@@ -1,9 +1,18 @@
 import type {HomeTheme} from '../shared/home-themes'
 
+export type HomeThemePreview = {
+  canvas: HTMLCanvasElement
+  resize(width: number, height: number): void
+  render(seconds: number, dark: boolean): boolean
+  dispose(): void
+}
+
 export type HomeThemeController = {
   getSelected(): HomeTheme
   select(id: HomeTheme): void
   getThumbnail(id: HomeTheme): string | null
+  /** A transient view of the real wallpaper renderer; callers own its lifetime. */
+  createPreview?(id: HomeTheme): HomeThemePreview | null
   subscribe(listener: () => void): () => void
 }
 

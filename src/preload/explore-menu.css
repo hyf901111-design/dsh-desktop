@@ -6,8 +6,8 @@
 .sherlock-account-button[data-explore-trigger] span{font-size:14px;font-weight:500}
 [data-sidebar-collapsed=true] .sherlock-account-button[data-explore-trigger]{width:56px!important;height:56px;padding:8px;overflow:visible}
 .hHd-Xa_root.hHd-Xa_collapsed .srb-account-controls .sherlock-account-button[data-explore-trigger],
-[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button[data-explore-trigger]{width:56px!important;height:56px!important;min-height:56px;padding:8px;flex:none;justify-content:center;gap:0;overflow:visible;border-radius:12px!important}
-.srb-account-controls:has([data-explore-trigger]){position:relative;isolation:isolate;overflow:visible}
+[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button[data-explore-trigger]{width:56px!important;height:56px!important;min-height:56px;padding:8px;flex:none;justify-content:center;gap:0;overflow:visible;border-radius:50%!important}
+.srb-account-controls:has([data-explore-trigger]){position:relative;isolation:isolate;overflow:visible;padding-top:8px}
 .srb-account-controls:has([data-explore-trigger]) [data-research-board-bell-host]{display:flex;align-items:center;justify-content:center;flex:none}
 .srb-account-controls:has([data-explore-trigger]) [data-research-board-bell-host]>button{width:40px!important;height:40px!important;min-width:40px;min-height:40px;max-width:40px;max-height:40px;padding:10px!important;box-sizing:border-box;flex:none;border-radius:10px!important}
 .odyssey-explore{--explore-ink:#26313a;--explore-muted:#626d79;--explore-tool:rgb(255 255 255/.32);--explore-tool-hover:rgb(255 255 255/.52);--explore-result:rgb(245 247 249/.82);--explore-row:rgb(255 255 255/.48);position:fixed;inset:0;margin:0;padding:64px 48px 48px;width:100vw;height:100dvh;max-width:none;max-height:none;box-sizing:border-box;border:0;background:transparent;color:var(--explore-ink);font-family:"Noto Sans SC","PingFang SC",sans-serif;overflow:hidden;-webkit-app-region:no-drag}
@@ -43,17 +43,22 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 .odyssey-explore-quick{position:absolute;inset:0;display:block;height:100%}
 .odyssey-explore .odyssey-operations-case-stack,.odyssey-explore .odyssey-operations-case-layer{position:absolute;inset:0}
 .odyssey-explore .odyssey-operations-case-stack{z-index:0;isolation:isolate}
-.odyssey-explore-wallpapers{position:absolute;inset:0;height:100%;overflow:auto;scrollbar-width:thin;scrollbar-color:rgb(130 137 145/.25) transparent}
-.odyssey-explore-wallpapers>.odyssey-theme-gallery{position:relative;display:grid;grid-template-columns:repeat(var(--odyssey-wallpaper-columns,5),minmax(0,1fr));gap:16px;grid-auto-rows:auto!important;left:auto;top:auto;width:100%!important}
-.odyssey-explore-wallpapers .odyssey-wallpaper-card{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-width:0;text-align:left}
-.odyssey-explore-wallpapers .odyssey-wallpaper-preview{position:relative;display:block;width:100%;aspect-ratio:1.877;overflow:hidden;border-radius:9px;background:rgb(150 150 150/.12);transition:box-shadow 150ms ease}
+.odyssey-explore-wallpapers{position:absolute;inset:0;height:100%;padding:4px;overflow:auto;scrollbar-width:none}
+.odyssey-explore-wallpapers::-webkit-scrollbar{display:none}
+.odyssey-explore-wallpapers>.odyssey-theme-gallery{position:relative;display:grid;grid-template-columns:repeat(var(--odyssey-wallpaper-columns,5),minmax(0,1fr));gap:var(--odyssey-wallpaper-gap,12px);grid-auto-rows:var(--odyssey-wallpaper-row-height,106px);left:auto;top:auto;width:100%!important}
+.odyssey-explore-wallpapers .odyssey-wallpaper-card{display:flex;flex-direction:column;align-items:stretch;gap:var(--odyssey-wallpaper-name-gap,8px);min-width:0;text-align:left}
+.odyssey-explore-wallpapers .odyssey-wallpaper-preview{position:relative;display:block;width:100%;height:var(--odyssey-wallpaper-preview-height,78px);overflow:hidden;border-radius:9px;background:rgb(150 150 150/.12);transition:box-shadow 180ms ease,translate 220ms cubic-bezier(.22,.61,.36,1)}
 .odyssey-explore-wallpapers .odyssey-wallpaper-card[aria-pressed=true] .odyssey-wallpaper-preview{box-shadow:inset 0 0 0 2px currentColor}
 .odyssey-explore-wallpapers .odyssey-wallpaper-preview>img{display:block;width:100%;height:100%;object-fit:cover}
+.odyssey-wallpaper-preview>canvas{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;animation:odyssey-wallpaper-preview-in 220ms ease-out both}
+.odyssey-wallpaper-preview>canvas[data-home-theme-preview-freeze]{animation:odyssey-wallpaper-preview-out 220ms ease-out both}
+@keyframes odyssey-wallpaper-preview-in{from{opacity:0}to{opacity:1}}
+@keyframes odyssey-wallpaper-preview-out{from{opacity:var(--odyssey-wallpaper-freeze-opacity,1)}to{opacity:0}}
 .odyssey-explore-wallpapers .odyssey-wallpaper-card[aria-pressed=true] .odyssey-wallpaper-preview{outline:2px solid currentColor;outline-offset:-2px}
 .odyssey-explore-wallpapers .odyssey-wallpaper-name{font:400 16px/24px "Noto Sans SC","PingFang SC",sans-serif;color:var(--explore-ink);overflow-wrap:anywhere}
 .odyssey-explore-system{position:absolute;right:54px;top:40px;display:flex;align-items:center;gap:12px}
 .odyssey-explore-system>.odyssey-explore-tool{background:transparent!important;box-shadow:none}
-.odyssey-explore-account{display:flex;align-items:center;gap:10px;height:40px;max-width:200px;border-radius:10px!important;padding:0 4px!important}
+.odyssey-explore-account{display:flex;align-items:center;gap:10px;height:48px;max-width:220px;border-radius:12px!important;padding:10px!important}
 .odyssey-explore-account:hover{background:var(--explore-tool)!important}.odyssey-explore-account>span{font-size:14px;line-height:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .odyssey-explore-account .sherlock-account-avatar{width:28px;height:28px;flex:none}
 .odyssey-explore .sherlock-account-menu[data-explore-account-menu]{--odyssey-menu:rgb(43 43 43/.68);--odyssey-menu-border:rgb(255 255 255/.1);--odyssey-menu-shadow:0 8px 12px rgb(0 0 0/.32);--odyssey-menu-blur:blur(18px);--odyssey-menu-row:rgb(255 255 255/.08);overflow:visible;box-sizing:border-box;width:224px;padding:7px;border-radius:16px;background:rgb(43 43 43/.68);color:#eee;border:1px solid rgb(255 255 255/.1);box-shadow:0 8px 12px rgb(0 0 0/.32);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);font:400 13px/20px "Noto Sans SC","PingFang SC",sans-serif}
@@ -97,7 +102,7 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 @keyframes odyssey-explore-veil{from{opacity:0}to{opacity:1}}
 @keyframes odyssey-explore-content-in{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes odyssey-explore-spinner{to{transform:rotate(360deg)}}
-@media(max-width:850px){.odyssey-explore{padding:88px 28px 32px}.odyssey-explore-content{width:100%}.odyssey-explore-system{right:24px;top:28px}.odyssey-explore-wallpapers>.odyssey-theme-gallery{gap:12px}.odyssey-explore-wallpapers .odyssey-wallpaper-name{font-size:13px;line-height:20px}}
+@media(max-width:850px){.odyssey-explore{padding:88px 28px 32px}.odyssey-explore-content{width:100%}.odyssey-explore-system{right:24px;top:28px}.odyssey-explore-wallpapers .odyssey-wallpaper-name{font-size:13px;line-height:20px}}
 @media(max-width:560px){.odyssey-explore{padding:84px 20px 20px}.odyssey-explore-tabs button{font-size:16px}.odyssey-explore-header{margin-bottom:16px}.odyssey-explore-viewport{height:calc(100dvh - 252px)}.odyssey-explore-search-control{transition-duration:240ms}.odyssey-explore-results{top:-50px;height:calc(100% + 50px)}.odyssey-explore-result strong{font-size:14px}.odyssey-explore-wallpapers .odyssey-wallpaper-name{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.odyssey-explore-orb img{animation:none}.odyssey-explore-orb img:not(:first-child){opacity:0}.odyssey-explore,.odyssey-explore::backdrop,.odyssey-explore-content,.odyssey-explore-results{animation:none!important}.odyssey-explore *{transition:none!important}}
 

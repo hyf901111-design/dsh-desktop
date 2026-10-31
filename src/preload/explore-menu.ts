@@ -60,7 +60,7 @@ export function mountExploreMenu(doc:Document,options:Options){
   showcase.querySelector('.odyssey-operations-pagination')!.classList.add('odyssey-explore-pages')
   createButtons.forEach((node,index)=>{node.classList.add('odyssey-explore-create');node.dataset.exploreCard=cards[index]!})
   const wallpapers=doc.createElement('div');wallpapers.className='odyssey-explore-wallpapers';wallpapers.id='odyssey-explore-wallpapers';wallpapers.role='tabpanel';wallpapers.setAttribute('aria-labelledby',wallpaperTab.id)
-  const gallery=createHomeThemeGallery(doc,options.themeController);wallpapers.append(gallery.element)
+  const gallery=createHomeThemeGallery(doc,options.themeController,{fitHeight:false,livePreview:true});wallpapers.append(gallery.element)
   const searchPanel=doc.createElement('section');searchPanel.className='odyssey-explore-results';searchPanel.setAttribute('aria-label','搜索结果');searchPanel.hidden=true
   const categories=doc.createElement('div');categories.className='odyssey-explore-categories';categories.role='tablist'
   const categoryButtons=new Map<string,HTMLButtonElement>()
@@ -95,7 +95,7 @@ export function mountExploreMenu(doc:Document,options:Options){
     tabAnimations=[previous.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:`translateX(${-10*direction}px)`}],{duration:240,easing:'cubic-bezier(.22,.61,.36,1)',fill:'both'}),incoming.animate([{opacity:0,transform:`translateX(${10*direction}px)`},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.61,.36,1)',fill:'both'})]
     void Promise.allSettled(tabAnimations.map(animation=>animation.finished)).then(()=>{if(epoch!==tabMotion)return;settleTabMotion();labels()})
   }
-  function layout(){deck.layout();if(opened&&tab==='wallpapers')gallery.layout(viewport.clientWidth,Math.max(250,win.innerHeight-240));}
+  function layout(){deck.layout();if(opened&&tab==='wallpapers')gallery.layout(Math.max(1,wallpapers.clientWidth-8),Math.max(1,wallpapers.clientHeight-8));}
   function cancelOpenResult(){if(openRequest)doc.dispatchEvent(new win.CustomEvent('sherlock:explore-search-request',{detail:{requestId:openRequest,action:'cancel'}}));openRequest='';list.removeAttribute('aria-busy')}
   function setSearch(next:boolean,restoreFocus=true){if(!opened||busy)return;settleTabMotion();if(!next)cancelOpenResult();searching=next;body.dataset.exploreSearching=String(next);searchPanel.hidden=!next;searchButton.setAttribute('aria-expanded',String(next));input.tabIndex=next?0:-1;collapseSearch.tabIndex=next?0:-1;brand.hidden=next;settings.inert=next;appearance.inert=next;navigation.inert=next;feedback.hidden=true;labels();if(next){input.focus({preventScroll:true});query()}else{input.value='';results=[];requestId='';if(restoreFocus)searchButton.focus({preventScroll:true})}}
   function query(){if(!opened||!searching)return;const id=win.crypto.randomUUID();requestId=id;doc.dispatchEvent(new win.CustomEvent('sherlock:explore-search-request',{detail:{requestId:id,action:'search',query:input.value}}))}
