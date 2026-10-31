@@ -33,11 +33,11 @@ it('records chart, selected rewrite and appended summary as three genuine native
  expect(await first).toMatchObject({kind:'component',node:{id:'home-note-chart-note-run',kind:'generated-container',containerSpec:{type:'html'}}});expect((await first).node.containerSpec.html).toContain('非含息收益');expect(await f.runtime.generate({...f.run,input:f.input})).toEqual(await first)
  expect(noteConversationRows(f.session)).toHaveLength(1);expect(progress.some(value=>value.stage==='thinking')).toBe(true);expect(progress.some(value=>value.stage==='writing'&&value.outputChars>0)).toBe(true)
  recordNoteConversation(f.session,{requestId:'task-1',phase:'accepted',finishedAt:Date.now()})
- const second=f.runtime.generate({...f.run,input:{...f.input,entryPoint:undefined,insertionAnchor:undefined,requestId:'task-2',prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION,context:{scope:'selection',components:[]}}});await vi.advanceTimersByTimeAsync(20000)
+ const second=f.runtime.generate({...f.run,input:{...f.input,entryPoint:'composer',insertionAnchor:undefined,requestId:'task-2',prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION,context:{scope:'selection',components:[]}}});await vi.advanceTimersByTimeAsync(20000)
  expect(await second).toEqual({kind:'text',markdown:HOME_NOTES_REWRITE_RESULT})
  recordNoteConversation(f.session,{requestId:'task-2',phase:'accepted',finishedAt:Date.now()})
  const refs=[{blockId:'chart-block',type:'research',title:'情景图表',content:JSON.stringify({spec:(await first).node.containerSpec})},{blockId:'quote-block',type:'research',title:'行情面板',content:JSON.stringify({spec:{version:1,type:'financial-widget',widget:'quote',title:'行情面板',symbols:[{code:'300308',market:'SZ',name:'中际旭创'}],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}})}]
- const summary={...f.input,requestId:'task-3',entryPoint:undefined,insertionAnchor:undefined,prompt:HOME_NOTES_TASK_PROMPT,markdown:'环比增长14.29%；经营现金流净额18.00亿元，同比下降44.08%。不把单期业绩或历史涨幅当作确定性依据。沪深300同期下跌10.88%。',context:{scope:'note',components:refs}}
+ const summary={...f.input,requestId:'task-3',entryPoint:'composer',insertionAnchor:undefined,prompt:HOME_NOTES_TASK_PROMPT,markdown:'环比增长14.29%；经营现金流净额18.00亿元，同比下降44.08%。不把单期业绩或历史涨幅当作确定性依据。沪深300同期下跌10.88%。',context:{scope:'note',components:refs}}
  await expect(f.runtime.generate({...f.run,input:{...summary,context:{...summary.context,components:refs.slice(0,1)}}})).rejects.toThrow('引用内容')
  const third=f.runtime.generate({...f.run,input:summary});await vi.advanceTimersByTimeAsync(20000)
  expect(await third).toEqual({kind:'text',markdown:HOME_NOTES_TASK_RESULT})
@@ -70,6 +70,8 @@ it('rejects skipped stages, a missing inline anchor, foreign quote references an
  const f=await fixture();await f.runtime.prepare(f.run)
  await expect(f.runtime.generate({...f.run,input:{...f.input,prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION,entryPoint:undefined,insertionAnchor:undefined,context:{scope:'selection',components:[]}}})).rejects.toThrow('顺序')
  await expect(f.runtime.generate({...f.run,input:{...f.input,insertionAnchor:undefined}})).rejects.toThrow('引用内容')
+ for(const entryPoint of ['inline','component','foreign'])await expect(f.runtime.generate({...f.run,input:{...f.input,prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION,entryPoint,insertionAnchor:undefined,context:{scope:'selection',components:[]}}})).rejects.toThrow('引用内容')
+ await expect(f.runtime.generate({...f.run,input:{...f.input,prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION+' 用户的新内容',entryPoint:'composer',insertionAnchor:undefined,context:{scope:'selection',components:[]}}})).rejects.toThrow('引用内容')
  expect(noteConversationRows(f.session)).toEqual([])
  await f.runtime.disposeRun(f.run)
  await expect(f.runtime.generate({...f.run,input:f.input})).rejects.toMatchObject({name:'AbortError'})

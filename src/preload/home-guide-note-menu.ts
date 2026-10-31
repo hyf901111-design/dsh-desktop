@@ -1,5 +1,6 @@
 import {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../shared/note-menu-presentation'
 import type {NoteMenuState,NoteMenuEvent} from '../shared/notes-menu'
+import {noteMenuBounds,noteSubmenuBounds} from '../shared/note-menu-geometry'
 /** The original native menu renderer, hosted in this guide's top layer only.
  * NativeSlashMenu still owns every callback, revision and library admission. */
 export function createHomeGuideNoteMenu(document:Document,options:{runId:string;sessionId:string;signal:AbortSignal;current():boolean}){
@@ -33,7 +34,20 @@ export function createHomeGuideNoteMenu(document:Document,options:{runId:string;
  options.signal.addEventListener('abort',dispose,{once:true});if(options.signal.aborted)dispose()
  return{sync(input:NoteMenuState){validateNoteMenu(input);if(!current()||input.sessionId!==options.sessionId||retired.has(input.menuId))throw new DOMException('演示菜单已结束。','AbortError');if(state&&(state.menuId!==input.menuId||input.revision<state.revision))throw Error('组件库菜单已变化。');state=input
    const presentation=noteMenuPresentation(input,ticket,{height:win.innerHeight-24,width:win.innerWidth-24,shadowInset:0})
-   host.dataset.noteMenuId=input.menuId;host.dataset.noteMenuRevision=String(input.revision);host.className=(input.dark?'guide-menu-dark ':'')+'guide-native-material';host.innerHTML='<style>@scope ([data-home-guide-note-menu]){'+css+'}</style><main>'+presentation.html+'</main>'
-   const left=Math.max(8,Math.min(input.anchor.x,win.innerWidth-presentation.width-8)),top=Math.max(8,Math.min(input.anchor.y+input.anchor.height+6,win.innerHeight-presentation.height-8));for(const [key,value] of Object.entries({width:presentation.width+'px',height:presentation.height+'px',background:'transparent','box-shadow':'none','backdrop-filter':'none'}))host.style.setProperty(key,value,'important');host.style.left=left+'px';host.style.top=top+'px';if(!host.isConnected)document.body.append(host);if(!host.matches(':popover-open'))host.showPopover()
+   host.dataset.noteMenuId=input.menuId;host.dataset.noteMenuRevision=String(input.revision);host.className=(input.dark?'guide-menu-dark ':'')+'guide-native-material';host.innerHTML='<style>@scope ([data-home-guide-note-menu]){'+css+'}</style><main>'+presentation.root.html+(presentation.child?.html||'')+'</main>'
+   // Match the native panels: opening a child must never reposition its root.
+   const work={x:0,y:0,width:win.innerWidth,height:win.innerHeight},rootBounds=noteMenuBounds(input.anchor,work,presentation.root.height,1,presentation.root.width,0)
+   const root=host.querySelector<HTMLElement>('.root-menu')!,child=host.querySelector<HTMLElement>('.child-menu')
+   const place=(node:HTMLElement,x:number,y:number)=>{node.style.position='absolute';node.style.left=x+'px';node.style.top=y+'px';node.style.margin='0'}
+   const bounds=(left:number,top:number,width:number,height:number)=>{for(const [key,value] of Object.entries({width:width+'px',height:height+'px',background:'transparent','box-shadow':'none','backdrop-filter':'none'}))host.style.setProperty(key,value,'important');host.style.left=left+'px';host.style.top=top+'px'}
+   bounds(rootBounds.x,rootBounds.y,rootBounds.width,rootBounds.height);place(root,0,0)
+   if(!host.isConnected)document.body.append(host);if(!host.matches(':popover-open'))host.showPopover()
+   if(child&&presentation.child){
+    const parentIndex=input.items.findIndex(item=>item.id===input.submenu?.parentId),parent=root.querySelector<HTMLElement>('#item-root-'+parentIndex)
+    const row=parent?.getBoundingClientRect(),item=row&&row.width&&row.height?{x:row.x,y:row.y,width:row.width,height:row.height}:{x:rootBounds.x,y:rootBounds.y+6+Math.max(0,parentIndex)*32,width:rootBounds.width,height:32}
+    const next=noteSubmenuBounds(rootBounds,item,work,presentation.child.height,presentation.child.width,1,0),left=Math.min(rootBounds.x,next.x),top=Math.min(rootBounds.y,next.y),right=Math.max(rootBounds.x+rootBounds.width,next.x+next.width),bottom=Math.max(rootBounds.y+rootBounds.height,next.y+next.height)
+    bounds(left,top,right-left,bottom-top);place(root,rootBounds.x-left,rootBounds.y-top);place(child,next.x-left,next.y-top)
+   }
+
   },close,dispose,element:()=>state&&current()?host:undefined}
 }

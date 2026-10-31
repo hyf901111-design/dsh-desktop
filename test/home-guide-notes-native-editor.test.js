@@ -146,7 +146,7 @@ it('uses the real paragraph selection and AI rewrite control before replacing on
   expect(await page.evaluate(()=>window.events.findLast(event=>event.name==='notes-composer-draft').detail.text)).toBe(HOME_NOTES_REWRITE_PROMPT)
   await page.evaluate(prompt=>window.submitNative(prompt),HOME_NOTES_REWRITE_PROMPT)
   await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(1)
-  expect(await page.evaluate(()=>window.results[0].input)).toMatchObject({prompt:HOME_NOTES_REWRITE_PROMPT,selection:'订单增长不能保证利润翻倍，仍需验证产品价格和回款。',markdown:'',context:{scope:'selection',components:[]}})
+  expect(await page.evaluate(()=>window.results[0].input)).toMatchObject({entryPoint:'composer',prompt:HOME_NOTES_REWRITE_PROMPT,selection:'订单增长不能保证利润翻倍，仍需验证产品价格和回款。',markdown:'',context:{scope:'selection',components:[]}})
   await page.evaluate(()=>window.results[0].resolve({kind:'text',markdown:'订单增长为收入扩张提供线索，利润兑现仍取决于价格、毛利率与回款质量。'}))
   await page.getByRole('button',{name:'替换所选',exact:true}).click();await page.evaluate(()=>window.noteApi.flush())
   expect(await page.locator('[data-id="intro"] .bn-inline-content').innerText()).toBe('原文摘要必须保留。')

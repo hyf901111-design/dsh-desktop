@@ -16,7 +16,9 @@ import {HOME_NOTES_CHART_SPEC,HOME_NOTES_TASK_RESULT,HOME_NOTES_GUIDE_SELECTION,
 import {homeNoteChallengeSidebarSource} from './fixtures/home-note-challenge-sidebar.js'
 import {homeNoteRewritePortalBrowser} from './fixtures/home-note-rewrite-portal-browser.js'
 import {Session} from '@deepseek-ai/dsh-session'
-import {engageNoteSession} from '../packages/dsh-research-task-runtime/notes-session.js'
+import {presentationHostFixture} from './fixtures/home-presentation-host.js'
+import {HOME_NOTES_PATH} from '../packages/dsh-research-task-runtime/home-notes-runtime.js'
+import {engageNoteSession,noteConversationRows,recordNoteConversation} from '../packages/dsh-research-task-runtime/notes-session.js'
 const evidenceDir=process.env.SHERLOCK_NOTES_DEMO_EVIDENCE||'/tmp/sherlock-notes-demo-flow-20261029/browser';mkdirSync(evidenceDir,{recursive:true})
 const preReview=['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail']
 const throughCorrections=[...preReview,'challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace','note-select-paragraph','note-rewrite','note-rewrite-apply']
@@ -140,9 +142,10 @@ it('synchronizes the actual autopilot slider during its pointer drag and hits ac
 it('moves the real pointer over the original library submenu and clicks its quote item above the menu surface',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide());for(const step of preReview.slice(0,5))await page.evaluate(step=>window.guide.runStep(step),step)
-  await page.evaluate(()=>{window.nativeAutoAck=false;window.menuPointer=createHomeGuidePointer(document,{runId:'notes-natural-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()});window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId)return;const ack=()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}));if(!cue.label.includes('组件库')){ack();return}window.menuPointer.perform({target:window.cueTarget(cue.targetToken),action:cue.action}).then(async()=>{window.menuPointerReady=cue.label;await new Promise(resolve=>window.releaseMenuPointer=resolve);window.menuPointerReady='';ack()})});window.quoteStep=window.guide.runStep('note-slash-quote')})
-  await expect.poll(()=>page.evaluate(()=>window.menuPointerReady)).toBe('移动到组件库，展开二级菜单');expect(await page.locator('[data-home-guide-note-menu] .child-menu').count()).toBe(0);await page.evaluate(()=>window.releaseMenuPointer())
-  await expect.poll(()=>page.evaluate(()=>window.menuPointerReady)).toBe('在组件库二级菜单选择行情面板')
+  await page.evaluate(()=>{window.nativeAutoAck=false;window.menuPointer=createHomeGuidePointer(document,{runId:'notes-natural-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()});window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId)return;const ack=()=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}));if(!cue.label.includes('组件库')){ack();return}window.menuPointer.perform({target:window.cueTarget(cue.targetToken),action:cue.action}).then(async()=>{window.menuPointerReady=cue.label;await new Promise(resolve=>window.releaseMenuPointer=resolve);window.menuPointerReady='';ack()})});window.quoteStep=window.guide.runStep('note-slash-quote').catch(error=>{window.menuFailure=error.message;throw error})})
+  await expect.poll(()=>page.evaluate(()=>window.menuFailure||window.menuPointerReady),{timeout:15000}).toBe('移动到组件库，展开二级菜单');expect(await page.locator('[data-home-guide-note-menu] .child-menu').count()).toBe(0);const rootBefore=await page.locator('[data-home-guide-note-menu] .root-menu').boundingBox();await page.evaluate(()=>window.releaseMenuPointer())
+  await expect.poll(()=>page.evaluate(()=>window.menuFailure||window.menuPointerReady),{timeout:15000}).toBe('在组件库二级菜单选择行情面板')
+  const rootAfter=await page.locator('[data-home-guide-note-menu] .root-menu').boundingBox();expect(rootAfter).toEqual(rootBefore);const childBox=await page.locator('[data-home-guide-note-menu] .child-menu').boundingBox(),viewport=page.viewportSize();expect(childBox.x).toBeGreaterThanOrEqual(8);expect(childBox.y).toBeGreaterThanOrEqual(8);expect(childBox.x+childBox.width).toBeLessThanOrEqual(viewport.width-8);expect(childBox.y+childBox.height).toBeLessThanOrEqual(viewport.height-8)
   expect(await page.locator('[data-home-guide-note-menu] .child-menu a[aria-label="行情面板"]').count()).toBe(1)
   expect(await page.locator('[data-home-guide-pointer]').evaluate(node=>({top:node.matches(':popover-open'),events:getComputedStyle(node).pointerEvents,hidden:node.hidden}))).toEqual({top:true,events:'none',hidden:false})
   await page.screenshot({path:join(evidenceDir,'pointer-above-library-submenu.png')});await page.evaluate(()=>window.releaseMenuPointer());await page.evaluate(()=>window.quoteStep)
@@ -497,7 +500,7 @@ it('submits the real NotesApp rewrite button prefill through the actual Native P
   expect(await page.evaluate(()=>window.nativeRewriteProbe.snapshot().submission)).toBe(0)
   await page.evaluate(()=>window.guide.runStep('note-rewrite'))
   const actual=await page.evaluate(()=>({drafts:window.nativePortalDrafts,requests:window.nativePortalGenerations,snapshot:window.nativeRewriteProbe.snapshot()}))
-  expect(actual.drafts).toContain(HOME_NOTES_REWRITE_PROMPT);expect(actual.requests).toHaveLength(2);expect(actual.requests[1]).toMatchObject({prompt:HOME_NOTES_REWRITE_PROMPT,selection:HOME_NOTES_GUIDE_SELECTION,markdown:'',context:{scope:'selection',components:[]}})
+  expect(actual.drafts).toContain(HOME_NOTES_REWRITE_PROMPT);expect(actual.requests).toHaveLength(2);expect(actual.requests[1]).toMatchObject({entryPoint:'composer',prompt:HOME_NOTES_REWRITE_PROMPT,selection:HOME_NOTES_GUIDE_SELECTION,markdown:'',context:{scope:'selection',components:[]}})
   expect(actual.snapshot).toMatchObject({draft:'',occurrences:0,submission:1});expect(await page.locator('.en-preview button').filter({hasText:'替换所选'}).count()).toBe(1)
   await page.evaluate(async()=>{await window.guide.flush();window.guide.dispose();delete document.documentElement.dataset.homeGuidePointerRun;window.openSavedNativeNote()})
   const paragraph=page.locator('#guide .bn-inline-content').filter({hasText:/\S/}).first();await paragraph.click({clickCount:3});await page.locator('.en-ai-format').click()
@@ -514,3 +517,38 @@ it('rejects a mismatched user draft after the real rewrite button without sendin
   expect(result).toEqual({ok:false,message:'输入框已有草稿，已停止示例输入。'});expect(await page.evaluate(()=>window.nativeRewriteProbe.snapshot())).toMatchObject({draft:'用户自己刚修改的需求',submission:0});expect(await page.evaluate(()=>window.nativePortalGenerations.length)).toBe(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },60000)
+
+it('completes the real editor and Portal through the actual Host composer guard then adopts the normal summary preview once',async()=>{
+ const host=await presentationHostFixture(),{context,page,errors}=await fixture(),seen=[]
+ try{
+  const origin='http://127.0.0.1:'+host.ctx.webServer.port
+  await import('node:fs/promises').then(fs=>fs.writeFile(join(host.home,'research-board-directories.json'),JSON.stringify({note:{sessionId:'demo',path:host.cwd,title:'AI 护航研究笔记示例'}})))
+  // The Browser fixture and Host fixture retain their own real session IDs;
+  // only this transport adapter aliases their synthetic ownership coordinates.
+  await page.exposeFunction('nativePresetRequest',async body=>{
+   const input=body.input?{...body.input,sessionId:'demo'}:undefined
+   const request={...body,sessionId:'demo',...body.cwd?{cwd:host.cwd}:{},...input?{input}:{}}
+   if(input)seen.push(structuredClone(input))
+   const response=await fetch(origin+HOME_NOTES_PATH,{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(request)})
+   return{ok:response.ok,text:await response.text()}
+  })
+  await page.exposeFunction('nativePresetState',value=>{if(value.sessionId==='real-guide-session'&&value.phase==='accepted')recordNoteConversation(host.agent.session,{requestId:value.requestId,phase:'accepted',finishedAt:Date.now()})})
+  await page.emulateMedia({reducedMotion:'reduce'});await page.addScriptTag({content:rewritePortalScript})
+  await page.evaluate(async()=>{document.addEventListener('sherlock:notes-task-state',event=>void window.nativePresetState(event.detail));await window.installRewritePortal(true);await window.startNativeGuide()})
+  for(const step of throughCorrections)await page.evaluate(step=>window.guide.runStep(step),step)
+  expect(seen[1]).toMatchObject({entryPoint:'composer',selection:HOME_NOTES_GUIDE_SELECTION,markdown:'',context:{scope:'selection',components:[]},prompt:'修正一下句子里不严谨的地方'})
+  expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toBe(HOME_NOTES_REWRITE_RESULT)
+  const before=await page.evaluate(()=>JSON.stringify(window.lastGuideSaved.blocks))
+  await page.evaluate(()=>{window.summaryStart=window.guide.runStep('note-task-compose')})
+  await expect.poll(()=>page.locator('.en-ai-loading').count(),{timeout:15000}).toBe(1)
+  expect(await page.evaluate(()=>JSON.stringify(window.lastGuideSaved.blocks))).toBe(before)
+  await page.evaluate(()=>window.summaryStart);await page.evaluate(()=>window.guide.runStep('note-task-review'))
+  expect(await page.locator('.en-ai-loading').count()).toBe(0);expect(await page.locator('.en-preview button[data-note-preview-apply]').count()).toBe(1)
+  expect(await page.locator('.en-preview').innerText()).toContain(HOME_NOTES_TASK_RESULT);expect(await page.evaluate(()=>JSON.stringify(window.lastGuideSaved.blocks))).toBe(before)
+  await page.evaluate(()=>window.guide.runStep('note-task-apply'));await page.evaluate(()=>window.guide.runStep('note-task-saved'));await page.evaluate(()=>window.guide.runStep('note-return-top'))
+  const saved=await page.evaluate(()=>window.lastGuideSaved);expect(saved.blocks.map(block=>JSON.stringify(block)).filter(value=>value.includes(HOME_NOTES_TASK_RESULT))).toHaveLength(1)
+  expect(seen).toHaveLength(3);expect(seen[2]).toMatchObject({entryPoint:'composer',selection:'',context:{scope:'note'}})
+  expect(noteConversationRows(host.agent.session).map(row=>row.phase)).toEqual(['accepted','accepted','accepted']);expect(host.outside).toEqual([]);expect(host.errors).toEqual([]);expect(errors).toEqual([])
+  writeFileSync(join(evidenceDir,'actual-host-native-composer-completion.json'),JSON.stringify({requests:seen.map(row=>({entryPoint:row.entryPoint,scope:row.context.scope,selection:row.selection,prompt:row.prompt})),history:noteConversationRows(host.agent.session).map(row=>({requestId:row.requestId,phase:row.phase})),finalSummaryCopies:1},null,2))
+ }finally{await context.close();await host.dispose()}
+},90000)
