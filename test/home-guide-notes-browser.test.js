@@ -135,7 +135,9 @@ it('waits for the async original slash menu choices before opening the actual qu
   for(const step of preReview.slice(0,5))await page.evaluate(step=>window.guide.runStep(step),step)
   await page.evaluate(()=>{window.nativeLibraryDelay=400;window.slashItemsDuringLoad=[];const observer=new MutationObserver(()=>{const id=document.querySelector('#guide .bn-editor')?.getAttribute('aria-controls'),menu=id&&document.getElementById(id);if(menu)window.slashItemsDuringLoad.push(menu.querySelectorAll(':scope > [role="option"]').length)});observer.observe(document.body,{childList:true,subtree:true});window.slashLoadingObserver=observer})
   await page.evaluate(()=>window.guide.runStep('note-slash-quote'))
-  expect(await page.evaluate(()=>window.slashItemsDuringLoad)).toContain(0)
+  // Cached library choices may already be complete when the paced menu opens.
+  // Require real visible choices and the native library result, not a transient empty frame.
+  expect((await page.evaluate(()=>window.slashItemsDuringLoad)).some(count=>count>0)).toBe(true)
   const blocks=await page.evaluate(()=>window.lastGuideSaved.blocks),quote=blocks.filter(block=>block.type==='research').map(block=>JSON.parse(block.props.payload)).find(node=>node.containerSpec?.widget==='quote')
   expect(quote).toBeDefined();expect(quote.noteLibrary).toBe(true);expect(errors).toEqual([])
  }finally{await context.close()}
@@ -162,6 +164,7 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.holdSummary=true;return window.startNativeGuide()})
   const snapshots=[]
   for(const step of [...throughCorrections,'note-task-compose','note-task-review','note-task-apply','note-task-saved']){
+   if(step==='note-task-compose')await page.evaluate(()=>window.beforeSummaryCueCount=window.guideCues.length)
    await page.evaluate(step=>window.guide.runStep(step),step);await page.evaluate(()=>window.guide.flush())
    const blocks=store.load('owner','real-guide-session').saved.blocks,parts=nonempty(blocks),components=blocks.filter(block=>block.type==='research');snapshots.push({step,blocks})
    if(step==='write'){expect(parts).toHaveLength(2);expect(components).toHaveLength(0)}
@@ -185,6 +188,7 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
    if(step==='note-select-paragraph'){expect(await page.evaluate(()=>getSelection().toString())).toBe(HOME_NOTES_GUIDE_SELECTION);expect(await page.evaluate(()=>window.guideCues.some(row=>row.label==='先查看句内表达标记的 AI 评论'))).toBe(true)}
    if(step==='note-rewrite-apply')expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toBe(HOME_NOTES_REWRITE_RESULT)
    if(step==='note-task-compose'){
+    expect(await page.evaluate(()=>window.guideCues.slice(window.beforeSummaryCueCount).some(cue=>cue.label==='在全新空白行继续'))).toBe(false)
     expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
     await expect.poll(()=>page.locator('.en-main [data-note-preview-state="generating"] .en-preview').count()).toBe(1)
     await page.evaluate(()=>window.summaryPendingCard=document.querySelector('.en-main [data-note-preview-request-id] .en-preview'))
