@@ -179,6 +179,33 @@ test('flushes the note before releasing its view and never restores an old sessi
  expect(document.querySelector('[data-home-guide]')).not.toBeNull();finish();await closing
  expect(f.release).toHaveBeenCalledOnce();expect(document.querySelector('[data-home-guide]')).toBeNull();expect(f.header.dataset.eworkNotesSession).toBe('example-note')
 })
+test.each(['reset','navigation','owner-changed','escape','blur-then-reset'] as const)('releases the interaction lease immediately on %s while saving is pending',async exit=>{
+ const f=fixture();await f.controller.start('note');let saved!:()=>void
+ f.flush.mockImplementationOnce(()=>new Promise<void>(resolve=>{saved=resolve}))
+ const resident=f.header.parentElement!,composer=f.text.parentElement!,body=resident.querySelector<HTMLElement>('.wSkVaW_scrollBody')!,guide=document.querySelector<HTMLElement>('[data-home-guide]')!
+ expect(composer.inert).toBe(true);expect(body.inert).toBe(true)
+ let closing:Promise<void>|undefined
+ if(exit==='navigation')f.header.querySelector<HTMLButtonElement>('[data-conversation-view-id="chat"]')!.click()
+ else if(exit==='owner-changed'){f.header.dataset.eworkNotesSession='new-user-session';window.dispatchEvent(new CustomEvent('sherlock:home-action-context-changed'))}
+ else if(exit==='escape')document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))
+ else{if(exit==='blur-then-reset')focus(false);closing=f.controller.reset(false)}
+ try{
+  expect(f.flush).toHaveBeenCalledOnce();expect(f.release).not.toHaveBeenCalled()
+  expect(composer.inert).toBe(false);expect(body.inert).toBe(false)
+  expect(resident.dataset.homeGuideResident).toBeUndefined();expect(document.querySelector<HTMLElement>('.pI_x6G_centerCol')!.dataset.homeGuideActive).toBeUndefined()
+  expect(guide.isConnected).toBe(true);expect(guide.style.display).toBe('none');expect(guide.inert).toBe(true)
+  // React can reuse the resident composer for the next session during this save.
+  f.text.value='用户现在输入的新草稿';f.text.focus();expect(document.activeElement).toBe(f.text)
+ }finally{saved();if(closing)await closing;else await vi.waitFor(()=>expect(f.release).toHaveBeenCalledOnce())}
+ expect(f.text.value).toBe('用户现在输入的新草稿');expect(composer.inert).toBe(false)
+})
+test('does not clear a pre-existing inert owner while ending an example',async()=>{
+ const f=fixture();f.text.parentElement!.inert=true;await f.controller.start('note');let saved!:()=>void
+ f.flush.mockImplementationOnce(()=>new Promise<void>(resolve=>{saved=resolve}))
+ const closing=f.controller.reset(false)
+ expect(f.text.parentElement!.inert).toBe(true);expect(document.querySelector<HTMLElement>('.wSkVaW_scrollBody')!.inert).toBe(false)
+ saved();await closing;expect(f.text.parentElement!.inert).toBe(true)
+})
 test('does not open a late prepared example after the user navigates elsewhere',async()=>{
  const f=fixture();let delayed:any;f.setPrepare(detail=>{delayed=detail})
  const starting=f.controller.start('note');await Promise.resolve();await Promise.resolve()

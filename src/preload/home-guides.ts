@@ -144,14 +144,18 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const run=active;if(!run)return closing
   if(reason!=='handoff')diagnostic(run,'cancelled',reason);active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false,true)
   if(document.documentElement.dataset.homeGuidePointerRun===run.id)delete document.documentElement.dataset.homeGuidePointerRun
+  // A save can outlive navigation or wait on persistence. Its old editor stays
+  // connected until flush completes, but must not retain input/hover ownership
+  // over the resident DOM that React may already be reusing for another view.
+  run.cleanup();run.root.style.display='none';run.root.inert=true
+  if(run.center.dataset.homeGuideActive===run.id){delete run.center.dataset.homeGuideActive;delete run.center.dataset.homeGuideKind;run.center.style.removeProperty('--odyssey-home-guide-controls-height')}
+  if(run.resident.dataset.homeGuideResident===run.id){delete run.resident.dataset.homeGuideResident;delete run.resident.dataset.homeGuideLive}
+  if(restoreFocus&&selected()===run.sessionId)run.resident.querySelector<HTMLElement>('[data-srb-tabs] [aria-selected=true]')?.focus({preventScroll:true})
   const finish=()=>{
    try{
-    run.cleanup();run.root.remove()
-    if(run.center.dataset.homeGuideActive===run.id){delete run.center.dataset.homeGuideActive;delete run.center.dataset.homeGuideKind;run.center.style.removeProperty('--odyssey-home-guide-controls-height')}
-    if(run.resident.dataset.homeGuideResident===run.id){delete run.resident.dataset.homeGuideResident;delete run.resident.dataset.homeGuideLive}
+    run.root.remove()
     run.handoff?.()
    }finally{run.abort.abort();run.adapter?.dispose()}
-   if(restoreFocus&&selected()===run.sessionId)run.resident.querySelector<HTMLElement>('[data-srb-tabs] [aria-selected=true]')?.focus({preventScroll:true})
   }
   if(alreadySaved||!run.adapter?.flush){finish();return Promise.resolve()}
   run.status.textContent='正在保存示例内容…'
