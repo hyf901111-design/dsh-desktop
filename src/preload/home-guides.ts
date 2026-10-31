@@ -161,7 +161,8 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   try{
    if(input.entry?.demoEntry){
     const entry=input.entry,cancel=()=>controller.abort(),original=[...document.querySelectorAll<HTMLTextAreaElement>('textarea')].filter(node=>!node.closest('[data-explore-menu],[data-odyssey-subagent-panel]')).map(node=>({node,value:node.value}))
-    checkDraft=()=>{if(original.some(({node,value})=>node.isConnected&&node.value!==value))throw aborted()}
+    // The SDK may reuse these DOM nodes for the prepared session's own draft.
+    checkDraft=()=>{if(selected()===pending.source&&original.some(({node,value})=>node.isConnected&&node.value!==value))throw aborted()}
     const takeover=(event:Event)=>{if(event.isTrusted&&preparing===pending)controller.abort()}
     entry.signal.addEventListener('abort',cancel,{once:true});for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.addEventListener(name,takeover,true)
     clearEntry=()=>{entry.signal.removeEventListener('abort',cancel);for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);checkDraft=undefined}
