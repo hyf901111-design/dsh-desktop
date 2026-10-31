@@ -1,0 +1,131 @@
+/* sherlock:conversation-submission:v3 */
+function createNativeConversationSubmissions(){
+ const entries=new Map(),seen=new Set(),listeners=new Set(),knownRejections=new WeakSet();let revision=0,stopCurrent=null,annotationReader=()=>null,sequence=0
+ const notify=()=>{revision++;for(const listener of listeners)listener()}
+ const clear=entry=>{if(entries.get(entry.rpcId)!==entry)return;entries.delete(entry.rpcId);entry.off?.();notify()}
+ const all=sessionId=>[...entries.values()].filter(entry=>entry.sessionId===sessionId&&entry.current())
+ const turnOf=node=>{const turn=node?.location?.turn?.turn??node?.data?.turn;return Number.isSafeInteger(turn)?turn:null}
+ const settle=(entry,node)=>{if(entries.get(entry.rpcId)!==entry)return;const turn=turnOf(node);for(const other of entries.values())if(other.sessionId===entry.sessionId&&other.predecessors.includes(entry.rpcId)&&turn!==null)other.barrierTurn=Math.max(other.barrierTurn,turn);clear(entry)}
+ return{
+  subscribe:listener=>{listeners.add(listener);return()=>listeners.delete(listener)},version:()=>revision,
+  read:sessionId=>all(sessionId)[0]??null,all,consume(entry,node){if(['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId)settle(entry,node);else clear(entry)},
+  annotation(sessionId,rpcId,text){return annotationReader(sessionId,rpcId,text)},
+  watch({api,sessions,inputHub}){
+   stopCurrent?.()
+   if(typeof api?.subscribeEnvelopes!=='function'||!sessions?.list)return()=>{}
+   let closed=false,off=()=>{},offList=()=>{}
+   const stop=()=>{if(closed)return;closed=true;off();offList();for(const entry of [...entries.values()])clear(entry);if(stopCurrent===stop)stopCurrent=null}
+   stopCurrent=stop
+   const current=entry=>{try{return!closed&&sessions.list.getSnapshot().current===entry.sessionId&&sessions.binding(entry.sessionId)?.session===entry.session&&inputHub.shells.get(entry.sessionId)===entry.shell&&!entry.shell.disposed&&!entry.session.getSnapshot().removed}catch{return false}}
+   annotationReader=(sessionId,rpcId,text)=>{
+    try{
+     const session=sessions.binding(sessionId)?.session,shell=inputHub.shells.get(sessionId),subject={sessionId,session,shell},annotations=typeof window==='object'?window[Symbol.for('sherlock:pptx-annotation-input')]:null,query={sessionId,shell,submissionId:rpcId,text}
+     if(!session||!shell||!current(subject))return null
+     const proof=annotations?.pendingMessagePresentation?.(query)
+     return proof?.text===text&&proof.submissionId===rpcId&&Array.isArray(proof.parts)?{...proof,sessionId,current:()=>current(subject)&&window[Symbol.for('sherlock:pptx-annotation-input')]===annotations&&annotations.pendingMessagePresentation(query)?.preparedId===proof.preparedId}:null
+    }catch{return null}
+   }
+   off=api.subscribeEnvelopes(batch=>{
+    if(closed)return
+    for(const envelope of batch){
+     if(envelope.type==='client-request'&&envelope.method==='session.prompt'){
+      const sessionId=envelope.payload?.sessionId,rpcId=envelope.rpcId,content=envelope.payload?.content
+      if(typeof sessionId!=='string'||typeof rpcId!=='string'||!rpcId||entries.has(rpcId)||seen.has(rpcId)||all(sessionId).length>=16||!Array.isArray(content)||!content.length)continue
+      let session,shell,snapshot
+      try{if(sessions.list.getSnapshot().current!==sessionId||sessions.subagentAddress?.(sessionId))continue;session=sessions.binding(sessionId)?.session;shell=inputHub.shells.get(sessionId);if(!session||!shell||shell.disposed)continue;snapshot=session.getSnapshot()}catch{continue}
+      const turns=[...(snapshot.chat?.timeline?.turns?.keys()??[])].filter(Number.isSafeInteger),previous=all(sessionId)
+      const entry={sessionId,rpcId,session,shell,content:structuredClone(content),mode:envelope.payload.mode,observedAt:Date.now(),sequence:++sequence,wasRunning:snapshot.running===true,barrierTurn:Math.max(0,...turns),predecessors:previous.map(value=>value.rpcId),accepted:false,current:()=>current(entry),off:null,lastError:snapshot.promptError}
+      entry.annotation=annotationReader(sessionId,rpcId,content.filter(part=>part?.type==='text'&&typeof part.text==='string').map(part=>part.text).join(''))
+      if(!entry.current())continue
+      seen.add(rpcId);if(seen.size>256)seen.delete(seen.values().next().value)
+      entries.set(rpcId,entry)
+      entry.off=session.subscribe(()=>{
+       if(!entry.current()){clear(entry);return}
+       const state=session.getSnapshot(),node=state.chat?.order?.map(key=>state.chat.nodes.get(key)).find(node=>['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===rpcId)
+       if(node){settle(entry,node);return}
+       if(state.promptError!==entry.lastError){entry.lastError=state.promptError;if(state.promptError?.op==='send'&&!knownRejections.has(state.promptError.error)&&!entry.accepted)clear(entry)}
+      })
+      notify()
+     }else if(envelope.type==='server-response'){
+      const entry=entries.get(envelope.rpcId)
+      if(envelope.result?.ok!==true||envelope.result.value?.accepted!==true){if(envelope.result?.error&&typeof envelope.result.error==='object')knownRejections.add(envelope.result.error);if(entry)clear(entry)}
+      else if(entry)entry.accepted=true
+     }else if(envelope.type==='client-request'&&envelope.method==='session.cancel'){
+      for(const entry of [...entries.values()])if(entry.sessionId===envelope.payload?.sessionId)clear(entry)
+     }
+    }
+   })
+   offList=sessions.list.subscribe(()=>{for(const entry of [...entries.values()])if(!entry.current())clear(entry)})
+   return stop
+  }
+ }
+}
+function useNativeConversationSubmission(sessionId,order,nodeStore,useSession){
+ const revision=react.useSyncExternalStore(NativeConversationSubmissions.subscribe,NativeConversationSubmissions.version,NativeConversationSubmissions.version)
+ const snapshot=useSession(value=>value),preset=typeof HomePresentationSubmissions!=='undefined'&&!!HomePresentationSubmissions.read(sessionId)
+ const entries=NativeConversationSubmissions.all(sessionId),received=entries.filter(entry=>order.some(key=>{const node=nodeStore.get(key);return['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId}))
+ react.useLayoutEffect(()=>{for(const entry of entries)if(preset||received.includes(entry))NativeConversationSubmissions.consume(entry,preset?undefined:order.map(key=>nodeStore.get(key)).find(node=>['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId===entry.rpcId))},[revision,snapshot,preset])
+ return react.useMemo(()=>({snapshot,entries:preset?[]:entries.filter(entry=>!received.includes(entry))}),[revision,snapshot,preset])
+}
+function projectNativeConversationSubmissions(flow,pending,nodeStore){
+ if(!pending?.entries?.length)return flow
+ const turnOf=entry=>{const node=entry.kind==='node'?nodeStore.get(entry.key):null,value=entry.kind==='execution'?entry.turn:node?.location?.turn?.turn??node?.data?.turn;return Number.isSafeInteger(value)?value:null}
+ const mirrors=new Map(),requests=new Map(pending.entries.map(entry=>[entry.rpcId,entry]));
+ let result=flow.filter(entry=>{const rpcId=entry.kind==='pending-steering'?entry.item?.source?.rpcId:null;if(rpcId&&requests.has(rpcId)){mirrors.set(rpcId,entry);return false}return true}),previousTarget=0,activePending=false
+ for(const submission of pending.entries){
+  let barrier=submission.barrierTurn
+  if(submission.mode!=='steer')barrier=Math.max(barrier,previousTarget)
+  // A different durable human already owns its turn; never attach this request to it.
+  for(const entry of result){const node=entry.kind==='node'?nodeStore.get(entry.key):null,turn=turnOf(entry);if(turn!==null&&turn>barrier&&['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&node.data.source.rpcId!==submission.rpcId)barrier=turn}
+  const index=submission.mode==='steer'&&submission.wasRunning?-1:result.findIndex(entry=>{const turn=turnOf(entry);return turn!==null&&turn>barrier})
+  const user=mirrors.get(submission.rpcId)??{kind:'native-submitted-user',key:'submitted:'+submission.rpcId,submission}
+  if(index>=0){previousTarget=turnOf(result[index])??barrier;result.splice(index,0,user);activePending=true;continue}
+  const latest=pending.snapshot?.chat?.timeline?.turns?.get(barrier),closed=latest?.status==='closed'||latest?.end!=null
+  const preTurn=pending.snapshot?.running&&!activePending&&((!submission.wasRunning&&!submission.predecessors.length&&barrier===submission.barrierTurn)||closed)
+  if(preTurn){
+   const reusable=result.find(entry=>entry.kind==='execution'&&entry.running&&entry.turn===null&&!entry.nodeKeys?.length)
+   if(reusable)result=result.filter(entry=>entry!==reusable)
+   result=result.map(entry=>entry.kind==='execution'&&entry.running&&turnOf(entry)!==null&&turnOf(entry)<=barrier?{...entry,running:false}:entry)
+   result.push(user,reusable?{...reusable,pendingSubmission:true,observedAt:submission.observedAt}:{kind:'execution',key:'submitted-execution:'+submission.rpcId,turn:null,nodeKeys:[],running:true,pendingSubmission:true,observedAt:submission.observedAt});activePending=true
+  }else result.push(user)
+ }
+ return result
+}
+function useNativeSubmittedAnnotation(text,identity,authoritative,provided){
+ const retained=react.useRef(null),sessionId=identity?.source?.kind==='user'?identity.sessionId:null,rpcId=identity?.source?.rpcId,key=sessionId?JSON.stringify([sessionId,rpcId,text]):null
+ const proof=provided??(key?NativeConversationSubmissions.annotation(sessionId,rpcId,text):null)
+ if(proof?.current())retained.current={key,proof}
+ if(provided)return provided.current()?provided.parts:authoritative
+ // The exact local snapshot bridges only the readonly request's pending state.
+ // A null/rejected durable receipt still restores the original message as before.
+ if(authoritative?.pending===true&&retained.current?.key===key&&retained.current.proof.current())return retained.current.proof.parts
+ return authoritative
+}
+function NativeConversationSubmittedUser({entry,loadImage,openFile,t}){
+ const [metadata,setMetadata]=react.useState(null)
+ react.useEffect(()=>{
+  let live=true;const readers=[]
+  entry.content.forEach((part,index)=>{
+   if(part?.type!=='image'||typeof part.data!=='string'||!['image/png','image/jpeg','image/webp','image/gif'].includes(part.mediaType))return
+   const image=new Image();readers.push(image)
+   image.onload=()=>{if(live&&image.naturalWidth>0&&image.naturalHeight>0)setMetadata(previous=>{const sizes=new Map(previous?.entry===entry?previous.sizes:[]);sizes.set(index,{width:image.naturalWidth,height:image.naturalHeight});return{entry,sizes}})}
+   image.src='data:'+part.mediaType+';base64,'+part.data
+  })
+  return()=>{live=false;for(const image of readers)image.onload=null}
+ },[entry])
+ const projected=react.useMemo(()=>{
+  const urls=new Map(),content=entry.content.map((part,index)=>{
+   if(part?.type!=='image'||typeof part.data!=='string'||!['image/png','image/jpeg','image/webp','image/gif'].includes(part.mediaType))return part
+   // A bounded loading tile is replaced by the actual decoded image dimensions.
+   const size=(metadata?.entry===entry&&metadata.sizes.get(index))||{width:240,height:240}
+   const attachment={attachmentId:'submitted:'+entry.rpcId+':'+index,name:part.name,mediaType:part.mediaType,...size}
+   urls.set(attachment,'data:'+part.mediaType+';base64,'+part.data)
+   return{type:'image',attachment}
+  })
+  return{content,urls}
+ },[entry,metadata])
+ const imageLoader=react.useCallback(attachment=>projected.urls.has(attachment)?Promise.resolve(projected.urls.get(attachment)):loadImage(attachment),[projected,loadImage])
+ return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-anchor-key':'submitted:'+entry.rpcId,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-native-submitted-user':entry.rpcId},react.createElement(UserStyleBubble,{content:projected.content,imageLoader,openFile,t,nativeSubmittedAnnotation:entry.annotation}))
+}
+const NativeConversationSubmissions=createNativeConversationSubmissions();
+/* sherlock:conversation-submission:end */
