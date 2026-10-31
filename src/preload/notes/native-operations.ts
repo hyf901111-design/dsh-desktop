@@ -192,6 +192,7 @@ export function createNativeNoteOperations(options:Options){
  }
  const execute=async(input:any,current:()=>boolean=()=>true,advance:()=>void=()=>{})=>{
   assert(current);enter(input.generationId)
+  if(input.previewOnly===true&&!options.previewing?.(input.generationId))throw Error('笔记预览请求已变化，本次未写入正文。')
   if(input.action==='notes.blocks.read'){if(input.args?.scope==='selected'&&JSON.stringify(options.selected())!==JSON.stringify(input.context?.selectedNativeBlockIds??[]))throw Error('原生选区已变化，请重新选择。');return read(input.args,input.generationId,current)}
   if(!['notes.blocks.apply','notes.blocks.undo'].includes(input.action))throw Error('不支持的原生笔记操作。')
   const key=input.generationId+':'+input.requestId,serialized=fingerprint([input.action,input.args]),cached=receipts.get(key),inflight=pending.get(key)

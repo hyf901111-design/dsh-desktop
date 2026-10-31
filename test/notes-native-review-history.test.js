@@ -71,3 +71,18 @@ it.each(['notes.blocks.apply','notes.blocks.undo','notes.components.create','not
   expect((await foreign.call({action:'conversation-state',phase:'accepted'})).status).toBe(503)
  }finally{foreign.dispose()}
 })
+
+it('admits a durable prepared native table only for an explicit preview-only begin and the same generation',async()=>{
+ const f=await nativeFixture();try{
+  await f.call({action:'conversation-native-begin',previewOnly:true,prompt:'创建一个8乘8的表格',title:'待确认表格'})
+  const prepared={capability:'notes.blocks.apply',status:'succeeded',data:{pendingPreview:true,actionId:'owned'},message:'表格建议已准备，正文未修改。'}
+  expect((await f.call({action:'conversation-native-end',phase:'ready',receipt:{...prepared,data:{...prepared.data,actionId:'foreign'}}})).status).toBe(503)
+  expect((await f.call({action:'conversation-native-end',phase:'ready',receipt:nativeReceipt})).status).toBe(503)
+  expect((await f.call({action:'conversation-native-end',phase:'ready',receipt:prepared})).status).toBe(200);f.restart();expect(f.rows()[0]).toMatchObject({phase:'ready',previewOnly:true,result:{capabilityReceipts:[{data:{pendingPreview:true}}]}})
+  expect((await f.call({action:'conversation-state',phase:'accepted'})).status).toBe(200)
+ }finally{f.dispose()}
+ const direct=await nativeFixture();try{
+  await direct.call({action:'conversation-native-begin',prompt:'创建一个3乘3的表格',title:'原生即时表格'})
+  expect((await direct.call({action:'conversation-native-end',phase:'ready',receipt:{capability:'notes.blocks.apply',status:'succeeded',data:{pendingPreview:true,actionId:'owned'},message:'伪造预览'}})).status).toBe(503)
+ }finally{direct.dispose()}
+})

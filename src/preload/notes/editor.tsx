@@ -620,9 +620,9 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     request.current = requestId;setWriting(true);setDocumentWriting(!!inlineTarget||component||!!guideSummary.current); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
-      const emptyTable=!component&&nativeBlankTableIntent(prompt,images)
+      const emptyTable=!component&&(!!inlineTarget||!captured.text)&&nativeBlankTableIntent(prompt,images)
       if(emptyTable){
-        composerPlans.current=undefined
+        if(inlineTarget)composerPlans.current=undefined;else setDocumentWriting(true)
         const anchorId=inlineTarget?.blockId||captured.cursor||editor.getTextCursorPosition().block.id
         if(!noteInlineBlockIdentity(editor,anchorId)&&editor.document.length===1&&editor.document[0].type==='paragraph'&&!editor.document[0].content?.length)captureNoteInlineAnchor(editor,client.current,anchorId)
         const identity=noteInlineBlockIdentity(editor,anchorId)
@@ -632,11 +632,18 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent()||noteInlineBlockIdentity(editor,anchorId)!==identity)throw Error(t('原插入位置已删除或变化，请在空白行重新启用 AI。'))
         if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
         capabilityFingerprint.current=noteCapabilityFingerprint(snapshot());dataRefreshGuard.current.begin(requestId,snapshot())
-        const outcome=await props.bridge.request('native-table',{sessionId:props.sessionId,requestId,documentId:client.current,prompt,anchorId,title:titleRef.current})
+        const outcome=await props.bridge.request('native-table',{sessionId:props.sessionId,requestId,documentId:client.current,prompt,anchorId,title:titleRef.current,...!inlineTarget?{entryPoint:'composer'}:{}})
         // A stopped or superseded request may retain honest applied/saved facts
         // in its journal/history, but cannot commit input or reopen old UI.
         if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent())return
         const {receipt,result,phase}=outcome,summary=t('已插入表格')
+        if(!inlineTarget){
+          const state=composerPlans.current
+          if(receipt?.status!=='succeeded'||receipt.effect||receipt.data?.pendingPreview!==true||state?.requestId!==requestId||!state.plans.length||!state.projected)throw Error(receipt?.message||t('表格建议尚未准备完成，笔记内容已保留。'))
+          const changed=new Set(state.plans.flatMap(plan=>plan.changedBlockIds)),blocks=state.projected.filter(block=>changed.has(block.id)),markdown=await editor.blocksToMarkdownLossy(blocks)
+          composerPreview.current={requestId,plans:state.plans,components:[]};const candidate={kind:'text' as const,markdown,capabilityReceipts:result.capabilityReceipts,capabilitySummary:result.capabilitySummary}
+          setPreview({requestId,result:candidate,fingerprint,selectedText:'',from:0,to:0,cursor:anchorId});publishTask(requestId,'ready',{result:candidate});commitNativeDraft(admission);return
+        }
         const value=finishInlineProposal(requestId,receipt.status!=='succeeded',summary,'native-operations',receipt.status==='succeeded'?undefined:receipt.message)
         if(value)showProposal(value);changed();publishTask(requestId,phase,{result,...phase==='failed'?{error:receipt.message}:{}});if(receipt.status==='succeeded')commitNativeDraft(admission);return
       }

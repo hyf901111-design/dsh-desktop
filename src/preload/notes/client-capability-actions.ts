@@ -18,6 +18,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
+const applyingPreviewOnly=(input:any)=>input.action==='notes.components.apply'&&input.previewOnly===true
 export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;anchoredCreate?(generationId:string):boolean;componentPreview?(generationId:string):{blocks:any[];stage(plan:NativeNotePreviewPlan):void}|undefined;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;nativeOperations?:{execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect|CapabilityNativeBlocksEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>(),activeData=new Set<string>()
@@ -107,6 +108,7 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    const bound=input.context.selectedBlockIds,selectionCurrent=()=>Array.isArray(bound)&&bound.length===1&&JSON.stringify(options.selectedBlockIds())===JSON.stringify(bound)
    if(!selectionCurrent())throw Error(t('选中组件已变化，请重新发送请求。'))
    const preview=options.componentPreview?.(input.generationId),projected=preview?JSON.parse(JSON.stringify(preview.blocks)):undefined
+   if(applyingPreviewOnly(input)&&!preview)throw Error(t('笔记预览请求已变化，本次未写入正文。'))
    const find=(blocks:any[],id:string):any=>{for(const block of blocks){if(block.id===id)return block;const child=find(block.children??[],id);if(child)return child}}
    const source=projected?{isEditable:options.editor.isEditable,document:projected,getBlock:(id:string)=>find(projected,id)}:options.editor
    const block=source.getBlock(bound[0])

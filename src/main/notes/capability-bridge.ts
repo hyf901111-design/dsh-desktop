@@ -46,7 +46,7 @@ export class NotesCapabilityBridge{
    let timer=setTimeout(()=>end(Error('笔记操作未及时确认，请查看文档当前状态。')),action==='notes.components.create'?250000:100000)
    const abort=()=>end(Error('笔记操作已取消。')),cleanup=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort)}
    this.pending.set(requestId,{owner:context.owner,sessionId:context.sessionId,action,resolve,reject,cleanup,signal,current,context,generationId,allowPreview});signal.addEventListener('abort',abort,{once:true})
-   try{this.send({requestId,generationId,action,args,context,owner:context.owner,sessionId:context.sessionId})}catch{end(Error('笔记窗口不可用。'))}
+   try{this.send({requestId,generationId,action,args,context,owner:context.owner,sessionId:context.sessionId,...allowPreview&&(nativeWrite(action)||action==='notes.components.apply')?{previewOnly:true}:{}})}catch{end(Error('笔记窗口不可用。'))}
   })
  }
  exportEffect(requestId:string,owner:string,sessionId:string,effect:CapabilityExportEffect){

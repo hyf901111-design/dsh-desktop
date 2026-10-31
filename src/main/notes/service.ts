@@ -155,7 +155,7 @@ export function installNotesService(options: {
       }
       case 'native-table': {
         const dimensions=typeof input.prompt==='string'&&nativeBlankTableIntent(input.prompt)
-        if(Object.keys(input).some(key=>!['owner','sessionId','requestId','documentId','prompt','anchorId','title'].includes(key))||!dimensions||input.prompt.length>8000||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>128||typeof input.documentId!=='string'||input.documentId.length>128||typeof input.anchorId!=='string'||!input.anchorId||input.anchorId.length>256||typeof input.title!=='string'||input.title.length>1000||options.canWrite?.(session)===false||documentAdapter.identity(session)!==input.documentId)throw Error('原生笔记请求已过期或不可编辑。')
+        if(Object.keys(input).some(key=>!['owner','sessionId','requestId','documentId','prompt','anchorId','title','entryPoint'].includes(key))||input.entryPoint!==undefined&&input.entryPoint!=='composer'||!dimensions||input.prompt.length>8000||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>128||typeof input.documentId!=='string'||input.documentId.length>128||typeof input.anchorId!=='string'||!input.anchorId||input.anchorId.length>256||typeof input.title!=='string'||input.title.length>1000||options.canWrite?.(session)===false||documentAdapter.identity(session)!==input.documentId)throw Error('原生笔记请求已过期或不可编辑。')
         const cacheKey=JSON.stringify([owner,session,'native-table',input.requestId]),fingerprint=createHash('sha256').update(JSON.stringify(input)).digest('hex'),cached=capabilityResults.get(cacheKey)
         if(cached){if(cached.fingerprint!==fingerprint)throw Error('请求标识已用于不同原生操作。');return cached.result}
         if(capabilityResults.size>=512)throw Error('本次客户端会话的操作回执已满，请重新启动客户端。')
@@ -172,7 +172,7 @@ export function installNotesService(options: {
         }
         let begun=false,receipt:any
         try{
-          const admission=await history('conversation-native-begin',{prompt:input.prompt,title:input.title});begun=true
+          const admission=await history('conversation-native-begin',{prompt:input.prompt,title:input.title,...input.entryPoint==='composer'?{previewOnly:true}:{}});begun=true
           if(admission.row&&!['ready','failed','stopped','accepted','discarded'].includes(admission.row.phase))throw Error('原生笔记准备尚未完成，本次未执行，请重试。')
           if(admission.row){const row=admission.row,receipt=row.result?.capabilityReceipts?.[0]??{status:'cancelled',requestId:input.requestId,capability:'notes.blocks.apply',message:'本次原生笔记请求已结束，原内容已保留。'},result={receipt,result:row.result??{kind:'conversation',markdown:receipt.message,capabilityReceipts:[receipt]},phase:row.phase};capabilityResults.set(cacheKey,{fingerprint,result});return result}
           if(!current())throw Error('本次原生笔记操作已取消。')
@@ -180,7 +180,7 @@ export function installNotesService(options: {
           if(!current()||read?.status!=='succeeded'||!read.data?.blocks?.some((row:any)=>row.block.id===input.anchorId))throw Error('原插入位置已变化，笔记内容已保留。')
           const {rows,columns}=dimensions
           const table={type:'table',content:{type:'tableContent',headerRows:0,rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
-          receipt=await capabilityBridge.request('notes.blocks.apply',{revision:read.data.revision,operations:[{op:'insert',anchor:{blockId:input.anchorId,placement:'before'},consumeEmpty:true,blocks:[table]}]},context,input.requestId,controller.signal,current)
+          receipt=await capabilityBridge.request('notes.blocks.apply',{revision:read.data.revision,operations:[{op:'insert',anchor:{blockId:input.anchorId,placement:input.entryPoint==='composer'?'after':'before'},consumeEmpty:true,blocks:[table]}]},context,input.requestId,controller.signal,current,input.entryPoint==='composer')
           // Saved is accepted only through this request's bridge and an actual
           // NotesStore checkpoint containing its native table, never a UI flag.
           if(receipt?.effect?.state==='saved'){
