@@ -42,7 +42,7 @@ it('releases old lifecycle listeners and cannot let an old disposer clear the ne
  expect(f.store.read('a').rpcId).toBe('rpc-2');expect(f.observers.size).toBe(1);stop();expect(f.store.read('a')).toBeNull();expect(f.observers.size).toBe(0);expect(f.owners.size).toBe(0);expect(f.states.size).toBe(0)
 })
 it('installs the actual native module twice with exact inverse and refuses drift/duplicates/orphan hooks',()=>{
- const script=`import{readFileSync}from'node:fs';import{Script}from'node:vm';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const raw=strip(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),one=patch(raw);assert.equal(patch(one),one);assert.equal(strip(one),raw);new Script(one);assert.throws(()=>strip(one+'\\nNativeConversationSubmissions;'));assert.throws(()=>strip(one.replace('function useNativeConversationSubmission','function invalidNativeHook')));assert.throws(()=>patch(raw+'\\nNativeConversationSubmittedUser;'));assert.throws(()=>strip(one.replace('/* sherlock:conversation-submission:v3 */','/* sherlock:conversation-submission:v3 */ /* sherlock:conversation-submission:v3 */')));console.log('strict two-pass/inverse/parse passed')`
+ const script=`import{readFileSync}from'node:fs';import{Script}from'node:vm';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const raw=strip(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),one=patch(raw);assert.equal(patch(one),one);assert.equal(strip(one),raw);new Script(one);assert.throws(()=>strip(one+'\\nNativeConversationSubmissions;'));assert.throws(()=>strip(one.replace('function useNativeConversationSubmission','function invalidNativeHook')));assert.throws(()=>patch(raw+'\\nNativeConversationSubmittedUser;'));assert.throws(()=>strip(one.replace('/* sherlock:conversation-submission:v4 */','/* sherlock:conversation-submission:v4 */ /* sherlock:conversation-submission:v4 */')));console.log('strict two-pass/inverse/parse passed')`
  expect(execFileSync(process.execPath,['--input-type=module','-e',script],{encoding:'utf8',maxBuffer:8*1024*1024})).toContain('strict two-pass/inverse/parse passed')
 })
 it('invalidates quietly when an actual session binding disappears during lifecycle teardown',()=>{
@@ -70,3 +70,50 @@ it('strictly upgrades the complete released v2 block to the bounded v3 flow with
  expect(execFileSync(process.execPath,['--input-type=module','-e',script],{encoding:'utf8',maxBuffer:8*1024*1024})).toContain('v2 strict migration')
 })
 it('keeps the real predecessor turn fence when React hands off before the session observer runs',()=>{const f=fixture();f.setState({blank:false,chat:{order:[],nodes:new Map(),timeline:{turns:new Map([[1,{turn:1,status:'closed'}]])}}});f.emit(f.request('one'),f.request('two'));const entry=f.store.read('a'),node={kind:'user',location:{kind:'turn',turn:{turn:2}},data:{source:{kind:'user',rpcId:'one'}}};f.store.consume(entry,node);expect(f.store.read('a').barrierTurn).toBe(2);f.stop()})
+
+const active=f=>f.setState({running:true,chat:{order:[],nodes:new Map(),timeline:{turns:new Map([[1,{turn:1,status:'open'}]])}}})
+const message=(id,rpcId,text='相同的需求')=>({id,role:'user',source:{kind:'user',rpcId},content:[{type:'text',text}]})
+const frame=(type,data)=>({type:'server-request',payload:{sessionId:'a',type,...data}})
+const event=(seq,type,data)=>frame('session/event',{event:{seq,type,data}})
+const row=(message,anchorSeq,placement='queued')=>({id:message.id,messageId:message.id,source:message.source,content:message.content,placement,anchorSeq,message})
+it('keeps distinct queued RPCs out of optimistic admission even for identical text, and only an exact real claim admits one',()=>{
+ const f=fixture();active(f);f.emit(f.request('one'),f.request('two'));const one=message('m1','one'),two=message('m2','two')
+ f.emit(event(10,'agent/inbox/spliced',{target:'next-turn',start:0,inserted:[one]}),event(11,'agent/inbox/spliced',{target:'next-turn',start:1,inserted:[two]}),frame('session/queue',{items:[row(one,10),row(two,11)]}))
+ expect(f.store.all('a').map(e=>[e.rpcId,e.initialImmediate,e.admitted])).toEqual([['one',false,false],['two',false,false]])
+ f.emit(frame('session/queue',{items:[]}));expect(f.store.all('a').every(e=>!e.admitted)).toBe(true)
+ f.emit(event(12,'turn/start',{turn:2}),event(13,'agent/inbox/spliced',{target:'next-turn',start:0,removedCount:1,inserted:[]}))
+ expect(f.store.all('a').map(e=>[e.rpcId,e.admitted,e.admittedTurn])).toEqual([['one',true,2],['two',false,null]])
+ expect(f.store.queue('a',[row(one,10),row(two,11)],new Map()).map(r=>r.id)).toEqual(['m2']);f.stop()
+})
+it('uses exact queue identity for edit/delete/promotion and ignores stale queue snapshots and receipts',()=>{
+ const f=fixture();active(f);f.emit(f.request('edit'),f.request('remove'),f.request('promote'));const a=message('m1','edit'),b=message('m2','remove'),c=message('m3','promote')
+ f.emit(event(1,'agent/inbox/spliced',{target:'next-turn',start:0,inserted:[a,b,c]}))
+ const edited=message('m1','edit','编辑后的排队正文')
+ f.emit(event(2,'agent/inbox/spliced',{target:'next-turn',start:0,removedCount:1,inserted:[edited],outcome:'canceled'}),frame('session/queue',{items:[row(a,1)]}))
+ expect(f.store.read('a').content).toEqual(edited.content);expect(f.store.read('a').admitted).toBe(false)
+ expect(f.store.queue('a',[row(a,1)],new Map())[0].preview).toBe('编辑后的排队正文')
+ f.emit(event(3,'agent/inbox/spliced',{target:'next-turn',start:1,removedCount:1,inserted:[],outcome:'canceled'}))
+ expect(f.store.all('a').map(e=>e.rpcId)).toEqual(['edit','promote']);expect(f.store.queue('a',[row(b,1)],new Map())).toHaveLength(0)
+ f.emit({type:'client-request',method:'session.updateQueue',rpcId:'promote-action',payload:{sessionId:'a',itemId:'m3',action:{kind:'steer'}}},{type:'server-response',rpcId:'promote-action',result:{ok:true,value:{accepted:true}}})
+ expect(f.store.all('a').find(e=>e.rpcId==='promote').mode).toBe('steer')
+ f.emit({type:'server-response',rpcId:'remove',result:{ok:true,value:{accepted:true}}},f.request('remove'));expect(f.store.all('a').map(e=>e.rpcId)).toEqual(['edit','promote']);f.stop()
+})
+it('does not infer a claim across a missing event or from another turn, and preserves queued work across cancellation',()=>{
+ const f=fixture();active(f);f.emit(f.request());const m=message('m1','rpc-1');f.emit(event(1,'agent/inbox/spliced',{target:'next-turn',start:0,inserted:[m]}),event(3,'turn/start',{turn:2}),event(4,'agent/inbox/spliced',{target:'next-turn',start:0,removedCount:1,inserted:[]}))
+ expect(f.store.read('a').admitted).toBe(false)
+ f.emit({type:'client-request',method:'session.cancel',payload:{sessionId:'a'}});expect(f.store.read('a').rpcId).toBe('rpc-1')
+ f.setOwner('other');expect(f.store.read('a')).toBeNull();f.stop()
+})
+it('keeps an idle first queue immediate, but a closed-to-open turn or another queued predecessor is not idle',()=>{
+ const f=fixture();f.emit(f.request('first'));expect(f.store.read('a').initialImmediate).toBe(true);f.emit(f.request('second'));expect(f.store.all('a')[1].initialImmediate).toBe(false);f.stop()
+ const stale=fixture();stale.setState({running:false,chat:{timeline:{turns:new Map([[2,{turn:2,status:'open'}]])}}});stale.emit(stale.request());expect(stale.store.read('a').initialImmediate).toBe(false);stale.stop()
+})
+it('filters a late queued mirror by exact durable RPC without suppressing another same-text request or a non-RPC message',()=>{
+ const f=fixture(),one=message('m1','one'),two=message('m2','two'),external={...message('m3','external'),source:{kind:'user'}}
+ const nodes=new Map([['human',{kind:'user',data:{source:{kind:'user',rpcId:'one'}}}],['old',{kind:'user',data:{source:{kind:'user'}}}]])
+ expect(f.store.queue('a',[row(one,1),row(two,2),row(external,3)],nodes).map(r=>r.id)).toEqual(['m2','m3']);f.stop()
+})
+it('strictly migrates the exact released v3 definition to v4 and restores its QueueDock hook without weakening drift guards',()=>{
+ const script=`import{readFileSync}from'node:fs';import{execFileSync}from'node:child_process';import{createHash}from'node:crypto';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const previous=await import('data:text/javascript;base64,'+execFileSync('git',['show','55e46e2433df898bcf28a6b3a503b6d84901ca26:scripts/lib/conversation-submission.mjs']).toString('base64')),raw=strip(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),old=previous.patchConversationSubmission(raw),legacy=readFileSync('test/fixtures/conversation-submission-v3.txt','utf8');assert.equal(createHash('sha256').update(legacy).digest('hex'),'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045');assert.ok(old.includes(legacy));const one=patch(old);assert.equal(strip(one),raw);assert.equal(patch(one),one);assert.equal(one,patch(raw));assert.throws(()=>strip(old.replace('accepted:false','accepted:true')));assert.throws(()=>strip(one.replace('useNativeSubmittedQueue(arguments[0].sessionId','useNativeSubmittedQueue("wrong"')));console.log('released v3 strict migration and queue inverse passed')`
+ expect(execFileSync(process.execPath,['--input-type=module','-e',script],{encoding:'utf8',maxBuffer:8*1024*1024})).toContain('v3 strict migration')
+})
