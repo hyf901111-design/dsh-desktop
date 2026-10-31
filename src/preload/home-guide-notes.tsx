@@ -239,10 +239,10 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    return [...surface.querySelectorAll<HTMLAnchorElement>(child?'.child-menu a[role="option"]':'.root-menu a[role="option"]')]
   }
   const surface=await until(()=>menu?.element()),parent=await until(()=>itemsFor(surface).find(item=>item.getAttribute('aria-label')===t('组件库')))
-  const parentRevision=surface.dataset.noteMenuRevision;await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
+  const parentRevision=surface.dataset.noteMenuRevision;await wait(700);itemsFor(surface);await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
   parent.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}))
   const child=await until(()=>surface.dataset.noteMenuRevision!==parentRevision&&itemsFor(surface,true).find(item=>item.getAttribute('aria-label')===t('行情面板')))
-  await wait(500);await point(child,'在组件库二级菜单选择行情面板');if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');child.click()
+  await wait(750);await point(child,'在组件库二级菜单选择行情面板');if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');child.click()
   await until(()=>editor!.snapshot().blocks.some(block=>{try{return block.type==='research'&&JSON.parse(block.props.payload).containerSpec?.widget==='quote'}catch{return false}}))
   await frame();expected=fingerprint();await flush()
  }
@@ -351,8 +351,8 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   return [...host.querySelectorAll<HTMLButtonElement>('.en-preview button')].find(button=>button.textContent===t(replace?'替换所选':'添加至正文'))
  },90000)
  let summaryTail:(()=>boolean)|undefined,summaryBefore='',summaryRequestId=''
- const summaryUnchanged=()=>{unchanged();if(!summaryTail?.())throw Error('笔记末尾光标已变化，已保留用户当前操作。')}
- const taskCompose=async()=>{await playing();unchanged();await emptyTail('guide-note-summary-anchor');summaryTail=editor!.prepareNative('summary');summaryBefore=fingerprint();await nativeReady().type('note')}
+ const summaryUnchanged=()=>{unchanged();if(!summaryTail?.())throw Error('笔记正文已变化，已保留用户当前操作。')}
+ const taskCompose=async()=>{await playing();unchanged();summaryTail=editor!.prepareNative('summary');summaryBefore=fingerprint();await nativeReady().type('note')}
  const taskReview=async()=>{summaryRequestId=await nativeReady().reviewSummary();summaryUnchanged();if(text().includes(HOME_NOTES_TASK_RESULT)||fingerprint()!==summaryBefore)throw Error('总结尚未确认，正文不应提前插入。');await playing()}
  const taskApply=async()=>{
   summaryUnchanged();const before=editor!.snapshot().blocks.filter(block=>block.type==='research'||noteText(block.content).trim())

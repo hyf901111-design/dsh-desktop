@@ -11,7 +11,9 @@ export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
 export type HomeOperationExample = HomeOperationCard | 'workbench'
 export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void; demoEntry?:{closeTarget:HTMLElement;closeOwned():Promise<void>} }
 type Card = HomeOperationCard
-type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: HomeOperationExample, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
+export type HomeOperationsDeck = {element:HTMLElement;usecase:HTMLElement;example:HTMLButtonElement;cards:HTMLButtonElement[];pages:HTMLButtonElement[];refresh():void;layout():void;setVisible(visible:boolean,autoplay?:boolean):void;dispose():void}
+type EmbeddedDeck = {host:HTMLElement;onAction(card:HomeOperationCard):void;onExample(kind:HomeOperationExample):void;onSelect(index:number):void;capture(deck:HomeOperationsDeck):void}
+type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: HomeOperationExample, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void>; embedded?:EmbeddedDeck }
 const mounted = new WeakMap<Document, () => void>()
 const STYLE_ID = 'sherlock-home-operations-style'
 const DESIGN_WIDTH = 780
@@ -53,12 +55,12 @@ const COPY = HOME_OPERATIONS_COPY
 
 /** Owns homepage presentation; native action adapters retain session and draft state. */
 export function mountHomeOperations(doc: Document = document, options: Options = {}): () => void {
-  const existing = mounted.get(doc)
+  const existing = options.embedded ? undefined : mounted.get(doc)
   if (existing) return existing
   const win = doc.defaultView
   if (!win || !doc.body) return () => {}
   const style = doc.createElement('style')
-  style.id = STYLE_ID
+  style.id = options.embedded ? STYLE_ID+'-deck' : STYLE_ID
   style.textContent = styles
   doc.documentElement.append(style)
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
@@ -166,7 +168,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       const text = copy().cases[Number(layer.dataset.case)]!
       layer.querySelector('.odyssey-operations-title strong')!.textContent = text[0]
       layer.querySelector('.odyssey-operations-subtitle')!.textContent = text[1]
-      layer.querySelector('.odyssey-operations-description')!.textContent = text[2]
+      const description=layer.querySelector('.odyssey-operations-description')!;if(!description.hasAttribute('data-odyssey-operations-intro'))description.textContent=text[2]
     }
     if (usecase) { usecase.dataset.case = String(caseIndex); usecase.setAttribute('aria-label', `${selected[0]} · ${selected[1]}`) }
     exampleButton?.setAttribute('aria-label', (locale() === 'en' ? 'Play example: ' : '播放示例：') + selected[1])
@@ -638,8 +640,8 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const tabs = doc.createElement('div'); tabs.className = 'odyssey-operations-tabs'; tabs.setAttribute('role', 'tablist')
     quickTab = doc.createElement('button'); wallpaperTab = doc.createElement('button')
     for (const [tab, key] of [[quickTab, 'quick'], [wallpaperTab, 'wallpapers']] as const) {
-      tab.type = 'button'; tab.dataset.odysseyOperationsTab = key; tab.setAttribute('role', 'tab'); tab.id = `odyssey-home-${key}-tab`
-      tab.setAttribute('aria-controls', `odyssey-home-${key}-panel`)
+      tab.type = 'button'; tab.dataset.odysseyOperationsTab = key; tab.setAttribute('role', 'tab'); tab.id = `odyssey-${options.embedded?'deck':'home'}-${key}-tab`
+      tab.setAttribute('aria-controls', `odyssey-${options.embedded?'deck':'home'}-${key}-panel`)
       tab.addEventListener('click', () => selectTab(key))
       tab.addEventListener('keydown', event => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return
@@ -662,10 +664,10 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     })
     heading.append(tabs, appearance)
     const grid = doc.createElement('div'); grid.className = 'odyssey-operations-grid'
-    quickPanel = grid; grid.id = 'odyssey-home-quick-panel'; grid.setAttribute('role', 'tabpanel'); grid.setAttribute('aria-labelledby', quickTab.id)
+    quickPanel = grid; grid.id = options.embedded?'odyssey-deck-quick-panel':'odyssey-home-quick-panel'; grid.setAttribute('role', 'tabpanel'); grid.setAttribute('aria-labelledby', quickTab.id)
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
     exampleButton = doc.createElement('button'); exampleButton.type = 'button'; exampleButton.className = 'odyssey-operations-example-open'; exampleButton.dataset.odysseyOperationsOpenExample = ''; exampleButton.tabIndex = -1
-    exampleButton.addEventListener('click', () => { void runAction(EXAMPLE_KINDS[caseIndex]!, true) })
+    exampleButton.addEventListener('click', () => { if(options.embedded)options.embedded.onExample(EXAMPLE_KINDS[caseIndex]!);else void runAction(EXAMPLE_KINDS[caseIndex]!, true) })
     usecase.append(exampleButton)
     const createCaseLayer = (index: number) => {
       const layer = doc.createElement('div')
@@ -705,7 +707,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const quickGrid = doc.createElement('div'); quickGrid.className = 'odyssey-operations-quick-grid'
     for (const key of CARDS) {
       const card = doc.createElement('button'); card.type = 'button'; card.className = `odyssey-operations-quick-card ${key}`; card.dataset.card = key; card.tabIndex = -1
-      card.addEventListener('click', () => { void runAction(key) })
+      card.addEventListener('click', () => { if(options.embedded)options.embedded.onAction(key);else void runAction(key) })
       const label = doc.createElement('span'); label.className = 'odyssey-operations-quick-label'
       const illustration = doc.createElement('div'); illustration.className = 'odyssey-operations-illustration'; illustration.setAttribute('aria-hidden', 'true')
       imagePair(illustration)
@@ -725,7 +727,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     toggle = doc.createElement('button'); toggle.type = 'button'; toggle.className = 'odyssey-operations-toggle'; toggle.dataset.odysseyHomeOperationsToggle = ''; toggle.setAttribute('aria-expanded', 'false')
     toggle.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     toggle.addEventListener('click', toggleSection)
-    caseTransition = createHomeOperationsCaseTransition({ win, card: usecase, initialIndex: caseIndex, createLayer: createCaseLayer, onCommit: index => { caseIndex = index; updateCase() } })
+    caseTransition = createHomeOperationsCaseTransition({ win, card: usecase, initialIndex: caseIndex, createLayer: createCaseLayer, onCommit: index => { caseIndex = index; updateCase();options.embedded?.onSelect(index) } })
     carousel = createHomeOperationsCarousel({ win, card: usecase, initialIndex: caseIndex, onChange: index => caseTransition?.select(index) })
   }
   const resize = new win.ResizeObserver(measure)
@@ -784,6 +786,22 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (disposed || frame) return
     frame = win.requestAnimationFrame(() => { frame = 0; sync() })
   }
+  // Explore embeds the original card builder and effect owners without mounting
+  // the homepage composer, wheel navigation, tabs, or a second action owner.
+  if(options.embedded){
+    const embedded=options.embedded;host=embedded.host;root=host;state=intent='operations';visible=false
+    createSection();section!.dataset.odysseyOperationsDeck='';section!.hidden=false;section!.inert=false;section!.setAttribute('aria-hidden','false');quickPanel!.hidden=false;quickPanel!.inert=false
+    host.dataset.odysseyHomeOperationsState='operations';host.append(section!)
+    const layout=()=>{if(!host||!section||!host.clientWidth||!host.clientHeight)return;host.style.setProperty('--odyssey-operations-deck-scale',String(Math.min(host.clientWidth/780,host.clientHeight/346)))}
+    const setVisible=(next:boolean,autoplay=true)=>{visible=next;host!.dataset.odysseyOperationsActiveTab=next?'quick':'wallpapers';carousel?.setVisible(next&&autoplay);caseTransition?.setVisible(next);for(const target of [...quickCards,...pages,exampleButton!])target.tabIndex=next?0:-1;if(!next){clearPointers();clearIllustrationBlends()}}
+    const refresh=()=>{updateImages();updateCase();layout()}
+    const changes=new win.MutationObserver(refresh);changes.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});changes.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']})
+    const size=new win.ResizeObserver(layout);size.observe(host)
+    const mode=()=>{if(reduced.matches){clearPointers();clearIllustrationBlends()}};reduced.addEventListener('change',mode)
+    refresh()
+    embedded.capture({element:section!,usecase:usecase!,example:exampleButton!,cards:quickCards,pages,refresh,layout,setVisible,dispose:()=>{if(disposed)return;disposed=true;changes.disconnect();size.disconnect();reduced.removeEventListener('change',mode);detach();style.remove()}})
+    return()=>{if(disposed)return;disposed=true;changes.disconnect();size.disconnect();reduced.removeEventListener('change',mode);detach();style.remove()}
+  }
   const changes = new win.MutationObserver(records => {
     if (records.every(record => own(record.target) || record.target === host && record.type === 'attributes' && record.attributeName === 'style' || record.type === 'childList' && [...record.addedNodes, ...record.removedNodes].every(own))) return
     scheduleSync()
@@ -822,4 +840,12 @@ export function mountHomeOperations(doc: Document = document, options: Options =
   }
   mounted.set(doc, dispose)
   return dispose
+}
+
+/** The same card DOM, gradients, illustration passes, tilt and carousel as Home. */
+export function createHomeOperationsDeck(doc:Document,host:HTMLElement,options:{onAction(card:HomeOperationCard):void;onExample(kind:HomeOperationExample):void;onSelect(index:number):void}):HomeOperationsDeck{
+ let deck:HomeOperationsDeck|undefined
+ mountHomeOperations(doc,{embedded:{host,...options,capture:value=>{deck=value}}})
+ if(!deck)throw Error('运营卡片尚未就绪。')
+ return deck
 }
