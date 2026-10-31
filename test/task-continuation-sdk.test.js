@@ -16,9 +16,12 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import Persistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import Jobs from '@deepseek-ai/dsh-jobs-local'
 import {apply as jobTools} from '@deepseek-ai/dsh-tool-jobs'
-import {patchTaskProgressRuntime} from '../scripts/lib/task-progress-runtime.mjs'
 import {legacyTaskProgressSource} from './fixtures/task-progress-v1.js'
 import {patchConversationTurnOrder} from '../scripts/lib/conversation-turn-order.mjs'
+
+// The installer fingerprints Function.toString() bytes. Load the production
+// Node module unchanged, as the installer does; Vitest inserts semicolons.
+const {patchTaskProgressRuntime}=createRequire(import.meta.url)('../scripts/lib/task-progress-runtime.mjs')
 
 const closes=[]
 afterEach(async()=>{for(const close of closes.splice(0).reverse())await close()})

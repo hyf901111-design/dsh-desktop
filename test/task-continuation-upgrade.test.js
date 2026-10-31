@@ -5,9 +5,12 @@ import {join} from 'node:path'
 import {execFileSync} from 'node:child_process'
 import {parse} from '@babel/parser'
 import {createHash} from 'node:crypto'
-import {patchTaskProgressRuntime} from '../scripts/lib/task-progress-runtime.mjs'
+import {createRequire} from 'node:module'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
 import {legacyTaskProgressSource} from './fixtures/task-progress-v1.js'
+
+// Exercise exactly the Node installer, including its strict byte guard.
+const {patchTaskProgressRuntime}=createRequire(import.meta.url)('../scripts/lib/task-progress-runtime.mjs')
 
 it('upgrades an already installed v1 runtime and produces identical bytes on a second complete patch pass',async()=>{
  const original=await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8'),source=legacyTaskProgressSource(original)

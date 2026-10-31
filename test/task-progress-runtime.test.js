@@ -1,6 +1,8 @@
 import { it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { installTaskProgressSync, patchTaskProgressRuntime } from '../scripts/lib/task-progress-runtime.mjs'
+import { createRequire } from 'node:module'
+// Preserve installer Function.toString() bytes instead of Vitest's rewriting.
+const { installTaskProgressSync, patchTaskProgressRuntime } = createRequire(import.meta.url)('../scripts/lib/task-progress-runtime.mjs')
 
 function fixture() {
   const hooks = {}; installTaskProgressSync({on:(name,fn)=>hooks[name]=fn})
