@@ -110,6 +110,52 @@ async function parentRequest(page:any){
  await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').length)).toBe(count+1)
  return page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').at(-1).input)
 }
+// Native QA session-48d863d1 seq14: Kimi reused this per-call ID for a
+// successful read and the following Python insert. Transport IDs were distinct.
+it.each(['space','sidebar'])('scopes the recorded read/apply ID through the real Notes Host and inserts Python once via %s',async entry=>{
+ const instruction='在这里插入一段Python代码，用函数计算列表均值，并处理空列表。',code='def mean(values):\n    if not values:\n        return None\n    return sum(values) / len(values)',requestId='insert-python-code-1'
+ let apply:any
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text),receipts=payload.clientReceipts
+  if(!receipts.length)return{kind:'capabilities',calls:[{requestId,capability:'notes.blocks.read',arguments:{scope:'note'}}]}
+  if(receipts.length===1){
+   expect(receipts[0]).toMatchObject({requestId,capability:'notes.blocks.read',status:'succeeded'})
+   apply={requestId,capability:'notes.blocks.apply',arguments:{revision:receipts[0].data.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'after'},consumeEmpty:true,blocks:[{id:'python-mean',type:'codeBlock',props:{language:'python'},content:code}]}]}}
+   return{kind:'capabilities',calls:[apply]}
+  }
+  expect(receipts[1]).toMatchObject({requestId,capability:'notes.blocks.apply',status:'succeeded'})
+  // An identical provider delivery must replay the receipt, not another edit.
+  if(receipts.length===2)return{kind:'capabilities',calls:[apply]}
+  return{kind:'conversation',markdown:''}
+ });try{
+  await f.page.evaluate(()=>{const editor=(window as any).editor;editor.insertBlocks([{id:'existing-table',type:'table',content:{type:'tableContent',rows:Array.from({length:8},(_,row)=>({cells:Array.from({length:8},(_,column)=>row===0&&column===0?'首格':row===7&&column===7?'末格':'')}))}}],'before','after');editor.focus();editor.setTextCursorPosition('anchor','start')})
+  await f.page.keyboard.press('Meta+s');await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks.some((block:any)=>block.id==='existing-table')).toBe(true)
+  const before=await f.page.evaluate(()=>JSON.parse(JSON.stringify((window as any).editor.document)))
+  await f.page.evaluate(()=>(window as any).useNativeModel=true)
+  if(entry==='space'){await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill(instruction);await input.press('Enter')}
+  else await f.page.evaluate((prompt:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'native-fixture',prompt,images:[]}})),instruction)
+  await expect.poll(()=>f.history().at(-1)?.result?.capabilityReceipts?.length).toBeGreaterThanOrEqual(2)
+  const initialReceipts=f.history().at(-1).result.capabilityReceipts
+  if(process.env.SHERLOCK_NATIVE_ID_EVIDENCE)writeFileSync(process.env.SHERLOCK_NATIVE_ID_EVIDENCE+'-'+entry+'.json',JSON.stringify({entry,receipts:initialReceipts.map(({requestId,capability,status,message}:any)=>({requestId,capability,status,message})),document:await f.page.evaluate(()=>(window as any).editor.document)},null,2)+'\n')
+  expect(initialReceipts.slice(0,2).map((receipt:any)=>({requestId:receipt.requestId,capability:receipt.capability,status:receipt.status}))).toEqual([{requestId,capability:'notes.blocks.read',status:'succeeded'},{requestId,capability:'notes.blocks.apply',status:'succeeded'}])
+  if(entry==='sidebar'){
+   await f.page.getByRole('button',{name:'添加至正文',exact:true}).waitFor({timeout:8000});expect(await f.page.evaluate(()=>JSON.parse(JSON.stringify((window as any).editor.document)))).toEqual(before);await acceptCandidate(f)
+  }else{await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor({timeout:8000});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click()}
+  const saved=f.store.load('fixture','native-fixture').saved.blocks
+  expect(saved.map((block:any)=>block.id)).toEqual(['before','existing-table','python-mean','after']);expect(saved.filter((block:any)=>block.id!=='python-mean')).toEqual(before.filter((block:any)=>block.id!=='anchor'));expect(saved[2]).toMatchObject({type:'codeBlock',props:{language:'python'},content:[{text:code}]})
+  const actions=await f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.method==='capability-reply'&&row.input.result?.effect?.kind==='native-blocks'))
+  const reads=await f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.method==='capability-reply'&&row.input.result?.data?.blocks))
+  expect(reads).toHaveLength(1);expect(f.modelRequests).toHaveLength(4);expect(f.modelRequests.every((request:any)=>request.purpose==='workspace-note')).toBe(true)
+  const row=f.history().at(-1);expect(row.result.capabilityReceipts).toMatchObject([{requestId,capability:'notes.blocks.read',status:'succeeded'},{requestId,capability:'notes.blocks.apply',status:'succeeded'},{requestId,capability:'notes.blocks.apply',status:'succeeded'}])
+  const parent=await f.page.evaluate(()=>(window as any).calls.find((row:any)=>row.method==='generate').input),replayed=await f.host('generate',parent)
+  const nativeWrites=await f.page.evaluate((id:string)=>(window as any).calls.filter((row:any)=>row.method==='capability-reply'&&row.input.result?.data?.actionId===id),parent.requestId)
+  expect(nativeWrites).toHaveLength(1);expect(nativeWrites[0].input.requestId).not.toBe(reads[0].input.requestId)
+  expect(replayed.capabilityReceipts).toEqual(row.result.capabilityReceipts);expect(f.modelRequests).toHaveLength(4)
+  await expect(f.host('generate',{...parent,prompt:'不同内容不可复用原生成请求'})).rejects.toThrow('请求标识')
+  await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor').waitFor();expect(await f.page.evaluate(()=>JSON.parse(JSON.stringify((window as any).editor.document)))).toEqual(saved);expect(f.errors).toEqual([])
+  metrics.push({entry:'recorded-python-'+entry,requestId,modelRounds:f.modelRequests.length,nativeReads:reads.length,nativeWriteReceipts:actions.length,oneCodeBlock:true,saved:true,reopen:true})
+ }finally{await f.close()}
+},25000)
 it.each(['automatic','mixed-manual'].flatMap(widthMode=>['missing-token','eof-containers'].map(protocol=>({widthMode,protocol}))))('replays the recorded $protocol sidebar response through Main with $widthMode widths and saves only the requested company cell, with exact Undo',async({widthMode,protocol})=>{
  const f=await open(request=>{
   const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text),receipts=payload.clientReceipts

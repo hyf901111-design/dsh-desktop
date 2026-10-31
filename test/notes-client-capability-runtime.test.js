@@ -81,8 +81,8 @@ it.each([{kind:'capabilities',calls:[]},{calls:[]},{kind:'operation',capability:
 
 it('keeps an incomplete model stream as a follow-up failure even when prior host operations succeeded',async()=>{
  const h=harness();h.ctx.llm.stream=async function*(){yield{type:'text-delta',text:'{"message":"已完成"}'};yield{type:'finish',reason:{kind:'max-tokens'}}}
- await expect(generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:[{capability:'notes.export',status:'succeeded',path:'/tmp/host-confirmed.pdf'}]})).rejects.toThrow('生成未完整结束')
- expect(noteConversationRows(h.session)[0]).toMatchObject({phase:'failed',error:expect.stringContaining('未完整结束')})
+ await expect(generateNoteSuggestion(h.ctx,{...h.input,clientReceipts:[{capability:'notes.export',status:'succeeded',path:'/tmp/host-confirmed.pdf'}]})).rejects.toMatchObject({code:'MAX_TOKENS',message:expect.stringContaining('本次模型输出未写入')})
+ expect(noteConversationRows(h.session)[0]).toMatchObject({phase:'failed',error:expect.stringContaining('MAX_TOKENS'),diagnostic:{purpose:'workspace-note',finish:'max-tokens',failure:{code:'MAX_TOKENS'}}})
 })
 
 it('preserves a failed follow-up request parameter without repeating earlier confirmed writes',async()=>{
