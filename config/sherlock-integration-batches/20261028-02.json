@@ -12718,10 +12718,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记右侧问答与内容候选预览统一",
+        "featureName": "笔记右侧问答与内容候选预览统一及演示落点修复",
         "branch": "codex/feat/notes-chat-preview-20261031",
         "baseCommit": "1fee2ebb24f013a9429dc05b92fd4de1d522cded",
-        "tipCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+        "tipCommit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
         "commits": [
           {
             "commit": "4f64b9246e3dca127b8d32971d23ca2608c18db5",
@@ -12750,6 +12750,13 @@
               "1931036ec59745b0347034a56d505147dbb6083a"
             ],
             "subject": "统一右侧空白表格快捷创建的原生预览确认流程"
+          },
+          {
+            "commit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
+            "parents": [
+              "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93"
+            ],
+            "subject": "修复笔记演示空格落点并对齐正常预览确认验收"
           }
         ],
         "files": [
@@ -12794,6 +12801,14 @@
             "path": "src/preload/notes/native-operations.ts"
           },
           {
+            "status": "M",
+            "path": "test/fixtures/home-note-components.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
             "status": "A",
             "path": "test/notes-chat-preview-browser.test.ts"
           },
@@ -12835,9 +12850,9 @@
               "test/notes-client-capability-editing.test.ts"
             ],
             "outcome": "passed",
-            "summary": "118/118：原完整33Native Browser（右侧3×3/8×8零模型空表改为预览→确认→原生编辑/保存/重开，旧光标首段仍追加末尾，Space快路/权限/停止/窄屏保留）、27路由/组件候选/撤销Browser、Main桥接/持久历史45、原组件editing13。日志 /tmp/notes-chat-preview-table-focused-final.log",
-            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
-            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "summary": "精确提交 abed：119/119 聚焦验证，包括新增真实 guide.prepareNative 的Space末行和summary不移动正文/caret变化拒绝回归；日志 /tmp/sherlock-core-note-chart-regression-20261031/committed-focused.log",
+            "verifiedCommit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
+            "completedAt": "2026-10-31T07:55:50.903618+00:00",
             "timeoutMs": 180000
           },
           {
@@ -12847,46 +12862,34 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript noEmit通过；/tmp/notes-chat-preview-table-typecheck-final.log",
-            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
-            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "summary": "精确abed TypeScript通过；/tmp/sherlock-core-note-chart-regression-20261031/committed-typecheck.log",
+            "verifiedCommit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
+            "completedAt": "2026-10-31T07:55:50.903618+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "node",
               "--check",
-              "packages/dsh-research-task-runtime/notes-ai.js"
+              "test/fixtures/home-note-components.js"
             ],
             "outcome": "passed",
-            "summary": "JS语法通过",
-            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
-            "completedAt": "2026-10-31T06:08:45.305108+00:00",
-            "timeoutMs": 180000
+            "summary": "测试fixture语法检查通过",
+            "verifiedCommit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
+            "completedAt": "2026-10-31T07:55:50.903618+00:00",
+            "timeoutMs": 30000
           },
           {
             "argv": [
               "node",
               "--check",
-              "packages/dsh-research-task-runtime/notes-session.js"
+              "test/home-guide-notes-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "JS语法通过",
-            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
-            "completedAt": "2026-10-31T06:08:45.305108+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "--check",
-              "packages/dsh-research-task-runtime/client-capability-receipts.js"
-            ],
-            "outcome": "passed",
-            "summary": "JS语法通过",
-            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
-            "completedAt": "2026-10-31T06:08:45.305108+00:00",
-            "timeoutMs": 180000
+            "summary": "测试语法检查通过",
+            "verifiedCommit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
+            "completedAt": "2026-10-31T07:55:50.903618+00:00",
+            "timeoutMs": 30000
           },
           {
             "argv": [
@@ -12895,15 +12898,15 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "源码无空白错误",
-            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
-            "completedAt": "2026-10-31T06:08:45.305108+00:00",
-            "timeoutMs": 180000
+            "summary": "空白检查通过",
+            "verifiedCommit": "abeda2d74d542e796db911d2db9108ac9db7f7f9",
+            "completedAt": "2026-10-31T07:55:50.903618+00:00",
+            "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产NotesApp真实浏览器、NotesStore、Main bridge/runtime链通过：60 Browser及58相关unit，共118例。右侧空表是本地确定性native-table Main路径，生成前后零LLM/零子agent；确认前正文和Saved零差异且无Space框，确认后可编辑并重开。未构建App；live provider/Native最终由Root同包验收。"
+          "summary": "Headless真实生产NotesApp/Main/Store聚焦119通过。相同依赖、同精确retained gate：baseline5f4 PASS，5f4+cf4 RED(chartCompose光标仍在非空旧段)；5f4+abed经仅一处test相邻if合并、精确resolved tree c458e285e0832f161cea86cca9da46525ce407c1 对全部变更文件逐字绑定，完整演示与手动改光标拒绝2/2 GREEN。保留正常NoteAiProcessing→SuggestionPanel同request，正文确认前逐字不变，一次添加/保存/重开。共享Native最终由Root验收。"
         },
         "acceptanceCriteria": [
           "普通总结/解释仅在右侧回答，不预先显示正文生成卡且不修改笔记。",
@@ -12914,15 +12917,23 @@
           "Demo summary hooks保留，不创建special UI或移动笔记光标。",
           "右侧内部AI inspect→notes.components.apply只准备所选组件内容候选，复用投影revision和原schema/CAS校验；确认时与native/text整批提交。组件菜单、external/Space和style/layout/align等设置路径不改变。",
           "右侧撤销候选复用journal.canRevert安全过滤，dirty/identity/依赖/无法精确定位时拒绝整项候选，正文及原审阅记录不变；干净候选确认前复核journal/正文/Y身份，确认后实际结果必须与预览相同。",
-          "右侧明确简单空表需求先用native-table准备无effect候选，显示正常SuggestionPanel；一次加入才写入同尺寸可编辑原生表格，默认追加文末；选区/明确位置/填充需求不被快捷路吞掉。Main预览租约失效时拒绝操作，不允许回落即时写入。"
+          "右侧明确简单空表需求先用native-table准备无effect候选，显示正常SuggestionPanel；一次加入才写入同尺寸可编辑原生表格，默认追加文末；选区/明确位置/填充需求不被快捷路吞掉。Main预览租约失效时拒绝操作，不允许回落即时写入。",
+          "非summary的本地guide.prepareNative恢复末行原生光标准备，空格键仅在真正空白行激活，保留Space入口校验。",
+          "summary不移动现有正文PM光标，捕获当时选区from/to、全文fingerprint与尾块，用户主动改选区或正文后拒绝采纳。",
+          "完整笔记演示使用生产NoteAiProcessing→SuggestionPanel，通过同request的data-note-preview-apply按钮；不要求special summary UI或同一DOM复用。",
+          "生成和预览时正文块与生成前逐字相同，无Space确认卡，点击添加才一次写入，并保存重开。",
+          "普通右侧问答/追加/原生表格/撤销保护保持r4行为；不修改普通processing语义。"
         ],
         "risks": [
+          "当前feature尚未merged，依官方refresh约束保留原始1fee基线；本完整卡包括5个提交和19文件。abed仍是cf4严格单父后继，本次新增修复仅4文件；严格增量r5卡和红绿provenance另保留。",
+          "与Explore r3测试同一loop内新增beforeSummaryCueCount存在一个上下文冲突，需合并保留该if和summaryBeforeBlocks捕获；已测试resolved文件在 /tmp/sherlock-core-note-chart-regression-20261031/derived/test/home-guide-notes-browser.test.js。生产源码无冲突。",
+          "独立frozen初次缺untracked vendor fixture记录及旧special UI期望、负例旧文案不匹配均保留，不计为通过。feature目录本身缺该vendor fixture，完整demo只在精确derived同字节依赖中验收；没有把环境缺件或源码测试当作Native。",
           "未确认候选只在当前编辑器内存，退出重开丢弃候选但原正文不变；旧完成会话和已写入正文不迁移、不删除。",
           "浏览器fixture验证真实生产事务和一次模型路由，不代表live provider成功率或延迟；需集成包实测普通总结与明确文末追加。",
           "新增候选事务覆盖notes.blocks.apply/undo、新建component及内部AI notes.components.apply内容修改；既有样式/对齐/数据刷新等直接组件设置保持原契约。",
           "右侧撤销仅允许完整且可精确投影的安全结果；含移动或不能完整撤销的记录明确拒绝生成候选。原Space撤销保持既有可安全部分回退能力，未放宽任何dirty/identity/位置/依赖guard。"
         ],
-        "generatedAt": "2026-10-31T06:08:45.305108+00:00"
+        "generatedAt": "2026-10-31T08:04:29.179527+00:00"
       }
     }
   ],
