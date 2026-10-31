@@ -1,0 +1,52 @@
+import {homeGuideTargetPoint,type HomeGuidePointerAction} from './home-guide-pointer'
+import type {HomeOperationActionContext} from './home-operations'
+import type {HomeGuideKind} from './home-guides'
+import type {HomeGuideEntryAction} from './home-guide-entry-native'
+type Options={homeEmpty?:boolean;context:HomeOperationActionContext;signal:AbortSignal;pointer:{perform(action:HomeGuidePointerAction):Promise<void>};assert():void;nativeClick(target:HTMLElement):void;activate(target:HTMLElement,action:HomeGuideEntryAction,beforeCommit:()=>Promise<void>):Promise<void>}
+/** Only visible native controls. The final click consumes one prepared-session lease. */
+export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuideKind,options:Options){
+ const win=document.defaultView!,check=()=>{if(options.signal.aborted||options.context.signal.aborted)throw new DOMException('演示入口已取消。','AbortError');options.assert()}
+ const visible=(node:HTMLElement)=>{try{homeGuideTargetPoint(document,node);return true}catch{return false}}
+ const unique=<T extends HTMLElement>(nodes:Iterable<T>):T|undefined=>{const all=[...new Set(nodes)].filter(visible);if(all.length>1)throw Error('可见入口不唯一，请重新打开探索。');return all[0]}
+ const wait=async<T>(read:()=>T|undefined)=>{const expires=Date.now()+6000;for(;;){check();const value=read();if(value)return value;if(Date.now()>=expires)throw Error('可见入口尚未就绪，请重新打开探索。');await new Promise(resolve=>win.setTimeout(resolve,25))}}
+ const click=async(target:HTMLElement)=>{check();await options.pointer.perform({target,action:'click'});check();homeGuideTargetPoint(document,target);options.nativeClick(target);check()}
+ const activate=async(target:HTMLElement,action:HomeGuideEntryAction)=>{check();await options.pointer.perform({target,action:'move'});check();await options.activate(target,action,async()=>{check();homeGuideTargetPoint(document,target);await options.pointer.perform({target,action:'click'});check();homeGuideTargetPoint(document,target)});check()}
+ const entry=options.context.demoEntry;if(!entry)throw Error('探索演示入口已变化。')
+ await options.pointer.perform({target:entry.closeTarget,action:'click'});check();homeGuideTargetPoint(document,entry.closeTarget);await entry.closeOwned();check()
+ if(document.querySelector('dialog[data-explore-menu][open]'))throw Error('探索尚未关闭，未继续操作。')
+ // Settings/plugin surfaces may hide a perfectly valid old conversation root.
+ // Return through the visible application control, otherwise stop safely.
+ if(document.body.dataset.workspaceSurface&&document.body.dataset.workspaceSurface!=='notes'||document.querySelector('.VOzbGW_overlay')){
+  const back=unique(document.querySelectorAll<HTMLElement>('button[aria-label="返回应用"],button[aria-label="Back to app"]'))
+  if(!back)throw Error('请先返回应用后再播放演示。')
+  await click(back);await wait(()=>(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')&&!document.querySelector('.VOzbGW_overlay')?true:undefined)
+ }
+ const root=document.body.dataset.workspaceSurface==='notes'?undefined:await wait(()=>unique(document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')))
+ const mode=kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':'chat'
+ const emptyHome=options.homeEmpty!==false&&root?.dataset.odysseyPage==='home'&&![...root.querySelectorAll<HTMLTextAreaElement>('textarea')].some(input=>input.value.trim())&&!root.querySelector('[data-note-reference-chip],[data-research-inline-reference],[data-input-attachment]')
+ if(emptyHome){
+  const tab=unique(root.querySelectorAll<HTMLElement>('[data-srb-tabs] [data-conversation-view-id="'+mode+'"]'))
+  if(tab){
+   if(tab.getAttribute('aria-selected')!=='true'){
+    await activate(tab,('home-'+mode) as HomeGuideEntryAction);return
+   }
+   const input=unique([...document.querySelectorAll<HTMLTextAreaElement>('.pI_x6G_centerCol textarea,[data-research-composer-host] textarea')].filter(node=>!node.readOnly))
+   if(input){if(input.value.trim())throw Error('输入框已有草稿，未用于演示。');await activate(input,'home-input');return}
+   // A selected empty Notes/Research view may have no visible composer. Its
+   // ordinary sidebar New control is the visible entry; do not click the
+   // selected tab again or force a hidden right-hand input to appear.
+  }
+ }
+ const sidebar=await wait(()=>unique(document.querySelectorAll<HTMLElement>('[data-dsh-sidebar-root]')))
+ const action:HomeGuideEntryAction=mode==='notes'?'new-note':mode==='research'?'new-research':'new-chat'
+ const labels=action==='new-note'?['新建笔记','新笔记','New note','New Note']:action==='new-research'?['新建研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
+ const matching=()=>unique([...sidebar.querySelectorAll<HTMLElement>('button,[role="menuitem"]'),...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"],[role="menu"] button,[data-sidebar-more] button')].filter(node=>labels.includes(node.getAttribute('aria-label')||node.textContent?.trim()||'')||(action==='new-note'&&node.hasAttribute('data-sidebar-new-note'))))
+ let target=matching()
+ if(!target&&action==='new-note'){
+  const more=unique([...sidebar.querySelectorAll<HTMLElement>('button')].filter(node=>['更多','More','更多新建选项'].includes(node.getAttribute('aria-label')||'')))
+  if(!more)throw Error('可见的新建笔记入口尚未就绪。')
+  await click(more);target=await wait(matching)
+ }
+ if(!target)throw Error('可见的新建入口尚未就绪。')
+ await activate(target,action)
+}

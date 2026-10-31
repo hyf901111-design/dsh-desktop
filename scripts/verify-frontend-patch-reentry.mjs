@@ -19,6 +19,9 @@ async function replay(){
  const moduleFor=async(url)=>{
   if(cache.has(url))return cache.get(url)
   if(url.startsWith('file:')){
+   // Project JSON imports still use their real bytes; only their module shape
+   // differs from JavaScript. Keep both on the same write-free VM overlay.
+   if(new URL(url).pathname.endsWith('.json')){const value=JSON.parse(actualRead(new URL(url),'utf8')),module=new SyntheticModule(['default'],function(){this.setExport('default',value)},{context,identifier:url});cache.set(url,module);return module}
    const module=new SourceTextModule(actualRead(new URL(url),'utf8'),{context,identifier:url,initializeImportMeta:meta=>{meta.url=url}});cache.set(url,module);return module
   }
   const value=url==='node:fs'?virtualFs:url==='node:fs/promises'?virtualPromises:await import(url),names=[...new Set(['default',...Object.keys(value)])]

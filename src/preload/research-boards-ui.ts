@@ -1,4 +1,5 @@
 import {waitForMemorySource} from './memory/source'
+import {installHomeGuideEntryNative} from './home-guide-entry-native'
 import {homeGuideSessionTitle,isHomeGuideSessionTitle} from '../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
 import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
@@ -66,6 +67,8 @@ export type PageDependencies = {
   workspaces: { list: Store<any>; [key: string]: any }
   researchWorkspaces: { for(id: string): Workspace }
   inputHub: { shells: Map<string, any> }
+  getInput?(sessionId:string):any
+  chatStore?:{create(sessionId:string):{actions:{setView(view:string):void}}}
   bridge: ResearchBoardsBridge
   slots?: any
   document?: Document
@@ -832,7 +835,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   cleanups.push(()=>guidePendingTitles.clear())
   const guideWorkspaceFlights = new Map<string, { guards: Set<() => void>; promise?: Promise<void> }>()
   let guideSelectedSession = current(), guideSelectionRevision = 0, guideSelectedAttempt = ''
-  const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number }>()
+  const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number;cancelled?:boolean;source?:string;selectionRevision?:number }>()
   const guideReadyWaiters = new Set<{ resolve(): void; reject(error: Error): void }>()
   const guideOwner = () => state.account.user?.userId ? 'account:' + state.account.user.userId : 'local'
   const guideStorage = () => {
@@ -963,17 +966,19 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   }
   listeners.add(repairSelectedGuideWorkspace)
   cleanups.push(() => listeners.delete(repairSelectedGuideWorkspace), deps.workspaces.list.subscribe(() => { repairSelectedGuideWorkspace(); notify() }))
-  const prepareHomeGuideSession = async (kind: GuideKind, replay: boolean) => {
+  const prepareHomeGuideSession = async (kind: GuideKind, replay: boolean, requester?:{check():void;runId?:string}) => {
+    requester?.check()
     await whenHomeGuideSessionsReady()
     const owner = guideOwner(), generation = state.account.generation, identityRevision = guideIdentityRevision
     const valid = () => {
+      requester?.check()
       if (disposed || guideOwner() !== owner || state.account.generation !== generation || identityRevision !== guideIdentityRevision) throw Error('账号或页面已变化，请重新打开示例。')
     }
     valid()
-    await migrateGuideTitles(true);valid()
+    if(!requester?.runId){await migrateGuideTitles(true);valid()}
     const records = guideRegistry(owner)
     const previous = !replay && [...records].reverse().find(entry => entry.kind === kind && guideSessionAvailable(entry))
-    const key = JSON.stringify([owner, generation, identityRevision, kind, replay])
+    const key = JSON.stringify([owner, generation, identityRevision, kind, replay,requester?.runId??null])
     let flight = guideFlights.get(key)
     if (!flight) {
       flight = (async () => {
@@ -1021,6 +1026,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const request = (event as CustomEvent).detail
     if (disposed || !request || Array.isArray(request) || typeof request.requestId !== 'string' || !request.requestId || request.requestId.length > 200) return
     const { requestId, kind, command } = request
+    if(command==='cancel'){const prior=guideRequests.get(requestId);if(prior)prior.cancelled=true;return}
     const reply = (value: Record<string, unknown>, record?: { owner?: string; generation?: number; revision?: number }) => {
       if (disposed) return
       const stale = value.ok === true && record && (record.owner !== guideOwner() || record.generation !== state.account.generation || record.revision !== guideIdentityRevision)
@@ -1030,13 +1036,17 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const fingerprint = JSON.stringify([kind, command, request.replay === true, request.sessionId])
     const prior = guideRequests.get(requestId)
     if (prior) { if (prior.fingerprint !== fingerprint) reply({ ok: false, message: '示例请求标识已使用。' }); else void prior.promise.then(value => reply(value, prior)); return }
-    const record = { fingerprint, promise: undefined as unknown as Promise<Record<string, unknown>>, owner: undefined as string | undefined, generation: undefined as number | undefined, revision: undefined as number | undefined }
+    const record = { fingerprint, promise: undefined as unknown as Promise<Record<string, unknown>>, owner: undefined as string | undefined, generation: undefined as number | undefined, revision: undefined as number | undefined,cancelled:false,source:current(),selectionRevision:guideSelectionRevision }
+    const valid=()=>{if(disposed||record.cancelled||current()!==record.source||guideSelectionRevision!==record.selectionRevision||record.owner!==undefined&&(record.owner!==guideOwner()||record.generation!==state.account.generation||record.revision!==guideIdentityRevision))throw Error('账号或页面已变化，请重新打开示例。')}
     const promise = (async () => {
+      valid()
       await whenHomeGuideSessionsReady()
+      valid()
       record.owner = guideOwner(); record.generation = state.account.generation; record.revision = guideIdentityRevision
-      if (command === 'prepare') { const entry = await prepareHomeGuideSession(kind, request.replay === true); return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: entry.fresh } }
+      if (command === 'prepare') { const entry = await prepareHomeGuideSession(kind, request.replay === true,{check:valid});valid(); return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: entry.fresh } }
       const owner = guideOwner(), generation = state.account.generation, origin = current(), identityRevision = guideIdentityRevision
       await whenHomeGuideSessionsReady()
+      valid()
       if (disposed || owner !== guideOwner() || generation !== state.account.generation || current() !== origin || identityRevision !== guideIdentityRevision) throw Error('账号或页面已变化，请重新打开示例。')
       const entry = getHomeGuideSession(request.sessionId)
       if (!entry || entry.kind !== kind) throw Error('该示例不属于当前账号，或会话已移除。')
@@ -1048,7 +1058,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           // Only the native title captured at creation is ours to replace.
           // A user's later title wins, including a name changed during entry.
           if(actualTitle()===pending.original){
+            valid()
             const renamed=await binding?.session?.rename(entry.title)
+            valid()
             if(renamed?.ok!==true)throw Error(renamed?.error?.message||'示例名称保存失败。')
           }
           if(disposed||owner!==guideOwner()||generation!==state.account.generation||identityRevision!==guideIdentityRevision||current()!==origin||!guideSessionAvailable(entry))throw Error('账号或页面已变化，未更新示例名称。')
@@ -1057,6 +1069,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         return {ok:true,sessionId:entry.sessionId,cwd:entry.cwd,title:entry.title}
       }
       navigation++
+      valid()
       deps.sessions.open(entry.sessionId)
       if (kind === 'board' || kind === 'workbench') selectBoardSession(entry.sessionId)
       return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: false }
@@ -1066,6 +1079,22 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (guideRequests.size > 128) guideRequests.delete(guideRequests.keys().next().value!)
     void promise.then(value => reply(value, record))
   }
+  cleanups.push(installHomeGuideEntryNative({
+    document:doc,
+    context:()=>{
+      const sessionId=current(),summary=sessionId?deps.sessions.list.getSnapshot().byId[sessionId]:undefined,binding=sessionId?deps.sessions.binding(sessionId):undefined
+      return{owner:guideOwner(),generation:state.account.generation,identityRevision:guideIdentityRevision,sessionId,selectionRevision:guideSelectionRevision,input:sessionId?(deps.getInput?deps.getInput(sessionId):deps.inputHub.shells.get(sessionId)):undefined,eligible:state.account.status!=='loading'&&(!sessionId||!!summary&&!summary.removed&&!summary.subagent&&!summary.parentId&&summary.origin!=='subagent'&&binding?.kind!=='subagent')}
+    },
+    subscribe:listener=>{listeners.add(listener);const off=deps.sessions.list.subscribe(listener);return()=>{listeners.delete(listener);off()}},
+    prepare:(kind,runId,check)=>prepareHomeGuideSession(kind,true,{check,runId}),
+    open:(entry,kind,check)=>{
+      check();const registered=getHomeGuideSession(entry.sessionId)
+      if(!registered||registered.kind!==kind||registered.cwd!==entry.cwd||!deps.chatStore)throw Error('原生示例入口已变化。')
+      deps.chatStore.create(entry.sessionId).actions.setView(kind==='note'?'notes':kind==='board'||kind==='workbench'?'research':'chat');check()
+      navigation++;deps.sessions.open(entry.sessionId)
+      if(kind==='board'||kind==='workbench')selectBoardSession(entry.sessionId)
+    }
+  }))
 
   async function openBoard(boardId: string) {
     // The account-scoped directory already identifies pinned local sessions.

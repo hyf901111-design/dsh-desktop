@@ -3,6 +3,8 @@ import { HOME_WORKBENCH_STEPS } from '../../packages/dsh-research-task-runtime/h
 import { createHomeGuideTimeline, type GuideTimeline } from './home-guide-timeline'
 import {createHomeGuidePointer, type HomeGuidePointerAction} from './home-guide-pointer'
 import type {HomeOperationActionContext} from './home-operations'
+import {playExploreHomeGuideEntry} from './home-guide-explore-entry'
+import {createHomeGuideEntryClient} from './home-guide-entry-native'
 
 export type HomeGuideKind = 'board' | 'note' | 'ppt' | 'report' | 'workbench'
 export type HomeGuideAdapter = { runStep(step: any): Promise<void>; flush?(): Promise<void>; dispose(): void }
@@ -90,9 +92,10 @@ function exchangeSession(document:Document,input:Record<string,unknown>,signal:A
   if(signal.aborted){reject(aborted());return}
   const requestId=win.crypto.randomUUID()
   const clean=()=>{win.clearTimeout(timer);win.removeEventListener('sherlock:home-guide-session-reply',receive);signal.removeEventListener('abort',cancel)}
-  const cancel=()=>{clean();reject(aborted())}
+  const nativeCancel=()=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-request',{detail:{requestId,kind:input.kind,command:'cancel'}}))
+  const cancel=()=>{clean();nativeCancel();reject(aborted())}
   const receive=(event:Event)=>{const reply=(event as CustomEvent).detail;if(reply?.requestId!==requestId)return;clean();if(!reply.ok||typeof reply.sessionId!=='string'||typeof reply.cwd!=='string')reject(Error(reply.message||'示例工作区尚未就绪，请重试。'));else resolve(reply)}
-  const timer=win.setTimeout(()=>{clean();reject(Error('示例工作区准备超时，请重试。'))},30000)
+  const timer=win.setTimeout(()=>{clean();nativeCancel();reject(Error('示例工作区准备超时，请重试。'))},30000)
   win.addEventListener('sherlock:home-guide-session-reply',receive);signal.addEventListener('abort',cancel,{once:true})
   win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-request',{detail:{...input,requestId}}))
  })
@@ -154,9 +157,32 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   let entryPointer:ReturnType<typeof createHomeGuidePointer>|undefined,mountedOptions:HomeGuideMountOptions|undefined,checkDraft:(()=>void)|undefined,clearEntry=()=>{},clearTakeover=()=>{}
   const id=win.crypto.randomUUID()
   const ensurePending=()=>{if(disposed||controller.signal.aborted||token!==generation)throw aborted();const current=selected();if(current!==pending.source&&current!==pending.target)throw aborted();checkDraft?.()}
-  let session:Session,prepared:Session|undefined,preflighted=false
+  let session:Session,prepared:Session|undefined,preflighted=false,openedFromEntry=false
   try{
-   if(input.entry){
+   if(input.entry?.demoEntry){
+    const entry=input.entry,cancel=()=>controller.abort(),original=[...document.querySelectorAll<HTMLTextAreaElement>('textarea')].filter(node=>!node.closest('[data-explore-menu],[data-odyssey-subagent-panel]')).map(node=>({node,value:node.value}))
+    checkDraft=()=>{if(original.some(({node,value})=>node.isConnected&&node.value!==value))throw aborted()}
+    const takeover=(event:Event)=>{if(event.isTrusted&&preparing===pending)controller.abort()}
+    entry.signal.addEventListener('abort',cancel,{once:true});for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.addEventListener(name,takeover,true)
+    clearEntry=()=>{entry.signal.removeEventListener('abort',cancel);for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);checkDraft=undefined}
+    controller.signal.addEventListener('abort',clearEntry,{once:true})
+    const gate=async()=>{ensurePending();while(document.hidden||!document.hasFocus()){await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending()}}
+    const bounds=entry.demoEntry!.closeTarget.getBoundingClientRect(),origin=entry.origin??{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}
+    if(!Number.isFinite(origin.x)||!Number.isFinite(origin.y)||origin.x<0||origin.y<0||origin.x>win.innerWidth||origin.y>win.innerHeight)throw aborted()
+    entryPointer=createHomeGuidePointer(document,{runId:id,signal:controller.signal,initialPosition:origin,wait:ms=>mountedOptions?mountedOptions.wait(ms):new Promise(resolve=>win.setTimeout(resolve,ms)),waitUntilPlaying:()=>mountedOptions?mountedOptions.waitUntilPlaying():gate()})
+    const client=await createHomeGuideEntryClient(document,{runId:id,kind,signal:controller.signal,sourceSessionId:pending.source})
+    try{
+     await playExploreHomeGuideEntry(document,kind,{homeEmpty:client.homeEmpty,context:entry,signal:controller.signal,pointer:entryPointer,assert:ensurePending,nativeClick:target=>{ownedNavigation++;try{target.click()}finally{ownedNavigation--}},activate:async(target,action,beforeCommit)=>{
+      prepared=await client.prepare(target,action);ensurePending();pending.target=prepared.sessionId
+      transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=pending.source
+      await adapters.beforeOpen?.({...prepared,kind});ensurePending();preflighted=true
+      await beforeCommit();ensurePending()
+      let opening:Promise<Session>;ownedNavigation++;try{opening=client.commit(target)}finally{ownedNavigation--}
+      await opening;ensurePending();openedFromEntry=true
+     }})
+     entry.handoff?.();clearEntry();ensurePending()
+    }finally{client.dispose()}
+   }else if(input.entry){
     const entry=input.entry,center=document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')??[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
     const back=center?.querySelector<HTMLButtonElement>('[data-odyssey-home-operations-toggle]'),card=center?.querySelector<HTMLElement>('.odyssey-operations-usecase'),draft=resident?.querySelector<HTMLTextAreaElement>('textarea')
     if(!pending.source||!center||!resident||!back||!card||!draft||entry.signal.aborted)throw aborted()
@@ -205,8 +231,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    if(!preflighted)await adapters.beforeOpen?.({...session,kind});ensurePending();adapters.revealConversation?.();ensurePending()
    let opening:Promise<Session>
    document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
-   ownedNavigation++;try{opening=exchangeSession(document,{kind,command:'open',sessionId:session.sessionId},controller.signal)}finally{ownedNavigation--}
-   await opening
+   if(!openedFromEntry){ownedNavigation++;try{opening=exchangeSession(document,{kind,command:'open',sessionId:session.sessionId},controller.signal)}finally{ownedNavigation--};await opening}
    ensurePending()
    const deadline=Date.now()+6000
    while(selected()!==session.sessionId){ensurePending();if(Date.now()>deadline)throw Error('示例会话尚未打开，请重试。');await new Promise(resolve=>win.setTimeout(resolve,32))}
@@ -233,7 +258,13 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   context.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ework-notes-session','data-workspace-surface']})
   run.cleanup=()=>{resize.disconnect();context.disconnect();win.removeEventListener('resize',position);for(const[body,inert]of blocked)body.inert=inert}
   const guideTab=(kind==='board'||kind==='workbench')?'research':kind==='note'?'notes':'chat',tab=resident.querySelector<HTMLButtonElement>('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')
-  ownedNavigation++;try{if(tab?.getAttribute('aria-selected')!=='true')tab?.click()}finally{ownedNavigation--}
+  if(input.entry?.demoEntry){
+   // The reserved native entry already owns the mode switch. Wait for its
+   // rendered acknowledgement instead of issuing a second mode click.
+   const modeDeadline=Date.now()+6000
+   try{while(resident.querySelector('[data-srb-tabs] [data-conversation-view-id="'+guideTab+'"]')?.getAttribute('aria-selected')!=='true'){if(controller.signal.aborted||selected()!==run.sessionId||!resident.isConnected)throw aborted();if(Date.now()>modeDeadline)throw Error('示例模式尚未就绪，请重试。');await new Promise(resolve=>win.setTimeout(resolve,25))}}
+   catch(error){await close(false,false,'navigation');throw error}
+  }else{ownedNavigation++;try{if(tab?.getAttribute('aria-selected')!=='true')tab?.click()}finally{ownedNavigation--}}
   const ensure=()=>{if(active!==run||controller.signal.aborted||selected()!==run.sessionId)throw aborted()}
   const options:HomeGuideMountOptions={kind,signal:controller.signal,sessionId:run.sessionId,cwd:session.cwd,runId:id,fresh:session.fresh!==false,waitUntilPlaying:()=>run.timeline?run.timeline.waitUntilPlaying():Promise.resolve(),wait:(ms,signal)=>run.timeline?run.timeline.wait(ms,signal):new Promise((resolve,reject)=>{const signals=[controller.signal,...(signal?[signal]:[])];if(signals.some(item=>item.aborted)){reject(aborted());return}const clean=()=>{win.clearTimeout(timer);for(const item of signals)item.removeEventListener('abort',stop)},stop=()=>{clean();reject(aborted())},timer=win.setTimeout(()=>{clean();resolve()},ms);for(const item of signals)item.addEventListener('abort',stop,{once:true})}),onStatus:text=>{if(active===run)status.textContent=text}}
   mountedOptions=options;run.pointer=entryPointer??createHomeGuidePointer(document,options);document.documentElement.dataset.homeGuidePointerRun=id
