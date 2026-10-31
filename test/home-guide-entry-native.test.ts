@@ -10,7 +10,7 @@ afterEach(()=>{cleanup.splice(0).reverse().forEach(fn=>fn());vi.unstubAllGlobals
 function store<T>(value:T){const listeners=new Set<()=>void>();return{getSnapshot:()=>value,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>listeners.delete(fn)},set:(next:T)=>{value=next;for(const fn of listeners)fn()}}}
 const gate=()=>{let release!:()=>void;return{promise:new Promise<void>(yes=>release=yes),release:()=>release()}}
 const blank=()=>({snapshot:{phase:'plain',draft:'用户未发送的文字',draftRev:4,imageIds:['image-kept'],occurrences:[{kind:'skill',id:'skill-kept'}],researchContextPreparing:false},disposed:false})
-async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<void>;noteFlush?:Promise<void>;noteInput?:boolean}={}){
+async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<void>;noteFlush?:Promise<void>;noteFlushError?:Error;noteInput?:boolean}={}){
  const win=new Window({url:'http://localhost:44321'}),document=win.document as unknown as Document
  vi.stubGlobal('Event',win.Event);vi.stubGlobal('CustomEvent',win.CustomEvent);vi.stubGlobal('document',document)
  document.body.innerHTML='<aside data-dsh-sidebar-root><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button></aside><div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="home"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button></div><textarea></textarea></div></div><div class="st-menu" data-sidebar-more="true" role="menu"><button role="menuitem">新笔记</button></div>'
@@ -24,13 +24,13 @@ async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<v
  const page=createResearchBoardsPage({document,sessions,workspaces,inputHub:{shells:new Map([['A',ordinary]])},getInput:()=>effective,chatStore:{create:(id:string)=>({actions:{setView:(view:string)=>{modes.push([id,view])}}})},researchWorkspaces:{for:()=>({getSnapshot:()=>({files:[],artifacts:[]}),subscribe:()=>()=>{},persist:()=>true})},bridge:{isSharedSession:()=>false,getSnapshot:async()=>state,subscribe:(fn:(event:any)=>void)=>{emit=fn;return()=>{}},invoke:async(action:string,input:any)=>{requests.push([action,input]);if(action==='local.directory'&&input.mode==='reserve'){await options.reserveGate;return{ok:true,value:{directoryId:'dir-'+requests.length,path:'/examples/'+requests.length}}}if(action==='favorite.add'){state.favorites.push({...input.identity,favoriteId:'f'+requests.length,dedicated:true});return{ok:true,value:state.favorites.at(-1)}}return{ok:true,value:null}}}}as any)
  const ordinaryNew=(event:Event)=>{normal++;navigate('ordinary-'+normal)}
  document.querySelector('[aria-label="新建对话"]')!.addEventListener('click',ordinaryNew);document.querySelector('[aria-label="新建研究"]')!.addEventListener('click',ordinaryNew)
- const noteAction=createSidebarNewNoteAction(document,async()=>{await options.noteFlush})
+ const noteAction=createSidebarNewNoteAction(document,async()=>{await options.noteFlush;if(options.noteFlushError)throw options.noteFlushError})
  const note=document.querySelector<HTMLElement>('[role="menuitem"]')!;note.onclick=()=>{note.closest('[role="menu"]')?.remove();void noteAction.create().catch(()=>{})}
  const ordinaryNote=(event:any)=>{const d=(event as CustomEvent).detail;if(d.phase==='prepare')win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,ok:true,token:'ordinary'}}));if(d.phase==='create'){normal++;navigate('ordinary-'+normal);win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,ok:true,sessionId:'ordinary-'+normal}}))}}
  win.addEventListener('sherlock:sidebar-new-note-request',ordinaryNote)
  await Promise.resolve();await Promise.resolve()
  cleanup.push(()=>{noteAction.dispose();page.dispose();void win.happyDOM.abort()})
- return{win,document,page,list,ordinary,notes,requests,opened,modes,sessionsById,navigate,note,normal:()=>normal,setEffective:(value:any)=>{effective=value},setOwner:(userId:string,generation=false)=>{state.account={...state.account,generation:state.account.generation+(generation?1:0),user:{userId}};state.eventSeq++;emit({type:'state',state:{...state},eventSeq:state.eventSeq,accountGeneration:state.account.generation})},client:async(kind:HomeGuideEntryKind,signal=new AbortController().signal)=>createHomeGuideEntryClient(document,{runId:win.crypto.randomUUID(),kind,signal,sourceSessionId:'A'}),target:(kind:HomeGuideEntryKind)=>kind==='note'?note:document.querySelector<HTMLElement>(kind==='board'||kind==='workbench'?'[aria-label="新建研究"]':'[aria-label="新建对话"]')!}
+ return{win,document,page,list,ordinary,notes,requests,opened,modes,sessionsById,navigate,note,noteAction,normal:()=>normal,setEffective:(value:any)=>{effective=value},setOwner:(userId:string,generation=false)=>{state.account={...state.account,generation:state.account.generation+(generation?1:0),user:{userId}};state.eventSeq++;emit({type:'state',state:{...state},eventSeq:state.eventSeq,accountGeneration:state.account.generation})},client:async(kind:HomeGuideEntryKind,signal=new AbortController().signal)=>createHomeGuideEntryClient(document,{runId:win.crypto.randomUUID(),kind,signal,sourceSessionId:'A'}),target:(kind:HomeGuideEntryKind)=>kind==='note'?note:document.querySelector<HTMLElement>(kind==='board'||kind==='workbench'?'[aria-label="新建研究"]':'[aria-label="新建对话"]')!}
 }
 it.each(['board','workbench','note','ppt','report']as HomeGuideEntryKind[])('opens one prepared %s via its actual native entry without an extra blank or old draft changes',async kind=>{
  const f=await fixture(),before=JSON.stringify(f.ordinary.snapshot),client=await f.client(kind),target=f.target(kind),action:HomeGuideEntryAction=kind==='note'?'new-note':kind==='board'||kind==='workbench'?'new-research':'new-chat'
@@ -141,4 +141,20 @@ it('retires completed leases without permanently blocking the 129th independent 
  cleanup.push(()=>{dispose();void win.happyDOM.abort()})
  for(let i=0;i<130;i++){const client=await createHomeGuideEntryClient(document,{runId:'cycle-'+i,kind:'ppt',signal:new AbortController().signal,sourceSessionId:selected});await client.prepare(target,'new-chat');await client.commit(target);client.dispose()}
  expect(opens).toBe(130)
+})
+
+it('immediately revokes the entry when the real More Note save rejects before creation',async()=>{
+ const f=await fixture({noteFlushError:Error('source note save failed')}),client=await f.client('note'),target=f.target('note'),cancelled:any[]=[];f.win.addEventListener('sherlock:home-guide-entry-cancelled',(event:any)=>cancelled.push(event.detail))
+ await client.prepare(target,'new-note');await expect(client.commit(target)).rejects.toThrow()
+ expect(cancelled).toHaveLength(1);expect(f.opened).toEqual([]);expect(f.normal()).toBe(0);expect(f.document.querySelector('[role="menu"]')).toBeNull();client.dispose()
+})
+it('releases the demo lease after the real Note action is reset during its save',async()=>{
+ const held=gate(),f=await fixture({noteFlush:held.promise}),client=await f.client('note'),target=f.target('note');await client.prepare(target,'new-note')
+ const pending=client.commit(target),rejected=expect(pending).rejects.toThrow();f.noteAction.reset();held.release();await rejected
+ expect(f.opened).toEqual([]);expect(f.normal()).toBe(0);client.dispose()
+})
+it('does not revoke a successful Note entry when its normal action sends its final cleanup cancel',async()=>{
+ const f=await fixture(),client=await f.client('note'),target=f.target('note'),cancelled:any[]=[];f.win.addEventListener('sherlock:home-guide-entry-cancelled',(event:any)=>cancelled.push(event.detail))
+ const entry=await client.prepare(target,'new-note');await expect(client.commit(target)).resolves.toMatchObject({sessionId:entry.sessionId});await new Promise(resolve=>setTimeout(resolve,0))
+ expect(f.opened).toEqual([entry.sessionId]);expect(cancelled).toEqual([]);expect(f.normal()).toBe(0);client.dispose()
 })

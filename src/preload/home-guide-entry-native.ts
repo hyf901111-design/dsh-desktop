@@ -154,7 +154,7 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   if(d.phase==='prepare'&&(!run.target?.hasAttribute(CLICK)||run.phase!=='committing'))return
   event.stopImmediatePropagation()
   const nativeReply=(value:Record<string,unknown>)=>win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,...value}}))
-  if(d.phase==='cancel'){nativeReply({ok:true});return}
+  if(d.phase==='cancel'){revoke(run);nativeReply({ok:true});return}
   try{current(run)
    if(d.phase==='prepare'){run.noteToken=win.crypto.randomUUID();activeNote=undefined;nativeReply({ok:true,token:run.noteToken});return}
    if(d.phase!=='create'||run.noteCreating)throw cancelled();run.noteCreating=true
