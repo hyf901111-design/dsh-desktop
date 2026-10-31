@@ -16747,6 +16747,183 @@
         ],
         "recordedAt": "2026-10-31T15:26:36.196Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复真实验收发现的专属研究演示入口与笔记生成调用冲突",
+        "branch": "codex/feat/final-native-repairs-20261101",
+        "baseCommit": "c735914ef6566d9ef1899215cdf957a72a57e16f",
+        "tipCommit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+        "commits": [
+          {
+            "commit": "c1f2b55477aeab4b37a9a6deb6d7286149ecfd81",
+            "parents": [
+              "c735914ef6566d9ef1899215cdf957a72a57e16f"
+            ],
+            "subject": "修复专属研究看板演示入口因模式页签隐藏而中断"
+          },
+          {
+            "commit": "b10144913da647cc6da57787f8f0570f547bdc6e",
+            "parents": [
+              "c735914ef6566d9ef1899215cdf957a72a57e16f",
+              "c1f2b55477aeab4b37a9a6deb6d7286149ecfd81"
+            ],
+            "subject": "合入专属研究看板演示入口修复"
+          },
+          {
+            "commit": "6377e77c2e805a03253b2401ff72fbf2adcab5ea",
+            "parents": [
+              "c735914ef6566d9ef1899215cdf957a72a57e16f"
+            ],
+            "subject": "修复笔记读取与编辑复用调用标识导致生成失败"
+          },
+          {
+            "commit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+            "parents": [
+              "b10144913da647cc6da57787f8f0570f547bdc6e",
+              "6377e77c2e805a03253b2401ff72fbf2adcab5ea"
+            ],
+            "subject": "合入笔记生成读取与编辑调用标识隔离修复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/notes/capability-operation-identity.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-guide-entry-handoff-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-strip.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-capability-operation-identity.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-operations-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/sherlock-final-native-repairs-combined-20261101/combined-installer.log",
+            "verifiedCommit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+            "completedAt": "2026-10-31T18:49:23.677803+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "prepare:bundled-plugin-profile"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/sherlock-final-native-repairs-combined-20261101/combined-profile.log",
+            "verifiedCommit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+            "completedAt": "2026-10-31T18:49:42.408864+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-handoff-browser.test.js",
+              "test/notes-native-operations-browser.test.ts",
+              "test/notes-capability-operation-identity.test.ts",
+              "test/notes-inline-ai-browser.test.ts",
+              "-t",
+              "starts a dedicated|tabless dedicated entry|separates provider|replays the same pending|does not borrow|keeps raw ID|provider.*read|same.*read.*apply|dismisses only the idle|respects composed internal|does not dismiss or stop",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/sherlock-final-native-repairs-combined-20261101/combined-focused.log",
+            "verifiedCommit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+            "completedAt": "2026-10-31T18:50:39.461971+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/tmp/sherlock-final-native-repairs-combined-20261101/combined-typecheck.log",
+            "verifiedCommit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+            "completedAt": "2026-10-31T18:50:49.188778+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-operations-browser.test.ts",
+              "-t",
+              "scopes the recorded read/apply ID",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "真实Main→runtime→NotesApp Python原位与右侧待确认两条通过，重复apply一次、原8×8/正文保留、保存重开；combined-python-native.log",
+            "verifiedCommit": "0b528bc01399972dee46a79fe3c048d8dd6af944",
+            "completedAt": "2026-10-31T18:52:34.459284+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "精确组合11paths/两个完整历史字节一致；独立scoped review通过；18项组合交互与2条真实Main/Native编辑器Python操作通过。最终签名包Native待集成后。"
+        },
+        "acceptanceCriteria": [
+          "专属board/workbench无模式页签时仍校验实际React render session与mode，稳定接管示例，不从旧笔记借用目标。",
+          "读取与编辑可复用模型局部调用编号；同能力同编号改变参数仍拒绝，同请求重放只写一次。",
+          "空格原位代码与右侧待确认候选都保留已有原生表格、正文与保存重开；原有用户取消、文档/会话/身份守卫保持。",
+          "两个冻结作者完整历史及11paths保持精确一致，集成后Root签名同包复验。"
+        ],
+        "risks": [
+          "真实Native在c735914复现的两个问题有独立证据；本分支修复只经真实Browser/Main/editor与独立审查，尚未宣称新签名包Native完成。",
+          "组合focused初次名称过滤未覆盖Python两条，已用精确测试名单独补跑2/2通过，未放松断言或跳过失败。",
+          "不同模型或外部行情故障仍可能发生，不承诺任意需求绝对成功。"
+        ],
+        "generatedAt": "2026-10-31T18:52:34.459453+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -17614,6 +17791,50 @@
         "scripts/lib/conversation-submission.mjs"
       ],
       "timeoutMs": 20000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "prepare:bundled-plugin-profile"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-entry-handoff-browser.test.js",
+        "test/notes-native-operations-browser.test.ts",
+        "test/notes-capability-operation-identity.test.ts",
+        "test/notes-inline-ai-browser.test.ts",
+        "-t",
+        "starts a dedicated|tabless dedicated entry|separates provider|replays the same pending|does not borrow|keeps raw ID|provider.*read|same.*read.*apply|dismisses only the idle|respects composed internal|does not dismiss or stop",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-operations-browser.test.ts",
+        "-t",
+        "scopes the recorded read/apply ID",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
