@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 const require=createRequire(import.meta.url)
 let browser:any,script:string,uiExpect:any
-const evidence='/tmp/sherlock-explore-hover-20261031/browser'
+const evidence=process.env.SHERLOCK_EXPLORE_EVIDENCE??'/tmp/sherlock-explore-hover-20261031/browser'
 beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
@@ -276,3 +276,20 @@ it('keeps reduced motion static and cancels transient wallpaper work when the ga
 it('uses the native flow, React Bits and koi surfaces without changing the selected wallpaper',async()=>{
  const f=await fixture({reduced:false});try{await open(f.page);await f.page.getByRole('tab',{name:'主题壁纸',exact:true}).click();for(const[id,name]of[['default','静谧起航'],['crt-warp','时空回声'],['koi-pond','锦鲤浮光']]){await f.page.getByRole('button',{name,exact:true}).hover();const canvas=f.page.locator('canvas[data-home-theme-preview="'+id+'"]');await uiExpect(canvas).toHaveCount(1);expect(await f.page.locator('canvas[data-home-theme-preview]').count()).toBe(1);await f.page.waitForTimeout(160);await canvas.screenshot({path:evidence+'/wallpaper-family-'+id+'.png',animations:'allow'});expect(await canvas.evaluate((node:HTMLCanvasElement)=>node.width>0&&node.height>0)).toBe(true)}expect(await f.page.evaluate(()=>(window as any).fixture.selected())).toBe('default');await f.page.evaluate(()=>(window as any).fixture.dispose());expect(await f.page.locator('canvas[data-home-theme-preview],canvas[data-home-theme-preview-freeze]').count()).toBe(0);expect(f.errors).toEqual([])}finally{await f.close()}
 },20000)
+
+it('starts search with no selected result and preserves deliberate keyboard navigation and quick open',async()=>{
+ const f=await fixture();try{
+  await open(f.page);await f.page.getByRole('button',{name:'搜索会话',exact:true}).click();const input=f.page.getByRole('searchbox',{name:'搜索会话',exact:true}),rows=f.page.getByRole('option');await input.fill('中际');await uiExpect(rows).toHaveCount(3);await uiExpect(f.page.locator('[role=option][aria-selected=true]')).toHaveCount(0)
+  await rows.nth(1).hover();await uiExpect(f.page.locator('[role=option][aria-selected=true]')).toHaveCount(0);await f.page.mouse.move(8,8)
+  await input.press('ArrowDown');await uiExpect(rows.nth(0)).toBeFocused();await uiExpect(rows.nth(0)).toHaveAttribute('aria-selected','true');await f.page.keyboard.press('ArrowDown');await uiExpect(rows.nth(1)).toBeFocused();await uiExpect(rows.nth(1)).toHaveAttribute('aria-selected','true')
+  await input.focus();await uiExpect(f.page.locator('[role=option][aria-selected=true]')).toHaveCount(0);await f.page.getByRole('tab',{name:'笔记',exact:true}).click();await uiExpect(rows).toHaveCount(1);await uiExpect(f.page.locator('[role=option][aria-selected=true]')).toHaveCount(0)
+  await input.fill('现金流');await uiExpect(rows).toHaveCount(1);await uiExpect(f.page.locator('[role=option][aria-selected=true]')).toHaveCount(0);await input.press('Enter');await expect.poll(()=>f.page.evaluate(()=>(window as any).opened)).toEqual(['session:n']);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it.each([false,true])('keeps the selected wallpaper edge visible above a live hover preview in dark=%s',async dark=>{
+ const f=await fixture({dark,reduced:false});try{
+  await open(f.page);await f.page.getByRole('tab',{name:'主题壁纸',exact:true}).click();const card=f.page.getByRole('button',{name:'星云风暴',exact:true});await card.click();await f.page.mouse.move(8,8);await card.hover();await uiExpect(f.page.locator('canvas[data-home-theme-preview="shashidhar"]')).toHaveCount(1);await uiExpect(card).toHaveAttribute('aria-pressed','true')
+  const edge=await card.locator('.odyssey-wallpaper-preview').evaluate((node:HTMLElement)=>{const s=getComputedStyle(node),a=getComputedStyle(node,'::after');return{shadow:s.boxShadow,outline:s.outlineStyle,border:a.borderColor,width:a.borderWidth,opacity:a.opacity,z:a.zIndex,pointer:a.pointerEvents}});expect(edge).toEqual({shadow:'none',outline:'none',border:dark?'rgb(209, 214, 222)':'rgb(188, 195, 205)',width:'2px',opacity:'1',z:'2',pointer:'none'});await card.screenshot({path:evidence+'/selected-hover-edge-'+dark+'.png',animations:'allow'});expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
