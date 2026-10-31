@@ -548,29 +548,38 @@ it('reclaims financial footer port slots in preview and restores edit geometry i
  }finally{await close()}
 },30000)
 
-it('reclaims study, generated HTML and smart footer reserves only in research preview',async()=>{
+it('reclaims connected footer reserves while preserving port-free study and HTML padding in research preview',async()=>{
  const {page,close,errors}=await fixture(),evidence=[]
  try{
   const ids=await page.evaluate(()=>{
    const w=window.fixture.workspace(),study={...window.fixture.text('footer-study'),messageId:'footer-study',kind:'generated-container',generationStatus:'completed',containerPrompt:'研究组件',refreshMinutes:0,containerSpec:window.fixture.bundle.__PreviewStudySpec('directory')},html={...window.fixture.text('footer-html'),messageId:'footer-html',kind:'generated-container',generationStatus:'completed',containerPrompt:'正文组件',refreshMinutes:0,containerSpec:{version:1,type:'html',title:'生成 HTML',html:'<article><p>正文可正常浏览</p></article>'}}
-   const smart=w.createContainerDraft();w.setArtifacts([study,html,smart]);return{study:study.id,html:html.id,smart:smart.id}
+   const peer={...study,id:'footer-peer',messageId:'footer-peer',containerSpec:window.fixture.bundle.__PreviewStudySpec('peers')},customHtml={...html,id:'footer-html-custom',messageId:'footer-html-custom'}
+   const smart=w.createContainerDraft();w.setArtifacts([study,html,peer,customHtml,smart]);return{study:study.id,html:html.id,peer:peer.id,customHtml:customHtml.id,smart:smart.id}
   })
   await page.locator('[data-research-node-id="'+ids.study+'"] .hws-footer').waitFor().catch(async error=>{throw Error(error.message+'; '+JSON.stringify({errors,snapshot:await page.evaluate(()=>window.fixture.workspace().getSnapshot().artifacts.map(n=>({id:n.id,type:n.containerSpec?.type}))),dom:await page.locator('#host').innerText()}))});await page.locator('[data-research-node-id="'+ids.html+'"] .odyssey-data-stamp').waitFor();await page.locator('[data-research-node-id="'+ids.smart+'"] .ew-smart-create-footer').waitFor()
+  await page.locator('[data-research-node-id="'+ids.peer+'"] .hws-footer').waitFor();await page.locator('[data-research-node-id="'+ids.customHtml+'"] .odyssey-data-stamp').waitFor()
+  // Lower-specificity host customizations must survive when no connection slot
+  // exists. The former unconditional preview reset overrides both real owners.
+  await page.addStyleTag({content:'body [data-ework-grid] [data-research-node-id="'+ids.peer+'"] .hws-footer{padding-left:18px!important;padding-right:22px!important}@layer ework-workbench{body [data-research-canvas][data-ework-grid] [data-research-node-id="'+ids.customHtml+'"] .odyssey-data-stamp{padding-left:18px!important;padding-right:22px!important}}'})
+  const kinds={study:'study',html:'html',peer:'study',customHtml:'html',smart:'smart'},measure=async()=>Object.fromEntries(await Promise.all(Object.entries(ids).map(async([key,id])=>[key,await footerGeometry(page,id,kinds[key])])))
   for(const theme of ['light','dark','enterprise','openterminal']){
    await page.evaluate(theme=>window.fixture.workspace().setWorkbenchStyle(theme,{scope:'board'}),theme)
-   const before={study:await footerGeometry(page,ids.study,'study'),html:await footerGeometry(page,ids.html,'html'),smart:await footerGeometry(page,ids.smart,'smart')}
+   const before=await measure()
    expect(before.study.ports.map(port=>port.side)).toEqual(['input','output']);expect(before.study.left).toBe(24);expect(before.study.right).toBe(24)
    expect(before.smart.ports).toHaveLength(1);expect(before.smart.left).toBe(36)
+   for(const key of ['peer','customHtml']){expect(before[key].ports).toEqual([]);expect(before[key].left).toBe(18);expect(before[key].right).toBe(22)}
+   expect(before.html.ports).toEqual([])
    const stored=await content(page);await preview(page)
-   const after={study:await footerGeometry(page,ids.study,'study'),html:await footerGeometry(page,ids.html,'html'),smart:await footerGeometry(page,ids.smart,'smart')}
+   const after=await measure()
    expect(after.study.left).toBe(12);expect(after.study.right).toBe(12)
-   expect(after.html.left).toBe(10);expect(after.html.right).toBe(10);expect(after.smart.left).toBe(10)
+   expect(after.smart.left).toBe(10)
+   for(const key of ['html','peer','customHtml'])expect(after[key]).toEqual(before[key])
    for(const[kind,value]of Object.entries(after)){
     expect(value.ports.every(port=>port.display==='none'&&port.width===0&&port.height===0),kind).toBe(true)
     expect(value.source).toBe(before[kind].source);expect(value.state).toBe(before[kind].state)
    }
    expect(await content(page)).toBe(stored);await page.locator('#preview-toggle').click()
-   for(const[kind,id]of Object.entries(ids))expect(await footerGeometry(page,id,kind==='html'?'html':kind==='study'?'study':'smart')).toEqual(before[kind])
+   expect(await measure()).toEqual(before)
    evidence.push({theme,before,preview:after})
   }
   if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await writeFile(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/generated-footer-geometry.json',JSON.stringify(evidence,null,2))
