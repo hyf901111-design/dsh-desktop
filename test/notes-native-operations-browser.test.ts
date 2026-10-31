@@ -54,19 +54,31 @@ async function open(modelOutput?:(request:any)=>unknown){
  await page.evaluate(()=>{const w=window as any;w.editor.replaceBlocks(w.editor.document,w.saved.blocks);w.editor.focus();w.editor.setTextCursorPosition('anchor','start')})
  return{page,context,errors,store,main,session,host,modelRequests,setHistoryWritable:(value:boolean)=>{historyWritable=value},history:()=>noteConversationRows(session),restartHistory:()=>{const value=JSON.parse(readFileSync(historyPath,'utf8'));session=Session.fromRestore('native-fixture' as any,value.events,value.header)},async close(){main.dispose();disposeService();disposeRuntime();disposeAi();await new Promise<void>(done=>server.close(()=>done()));await context.close();rmSync(root,{recursive:true,force:true})}}
 }
+async function finishCandidate(f:any,receipt?:any){
+ await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',...receipt?{capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}:{}}),receipt)
+ await f.page.getByRole('button',{name:'添加至正文',exact:true}).waitFor()
+ expect(await f.page.locator('.en-space-ai').count()).toBe(0)
+}
+async function acceptCandidate(f:any){await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>f.page.getByRole('button',{name:'添加至正文',exact:true}).count()).toBe(0)}
 it.each([{entry:'space',size:8},{entry:'sidebar',size:8},{entry:'space',size:3},{entry:'sidebar',size:3}])('creates a directly editable native $size by $size table without a model or child through $entry',async({entry,size})=>{
  const f=await open();try{
+  const original=await f.page.evaluate(()=>(window as any).editor.document),originalSaved=f.store.load('fixture','native-fixture').saved.blocks
+  if(entry==='sidebar')await f.page.evaluate(()=>{const editor=(window as any).editor;editor.focus();editor.setTextCursorPosition('before','start')})
   await f.page.evaluate((size:number)=>(window as any).armNativeTiming(size),size)
   if(entry==='space'){await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).fill(`创建一个${size}乘${size}的表格`);await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter')}
   else await f.page.evaluate((size:number)=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'native-fixture',prompt:`创建一个${size}乘${size}的表格`,images:[]}})),size)
+  if(entry==='sidebar'){
+   await f.page.locator('[data-note-preview-state=ready]').waitFor();expect(await f.page.evaluate(()=>(window as any).editor.document)).toEqual(original);expect(f.store.load('fixture','native-fixture').saved.blocks).toEqual(originalSaved);expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(f.history()[0].result.capabilityReceipts[0]).toMatchObject({status:'succeeded',data:{pendingPreview:true}});expect(f.history()[0].result.capabilityReceipts[0].effect).toBeUndefined()
+   await f.page.evaluate(()=>{const timing=(window as any).fastTiming;timing.previewReadyMs=performance.now()-timing.submitAt;timing.submitAt=performance.now()});await acceptCandidate(f)
+  }
   await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='table').length),{timeout:2500}).toBe(1)
   const state=await f.page.evaluate(()=>{const w=window as any;return{blocks:w.editor.document,model:w.calls.filter((x:any)=>x.method==='generate').length}}),table=state.blocks.find((b:any)=>b.type==='table')
   await expect.poll(()=>f.page.evaluate(()=>(window as any).fastTiming?.saveAckAt)).toBeTruthy();const timing=await f.page.evaluate(()=>{const w=window as any,{submitAt,visibleAt,saveAckAt,visibleCells}=w.fastTiming;return{visibleCells,visibleMs:visibleAt-submitAt,savedMs:saveAckAt-submitAt,generateIpc:w.calls.filter((row:any)=>row.method==='generate').length,modelRequests:w.calls.filter((row:any)=>row.method==='generate').length,childRequests:w.calls.filter((row:any)=>row.method==='generate'&&row.input?.mode==='component').length}});expect(timing.visibleCells).toBe(size*size);expect(timing.visibleMs).toBeGreaterThanOrEqual(0);expect(timing.visibleMs).toBeLessThan(1000);expect(timing.generateIpc).toBe(0);expect(timing.modelRequests).toBe(0);expect(timing.childRequests).toBe(0);metrics.push({entry,...timing,rows:size,columns:size,cells:size*size,editable:true});if(process.env.SHERLOCK_NATIVE_OPS_METRICS)await f.page.screenshot({path:resolve(dirname(process.env.SHERLOCK_NATIVE_OPS_METRICS),entry+'-native-'+size+'x'+size+'.png')})
   const available=await f.page.locator('.bn-editor').evaluate((element:HTMLElement)=>Math.max(35,element.clientWidth-31)),expectedWidth=Math.max(size*35,Math.floor(Math.min(available,size*100)))
-  expect(table.content.columnWidths.reduce((sum:number,width:number)=>sum+width,0)).toBe(expectedWidth);expect(await f.page.locator('.en-space-ai').innerText()).toContain('已插入表格');expect(await f.page.locator('.en-space-ai').innerText()).not.toMatch(/行.*列|这里.*编辑/)
+  expect(table.content.columnWidths.reduce((sum:number,width:number)=>sum+width,0)).toBe(expectedWidth);if(entry==='space'){expect(await f.page.locator('.en-space-ai').innerText()).toContain('已插入表格');expect(await f.page.locator('.en-space-ai').innerText()).not.toMatch(/行.*列|这里.*编辑/)}else expect(await f.page.locator('.en-space-ai').count()).toBe(0)
   expect(state.model).toBe(0);expect(state.blocks.some((b:any)=>b.type==='research')).toBe(false);expect(table.content.rows).toHaveLength(size);expect(table.content.rows.every((r:any)=>r.cells.length===size&&r.cells.every((c:any)=>(Array.isArray(c)?c:c.content).length===0))).toBe(true)
-  expect(state.blocks[0].id).toBe('before');expect(state.blocks.at(-1).id).toBe('after')
-  await f.page.locator('.bn-editor td p').first().click();await f.page.keyboard.type('真实可编辑');await expect.poll(()=>f.page.locator('.bn-editor table').textContent()).toContain('真实可编辑');await f.page.locator('.bn-editor td p').last().click();await f.page.keyboard.type('末格也保存');await f.page.keyboard.press('Meta+s');await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('末格也保存');await expect.poll(()=>f.store.load('fixture','native-fixture').draft).toBeUndefined();await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor table').waitFor();expect(await f.page.locator('.bn-editor table').textContent()).toContain('真实可编辑');expect(await f.page.locator('.bn-editor table').textContent()).toContain('末格也保存');expect(f.errors).toEqual([]);expect(f.history()).toHaveLength(1);expect(f.history()[0]).toMatchObject({prompt:`创建一个${size}乘${size}的表格`,phase:'ready',result:{capabilityReceipts:[{capability:'notes.blocks.apply',effect:{state:'saved'}}]}});expect((await f.host('conversation-load',{})).rows).toEqual(f.history())
+  expect(state.blocks[0].id).toBe('before');expect(state.blocks.at(-1).id).toBe(entry==='space'?'after':table.id)
+  await f.page.locator('.bn-editor td p').first().click();await f.page.keyboard.type('真实可编辑');await expect.poll(()=>f.page.locator('.bn-editor table').textContent()).toContain('真实可编辑');await f.page.locator('.bn-editor td p').last().click();await f.page.keyboard.type('末格也保存');await f.page.keyboard.press('Meta+s');await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('末格也保存');await expect.poll(()=>f.store.load('fixture','native-fixture').draft).toBeUndefined();await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor table').waitFor();expect(await f.page.locator('.bn-editor table').textContent()).toContain('真实可编辑');expect(await f.page.locator('.bn-editor table').textContent()).toContain('末格也保存');expect(f.errors).toEqual([]);expect(f.history()).toHaveLength(1);expect(f.history()[0]).toMatchObject({prompt:`创建一个${size}乘${size}的表格`,phase:entry==='space'?'ready':'accepted',result:{capabilityReceipts:[{capability:'notes.blocks.apply',...entry==='space'?{effect:{state:'saved'}}:{data:{pendingPreview:true}}}]}});expect((await f.host('conversation-load',{})).rows).toEqual(f.history())
  }finally{await f.close()}
 },15000)
 
@@ -84,9 +96,9 @@ it.each([3,8])('fits the actual native %i-column shortcut to a narrow note body 
 it('preserves saved manual widths while the real shortcut inserts a compact empty table and populated tables keep fitting',async()=>{
  const f=await open();try{
   const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'before'},blocks:[{id:'manual-empty',type:'table',content:{type:'tableContent',columnWidths:[90,140,210],rows:[{cells:['','','']}]}},{id:'populated',type:'table',content:{type:'tableContent',headerRows:1,rows:[{cells:['日期','收入','备注']},{cells:['周一','10','用户提供']} ]}}]}]})
-  expect(applied.result.status).toBe('succeeded');const original=await f.page.evaluate(()=>{const w=window as any;return['manual-empty','populated'].map(id=>w.editor.getBlock(id))}),available=await f.page.locator('.bn-editor').evaluate((element:HTMLElement)=>Math.max(35,element.clientWidth-31))
+  expect(applied.result.status).toBe('succeeded');await finishCandidate(f,applied.result);await acceptCandidate(f);const original=await f.page.evaluate(()=>{const w=window as any;return['manual-empty','populated'].map(id=>w.editor.getBlock(id))}),available=await f.page.locator('.bn-editor').evaluate((element:HTMLElement)=>Math.max(35,element.clientWidth-31))
   expect(original[0].content.columnWidths).toEqual([90,140,210]);expect(original[1].content.columnWidths.reduce((sum:number,width:number)=>sum+width,0)).toBe(Math.floor(available))
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result);await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click();await f.page.evaluate(()=>{const w=window as any;w.editor.focus();w.editor.setTextCursorPosition('anchor','start')})
+  await f.page.evaluate(()=>{const w=window as any;w.editor.focus();w.editor.setTextCursorPosition('anchor','start')})
   await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill('创建一个3乘3的表格');await input.press('Enter');await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor()
   const after=await f.page.evaluate(()=>{const w=window as any;return{previous:['manual-empty','populated'].map(id=>w.editor.getBlock(id)),fresh:w.editor.document.find((block:any)=>block.type==='table'&&!['manual-empty','populated'].includes(block.id))}});expect(after.previous).toEqual(original);expect(after.fresh.content.columnWidths).toEqual([100,100,100]);expect(f.store.load('fixture','native-fixture').saved.blocks.filter((block:any)=>['manual-empty','populated'].includes(block.id))).toEqual(original);expect(f.errors).toEqual([])
  }finally{await f.close()}
@@ -110,7 +122,7 @@ it.each(['automatic','mixed-manual'].flatMap(widthMode=>['missing-token','eof-co
    if(protocol==='eof-containers'){const value=JSON.parse(recordedEof.partialOutput+recordedEof.expectedSuffix);value.wireToken=/wireToken=([a-f0-9-]+)/u.exec(request.system)![1];value.calls=[call];return JSON.stringify(value).slice(0,-recordedEof.expectedSuffix.length)}
    return{kind:'capabilities',calls:[call]}
   }
-  expect(receipts[1]).toMatchObject({capability:'notes.blocks.apply',status:'succeeded',effect:{kind:'native-blocks',state:'saved',changedBlockIds:['company-table']}})
+  expect(receipts[1]).toMatchObject({capability:'notes.blocks.apply',status:'succeeded',data:{pendingPreview:true}});expect(receipts[1].effect).toBeUndefined()
   return{kind:'conversation',markdown:''}
  });try{
   await f.page.evaluate((widthMode:string)=>{
@@ -119,12 +131,12 @@ it.each(['automatic','mixed-manual'].flatMap(widthMode=>['missing-token','eof-co
   const before=structuredClone(f.store.load('fixture','native-fixture').saved.blocks),originalTable=before.find((block:any)=>block.id==='company-table')
   expect(originalTable.content).toMatchObject({headerRows:1,headerCols:1,columnWidths:widthMode==='mixed-manual'?[190,null]:[null,null]});expect(originalTable.content.rows[0].cells[0]).toMatchObject({content:[{styles:{bold:true}}],props:{backgroundColor:'gray'}})
   await f.page.evaluate((prompt:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'native-fixture',prompt,images:[]}})),recordedCrud.instruction)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor({timeout:8000})
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).waitFor({timeout:8000});expect(f.store.load('fixture','native-fixture').saved.blocks).toEqual(before);await acceptCandidate(f)
   const expected=structuredClone(before);expected.find((block:any)=>block.id==='company-table').content.rows[1].cells[1].content[0].text='300308'
   expect(f.store.load('fixture','native-fixture').saved.blocks).toEqual(expected);expect(await f.page.evaluate(()=>JSON.parse(JSON.stringify((window as any).editor.document)))).toEqual(expected)
   expect(f.modelRequests).toHaveLength(3);expect(f.modelRequests.map(request=>request.purpose)).toEqual(['workspace-note','workspace-note','workspace-note'])
-  const row=f.history().at(-1);expect(row.prompt).toBe(recordedCrud.instruction);expect(row.result.capabilityReceipts).toMatchObject([{capability:'notes.blocks.read',status:'succeeded'},{capability:'notes.blocks.apply',status:'succeeded',effect:{state:'saved',changedBlockIds:['company-table']}}])
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks).toEqual(before)
+  const row=f.history().at(-1);expect(row.prompt).toBe(recordedCrud.instruction);expect(row.result.capabilityReceipts).toMatchObject([{capability:'notes.blocks.read',status:'succeeded'},{capability:'notes.blocks.apply',status:'succeeded',data:{pendingPreview:true}}])
+  await f.page.locator('.en-document .bn-editor[contenteditable=true]').click();await f.page.keyboard.press('Meta+z');await f.page.keyboard.press('Meta+s');await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks).toEqual(before)
   await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor table').first().waitFor();expect(await f.page.evaluate(()=>JSON.parse(JSON.stringify((window as any).editor.document)))).toEqual(before);expect(f.errors).toEqual([])
   metrics.push({entry:'sidebar-recorded-crud',widthMode,protocol,modelRounds:f.modelRequests.length,formatRecoveryRounds:f.modelRequests.filter(request=>request.purpose==='workspace-note-format-recovery').length,changedCells:1,unchangedOtherBlocks:true,saved:true,undoRestored:true})
  }finally{await f.close()}
@@ -146,12 +158,11 @@ async function capability(page:any,parent:any,action:string,args:any,id='native-
 }
 it('reads real native blocks and updates content through the admitted capability executor',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
-  expect(read.error).toBeUndefined();expect(read.result?.status).toBe('succeeded');expect(read.result.data.blocks.map((x:any)=>x.block.id)).toEqual(['before','anchor','after'])
+  const before=await f.page.evaluate(()=>(window as any).editor.document),parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
+  expect(read.result.data.blocks.map((x:any)=>x.block.id)).toEqual(['before','anchor','after'])
   const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'AI原生修改'}}]})
-  expect(applied.error).toBeUndefined();expect(applied.result?.status).toBe('succeeded');expect(await f.page.locator('.bn-editor').textContent()).toContain('AI原生修改')
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('保留前段');expect(f.errors).toEqual([])
+  expect(applied.result).toMatchObject({status:'succeeded',data:{pendingPreview:true}});expect(applied.result.effect).toBeUndefined();expect(await f.page.evaluate(()=>(window as any).editor.document)).toEqual(before)
+  await finishCandidate(f,applied.result);await acceptCandidate(f);expect(await f.page.locator('.bn-editor').textContent()).toContain('AI原生修改');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
@@ -174,123 +185,78 @@ it('preflights the entire native batch, deduplicates a real request, and rejects
   expect(aba.error).toContain('身份');expect(await f.page.locator('.bn-editor').textContent()).not.toContain('不得写入新身份');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
-it('moves, removes and inserts native list/code in one transaction, then undoes only the current action after save and reopen',async()=>{
+it('previews a native list/code move-remove-insert batch and saves its confirmed structure across reopen',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
+  const before=await f.page.evaluate(()=>(window as any).editor.document),parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
   const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'move',blockIds:['before'],anchor:{blockId:'after',placement:'after'}},{op:'remove',blockIds:['anchor']},{op:'insert',anchor:{blockId:'before',placement:'before'},blocks:[{id:'new-list',type:'bulletListItem',content:'待办条目'},{id:'new-code',type:'codeBlock',content:'console.log(1)'}]}]})
-  expect(applied.error).toBeUndefined();expect(applied.result.status).toBe('succeeded')
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();await expect.poll(()=>f.page.evaluate(()=>(window as any).saved.blocks.map((b:any)=>b.id))).toEqual(['after','new-list','new-code','before'])
-  await f.page.keyboard.press('Meta+s');await expect.poll(()=>f.store.load('fixture','native-fixture').draft).toBeUndefined();await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor').waitFor();await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click()
-  await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['before','anchor','after']);expect(f.errors).toEqual([])
+  expect(applied.result.data.pendingPreview).toBe(true);expect(await f.page.evaluate(()=>(window as any).editor.document)).toEqual(before);await finishCandidate(f,applied.result);await acceptCandidate(f)
+  await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks.map((b:any)=>b.id)).toEqual(['after','new-list','new-code','before']);await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor').waitFor();expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['after','new-list','new-code','before']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
 it('keeps filled table requests on normal planning, preserves human edits, and leaves a failed save as a real pending draft',async()=>{
  const f=await open();try{
   await f.page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'native-fixture',prompt:'创建8×8表格，填入上文收入数据',images:[]}})))
-  await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').length)).toBe(1)
-  expect(await f.page.evaluate(()=>(window as any).editor.document.some((b:any)=>b.type==='table'))).toBe(false)
-  const parent=await f.page.evaluate(()=>(window as any).calls.find((x:any)=>x.method==='generate').input),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
-  await f.page.evaluate(()=>(window as any).failSave=true)
-  const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'AI更新'}}]})
-  expect(applied.result.status).toBe('failed');expect(applied.result.effect.state).toBe('applied')
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',requiresReply:true,capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor();expect(await f.page.evaluate(()=>(window as any).ledger.list()[0].error)).toBeTruthy()
-  await f.page.evaluate(()=>{(window as any).editor.updateBlock('before',{content:'人工后续修改'})})
-  expect(await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).isDisabled()).toBe(true);expect(await f.page.locator('.bn-editor').textContent()).toContain('人工后续修改');expect(f.errors).toEqual([])
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').length)).toBe(1);expect(await f.page.evaluate(()=>(window as any).editor.document.some((b:any)=>b.type==='table'))).toBe(false)
+  const parent=await f.page.evaluate(()=>(window as any).calls.find((x:any)=>x.method==='generate').input),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'AI更新'}}]})
+  expect(applied.result.data.pendingPreview).toBe(true);await finishCandidate(f,applied.result);await f.page.evaluate(()=>(window as any).failSave=true);await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>f.store.load('fixture','native-fixture').draft?.blocks[0].content[0].text).toBe('AI更新');expect(JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks[0].content)).toContain('保留前段');await f.page.evaluate(()=>(window as any).editor.updateBlock('before',{content:'人工后续修改'}));await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();expect(await f.page.locator('.en-document .bn-editor[contenteditable=true]').textContent()).toContain('人工后续修改');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
 it('uses the real read/apply/undo capability path across requests and refuses a cancelled target before writing',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'本轮原生更新'}}]})
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor()
-  const next=await parentRequest(f.page),fresh=await capability(f.page,next,'notes.blocks.read',{scope:'note'}),action=fresh.result.data.actions[0].actionId
-  expect(action).toBe(parent.requestId)
-  const undone=await capability(f.page,next,'notes.blocks.undo',{revision:fresh.result.data.revision,actionId:action})
-  expect(undone.result.status).toBe('succeeded');expect(undone.result.effect.state).toBe('saved');expect(await f.page.locator('.bn-editor').textContent()).toContain('保留前段');expect(await f.page.evaluate(()=>(window as any).ledger.list())).toEqual([])
-  const currentRead=await capability(f.page,next,'notes.blocks.read',{scope:'note'})
-  await f.page.evaluate((parent:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'native-fixture',requestId:'cancelled-write',cancel:true}})),next)
-  const cancelled=await capability(f.page,next,'notes.blocks.apply',{revision:currentRead.result.data.revision,operations:[{op:'remove',blockIds:['after']}]},'cancelled-write')
-  expect(cancelled.error).toContain('取消');expect(await f.page.locator('.bn-editor').textContent()).toContain('保留后段');expect(f.errors).toEqual([])
+  // The Space transaction remains undoable; the right-hand undo is a preview.
+  await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).fill('修改开头段落');await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).press('Enter');await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((x:any)=>x.method==='generate').length)).toBe(1)
+  const parent=await f.page.evaluate(()=>(window as any).calls.find((x:any)=>x.method==='generate').input),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'本轮原生更新'}}]})
+  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result);await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor();await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).count().catch(()=>0);await f.page.keyboard.press('Escape')
+  const next=await parentRequest(f.page),fresh=await capability(f.page,next,'notes.blocks.read',{scope:'note'}),action=fresh.result.data.actions[0].actionId;expect(action).toBe(parent.requestId)
+  const undone=await capability(f.page,next,'notes.blocks.undo',{revision:fresh.result.data.revision,actionId:action});expect(undone.result.data.pendingPreview).toBe(true);expect(await f.page.locator('.bn-editor').textContent()).toContain('本轮原生更新');await finishCandidate(f,undone.result);await acceptCandidate(f);expect(await f.page.locator('.bn-editor').textContent()).toContain('保留前段')
+  const third=await parentRequest(f.page),currentRead=await capability(f.page,third,'notes.blocks.read',{scope:'note'});await f.page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:{sessionId:'native-fixture',requestId:'cancelled-write',cancel:true}})));const cancelled=await capability(f.page,third,'notes.blocks.apply',{revision:currentRead.result.data.revision,operations:[{op:'remove',blockIds:['after']}]},'cancelled-write');expect(cancelled.error).toContain('取消');expect(await f.page.locator('.bn-editor').textContent()).toContain('保留后段');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
 it('validates native table content without accepting HTML/research props, and keeps the edited table when undo is no longer owned',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
-  const bad=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'before'},blocks:[{type:'paragraph',props:{payload:'<script>alert(1)</script>'},content:'unsafe'}]}]})
-  expect(bad.error).toContain('属性')
-  const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'before'},blocks:[{id:'native-table',type:'table',content:{type:'tableContent',headerRows:1,rows:[{cells:['日期','值']},{cells:['周一','10']}]}}]}]})
-  expect(applied.result.status).toBe('succeeded')
-  const fresh=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),updated=await capability(f.page,parent,'notes.blocks.apply',{revision:fresh.result.data.revision,operations:[{op:'update',blockId:'native-table',block:{content:{type:'tableContent',headerRows:1,rows:[{cells:['日期','值']},{cells:['周一','20']}]}}}]})
-  expect(updated.result.status).toBe('succeeded');expect(await f.page.locator('table').textContent()).toContain('20')
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),updated.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor();await f.page.locator('td p').last().click();await f.page.keyboard.type('人工补充')
-  expect(await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).isDisabled()).toBe(true);expect(f.errors).toEqual([])
+  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),bad=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'before'},blocks:[{type:'paragraph',props:{payload:'<script>alert(1)</script>'},content:'unsafe'}]}]});expect(bad.error).toContain('属性')
+  await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'before'},blocks:[{id:'native-table',type:'table',content:{type:'tableContent',headerRows:1,rows:[{cells:['日期','值']},{cells:['周一','10']}]}}]}]});expect(await f.page.locator('.bn-editor table').count()).toBe(0)
+  const fresh=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),updated=await capability(f.page,parent,'notes.blocks.apply',{revision:fresh.result.data.revision,operations:[{op:'update',blockId:'native-table',block:{content:{type:'tableContent',headerRows:1,rows:[{cells:['日期','值']},{cells:['周一','20']}]}}}]});expect(updated.result.status).toBe('succeeded');await finishCandidate(f,updated.result);await acceptCandidate(f);expect(await f.page.locator('table').textContent()).toContain('20');await f.page.locator('td p').last().click();await f.page.keyboard.type('人工补充');expect(await f.page.locator('table').textContent()).toContain('人工补充');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
 it('passes native reads and saved edits through the real Main bridge with independent transport UUIDs',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),context:any={owner:'fixture',sessionId:'native-fixture',documentId:parent.capabilityContext.documentId,mode:'notes',editable:true,selectedBlockIds:[],selectedNativeBlockIds:[]},controller=new AbortController()
-  const read=await f.main.request('notes.blocks.read',{scope:'note'},context,parent.requestId,controller.signal,()=>true)
-  const receipt=await f.main.request('notes.blocks.apply',{revision:read.data.revision,operations:[{op:'update',blockId:'before',block:{content:'真实Main传输原生更新'}}],sourceInstruction:'本次宿主捕获的真实原生需求'},context,parent.requestId,controller.signal,()=>true)
-  expect(receipt.status).toBe('succeeded');expect(await f.page.evaluate(()=>(window as any).ledger.list()[0].prompt)).toBe('本次宿主捕获的真实原生需求');expect(receipt.effect).toMatchObject({kind:'native-blocks',state:'saved',actionId:parent.requestId,changedBlockIds:['before']})
-  const ids=await f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.method==='capability-reply').map((row:any)=>row.input.requestId));expect(ids.every((id:string)=>id!==parent.requestId)).toBe(true)
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply',requestId:'model-native-operation'}]}),receipt)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('保留前段');expect(f.errors).toEqual([])
+  const parent=await parentRequest(f.page),context:any={owner:'fixture',sessionId:'native-fixture',documentId:parent.capabilityContext.documentId,mode:'notes',editable:true,selectedBlockIds:[],selectedNativeBlockIds:[]},controller=new AbortController(),read=await f.main.request('notes.blocks.read',{scope:'note'},context,parent.requestId,controller.signal,()=>true)
+  const receipt=await f.main.request('notes.blocks.apply',{revision:read.data.revision,operations:[{op:'update',blockId:'before',block:{content:'真实Main传输原生更新'}}],sourceInstruction:'本次宿主捕获的真实原生需求'},context,parent.requestId,controller.signal,()=>true,true)
+  expect(receipt).toMatchObject({status:'succeeded',data:{pendingPreview:true}});expect(receipt.effect).toBeUndefined();expect(await f.page.evaluate(()=>(window as any).ledger.list())).toEqual([]);const ids=await f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.method==='capability-reply').map((row:any)=>row.input.requestId));expect(ids.every((id:string)=>id!==parent.requestId)).toBe(true);await finishCandidate(f,receipt);await acceptCandidate(f);expect(await f.page.locator('.bn-editor').textContent()).toContain('真实Main传输原生更新');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
-it('restores a failed native save from the actual local draft and keeps exact Undo after recovery',async()=>{
+
+it('restores a failed confirmed native save from the actual local draft without creating a Space review',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
-  await f.page.evaluate(()=>(window as any).failSave=true)
-  const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'草稿中的原生更新'}}]})
-  expect(applied.result).toMatchObject({status:'failed',effect:{state:'applied'}})
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',requiresReply:true,capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor();await expect.poll(()=>f.store.load('fixture','native-fixture').draft?.blocks[0].content[0].text).toBe('草稿中的原生更新')
-  await f.page.evaluate(()=>(window as any).reopen());await f.page.getByRole('button',{name:'恢复草稿',exact:true}).waitFor();await f.page.evaluate(()=>(window as any).failSave=false);await f.page.getByRole('button',{name:'恢复草稿',exact:true}).click()
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('保留前段');expect(f.errors).toEqual([])
+  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'草稿中的原生更新'}}]});expect(applied.result.data.pendingPreview).toBe(true);await finishCandidate(f,applied.result);await f.page.evaluate(()=>(window as any).failSave=true);await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>f.store.load('fixture','native-fixture').draft?.blocks[0].content[0].text).toBe('草稿中的原生更新');await f.page.evaluate(()=>(window as any).reopen());await f.page.getByRole('button',{name:'恢复草稿',exact:true}).waitFor();await f.page.evaluate(()=>(window as any).failSave=false);await f.page.getByRole('button',{name:'恢复草稿',exact:true}).click();await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks[0].content[0].text).toBe('草稿中的原生更新');expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
 it('does not overwrite or claim a saved native batch after a human edits during its real progress acknowledgement',async()=>{
  const f=await open();try{
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
-  await f.page.evaluate(()=>(window as any).holdNativeEffect=true)
-  const pending=capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'刚应用的AI原生更新'}}]})
-  await expect.poll(()=>f.page.locator('.bn-editor').textContent()).toContain('刚应用的AI原生更新')
-  await f.page.evaluate(()=>{const w=window as any;w.editor.updateBlock('before',{content:'等待回执时的人工修改'});w.releaseNativeEffect()})
-  const result=await pending;expect(result.result).toMatchObject({status:'failed',effect:{state:'applied'}});expect(result.result.message).toContain('较新编辑');expect(await f.page.locator('.bn-editor').textContent()).toContain('等待回执时的人工修改');expect(f.errors).toEqual([])
+  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'尚未接受的AI更新'}}]});expect(applied.result.effect).toBeUndefined();await finishCandidate(f,applied.result);await f.page.evaluate(()=>(window as any).editor.updateBlock('before',{content:'等待预览时的人工修改'}));await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();expect(await f.page.locator('.en-document .bn-editor[contenteditable=true]').textContent()).toContain('等待预览时的人工修改');expect(await f.page.locator('.en-document .bn-editor[contenteditable=true]').textContent()).not.toContain('尚未接受的AI更新');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
-it.each([false,true])('keeps nested native move ownership and preserves a later child edit (edited=%s)',async edited=>{
+it.each([false,true])('keeps nested native move candidates and preserves a later child edit (edited=%s)',async edited=>{
  const f=await open();try{
-  await f.page.evaluate(()=>{const e=(window as any).editor;e.updateBlock('before',{children:[{id:'child-one',type:'bulletListItem',content:'子条目一'},{id:'child-two',type:'bulletListItem',content:'子条目二'}]})})
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
-  expect(read.result.data.blocks.find((row:any)=>row.block.id==='child-one')).toMatchObject({parentId:'before',index:0})
-  const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'move',blockIds:['child-one'],anchor:{blockId:'after',placement:'before'}}]})
-  expect(applied.result.status).toBe('succeeded')
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).waitFor()
-  if(edited){await f.page.evaluate(()=>(window as any).editor.updateBlock('child-one',{content:'人工编辑移动后的子条目'}));expect(await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).isDisabled()).toBe(true);expect(await f.page.locator('.bn-editor').textContent()).toContain('人工编辑移动后的子条目')}
-  else {await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.getBlock('before').children.map((block:any)=>block.id))).toEqual(['child-one','child-two']);expect(await f.page.evaluate(()=>(window as any).editor.document.map((block:any)=>block.id))).toEqual(['before','anchor','after'])}
-  expect(f.errors).toEqual([])
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.updateBlock('before',{children:[{id:'child-one',type:'bulletListItem',content:'子条目一'},{id:'child-two',type:'bulletListItem',content:'子条目二'}]})});const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'});expect(read.result.data.blocks.find((row:any)=>row.block.id==='child-one')).toMatchObject({parentId:'before',index:0});const applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'move',blockIds:['child-one'],anchor:{blockId:'after',placement:'before'}}]});await finishCandidate(f,applied.result)
+  if(edited){await f.page.evaluate(()=>(window as any).editor.updateBlock('child-one',{content:'人工较新子条目'}));await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();expect(await f.page.evaluate(()=>(window as any).editor.getBlock('before').children.map((b:any)=>b.id))).toEqual(['child-one','child-two']);expect(await f.page.locator('.en-document .bn-editor[contenteditable=true]').textContent()).toContain('人工较新子条目')}
+  else{await acceptCandidate(f);expect(await f.page.evaluate(()=>(window as any).editor.getBlock('before').children.map((b:any)=>b.id))).toEqual(['child-two']);expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['before','anchor','child-one','after'])}expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
-it('restores a native top-level block moved into an existing nested list without duplicating it',async()=>{
+it('previews and confirms a native top-level move into an existing nested list without duplicating it',async()=>{
  const f=await open();try{
-  await f.page.evaluate(()=>(window as any).editor.updateBlock('after',{children:[{id:'nested-target',type:'bulletListItem',content:'原有子条目'}]}))
-  const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'move',blockIds:['before'],anchor:{blockId:'nested-target',placement:'after'}}]})
-  expect(applied.result.status).toBe('succeeded');expect(await f.page.evaluate(()=>(window as any).editor.getBlock('after').children.map((block:any)=>block.id))).toEqual(['nested-target','before'])
-  await f.page.evaluate((receipt:any)=>(window as any).modelResolve({kind:'conversation',markdown:'',capabilityReceipts:[{...receipt,capability:'notes.blocks.apply'}]}),applied.result)
-  await f.page.getByRole('button',{name:'撤销本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((block:any)=>block.id))).toEqual(['before','anchor','after'])
-  expect(await f.page.evaluate(()=>(window as any).editor.getBlock('after').children.map((block:any)=>block.id))).toEqual(['nested-target']);expect(f.errors).toEqual([])
+  await f.page.evaluate(()=>(window as any).editor.updateBlock('after',{children:[{id:'nested-target',type:'bulletListItem',content:'原有子条目'}]}));const parent=await parentRequest(f.page),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),applied=await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'move',blockIds:['before'],anchor:{blockId:'nested-target',placement:'after'}}]});expect(applied.result.data.pendingPreview).toBe(true);expect(await f.page.evaluate(()=>(window as any).editor.getBlock('after').children.map((b:any)=>b.id))).toEqual(['nested-target']);await finishCandidate(f,applied.result);await acceptCandidate(f);expect(await f.page.evaluate(()=>(window as any).editor.getBlock('after').children.map((b:any)=>b.id))).toEqual(['nested-target','before']);expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id))).toEqual(['anchor','after']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
 it('does not use the deterministic shortcut when Main says the current note is read-only',async()=>{
  const f=await open();try{
   await f.page.evaluate(()=>(window as any).nativeReadOnly=true)
@@ -338,10 +304,11 @@ it('does not restore a stopped request over a new native task or later manual te
   await f.page.evaluate(()=>{const w=window as any;w.holdNativeEffect=false;w.editor.updateBlock('after',{content:'停止后的人工正文'});w.editor.setTextCursorPosition('after','end')})
   await f.page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'native-fixture',prompt:'创建一个4乘4的表格',images:[]}})))
   await expect.poll(()=>f.history().find((row:any)=>row.prompt==='创建一个4乘4的表格')?.phase).toBe('ready')
+  expect(await f.page.evaluate(()=>(window as any).editor.document.filter((block:any)=>block.type==='table').length)).toBe(1);await acceptCandidate(f);await expect.poll(()=>f.history().find((row:any)=>row.prompt==='创建一个4乘4的表格')?.phase).toBe('accepted')
   await f.page.evaluate(()=>(window as any).releaseNativeEffect());await expect.poll(()=>f.history().find((row:any)=>row.prompt==='创建一个3乘3的表格')?.phase).toBe('stopped')
   const result=await f.page.evaluate(()=>{const w=window as any;return{phases:w.phases,commits:w.commits,blocks:w.editor.document,calls:w.calls}})
   const old=f.history().find((row:any)=>row.prompt==='创建一个3乘3的表格'),fresh=f.history().find((row:any)=>row.prompt==='创建一个4乘4的表格')
-  expect(result.phases.filter((row:any)=>row.requestId===old.requestId).map((row:any)=>row.phase)).toEqual(['preparing','stopped']);expect(result.phases.filter((row:any)=>row.requestId===fresh.requestId).map((row:any)=>row.phase)).toEqual(['preparing','ready']);expect(result.commits).toHaveLength(1);expect(JSON.stringify(result.blocks)).toContain('停止后的人工正文');expect(result.blocks.filter((block:any)=>block.type==='table')).toHaveLength(2);expect(result.calls.filter((row:any)=>row.method==='generate')).toHaveLength(0);expect(f.errors).toEqual([])
+  expect(result.phases.filter((row:any)=>row.requestId===old.requestId).map((row:any)=>row.phase)).toEqual(['preparing','stopped']);expect(result.phases.filter((row:any)=>row.requestId===fresh.requestId).map((row:any)=>row.phase)).toEqual(['preparing','ready','accepted']);expect(result.commits).toHaveLength(1);expect(JSON.stringify(result.blocks)).toContain('停止后的人工正文');expect(result.blocks.filter((block:any)=>block.type==='table')).toHaveLength(2);expect(result.calls.filter((row:any)=>row.method==='generate')).toHaveLength(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 

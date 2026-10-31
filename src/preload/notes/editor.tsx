@@ -26,7 +26,7 @@ import {NoteCreationBlock} from './creation-block'
 import {NativeTableControls,withNativeTableSizing} from './native-table'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
-import {createNativeNoteOperations,nativeBlankTableIntent,selectedNativeNoteBlocks} from './native-operations'
+import {createNativeNoteOperations,nativeBlankTableIntent,selectedNativeNoteBlocks,type NativeNotePreviewPlan} from './native-operations'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
@@ -256,6 +256,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
+  const [documentWriting,setDocumentWriting]=useState(false),composerPlans=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];projected?:any[];fingerprint:string}>(),composerPreview=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];updates?:any[];markdown?:string;inlineOrder?:string}>(),composerChildren=useRef(new Set<string>())
   const [guideSummaryRequest,setGuideSummaryRequest]=useState(''),guideSummary=useRef<{lease():boolean;requestId?:string}>()
   const [inlineDraft,setInlineDraft]=useState<NoteInlineAiDraft>(),inlineDraftRef=useRef<NoteInlineAiDraft>(),inlinePrompt=useRef(''),inlineRequest=useRef<{requestId:string;anchor:NoteInsertionAnchor}>(),composing=useRef(false)
   // The inline demand and component fields own their IME lifecycle. A removed
@@ -388,6 +389,9 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   const nativeOperations=useMemo(()=>createNativeNoteOperations({editor,documentId:client.current,journal:proposals,
     current:()=>!disposed.current&&!props.recovery&&editorActive()&&nativeCurrent(),snapshot:()=>snapshot(),
+    previewBlocks:id=>composerPlans.current?.requestId===id?composerPlans.current.projected:undefined,
+    previewing:id=>composerPlans.current?.requestId===id&&!inlineRequest.current&&!generatingBlock.current,
+    stage:plan=>{if(!request.current||inlineRequest.current||generatingBlock.current)return false;const state=composerPlans.current;if(!state)return false;if(state.requestId!==plan.generationId)throw Error('笔记预览请求已变化。');state.plans.push(plan);state.projected=plan.blocks;setDocumentWriting(true);return true},
     selected:()=>selectedNativeNoteBlocks(editor,references.capture(false).range),prompt:()=>lastRequest.current?.prompt||'原生笔记操作',
     persist:()=>persistConfirmed(),changed:()=>changed(),
     availableWidth:()=>Math.max(35,(scroll.current?.querySelector<HTMLElement>('.bn-editor')?.clientWidth||820)-31),
@@ -461,6 +465,17 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       createComponent:async(args:any,current:()=>boolean,requestId:string,report:(effect:any)=>Promise<void>)=>{
         if(!current())throw Error('笔记会话已变化。')
         const inline=inlineRequest.current?.requestId===request.current?inlineRequest.current:undefined
+        const candidate=composerPlans.current
+        if(!inline&&candidate?.requestId===request.current){
+          setDocumentWriting(true)
+          const childId=crypto.randomUUID(),context=args.requestContext||{}
+          composerChildren.current.add(childId)
+          const result=await props.bridge.request('generate',{sessionId:props.sessionId,requestId:childId,entryPoint:'component',mode:'component',prompt:args.prompt,title:context.title||'',markdown:context.markdown||'',selection:context.selection||'',context:context.context||{scope:'none',components:[]},images:context.images||[]}).finally(()=>composerChildren.current.delete(childId))
+          if(!current()||composerPlans.current!==candidate)throw Error('笔记预览请求已取消。')
+          if(result?.kind!=='component')throw Error('组件未返回可预览内容。')
+          candidate.components.push(result)
+          return{status:'succeeded',data:{pendingPreview:true,actionId:candidate.requestId},message:'组件建议已准备，等待用户确认；笔记正文尚未修改。'}
+        }
         if(inline)noteInlineAnchorBlock(editor,inline.anchor,client.current)
         const retry=inline?proposals.list().flatMap(value=>{
           if(value.id===inline.requestId||value.state!=='ready'||value.prompt.trim()!==lastRequest.current?.prompt.trim()||value.anchor?.blockId!==inline.anchor.blockId)return []
@@ -498,7 +513,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       settle:()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())))
     }
     const current=()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&editorActive()
-    const handler=createNoteCapabilityActions({...sharedActions,initialFingerprint:()=>capabilityFingerprint.current,generationId:()=>request.current,current,anchoredCreate:(generationId:string)=>{const inline=inlineRequest.current;if(!inline||inline.requestId!==generationId)return false;noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}})
+    const handler=createNoteCapabilityActions({...sharedActions,initialFingerprint:()=>capabilityFingerprint.current,generationId:()=>request.current,current,componentPreview:generationId=>{const state=composerPlans.current;if(!state||state.requestId!==generationId||inlineRequest.current||generatingBlock.current)return;return{blocks:state.projected??editor.document,stage:(plan:NativeNotePreviewPlan)=>{if(composerPlans.current!==state||request.current!==generationId)throw Error('笔记预览请求已变化。');state.plans.push(plan);state.projected=plan.blocks;setDocumentWriting(true)}}},anchoredCreate:(generationId:string)=>{const inline=inlineRequest.current;if(!inline||inline.requestId!==generationId)return false;noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}})
     const external=createExternalNoteCapabilityLease({sessionId:props.sessionId,documentId:client.current,current,busy:()=>!!request.current||exportPending.current||!!importing.current.size||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)&&![...capabilityCards.current.values()].includes(block.id)),snapshot,
       capture:async()=>{const context=references.capture(),range=context.range;return{selectedBlockIds:sharedActions.selectedBlockIds(),selectedParagraphIds:sharedActions.selectedParagraphIds(),selectedNativeBlockIds:selectedNativeNoteBlocks(editor,range),requestContext:{images:[],title:titleRef.current,markdown:context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):'',selection:range?.text||'',context:{scope:context.scope,components:context.components}}}},
       begin:id=>dataRefreshGuard.current.begin(id,snapshot()),
@@ -579,6 +594,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     if ((!prompt.trim() && !images.length) || request.current || externalCapabilities.current?.pending() || props.recovery||!editorActive()||!nativeCurrent()) return
     if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
     externalCapabilities.current?.revoke()
+    if(!inlineTarget){setInlineDraft(undefined);reviewedProposal.current=undefined}
     const draftBlockId=targetDraft||retry?.draftBlockId
     const draftBlock=draftBlockId?editor.getBlock(draftBlockId):undefined
     if(draftBlockId&&(!draftBlock||JSON.parse(draftBlock.props.payload).noteDraft!=='smart'))return
@@ -590,6 +606,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     }
     if(!retry&&context.range&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
     if(inlineTarget)Object.assign(captured,{text:'',from:0,to:0,cursor:inlineTarget.blockId})
+    else if(!draftBlockId&&!captured.text)captured.cursor=editor.document.at(-1)?.id||captured.cursor
     const targetPayloads=new Map(context.components.map(item=>[item.blockId,editor.getBlock(item.blockId)?.props.payload]))
     const component = !!draftBlockId
     const selectedResearch=context.scope==='selection'?context.components.filter(item=>item.type==='research'):[]
@@ -599,11 +616,13 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     publishTask(requestId,'preparing',{prompt,references:noteMessageReferences(context,captured.text),operation:component?'component':captured.text?'rewrite':'write'})
     if(!component&&captured.text)paintSelection(captured)
     if(inlineTarget){inlineCreations.current.clear();inlineRequest.current={requestId,anchor:inlineTarget};setInlineDraft(value=>value?{...value,error:undefined,reply:undefined}:value)}
-    request.current = requestId;setWriting(true); publishComposer({running:true}); setError(''); setPreview(undefined)
+    composerPlans.current=inlineTarget||component?undefined:{requestId,plans:[],components:[],fingerprint};composerPreview.current=undefined
+    request.current = requestId;setWriting(true);setDocumentWriting(!!inlineTarget||component||!!guideSummary.current); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
-      const emptyTable=!component&&nativeBlankTableIntent(prompt,images)
+      const emptyTable=!component&&(!!inlineTarget||!captured.text)&&nativeBlankTableIntent(prompt,images)
       if(emptyTable){
+        if(inlineTarget)composerPlans.current=undefined;else setDocumentWriting(true)
         const anchorId=inlineTarget?.blockId||captured.cursor||editor.getTextCursorPosition().block.id
         if(!noteInlineBlockIdentity(editor,anchorId)&&editor.document.length===1&&editor.document[0].type==='paragraph'&&!editor.document[0].content?.length)captureNoteInlineAnchor(editor,client.current,anchorId)
         const identity=noteInlineBlockIdentity(editor,anchorId)
@@ -613,11 +632,18 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent()||noteInlineBlockIdentity(editor,anchorId)!==identity)throw Error(t('原插入位置已删除或变化，请在空白行重新启用 AI。'))
         if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
         capabilityFingerprint.current=noteCapabilityFingerprint(snapshot());dataRefreshGuard.current.begin(requestId,snapshot())
-        const outcome=await props.bridge.request('native-table',{sessionId:props.sessionId,requestId,documentId:client.current,prompt,anchorId,title:titleRef.current})
+        const outcome=await props.bridge.request('native-table',{sessionId:props.sessionId,requestId,documentId:client.current,prompt,anchorId,title:titleRef.current,...!inlineTarget?{entryPoint:'composer'}:{}})
         // A stopped or superseded request may retain honest applied/saved facts
         // in its journal/history, but cannot commit input or reopen old UI.
         if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent())return
         const {receipt,result,phase}=outcome,summary=t('已插入表格')
+        if(!inlineTarget){
+          const state=composerPlans.current
+          if(receipt?.status!=='succeeded'||receipt.effect||receipt.data?.pendingPreview!==true||state?.requestId!==requestId||!state.plans.length||!state.projected)throw Error(receipt?.message||t('表格建议尚未准备完成，笔记内容已保留。'))
+          const changed=new Set(state.plans.flatMap(plan=>plan.changedBlockIds)),blocks=state.projected.filter(block=>changed.has(block.id)),markdown=await editor.blocksToMarkdownLossy(blocks)
+          composerPreview.current={requestId,plans:state.plans,components:[]};const candidate={kind:'text' as const,markdown,capabilityReceipts:result.capabilityReceipts,capabilitySummary:result.capabilitySummary}
+          setPreview({requestId,result:candidate,fingerprint,selectedText:'',from:0,to:0,cursor:anchorId});publishTask(requestId,'ready',{result:candidate});commitNativeDraft(admission);return
+        }
         const value=finishInlineProposal(requestId,receipt.status!=='succeeded',summary,'native-operations',receipt.status==='succeeded'?undefined:receipt.message)
         if(value)showProposal(value);changed();publishTask(requestId,phase,{result,...phase==='failed'?{error:receipt.message}:{}});if(receipt.status==='succeeded')commitNativeDraft(admission);return
       }
@@ -636,17 +662,30 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
       dataRefreshGuard.current.begin(requestId,snapshot())
       if(inlineTarget)proposals.begin(requestId,prompt,inlineTarget)
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedNativeBlockIds:selectedNativeNoteBlocks(editor,context.range),selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedNativeBlockIds:selectedNativeNoteBlocks(editor,context.range),selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{entryPoint:'composer'}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt||!nativeCurrent()||inlineTarget&&(!editorActive()||inlineRequest.current?.requestId!==requestId)) return
       if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
       // Legacy component results still honor explicit creation after the generic
       // conversation loop has completed; they never bypass capability planning.
-      if(!inlineTarget&&!pending&&result.kind==='component'&&!result.targetBlockId&&noteComponentRequest(prompt)){
-        const reference=captured.cursor?editor.getBlock(captured.cursor):editor.getTextCursorPosition().block
-        pending=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}],reference||editor.getTextCursorPosition().block,'after')[0].id
-      }
+
       let completedBlock='',inlineCompletion:undefined|{partial:boolean;summary:string;kind:string;error?:string}
+      const staged=composerPlans.current?.requestId===requestId?composerPlans.current.plans:[]
+      const components=composerPlans.current?.requestId===requestId?composerPlans.current.components:[]
+      if(!inlineTarget&&(staged.length||components.length)){
+        const ids=new Set(staged.flatMap(plan=>plan.changedBlockIds)),projected=composerPlans.current?.projected||[],flatten=(blocks:any[]):any[]=>blocks.flatMap(block=>[block,...flatten(block.children??[])]),nextIds=new Set(flatten(projected).map(block=>block.id)),blocks=flatten(projected).filter(block=>ids.has(block.id)),removed=flatten(editor.document).filter(block=>ids.has(block.id)&&!nextIds.has(block.id))
+        const updates=blocks.filter(block=>block.type==='research').map(block=>JSON.parse(block.props.payload)),textBlocks=blocks.filter(block=>block.type!=='research')
+        let markdown=textBlocks.length?await editor.blocksToMarkdownLossy(textBlocks):''
+        if(removed.length)markdown+=(markdown?'\n\n':'')+t('将移除以下内容：')+'\n\n'+await editor.blocksToMarkdownLossy(removed)
+        if(!markdown.trim())markdown=t('应用本次笔记编排建议。')
+        if(result.kind==='text'&&result.markdown.trim())markdown+='\n\n'+result.markdown
+        composerPreview.current={requestId,plans:staged,components,updates,markdown:result.kind==='text'?result.markdown:undefined,inlineOrder:result.kind==='text'?result.inlineOrder:undefined};setPreview({requestId,result:{kind:'text',markdown},fingerprint,selectedText:'',from:0,to:0,cursor:captured.cursor||editor.document.at(-1)?.id})
+        publishTask(requestId,'ready',{result:{kind:'text',markdown}});commitNativeDraft(admission);return
+      }
+      if(result.kind==='component'&&result.targetBlockId&&!inlineTarget){
+        if(context.scope!=='selection'||!context.components.some(item=>item.blockId===result.targetBlockId&&item.type==='research')||editor.getBlock(result.targetBlockId)?.props.payload!==targetPayloads.get(result.targetBlockId))throw Error(t('组件已变化，请重新选择后修改。'))
+        setPreview({requestId,...noteSuggestionPreview(result,{...captured,fingerprint,cursor:captured.cursor||editor.document.at(-1)?.id})});publishTask(requestId,'ready',{result});commitNativeDraft(admission);return
+      }
       if(result.kind==='component'&&result.targetBlockId){
         const current=editor.getBlock(result.targetBlockId)
         if(context.scope!=='selection'||!context.components.some(item=>item.blockId===result.targetBlockId&&item.type==='research'))throw Error(t("组件不在当前引用范围内，请重新选择。"))
@@ -749,11 +788,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if (!disposed.current && epoch.current === attempt) {
         const message = (e as Error).name === 'AbortError' ? t("生成已停止，可调整需求后重试。") : noteGenerationError(e)
         if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
-        rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget){const value=finishInlineProposal(requestId,true,'',undefined,message);if(value){showProposal(value);changed()}else setInlineDraft(draft=>draft?{...draft,review:undefined,error:message}:draft)}else {const value=proposals.list().some(value=>value.id===requestId&&value.changes.length)&&finishInlineProposal(requestId,true,'本次操作未完成，内容已保留','native-operations',message);if(value){showProposal(value);changed()}else setError(message)}
+        rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); if(inlineTarget){const value=finishInlineProposal(requestId,true,'',undefined,message);if(value){showProposal(value);changed()}else setInlineDraft(draft=>draft?{...draft,review:undefined,error:message}:draft)}else {const value=proposals.list().some(value=>value.id===requestId&&value.changes.length)&&finishInlineProposal(requestId,true,'本次操作未完成，内容已保留','native-operations',message);if(value){showProposal(value);changed()}else setError(component?message:'')}
       }
-    } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); request.current = '';inlineRequest.current=undefined; publishComposer({running:false}); generatingBlock.current = '';activeGeneration.current=undefined;challengeScheduleSync.current?.() } }
+    } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false);setDocumentWriting(false); request.current = '';inlineRequest.current=undefined; publishComposer({running:false}); generatingBlock.current = '';activeGeneration.current=undefined;challengeScheduleSync.current?.() } }
   }
-  const stop = () => { for(const blockId of capabilityCards.current.values())inlineComponents.stop(blockId);capabilityReservations.current.clear();inlineCreations.current.clear();inlineRequest.current=undefined;externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。"));challengeScheduleSync.current?.() }
+  const stop = () => { for(const requestId of composerChildren.current)void props.bridge.request('stop',{sessionId:props.sessionId,requestId});composerChildren.current.clear();for(const blockId of capabilityCards.current.values())inlineComponents.stop(blockId);capabilityReservations.current.clear();inlineCreations.current.clear();inlineRequest.current=undefined;externalCapabilities.current?.revoke();epoch.current++; const id = request.current; request.current = '';setWriting(false);setDocumentWriting(false);composerPlans.current=undefined;composerPreview.current=undefined; publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(inlineRequest.current||lastRequest.current?.draftBlockId?t("生成已停止，笔记内容已保留。"):'');challengeScheduleSync.current?.() }
   const stopInlineAi=()=>{const id=inlineRequest.current?.requestId;if(id){stop();const value=finishInlineProposal(id,true);if(value){showProposal(value);changed()}}setError('')}
   const cancelInlineAi=()=>{const draft=inlineDraftRef.current;if(draft)inlinePrompt.current=draft.review&&!draft.error?'':draft.prompt;if(inlineRequest.current)stopInlineAi();setInlineDraft(undefined);setError('');if(editorActive()&&draft&&editor.getBlock(draft.anchor.blockId)){editor.focus();editor.setTextCursorPosition(draft.anchor.blockId,'start')}}
   const submitInlineAi=()=>{const draft=inlineDraftRef.current;if(!draft||draft.review||request.current||settlingProposal.current||externalCapabilities.current?.pending())return;inlinePrompt.current=draft.prompt;try{noteInlineAnchorBlock(editor,draft.anchor,client.current);void generate(draft.prompt,[],undefined,undefined,undefined,draft.anchor)}catch(error){setInlineDraft(value=>value?{...value,error:(error as Error).message}:value)}}
@@ -782,20 +821,44 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   reviewActions.current={show:showProposal,confirm:id=>{automaticSettlements.current=automaticSettlements.current.catch(()=>{}).then(async()=>{await settlementTask.current.catch(()=>{});if(!disposed.current)await settleInlineProposal(false,id,true)}).catch(error=>{if(!disposed.current&&editorActive())setError((error as Error).message)})}}
   useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key!=='Escape'||event.defaultPrevented||event.isComposing||request.current||!inlineDraftRef.current?.review||!scroll.current?.contains(event.target as Node))return;event.preventDefault();setInlineDraft(undefined)};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape)},[])
   const apply = async (replace: boolean) => {
-    if (!preview||!nativeCurrent()) return
-    if(props.guide?.native&&JSON.stringify(editor.document)!==preview.fingerprint){setError(t('笔记已变化，请重新生成建议，较新内容已保留。'));return}
+    if (!preview||!nativeCurrent()||!editorActive()||props.recovery||request.current) return
+    if(JSON.stringify(editor.document)!==preview.fingerprint){setError(t('笔记已变化，请重新生成建议，较新内容已保留。'));return}
     if(guideSummary.current?.requestId===preview.requestId&&!guideSummary.current.lease()){setError(t('笔记末尾光标已变化，已保留用户当前操作。'));return}
+    const native=composerPreview.current?.requestId===preview.requestId?composerPreview.current:undefined
+    if(native){
+      try{
+        for(const plan of native.plans)plan.check()
+        const moved=[...new Set(native.plans.flatMap(plan=>plan.movedIds))],created:any[]=[]
+        proposals.begin(preview.requestId,lastRequest.current?.prompt||'',{documentId:client.current,blockId:preview.cursor,position:{}})
+        proposals.runFor(preview.requestId,()=>editor.transact(()=>{
+          for(const plan of native.plans)plan.apply()
+          const components=native.components.map(result=>({type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+crypto.randomUUID()})}})),text=native.markdown?editor.tryParseMarkdownToBlocks(native.markdown):[]
+          const extra=native.inlineOrder==='before-components'?[...text,...components]:[...components,...text]
+          if(extra.length)created.push(...editor.insertBlocks(extra,editor.document.at(-1),'after').filter((block:any)=>block.type==='research'))
+        }),moved,native.plans.some(plan=>plan.dependent))
+        proposals.confirm(preview.requestId);changed();await persistConfirmed()
+        // Bind refresh only after the accepted component is actually saved.
+        for(let index=0;index<created.length;index++){
+          const source=native.components[index]?.sourceResult,block=created[index],payload=editor.getBlock(block.id)?.props.payload
+          if(source?.status!=='verified'||!payload)continue
+          const node=JSON.parse(payload)
+          try{const binding=await props.bridge.request('component-data',{sessionId:props.sessionId,action:'bind-generated',nodeId:node.id,recipe:source.recipe,initialSpec:node.containerSpec});if(editorActive()&&editor.getBlock(block.id)?.props.payload===payload)updateSystemComponent(block.id,{...node,noteDataBound:true,sourceText:binding.enabled===false?t('已绑定数据源 · 手动刷新'):t('已绑定数据源 · 可见时自动刷新')})}catch{if(editor.getBlock(block.id)?.props.payload===payload)updateSystemComponent(block.id,{...node,noteDataBound:false,sourceText:t('已验证数据来源 · 当前为快照，自动刷新未启用')})}
+        }
+        composerPreview.current=undefined;composerPlans.current=undefined;publishTask(preview.requestId,'accepted');setPreview(undefined);clearSelection();return
+      }catch(error){setError((error as Error).message);return}
+    }
     editor.focus()
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     const range=editor.getExtension(NoteAiSelection)?.currentRange()
     if(replace&&range&&!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,range)){setError(t("请只选择正文文字进行改写。"));return}
-    if(replace&&preview.result.kind==='text'&&range)replaceNoteSelection(editor,range,blocks,preview.result.markdown)
+    if(preview.result.kind==='component'&&preview.result.targetBlockId){const block=editor.getBlock(preview.result.targetBlockId);if(!block||block.type!=='research'){setError(t('组件已变化，请重新生成。'));return}const original=JSON.parse(block.props.payload);editor.updateBlock(block.id,{props:{payload:JSON.stringify({...original,...preview.result.node,id:original.id,noteSize:original.noteSize})}})}
+    else if(replace&&preview.result.kind==='text'&&range)replaceNoteSelection(editor,range,blocks,preview.result.markdown)
     else { const reference = editor.getBlock(preview.cursor) || editor.getTextCursorPosition().block; editor.insertBlocks(blocks, reference, 'after') }
     setError('')
     publishTask(preview.requestId,'accepted'); setPreview(undefined); clearSelection(); changed()
     if(guideSummary.current?.requestId===preview.requestId){guideSummary.current=undefined;setGuideSummaryRequest('')}
   }
-  const discardPreview=()=>{if(preview)publishTask(preview.requestId,'discarded');if(preview?.requestId===guideSummary.current?.requestId){guideSummary.current=undefined;setGuideSummaryRequest('')}setPreview(undefined);clearSelection()}
+  const discardPreview=()=>{composerPlans.current=undefined;composerPreview.current=undefined;if(preview)publishTask(preview.requestId,'discarded');if(preview?.requestId===guideSummary.current?.requestId){guideSummary.current=undefined;setGuideSummaryRequest('')}setPreview(undefined);clearSelection()}
   const regenerate=()=>{const previous=lastRequest.current;if(!previous||request.current)return;if(preview)publishTask(preview.requestId,'discarded');const range=editor.getExtension(NoteAiSelection)?.currentRange();void generate(previous.prompt,previous.images,previous.admission,{...previous,captured:{...previous.captured,...(range||{from:0,to:0}),text:range?editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'):''}})}
   const commands = useRef({generate,stop,exportNote:(_format?:string)=>{}});commands.current={generate,stop,exportNote:(format?:string)=>{void exportNote(format)}}
   useEffect(()=>{
@@ -810,6 +873,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         ...value.capabilityProgress===undefined?{}:{capabilityProgress:value.capabilityProgress},
         ...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}
       })
+      if(value.documentIntent===true)setDocumentWriting(true)
       const active=activeGeneration.current,task=value.componentTask
       if(!active||active.requestId!==value.requestId||!task||!currentGeneration(active))return
       const node=JSON.parse(active.expected),next={...node,generationTaskId:task.generationTaskId||node.generationTaskId,generationChildSessionId:task.childSessionId||node.generationChildSessionId,generationStartedAt:task.generationStartedAt||node.generationStartedAt,generationEvents:task.generationEvents||node.generationEvents,generationPartialText:task.generationPartialText??node.generationPartialText,generationStatus:'running'}
@@ -896,7 +960,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       setDocument:(nextTitle,blocks)=>{assert();titleRef.current=nextTitle;setTitle(nextTitle);editor.replaceBlocks(editor.document,blocks);changed()},
       appendBlock:block=>{assert();editor.insertBlocks([block],editor.document.at(-1),'after')},
       updateText:(blockId,text)=>{assert();if(!editor.getBlock(blockId))throw Error('演示段落已变化。');editor.updateBlock(blockId,{content:text})},
-      prepareNative:mode=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(last)editor.setTextCursorPosition(last.id,'end');const state=editor._tiptapEditor.state,doc=state.doc,from=state.selection.from,to=state.selection.to,lease=()=>{assert();const current=editor._tiptapEditor.state;return!!props.guide?.native&&nativeCurrent()&&editor.document.at(-1)?.id===last?.id&&current.doc===doc&&current.selection.empty&&current.selection.$from.parentOffset===current.selection.$from.parent.content.size&&current.selection.from===from&&current.selection.to===to};if(mode==='summary')guideSummary.current={lease};return lease},
+      prepareNative:mode=>{assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError');clearSelection();const last=editor.document.at(-1);if(mode!=='summary'&&last)editor.setTextCursorPosition(last.id,'end');const fingerprint=JSON.stringify(editor.document),{from,to}=editor._tiptapEditor.state.selection;const lease=()=>{assert();const selection=editor._tiptapEditor.state.selection;return!!props.guide?.native&&nativeCurrent()&&editor.document.at(-1)?.id===last?.id&&JSON.stringify(editor.document)===fingerprint&&selection.from===from&&selection.to===to};if(mode==='summary'){guideSummary.current={lease};selection.current={text:'',from:0,to:0,cursor:last?.id||''}}return lease},
       paragraphStartPoint:blockId=>{
         assert();if(!props.guide?.native||!nativeCurrent())throw new DOMException('演示编辑器已关闭。','AbortError')
         const view=editor._tiptapEditor.view,block=editor.getBlock(blockId),selection=view.state.selection
@@ -944,12 +1008,12 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   },[editor,props.guide])
   const editedDate=editedAt?noteEditDate(editedAt,document.documentElement.dataset.odysseyLocale):undefined
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
-  const guideSummaryPreview=preview?.requestId===guideSummaryRequest?preview:undefined,guideSummaryVisible=!!props.guide?.native&&!!guideSummaryRequest&&(writing&&request.current===guideSummaryRequest||!!guideSummaryPreview)
-  const suggestion=<>{guideSummaryVisible?<div data-note-preview-request-id={guideSummaryRequest} data-note-preview-state={guideSummaryPreview?'ready':'generating'}><SuggestionPanel header={<strong>{t(guideSummaryPreview?'内容预览':'正在回复')}</strong>} footer={guideSummaryPreview?<><button data-note-preview-apply={guideSummaryRequest} onClick={()=>apply(false)}>{t('插入笔记')}</button><button onClick={discardPreview}>{t('放弃')}</button></>:null}>{guideSummaryPreview?.result.kind==='text'?<MarkdownPreview markdown={guideSummaryPreview.result.markdown} dark={props.dark}/>:<NoteAiProcessing stop={stop} label="正在生成内容…"/>}</SuggestionPanel></div>:null}{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing&&!inlineDraft&&!guideSummaryVisible ? <NoteAiProcessing stop={stop}/> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
-      {preview&&!guideSummaryPreview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
+  const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing&&documentWriting&&!inlineDraft?<div data-note-preview-request-id={request.current} data-note-preview-state="generating"><NoteAiProcessing stop={stop}/></div>:null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
+      {preview ? <div data-note-preview-request-id={preview.requestId} data-note-preview-state="ready"><SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button data-note-preview-apply={preview.requestId} onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
         {preview.result.capabilitySummary||preview.result.capabilityReceipts?.length?<div className="en-capability-receipts" role="status">{preview.result.capabilityReceipts?.length?capabilityReceiptText(preview.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):preview.result.capabilitySummary}</div>:null}
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
-      </SuggestionPanel> : null}</>
+        {composerPreview.current?.requestId===preview.requestId?[...(composerPreview.current.updates??[]).map(node=>({node})),...composerPreview.current.components].map((result,index)=><ResearchBlock key={index} block={{id:'preview-'+index,props:{payload:JSON.stringify(result.node)}}}/>):null}
+      </SuggestionPanel></div> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
     {props.active!==false?<ChallengeToolbar controller={challenge} sessionId={props.sessionId} dark={props.dark} marginAvailable={challengeMarginAvailable} disabled={!!props.recovery}/>:null}

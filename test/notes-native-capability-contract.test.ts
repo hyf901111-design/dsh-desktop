@@ -116,7 +116,11 @@ it.each([false,true])('guides actual Notes generation toward native edits while 
  const f=fixture(),input:any={sessionId:session.id,requestId:'native-plan',title:'笔记',markdown:'现有正文',selection:'',prompt:'先把现有内容整理为可编辑表格和清单，再给出说明与交互行情组件。',mode:'write',clientContext:context,clientCapabilities:f.host.registry.catalog(context),context:{scope:'note',components:[]},...inline?{entryPoint:'inline',insertionAnchor:{documentId:context.documentId,blockId:'paragraph-one',position:{}}}:{}}
  expect(await generateNoteSuggestion(ctx,input)).toEqual({kind:'capabilities',calls})
  expect(seen).toHaveLength(1)
- expect(seen[0].system).toMatch(/普通[^。]*正文[^。]*表格[^。]*列表[^。]*代码[^。]*优先[^。]*notes\.blocks\.read[^。]*notes\.blocks\.apply/)
+ expect(seen[0].system).toMatch(/只有需要定位并编排现有块[^。]*notes\.blocks\.read[^。]*notes\.blocks\.apply/)
+ expect(seen[0].system).toContain('不把普通表格默认变成研究组件')
+ expect(seen[0].system).toContain('普通总结、解释、核对、讨论均默认conversation')
+ expect(seen[0].system).toContain('pendingPreview回执表示没有写入或保存')
+ if(inline)expect(seen[0].system).toContain('此入口直接完成需求')
  expect(seen[0].system).toMatch(/(?:只有|仅)[^。]*交互[^。]*行情[^。]*特殊视觉[^。]*notes\.components\.create/)
  expect(seen[0].system).toContain('inlineOrder=before-components或after-components')
  expect(seen[0].system).toContain('wireToken=')

@@ -86,3 +86,9 @@ it('retains native image manual alignment while capability scopes do not expand 
  changeNoteAlignment(f.editor,['image'],'right');expect(image.props).toEqual({url:'https://example.com/image.png',textAlignment:'right',previewWidth:280})
  f.retry();await f.call('notes.blocks.align',{scope:'note',target:'researchComponents',alignment:'center'});expect(image.props.textAlignment).toBe('right');expect(f.editor.getBlock('r').props.textAlignment).toBe('center')
 })
+
+it('refuses a Main preview-only component content request if its composer preview lease is absent',async()=>{
+ const f=fixture(),inspect:any=await f.call('notes.components.inspect'),before=structuredClone(f.content)
+ await expect(f.handler({action:'notes.components.apply',args:{blockId:'r',revision:inspect.data.revision,containerSpec:spec('不应写入')},context:f.context(),generationId:'generation',requestId:'requires-preview',previewOnly:true})).rejects.toThrow('本次未写入正文')
+ expect(f.content).toEqual(before);expect(f.effects).toEqual([])
+})
