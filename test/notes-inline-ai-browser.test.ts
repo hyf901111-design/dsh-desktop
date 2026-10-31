@@ -65,6 +65,43 @@ it('opens only at a blank paragraph start without changing the document; Escape 
   await f.page.keyboard.type('/');await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.some((call:any)=>call.method==='menu-sync'))).toBe(true);expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
+it.each(['paragraph','title','sidebar','iframe'])('dismisses only the idle Space input on an outside %s click, retains the draft, and leaves focus at the clicked target',async target=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const button=document.createElement('button');button.id='outside-sidebar';button.textContent='侧边入口';Object.assign(button.style,{position:'fixed',top:'8px',right:'8px',zIndex:'999999'});document.body.append(button);const frame=document.createElement('iframe');frame.id='outside-frame';frame.srcdoc='<input aria-label="外部嵌入输入" />';Object.assign(frame.style,{position:'fixed',bottom:'8px',right:'8px',width:'210px',height:'42px',zIndex:'999999'});document.body.append(frame)})
+  await cursor(f.page);await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求'});await input.fill('稍后继续的需求');await input.click();await f.page.locator('.en-space-ai-avatar').click();expect(await f.page.locator('.en-space-ai').count()).toBe(1);await input.click()
+  const before=await f.page.evaluate(()=>JSON.stringify((window as any).editor.document))
+  if(target==='paragraph')await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click()
+  else if(target==='title')await f.page.locator('.en-title').click()
+  else if(target==='sidebar')await f.page.locator('#outside-sidebar').click()
+  else await f.page.frameLocator('#outside-frame').getByRole('textbox',{name:'外部嵌入输入'}).click()
+  await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0)
+  const state=await f.page.evaluate(()=>{const e=(window as any).editor,a=document.activeElement,selection=e._tiptapEditor.state.selection;return{document:JSON.stringify(e.document),active:a?.id||a?.className,cursor:e.getTextCursorPosition().block.id,offset:selection.$from.parentOffset,empty:selection.empty,calls:(window as any).calls.filter((c:any)=>c.method==='generate'||c.method==='stop')}})
+  expect(state.document).toBe(before);expect(state.calls).toEqual([])
+  if(target==='paragraph'){expect(state.cursor).toBe('before');expect(state.offset).toBeGreaterThanOrEqual(0);expect(state.offset).toBeLessThanOrEqual(4);expect(state.empty).toBe(true)}
+  else if(target==='title')expect(state.active).toContain('en-title')
+  else expect(state.active).toBe(target==='sidebar'?'outside-sidebar':'outside-frame')
+  await cursor(f.page);await f.page.keyboard.press('Space');expect(await input.inputValue()).toBe('稍后继续的需求');expect(await input.evaluate((element:Element)=>element===document.activeElement)).toBe(true);await f.page.keyboard.press('Escape');expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('respects composed internal focus, dismisses outside keyboard focus, and releases listeners on owner disposal',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const button=document.createElement('button');button.id='outside-tab';button.textContent='外部焦点';document.body.append(button);})
+  await cursor(f.page);await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求'});await input.fill('保留键盘草稿')
+  await f.page.evaluate(()=>{const host=document.createElement('span');host.id='inline-shadow';document.querySelector('.en-space-ai')!.append(host);host.attachShadow({mode:'open'}).innerHTML='<button>内部扩展操作</button>'})
+  await f.page.getByRole('button',{name:'内部扩展操作'}).click();expect(await f.page.locator('.en-space-ai').count()).toBe(1)
+  await f.page.locator('#outside-tab').focus();await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0);expect(await f.page.locator('#outside-tab').evaluate((element:Element)=>element===document.activeElement)).toBe(true)
+  await cursor(f.page);await f.page.keyboard.press('Space');expect(await input.inputValue()).toBe('保留键盘草稿')
+  // Queue an external dismissal, then dispose this owner before its timer runs.
+  await f.page.evaluate(()=>{document.querySelector('#outside-tab')!.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true}));(window as any).fixture.reopen()})
+  await f.page.locator('.en-title').waitFor();await cursor(f.page);await f.page.keyboard.press('Space');await input.fill('新 owner 的需求');await input.click();expect(await input.inputValue()).toBe('新 owner 的需求');expect(await f.page.locator('.en-space-ai').count()).toBe(1);expect(await f.page.evaluate(()=>(window as any).calls.filter((c:any)=>c.method==='stop').length)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('does not dismiss or stop an ongoing Space generation when other paragraphs or title receive focus',async()=>{
+ const f=await open();try{
+  await launch(f.page,'持续生成的需求');await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.en-title').click();expect(await f.page.locator('.en-space-ai .en-ai-loading').count()).toBe(1);expect(await f.page.evaluate(()=>(window as any).calls.filter((c:any)=>c.method==='stop').length)).toBe(0)
+  await finish(f.page,{kind:'text',markdown:'生成中切换焦点仍保留的结果。'});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.bn-editor').textContent()).toContain('生成中切换焦点仍保留的结果。');await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).click();await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
 it('keeps ordinary spaces in nonempty paragraphs, headings, code, selected text, IME and read-only editors',async()=>{
  const f=await open();try{
   await cursor(f.page,'before',true);await f.page.keyboard.press('Space');expect(await f.page.locator('.en-space-ai').count()).toBe(0)
@@ -229,15 +266,15 @@ it('replaces a submitted multiline draft with one compact processing row and ret
   await f.page.evaluate(()=>(Object.values((window as any).jobs)[0] as any).reject(Error('临时失败')));await expect.poll(()=>f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe(prompt);expect(await f.page.locator('.en-space-ai .en-ai-loading').count()).toBe(0);await f.page.getByRole('button',{name:'发送行内 AI 需求'}).click();await f.page.getByRole('button',{name:'停止',exact:true}).click();expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe(prompt);expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).evaluate((el:Element)=>el===document.activeElement)).toBe(true);expect(await f.page.locator('.en-space-ai .en-ai-loading').count()).toBe(0);await f.page.keyboard.press('Escape');expect(await f.page.locator('.en-space-ai').count()).toBe(0);await cursor(f.page);await f.page.keyboard.press('Space');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe(prompt);expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
-it.each([false,true])('keeps the real paragraph color submenu and formatting toolbar above inline AI in dark=%s',async dark=>{
+it.each([false,true])('keeps the real paragraph color submenu and formatting toolbar above a generated inline review in dark=%s',async dark=>{
  const f=await open(1280,dark);try{
-  await cursor(f.page);await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('保留行内需求')
+  await launch(f.page,'保留行内需求');await finish(f.page,{kind:'text',markdown:'待确认的生成正文。'});await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();await f.page.evaluate(()=>(window as any).holdSaves=true)
   const inspect=async(selector:string,name:string)=>{const layer=await inlineMenuLayer(f.page,selector);if(evidence){writeFileSync(resolve(evidence,`${name}-${dark?'dark':'light'}.json`),JSON.stringify(layer,null,2));await f.page.screenshot({path:resolve(evidence,`${name}-${dark?'dark':'light'}.png`)})}expect(layer.overlap.width).toBeGreaterThan(20);expect(layer.overlap.height).toBeGreaterThan(5);expect.soft(layer.menuTop,JSON.stringify(layer)).toBe(true)}
   const colors=async(name='color-menu')=>{await f.page.locator('.bn-block-outer[data-id="before"]').hover();await f.page.getByRole('button',{name:'打开菜单',exact:true}).click();await f.page.getByRole('menuitem',{name:'颜色',exact:true}).hover();await inspect('.bn-color-picker-dropdown',name)}
   await colors()
-  await f.page.locator('.bn-block-outer[data-id="after"] .bn-inline-content').click();await cursor(f.page,'after');await f.page.keyboard.press('Shift+End');await inspect('.bn-formatting-toolbar','format-toolbar')
+  const resultId=await f.page.evaluate(()=>(window as any).editor.document.find((block:any)=>block.content?.some((part:any)=>part.text==='待确认的生成正文。')).id);await f.page.locator('.bn-block-outer[data-id="'+resultId+'"] .bn-inline-content').click();await cursor(f.page,resultId);await f.page.keyboard.press('Shift+End');await inspect('.bn-formatting-toolbar','format-toolbar')
   await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.bn-block-outer[data-id="before"]').hover();await f.page.getByRole('button',{name:'段落操作',exact:true}).click();await inspect('.en-block-menu','paragraph-menu')
-  await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.en-document-scroll').evaluate((element:HTMLElement)=>element.scrollTop=60);await colors('color-menu-scrolled');expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('保留行内需求');expect(f.errors).toEqual([])
+  await f.page.locator('.bn-block-outer[data-id="before"] .bn-inline-content').click();await f.page.locator('.en-document-scroll').evaluate((element:HTMLElement)=>element.scrollTop=60);await colors('color-menu-scrolled');expect(await f.page.locator('.en-space-ai[data-review]').count()).toBe(1);await f.page.evaluate(()=>{const w=window as any;w.holdSaves=false;(w.saveWaiters||[]).splice(0).forEach((release:any)=>release())});expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })
 it.each([{width:1280,dark:false},{width:620,dark:true}])('keeps the visible blank paragraph below long content and a tall component in view across repeated Space and Escape at $width px',async({width,dark})=>{
@@ -259,14 +296,18 @@ it.each([{width:1280,dark:false},{width:620,dark:true}])('keeps a distant second
  const f=await open(width,dark);try{
   await f.page.evaluate(()=>{const e=(window as any).editor;e.replaceBlocks(e.document,[{id:'first-anchor',type:'paragraph'},...Array.from({length:40},(_,i)=>({id:'between-'+i,type:'paragraph',content:'两处空白行之间的长笔记第'+(i+1)+'段：保留正文与阅读位置。'})),{id:'second-anchor',type:'paragraph'},{id:'second-tail',type:'paragraph',content:'保留第二处空白行后的正文'}])})
   await cursor(f.page,'first-anchor');await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).fill('尚未提交的需求')
-  // A physical click moves the existing draft's caret to a distant paragraph.
-  // The same composer remains mounted when Space retargets it to this line.
+  // A physical click dismisses the idle input, retaining its draft. Space at
+  // the newly focused line reopens it after the old reservation is removed.
   await f.page.locator('.bn-block-outer[data-id="second-anchor"] .bn-inline-content').click()
+  await expect.poll(()=>f.page.locator('.en-space-ai').count()).toBe(0);expect(await f.page.evaluate(()=>{const e=(window as any).editor,s=e._tiptapEditor.state.selection;return{id:e.getTextCursorPosition().block.id,offset:s.$from.parentOffset,empty:s.empty}})).toEqual({id:'second-anchor',offset:0,empty:true})
   await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
-  const before=await f.page.locator('.en-document-scroll').evaluate((root:HTMLElement)=>root.scrollTop);expect(before).toBeGreaterThan(1000)
+  const before=await f.page.locator('.en-document-scroll').evaluate((root:HTMLElement)=>{const e=(window as any).editor,s=e._tiptapEditor.state.selection;return{scrollTop:root.scrollTop,anchorTop:root.querySelector<HTMLElement>('[data-id="second-anchor"] .bn-block-content')!.getBoundingClientRect().top,caret:e._tiptapEditor.view.coordsAtPos(s.from)}});expect(before.scrollTop).toBeGreaterThan(1000)
   await f.page.keyboard.press('Space');await f.page.getByRole('textbox',{name:'行内 AI 需求'}).waitFor();await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
-  const after=await f.page.evaluate(()=>{const root=document.querySelector<HTMLElement>('.en-document-scroll')!,popup=document.querySelector<HTMLElement>('.en-space-ai')!,anchor=root.querySelector<HTMLElement>('[data-id="second-anchor"] .bn-block-content')!,input=popup.querySelector('textarea')!,viewport=root.getBoundingClientRect(),box=popup.getBoundingClientRect();return{scrollTop:root.scrollTop,viewport:{top:viewport.top,bottom:viewport.bottom},box:{top:box.top,bottom:box.bottom},anchorTop:anchor.getBoundingClientRect().top,focused:input===document.activeElement}})
-  expect.soft(Math.abs(after.scrollTop-before),JSON.stringify({before,after})).toBeLessThan(3);expect.soft(after.box.top).toBeGreaterThanOrEqual(after.viewport.top);expect.soft(after.box.bottom).toBeLessThanOrEqual(after.viewport.bottom);expect.soft(Math.abs(after.box.top-after.anchorTop)).toBeLessThan(2);expect(after.focused).toBe(true)
+  const after=await f.page.evaluate(()=>{const e=(window as any).editor,s=e._tiptapEditor.state.selection,root=document.querySelector<HTMLElement>('.en-document-scroll')!,popup=document.querySelector<HTMLElement>('.en-space-ai')!,anchor=root.querySelector<HTMLElement>('[data-id="second-anchor"] .bn-block-content')!,input=popup.querySelector('textarea')!,viewport=root.getBoundingClientRect(),box=popup.getBoundingClientRect(),field=input.getBoundingClientRect();return{scrollTop:root.scrollTop,viewport:{top:viewport.top,bottom:viewport.bottom},box:{top:box.top,bottom:box.bottom},input:{top:field.top,bottom:field.bottom},anchorTop:anchor.getBoundingClientRect().top,caret:e._tiptapEditor.view.coordsAtPos(s.from),cursor:{id:e.getTextCursorPosition().block.id,offset:s.$from.parentOffset,empty:s.empty},focused:input===document.activeElement}})
+  // Browser scroll anchoring may compensate for the old reservation disappearing.
+  // Validate the visible paragraph/caret rather than the scrollTop counter.
+  if(evidence)writeFileSync(resolve(evidence,'retarget-outside-dismiss-'+width+'.json'),JSON.stringify({before,after},null,2))
+  expect.soft(Math.abs(after.anchorTop-before.anchorTop),JSON.stringify({before,after})).toBeLessThan(3);expect.soft(Math.abs(after.caret.top-before.caret.top),JSON.stringify({before,after})).toBeLessThan(3);expect.soft(Math.abs(after.caret.left-before.caret.left),JSON.stringify({before,after})).toBeLessThan(3);expect(after.cursor).toEqual({id:'second-anchor',offset:0,empty:true});expect.soft(after.box.top).toBeGreaterThanOrEqual(after.viewport.top);expect.soft(after.box.bottom).toBeLessThanOrEqual(after.viewport.bottom);expect(after.input.top).toBeGreaterThanOrEqual(after.viewport.top);expect(after.input.bottom).toBeLessThanOrEqual(after.viewport.bottom);expect.soft(Math.abs(after.box.top-after.anchorTop)).toBeLessThan(2);expect(after.focused).toBe(true)
   expect(await f.page.getByRole('textbox',{name:'行内 AI 需求'}).inputValue()).toBe('尚未提交的需求');expect(await f.page.evaluate(()=>Object.keys((window as any).jobs).length)).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })

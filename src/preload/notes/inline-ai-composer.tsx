@@ -9,10 +9,26 @@ export function NoteAiProcessing({stop,label='正在生成内容…'}:{stop():vo
 }
 export type NoteInlineAiReview={id:string;summary:string;blockIds:string[];anchorBlockId?:string;anchorIsResult?:boolean;busy?:boolean;canUndo?:boolean}
 export type NoteInlineAiDraft={anchor:NoteInsertionAnchor;prompt:string;error?:string;reply?:string;review?:NoteInlineAiReview}
-export function NoteInlineAiComposer({draft,editor,scroll,running,disabled,onChange,onSubmit,onCancel,onStop,onConfirm,onUndo}:{draft:NoteInlineAiDraft;editor:any;scroll:React.RefObject<HTMLElement>;running:boolean;disabled:boolean;onChange(value:string):void;onSubmit():void;onCancel():void;onStop():void;onConfirm?():void|Promise<unknown>;onUndo?():void|Promise<unknown>}){
+export function NoteInlineAiComposer({draft,editor,scroll,running,disabled,onChange,onSubmit,onCancel,onDismiss,onStop,onConfirm,onUndo}:{draft:NoteInlineAiDraft;editor:any;scroll:React.RefObject<HTMLElement>;running:boolean;disabled:boolean;onChange(value:string):void;onSubmit():void;onCancel():void;onDismiss?():void;onStop():void;onConfirm?():void|Promise<unknown>;onUndo?():void|Promise<unknown>}){
  const shell=useRef<HTMLElement>(null),input=useRef<HTMLTextAreaElement>(null),composition=useRef(false),wasRunning=useRef(false),operation=useRef(0),[working,setWorking]=useState(false),[actionError,setActionError]=useState(''),[placement,setPlacement]=useState({anchor:undefined as NoteInsertionAnchor|undefined,top:0,left:0,width:0}),[reservation,setReservation]=useState(0)
  const review=draft.review,ready=!!review&&!running,anchorBlockId=review?.anchorBlockId||draft.anchor.blockId,anchorIsResult=!!review?.anchorIsResult
+ const dismiss=useRef(onDismiss);dismiss.current=onDismiss
  useLayoutEffect(()=>{operation.current++;setWorking(false);setActionError('');return()=>{operation.current++}},[review?.id])
+ useLayoutEffect(()=>{
+  const element=shell.current,owner=element?.ownerDocument,view=owner?.defaultView
+  if(!element||!owner||!view||running||review||!dismiss.current)return
+  let timer:number|undefined
+  const schedule=(frameOnly=false)=>{
+   if(timer!==undefined)view.clearTimeout(timer)
+   // Let the new target receive its native focus/caret before removing the
+   // anchored input and its reserved height. Dismissal never restores focus.
+   timer=view.setTimeout(()=>{timer=undefined;if(element.isConnected&&(!frameOnly||owner.activeElement?.tagName==='IFRAME'&&!element.contains(owner.activeElement)))dismiss.current?.()},0)
+  }
+  const outside=(event:Event)=>{if(!event.composedPath().includes(element)&&!element.contains(event.target as Node))schedule()}
+  const frameFocus=()=>schedule(true)
+  owner.addEventListener('pointerdown',outside,true);owner.addEventListener('focusin',outside,true);view.addEventListener('blur',frameFocus)
+  return()=>{if(timer!==undefined)view.clearTimeout(timer);owner.removeEventListener('pointerdown',outside,true);owner.removeEventListener('focusin',outside,true);view.removeEventListener('blur',frameFocus)}
+ },[running,!!review,draft.anchor])
  const {anchor:positionAnchor,...position}=placement
  useLayoutEffect(()=>{
   const root=scroll.current,document=root?.querySelector<HTMLElement>('.en-document')
@@ -28,7 +44,7 @@ export function NoteInlineAiComposer({draft,editor,scroll,running,disabled,onCha
   if(!positioned)return
   if(review&&!running){composition.current=false;wasRunning.current=false;return}
   if(running){composition.current=false;if(!wasRunning.current||shell.current?.contains(document.activeElement))shell.current?.focus({preventScroll:true})}
-  else if(!wasRunning.current||shell.current?.contains(document.activeElement)){input.current?.focus({preventScroll:true});input.current?.scrollIntoView({block:'nearest'})}
+  else if(!wasRunning.current||shell.current?.contains(document.activeElement)){input.current?.focus({preventScroll:true});const box=shell.current?.getBoundingClientRect(),viewport=scroll.current?.getBoundingClientRect();if(!box||!viewport||box.top<viewport.top||box.bottom>viewport.bottom)shell.current?.scrollIntoView({block:'nearest'})}
   wasRunning.current=running
  },[draft.anchor,running,positioned,review?.id])
  useLayoutEffect(()=>{const element=input.current;if(element){element.style.height='0';element.style.height=Math.min(180,Math.max(28,element.scrollHeight))+'px'}},[draft.prompt,position.width,running])
