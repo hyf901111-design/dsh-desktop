@@ -967,7 +967,8 @@ export function patchHomeGuideNative(source) {
   source = replaceOne(source, '\nfunction ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {', '\n' + CANVAS + '\nfunction HomeGuideNativeOriginalResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {')
   source = replaceOne(source, 'function FinancialWidget({node,sessionId,visible,onSpecChange}){', PERSISTENT + '\nfunction HomeGuideNativeOriginalFinancialWidget({node,sessionId,visible,onSpecChange}){')
   source = replaceOne(source, 'function FinancialLibrary({rootRef,workspace,sessionId}){', 'function HomeGuideNativeOriginalFinancialLibrary({rootRef,workspace,sessionId}){')
-  const page='"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
-  source=replaceOne(source,page,page+'\n'+RENDER_OWNER)
+  // Preserve the shell patch's strict phase/page/capture adjacency.
+  const phase='\t\t\t\t"data-phase": phase,'
+  source=replaceOne(source,phase,RENDER_OWNER+'\n'+phase)
   return source
 }

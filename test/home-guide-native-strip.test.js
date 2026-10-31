@@ -6,6 +6,7 @@ import * as guide from '../scripts/lib/home-guide-native.mjs'
 import * as presentation from '../scripts/lib/home-guide-presentation-native.mjs'
 import {patchSubagentPanelConversation} from '../scripts/lib/figma-subagent-panel.mjs'
 import {patchFinancialWidgetClient} from '../scripts/lib/financial-widget-client.mjs'
+import {patchFigmaFinalConversation} from '../scripts/lib/patch-figma-final-shell.mjs'
 import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 
 const resident=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
@@ -103,8 +104,15 @@ it('strips and reapplies the native owner bridge beside a real managed preview g
 
 it('publishes the actual resident render session and dedicated membership, upgrades older SDKs and strictly strips its owned marker',()=>{
  const current=guide.patchHomeGuideNative(withoutPresentation(installed)),marker='/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,'
- expect(current.split(marker)).toHaveLength(2);expect(current.indexOf(marker)).toBeGreaterThan(current.indexOf('function HomeGuideNativeOriginalConversationRoot('));expect(current.slice(current.indexOf(marker)-100,current.indexOf(marker))).toContain('"data-odyssey-page": research ? "research"')
+ expect(current.split(marker)).toHaveLength(2);expect(current.indexOf(marker)).toBeGreaterThan(current.indexOf('function HomeGuideNativeOriginalConversationRoot('));expect(current.slice(current.indexOf(marker)+marker.length,current.indexOf(marker)+marker.length+200)).toContain('"data-odyssey-page": research ? "research"')
  const native=guide.stripHomeGuideNative(current);expect(native).not.toContain('data-home-guide-view-session');expect(native).not.toContain('data-home-guide-board-only');expect(guide.patchHomeGuideNative(current.replace('\n'+marker,''))).toBe(current)
  for(const broken of [current.replace('"data-home-guide-view-session": sessionId','"data-home-guide-view-session": otherSession'),current.replace(marker,marker+'\n'+marker),current.replace('/* odyssey:home-guide-render-owner:v1 */','')])expect(()=>guide.stripHomeGuideNative(broken)).toThrow(/anchor|partial|drift/i)
  new Script(current);new Script(native)
+})
+
+it('preserves the strict shell rebuild anchor and migrates the previous render-owner position without weakening either patch',()=>{
+ const current=guide.patchHomeGuideNative(withoutPresentation(installed)),marker='/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,',page='"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
+ expect(current).toContain('"data-phase": phase,\n\t\t\t\t'+page+'\n\t\t\t\tonClickCapture:');expect(patchFigmaFinalConversation(current)).toBe(current);expect(guide.patchHomeGuideNative(patchFigmaFinalConversation(current))).toBe(current)
+ const previous=current.replace('\n'+marker,'').replace(page,page+'\n'+marker)
+ expect(()=>patchFigmaFinalConversation(previous)).toThrow(/anchor drifted/);expect(guide.patchHomeGuideNative(previous)).toBe(current);expect(guide.stripHomeGuideNative(previous)).toBe(guide.stripHomeGuideNative(current));expect(patchFigmaFinalConversation(guide.patchHomeGuideNative(previous))).toBe(current)
 })
