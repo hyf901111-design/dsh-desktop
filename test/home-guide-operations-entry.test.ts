@@ -3,21 +3,21 @@ import {expect,test,vi} from 'vitest'
 import {playHomeGuideFromOperations,type HomeGuideKind} from '../src/preload/home-guides'
 import {playHomeGuideFromExplore} from '../src/preload/explore-menu-actions'
 
-test.each<HomeGuideKind>(['board','note','ppt','report','workbench'])('dismisses Explore before handing the %s example to its native session controller',async kind=>{
- const order:string[]=[],context={signal:new AbortController().signal,revealComposer:vi.fn(async()=>{order.push('dismiss')})},start=vi.fn(async()=>{order.push('native-start')})
+test.each<HomeGuideKind>(['board','note','ppt','report','workbench'])('hands the still-open Explore %s entry to the native controller without hiding its first click',async kind=>{
+ const context={signal:new AbortController().signal,revealComposer:vi.fn(async()=>{})},start=vi.fn(async()=>{})
  await playHomeGuideFromExplore({start},kind,context)
- expect(order).toEqual(['dismiss','native-start'])
- expect(start).toHaveBeenCalledExactlyOnceWith(kind,{replay:true})
+ expect(context.revealComposer).not.toHaveBeenCalled()
+ expect(start).toHaveBeenCalledExactlyOnceWith(kind,{replay:true,entry:context})
 })
-test('does not start an Explore example after cancellation during its dismissal',async()=>{
- const abort=new AbortController(),start=vi.fn(async()=>{})
- await expect(playHomeGuideFromExplore({start},'note',{signal:abort.signal,revealComposer:async()=>{abort.abort()}})).rejects.toMatchObject({name:'AbortError'})
+test('does not start an Explore example after cancellation',async()=>{
+ const abort=new AbortController(),start=vi.fn(async()=>{});abort.abort()
+ await expect(playHomeGuideFromExplore({start},'note',{signal:abort.signal,revealComposer:async()=>{}})).rejects.toMatchObject({name:'AbortError'})
  expect(start).not.toHaveBeenCalled()
 })
-test('keeps a failed Explore dismissal from creating a native session',async()=>{
- const start=vi.fn(async()=>{}),error=Error('浮层未关闭')
- await expect(playHomeGuideFromExplore({start},'note',{signal:new AbortController().signal,revealComposer:async()=>{throw error}})).rejects.toBe(error)
- expect(start).not.toHaveBeenCalled()
+test('propagates a failed native Explore opening without independently dismissing it',async()=>{
+ const error=Error('浮层未关闭'),context={signal:new AbortController().signal,revealComposer:vi.fn(async()=>{})},start=vi.fn(async()=>{throw error})
+ await expect(playHomeGuideFromExplore({start},'note',context)).rejects.toBe(error)
+ expect(context.revealComposer).not.toHaveBeenCalled()
 })
 
 test.each<HomeGuideKind>(['board','note','ppt','report','workbench'])('hands the intact %s entry to the controller before any independent navigation',async kind=>{

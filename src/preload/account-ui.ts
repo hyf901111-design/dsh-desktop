@@ -1,4 +1,8 @@
 import {createExploreOrb} from './explore-orb'
+import exploreCopy from './explore-assets/account-copy.svg?raw'
+import exploreCheck from './explore-assets/account-check.svg?raw'
+import exploreId from './explore-assets/account-id-card.svg?raw'
+import exploreLogout from './explore-assets/account-log-out.svg?raw'
 import backArrow from './figma-settings-assets/back-arrow.svg?raw'
 import { publicIdLabel, installBoardUiStyles } from './research-board-dialogs'
 import type { ResearchBoardsBridge } from '../shared/research-boards'
@@ -85,7 +89,8 @@ export function mountAccountUi(
     pendingAccount = false,
     menu: HTMLElement | undefined,
     trigger: HTMLButtonElement | undefined,
-    menuAnchor: HTMLElement | undefined
+    menuAnchor: HTMLElement | undefined,
+    copyReset: ReturnType<typeof setTimeout> | undefined
   const errors: Record<string, string> = {
     LOGIN_REQUIRED: '登录已过期，请重新登录。',
     INVALID_CREDENTIALS: '用户名或密码不正确。',
@@ -110,6 +115,7 @@ export function mountAccountUi(
     return b
   }
   const closeMenu = () => {
+    if(copyReset!==undefined){clearTimeout(copyReset);copyReset=undefined}
     if(menu?.matches(':popover-open'))menu.hidePopover()
     menu?.remove()
     menu = undefined
@@ -640,7 +646,28 @@ export function mountAccountUi(
           menu = document.createElement('div')
           menu.className = 'sherlock-account-menu'
           menu.role = 'menu'
-          if(user) {
+          const exploreHost=options.explore&&anchor.closest('dialog.odyssey-explore')
+          if(exploreHost&&user){
+            menu.dataset.exploreAccountMenu=''
+            const accountId=user.id,label=document.createElement('span'),row=document.createElement('div')
+            let publicId:string|undefined
+            const icon=(source:string)=>{const svg=new DOMParser().parseFromString(source,'image/svg+xml').documentElement;svg.setAttribute('aria-hidden','true');return document.importNode(svg,true)}
+            label.className='odyssey-explore-account-id';row.className='odyssey-explore-account-id-row'
+            const restore=()=>{label.textContent=publicId?'用户 ID：'+publicId:'用户 ID 暂时不可用';copyId.replaceChildren(icon(exploreCopy));copyId.removeAttribute('data-copied');copyId.removeAttribute('title')}
+            const feedback=(message:string)=>{const hint=document.createElement('span');hint.className='odyssey-explore-account-copy-feedback';hint.role='status';hint.textContent=message;copyId.append(hint)}
+            const copyId=button('',async()=>{
+              if(!publicId||user?.id!==accountId||!copyId.isConnected)return
+              if(copyReset!==undefined)clearTimeout(copyReset)
+              try{await document.defaultView!.navigator.clipboard.writeText(publicId);if(!copyId.isConnected||user?.id!==accountId)return;copyId.replaceChildren(icon(exploreCheck));copyId.dataset.copied='';feedback('已复制')}
+              catch{if(!copyId.isConnected)return;restore();copyId.title='复制失败，请重试';feedback('复制失败，请重试')}
+              copyReset=setTimeout(restore,1500)
+            },'odyssey-explore-account-copy')
+            copyId.setAttribute('aria-label','复制用户 ID');copyId.disabled=true
+            row.append(icon(exploreId),label,copyId)
+            restore();menu.append(row)
+            const separator=document.createElement('div');separator.className='odyssey-explore-account-divider';separator.role='separator';menu.append(separator)
+            if(boards)void boards.getSnapshot().then(snapshot=>{if(!copyId.isConnected||user?.id!==accountId)return;const identity=snapshot.account.user;publicId=identity?.userId===accountId&&typeof identity.publicId==='string'?identity.publicId.trim()||undefined:undefined;copyId.disabled=!publicId;restore()}).catch(()=>{})
+          }else if(user) {
             const profile=button('',()=>open(true),'sherlock-account-menu-profile')
             profile.setAttribute('aria-label',user.username+'，查看账户信息')
             const avatar=createAvatar()
@@ -658,16 +685,17 @@ export function mountAccountUi(
               id.textContent=snapshot.account.user?.userId===accountId?'ID '+publicIdLabel(snapshot.account.user.publicId):'用户 ID 暂时不可用'
             }).catch(()=>{if(profile.isConnected)id.textContent='用户 ID 暂时不可用'})
           }else menu.append(menuButton('登录 / 注册','account',()=>open(true)))
-          menu.append(menuButton('设置', 'settings', () => open(false)))
+          if(!exploreHost||!user)menu.append(menuButton('设置', 'settings', () => open(false)))
           if (user) {
             const signOut = menuButton('退出登录', 'logout', () => { void logout(signOut) })
+            if(exploreHost){const svg=new DOMParser().parseFromString(exploreLogout,'image/svg+xml').documentElement;svg.setAttribute('aria-hidden','true');signOut.firstElementChild?.replaceWith(document.importNode(svg,true))}
             menu.append(signOut)
           }
           for (const b of menu.querySelectorAll('button')) b.role = 'menuitem'
           ;(anchor.closest('dialog')??document.body).append(menu)
           const rect = anchor.getBoundingClientRect()
-          menu.style.left = `${Math.max(8, Math.min(rect.left, document.documentElement.clientWidth - 260))}px`
-          if(options.explore&&anchor!==trigger){menu.style.top=`${rect.bottom+8}px`;menu.style.bottom='auto';menu.style.margin='0';menu.setAttribute('popover','manual');menu.showPopover()}
+          menu.style.left = `${Math.max(8, Math.min(exploreHost&&user?rect.right-224:rect.left, document.documentElement.clientWidth - (exploreHost&&user?232:260)))}px`
+          if(options.explore&&anchor!==trigger){menu.style.top=`${rect.bottom+(exploreHost&&user?12:8)}px`;menu.style.bottom='auto';menu.style.margin='0';menu.setAttribute('popover','manual');menu.showPopover()}
           else menu.style.bottom = `${Math.max(8, document.documentElement.clientHeight - rect.top + 8)}px`
           menuAnchor=anchor;anchor.setAttribute('aria-expanded', 'true')
           menu.querySelector('button')?.focus()

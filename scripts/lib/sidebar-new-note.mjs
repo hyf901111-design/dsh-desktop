@@ -3,7 +3,7 @@
 export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput}) {
   const tickets=new Map(),requests=new Map();let disposed=false,epoch=0,creating=false
   const abort=()=>new DOMException('当前会话已变化，请重新新建笔记。','AbortError')
-  const fingerprint=shell=>{const s=shell?.snapshot;return s?JSON.stringify([s.draft,s.draftRev,s.imageIds,s.occurrences]):null}
+  const fingerprint=shell=>{const s=shell?.snapshot;return s?JSON.stringify([s.draft,s.draftRev,s.imageIds,s.occurrences,s.phase,s.researchContextPreparing,s.composing,s.isComposing,s.compositionActive]):null}
   // Read the same effective preference as the native wrapper, without creating
   // a detached store or retrying writes. A same-view acknowledgement is benign.
   const view=id=>{
@@ -90,7 +90,7 @@ export const stripSidebarNewNoteShell=source=>restore(source,'shell')
 export function patchSidebarNewNoteConversation(input){
   const source=stripSidebarNewNoteConversation(input),anchor='const composerBlocks = new ComposerBlockRegistry();'
   if(source.includes('Sherlock sidebar new note'))throw Error('Orphan Sidebar New Note action')
-  const code='\nctx.effect(()=>{if(window.top!==window)return;return ('+installSidebarNewNote.toString()+')({sessions,workspaces,chatStore,inputHub,getInput:id=>document.body.dataset.workspaceSurface==="notes"?eworkNotesInputs.get(id)?.shell:inputHub.shell(id)});},"Sherlock sidebar new note");'
+  const code='\nctx.effect(()=>{if(window.top!==window)return;return ('+installSidebarNewNote.toString()+')({sessions,workspaces,chatStore,inputHub,getInput:id=>eworkActiveInput(id,inputHub.shell(id))});},"Sherlock sidebar new note");'
   return apply(source,'conversation',[[anchor,anchor+code]])
 }
 export function patchSidebarNewNoteShell(input){

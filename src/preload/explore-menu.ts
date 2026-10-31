@@ -38,11 +38,12 @@ export function mountExploreMenu(doc:Document,options:Options){
   const button=(label:string,src:string,onClick:()=>void,width=20)=>{const node=doc.createElement('button');node.type='button';node.className='odyssey-explore-tool';node.setAttribute('aria-label',label);node.title=label;node.append(image(src,width));node.onclick=onClick;return node}
   let disposed=false,opened=false,closing:Promise<void>|undefined,caseIndex=0,tab:'quick'|'wallpapers'='quick',category='all',searching=false,busy=false,appearanceBusy=false
   let accountOwner:string|null|undefined;let focusBefore:HTMLElement|null=null,action:AbortController|undefined,requestId='',openRequest='',results:ExploreResult[]=[],activeResult=0
+  let outgoingTab:HTMLElement|undefined,tabAnimations:Animation[]=[],tabMotion=0,ownedDemoClose=false
   const language=()=>doc.documentElement.dataset.odysseyLocale==='en'?'en':'zh',copy=()=>HOME_OPERATIONS_COPY[language()],english=()=>language()==='en'
   const text=(zh:string,en:string)=>english()?en:zh
   const account=doc.createElement('button');account.type='button';account.className='odyssey-explore-account';account.setAttribute('aria-haspopup','menu')
   account.onclick=()=>win.dispatchEvent(new win.CustomEvent('sherlock:account-menu-request',{detail:{anchor:account}}))
-  const closeButton=button('关闭探索',closeIcon,()=>{void close()},26);system.append(account,closeButton)
+  const closeButton=button('关闭探索',closeIcon,()=>{void close(!ownedDemoClose,ownedDemoClose)},26);closeButton.dataset.exploreClose='';system.append(account,closeButton)
   const searchWrap=doc.createElement('div');searchWrap.className='odyssey-explore-search-control'
   const searchButton=button('搜索会话',searchIcon,()=>setSearch(true));searchButton.setAttribute('aria-expanded','false')
   const input=doc.createElement('input');input.type='search';input.autocomplete='off';input.setAttribute('aria-label','搜索会话');input.tabIndex=-1
@@ -53,7 +54,7 @@ export function mountExploreMenu(doc:Document,options:Options){
   const quickTab=doc.createElement('button'),wallpaperTab=doc.createElement('button')
   for(const [node,key]of [[quickTab,'quick'],[wallpaperTab,'wallpapers']] as const){node.type='button';node.role='tab';node.id='odyssey-explore-'+key+'-tab';node.setAttribute('aria-controls','odyssey-explore-'+key);node.onclick=()=>selectTab(key);node.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return;event.preventDefault();const next=event.key==='Home'||event.key==='ArrowLeft'?quickTab:wallpaperTab;next.click();next.focus()};tabs.append(node)}
   const appearance=button('切换为浅色',homeAppearanceIcon(false),()=>{if(appearanceBusy)return;appearanceBusy=true;appearance.disabled=true;void options.onToggleAppearance().catch(showError).finally(()=>{appearanceBusy=false;appearance.disabled=false;labels()})});appearance.dataset.exploreAppearance=''
-  const navigation=doc.createElement('nav');navigation.className='odyssey-explore-navigation';navigation.append(tabs,appearance)
+  const navigation=doc.createElement('nav');navigation.className='odyssey-explore-navigation';navigation.append(tabs);tools.prepend(appearance);tools.append(searchWrap)
   const viewport=doc.createElement('div');viewport.className='odyssey-explore-viewport'
   const quick=doc.createElement('div');quick.className='odyssey-explore-quick';quick.id='odyssey-explore-quick';quick.role='tabpanel';quick.setAttribute('aria-labelledby',quickTab.id)
   const showcase=doc.createElement('article');showcase.className='odyssey-explore-showcase'
@@ -84,7 +85,7 @@ export function mountExploreMenu(doc:Document,options:Options){
     input.hidden=!searching;collapseSearch.hidden=!searching
     for(const [node,label]of [[searchButton,text('搜索会话','Search conversations')],[settings,text('设置','Settings')],[closeButton,text('关闭探索','Close Explore')],[collapseSearch,text('收起搜索','Close search')]]as const){node.title=label;node.setAttribute('aria-label',label)}
     for(const [node,key]of [[quickTab,'quick'],[wallpaperTab,'wallpapers']] as const){node.setAttribute('aria-selected',String(tab===key));node.tabIndex=tab===key?0:-1}
-    quick.hidden=tab!=='quick';quick.inert=tab!=='quick'||searching;wallpapers.hidden=tab!=='wallpapers';wallpapers.inert=tab!=='wallpapers'||searching;gallery.setVisible(opened&&tab==='wallpapers'&&!searching)
+    quick.hidden=tab!=='quick'&&outgoingTab!==quick;quick.inert=tab!=='quick'||searching;quick.setAttribute('aria-hidden',String(tab!=='quick'||searching));wallpapers.hidden=tab!=='wallpapers'&&outgoingTab!==wallpapers;wallpapers.inert=tab!=='wallpapers'||searching;wallpapers.setAttribute('aria-hidden',String(tab!=='wallpapers'||searching));gallery.setVisible(opened&&tab==='wallpapers'&&!searching)
     const appearanceLabel=dark()?copy().light:copy().dark;appearance.title=appearanceLabel;appearance.setAttribute('aria-label',appearanceLabel);appearance.querySelector('img')!.src=homeAppearanceIcon(dark())
     createButtons.forEach((node,index)=>{node.querySelector('span')!.textContent=copy().cards[index]!;node.querySelector('img')!.src=OPERATIONS_ILLUSTRATIONS[dark()?'dark':'light'].normal[cards[index]!]})
     for(const layer of showcase.querySelectorAll<HTMLElement>('[data-odyssey-operations-case-layer]')){const index=Number(layer.dataset.case),description=layer.querySelector<HTMLElement>('.odyssey-explore-case-description');layer.querySelector('strong')!.textContent=copy().cases[index]![0];layer.querySelector('.odyssey-explore-case-subtitle')!.textContent=copy().cases[index]![1];layer.querySelector<HTMLImageElement>('.odyssey-explore-case-glow')!.src=OPERATIONS_CASE_GLOWS[dark()?'dark':'light'][index]!;if(description&&!description.hasAttribute('data-explore-preparing'))description.textContent=copy().cases[index]![2]}
@@ -93,10 +94,21 @@ export function mountExploreMenu(doc:Document,options:Options){
     carousel.setVisible(opened&&tab==='quick'&&!searching&&!busy);transition.setVisible(opened&&tab==='quick'&&!searching)
     gallery.refresh()
   }
-  function selectTab(next:typeof tab){if(busy)return;tab=next;feedback.hidden=true;body.dataset.exploreTab=tab;labels();layout()}
+  function settleTabMotion(){tabMotion++;for(const animation of tabAnimations)animation.cancel();tabAnimations=[];outgoingTab=undefined}
+  function selectTab(next:typeof tab){
+    if(busy||next===tab)return
+    settleTabMotion();const previous=tab==='quick'?quick:wallpapers,direction=next==='wallpapers'?1:-1
+    tab=next;feedback.hidden=true;body.dataset.exploreTab=tab
+    if(!reduced.matches&&opened&&!searching)outgoingTab=previous
+    labels();layout()
+    if(!outgoingTab)return
+    const incoming=tab==='quick'?quick:wallpapers,epoch=tabMotion
+    tabAnimations=[previous.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:`translateX(${-10*direction}px)`}],{duration:240,easing:'cubic-bezier(.22,.61,.36,1)',fill:'both'}),incoming.animate([{opacity:0,transform:`translateX(${10*direction}px)`},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.61,.36,1)',fill:'both'})]
+    void Promise.allSettled(tabAnimations.map(animation=>animation.finished)).then(()=>{if(epoch!==tabMotion)return;settleTabMotion();labels()})
+  }
   function layout(){if(opened&&tab==='wallpapers')gallery.layout(viewport.clientWidth,Math.max(250,win.innerHeight-240));}
   function cancelOpenResult(){if(openRequest)doc.dispatchEvent(new win.CustomEvent('sherlock:explore-search-request',{detail:{requestId:openRequest,action:'cancel'}}));openRequest='';list.removeAttribute('aria-busy')}
-  function setSearch(next:boolean,restoreFocus=true){if(!opened||busy)return;if(!next)cancelOpenResult();searching=next;body.dataset.exploreSearching=String(next);searchPanel.hidden=!next;searchButton.setAttribute('aria-expanded',String(next));input.tabIndex=next?0:-1;collapseSearch.tabIndex=next?0:-1;brand.hidden=next;navigation.inert=next;feedback.hidden=true;labels();if(next){input.focus({preventScroll:true});query()}else{input.value='';results=[];requestId='';if(restoreFocus)searchButton.focus({preventScroll:true})}}
+  function setSearch(next:boolean,restoreFocus=true){if(!opened||busy)return;settleTabMotion();if(!next)cancelOpenResult();searching=next;body.dataset.exploreSearching=String(next);searchPanel.hidden=!next;searchButton.setAttribute('aria-expanded',String(next));input.tabIndex=next?0:-1;collapseSearch.tabIndex=next?0:-1;brand.hidden=next;settings.inert=next;appearance.inert=next;navigation.inert=next;feedback.hidden=true;labels();if(next){input.focus({preventScroll:true});query()}else{input.value='';results=[];requestId='';if(restoreFocus)searchButton.focus({preventScroll:true})}}
   function query(){if(!opened||!searching)return;const id=win.crypto.randomUUID();requestId=id;doc.dispatchEvent(new win.CustomEvent('sherlock:explore-search-request',{detail:{requestId:id,action:'search',query:input.value}}))}
   function renderResults(){
     if(!opened||!searching)return
@@ -112,9 +124,9 @@ export function mountExploreMenu(doc:Document,options:Options){
   const accountState=(event:Event)=>{const state=(event as CustomEvent).detail;if(!state||typeof state.username!=='string')return;const owner=typeof state.accountId==='string'?state.accountId:null;if(accountOwner!==undefined&&accountOwner!==owner)void close(false);accountOwner=owner;account.replaceChildren();const avatar=state.avatar instanceof win.HTMLElement&&state.avatar.ownerDocument===doc?state.avatar.cloneNode(true):undefined;if(avatar)account.append(avatar);const label=doc.createElement('span');label.textContent=state.username;label.dataset.uiPreserve='';account.append(label,image(chevronIcon,15));account.setAttribute('aria-label',state.username+text('，打开账户菜单',', open account menu'))}
   function open(){if(disposed||opened)return;if(closing){void closing.then(open);return}options.onBeforeOpen?.();opened=true;focusBefore=doc.activeElement instanceof win.HTMLElement?doc.activeElement:null;feedback.hidden=true;dialog.showModal();doc.body.dataset.exploreOpen='';doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','true');dialog.dataset.motion='opening';labels();layout();(tab==='quick'?quickTab:wallpaperTab).focus({preventScroll:true});win.dispatchEvent(new win.CustomEvent('sherlock:account-state-request'));}
   function close(restoreFocus=true,preserveAction=false):Promise<void>{
-    if(closing)return closing;if(!opened)return Promise.resolve();opened=false;cancelOpenResult();requestId='';win.dispatchEvent(new win.CustomEvent('sherlock:account-menu-close'));if(!preserveAction)action?.abort();carousel.setVisible(false);transition.setVisible(false);gallery.setVisible(false);dialog.dataset.motion='closing'
+    if(closing){if(!preserveAction)action?.abort();return closing}if(!opened)return Promise.resolve();opened=false;settleTabMotion();labels();cancelOpenResult();requestId='';win.dispatchEvent(new win.CustomEvent('sherlock:account-menu-close'));if(!preserveAction)action?.abort();carousel.setVisible(false);transition.setVisible(false);gallery.setVisible(false);dialog.dataset.motion='closing'
     const animations=reduced.matches?[]:[dialog.animate([{opacity:1},{opacity:0}],{duration:180,easing:'ease-out'}),body.animate([{opacity:1,transform:'translateY(0) scale(1)'},{opacity:0,transform:'translateY(8px) scale(.985)'}],{duration:180,easing:'ease-out'})]
-    closing=Promise.allSettled(animations.map(animation=>animation.finished)).then(()=>{if(dialog.open)dialog.close();animations.forEach(animation=>animation.cancel());delete doc.body.dataset.exploreOpen;doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','false');delete dialog.dataset.motion;searching=false;body.dataset.exploreSearching='false';searchPanel.hidden=true;brand.hidden=false;input.value='';results=[];navigation.inert=false;labels();if(restoreFocus&&focusBefore?.isConnected)focusBefore.focus({preventScroll:true})}).finally(()=>{closing=undefined});return closing
+    closing=Promise.allSettled(animations.map(animation=>animation.finished)).then(()=>{if(dialog.open)dialog.close();animations.forEach(animation=>animation.cancel());delete doc.body.dataset.exploreOpen;doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','false');delete dialog.dataset.motion;searching=false;body.dataset.exploreSearching='false';searchPanel.hidden=true;brand.hidden=false;input.value='';results=[];settings.inert=false;appearance.inert=false;navigation.inert=false;labels();if(restoreFocus&&focusBefore?.isConnected)focusBefore.focus({preventScroll:true})}).finally(()=>{closing=undefined});return closing
   }
   async function run(card:HomeOperationExample,isExample:boolean){
     if(!opened||busy)return;const controller=new win.AbortController();action=controller;busy=true;feedback.hidden=true;createButtons.forEach(node=>node.disabled=true);example.disabled=true;labels()
@@ -122,8 +134,8 @@ export function mountExploreMenu(doc:Document,options:Options){
     try{
       if(isExample){if(description){description.dataset.explorePreparing='';description.textContent=copy().demoIntro}await new Promise<void>((resolve,reject)=>{const timer=win.setTimeout(resolve,reduced.matches?0:1800);controller.signal.addEventListener('abort',()=>{win.clearTimeout(timer);reject(new DOMException('Cancelled','AbortError'))},{once:true})})}
       if(controller.signal.aborted)return
-      const context:HomeOperationActionContext={signal:controller.signal,origin:{x:origin.left+origin.width/2,y:origin.top+origin.height/2},revealComposer:()=>close(false,true),handoff:()=>{}}
-      await close(false,true);if(controller.signal.aborted)return
+      const context:HomeOperationActionContext={signal:controller.signal,origin:{x:origin.left+origin.width/2,y:origin.top+origin.height/2},revealComposer:()=>close(false,true),handoff:()=>{},...(isExample?{demoEntry:{closeTarget:closeButton,closeOwned:async()=>{if(controller.signal.aborted||!opened)throw new DOMException('操作已取消。','AbortError');ownedDemoClose=true;try{closeButton.click()}finally{ownedDemoClose=false}await closing}}}:{})}
+      if(!isExample)await close(false,true);if(controller.signal.aborted)return
       if(isExample)await options.onExample(card,context);else await options.onAction(card as HomeOperationCard,context)
     }catch(error){if(!controller.signal.aborted&&!disposed)showError(error)}finally{if(action===controller){action=undefined;busy=false;createButtons.forEach(node=>node.disabled=false);example.disabled=false;if(description){delete description.dataset.explorePreparing;description.textContent=copy().cases[caseIndex]![2]}labels()}}
   }
@@ -132,6 +144,6 @@ export function mountExploreMenu(doc:Document,options:Options){
   const openEvent=()=>open(),closeEvent=(event:Event)=>{void close((event as CustomEvent).detail?.restoreFocus!==false)},changed=(event:Event)=>{if((event as CustomEvent).detail?.ownerChanged){reset();return}if(opened&&searching)query()},reset=()=>{action?.abort();void close(false)}
   win.addEventListener('sherlock:explore-open',openEvent);win.addEventListener('sherlock:explore-close',closeEvent);win.addEventListener('sherlock:account-state',accountState);doc.addEventListener('sherlock:explore-search-reply',searchReply);doc.addEventListener('sherlock:explore-search-changed',changed);win.addEventListener('sherlock:skill-menu-reset',reset)
   const observer=new win.MutationObserver(()=>{labels();layout()});observer.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});const resize=new win.ResizeObserver(layout);resize.observe(body)
-  const dispose=()=>{if(disposed)return;disposed=true;cancelOpenResult();action?.abort();carousel.dispose();transition.dispose();gallery.dispose();observer.disconnect();resize.disconnect();win.removeEventListener('sherlock:explore-open',openEvent);win.removeEventListener('sherlock:explore-close',closeEvent);win.removeEventListener('sherlock:account-state',accountState);doc.removeEventListener('sherlock:explore-search-reply',searchReply);doc.removeEventListener('sherlock:explore-search-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',reset);dialog.remove();style.remove();delete doc.body.dataset.exploreOpen;mounted.delete(doc)}
+  const dispose=()=>{if(disposed)return;disposed=true;settleTabMotion();cancelOpenResult();action?.abort();carousel.dispose();transition.dispose();gallery.dispose();observer.disconnect();resize.disconnect();win.removeEventListener('sherlock:explore-open',openEvent);win.removeEventListener('sherlock:explore-close',closeEvent);win.removeEventListener('sherlock:account-state',accountState);doc.removeEventListener('sherlock:explore-search-reply',searchReply);doc.removeEventListener('sherlock:explore-search-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',reset);dialog.remove();style.remove();delete doc.body.dataset.exploreOpen;mounted.delete(doc)}
   labels();mounted.set(doc,dispose);return dispose
 }

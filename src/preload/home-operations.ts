@@ -9,7 +9,7 @@ type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
 export type HomeOperationExample = HomeOperationCard | 'workbench'
-export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void }
+export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void; demoEntry?:{closeTarget:HTMLElement;closeOwned():Promise<void>} }
 type Card = HomeOperationCard
 type Options = { onAction?(card: Card, context: HomeOperationActionContext): Promise<void>; onExample?(card: HomeOperationExample, context: HomeOperationActionContext): Promise<void>; themeController?: HomeThemeController; onToggleAppearance?(): Promise<void> }
 const mounted = new WeakMap<Document, () => void>()
