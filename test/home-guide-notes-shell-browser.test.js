@@ -253,3 +253,21 @@ it('keeps strict review alive during a long pause and then preserves the finishe
   expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(errors).toEqual([]);expect(logs).toEqual([])
  }finally{await f.dispose()}
 },130000)
+
+it.each(['board','ppt','report','workbench'])('flushes the current native Notes source before handing a fresh %s target to its caller',async kind=>{
+ const f=await fixture(),{page,store,errors}=f;try{
+  await page.getByRole('tab',{name:'笔记'}).click();await page.locator('[data-note-editor-session="original-session"] .en-title').fill('未到防抖时限的源笔记 '+kind)
+  await page.evaluate(kind=>{window.deferNoteSave=true;window.nativeTargetOpened=false;window.sourceHandoff=window.nativeNotes.prepareGuideFromCurrent('fresh-'+kind).then(()=>{window.nativeTargetOpened=true})},kind)
+  await page.waitForTimeout(50);expect(await page.evaluate(()=>window.nativeTargetOpened)).toBe(false)
+  await page.evaluate(()=>window.sourceHandoff);expect(store.load('owner','original-session').saved.title).toBe('未到防抖时限的源笔记 '+kind)
+  expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="original-session"] .en-title').inputValue()).toBe('未到防抖时限的源笔记 '+kind);expect(await page.locator('#original-draft').inputValue()).toBe('用户原有提示词与技能标签');expect(errors).toEqual([])
+ }finally{await f.dispose()}
+},15000)
+it('does not hand a target to its caller when the current native Notes source cannot save',async()=>{
+ const f=await fixture(),{page,store,errors}=f;try{
+  await page.getByRole('tab',{name:'笔记'}).click();await page.locator('[data-note-editor-session="original-session"] .en-title').fill('必须保留的源笔记草稿')
+  await expect.poll(()=>store.load('owner','original-session').draft?.title).toBe('必须保留的源笔记草稿');const initial=store.load('owner','original-session').saved;store.save('owner','original-session',initial.revision,{title:'外部较新快照',blocks:[],yjs:''})
+  const result=await page.evaluate(async()=>{window.nativeTargetOpened=false;try{await window.nativeNotes.prepareGuideFromCurrent('fresh-board');window.nativeTargetOpened=true;return'opened'}catch(error){return error.message}})
+  expect(result).toContain('尚未保存');expect(await page.evaluate(()=>window.nativeTargetOpened)).toBe(false);expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="original-session"] .en-title').inputValue()).toBe('必须保留的源笔记草稿');expect(store.load('owner','original-session').saved.title).toBe('外部较新快照');expect(errors).toEqual([])
+ }finally{await f.dispose()}
+},15000)

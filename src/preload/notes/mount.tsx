@@ -55,6 +55,7 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
     if(sessionId===id){sessionId='';lastAnchor=null;host.close('notes')}
     flushSync(renderEntries)
   }
+  const prepareGuideFromCurrent=async(id:string)=>{await flushCurrent();await prepareGuide(id)}
   const finishGuide=async(id:string,signal:AbortSignal)=>{
     const current=()=>!signal.aborted&&!resetting&&document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession===id&&!!document.querySelector('[data-ework-note-view="'+CSS.escape(id)+'"]')
     const cancelled=()=>new DOMException('笔记演示已结束。','AbortError')
@@ -110,5 +111,5 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const theme = new MutationObserver(render); theme.observe(surface, { attributes: true, attributeFilter: ['data-dark'] })
   const identity = () => { resetting=true;entries.clear();handoffPreloads.clear();reactRoot?.unmount();reactRoot=undefined;sessionId='';host.close('notes');resetting=false;document.dispatchEvent(new CustomEvent('sherlock:notes-reset')) }
   document.addEventListener('sherlock:notes-capability-activity',capabilityActivity);document.addEventListener('sherlock:notes-challenge-activity',activity);document.addEventListener('sherlock:notes-open', open); document.addEventListener('sherlock:notes-close', close); document.addEventListener('click', onNativeTabClick, true); sync()
-  return { flushCurrent,prepareGuide,finishGuide,resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-capability-activity',capabilityActivity);document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
+  return { flushCurrent,prepareGuide,prepareGuideFromCurrent,finishGuide,resetIdentity: identity, dispose: () => { identity(); observer.disconnect(); theme.disconnect(); cancelAnimationFrame(frame); style.remove(); surface.remove(); document.removeEventListener('sherlock:notes-capability-activity',capabilityActivity);document.removeEventListener('sherlock:notes-challenge-activity',activity);document.removeEventListener('sherlock:notes-open', open); document.removeEventListener('sherlock:notes-close', close); document.removeEventListener('click', onNativeTabClick, true) } }
 }
