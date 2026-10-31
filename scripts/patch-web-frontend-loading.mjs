@@ -58,6 +58,7 @@ import {patchPlainSlashInput,stripPlainSlashInput} from './lib/plain-slash-input
 import {patchComposerVoice,stripComposerVoice} from './lib/composer-voice.mjs'
 import {patchConversationSubmission,stripConversationSubmission} from './lib/conversation-submission.mjs'
 import {patchConversationResponseProgress,stripConversationResponseProgress} from './lib/conversation-response-progress.mjs'
+import {patchConversationTurnOrder} from './lib/conversation-turn-order.mjs'
 import {patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient} from './lib/conversation-history-page.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
 import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
@@ -333,6 +334,7 @@ writeFileSync(conversationPath,patchPlainSlashInput(readFileSync(conversationPat
 
 // Read-only first-send projection and one native turn clock are the outermost layers.
 writeFileSync(conversationPath,patchConversationHistoryClient(patchConversationSubmission(patchConversationResponseProgress(readFileSync(conversationPath,'utf8')))))
+writeFileSync(conversationPath,patchConversationTurnOrder(readFileSync(conversationPath,'utf8')))
 writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 // Board tabs wrap the final resident canvas and reverse before all earlier passes.
 writeFileSync(conversationPath,patchBoardTabsClient(readFileSync(conversationPath,'utf8')))

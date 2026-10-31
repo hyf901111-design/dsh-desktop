@@ -91,10 +91,21 @@ export function EWorkNotesConversation({sessionId,empty,children,t}){
    react.createElement('div',{style:{display:welcome?'none':'contents'}},children||react.createElement(EWorkNotesActivity,{sessionId,t})))
 }
 export function mergeNoteConversationFlow(flow,nodeStore,rows){
- let previous=-1
- const entries=flow.map((entry,i)=>{const node=nodeStore.get(entry.kind==='node'?entry.key:entry.nodeKeys?.[0]);previous=node?.anchorSeq??previous;return{entry,seq:previous,index:i}})
- for(const row of rows)entries.push({entry:{kind:'note-conversation',key:'note:'+row.requestId,row},seq:Number.isSafeInteger(row.seq)?row.seq:Infinity,index:entries.length})
- return entries.sort((a,b)=>a.seq-b.seq||a.index-b.index).map(value=>value.entry)
+ if(!rows.length)return flow
+ const pending=rows.map((row,index)=>({row,index,seq:Number.isSafeInteger(row.seq)?row.seq:Infinity})).sort((a,b)=>a.seq-b.seq||a.index-b.index),entries=[]
+ let previous=-1,index=0
+ const push=()=>{const {row}=pending[index++];entries.push({kind:'note-conversation',key:'note:'+row.requestId,row})}
+ // Native flow already owns turn/steering boundaries. A preparation group's
+ // first event may precede its human even though the group renders after it.
+ // Insert note rows without sorting those native entries back out of order.
+ for(const entry of flow){
+  const node=nodeStore.get(entry.kind==='node'?entry.key:entry.nodeKeys?.[0])
+  previous=Math.max(previous,node?.anchorSeq??previous)
+  while(index<pending.length&&pending[index].seq<previous)push()
+  entries.push(entry)
+ }
+ while(index<pending.length)push()
+ return entries
 }
 
 export function patchNotesActivity(source) {

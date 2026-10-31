@@ -8,6 +8,7 @@ import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {presentationHostFixture} from './fixtures/home-presentation-host.js'
 import {PptxAnnotationService} from '../src/main/pptx/annotations'
+import {createUserMessage} from '@deepseek-ai/dsh-llm'
 const require=createRequire(import.meta.url)
 const {patchHomeGuidePresentationNative}=require('../scripts/lib/home-guide-presentation-native.mjs')
 const {patchPptxAnnotationInput}=require('../scripts/lib/pptx-annotation-native.mjs')
@@ -33,7 +34,7 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 
-async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,annotationFile=false,history=false,historyLimit=100}={}){
+async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,annotationFile=false,history=false,historyLimit=100,prelude=false}={}){
  const host=await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[],requests=[]
  const origin='http://127.0.0.1:'+host.ctx.get('webServer').port
  const sourcePath=join(host.cwd,'Vanguard-2026经济与市场展望.pdf'),brief='请基于当前资料梳理研究结论，保留来源与时点。中文与 emoji 📈 均应完整。',guidePath=kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation'
@@ -50,7 +51,7 @@ async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,
  }
  if(history){await host.prompt('之前已完成的真实请求');await host.agent.whenIdle()}
  const offStatus=host.ctx.on('agent/status',event=>{if(requests.length)void page.evaluate(status=>window.probe?.status(status),event.status).catch(()=>{})})
- const off=host.ctx.on('agent/pre-step',async(event,next)=>{if(event.messages.some(message=>message.source?.rpcId==='user-first-1')){entered=true;await held}return next()})
+ const off=host.ctx.on('agent/pre-step',async(event,next)=>{if(event.messages.some(message=>message.source?.rpcId==='user-first-1')){if(prelude)event.agent.session.append('user/message',createUserMessage({source:{kind:'plugin',plugin:'fixture-file-context'},content:[{type:'text',text:'附件PPT读取上下文已准备'}]}),{surfaceOp:'append'});entered=true;await held}return next()})
  page.on('pageerror',error=>errors.push(error.stack??error.message))
  await page.exposeFunction('userMessageBackend',async input=>{
   if(input.action==='history'){const catalog=await host.request(host.api.sessions.list,{}),row=catalog.items.find(item=>item.sessionId===host.agent.id||item.id===host.agent.id);return{events:await host.request(host.api.sessions.history,{sessionId:host.agent.id,maxMessages:history&&requests.length?currentHistoryLimit:100}).then(value=>value.events),running:host.agent.status==='running',blank:row.blank}}
@@ -154,6 +155,25 @@ it.each([false,true])('shows the actual ordinary first user message before Host 
   await writeFile(join(evidence,'ordinary-'+tagged+'-frames.json'),JSON.stringify(frames,null,2))
   const users=f.host.agent.session.events.filter(event=>event.type==='user/message'&&event.data.source?.kind==='user');expect(users).toHaveLength(1);expect(users[0].data.source.rpcId).toBe(f.requests[0].rpcId);expect(users[0].data.content).toEqual(f.requests[0].payload.content)
   expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},30000)
+
+it('keeps the actual pending user before a durable Host file-context prelude until the real human receipt arrives',async()=>{
+ const f=await fixture({prelude:true}),{page}=f
+ try{
+  await page.evaluate(()=>window.probe.shell.setDraft('📎 附件研究.pptx 请整理版式，保留文字。'))
+  await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>f.entered).toBe(true);await page.evaluate(()=>window.probe.refresh())
+  const journal=f.host.agent.session.events,pending=await page.evaluate(()=>window.probe.snapshot())
+  // The actual SDK opens turn/start before pre-step and appends step/start
+  // only after pre-step returns. Do not fabricate a step event at this gate.
+  expect(journal.some(event=>event.type==='turn/start')).toBe(true);expect(journal.some(event=>event.type==='user/message'&&event.data.source?.plugin==='fixture-file-context')).toBe(true)
+  expect(journal.some(event=>event.type==='user/message'&&event.data.source?.kind==='user')).toBe(false)
+  expect(pending.historyHumans).toBe(0);expect(pending.rows).toHaveLength(1);expect(pending.rows[0].text).toContain('附件研究.pptx');expect(pending.thinking.text).toContain('正在思考');expect(pending.thinking.top).toBeGreaterThanOrEqual(pending.rows[0].bottom)
+  const groups=await page.locator('[data-chat-flow-kind="execution"]').evaluateAll(elements=>elements.map(el=>({top:el.getBoundingClientRect().top,text:el.innerText,key:el.dataset.chatFlowKey})))
+  expect(groups.length).toBeGreaterThan(0);expect(groups.every(group=>group.top>=pending.rows[0].bottom)).toBe(true)
+  await writeFile(join(evidence,'actual-durable-prelude-before-human.json'),JSON.stringify({journal,pending,groups},null,2));await page.screenshot({path:join(evidence,'actual-durable-prelude-before-human.png')})
+  f.release();await f.host.agent.whenIdle();await page.evaluate(()=>window.probe.refresh());await expect.poll(()=>page.evaluate(()=>window.probe.snapshot().historyHumans)).toBe(1)
+  expect((await page.evaluate(()=>window.probe.snapshot())).rows).toHaveLength(1);expect(await page.locator('[data-native-submitted-user]').count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
 
