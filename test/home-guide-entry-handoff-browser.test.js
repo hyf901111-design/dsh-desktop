@@ -64,7 +64,7 @@ it('waits for a slow preparation before visibly pressing the real Notes tab, usi
  }finally{await f.close()}
 },20000)
 
-async function beginExplore(page,index){await page.getByRole('button',{name:'探索',exact:true}).click();await page.locator('.odyssey-explore-pages button').nth(index).click();await page.locator('.odyssey-explore-example').click()}
+async function beginExplore(page,index){await page.getByRole('button',{name:'探索',exact:true}).click();await page.locator('.odyssey-explore-content').evaluate(node=>Promise.all(node.getAnimations().filter(animation=>animation.effect?.getTiming().iterations!==Infinity).map(animation=>animation.finished)));await page.locator('.odyssey-explore-pages button').nth(index).click();await expect.poll(()=>page.locator('.odyssey-explore-showcase').getAttribute('data-case')).toBe(String(index));await expect.poll(()=>page.locator('.odyssey-explore-showcase [data-odyssey-operations-case-blending]').count()).toBe(0);await page.locator('.odyssey-explore-example').click()}
 for(const[kind,index,mode]of [['board',0,'research'],['note',1,'notes']])it('hands the global Explore '+kind+' entry to a retained native session without editing the source draft',async()=>{
  const f=await fixture({explore:true}),{page}=f;try{
   await beginExplore(page,index);await page.locator('[data-home-guide-kind="'+kind+'"]').waitFor({timeout:7000});if(kind==='note')await page.locator('[data-home-guide] .bn-editor').waitFor()

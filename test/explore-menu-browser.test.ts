@@ -183,6 +183,7 @@ it('expands search across the full content header with the result edges aligned 
  const f=await fixture({reduced:false});try{
   await open(f.page);await f.page.getByRole('button',{name:'搜索会话',exact:true}).click()
   await expect.poll(()=>f.page.locator('.odyssey-explore-search-control').evaluate((node:HTMLElement)=>Math.round(node.getBoundingClientRect().width))).toBe(864)
+  await f.page.locator('.odyssey-explore-search-control').evaluate((node:HTMLElement)=>Promise.all(node.getAnimations().filter(animation=>animation.effect?.getTiming().iterations!==Infinity).map(animation=>animation.finished)))
   const geometry=await f.page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>{const box=(s:string)=>{const r=node.querySelector(s)!.getBoundingClientRect();return{left:r.left,right:r.right,width:r.width,height:r.height}};return{content:node.getBoundingClientRect().width,search:box('.odyssey-explore-search-control'),results:box('.odyssey-explore-results'),settings:getComputedStyle(node.querySelector('.odyssey-explore-tools>.odyssey-explore-tool')!).visibility}})
   expect(geometry.search.width).toBe(geometry.content);expect(geometry.search.height).toBe(40);expect(geometry.search.left).toBeCloseTo(geometry.results.left,0);expect(geometry.search.right).toBeCloseTo(geometry.results.right,0);expect(geometry.settings).toBe('hidden')
   await writeFile(evidence+'/search-full-width.json',JSON.stringify(geometry,null,2));await f.page.screenshot({path:evidence+'/search-full-width.png'})
