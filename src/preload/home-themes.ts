@@ -1,4 +1,4 @@
-import type {HomeThemeController} from './home-theme-controls'
+import type {HomeThemeController, HomeThemePreview} from './home-theme-controls'
 import { createHomeFlowField } from './home-flow'
 import { createHomeThemeRenderer, type HomeShaderThemeId } from './home-theme-renderer'
 import { isReactBitsTheme } from './home-reactbits-renderer'
@@ -55,6 +55,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
   let disposed = false, frame = 0, previous = 0, elapsed = 0, cleanupTimer = 0
   const thumbs = new Map<string, string>(), listeners = new Set<() => void>()
+  const previews = new Set<HomeThemePreview>()
   const transitions = new Set<Animation>()
   const field = createHomeFlowField({ speed: 1.5, strength: 1.3 })
   const isShown = (element: Element | null): boolean => {
@@ -91,12 +92,12 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       dispose() { pixels = null }
     }
   }
-  const makeSurface = (theme: Theme): Surface | null => {
+  const makeSurface = (theme: Theme, mode = dark): Surface | null => {
     let canvas = doc.createElement('canvas')
     canvas.setAttribute('aria-hidden', 'true')
     canvas.dataset.homeThemeCanvas = theme
     if (theme !== 'default') {
-      const renderer = createHomeThemeRenderer(canvas, theme, { dark })
+      const renderer = createHomeThemeRenderer(canvas, theme, { dark: mode })
       if (renderer) return { canvas, ...renderer }
       // A canvas with a failed GL context cannot be reused as a 2D canvas.
       canvas = doc.createElement('canvas'); canvas.setAttribute('aria-hidden', 'true'); canvas.dataset.homeThemeCanvas = 'default'
@@ -208,6 +209,20 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     getSelected: () => selected,
     select,
     getThumbnail: thumbnail,
+    createPreview(theme) {
+      if (disposed || !validTheme(theme)) return null
+      const value = makeSurface(theme, doc.body.hasAttribute('data-ds-dark-theme'))
+      if (!value) return null
+      let released = false
+      const preview: HomeThemePreview = {
+        canvas: value.canvas,
+        resize(width, height) { if (!released) value.resize(width, height) },
+        render(seconds, mode) { return !released && value.render(seconds, mode) },
+        dispose() { if (released) return; released = true; value.dispose(); previews.delete(preview) }
+      }
+      previews.add(preview)
+      return preview
+    },
     subscribe(listener) { if (disposed) return () => {}; listeners.add(listener); return () => { listeners.delete(listener) } }
   }
   controllers.set(doc, controller)
@@ -255,6 +270,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     disposed = true; changes.disconnect(); teardown()
     doc.removeEventListener('visibilitychange', onVisibility); doc.removeEventListener('sherlock:workspace-surface-change', sync)
     reduced.removeEventListener('change', onReduced); win.removeEventListener('storage', onStorage)
+    for (const preview of previews) preview.dispose()
     thumbs.clear(); listeners.clear(); controllers.delete(doc); mounted.delete(doc)
   }
   mounted.set(doc, dispose)
