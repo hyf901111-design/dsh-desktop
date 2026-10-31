@@ -201,23 +201,32 @@ it('keeps one human before real continued work and background notices in the com
  const beforeHuman=ctx=>ctx.on('agent/pre-step',async(event,next)=>{const decision=await next();return event.step===1&&decision.messages?.some(message=>message.source?.kind==='user')?{...decision,messages:[createUserMessage({content:[{type:'text',text:'已读取附件PPT上下文'}],source:{kind:'plugin',plugin:'fixture-file-context'}}),...decision.messages]}:decision})
  const inspect=async(f,label)=>{
   await f.ctx.sessions.flush(f.agent.session)
-  const journal=await f.disk(),original=JSON.stringify(journal),projection=await projectNativeJournal(journal),humans=projection.nodes.filter(node=>['user','steering'].includes(node.kind)),humanIndex=projection.flow.findIndex(row=>row.key===humans[0]?.key),activityIndices=projection.flow.map((row,index)=>row.kind==='execution'?index:-1).filter(index=>index>=0)
+  // This fixture persists uncompressed, unpacked JSONL with a leading header.
+  // The live persistence service correctly refuses to reopen an open turn;
+  // read only event records and verify them against the actual live journal.
+  const journal=(await f.disk()).filter(event=>Number.isSafeInteger(event.seq))
+  expect(journal).toEqual(f.agent.session.events)
+  if(f.agent.status!=='running')expect((await f.ctx.sessionPersistence.load(f.agent.id)).events).toEqual(journal)
+  const original=JSON.stringify(journal),projection=await projectNativeJournal(journal),humans=projection.nodes.filter(node=>['user','steering'].includes(node.kind)),humanIndex=projection.flow.findIndex(row=>row.key===humans[0]?.key),activityIndices=projection.flow.map((row,index)=>row.kind==='execution'?index:-1).filter(index=>index>=0)
   expect(humans).toHaveLength(1);expect(humanIndex).toBe(0);expect(activityIndices.length).toBeGreaterThan(0);expect(activityIndices.every(index=>index>humanIndex)).toBe(true)
   expect(journal.filter(event=>event.type==='user/message'&&event.data.source?.kind==='user')).toHaveLength(1)
   expect(journal.some(event=>event.type==='user/message'&&event.data.source?.plugin==='sherlock-task-progress')).toBe(true)
   expect(JSON.stringify(journal)).toBe(original)
   return {label,requests:f.requests.length,events:journal,projection,journalUnchanged:true}
  }
+ const pending=[]
+ try{
  const completed=await fixture(n=>[todo(false),call('work_stage',{stage:'start-background'}),text('渲染已启动。'),text('独立检查已完成，等待后台结果。'),call('job_output',{job_id:'guard-1'}),todo(true),text('文稿已核验并交付。')][n-1],{jobs:true});beforeHuman(completed.ctx)
- const done=completed.run('请保留附件文字，修复文稿并核验后交付。');await expect.poll(()=>completed.requests.length).toBe(4)
+ const done=completed.run('请保留附件文字，修复文稿并核验后交付。');pending.push([completed,done]);await expect.poll(()=>completed.requests.length).toBe(4)
  expect(completed.agent.status).toBe('running');expect(completed.ctx.jobs.get(completed.jobId,completed.agent).status).toBe('running')
  const waiting=await inspect(completed,'waiting');completed.releaseJob();await done
  expect(completed.requests).toHaveLength(7);expect(completed.agent.session.events.findLast(event=>event.type==='turn/end').data.reason.kind).toBe('completed')
  const delivered=await inspect(completed,'delivered')
  const stopped=await fixture(n=>n===1?todo(false):n===2?call('work_stage',{stage:'start-background'}):text('等待后台渲染。'),{jobs:true});beforeHuman(stopped.ctx)
- const stoppedRun=stopped.run();await expect.poll(()=>stopped.requests.length).toBe(4);stopped.agent.cancel({kind:'user'});await stoppedRun
+ const stoppedRun=stopped.run();pending.push([stopped,stoppedRun]);await expect.poll(()=>stopped.requests.length).toBe(4);stopped.agent.cancel({kind:'user'});await stoppedRun
  const requestCount=stopped.requests.length;stopped.releaseJob();await stopped.ctx.jobs.wait(stopped.jobId,1000,stopped.agent);await stopped.agent.whenIdle()
  expect(stopped.requests).toHaveLength(requestCount);expect(stopped.agent.session.events.findLast(event=>event.type==='todo/write').data.todos).toEqual(list)
  const late=await inspect(stopped,'stopped-late-job')
  const evidence=process.env.SHERLOCK_CHAT_RELIABILITY_EVIDENCE||'/tmp/sherlock-chat-reliability-20261031';await mkdir(evidence,{recursive:true});await writeFile(join(evidence,'combined-real-journal-cross.json'),JSON.stringify({waiting,delivered,late},null,2))
+ }finally{for(const [f,run] of pending){if(f.agent.status==='running')f.agent.cancel({kind:'user'});await run}}
 },20000)
