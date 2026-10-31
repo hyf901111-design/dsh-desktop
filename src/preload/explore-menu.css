@@ -79,6 +79,17 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 .odyssey-explore-account{display:flex;align-items:center;gap:10px;height:40px;max-width:200px;border-radius:10px!important;padding:0 4px!important}
 .odyssey-explore-account:hover{background:var(--explore-tool)!important}.odyssey-explore-account>span{font-size:14px;line-height:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .odyssey-explore-account .sherlock-account-avatar{width:28px;height:28px;flex:none}
+.odyssey-explore .sherlock-account-menu[data-explore-account-menu]{--odyssey-menu:rgb(43 43 43/.68);--odyssey-menu-border:rgb(255 255 255/.1);--odyssey-menu-shadow:0 8px 12px rgb(0 0 0/.32);--odyssey-menu-blur:blur(18px);--odyssey-menu-row:rgb(255 255 255/.08);box-sizing:border-box;width:224px;padding:7px;border-radius:16px;background:rgb(43 43 43/.68);color:#eee;border:1px solid rgb(255 255 255/.1);box-shadow:0 8px 12px rgb(0 0 0/.32);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);font:400 13px/20px "Noto Sans SC","PingFang SC",sans-serif}
+.odyssey-explore [data-explore-account-menu] button{display:flex;align-items:center;width:208px;height:32px;min-height:32px;gap:8px;padding:0 8px;border-radius:8px;text-align:left;font:inherit;color:inherit}
+.odyssey-explore [data-explore-account-menu] button:hover{background:rgb(255 255 255/.08)}
+.odyssey-explore [data-explore-account-menu] button:disabled{opacity:1;cursor:default}
+.odyssey-explore [data-explore-account-menu] button>svg{width:16px;height:16px;flex:none;color:#bbb}
+.odyssey-explore .odyssey-explore-account-id{min-width:0;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.odyssey-explore .odyssey-explore-account-copy{display:grid;place-items:center;flex:none;width:24px;height:24px;margin-left:auto;border-radius:6px;color:#bbb}
+.odyssey-explore .odyssey-explore-account-copy svg{width:16px;height:16px}
+.odyssey-explore [data-explore-account-menu] button:not(:disabled):hover .odyssey-explore-account-copy{background:rgb(255 255 255/.07)}
+.odyssey-explore .odyssey-explore-account-divider{position:relative;width:208px;height:8px}
+.odyssey-explore .odyssey-explore-account-divider:after{content:'';position:absolute;left:8px;right:8px;top:3.5px;height:1px;background:rgb(255 255 255/.1)}
 .odyssey-explore-search-control{position:relative;width:40px;height:40px;border-radius:20px;transition:width 300ms cubic-bezier(.22,.61,.36,1),background 180ms ease;overflow:hidden;flex:none}
 .odyssey-explore-search-control>.odyssey-explore-tool:first-child{position:absolute;left:0;top:0;z-index:1}
 .odyssey-explore-search-control>input{position:absolute;inset:0;width:100%;border:0;border-radius:20px;padding:0 42px;background:transparent;font-size:14px;outline:none!important;opacity:0;pointer-events:none;transition:opacity 160ms ease}
