@@ -6,7 +6,9 @@ const {stripConversationSubmission}=require('../../scripts/lib/conversation-subm
 const {stripConversationResponseProgress}=require('../../scripts/lib/conversation-response-progress.mjs')
 const {stripPlainSlashInput}=require('../../scripts/lib/plain-slash-input.mjs')
 const {stripSidebarNewNoteConversation}=require('../../scripts/lib/sidebar-new-note.mjs')
-export const stripConversationTransientUi=source=>stripPlainSlashInput(stripConversationResponseProgress(stripConversationSubmission(source)))
+// The installed Workbench portal is outside Presentation and must unwind before
+// those older strict inverses. Keep the same order as the production installer.
+export const stripConversationTransientUi=source=>stripWorkbenchReplay(stripPlainSlashInput(stripConversationResponseProgress(stripConversationSubmission(source))))
 export const stripConversationOuterUi=source=>stripSidebarNewNoteConversation(stripConversationTransientUi(source))
 
 // These outer restore records must be removed before guide/presentation and
