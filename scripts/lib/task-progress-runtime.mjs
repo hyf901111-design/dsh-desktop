@@ -30,7 +30,7 @@ export function installTaskProgressSync(ctx) {
         const message = event.data.message, result = message?.content?.find(part => part.type === 'tool-result'), callId = result?.toolCallId ?? message?.source?.callId, call = state.calls.get(callId)
         state.calls.delete(callId)
         if (result?.isError && ['FS_PERMISSION_DENIED','PERMISSION_DENIED','APPROVAL_DENIED','USER_DENIED','TOOL_ABORTED','TOOL_ABORTED_BEFORE_DISPATCH'].includes(event.data.error?.code)) state.policyBlocked = true
-        else if (call && result && !['todo_write','job_list'].includes(call.name)) {
+        else if (call && result && !result.isError && !['todo_write','job_list'].includes(call.name)) {
           // Identical repeated reads, duplicate callbacks and empty polling are
           // not progress. Keep bounded fingerprints, never execute a tool here.
           const key = JSON.stringify([call.name,call.arguments,result.content]).slice(0,32768)

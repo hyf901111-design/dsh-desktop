@@ -21,7 +21,7 @@ const text=value=>({text:value})
 const call=(name,args)=>({name,args})
 const todo=done=>call('todo_write',{todos:list.map(item=>({...item,status:done?'completed':item.status}))})
 
-async function fixture(script,{legacy=false,failOnce=false,conclude=false}={}){
+async function fixture(script,{legacy=false,failOnce=false,failAlways=false,conclude=false}={}){
  const root=await mkdtemp(join(tmpdir(),'ework-task-continuation-sdk-')),ctx=new Context(),requests=[],work=[],errors=[]
  await symlink(join(process.cwd(),'node_modules'),join(root,'node_modules'))
  const original=await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8'),source=legacy?legacyTaskProgressSource(original):patchTaskProgressRuntime(original)
@@ -33,7 +33,7 @@ async function fixture(script,{legacy=false,failOnce=false,conclude=false}={}){
  let attempts=0
  ctx.tools.register(defineTool({name:'work_stage',description:'执行当前任务的下一项真实检查',parameters:{stage:{type:'string',required:true}},output:{schema:{type:'string'},render:(_args,value)=>[{type:'text',text:value}]},execute:async(args,exec)=>{
   attempts++
-  if(failOnce&&attempts===1)throw Object.assign(Error('render font unavailable'),{code:'FONT_NOT_FOUND'})
+  if(failAlways||failOnce&&attempts===1)throw Object.assign(Error('render font unavailable; attempt '+attempts),{code:'FONT_NOT_FOUND'})
   work.push(args.stage)
   if(conclude)exec.concludeTurn()
   return 'verified '+args.stage
@@ -92,6 +92,15 @@ it('recovers after one recoverable tool failure and finishes rather than immedia
  expect(f.requests).toHaveLength(6);expect(f.work).toEqual(['render-with-installed-font'])
  expect(f.agent.session.events.findLast(e=>e.type==='turn/end').data.reason.kind).toBe('completed')
  expect(f.agent.session.events.filter(e=>e.type==='tool/result').some(e=>e.data.message.content[0].isError)).toBe(true)
+})
+it('does not count changing failure messages as progress and durably blocks repeated unsuccessful recovery with pending work intact',async()=>{
+ const f=await fixture(n=>n===1?todo(false):n%2===0?call('work_stage',{stage:'render-attempt-'+n/2}):text('尝试另一种可用的渲染方式。'),{failAlways:true});await f.run()
+ expect(f.requests).toHaveLength(7);expect(f.work).toEqual([]);expect(f.errors).toEqual([])
+ const events=await f.disk(),results=events.filter(e=>e.type==='tool/result'&&e.data.message.content[0].isError)
+ expect(results).toHaveLength(3)
+ expect(new Set(results.map(e=>JSON.stringify(e.data.message.content[0].content))).size).toBe(3)
+ expect(events.findLast(e=>e.type==='turn/end').data.reason.kind).toBe('blocked')
+ expect(events.findLast(e=>e.type==='todo/write').data.todos).toEqual(list)
 })
 it('does not revive a native concluding tool or an explicit user stop',async()=>{
  const conclude=await fixture(n=>n===1?todo(false):call('work_stage',{stage:'wait-for-human'}),{conclude:true});await conclude.run()
