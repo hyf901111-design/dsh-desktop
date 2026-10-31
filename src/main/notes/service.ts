@@ -7,6 +7,7 @@ import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime
 import {NotesCapabilityBridge} from './capability-bridge'
 import {createNoteDataRevisionHandler} from './data-revisions'
 import {createNoteCapabilityHandlers} from './capability-handlers'
+import {createNoteCapabilityExecutor} from './capability-operation-identity'
 import {NotesDocumentCapabilityAdapter,type NoteDocumentAdapter} from './document-capability-adapter'
 import { NotesStore } from './store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
@@ -226,7 +227,7 @@ export function installNotesService(options: {
             ...options.inspectCanvas&&(options.canvasAvailable?.(session)??true)?{inspectCanvas:async(args:any)=>{await renderer('context',{});const data=await options.inspectCanvas!(session,signal,args);return {status:'succeeded' as const,data}}}:{},
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           }})
-          const {registry,executor}=host,receipts:CapabilityReceipt[]=[]
+          const {registry}=host,executor=createNoteCapabilityExecutor(host,()=>current()?clientContext:undefined),receipts:CapabilityReceipt[]=[]
           const generateResult=async(clientReceipts:CapabilityReceipt[],textOnly=false)=>{
             const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint==='inline'?{insertionAnchor:input.insertionAnchor}:{},...cardLocal&&typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?{sourceInstruction:input.sourceInstruction}:{},...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:textOnly?[]:registry.catalog(clientContext),clientContext,clientReceipts}:{},...textOnly?{completionMode:'text-only'}:{},stream:true }) })
             if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}

@@ -14,6 +14,7 @@ const RESIDENT_V4 = '/* odyssey:home-guide-resident-isolation:v4 */'
 const RESIDENT = '/* odyssey:home-guide-resident-isolation:v5 */'
 const PERSISTENT = '/* odyssey:home-guide-persistent-board:v1 */'
 const CANVAS = '/* odyssey:home-guide-shared-workspace-canvas:v1 */'
+const RENDER_OWNER = '/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,'
 const COMPLETE_DRAFT = '/* odyssey:home-guide-complete-draft:v1 */\nuseHomeGuideNativeCompleteDraft(rootRef,sessionId,workspace,canvasToolRef,selectCanvasTool);'
 const SELECT_TOOL = '\n      const selectCanvasTool=tool=>{canvasToolRef.current=tool;setCanvasTool(tool);};'
 
@@ -880,7 +881,7 @@ function residentChanges(legacy = false, priorV2 = false, priorV3 = false, prior
 
 /** Restore the native anchors before older source patches run again. */
 export function stripHomeGuideNative(source) {
-  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident', 'odyssey:home-guide-complete-draft', 'useHomeGuideNativeCompleteDraft','function homeGuideNativePreviewOwner(','function subscribeHomeGuideNativePreviewOwner(','createHomeGuideNativeOwnedResource','homeGuideNativePreviewOwnerListeners']
+  const owned = [START, END, RESIDENT, RESIDENT_V1, RESIDENT_V2, RESIDENT_V3, RESIDENT_V4, PERSISTENT, CANVAS, RENDER_OWNER, 'data-home-guide-view-session', 'data-home-guide-board-only', 'HomeGuideNativeOriginalResearchCanvas', 'HomeGuideNativeOriginalFinancialWidget', 'HomeGuideNativeOriginalFinancialLibrary', 'useHomeGuideNativeResearchActivation', 'HomeGuideNativeOriginalConversationRoot', 'NativeHomeGuidePortal', 'NativeHomeNotesGuidePortal', 'homeGuideNativeSmartPath', 'homeGuideNativeSmartPrompt', 'HomeGuideNativeFinancialContext', 'homeGuideNativeSharedResource', 'homeGuideProvider', 'homeGuideResident', 'useHomeGuideNativeResident', 'odyssey:home-guide-complete-draft', 'useHomeGuideNativeCompleteDraft','function homeGuideNativePreviewOwner(','function subscribeHomeGuideNativePreviewOwner(','createHomeGuideNativeOwnedResource','homeGuideNativePreviewOwnerListeners']
   if (!source.includes(START)) {
     if (owned.some(token => source.includes(token))) throw Error('Home guide native partial patch drifted')
     return source
@@ -899,6 +900,7 @@ export function stripHomeGuideNative(source) {
   if(previewOwned.some(token=>runtime.includes(token)))for(const anchor of ['const homeGuideNativePreviewOwnerListeners = new WeakMap();','function homeGuideNativePreviewOwner(','function subscribeHomeGuideNativePreviewOwner(','function createHomeGuideNativeOwnedResource('])if(runtime.split(anchor).length!==2)throw Error('Home guide native preview owner anchor drifted: '+anchor)
   if (runtime.includes('NativeHomeNotesGuidePortal') && runtime.split('function NativeHomeNotesGuidePortal(').length !== 2) throw Error('Home guide notes native anchor drifted')
   source = source.slice(0, start) + source.slice(end + END.length + 1)
+  if(source.includes(RENDER_OWNER))source=replaceOne(source,'\n'+RENDER_OWNER,'')
   if (source.includes(COMPLETE_DRAFT)) source = replaceOne(source, '\n' + COMPLETE_DRAFT, '')
   if (source.includes(RESIDENT) || source.includes(RESIDENT_V1) || source.includes(RESIDENT_V2) || source.includes(RESIDENT_V3) || source.includes(RESIDENT_V4)) for (const [native, patched] of residentChanges(source.includes(RESIDENT_V1), source.includes(RESIDENT_V2), source.includes(RESIDENT_V3), source.includes(RESIDENT_V4))) source = replaceOne(source, patched, native)
   source = replaceOne(source, 'function HomeGuideNativeOriginalConversationRoot({ subagentPanel=false,', 'function ConversationRoot({ subagentPanel=false,')
@@ -965,5 +967,8 @@ export function patchHomeGuideNative(source) {
   source = replaceOne(source, '\nfunction ResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {', '\n' + CANVAS + '\nfunction HomeGuideNativeOriginalResearchCanvas({ sessionId, t, researchWorkspaces = defaultResearchWorkspaces, researchOfficePreview = defaultResearchOfficePreview, actions, selectionGeneration }) {')
   source = replaceOne(source, 'function FinancialWidget({node,sessionId,visible,onSpecChange}){', PERSISTENT + '\nfunction HomeGuideNativeOriginalFinancialWidget({node,sessionId,visible,onSpecChange}){')
   source = replaceOne(source, 'function FinancialLibrary({rootRef,workspace,sessionId}){', 'function HomeGuideNativeOriginalFinancialLibrary({rootRef,workspace,sessionId}){')
+  // Preserve the shell patch's strict phase/page/capture adjacency.
+  const phase='\t\t\t\t"data-phase": phase,'
+  source=replaceOne(source,phase,RENDER_OWNER+'\n'+phase)
   return source
 }
