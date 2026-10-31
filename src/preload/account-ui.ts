@@ -1,4 +1,8 @@
 import {createExploreOrb} from './explore-orb'
+import exploreCopy from './explore-assets/account-copy.svg?raw'
+import exploreCheck from './explore-assets/account-check.svg?raw'
+import exploreId from './explore-assets/account-id-card.svg?raw'
+import exploreLogout from './explore-assets/account-log-out.svg?raw'
 import backArrow from './figma-settings-assets/back-arrow.svg?raw'
 import { publicIdLabel, installBoardUiStyles } from './research-board-dialogs'
 import type { ResearchBoardsBridge } from '../shared/research-boards'
@@ -645,23 +649,22 @@ export function mountAccountUi(
           const exploreHost=options.explore&&anchor.closest('dialog.odyssey-explore')
           if(exploreHost&&user){
             menu.dataset.exploreAccountMenu=''
-            const accountId=user.id,label=document.createElement('span'),copy=document.createElement('i')
+            const accountId=user.id,label=document.createElement('span'),row=document.createElement('div')
             let publicId:string|undefined
-            const copyPath='<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
-            const icon=(paths:string)=>{const svg=new DOMParser().parseFromString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`,'image/svg+xml').documentElement;svg.setAttribute('aria-hidden','true');return document.importNode(svg,true)}
-            copy.className='odyssey-explore-account-copy';copy.append(icon(copyPath))
-            label.className='odyssey-explore-account-id';label.setAttribute('aria-live','polite')
-            const restore=()=>{label.textContent=publicId?'用户 ID：'+publicId:'用户 ID 暂时不可用';copy.replaceChildren(icon(copyPath));copy.removeAttribute('data-copied');copyId.removeAttribute('title')}
+            const icon=(source:string)=>{const svg=new DOMParser().parseFromString(source,'image/svg+xml').documentElement;svg.setAttribute('aria-hidden','true');return document.importNode(svg,true)}
+            label.className='odyssey-explore-account-id';row.className='odyssey-explore-account-id-row'
+            const restore=()=>{label.textContent=publicId?'用户 ID：'+publicId:'用户 ID 暂时不可用';copyId.replaceChildren(icon(exploreCopy));copyId.removeAttribute('data-copied');copyId.removeAttribute('title')}
+            const feedback=(message:string)=>{const hint=document.createElement('span');hint.className='odyssey-explore-account-copy-feedback';hint.role='status';hint.textContent=message;copyId.append(hint)}
             const copyId=button('',async()=>{
               if(!publicId||user?.id!==accountId||!copyId.isConnected)return
               if(copyReset!==undefined)clearTimeout(copyReset)
-              try{await document.defaultView!.navigator.clipboard.writeText(publicId);if(!copyId.isConnected||user?.id!==accountId)return;label.textContent='已复制';copy.replaceChildren(icon('<path d="m5 12 4 4L19 6"/>'));copy.dataset.copied=''}
-              catch{if(!copyId.isConnected)return;copy.textContent='重试';copyId.title='复制失败，请重试'}
+              try{await document.defaultView!.navigator.clipboard.writeText(publicId);if(!copyId.isConnected||user?.id!==accountId)return;copyId.replaceChildren(icon(exploreCheck));copyId.dataset.copied='';feedback('已复制')}
+              catch{if(!copyId.isConnected)return;restore();copyId.title='复制失败，请重试';feedback('复制失败，请重试')}
               copyReset=setTimeout(restore,1500)
-            },'odyssey-explore-account-id-row')
+            },'odyssey-explore-account-copy')
             copyId.setAttribute('aria-label','复制用户 ID');copyId.disabled=true
-            copyId.append(icon('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 10h2m-2 4h2M7 15a2 2 0 0 1 4 0"/><circle cx="9" cy="10" r="2"/>'),label,copy)
-            restore();menu.append(copyId)
+            row.append(icon(exploreId),label,copyId)
+            restore();menu.append(row)
             const separator=document.createElement('div');separator.className='odyssey-explore-account-divider';separator.role='separator';menu.append(separator)
             if(boards)void boards.getSnapshot().then(snapshot=>{if(!copyId.isConnected||user?.id!==accountId)return;const identity=snapshot.account.user;publicId=identity?.userId===accountId&&typeof identity.publicId==='string'?identity.publicId.trim()||undefined:undefined;copyId.disabled=!publicId;restore()}).catch(()=>{})
           }else if(user) {
@@ -685,6 +688,7 @@ export function mountAccountUi(
           if(!exploreHost||!user)menu.append(menuButton('设置', 'settings', () => open(false)))
           if (user) {
             const signOut = menuButton('退出登录', 'logout', () => { void logout(signOut) })
+            if(exploreHost){const svg=new DOMParser().parseFromString(exploreLogout,'image/svg+xml').documentElement;svg.setAttribute('aria-hidden','true');signOut.firstElementChild?.replaceWith(document.importNode(svg,true))}
             menu.append(signOut)
           }
           for (const b of menu.querySelectorAll('button')) b.role = 'menuitem'
