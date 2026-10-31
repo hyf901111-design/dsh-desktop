@@ -180,8 +180,9 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.holdSummary=true;return window.startNativeGuide()})
-  const snapshots=[]
+  const snapshots=[];let summaryBeforeBlocks
   for(const step of [...throughCorrections,'note-task-compose','note-task-review','note-task-apply','note-task-saved']){
+   if(step==='note-task-compose')summaryBeforeBlocks=structuredClone(store.load('owner','real-guide-session').saved.blocks)
    await page.evaluate(step=>window.guide.runStep(step),step);await page.evaluate(()=>window.guide.flush())
    const blocks=store.load('owner','real-guide-session').saved.blocks,parts=nonempty(blocks),components=blocks.filter(block=>block.type==='research');snapshots.push({step,blocks})
    if(step==='write'){expect(parts).toHaveLength(2);expect(components).toHaveLength(0)}
@@ -205,15 +206,15 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
    if(step==='note-select-paragraph'){expect(await page.evaluate(()=>getSelection().toString())).toBe(HOME_NOTES_GUIDE_SELECTION);expect(await page.evaluate(()=>window.guideCues.some(row=>row.label==='先查看句内表达标记的 AI 评论'))).toBe(true)}
    if(step==='note-rewrite-apply')expect(await page.locator('[data-id="guide-note-cashflow"] .bn-inline-content').innerText()).toBe(HOME_NOTES_REWRITE_RESULT)
    if(step==='note-task-compose'){
-    expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
-    await expect.poll(()=>page.locator('.en-main [data-note-preview-state="generating"] .en-preview').count()).toBe(1)
-    await page.evaluate(()=>window.summaryPendingCard=document.querySelector('.en-main [data-note-preview-request-id] .en-preview'))
+    expect(blocks).toEqual(summaryBeforeBlocks);expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
+    await expect.poll(()=>page.locator('.en-main [data-note-preview-state="generating"] .en-ai-loading').count()).toBe(1)
+    await page.evaluate(()=>window.summaryPendingRequest=document.querySelector('.en-main [data-note-preview-state="generating"]').dataset.notePreviewRequestId)
     await page.screenshot({path:join(evidenceDir,'summary-pending-main.png')});await expect.poll(()=>page.evaluate(()=>typeof window.releaseSummary)).toBe('function');await page.evaluate(()=>window.releaseSummary())
    }
    if(step==='note-task-review'){
-    expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
+    expect(blocks).toEqual(summaryBeforeBlocks);expect(parts).toHaveLength(7);expect(JSON.stringify(blocks)).not.toContain(HOME_NOTES_TASK_RESULT)
     expect(await page.locator('.en-main [data-note-preview-state="ready"] .en-preview').count()).toBe(1);expect(await page.locator('[data-note-result-preview]').count()).toBe(0)
-    expect(await page.evaluate(()=>window.summaryPendingCard===document.querySelector('.en-main [data-note-preview-request-id] .en-preview'))).toBe(true)
+    expect(await page.evaluate(()=>window.summaryPendingRequest===document.querySelector('.en-main [data-note-preview-state="ready"]').dataset.notePreviewRequestId)).toBe(true);expect(await page.locator('.en-main .en-preview button').allTextContents()).toEqual(['×','添加至正文','重新撰写','放弃']);expect(await page.locator('.en-space-ai').count()).toBe(0)
     expect(await page.locator('.en-main .en-preview').innerText()).toContain(HOME_NOTES_TASK_RESULT);await page.screenshot({path:join(evidenceDir,'summary-ready-not-inserted.png')})
    }
    if(step==='note-task-apply'){expect(parts).toHaveLength(8);expect(parts.at(-1).type).toBe('paragraph');expect(parts.at(-1).content.map(p=>p.text||'').join('')).toBe(HOME_NOTES_TASK_RESULT);expect(components).toHaveLength(2);writeFileSync(join(evidenceDir,'completed-blocks.json'),JSON.stringify(blocks,null,2));await page.screenshot({path:join(evidenceDir,'summary-added.png')})}
@@ -239,7 +240,7 @@ it('stops before the public summary action when the user moves the retained note
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
   for(const step of [...throughCorrections,'note-task-compose','note-task-review'])await page.evaluate(step=>window.guide.runStep(step),step)
   await page.locator('[data-id="guide-note-intro"] .bn-inline-content').click()
-  await expect(page.evaluate(()=>window.guide.runStep('note-task-apply'))).rejects.toThrow('光标已变化')
+  await expect(page.evaluate(()=>window.guide.runStep('note-task-apply'))).rejects.toThrow(/笔记(?:末尾光标|正文)已变化，已保留用户当前操作。/)
   await expect.poll(()=>page.locator('#guide .bn-editor').count()).toBe(0)
   const saved=store.load('owner','real-guide-session');expect(nonempty(saved.saved.blocks)).toHaveLength(7);expect(JSON.stringify(saved.saved.blocks)).not.toContain(HOME_NOTES_TASK_RESULT);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
