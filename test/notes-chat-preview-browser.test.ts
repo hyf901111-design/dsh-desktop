@@ -170,3 +170,33 @@ it('executes a real runtime inspect/apply component request with a prepared rece
   await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('真实运行时准备的组件更新');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+it.each(['single-dirty','partly-safe','dependent'])('refuses a right undo candidate for %s instead of promising text it must preserve',async mode=>{
+ const f=await open();try{
+  await f.page.evaluate((mode:string)=>{const w=window as any;w.ledger.begin('prior-inline','AI旧改写',{documentId:'doc',blockId:'before',position:{}});w.ledger.runFor('prior-inline',()=>{w.editor.updateBlock('before',{content:'AI旧改写'});if(mode!=='single-dirty')w.editor.updateBlock('after',{content:'可独立回退的AI段落'})},[],mode==='dependent');w.ledger.finish('prior-inline');w.editor.updateBlock('before',{content:'人工最新改写必须保留'})},mode)
+  const original=await body(f.page),allowed=await f.page.evaluate(()=>(window as any).ledger.canUndoBlock('prior-inline','after'))
+  if(mode==='partly-safe')expect(allowed).toBe(true);if(mode==='dependent')expect(allowed).toBe(false)
+  const parent=await submit(f.page,'撤销刚才的AI改写'),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),reply=await capability(f.page,parent,'notes.blocks.undo',{revision:read.result.data.revision,actionId:'prior-inline'})
+  expect(reply.error).toContain('无法完整预览撤销');expect(reply.result).toBeUndefined();expect(await body(f.page)).toEqual(original)
+  await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:'包含较新编辑，当前内容已保留。'}));await expect.poll(()=>f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(await body(f.page)).toEqual(original)
+  expect(await f.page.evaluate(()=>(window as any).ledger.list().some((value:any)=>value.id==='prior-inline'&&value.changes.some((change:any)=>change.dirty)))).toBe(true);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['update','replace-empty-anchor'])('shows an exact safe %s undo preview and confirms the same body',async mode=>{
+ const f=await open();try{
+  const original=await body(f.page)
+  await f.page.evaluate((mode:string)=>{const w=window as any;w.ledger.begin('prior-clean','AI干净改写',{documentId:'doc',blockId:'before',position:{}});w.ledger.run(()=>{if(mode==='update')w.editor.updateBlock('before',{content:'AI干净修改'});else w.editor.replaceBlocks(['anchor'],[{id:'created-inline',type:'paragraph',content:'AI插入的内容'}])});w.ledger.finish('prior-clean')},mode)
+  const before=await body(f.page),parent=await submit(f.page,'撤销刚才的AI生成'),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'}),reply=await capability(f.page,parent,'notes.blocks.undo',{revision:read.result.data.revision,actionId:'prior-clean'})
+  expect(reply.result).toMatchObject({status:'succeeded',data:{pendingPreview:true}});expect(await body(f.page)).toEqual(before)
+  await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:''}));await f.page.locator('[data-note-preview-state=ready]').waitFor();await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>f.page.locator('[data-note-preview-state=ready]').count()).toBe(0)
+  expect(await body(f.page)).toEqual(original);expect(await f.page.evaluate(()=>(window as any).ledger.list().some((value:any)=>value.id==='prior-clean'))).toBe(false);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('refuses undo acceptance if the owned journal changes after a clean preview without changing body text',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const w=window as any;w.ledger.begin('prior-cas','AI改写',{documentId:'doc',blockId:'before',position:{}});w.ledger.run(()=>w.editor.updateBlock('before',{content:'AI改写'}));w.ledger.finish('prior-cas')})
+  const before=await body(f.page),parent=await submit(f.page,'撤销AI改写'),read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'});await capability(f.page,parent,'notes.blocks.undo',{revision:read.result.data.revision,actionId:'prior-cas'});await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:''}));await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  await f.page.evaluate(()=>(window as any).ledger.setError('prior-cas','生成记录已变化'));await f.page.getByRole('button',{name:'添加至正文',exact:true}).click()
+  expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state=ready]').count()).toBe(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)

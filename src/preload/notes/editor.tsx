@@ -390,6 +390,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const nativeOperations=useMemo(()=>createNativeNoteOperations({editor,documentId:client.current,journal:proposals,
     current:()=>!disposed.current&&!props.recovery&&editorActive()&&nativeCurrent(),snapshot:()=>snapshot(),
     previewBlocks:id=>composerPlans.current?.requestId===id?composerPlans.current.projected:undefined,
+    previewing:id=>composerPlans.current?.requestId===id&&!inlineRequest.current&&!generatingBlock.current,
     stage:plan=>{if(!request.current||inlineRequest.current||generatingBlock.current)return false;const state=composerPlans.current;if(!state)return false;if(state.requestId!==plan.generationId)throw Error('笔记预览请求已变化。');state.plans.push(plan);state.projected=plan.blocks;setDocumentWriting(true);return true},
     selected:()=>selectedNativeNoteBlocks(editor,references.capture(false).range),prompt:()=>lastRequest.current?.prompt||'原生笔记操作',
     persist:()=>persistConfirmed(),changed:()=>changed(),

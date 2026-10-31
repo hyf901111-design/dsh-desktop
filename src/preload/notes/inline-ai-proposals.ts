@@ -223,8 +223,34 @@ export function createNoteInlineProposals({editor,doc,onChange=()=>{}}:{editor:a
   value.changes=remaining;value.summary=remaining.length?'已撤销可安全回退的内容；较新编辑已保留':'已撤销本次生成，正在保存';write(value)
   publish();return{complete:!remaining.length,retained:remaining.length}
  }
+ // A sidebar candidate must promise the exact safe result, never a best-effort
+ // rewind of dirty entries. The original inline Undo keeps its partial recovery.
+ const previewUndo=(id:string)=>{
+  inspect();const value=list().find(record=>record.id===id);if(!value||!value.changes.length)throw Error('本次生成没有可撤销的内容。')
+  const currentIdentities=identities(doc),baseline=fingerprint(editor.document),journal=fingerprint(value)
+  if(!value.changes.every(entry=>canRevert(entry,value.changes,currentIdentities)))throw Error('本次生成包含较新编辑或依赖变化，已保留当前内容；无法完整预览撤销。')
+  if(value.changes.some(entry=>entry.moved))throw Error('本次生成涉及位置关联，无法完整预览撤销；请使用原生成结果的撤销操作。')
+  const projected:Block[]=clone(editor.document),deleted=new Map(value.changes.filter(entry=>entry.before&&!entry.after).map(entry=>[entry.id,entry])),created=new Set(value.changes.filter(entry=>!entry.before&&entry.after).map(entry=>entry.id)),restored=new Set<string>(),beforeChain:Change[]=[],heads=[...deleted.values()].filter(entry=>!entry.previous),seen=new Set<string>()
+  let cursor=heads.length===1?heads[0]:undefined
+  while(cursor&&!seen.has(cursor.id)){seen.add(cursor.id);beforeChain.push(cursor);cursor=cursor.next?deleted.get(cursor.next):undefined}
+  const completeBefore=beforeChain.length===deleted.size&&beforeChain.length>0&&!beforeChain.at(-1)!.next
+  if(completeBefore&&projected.length&&projected.every(block=>created.has(block.id)))projected.splice(0,projected.length,...beforeChain.map(entry=>clone(entry.before!)))
+  else{
+   for(let index=projected.length-1;index>=0;index--)if(created.has(projected[index]!.id))projected.splice(index,1)
+   const neighbour=(entry:Change,side:'previous'|'next',visited=new Set<string>()):Block|undefined=>{const peerId=entry[side];if(!peerId||visited.has(peerId))return;visited.add(peerId);const block=treePositions(projected).get(peerId)?.block,expected=side==='next'?entry.nextIdentity:entry.previousIdentity;if(block)return(!!expected&&currentIdentities.get(peerId)===expected||restored.has(peerId)&&fingerprint(block)===fingerprint(deleted.get(peerId)?.before))?block:undefined;const prior=deleted.get(peerId);return prior?neighbour(prior,side,visited):undefined}
+   for(const entry of [...value.changes].sort((a,b)=>Number(!!a.before)-Number(!!b.before))){
+    if(!entry.before)continue
+    if(entry.after){const position=treePositions(projected).get(entry.id);if(!position)throw Error('原撤销位置已变化，已保留当前内容。');position.siblings[position.index]=clone(entry.before);continue}
+    const next=neighbour(entry,'next'),previous=neighbour(entry,'previous'),target=next||previous,position=target&&treePositions(projected).get(target.id)
+    if(!position)throw Error('原撤销位置已变化，无法完整预览撤销；已保留当前内容。')
+    position.siblings.splice(position.index+(next?0:1),0,clone(entry.before));restored.add(entry.id)
+   }
+  }
+  if(!projected.length)throw Error('本次撤销将重建空白位置，无法精确预览；请使用原生成结果的撤销操作。')
+  return{blocks:projected,check:()=>{inspect();const actual=list().find(record=>record.id===id),next=identities(doc);if(!actual||fingerprint(actual)!==journal||fingerprint(editor.document)!==baseline||[...currentIdentities].some(([blockId,item])=>next.get(blockId)!==item)||!actual.changes.every(entry=>canRevert(entry,actual.changes,next)))throw Error('笔记或生成记录已有较新编辑，已保留当前内容，请重新请求撤销。')}}
+ }
  const confirm=(id:string)=>{if(!records.has(id))throw Error('本次生成记录已变化。');records.delete(id);publish()}
- return{list,begin,run,runFor,proxy,finish,undo,confirm,captureHtmlInteraction,setError:(id:string,error:string)=>{const value=read(id);if(value)write({...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{write(clone(value));inspect()},active:()=>active,has:(id:string)=>!!read(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes,identities(doc))},canUndo:(id:string)=>{const value=list().find(value=>value.id===id),currentIdentities=identities(doc);return value?.changes.some(entry=>canRevert(entry,value.changes,currentIdentities))??false},dispose(){disposed=true;off();records.unobserve(publish)}}
+ return{list,begin,run,runFor,proxy,finish,undo,previewUndo,confirm,captureHtmlInteraction,setError:(id:string,error:string)=>{const value=read(id);if(value)write({...value,error:error.slice(0,1000)})},restore:(value:NoteInlineProposal)=>{write(clone(value));inspect()},active:()=>active,has:(id:string)=>!!read(active||'')?.changes.some(entry=>entry.id===id),canUndoBlock:(id:string,blockId:string)=>{const value=list().find(item=>item.id===id),entry=value?.changes.find(item=>item.id===blockId);return !!value&&!!entry&&canRevert(entry,value.changes,identities(doc))},canUndo:(id:string)=>{const value=list().find(value=>value.id===id),currentIdentities=identities(doc);return value?.changes.some(entry=>canRevert(entry,value.changes,currentIdentities))??false},dispose(){disposed=true;off();records.unobserve(publish)}}
 }
 
 const markKey=new PluginKey('note-inline-ai-proposal')

@@ -12,9 +12,9 @@ export {nativeBlankTableIntent} from '../../shared/notes-native-intent'
 export function nativeBlankTable(rows:number,columns:number,availableWidth:number){
  return{type:'table',content:{type:'tableContent',headerRows:0,columnWidths:initialNativeTableColumnWidths(columns,availableWidth),rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
 }
-type Journal={list():any[];begin(id:string,prompt:string,anchor:any):void;run<T>(fn:()=>T):T;runFor<T>(id:string,fn:()=>T,movedIds?:readonly string[],dependent?:boolean):T;undo(id:string):{complete:boolean;retained:number};confirm(id:string):void;setError(id:string,error:string):void;restore(value:any):void}
+type Journal={list():any[];begin(id:string,prompt:string,anchor:any):void;run<T>(fn:()=>T):T;runFor<T>(id:string,fn:()=>T,movedIds?:readonly string[],dependent?:boolean):T;undo(id:string):{complete:boolean;retained:number};previewUndo?(id:string):{blocks:any[];check():void};confirm(id:string):void;setError(id:string,error:string):void;restore(value:any):void}
 export type NativeNotePreviewPlan={generationId:string;blocks:any[];changedBlockIds:string[];movedIds:string[];dependent:boolean;check():void;apply():void}
-type Options={editor:any;documentId:string;stage?(plan:NativeNotePreviewPlan):boolean;previewBlocks?(generationId:string):any[]|undefined;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}
+type Options={editor:any;documentId:string;previewing?(generationId:string):boolean;stage?(plan:NativeNotePreviewPlan):boolean;previewBlocks?(generationId:string):any[]|undefined;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}
 type Snapshot={scope:string;fullNote:boolean;generationId:string;fingerprint:string;allowed:Set<string>;identities:Map<string,string>}
 const flatten=(blocks:any[],parentId?:string):any[]=>blocks.flatMap((block,index)=>[{block,parentId,index},...flatten(block.children??[],block.id)])
 function locate(blocks:any[],id:string):{siblings:any[];index:number;block:any}|undefined{
@@ -174,14 +174,13 @@ export function createNativeNoteOperations(options:Options){
   if(!only(args,['revision','actionId'])||typeof args.actionId!=='string')throw Error('撤销参数无效。')
   const value=options.journal.list().find(value=>value.id===args.actionId)
   if(!value||value.state!=='ready'||value.changes.some((entry:any)=>!snapshot.allowed.has(entry.id)&&!(snapshot.fullNote&&!entry.after)))throw Error('撤销目标不在当前读取范围内。')
-  const projected=copy(source(generationId)),baseline=noteCapabilityFingerprint(options.snapshot())
-  for(const change of [...value.changes].reverse()){
-   const row=locate(projected,change.id)
-   if(change.before===null){if(row)row.siblings.splice(row.index,1)}
-   else if(row)row.siblings[row.index]=copy(change.before)
-   else{const previous=change.previous&&locate(projected,change.previous),next=change.next&&locate(projected,change.next);if(previous)previous.siblings.splice(previous.index+1,0,copy(change.before));else if(next)next.siblings.splice(next.index,0,copy(change.before));else projected.push(copy(change.before))}
+  if(options.previewing?.(generationId)){
+   if(fingerprint(source(generationId))!==fingerprint(options.editor.document))throw Error('本轮已有待确认修改，请先处理当前建议后再撤销。')
+   const preview=options.journal.previewUndo?.(args.actionId)
+   if(!preview)throw Error('当前撤销无法安全预览，已保留笔记内容。')
+   if(!options.stage?.({generationId,blocks:copy(preview.blocks),changedBlockIds:value.changes.map((change:any)=>change.id),movedIds:[],dependent:true,check:()=>{assert();preview.check()},apply:()=>{preview.check();const result=options.journal.undo(args.actionId);if(!result.complete||fingerprint(options.editor.document)!==fingerprint(preview.blocks))throw Error('撤销结果与预览不一致，较新编辑已保留，请检查当前内容。');options.journal.confirm(args.actionId)}}))throw Error('撤销预览请求已变化，已保留笔记内容。')
+   return{status:'succeeded',data:{pendingPreview:true,actionId:generationId},message:'撤销建议已准备，等待用户确认；笔记正文尚未修改。'}
   }
-  if(options.stage?.({generationId,blocks:projected,changedBlockIds:value.changes.map((change:any)=>change.id),movedIds:[],dependent:true,check:()=>{assert();if(noteCapabilityFingerprint(options.snapshot())!==baseline)throw Error('笔记已有较新编辑，请重新生成建议。')},apply:()=>{const result=options.journal.undo(args.actionId);if(result.complete)options.journal.confirm(args.actionId)}}))return{status:'succeeded',data:{pendingPreview:true,actionId:generationId},message:'撤销建议已准备，等待用户确认；笔记正文尚未修改。'}
   const beforeBlocks=copy(options.editor.document),before=fingerprint(beforeBlocks),result=options.journal.undo(args.actionId);advance();options.changed()
   if(before===fingerprint(options.editor.document))return{status:'failed',message:'本次内容已变化，较新修改已保留。'}
   const previous=new Map(flatten(beforeBlocks).map(row=>[row.block.id,fingerprint(row)])),next=new Map(flatten(options.editor.document).map(row=>[row.block.id,fingerprint(row)]))
