@@ -28,3 +28,14 @@ it.each(['cancel','mode','abort','owner','aba'])('retires the owned menu after %
  const count=f.events.length;link.click();expect(f.events).toHaveLength(count);expect(()=>f.menu.sync(f.input)).toThrow();if(kind!=='owner')expect(root.isConnected).toBe(false)
 })
 it('rejects an unadmitted session or malformed menu before attaching any visible surface',()=>{const f=fixture();expect(()=>f.menu.sync({...f.input,sessionId:'other'})).toThrow();expect(()=>f.menu.sync({...f.input,items:[{id:'bad',title:'bad'} as any]})).toThrow();expect(f.menu.element()).toBeUndefined()})
+
+it.each([{x:20,y:700},{x:980,y:700},{x:980,y:40}])('keeps the root menu anchored while a taller library submenu opens and closes at $x/$y',anchor=>{
+ vi.spyOn(window,'innerWidth','get').mockReturnValue(1280);vi.spyOn(window,'innerHeight','get').mockReturnValue(800)
+ const f=fixture(),children=Array.from({length:32},(_,index)=>({id:'library-'+index,title:'组件 '+index,icon:'quote',subtext:'',group:'',badge:''})),input={...f.input,anchor:{...anchor,width:2,height:20},items:[{...f.input.items[0]!,children},...Array.from({length:5},(_,index)=>({id:'native-'+index,title:'命令 '+index,icon:'quote',subtext:'',group:'',badge:''}))]}
+ const rect=(host:HTMLElement,selector:string)=>{const pane=host.querySelector<HTMLElement>(selector)!;return{x:parseFloat(host.style.left)+parseFloat(pane.style.left),y:parseFloat(host.style.top)+parseFloat(pane.style.top),width:parseFloat(pane.style.width),height:parseFloat(pane.style.height)}}
+ f.menu.sync(input);const host=f.menu.element()!,before=rect(host,'.root-menu')
+ f.menu.sync({...input,revision:2,submenu:{parentId:'library',selectedIndex:0,keyboardActive:false}})
+ expect(rect(host,'.root-menu')).toEqual(before);const child=rect(host,'.child-menu');expect(child.x).toBeGreaterThanOrEqual(8);expect(child.x+child.width).toBeLessThanOrEqual(1272);expect(child.y).toBeGreaterThanOrEqual(8);expect(child.y+child.height).toBeLessThanOrEqual(792)
+ if(anchor.x>900)expect(child.x+child.width).toBeLessThanOrEqual(before.x)
+ f.menu.sync({...input,revision:3});expect(rect(host,'.root-menu')).toEqual(before)
+})
