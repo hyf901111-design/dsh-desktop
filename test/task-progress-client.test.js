@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
-import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
+import {patchTaskProgressClient,continueUnfinishedTask} from '../scripts/lib/task-progress-client.mjs'
 const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 it('stops stale running glyphs and reports incomplete checklists honestly after a run ends',()=>{
  const patched=patchTaskProgressClient(source)
@@ -11,6 +11,15 @@ it('stops stale running glyphs and reports incomplete checklists honestly after 
  expect(glyph({status:'in_progress',running:false}).type).toBe('pending')
  expect(glyph({status:'in_progress',running:true}).props['data-odyssey-task-status']).toBe('in_progress')
  expect(glyph({status:'completed',running:false}).props['data-odyssey-task-status']).toBe('completed')
- expect(patched).toContain('running: useSession(s=>s.running)')
- expect(patched).toContain('本轮已结束 · 清单待核对')
+ expect(patched.includes('running=useSession(s=>s.running)')).toBe(true)
+ expect(patched).toContain('任务尚未完成 · 可继续')
+ expect(patched).toContain('data-task-continue')
+})
+it('only resumes after an explicit click through the native input actions without replacing a draft or attachment',()=>{
+ const calls=[],inputActions={setDraft:text=>calls.push(['draft',text]),submit:()=>calls.push(['submit'])},todos=[{content:'读取资料',status:'completed'},{content:'渲染核验并交付',status:'in_progress'}],plain={phase:'plain',draft:'',imageIds:[],occurrences:[]}
+ for(const input of [{...plain,draft:'用户自己的草稿'},{...plain,imageIds:['image']},{...plain,occurrences:[{id:1}]},{...plain,phase:'submitting'}])expect(continueUnfinishedTask({inputActions,input,todos,running:false})).toBe(false)
+ expect(continueUnfinishedTask({inputActions,input:plain,todos,running:true})).toBe(false)
+ expect(calls).toEqual([])
+ expect(continueUnfinishedTask({inputActions,input:plain,todos,running:false})).toBe(true)
+ expect(calls).toHaveLength(2);expect(calls[0][1]).toContain('不扩大任务范围');expect(calls[0][1]).toContain('渲染核验并交付');expect(calls[0][1]).not.toContain('读取资料');expect(calls[1]).toEqual(['submit'])
 })

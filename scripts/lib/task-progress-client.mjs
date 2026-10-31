@@ -1,15 +1,42 @@
+/** Explicit user action only: reuse the native send path and preserve drafts. */
+export function continueUnfinishedTask({inputActions,input,todos,running}) {
+  if (running || !inputActions || !input || input.phase !== 'plain' || input.draft !== '' || input.imageIds?.length || input.occurrences?.length || !todos.some(item=>item.status!=='completed')) return false
+  const remaining=todos.filter(item=>item.status!=='completed').slice(0,64).map(item=>String(item.content).slice(0,600))
+  inputActions.setDraft('继续完成上一次用户要求中尚未完成的工作。保留原目标和约束，不重复已完成的工作，不扩大任务范围；先核实当前工具与后台任务状态，再继续。未完成清单：\n'+remaining.map((text,i)=>`${i+1}. ${text}`).join('\n'))
+  inputActions.submit()
+  return true
+}
+
 export function patchTaskProgressClient(source) {
   const marker = '/* sherlock:task-progress-lifecycle:v1 */'
-  if (source.includes(marker)) return source
   const replace = (before, after) => {
     if (source.split(before).length !== 2) throw Error('Task progress UI anchor drifted: ' + before)
     source = source.replace(before, after)
   }
-  replace('function TodoPanel({ todos, objective, t }) {', `function TodoPanel({ todos, objective, t, running = true }) {${marker}`)
-  replace('function OdysseyTaskStatus({status}) {', 'function OdysseyTaskStatus({status,running=true}) {\n  if(!running && status==="in_progress") return react_jsx_runtime.jsx(PendingGlyph,{});')
-  replace('jsx)(OdysseyTaskStatus, { status: item.status })', 'jsx)(OdysseyTaskStatus, { status: item.status, running })')
-  replace('"completed" : "pending" })', '"completed" : "pending", running })')
-  replace('children: t("todo.progress.total", { done: todos.filter(item => item.status === "completed").length, total: todos.length })', `children: running === false && todos.some(item=>item.status!=="completed") ? (document.documentElement.dataset.odysseyLocale==='en' ? 'Run ended · checklist needs review' : '本轮已结束 · 清单待核对') : t("todo.progress.total", { done: todos.filter(item => item.status === "completed").length, total: todos.length })`)
-  replace('todos: useProjection("todos") ?? [],', 'todos: useProjection("todos") ?? [],\n                running: useSession(s=>s.running),')
+  if (!source.includes(marker)) {
+    replace('function TodoPanel({ todos, objective, t }) {', `function TodoPanel({ todos, objective, t, running = true }) {${marker}`)
+    replace('function OdysseyTaskStatus({status}) {', 'function OdysseyTaskStatus({status,running=true}) {\n  if(!running && status==="in_progress") return react_jsx_runtime.jsx(PendingGlyph,{});')
+    replace('jsx)(OdysseyTaskStatus, { status: item.status })', 'jsx)(OdysseyTaskStatus, { status: item.status, running })')
+    replace('"completed" : "pending" })', '"completed" : "pending", running })')
+    replace('children: t("todo.progress.total", { done: todos.filter(item => item.status === "completed").length, total: todos.length })', `children: running === false && todos.some(item=>item.status!=="completed") ? (document.documentElement.dataset.odysseyLocale==='en' ? 'Run ended · checklist needs review' : '本轮已结束 · 清单待核对') : t("todo.progress.total", { done: todos.filter(item => item.status === "completed").length, total: todos.length })`)
+    replace('todos: useProjection("todos") ?? [],', 'todos: useProjection("todos") ?? [],\n                running: useSession(s=>s.running),')
+  }
+  const next='/* sherlock:task-progress-resume:v2 */'
+  if (source.includes(next)) return source
+  replace("'本轮已结束 · 清单待核对'", "'任务尚未完成 · 可继续'")
+  replace("'Run ended · checklist needs review'", "'Task unfinished · can continue'")
+  const start=source.indexOf('function TodoDock('),end=source.indexOf('\n\t\t/**',start)
+  if(start<0||end<start)throw Error('Task resume dock anchor drifted')
+  const before=source.slice(start,end)
+  if(!before.includes('todos: useProjection("todos") ?? []')||!before.includes('running: useSession(s=>s.running)'))throw Error('Task resume projection anchor drifted')
+  const after=`${next}
+${continueUnfinishedTask.toString()}
+function TodoDock({useProjection,useSession,useInput,inputActions,t}) {
+ const objective=useSession(odysseyTaskObjective),running=useSession(s=>s.running),todos=useProjection("todos")??[],input=useInput(s=>s),clicked=react.useRef(false);
+ react.useEffect(()=>{if(running)clicked.current=false},[running]);
+ const canContinue=!running&&todos.some(item=>item.status!=="completed"),blocked=!input||input.phase!=="plain"||input.draft!==""||!!input.imageIds?.length||!!input.occurrences?.length;
+ return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(TodoPanel,{todos,running,objective:odysseyTaskVisibleText(useProjection("goal")?.goal?.objective)||objective,t}),canContinue&&react_jsx_runtime.jsx('button',{type:'button','data-task-continue':'','aria-label':document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务',disabled:blocked,onClick:()=>{if(clicked.current||blocked)return;clicked.current=true;if(!continueUnfinishedTask({inputActions,input,todos,running}))clicked.current=false},style:{display:'block',margin:'4px 12px 4px auto',padding:'4px 8px',border:0,borderRadius:6,background:'var(--dsw-alias-interactive-bg-hover)',color:'var(--dsw-alias-label-secondary)',fontSize:12,cursor:blocked?'default':'pointer',opacity:blocked?.45:1},children:document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务'})]});
+}`
+  source=source.slice(0,start)+after+source.slice(end)
   return source
 }
