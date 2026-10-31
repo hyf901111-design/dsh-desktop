@@ -6,10 +6,10 @@ const bridges:NotesCapabilityBridge[]=[]
 afterEach(()=>{for(const bridge of bridges.splice(0))bridge.dispose();vi.useRealTimers()})
 const applied={kind:'native-blocks',state:'applied',actionId:'native-action-one',changedBlockIds:['paragraph-one','table-one'],revision:'revision-after-one'}
 const saved={...applied,state:'saved'}
-function fixture(action='notes.blocks.apply'){
+function fixture(action='notes.blocks.apply',allowPreview=false){
  const sent:any[]=[],controller=new AbortController(),bridge=new NotesCapabilityBridge(value=>sent.push(value));bridges.push(bridge)
  let current=true
- const promise=bridge.request(action as any,{},context,'generation-one',controller.signal,()=>current);void promise.catch(()=>{})
+ const promise=bridge.request(action as any,{},context,'generation-one',controller.signal,()=>current,allowPreview);void promise.catch(()=>{})
  const requestId=sent[0].requestId
  const respond=(input:any,owner='alice',sessionId='note')=>bridge.respond({requestId,sessionId,...input},owner)
  return{bridge,promise,sent,requestId,respond,controller,hide:()=>{current=false}}
@@ -116,4 +116,41 @@ it('retains complete native effect metadata for a legal batch changing more than
  const f=fixture('notes.blocks.apply'),effect={...saved,changedBlockIds:Array.from({length:20000},(_,index)=>'block-'+index)}
  expect(f.respond({result:{status:'succeeded',effect}})).toEqual({ok:true})
  expect((await f.promise).effect.changedBlockIds).toHaveLength(20000)
+})
+
+const prepared={status:'succeeded',data:{pendingPreview:true,actionId:'generation-one'}}
+it('keeps native saved-only admission unless the composer explicitly enables a generation-bound preview',async()=>{
+ const ordinary=fixture()
+ expect(ordinary.respond({result:prepared})).toEqual({ok:false})
+ expect(ordinary.bridge.allowed(ordinary.requestId,'alice','note')).toBe(true)
+ ordinary.respond({result:{status:'failed'}});await ordinary.promise
+ const composer=fixture('notes.blocks.apply',true)
+ expect(composer.respond({result:prepared})).toEqual({ok:true})
+ expect(await composer.promise).toEqual(prepared)
+})
+it.each([
+ {pendingPreview:true,actionId:'foreign'},
+ {pendingPreview:true},
+ {pendingPreview:true,actionId:'generation-one',effect:{state:'saved'}},
+ {pendingPreview:false,actionId:'generation-one'}
+])('rejects an unowned or malformed prepared native reply without consuming it (%#)',async data=>{
+ const f=fixture('notes.blocks.undo',true)
+ expect(f.respond({result:{status:'succeeded',data}})).toEqual({ok:false})
+ expect(f.bridge.allowed(f.requestId,'alice','note')).toBe(true)
+ f.respond({result:prepared});expect(await f.promise).toEqual(prepared)
+})
+it('never turns an acknowledged applied write into a no-effect preview',async()=>{
+ const f=fixture('notes.blocks.apply',true)
+ expect(f.respond({effect:applied})).toEqual({ok:true})
+ expect(f.respond({result:prepared})).toEqual({ok:false})
+ f.respond({result:{status:'succeeded',effect:saved}})
+ expect(await f.promise).toMatchObject({effect:saved})
+})
+it('does not expose a preview after cancellation or a context change',async()=>{
+ const stopped=fixture('notes.blocks.apply',true);stopped.controller.abort()
+ expect(stopped.respond({result:prepared})).toEqual({ok:true})
+ expect(await stopped.promise).toMatchObject({status:'cancelled'})
+ const changed=fixture('notes.blocks.apply',true);changed.hide()
+ expect(changed.respond({result:prepared})).toEqual({ok:true})
+ await expect(changed.promise).rejects.toThrow('会话已变化')
 })

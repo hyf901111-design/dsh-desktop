@@ -130,6 +130,7 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    const before=noteCapabilityFingerprint(options.snapshot())
    try{
     const result=await options.createComponent(input.args,current,input.requestId,publish)
+    if(result?.data?.pendingPreview===true)return receipt(result)
     if(result.status==='succeeded'){
      await publish({state:'applied',blockId:result.blockId})
      const after=options.snapshot(),withoutCreated={...after,blocks:after.blocks.filter(block=>block.id!==result.blockId)}

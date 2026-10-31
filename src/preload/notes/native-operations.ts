@@ -13,7 +13,8 @@ export function nativeBlankTable(rows:number,columns:number,availableWidth:numbe
  return{type:'table',content:{type:'tableContent',headerRows:0,columnWidths:initialNativeTableColumnWidths(columns,availableWidth),rows:Array.from({length:rows},()=>({cells:Array.from({length:columns},()=> '')}))}}
 }
 type Journal={list():any[];begin(id:string,prompt:string,anchor:any):void;run<T>(fn:()=>T):T;runFor<T>(id:string,fn:()=>T,movedIds?:readonly string[],dependent?:boolean):T;undo(id:string):{complete:boolean;retained:number};confirm(id:string):void;setError(id:string,error:string):void;restore(value:any):void}
-type Options={editor:any;documentId:string;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}
+export type NativeNotePreviewPlan={generationId:string;blocks:any[];changedBlockIds:string[];movedIds:string[];dependent:boolean;check():void;apply():void}
+type Options={editor:any;documentId:string;stage?(plan:NativeNotePreviewPlan):boolean;previewBlocks?(generationId:string):any[]|undefined;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}
 type Snapshot={scope:string;fullNote:boolean;generationId:string;fingerprint:string;allowed:Set<string>;identities:Map<string,string>}
 const flatten=(blocks:any[],parentId?:string):any[]=>blocks.flatMap((block,index)=>[{block,parentId,index},...flatten(block.children??[],block.id)])
 function locate(blocks:any[],id:string):{siblings:any[];index:number;block:any}|undefined{
@@ -35,18 +36,21 @@ export function selectedNativeNoteBlocks(editor:any,range?:{from:number;to:numbe
 export function createNativeNoteOperations(options:Options){
  const reads=new Map<string,Snapshot>(),receipts=new Map<string,{arguments:string;value:any}>(),used=new Map<string,string>(),pending=new Map<string,{arguments:string;promise:Promise<any>}>()
  let generation=''
+ const source=(id:string)=>options.previewBlocks?.(id)??options.editor.document
+ const sourceFingerprint=(id:string)=>noteCapabilityFingerprint({...options.snapshot(),blocks:source(id)})
+ const sourceIdentities=(id:string)=>{const identities=noteInlineBlockIdentities(options.editor);for(const {block}of flatten(source(id)))if(!identities.has(block.id))identities.set(block.id,'preview:'+id+':'+block.id);return identities}
  const enter=(id:string)=>{if(generation!==id){generation=id;reads.clear();receipts.clear();used.clear()}}
  const assert=(current:()=>boolean=()=>true)=>{if(!options.current()||!current())throw Error('笔记会话已变化或操作已取消。')}
  const read=(args:any,generationId:string,current:()=>boolean=()=>true)=>{
   assert(current);enter(generationId);if(!only(args,['scope','ids'])||!['note','selected'].includes(args.scope))throw Error('笔记读取范围无效。')
   const editor=options.editor
   if(editor.document.length===1&&editor.document[0].type==='paragraph'&&!editor.document[0].content?.length)captureNoteInlineAnchor(editor,options.documentId,editor.document[0].id)
-  const all=flatten(editor.document),selected=new Set(options.selected()),scope=all.filter(row=>args.scope==='note'||selected.has(row.block.id)),permitted=new Set(scope.flatMap(row=>flatten([row.block]).map(x=>x.block.id)))
+  const blocks=source(generationId),all=flatten(blocks),selected=new Set(options.selected()),scope=all.filter(row=>args.scope==='note'||selected.has(row.block.id)),permitted=new Set(scope.flatMap(row=>flatten([row.block]).map(x=>x.block.id)))
   const ids=args.ids??scope.map(row=>row.block.id)
   if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!permitted.has(id)))throw Error('读取目标不在当前笔记授权范围内。')
-  const allIdentities=noteInlineBlockIdentities(editor),allowed=new Set<string>(ids.flatMap(id=>flatten([editor.getBlock(id)]).map(x=>x.block.id))),identities=new Map<string,string>()
+  const allIdentities=sourceIdentities(generationId),allowed=new Set<string>(ids.flatMap(id=>flatten([locate(blocks,id)!.block]).map(x=>x.block.id))),identities=new Map<string,string>()
   for(const id of allowed){const identity=allIdentities.get(id);if(!identity)throw Error('笔记块身份尚未就绪。');identities.set(id,identity)}
-  const revision=crypto.randomUUID(),snapshot={scope:args.scope,fullNote:args.scope==='note'&&args.ids===undefined,generationId,fingerprint:noteCapabilityFingerprint(options.snapshot()),allowed,identities}
+  const revision=crypto.randomUUID(),snapshot={scope:args.scope,fullNote:args.scope==='note'&&args.ids===undefined,generationId,fingerprint:sourceFingerprint(generationId),allowed,identities}
   if(reads.size>=64)reads.delete(reads.keys().next().value!)
   reads.set(revision,snapshot)
   return{status:'succeeded',data:{revision,blocks:scope.filter(row=>ids.includes(row.block.id)).map(({block,parentId,index})=>({block:copy(block),parentId,index})),actions:options.journal.list().filter(value=>value.state==='ready'&&(snapshot.fullNote||value.changes.every((entry:any)=>allowed.has(entry.id)))).map(value=>({actionId:value.id,summary:value.summary}))}}
@@ -54,8 +58,8 @@ export function createNativeNoteOperations(options:Options){
  const admitted=(revision:string,generationId:string,current:()=>boolean)=>{
   assert(current);if(!options.editor.isEditable)throw Error('笔记当前不可编辑。')
   const value=reads.get(revision)
-  if(!value||value.generationId!==generationId||value.fingerprint!==noteCapabilityFingerprint(options.snapshot()))throw Error('笔记修订已变化，请重新读取后操作。')
-  const actualIdentities=noteInlineBlockIdentities(options.editor)
+  if(!value||value.generationId!==generationId||value.fingerprint!==sourceFingerprint(generationId))throw Error('笔记修订已变化，请重新读取后操作。')
+  const actualIdentities=sourceIdentities(generationId)
   for(const[id,identity]of value.identities)if(actualIdentities.get(id)!==identity)throw Error('笔记块身份已变化。')
   return value
  }
@@ -103,7 +107,7 @@ export function createNativeNoteOperations(options:Options){
  const apply=async(args:any,generationId:string,requestId:string,current:()=>boolean=()=>true,advance:()=>void=()=>{},prompt=options.prompt())=>{
   const snapshot=admitted(args?.revision,generationId,current),editor=options.editor,operations=args.operations as CapabilityNativeBlockOperation[]
   if(!only(args,['revision','operations'])||!Array.isArray(operations)||!operations.length||operations.length>1000)throw Error('原生操作批次无效。')
-  const projected=copy(editor.document),plans:(()=>void)[]=[],changedIds=new Set<string>(),movedIds=new Set<string>(),allowed=new Set(snapshot.allowed);let dependent=false
+  const projected=copy(source(generationId)),plans:(()=>void)[]=[],changedIds=new Set<string>(),movedIds=new Set<string>(),allowed=new Set(snapshot.allowed);let dependent=false
   const target=(id:string)=>{const found=locate(projected,id);if(!allowed.has(id)||!found)throw Error('操作目标不在本次读取范围内。');return found}
   const anchor=(value:any)=>{if(!only(value,['blockId','placement'])||!['before','after'].includes(value.placement))throw Error('插入位置无效。');return target(value.blockId)}
   const distinct=(ids:any)=>{if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length)throw Error('操作目标无效。');const rows=ids.map(target);if(rows.some(row=>flatten(row.block.children??[]).some(child=>ids.includes(child.block.id))))throw Error('不能同时操作祖先与子块。');return rows}
@@ -139,9 +143,15 @@ export function createNativeNoteOperations(options:Options){
    }else throw Error('未知原生笔记操作。')
   }
   if(projected.length>10000||new TextEncoder().encode(JSON.stringify({...options.snapshot(),blocks:projected})).length>4*1024*1024)throw Error('笔记超过现有容量限制，请拆分文档。')
-  if(fingerprint(projected)===fingerprint(editor.document))return saveEffect({kind:'native-blocks',state:'applied',actionId:generationId,changedBlockIds:[],revision:crypto.randomUUID()},requestId,current,'当前内容与目标一致').then(receipt=>({...receipt,data:{...receipt.data,unchanged:true},message:receipt.status==='succeeded'?'当前内容与目标一致，无需修改。':receipt.message}))
+  if(fingerprint(projected)===fingerprint(source(generationId))&&options.previewBlocks?.(generationId))return{status:'succeeded',data:{pendingPreview:true,actionId:generationId,unchanged:true},message:'当前预览与目标一致，无需再次修改。'}
   admitted(args.revision,generationId,current)
   const actionId=generationId,first=operations[0]!,feedback='anchor'in first?first.anchor.blockId:'blockId'in first?first.blockId:first.blockIds[0]
+  const original=noteCapabilityFingerprint(options.snapshot()),identities=new Map(noteInlineBlockIdentities(editor))
+  const checkPreview=()=>{assert();const actual=noteInlineBlockIdentities(editor);if(noteCapabilityFingerprint(options.snapshot())!==original||[...identities].some(([id,value])=>actual.get(id)!==value))throw Error('笔记已有较新编辑，请重新生成建议。')}
+  // A right-hand request prepares a host-owned transaction. It does not write
+  // a draft, create an inline journal or claim an applied/saved effect.
+  if(options.stage?.({generationId,blocks:copy(projected),changedBlockIds:[...changedIds],movedIds:[...movedIds],dependent,check:checkPreview,apply:()=>{for(const plan of plans)plan()}}))return{status:'succeeded',data:{pendingPreview:true,actionId:generationId},message:'修改建议已准备，等待用户确认；笔记正文尚未修改。'}
+  if(fingerprint(projected)===fingerprint(editor.document))return saveEffect({kind:'native-blocks',state:'applied',actionId:generationId,changedBlockIds:[],revision:crypto.randomUUID()},requestId,current,'当前内容与目标一致').then(receipt=>({...receipt,data:{...receipt.data,unchanged:true},message:receipt.status==='succeeded'?'当前内容与目标一致，无需修改。':receipt.message}))
   if(!options.journal.list().some(value=>value.id===actionId))options.journal.begin(actionId,prompt,{documentId:options.documentId,blockId:feedback,position:{}})
   // BlockNote dispatches this accumulated transaction only after a successful
   // callback. All parsing, scope checks and capacity checks happened above.
@@ -164,6 +174,14 @@ export function createNativeNoteOperations(options:Options){
   if(!only(args,['revision','actionId'])||typeof args.actionId!=='string')throw Error('撤销参数无效。')
   const value=options.journal.list().find(value=>value.id===args.actionId)
   if(!value||value.state!=='ready'||value.changes.some((entry:any)=>!snapshot.allowed.has(entry.id)&&!(snapshot.fullNote&&!entry.after)))throw Error('撤销目标不在当前读取范围内。')
+  const projected=copy(source(generationId)),baseline=noteCapabilityFingerprint(options.snapshot())
+  for(const change of [...value.changes].reverse()){
+   const row=locate(projected,change.id)
+   if(change.before===null){if(row)row.siblings.splice(row.index,1)}
+   else if(row)row.siblings[row.index]=copy(change.before)
+   else{const previous=change.previous&&locate(projected,change.previous),next=change.next&&locate(projected,change.next);if(previous)previous.siblings.splice(previous.index+1,0,copy(change.before));else if(next)next.siblings.splice(next.index,0,copy(change.before));else projected.push(copy(change.before))}
+  }
+  if(options.stage?.({generationId,blocks:projected,changedBlockIds:value.changes.map((change:any)=>change.id),movedIds:[],dependent:true,check:()=>{assert();if(noteCapabilityFingerprint(options.snapshot())!==baseline)throw Error('笔记已有较新编辑，请重新生成建议。')},apply:()=>{const result=options.journal.undo(args.actionId);if(result.complete)options.journal.confirm(args.actionId)}}))return{status:'succeeded',data:{pendingPreview:true,actionId:generationId},message:'撤销建议已准备，等待用户确认；笔记正文尚未修改。'}
   const beforeBlocks=copy(options.editor.document),before=fingerprint(beforeBlocks),result=options.journal.undo(args.actionId);advance();options.changed()
   if(before===fingerprint(options.editor.document))return{status:'failed',message:'本次内容已变化，较新修改已保留。'}
   const previous=new Map(flatten(beforeBlocks).map(row=>[row.block.id,fingerprint(row)])),next=new Map(flatten(options.editor.document).map(row=>[row.block.id,fingerprint(row)]))

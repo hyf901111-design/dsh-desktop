@@ -59,3 +59,15 @@ it('waits for real session flush and allows a same-request retry to persist an a
   f.flush(true);expect((await f.call({requestId:'new-request',action:'conversation-native-end',phase:'ready',receipt:nextReceipt})).status).toBe(200);f.restart();expect(f.rows()[1].phase).toBe('ready')
  }finally{f.dispose()}
 })
+
+it.each(['notes.blocks.apply','notes.blocks.undo','notes.components.create'])('reviews a prepared %s candidate only for its owning generation',async capability=>{
+ const prepared={capability,status:'succeeded',data:{pendingPreview:true,actionId:'owned'}}
+ const f=await fixture([prepared]);try{
+  expect(noteConversationRows(f.session)[0].phase).toBe('ready')
+  expect((await f.call({action:'conversation-state',phase:'accepted'})).status).toBe(200)
+ }finally{f.dispose()}
+ const foreign=await fixture([{...prepared,data:{...prepared.data,actionId:'foreign'}}]);try{
+  expect(noteConversationRows(foreign.session)[0].phase).toBe('replied')
+  expect((await foreign.call({action:'conversation-state',phase:'accepted'})).status).toBe(503)
+ }finally{foreign.dispose()}
+})

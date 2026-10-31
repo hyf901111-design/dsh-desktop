@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto'
 import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import type {ClientCapabilityContext,CapabilityEffect,CapabilityStyleEffect,CapabilityExportEffect,CapabilityCreateEffect,CapabilityChallengeEffect,CapabilityDataEffect,CapabilityNativeBlocksEffect} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
-type Pending={owner:string;sessionId:string;action:string;resolve(value:any):void;reject(error:Error):void;cleanup():void;signal:AbortSignal;current():boolean;context:ClientCapabilityContext;cancelled?:boolean;effect?:CapabilityEffect}
+type Pending={owner:string;sessionId:string;action:string;resolve(value:any):void;reject(error:Error):void;cleanup():void;signal:AbortSignal;current():boolean;context:ClientCapabilityContext;generationId:string;allowPreview:boolean;cancelled?:boolean;effect?:CapabilityEffect}
 const nativeWrite=(action:string)=>action==='notes.blocks.apply'||action==='notes.blocks.undo'
 const nativeAction=(action:string)=>nativeWrite(action)||action==='notes.blocks.read'
 const effectId=(value:any)=>typeof value==='string'&&value.length>0&&value.length<=256
@@ -27,7 +27,7 @@ const cancelledReceipt=(effect?:CapabilityEffect)=>({status:'cancelled',...effec
 export class NotesCapabilityBridge{
  private pending=new Map<string,Pending>()
  constructor(private send:(value:any)=>void){}
- request(action:'context'|'context.acquire'|'notes.export'|'notes.components.style'|'notes.components.layout'|'notes.components.create'|'notes.blocks.align'|'notes.blocks.read'|'notes.blocks.apply'|'notes.blocks.undo'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure'|'notes.components.data',args:any,context:ClientCapabilityContext,generationId:string,signal:AbortSignal,current:()=>boolean):Promise<any>{
+ request(action:'context'|'context.acquire'|'notes.export'|'notes.components.style'|'notes.components.layout'|'notes.components.create'|'notes.blocks.align'|'notes.blocks.read'|'notes.blocks.apply'|'notes.blocks.undo'|'notes.components.inspect'|'notes.components.apply'|'notes.challenge.configure'|'notes.components.data',args:any,context:ClientCapabilityContext,generationId:string,signal:AbortSignal,current:()=>boolean,allowPreview=false):Promise<any>{
   signal.throwIfAborted();if(!current())throw Error('笔记会话已变化。')
   const requestId=randomUUID()
   return new Promise((resolve,reject)=>{
@@ -45,7 +45,7 @@ export class NotesCapabilityBridge{
    }
    let timer=setTimeout(()=>end(Error('笔记操作未及时确认，请查看文档当前状态。')),action==='notes.components.create'?250000:100000)
    const abort=()=>end(Error('笔记操作已取消。')),cleanup=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort)}
-   this.pending.set(requestId,{owner:context.owner,sessionId:context.sessionId,action,resolve,reject,cleanup,signal,current,context});signal.addEventListener('abort',abort,{once:true})
+   this.pending.set(requestId,{owner:context.owner,sessionId:context.sessionId,action,resolve,reject,cleanup,signal,current,context,generationId,allowPreview});signal.addEventListener('abort',abort,{once:true})
    try{this.send({requestId,generationId,action,args,context,owner:context.owner,sessionId:context.sessionId})}catch{end(Error('笔记窗口不可用。'))}
   })
  }
@@ -77,7 +77,8 @@ export class NotesCapabilityBridge{
   const effect=effectValue(input.result?.effect,job.action)
   if(input.result?.effect!==undefined&&(nativeAction(job.action)||input.result.effect?.kind==='native-blocks')&&!effect)return {ok:false}
   if(effect){if(!this.canAdvance(job.effect,effect))return {ok:false};job.effect=effect}
-  if(nativeWrite(job.action)&&input.result?.status==='succeeded'&&job.effect?.state!=='saved')return {ok:false}
+  const prepared=job.allowPreview&&nativeWrite(job.action)&&!job.effect&&input.result?.effect===undefined&&input.result?.status==='succeeded'&&input.result.data?.pendingPreview===true&&input.result.data.actionId===job.generationId&&Object.keys(input.result.data).every(key=>['pendingPreview','actionId','unchanged'].includes(key))
+  if(nativeWrite(job.action)&&input.result?.status==='succeeded'&&job.effect?.state!=='saved'&&!prepared)return {ok:false}
   const result=nativeWrite(job.action)&&job.effect?{...input.result,effect:job.effect,changedBlockIds:'changedBlockIds' in job.effect?[...job.effect.changedBlockIds]:[]}:input.result
   job.cleanup();this.pending.delete(input.requestId)
   if(job.cancelled)job.resolve(cancelledReceipt(job.effect))
