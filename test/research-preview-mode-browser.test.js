@@ -1,5 +1,5 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {readFile,mkdir} from 'node:fs/promises'
+import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
@@ -15,15 +15,16 @@ beforeAll(async()=>{
  source=require('./fixtures/strip-conversation-transient-ui.mjs').stripConversationGridOverlays(source)
  for(const[file,strip]of [['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']])source=require('../scripts/lib/'+file+'.mjs')[strip](source)
  const grid=require('../scripts/lib/research-grid-workbench.mjs'),tabs=require('../scripts/lib/board-tabs-client.mjs')
- source=tabs.patchBoardTabsClient(grid.patchResearchGridWorkbench(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source)))))
+ source=tabs.patchBoardTabsClient(grid.patchResearchGridWorkbench(require('../scripts/lib/calendar-tool-client.mjs').patchCalendarToolClient(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))))
  expect(tabs.patchBoardTabsClient(source)).toBe(source)
+ source=require('../scripts/lib/home-workbench-client.mjs').patchHomeWorkbenchClient(source)
  expect(()=>new Function(source)).not.toThrow()
  // Install the exact production host-subscription callback in the fixture; its
  // private refresh identity stays in the bundle closure and is never exported.
  const callbackStart=source.indexOf('async request=>{',source.indexOf('researchCanvasActions?.subscribe(')),callbackEnd=source.indexOf('\n        });',callbackStart)
  if(callbackStart<0||callbackEnd<0)throw Error('Real canvas subscription callback missing')
  const callback=source.slice(callbackStart,callbackEnd+10)
- source=source.replace('exports.ResearchCanvas = ResearchCanvas;', 'exports.__PreviewCalendar=CalendarTool;exports.__PreviewCalendarRequest=calendarToolRequest;exports.__registerPreviewHost=researchWorkspaces=>window.dshDesktop.researchCanvasActions.subscribe('+callback+');exports.ResearchCanvas = ResearchCanvas;')
+ source=source.replace('exports.ResearchCanvas = ResearchCanvas;', 'exports.__PreviewStudySpec=homeWorkbenchStudySpec;exports.__PreviewCalendar=CalendarTool;exports.__PreviewCalendarRequest=calendarToolRequest;exports.__registerPreviewHost=researchWorkspaces=>window.dshDesktop.researchCanvasActions.subscribe('+callback+');exports.ResearchCanvas = ResearchCanvas;')
  const entry=`import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host.ts';import {ResearchBoardHeader} from './src/preload/research-boards-ui.ts';import {installBoardUiStyles} from './src/preload/research-board-dialogs.ts';import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
  let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.__copies=[];window.__library=[];window.__dataRequests=[];
  window.dshDesktop={researchCanvasActions:{subscribe:handler=>{window.__trustedCanvasHandler=handler;return()=>{}}},researchBoards:{isSharedSession:id=>id.startsWith('shared-')},researchClipboard:{copy:async value=>{window.__copies.push(value);return {ok:true}},read:async()=>({kind:'text',text:'unexpected pasted component'}),inspect:async()=>({available:true})},componentLibrary:{request:async value=>{window.__library.push(value);return value.action==='list'?[]:{ok:true}}},financialWidget:{request:async value=>{window.__dataRequests.push(value);return value.action==='search'?{symbols:[{code:'MSFT',market:'US',name:'微软'}]}:{quotes:[],news:[],announcements:[],bars:[],source:'fixture',receivedAt:Date.now()}}}};
@@ -47,7 +48,7 @@ async function fixture({header=false}={}){
  const context=await browser.newContext({viewport:{width:1200,height:850},reducedMotion:'reduce'}),page=await context.newPage(),errors=[]
  page.setDefaultTimeout(5000);page.on('pageerror',error=>errors.push(error.message))
  await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\n[data-workspace-surface-hidden=true]{visibility:hidden!important}html,body{margin:0}#host{height:800px;width:100vw}[data-research-canvas]{height:740px!important}#preview-toggle{position:fixed;top:0;right:0;z-index:10000}</style>${header?'<div id="header" style="position:fixed;top:0;left:0;z-index:1000"></div>':''}<div class="pI_x6G_frame"><div class="pI_x6G_centerCol"><div id="host"></div></div></div><button id="preview-toggle">fixture preview toggle</button>`}))
- await page.goto('https://research-preview.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-toolbar]')
+ await page.goto('https://research-preview.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-toolbar]').catch(error=>{throw Error(error.message+'; page errors: '+JSON.stringify(errors))})
  return {page,errors,close:()=>context.close()}
 }
 async function preview(page){
@@ -509,3 +510,79 @@ it('hides only preview canvas selection and connection decoration while preservi
   await page.evaluate(()=>window.fixture.workspace().setPreviewMode(true));await card.locator('[data-stock-code="MSFT"]').click();await expect.poll(()=>page.evaluate(id=>window.fixture.workspace().getSnapshot().artifacts.find(n=>n.id===id).containerSpec.symbols[0]?.code,ids.quote)).toBe('MSFT');expect(errors).toEqual([])
  }finally{await close()}
 },25000)
+
+const footerGeometry=(page,id,kind)=>page.locator('[data-research-node-id="'+id+'"]').evaluate((card,kind)=>{
+ const footer=card.querySelector(kind==='financial'?'.ew-financial-footer':kind==='study'?'.hws-footer':kind==='smart'?'.ew-smart-create-footer':'.odyssey-data-stamp')
+ const source=footer.querySelector(kind==='financial'?'.ew-financial-provenance':kind==='study'?'.hws-footer-source':kind==='smart'?'.ew-smart-create-status':'.odyssey-data-frequency')
+ const state=kind==='smart'?null:footer.querySelector(kind==='financial'?':scope > span':kind==='study'?'.hws-footer-state':'time')
+ const f=footer.getBoundingClientRect(),s=source.getBoundingClientRect(),r=state?.getBoundingClientRect(),style=getComputedStyle(footer)
+ return{source:source.textContent,state:state?.textContent,left:s.left-f.left,right:r?f.right-r.right:null,paddingLeft:parseFloat(style.paddingLeft),paddingRight:parseFloat(style.paddingRight),ports:[...card.querySelectorAll('[data-financial-port]')].map(el=>({side:el.dataset.financialPort,display:getComputedStyle(el).display,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})),sourceTextInset:s.left-card.getBoundingClientRect().left+parseFloat(getComputedStyle(source).paddingLeft)}
+},kind)
+
+it('reclaims financial footer port slots in preview and restores edit geometry in all four themes',async()=>{
+ const {page,close,errors}=await fixture(),evidence=[]
+ try{
+  const ids=await page.evaluate(()=>Object.fromEntries(['watchlist','quote','news'].map(kind=>[kind,window.fixture.workspace().createFinancialWidget(kind).id])))
+  await page.locator('[data-research-node-id="'+ids.quote+'"] .ew-financial-footer').waitFor()
+  for(const theme of ['light','dark','enterprise','openterminal']){
+   await page.evaluate(theme=>window.fixture.workspace().setWorkbenchStyle(theme,{scope:'board'}),theme)
+   const before=Object.fromEntries(await Promise.all(Object.entries(ids).map(async([kind,id])=>[kind,await footerGeometry(page,id,'financial')])))
+   for(const value of Object.values(before))expect(value.ports.every(port=>port.width===20&&port.height===20)).toBe(true)
+   const stored=await content(page);await preview(page)
+   const after=Object.fromEntries(await Promise.all(Object.entries(ids).map(async([kind,id])=>[kind,await footerGeometry(page,id,'financial')])))
+   for(const[kind,value]of Object.entries(after)){
+    expect(value.ports.every(port=>port.display==='none'&&port.width===0&&port.height===0),kind).toBe(true)
+    expect(value.left,kind).toBe(0);expect(value.right,kind).toBe(0)
+    expect(value.source).toBe(before[kind].source);expect(value.state).toBe(before[kind].state)
+    expect(value.sourceTextInset).toBe(theme==='openterminal'?13:12)
+   }
+   expect(before.quote.left-after.quote.left).toBe(28);expect(before.quote.right-after.quote.right).toBe(28)
+   expect(before.news.left-after.news.left).toBe(28);expect(before.watchlist.right-after.watchlist.right).toBe(28)
+   expect(await content(page)).toBe(stored)
+   await page.locator('#preview-toggle').click()
+   for(const[kind,id]of Object.entries(ids))expect(await footerGeometry(page,id,'financial')).toEqual(before[kind])
+   evidence.push({theme,before,preview:after})
+  }
+  if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await writeFile(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/financial-footer-geometry.json',JSON.stringify(evidence,null,2))
+  expect(errors).toEqual([])
+ }finally{await close()}
+},30000)
+
+it('reclaims connected footer reserves while preserving port-free study and HTML padding in research preview',async()=>{
+ const {page,close,errors}=await fixture(),evidence=[]
+ try{
+  const ids=await page.evaluate(()=>{
+   const w=window.fixture.workspace(),study={...window.fixture.text('footer-study'),messageId:'footer-study',kind:'generated-container',generationStatus:'completed',containerPrompt:'研究组件',refreshMinutes:0,containerSpec:window.fixture.bundle.__PreviewStudySpec('directory')},html={...window.fixture.text('footer-html'),messageId:'footer-html',kind:'generated-container',generationStatus:'completed',containerPrompt:'正文组件',refreshMinutes:0,containerSpec:{version:1,type:'html',title:'生成 HTML',html:'<article><p>正文可正常浏览</p></article>'}}
+   const peer={...study,id:'footer-peer',messageId:'footer-peer',containerSpec:window.fixture.bundle.__PreviewStudySpec('peers')},customHtml={...html,id:'footer-html-custom',messageId:'footer-html-custom'}
+   const smart=w.createContainerDraft();w.setArtifacts([study,html,peer,customHtml,smart]);return{study:study.id,html:html.id,peer:peer.id,customHtml:customHtml.id,smart:smart.id}
+  })
+  await page.locator('[data-research-node-id="'+ids.study+'"] .hws-footer').waitFor().catch(async error=>{throw Error(error.message+'; '+JSON.stringify({errors,snapshot:await page.evaluate(()=>window.fixture.workspace().getSnapshot().artifacts.map(n=>({id:n.id,type:n.containerSpec?.type}))),dom:await page.locator('#host').innerText()}))});await page.locator('[data-research-node-id="'+ids.html+'"] .odyssey-data-stamp').waitFor();await page.locator('[data-research-node-id="'+ids.smart+'"] .ew-smart-create-footer').waitFor()
+  await page.locator('[data-research-node-id="'+ids.peer+'"] .hws-footer').waitFor();await page.locator('[data-research-node-id="'+ids.customHtml+'"] .odyssey-data-stamp').waitFor()
+  // Lower-specificity host customizations must survive when no connection slot
+  // exists. The former unconditional preview reset overrides both real owners.
+  await page.addStyleTag({content:'body [data-ework-grid] [data-research-node-id="'+ids.peer+'"] .hws-footer{padding-left:18px!important;padding-right:22px!important}@layer ework-workbench{body [data-research-canvas][data-ework-grid] [data-research-node-id="'+ids.customHtml+'"] .odyssey-data-stamp{padding-left:18px!important;padding-right:22px!important}}'})
+  const kinds={study:'study',html:'html',peer:'study',customHtml:'html',smart:'smart'},measure=async()=>Object.fromEntries(await Promise.all(Object.entries(ids).map(async([key,id])=>[key,await footerGeometry(page,id,kinds[key])])))
+  for(const theme of ['light','dark','enterprise','openterminal']){
+   await page.evaluate(theme=>window.fixture.workspace().setWorkbenchStyle(theme,{scope:'board'}),theme)
+   const before=await measure()
+   expect(before.study.ports.map(port=>port.side)).toEqual(['input','output']);expect(before.study.left).toBe(24);expect(before.study.right).toBe(24)
+   expect(before.smart.ports).toHaveLength(1);expect(before.smart.left).toBe(36)
+   for(const key of ['peer','customHtml']){expect(before[key].ports).toEqual([]);expect(before[key].left).toBe(18);expect(before[key].right).toBe(22)}
+   expect(before.html.ports).toEqual([])
+   const stored=await content(page);await preview(page)
+   const after=await measure()
+   expect(after.study.left).toBe(12);expect(after.study.right).toBe(12)
+   expect(after.smart.left).toBe(10)
+   for(const key of ['html','peer','customHtml'])expect(after[key]).toEqual(before[key])
+   for(const[kind,value]of Object.entries(after)){
+    expect(value.ports.every(port=>port.display==='none'&&port.width===0&&port.height===0),kind).toBe(true)
+    expect(value.source).toBe(before[kind].source);expect(value.state).toBe(before[kind].state)
+   }
+   expect(await content(page)).toBe(stored);await page.locator('#preview-toggle').click()
+   expect(await measure()).toEqual(before)
+   evidence.push({theme,before,preview:after})
+  }
+  if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await writeFile(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/generated-footer-geometry.json',JSON.stringify(evidence,null,2))
+  expect(errors).toEqual([])
+ }finally{await close()}
+},30000)
