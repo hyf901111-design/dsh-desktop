@@ -50,3 +50,25 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
  if(!target)throw Error('可见的新建入口尚未就绪。')
  await activate(target,action)
 }
+
+/** Wait for the SDK's target session and mode to own a stable visible root.
+ * A header may update before React replaces its former conversation root. */
+export async function waitForHomeGuideNativeView(document:Document,sessionId:string,kind:HomeGuideKind,options:{signal:AbortSignal;assert():void}){
+ const win=document.defaultView!,mode=kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':'chat',deadline=Date.now()+6000
+ let previous:HTMLElement|undefined,stable=0
+ const check=()=>{if(options.signal.aborted)throw new DOMException('演示入口已取消。','AbortError');options.assert()}
+ const frame=()=>new Promise<void>((resolve,reject)=>{let raf=0,timer=0;const clean=()=>{win.cancelAnimationFrame(raf);win.clearTimeout(timer);options.signal.removeEventListener('abort',abort)},finish=()=>{clean();resolve()},abort=()=>{clean();reject(new DOMException('演示入口已取消。','AbortError'))};options.signal.addEventListener('abort',abort,{once:true});raf=win.requestAnimationFrame(finish);timer=win.setTimeout(finish,48);if(options.signal.aborted)abort()})
+ for(;;){
+  check();const candidates=[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')].filter(resident=>{
+   if(resident.closest('[data-odyssey-subagent-panel]'))return false
+   const header=resident.querySelector<HTMLElement>('[data-srb-session-header][data-ework-notes-session]'),tab=header?.querySelector<HTMLElement>('[data-srb-tabs] [data-conversation-view-id="'+mode+'"]')
+   if(header?.dataset.eworkNotesSession!==sessionId||tab?.getAttribute('aria-selected')!=='true')return false
+   try{homeGuideTargetPoint(document,resident);homeGuideTargetPoint(document,tab);return true}catch{return false}
+  })
+  const resident=candidates.length===1?candidates[0]:undefined
+  if(resident&&resident===previous)stable++;else{previous=resident;stable=0}
+  if(resident&&stable>=2){check();return{resident,center:resident.closest<HTMLElement>('.pI_x6G_centerCol')!}}
+  if(Date.now()>deadline)throw Error('示例模式尚未就绪，请重试。')
+  await frame()
+ }
+}
