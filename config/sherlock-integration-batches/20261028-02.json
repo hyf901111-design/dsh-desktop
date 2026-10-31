@@ -15194,6 +15194,387 @@
         ],
         "recordedAt": "2026-10-31T10:54:26.680Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组合笔记空格收起、用例菜单与入口、探索动态壁纸、消息排队和预览底栏修复",
+        "branch": "codex/feat/client-polish-20261031",
+        "baseCommit": "55e46e2433df898bcf28a6b3a503b6d84901ca26",
+        "tipCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+        "commits": [
+          {
+            "commit": "486fc766f73c0b5242f9410fe48a5ab294bc0fca",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26"
+            ],
+            "subject": "修复笔记演示改写入口校验与斜杠菜单跳位"
+          },
+          {
+            "commit": "2fa855d2f99b23c8f3f485cb40397eec66486dc4",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26",
+              "486fc766f73c0b5242f9410fe48a5ab294bc0fca"
+            ],
+            "subject": "组合笔记演示入口与菜单定位修复"
+          },
+          {
+            "commit": "6581bbc08b79bd7c53071d4a976f72d4a3cee8f2",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26"
+            ],
+            "subject": "优化探索入口留白并增加壁纸悬停动态预览"
+          },
+          {
+            "commit": "6f74c123e18c6cd5ef9def12ff42f90e56515437",
+            "parents": [
+              "6581bbc08b79bd7c53071d4a976f72d4a3cee8f2"
+            ],
+            "subject": "取消探索搜索默认高亮并稳定壁纸选中边框"
+          },
+          {
+            "commit": "ecb875f06c71f5df0f754b0d96aa065693d05d1d",
+            "parents": [
+              "2fa855d2f99b23c8f3f485cb40397eec66486dc4",
+              "6f74c123e18c6cd5ef9def12ff42f90e56515437"
+            ],
+            "subject": "组合探索留白壁纸预览与搜索反馈优化"
+          },
+          {
+            "commit": "853b5022c3101507635828be7f2711e45c5e7d62",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26"
+            ],
+            "subject": "修复演示退出保存时的输入与悬停锁定并规范桌面工具选择"
+          },
+          {
+            "commit": "9142ef81fd8eaee1ef4444492cb7716239b66ba4",
+            "parents": [
+              "ecb875f06c71f5df0f754b0d96aa065693d05d1d",
+              "853b5022c3101507635828be7f2711e45c5e7d62"
+            ],
+            "subject": "组合演示退出交互锁释放与桌面工具选择修复"
+          },
+          {
+            "commit": "7c7b590a3f976219633251d1fae13842b274f449",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26"
+            ],
+            "subject": "修复排队消息提前进入对话并按真实接收边界交接"
+          },
+          {
+            "commit": "c28a5613729ea99aeed0e9ee09217e717e674086",
+            "parents": [
+              "9142ef81fd8eaee1ef4444492cb7716239b66ba4",
+              "7c7b590a3f976219633251d1fae13842b274f449"
+            ],
+            "subject": "组合排队消息真实接收与去重展示修复"
+          },
+          {
+            "commit": "145c085ad20115cc662daa2e1596dae142b86410",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26"
+            ],
+            "subject": "修复研究预览模式组件底栏连接节点残留占位"
+          },
+          {
+            "commit": "4365ba6545ca23ff3eea6894834d2ea976ddf311",
+            "parents": [
+              "145c085ad20115cc662daa2e1596dae142b86410"
+            ],
+            "subject": "限定预览底栏补位仅作用于含连接节点的组件"
+          },
+          {
+            "commit": "aced2ddefd2e320460ba00777e2be34ef531e7be",
+            "parents": [
+              "c28a5613729ea99aeed0e9ee09217e717e674086",
+              "4365ba6545ca23ff3eea6894834d2ea976ddf311"
+            ],
+            "subject": "合入研究预览连接节点隐藏后的底栏补位优化"
+          },
+          {
+            "commit": "3a2945e05ae8d66453107fc87b17299cc2e6d85e",
+            "parents": [
+              "55e46e2433df898bcf28a6b3a503b6d84901ca26"
+            ],
+            "subject": "修复笔记空格输入框点击外部自动收起并保留草稿"
+          },
+          {
+            "commit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "parents": [
+              "aced2ddefd2e320460ba00777e2be34ef531e7be",
+              "3a2945e05ae8d66453107fc87b17299cc2e6d85e"
+            ],
+            "subject": "合入笔记空格输入点击外部收起并保留草稿"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-submission.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-notes-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-note-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-controls.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-gallery.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/inline-ai-composer.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/note-menu-geometry.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission-flow.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-submission-browser.tsx"
+          },
+          {
+            "status": "C065",
+            "path": "test/fixtures/conversation-submission-v3.txt",
+            "previousPath": "scripts/lib/conversation-submission.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-note-rewrite-portal-browser.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-interaction-lease-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-note-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-native-editor.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-portal.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-ai-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-inline-result-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-mode-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确组合源码私有SDK完整installer连续2遍，3237文件逐字节幂等，共享SDK未变；verification.json",
+            "verifiedCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "completedAt": "2026-10-31T15:08:29.731878+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-inline-ai-browser.test.ts",
+              "test/notes-inline-result-browser.test.ts",
+              "test/home-guide-notes-browser.test.js",
+              "test/home-guide-interaction-lease-browser.test.js",
+              "test/research-preview-mode-browser.test.js",
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "dismisses only the idle|respects composed internal|does not dismiss or stop|distant second blank paragraph|click-away dismisses idle|actual Host composer guard|original library submenu|keeps real input and hover usable|reclaims|starts search with no selected result|selected wallpaper edge",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "combined-ui：精确源码组合检查通过；/tmp/sherlock-client-polish-combined-20261031/combined-ui.log",
+            "verifiedCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "completedAt": "2026-10-31T15:17:45.835545+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-submission.test.js",
+              "test/conversation-submission-flow.test.js",
+              "test/conversation-submission-browser.test.js",
+              "test/conversation-turn-order.test.js",
+              "test/conversation-turn-order-browser.test.js",
+              "test/conversation-history-page.test.js",
+              "test/conversation-history-page-browser.test.js",
+              "test/conversation-response-progress-browser.test.js",
+              "test/notes-activity.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "combined-queue：精确源码组合检查通过；/tmp/sherlock-client-polish-combined-20261031/combined-queue.log",
+            "verifiedCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "completedAt": "2026-10-31T15:22:10.959824+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "combined-typecheck：精确源码组合检查通过；/tmp/sherlock-client-polish-combined-20261031/combined-typecheck.log",
+            "verifiedCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "completedAt": "2026-10-31T15:22:21.901142+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "--check",
+              "packages/dsh-research-task-runtime/computer-use-tools.js"
+            ],
+            "outcome": "passed",
+            "summary": "combined-syntax-cua：精确源码组合检查通过；/tmp/sherlock-client-polish-combined-20261031/combined-syntax-cua.log",
+            "verifiedCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "completedAt": "2026-10-31T15:22:21.951271+00:00",
+            "timeoutMs": 20000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "--check",
+              "scripts/lib/conversation-submission.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "combined-syntax-queue：精确源码组合检查通过；/tmp/sherlock-client-polish-combined-20261031/combined-syntax-queue.log",
+            "verifiedCommit": "4977c3f30a57e5a67e5f9a55a69a09d7834db699",
+            "completedAt": "2026-10-31T15:22:22.000578+00:00",
+            "timeoutMs": 20000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "六特性完整历史及37文件hash逐字节一致；独立SCOPED PASS。组合真实Browser22交互+103消息队列/顺序+TC/语法通过。同包Native仍须后续正式集成构建完成。"
+        },
+        "acceptanceCriteria": [
+          "保留六个已验证feature完整历史及原交接证据，37变更路径与作者精确tip一致。",
+          "Space idle外部点击/焦点离开自动收起、草稿保留且不抢光标；running/review原行为保留。",
+          "真实NotesApp composer演示请求通过原Host；Slash根/子菜单稳定、停留1秒，改写短提示词；行情演示不点击切源。",
+          "Explore真实壁纸单实例hover预览、浅灰描边不被遮挡、搜索无默认首项高亮，footer/账号hover内边距安全。",
+          "演示退出即释放inert/hover/input租约，不等异步保存；ComputerUse保留真实UI能力、优先原生内容工具。",
+          "未claim排队请求只在QueueDock，exact RPC真接收后只出现一次；编辑/删除/插话和旧版v1/v2/v3严格迁移保留。",
+          "Research preview仅真实有端口footer收回留白，编辑回切及无端口自定义footer保持不变。",
+          "最终Root独占集成、私有SDK两遍幂等及签名包Parity、五真实演示/Native实测和重开由后续执行，不能用Browser替代。"
+        ],
+        "risks": [
+          "前一次archive UI检查因缺profile未启动一组，补齐同源profile后22项通过；旧日志保留。",
+          "archive无法读取Git历史导致3项旧版迁移检查环境失败，迁至精确Git功能树+私有SDK重跑完整103项通过，未放松断言。",
+          "外部模型与行情依赖仍可能失败；无绝对成功率承诺，不将空行情或未完成步骤当成通过。",
+          "此组合分支未构建/替换共享App，不修改main或公开更新源；必须继续Root官方集成和同包Native验收。"
+        ],
+        "generatedAt": "2026-10-31T15:24:25.899213+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -16001,6 +16382,66 @@
         "ebb21112c751b342e060aa570e94699730b1b26f..HEAD"
       ],
       "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-inline-ai-browser.test.ts",
+        "test/notes-inline-result-browser.test.ts",
+        "test/home-guide-notes-browser.test.js",
+        "test/home-guide-interaction-lease-browser.test.js",
+        "test/research-preview-mode-browser.test.js",
+        "test/explore-menu-browser.test.ts",
+        "-t",
+        "dismisses only the idle|respects composed internal|does not dismiss or stop|distant second blank paragraph|click-away dismisses idle|actual Host composer guard|original library submenu|keeps real input and hover usable|reclaims|starts search with no selected result|selected wallpaper edge",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-submission.test.js",
+        "test/conversation-submission-flow.test.js",
+        "test/conversation-submission-browser.test.js",
+        "test/conversation-turn-order.test.js",
+        "test/conversation-turn-order-browser.test.js",
+        "test/conversation-history-page.test.js",
+        "test/conversation-history-page-browser.test.js",
+        "test/conversation-response-progress-browser.test.js",
+        "test/notes-activity.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "--check",
+        "packages/dsh-research-task-runtime/computer-use-tools.js"
+      ],
+      "timeoutMs": 20000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "--check",
+        "scripts/lib/conversation-submission.mjs"
+      ],
+      "timeoutMs": 20000
     }
   ],
   "mainSynchronizations": []
