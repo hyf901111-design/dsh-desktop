@@ -1,8 +1,11 @@
 import {afterEach,expect,it} from 'vitest'
-import {mkdtemp,readFile,writeFile,symlink,rm} from 'node:fs/promises'
+import {mkdtemp,readFile,writeFile,symlink,rm,mkdir} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
+import vm from 'node:vm'
+import {createRequire} from 'node:module'
+import {Window} from 'happy-dom'
 import {Context} from '@deepseek-ai/cordis'
 import {SessionStore} from '@deepseek-ai/dsh-session'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
@@ -15,6 +18,7 @@ import Jobs from '@deepseek-ai/dsh-jobs-local'
 import {apply as jobTools} from '@deepseek-ai/dsh-tool-jobs'
 import {patchTaskProgressRuntime} from '../scripts/lib/task-progress-runtime.mjs'
 import {legacyTaskProgressSource} from './fixtures/task-progress-v1.js'
+import {patchConversationTurnOrder} from '../scripts/lib/conversation-turn-order.mjs'
 
 const closes=[]
 afterEach(async()=>{for(const close of closes.splice(0).reverse())await close()})
@@ -22,6 +26,25 @@ const list=[{content:'读取参考资料',status:'in_progress'},{content:'修复
 const text=value=>({text:value})
 const call=(name,args)=>({name,args})
 const todo=done=>call('todo_write',{todos:list.map(item=>({...item,status:done?'completed':item.status}))})
+
+// Project a real AgentLoop journal through the installed SDK assembler and the
+// production compact function. Plugin notices must stay context, not humans.
+async function projectNativeJournal(log){
+ const require=createRequire(import.meta.url),window=new Window({url:'https://chat-reliability.test'}),descriptors=[]
+ closes.push(()=>window.happyDOM.abort());window.__ModuleLoader__={load:value=>descriptors.push(value)}
+ const context=vm.createContext({window,document:window.document,console,setTimeout,clearTimeout,queueMicrotask,AbortController,requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout})
+ vm.runInContext(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),context)
+ const source=patchConversationTurnOrder(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ vm.runInContext(source.replace('exports.apply = apply;','exports.apply = apply;exports.__register=registerConversationNodes;exports.__flow=compactConversationFlow;'),context)
+ let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
+ const modules=id=>id==='react'?require('react'):id==='react/jsx-runtime'?require('react/jsx-runtime'):id==='react-dom'?require('react-dom'):id==='@deepseek-ai/cordis'?{Service:class{constructor(ctx){this.ctx=ctx}}}:fake
+ const rt=descriptors[0].factory(modules),native=descriptors[1].factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id)),ctx={get:()=>undefined,reflect:{provide(){}},effect:fn=>fn()??(()=>{})},events=new rt.ConversationEventRegistry(ctx),views=new rt.ConversationViewRegistry(ctx)
+ native.__register({...ctx,conversationEvents:events,conversationViews:views})
+ const session=new rt.SessionRuntime(ctx,{},{},{events,views}).manager.get('task-continuation')
+ session.openState='open';session.installWindow(log.map(event=>({event})),false)
+ const chat=session.getSnapshot().chat,flow=native.__flow(chat.order,chat.nodes,null)
+ return {flow,nodes:chat.order.map(key=>({key,kind:chat.nodes.get(key).kind,anchorSeq:chat.nodes.get(key).anchorSeq}))}
+}
 
 async function fixture(script,{legacy=false,failOnce=false,failAlways=false,permissionDenied=false,conclude=false,jobs=false}={}){
  const root=await mkdtemp(join(tmpdir(),'ework-task-continuation-sdk-')),ctx=new Context(),requests=[],work=[],errors=[]
@@ -171,3 +194,27 @@ it('lets a new human steering request interrupt the old observation promptly wit
  expect(f.requests).toHaveLength(5);expect(f.ctx.jobs.get(f.jobId,f.agent).status).toBe('running')
  expect(f.agent.session.events.findLast(e=>e.type==='turn/end').data.reason.kind).toBe('completed')
 })
+it('keeps one human before real continued work and background notices in the combined native flow, including a late job after User Stop',async()=>{
+ const beforeHuman=ctx=>ctx.on('agent/pre-step',async(event,next)=>{const decision=await next();return event.step===1&&decision.messages?.some(message=>message.source?.kind==='user')?{...decision,messages:[createUserMessage({content:[{type:'text',text:'已读取附件PPT上下文'}],source:{kind:'plugin',plugin:'fixture-file-context'}}),...decision.messages]}:decision})
+ const inspect=async(f,label)=>{
+  await f.ctx.sessions.flush(f.agent.session)
+  const journal=await f.disk(),original=JSON.stringify(journal),projection=await projectNativeJournal(journal),humans=projection.nodes.filter(node=>['user','steering'].includes(node.kind)),humanIndex=projection.flow.findIndex(row=>row.key===humans[0]?.key),activityIndices=projection.flow.map((row,index)=>row.kind==='execution'?index:-1).filter(index=>index>=0)
+  expect(humans).toHaveLength(1);expect(humanIndex).toBe(0);expect(activityIndices.length).toBeGreaterThan(0);expect(activityIndices.every(index=>index>humanIndex)).toBe(true)
+  expect(journal.filter(event=>event.type==='user/message'&&event.data.source?.kind==='user')).toHaveLength(1)
+  expect(journal.some(event=>event.type==='user/message'&&event.data.source?.plugin==='sherlock-task-progress')).toBe(true)
+  expect(JSON.stringify(journal)).toBe(original)
+  return {label,requests:f.requests.length,events:journal,projection,journalUnchanged:true}
+ }
+ const completed=await fixture(n=>[todo(false),call('work_stage',{stage:'start-background'}),text('渲染已启动。'),text('独立检查已完成，等待后台结果。'),call('job_output',{job_id:'guard-1'}),todo(true),text('文稿已核验并交付。')][n-1],{jobs:true});beforeHuman(completed.ctx)
+ const done=completed.run('请保留附件文字，修复文稿并核验后交付。');await expect.poll(()=>completed.requests.length).toBe(4)
+ expect(completed.agent.status).toBe('running');expect(completed.ctx.jobs.get(completed.jobId,completed.agent).status).toBe('running')
+ const waiting=await inspect(completed,'waiting');completed.releaseJob();await done
+ expect(completed.requests).toHaveLength(7);expect(completed.agent.session.events.findLast(event=>event.type==='turn/end').data.reason.kind).toBe('completed')
+ const delivered=await inspect(completed,'delivered')
+ const stopped=await fixture(n=>n===1?todo(false):n===2?call('work_stage',{stage:'start-background'}):text('等待后台渲染。'),{jobs:true});beforeHuman(stopped.ctx)
+ const stoppedRun=stopped.run();await expect.poll(()=>stopped.requests.length).toBe(4);stopped.agent.cancel({kind:'user'});await stoppedRun
+ const requestCount=stopped.requests.length;stopped.releaseJob();await stopped.ctx.jobs.wait(stopped.jobId,1000,stopped.agent);await stopped.agent.whenIdle()
+ expect(stopped.requests).toHaveLength(requestCount);expect(stopped.agent.session.events.findLast(event=>event.type==='todo/write').data.todos).toEqual(list)
+ const late=await inspect(stopped,'stopped-late-job')
+ const evidence=process.env.SHERLOCK_CHAT_RELIABILITY_EVIDENCE||'/tmp/sherlock-chat-reliability-20261031';await mkdir(evidence,{recursive:true});await writeFile(join(evidence,'combined-real-journal-cross.json'),JSON.stringify({waiting,delivered,late},null,2))
+},20000)
