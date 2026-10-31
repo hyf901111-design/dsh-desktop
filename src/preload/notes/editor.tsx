@@ -256,7 +256,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
-  const [documentWriting,setDocumentWriting]=useState(false),composerPlans=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];projected?:any[];fingerprint:string}>(),composerPreview=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];markdown?:string;inlineOrder?:string}>(),composerChildren=useRef(new Set<string>())
+  const [documentWriting,setDocumentWriting]=useState(false),composerPlans=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];projected?:any[];fingerprint:string}>(),composerPreview=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];updates?:any[];markdown?:string;inlineOrder?:string}>(),composerChildren=useRef(new Set<string>())
   const [guideSummaryRequest,setGuideSummaryRequest]=useState(''),guideSummary=useRef<{lease():boolean;requestId?:string}>()
   const [inlineDraft,setInlineDraft]=useState<NoteInlineAiDraft>(),inlineDraftRef=useRef<NoteInlineAiDraft>(),inlinePrompt=useRef(''),inlineRequest=useRef<{requestId:string;anchor:NoteInsertionAnchor}>(),composing=useRef(false)
   // The inline demand and component fields own their IME lifecycle. A removed
@@ -512,7 +512,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       settle:()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())))
     }
     const current=()=>live&&!disposed.current&&!props.recovery&&editor.isEditable&&editorActive()
-    const handler=createNoteCapabilityActions({...sharedActions,initialFingerprint:()=>capabilityFingerprint.current,generationId:()=>request.current,current,anchoredCreate:(generationId:string)=>{const inline=inlineRequest.current;if(!inline||inline.requestId!==generationId)return false;noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}})
+    const handler=createNoteCapabilityActions({...sharedActions,initialFingerprint:()=>capabilityFingerprint.current,generationId:()=>request.current,current,componentPreview:generationId=>{const state=composerPlans.current;if(!state||state.requestId!==generationId||inlineRequest.current||generatingBlock.current)return;return{blocks:state.projected??editor.document,stage:(plan:NativeNotePreviewPlan)=>{if(composerPlans.current!==state||request.current!==generationId)throw Error('笔记预览请求已变化。');state.plans.push(plan);state.projected=plan.blocks;setDocumentWriting(true)}}},anchoredCreate:(generationId:string)=>{const inline=inlineRequest.current;if(!inline||inline.requestId!==generationId)return false;noteInlineAnchorBlock(editor,inline.anchor,client.current);return true}})
     const external=createExternalNoteCapabilityLease({sessionId:props.sessionId,documentId:client.current,current,busy:()=>!!request.current||exportPending.current||!!importing.current.size||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)&&![...capabilityCards.current.values()].includes(block.id)),snapshot,
       capture:async()=>{const context=references.capture(),range=context.range;return{selectedBlockIds:sharedActions.selectedBlockIds(),selectedParagraphIds:sharedActions.selectedParagraphIds(),selectedNativeBlockIds:selectedNativeNoteBlocks(editor,range),requestContext:{images:[],title:titleRef.current,markdown:context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):'',selection:range?.text||'',context:{scope:context.scope,components:context.components}}}},
       begin:id=>dataRefreshGuard.current.begin(id,snapshot()),
@@ -616,7 +616,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     if(!component&&captured.text)paintSelection(captured)
     if(inlineTarget){inlineCreations.current.clear();inlineRequest.current={requestId,anchor:inlineTarget};setInlineDraft(value=>value?{...value,error:undefined,reply:undefined}:value)}
     composerPlans.current=inlineTarget||component?undefined:{requestId,plans:[],components:[],fingerprint};composerPreview.current=undefined
-    request.current = requestId;setWriting(true);setDocumentWriting(!!inlineTarget||component||!!captured.text||!!guideSummary.current); publishComposer({running:true}); setError(''); setPreview(undefined)
+    request.current = requestId;setWriting(true);setDocumentWriting(!!inlineTarget||component||!!guideSummary.current); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
       const emptyTable=!component&&nativeBlankTableIntent(prompt,images)
@@ -666,11 +666,12 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       const components=composerPlans.current?.requestId===requestId?composerPlans.current.components:[]
       if(!inlineTarget&&(staged.length||components.length)){
         const ids=new Set(staged.flatMap(plan=>plan.changedBlockIds)),projected=composerPlans.current?.projected||[],flatten=(blocks:any[]):any[]=>blocks.flatMap(block=>[block,...flatten(block.children??[])]),nextIds=new Set(flatten(projected).map(block=>block.id)),blocks=flatten(projected).filter(block=>ids.has(block.id)),removed=flatten(editor.document).filter(block=>ids.has(block.id)&&!nextIds.has(block.id))
-        let markdown=blocks.length?await editor.blocksToMarkdownLossy(blocks):''
+        const updates=blocks.filter(block=>block.type==='research').map(block=>JSON.parse(block.props.payload)),textBlocks=blocks.filter(block=>block.type!=='research')
+        let markdown=textBlocks.length?await editor.blocksToMarkdownLossy(textBlocks):''
         if(removed.length)markdown+=(markdown?'\n\n':'')+t('将移除以下内容：')+'\n\n'+await editor.blocksToMarkdownLossy(removed)
         if(!markdown.trim())markdown=t('应用本次笔记编排建议。')
         if(result.kind==='text'&&result.markdown.trim())markdown+='\n\n'+result.markdown
-        composerPreview.current={requestId,plans:staged,components,markdown:result.kind==='text'?result.markdown:undefined,inlineOrder:result.kind==='text'?result.inlineOrder:undefined};setPreview({requestId,result:{kind:'text',markdown},fingerprint,selectedText:'',from:0,to:0,cursor:captured.cursor||editor.document.at(-1)?.id})
+        composerPreview.current={requestId,plans:staged,components,updates,markdown:result.kind==='text'?result.markdown:undefined,inlineOrder:result.kind==='text'?result.inlineOrder:undefined};setPreview({requestId,result:{kind:'text',markdown},fingerprint,selectedText:'',from:0,to:0,cursor:captured.cursor||editor.document.at(-1)?.id})
         publishTask(requestId,'ready',{result:{kind:'text',markdown}});commitNativeDraft(admission);return
       }
       if(result.kind==='component'&&result.targetBlockId&&!inlineTarget){
@@ -1003,7 +1004,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       {preview ? <div data-note-preview-request-id={preview.requestId} data-note-preview-state="ready"><SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button data-note-preview-apply={preview.requestId} onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
         {preview.result.capabilitySummary||preview.result.capabilityReceipts?.length?<div className="en-capability-receipts" role="status">{preview.result.capabilityReceipts?.length?capabilityReceiptText(preview.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):preview.result.capabilitySummary}</div>:null}
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
-        {composerPreview.current?.requestId===preview.requestId?composerPreview.current.components.map((result,index)=><ResearchBlock key={index} block={{id:'preview-'+index,props:{payload:JSON.stringify(result.node)}}}/>):null}
+        {composerPreview.current?.requestId===preview.requestId?[...(composerPreview.current.updates??[]).map(node=>({node})),...composerPreview.current.components].map((result,index)=><ResearchBlock key={index} block={{id:'preview-'+index,props:{payload:JSON.stringify(result.node)}}}/>):null}
       </SuggestionPanel></div> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />

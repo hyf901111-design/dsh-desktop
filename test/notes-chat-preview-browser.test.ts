@@ -27,7 +27,7 @@ beforeAll(async()=>{
  import '@blocknote/mantine/style.css';import ${JSON.stringify(resolve('src/preload/notes/style.css'))};import ${JSON.stringify(resolve('src/preload/notes/challenge.css'))};
  window.armNativeTiming=dimension=>{let observer;const submit=()=>{window.fastTiming={submitAt:performance.now(),dimension};observer=new MutationObserver(()=>{const table=document.querySelector('.bn-editor table'),cells=table?.querySelectorAll('td');if(cells?.length===dimension*dimension&&table.getBoundingClientRect().width>0&&table.getBoundingClientRect().height>0){window.fastTiming.visibleAt=performance.now();window.fastTiming.visibleCells=[...cells].filter(cell=>{const r=cell.getBoundingClientRect();return r.width>0&&r.height>0&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth}).length;observer.disconnect()}});observer.observe(document.querySelector('.bn-editor'),{childList:true,subtree:true})};const key=e=>{if(e.key==='Enter'&&!e.shiftKey&&e.target.matches('.en-space-ai textarea')){document.removeEventListener('keydown',key,true);document.removeEventListener('sherlock:notes-submit',side,true);submit()}},side=()=>{document.removeEventListener('keydown',key,true);document.removeEventListener('sherlock:notes-submit',side,true);submit()};document.addEventListener('keydown',key,true);document.addEventListener('sherlock:notes-submit',side,true)};
  window.calls=[];window.saved={title:'原生操作验收',blocks:[{id:'before',type:'paragraph',content:'保留前段'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后段'}],yjs:'',revision:0,updatedAt:0};
- const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load'){const loaded=await window.nativeStore(method,input);window.saved=loaded.saved;return loaded}if(method==='save'){if(window.failSave)throw Error('保存失败样本');const result=await window.nativeStore(method,input);if(window.holdSaveAck&&input.content.blocks.some(block=>block.type==='table'))await new Promise(resolve=>window.releaseSaveAck=resolve);if(result.status==='saved'){window.saved=result.saved;if(window.fastTiming?.submitAt&&result.saved.blocks.some(b=>b.type==='table'&&b.content.rows.length===window.fastTiming.dimension&&b.content.rows[0].cells.length===window.fastTiming.dimension))window.fastTiming.saveAckAt??=performance.now()}return result}if(method==='capability-reply'){if(window.holdNativeEffect&&input.effect?.state==='applied')await new Promise(resolve=>window.releaseNativeEffect=resolve);return window.mainCapabilityReply(input)}if(method==='capability-ready'){if(window.holdNativeAdmission)await new Promise(resolve=>window.releaseNativeAdmission=resolve);return window.hostNativeReady(input,!!window.nativeReadOnly)}if(method==='native-table'||method==='conversation-state'||method==='conversation-load'||method==='stop')return window.hostNativeRequest(method,input);if(method==='generate'&&input.entryPoint==='component')return {kind:'component',node:{kind:'generated-container',title:'预览中的专业图表',containerSpec:{version:1,type:'chart',variant:'line',title:'预览中的专业图表',labels:['A','B'],series:[{name:'演示',values:[1,2]}]}}};if(method==='generate')return window.useNativeModel?window.hostNativeRequest(method,input):new Promise((resolve,reject)=>{window.modelResolve=resolve;window.modelReject=reject});if(method==='library-list')return[];return{}},draft:async input=>{window.pendingDraft=input;await window.nativeStore('draft',input)}};
+ const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load'){const loaded=await window.nativeStore(method,input);window.saved=loaded.saved;return loaded}if(method==='save'){if(window.failSave)throw Error('保存失败样本');const result=await window.nativeStore(method,input);if(window.holdSaveAck&&input.content.blocks.some(block=>block.type==='table'))await new Promise(resolve=>window.releaseSaveAck=resolve);if(result.status==='saved'){window.saved=result.saved;if(window.fastTiming?.submitAt&&result.saved.blocks.some(b=>b.type==='table'&&b.content.rows.length===window.fastTiming.dimension&&b.content.rows[0].cells.length===window.fastTiming.dimension))window.fastTiming.saveAckAt??=performance.now()}return result}if(method==='capability-reply'){if(window.holdNativeEffect&&input.effect?.state==='applied')await new Promise(resolve=>window.releaseNativeEffect=resolve);return window.mainCapabilityReply(input)}if(method==='capability-ready'){if(window.holdNativeAdmission)await new Promise(resolve=>window.releaseNativeAdmission=resolve);return window.hostNativeReady(input,!!window.nativeReadOnly)}if(method==='render'||method==='native-table'||method==='conversation-state'||method==='conversation-load'||method==='stop')return window.hostNativeRequest(method,input);if(method==='generate'&&input.entryPoint==='component')return {kind:'component',node:{kind:'generated-container',title:'预览中的专业图表',containerSpec:{version:1,type:'chart',variant:'line',title:'预览中的专业图表',labels:['A','B'],series:[{name:'演示',values:[1,2]}]}}};if(method==='generate')return window.useNativeModel?window.hostNativeRequest(method,input):new Promise((resolve,reject)=>{window.modelResolve=resolve;window.modelReject=reject});if(method==='library-list')return[];return{}},draft:async input=>{window.pendingDraft=input;await window.nativeStore('draft',input)}};
  const root=createRoot(document.querySelector('#root'));window.reopen=()=>{root.unmount();const next=document.createElement('div');document.body.append(next);createRoot(next).render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){}}))};root.render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){}}));
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.ledger=proposals; const slashMenu = useMemo')}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
@@ -105,4 +105,68 @@ it('prepares a mixed native table, component and text candidate and inserts the 
 
 it.each(['为什么不能删除这段？','解释创建流程','如何更新这张表？'])('does not create a note loading card for conversational words in %s',async prompt=>{
  const f=await open();try{const before=await body(f.page);await submit(f.page,prompt);expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0);await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:'这是操作说明，不改笔记正文。'}));await expect.poll(()=>f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(await body(f.page)).toEqual(before);expect(f.errors).toEqual([])}finally{await f.close()}
+},15000)
+
+const componentSpec=(value:string)=>({version:1,type:'markdown',title:'经营复盘',content:value})
+async function selectComponent(f:any){
+ await f.page.evaluate(()=>{const editor=(window as any).editor;editor.insertBlocks([{id:'selected-component',type:'research',props:{payload:JSON.stringify({id:'selected-node',kind:'generated-container',title:'经营复盘',generationStatus:'completed',noteSize:{width:500,height:280},containerSpec:{version:1,type:'markdown',title:'经营复盘',content:'原有组件内容'}})}}],editor.document.at(-1),'after');document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'native-fixture',blockId:'selected-component'}}))})
+ await f.page.keyboard.press('Meta+s')
+ await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('原有组件内容')
+}
+async function preparedComponent(f:any,parent:any,value:string){
+ const context={owner:'fixture',sessionId:'native-fixture',documentId:parent.capabilityContext.documentId,mode:'notes',editable:true,selectedBlockIds:['selected-component'],selectedNativeBlockIds:[]},controller=new AbortController()
+ const inspect=await f.main.request('notes.components.inspect',{},context,parent.requestId,controller.signal,()=>true)
+ const applied=await f.main.request('notes.components.apply',{blockId:'selected-component',revision:inspect.data.revision,containerSpec:componentSpec(value)},context,parent.requestId,controller.signal,()=>true,true)
+ return{inspect,applied}
+}
+it('previews selected component content through real Main inspect/apply before confirmation, saves and reopens once',async()=>{
+ const f=await open();try{
+  await selectComponent(f);const before=await body(f.page),parent=await submit(f.page,'把所选组件内容调整为经营验证清单')
+  expect(parent.capabilityContext.selectedBlockIds).toEqual(['selected-component'])
+  const{applied}=await preparedComponent(f,parent,'改后的经营验证清单')
+  expect(applied).toMatchObject({status:'succeeded',data:{pendingPreview:true,actionId:parent.requestId,blockId:'selected-component'}});expect(applied.effect).toBeUndefined();expect(await body(f.page)).toEqual(before)
+  await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:''}));await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  expect(await body(f.page)).toEqual(before);expect(await f.page.locator('.en-space-ai').count()).toBe(0);await expect.poll(()=>f.page.locator('[data-note-preview-state=ready] iframe').contentFrame().locator('body').textContent()).toContain('改后的经营验证清单')
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('改后的经营验证清单');await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor').waitFor()
+  expect(JSON.stringify(await body(f.page))).toContain('改后的经营验证清单');expect((await body(f.page)).filter((block:any)=>block.id==='selected-component')).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['human-edit','stop'])('preserves a selected component candidate after %s without an unconfirmed payload write',async action=>{
+ const f=await open();try{
+  await selectComponent(f);const before=await body(f.page),parent=await submit(f.page,'调整所选组件内容');await preparedComponent(f,parent,'不应自动写入的内容')
+  if(action==='stop'){await f.page.getByRole('button',{name:'停止',exact:true}).click();await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:''}));await expect.poll(()=>f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(await body(f.page)).toEqual(before)}
+  else{await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:''}));await f.page.locator('[data-note-preview-state=ready]').waitFor();await f.page.evaluate(()=>(window as any).editor.updateBlock('before',{content:'人工新编辑'}));await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();const blocks=await body(f.page);expect(JSON.stringify(blocks)).toContain('人工新编辑');expect(blocks.find((block:any)=>block.id==='selected-component').props.payload).toBe(before.find((block:any)=>block.id==='selected-component').props.payload)}
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('combines native edits, two projected component revisions and final text in one confirmed candidate',async()=>{
+ const f=await open();try{
+  await selectComponent(f);const before=await body(f.page),parent=await submit(f.page,'补充原生段落、修改图表并追加说明');const read=await capability(f.page,parent,'notes.blocks.read',{scope:'note'})
+  await capability(f.page,parent,'notes.blocks.apply',{revision:read.result.data.revision,operations:[{op:'update',blockId:'before',block:{content:'整批原生更新'}}]})
+  const first=await preparedComponent(f,parent,'组件中间版本'),last=await preparedComponent(f,parent,'组件最终版本');expect(last.inspect.data.revision).toBe(first.applied.data.revision)
+  expect(await body(f.page)).toEqual(before);await f.page.evaluate(()=>(window as any).modelResolve({kind:'text',markdown:'后续按经营数据继续验证。'}));await f.page.locator('[data-note-preview-state=ready]').waitFor();expect(await body(f.page)).toEqual(before)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('组件最终版本');const blocks=await body(f.page)
+  expect(JSON.stringify(blocks)).toContain('整批原生更新');expect(JSON.stringify(blocks)).toContain('后续按经营数据继续验证');expect(JSON.stringify(blocks)).not.toContain('组件中间版本');expect(await f.page.locator('.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it('keeps a question about selected text in the right conversation without prematurely showing a note card',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>{const editor=(window as any).editor;let start=0;editor._tiptapEditor.state.doc.descendants((node:any,pos:number)=>{if(!start&&node.isText){start=pos;return false}});editor._tiptapEditor.commands.setTextSelection({from:start,to:start+4})})
+  const before=await body(f.page),parent=await submit(f.page,'解释这段文字')
+  expect(parent.selection).toBeTruthy();expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0)
+  await f.page.evaluate(()=>(window as any).modelResolve({kind:'conversation',markdown:'这是所选内容的解释，不改动笔记。'}));await expect.poll(()=>f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(await body(f.page)).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('executes a real runtime inspect/apply component request with a prepared receipt and no body effect until acceptance',async()=>{
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text),receipts=payload.clientReceipts,wireToken=/wireToken=([a-f0-9-]+)/u.exec(request.system)![1]
+  if(!receipts.length)return{kind:'capabilities',wireToken,calls:[{requestId:'inspect-selected',capability:'notes.components.inspect',arguments:{}}]}
+  if(receipts.length===1)return{kind:'capabilities',wireToken,calls:[{requestId:'apply-selected',capability:'notes.components.apply',arguments:{blockId:receipts[0].data.blockId,revision:receipts[0].data.revision,containerSpec:componentSpec('真实运行时准备的组件更新')}}]}
+  expect(receipts[1]).toMatchObject({capability:'notes.components.apply',status:'succeeded',data:{pendingPreview:true}});expect(receipts[1].effect).toBeUndefined();return{kind:'conversation',markdown:''}
+ });try{
+  await selectComponent(f);const before=await body(f.page);await f.page.evaluate(()=>(window as any).useNativeModel=true);await submit(f.page,'调整所选组件的经营验证内容')
+  await f.page.locator('[data-note-preview-state=ready]').waitFor();expect(await body(f.page)).toEqual(before);expect(f.modelRequests).toHaveLength(3);expect(f.history().at(-1).phase).toBe('ready')
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('真实运行时准备的组件更新');expect(f.errors).toEqual([])
+ }finally{await f.close()}
 },15000)

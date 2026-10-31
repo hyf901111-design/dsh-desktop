@@ -60,7 +60,7 @@ it('waits for real session flush and allows a same-request retry to persist an a
  }finally{f.dispose()}
 })
 
-it.each(['notes.blocks.apply','notes.blocks.undo','notes.components.create'])('reviews a prepared %s candidate only for its owning generation',async capability=>{
+it.each(['notes.blocks.apply','notes.blocks.undo','notes.components.create','notes.components.apply'])('reviews a prepared %s candidate only for its owning generation',async capability=>{
  const prepared={capability,status:'succeeded',data:{pendingPreview:true,actionId:'owned'}}
  const f=await fixture([prepared]);try{
   expect(noteConversationRows(f.session)[0].phase).toBe('ready')

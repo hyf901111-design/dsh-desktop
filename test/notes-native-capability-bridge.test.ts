@@ -6,10 +6,10 @@ const bridges:NotesCapabilityBridge[]=[]
 afterEach(()=>{for(const bridge of bridges.splice(0))bridge.dispose();vi.useRealTimers()})
 const applied={kind:'native-blocks',state:'applied',actionId:'native-action-one',changedBlockIds:['paragraph-one','table-one'],revision:'revision-after-one'}
 const saved={...applied,state:'saved'}
-function fixture(action='notes.blocks.apply',allowPreview=false){
+function fixture(action='notes.blocks.apply',allowPreview=false,selectedBlockIds:string[]=[]){
  const sent:any[]=[],controller=new AbortController(),bridge=new NotesCapabilityBridge(value=>sent.push(value));bridges.push(bridge)
  let current=true
- const promise=bridge.request(action as any,{},context,'generation-one',controller.signal,()=>current,allowPreview);void promise.catch(()=>{})
+ const promise=bridge.request(action as any,{},{...context,selectedBlockIds},'generation-one',controller.signal,()=>current,allowPreview);void promise.catch(()=>{})
  const requestId=sent[0].requestId
  const respond=(input:any,owner='alice',sessionId='note')=>bridge.respond({requestId,sessionId,...input},owner)
  return{bridge,promise,sent,requestId,respond,controller,hide:()=>{current=false}}
@@ -153,4 +153,15 @@ it('does not expose a preview after cancellation or a context change',async()=>{
  const changed=fixture('notes.blocks.apply',true);changed.hide()
  expect(changed.respond({result:prepared})).toEqual({ok:true})
  await expect(changed.promise).rejects.toThrow('会话已变化')
+})
+
+const componentPrepared={status:'succeeded',data:{pendingPreview:true,actionId:'generation-one',blockId:'selected-component',revision:'component-sha'}}
+it('admits a prepared component content reply only for the enabled composer and its one selected target',async()=>{
+ const disabled=fixture('notes.components.apply',false,['selected-component'])
+ expect(disabled.respond({result:componentPrepared})).toEqual({ok:false});disabled.respond({result:{status:'failed'}});await disabled.promise
+ const enabled=fixture('notes.components.apply',true,['selected-component'])
+ for(const data of [{...componentPrepared.data,blockId:'other'},{...componentPrepared.data,actionId:'other'},{...componentPrepared.data,revision:''},{...componentPrepared.data,extra:true}])expect(enabled.respond({result:{status:'succeeded',data}})).toEqual({ok:false})
+ expect(enabled.respond({result:componentPrepared})).toEqual({ok:true});expect(await enabled.promise).toEqual(componentPrepared)
+ const unselected=fixture('notes.components.apply',true)
+ expect(unselected.respond({result:componentPrepared})).toEqual({ok:false});unselected.respond({result:{status:'failed'}});await unselected.promise
 })

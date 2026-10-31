@@ -2,6 +2,8 @@ import {noteCapabilityReceiptMessage} from '../../../packages/dsh-research-task-
 import type {CapabilityStyleEffect,CapabilityCreateEffect,CapabilityDataEffect,CapabilityNativeBlocksEffect,CapabilityChallengeConfiguration,CapabilityChallengeEffect,ClientCapabilityArguments} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {NoteContent} from '../../shared/workspace-notes'
+import type {NativeNotePreviewPlan} from './native-operations'
+import {noteInlineBlockIdentities} from './inline-ai'
 import {changeNoteAlignment,noteAlignmentBlocks} from './block-alignment'
 import {createNoteComponentDataActions} from './component-data-actions'
 import {updateNoteComponentLayout} from './component-size-state'
@@ -16,7 +18,7 @@ export function updateNoteComponentPresentation(editor:any,ids:string[],style:No
  if(editor.transact)editor.transact(apply);else apply()
  return ids
 }
-export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;anchoredCreate?(generationId:string):boolean;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;nativeOperations?:{execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect|CapabilityNativeBlocksEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
+export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteContent;current():boolean;generationId():string;initialFingerprint?():string;anchoredCreate?(generationId:string):boolean;componentPreview?(generationId:string):{blocks:any[];stage(plan:NativeNotePreviewPlan):void}|undefined;refreshGuard?:NoteDataRefreshGuard;documentId:string;selectedBlockIds():string[];selectedParagraphIds?():string[];componentWidth?(blockId:string):number;nativeOperations?:{execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};dataCapability?:{cancel(id:string):void;execute(input:any,current:()=>boolean,advance:()=>void):Promise<any>};challenge?():{configure(settings:ClientCapabilityArguments['notes.challenge.configure']):void;getConfiguration():CapabilityChallengeConfiguration}|undefined;createComponent?(args:any,current:()=>boolean,requestId:string,report:(effect:CapabilityCreateEffect)=>Promise<void>):Promise<any>;cancelComponent?(requestId:string):void;reportEffect?(requestId:string,effect:CapabilityStyleEffect|CapabilityCreateEffect|CapabilityChallengeEffect|CapabilityDataEffect|CapabilityNativeBlocksEffect):Promise<unknown>;persist():Promise<void>;exportNote(args:any,current:()=>boolean):Promise<any>;settle():Promise<void>}){
  let generation='',fingerprint=''
  const cancelled=new Set<string>(),activeData=new Set<string>()
  const advanceFingerprint=(next:string)=>{options.refreshGuard?.advanceOwn(generation,fingerprint,next);fingerprint=next}
@@ -104,12 +106,16 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
   if(input.action==='notes.components.inspect'||input.action==='notes.components.apply'){
    const bound=input.context.selectedBlockIds,selectionCurrent=()=>Array.isArray(bound)&&bound.length===1&&JSON.stringify(options.selectedBlockIds())===JSON.stringify(bound)
    if(!selectionCurrent())throw Error(t('选中组件已变化，请重新发送请求。'))
-   const block=options.editor.getBlock(bound[0])
+   const preview=options.componentPreview?.(input.generationId),projected=preview?JSON.parse(JSON.stringify(preview.blocks)):undefined
+   const find=(blocks:any[],id:string):any=>{for(const block of blocks){if(block.id===id)return block;const child=find(block.children??[],id);if(child)return child}}
+   const source=projected?{isEditable:options.editor.isEditable,document:projected,getBlock:(id:string)=>find(projected,id)}:options.editor
+   const block=source.getBlock(bound[0])
    if(block?.type!=='research')throw Error(t('组件已移除，请重新发送请求。'))
    const node=JSON.parse(block.props.payload),applying=input.action==='notes.components.apply'
    if(applying&&input.args.blockId!==block.id)throw Error(t('组件不在当前引用范围内，请重新选择。'))
-   let applied=false
-   const handle=createNoteComponentDataActions({sessionId:input.context.sessionId,editor:options.editor,current:()=>current()&&selectionCurrent()&&noteCapabilityFingerprint(options.snapshot())===fingerprint,update:(id,next)=>{options.editor.updateBlock(id,{props:{payload:JSON.stringify(next)}});applied=true;advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))}})
+   let applied=false,patch:undefined|{id:string;node:any}
+   const baseline=noteCapabilityFingerprint(options.snapshot()),identities=preview?new Map(noteInlineBlockIdentities(options.editor)):undefined
+   const handle=createNoteComponentDataActions({sessionId:input.context.sessionId,editor:source,current:()=>current()&&selectionCurrent()&&noteCapabilityFingerprint(options.snapshot())===fingerprint,update:(id,next)=>{if(projected){const target=find(projected,id);if(!target)throw Error(t('组件已移除，请重新发送请求。'));target.props={...target.props,payload:JSON.stringify(next)};patch={id,node:next};return}options.editor.updateBlock(id,{props:{payload:JSON.stringify(next)}});applied=true;advanceFingerprint(noteCapabilityFingerprint(options.snapshot()))}})
    const reply=await handle({sessionId:input.context.sessionId,requestId:input.requestId,expiresAt:Date.now()+100000,selectedIds:[node.id],method:applying?'apply':'inspect',args:applying?{requestId:input.requestId,revision:input.args.revision,changes:[{op:'update',id:node.id,fields:{containerSpec:input.args.containerSpec}}]}:{ids:[node.id]}})
    // The existing sink rechecks visibility after its mutation. Keep an honest
    // applied effect if cancellation arrived at that boundary; never claim no edit.
@@ -117,6 +123,12 @@ export function createNoteCapabilityActions(options:{editor:any;snapshot():NoteC
    if(reply?.error)throw Error(t(reply.error))
    if(!reply?.result)throw Error(t('客户端操作未返回有效回执。'))
    const data={...reply.result,blockId:block.id}
+   if(applying&&preview&&projected&&patch){
+    const change=patch
+    assertCurrent()
+    preview.stage({generationId:input.generationId,blocks:projected,changedBlockIds:[block.id],movedIds:[],dependent:false,check:()=>{const actual=noteInlineBlockIdentities(options.editor);if(!options.current()||noteCapabilityFingerprint(options.snapshot())!==baseline||[...identities!].some(([id,identity])=>actual.get(id)!==identity))throw Error(t('笔记已有较新编辑，请重新生成建议。'))},apply:()=>options.editor.updateBlock(change.id,{props:{payload:JSON.stringify(change.node)}})})
+    return{status:'succeeded',data:{pendingPreview:true,actionId:input.generationId,blockId:block.id,revision:reply.result.revision},message:t('组件内容建议已准备，等待用户确认；笔记正文尚未修改。')}
+   }
    return applying?saveMutation([block.id],'content',data):{status:'succeeded',data}
   }
   if(input.action==='notes.components.create'){

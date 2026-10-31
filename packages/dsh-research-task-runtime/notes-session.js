@@ -73,7 +73,7 @@ export function engageNoteSession(ctx, input) {
   return { ok: true, title: session.events.findLast(e => e.type === 'session/title')?.data.title || '', automatic }
 }
 
-const pendingNotePreviewReceipt=(receipts,requestId)=>Array.isArray(receipts)&&receipts.some(receipt=>receipt.status==='succeeded'&&['notes.blocks.apply','notes.blocks.undo','notes.components.create'].includes(receipt.capability)&&receipt.effect===undefined&&receipt.data?.pendingPreview===true&&receipt.data.actionId===requestId)===true
+const pendingNotePreviewReceipt=(receipts,requestId)=>Array.isArray(receipts)&&receipts.some(receipt=>receipt.status==='succeeded'&&['notes.blocks.apply','notes.blocks.undo','notes.components.create','notes.components.apply'].includes(receipt.capability)&&receipt.effect===undefined&&receipt.data?.pendingPreview===true&&receipt.data.actionId===requestId)===true
 const nativeDocumentReceipt=(receipts,requestId)=>Array.isArray(receipts)&&receipts.some(receipt=>receipt.capability==='notes.blocks.apply'&&receipt.effect?.kind==='native-blocks'&&receipt.effect.actionId===requestId&&['applied','saved'].includes(receipt.effect.state)&&Array.isArray(receipt.effect.changedBlockIds)&&receipt.effect.changedBlockIds.length>0&&receipt.effect.changedBlockIds.every(id=>typeof id==='string'&&id.length>0&&id.length<=256))===true
 
 export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {

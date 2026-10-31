@@ -77,7 +77,8 @@ export class NotesCapabilityBridge{
   const effect=effectValue(input.result?.effect,job.action)
   if(input.result?.effect!==undefined&&(nativeAction(job.action)||input.result.effect?.kind==='native-blocks')&&!effect)return {ok:false}
   if(effect){if(!this.canAdvance(job.effect,effect))return {ok:false};job.effect=effect}
-  const prepared=job.allowPreview&&nativeWrite(job.action)&&!job.effect&&input.result?.effect===undefined&&input.result?.status==='succeeded'&&input.result.data?.pendingPreview===true&&input.result.data.actionId===job.generationId&&Object.keys(input.result.data).every(key=>['pendingPreview','actionId','unchanged'].includes(key))
+  const prepared=job.allowPreview&&(nativeWrite(job.action)||job.action==='notes.components.apply')&&!job.effect&&input.result?.effect===undefined&&input.result?.status==='succeeded'&&input.result.data?.pendingPreview===true&&input.result.data.actionId===job.generationId&&Object.keys(input.result.data).every(key=>(job.action==='notes.components.apply'?['pendingPreview','actionId','blockId','revision']:['pendingPreview','actionId','unchanged']).includes(key))&&(job.action!=='notes.components.apply'||job.context.selectedBlockIds.length===1&&input.result.data.blockId===job.context.selectedBlockIds[0]&&effectId(input.result.data.revision))
+  if(job.action==='notes.components.apply'&&input.result?.data?.pendingPreview===true&&!prepared)return{ok:false}
   if(nativeWrite(job.action)&&input.result?.status==='succeeded'&&job.effect?.state!=='saved'&&!prepared)return {ok:false}
   const result=nativeWrite(job.action)&&job.effect?{...input.result,effect:job.effect,changedBlockIds:'changedBlockIds' in job.effect?[...job.effect.changedBlockIds]:[]}:input.result
   job.cleanup();this.pending.delete(input.requestId)
