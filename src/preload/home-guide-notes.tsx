@@ -239,10 +239,12 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    return [...surface.querySelectorAll<HTMLAnchorElement>(child?'.child-menu a[role="option"]':'.root-menu a[role="option"]')]
   }
   const surface=await until(()=>menu?.element()),parent=await until(()=>itemsFor(surface).find(item=>item.getAttribute('aria-label')===t('组件库')))
-  const parentRevision=surface.dataset.noteMenuRevision;await wait(700);itemsFor(surface);await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
+  const parentRevision=surface.dataset.noteMenuRevision;await wait(1000);itemsFor(surface);await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
   parent.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}))
   const child=await until(()=>surface.dataset.noteMenuRevision!==parentRevision&&itemsFor(surface,true).find(item=>item.getAttribute('aria-label')===t('行情面板')))
-  await wait(750);await point(child,'在组件库二级菜单选择行情面板');if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');child.click()
+  let childBox:DOMRect|undefined,childStable=0
+  await until(()=>{if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');validTarget(child,true);const box=child.getBoundingClientRect();childStable=childBox&&Math.abs(box.x-childBox.x)<.5&&Math.abs(box.y-childBox.y)<.5?childStable+1:0;childBox=box;return childStable>=2})
+  await wait(1000);await point(child,'在组件库二级菜单选择行情面板');if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');child.click()
   await until(()=>editor!.snapshot().blocks.some(block=>{try{return block.type==='research'&&JSON.parse(block.props.payload).containerSpec?.widget==='quote'}catch{return false}}))
   await frame();expected=fingerprint();await flush()
  }

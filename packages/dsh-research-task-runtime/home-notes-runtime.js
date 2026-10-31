@@ -39,10 +39,11 @@ export function createHomeNotesRuntime(ctx,{env=process.env}={}){
    const run=current(input),value=input.input
    if(!value||value.sessionId!==run.sessionId||!id(value.requestId)||value.mode!=='write'||typeof value.markdown!=='string'||value.markdown.length>100000||typeof value.selection!=='string'||!Array.isArray(value.context?.components)||value.context.components.length>2||value.images!==undefined&&(!Array.isArray(value.images)||value.images.length)||JSON.stringify(value).length>180000)throw Error('笔记示例生成请求无效。')
    const stage=value.prompt===HOME_NOTES_CHART_PROMPT?0:value.prompt===HOME_NOTES_REWRITE_PROMPT?1:value.prompt===HOME_NOTES_TASK_PROMPT?2:-1
+   const composer=value.entryPoint===undefined||value.entryPoint==='composer'
    const anchor=value.insertionAnchor,inline=stage===0&&value.entryPoint==='inline'&&anchor&&id(anchor.documentId)&&id(anchor.blockId)&&anchor.position&&typeof anchor.position==='object'&&!Array.isArray(anchor.position)&&JSON.stringify(anchor.position).length<2048
    const valid=stage===0?inline&&value.context.scope==='note'&&value.context.components.length===0&&value.selection===''&&['增长兑现与估值','2025年10月23日','2026年10月23日','222.81','环比增长174.57%'].every(marker=>value.markdown.includes(marker))
-    :stage===1?value.entryPoint===undefined&&value.insertionAnchor===undefined&&value.context.scope==='selection'&&value.context.components.length===0&&value.markdown===''&&value.selection.trim()===HOME_NOTES_GUIDE_SELECTION
-    :stage===2?value.entryPoint===undefined&&value.insertionAnchor===undefined&&value.context.scope==='note'&&value.selection===''&&['环比增长14.29%','现金流净额18.00亿元','同比下降44.08%','不把单期业绩或历史涨幅当作确定性依据','沪深300同期下跌10.88%'].every(marker=>value.markdown.includes(marker))&&homeNotesGuideSummaryReferences(value.context.components):false
+    :stage===1?composer&&value.insertionAnchor===undefined&&value.context.scope==='selection'&&value.context.components.length===0&&value.markdown===''&&value.selection.trim()===HOME_NOTES_GUIDE_SELECTION
+    :stage===2?composer&&value.insertionAnchor===undefined&&value.context.scope==='note'&&value.selection===''&&['环比增长14.29%','现金流净额18.00亿元','同比下降44.08%','不把单期业绩或历史涨幅当作确定性依据','沪深300同期下跌10.88%'].every(marker=>value.markdown.includes(marker))&&homeNotesGuideSummaryReferences(value.context.components):false
    if(!valid)throw Error('示例需求或引用内容已变化，请重新播放。')
    const fingerprint=createHash('sha256').update(JSON.stringify(value)).digest('hex'),old=run.requests.get(value.requestId)
    if(old){if(old.fingerprint!==fingerprint)throw Error('请求标识已用于其他内容。');return old.promise}

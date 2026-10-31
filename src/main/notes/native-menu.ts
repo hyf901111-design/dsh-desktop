@@ -3,22 +3,10 @@ import { randomUUID } from 'node:crypto'
 import type { NoteMenuState, NotesNativeMenu } from '../../shared/notes-menu'
 import {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../../shared/note-menu-presentation'
 export {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../../shared/note-menu-presentation'
+import {noteMenuBounds,noteSubmenuBounds} from '../../shared/note-menu-geometry'
+export {noteMenuBounds,noteSubmenuBounds} from '../../shared/note-menu-geometry'
 const MENU_SHADOW_INSET=24
 
-export function noteMenuBounds(anchor: NoteMenuState['anchor'], work: Electron.Rectangle, desiredHeight: number, zoom = 1, desiredWidth = 264, shadowInset = 0): Electron.Rectangle {
-  const margin = 8, inset = Math.ceil(shadowInset * zoom), width = Math.min(Math.ceil(desiredWidth * zoom), work.width - margin * 2), height = Math.min(Math.ceil(desiredHeight * zoom), work.height - margin * 2)
-  const below = work.y + work.height - anchor.y - anchor.height - margin - 6 + inset, above = anchor.y - work.y - margin - 6 + inset
-  const y = below >= height || below >= above ? anchor.y + anchor.height + 6 - inset : anchor.y - height - 6 + inset
-  return { x: Math.round(Math.max(work.x + margin, Math.min(anchor.x - inset, work.x + work.width - width - margin))),
-    y: Math.round(Math.max(work.y + margin, Math.min(y, work.y + work.height - height - margin))), width, height }
-}
-
-export function noteSubmenuBounds(pane:Electron.Rectangle,item:Electron.Rectangle,work:Electron.Rectangle,desiredHeight:number,desiredWidth:number,zoom=1,shadowInset=MENU_SHADOW_INSET):Electron.Rectangle {
-  const inset=shadowInset*zoom,margin=8,gap=4*zoom,width=Math.min(Math.ceil(desiredWidth*zoom),work.width-margin*2),height=Math.min(Math.ceil(desiredHeight*zoom),work.height-margin*2)
-  const right=pane.x+pane.width+gap-inset,left=pane.x-gap-(width-inset*2)-inset
-  const x=right+width<=work.x+work.width-margin?right:left
-  return {x:Math.round(Math.max(work.x+margin,Math.min(x,work.x+work.width-width-margin))),y:Math.round(Math.max(work.y+margin,Math.min(item.y-inset,work.y+work.height-height-margin))),width,height}
-}
 /** Non-key macOS panels do not reliably deliver pointer moves to Chromium. */
 export function noteMenuPointerScript(x:number,y:number):string {
   return `(()=>{const a=document.elementFromPoint(${JSON.stringify(x)},${JSON.stringify(y)})?.closest('a');document.querySelectorAll('a[data-pointer-hover]').forEach(item=>{if(item!==a)item.removeAttribute('data-pointer-hover')});if(a)a.setAttribute('data-pointer-hover','true');return a?{href:a.href,submenu:a.hasAttribute('data-submenu')}:null})()`

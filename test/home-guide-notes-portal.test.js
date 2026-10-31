@@ -59,10 +59,10 @@ function fixture({foreignPopup=false,deferSummary=false,quoteFailOnce=false,repl
  const openEvidence=()=>sidebar.openTab({id:'notes-challenge:note-session',type:'sherlock-notes-challenge',title:'AI随航'},{sessionId:'note-session'})
  return{win,doc,record,diagnostics,previews,quoteCues,quoteSwitches:()=>quoteSwitches,foreignClicks:()=>foreignClicks,summaryReads:()=>summaryReads,summaryAborts:()=>summaryAborts,releaseSummary:error=>summaryRead?.(error),fetches,cues,submissions,command,mount,ack,sidebar,sidebarStore,openEvidence,coordinator,defaultSidebar:native.__defaultSidebar,setAutoAck:value=>{autoAck=value}}
 }
-it.each([false,true])('recovers a failed quote through its real footer and alternate-source selector before continuing (remount=%s)',async replaceQuoteRoot=>{
- const f=fixture({quoteFailOnce:true,replaceQuoteRoot});await f.mount();expect(f.quoteSwitches()).toBe(1)
- expect(f.quoteCues).toEqual(['搜索中际旭创（300308）','选择中际旭创（300308.SZ）','行情未载入，点击组件底部切换数据源','改用新浪财经获取中际旭创行情','返回行情面板，核对新来源和获取时间'])
- expect(f.doc.querySelector('.ew-financial-source-time').textContent).toContain('新浪财经');expect(f.doc.querySelector('[role=dialog]')).toBeNull();expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:true})
+it('preserves a failed quote honestly and continues the note demo without opening its provider menu',async()=>{
+ const f=fixture({quoteFailOnce:true});await f.mount();expect(f.quoteSwitches()).toBe(0)
+ expect(f.quoteCues).toEqual(['搜索中际旭创（300308）','选择中际旭创（300308.SZ）'])
+ expect(f.doc.querySelector('.ew-financial-empty').textContent).toContain('获取失败');expect(f.doc.querySelector('.ew-quote-price-line')).toBeNull();expect(f.doc.querySelector('[role=dialog]')).toBeNull();expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:true})
 },15000)
 it('types into the real Notes SessionInputShell and submits through its ordinary note admission',async()=>{
  const f=fixture();await f.mount();expect(await f.command('type',{stage:'selection'})).toMatchObject({ok:true})
