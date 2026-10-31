@@ -15,7 +15,7 @@ import {createSidebarNewNoteAction} from '../../src/preload/sidebar-new-note'
 import {ScheduledTaskView} from '../../src/preload/scheduled/view'
 import {WorkspaceSurfaceHost} from '../../src/preload/workspace-surface-host'
 
-const input=window.entryInput,probe=window.entryProbe={frames:[],requests:[],actions:[],loads:[],started:false,sourceChanges:[],sent:0,stops:[]}
+const input=window.entryInput,probe=window.entryProbe={frames:[],requests:[],actions:[],loads:[],started:false,sourceChanges:[],sent:0,stops:[],saves:[],entryPhases:[],beforeOpenCalls:[]}
 const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),empty=()=>null
 const primitives=new Proxy({Tooltip:({children})=>children},{get:(target,key)=>target[key]??empty})
 const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/cordis'?cordis:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty}:fake
@@ -40,16 +40,17 @@ function Scope({id}){
  return <native.ConversationRoot {...shared} useProjection={()=>undefined} useInput={useInput} useComposerBlock={()=>undefined} renderSlot={renderSlot} renderSlotChain={(_name,_props,{fallback})=>fallback} selectWorkspace={async()=>{}} useWorkspaces={select=>select({phase:'ready',items:[{workspaceId:'qa',title:'原工作区',sessionIds:['source']}]})} researchWorkspaces={registry} researchSidebar={sidebar} setResearchActive={()=>{}}/>
 }
 function App(){const state=React.useSyncExternalStore(sessions.list.subscribe,sessions.list.getSnapshot);return state.current?<Scope id={state.current}/>:null}
-const bridge={request:async(method,value)=>{if(method==='load'){probe.loads.push({id:value.sessionId,time:performance.now()});await new Promise(resolve=>setTimeout(resolve,120))}return window.entryNotesStorage(method,value)},draft:value=>window.entryNotesStorage('draft',value)}
+const bridge={request:async(method,value)=>{if(method==='load'){probe.loads.push({id:value.sessionId,time:performance.now()});await new Promise(resolve=>setTimeout(resolve,120))}if(method==='save'&&value.sessionId==='source'){probe.saves.push({phase:'start',time:performance.now(),title:value.content.title});if(input.holdSourceSave&&!probe.sourceSaveReleased)await new Promise(resolve=>probe.releaseSourceSave=()=>{probe.sourceSaveReleased=true;resolve()});if(input.failSourceSave)throw Error('源笔记测试保存失败');const result=await window.entryNotesStorage(method,value);probe.saves.push({phase:'saved',time:performance.now(),title:result.saved?.title});return result}return window.entryNotesStorage(method,value)},draft:value=>window.entryNotesStorage('draft',value)}
 const workspace=new WorkspaceSurfaceHost(document),notes=mountNotes(document,bridge,workspace)
 const guide=mountHomeGuides(document,{
- beforeOpen:session=>notes.prepareGuide(session.sessionId),revealConversation:()=>workspace.revealConversation(),
+ beforeOpen:async session=>{probe.beforeOpenCalls.push({kind:session.kind,time:performance.now()});await notes.prepareGuideFromCurrent(session.sessionId)},revealConversation:()=>workspace.revealConversation(),
  // Actor steps are outside this entry-only test. Readiness is the real editor,
  // not a stubbed ready callback; no model/send is allowed.
  async mountNotes(_document,host,options){const root=createRoot(host);let api;root.render(<NotesApp sessionId={options.sessionId} bridge={bridge} dark={false} navigate={()=>{}} guide={{ready:value=>api=value}}/>);const deadline=performance.now()+5000;while(!api||!host.querySelector('.bn-editor')){if(performance.now()>deadline)throw Error('真实NotesApp尚未加载');await new Promise(resolve=>setTimeout(resolve,16))}probe.noteReady=performance.now();return{runStep:async()=>{await new Promise(resolve=>options.signal.addEventListener('abort',resolve,{once:true}))},flush:()=>api.flush(),dispose:()=>root.unmount()}},
  mountPresentation:async()=>({runStep:async()=>{},dispose(){}})
 })
 if(input.explore){
+ window.addEventListener('sherlock:home-guide-entry-request',event=>{probe.entryPhases.push({phase:event.detail?.phase,time:performance.now()})})
  const sidebarNative=load(input.sidebar,modules),host=document.createElement('aside');host.id='native-sidebar';document.body.append(host)
  const rail=createRoot(host),newNote=createSidebarNewNoteAction(document,async()=>{probe.actions.push({type:'new-note-before-create',time:performance.now()});await notes.flushCurrent()})
  const noBlank=()=>{probe.extraBlank=(probe.extraBlank??0)+1;throw Error('演示入口不应额外创建空会话')}

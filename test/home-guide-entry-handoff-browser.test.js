@@ -9,7 +9,7 @@ import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 import {NotesStore} from '../src/main/notes/store'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 let browser,script,css,runtime,conversation,theme,sidebarSource
-const output='/tmp/home-guide-entry-handoff-20261026'
+const output='/tmp/sherlock-explore-refinement-r3-20261031/entry-browser'
 beforeAll(async()=>{
  sidebarSource=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Root=SidebarRoot;')
  runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
@@ -94,4 +94,21 @@ for(const[kind,index,mode]of [['board',0,'research'],['note',1,'notes']])it('clo
 },20000)
 it('starts Explore from the real Notes surface and preserves its edited source document through the native More route',async()=>{
  const f=await fixture({explore:true,sourceView:'notes'}),{page}=f;try{const original=page.locator('[data-workspace-surface=notes] .bn-editor');await original.waitFor({timeout:10000});await original.click();await page.keyboard.type('原笔记段落必须保存，不属于演示内容。');await beginExplore(page,1);await page.locator('[data-home-guide] .bn-editor').waitFor({timeout:10000});expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('example-note');expect(await page.evaluate(()=>window.entryProbe.storeFor('source').getSnapshot().view)).toBe('notes');expect(JSON.stringify(f.store.load('owner','source'))).toContain('原笔记段落必须保存，不属于演示内容。');expect(await page.evaluate(()=>window.entryProbe.extraBlank??0)).toBe(0);expect(f.errors).toEqual([])}finally{await f.close()}
+},22000)
+
+for(const[kind,index]of [['board',0],['ppt',2],['report',3],['workbench',4]])it('saves an undebounced real Notes source before Explore opens the native '+kind+' example',async()=>{
+ const f=await fixture({explore:true,sourceView:'notes',holdSourceSave:true,prepareDelay:0}),{page}=f;try{
+  const title='源研究笔记未防抖修改 '+kind;await page.locator('[data-note-editor-session="source"] .en-title').fill(title);expect(f.store.load('owner','source').saved.title).not.toBe(title)
+  await beginExplore(page,index);await page.waitForFunction(()=>window.entryProbe.beforeOpenCalls.length>0&&typeof window.entryProbe.releaseSourceSave==='function',{},{timeout:12000})
+  expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('source');expect(await page.evaluate(()=>window.entryProbe.requests.filter(row=>row.command==='open'))).toEqual([])
+  await page.evaluate(()=>window.entryProbe.releaseSourceSave());await page.locator('[data-home-guide-kind="'+kind+'"]').waitFor({timeout:10000})
+  const value=await page.evaluate(()=>({selected:window.entryProbe.sessions.list.getSnapshot().current,mode:window.entryProbe.storeFor('source').getSnapshot().view,draft:window.entryProbe.shellFor('source').snapshot.draft,saves:window.entryProbe.saves,opened:window.entryProbe.opened,blank:window.entryProbe.extraBlank??0}));await writeFile(output+'/source-save-'+kind+'.json',JSON.stringify(value,null,2));expect(value.selected).toBe('example-'+kind);expect(value.mode).toBe('notes');expect(value.draft).toBe('原会话草稿和技能不得改变😀');expect(value.blank).toBe(0);expect(value.saves.find(row=>row.phase==='saved'&&row.title===title).time).toBeLessThan(value.opened);expect(f.store.load('owner','source').saved.title).toBe(title);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},25000)
+it('keeps a failed Notes save and its draft alive while cancelling the real Explore native entry lease',async()=>{
+ const f=await fixture({explore:true,sourceView:'notes',failSourceSave:true,prepareDelay:0}),{page}=f;try{
+  const title='原笔记保存失败必须留在当前页';await page.locator('[data-note-editor-session="source"] .en-title').fill(title);await beginExplore(page,0)
+  await expect.poll(()=>page.evaluate(()=>window.entryProbe.entryPhases.some(row=>row.phase==='cancel')),{timeout:12000}).toBe(true);await expect.poll(()=>page.locator('[data-home-guide-pointer]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('source');expect(await page.evaluate(()=>window.entryProbe.storeFor('source').getSnapshot().view)).toBe('notes');expect(await page.evaluate(()=>window.entryProbe.shellFor('source').snapshot.draft)).toBe('原会话草稿和技能不得改变😀');expect(await page.evaluate(()=>window.entryProbe.requests.filter(row=>row.command==='open'))).toEqual([]);expect(await page.locator('[data-note-editor-session="source"] .en-title').inputValue()).toBe(title);expect(f.store.load('owner','source').saved.title).not.toBe(title);expect(f.store.load('owner','source').draft.title).toBe(title);expect(await page.locator('[data-home-guide-entry-target]').count()).toBe(0);expect(await page.locator('[data-home-guide]').count()).toBe(0);await writeFile(output+'/source-save-failure.json',JSON.stringify(await page.evaluate(()=>({selected:window.entryProbe.sessions.list.getSnapshot().current,mode:window.entryProbe.storeFor('source').getSnapshot().view,phases:window.entryProbe.entryPhases,requests:window.entryProbe.requests})),null,2));expect(f.errors).toEqual([])
+ }finally{await f.close()}
 },22000)
