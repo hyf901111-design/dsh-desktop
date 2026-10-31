@@ -61,9 +61,18 @@ export async function waitForHomeGuideNativeView(document:Document,sessionId:str
  for(;;){
   check();const candidates=[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')].filter(resident=>{
    if(resident.closest('[data-odyssey-subagent-panel]'))return false
-   const header=resident.querySelector<HTMLElement>('[data-srb-session-header][data-ework-notes-session]'),tab=header?.querySelector<HTMLElement>('[data-srb-tabs] [data-conversation-view-id="'+mode+'"]')
-   if(header?.dataset.eworkNotesSession!==sessionId||tab?.getAttribute('aria-selected')!=='true')return false
-   try{homeGuideTargetPoint(document,resident);homeGuideTargetPoint(document,tab);return true}catch{return false}
+   const header=resident.querySelector<HTMLElement>('[data-srb-session-header][data-ework-notes-session]'),tabs=header?.querySelector('[data-srb-tabs]'),tab=tabs?.querySelector<HTMLElement>('[data-conversation-view-id="'+mode+'"]')
+   if(header?.dataset.eworkNotesSession!==sessionId)return false
+   try{
+    homeGuideTargetPoint(document,resident)
+    if(tabs){if(tab?.getAttribute('aria-selected')!=='true')return false;homeGuideTargetPoint(document,tab);return true}
+    // Dedicated Boards intentionally omit mode tabs. Their ordinary canvas is
+    // also suppressed while the guide's transition owns the resident. Read the
+    // actual React render's session/mode, not the absence of a tab or canvas.
+    if(mode!=='research'||resident.dataset.odysseyPage!=='research'||resident.dataset.homeGuideViewSession!==sessionId||resident.dataset.homeGuideBoardOnly!=='true')return false
+    const canvases=[...resident.querySelectorAll<HTMLElement>('[data-research-canvas]')].filter(canvas=>{if(canvas.closest('.wSkVaW_root')!==resident||canvas.closest('[data-odyssey-subagent-panel]'))return false;try{homeGuideTargetPoint(document,canvas);return true}catch{return false}})
+    return canvases.length===0||canvases.length===1&&canvases[0]!.dataset.researchPreviewSession===sessionId
+   }catch{return false}
   })
   const resident=candidates.length===1?candidates[0]:undefined
   if(resident&&resident===previous)stable++;else{previous=resident;stable=0}

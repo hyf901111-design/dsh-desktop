@@ -100,3 +100,11 @@ it('strips and reapplies the native owner bridge beside a real managed preview g
  }
  expect(()=>guide.stripHomeGuideNative(stripped+'\nfunction homeGuideNativePreviewOwner(){}')).toThrow(/partial|drift/i);new Script(stripped)
 },30000)
+
+it('publishes the actual resident render session and dedicated membership, upgrades older SDKs and strictly strips its owned marker',()=>{
+ const current=guide.patchHomeGuideNative(withoutPresentation(installed)),marker='/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,'
+ expect(current.split(marker)).toHaveLength(2);expect(current.indexOf(marker)).toBeGreaterThan(current.indexOf('function HomeGuideNativeOriginalConversationRoot('));expect(current.slice(current.indexOf(marker)-100,current.indexOf(marker))).toContain('"data-odyssey-page": research ? "research"')
+ const native=guide.stripHomeGuideNative(current);expect(native).not.toContain('data-home-guide-view-session');expect(native).not.toContain('data-home-guide-board-only');expect(guide.patchHomeGuideNative(current.replace('\n'+marker,''))).toBe(current)
+ for(const broken of [current.replace('"data-home-guide-view-session": sessionId','"data-home-guide-view-session": otherSession'),current.replace(marker,marker+'\n'+marker),current.replace('/* odyssey:home-guide-render-owner:v1 */','')])expect(()=>guide.stripHomeGuideNative(broken)).toThrow(/anchor|partial|drift/i)
+ new Script(current);new Script(native)
+})
