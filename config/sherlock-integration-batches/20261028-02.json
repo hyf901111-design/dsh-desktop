@@ -12714,6 +12714,216 @@
         ],
         "recordedAt": "2026-10-30T19:24:05.836Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记右侧问答与内容候选预览统一",
+        "branch": "codex/feat/notes-chat-preview-20261031",
+        "baseCommit": "1fee2ebb24f013a9429dc05b92fd4de1d522cded",
+        "tipCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+        "commits": [
+          {
+            "commit": "4f64b9246e3dca127b8d32971d23ca2608c18db5",
+            "parents": [
+              "1fee2ebb24f013a9429dc05b92fd4de1d522cded"
+            ],
+            "subject": "修复笔记右侧问答路由并统一修改候选预览确认"
+          },
+          {
+            "commit": "ecb32fcdf3bfff51f6a3a02cea94e7a1e897eed2",
+            "parents": [
+              "4f64b9246e3dca127b8d32971d23ca2608c18db5"
+            ],
+            "subject": "完善笔记组件内容修改的预览事务和选区问答边界"
+          },
+          {
+            "commit": "1931036ec59745b0347034a56d505147dbb6083a",
+            "parents": [
+              "ecb32fcdf3bfff51f6a3a02cea94e7a1e897eed2"
+            ],
+            "subject": "修复笔记撤销预览与安全回退结果不一致"
+          },
+          {
+            "commit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "parents": [
+              "1931036ec59745b0347034a56d505147dbb6083a"
+            ],
+            "subject": "统一右侧空白表格快捷创建的原生预览确认流程"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capability-receipts.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/capability-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/stream.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/client-capability-actions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/inline-ai-proposals.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-operations.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-chat-preview-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-client-capability-editing.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-capability-bridge.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-capability-contract.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-operations-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-planning.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-review-history.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-native-operations-browser.test.ts",
+              "test/notes-chat-preview-browser.test.ts",
+              "test/notes-native-review-history.test.js",
+              "test/notes-native-capability-bridge.test.ts",
+              "test/notes-client-capability-editing.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "118/118：原完整33Native Browser（右侧3×3/8×8零模型空表改为预览→确认→原生编辑/保存/重开，旧光标首段仍追加末尾，Space快路/权限/停止/窄屏保留）、27路由/组件候选/撤销Browser、Main桥接/持久历史45、原组件editing13。日志 /tmp/notes-chat-preview-table-focused-final.log",
+            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript noEmit通过；/tmp/notes-chat-preview-table-typecheck-final.log",
+            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "packages/dsh-research-task-runtime/notes-ai.js"
+            ],
+            "outcome": "passed",
+            "summary": "JS语法通过",
+            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "packages/dsh-research-task-runtime/notes-session.js"
+            ],
+            "outcome": "passed",
+            "summary": "JS语法通过",
+            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "packages/dsh-research-task-runtime/client-capability-receipts.js"
+            ],
+            "outcome": "passed",
+            "summary": "JS语法通过",
+            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "源码无空白错误",
+            "verifiedCommit": "cf4a5aa2538d0fbff922cc59ddf9deec0c2c1d93",
+            "completedAt": "2026-10-31T06:08:45.305108+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产NotesApp真实浏览器、NotesStore、Main bridge/runtime链通过：60 Browser及58相关unit，共118例。右侧空表是本地确定性native-table Main路径，生成前后零LLM/零子agent；确认前正文和Saved零差异且无Space框，确认后可编辑并重开。未构建App；live provider/Native最终由Root同包验收。"
+        },
+        "acceptanceCriteria": [
+          "普通总结/解释仅在右侧回答，不预先显示正文生成卡且不修改笔记。",
+          "普通右侧依模型流式文档类型/真实staged effect显示生产NoteAiProcessing，完成使用现有SuggestionPanel，加入前正文不变。",
+          "明确追加文字无需read/apply多轮；结构化原生CRUD先准备CAS事务，多阶段及mixed表格/图表/正文由一次确认整批写入并保存。",
+          "取消/放弃/超时/切页或较新正文编辑不能偷写正文；持久化失败保留真实草稿，确认后的内容重开保留。",
+          "Space原位生成及其原生表格即时快捷路径不改变；右侧空表保持零模型原生工具，但通过正常候选确认；正文保存冲突恢复入口保留。",
+          "Demo summary hooks保留，不创建special UI或移动笔记光标。",
+          "右侧内部AI inspect→notes.components.apply只准备所选组件内容候选，复用投影revision和原schema/CAS校验；确认时与native/text整批提交。组件菜单、external/Space和style/layout/align等设置路径不改变。",
+          "右侧撤销候选复用journal.canRevert安全过滤，dirty/identity/依赖/无法精确定位时拒绝整项候选，正文及原审阅记录不变；干净候选确认前复核journal/正文/Y身份，确认后实际结果必须与预览相同。",
+          "右侧明确简单空表需求先用native-table准备无effect候选，显示正常SuggestionPanel；一次加入才写入同尺寸可编辑原生表格，默认追加文末；选区/明确位置/填充需求不被快捷路吞掉。Main预览租约失效时拒绝操作，不允许回落即时写入。"
+        ],
+        "risks": [
+          "未确认候选只在当前编辑器内存，退出重开丢弃候选但原正文不变；旧完成会话和已写入正文不迁移、不删除。",
+          "浏览器fixture验证真实生产事务和一次模型路由，不代表live provider成功率或延迟；需集成包实测普通总结与明确文末追加。",
+          "新增候选事务覆盖notes.blocks.apply/undo、新建component及内部AI notes.components.apply内容修改；既有样式/对齐/数据刷新等直接组件设置保持原契约。",
+          "右侧撤销仅允许完整且可精确投影的安全结果；含移动或不能完整撤销的记录明确拒绝生成候选。原Space撤销保持既有可安全部分回退能力，未放宽任何dirty/identity/位置/依赖guard。"
+        ],
+        "generatedAt": "2026-10-31T06:08:45.305108+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -13349,6 +13559,51 @@
         "0d86bbc886cc479fc7a35078761c438d475620b7..HEAD"
       ],
       "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/notes-native-operations-browser.test.ts",
+        "test/notes-chat-preview-browser.test.ts",
+        "test/notes-native-review-history.test.js",
+        "test/notes-native-capability-bridge.test.ts",
+        "test/notes-client-capability-editing.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "packages/dsh-research-task-runtime/notes-ai.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "packages/dsh-research-task-runtime/notes-session.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "packages/dsh-research-task-runtime/client-capability-receipts.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
