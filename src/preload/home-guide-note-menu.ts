@@ -26,12 +26,16 @@ export function createHomeGuideNoteMenu(document:Document,options:{runId:string;
  host.addEventListener('pointerdown',event=>event.preventDefault())
  host.addEventListener('pointerover',event=>{const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-submenu]');if(link)route(link,true)})
  host.addEventListener('click',event=>{event.preventDefault();const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a');if(link)route(link)})
- host.addEventListener('scroll',event=>{const list=host.querySelector<HTMLElement>('.root-menu>[role=listbox]');if(event.target===list&&list&&list.scrollTop!==rootScrollTop){rootScrollTop=list.scrollTop;if(state?.submenu)emit({action:'back'})}},true)
+ // This top-layer menu shares the editor document only during replay.
+ // Keep its own scrolling out of BlockNote's document capture listener,
+ // otherwise restoring scrollTop repaints the menu in an endless loop.
+ const scroll=(event:Event)=>{if(!current())return;const list=host.querySelector<HTMLElement>('.root-menu>[role=listbox]'),child=host.querySelector<HTMLElement>('.child-menu>[role=listbox]');if(event.target!==list&&event.target!==child)return;event.stopPropagation();if(event.target===list&&list&&list.scrollTop!==rootScrollTop){rootScrollTop=list.scrollTop;if(state?.submenu)emit({action:'back'})}}
+ win.addEventListener('scroll',scroll,true)
  const outside=(event:Event)=>{if(state&&!host.contains(event.target as Node))close(undefined,true)}
  document.addEventListener('pointerdown',outside,true)
  const blur=()=>{if(!document.hasFocus())close(undefined,true)},surface=(event:Event)=>{if((event as CustomEvent).detail?.surface!=='notes')close(undefined,true)}
  win.addEventListener('blur',blur);document.addEventListener('sherlock:workspace-surface-change',surface)
- const dispose=()=>{if(closed)return;close(undefined,true);closed=true;observer.disconnect();document.removeEventListener('pointerdown',outside,true);win.removeEventListener('blur',blur);document.removeEventListener('sherlock:workspace-surface-change',surface);options.signal.removeEventListener('abort',dispose)}
+ const dispose=()=>{if(closed)return;close(undefined,true);closed=true;observer.disconnect();document.removeEventListener('pointerdown',outside,true);win.removeEventListener('blur',blur);win.removeEventListener('scroll',scroll,true);document.removeEventListener('sherlock:workspace-surface-change',surface);options.signal.removeEventListener('abort',dispose)}
  options.signal.addEventListener('abort',dispose,{once:true});if(options.signal.aborted)dispose()
  return{sync(input:NoteMenuState){validateNoteMenu(input);if(!current()||input.sessionId!==options.sessionId||retired.has(input.menuId))throw new DOMException('演示菜单已结束。','AbortError');if(state&&(state.menuId!==input.menuId||input.revision<state.revision))throw Error('组件库菜单已变化。')
    const previous=state,sameRows=(a:NoteMenuState['items']|undefined,b:NoteMenuState['items'])=>!!a&&a.map(item=>item.id).join(',')===b.map(item=>item.id).join(',')

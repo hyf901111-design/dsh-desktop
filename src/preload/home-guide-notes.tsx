@@ -238,10 +238,27 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    if(body!==menuEditor||body?.getAttribute('aria-expanded')!=='true'||body.getAttribute('aria-controls')!==list.id||document.getElementById(list.id)!==list||owned!==surface||!surface.isConnected)throw Error('组件库菜单已变化。')
    return [...surface.querySelectorAll<HTMLAnchorElement>(child?'.child-menu a[role="option"]':'.root-menu a[role="option"]')]
   }
-  const surface=await until(()=>menu?.element()),parent=await until(()=>itemsFor(surface).find(item=>item.getAttribute('aria-label')===t('组件库')))
-  const parentRevision=surface.dataset.noteMenuRevision;await wait(1000);itemsFor(surface);await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
+  const revealItem=async(surface:HTMLElement,item:HTMLAnchorElement,child=false)=>{
+   const menuId=surface.dataset.noteMenuId,id=item.id,label=item.getAttribute('aria-label'),reduced=document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches
+   let previous:DOMRect|undefined,stable=0
+   return until(()=>{
+    if(surface.dataset.noteMenuId!==menuId)throw Error('组件库菜单已变化。')
+    // Scrolling can refresh BlockNote's reference position and menu revision.
+    // Reacquire only the same command in the still-owned current menu.
+    const current=itemsFor(surface,child).find(row=>row.id===id&&row.getAttribute('aria-label')===label),list=current?.closest<HTMLElement>((child?'.child-menu':'.root-menu')+'>[role="listbox"]')
+    if(!current||!list||!surface.contains(list))throw Error('组件库菜单已变化。')
+    validTarget(current);const box=current.getBoundingClientRect(),area=list.getBoundingClientRect(),delta=box.top<area.top+2?box.top-area.top-2:box.bottom>area.bottom-2?box.bottom-area.bottom+2:0
+    const distance=reduced?delta:Math.max(-24,Math.min(24,delta)),top=Math.max(0,Math.min(list.scrollHeight-list.clientHeight,list.scrollTop+distance))
+    if(top!==list.scrollTop){list.scrollTo({top,behavior:'instant'});previous=undefined;stable=0;return}
+    if(box.top<area.top||box.bottom>area.bottom){previous=undefined;stable=0;return}
+    validTarget(current,true);stable=previous&&Math.abs(previous.x-box.x)<.5&&Math.abs(previous.y-box.y)<.5?stable+1:0;previous=box;return stable>=2?current:undefined
+   })
+  }
+  const surface=await until(()=>menu?.element());let parent=await until(()=>itemsFor(surface).find(item=>item.getAttribute('aria-label')===t('组件库')))
+  const parentRevision=surface.dataset.noteMenuRevision;await wait(1000);parent=await revealItem(surface,parent);await point(parent,'移动到组件库，展开二级菜单','move');itemsFor(surface)
   parent.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}))
-  const child=await until(()=>surface.dataset.noteMenuRevision!==parentRevision&&itemsFor(surface,true).find(item=>item.getAttribute('aria-label')===t('行情面板')))
+  let child=await until(()=>surface.dataset.noteMenuRevision!==parentRevision&&itemsFor(surface,true).find(item=>item.getAttribute('aria-label')===t('行情面板')))
+  child=await revealItem(surface,child,true)
   let childBox:DOMRect|undefined,childStable=0
   await until(()=>{if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');validTarget(child,true);const box=child.getBoundingClientRect();childStable=childBox&&Math.abs(box.x-childBox.x)<.5&&Math.abs(box.y-childBox.y)<.5?childStable+1:0;childBox=box;return childStable>=2})
   await wait(1000);await point(child,'在组件库二级菜单选择行情面板');if(!itemsFor(surface,true).includes(child))throw Error('组件库菜单已变化。');child.click()
