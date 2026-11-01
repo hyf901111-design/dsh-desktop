@@ -8,7 +8,7 @@ const {syncProfileRuntimePatches,verifyProfileRuntimePatches}=createRequire(impo
 it('ships patched runtime into the independent plugin profile and verifies parity',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'profile-patches-'))
  try{
-  for(const name of ['dsh-llm','dsh-tool-fs','dsh-subagent','dsh-skill','dsh-message-feedback','dsh-tool-bash','dsh-tool-todo']){
+  for(const name of ['dsh-llm','dsh-tool-fs','dsh-subagent','dsh-skill','dsh-message-feedback','dsh-tool-bash','dsh-tool-todo','dsh-tool-goal']){
    const source=JSON.parse(await readFile(`node_modules/@deepseek-ai/${name}/package.json`,'utf8'))
    const dir=path.join(root,'node_modules/@deepseek-ai',name)
    await mkdir(path.join(dir,'lib'),{recursive:true})
@@ -23,6 +23,10 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   await mkdir(path.join(nestedBash,'lib'),{recursive:true})
   await writeFile(path.join(nestedBash,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
   await writeFile(path.join(nestedBash,'lib/index.js'),'unpatched nested bash copy')
+  const nestedGoal=path.join(root,'node_modules/.pnpm/@deepseek-ai+dsh-tool-goal@0.1.0-rc.7_peer/node_modules/@deepseek-ai/dsh-tool-goal')
+  await mkdir(path.join(nestedGoal,'lib'),{recursive:true})
+  await writeFile(path.join(nestedGoal,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
+  await writeFile(path.join(nestedGoal,'lib/index.js'),'unpatched nested goal policy')
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow()
   const digest=await syncProfileRuntimePatches(process.cwd(),root)
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-subagent/lib/index.js'),'utf8')).toContain('CANVAS_TASK_OWNED_SETTLEMENT')
@@ -33,6 +37,9 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   expect(bash).toContain('kind: args.background_kind==="service"?"bash-service":"bash"')
   expect(await readFile(path.join(nestedBash,'lib/index.js'),'utf8')).toBe(bash)
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js'),'utf8')).toContain('task-progress-continuation:v4')
+  const goal=await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-tool-goal/lib/index.js'),'utf8')
+  expect(goal).toContain('sherlock:goal-tool-stage-guidance:rc7:v1')
+  expect(await readFile(path.join(nestedGoal,'lib/index.js'),'utf8')).toBe(goal)
   expect(digest).toMatch(/^[a-f0-9]{64}$/)
   await verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))
   await writeFile(path.join(nested,'lib/index.js'),'policy was dropped')
@@ -46,6 +53,13 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow(/parity/)
   await syncProfileRuntimePatches(process.cwd(),root)
   expect(await readFile(path.join(nestedBash,'lib/index.js'),'utf8')).toBe(bash)
+  await writeFile(path.join(nestedGoal,'lib/index.js'),'goal stage policy was dropped')
+  await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow(/parity/)
+  await syncProfileRuntimePatches(process.cwd(),root)
+  expect(await readFile(path.join(nestedGoal,'lib/index.js'),'utf8')).toBe(goal)
+  await writeFile(path.join(nestedGoal,'package.json'),JSON.stringify({version:'99'}))
+  await expect(syncProfileRuntimePatches(process.cwd(),root)).rejects.toThrow(/version/)
+  await writeFile(path.join(nestedGoal,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
   await writeFile(path.join(nestedBash,'package.json'),JSON.stringify({version:'99'}))
   await expect(syncProfileRuntimePatches(process.cwd(),root)).rejects.toThrow(/version/)
   await writeFile(path.join(nestedBash,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
