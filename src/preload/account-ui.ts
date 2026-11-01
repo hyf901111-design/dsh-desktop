@@ -779,15 +779,25 @@ export function mountAccountUi(
       renderAccount(root)
     } else back.focus()
   }
-  document.addEventListener('pointerdown', (event) => {
+  const dismissMenuOutside = (event: Event) => {
     if (
       menu &&
       !menu.contains(event.target as Node) &&
       !trigger?.contains(event.target as Node) &&
       !menuAnchor?.contains(event.target as Node)
-    )
+    ) {
+      const exploreHost = options.explore ? menu.closest('dialog.odyssey-explore') : null
+      if (event.type === 'click' && !exploreHost) return
+      const backdrop = exploreHost && (event.target === exploreHost || event.target === exploreHost.querySelector(':scope > .odyssey-explore-edge'))
+      // Keep the popover until the background click can be owned here. Removing
+      // it on pointerdown lets the same gesture also close the parent dialog.
+      if (backdrop && event.type === 'pointerdown') return
       closeMenu()
-  })
+      if (backdrop) event.stopPropagation()
+    }
+  }
+  document.addEventListener('pointerdown', dismissMenuOutside)
+  document.addEventListener('click', dismissMenuOutside, true)
   document.addEventListener(
     'keydown',
     (event) => {
@@ -846,6 +856,8 @@ export function mountAccountUi(
     localeObserver.disconnect()
     settingsBackground.dispose()
     closeMenu()
+    document.removeEventListener('pointerdown', dismissMenuOutside)
+    document.removeEventListener('click', dismissMenuOutside, true)
     style.remove()
     document.defaultView?.removeEventListener('sherlock:account-menu-request',exploreAccount)
     document.defaultView?.removeEventListener('sherlock:account-state-request',publishAccountState)

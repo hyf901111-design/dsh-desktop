@@ -26,10 +26,10 @@ beforeAll(async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },30000)
 afterAll(async()=>browser?.close())
-async function open(width=1100,existing?:number[]){
+async function open(width=1100,existing?:number[],frame?:{left:number;right:number}){
  const session='table-'+(++serial),context=await browser.newContext({viewport:{width,height:850}}),page=await context.newPage(),errors:string[]=[];page.on('pageerror',(error:Error)=>errors.push(error.message));page.setDefaultTimeout(3500)
  await page.exposeBinding('tableStore',async(_:unknown,method:string,input:any)=>{if(method==='load')return store.load('table-fixture',session);if(method==='save')return store.save('table-fixture',session,input.revision,input.content,input.clientId);if(method==='draft')return store.draft('table-fixture',session,input.clientId,input.revision,input.content)})
- await page.route('https://native-table.test/**',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body data-workspace-surface="notes" style="margin:0"><header data-srb-session-header data-ework-notes-session="'+session+'"></header><section class="en-root" style="left:0;right:0"><div id="root" class="en-editor-host"></div></section><button id="outside" style="position:fixed;right:4px;bottom:4px;z-index:999">外部</button></body></html>'}))
+ await page.route('https://native-table.test/**',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><html data-odyssey-locale="zh"><body data-workspace-surface="notes" style="margin:0"><header data-srb-session-header data-ework-notes-session="'+session+'"></header><section class="en-root" style="left:'+(frame?.left??0)+'px;right:'+(frame?.right??0)+'px"><div id="root" class="en-editor-host"></div></section><button id="outside" style="position:fixed;right:4px;bottom:4px;z-index:999">外部</button></body></html>'}))
  await page.goto('https://native-table.test/?session='+session);await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.bn-editor').waitFor()
  await page.evaluate((existing?:number[])=>{const w=window as any,blocks:any[]=[{id:'intro',type:'paragraph',content:'表格前的原始正文。'},{id:'anchor',type:'paragraph'},{id:'tail',type:'paragraph',content:'表格后的原始正文。'}];if(existing)blocks.splice(2,0,{id:'native-table',type:'table',content:{type:'tableContent',columnWidths:existing,headerRows:0,rows:Array.from({length:8},()=>({cells:Array(8).fill('')}))}});w.tableEditor.replaceBlocks(w.tableEditor.document,blocks)},existing)
  await save(page);await page.evaluate(()=>(window as any).tableReopen());await page.locator('.bn-editor').waitFor();expect(errors).toEqual([])
@@ -192,11 +192,11 @@ it('keeps controls icon-only and selects a real native row or column from its th
  }finally{await f.close()}
 },15000)
 
-it('uses a full-height ten-pixel width target, keeps the separate add-column target, and persists header toggles',async()=>{
+it('uses a short ten-pixel width grip, keeps the separate add-column target, and persists header toggles',async()=>{
  const f=await open();try{
   await f.page.evaluate(()=>(window as any).tableInsert());await clickCell(f.page,1,1)
   const handle=f.page.getByRole('separator',{name:'调整表格整体宽度'}),bounds=await handle.boundingBox(),table=await f.page.locator('[data-id="native-table"] table').boundingBox()
-  expect(bounds.width).toBe(10);expect(bounds.height).toBeGreaterThan(300);expect(bounds.y).toBeCloseTo(table.y,0)
+  expect(bounds.width).toBe(10);expect(bounds.height).toBe(20);expect(bounds.y).toBeGreaterThan(table.y+table.height-50)
   expect(await handle.evaluate((node:HTMLElement)=>{const b=node.getBoundingClientRect();return node.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2))})).toBe(true)
   await f.page.getByRole('button',{name:'表格操作',exact:true}).click();await f.page.getByRole('menuitemcheckbox',{name:'标题行',exact:true}).click();expect(await f.page.locator('[data-id="native-table"] tr').first().locator('th').count()).toBe(8)
   await f.page.getByRole('button',{name:'表格操作',exact:true}).click();await f.page.getByRole('menuitemcheckbox',{name:'标题列',exact:true}).click();const block=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'));expect(block.content.headerRows).toBe(1);expect(block.content.headerCols).toBe(1)
@@ -216,7 +216,7 @@ it('starts a three-column Slash table at a compact natural width without placeho
 it('double-clicks the visible width edge to fit an old wide table and prevents accidental oversize whole-table drags',async()=>{
  const f=await open(800,[180,160,140,120,100,90,80,70]);try{
   await clickCell(f.page,2,2);const before=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table')),handle=f.page.getByRole('separator',{name:'调整表格整体宽度'})
-  await handle.dblclick();const fit=await f.page.evaluate(()=>(window as any).tableLayout());expect(fit.tableWidth).toBeLessThanOrEqual(fit.wrapperWidth);expect(fit.bodyWidth).toBe(800)
+  expect(await handle.count()).toBe(0);await f.page.locator('[data-id="native-table"] .tableWrapper').evaluate((node:HTMLElement)=>{node.scrollLeft=node.scrollWidth});await handle.dblclick();const fit=await f.page.evaluate(()=>(window as any).tableLayout());expect(fit.tableWidth).toBeLessThanOrEqual(fit.wrapperWidth);expect(fit.bodyWidth).toBe(800)
   const box=await handle.boundingBox();await f.page.mouse.move(box.x+box.width/2,box.y+box.height/2);await f.page.mouse.down();await f.page.mouse.move(1800,box.y+box.height/2,{steps:8});await f.page.mouse.up();const after=await f.page.evaluate(()=>(window as any).tableLayout());expect(after.columns.reduce((a:number,b:number)=>a+b,0)).toBe(fit.columns.reduce((a:number,b:number)=>a+b,0));expect(after.bodyWidth).toBe(800)
   await f.page.evaluate(()=>(window as any).tableEditor.undo());expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))).toEqual(before);expect(f.errors).toEqual([])
  }finally{await f.close()}
@@ -228,5 +228,132 @@ it('keeps compact edge controls and the whole-table menu readable in the real da
   await f.page.evaluate(()=>(window as any).tableInsert());await f.page.evaluate(()=>(window as any).tableSetDark(true));await clickCell(f.page,2,2);await f.page.getByRole('button',{name:'表格操作',exact:true}).click();const menu=f.page.getByRole('menu',{name:'表格操作',exact:true})
   const colors=await menu.evaluate((node:HTMLElement)=>({background:getComputedStyle(node).backgroundColor,color:getComputedStyle(node).color,border:getComputedStyle(node).borderTopColor}));const palette=await f.page.evaluate(()=>{const probe=document.createElement('div');probe.style.cssText='background:var(--en-popup);color:var(--en-ink);border:1px solid var(--en-border)';document.querySelector('.en-root')!.append(probe);const style=getComputedStyle(probe),value={background:style.backgroundColor,color:style.color,border:style.borderTopColor};probe.remove();return value});expect(colors).toEqual(palette);expect(Number(colors.background.match(/\d+/)![0])).toBeLessThan(70);expect(Number(colors.color.match(/\d+/)![0])).toBeGreaterThan(180)
   await proof(f.page,'dark-table-menu',{colors});await f.page.keyboard.press('Escape');expect(await f.page.getByRole('menu').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+
+it.each([false,true])('keeps wide-table add controls inside the note viewport through horizontal scrolling without rewriting saved widths in dark=%s',async dark=>{
+ const old=[180,160,140,120,100,90,80,70],f=await open(1200,old,{left:220,right:504});try{
+  if(dark)await f.page.evaluate(()=>(window as any).tableSetDark(true));await clickCell(f.page,2,1)
+  const table=f.page.locator('[data-id="native-table"] table'),wrapper=f.page.locator('[data-id="native-table"] .tableWrapper'),note=f.page.locator('.en-document-scroll')
+  const before=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))
+  for(const fraction of[0,.5,1]){
+   await wrapper.evaluate((node:HTMLElement,fraction:number)=>{node.scrollLeft=(node.scrollWidth-node.clientWidth)*fraction},fraction)
+   const bounds=await table.boundingBox(),clip=await note.boundingBox(),wrap=await wrapper.boundingBox()
+   await f.page.mouse.move(Math.max(bounds.x,wrap.x)+28,bounds.y+bounds.height+8)
+   const add=f.page.locator('.bn-extend-button-add-remove-rows');await add.waitFor({state:'visible'});const button=await add.boundingBox()
+   await proof(f.page,'wide-add-row-'+dark+'-'+fraction,{dark,fraction,button,clip,wrap})
+   expect(button.x).toBeGreaterThanOrEqual(clip.x);expect(button.x+button.width).toBeLessThanOrEqual(clip.x+clip.width)
+   expect(button.y+button.height).toBeLessThanOrEqual(clip.y+clip.height)
+   expect(await add.evaluate((node:HTMLElement)=>{const b=node.getBoundingClientRect();return node.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2))})).toBe(true)
+   expect(await add.evaluate((node:HTMLElement)=>getComputedStyle(node).cursor)).toBe('pointer')
+   expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))).toEqual(before)
+  }
+  await save(f.page);await f.page.evaluate(()=>(window as any).tableReopen());await table.waitFor();expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))).toEqual(before)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('preserves existing unequal column widths when adding a column and resizing by keyboard',async()=>{
+ const old=[180,160,140,120,100,90,80,70],f=await open(1200,old,{left:220,right:504});try{
+  await clickCell(f.page,2,1)
+  const wrapper=f.page.locator('[data-id="native-table"] .tableWrapper'),table=f.page.locator('[data-id="native-table"] table')
+  await wrapper.evaluate((node:HTMLElement)=>{node.scrollLeft=node.scrollWidth})
+  const box=await table.boundingBox();await f.page.mouse.move(box.x+box.width+16,box.y+45)
+  const add=f.page.locator('.bn-extend-button-add-remove-columns');await add.waitFor({state:'visible'});await add.click()
+  const columns=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths)
+  await wrapper.evaluate((node:HTMLElement)=>{node.scrollLeft=node.scrollWidth})
+  expect(columns).toHaveLength(9);expect(columns.slice(0,8)).toEqual(old);expect(columns[8]).toBeGreaterThanOrEqual(35)
+  const handle=f.page.getByRole('separator',{name:'调整表格整体宽度'});await handle.focus();await handle.press('ArrowLeft')
+  const resized=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths)
+  expect(resized.reduce((a:number,b:number)=>a+b,0)).toBe(columns.reduce((a:number,b:number)=>a+b,0)-8);expect(resized[0]).toBeGreaterThan(resized[7]*2)
+  await save(f.page);await f.page.evaluate(()=>(window as any).tableReopen());await table.waitFor();expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths)).toEqual(resized)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('keeps native row and column rails, plus buttons and the short resize grip inside a scrolled note between side panels',async()=>{
+ const old=[180,160,140,120,100,90,80,70],f=await open(1200,old,{left:220,right:504});try{
+  await f.page.evaluate(()=>{const w=window as any;w.tableEditor.insertBlocks(Array.from({length:10},(_,i)=>({type:'paragraph',content:'滚动前正文 '+i})),'intro','after')})
+  await clickCell(f.page,3,1)
+  const table=f.page.locator('[data-id="native-table"] table'),wrapper=f.page.locator('[data-id="native-table"] .tableWrapper'),scroll=f.page.locator('.en-document-scroll')
+  const before=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))
+  await scroll.evaluate((node:HTMLElement)=>{const table=node.querySelector('[data-id="native-table"] table')!;node.scrollTop+=table.getBoundingClientRect().top-node.getBoundingClientRect().top+60})
+  for(const fraction of[0,.5,1]){
+   await wrapper.evaluate((node:HTMLElement,fraction:number)=>{node.scrollLeft=(node.scrollWidth-node.clientWidth)*fraction},fraction)
+   const row=await table.locator('tr').nth(3).boundingBox(),wrap=await wrapper.boundingBox(),clip=await scroll.boundingBox()
+   const hoverX=await table.locator('tr').nth(3).evaluate((node:HTMLTableRowElement)=>{const wrapper=node.closest('.tableWrapper')!.getBoundingClientRect();const cells=[...node.cells].map(cell=>cell.getBoundingClientRect()).map(rect=>({left:Math.max(rect.left,wrapper.left),right:Math.min(rect.right,wrapper.right)})).sort((a,b)=>(b.right-b.left)-(a.right-a.left));return(cells[0]!.left+cells[0]!.right)/2});await f.page.mouse.move(hoverX,row.y+row.height/2)
+   const rail=f.page.locator('.en-native-table-edge-row .bn-table-handle');await rail.waitFor({state:'visible'})
+   const grip=f.page.getByRole('separator',{name:'调整表格整体宽度'}),actual=await table.boundingBox(),endVisible=actual.x+actual.width<=wrap.x+wrap.width+.5;expect(await grip.count()).toBe(endVisible?1:0)
+   for(const control of[rail,f.page.locator('.en-native-table-edge-column .bn-table-handle'),f.page.getByRole('button',{name:'添加列',exact:true}),...(endVisible?[grip]:[])]){
+    const bounds=await control.boundingBox();expect(bounds.x).toBeGreaterThanOrEqual(clip.x);expect(bounds.x+bounds.width).toBeLessThanOrEqual(clip.x+clip.width);expect(bounds.y).toBeGreaterThanOrEqual(clip.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(clip.y+clip.height)
+    expect(await control.evaluate((node:HTMLElement)=>{const b=node.getBoundingClientRect();return node.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2))})).toBe(true)
+   }
+   const add=f.page.getByRole('button',{name:'添加列',exact:true}),a=await add.boundingBox(),b=endVisible?await grip.boundingBox():undefined;if(b)expect(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y).toBe(true)
+   await proof(f.page,'nested-scroll-rails-'+fraction,{clip,wrap,add:a,resize:b,table:await table.boundingBox()})
+   expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))).toEqual(before)
+  }
+  await f.page.getByRole('button',{name:'添加行',exact:true}).click();expect(await table.locator('tr').count()).toBe(9);expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths)).toEqual(old)
+  await f.page.evaluate(()=>(window as any).tableEditor.undo());expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('fills a newly inserted native menu column on width adjustment without flattening earlier unequal columns',async()=>{
+ const old=[180,160,140,120,100,90,80,70],f=await open(1200,old,{left:220,right:504});try{
+  await clickCell(f.page,2,1);await commandMenu(f.page,'column');await f.page.getByRole('menuitem',{name:'在右侧插入列',exact:true}).click()
+  const columns=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths);expect(columns.slice(0,2)).toEqual(old.slice(0,2));expect(columns.slice(3)).toEqual(old.slice(2))
+  await f.page.locator('[data-id="native-table"] .tableWrapper').evaluate((node:HTMLElement)=>{node.scrollLeft=node.scrollWidth});const grip=f.page.getByRole('separator',{name:'调整表格整体宽度'});await grip.focus();await grip.press('ArrowLeft');const after=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths)
+  expect(after.every((width:number)=>Number.isFinite(width)&&width>=35)).toBe(true);expect(after[0]).toBeGreaterThan(after[8]*2);expect(after[0]).toBeGreaterThan(170)
+  await save(f.page);await f.page.evaluate(()=>(window as any).tableReopen());await f.page.locator('[data-id="native-table"] table').waitFor();expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table').content.columnWidths)).toEqual(after);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('inserts from Feishu-style blue boundary hotspots with native undo and preserves the original hundred-pixel columns',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>(window as any).tableSlashInsert());const table=f.page.locator('[data-id="anchor"] table')
+  await table.locator('tr').nth(0).locator('td').nth(1).locator('p').click();await f.page.keyboard.type('原第二列')
+  await table.locator('tr').nth(1).locator('td').nth(0).locator('p').click();await f.page.keyboard.type('原第二行')
+  const before=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'));const toolbar=await f.page.getByRole('toolbar',{name:'原生表格操作'}).boundingBox();expect(toolbar.width).toBe(44);expect(toolbar.height).toBe(30);expect((await table.locator('tr').first().boundingBox()).height).toBe(40)
+  const insert=f.page.locator('[data-note-table-insert-column="1"]');await insert.hover();await expect.poll(()=>insert.evaluate((node:HTMLElement)=>Number(getComputedStyle(node).opacity))).toBe(1)
+  const hot=await insert.boundingBox();expect(hot.width).toBe(22);expect(hot.height).toBe(24);expect(await insert.evaluate((node:HTMLElement)=>getComputedStyle(node).cursor)).toBe('pointer')
+  const line=await f.page.locator('.en-native-table-insert-line').boundingBox();expect(line.width).toBe(1);expect(line.height).toBeGreaterThan(55);await proof(f.page,'blue-column-boundary',{hot,line});await insert.click()
+  const after=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'));expect(after.content.columnWidths).toEqual([100,100,100,100]);expect(after.content.rows[0].cells).toHaveLength(4);expect(JSON.stringify(after.content.rows[0].cells[2])).toContain('原第二列')
+  expect(await f.page.evaluate(()=>(window as any).tableEditor.prosemirrorState.selection.$from.parent.textContent)).toBe('')
+  await f.page.evaluate(()=>(window as any).tableEditor.undo());expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'))).toEqual(before);await f.page.evaluate(()=>(window as any).tableEditor.redo());expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'))).toEqual(after);await f.page.evaluate(()=>(window as any).tableEditor.undo());expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'))).toEqual(before)
+  const addRow=f.page.locator('[data-note-table-insert-row="1"]');await addRow.hover();await expect.poll(()=>addRow.evaluate((node:HTMLElement)=>Number(getComputedStyle(node).opacity))).toBe(1);await addRow.click()
+  const row=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'));expect(row.content.rows).toHaveLength(3);expect(row.content.columnWidths).toEqual([100,100,100]);expect(JSON.stringify(row.content.rows[2].cells[0])).toContain('原第二行')
+  await save(f.page);await f.page.evaluate(()=>(window as any).tableReopen());await table.waitFor();expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('anchor'))).toEqual(row);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('opens the real native row menu by right-clicking its ten-pixel rail and leaves column hover transitions lightweight',async()=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>(window as any).tableInsert());await clickCell(f.page,2,2)
+  const cell=f.page.locator('[data-id="native-table"] tr').nth(2).locator('td').nth(2);await cell.locator('p').hover()
+  const rail=f.page.locator('.en-native-table-edge-row .bn-table-handle');await rail.click({button:'right'});const menu=f.page.locator('.bn-table-handle-menu');await menu.waitFor();expect(await menu.getByRole('menuitem',{name:'下方添加行',exact:true}).count()).toBe(1)
+  await menu.getByRole('menuitem',{name:'下方添加行',exact:true}).click();expect(await f.page.locator('[data-id="native-table"] tr').count()).toBe(9);await expect.poll(()=>menu.count()).toBe(0)
+  await cell.locator('p').hover();const column=f.page.locator('.en-native-table-edge-column .bn-table-handle');await column.hover();expect((await column.boundingBox()).height).toBe(10);expect(await column.evaluate((node:HTMLElement)=>getComputedStyle(node).transitionDuration)).not.toBe('0s');await column.click({button:'right'});await menu.waitFor();expect(await menu.getByRole('menuitem',{name:'右侧添加列',exact:true}).count()).toBe(1)
+  await f.page.keyboard.press('Escape');await expect.poll(()=>menu.count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('reveals Add Row only at the actual bottom of a long native table and reaches it by normal note scrolling',async()=>{
+ const f=await open(1200,[180,160,140,120,100,90,80,70],{left:220,right:504});try{
+  await f.page.evaluate(()=>{const w=window as any,block=w.tableEditor.getBlock('native-table');w.tableEditor.updateBlock(block,{content:{...block.content,rows:Array.from({length:30},()=>({cells:Array(8).fill('')}))}})});await clickCell(f.page,2,1)
+  const scroll=f.page.locator('.en-document-scroll'),add=f.page.getByRole('button',{name:'添加行',exact:true});expect(await add.count()).toBe(0)
+  await scroll.evaluate((node:HTMLElement)=>{node.scrollTop=node.scrollHeight});await add.waitFor({state:'visible'});const box=await add.boundingBox(),note=await scroll.boundingBox();expect(box.y+box.height).toBeLessThanOrEqual(note.y+note.height)
+  const before=await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'));await add.click();expect(await f.page.locator('[data-id="native-table"] tr').count()).toBe(31);expect(await f.page.evaluate(()=>(window as any).tableEditor.prosemirrorState.selection.$from.parent.textContent)).toBe('')
+  await f.page.evaluate(()=>(window as any).tableEditor.undo());expect(await f.page.evaluate(()=>(window as any).tableEditor.getBlock('native-table'))).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+
+it('keeps the native last-column context menu fully readable and clickable inside a narrow note',async()=>{
+ const f=await open(1200,[180,160,140,120,100,90,80,70],{left:220,right:504});try{
+  await clickCell(f.page,2,1);await f.page.locator('[data-id="native-table"] .tableWrapper').evaluate((node:HTMLElement)=>{node.scrollLeft=node.scrollWidth})
+  const cell=f.page.locator('[data-id="native-table"] tr').nth(2).locator('td').nth(7);await cell.locator('p').hover();const rail=f.page.locator('.en-native-table-edge-column .bn-table-handle');await rail.click({button:'right'})
+  const menu=f.page.getByRole('menu',{name:'列操作',exact:true});await menu.waitFor();const note=await f.page.locator('.en-document-scroll').boundingBox(),bounds=await menu.boundingBox();await proof(f.page,'narrow-last-column-menu',{note,bounds})
+  expect(bounds.x).toBeGreaterThanOrEqual(note.x);expect(bounds.x+bounds.width).toBeLessThanOrEqual(note.x+note.width);expect(bounds.y).toBeGreaterThanOrEqual(note.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(note.y+note.height)
+  const last=menu.getByRole('menuitem',{name:'右侧添加列',exact:true});expect(await last.evaluate((node:HTMLElement)=>{const box=node.getBoundingClientRect();return node.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))})).toBe(true);await last.click();expect(await f.page.locator('[data-id="native-table"] tr').first().locator('td').count()).toBe(9);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)

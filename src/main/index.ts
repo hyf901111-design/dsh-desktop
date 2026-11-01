@@ -47,6 +47,8 @@ import { registerCanvasUseWeb } from './state/canvas-use-web'
 import {createGenerationDeliveryLog,GENERATION_DELIVERY_PREFIX} from './state/generation-delivery-log'
 import {createNotesGuideDiagnosticLog,recordNotesGuideConsoleMessage} from './state/notes-guide-diagnostics'
 import {NOTES_GUIDE_DIAGNOSTIC_PREFIX} from '../shared/notes-guide-diagnostics'
+import {createHomeGuideEntryDiagnosticLog,recordHomeGuideEntryConsoleMessage} from './state/home-guide-entry-diagnostics'
+import {HOME_GUIDE_ENTRY_DIAGNOSTIC_PREFIX} from '../shared/home-guide-entry-diagnostics'
 import { copyResearchFile } from './state/research-owned-files'
 import {randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
@@ -643,7 +645,9 @@ function createWindow(): BrowserWindow {
   })
   const generationDeliveryLog=createGenerationDeliveryLog(app.getPath('logs'))
   const notesGuideDiagnosticLog=createNotesGuideDiagnosticLog(app.getPath('logs'))
+  const homeGuideEntryDiagnosticLog=createHomeGuideEntryDiagnosticLog(app.getPath('logs'))
   window.webContents.on('console-message', (details) => {
+    if(details.level==='info'&&details.message.startsWith(HOME_GUIDE_ENTRY_DIAGNOSTIC_PREFIX))recordHomeGuideEntryConsoleMessage(homeGuideEntryDiagnosticLog,details,isTrustedMainWindowEvent({sender:window.webContents,senderFrame:details.frame},window))
     if(details.level==='info'&&details.message.startsWith(NOTES_GUIDE_DIAGNOSTIC_PREFIX))recordNotesGuideConsoleMessage(notesGuideDiagnosticLog,details,isTrustedMainWindowEvent({sender:window.webContents,senderFrame:details.frame},window))
     if(details.level==='info'&&details.message.startsWith(GENERATION_DELIVERY_PREFIX)&&isTrustedMainWindowEvent({sender:window.webContents,senderFrame:details.frame},window))generationDeliveryLog.write(details.message)
     if (details.level !== 'error') return

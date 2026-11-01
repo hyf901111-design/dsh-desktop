@@ -76,7 +76,7 @@ it('patches the real todo entry idempotently with existing projection behavior p
  const next=patchTaskProgressRuntime(source)
  expect(patchTaskProgressRuntime(next)).toBe(next)
  expect(next).toContain('installTaskProgressSync(ctx)')
- expect(next).toContain('/* sherlock:task-progress-continuation:v3 */')
+ expect(next).toContain('/* sherlock:task-progress-continuation:v4 */')
  expect(next).toContain('if (event.type === "todo/write") return event.data.todos;')
 })
 it('does not turn three unchanged background observation timeouts into progress or repeated model continuations',async()=>{

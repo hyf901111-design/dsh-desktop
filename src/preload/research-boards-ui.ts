@@ -983,7 +983,6 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (!flight) {
       flight = (async () => {
         if (previous) { await ensureGuideWorkspace(previous, valid); return previous }
-        if (records.filter(guideSessionAvailable).length >= 100) throw Error('已保存较多示例，请先整理不再需要的示例会话。')
         const title = homeGuideSessionTitle(kind,replay)
         const basePath = await defaultDirectory(); valid()
         const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath }); valid()
@@ -1009,8 +1008,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           await call('favorite.add', { identity: { ...value, title }, dedicated: true }); valid()
           temporaryBoards.keep(sessionId)
         }
-        const latest = guideRegistry(owner).filter(guideSessionAvailable)
-        if (latest.length >= 100) throw Error('已保存较多示例，请先整理不再需要的示例会话。')
+        // History is not an in-flight quota. Keep archived/offline records;
+        // the main-process schema and byte limit bound durable storage.
+        const latest = guideRegistry(owner)
         const next = [...latest, entry]
         if (guideStorage().setItem(guidePrefix + encodeURIComponent(owner), JSON.stringify({ version: 1, scope: owner, entries: next })) !== true) throw Error('示例保存失败，已创建的会话仍保留在本地。')
         guideRecords.set(owner, next); notify()

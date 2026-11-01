@@ -259,6 +259,9 @@ writeFileSync(subagentRuntimePath, patchCanvasTaskNotices(readFileSync(subagentR
 writeFileSync(conversationPath, patchCanvasRefresh(readFileSync(conversationPath, 'utf8')))
 
 import { patchTaskProgressRuntime } from './lib/task-progress-runtime.mjs'
+import { patchBashBackgroundLifecycle } from './lib/bash-background-lifecycle.mjs'
+const bashRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-bash/lib/index.js')
+writeFileSync(bashRuntimePath, patchBashBackgroundLifecycle(readFileSync(bashRuntimePath, 'utf8')))
 import { patchTodoRecovery, patchFileRecovery } from './lib/tool-recovery-guidance.mjs'
 import { patchTaskProgressClient } from './lib/task-progress-client.mjs'
 const todoRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js')

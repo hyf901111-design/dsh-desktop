@@ -15,7 +15,7 @@ export interface HomeThemeRenderer {
   dispose(): void
 }
 
-type Options = { dark: boolean; thumbnail?: boolean }
+type Options = { dark: boolean; thumbnail?: boolean; preview?: boolean }
 type UniformName = 'iResolution' | 'iTime' | 'uLightMode' | 'uDarkBackground' | 'uLightBackground' |
   'uP' | 'tScene' | 'tGlyphs' | 'uPixelRatio' | 'uStrength' | 'uScale' | 'uSeed' | 'uIntensity'
 type Uniforms = Record<UniformName, WebGLUniformLocation | null>

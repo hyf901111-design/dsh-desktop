@@ -5,9 +5,16 @@ const EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,getHomeGuideSession:
 const EXPORT='exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;'
 
 export function homeWorkbenchReplayCells(tab,m,sessionId){
-   const wide=m.minColumns<=10,pair=m.minColumns<=20;
-   const rows=tab==='overview'?[[['watchlist',10],['quote',30]],[['disclosure',13],['performance',14],['peers',13]]]:tab==='valuation'?[[['watchlist',10],['valuation',10],['matrix',20]],[['dividend',20],['cashflow',20]]]:[[['watchlist',10],['directory',10],['reader',20]],[['news',24],['analysis',16]]]
-   const responsive=rows.flatMap(row=>wide?[row]:pair?(row.length===3?[[[row[0][0],20],[row[1][0],20]],[[row[2][0],40]]]:[row.map(([role])=>[role,20])]):row.map(([role])=>[[role,40]]))
+   // The financial watchlist has a narrower readable floor than a report or
+   // valuation card. Preserve roughly 230–260px rather than inheriting the
+   // global 280px floor, which made a 650px canvas split into equal halves.
+   const step=m.step??(280+m.gap)/m.minColumns,available=40*step-m.gap,
+    watchlist=Math.max(4,Math.ceil((230+m.gap)/step),Math.round((Math.min(260,available*.25)+m.gap)/step)),pair=m.minColumns<=20;
+   const rows=tab==='overview'?[[['watchlist',watchlist],['quote',40-watchlist]],[['disclosure',13],['performance',14],['peers',13]]]:tab==='valuation'?[[['watchlist',watchlist],['valuation',Math.max(10,m.minColumns)],['matrix',40-watchlist-Math.max(10,m.minColumns)]],[['dividend',20],['cashflow',20]]]:[[['watchlist',watchlist],['directory',Math.max(10,m.minColumns)],['reader',40-watchlist-Math.max(10,m.minColumns)]],[['news',24],['analysis',16]]]
+   const readable=([role,width])=>width>0&&(role==='watchlist'||width>=m.minColumns)
+   const responsive=rows.flatMap(row=>row.every(readable)?[row]:row[0][0]==='watchlist'&&40-watchlist>=m.minColumns?[
+    [['watchlist',watchlist],[row[1][0],40-watchlist]],...(row.length===3?[[[row[2][0],40]]]:[])
+   ]:row[0][0]!=='watchlist'&&pair?[[[row[0][0],20],[row[1][0],20]],...(row.length===3?[[[row[2][0],40]]]:[])]:row.map(([role])=>[[role,40]]))
    const cells=[];let y=0
    for(let r=0;r<responsive.length;r++){const row=responsive[r],pixels=tab==='overview'?(r===0?500:365):tab==='valuation'?(r===0?420:365):(r===0?500:365),h=Math.ceil((pixels+m.gap)/m.rowStep);let x=0;for(const[role,width]of row){cells.push({id:'hwb:'+sessionId+':'+tab+':'+role,x,y,w:width,h});x+=width}y+=h}
 

@@ -1,4 +1,5 @@
-// Exact image fills exported by Figma from the approved React Bits cards.
+// CRT retains its approved Figma fill; Dither is captured from the live card renderer.
+// Regenerate the last two themes with scripts/capture-home-theme-previews.mjs.
 import type { ReactBitsThemeId } from './home-reactbits-renderer'
 import crt_warp_light from './home-theme-assets/react-bits/crt-warp-light.jpg?inline'
 import crt_warp_dark from './home-theme-assets/react-bits/crt-warp-dark.jpg?inline'

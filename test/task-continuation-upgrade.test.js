@@ -7,6 +7,7 @@ import {parse} from '@babel/parser'
 import {createHash} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
+import {patchBashBackgroundLifecycle,stripBashBackgroundLifecycle} from '../scripts/lib/bash-background-lifecycle.mjs'
 import {legacyTaskProgressSource} from './fixtures/task-progress-v1.js'
 
 // Exercise exactly the Node installer, including its strict byte guard.
@@ -43,8 +44,9 @@ it('upgrades an already installed v1 runtime and produces identical bytes on a s
 it('upgrades an older continuation marker and dock once without duplicating the helper or losing original schemas',async()=>{
  const runtime=legacyTaskProgressSource(await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8')).replace('/* sherlock:task-progress-sync:v1 */','/* sherlock:task-progress-sync:v1 */\n/* sherlock:task-progress-continuation:v2 */')
  const upgraded=patchTaskProgressRuntime(runtime)
- expect(upgraded).toContain('/* sherlock:task-progress-continuation:v3 */')
+ expect(upgraded).toContain('/* sherlock:task-progress-continuation:v4 */')
  expect(upgraded).not.toContain('state.reconciled = true')
+ expect(upgraded).not.toContain('/* sherlock:task-progress-continuation:v2 */')
  expect(patchTaskProgressRuntime(upgraded)).toBe(upgraded)
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),oldDock=patchTaskProgressClient(source).replace('/* sherlock:task-progress-resume:v3 */','/* sherlock:task-progress-resume:v2 */').replace('clicked=react.useRef(null)','clicked=react.useRef(false)')
  const client=patchTaskProgressClient(oldDock)
@@ -57,4 +59,23 @@ it('fails closed on a truncated existing runtime or drifted current install rath
  expect(()=>patchTaskProgressRuntime(original.replace('installTaskProgressSync(ctx);',''))).toThrow('installation is incomplete')
  const current=patchTaskProgressRuntime(original)
  expect(()=>patchTaskProgressRuntime(current.replace('state.noProgress >= 2','state.noProgress >= 999'))).toThrow('runtime drifted')
+ expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-sync:v1 */',''))).toThrow('installation is incomplete')
+ expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v4 */\n/* sherlock:task-progress-continuation:v4 */'))).toThrow('marker drifted')
+ expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v99 */'))).toThrow('marker drifted')
+})
+
+it('migrates only the exact prior v3 declaration and leaves the current v4 idempotent',async()=>{
+ const raw=await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8'),current=patchTaskProgressRuntime(raw),frozen=JSON.parse(await readFile('test/fixtures/task-progress-v3.json','utf8')).declaration
+ const node=parse(current,{sourceType:'module'}).program.body.find(node=>node.type==='FunctionDeclaration'&&node.id?.name==='installTaskProgressSync')
+ const previous=(current.slice(0,node.start)+frozen+current.slice(node.end)).replace('/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v3 */')
+ expect(patchTaskProgressRuntime(previous)).toBe(current);expect(patchTaskProgressRuntime(current)).toBe(current)
+ expect(()=>patchTaskProgressRuntime(previous.replace('!unfinished(state)) return','!unfinished(state)) return; // drift'))).toThrow('previous runtime drifted')
+})
+it('declares service lifecycle at the actual bash producer only and strictly preserves its finite default/schema on rebuild',async()=>{
+ const original=await readFile('node_modules/@deepseek-ai/dsh-tool-bash/lib/index.js','utf8'),clean=stripBashBackgroundLifecycle(original),next=patchBashBackgroundLifecycle(clean)
+ expect(patchBashBackgroundLifecycle(next)).toBe(next);expect(stripBashBackgroundLifecycle(next)).toBe(clean)
+ expect(next).toContain('kind: args.background_kind==="service"?"bash-service":"bash"');expect(next).toContain('args.run_in_background!==true')
+ expect(()=>stripBashBackgroundLifecycle(next.replace('args.background_kind==="service"','args.background_kind==="finite"'))).toThrow('anchor drifted')
+ expect(()=>stripBashBackgroundLifecycle(next.replace('/* sherlock:bash-background-lifecycle:v1 */\n',''))).toThrow('partial install')
+ expect(()=>patchBashBackgroundLifecycle(clean.replace('kind: "bash",','kind: "changed",'))).toThrow('anchor drifted')
 })

@@ -229,3 +229,9 @@ describe('desktop Research canvas storage', () => {
     })
   })
 })
+
+it('preserves all 101 guide histories across a fresh storage instance while enforcing the existing byte and schema boundaries',()=>{
+ const directory=temporaryUserData(),key='sherlock.home-guide.sessions.v1:account%3Acapacity',entries=Array.from({length:101},(_,i)=>({kind:'board',sessionId:'retained-'+i,cwd:'/workspace/retained-'+i,title:'自选行情示例看板（演示案例）',createdAt:i+1})),record={version:1,scope:'account:capacity',entries},storage=new ResearchCanvasStorage(directory),value=JSON.stringify(record)
+ expect(storage.setItem(key,value)).toBe(true);expect(JSON.parse(new ResearchCanvasStorage(directory).getItem(key)!).entries).toEqual(entries)
+ expect(storage.setItem(key,JSON.stringify({...record,entries:[...entries,entries[0]]}))).toBe(false);expect(storage.setItem(key,value+' '.repeat(RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH))).toBe(false);expect(new ResearchCanvasStorage(directory).getItem(key)).toBe(value)
+})
