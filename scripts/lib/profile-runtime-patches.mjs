@@ -1,5 +1,6 @@
 import {patchCanvasTaskNotices} from './canvas-task-notices.mjs'
 import {patchTaskProgressRuntime} from './task-progress-runtime.mjs'
+import {patchPlanPendingReplay} from './plan-mode-pending-replay.mjs'
 import {patchBashBackgroundLifecycle} from './bash-background-lifecycle.mjs'
 import {patchMemoryRequestContext} from './memory-request-context.mjs'
 import {patchNoteFeedbackHost} from './notes-reply-actions.mjs'
@@ -13,6 +14,7 @@ const entries = [
   ['@deepseek-ai/dsh-agent-loop', '/* ework:memory-request-context:rc7:v1 */', true],
   ['@deepseek-ai/dsh-subagent', '/* CANVAS_TASK_OWNED_SETTLEMENT */', true],
   ['@deepseek-ai/dsh-tool-todo', '/* sherlock:task-progress-sync:v1 */', true],
+  ['@deepseek-ai/dsh-plan-mode', '/* sherlock:plan-pending-replay:rc7:v1 */', true],
   ['@deepseek-ai/dsh-tool-bash', '/* sherlock:bash-background-lifecycle:v1 */', true],
   ['@deepseek-ai/dsh-message-feedback', '/* ework:note-feedback-target:v1 */', true],
   ['@deepseek-ai/dsh-llm', 'function toolImagesAsText(message)'],
@@ -59,10 +61,10 @@ async function sources(projectRoot, modulesRoot) {
       readFile(path.join(sourceRoot, 'package.json'), 'utf8'),
       readFile(path.join(sourceRoot, 'lib/index.js'), 'utf8')
     ])
-    const source = name === '@deepseek-ai/dsh-agent-loop' ? patchMemoryRequestContext(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-tool-bash' ? patchBashBackgroundLifecycle(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
+    const source = name === '@deepseek-ai/dsh-agent-loop' ? patchMemoryRequestContext(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-plan-mode' ? patchPlanPendingReplay(originalSource) : name === '@deepseek-ai/dsh-tool-bash' ? patchBashBackgroundLifecycle(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
     if (JSON.parse(sourceManifest).version !== JSON.parse(targetManifest).version) throw Error(`Plugin runtime version mismatch: ${name}`)
     if (!source.includes(marker)) throw Error(`Required runtime patch missing: ${name}`)
-    const targets=['@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop','@deepseek-ai/dsh-tool-bash'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot]
+    const targets=['@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop','@deepseek-ai/dsh-tool-bash','@deepseek-ai/dsh-plan-mode'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot]
     const files=[]
     for(const target of targets){
       if(JSON.parse(await readFile(path.join(target,'package.json'),'utf8')).version!==JSON.parse(sourceManifest).version)throw Error(`Plugin runtime version mismatch: ${name}`)
