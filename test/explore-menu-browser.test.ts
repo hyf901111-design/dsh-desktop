@@ -38,6 +38,7 @@ async function fixture({dark=true,width=1600,height=1000,reduced=true,collapsed=
  return{page,context,errors,async close(){await context.close()}}
 }
 async function open(page:any){await page.getByRole('button',{name:'探索',exact:true}).click();await uiExpect(page.getByRole('dialog',{name:'探索',exact:true})).toBeVisible();await page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>Promise.all(node.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished)))}
+async function clickExploreControl(page:any,selector:string){const node=page.locator('dialog.odyssey-explore '+selector),box=await node.boundingBox();expect(box).not.toBeNull();const point={x:box.x+box.width/2,y:box.y+box.height/2};expect(await node.evaluate((node:HTMLElement,point:any)=>node.contains(document.elementFromPoint(point.x,point.y)),point)).toBe(true);await page.mouse.click(point.x,point.y)}
 it('replaces the bottom account entry with an always-flowing orb and opens a centered full-client menu without changing the draft',async()=>{
  const f=await fixture({reduced:false});try{
   const input=f.page.getByRole('textbox',{name:'保留的原输入框'});await input.focus()
@@ -67,6 +68,46 @@ it('searches actual source rows by keyword and all four categories, clears and c
 it('keeps account actions clickable above the modal and closes Explore before opening the original settings shell',async()=>{
  const f=await fixture();try{await open(f.page);await f.page.getByRole('button',{name:'研究员，打开账户菜单',exact:true}).click();const menu=f.page.getByRole('menu');await uiExpect(menu).toBeVisible();expect(await menu.evaluate((node:HTMLElement)=>node.matches(':popover-open')&&!!node.closest('dialog'))).toBe(true);await uiExpect(menu.getByRole('menuitem',{name:'退出登录',exact:true})).toBeVisible();await f.page.keyboard.press('Escape');await uiExpect(menu).not.toBeVisible();await uiExpect(f.page.getByRole('button',{name:'研究员，打开账户菜单',exact:true})).toBeFocused();await f.page.getByRole('button',{name:'设置',exact:true}).click();await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible();await uiExpect(f.page.locator('.VOzbGW_panel')).toBeVisible();expect(f.errors).toEqual([])}finally{await f.close()}
 },20000)
+it.each([true,false])('dismisses only the account popover on the first Explore background click in dark=%s',async dark=>{
+ const f=await fixture({dark});try{
+  await open(f.page);const dialog=f.page.locator('dialog.odyssey-explore'),anchor=f.page.locator('.odyssey-explore-account')
+  await f.page.evaluate(()=>{(window as any).underlyingNavigations=0;for(const side of ['left','right']){const node=document.createElement('button');node.textContent='底层导航';node.style.cssText='position:fixed;top:360px;'+side+':0;width:160px;height:80px';node.onclick=()=>{(window as any).underlyingNavigations++};document.body.append(node)}})
+  for(const side of ['left','right']){
+   await anchor.click();await uiExpect(f.page.getByRole('menu')).toBeVisible()
+   const box=await dialog.boundingBox(),point={x:side==='left'?8:box.width-8,y:400}
+   const target=await f.page.evaluate(({x,y}:any)=>{const node=document.elementFromPoint(x,y);return{tag:node?.tagName,className:node?.className}},point)
+   await f.page.mouse.click(box.x+point.x,box.y+point.y)
+   await writeFile(evidence+'/account-dismiss-background-'+dark+'-'+side+'.json',JSON.stringify({target,exploreOpen:await dialog.evaluate((node:HTMLDialogElement)=>node.open),accountMenus:await f.page.getByRole('menu').count(),anchorExpanded:await anchor.getAttribute('aria-expanded'),underlyingNavigations:await f.page.evaluate(()=>(window as any).underlyingNavigations)},null,2))
+   await f.page.screenshot({path:evidence+'/account-dismiss-background-'+dark+'-'+side+'.png'})
+   await uiExpect(f.page.getByRole('menu')).not.toBeVisible();expect(await dialog.isVisible()).toBe(true);await uiExpect(anchor).toHaveAttribute('aria-expanded','false');expect(await f.page.evaluate(()=>(window as any).underlyingNavigations)).toBe(0)
+  }
+  await f.page.mouse.click(8,400);await uiExpect(dialog).not.toBeVisible();expect(await f.page.evaluate(()=>(window as any).underlyingNavigations)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['content','wallpapers','appearance','search','settings','close'])('dismisses the account popover while preserving the normal %s action',async control=>{
+ const f=await fixture();try{
+  await open(f.page);const dialog=f.page.locator('dialog.odyssey-explore');await f.page.locator('.odyssey-explore-account').click()
+  const selectors:Record<string,string>={content:'.odyssey-explore-brand',wallpapers:'#odyssey-explore-wallpapers-tab',appearance:'[data-explore-appearance]',search:'.odyssey-explore-tool[aria-label="搜索会话"]',settings:'.odyssey-explore-tool[aria-label="设置"]',close:'[data-explore-close]'}
+  await clickExploreControl(f.page,selectors[control]!)
+  await uiExpect(f.page.getByRole('menu')).not.toBeVisible()
+  if(control==='close'||control==='settings')await uiExpect(dialog).not.toBeVisible();else await uiExpect(dialog).toBeVisible()
+  if(control==='wallpapers')await uiExpect(f.page.getByRole('tab',{name:'主题壁纸',exact:true})).toHaveAttribute('aria-selected','true')
+  if(control==='appearance')await uiExpect(f.page.getByRole('button',{name:'切换为深色',exact:true})).toBeVisible()
+  if(control==='search')await uiExpect(f.page.getByRole('searchbox',{name:'搜索会话',exact:true})).toBeFocused()
+  if(control==='settings')await uiExpect(f.page.locator('.VOzbGW_panel')).toBeVisible()
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},10000)
+it('keeps account dismissal owned by the current click across Escape, pointer cancellation and Explore remount',async()=>{
+ const f=await fixture();try{
+  await open(f.page);const dialog=f.page.locator('dialog.odyssey-explore'),anchor=f.page.locator('.odyssey-explore-account')
+  await anchor.click();await f.page.keyboard.press('Escape');await uiExpect(f.page.getByRole('menu')).not.toBeVisible();await uiExpect(dialog).toBeVisible();await uiExpect(anchor).toBeFocused()
+  await dialog.click({position:{x:8,y:400}});await uiExpect(dialog).not.toBeVisible();await open(f.page);await anchor.click()
+  await dialog.dispatchEvent('pointerdown',{bubbles:true,pointerId:7});await dialog.dispatchEvent('pointercancel',{bubbles:true,pointerId:7})
+  await clickExploreControl(f.page,'[data-explore-close]');await uiExpect(dialog).not.toBeVisible();await f.page.evaluate(()=>(window as any).fixture.restart())
+  await open(f.page);await f.page.locator('dialog.odyssey-explore').click({position:{x:8,y:400}});await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible();expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it.each([true,false])('matches the R7 glass account menu and copies the actual pure public ID in dark=%s',async dark=>{
  const f=await fixture({dark});try{
   await open(f.page);const anchor=f.page.getByRole('button',{name:'研究员，打开账户菜单',exact:true});await anchor.click();const menu=f.page.getByRole('menu');await uiExpect(menu.getByRole('menuitem',{name:'复制用户 ID',exact:true})).toBeEnabled();await uiExpect(menu).toContainText('用户 ID：1234567890');expect(await menu.getByRole('menuitem').count()).toBe(2);expect(await menu.locator('.sherlock-account-avatar,.sherlock-account-menu-profile').count()).toBe(0);expect(await menu.getByText('设置',{exact:true}).count()).toBe(0)
