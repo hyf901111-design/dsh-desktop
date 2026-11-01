@@ -19860,6 +19860,125 @@
         ],
         "recordedAt": "2026-11-01T05:50:34.421Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "保持解释如何修改的问答补语范围，并保留独立后续写作请求",
+        "branch": "codex/feat/notes-sidebar-readonly-preview-20261101",
+        "baseCommit": "a68212f117c05960ac441776db4696b84baee50a",
+        "tipCommit": "9581746982fbcac215a1ab88c589605ad72cf784",
+        "commits": [
+          {
+            "commit": "0a796ff7d7bd09afc109db35ccaeb4b9c54d39dc",
+            "parents": [
+              "a68212f117c05960ac441776db4696b84baee50a"
+            ],
+            "subject": "修复笔记侧栏只读问答误生成正文预览"
+          },
+          {
+            "commit": "1faac7351358a8eccc878777128db5387af48365",
+            "parents": [
+              "0a796ff7d7bd09afc109db35ccaeb4b9c54d39dc"
+            ],
+            "subject": "保留解释问答之后明确提出的笔记写作交付"
+          },
+          {
+            "commit": "9581746982fbcac215a1ab88c589605ad72cf784",
+            "parents": [
+              "1faac7351358a8eccc878777128db5387af48365"
+            ],
+            "subject": "保持如何修改问答补语的完整作用范围"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-sidebar-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-chat-preview-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-sidebar-intent.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-sidebar-intent.test.js",
+              "test/notes-chat-preview-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "87/87最终Helper46+真实NotesApp→Main Host→HTTP runtime→Session/Store Browser41；新增2句解释如何…仍只问答，真实Host误标text也无正文预览，独立please/请新写作及前4合法追加需求保留。host-intent-final.log。",
+            "verifiedCommit": "9581746982fbcac215a1ab88c589605ad72cf784",
+            "completedAt": "2026-11-01T09:30:52.923328+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-ai.test.js",
+              "test/notes-output-compatibility.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "68/68最终runtime AI/公开输出协议聚焦，runtime-final.log。",
+            "verifiedCommit": "9581746982fbcac215a1ab88c589605ad72cf784",
+            "completedAt": "2026-11-01T09:30:52.923328+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit通过，typecheck.log。",
+            "verifiedCommit": "9581746982fbcac215a1ab88c589605ad72cf784",
+            "completedAt": "2026-11-01T09:30:52.923328+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "1faac7351358a8eccc878777128db5387af48365..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "strict successor仅helper与2关联tests，3paths22+/3-，单中文提交，clean。",
+            "verifiedCommit": "9581746982fbcac215a1ab88c589605ad72cf784",
+            "completedAt": "2026-11-01T09:30:52.923328+00:00",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "41条真实生产NotesApp/Main Host/HTTP runtime Browser；新增2句解释如何…的误标text只回侧栏，前4句后续明确写作保留候选。未操作共享App或构建；最终包Native由Root验收。"
+        },
+        "acceptanceCriteria": [
+          "解释如何修改并在笔记末尾添加示例与英文Explain how to modify and append…保持整个问答补语，不因Note位置切出编辑指令。",
+          "仅独立请/please新请求或明确问句/句界后的新命令重置已有如何补语范围；前4句先解释后明确追加/改写/预览仍可生成待确认候选。",
+          "只读plain/text/read回执答复不出现Note卡；Space原位、非选区写作、原生CRUD计划及取消/较新编辑守卫保持。"
+        ],
+        "risks": [
+          "微修仅调整当前instruction delivery子句边界，未修改Main/Editor权限、scope/session/cancel和事务逻辑；不读取正文/历史为指令。",
+          "notes-sidebar-intent.js与notes-ai.js仍须由Root一起进入最终runtime/profile并检查同源；本树无共享SDK/App修改。"
+        ],
+        "generatedAt": "2026-11-01T09:30:52.923328+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -20818,6 +20937,35 @@
         "--fileParallelism=false"
       ],
       "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/notes-sidebar-intent.test.js",
+        "test/notes-chat-preview-browser.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/notes-ai.test.js",
+        "test/notes-output-compatibility.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "1faac7351358a8eccc878777128db5387af48365..HEAD"
+      ],
+      "timeoutMs": 10000
     }
   ],
   "mainSynchronizations": []
