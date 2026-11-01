@@ -95,6 +95,44 @@ it('a model timeout after a prepared change leaves the actual note unchanged',as
 it.each([{prompt:'总结全文',kind:'conversation'},{prompt:'在笔记末尾补一个两句总结，先给我预览',kind:'text'}])('routes $prompt through one real runtime model call and keeps content out of the body',async({prompt,kind})=>{
  const f=await open(()=>({kind,markdown:'增长与现金转化需要交叉检验。后续按情景继续核对。'}));try{const before=await body(f.page);await f.page.evaluate(()=>(window as any).useNativeModel=true);await submit(f.page,prompt);await expect.poll(()=>f.history().at(-1)?.phase).toBe(kind==='text'?'ready':'replied');expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state=ready]').count()).toBe(kind==='text'?1:0);expect(f.modelRequests[0].system).toContain('已有正文足够时不要为同样内容再次调用read');expect(f.errors).toEqual([])}finally{await f.close()}
 },15000)
+it.each(['plain-answer','text-envelope','read-then-conversation','read-then-plain'])('keeps an explicit readonly Python answer in the sidebar through the real Host: %s',async mode=>{
+ const answer='对空列表会返回 None；if not values 会直接返回，避免除零错误。'
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text)
+  if(mode.startsWith('read-then-')&&!payload.clientReceipts.length)return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],calls:[{requestId:'read-python',capability:'notes.blocks.read',arguments:{scope:'note'}}]}
+  return ['plain-answer','read-then-plain'].includes(mode)?answer:{kind:mode==='text-envelope'?'text':'conversation',markdown:answer}
+ });try{
+  await f.page.evaluate(()=>{const e=(window as any).editor;e.updateBlock('before',{content:'Python mean: if not values: return None；否则返回 sum(values) / len(values)。'});(window as any).useNativeModel=true})
+  const before=await body(f.page)
+  await submit(f.page,'这段Python函数对空列表会返回什么？只回答，不修改笔记。')
+  expect(await f.page.locator('[data-note-preview-state=generating]').count()).toBe(0)
+  await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied')
+  expect(f.modelRequests).toHaveLength(mode.startsWith('read-then-')?2:1)
+  expect(f.history().at(-1)?.result).toMatchObject({kind:'conversation'})
+  expect(f.history().at(-1)?.result.markdown).toContain(answer)
+  expect(await f.page.locator('[data-note-preview-state], .en-space-ai').count()).toBe(0)
+  expect(await body(f.page)).toEqual(before)
+  // Flush any normal draft save, then compare the stable document, not timestamps.
+  await f.page.keyboard.press('Meta+s');expect(f.store.load('fixture','native-fixture').saved.blocks).toEqual(before)
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+it.each(['不要改其他段落，只在笔记末尾追加两句总结，先给我预览','写一段文字'])('keeps a raw writing result as a normal candidate for %s',async prompt=>{
+ const f=await open(()=>'后续核对增长与现金转化。');try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,prompt)
+  await f.page.locator('[data-note-preview-state=ready]').waitFor();expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('后续核对增长与现金转化')
+  const after=await body(f.page);expect(after.slice(0,before.length)).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('still inserts a conversational-looking Space request at its exact anchor instead of creating a sidebar preview',async()=>{
+ const f=await open(()=>'空列表返回 None。');try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill('这段Python函数对空列表会返回什么？只回答。');await input.press('Enter')
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();const blocks=await body(f.page);expect(JSON.stringify(blocks)).toContain('空列表返回 None');expect(blocks[0].id).toBe('before');expect(blocks.at(-1).id).toBe('after');expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(f.modelRequests).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
 it('keeps Space native tables immediately editable on their existing inline transaction path',async()=>{
  const f=await open();try{await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill('创建一个3乘3的表格');await input.press('Enter');await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor();expect(await f.page.locator('.bn-editor table').count()).toBe(1);expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(f.modelRequests).toHaveLength(0);expect(f.errors).toEqual([])}finally{await f.close()}
 },15000)
