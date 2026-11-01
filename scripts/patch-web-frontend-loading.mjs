@@ -259,6 +259,9 @@ writeFileSync(subagentRuntimePath, patchCanvasTaskNotices(readFileSync(subagentR
 writeFileSync(conversationPath, patchCanvasRefresh(readFileSync(conversationPath, 'utf8')))
 
 import { patchTaskProgressRuntime } from './lib/task-progress-runtime.mjs'
+import { patchPlanPendingReplay } from './lib/plan-mode-pending-replay.mjs'
+const planModeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-plan-mode/lib/index.js')
+writeFileSync(planModeRuntimePath, patchPlanPendingReplay(readFileSync(planModeRuntimePath, 'utf8')))
 import { patchBashBackgroundLifecycle } from './lib/bash-background-lifecycle.mjs'
 const bashRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-bash/lib/index.js')
 writeFileSync(bashRuntimePath, patchBashBackgroundLifecycle(readFileSync(bashRuntimePath, 'utf8')))
