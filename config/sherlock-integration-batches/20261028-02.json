@@ -18162,6 +18162,409 @@
         ],
         "recordedAt": "2026-10-31T19:42:41.715Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "客户端表格探索演示入口与后台任务可靠性集中修复",
+        "branch": "codex/feat/client-followups-20261101",
+        "baseCommit": "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4",
+        "tipCommit": "44e3a50bc0f9d96811760a18e6cd397d003bfa49",
+        "commits": [
+          {
+            "commit": "3e6e65c9f71828d528e4f7e29461d7478e0b9ccb",
+            "parents": [
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4"
+            ],
+            "subject": "统一探索主题静态与动态预览并缩小锦鲤卡片比例"
+          },
+          {
+            "commit": "ca4c8f884ac125756c20d991a8370434bfede1f8",
+            "parents": [
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4",
+              "3e6e65c9f71828d528e4f7e29461d7478e0b9ccb"
+            ],
+            "subject": "整合探索主题预览一致性修复"
+          },
+          {
+            "commit": "6449813a31b4d396ce0814b77591458fd6cb1a3e",
+            "parents": [
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4"
+            ],
+            "subject": "优化笔记原生表格的可见边界和行列插入交互"
+          },
+          {
+            "commit": "49e581621456c1344da5b675277f3e93451ccdb5",
+            "parents": [
+              "ca4c8f884ac125756c20d991a8370434bfede1f8",
+              "6449813a31b4d396ce0814b77591458fd6cb1a3e"
+            ],
+            "subject": "整合原生笔记表格可见边界与交互优化"
+          },
+          {
+            "commit": "b5cbb23c9fc57d2802cb1b06f613ec0ca5a806ae",
+            "parents": [
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4"
+            ],
+            "subject": "修复无清单后台任务提前结束并核验有限任务最终输出"
+          },
+          {
+            "commit": "113654bd98f14a7650a9ca05dccad0c8d4f825a7",
+            "parents": [
+              "49e581621456c1344da5b675277f3e93451ccdb5",
+              "b5cbb23c9fc57d2802cb1b06f613ec0ca5a806ae"
+            ],
+            "subject": "整合后台任务完成判定与结果收集修复"
+          },
+          {
+            "commit": "5ae40511dc206a64339b3aaaf9f080d65d4580cf",
+            "parents": [
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4"
+            ],
+            "subject": "补充演示入口安全诊断并消除文稿演示规划栏闪现"
+          },
+          {
+            "commit": "89aa709ae4f4b5dcd3b34d66bf82a8078fc716eb",
+            "parents": [
+              "113654bd98f14a7650a9ca05dccad0c8d4f825a7",
+              "5ae40511dc206a64339b3aaaf9f080d65d4580cf"
+            ],
+            "subject": "整合演示转场规划栏优化与安全入口诊断"
+          },
+          {
+            "commit": "e61f20c0782813b8ecf0d363561197c4edaa1c3f",
+            "parents": [
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4"
+            ],
+            "subject": "修复探索账户菜单关闭时误退出探索页"
+          },
+          {
+            "commit": "06824f8be5b8263e61dbc94c67ca4629f7b7555a",
+            "parents": [
+              "89aa709ae4f4b5dcd3b34d66bf82a8078fc716eb",
+              "e61f20c0782813b8ecf0d363561197c4edaa1c3f"
+            ],
+            "subject": "整合探索账户菜单外部点击边界修复"
+          },
+          {
+            "commit": "b38fa7e7d0ce20c6dbd50e40f48d15466d9efa1c",
+            "parents": [
+              "06824f8be5b8263e61dbc94c67ca4629f7b7555a"
+            ],
+            "subject": "减轻探索设置图标视觉粗细并保持按钮对齐"
+          },
+          {
+            "commit": "51bd49819ebd4aa27b757980b22193906e1fb658",
+            "parents": [
+              "5ae40511dc206a64339b3aaaf9f080d65d4580cf"
+            ],
+            "subject": "修复百条历史用例阻断新演示并保留真实准备错误"
+          },
+          {
+            "commit": "61153e3afdb66dad0d5fb8c3da679e2cbbf63ce2",
+            "parents": [
+              "b38fa7e7d0ce20c6dbd50e40f48d15466d9efa1c",
+              "51bd49819ebd4aa27b757980b22193906e1fb658"
+            ],
+            "subject": "整合历史演示配额与静默取消修复"
+          },
+          {
+            "commit": "230e7393b50907401057d183025e09cd6871704a",
+            "parents": [
+              "51bd49819ebd4aa27b757980b22193906e1fb658"
+            ],
+            "subject": "优化工作台自选宽度并保持整理与保存后布局一致"
+          },
+          {
+            "commit": "c39068af708dcf35eb9646237fc84ba95b2074ea",
+            "parents": [
+              "61153e3afdb66dad0d5fb8c3da679e2cbbf63ce2",
+              "230e7393b50907401057d183025e09cd6871704a"
+            ],
+            "subject": "整合工作台自选窄栏与统一整理尺寸规则"
+          },
+          {
+            "commit": "a4a707fe45115f855e7257bdaa13a6f86f27a818",
+            "parents": [
+              "230e7393b50907401057d183025e09cd6871704a"
+            ],
+            "subject": "完善演示输入接管取消与迟到回包守卫测试"
+          },
+          {
+            "commit": "44e3a50bc0f9d96811760a18e6cd397d003bfa49",
+            "parents": [
+              "c39068af708dcf35eb9646237fc84ba95b2074ea",
+              "a4a707fe45115f855e7257bdaa13a6f86f27a818"
+            ],
+            "subject": "整合用户输入接管演示的严格取消回归"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/capture-home-theme-previews.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/bash-background-lifecycle.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-workbench-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-progress-runtime.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/home-guide-entry-diagnostics.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-assets/settings.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-entry-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-koi-renderer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-reactbits-previews.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-assets/koi-pond-dark.png"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-assets/koi-pond-light.png"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-assets/react-bits/dither-dark.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-assets/react-bits/dither-light.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-renderer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/home-guide-entry-diagnostics.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-guide-entry-handoff-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/task-progress-v1.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/task-progress-v3.json"
+          },
+          {
+            "status": "A",
+            "path": "test/home-guide-entry-diagnostics.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/home-theme-preview-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-workbench-workspace.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/profile-runtime-patches.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/task-continuation-sdk.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-continuation-upgrade.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-progress-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined candidate; evidence /tmp/sherlock-current-followups-20261101/combined-final-focused-1.log; elapsed 0.0s",
+            "verifiedCommit": "44e3a50bc0f9d96811760a18e6cd397d003bfa49",
+            "completedAt": "2026-11-01T05:44:50.781518+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "./node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined candidate; evidence /tmp/sherlock-current-followups-20261101/combined-final-focused-2.log; elapsed 8.7s",
+            "verifiedCommit": "44e3a50bc0f9d96811760a18e6cd397d003bfa49",
+            "completedAt": "2026-11-01T05:44:59.530927+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-native.test.ts",
+              "test/research-canvas-storage.test.ts",
+              "test/home-guide-entry-diagnostics.test.ts",
+              "test/home-workbench-workspace.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined candidate; evidence /tmp/sherlock-current-followups-20261101/combined-final-focused-3.log; elapsed 10.1s",
+            "verifiedCommit": "44e3a50bc0f9d96811760a18e6cd397d003bfa49",
+            "completedAt": "2026-11-01T05:45:09.592837+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "-t",
+              "optically lighter settings|honors real typing|free of planning-strip flashes",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined candidate; evidence /tmp/sherlock-current-followups-20261101/combined-final-focused-4.log; elapsed 11.6s",
+            "verifiedCommit": "44e3a50bc0f9d96811760a18e6cd397d003bfa49",
+            "completedAt": "2026-11-01T05:45:21.238356+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "合并候选私有生产 Browser 已执行150个场景，149通过；用户输入接管场景的旧断言误排除正确cancel事件，已仅修正测试并对新最终tip通过5个直接相关case；其余149通过日志完整保留。表格超宽、主题预览、账户关闭、WB窄栏等作者冻结证据独立保留。最终打包Native与真实模型验收由Root随后进行，不以Browser代替。"
+        },
+        "acceptanceCriteria": [
+          "原生笔记表格超宽时行列操作、菜单限制在笔记可见区域，普通表格直接可编辑且保留列宽与撤销。",
+          "探索账户菜单外部点击仅关闭菜单；设置图标视觉减细；末两主题静态动态一致且锦鲤预览尺寸合理。",
+          "百条历史演示不阻断新演示并保留全部历史；真实准备失败安全回报，用户输入接管仍严格取消。",
+          "演示工作台三页签自选保持窄栏，自动或手动整理和保存重开不再扩宽；文稿转场不闪规划栏。",
+          "任务有限后台工作实际收集终态后才可完成；常驻服务仅在明确场景用实际读取与验证完成配置里程碑。",
+          "本地候选同包做三模式与演示Native验收，产出带截图的说明报告；不发布、不递增版本、不推送。"
+        ],
+        "risks": [
+          "真实外部模型成功率与完整新包Native仍需后续实测，不能用受控SDK/Browser等同。",
+          "只运行相关聚焦检查及批次既有声明门禁，不跑全功能单元测试。",
+          "不包含其他聊天PPT skill候选，不改正式main，不删除用户会话或历史。"
+        ],
+        "generatedAt": "2026-11-01T05:47:30.336868+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -19073,6 +19476,53 @@
         "--fileParallelism=false"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "d3dfab67dbeb5b2a6daa490cca1fb994022f5fd4..HEAD"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "./node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-entry-native.test.ts",
+        "test/research-canvas-storage.test.ts",
+        "test/home-guide-entry-diagnostics.test.ts",
+        "test/home-workbench-workspace.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/explore-menu-browser.test.ts",
+        "test/home-guide-presentation-shell-browser.test.js",
+        "-t",
+        "optically lighter settings|honors real typing|free of planning-strip flashes",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 600000
     }
   ],
   "mainSynchronizations": []
