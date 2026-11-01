@@ -41,3 +41,16 @@ it.each([
 ])('recognizes a final writing instruction after an initial explanation: %s',prompt=>{
  expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(false)
 })
+
+it.each([
+ '解释如何修改并在笔记末尾添加示例？',
+ 'Explain how to modify and append a paragraph to the note.',
+])('keeps a how-to complement scoped across a note-location continuation: %s',prompt=>{
+ expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(true)
+})
+it.each([
+ '解释如何修改，并请在笔记末尾添加示例',
+ 'Explain how to modify and please append a paragraph to the note.',
+])('allows an independently polite writing request after a how-to explanation: %s',prompt=>{
+ expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(false)
+})

@@ -12,9 +12,8 @@ export function sidebarNoteConversationOnly(input){
   let current=parts[0]
   for(let index=1;index<parts.length;index+=2){
    const next=parts[index+1]?.trim()||'',questionComplement=/(?:如何|怎么|怎样|\b(?:how|what|why)\b)/iu.test(current)
-   const directedDelivery=/^(?:请|帮我|麻烦|please\b)|^(?:在.{0,24}(?:笔记|正文|文档|文末|末尾)|(?:给我|提供|展示).{0,16}(?:正文|内容)预览)|\b(?:append|insert|write|add)\b.{0,80}\b(?:to|into|in|at)\b.{0,20}\b(?:note|document)\b/iu.test(next)
-   const interrogativeLead=/^(?:(?:请|帮我|麻烦|先)\s*)*(?:为什么|为何|如何|怎么|怎样|\b(?:how|what|why)\b)/iu.test(current),newRequest=/^(?:请|帮我|麻烦|please\b)/iu.test(next)
-   if(!questionComplement||directedDelivery&&(!interrogativeLead||newRequest)){result.push(current);current=next}else current+=parts[index]+next
+   const newRequest=/^(?:请|帮我|麻烦|please\b)/iu.test(next)
+   if(!questionComplement||newRequest){result.push(current);current=next}else current+=parts[index]+next
   }
   result.push(current);return result
  }).map(value=>value.trim()).filter(Boolean)

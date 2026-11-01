@@ -118,6 +118,13 @@ it.each(['plain-answer','text-envelope','read-then-conversation','read-then-plai
  }finally{await f.close()}
 },15000)
 
+it.each(['解释如何修改并在笔记末尾添加示例？','Explain how to modify and append a paragraph to the note.'])('keeps the whole how-to answer in the sidebar through the real Host: %s',async prompt=>{
+ const answer='这是修改和追加示例的方法说明，尚未要求执行笔记编辑。',f=await open(()=>({kind:'text',markdown:answer}));try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,prompt)
+  await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied');expect(f.history().at(-1)?.result).toMatchObject({kind:'conversation',markdown:answer});expect(f.modelRequests).toHaveLength(1);expect(await f.page.locator('[data-note-preview-state], .en-space-ai').count()).toBe(0);expect(await body(f.page)).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
 it.each(['不要改其他段落，只在笔记末尾追加两句总结，先给我预览','写一段文字','请解释这段代码并在笔记末尾添加一个代码示例','这段函数应该怎么修改？请把选中段落改写为完整说明','Explain this function and append a short example to the note.','请先解释这张图并给我正文预览'])('keeps a raw writing result as a normal candidate for %s',async prompt=>{
  const f=await open(()=>'后续核对增长与现金转化。');try{
   await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,prompt)
