@@ -121,3 +121,12 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 .odyssey-explore .odyssey-operations-description[data-explore-preparing]{padding-left:27px;animation:odyssey-explore-veil 200ms ease-out both}
 .odyssey-explore .odyssey-operations-description[data-explore-preparing]:before{position:absolute;left:0;top:calc(.5lh - 8.5px);content:'';width:17px;height:17px;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:odyssey-explore-spinner .8s linear infinite}
 @media(prefers-reduced-motion:reduce){.odyssey-explore .odyssey-operations-description[data-explore-preparing]:before{animation:none}}
+/* English uses the same fixed Explore deck as Chinese; long headlines must
+   wrap inside the card rather than relying on the legacy fluid-home rules. */
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-case-copy{width:calc(100% - 42px)}
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] :is(.odyssey-operations-title,.odyssey-operations-subtitle){max-width:100%;white-space:normal;overflow-wrap:break-word;font-size:clamp(22px,2vw,26px);line-height:1.3}
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-title{align-items:flex-start}
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-title>strong{min-width:0}
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-trend{margin-top:6px}
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-quick-label{max-width:calc(100% - 26px);height:auto;white-space:normal;overflow-wrap:break-word;line-height:18px}
+html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-description{width:calc(100% - 46px);white-space:normal;line-height:1.35}

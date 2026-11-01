@@ -351,3 +351,27 @@ it('localizes the new Explore account and search menus live without translating 
   expect(await dialog.locator('.odyssey-explore-account').textContent()).toContain('研究员');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+it.each([[1380,true],[1380,false],[820,true],[820,false]] as const)('keeps every English Explore hero and quick title readable within its card at %ipx, dark=%s while preserving Chinese styling',async(width,dark)=>{
+ const f=await fixture({width,height:920,dark});try{
+  await open(f.page);const dialog=f.page.locator('dialog.odyssey-explore');
+  const chinese=()=>dialog.evaluate((root:HTMLElement)=>[...root.querySelectorAll<HTMLElement>('.odyssey-operations-title,.odyssey-operations-subtitle,.odyssey-operations-quick-label,.odyssey-operations-illustration')].map(el=>{const s=getComputedStyle(el);return{text:el.textContent,font:s.fontSize,lineHeight:s.lineHeight,whiteSpace:s.whiteSpace,width:s.width,height:s.height,top:s.top,left:s.left,background:s.backgroundImage,src:el.getAttribute('src')}}));const before=await chinese();
+  await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await uiExpect(dialog.getByRole('tab',{name:'Quick start',exact:true})).toBeVisible();const samples:any[]=[];
+  for(let index=0;index<5;index++){
+   await dialog.locator('.odyssey-explore-pages button').nth(index).click();await uiExpect(dialog.locator('.odyssey-operations-usecase')).toHaveAttribute('data-case',String(index));
+   const geometry=await dialog.evaluate((root:HTMLElement,index:number)=>{
+    const box=(el:Element)=>{const r=el.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+    const glyphs=(el:Element)=>{const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),rects:any[]=[];while(walker.nextNode()){if(!walker.currentNode.textContent?.trim())continue;const range=document.createRange();range.selectNodeContents(walker.currentNode);rects.push(...[...range.getClientRects()].map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom})))}return rects};
+    const layer=root.querySelector<HTMLElement>('.odyssey-operations-case-layer[data-case="'+index+'"]')!,card=layer.closest('.odyssey-operations-usecase')!,copy=layer.querySelector('.odyssey-operations-case-copy')!,description=layer.querySelector('.odyssey-operations-description')!,progress=card.querySelector('.odyssey-operations-pagination')!,subtitle=layer.querySelector('.odyssey-operations-subtitle')!;
+    return{index,hero:{card:box(card),copy:box(copy),glyphs:glyphs(copy),description:box(description),descriptionGlyphs:glyphs(description),progress:box(progress),subtitle:subtitle.textContent,whiteSpace:getComputedStyle(subtitle).whiteSpace},quick:[...root.querySelectorAll<HTMLElement>('.odyssey-operations-quick-card')].map(card=>{const label=card.querySelector('.odyssey-operations-quick-label')!,art=card.querySelector('.odyssey-operations-illustration')!;return{card:box(card),label:box(label),glyphs:glyphs(label),art:box(art),text:label.textContent,overflow:getComputedStyle(label).textOverflow}})}
+   },index);samples.push(geometry);
+   if(index===2)await dialog.screenshot({path:evidence+'/english-presentation-'+width+'-'+dark+'.png'});
+  }
+  await writeFile(evidence+'/english-cards-'+width+'-'+dark+'.json',JSON.stringify(samples,null,2));
+  for(const geometry of samples){
+   expect(geometry.hero.whiteSpace).toBe('normal');for(const r of geometry.hero.glyphs){expect(r.left).toBeGreaterThanOrEqual(geometry.hero.card.left+6);expect(r.right).toBeLessThanOrEqual(geometry.hero.card.right-6)}expect(geometry.hero.copy.bottom).toBeLessThan(geometry.hero.description.top-8);for(const r of geometry.hero.descriptionGlyphs)expect(r.bottom).toBeLessThan(geometry.hero.progress.top-4);
+   for(const item of geometry.quick){expect(item.overflow).not.toBe('ellipsis');for(const r of item.glyphs){expect(r.left).toBeGreaterThanOrEqual(item.card.left+5);expect(r.right).toBeLessThanOrEqual(item.card.right-5);expect(r.bottom).toBeLessThan(item.art.top+1)}}
+  }
+  await dialog.screenshot({path:evidence+'/english-cards-'+width+'-'+dark+'.png'});await writeFile(evidence+'/english-cards-'+width+'-'+dark+'.json',JSON.stringify(samples,null,2));
+  await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await uiExpect(dialog.getByRole('tab',{name:'快速开始',exact:true})).toBeVisible();await dialog.locator('.odyssey-explore-pages button').first().click();expect(await chinese()).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
