@@ -4,6 +4,10 @@ export function createResearchGrid() {
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
   const minimum=(node,m,arranging=false)=>{
+    // A compact typed watchlist in the authored workbench has a different
+    // reading floor from report/chart panels. Use the same policy for normal
+    // projection and Standard Arrange so later packing cannot widen it again.
+    if(node?.workbenchLayoutVersion===1&&typeof node.workbenchId==='string'&&node.workbenchId.startsWith('hwb:')&&node.id===node.workbenchId+':watchlist'&&node?.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='watchlist'&&node.workbenchSpan!==true)return {w:Math.min(columns,Math.ceil((230+m.gap)/m.step)),h:m.minRows}
     // Manual resizing uses one base frame for every component. Readable
     // template widths guide Arrange only; titles never constrain the frame.
     if(!arranging)return {w:m.minColumns,h:m.minRows}
