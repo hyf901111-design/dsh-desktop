@@ -23031,10 +23031,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记生成、Goal Plan、菜单视窗与演示会话显示最终组合（严格ef raw两遍）",
+        "featureName": "笔记生成与Goal Plan可靠性、菜单视窗和演示会话最终完整候选（含滚动重绘严格修复）",
         "branch": "codex/feat/goal-notes-plan-combined-20261102",
         "baseCommit": "ef5375ed680ed8de40c6b8cc95174699d27f5c6e",
-        "tipCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+        "tipCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
         "commits": [
           {
             "commit": "4801191c96de124afaff1984e268822807207338",
@@ -23170,6 +23170,21 @@
               "b083595502958fa9b26591f47ce84823d869e4fb"
             ],
             "subject": "合并：保留演示工作区原会话的可见性"
+          },
+          {
+            "commit": "679504cd1dcd7d9affd7f6dee9e26bcd8c4a9114",
+            "parents": [
+              "545617e54a4b2e36e5096b63e1b4c0c65317725d"
+            ],
+            "subject": "修复：笔记演示滚入组件菜单并隔离菜单内部滚动"
+          },
+          {
+            "commit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "parents": [
+              "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+              "679504cd1dcd7d9affd7f6dee9e26bcd8c4a9114"
+            ],
+            "subject": "合并：修复演示斜杠菜单滚动重绘与目标定位"
           }
         ],
         "files": [
@@ -23223,6 +23238,10 @@
           },
           {
             "status": "M",
+            "path": "src/preload/home-guide-notes.tsx"
+          },
+          {
+            "status": "M",
             "path": "src/preload/research-boards-ui.ts"
           },
           {
@@ -23232,6 +23251,10 @@
           {
             "status": "M",
             "path": "src/shared/note-menu-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-guide-playback.js"
           },
           {
             "status": "A",
@@ -23244,6 +23267,10 @@
           {
             "status": "M",
             "path": "test/home-guide-note-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-shell-browser.test.js"
           },
           {
             "status": "M",
@@ -23307,9 +23334,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终545同tip、真实ef raw安装后19文件263/263 Node。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:22:50.878998+00:00",
+            "summary": "新bd2实际安装后19文件263/263 Node。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:00:34.679836+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23326,9 +23353,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终545同tip3文件102 selected通过、7已确认旧基线skip；不宣称整109均通过。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:28:48.579734+00:00",
+            "summary": "新bd2三文件102 selected通过、7已确认旧基线skip；不声称整109均绿。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:02:48.637688+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23343,9 +23370,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终545同tip实际Notes Host6/6；35非scope明确skip。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:31:18.985528+00:00",
+            "summary": "新bd2实际Notes Host6/6；35 scope外skip。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:03:39.378860+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23362,10 +23389,30 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终545同tip5文件50/50，实际NotesApp→NativeSlashMenu→NoteNativeMenu.paint→真实popup HTML，900/820/620与zoom1.1；作者原6份截图/几何SHA恢复，本次证据独立保存。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:32:32.621886+00:00",
+            "summary": "新bd2五文件52/52，包含新owned-listbox scroll隔离与dispose边界，原viewport/focus/selection守卫保留；作者原6份证据恢复SHA，独立保存本次截图。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:04:40.642441+00:00",
             "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_SIDEBAR_SOURCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/integration-power-watchlist-20261028-02/dist-notarized/mac-arm64/EWork Odyssey.app/Contents/Resources/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js",
+              "SHERLOCK_SLASH_EVIDENCE_DIR=/tmp/sherlock-goal-notes-plan-combined-20261102/replay-successor/shell-evidence",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-notes-shell-browser.test.js",
+              "-t",
+              "saves and reopens the native note without clipping a",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "新bd2原600/700完整Shell2/2，原每case130秒未改；完整写作、菜单hover二级、行情、review/替换/总结、保存重开和scope/无延迟修改原断言保留，新增真实target中心命中/完整可见/root不跳与compound ownership守卫。17非选中case。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:07:50.321430+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
@@ -23376,9 +23423,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "最终545同tipTypeScript检查exit0。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:34:11.716765+00:00",
+            "summary": "新bd2 TypeScript检查exit0。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:08:59.830762+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23387,9 +23434,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "严格物理安装仅两次，无warmup：直接从Root integration ef raw的3237文件完全相同克隆开始，第一次输出与第二次输出全部3237文件和SHA完全一致；digest 524462d3daeb7147e2687b2cdd096a09efd05c8c3665653b66895cbb749a0886；client e5e27d351579eb0c5d1beac8e087ee9f8000512b4e63ca7965cc1c8687b1a89b。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:21:48.790818+00:00",
+            "summary": "从Root冻结ef raw快照（captureSHA33b8db…、3237文件bytes/SHA完全匹配）fresh克隆开始，完整installer仅2遍，无warmup；第一次与第二次3237文件全树相同，digest 524462d3daeb7147e2687b2cdd096a09efd05c8c3665653b66895cbb749a0886；frozen原始snapshot未变。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T22:59:43.058340+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23397,18 +23444,18 @@
               "git",
               "diff",
               "--check",
-              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..545617e54a4b2e36e5096b63e1b4c0c65317725d"
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..bd2c88fd4dfeb23015acb7d87ca35b1f39786212"
             ],
             "outcome": "passed",
-            "summary": "完整26路径与ec0后继2路径diffcheck0；9作者tips均保留完整history，23个非冲突winning路径与作者原字节完全相同，3个安装接线路径人工保留两侧；clean。",
-            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
-            "completedAt": "2026-11-01T21:37:28.844654+00:00",
+            "summary": "完整29paths与545后继5paths diffcheck0；10作者history完整，26winning路径字节精确，3原安装接线组合路径保留；clean。",
+            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+            "completedAt": "2026-11-01T23:10:49.198855+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "最终545同源私有headless真实NotesHost6项与原生popupHTML桥50项；900截图已目视确认首项可见。未操作共享NativeApp/未调用模型；实际包和模型复验仍由Root执行。"
+          "summary": "新bd2实际headlessNotes Host6、真实popupHTML菜单52、600/700完整原NotesShell2；独立截图/几何和guard轨迹已保留。未使用共享NativeUI或模型，不等于最终打包客户端验收。"
         },
         "acceptanceCriteria": [
           "原723五项feature保持，严格追加Goalprofile e4ee、Facts24a8和菜单9ab；全部作者原提交保留，不偷改其scope。",
@@ -23416,15 +23463,17 @@
           "本轮正文/选区/当前真实回执优先旧history，当前与历史原字节保留；不强制已有资料充分时重读，不修改scope/权限/native fastpath。",
           "原生与guide斜杠菜单按实际窗口可见范围和caret可用侧限高，完整菜单在固定宽listbox滚动，submenu与root scroll/bounds稳定。",
           "演示board/workbench专属工作区的原始session保持可见，非此owned registry/cwd/成员边界不改变普通独立看板过滤。",
-          "最终545直接Node263、selected visibility102/7skip、实际Host6/35skip、geometry50、TC0及正确Root ef raw克隆严格两遍物理installer全部通过。"
+          "演示菜单不在可视区时只滚当前owned列表，guard保持、两稳定帧后真实pointer；window只隔离当前owned root/child内部scroll，其他滚动不拦，close/失权/dispose清理。",
+          "最终bd2的Node263、visibility102/7skip、Host6/35skip、菜单52、完整Shell2/17非选中、TC0与冻结ef raw严格2pass均实际通过；分组不合计成唯一case数。"
         ],
         "risks": [
-          "未运行92声明门禁或全功能测试；Root负责正式集成门禁、构建与真实客户端和模型验收。",
-          "current-facts规则仅经实际请求producer合同验证，不宣称真实模型已纠正历史8×8回忆。",
-          "visibility有7项作者在ef基线复现的旧skip，Host有35项scope外skip；按各组如实报告，不合称所有测试通过。",
-          "旧723/ec0私有SDK证明使用了旧canonical-main donor并warmup，不能作为此次Root ef raw严格两遍的证明；本卡明确以final-ef-raw新证明取代旧SDK校验。"
+          "未运行92声明门禁或全功能测试；Root后续official gate/构建与Native和模型复验。",
+          "current-facts规则仅实际producer合同验证，尚不宣称真实模型质量提升。",
+          "visibility保留7旧基线skip，Host35与Shell17为scope外未选中项；各组分开报告。",
+          "旧723/ec0的旧donor+warmup SDK证据保留且被final-ef-raw545严格证据取代；本次又从Root冻结ef snapshot fresh严格两遍验证，不复用先前安装目录。",
+          "仅只读使用efApp sidebar asset（SHA590785…）供真实Shellfixture，未操作或修改共享客户端/SDK。"
         ],
-        "generatedAt": "2026-11-01T21:37:28.844654+00:00"
+        "generatedAt": "2026-11-01T23:10:49.198855+00:00"
       }
     }
   ],
