@@ -5,7 +5,7 @@ import waterAsset from './home-koi/assets/water-plate.png?inline'
 import koiAsset from './home-koi/assets/koi-sprite.png?inline'
 
 /** The approved portable pond, driven exclusively by the homepage's RAF owner. */
-export function createKoiRenderer(canvas: HTMLCanvasElement, options: { dark: boolean }): HomeThemeRenderer | null {
+export function createKoiRenderer(canvas: HTMLCanvasElement, options: { dark: boolean; preview?: boolean }): HomeThemeRenderer | null {
   const win = canvas.ownerDocument.defaultView
   if (!win) return null
   let gl: WebGLRenderingContext | null
@@ -31,12 +31,16 @@ export function createKoiRenderer(canvas: HTMLCanvasElement, options: { dark: bo
   }
   const resize = (w: number, h: number) => {
     if (disposed || lost || failed || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return
+    // Fish are modeled in CSS pixels. A card is a miniature of the same pond,
+    // rather than a 150px pond containing full-size 310px fish.
     width = w; height = h
-    if (!simulation) simulation = new Simulation({ width, height, fishCount: 2 })
-    else simulation.resize(width, height)
+    const previewScale = options.preview ? 1150 / width : 1
+    const sceneWidth = width * previewScale, sceneHeight = height * previewScale
+    if (!simulation) simulation = new Simulation({ width: sceneWidth, height: sceneHeight, fishCount: 2, ...(options.preview ? { seed: 0x5eed } : {}) })
+    else simulation.resize(sceneWidth, sceneHeight)
     if (pond) {
       const ratio = Math.min(win.devicePixelRatio || 1, 1.25, Math.sqrt(2_400_000 / (width * height)))
-      try { pond.resize(width, height, ratio) } catch { failed = true; canvas.dataset.homeKoiState = 'failed' }
+      try { pond.resize(sceneWidth, sceneHeight, ratio / previewScale) } catch { failed = true; canvas.dataset.homeKoiState = 'failed' }
     }
   }
   const loaded = () => {
