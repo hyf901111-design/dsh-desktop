@@ -156,13 +156,13 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
    const rect=table.getBoundingClientRect(),geometry=noteViewport(table)
    if(!geometry){setPosition(undefined);setInsertHover(undefined);close();return}
    const {visible,outer,note}=geometry,clipLeft=Math.max(outer.left,note.left,0),clipRight=Math.min(outer.right,note.right,window.innerWidth),clipTop=Math.max(note.top,0),clipBottom=Math.min(note.bottom,window.innerHeight)
-   const columns=[...table.querySelectorAll<HTMLTableColElement>('colgroup col')].map((col,index)=>({index,x:col.getBoundingClientRect().left})).filter(point=>point.x>=clipLeft+12&&point.x<=clipRight-12)
-   const rows=[...table.rows].map((row,index)=>({index,y:row.getBoundingClientRect().top})).filter(point=>point.y>=clipTop+12&&point.y<=clipBottom-12)
-   // The table menu has its own lane above the insertion handles. If that
-   // lane scrolls out, use the note's right gutter instead of stacking it over
-   // a column hotspot or the paragraph's left-side block controls.
-   const upperLane=rect.top-68>=clipTop+6,toolbarLeft=upperLane?Math.max(note.left+4,Math.min(clipLeft+8,note.right-48)):Math.max(note.left+4,note.right-48)
-   setPosition({left:toolbarLeft,top:upperLane?Math.min(rect.top-68,clipBottom-34):clipTop+6,tableTop:visible.top,tableLeft:visible.left,tableRight:visible.right,tableBottom:visible.bottom,right:Math.min(rect.right,clipRight-34),bottom:Math.min(rect.bottom,clipBottom-24),clipLeft,clipRight,noteLeft:Math.max(0,note.left),noteRight:Math.min(window.innerWidth,note.right),clipTop,clipBottom,actualBottom:rect.bottom,resizeRight:rect.right<=clipRight+.5?rect.right:undefined,columns,rows})
+   const columns=[...table.querySelectorAll<HTMLTableColElement>('colgroup col')].map((col,index)=>({index,x:col.getBoundingClientRect().left})).filter(point=>point.index>0&&point.x>=clipLeft+12&&point.x<=clipRight-12)
+   const rows=[...table.rows].map((row,index)=>({index,y:row.getBoundingClientRect().top})).filter(point=>point.index>0&&point.y>=clipTop+12&&point.y<=clipBottom-12)
+   // Keep the toolbar in the note's existing right padding, never over the
+   // preceding paragraph. The start boundaries share BlockMenu's lane; their
+   // Add above/left commands remain available in the row/column menus.
+   const toolbarLeft=Math.max(note.left+4,note.right-48)
+   setPosition({left:toolbarLeft,top:Math.max(clipTop+6,Math.min(rect.top,clipBottom-34)),tableTop:visible.top,tableLeft:visible.left,tableRight:visible.right,tableBottom:visible.bottom,right:Math.min(rect.right,clipRight-34),bottom:Math.min(rect.bottom,clipBottom-24),clipLeft,clipRight,noteLeft:Math.max(0,note.left),noteRight:Math.min(window.innerWidth,note.right),clipTop,clipBottom,actualBottom:rect.bottom,resizeRight:rect.right<=clipRight+.5?rect.right:undefined,columns,rows})
   }
   const schedule=()=>{setInsertHover(undefined);cancelAnimationFrame(frame);frame=requestAnimationFrame(update)}
   positionUpdate.current=update;update();window.addEventListener('resize',schedule);window.addEventListener('scroll',schedule,true)
