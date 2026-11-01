@@ -32,9 +32,9 @@ export function validateNoteMenu(input: NoteMenuState): void {
   if(input.submenu){const parent=input.items.find(item=>item.id===input.submenu!.parentId);if(!parent?.children?.length||!Number.isInteger(input.submenu.selectedIndex)||input.submenu.selectedIndex<0||input.submenu.selectedIndex>=parent.children.length||(input.submenu.keyboardActive!==undefined&&typeof input.submenu.keyboardActive!=='boolean'))throw Error('子菜单选择无效。')}
 }
 
-/** The screen, rather than the parent window, bounds this native floating menu. */
+/** Native and replay panels share the same bounded, scrollable menu content. */
 type MenuPane={html:string;height:number;width:number}
-export function noteMenuPresentation(state: NoteMenuState, ticket: string, limits: {height?:number;width?:number;shadowInset?:number} = {}): MenuPane&{root:MenuPane;child?:MenuPane} {
+export function noteMenuPresentation(state: NoteMenuState, ticket: string, limits: {height?:number;rootHeight?:number;width?:number;shadowInset?:number} = {}): MenuPane&{root:MenuPane;child?:MenuPane} {
   const shadowInset=limits.shadowInset??MENU_SHADOW_INSET
   const t=(value:string)=>noteUiText(value,state.locale)
   const grid=state.items.some(item=>item.icon==='paragraph')&&state.items.some(item=>item.icon==='heading')&&state.items.some(item=>item.icon==='bullet_list')
@@ -58,6 +58,7 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
   const root=list(rest,14+basicHeight+(grid&&rest.length?24:0),264)
   root.width=Math.min(maxWidth,Math.max(root.width,basic.length?gridColumns*42+12:0))
   if(!state.items.length)root.height=50
+  root.height=Math.min(root.height,Math.max(0,limits.rootHeight??maxHeight))
   const rootHtml=`<section class="menu root-menu" style="height:${root.height}px;width:${root.width}px"><div id="items" role="listbox" aria-label="${t('笔记斜杠菜单')}">${state.items.length?basicHtml+(grid&&rest.length?'<h2>'+t('插入')+'</h2>':'')+root.html:'<p class="empty">'+t('没有匹配的命令')+'</p>'}</div></section>`
   const child=parent?list(parent.children!,14,260,parent.id):undefined,showRoot=!child||root.width+4+child.width<=maxWidth
   const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="${t('组件库')}">${child.html}</div></section>`:''

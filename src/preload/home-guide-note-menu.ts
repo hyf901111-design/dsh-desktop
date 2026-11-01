@@ -40,10 +40,12 @@ export function createHomeGuideNoteMenu(document:Document,options:{runId:string;
    const childScroll=previous?.submenu?.parentId===input.submenu?.parentId&&sameRows(previousParent?.children,nextParent?.children||[])?host.querySelector<HTMLElement>('.child-menu>[role=listbox]')?.scrollTop||0:0
    const restore=(selector:string,top:number,reveal:boolean)=>{const list=host.querySelector<HTMLElement>(selector+'>[role=listbox]');if(list){list.scrollTop=top;if(reveal)list.querySelector<HTMLElement>('[aria-selected=true]')?.scrollIntoView({block:'nearest'})}}
    state=input
-   const presentation=noteMenuPresentation(input,ticket,{height:win.innerHeight-24,width:win.innerWidth-24,shadowInset:0})
+   const limits={height:win.innerHeight-24,width:win.innerWidth-24,shadowInset:0}
+   const desired=noteMenuPresentation(input,ticket,limits)
+   const work={x:0,y:0,width:win.innerWidth,height:win.innerHeight},rootBounds=noteMenuBounds(input.anchor,work,desired.root.height,1,desired.root.width,0)
+   const presentation=noteMenuPresentation(input,ticket,{...limits,rootHeight:rootBounds.height})
    host.dataset.noteMenuId=input.menuId;host.dataset.noteMenuRevision=String(input.revision);host.className=(input.dark?'guide-menu-dark ':'')+'guide-native-material';host.innerHTML='<style>@scope ([data-home-guide-note-menu]){'+css+'}</style><main>'+presentation.root.html+(presentation.child?.html||'')+'</main>'
    // Match the native panels: opening a child must never reposition its root.
-   const work={x:0,y:0,width:win.innerWidth,height:win.innerHeight},rootBounds=noteMenuBounds(input.anchor,work,presentation.root.height,1,presentation.root.width,0)
    const root=host.querySelector<HTMLElement>('.root-menu')!,child=host.querySelector<HTMLElement>('.child-menu')
    const place=(node:HTMLElement,x:number,y:number)=>{node.style.position='absolute';node.style.left=x+'px';node.style.top=y+'px';node.style.margin='0'}
    const bounds=(left:number,top:number,width:number,height:number)=>{for(const [key,value] of Object.entries({width:width+'px',height:height+'px',background:'transparent','box-shadow':'none','backdrop-filter':'none'}))host.style.setProperty(key,value,'important');host.style.left=left+'px';host.style.top=top+'px'}

@@ -39,3 +39,13 @@ it.each([{x:20,y:700},{x:980,y:700},{x:980,y:40}])('keeps the root menu anchored
  if(anchor.x>900)expect(child.x+child.width).toBeLessThanOrEqual(before.x)
  f.menu.sync({...input,revision:3});expect(rect(host,'.root-menu')).toEqual(before)
 })
+
+it.each([[900,554],[820,500],[620,390]])('keeps the long replay root on one safe side of the caret at %ipx', (height,caret)=>{
+ vi.spyOn(window,'innerWidth','get').mockReturnValue(1380);vi.spyOn(window,'innerHeight','get').mockReturnValue(height)
+ const f=fixture(),items=[...Array.from({length:40},(_,index)=>({id:'command-'+index,title:'Command '+index,icon:'quote',subtext:'',group:'',badge:''})),f.input.items[0]!],input={...f.input,anchor:{x:386,y:caret,width:1,height:24},items}
+ f.menu.sync(input);const host=f.menu.element()!,root=host.querySelector<HTMLElement>('.root-menu')!,top=parseFloat(host.style.top)+parseFloat(root.style.top),menuHeight=parseFloat(root.style.height)
+ expect(top).toBeGreaterThanOrEqual(8);expect(top+menuHeight).toBeLessThanOrEqual(caret-6);expect(top+menuHeight).toBeLessThanOrEqual(height-8);expect(root.style.width).toBe('264px');expect(root.querySelectorAll('[role=option]')).toHaveLength(41)
+ const before={top:host.style.top,rootTop:root.style.top,height:root.style.height}
+ f.menu.sync({...input,revision:2,submenu:{parentId:'library',selectedIndex:0,keyboardActive:false}})
+ const after=host.querySelector<HTMLElement>('.root-menu')!;expect({top:host.style.top,rootTop:after.style.top,height:after.style.height}).toEqual(before)
+})
