@@ -636,7 +636,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         // A stopped or superseded request may retain honest applied/saved facts
         // in its journal/history, but cannot commit input or reopen old UI.
         if(disposed.current||epoch.current!==attempt||request.current!==requestId||!editorActive()||!nativeCurrent())return
-        const {receipt,result,phase}=outcome,summary=t('已插入表格')
+        const {receipt,result,phase}=outcome,summary='已插入表格'
         if(!inlineTarget){
           const state=composerPlans.current
           if(receipt?.status!=='succeeded'||receipt.effect||receipt.data?.pendingPreview!==true||state?.requestId!==requestId||!state.plans.length||!state.projected)throw Error(receipt?.message||t('表格建议尚未准备完成，笔记内容已保留。'))

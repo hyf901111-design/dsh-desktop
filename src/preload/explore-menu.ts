@@ -73,6 +73,7 @@ export function mountExploreMenu(doc:Document,options:Options){
   function labels(){
     name.textContent=text('探索','Explore');dialog.setAttribute('aria-label',name.textContent);quickTab.textContent=copy().heading;wallpaperTab.textContent=copy().wallpapers
     input.hidden=!searching;collapseSearch.hidden=!searching
+    searchPanel.setAttribute('aria-label',text('搜索结果','Search results'));list.setAttribute('aria-label',text('会话搜索结果','Conversation search results'))
     for(const [node,label]of [[searchButton,text('搜索会话','Search conversations')],[settings,text('设置','Settings')],[closeButton,text('关闭探索','Close Explore')],[collapseSearch,text('收起搜索','Close search')]]as const){node.title=label;node.setAttribute('aria-label',label)}
     for(const [node,key]of [[quickTab,'quick'],[wallpaperTab,'wallpapers']] as const){node.setAttribute('aria-selected',String(tab===key));node.tabIndex=tab===key?0:-1}
     quick.hidden=tab!=='quick'&&outgoingTab!==quick;quick.inert=tab!=='quick'||searching;quick.setAttribute('aria-hidden',String(tab!=='quick'||searching));wallpapers.hidden=tab!=='wallpapers'&&outgoingTab!==wallpapers;wallpapers.inert=tab!=='wallpapers'||searching;wallpapers.setAttribute('aria-hidden',String(tab!=='wallpapers'||searching));gallery.setVisible(opened&&tab==='wallpapers'&&!searching)

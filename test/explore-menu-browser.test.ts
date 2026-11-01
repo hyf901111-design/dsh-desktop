@@ -10,6 +10,7 @@ const evidence=process.env.SHERLOCK_EXPLORE_EVIDENCE??'/tmp/sherlock-explore-hov
 beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
+ import{mountUiLocalization}from'./src/preload/ui-localization';mountUiLocalization(document);
  import{mountExploreMenu}from'./src/preload/explore-menu';import{mountHomeOperations}from'./src/preload/home-operations';import{mountDesktopShellStyles}from'./src/preload/shell-style';mountDesktopShellStyles(document);import{mountAccountUi}from'./src/preload/account-ui';import{mountResearchBoardNotifications}from'./src/preload/research-board-notifications-ui';import{installExploreSearch}from'./src/preload/explore-search';import{mountHomeThemes,getHomeThemeController}from'./src/preload/home-themes';import{createHomeOperationsActions}from'./src/preload/home-operations-actions';import{installHomeOperationsNavigation}from'./src/preload/home-operations-navigation';
  let durable='default',user={id:'qa-owner',username:'研究员',createdAt:1},generation=0;window.calls=[];window.opened=[];window.rows=[{key:'board:b',title:'中际旭创研究工作台',area:'boards',boardId:'b',sessionId:'board-session',time:3,kind:'board',location:'个人看板'},{key:'session:n',title:'中际旭创现金流笔记',area:'workspaces',sessionId:'n',time:2,kind:'note',location:'研究工作区'},{key:'session:c',title:'中际旭创收入分析',area:'workspaces',sessionId:'c',time:1,kind:'session',location:'研究工作区'}];window.holdOpen=false;window.cancelled=0;let searchNavigation=0,sourceRefresh=()=>{};
  window.copied=[];window.copyFailure=false;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{if(window.copyFailure)throw Error('clipboard unavailable');window.copied.push(value)}}});window.actionHold=false;const original=document.querySelector('.VOzbGW_trigger');original.onclick=()=>{if(document.querySelector('.VOzbGW_panel'))return;const panel=document.createElement('div');panel.className='VOzbGW_panel';panel.innerHTML='<nav><div class="VOzbGW_navList"><button data-settings-section-id="general">通用设置</button></div></nav><button class="VOzbGW_close">关闭设置</button><div class="VOzbGW_content"><div class="VOzbGW_options"></div></div>';panel.querySelector('.VOzbGW_close').onclick=()=>panel.remove();document.body.append(panel)};
@@ -334,3 +335,19 @@ it.each([false,true])('keeps the selected wallpaper edge visible above a live ho
   const edge=await card.locator('.odyssey-wallpaper-preview').evaluate((node:HTMLElement)=>{const s=getComputedStyle(node),a=getComputedStyle(node,'::after');return{shadow:s.boxShadow,outline:s.outlineStyle,border:a.borderColor,width:a.borderWidth,opacity:a.opacity,z:a.zIndex,pointer:a.pointerEvents}});expect(edge).toEqual({shadow:'none',outline:'none',border:dark?'rgb(209, 214, 222)':'rgb(188, 195, 205)',width:'2px',opacity:'1',z:'2',pointer:'none'});await card.screenshot({path:evidence+'/selected-hover-edge-'+dark+'.png',animations:'allow'});expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+it('localizes the new Explore account and search menus live without translating the actual identity, result title or draft',async()=>{
+ const f=await fixture();try{
+  f.page.setDefaultTimeout(4000);await open(f.page);await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');
+  const dialog=f.page.getByRole('dialog',{name:'Explore',exact:true});await uiExpect(dialog).toBeVisible();await uiExpect(dialog.getByRole('tab',{name:'Quick start',exact:true})).toBeVisible();
+  await dialog.locator('.odyssey-explore-account').click();const menu=f.page.getByRole('menu');
+  await uiExpect(menu.getByRole('menuitem',{name:'Copy user ID',exact:true})).toBeEnabled();await uiExpect(menu).toContainText('User ID: 1234567890');await menu.screenshot({path:evidence+'/account-menu-english.png'});
+  await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await uiExpect(menu.getByRole('menuitem',{name:'复制用户 ID',exact:true})).toBeEnabled();await uiExpect(menu).toContainText('用户 ID：1234567890');
+  await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await menu.getByRole('menuitem',{name:'Copy user ID',exact:true}).click();await uiExpect(menu).toContainText('Copied');expect(await f.page.evaluate(()=>(window as any).copied)).toEqual(['1234567890']);
+  await f.page.keyboard.press('Escape');await dialog.getByRole('button',{name:'Search conversations',exact:true}).click();
+  const input=dialog.getByRole('searchbox');expect(await input.getAttribute('aria-label')).toMatch(/^Search (conversations|sessions)$/);await input.fill('中际旭创');
+  await uiExpect(dialog.getByRole('listbox',{name:'Conversation search results',exact:true})).toBeVisible();await uiExpect(dialog.locator('.odyssey-explore-result-list strong').first()).toHaveText('中际旭创研究工作台');await dialog.screenshot({path:evidence+'/explore-search-english.png'});
+  expect(await f.page.locator('.wSkVaW_composerHero textarea').inputValue()).toBe('原草稿必须保留');await dialog.getByRole('button',{name:'Close search',exact:true}).click();
+  expect(await dialog.locator('.odyssey-explore-account').textContent()).toContain('研究员');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
