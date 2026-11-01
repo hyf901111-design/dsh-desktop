@@ -92,12 +92,12 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       dispose() { pixels = null }
     }
   }
-  const makeSurface = (theme: Theme, mode = dark): Surface | null => {
+  const makeSurface = (theme: Theme, mode = dark, preview = false): Surface | null => {
     let canvas = doc.createElement('canvas')
     canvas.setAttribute('aria-hidden', 'true')
     canvas.dataset.homeThemeCanvas = theme
     if (theme !== 'default') {
-      const renderer = createHomeThemeRenderer(canvas, theme, { dark: mode })
+      const renderer = createHomeThemeRenderer(canvas, theme, { dark: mode, preview })
       if (renderer) return { canvas, ...renderer }
       // A canvas with a failed GL context cannot be reused as a 2D canvas.
       canvas = doc.createElement('canvas'); canvas.setAttribute('aria-hidden', 'true'); canvas.dataset.homeThemeCanvas = 'default'
@@ -211,7 +211,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     getThumbnail: thumbnail,
     createPreview(theme) {
       if (disposed || !validTheme(theme)) return null
-      const value = makeSurface(theme, doc.body.hasAttribute('data-ds-dark-theme'))
+      const value = makeSurface(theme, doc.body.hasAttribute('data-ds-dark-theme'), true)
       if (!value) return null
       let released = false
       const preview: HomeThemePreview = {
