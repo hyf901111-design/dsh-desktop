@@ -21315,6 +21315,297 @@
         ],
         "recordedAt": "2026-11-01T09:42:38.592Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一技能菜单表格交互及探索英文内容适配",
+        "branch": "codex/feat/client-followups-final-menus-20261101",
+        "baseCommit": "fd0b185f691d32fcf490d4757e2d2145dea5b142",
+        "tipCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+        "commits": [
+          {
+            "commit": "9a0379dcaba9a1cd8205b00f6414abbebc161ddf",
+            "parents": [
+              "a68212f117c05960ac441776db4696b84baee50a"
+            ],
+            "subject": "补齐新增菜单中英文本地化并保留笔记原始内容"
+          },
+          {
+            "commit": "898b8c42f6720c5a878e944d11734a3b5816c5b8",
+            "parents": [
+              "fd0b185f691d32fcf490d4757e2d2145dea5b142",
+              "9a0379dcaba9a1cd8205b00f6414abbebc161ddf"
+            ],
+            "subject": "合并新增菜单英文文案候选"
+          },
+          {
+            "commit": "433f89192c01e8e3503a55150855b629d3dc4e49",
+            "parents": [
+              "a68212f117c05960ac441776db4696b84baee50a"
+            ],
+            "subject": "统一技能菜单固定宽度滚动并优化笔记表格菜单交互"
+          },
+          {
+            "commit": "e2b125bfb3930b7547a07d212bbc955f046e73e1",
+            "parents": [
+              "433f89192c01e8e3503a55150855b629d3dc4e49"
+            ],
+            "subject": "避让笔记正文与段落菜单的表格首部控件"
+          },
+          {
+            "commit": "50ec2d64ee51da10d8c33cbedb2f24c96118ce34",
+            "parents": [
+              "898b8c42f6720c5a878e944d11734a3b5816c5b8",
+              "e2b125bfb3930b7547a07d212bbc955f046e73e1"
+            ],
+            "subject": "合并固定宽度菜单与表格操作避让候选"
+          },
+          {
+            "commit": "2ee7b0b651ebb5ada782f5b0c3a9ee934fb3ded8",
+            "parents": [
+              "9a0379dcaba9a1cd8205b00f6414abbebc161ddf"
+            ],
+            "subject": "修复探索页英文卡片换行与内容安全边距"
+          },
+          {
+            "commit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "parents": [
+              "50ec2d64ee51da10d8c33cbedb2f24c96118ce34",
+              "2ee7b0b651ebb5ada782f5b0c3a9ee934fb3ded8"
+            ],
+            "subject": "完善探索页英文卡片排版并保留原有视觉"
+          }
+        ],
+        "boundaryParents": [
+          "a68212f117c05960ac441776db4696b84baee50a"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/financial-ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-note-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/inline-ai-composer.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-localization.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/note-menu-presentation.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-followups-menu-i18n.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-followups-note-menu-i18n-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-surface-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-pointer-menu-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-menu-selection.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-operations-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-slash-fixed-width-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-header.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/slash-menu-expanded.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "fd0b185f691d32fcf490d4757e2d2145dea5b142..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined d19d candidate; evidence /tmp/sherlock-final-menus-combined-20261101/focused-1.log; elapsed 0.0s",
+            "verifiedCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "completedAt": "2026-11-01T13:12:39.661392+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined d19d candidate; evidence /tmp/sherlock-final-menus-combined-20261101/focused-2.log; elapsed 12.6s",
+            "verifiedCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "completedAt": "2026-11-01T13:12:52.238329+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-menu.test.ts",
+              "test/notes-menu-selection.test.js",
+              "test/notes-native-table-browser.test.ts",
+              "test/notes-native-table-layout.test.ts",
+              "test/notes-slash-fixed-width-browser.test.js",
+              "test/slash-menu-expanded.test.js",
+              "test/home-guide-pointer-menu-browser.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined d19d candidate; evidence /tmp/sherlock-final-menus-combined-20261101/focused-3.log; elapsed 43.0s",
+            "verifiedCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "completedAt": "2026-11-01T13:13:35.287231+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/client-followups-note-menu-i18n-browser.test.ts",
+              "test/notes-native-operations-browser.test.ts",
+              "test/component-surface-menu-browser.test.ts",
+              "-t",
+              "serializes English slash|localizes the real Host native-table|localizes the real new component",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined d19d candidate; evidence /tmp/sherlock-final-menus-combined-20261101/focused-4.log; elapsed 20.8s",
+            "verifiedCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "completedAt": "2026-11-01T13:13:56.096012+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "keeps every English Explore hero|localizes the new Explore|reuses the original layered illustrations|fits the requested menu|hands quick actions",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined d19d candidate; evidence /tmp/sherlock-final-menus-combined-20261101/focused-5.log; elapsed 14.2s",
+            "verifiedCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "completedAt": "2026-11-01T13:14:10.248993+00:00",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/client-followups-menu-i18n.test.ts",
+              "test/ui-localization.test.ts",
+              "test/research-preview-header.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "Exact combined d19d candidate; evidence /tmp/sherlock-final-menus-combined-20261101/focused-6.log; elapsed 1.2s",
+            "verifiedCommit": "d19d35498b9ca0aa6ed9b7a879e3e56646489c69",
+            "completedAt": "2026-11-01T13:14:11.461310+00:00",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "最终组合候选 d19d：私有真实 Browser 执行技能单列滚动/表格与段落避让/深浅模糊菜单/英文主行列菜单/Explore 1380与820深浅五hero四quick/Note与Chat主题菜单；原生产Host/Store/selection实际操作；相关Focused全部通过。最终共享包Native待后续同包验证，不以Headless代替。"
+        },
+        "acceptanceCriteria": [
+          "Skills 命令列表原360px宽度，单列内部滚动，真实末项可点击；Note主菜单264、二级260，保持hover与滚位。",
+          "原生表格工具条在既有右gutter，首部边界热点避让BlockMenu，主行列菜单统一背景模糊，打开时不被插入/尺寸热点截获。",
+          "英文新增Explore账户/search、预览编辑、组件四主题、原生表格与确认文案翻译；保留用户正文及自定义中文组件名称。",
+          "Explore英文长标题安全换行，5hero/4quick在1380与820深浅完整可读，中文布局/渐变/插画不变。"
+        ],
+        "risks": [
+          "不包含其他任务PPT skill候选，不改正式main，无共享客户端构建或操作。",
+          "仅直接相关聚焦检查与批次声明门禁；不跑全功能单元测试。",
+          "Native最终同包验收与外部模型重测由Root集成打包后继续。"
+        ],
+        "generatedAt": "2026-11-01T13:16:03.420278+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -22302,6 +22593,83 @@
         "1faac7351358a8eccc878777128db5387af48365..HEAD"
       ],
       "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "fd0b185f691d32fcf490d4757e2d2145dea5b142..HEAD"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-menu.test.ts",
+        "test/notes-menu-selection.test.js",
+        "test/notes-native-table-browser.test.ts",
+        "test/notes-native-table-layout.test.ts",
+        "test/notes-slash-fixed-width-browser.test.js",
+        "test/slash-menu-expanded.test.js",
+        "test/home-guide-pointer-menu-browser.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/client-followups-note-menu-i18n-browser.test.ts",
+        "test/notes-native-operations-browser.test.ts",
+        "test/component-surface-menu-browser.test.ts",
+        "-t",
+        "serializes English slash|localizes the real Host native-table|localizes the real new component",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/explore-menu-browser.test.ts",
+        "-t",
+        "keeps every English Explore hero|localizes the new Explore|reuses the original layered illustrations|fits the requested menu|hands quick actions",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/client-followups-menu-i18n.test.ts",
+        "test/ui-localization.test.ts",
+        "test/research-preview-header.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 600000
     }
   ],
   "mainSynchronizations": []
