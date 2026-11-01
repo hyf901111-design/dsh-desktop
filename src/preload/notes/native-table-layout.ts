@@ -28,3 +28,20 @@ export function resizeNativeTableColumnWidths(widths:readonly number[],requested
  }
  return result
 }
+
+/** Fill only missing native widths; adding a column must not redistribute saved columns. */
+export function resolveNativeTableColumnWidths(columnCount:number,existing:readonly (number|null|undefined)[]=[],measured:readonly number[]=[]):number[]{
+ if(!Number.isSafeInteger(columnCount)||columnCount<1||columnCount>10000)throw new RangeError('表格列数无效。')
+ return Array.from({length:columnCount},(_,index)=>{
+  const width=existing[index],actual=measured[index]
+  return typeof width==='number'&&Number.isFinite(width)&&width>0?width:typeof actual==='number'&&Number.isFinite(actual)&&actual>0?Math.max(35,Math.round(actual)):100
+ })
+}
+
+type TableRect={left:number;right:number;top:number;bottom:number}
+/** All controls use the same screen-space intersection. Scrolling never changes persisted widths. */
+export function nativeTableVisibleRect(table:TableRect,wrapper:TableRect,note:TableRect,screen:TableRect):TableRect|undefined{
+ const left=Math.max(table.left,wrapper.left,note.left,screen.left),right=Math.min(table.right,wrapper.right,note.right,screen.right)
+ const top=Math.max(table.top,wrapper.top,note.top,screen.top),bottom=Math.min(table.bottom,wrapper.bottom,note.bottom,screen.bottom)
+ return right>left&&bottom>top?{left,right,top,bottom}:undefined
+}
