@@ -11,6 +11,8 @@ beforeAll(async()=>{
  const source=notesResidentProductionSource({conversation:true}).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell;exports.__NoteViews=EWorkNoteComponentViews;exports.__ConversationCard=ConversationComponentCard;exports.__DataSettings=ComponentDataSettings;')
  const config=(await resolveConfig({configFile:resolve('electron.vite.config.ts'),logLevel:'silent'},'build','production')).config!.preload!
  const fixture:Plugin={name:'component-surface-menu-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
+ import {useNoteUiLocale} from ${JSON.stringify(resolve('src/preload/notes/locale.ts'))};
+ import {mountUiLocalization} from ${JSON.stringify(resolve('src/preload/ui-localization.ts'))};mountUiLocalization(document);
  import React,{useState} from 'react';import * as JSX from 'react/jsx-runtime';import * as DOM from 'react-dom';import {createRoot} from 'react-dom/client';
  import {NativeComponentBlock} from ${JSON.stringify(resolve('src/preload/notes/native-component-block.tsx'))};
  import {WorkspaceSurfaceHost} from ${JSON.stringify(resolve('src/preload/workspace-surface-host.ts'))};
@@ -29,7 +31,7 @@ beforeAll(async()=>{
  let block={id:'note-block',type:'research',props:{payload:JSON.stringify(node)}},setBlock;
  const editor={isEditable:!window.fixtureReadOnly,getBlock:()=>block,removeBlocks:()=>{},updateBlock:(_id,value)=>{block={...block,props:{...block.props,...value.props}};window.probe.notes.push(JSON.parse(block.props.payload));setBlock(block)}};
  window.surfaceEditor=editor;
- function Note(){const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>{if(method==='component-menu-capabilities'&&window.deferNoteMenu)await new Promise(resolve=>window.releaseNoteMenu=resolve);return method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}}},persistComponentActions:async()=>{if(window.holdThemePersist)await new Promise(resolve=>window.releaseThemePersist=resolve)},sessionId:'same-session',dark:false}})}
+ function Note(){useNoteUiLocale();const [current,update]=useState(block);setBlock=update;return React.createElement(NativeComponentBlock,{block:current,node:JSON.parse(current.props.payload),context:{editor,bridge:{request:async method=>{if(method==='component-menu-capabilities'&&window.deferNoteMenu)await new Promise(resolve=>window.releaseNoteMenu=resolve);return method==='component-menu-capabilities'?{copy:window.fixtureFull,saveLibrary:window.fixtureFull&&!window.fixtureReadOnly,exportContent:window.fixtureFull,rename:window.fixtureFull&&!window.fixtureReadOnly}:{}}},persistComponentActions:async()=>{if(window.holdThemePersist)await new Promise(resolve=>window.releaseThemePersist=resolve)},sessionId:'same-session',dark:false}})}
  createRoot(document.querySelector('#note')).render(React.createElement(Note));createRoot(document.querySelector('#note-portals')).render(React.createElement(library.__NoteViews,{sessionId:'same-session',active:true}));
  createRoot(document.querySelector('#conversation')).render(React.createElement(library.__ConversationCard,{sessionId:'same-session',manifest:{componentId:node.id,sessionId:'same-session'}}));
  createRoot(document.querySelector('#settings-controller')).render(React.createElement(library.__DataSettings,{sessionId:'same-session',canvasRoot:{current:document.querySelector('#canvas')}}));
@@ -252,3 +254,18 @@ it('retains the executable Research reading, clipboard, naming, library and expo
   await f.page.locator('#note').getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await f.page.getByRole('menu',{name:'组件更多操作',exact:true}).getByRole('menuitem').allTextContents()).toEqual(['模式切换›','放大阅读','复制组件','重命名','添加至组件库','导出›','数据源与自动更新']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+
+it.each(['note','conversation'])('localizes the real new component theme submenu while preserving the authored title and persisting the chosen theme: %s',async host=>{
+ const f=await open();try{
+  await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');
+  await f.page.locator('#'+host).getByRole('button',{name:'More component actions',exact:true}).click();
+  const menu=f.page.getByRole('menu',{name:'More component actions',exact:true});await menu.getByRole('menuitem',{name:'Theme',exact:true}).hover();
+  const submenu=f.page.getByRole('menu',{name:'Component theme',exact:true});await submenu.waitFor();
+  for(const label of ['Light theme','Dark theme','E Fund theme','Bloomberg theme'])expect(await submenu.getByRole('menuitemradio',{name:label,exact:true}).count()).toBe(1);if(process.env.SHERLOCK_MENU_I18N_EVIDENCE)await submenu.screenshot({path:process.env.SHERLOCK_MENU_I18N_EVIDENCE+'/component-theme-'+host+'-english.png'});
+  await submenu.getByRole('menuitemradio',{name:'Bloomberg theme',exact:true}).click();
+  await expect.poll(()=>f.page.locator(host==='note'?'#note .en-research':'#conversation [data-conversation-component-id]').getAttribute('data-workbench-style')).toBe('openterminal');
+  await f.page.locator('#'+host).getByRole('button',{name:'More component actions',exact:true}).click();await menu.getByRole('menuitem',{name:'Theme',exact:true}).hover();
+  await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await expect.poll(()=>f.page.getByRole('menuitem',{name:'模式切换',exact:true}).count()).toBe(1);
+  expect(await f.page.locator('#'+host).textContent()).toContain('菜单验收行情');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
