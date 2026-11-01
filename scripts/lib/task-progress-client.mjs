@@ -24,7 +24,7 @@ export function patchTaskProgressClient(source) {
     replace('todos: useProjection("todos") ?? [],', 'todos: useProjection("todos") ?? [],\n                running: useSession(s=>s.running),')
   }
   const next='/* sherlock:task-progress-resume:v3 */'
-  if (source.includes(next)) return source
+  if (source.includes(next)) return patchTaskGoalObjective(source)
   const previous=source.indexOf('/* sherlock:task-progress-resume:v2 */')
   if(previous<0){replace("'本轮已结束 · 清单待核对'", "'任务尚未完成 · 可继续'");replace("'Run ended · checklist needs review'", "'Task unfinished · can continue'")}
   const dock=source.indexOf('function TodoDock('),start=previous<0?dock:previous,end=source.indexOf('\n\t\t/**',dock)
@@ -40,5 +40,34 @@ function TodoDock({useProjection,useSession,useInput,inputActions,t}) {
  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(TodoPanel,{todos,running,objective:odysseyTaskVisibleText(useProjection("goal")?.goal?.objective)||objective,t}),canContinue&&react_jsx_runtime.jsx('button',{type:'button','data-task-continue':'','aria-label':document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务',disabled:blocked,onClick:()=>{if(clicked.current||blocked)return;clicked.current={revision:input.draftRev};if(!continueUnfinishedTask({inputActions,input,todos,running}))clicked.current=null},style:{display:'block',margin:'4px 12px 4px auto',padding:'4px 8px',border:0,borderRadius:6,background:'var(--dsw-alias-interactive-bg-hover)',color:'var(--dsw-alias-label-secondary)',fontSize:12,cursor:blocked?'default':'pointer',opacity:blocked ? .45 : 1},children:document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务'})]});
 }`
   source=source.slice(0,start)+after+source.slice(end)
-  return source
+  return patchTaskGoalObjective(source)
+}
+
+/** An inactive retained Goal must not label a new human request as the old task. */
+function patchTaskGoalObjective(source) {
+  const marker='/* sherlock:task-goal-objective:v1 */'
+  const helper=`${marker}
+function odysseyTaskHeaderObjective(snapshot,goal) {
+ if(goal?.phase==="active") return odysseyTaskVisibleText(goal.objective)||odysseyTaskObjective(snapshot);
+ if(!goal||!["complete","paused","blocked"].includes(goal.phase)) return odysseyTaskObjective(snapshot);
+ if(snapshot.hasMore||!snapshot.chat) return undefined;
+ // Context injections and in-turn steering are not a new human task admission.
+ const order=[...snapshot.chat.order].reverse().filter(key=>{
+  const node=snapshot.chat.nodes.get(key);
+  return node?.kind==="user"&&node.data?.source?.kind==="user";
+ });
+ return odysseyTaskObjective({...snapshot,chat:{...snapshot.chat,order}});
+}
+`
+  const before='const objective=useSession(odysseyTaskObjective),running='
+  const after='const goal=useProjection("goal")?.goal,objective=useSession(snapshot=>odysseyTaskHeaderObjective(snapshot,goal)),running='
+  const oldObjective='objective:odysseyTaskVisibleText(useProjection("goal")?.goal?.objective)||objective,t'
+  const newObjective='objective,t'
+  if(source.includes(marker)) {
+    if(source.split(marker).length!==2||source.split(helper).length!==2||source.split(after).length!==2||source.includes(oldObjective))throw Error('Task Goal objective installation drifted')
+    return source
+  }
+  if(source.includes('function odysseyTaskHeaderObjective('))throw Error('Task Goal objective installation is incomplete')
+  for(const anchor of ['function TodoDock(',before,oldObjective])if(source.split(anchor).length!==2)throw Error('Task Goal objective anchor drifted: '+anchor)
+  return source.replace('function TodoDock(',helper+'function TodoDock(').replace(before,after).replace(oldObjective,newObjective)
 }
