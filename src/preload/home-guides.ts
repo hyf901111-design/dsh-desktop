@@ -1,3 +1,4 @@
+import {emitHomeGuideEntryDiagnostic} from '../shared/home-guide-entry-diagnostics'
 import styles from './home-guides.css?raw'
 import {emitNotesGuideDiagnostic} from './notes-guide-diagnostics'
 import {NOTES_GUIDE_STEPS,notesGuideFailureReason,type NotesGuideDiagnosticPhase,type NotesGuideDiagnosticReason} from '../shared/notes-guide-diagnostics'
@@ -150,6 +151,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   run.cleanup();run.root.style.display='none';run.root.inert=true
   if(run.center.dataset.homeGuideActive===run.id){delete run.center.dataset.homeGuideActive;delete run.center.dataset.homeGuideKind;run.center.style.removeProperty('--odyssey-home-guide-controls-height')}
   if(run.resident.dataset.homeGuideResident===run.id){delete run.resident.dataset.homeGuideResident;delete run.resident.dataset.homeGuideLive}
+  if(run.resident.dataset.homeGuidePlanning===run.id)delete run.resident.dataset.homeGuidePlanning
   if(restoreFocus&&selected()===run.sessionId)run.resident.querySelector<HTMLElement>('[data-srb-tabs] [aria-selected=true]')?.focus({preventScroll:true})
   const finish=()=>{
    try{
@@ -251,7 +253,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    while(selected()!==session.sessionId){ensurePending();if(Date.now()>deadline)throw Error('示例会话尚未打开，请重试。');await new Promise(resolve=>win.setTimeout(resolve,32))}
    if(openedFromEntry)entryView=await waitForHomeGuideNativeView(document,session.sessionId,kind,{signal:controller.signal,assert:ensurePending})
    clearEntry();ensurePending()
-  }catch(error){clearEntry();clearTakeover();entryPointer?.dispose();if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
+  }catch(error){if(input.entry?.demoEntry)emitHomeGuideEntryDiagnostic({runId:id,sessionId:pending.source,kind,phase:'cancel',reason:controller.signal.aborted?'source-context':'operation-failed'});clearEntry();clearTakeover();entryPointer?.dispose();if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
   clearTakeover()
   if(preparing===pending)preparing=undefined
   const center=entryView?.center??document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=entryView?.resident??[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')||[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
@@ -265,7 +267,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const fault=(message:string)=>{root.dataset.phase='error';notice.hidden=false;status.textContent=message}
   const blocked=new Map<HTMLElement,boolean>()
   const run:Run={id,kind,sessionId:session.sessionId,abort:controller,root,resident,center,content,status,cleanup:()=>{}}
-  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report'||kind==='workbench')resident.dataset.homeGuideLive='true'
+  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report'||kind==='workbench')resident.dataset.homeGuideLive='true';if(kind==='ppt'||kind==='report')resident.dataset.homeGuidePlanning=id
   const blockResident=()=>{if(kind==='ppt'||kind==='report'||kind==='workbench')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
   blockResident();center.append(root);releaseTransition();playback(run,false)
   const position=()=>{if(!root.isConnected)return;const bounds=center.getBoundingClientRect(),chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header')?.getBoundingClientRect(),top=Math.max(bounds.top,chrome?.bottom??bounds.top+44);root.style.left=bounds.left+'px';root.style.top=top+'px';root.style.width=bounds.width+'px';root.style.height=Math.max(1,bounds.bottom-top)+'px'}
