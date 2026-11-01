@@ -23027,6 +23027,405 @@
         ],
         "recordedAt": "2026-11-01T14:31:57.547Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记生成、Goal Plan、菜单视窗与演示会话显示最终组合（严格ef raw两遍）",
+        "branch": "codex/feat/goal-notes-plan-combined-20261102",
+        "baseCommit": "ef5375ed680ed8de40c6b8cc95174699d27f5c6e",
+        "tipCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+        "commits": [
+          {
+            "commit": "4801191c96de124afaff1984e268822807207338",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "优化：笔记组件绑定首请求只保留一份宿主协议"
+          },
+          {
+            "commit": "55357918c91b84d0a3e5b556f85c429c2fc9a4fa",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e",
+              "4801191c96de124afaff1984e268822807207338"
+            ],
+            "subject": "合并：笔记组件绑定提示词去重候选"
+          },
+          {
+            "commit": "4d7e6477a42b261ac3e3cc7fc71876fad4ea5a1e",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "统一笔记空格与侧栏的生成交付提示契约"
+          },
+          {
+            "commit": "d2ce772b278830ecdb301ea34de94b3d13cbf9b8",
+            "parents": [
+              "55357918c91b84d0a3e5b556f85c429c2fc9a4fa",
+              "4d7e6477a42b261ac3e3cc7fc71876fad4ea5a1e"
+            ],
+            "subject": "合并：笔记空格与侧屏生成契约候选"
+          },
+          {
+            "commit": "0c905f6cdbe9f430fc6e5e2c86629d9b010e5e2d",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "修复：目标结束后任务进度标题采用当前用户需求"
+          },
+          {
+            "commit": "81f040d3e3e4ee4dae56a5016b89f17f246c5b8e",
+            "parents": [
+              "d2ce772b278830ecdb301ea34de94b3d13cbf9b8",
+              "0c905f6cdbe9f430fc6e5e2c86629d9b010e5e2d"
+            ],
+            "subject": "合并：结束目标后的任务标题候选"
+          },
+          {
+            "commit": "4c63fedd8817d9e9d42e5400e868cf7366c39383",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "修复：冷重开后恢复Plan待切换状态并保留审批边界"
+          },
+          {
+            "commit": "bdaf8204d8ff86c7cde2b5ae5381f7c91298d9f8",
+            "parents": [
+              "81f040d3e3e4ee4dae56a5016b89f17f246c5b8e",
+              "4c63fedd8817d9e9d42e5400e868cf7366c39383"
+            ],
+            "subject": "合并：Plan待切换状态冷重开恢复候选"
+          },
+          {
+            "commit": "345d72cbfd47a16c0a65ebb667c6daa26ad177c7",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "优化：明确目标任务阶段边界与待人工阻塞规则"
+          },
+          {
+            "commit": "723611ad95a597f410a2aac091f5649b8789fb4e",
+            "parents": [
+              "bdaf8204d8ff86c7cde2b5ae5381f7c91298d9f8",
+              "345d72cbfd47a16c0a65ebb667c6daa26ad177c7"
+            ],
+            "subject": "合并：统一Goal阶段规则并保留Plan恢复安装接线"
+          },
+          {
+            "commit": "e4eeacf2b43b64d69a543093030195ada078ebc8",
+            "parents": [
+              "345d72cbfd47a16c0a65ebb667c6daa26ad177c7"
+            ],
+            "subject": "修复：同步目标自动轮提示到插件所有合法副本"
+          },
+          {
+            "commit": "67e530d7e13e6f58ad11552af89c394e5a2437c9",
+            "parents": [
+              "723611ad95a597f410a2aac091f5649b8789fb4e",
+              "e4eeacf2b43b64d69a543093030195ada078ebc8"
+            ],
+            "subject": "合并：补齐Goal轮次服务的插件依赖同步守护"
+          },
+          {
+            "commit": "24a8b29f8e6b5d11bcd2e42cc4ea354d39a75767",
+            "parents": [
+              "4d7e6477a42b261ac3e3cc7fc71876fad4ea5a1e"
+            ],
+            "subject": "优化：笔记生成优先本轮资料并核对模糊表格结构"
+          },
+          {
+            "commit": "ab8e34ab59ea2f9ed77e4b262648f65b4f8bfbff",
+            "parents": [
+              "67e530d7e13e6f58ad11552af89c394e5a2437c9",
+              "24a8b29f8e6b5d11bcd2e42cc4ea354d39a75767"
+            ],
+            "subject": "合并：笔记生成以本轮真实资料优先于历史"
+          },
+          {
+            "commit": "9ab6dd5cc53b0dd0df2d1084af83ea8a23c4b4fd",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "修复：笔记斜杠菜单适配窗口可视区域并保留完整命令"
+          },
+          {
+            "commit": "ec0b0a8362f59899f39a6360fbca3cf4e3d3a771",
+            "parents": [
+              "ab8e34ab59ea2f9ed77e4b262648f65b4f8bfbff",
+              "9ab6dd5cc53b0dd0df2d1084af83ea8a23c4b4fd"
+            ],
+            "subject": "合并：修复笔记斜杠菜单在实际窗口中的定位裁切"
+          },
+          {
+            "commit": "b083595502958fa9b26591f47ce84823d869e4fb",
+            "parents": [
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e"
+            ],
+            "subject": "修复演示工作区原会话被独立看板过滤隐藏"
+          },
+          {
+            "commit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "parents": [
+              "ec0b0a8362f59899f39a6360fbca3cf4e3d3a771",
+              "b083595502958fa9b26591f47ce84823d869e4fb"
+            ],
+            "subject": "合并：保留演示工作区原会话的可见性"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-component-generation.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-surface-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/goal-stage-guidance.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/plan-mode-pending-replay.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-progress-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-note-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/note-menu-geometry.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/note-menu-presentation.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/goal-profile-runtime-patches.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/goal-stage-guidance.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-note-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-workspace.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/note-binding-prompt-dedup.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-slash-viewport-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-surface-prompt-contract.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/plan-pending-replay.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/profile-runtime-patches.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/task-progress-goal-objective.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/note-binding-prompt-dedup.test.js",
+              "test/notes-component-generation.test.js",
+              "test/note-component-repair.test.js",
+              "test/component-generation-prompt-routing.test.js",
+              "test/notes-surface-prompt-contract.test.js",
+              "test/notes-ai.test.js",
+              "test/notes-client-capability-runtime.test.js",
+              "test/notes-native-planning.test.js",
+              "test/notes-sidebar-intent.test.js",
+              "test/notes-text-fallback.test.js",
+              "test/client-capability-host.test.js",
+              "test/task-progress-goal-objective.test.js",
+              "test/task-progress-client.test.js",
+              "test/figma-task-progress.test.ts",
+              "test/task-continuation-upgrade.test.js",
+              "test/plan-pending-replay.test.js",
+              "test/profile-runtime-patches.test.js",
+              "test/goal-stage-guidance.test.js",
+              "test/goal-profile-runtime-patches.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "最终545同tip、真实ef raw安装后19文件263/263 Node。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:22:50.878998+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-workspace.test.ts",
+              "test/home-guide-entry-native.test.ts",
+              "test/research-board-presence-final.test.ts",
+              "-t",
+              "^(?!registers a durable Workspace|shares a pending current-example|keeps an added private board|adds a dedicated private board).*",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "最终545同tip3文件102 selected通过、7已确认旧基线skip；不宣称整109均通过。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:28:48.579734+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-chat-preview-browser.test.ts",
+              "-t",
+              "routes .*through one real runtime|still inserts a conversational-looking|keeps Space native tables|prepares a mixed native table|executes a real runtime inspect/apply",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "最终545同tip实际Notes Host6/6；35非scope明确skip。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:31:18.985528+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-slash-viewport-browser.test.ts",
+              "test/notes-native-menu.test.ts",
+              "test/home-guide-note-menu.test.ts",
+              "test/notes-slash-fixed-width-browser.test.js",
+              "test/notes-menu-selection.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "最终545同tip5文件50/50，实际NotesApp→NativeSlashMenu→NoteNativeMenu.paint→真实popup HTML，900/820/620与zoom1.1；作者原6份截图/几何SHA恢复，本次证据独立保存。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:32:32.621886+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "最终545同tipTypeScript检查exit0。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:34:11.716765+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "严格物理安装仅两次，无warmup：直接从Root integration ef raw的3237文件完全相同克隆开始，第一次输出与第二次输出全部3237文件和SHA完全一致；digest 524462d3daeb7147e2687b2cdd096a09efd05c8c3665653b66895cbb749a0886；client e5e27d351579eb0c5d1beac8e087ee9f8000512b4e63ca7965cc1c8687b1a89b。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:21:48.790818+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..545617e54a4b2e36e5096b63e1b4c0c65317725d"
+            ],
+            "outcome": "passed",
+            "summary": "完整26路径与ec0后继2路径diffcheck0；9作者tips均保留完整history，23个非冲突winning路径与作者原字节完全相同，3个安装接线路径人工保留两侧；clean。",
+            "verifiedCommit": "545617e54a4b2e36e5096b63e1b4c0c65317725d",
+            "completedAt": "2026-11-01T21:37:28.844654+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "最终545同源私有headless真实NotesHost6项与原生popupHTML桥50项；900截图已目视确认首项可见。未操作共享NativeApp/未调用模型；实际包和模型复验仍由Root执行。"
+        },
+        "acceptanceCriteria": [
+          "原723五项feature保持，严格追加Goalprofile e4ee、Facts24a8和菜单9ab；全部作者原提交保留，不偷改其scope。",
+          "GoalRound所有实际profile副本含nested-only按同版本owned源码同步，真正缺省不制造副本，污染/缺manifest/错版本严格失败。",
+          "本轮正文/选区/当前真实回执优先旧history，当前与历史原字节保留；不强制已有资料充分时重读，不修改scope/权限/native fastpath。",
+          "原生与guide斜杠菜单按实际窗口可见范围和caret可用侧限高，完整菜单在固定宽listbox滚动，submenu与root scroll/bounds稳定。",
+          "演示board/workbench专属工作区的原始session保持可见，非此owned registry/cwd/成员边界不改变普通独立看板过滤。",
+          "最终545直接Node263、selected visibility102/7skip、实际Host6/35skip、geometry50、TC0及正确Root ef raw克隆严格两遍物理installer全部通过。"
+        ],
+        "risks": [
+          "未运行92声明门禁或全功能测试；Root负责正式集成门禁、构建与真实客户端和模型验收。",
+          "current-facts规则仅经实际请求producer合同验证，不宣称真实模型已纠正历史8×8回忆。",
+          "visibility有7项作者在ef基线复现的旧skip，Host有35项scope外skip；按各组如实报告，不合称所有测试通过。",
+          "旧723/ec0私有SDK证明使用了旧canonical-main donor并warmup，不能作为此次Root ef raw严格两遍的证明；本卡明确以final-ef-raw新证明取代旧SDK校验。"
+        ],
+        "generatedAt": "2026-11-01T21:37:28.844654+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -24091,6 +24490,87 @@
         "--fileParallelism=false"
       ],
       "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/note-binding-prompt-dedup.test.js",
+        "test/notes-component-generation.test.js",
+        "test/note-component-repair.test.js",
+        "test/component-generation-prompt-routing.test.js",
+        "test/notes-surface-prompt-contract.test.js",
+        "test/notes-ai.test.js",
+        "test/notes-client-capability-runtime.test.js",
+        "test/notes-native-planning.test.js",
+        "test/notes-sidebar-intent.test.js",
+        "test/notes-text-fallback.test.js",
+        "test/client-capability-host.test.js",
+        "test/task-progress-goal-objective.test.js",
+        "test/task-progress-client.test.js",
+        "test/figma-task-progress.test.ts",
+        "test/task-continuation-upgrade.test.js",
+        "test/plan-pending-replay.test.js",
+        "test/profile-runtime-patches.test.js",
+        "test/goal-stage-guidance.test.js",
+        "test/goal-profile-runtime-patches.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-workspace.test.ts",
+        "test/home-guide-entry-native.test.ts",
+        "test/research-board-presence-final.test.ts",
+        "-t",
+        "^(?!registers a durable Workspace|shares a pending current-example|keeps an added private board|adds a dedicated private board).*",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-chat-preview-browser.test.ts",
+        "-t",
+        "routes .*through one real runtime|still inserts a conversational-looking|keeps Space native tables|prepares a mixed native table|executes a real runtime inspect/apply",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-slash-viewport-browser.test.ts",
+        "test/notes-native-menu.test.ts",
+        "test/home-guide-note-menu.test.ts",
+        "test/notes-slash-fixed-width-browser.test.js",
+        "test/notes-menu-selection.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..545617e54a4b2e36e5096b63e1b4c0c65317725d"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
