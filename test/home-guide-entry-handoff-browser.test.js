@@ -147,3 +147,10 @@ for(const preview of ['edit','preview'])for(const collapsedSidebar of [false,tru
   expect(result.selected).toBe('example-board');expect(result.header).toBe(result.selected);expect(result.owner).toBe(result.selected);expect(result.source.map(({x,y,width,height,...node})=>node)).toEqual(before.map(({x,y,width,height,...node})=>node));expect(result.sourcePreview).toBe(preview==='preview');expect(result.requests.filter(row=>row.command==='prepare')).toHaveLength(1);expect(result.requests.filter(row=>row.command==='open')).toHaveLength(1);expect(result.steps).toContain('mount-board');expect(result.extraBlank).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },22000)
+
+it('shows a safe preparation failure outside the already closed Explore dialog without changing the source draft',async()=>{
+ const f=await fixture({explore:true,failPrepare:true,prepareDelay:0,reducedMotion:'reduce'}),{page}=f;try{
+  const before=await page.evaluate(()=>window.entryProbe.shellFor('source').snapshot);await beginExplore(page,0)
+  const notice=page.locator('.odyssey-home-guide-save-error');await expect.poll(()=>notice.count(),{timeout:7000}).toBe(1);expect(await notice.isVisible()).toBe(true);expect(await notice.innerText()).toContain('演示准备未完成，请重新打开探索后重试。');expect(await page.locator('dialog.odyssey-explore[open]').count()).toBe(0);expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('source');expect(await page.evaluate(()=>window.entryProbe.shellFor('source').snapshot)).toEqual(before);await notice.getByRole('button',{name:'关闭',exact:true}).click();expect(await notice.count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)

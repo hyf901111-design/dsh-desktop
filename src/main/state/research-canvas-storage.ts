@@ -58,11 +58,11 @@ function validTableColumnPreference(value: string): boolean {
 
 function validHomeGuideRegistry(key: string, value: string): boolean {
   try {
-    if (value.length > 512_000) return false
+    if (value.length > RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH) return false
     const record = JSON.parse(value)
     const scope = decodeURIComponent(key.slice(HOME_GUIDE_SESSION_PREFIX.length))
     if (scope !== 'local' && !/^account:[^\x00-\x1f]{1,200}$/.test(scope)) return false
-    if (!record || Array.isArray(record) || Object.keys(record).sort().join(',') !== 'entries,scope,version' || record.version !== 1 || record.scope !== scope || !Array.isArray(record.entries) || record.entries.length > 100) return false
+    if (!record || Array.isArray(record) || Object.keys(record).sort().join(',') !== 'entries,scope,version' || record.version !== 1 || record.scope !== scope || !Array.isArray(record.entries)) return false
     const ids = new Set<string>()
     return record.entries.every((entry: any) => {
       if (!entry || Array.isArray(entry) || Object.keys(entry).sort().join(',') !== 'createdAt,cwd,kind,sessionId,title' || !['board','note','ppt','report','workbench'].includes(entry.kind) || typeof entry.sessionId !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(entry.sessionId) || ids.has(entry.sessionId) || typeof entry.cwd !== 'string' || !path.isAbsolute(entry.cwd) || entry.cwd.length > 4096 || /[\x00-\x1f]/.test(entry.cwd) || typeof entry.title !== 'string' || !entry.title.trim() || entry.title.length > 256 || /[\x00-\x1f]/.test(entry.title) || !Number.isSafeInteger(entry.createdAt) || entry.createdAt <= 0) return false
