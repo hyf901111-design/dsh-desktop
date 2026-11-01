@@ -204,3 +204,18 @@ it('localizes native headings and empty states with the owning editor locale',()
  expect(noteMenuPresentation(input({locale:'en',items:[],selectedIndex:undefined}),'t').html).toContain('No matching commands')
  expect(()=>validateNoteMenu(input({locale:'invalid' as any}))).toThrow()
 })
+
+it('keeps long native command and child lists at their original width with internal scrolling',()=>{
+ const item=(id:string)=>({id,title:id,icon:'quote',subtext:'',badge:'',group:''}),children=Array.from({length:80},(_,index)=>item('child-'+index)),items=[...Array.from({length:30},(_,index)=>item('command-'+index)),{...item('library'),children}]
+ const result=noteMenuPresentation(input({items,submenu:{parentId:'library',selectedIndex:79,keyboardActive:true}}),'ticket',{height:300,width:720,shadowInset:0})
+ expect(result.root.width).toBe(264);expect(result.child!.width).toBe(260);expect(result.root.height).toBe(300);expect(result.child!.height).toBe(300)
+ expect(result.root.html.match(/role="option"/g)).toHaveLength(31);expect(result.child!.html.match(/role="option"/g)).toHaveLength(80)
+ expect(result.html).not.toContain('menu-columns');expect(noteMenuDocumentHtml).toContain('overflow-y:auto')
+})
+it('refreshes hover after scrolling below a stationary native pointer without closing keyboard-opened children on repaint',async()=>{
+ const {parent,menu}=fixture(),library={id:'library',title:'组件库',icon:'library',subtext:'',badge:'',group:'',children:[{id:'quote',title:'行情',icon:'quote',subtext:'',badge:'',group:''}]},items=[...Array.from({length:40},(_,index)=>({...library,id:'command-'+index,children:undefined})),library];menu.sync(input({items}),'alice');const popup=instances()[1] as any
+ await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled());const js=popup.webContents.executeJavaScript.mock.calls.find((call:any[])=>call[0].includes('innerHTML'))[0],ticket=js.match(/ework-note-menu:\/\/([\w-]+)\//)[1];let scroll=0
+ popup.webContents.executeJavaScript.mockImplementation(async(script:string)=>script.includes('elementFromPoint')?{href:`ework-note-menu://${ticket}/select/other?revision=2`,submenu:false,scroll,scrollable:true}:({pane:{x:0,y:0,width:264,height:300},item:{x:7,y:7,width:252,height:32}}))
+ await new Promise(resolve=>setTimeout(resolve,90));menu.sync(input({revision:2,items,submenu:{parentId:'library',selectedIndex:0,keyboardActive:true}}),'alice');await vi.waitFor(()=>expect(instances().at(-1).showInactive).toHaveBeenCalled());await new Promise(resolve=>setTimeout(resolve,90));expect(parent.webContents.send).not.toHaveBeenCalled();scroll=64
+ await vi.waitFor(()=>expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'back',itemId:'library'})))
+})

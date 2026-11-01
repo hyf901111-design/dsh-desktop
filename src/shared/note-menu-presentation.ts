@@ -46,26 +46,20 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
     return `<a role="option" aria-label="${escapeHtml(item.title)}" title="${escapeHtml(item.title+(item.badge?' · '+item.badge:''))}" aria-selected="${selected}" ${item.children?'aria-haspopup="menu" aria-expanded="'+(state.submenu?.parentId===item.id)+'" data-submenu=""':''} id="item-${parentId||'root'}-${index}" href="ework-note-menu://${ticket}/${route}/${item.id}?revision=${state.revision}${suffix}" class="${iconOnly?'basic-item':''}"><span class="icon ${parentId?'library-icon':tone(item.icon)}">${menuIcon(item.icon,!!parentId)}</span>${iconOnly?'':`<span class="label">${escapeHtml(item.title)}</span>`}${item.children?'<span class="chevron">›</span>':''}</a>`
   }
   const maxHeight=limits.height??Infinity,maxWidth=limits.width??Infinity
-  // All commands are visible. Short displays add columns rather than a scroll area.
-  const columns=(items:NoteMenuState['items'],baseHeight:number,columnWidth:number,parentId?:string)=>{
-    const capacity=Math.max(32,maxHeight-baseHeight)
-    const parts:{html:string;height:number}[]=[{html:'',height:0}],positions=new Map<string,number>()
-    for(const item of items){
-      let part=parts.at(-1)!
-      if(part.height&&part.height+32>capacity){part={html:'',height:0};parts.push(part)}
-      positions.set(item.id,baseHeight-7+part.height)
-      part.html+=row(item,false,parentId);part.height+=32
-    }
-    return {html:'<div class="menu-columns" style="grid-template-columns:repeat('+parts.length+',minmax(0,1fr))">'+parts.map(part=>'<div>'+part.html+'</div>').join('')+'</div>',height:baseHeight+Math.max(...parts.map(part=>part.height)),width:Math.min(maxWidth,parts.length*columnWidth),positions}
+  // Keep native and replay menus at their established width. Long rosters
+  // scroll within one pane instead of adding columns across the document.
+  const list=(items:NoteMenuState['items'],baseHeight:number,columnWidth:number,parentId?:string)=>{
+    const positions=new Map(items.map((item,index)=>[item.id,baseHeight-7+index*32]))
+    return {html:'<div class="menu-list">'+items.map(item=>row(item,false,parentId)).join('')+'</div>',height:Math.min(maxHeight,baseHeight+items.length*32),width:Math.min(maxWidth,columnWidth),positions}
   }
-  const gridRows=Math.max(1,Math.floor((maxHeight-14-24-8-(rest.length?56:0))/32)),gridColumns=Math.max(6,Math.ceil(basic.length/gridRows))
+  const gridColumns=6
   const basicHeight=basic.length?24+Math.ceil(basic.length/gridColumns)*32+8:0
   const basicHtml=basic.length?'<h2>'+t('基础格式')+'</h2><div class="basic-grid" style="grid-template-columns:repeat('+gridColumns+',minmax(0,1fr));max-width:'+gridColumns*42+'px">'+basic.map(item=>row(item,true)).join('')+'</div>':''
-  const root=columns(rest,14+basicHeight+(grid&&rest.length?24:0),264)
+  const root=list(rest,14+basicHeight+(grid&&rest.length?24:0),264)
   root.width=Math.min(maxWidth,Math.max(root.width,basic.length?gridColumns*42+12:0))
   if(!state.items.length)root.height=50
   const rootHtml=`<section class="menu root-menu" style="height:${root.height}px;width:${root.width}px"><div id="items" role="listbox" aria-label="${t('笔记斜杠菜单')}">${state.items.length?basicHtml+(grid&&rest.length?'<h2>'+t('插入')+'</h2>':'')+root.html:'<p class="empty">'+t('没有匹配的命令')+'</p>'}</div></section>`
-  const child=parent?columns(parent.children!,14,260,parent.id):undefined,showRoot=!child||root.width+4+child.width<=maxWidth
+  const child=parent?list(parent.children!,14,260,parent.id):undefined,showRoot=!child||root.width+4+child.width<=maxWidth
   const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="${t('组件库')}">${child.html}</div></section>`:''
   const childTop=showRoot&&child?Math.max(0,Math.min(root.positions.get(parent!.id)||0,maxHeight-child.height)):0
   const html=(showRoot?rootHtml:'')+(child?childHtml.replace('style="height:','style="margin-top:'+childTop+'px;height:'):'')
@@ -73,6 +67,6 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
 }
 export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>Note commands</title><style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:rgba(255, 255, 255, 0.78);--hover:#e7e7e7;--muted:#777;--line:rgba(0,0,0,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.16)}body.dark{color:#eee;--bg:rgba(43, 43, 43, 0.68);--hover:#383838;--muted:#aaa;--line:rgba(255,255,255,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.32)}
-main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:0;border-radius:10px;background:var(--bg);box-shadow:var(--shadow);backdrop-filter:blur(36px) saturate(1.2);-webkit-backdrop-filter:blur(36px) saturate(1.2);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow:hidden}.menu-columns{display:grid;gap:8px;align-items:start}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[data-pointer-hover=true],a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
+main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:0;border-radius:10px;background:var(--bg);box-shadow:var(--shadow);backdrop-filter:blur(36px) saturate(1.2);-webkit-backdrop-filter:blur(36px) saturate(1.2);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--muted) transparent}.menu-list{display:block}.menu>[role=listbox]::-webkit-scrollbar{width:4px}.menu>[role=listbox]::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[data-pointer-hover=true],a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
 body.native-material main{padding:0}body.native-material .menu{box-shadow:none}
 </style><main></main>`
