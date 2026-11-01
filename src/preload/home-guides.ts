@@ -140,7 +140,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const playback=(run:Run,playing:boolean,ending=false)=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:run.id,sessionId:run.sessionId,playing,...ending?{ending:true}:{}}}))
  const hideCue=()=>active?.pointer?.hide()
  const notices=new Set<HTMLElement>()
- const saveFailure=(message:string)=>{const notice=document.createElement('div');notice.className='odyssey-home-guide-save-error';notice.setAttribute('role','alert');const text=document.createElement('span');text.textContent='示例保存未完成：'+message;const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='关闭';dismiss.addEventListener('click',()=>{notices.delete(notice);notice.remove()});notice.append(text,dismiss);notices.add(notice);document.body.append(notice)}
+ const saveFailure=(message:string,prefix='示例保存未完成：')=>{const notice=document.createElement('div');notice.className='odyssey-home-guide-save-error';notice.setAttribute('role','alert');const text=document.createElement('span');text.textContent=prefix+message;const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='关闭';dismiss.addEventListener('click',()=>{notices.delete(notice);notice.remove()});notice.append(text,dismiss);notices.add(notice);document.body.append(notice)}
  const close=(restoreFocus=true,alreadySaved=false,reason:NotesGuideDiagnosticReason='closed'):Promise<void>=>{
   const run=active;if(!run)return closing
   if(reason!=='handoff')diagnostic(run,'cancelled',reason);active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false,true)
@@ -253,7 +253,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    while(selected()!==session.sessionId){ensurePending();if(Date.now()>deadline)throw Error('示例会话尚未打开，请重试。');await new Promise(resolve=>win.setTimeout(resolve,32))}
    if(openedFromEntry)entryView=await waitForHomeGuideNativeView(document,session.sessionId,kind,{signal:controller.signal,assert:ensurePending})
    clearEntry();ensurePending()
-  }catch(error){if(input.entry?.demoEntry)emitHomeGuideEntryDiagnostic({runId:id,sessionId:pending.source,kind,phase:'cancel',reason:controller.signal.aborted?'source-context':'operation-failed'});clearEntry();clearTakeover();entryPointer?.dispose();if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
+  }catch(error){if(input.entry?.demoEntry&&!controller.signal.aborted&&(error as {name?:string})?.name!=='AbortError')saveFailure('演示准备未完成，请重新打开探索后重试。','');if(input.entry?.demoEntry)emitHomeGuideEntryDiagnostic({runId:id,sessionId:pending.source,kind,phase:'cancel',reason:controller.signal.aborted?'source-context':'operation-failed'});clearEntry();clearTakeover();entryPointer?.dispose();if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
   clearTakeover()
   if(preparing===pending)preparing=undefined
   const center=entryView?.center??document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=entryView?.resident??[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')||[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
