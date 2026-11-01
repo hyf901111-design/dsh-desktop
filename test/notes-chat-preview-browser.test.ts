@@ -118,7 +118,7 @@ it.each(['plain-answer','text-envelope','read-then-conversation','read-then-plai
  }finally{await f.close()}
 },15000)
 
-it.each(['不要改其他段落，只在笔记末尾追加两句总结，先给我预览','写一段文字'])('keeps a raw writing result as a normal candidate for %s',async prompt=>{
+it.each(['不要改其他段落，只在笔记末尾追加两句总结，先给我预览','写一段文字','请解释这段代码并在笔记末尾添加一个代码示例','这段函数应该怎么修改？请把选中段落改写为完整说明','Explain this function and append a short example to the note.','请先解释这张图并给我正文预览'])('keeps a raw writing result as a normal candidate for %s',async prompt=>{
  const f=await open(()=>'后续核对增长与现金转化。');try{
   await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,prompt)
   await f.page.locator('[data-note-preview-state=ready]').waitFor();expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before)

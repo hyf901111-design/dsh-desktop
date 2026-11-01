@@ -3,7 +3,21 @@
  * Unknown writing requests keep the existing content fallback. */
 export function sidebarNoteConversationOnly(input){
  if(input.entryPoint==='inline'||input.mode==='component'||typeof input.prompt!=='string')return false
- const prompt=input.prompt.trim(),clauses=prompt.split(/[，,。；;\n]/u).map(value=>value.trim()).filter(Boolean)
+ const prompt=input.prompt.trim()
+ // Question/sequence boundaries end the previous request's scope. Preserve
+ // “explain how to modify and update…” as one inquiry, but recognize an
+ // independently directed delivery after it instead of swallowing that action.
+ const clauses=prompt.split(/[，,。；;？！?!\n]/u).flatMap(sentence=>{
+  const parts=sentence.split(/((?<!合)并(?:且)?|然后|之后|接着|同时|\s+and\s+|\s+then\s+)/iu),result=[]
+  let current=parts[0]
+  for(let index=1;index<parts.length;index+=2){
+   const next=parts[index+1]?.trim()||'',questionComplement=/(?:如何|怎么|怎样|\b(?:how|what|why)\b)/iu.test(current)
+   const directedDelivery=/^(?:请|帮我|麻烦|please\b)|^(?:在.{0,24}(?:笔记|正文|文档|文末|末尾)|(?:给我|提供|展示).{0,16}(?:正文|内容)预览)|\b(?:append|insert|write|add)\b.{0,80}\b(?:to|into|in|at)\b.{0,20}\b(?:note|document)\b/iu.test(next)
+   const interrogativeLead=/^(?:(?:请|帮我|麻烦|先)\s*)*(?:为什么|为何|如何|怎么|怎样|\b(?:how|what|why)\b)/iu.test(current),newRequest=/^(?:请|帮我|麻烦|please\b)/iu.test(next)
+   if(!questionComplement||directedDelivery&&(!interrogativeLead||newRequest)){result.push(current);current=next}else current+=parts[index]+next
+  }
+  result.push(current);return result
+ }).map(value=>value.trim()).filter(Boolean)
  const questionStart=/^(?:(?:请|帮我|麻烦|先)\s*)*(?:解释|解读|说明|讨论|回答|答复|为什么|为何|如何|怎么|是否|能否|可否|what\b|why\b|how\b|explain\b|describe\b|answer\b|discuss\b)/iu
  const negatedAction=/^(?:(?:请|先|也|都|本次|此次)\s*)*(?:不(?:要|必|用|需)?|无需|别|do\s+not\b|don't\b|without\b)\s*(?:再|直接)?\s*(?:修改|改|编辑|更新|写|插入|添加|追加|删除|移除|移动|edit\b|change\b|modify\b|write\b|insert\b|append\b|delete\b)/iu
  // A real writing/edit clause wins over scoped negatives such as “不要改其他
