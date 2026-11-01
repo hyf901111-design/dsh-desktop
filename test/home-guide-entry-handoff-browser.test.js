@@ -1,3 +1,5 @@
+import {createResearchGrid} from '../packages/dsh-research-task-runtime/research-grid.js'
+import {homeWorkbenchReplayCells} from '../scripts/lib/home-guide-workbench-native.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile,readdir,mkdir,writeFile,mkdtemp,rm} from 'node:fs/promises'
 import {join,dirname} from 'node:path'
@@ -154,3 +156,19 @@ it('shows a safe preparation failure outside the already closed Explore dialog w
   const notice=page.locator('.odyssey-home-guide-save-error');await expect.poll(()=>notice.count(),{timeout:7000}).toBe(1);expect(await notice.isVisible()).toBe(true);expect(await notice.innerText()).toContain('演示准备未完成，请重新打开探索后重试。');expect(await page.locator('dialog.odyssey-explore[open]').count()).toBe(0);expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('source');expect(await page.evaluate(()=>window.entryProbe.shellFor('source').snapshot)).toEqual(before);await notice.getByRole('button',{name:'关闭',exact:true}).click();expect(await notice.count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+it('renders a narrow watchlist beside readable main content on all three completed Workbench pages at native canvas widths',async()=>{
+ const f=await fixture({explore:true,nativeBoards:true,completedWorkbench:true,reducedMotion:'reduce',sourceView:'research',homeEmpty:true,sourcePreview:'edit'}),{page}=f;try{
+  for(const width of [650,1000]){
+   await page.setViewportSize({width:width+240,height:860});await page.waitForTimeout(100)
+   for(const tab of ['overview','valuation','documents']){
+    const actualWidth=await page.evaluate(()=>{const w=window.entryProbe.registry.for('source'),s=w.getSnapshot();return s.canvasSize.availableWidth||s.canvasSize.width}),metrics=createResearchGrid().metrics(actualWidth),cells=homeWorkbenchReplayCells(tab,metrics,'source')
+    await page.evaluate(({tab,cells})=>{const w=window.entryProbe.registry.for('source'),nav=w.getSnapshot().artifacts.find(node=>node.containerSpec?.type==='board-tabs'),i=['overview','valuation','documents'].indexOf(tab);w.selectBoardTab(nav.containerSpec.tabs[i].id);if(!w.applyWorkbenchCells(w.getWorkbenchCells().map(cell=>cells.find(next=>next.id===cell.id)??cell),false))throw Error('Completed source layout write denied')},{tab,cells});await page.waitForTimeout(100)
+    const state=await page.evaluate(tab=>{const w=window.entryProbe.registry.for('source'),nodes=w.getVisibleBoardSnapshot().artifacts,watch=nodes.find(node=>node.id.endsWith(':'+tab+':watchlist')),next=nodes.filter(node=>node.id!==watch.id&&node.containerSpec?.type!=='board-tabs').sort((a,b)=>a.y-b.y||a.x-b.x)[0];return{watch:{width:watch.width,x:watch.x,version:watch.workbenchLayoutVersion,type:watch.containerSpec?.type,widget:watch.containerSpec?.widget},next:{width:next.width,x:next.x},count:nodes.length,grid:w.getWorkbenchCells().find(cell=>cell.id===watch.id),canvas:w.getSnapshot().canvasSize}},tab)
+    await writeFile(output+'/watchlist-'+width+'-'+tab+'.json',JSON.stringify({actualWidth,metrics,cells,state},null,2));expect(state.count).toBe(5);expect(state.watch.width).toBeGreaterThanOrEqual(230);expect(state.watch.width).toBeLessThan(285);expect(state.next.width).toBeGreaterThan(state.watch.width);await page.evaluate(()=>{const w=window.entryProbe.registry.for('source');if(!w.organizeCanvas(new Map(),'standard')||!w.persist())throw Error('Standard arrange/save rejected')});await page.waitForTimeout(80);expect(await page.evaluate(tab=>window.entryProbe.registry.for('source').getVisibleBoardSnapshot().artifacts.find(node=>node.id.endsWith(':'+tab+':watchlist')).width,tab)).toBeLessThan(285)
+    await page.screenshot({path:output+'/watchlist-'+width+'-'+tab+'.png'});await writeFile(output+'/watchlist-'+width+'-'+tab+'.json',JSON.stringify({actualWidth,metrics,cells,state},null,2))
+   }
+  }
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},18000)
