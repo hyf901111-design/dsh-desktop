@@ -117,7 +117,7 @@ async function fixture(legacyKind?: string, options: {legacyTitle?:string;curren
   const reply = async (id: string) => { await expect.poll(() => replies.find(row => row.requestId === id), { timeout: 1500 }).toBeTruthy(); return replies.find(row => row.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(async () => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; await win.happyDOM.abort(); await closeHost(); await rm(root, { recursive: true, force: true }) })
-  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, failRename(value:boolean){failRename=value}, failStorage(count:number){failStorage=count}, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await sessionStore.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, win, emitState(){ state.eventSeq++; emit({type:"state",state:{...state},eventSeq:state.eventSeq,accountGeneration:state.account.generation}) }, failRename(value:boolean){failRename=value}, failStorage(count:number){failStorage=count}, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await sessionStore.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 
 const oldGuideTitles={board:'自选行情示例看板',note:'AI 护航研究笔记示例',ppt:'公司风格演示示例',report:'研究报告示例'} as const
@@ -338,4 +338,118 @@ it.each(['board', 'note', 'ppt', 'report'])('binds the same persisted %s example
   expect(repaired).toMatchObject({ ok: true, fresh: false, sessionId: old.sessionId, cwd: old.cwd })
   expect((await f.registry.resolveByPath(old.cwd))!.sessionIds).toEqual([old.sessionId])
   expect(f.calls.filter(row => row[0] === 'session.create')).toHaveLength(1)
+})
+
+
+// Execute the installed production sidebar projection without rewriting its
+// filter or group implementation. Host Workspace/session transport above is real;
+// these hooks only read the exact dataset snapshot used by SessionTree.
+async function sidebarProjection(win: Window) {
+  const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js', 'utf8')
+  const anchor = 'return module.exports;'
+  expect(source.split(anchor)).toHaveLength(2)
+  let descriptor: any
+  ;(win as any).__ModuleLoader__ = { load(value: any) { descriptor = value } }
+  runInNewContext(source.replace(anchor, 'exports.__sidebar = { useBoardWorkspaceList, groupByWorkspace, researchSessionEngaged };' + anchor), {window:win,document:win.document,localStorage:win.localStorage,Event:win.Event,console,crypto,setTimeout,clearTimeout})
+  const dependencies: Record<string, unknown> = {
+    '@deepseek-ai/dsh-client-runtime/client': {},
+    'react/jsx-runtime': {},
+    'react': { useSyncExternalStore: (_subscribe: unknown, snapshot: () => unknown) => snapshot(), useMemo: (read: () => unknown) => read() },
+    '@deepseek-ai/dsh-client-ui-primitives': {}
+  }
+  return descriptor.factory((id: string) => { if (id in dependencies) return dependencies[id]; throw Error('Unexpected sidebar dependency: ' + id) }).__sidebar
+}
+async function projectedGuideFixture(kind: string) {
+  const f = await fixture(), entry = await f.reply(f.send(kind))
+  expect(entry.ok).toBe(true)
+  const sidebar = await sidebarProjection(f.win)
+  const tree = () => {
+    const list = f.sessions.list.getSnapshot()
+    return sidebar.groupByWorkspace(sidebar.useBoardWorkspaceList({...list,ids:Object.keys(list.byId)}),f.workspaces.list.getSnapshot().items,new Set(f.workspaces.list.getSnapshot().archivedSessionIds ?? [])) as Array<{sessions:Array<{id:string}>}>
+  }
+  const visible = () => tree().flatMap(group => group.sessions.map(session => session.id))
+  const setSummary = (patch: Record<string, unknown>) => {
+    const list = f.sessions.list.getSnapshot()
+    f.sessions.list.set({...list,byId:{...list.byId,[entry.sessionId]:{...list.byId[entry.sessionId],...patch}}})
+  }
+  // This is the saved desktop-owned artifact representation read by the real
+  // blank/engaged filter; plain journal blank summaries are not force-unblanked.
+  f.disk.set('sherlock.research.canvas.artifacts.v1:' + entry.sessionId,JSON.stringify([{id:'saved-chart',title:'Saved research chart'}]))
+  return {...f,entry,sidebar,tree,visible,setSummary,hidden:()=>JSON.parse(f.win.document.documentElement.dataset.srbHiddenSessions ?? '[]') as string[]}
+}
+it.each(['board','workbench'])('keeps the original registered %s inside its real Workspace after dedicated pinning and cold summary restore',async kind=>{
+  const f = await projectedGuideFixture(kind), id=f.entry.sessionId
+  expect((await f.registry.resolveByPath(f.entry.cwd))!.sessionIds).toEqual([id])
+  expect(f.sessions.list.getSnapshot().current).toBe('original')
+  expect(f.state.favorites.find((row:any)=>row.sessionId===id).dedicated).toBe(true)
+  expect(f.page.isBoardOnly(id)).toBe(true)
+  expect(f.sidebar.researchSessionEngaged(id)).toBe(true)
+  expect(f.visible()).toContain(id)
+  expect(f.hidden()).not.toContain(id)
+  await f.coldSession(id)
+  expect(f.ctx.agents.get(SessionId(id))).toBeUndefined()
+  await f.sessions.binding(id).session.rename('User-renamed original')
+  f.emitState()
+  expect(f.visible()).toContain(id)
+  expect(f.calls.filter(row=>row[0]==='session.create')).toHaveLength(1)
+})
+it('retains dedicated copies and shared-board local sessions in the hidden set while exposing only the registered original',async()=>{
+  const f=await projectedGuideFixture('board'),id=f.entry.sessionId
+  const workspace=await f.registry.resolveByPath(f.entry.cwd)
+  const copy=await f.sessions.create({cwd:f.entry.cwd}),mirror=await f.sessions.create({cwd:f.entry.cwd})
+  for(const sessionId of [copy,mirror])f.unwrap(await f.workspaces.api.sessions.create({workspaceId:workspace!.id,sessionId}))
+  await f.workspaces.refresh()
+  const list=f.sessions.list.getSnapshot()
+  f.sessions.list.set({...list,byId:{...list.byId,[copy]:{...list.byId[copy],blank:false},[mirror]:{...list.byId[mirror],blank:false}}})
+  f.state.favorites.push({favoriteId:'ordinary-copy',sessionId:copy,pinned:true,dedicated:true})
+  f.state.boards.push({boardId:'shared-board',localSessionId:mirror,pinned:true})
+  f.emitState()
+  expect(new Set(f.hidden())).toEqual(new Set([copy,mirror]))
+  expect(f.visible()).toContain(id)
+  expect(f.visible()).not.toContain(copy);expect(f.visible()).not.toContain(mirror)
+  f.state.boards.push({boardId:'shared-original',localSessionId:id,pinned:true});f.emitState()
+  expect(f.hidden()).toContain(id);expect(f.visible()).not.toContain(id)
+})
+
+it.each(['account','cwd','workspace','archived','removed','parent','origin','subagent'])('does not expose a dedicated guide original after its %s ownership or root-session guard fails',async guard=>{
+  const f=await projectedGuideFixture('workbench'),id=f.entry.sessionId
+  expect(f.visible()).toContain(id)
+  if(guard==='account')f.setOwner('other')
+  else if(guard==='cwd')f.setSummary({cwd:f.root})
+  else if(guard==='removed')f.setSummary({removed:true})
+  else if(guard==='parent')f.setSummary({parentId:'parent-agent'})
+  else if(guard==='origin')f.setSummary({origin:'subagent'})
+  else if(guard==='subagent')f.setSummary({subagent:true})
+  else if(guard==='workspace'){
+    const list=f.workspaces.list.getSnapshot();(f.workspaces.list as any).getSnapshot=()=>({...list,items:list.items.map((row:any)=>({...row,sessionIds:[]}))});f.emitState()
+  }else if(guard==='archived'){
+    await f.workspaces.archiveSession(id)
+  }
+  expect(f.hidden()).toContain(id)
+  expect(f.visible()).not.toContain(id)
+})
+it('keeps the ordinary blank/engaged and archived filters after the guide-only hidden-set exception',async()=>{
+  const f=await projectedGuideFixture('board'),id=f.entry.sessionId
+  expect(f.sessions.list.getSnapshot().byId[id].blank).toBe(true)
+  expect(f.visible()).toContain(id)
+  f.disk.delete('sherlock.research.canvas.artifacts.v1:'+id)
+  expect(f.hidden()).not.toContain(id)
+  expect(f.visible()).not.toContain(id)
+  f.setSummary({blank:false})
+  expect(f.visible()).toContain(id)
+  await f.workspaces.archiveSession(id)
+  expect(f.visible()).not.toContain(id)
+})
+
+it.each(['missing','other-owner','wrong-cwd'] as const)('keeps an existing dedicated session hidden without a matching %s guide registration',async registration=>{
+  const f=await fixture('board',{registration}),id=f.legacy!.sessionId
+  const workspace=await f.workspaces.create({path:f.legacy!.cwd})
+  f.unwrap(await f.workspaces.api.sessions.create({workspaceId:workspace.workspaceId,sessionId:id}))
+  await f.workspaces.refresh()
+  f.state.favorites.push({favoriteId:'legacy-dedicated',sessionId:id,pinned:true,dedicated:true,cwd:f.legacy!.cwd})
+  f.emitState()
+  expect(JSON.parse(f.win.document.documentElement.dataset.srbHiddenSessions ?? '[]')).toContain(id)
+  const sidebar=await sidebarProjection(f.win),list=f.sessions.list.getSnapshot()
+  const groups=sidebar.groupByWorkspace(sidebar.useBoardWorkspaceList({...list,ids:Object.keys(list.byId)}),f.workspaces.list.getSnapshot().items,new Set())
+  expect(groups.flatMap((group:any)=>group.sessions.map((session:any)=>session.id))).not.toContain(id)
 })
