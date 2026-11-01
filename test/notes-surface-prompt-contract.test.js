@@ -67,3 +67,30 @@ it('neutral descriptions do not change external host direct effects, scope valid
  expect(host.catalog(clientContext).find(row=>row.id===call.capability).description).not.toContain('仅准备待确认事务')
  expect(host.catalog({...clientContext,editable:false}).find(row=>row.id===call.capability).available).toBe(false)
 })
+
+it.each(['inline','composer'])('uses current native-table facts ahead of intact stale history in one real %s request',async entryPoint=>{
+ const {Session}=await import('@deepseek-ai/dsh-session')
+ const session=Session.create('session'),history='此前创建了8×8表格，首行“项目”，右下角“末格”。'
+ session.append('user/message',{id:'old-table-request',role:'user',source:{kind:'user'},content:[{type:'text',text:history}]},{surfaceOp:'append'})
+ const rows=Array.from({length:9},(_,i)=>Array.from({length:11},(_,j)=>i===1&&j===0?'项目':i===8&&j===7?'末格':''))
+ // Markdown's synthetic empty header does not belong to the native data rows.
+ const line=cells=>'| '+cells.join(' | ')+' |'
+ const document=[line(Array(11).fill('')),line(Array(11).fill('---')),...rows.map(line)].join('\n'),selection='项目'
+ const block={id:'table',type:'table',content:{type:'tableContent',headerRows:0,rows:rows.map(cells=>({cells}))}}
+ const clientReceipts=[{requestId:'current-read',capability:'notes.blocks.read',status:'succeeded',message:'已读取本轮表格',data:{revision:'current',blocks:[{block}]}}]
+ const read=vi.fn(),catalog=createClientCapabilityRegistry({readNoteBlocks:read}).catalog(clientContext),requests=[]
+ const reply=entryPoint==='inline'?{kind:'text',markdown:'本轮表格有九个数据行和十一列。'}:{kind:'conversation',markdown:'当前表格有九个数据行和十一列。'}
+ const ctx={sessions:{get:()=>session},sessionTitle:{rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}},apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'provider',model:'model'},routable:true}}})}},llm:{stream:async function*(options){requests.push(options);yield{type:'text-delta',text:JSON.stringify(reply)};yield{type:'finish',reason:{kind:'stop'}}}}}
+ const result=await generateNoteSuggestion(ctx,{...input,entryPoint,markdown:document,selection,prompt:entryPoint==='inline'?'在此处总结当前表格。':'核对当前表格，只回答，不改笔记。',clientCapabilities:catalog,clientReceipts,...entryPoint==='inline'?{insertionAnchor:{documentId:'document',blockId:'anchor',position:{}}}:{}})
+ expect(result.kind).toBe(reply.kind)
+ expect(requests).toHaveLength(1)
+ const sent=JSON.parse(requests[0].messages[0].content[0].text)
+ expect(sent.document).toBe(document);expect(sent.selection).toBe(selection);expect(sent.clientReceipts).toEqual(clientReceipts)
+ expect(sent.conversation.find(row=>row.role==='user').text).toBe(history)
+ expect(requests[0].system.split('本轮事实优先').length-1).toBe(1)
+ expect(requests[0].system).toContain('优先于conversation中的旧尺寸、数值和单元格位置')
+ expect(requests[0].system).toContain('Markdown可能自动补空表头')
+ expect(requests[0].system).toContain('可用notes.blocks.read核对真实结构')
+ expect(requests[0].system).toContain('资料已足够时直接处理，不为重复确认额外读取')
+ expect(read).not.toHaveBeenCalled()
+})
