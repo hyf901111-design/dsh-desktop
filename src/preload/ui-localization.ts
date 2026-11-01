@@ -45,6 +45,7 @@ export function translateUiCopy(value: string, context?: Element): string {
   for(const [pattern,render] of integrationPatterns)if(pattern.test(key))return value.replace(key,key.replace(pattern,render))
  }
  const patterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^用户 ID[：:]\s*(\d{10})$/,(_m,id)=>`User ID: ${id}`],
   [/^我的自选 · (\d+)$/,(_m,n)=>`My watchlist · ${n}`],
   [/^已选 (\d+)$/,(_m,n)=>`Selected ${n}`],
   [/^(\d+) 项$/,(_m,n)=>`${n} ${n==='1'?'item':'items'}`],

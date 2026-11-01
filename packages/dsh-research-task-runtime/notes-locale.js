@@ -1,5 +1,41 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "组件更多操作": "More component actions",
+  "原生表格操作": "Native table actions",
+  "表格操作": "Table actions",
+  "行操作": "Row actions",
+  "列操作": "Column actions",
+  "标题行": "Header row",
+  "标题列": "Header column",
+  "适应正文": "Fit to page",
+  "均分列宽": "Distribute columns evenly",
+  "表格宽度": "Table width",
+  "当前行": "Current row",
+  "当前列": "Current column",
+  "删除表格": "Delete table",
+  "在上方插入行": "Insert row above",
+  "在下方插入行": "Insert row below",
+  "上移此行": "Move row up",
+  "下移此行": "Move row down",
+  "删除此行": "Delete row",
+  "在左侧插入列": "Insert column left",
+  "在右侧插入列": "Insert column right",
+  "左移此列": "Move column left",
+  "右移此列": "Move column right",
+  "删除此列": "Delete column",
+  "调整表格整体宽度": "Resize table",
+  "添加列": "Add column",
+  "添加行": "Add row",
+  "在此处插入列": "Insert column here",
+  "在此处插入行": "Insert row here",
+  "已插入表格": "Table inserted",
+  "已更新原生笔记内容": "Note content updated",
+  "已生成文字": "Text generated",
+  "已生成文字，组件未生成": "Text generated; the component was not generated",
+  "已生成文字，组件未生成；原组件内容已保留": "Text generated; the component was not generated; existing components were kept",
+  "已生成文字，部分组件未生成": "Text generated; some components were not generated",
+  "已生成文字，部分组件未生成；原组件内容已保留": "Text generated; some components were not generated; existing components were kept",
+
   "已撤销本次生成，正在保存": "This AI result was undone. Saving…",
   "已撤销可安全回退的内容；较新编辑已保留": "Safe changes were undone; newer edits were kept.",
   "已停止，已保留本次生成内容": "Stopped. Generated content was kept.",
@@ -606,7 +642,7 @@ export const NOTE_ENGLISH = {
 }
 export function noteUiText(value, locale = globalThis.document?.documentElement?.dataset?.odysseyLocale) {
  if(typeof value!=='string')return value
- if(locale==='en'){const pending=/^(已生成|已保留)(?:(\d+)项内容)?(?:、?(\d+)个组件)?(，部分未完成)?$/u.exec(value);if(pending&&(pending[2]||pending[3]))return(pending[1]==='已生成'?'Generated ':'Kept ')+[pending[2]?pending[2]+' content blocks':'',pending[3]?pending[3]+' components':''].filter(Boolean).join(' and ')+(pending[4]?'; some work is incomplete':'');return NOTE_ENGLISH[value]??value}
+ if(locale==='en'){const pending=/^(已生成|已保留)(?:(\d+)项内容)?(?:、?(\d+)个组件)?(，部分未完成)?$/u.exec(value);if(pending&&(pending[2]||pending[3]))return(pending[1]==='已生成'?'Generated ':'Kept ')+[pending[2]?pending[2]+(pending[2]==='1'?' content block':' content blocks'):'',pending[3]?pending[3]+(pending[3]==='1'?' component':' components'):''].filter(Boolean).join(' and ')+(pending[4]?'; some work is incomplete':'');return NOTE_ENGLISH[value]??value}
  // Exact presentation aliases keep saved checks and serialized UI keys
  // compatible. Never replace a substring in note text or an author's name.
  return {

@@ -6,6 +6,7 @@ import {createRequire} from 'node:module'
 import {createNativePreviewOwnerHarness} from './fixtures/research-preview-native-owner.mjs'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives',()=>Object.fromEntries(['StateDot','Modal','Button','IconTrashOutline16','Menu','IconPlusOutline16','IconEllipsisOutline16','IconSearchOutline16','IconFolderOpenOutline16','IconEditOutline16','IconTriangleRightFill14'].map(name=>[name,()=>null])))
+import {mountUiLocalization} from '../src/preload/ui-localization'
 import {createResearchBoardsPage,ResearchBoardHeader} from '../src/preload/research-boards-ui'
 
 const {createResearchPreviewModeState}=createRequire(import.meta.url)('../scripts/lib/research-preview-mode.mjs')
@@ -133,4 +134,12 @@ it.each([
 it.each([true,false])('retains shared-view permissions and puts mode after collaboration controls (read=%s)',async read=>{
  const view={...personalView,board:{sharingState:'shared',lifecycle:'active'},permissions:{read,manage:read}},f=await fixture({view,boards:[{boardId:'stable-board',localSessionId:'a',pinned:true}]})
  expect(f.host.querySelector('.srb-favorite-button')).toBeNull();expect(f.host.querySelector('.srb-create-collaboration')).toBeNull();expect([...f.host.querySelectorAll('button')].at(-1)).toBe(f.toggle());expect(f.host.textContent?.includes('管理')).toBe(read);expect(f.host.textContent?.includes('共享访问已结束')).toBe(!read);expect(f.errors).toEqual([])
+})
+
+it('localizes the real mode toggle state, action and accessible hint live without changing the persisted mode',async()=>{
+ const f=await fixture();const stop=mountUiLocalization(f.win.document as unknown as Document);cleanup.push(async()=>stop());
+ f.win.document.documentElement.dataset.odysseyLocale='en';await f.win.happyDOM.waitUntilComplete();
+ expect(f.toggle()!.textContent).toBe('Edit mode');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to preview mode');expect(f.toggle()!.title).toBe('Edit mode is active. Click to switch to preview mode');
+ await f.click();await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('Preview mode');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to edit mode');expect(f.toggle()!.title).toBe('Preview mode is active. Click to switch to edit mode');
+ f.win.document.documentElement.dataset.odysseyLocale='zh';await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('预览模式');expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式');expect(f.workspaceFor('a').getPreviewMode()).toBe(true);expect(f.errors).toEqual([])
 })

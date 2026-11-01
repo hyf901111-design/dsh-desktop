@@ -5,12 +5,13 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {PNG} from 'pngjs'
+import {patchSkillCommandLabels,patchSkillCommandPopup} from '../scripts/lib/skill-command-menu.mjs'
 
 let browser,script,css,sources
 const output=process.env.SHERLOCK_POINTER_MENU_OUTPUT||await mkdtemp(join(tmpdir(),'home-pointer-menu-'))
 beforeAll(async()=>{
  await mkdir(output,{recursive:true});css=await readFile('src/preload/home-guides.css','utf8')
- sources=await Promise.all(['runtime','ui-commands','ui-input-trigger'].map(async name=>(await readFile('node_modules/@deepseek-ai/dsh-client-'+name+'/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;'+(name==='ui-commands'?'exports.__Popup=PopupSelectView;':name==='ui-input-trigger'?'exports.__Menu=MenuView;':''))))
+ sources=await Promise.all(['runtime','ui-commands','ui-input-trigger'].map(async name=>{const raw=await readFile('node_modules/@deepseek-ai/dsh-client-'+name+'/lib/client.js','utf8'),source=name==='ui-commands'?patchSkillCommandPopup(raw):name==='ui-input-trigger'?patchSkillCommandLabels(raw):raw;return source.replace('exports.apply = apply;','exports.apply = apply;'+(name==='ui-commands'?'exports.__Popup=PopupSelectView;':name==='ui-input-trigger'?'exports.__Menu=MenuView;':''))}))
  script=(await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as React from 'react';import * as jsx from 'react/jsx-runtime';import{createRoot}from'react-dom/client';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake});const empty=()=>null,primitives=new Proxy({useAnchoredMaxHeight:()=>400},{get:(target,key)=>target[key]??empty});
@@ -32,7 +33,7 @@ async function fixture(mode){
  await page.setContent('<style>body{margin:0;background:#eee;color:#252525;font:14px/1.5 system-ui;--dsw-specific-menu:#fff;--dsw-alias-label-primary:#252525;--dsw-alias-label-tertiary:#777;--dsw-alias-border-inverted:#ccc}body[data-ds-dark-theme]{background:#171717;color:#ddd;--dsw-specific-menu:#2b2b2b;--dsw-alias-label-primary:#ddd;--dsw-alias-label-tertiary:#aaa;--dsw-alias-border-inverted:#555}textarea{display:block;width:480px;height:60px}</style><div id="root"></div><script>window.descriptors=[];window.__ModuleLoader__={load:value=>window.descriptors.push(value)}</script>')
  if(mode==='dark')await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''))
  for(const source of sources)await page.addScriptTag({content:source})
- await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.waitForSelector('textarea');return{page,errors}
+ await page.addStyleTag({content:css});await page.addStyleTag({content:await readFile('src/preload/figma-refinements.css','utf8')});await page.addScriptTag({content:script});await page.waitForSelector('textarea');return{page,errors}
 }
 async function raster(page,name){
  const position=await page.evaluate(()=>window.menuFixture.pointer.snapshot()),clip={x:Math.floor(position.x)-3,y:Math.floor(position.y)-3,width:22,height:24},visible=PNG.sync.read(await page.screenshot({path:join(output,name+'.png'),clip}));
@@ -46,7 +47,7 @@ it.each(['light','dark'])('keeps the pointer above real slash and skill top-laye
  const{page,errors}=await fixture(mode)
  try{
   await page.evaluate(()=>window.menuFixture.openSlash());await page.waitForSelector('[data-ework-expanded-command]:popover-open');await page.evaluate(()=>window.menuFixture.move('slash'));await raster(page,mode+'-slash')
-  await page.getByRole('option').first().click();await page.waitForSelector('[data-ework-command=skills]:popover-open');await page.evaluate(()=>window.menuFixture.move('skills'));await raster(page,mode+'-skills')
+  const commandWidth=(await page.locator('[data-ework-expanded-command]').boundingBox()).width;await page.getByRole('option').first().click();await page.waitForSelector('[data-ework-command=skills]:popover-open');expect((await page.locator('[data-ework-command=skills]').boundingBox()).width).toBe(commandWidth);await page.evaluate(()=>window.menuFixture.move('skills'));await raster(page,mode+'-skills')
   // The same live pointer must remain above a newly reopened menu even before its next movement.
   await page.evaluate(()=>{const card=document.querySelector('[data-ework-command=skills]');card.hidePopover();card.showPopover()});await page.waitForTimeout(30);await raster(page,mode+'-reopened')
   expect(await page.locator('[data-ework-command=skills] input').evaluate(node=>document.activeElement===node)).toBe(true)
