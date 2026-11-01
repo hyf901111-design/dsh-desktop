@@ -2104,7 +2104,7 @@ function artifactStreamStarted(text) {
   return /(?:^|\n)\s*(?:```(?:json)?\s*)?\{\s*(?:"|$)/iu.test(text.slice(0,512))
 }
 
-export function createSubagentAdapter(ctx, { surface, noteSourceGuidance } = {}) {
+export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBindingProtocol = false } = {}) {
   let disposed = false
   const sourceProjectionStops=new Set()
 
@@ -2305,6 +2305,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance } = {})
       // Research and Notes use the same discriminator gate below.
       let declaredChartContract
       if(kind==='container')workbenchPanelPrompt(query,bindingRequested,contract=>{declaredChartContract=contract})
+      const canonicalBindingProtocol = boundTemplate && !preservePrompt && bindingRequested
       let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
       const noteGuidance=surface==='note'&&permitsTools&&typeof noteSourceGuidance==='function'?noteSourceGuidance(scopedSchemas)||'':''
       if(kind==='container'&&permitsTools){
@@ -2405,7 +2406,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance } = {})
         // A typed panel rebuilds effectivePrompt from the public query. Keep
         // frozen note evidence separate so it survives that rewrite and never
         // becomes a host search query or a template-selection instruction.
-        prompt: [...(surface === 'note' ? imageContent : []), { type: 'text', text: effectivePrompt + (surface === 'note' ? executionContext+noteGuidance : '') }],
+        // The Notes producer supplies this host contract separately from frozen
+        // evidence. Only a known typed builder can own the canonical copy;
+        // never search or rewrite user text to decide which rules to retain.
+        prompt: [...(surface === 'note' ? imageContent : []), { type: 'text', text: effectivePrompt + (surface === 'note' ? executionContext+(noteBindingProtocol&&!canonicalBindingProtocol?COMPONENT_BOUND_DATA_PROMPT:'')+noteGuidance : '') }],
         maxDepth: 1,
         toolFilter: {
           // Tool availability must not depend on a freshness keyword match.
