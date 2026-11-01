@@ -1,5 +1,6 @@
 import {beforeAll,afterAll,it,expect,vi} from 'vitest'
 import {build} from 'esbuild'
+import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 import {pathToFileURL} from 'node:url'
 import {noteMenuDocumentHtml,noteMenuPresentation} from '../src/main/notes/native-menu'
 vi.mock('electron',()=>({BrowserWindow:class{},screen:{}}))
@@ -9,7 +10,7 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
  window.noteRequests=[];const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:{title:'菜单验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='library-list'?[{id:'watchlist',title:'自选股',icon:'watchlist',group:'内置组件'},{id:'quote',title:'个股行情',icon:'quote',group:'内置组件'}]:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:{}},draft:async()=>{}};
- createRoot(document.querySelector('.en-editor-host')).render(<NotesApp sessionId="menu-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);`},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'}})
+ createRoot(document.querySelector('.en-editor-host')).render(<NotesApp sessionId="menu-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);`},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[esbuildRawSource()]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text;css=output.outputFiles.find(file=>file.path.endsWith('.css')).text
  const {chromium}=await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})

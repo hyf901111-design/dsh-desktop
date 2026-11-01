@@ -1,4 +1,11 @@
-.en-native-table-layer{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--en-ink);overflow:visible;pointer-events:none;font:13px/20px "Noto Sans SC",system-ui,sans-serif}
+.en-native-table-layer{clip-path:var(--en-table-viewport-clip,none);position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--en-ink);overflow:visible;pointer-events:none;font:13px/20px "Noto Sans SC",system-ui,sans-serif}
+/* A clipped ancestor isolates backdrop sampling from the note. Menus already
+   fit the viewport, so release that clip only while a menu is open. */
+.en-native-table-layer:has([role=menu]){clip-path:none}
+/* An open menu owns this interaction; dormant insertion/resize targets must
+   not intercept its menu items. Closing the menu restores every control. */
+.en-native-table-layer:has([role=menu]) :is(.en-native-table-boundary,.en-native-table-add,.en-native-table-width-handle){visibility:hidden;pointer-events:none}
+.en-native-table-layer:has(.en-native-table-menu) .en-native-table-edge{visibility:hidden;pointer-events:none}
 .en-native-table-layer::backdrop{background:transparent;pointer-events:none}
 .en-native-table-layer :is(button,input,[role=menu],.bn-table-handle,.bn-extend-button,.bn-table-cell-handle){pointer-events:auto}
 .en-native-table-layer button{font:inherit;color:inherit;cursor:pointer}
@@ -13,9 +20,9 @@
 .en-native-table-toolbar{position:fixed;box-sizing:border-box;width:44px;height:30px;display:flex;align-items:center;padding:0;border:1px solid var(--en-border);border-radius:5px;background:var(--en-popup);box-shadow:0 1px 4px #0001;pointer-events:auto;z-index:30}
 .en-native-table-toolbar>button{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;width:100%;height:100%;border:0;background:transparent;border-radius:4px;padding:3px}
 .en-native-table-toolbar>button:hover,.en-native-table-menu button:hover{background:var(--en-control)}
-.en-native-table-menu{position:fixed;left:0;top:calc(100% + 5px);width:200px;max-height:min(340px,calc(100vh - 100px));overflow:auto;border:1px solid var(--en-border);border-radius:8px;padding:5px;background:var(--en-popup);box-shadow:0 6px 24px #0002;z-index:40}
+.en-native-table-menu{position:fixed;left:0;top:calc(100% + 5px);width:200px;max-height:min(340px,calc(100vh - 100px));overflow:auto;border:1px solid var(--odyssey-menu-border);border-radius:8px;padding:5px;background:var(--odyssey-menu);box-shadow:var(--odyssey-menu-shadow);backdrop-filter:var(--odyssey-menu-blur);-webkit-backdrop-filter:var(--odyssey-menu-blur);z-index:40}
 .en-native-table-menu>button{display:flex;align-items:center;justify-content:space-between;text-align:left;width:100%;padding:6px 9px;border:0;background:transparent;border-radius:4px}
-.en-native-table-menu hr{border:0;border-top:1px solid var(--en-border);margin:4px}
+.en-native-table-menu hr{border:0;border-top:1px solid var(--odyssey-menu-border);margin:4px}
 .en-native-table-menu label{display:flex;align-items:center;gap:5px;padding:6px 8px;white-space:nowrap;font-size:12px}
 .en-native-table-menu input{width:72px;min-width:0;border:1px solid var(--en-border);border-radius:4px;padding:3px;background:var(--en-bg);color:var(--en-ink);font:inherit}
 .en-native-table-width-handle{position:fixed;display:flex;align-items:center;justify-content:center;width:10px;min-height:20px;border:0;border-radius:3px;background:transparent;color:var(--en-muted);cursor:ew-resize!important;padding:0;touch-action:none;z-index:20}
@@ -37,7 +44,7 @@
 
 .en-root .bn-editor [data-content-type=table] :is(td,th)>p{min-height:24px;line-height:24px}
 
-.en-native-table-layer :is(.bn-table-handle-menu,.bn-table-cell-menu){border:1px solid var(--en-border);border-radius:8px;background:var(--en-popup);color:var(--en-ink);box-shadow:0 6px 24px #0002}
+.en-native-table-layer :is(.bn-table-handle-menu,.bn-table-cell-menu){border:1px solid var(--odyssey-menu-border);border-radius:8px;background:var(--odyssey-menu);color:var(--en-ink);box-shadow:var(--odyssey-menu-shadow);backdrop-filter:var(--odyssey-menu-blur);-webkit-backdrop-filter:var(--odyssey-menu-blur)}
 .en-native-table-layer :is(.bn-table-handle-menu,.bn-table-cell-menu) :is([role=menuitem],[role=menuitemcheckbox]){color:inherit}
 .en-native-table-layer :is(.bn-table-handle-menu,.bn-table-cell-menu) :is([role=menuitem],[role=menuitemcheckbox]):hover{background:var(--en-control)}
 body:has(.en-native-table-layer .bn-table-handle-menu) .en-root .bn-formatting-toolbar{visibility:hidden}

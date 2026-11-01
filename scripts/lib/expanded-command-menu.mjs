@@ -1,23 +1,24 @@
-const CSS='/* ework-expanded-command-menu:start */[data-ework-expanded-command]{box-sizing:border-box;position:fixed!important;inset:auto;margin:0!important;z-index:2147483000!important;background:var(--odyssey-menu,rgba(255,255,255,.78))!important;border-color:var(--odyssey-menu-border,rgba(0,0,0,.10))!important;box-shadow:var(--odyssey-menu-shadow,0 8px 24px -4px rgba(0,0,0,.16))!important;backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))!important;-webkit-backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))!important;max-height:none!important;max-width:none!important;overflow:visible!important}[data-ework-expanded-command]>:is(._3e4SsG_viewport,.mufS8W_viewport){overflow:visible!important;flex-shrink:0}[data-ework-expanded-command] :is(._3e4SsG_item,.mufS8W_row){min-width:0}body[data-ds-dark-theme] [data-ework-expanded-command],html[data-theme=dark] [data-ework-expanded-command],html.dark [data-ework-expanded-command]{background:var(--odyssey-menu,rgba(43,43,43,.68))!important;border-color:var(--odyssey-menu-border,rgba(255,255,255,.10))!important;box-shadow:var(--odyssey-menu-shadow,0 8px 24px -4px rgba(0,0,0,.32))!important}/* ework-expanded-command-menu:end */'
+const CSS='/* ework-expanded-command-menu:start */.mufS8W_card[data-ework-command=skills]{box-sizing:border-box}[data-ework-expanded-command]{box-sizing:border-box;position:fixed!important;inset:auto;margin:0!important;z-index:2147483000!important;background:var(--odyssey-menu,rgba(255,255,255,.78))!important;border-color:var(--odyssey-menu-border,rgba(0,0,0,.10))!important;box-shadow:var(--odyssey-menu-shadow,0 8px 24px -4px rgba(0,0,0,.16))!important;backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))!important;-webkit-backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))!important;max-height:none!important;max-width:none!important;overflow:hidden!important}[data-ework-expanded-command]>:is(._3e4SsG_viewport,.mufS8W_viewport){display:block!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;min-height:0;flex-shrink:1;scrollbar-width:thin}[data-ework-expanded-command] :is(._3e4SsG_item,.mufS8W_row){min-width:0}body[data-ds-dark-theme] [data-ework-expanded-command],html[data-theme=dark] [data-ework-expanded-command],html.dark [data-ework-expanded-command]{background:var(--odyssey-menu,rgba(43,43,43,.68))!important;border-color:var(--odyssey-menu-border,rgba(255,255,255,.10))!important;box-shadow:var(--odyssey-menu-shadow,0 8px 24px -4px rgba(0,0,0,.32))!important}/* ework-expanded-command-menu:end */'
 
-/** Keep the complete roster visible; short windows use columns instead of scrolling. */
+/** Commands and skills retain the original popup width; long rosters scroll internally. */
 export function useExpandedCommandMenu(ref,state,enabled=true){
  (0,react.useLayoutEffect)(()=>{
   const element=ref.current
   if(!element||!state.open||!enabled)return
   const win=element.ownerDocument.defaultView
   let frame=0
-  const originalWidth=element.getBoundingClientRect().width
+  const originalWidth=element.getBoundingClientRect().width,originalMaxHeight=element.style.getPropertyValue('max-height'),originalMaxHeightPriority=element.style.getPropertyPriority('max-height')
   const card=element.closest('[data-composer-card]')
   const launcher=[...(card??element.parentElement).querySelectorAll('button[aria-haspopup="listbox"]')].find(button=>button.textContent.trim()==='/')
   element.setAttribute('popover','manual');element.showPopover?.()
   const viewport=element.querySelector('._3e4SsG_viewport,.mufS8W_viewport')
   const clear=()=>{
    for(const key of ['translate','width','left','top'])element.style.removeProperty(key)
-   if(viewport)for(const key of ['display','grid-auto-flow','grid-template-rows','grid-template-columns','column-gap'])viewport.style.removeProperty(key)
+   if(originalMaxHeight)element.style.setProperty('max-height',originalMaxHeight,originalMaxHeightPriority);else element.style.removeProperty('max-height')
+   if(viewport)for(const key of ['display','grid-auto-flow','grid-template-rows','grid-template-columns','column-gap','max-height'])viewport.style.removeProperty(key)
   }
   const place=()=>{
-   frame=0;clear();element.dataset.eworkExpandedCommand='';element.style.width=originalWidth+'px'
+   frame=0;const scrollTop=viewport?.scrollTop||0;clear();element.dataset.eworkExpandedCommand='';element.style.width=originalWidth+'px'
    const bounds={left:8,top:8,right:win.innerWidth-8,bottom:win.innerHeight-8}
    for(let parent=element.parentElement;parent;parent=parent.parentElement){
     const style=win.getComputedStyle(parent),box=parent.getBoundingClientRect()
@@ -29,25 +30,23 @@ export function useExpandedCommandMenu(ref,state,enabled=true){
    const bottom=anchor?Math.min(bounds.bottom,anchor.top-4):bounds.bottom
    const width=Math.max(1,bounds.right-bounds.left),height=Math.max(1,bottom-bounds.top)
    let box=element.getBoundingClientRect()
-   if(viewport&&box.height>height){
-    const rows=[...viewport.children],rowHeight=Math.max(1,...rows.map(row=>row.getBoundingClientRect().height))
-    const chrome=box.height-viewport.getBoundingClientRect().height
-    const perColumn=Math.max(1,Math.floor((height-chrome)/rowHeight)),columns=Math.ceil(rows.length/perColumn)
-    viewport.style.display='grid';viewport.style.gridAutoFlow='column'
-    viewport.style.gridTemplateRows=`repeat(${Math.min(rows.length,perColumn)},${rowHeight}px)`
-    viewport.style.gridTemplateColumns=`repeat(${columns},minmax(0,1fr))`;viewport.style.columnGap='8px'
-    element.style.width=Math.min(width,Math.max(box.width,columns*280))+'px'
-   }else if(box.width>width)element.style.width=width+'px'
+   // Command and skill rosters must never expand into multiple columns.
+   const chrome=viewport?box.height-viewport.getBoundingClientRect().height:0
+   element.style.width=Math.min(originalWidth,width)+'px'
+   element.style.setProperty('max-height',height+'px','important')
+   if(viewport)viewport.style.maxHeight=Math.max(0,height-chrome)+'px'
    box=element.getBoundingClientRect()
    const left=Math.min(Math.max(anchor?.left??box.left,bounds.left),Math.max(bounds.left,bounds.right-box.width))
    const top=Math.min(Math.max(anchor?bottom-box.height:box.top,bounds.top),Math.max(bounds.top,bottom-box.height))
    element.style.left=left+'px';element.style.top=top+'px'
+   if(viewport)viewport.scrollTop=scrollTop
   }
   const schedule=()=>{if(!frame)frame=win.requestAnimationFrame(place)}
   place()
   const observer=new win.ResizeObserver(schedule);observer.observe(element)
-  win.addEventListener('resize',schedule);win.addEventListener('scroll',schedule,true)
-  return()=>{observer.disconnect();win.cancelAnimationFrame(frame);win.removeEventListener('resize',schedule);win.removeEventListener('scroll',schedule,true);element.hidePopover?.();element.removeAttribute('popover');clear();delete element.dataset.eworkExpandedCommand}
+  const scroll=event=>{if(event.target!==viewport)schedule()}
+  win.addEventListener('resize',schedule);win.addEventListener('scroll',scroll,true)
+  return()=>{observer.disconnect();win.cancelAnimationFrame(frame);win.removeEventListener('resize',schedule);win.removeEventListener('scroll',scroll,true);element.hidePopover?.();element.removeAttribute('popover');clear();delete element.dataset.eworkExpandedCommand}
  // Highlight and submitting updates do not change the roster geometry. Keeping
  // the effect mounted avoids closing/reopening its top-layer popover on a pick.
  },[ref,state.open,state.command,state.options,state.search,state.status,state.confirming,state.error,state.groups,state.hit,enabled])
