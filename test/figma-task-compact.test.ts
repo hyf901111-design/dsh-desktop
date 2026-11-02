@@ -2,7 +2,10 @@ import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { expect, it } from 'vitest'
 import { patchFigmaReadingConversation } from '../scripts/lib/figma-reading-client.mjs'
-const source=patchFigmaReadingConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+import { patchTaskProgressClient } from '../scripts/lib/task-progress-client.mjs'
+// Match the real installer order instead of depending on the local SDK already
+// having the continuation footer installed before this fixture is loaded.
+const source=patchTaskProgressClient(patchFigmaReadingConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
 const start=source.indexOf('function useOdysseyCompactTasks('),end=source.indexOf('function OdysseyTaskSheet(',start)
 function fixture() {
  let compact=false,previousDeps:any[]|undefined,cleanup:any,effect:any,frameId=0
