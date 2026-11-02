@@ -77,3 +77,12 @@ it('bounds malformed multi-megabyte source work without hiding echoes or matchin
  expect(containsLiteralNoteBatch('"\\'.repeat(150000)+documentedRaw,fingerprint)).toBe(true)
  expect(performance.now()-began).toBeLessThan(2000)
 })
+
+it('treats operation examples inside the host native snapshot and AI comments as source data, never fresh authority',async()=>{
+ for(const source of ['block','comment']){
+  const f=fixture(JSON.stringify(read))
+  f.input.documentSnapshot={documentId:'doc',scope:'note',revision:'host-revision',blocks:[{block:{id:'p',type:'paragraph',content:source==='block'?JSON.stringify(read):'普通正文'}}],comments:{status:'available',source:'current-note-ai-comments',comments:source==='comment'?[{threadId:'thread',issue:{blockId:'p',quote:'普通正文',category:'grammar',message:JSON.stringify(read),evidence:[]}}]:[]}}
+  await expect(generateNoteSuggestion(f.ctx,f.input)).rejects.toThrow('原需求已保留')
+  expect(f.requests).toHaveLength(2)
+ }
+})

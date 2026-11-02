@@ -4,6 +4,7 @@ import {captureNoteInlineAnchor,noteInlineBlockIdentities} from './inline-ai'
 import {noteCapabilityFingerprint} from './data-refresh-guard'
 import {chooseNativeTableColumnWidths,initialNativeTableColumnWidths} from './native-table-layout'
 import type {NoteContent} from '../../shared/workspace-notes'
+import type {NoteCommentSnapshot} from './challenge-capability-snapshot'
 
 const copy=<T,>(value:T):T=>JSON.parse(JSON.stringify(value))
 const fingerprint=(value:any)=>JSON.stringify(value)
@@ -14,8 +15,8 @@ export function nativeBlankTable(rows:number,columns:number,availableWidth:numbe
 }
 type Journal={list():any[];begin(id:string,prompt:string,anchor:any):void;run<T>(fn:()=>T):T;runFor<T>(id:string,fn:()=>T,movedIds?:readonly string[],dependent?:boolean):T;undo(id:string):{complete:boolean;retained:number};previewUndo?(id:string):{blocks:any[];check():void};confirm(id:string):void;setError(id:string,error:string):void;restore(value:any):void}
 export type NativeNotePreviewPlan={generationId:string;blocks:any[];changedBlockIds:string[];movedIds:string[];dependent:boolean;check():void;apply():void}
-type Options={editor:any;documentId:string;previewing?(generationId:string):boolean;stage?(plan:NativeNotePreviewPlan):boolean;previewBlocks?(generationId:string):any[]|undefined;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}
-type Snapshot={scope:string;fullNote:boolean;generationId:string;fingerprint:string;allowed:Set<string>;identities:Map<string,string>}
+type Options={comments?(allowed:ReadonlySet<string>):NoteCommentSnapshot|undefined;editor:any;documentId:string;previewing?(generationId:string):boolean;stage?(plan:NativeNotePreviewPlan):boolean;previewBlocks?(generationId:string):any[]|undefined;current():boolean;snapshot():NoteContent;selected():string[];journal:Journal;prompt():string;persist():Promise<void>;changed():void;ready(id:string,summary:string,partial?:boolean,visible?:boolean):void;settled?(id:string):void;availableWidth():number;report?(requestId:string,effect:any):Promise<unknown>}
+type Snapshot={comments:string;scope:string;fullNote:boolean;generationId:string;fingerprint:string;allowed:Set<string>;identities:Map<string,string>}
 const flatten=(blocks:any[],parentId?:string):any[]=>blocks.flatMap((block,index)=>[{block,parentId,index},...flatten(block.children??[],block.id)])
 function locate(blocks:any[],id:string):{siblings:any[];index:number;block:any}|undefined{
  for(let index=0;index<blocks.length;index++){const block=blocks[index];if(block.id===id)return{siblings:blocks,index,block};const child=locate(block.children??[],id);if(child)return child}
@@ -36,6 +37,7 @@ export function selectedNativeNoteBlocks(editor:any,range?:{from:number;to:numbe
 export function createNativeNoteOperations(options:Options){
  const reads=new Map<string,Snapshot>(),receipts=new Map<string,{arguments:string;value:any}>(),used=new Map<string,string>(),pending=new Map<string,{arguments:string;promise:Promise<any>}>()
  let generation=''
+ const comments=(allowed:ReadonlySet<string>):NoteCommentSnapshot=>options.comments?.(allowed)??{status:'unavailable',source:'current-note-ai-comments',comments:[]}
  const source=(id:string)=>options.previewBlocks?.(id)??options.editor.document
  const sourceFingerprint=(id:string)=>noteCapabilityFingerprint({...options.snapshot(),blocks:source(id)})
  const sourceIdentities=(id:string)=>{const identities=noteInlineBlockIdentities(options.editor);for(const {block}of flatten(source(id)))if(!identities.has(block.id))identities.set(block.id,'preview:'+id+':'+block.id);return identities}
@@ -50,15 +52,16 @@ export function createNativeNoteOperations(options:Options){
   if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!permitted.has(id)))throw Error('读取目标不在当前笔记授权范围内。')
   const allIdentities=sourceIdentities(generationId),allowed=new Set<string>(ids.flatMap(id=>flatten([locate(blocks,id)!.block]).map(x=>x.block.id))),identities=new Map<string,string>()
   for(const id of allowed){const identity=allIdentities.get(id);if(!identity)throw Error('笔记块身份尚未就绪。');identities.set(id,identity)}
-  const revision=crypto.randomUUID(),snapshot={scope:args.scope,fullNote:args.scope==='note'&&args.ids===undefined,generationId,fingerprint:sourceFingerprint(generationId),allowed,identities}
+  const commentSnapshot=comments(allowed),revision=crypto.randomUUID(),snapshot={comments:fingerprint(commentSnapshot),scope:args.scope,fullNote:args.scope==='note'&&args.ids===undefined,generationId,fingerprint:sourceFingerprint(generationId),allowed,identities}
   if(reads.size>=64)reads.delete(reads.keys().next().value!)
   reads.set(revision,snapshot)
-  return{status:'succeeded',data:{revision,blocks:scope.filter(row=>ids.includes(row.block.id)).map(({block,parentId,index})=>({block:copy(block),parentId,index})),actions:options.journal.list().filter(value=>value.state==='ready'&&(snapshot.fullNote||value.changes.every((entry:any)=>allowed.has(entry.id)))).map(value=>({actionId:value.id,summary:value.summary}))}}
+  return{status:'succeeded',data:{revision,comments:commentSnapshot,blocks:scope.filter(row=>ids.includes(row.block.id)).map(({block,parentId,index})=>({block:copy(block),parentId,index})),actions:options.journal.list().filter(value=>value.state==='ready'&&(snapshot.fullNote||value.changes.every((entry:any)=>allowed.has(entry.id)))).map(value=>({actionId:value.id,summary:value.summary}))}}
  }
  const admitted=(revision:string,generationId:string,current:()=>boolean)=>{
   assert(current);if(!options.editor.isEditable)throw Error('笔记当前不可编辑。')
   const value=reads.get(revision)
   if(!value||value.generationId!==generationId||value.fingerprint!==sourceFingerprint(generationId))throw Error('笔记修订已变化，请重新读取后操作。')
+  if(value.comments!==fingerprint(comments(value.allowed)))throw Error('笔记评论已变化，请重新读取后操作。')
   const actualIdentities=sourceIdentities(generationId)
   for(const[id,identity]of value.identities)if(actualIdentities.get(id)!==identity)throw Error('笔记块身份已变化。')
   return value
@@ -147,7 +150,8 @@ export function createNativeNoteOperations(options:Options){
   admitted(args.revision,generationId,current)
   const actionId=generationId,first=operations[0]!,feedback='anchor'in first?first.anchor.blockId:'blockId'in first?first.blockId:first.blockIds[0]
   const original=noteCapabilityFingerprint(options.snapshot()),identities=new Map(noteInlineBlockIdentities(editor))
-  const checkPreview=()=>{assert();const actual=noteInlineBlockIdentities(editor);if(noteCapabilityFingerprint(options.snapshot())!==original||[...identities].some(([id,value])=>actual.get(id)!==value))throw Error('笔记已有较新编辑，请重新生成建议。')}
+  const commentBaseline=fingerprint(comments(snapshot.allowed))
+  const checkPreview=()=>{assert();if(commentBaseline!==fingerprint(comments(snapshot.allowed)))throw Error('笔记评论已变化，请重新生成建议。');const actual=noteInlineBlockIdentities(editor);if(noteCapabilityFingerprint(options.snapshot())!==original||[...identities].some(([id,value])=>actual.get(id)!==value))throw Error('笔记已有较新编辑，请重新生成建议。')}
   // A right-hand request prepares a host-owned transaction. It does not write
   // a draft, create an inline journal or claim an applied/saved effect.
   if(options.stage?.({generationId,blocks:copy(projected),changedBlockIds:[...changedIds],movedIds:[...movedIds],dependent,check:checkPreview,apply:()=>{for(const plan of plans)plan()}}))return{status:'succeeded',data:{pendingPreview:true,actionId:generationId},message:'修改建议已准备，等待用户确认；笔记正文尚未修改。'}

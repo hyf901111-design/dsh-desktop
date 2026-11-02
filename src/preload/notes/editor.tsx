@@ -392,6 +392,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     previewBlocks:id=>composerPlans.current?.requestId===id?composerPlans.current.projected:undefined,
     previewing:id=>composerPlans.current?.requestId===id&&!inlineRequest.current&&!generatingBlock.current,
     stage:plan=>{if(!request.current||inlineRequest.current||generatingBlock.current)return false;const state=composerPlans.current;if(!state)return false;if(state.requestId!==plan.generationId)throw Error('笔记预览请求已变化。');state.plans.push(plan);state.projected=plan.blocks;setDocumentWriting(true);return true},
+    comments:allowed=>challengeController.current?.readComments(allowed),
     selected:()=>selectedNativeNoteBlocks(editor,references.capture(false).range),prompt:()=>lastRequest.current?.prompt||'原生笔记操作',
     persist:()=>persistConfirmed(),changed:()=>changed(),
     availableWidth:()=>Math.max(35,(scroll.current?.querySelector<HTMLElement>('.bn-editor')?.clientWidth||820)-31),
@@ -662,7 +663,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       capabilityFingerprint.current=noteCapabilityFingerprint(snapshot())
       dataRefreshGuard.current.begin(requestId,snapshot())
       if(inlineTarget)proposals.begin(requestId,prompt,inlineTarget)
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,selectedNativeBlockIds:selectedNativeNoteBlocks(editor,context.range),selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{entryPoint:'composer'}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,nativeSnapshot:1,selectedNativeBlockIds:selectedNativeNoteBlocks(editor,context.range),selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{entryPoint:'composer'}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt||!nativeCurrent()||inlineTarget&&(!editorActive()||inlineRequest.current?.requestId!==requestId)) return
       if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
