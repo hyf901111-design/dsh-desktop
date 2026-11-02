@@ -17,10 +17,17 @@ it('executes all 25 native actor stages through the real workspace and keeps all
  let descriptor;win.__ModuleLoader__={load:d=>descriptor=d};win.dshDesktop={componentLibrary:{request:async()=>[]}}
  const requests=[],fetcher=async(_url,request)=>{const data=JSON.parse(request.body);requests.push(data);let result={ok:true};if(data.action==='prepare')result.brief=HOME_WORKBENCH_PROMPT;if(data.action==='panel'){const p=HOME_WORKBENCH_PANELS.find(p=>p.tab===data.tab&&p.role===data.role);result.task={taskId:'task-'+data.tab+'-'+data.role,state:'completed',canvasNodeId:data.nodeId,createdAt:Date.now(),finalOutput:JSON.stringify(homeWorkbenchPreparedArtifact('demo',p))}}return{ok:true,json:async()=>result}};win.fetch=fetcher
  let source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- const actorStart=source.indexOf('function NativeHomeWorkbenchPortal('),actorEnd=source.indexOf('\nfunction NativeHomeWorkbenchGenerationProcess(',actorStart);if(actorStart<0||actorEnd<actorStart)throw Error('Installed native actor boundary is missing');source=source.slice(0,actorStart)+require('../scripts/lib/home-guide-workbench-native.mjs').NativeHomeWorkbenchPortal.toString()+source.slice(actorEnd)
- source=source.replace('let left=ms,last=performance.now();','let left=Math.min(ms,1),last=performance.now();').replace('exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;','exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;exports.__setWorkbenchDeps=value=>HomeWorkbenchNativeDeps=value;exports.__setPage=value=>sherlockBoardsAdapter=value;')
+ const actorStart=source.indexOf('function NativeHomeWorkbenchPortal('),actorEnd=source.indexOf('\nfunction NativeHomeWorkbenchGenerationProcess(',actorStart);if(actorStart<0||actorEnd<actorStart)throw Error('Installed native actor boundary is missing')
+ const holdAnchor='let left=ms,last=performance.now();',acceleratedHold='let left=Math.min(ms,1),last=performance.now();',actorSource=require('../scripts/lib/home-guide-workbench-native.mjs').NativeHomeWorkbenchPortal.toString()
+ // Accelerate only this actor's presentation pauses; never silently hit a
+ // similarly named hold in another installed SDK module. Keep all 25 stages.
+ expect(actorSource.split(holdAnchor)).toHaveLength(2)
+ source=source.slice(0,actorStart)+actorSource.replace(holdAnchor,acceleratedHold)+source.slice(actorEnd)
+ source=source.replace('exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;','exports.NativeHomeWorkbenchPortal = NativeHomeWorkbenchPortal;exports.__setWorkbenchDeps=value=>HomeWorkbenchNativeDeps=value;exports.__setPage=value=>sherlockBoardsAdapter=value;')
  runInNewContext(source,{window:win,document:doc,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),matchMedia:win.matchMedia,performance:win.performance,fetch:fetcher,structuredClone,AbortController,TextDecoder,TextEncoder,crypto,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),native=descriptor.factory(id=>['react','react/jsx-runtime','react-dom'].includes(id)?require(id):fake),registry=new native.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('demo'),entry={kind:'workbench',sessionId:'demo',cwd:'/examples/workbench',title:'白酒龙头研究工作台（演示案例）'}
+ expect(native.NativeHomeWorkbenchPortal.toString()).toContain(acceleratedHold)
+ expect(native.NativeHomeWorkbenchPortal.toString()).not.toContain(holdAnchor)
  const pendingReused=new Map(),applyWorkbench=workspace.applyWorkbench.bind(workspace)
  workspace.applyWorkbench=plan=>{
   const result=applyWorkbench(plan)
@@ -48,9 +55,12 @@ it('executes all 25 native actor stages through the real workspace and keeps all
     expect(JSON.parse(node.excerpt)).toEqual(node.containerSpec);expect(node.lastSuccessfulAt).toBe(node.generationCompletedAt)
    }
   }
-  const nodes=workspace.getSnapshot().artifacts,nav=nodes.find(n=>n.containerSpec?.type==='board-tabs');expect(nodes).toHaveLength(16);expect(nodes.every(n=>n.generationStatus==='completed')).toBe(true);expect(nav.containerSpec.tabs.map(tab=>tab.nodeIds.length)).toEqual([5,5,5]);expect(requests.filter(r=>r.action==='panel')).toHaveLength(13);expect(doc.querySelectorAll('[data-board-tab]')).toHaveLength(3);expect(doc.querySelector('textarea').value).toBe('');await command('flush');await command('dispose');expect(workspace.getSnapshot().artifacts).toHaveLength(16);expect(workspace.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
+  const nodes=workspace.getSnapshot().artifacts,nav=nodes.find(n=>n.containerSpec?.type==='board-tabs');expect(nodes).toHaveLength(16);expect(nodes.every(n=>n.generationStatus==='completed')).toBe(true);expect(nav.containerSpec.tabs.map(tab=>tab.nodeIds.length)).toEqual([5,5,5]);expect(requests.filter(r=>r.action==='panel')).toHaveLength(13);expect(doc.querySelectorAll('[data-board-tab]')).toHaveLength(3);expect(doc.querySelectorAll('[data-research-node-id]')).toHaveLength(15);expect(doc.querySelector('textarea').value).toBe('');await command('flush');await command('dispose');expect(doc.querySelectorAll('[data-research-node-id],[data-home-workbench-native]')).toHaveLength(0);expect(workspace.getSnapshot().artifacts).toHaveLength(16);expect(workspace.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
   const restored=new native.ResearchWorkspaceRegistry(win.localStorage).for('demo').getSnapshot().artifacts
   expect(pendingReused.size).toBe(2)
   for(const node of restored.filter(node=>pendingReused.has(node.id))){expect(node.generationError).toBeUndefined();expect(node.refreshError).toBeUndefined();expect(JSON.parse(node.excerpt)).toEqual(node.containerSpec)}
  }finally{await React.act(async()=>root.unmount());await win.happyDOM.abort();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]}
-},30000)
+// Full native CSS plus all three retained tabs makes HappyDOM recompute table
+// styles on each stage (~32s here); the real Chromium playback is covered by
+// home-workbench-browser.test.js. Bound this case without changing the suite.
+},60000)
