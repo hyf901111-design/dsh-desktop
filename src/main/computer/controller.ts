@@ -25,9 +25,6 @@ export class ComputerController {
   private owner?: string
   private runId = ''
   private observation?: Observation
-  private focusedPid?: number
-  private focusVerified = false
-  private focusAppActive = false
   private windows = new Map<string, Map<number, number>>()
   private sequence = 0
   private budgets = new Map<string, { started: number; actions: number; failures: number; keyboardRefusals: number }>()
@@ -56,9 +53,6 @@ export class ComputerController {
     if (sessionId !== this.owner) return
     this.abort?.abort(new Error('桌面控制已停止。'))
     this.observation = undefined
-    this.focusedPid = undefined
-    this.focusVerified = false
-    this.focusAppActive = false
     this.options.targetWindow?.()
     this.options.pointer()
     this.options.visibility(false)
@@ -72,7 +66,7 @@ export class ComputerController {
     try { await this.options.stopCapture?.() }
     finally {
       try { await (await this.options.driver()).callTool('end_session', JSON.stringify({ session: run }), { signal: AbortSignal.timeout(5000) }) }
-      finally { this.owner = undefined; this.observation = undefined; this.focusedPid = undefined; this.focusVerified = false; this.focusAppActive = false; this.options.targetWindow?.(); this.options.visibility(false); this.options.pointer(); clearTimeout(this.idle) }
+      finally { this.owner = undefined; this.observation = undefined; this.options.targetWindow?.(); this.options.visibility(false); this.options.pointer(); clearTimeout(this.idle) }
     }
   }
   async run(input: unknown, signal: AbortSignal): Promise<unknown> {
@@ -170,24 +164,24 @@ export class ComputerController {
       if (v.op === 'open') {
         this.observation = undefined
         if (typeof v.bundle_id !== 'string' && typeof v.name !== 'string') throw Error('请提供已发现的应用名称或 bundle_id。')
-        return await call('launch_app', { ...(v.bundle_id ? { bundle_id: text(v.bundle_id, 256) } : { name: text(v.name, 256) }) })
+        // This driver has no documented background-only launch contract.
+        // Reuse running instances without activation; do not guess open flags.
+        const listed = await call('list_apps')
+        const matches = (listed.data.apps ?? []).filter((a: RecordValue) => a.running
+          && (v.bundle_id ? a.bundle_id === v.bundle_id : a.name === v.name))
+        if (matches.length === 1) return { ...await listWindows(positiveInteger(matches[0].pid)), action: {
+          performed: false, code: 'application_already_running', delivery_mode: 'background',
+          reason: '应用已运行；未激活或重新启动，请选择本次返回的准确窗口。' } }
+        return { action: { performed: false, code: matches.length ? 'application_ambiguous' : 'background_launch_unavailable',
+          delivery_mode: 'background', reason: matches.length
+            ? '发现多个同名应用实例；未激活，请先选择准确的 PID 和窗口。'
+            : '当前启动接口不能保证后台启动；未打开或激活应用，可先手动打开目标应用后继续。' },
+          next: matches.map((a: RecordValue) => ({ op: 'windows', pid: positiveInteger(a.pid) })) }
       }
       const observe = async (target: RecordValue, freshAfterMs?: number) => {
         this.observation = undefined
-        let focus = { requested: false, verified: this.focusVerified, appActive: this.focusAppActive }
-        if (target.kind === 'window' && this.focusedPid !== target.pid) {
-          this.focusedPid = target.pid
-          try {
-            const activated = await call('bring_to_front', { pid: target.pid, window_id: target.window_id })
-            this.focusVerified = activated.data.activated === true
-            this.focusAppActive = activated.data.process_activated === true || this.focusVerified
-            focus = { requested: true, verified: this.focusVerified, appActive: this.focusAppActive }
-          } catch (error) {
-            this.focusVerified = false
-            this.focusAppActive = (error as { driverData?: RecordValue }).driverData?.process_activated === true
-            focus = { requested: true, verified: false, appActive: this.focusAppActive }
-          }
-        }
+        // Observation must not activate or raise the target while the user works.
+        const focus = { requested: false, verified: false, appActive: false, policy: 'background-only' }
         let result = target.kind === 'desktop'
           ? await call('get_desktop_state', { session: this.runId })
           : await call('get_window_state', { pid: target.pid, window_id: target.window_id, session: this.runId, max_elements: 500, max_depth: 15,
@@ -255,7 +249,7 @@ export class ComputerController {
           ? webFieldPixelPoint(observed.data, element) : undefined
         if (webField) {
           // Chromium/Electron AXValue can echo a write without the renderer
-          // accepting it. The px route performs a real focus click first.
+          // accepting it. Mark this unsupported route before dispatch instead.
           args.x = this.driverX(observed, webField.x); args.y = this.driverY(observed, webField.y)
           point = this.options.screenPoint(observed.target, observed.data, webField.x, webField.y)
           webKeyboardTarget = true
@@ -378,55 +372,27 @@ export class ComputerController {
           strokes = undefined; click = undefined
         }
       }
+      const keyboard = ['type', 'key', 'hotkey'].includes(v.op)
+      const knownKeyboardRefusal = keyboard && (samePidKeyboardUnavailable(observed.data, observed.target) || webKeyboardTarget)
+        ? backgroundKeyboardUnavailable(samePidKeyboardUnavailable(observed.data, observed.target) ? 'same_pid_keyboard_ambiguity' : 'web_text_field')
+        : undefined
       this.observation = undefined // Never replay a gesture against the old snapshot, including on failure.
-      if (point) await this.options.pointer({ ...point, drag: !!strokes && !click }, combined)
+      if (point && !knownKeyboardRefusal) await this.options.pointer({ ...point, drag: !!strokes && !click }, combined)
       combined.throwIfAborted()
-      const result = strokes
+      const result = knownKeyboardRefusal ?? (strokes
         ? await (async () => {
           await this.options.stroke!(observed!.target, observed!.data, strokes!, duration, combined, gestureModifiers, click)
           return { data: { performed: true, ...(click ? { count: click.count, route: 'window_pointer' } : { strokes: strokes!.length }), delivery_mode: 'background' } }
         })()
         : await (async () => {
-          const keyboard = ['type', 'key', 'hotkey'].includes(v.op)
-          const foregroundKeyboard = async (reason: string) => {
-            // A foreground text retry must re-focus the exact field. The
-            // process's remembered focus may belong to its sibling window.
-            if ((args.x === undefined || args.y === undefined) && token === undefined) {
-              return { data: { performed: false, code: 'keyboard_target_required',
-                reason: '同一应用有多个窗口，无法确认键盘目标；未输入。请用本次截图的输入框 x/y 或控件 token 指定目标。' } }
-            }
-            const listed = await call('list_windows', { pid: observed!.target.pid })
-            const windows = (listed.data.windows ?? []) as RecordValue[]
-            const targetWindow = windows.find(w => w.window_id === observed!.target.window_id
-              && w.is_on_screen !== false && w.on_current_space !== false)
-            if (!targetWindow) return { data: { performed: false, code: 'target_window_changed',
-              reason: '目标窗口已消失或离开当前桌面；未发送键盘输入。请重新观察窗口。' } }
-            if (point) {
-              const blockers = windows.filter(w => w.window_id !== targetWindow.window_id && w.pid === targetWindow.pid
-                && w.is_on_screen !== false && w.on_current_space !== false && validBounds(w.bounds)
-                && !sameBounds(w.bounds, targetWindow.bounds) && containsPoint(w.bounds, point!))
-              if (blockers.some(w => !Number.isFinite(w.z_index) || !Number.isFinite(targetWindow.z_index)
-                || w.z_index > targetWindow.z_index)) return { data: { performed: false, code: 'keyboard_window_covered',
-                reason: '目标输入点被同应用弹层覆盖，或叠放顺序不可确认；未发送键盘输入。请观察弹层或关闭后重试。' } }
-            }
-            // The driver's foreground route owns the brief front → input →
-            // restore transaction. Requiring the target to be frontmost here
-            // defeats that route when another app is already foreground.
-            const foreground = await call(tool, { ...args, delivery_mode: 'foreground' })
-            return { ...foreground, data: { ...foreground.data, delivery_mode: 'foreground', fallback_reason: reason } }
-          }
-          // The capability report is read-only. The driver rechecks it during
-          // delivery, but a known refusal need not consume a failed tool call.
-          if (keyboard && (samePidKeyboardUnavailable(observed!.data, observed!.target) || webKeyboardTarget))
-            return await foregroundKeyboard(samePidKeyboardUnavailable(observed!.data, observed!.target) ? 'same_pid_keyboard_ambiguity' : 'web_text_field')
           try { return await call(tool, args) }
           catch (error) {
             if (!keyboard || !isSamePidKeyboardRefusal(error, observed!.target)) throw error
-            // This refusal is decided before type_text's AX write and pixel
-            // focus click in the pinned driver. A token is safe to replay.
-            return await foregroundKeyboard('same_pid_keyboard_ambiguity')
+            // The pinned driver proves this refusal before any input. Keep it
+            // refused; never turn a known refusal into foreground delivery.
+            return backgroundKeyboardUnavailable('same_pid_keyboard_ambiguity')
           }
-        })()
+        })())
       if (['type', 'key', 'hotkey'].includes(v.op)) {
         budget.keyboardRefusals = result.data.performed === false ? budget.keyboardRefusals + 1 : 0
         if (budget.keyboardRefusals >= 2) {
@@ -438,11 +404,11 @@ export class ComputerController {
       budget.failures = 0
       const last = strokes?.at(-1)?.at(-1)
       const finalPoint = last ? this.options.screenPoint(observed.target, observed.data, last.x, last.y) : point
-      this.options.pointer(finalPoint ? { ...finalPoint, drag: false } : undefined)
+      this.options.pointer(finalPoint && result.data.performed !== false ? { ...finalPoint, drag: false } : undefined)
       // Let the application's event/render queue consume the input before the
       // screenshot. Otherwise a successful tool selection looks unchanged.
       const actionAt = Date.now()
-      await settle(this.options.windowStream ? 50 : 150, undefined, { signal: combined })
+      if (result.data.performed !== false) await settle(this.options.windowStream ? 50 : 150, undefined, { signal: combined })
       if (fallbackTarget) {
         try { return { action: result.data, ...await observe(observed.target, actionAt) } }
         catch (error) { return { action: { ...result.data, ...(isClosedWindowError(error) ? { dismissedPopup: true } : { popupObservationUnavailable: true }) }, ...await observe(fallbackTarget, actionAt) } }
@@ -523,6 +489,12 @@ function stableObservedTarget(before: Observation, after: Observation, input: Re
 }
 function validElementFrame(frame: RecordValue | undefined): boolean {
   return !!frame && [frame.x, frame.y, frame.w, frame.h].every(n => typeof n === 'number' && Number.isFinite(n)) && frame.w > 0 && frame.h > 0
+}
+function backgroundKeyboardUnavailable(reason: 'same_pid_keyboard_ambiguity' | 'web_text_field'): { data: RecordValue; screenshots: DriverResult['images'] } {
+  return { data: { performed: false, code: 'background_input_unavailable', delivery_mode: 'background', unsupported_reason: reason,
+    reason: reason === 'same_pid_keyboard_ambiguity'
+      ? '当前驱动无法可靠定位同一应用多窗口的后台键盘目标；未输入，也不会切换到前台重试。可改用该任务已有的文档、网页或应用接口。'
+      : '当前驱动不能可靠验证网页编辑器的后台键盘输入；未输入，也不会切换到前台重试。请优先使用 browser_use 或该任务已有的内容编辑接口。' }, screenshots: [] }
 }
 function samePidKeyboardUnavailable(data: RecordValue, target: RecordValue): boolean {
   const capability = data.background_input

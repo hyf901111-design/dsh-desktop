@@ -63,7 +63,8 @@ it('uses the native stream for window frames and keeps the assistant cursor clic
   const computer = createDesktopComputer(() => null)
   try {
     const view: any = await computer.run({ op: 'observe', pid: 9, window_id: 10, sessionId: 'test' }, new AbortController().signal)
-    expect(view.focus.verified).toBe(true)
+    expect(view.focus).toEqual({ requested: false, verified: false, appActive: false, policy: 'background-only' })
+    expect(fixture.calls).not.toContain('bring_to_front')
     expect(fixture.windows).toHaveLength(2)
     for (const window of fixture.windows) {
       expect(window.options.focusable).toBe(false)
