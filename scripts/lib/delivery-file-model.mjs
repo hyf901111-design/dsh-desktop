@@ -221,7 +221,7 @@ export function deliveryPathsFromFinalInlineCode(text, cwd) {
     return !qualityDepth
   }).map(row=>row.context).join('\n')
   const withdrawn=rows.some(row=>/非(?:正式)?交付|不(?:作为|列为|算作|用于)?(?:本次|此次)?(?:正式)?交付|不能(?:正式)?交付|(?:文件|成品|文稿|输出).{0,12}(?:尚未|还未|暂未|仍未|未|还没)(?:生成|写入|保存|完成|可用)|(?:请勿|不要|不能|不可)(?:使用|打开|下载).{0,16}(?:文件|路径|成品)|\bnot\s+(?:for\s+)?delivery\b|\b(?:files?|outputs?|presentations?|deliverables?)\b.{0,30}\b(?:not (?:yet )?(?:complete|ready|available)|incomplete|unavailable)\b|\bdo not (?:use|open|download)\b.{0,25}\b(?:files?|paths?|outputs?)\b/iu.test(row.context))
-  const draft=rows.some(row=>/候选|草稿|\b(?:candidate|drafts?|checkpoint|in progress|not (?:yet )?(?:ready|complete|delivered|validated))\b/iu.test(row.context))
+  const draft=rows.some(row=>/候选|草稿|\b(?:candidate|drafts?|checkpoint|not (?:yet )?delivered)\b/iu.test(row.context))
   if (declined(opening)||declined(deliveryClaim)||withdrawn||draft) return []
   const completed = /已(?:完成|生成|交付)|制作完成|生成完成|\b(?:completed|finished|done)\b/iu.test(opening)
   const paths = [], seen = new Set()

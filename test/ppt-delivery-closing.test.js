@@ -12,6 +12,10 @@ it.each(['## Delivered files','## Final deliverables','## 交付文件','交付�
  expect(mergeDeliveryPaths([],heading+'\n\n- `out/final.pptx`\n\n## Sources\n- `inputs/reference.pdf`','/work')).toEqual(['/work/out/final.pptx'])
 })
 
+it.each(['## QA\nNative PowerPoint validation is not yet complete.','## Quality status\nNative acceptance not complete.','## QA\nNative PowerPoint validation is in progress.'])('retains readable files when the separate English QA status is still pending: %s',quality=>{
+ expect(mergeDeliveryPaths([],'Completed.\n\n## Delivered files\n- `outputs/final.pptx`\n- `outputs/final.pdf`\n\n'+quality,'/work')).toEqual(['/work/outputs/final.pptx','/work/outputs/final.pdf'])
+})
+
 it.each(['说明：文件还未完成，请勿使用上述路径。','Files are not yet complete; do not use the paths above.','## 质量门禁\n文件还未完成，请勿使用上述路径。','## Quality assurance\nThe files are incomplete; do not use the paths above.','## QA\nDrafts only.','## 质量门禁\n上述两份文件仍是草稿，仅供检查。'])('preserves the refusal contract for incomplete, withdrawn and draft files: %s',qualification=>{
  expect(mergeDeliveryPaths([],'已完成。\n\n## 交付文件\n- `outputs/final.pptx`\n- `outputs/final.pdf`\n\n'+qualification,'/work')).toEqual([])
 })
