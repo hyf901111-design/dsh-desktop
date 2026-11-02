@@ -29,20 +29,24 @@ it('keeps the actual bridge failure instead of returning tutorial prices or news
  expect(card.textContent).not.toContain('1,456.80');expect(card.textContent).not.toContain('离线教程示例')
 })
 async function fixture({sessionId='owner',subagentPanel=false}={}){
- const win=new Window({url:'https://guide.test',width:1100,height:720}),doc=win.document,previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
+ const win=new Window({url:'https://guide.test',width:1100,height:1800}),doc=win.document,previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
  for(const[k,v]of Object.entries({window:win,document:doc,navigator:win.navigator,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,k,{value:v,configurable:true})
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="owner"></header><textarea>原草稿</textarea></div><section data-home-guide="run-a"><div id="guide-host"></div></section></main><div id="outside"></div>'
  Object.defineProperty(win.HTMLElement.prototype,'clientWidth',{configurable:true,get(){return 1100}})
- Object.defineProperty(win.HTMLElement.prototype,'clientHeight',{configurable:true,get(){return 720}})
+ Object.defineProperty(win.HTMLElement.prototype,'clientHeight',{configurable:true,get(){return 1800}})
  // Happy DOM has no layout engine. Expose native card inline geometry here;
  // actual CSS transitions, viewport fitting and footer bounds run in Chromium.
- Object.defineProperty(win.HTMLElement.prototype,'scrollHeight',{configurable:true,get(){return this.hasAttribute('data-research-canvas')?Math.max(720,...[...this.querySelectorAll('[data-research-node-id]')].map(card=>parseFloat(card.style.top)+parseFloat(card.style.height)/2+86).filter(Number.isFinite)):0}})
+ Object.defineProperty(win.HTMLElement.prototype,'scrollHeight',{configurable:true,get(){return this.hasAttribute('data-research-canvas')?Math.max(1800,...[...this.querySelectorAll('[data-research-node-id]')].map(card=>parseFloat(card.style.top)+parseFloat(card.style.height)/2+86).filter(Number.isFinite)):0}})
  win.HTMLElement.prototype.getBoundingClientRect=function(){
   const card=this.hasAttribute('data-research-node-id'),canvas=this.closest('[data-research-canvas]'),port=this.getAttribute('data-financial-port')
-  let width=card?parseFloat(this.style.width):1100,height=card?parseFloat(this.style.height):720,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2-(canvas?.scrollTop||0):0
+  let width=card?parseFloat(this.style.width):1100,height=card?parseFloat(this.style.height):1800,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2-(canvas?.scrollTop||0):0
   if(port){const bounds=this.closest('[data-research-node-id]').getBoundingClientRect();width=height=20;left=port==='output'?bounds.right-26:bounds.left+6;top=bounds.bottom-30}
+  else if(!card&&this.closest('[data-research-node-id]')){const bounds=this.closest('[data-research-node-id]').getBoundingClientRect();width=bounds.width;height=bounds.height;left=bounds.left;top=bounds.top}
   return{x:left,y:top,left,top,right:left+width,bottom:top+height,width,height,toJSON(){return{left,top,width,height}}}
  }
+ // Layout-only hit testing for Happy DOM; native FinancialConnections still
+ // owns the real pointer listeners, compatible targets and link sink.
+ doc.elementFromPoint=(x,y)=>{const contains=element=>{const b=element.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom};const port=[...doc.querySelectorAll('[data-financial-port]')].find(contains);if(port)return port;const card=[...doc.querySelectorAll('[data-research-node-id]')].find(contains);return card?.querySelector('[data-financial-widget]')||doc.querySelector('[data-research-canvas]')}
  win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  let descriptor,liveCalls=0;win.dshDesktop={financialWidget:homeGuideFinancialBridgeFixture(()=>liveCalls++),calendarTool:{request:async()=>({events:[],notices:[]}),subscribe:()=>()=>{}},componentLibrary:{request:async()=>[]}};win.__ModuleLoader__={load:d=>descriptor=d}
  const patched=patchHomeGuideNative(source).replace('exports.NativeHomeGuidePortal = NativeHomeGuidePortal;','exports.NativeHomeGuidePortal = NativeHomeGuidePortal;exports.__guideResident=homeGuideNativeResidentSession;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};')
@@ -102,7 +106,7 @@ it('uses actual native components and live bridge links, then unmounts only the 
  const f=await fixture(),input=f.doc.querySelector('textarea')
  await f.command('mount-board').then(reply=>expect(reply.ok,reply.message).toBe(true))
  expect(f.doc.querySelector('[data-home-guide-native] [data-research-canvas]')).not.toBeNull()
- for(const command of ['board-library','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add'])expect(await f.command(command)).toMatchObject({ok:true})
+ for(const command of ['board-library','board-watchlist','board-quote','board-news','board-arrange','board-link','board-add']){const result=await f.command(command);expect(result,command+': '+result.message).toMatchObject({ok:true})}
  expect(f.doc.querySelectorAll('[data-home-guide-native] [data-financial-widget]')).toHaveLength(3)
  expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([])
  // Native connections are intentionally shown for the user's selected endpoint.
@@ -210,7 +214,7 @@ it('normalizes a resumed nine-stock tutorial to the five requested stocks withou
 const pump=async predicate=>{for(let i=0;i<150;i++){if(predicate())return;await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,20))})}throw Error('Pointer fixture timed out')}
 function pointerFixture(f,{automatic=false}={}){
  f.doc.documentElement.dataset.homeGuidePointerRun='run-a'
- const cues=[],reply=(cue,extra={})=>f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true,...extra}}))
+ const cues=[],reply=(cue,extra={})=>{if(cue.action==='drag'&&extra.ok!==false){const find=token=>[...f.doc.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===token),from=find(cue.fromTargetToken),target=find(cue.targetToken);if(from&&target){const a=from.getBoundingClientRect(),b=target.getBoundingClientRect(),start={x:a.left+a.width/2,y:a.top+a.height/2},end={x:b.left+b.width/2,y:b.top+b.height/2};for(const frame of [{...start,phase:'pressed'},{x:(start.x+end.x)/2,y:(start.y+end.y)/2,phase:'dragging'},{...end,phase:'dragging'},{...end,phase:'released'}])f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-cue-progress',{detail:{runId:cue.runId,requestId:cue.requestId,...frame}}))}}f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true,...extra}}))}
  f.win.addEventListener('sherlock:home-guide-cue',event=>{cues.push(event.detail);if(automatic)reply(event.detail)})
  const target=(cue,from=false)=>[...f.doc.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===cue[from?'fromTargetToken':'targetToken'])
  return{cues,reply,target}
@@ -271,7 +275,8 @@ it.each(['dispose','disabled','pointer-owner','detached','rejected'])('rejects a
 },10000)
 it('shows and commits each port connection separately and cancels the second without a late apply',async()=>{
  const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');await f.command('board-arrange');const p=pointerFixture(f)
- let reply;await React.act(async()=>{void f.send('board-link').then(value=>{reply=value})});await pump(()=>p.cues.length>0)
+ let reply;await React.act(async()=>{void f.send('board-link').then(value=>{reply=value})});await pump(()=>p.cues.length>0||reply);expect(reply,JSON.stringify(reply)).toBeUndefined()
+ expect(p.cues[0].action).toBe('click');p.reply(p.cues.shift());await pump(()=>p.cues.length>0)
  expect(p.cues[0]).toMatchObject({action:'drag',requestId:expect.any(String)})
  expect(Object.keys(p.cues[0]).sort()).toEqual(['runId','requestId','label','action','targetToken','fromTargetToken'].sort())
  expect(p.cues[0].fromTargetToken).toBe('run-a:'+p.cues[0].requestId+':from')
@@ -279,7 +284,7 @@ it('shows and commits each port connection separately and cancels the second wit
  const firstTargets=[p.target(p.cues[0],true),p.target(p.cues[0])]
  const spec=id=>f.workspace.getSnapshot().artifacts.find(node=>node.id===id).containerSpec
  expect(spec(quote.id).linkedWatchlistId).toBeUndefined();expect(spec(news.id).linkedSourceId).toBeUndefined()
- p.reply(p.cues[0]);await pump(()=>p.cues.length===2)
+ p.reply(p.cues[0]);await pump(()=>p.cues.length===2);expect(p.cues[1].action).toBe('click');p.reply(p.cues.pop());await pump(()=>p.cues.length===2)
  expect(firstTargets.map(target=>target.getAttribute('data-home-guide-cue-target'))).toEqual([null,null])
  expect(spec(quote.id).linkedWatchlistId).toBe(watch.id);expect(spec(news.id).linkedSourceId).toBeUndefined()
  expect(p.target(p.cues[1],true).dataset.financialPortNode).toBe(quote.id);expect(p.target(p.cues[1]).dataset.financialPortNode).toBe(news.id)
@@ -291,7 +296,7 @@ it('shows and commits each port connection separately and cancels the second wit
 it('types the stock code character by character through actual search and keeps three linked widgets persisted',async()=>{
  const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');await f.command('board-arrange');const p=pointerFixture(f,{automatic:true}),typed=[]
  f.doc.addEventListener('input',event=>{if(event.target.getAttribute?.('role')==='combobox')typed.push(event.target.value)},true)
- expect((await f.command('board-link')).ok).toBe(true);expect(p.cues.filter(cue=>cue.action==='drag')).toHaveLength(2)
+ const linked=await f.command('board-link');expect(linked,JSON.stringify(linked)).toMatchObject({ok:true});expect(p.cues.filter(cue=>cue.action==='drag')).toHaveLength(2)
  const added=await f.command('board-add');expect(added,JSON.stringify({added,typed:typeof typed==='undefined'?undefined:typed,nodes:f.workspace.getSnapshot().artifacts.map(n=>n.containerSpec)})).toMatchObject({ok:true})
  expect(typed).toEqual(['000858','000425'].flatMap(code=>Array.from({length:code.length},(_,index)=>code.slice(0,index+1))))
  const nodes=f.workspace.getSnapshot().artifacts
