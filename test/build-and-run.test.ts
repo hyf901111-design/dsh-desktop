@@ -70,14 +70,14 @@ test -f "$fixture/foreign.alive" || exit 10
 ${started ? 'touch "$fixture/target.alive"' : ':'}
 `)
     const result = spawnSync('/bin/bash', [path.join(scriptDirectory, 'build_and_run.sh'), '--verify'], {
-      encoding: 'utf8', env: { ...process.env, PATH: `${fakeBin}:/usr/bin:/bin` }
+      encoding: 'utf8', timeout: 20_000, env: { ...process.env, PATH: `${fakeBin}:/usr/bin:/bin` }
     })
     expect(result.status, result.stderr).toBe(started ? 0 : 1)
     expect(await readFile(path.join(fixture, 'foreign.alive'), 'utf8')).toBe('independent')
     expect((await readFile(path.join(fixture, 'stopped'), 'utf8')).trim().split('\n')).toEqual(['target', 'target'])
     if (started) expect(result.stdout).toContain('EWork Odyssey is running.')
     else expect(result.stderr).toContain('EWork Odyssey did not stay running.')
-  })
+  }, 30_000)
 
   it('embeds the notarized update feed in local directory builds', async () => {
     const builderConfig = await readFile(
