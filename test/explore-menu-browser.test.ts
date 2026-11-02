@@ -1,46 +1,7 @@
-import {afterAll,beforeAll,expect,it} from 'vitest'
-import {build} from 'esbuild'
-import {readFile,readdir,mkdir,writeFile} from 'node:fs/promises'
-import {resolve} from 'node:path'
-import {pathToFileURL} from 'node:url'
-import {createRequire} from 'node:module'
-const require=createRequire(import.meta.url)
-const {PNG}=require('pngjs') as {PNG:{sync:{read(buffer:Buffer):{width:number;data:Buffer}}}}
-let browser:any,script:string,uiExpect:any
-const evidence=process.env.SHERLOCK_EXPLORE_EVIDENCE??'/tmp/sherlock-explore-hover-20261031/browser'
-beforeAll(async()=>{
- await mkdir(evidence,{recursive:true})
- const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import{mountUiLocalization}from'./src/preload/ui-localization';mountUiLocalization(document);
- import{mountExploreMenu}from'./src/preload/explore-menu';import{mountHomeOperations}from'./src/preload/home-operations';import{mountDesktopShellStyles}from'./src/preload/shell-style';mountDesktopShellStyles(document);import{mountAccountUi}from'./src/preload/account-ui';import{mountResearchBoardNotifications}from'./src/preload/research-board-notifications-ui';import{installExploreSearch}from'./src/preload/explore-search';import{mountHomeThemes,getHomeThemeController}from'./src/preload/home-themes';import{createHomeOperationsActions}from'./src/preload/home-operations-actions';import{installHomeOperationsNavigation}from'./src/preload/home-operations-navigation';
- let durable='default',user={id:'qa-owner',username:'研究员',createdAt:1},generation=0;window.calls=[];window.opened=[];window.rows=[{key:'board:b',title:'中际旭创研究工作台',area:'boards',boardId:'b',sessionId:'board-session',time:3,kind:'board',location:'个人看板'},{key:'session:n',title:'中际旭创现金流笔记',area:'workspaces',sessionId:'n',time:2,kind:'note',location:'研究工作区'},{key:'session:c',title:'中际旭创收入分析',area:'workspaces',sessionId:'c',time:1,kind:'session',location:'研究工作区'}];window.holdOpen=false;window.cancelled=0;let searchNavigation=0,sourceRefresh=()=>{};
- window.copied=[];window.copyFailure=false;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{if(window.copyFailure)throw Error('clipboard unavailable');window.copied.push(value)}}});window.actionHold=false;const original=document.querySelector('.VOzbGW_trigger');original.onclick=()=>{if(document.querySelector('.VOzbGW_panel'))return;const panel=document.createElement('div');panel.className='VOzbGW_panel';panel.innerHTML='<nav><div class="VOzbGW_navList"><button data-settings-section-id="general">通用设置</button></div></nav><button class="VOzbGW_close">关闭设置</button><div class="VOzbGW_content"><div class="VOzbGW_options"></div></div>';panel.querySelector('.VOzbGW_close').onclick=()=>panel.remove();document.body.append(panel)};
- const accountBridge={getSnapshot:async()=>({account:{user:{userId:'qa-owner',publicId:'1234567890'}}})};const disposeAccount=mountAccountUi(document,async(action)=>{window.calls.push({action});if(action==='logout'){user=null;generation++}return{user}},accountBridge,{explore:true});
- const offBell=mountResearchBoardNotifications(document,{getSnapshot:async()=>({version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:'qa-owner',username:'研究员',publicId:'1234567890'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,unreadCount:0,pendingCount:0,notifications:[]}}),subscribe:()=>()=>{}});
- const offSearch=installExploreSearch(document,{generation:()=>generation,results:query=>window.rows.filter(row=>row.title.toLowerCase().includes(query.trim().toLowerCase())),subscribe:fn=>{sourceRefresh=fn;return()=>{}},cancelOpen:()=>{window.cancelled++;searchNavigation++},open:async row=>{const navigation=searchNavigation;if(window.holdOpen)await new Promise(resolve=>window.releaseOpen=resolve);if(navigation===searchNavigation)window.opened.push(row.key)}});
- const snapshot={current:'current',byId:{current:{id:'current',title:'保留会话'}},ids:['current']};const offNavigation=installHomeOperationsNavigation({document,sessions:{list:{getSnapshot:()=>snapshot,subscribe:()=>()=>{}},binding:()=>({session:{getSnapshot:()=>({})}}),subagentAddress:()=>undefined,open:()=>{}},workspaces:{list:{getSnapshot:()=>({items:[]})},connectWorkspace:async()=>''},inputHub:{shell:()=>({snapshot:{phase:'plain',draftRev:0}})},composerBlocks:{storeFor:()=>({getSnapshot:()=>undefined})}});
- const actions=createHomeOperationsActions(document,{request:async()=>({type:'snapshot',snapshot:{rows:[{kind:'skill',id:'builtin:efund-ppt-maker',name:'PPT',enabled:true,revision:1},{kind:'skill',id:'builtin:ework-equity-research',name:'研报',enabled:true,revision:1}]}}),useSkill:async input=>window.calls.push({skill:input.id,prefill:input.prefill.text})});
- let offTheme,offExplore;const mount=()=>{offTheme=mountHomeThemes(document,{get:()=>durable,set:theme=>{durable=theme;window.calls.push({theme});return true}});offExplore=mountExploreMenu(document,{themeController:getHomeThemeController(document),onToggleAppearance:async()=>{window.calls.push({appearance:true});document.body.toggleAttribute('data-ds-dark-theme')},onAction:async(card,context)=>{window.actionSignal=context.signal;if(window.actionHold)await new Promise(resolve=>window.releaseAction=resolve);if(!context.signal.aborted)await actions.run(card,context)},onExample:async(kind,context)=>{window.exampleContext=context;window.exampleWasOpen=document.querySelector('dialog.odyssey-explore').open;if(window.exampleHold)await new Promise(resolve=>window.releaseExample=resolve);if(context.signal.aborted)return;await context.demoEntry.closeOwned();window.calls.push({example:kind,aborted:context.signal.aborted})}})};mount();
- let offLegacy;window.fixture={legacyStart(){offLegacy=mountHomeOperations(document)},legacyStop(){offLegacy?.();offLegacy=undefined},restart(){offExplore();offTheme();mount()},generation(){generation++;sourceRefresh()},selected:()=>getHomeThemeController(document).getSelected(),dispose(){offExplore();offTheme();offSearch();offBell();disposeAccount();offNavigation();actions.dispose()}};
- `},bundle:true,format:'iife',platform:'browser',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'production-assets',setup(builder){
-  builder.onResolve({filter:/\?(?:inline|raw|url&inline)$/},args=>({path:args.path.startsWith('.')?resolve(args.resolveDir,args.path.replace(/\?(?:inline|raw|url&inline)$/, '' )):require.resolve(args.path.replace(/\?(?:inline|raw|url&inline)$/, '' )),namespace:args.path.endsWith('?raw')?'raw':'asset'}))
-  builder.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:'export default '+JSON.stringify(await readFile(args.path,'utf8')),loader:'js'}))
-  builder.onLoad({filter:/.*/,namespace:'asset'},async args=>{const mime=args.path.endsWith('.svg')?'image/svg+xml':args.path.endsWith('.png')?'image/png':'image/jpeg';return{contents:'export default '+JSON.stringify('data:'+mime+';base64,'+(await readFile(args.path)).toString('base64')),loader:'js'}})
- }}]});script=result.outputFiles[0]!.text
- const runtime=await import(/* @vite-ignore */pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
- uiExpect=(await import(/* @vite-ignore */pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/test.mjs').href)).expect
- browser=await(runtime.default??runtime).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell',args:['--enable-unsafe-swiftshader']})
-},60000)
-afterAll(()=>browser?.close())
-async function fixture({dark=true,width=1600,height=1000,reduced=true,collapsed=false,clock=false}={}){
- const context=await browser.newContext({viewport:{width,height},reducedMotion:reduced?'reduce':'no-preference'}),page=await context.newPage(),errors:string[]=[]
- page.on('pageerror',(error:Error)=>errors.push(error.message))
- await page.route('https://explore.test/**',(route:any)=>route.fulfill({contentType:'text/html',body:`<!doctype html><html data-odyssey-locale="zh"><meta charset="UTF-8"><style>body{--dsw-alias-interactive-bg-hover:rgba(150,150,150,.18);margin:0;background:linear-gradient(140deg,#10161d,#243b52);font:16px system-ui;color:#ddd}#sidebar{position:fixed;left:0;top:0;bottom:0;width:${collapsed?80:250}px;background:#151719;padding:16px;box-sizing:border-box}#footer{position:absolute;bottom:16px;left:16px;right:16px}.pI_x6G_centerCol{margin-left:260px;padding:20px}textarea{width:650px;height:130px;background:#333;color:#ddd;border:0;border-radius:20px;padding:16px;font:16px system-ui}.wSkVaW_root{height:100vh;box-sizing:border-box}.wSkVaW_header{height:40px}.wSkVaW_composerHero{margin-top:22vh}h1{font-weight:500;font-size:28px}button{font:inherit}body:not([data-ds-dark-theme]){background:linear-gradient(130deg,#dde2e7,#aac5d6);color:#27333e}body:not([data-ds-dark-theme]) #sidebar{background:#eee;color:#27333e}</style><body ${dark?'data-ds-dark-theme':''} ${collapsed?'data-sidebar-collapsed="true"':''}><aside id="sidebar" class="hHd-Xa_root ${collapsed?'hHd-Xa_collapsed':''}"><b>EWork Odyssey</b><p>看板区</p><p>中际旭创研究工作台</p><p>工作区</p><p>专业研究笔记</p><footer id="footer"><button class="VOzbGW_trigger">设置</button></footer></aside><main class="pI_x6G_centerCol"><section class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header" data-srb-session-header data-ework-notes-session="current"><span>保留会话</span><div data-srb-tabs><button data-conversation-view-id="research" aria-selected="false" onclick="this.setAttribute('aria-selected','true')">研究</button><button data-conversation-view-id="notes" aria-selected="false" onclick="this.setAttribute('aria-selected','true')">笔记</button></div></header><div class="wSkVaW_composerHero"><h1>探索更远，洞见更深</h1><textarea aria-label="保留的原输入框" data-odyssey-file-reference-session="current">原草稿必须保留</textarea></div></section></main></body></html>`}))
- await page.route('https://explore.test/figma-self-avatar.png',(route:any)=>route.fulfill({contentType:'image/png',path:resolve('build/brand/figma-self-avatar.png')}));await page.route('https://explore.test/fonts/NotoSansSC.woff2',(route:any)=>route.fulfill({contentType:'font/woff2',path:resolve('build/fonts/NotoSansSC.woff2')}));await page.goto('https://explore.test/');if(clock)await page.clock.install({time:new Date('2026-10-30T00:00:00Z')});await page.addScriptTag({content:script});await page.getByRole('button',{name:'探索',exact:true}).waitFor();await expect.poll(()=>page.locator('.sherlock-account-button').getAttribute('data-explore-trigger')).toBe('');await page.evaluate(()=>document.fonts.ready);expect(errors).toEqual([])
- return{page,context,errors,async close(){await context.close()}}
-}
-async function open(page:any){await page.getByRole('button',{name:'探索',exact:true}).click();await uiExpect(page.getByRole('dialog',{name:'探索',exact:true})).toBeVisible();await page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>Promise.all(node.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished)))}
-async function clickExploreControl(page:any,selector:string){const node=page.locator('dialog.odyssey-explore '+selector),box=await node.boundingBox();expect(box).not.toBeNull();const point={x:box.x+box.width/2,y:box.y+box.height/2};expect(await node.evaluate((node:HTMLElement,point:any)=>node.contains(document.elementFromPoint(point.x,point.y)),point)).toBe(true);await page.mouse.click(point.x,point.y)}
+import {expect,it} from 'vitest'
+import {writeFile} from 'node:fs/promises'
+import {createExploreBrowserFixture} from './helpers/explore-menu-browser-fixture'
+const {evidence,fixture,open,clickExploreControl,uiExpect}=createExploreBrowserFixture()
 it.each([[1600,1000,true],[1380,900,false],[850,600,true],[851,600,false],[540,600,true],[1000,640,false]])('limits Explore window dragging to its top chrome and keeps actual controls reachable at %sx%s dark=%s',async(width,height,dark)=>{
  const f=await fixture({width:width as number,height:height as number,dark:dark as boolean});try{
   await open(f.page)
@@ -92,7 +53,6 @@ it('replaces the bottom account entry with an always-flowing orb and opens a cen
   const frameAfter=await orb.screenshot({path:evidence+'/orb-non-hover-1.png',animations:'allow'});expect(frameBefore.equals(frameAfter)).toBe(false);await writeFile(evidence+'/orb-motion-samples.json',JSON.stringify({hovered:false,before,after},null,2))
   expect(after).not.toEqual(before);expect(after.some((row:any,index:number)=>row.transform!==before[index].transform)).toBe(true)
   await open(f.page);await uiExpect(f.page.getByRole('tab',{name:'快速开始',exact:true})).toBeVisible();expect(await f.page.locator('[data-odyssey-home-operations-toggle]').count()).toBe(0)
-  await f.page.waitForTimeout(330)
   const geometry=await f.page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>{const r=node.getBoundingClientRect();return{x:r.x,width:r.width,height:r.height,center:r.x+r.width/2,centerY:r.y+r.height/2,stage:node.querySelector('.odyssey-explore-viewport')!.getBoundingClientRect().height,backdrop:getComputedStyle(node.closest('dialog')!,'::backdrop').backdropFilter}})
   expect(geometry.width).toBeCloseTo(864,0);expect(geometry.center).toBeCloseTo(800,0);expect(geometry.stage).toBe(376);expect(geometry.centerY).toBeCloseTo(484,0);expect(geometry.backdrop).toBe('blur(12px)')
   await f.page.screenshot({path:evidence+'/dark-quick.png'});await f.page.getByRole('button',{name:'关闭探索',exact:true}).click();await uiExpect(f.page.getByRole('dialog',{name:'探索',exact:true})).not.toBeVisible();expect(await input.inputValue()).toBe('原草稿必须保留');expect(f.errors).toEqual([])
@@ -419,49 +379,3 @@ it.concurrent.each([[1380,true],[1380,false],[820,true],[820,false]] as const)('
   await f.page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await uiExpect(dialog.getByRole('tab',{name:'快速开始',exact:true})).toBeVisible();await dialog.locator('.odyssey-explore-pages button').first().click();expect(await chinese()).toEqual(before);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
-async function mountProductionCardCss(page:any){
- const assets='node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
- const frontend=(await Promise.all((await readdir(assets)).filter(name=>/^index-.*\.css$/.test(name)).map(name=>readFile(assets+'/'+name,'utf8')))).join('\n')
- const libraries=await Promise.all(['layout','conversation','agent-preset'].map(name=>readFile('node_modules/@deepseek-ai/dsh-client-ui-'+name+'/lib/client.js','utf8')))
- const native=libraries.flatMap(source=>[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1]!))).join('\n')
- const portal=[...libraries[1]!.matchAll(/tag\.textContent \+?= ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1]!)).filter(css=>css.includes('.wSkVaW_root')).join('\n')
- await page.evaluate((css:string)=>{const style=document.createElement('style');style.textContent=css;document.head.prepend(style)},frontend+'\n'+native+'\n'+portal)
-}
-
-it.each([true,false])('keeps the complete production Explore card edges and gaps free of clipped shadow bands through hover, carousel and reopen (dark=%s)',async dark=>{
- const f=await fixture({dark,width:1380,height:900,reduced:false});try{
-  await mountProductionCardCss(f.page)
-  const enter=async()=>{await f.page.locator('[data-explore-trigger]').evaluate((node:HTMLElement)=>node.click());await uiExpect(f.page.locator('dialog.odyssey-explore')).toBeVisible();await f.page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>Promise.all(node.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished)));await f.page.mouse.move(8,800)}
-  await enter()
-  // Keep the wallpaper and the original interior effects on an identical frame
-  // for the visible-card / bare-backdrop pixel comparison.
-  await f.page.evaluate(()=>{for(const animation of document.getAnimations())if(animation.effect?.getTiming().iterations===Infinity){animation.pause();animation.currentTime=800}})
-  const bands:any[]=[]
-  const verify=async(state:string)=>{
-   const points=await f.page.locator('.odyssey-explore :is(.odyssey-operations-usecase,.odyssey-operations-quick-card)').evaluateAll((nodes:Element[])=>{
-    const cards=nodes.map(node=>{const r=node.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom}}),hero=cards[0]!,board=cards[1]!,note=cards[2]!,ppt=cards[3]!,report=cards[4]!,points:{name:string,x:number,y:number}[]=[]
-    const add=(name:string,x:number,y:number)=>{if(cards.every(card=>x<card.left-1||x>card.right+1||y<card.top-1||y>card.bottom+1))points.push({name,x:Math.floor(x),y:Math.floor(y)})}
-    for(const y of [hero.top+48,(hero.top+hero.bottom)/2,hero.bottom-48]){add('outer-left',hero.left-4,y);add('outer-right',note.right+4,y)}
-    for(const [left,right]of [[hero,board],[board,note],[ppt,report]] as const)if(right.left-left.right>4){const x=(left.right+right.left)/2;for(const y of [right.top+36,(right.top+right.bottom)/2,right.bottom-36])add('column-gap',x,y)}
-    for(const card of cards){add('under-card',(card.left+card.right)/2,card.bottom+4)}return points
-   })
-   expect(points.length).toBeGreaterThanOrEqual(8)
-   const cards=f.page.locator('.odyssey-explore :is(.odyssey-operations-usecase,.odyssey-operations-quick-card)')
-   await cards.evaluateAll((nodes:Element[])=>nodes.forEach(node=>(node as HTMLElement).style.visibility='hidden'))
-   const bare=PNG.sync.read(await f.page.screenshot())
-   await cards.evaluateAll((nodes:Element[])=>nodes.forEach(node=>(node as HTMLElement).style.removeProperty('visibility')))
-   const rendered=PNG.sync.read(await f.page.screenshot({path:evidence+'/card-edges-'+dark+'-'+state+'.png'}))
-   const samples=points.map((point:any)=>{const index=(point.y*rendered.width+point.x)*4,delta=Math.max(...[0,1,2].map(channel=>Math.abs(rendered.data[index+channel]!-bare.data[index+channel]!)));return{...point,delta}})
-   bands.push({state,samples});await writeFile(evidence+'/card-edge-pixels-'+dark+'.json',JSON.stringify(bands,null,2))
-   // Chromium may round the blurred backdrop by two levels between composites.
-   expect(Math.max(...samples.map((sample:any)=>sample.delta))).toBeLessThanOrEqual(2)
-  }
-  await verify('rest')
-  const anchors=f.page.locator('.odyssey-explore .odyssey-operations-tilt-anchor')
-  for(let index=0;index<5;index++){await anchors.nth(index).hover({position:{x:20,y:20}});await f.page.waitForTimeout(330);await verify('hover-'+index)}
-  await f.page.mouse.move(8,800);await f.page.waitForTimeout(330)
-  for(let index=1;index<5;index++){await f.page.locator('.odyssey-explore .odyssey-operations-pagination button').nth(index).click();await f.page.waitForTimeout(180);await verify('carousel-'+index);await f.page.waitForTimeout(330)}
-  await f.page.locator('[data-explore-close]').click();await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible();await enter();await f.page.waitForTimeout(330);await verify('reopened')
-  expect(f.errors).toEqual([])
- }finally{await f.close()}
-},45000)
