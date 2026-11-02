@@ -47,7 +47,9 @@ beforeAll(async()=>{
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },60000)
-afterAll(async()=>browser?.close())
+// Chromium process teardown has its own bounded budget, separate from the
+// walkthrough. Await real disconnection rather than swallowing cleanup errors.
+afterAll(async()=>{if(browser){await browser.close();expect(browser.isConnected()).toBe(false)}},30000)
 async function fixture(paneWidth=600,{isolated=false,deferEngage=false}={}){
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-shell-')),store=new NotesStore(directory),requests=[]
  let releaseEngage;const engageGate=deferEngage?new Promise(resolve=>releaseEngage=resolve):Promise.resolve()
