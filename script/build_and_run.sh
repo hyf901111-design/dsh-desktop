@@ -13,16 +13,16 @@ else
   formal_app="$project_root/dist-notarized/mac/EWork Odyssey.app"
 fi
 formal_executable="$formal_app/Contents/MacOS/EWork Odyssey"
+# Another copied app may have the same executable name and its own profile.
+# Match only this checkout's actual app path, with literal regexp metacharacters.
+formal_process_pattern="^$(printf '%s' "$formal_executable" | sed 's/[][\\.^$*+?(){}|]/\\&/g')([[:space:]]|$)"
 formal_runtime_node="$formal_app/Contents/Resources/app/node_modules/node/bin/node"
 workspace_runtime_node="$project_root/node_modules/node/bin/node"
 
 stop_sherlock_apps() {
-  pkill -x 'Sherlock Dev' 2>/dev/null || true
-  pkill -x 'Sherlock' 2>/dev/null || true
-  pkill -x 'EWork Odyssey Dev' 2>/dev/null || true
-  pkill -x 'EWork Odyssey' 2>/dev/null || true
+  pkill -f "$formal_process_pattern" 2>/dev/null || true
   for _attempt in $(seq 1 40); do
-    if ! pgrep -x 'Sherlock Dev|Sherlock|EWork Odyssey Dev|EWork Odyssey' >/dev/null; then
+    if ! pgrep -f "$formal_process_pattern" >/dev/null; then
       return 0
     fi
     sleep 0.25
@@ -74,7 +74,7 @@ case "$mode" in
     open_formal_app
     stable_checks=0
     for _attempt in $(seq 1 80); do
-      if pgrep -x 'EWork Odyssey' >/dev/null; then
+      if pgrep -f "$formal_process_pattern" >/dev/null; then
         stable_checks=$((stable_checks + 1))
         if [ "$stable_checks" -ge 4 ]; then
           echo 'EWork Odyssey is running.'

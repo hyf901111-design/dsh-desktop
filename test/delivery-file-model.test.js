@@ -6,6 +6,7 @@ import {
   mergeDeliveryPaths,
   verifiedResearchDeliveryPaths,
   homeGuideDeliveryPaths,
+  presentationDelivery,presentationCodeDelivery,
   deliveryModelSource
 } from '../scripts/lib/delivery-file-model.mjs'
 
@@ -222,6 +223,26 @@ describe('verified research tool result delivery', () => {
     for (const message of [null, {}, { source: { kind: 'tool' }, content: [{ type: 'tool-result', content: [{ type: 'text', text: '{bad json' }] }] }]) {
       expect(verifiedResearchDeliveryPaths(message)).toEqual([])
     }
+  })
+})
+
+describe('host presentation file publication',()=>{
+  const receipt=()=>({kind:'ework-presentation-files',version:1,tool:'presentation_files',ok:true,status:'available',sessionId:'session',turnId:'7',callId:'publish',qualityVerification:'not-evaluated',files:[{format:'pptx',path:'/work/outputs/报告.pptx',bytes:512,sha256:'a'.repeat(64)},{format:'pdf',path:'/work/outputs/报告.pdf',bytes:256,sha256:'b'.repeat(64)}]})
+  const message=value=>({source:{kind:'tool',callId:'publish'},content:[{type:'tool-result',toolCallId:'publish',content:[{type:'text',text:JSON.stringify(value)}]}]})
+  it('accepts only the host publication identity and preserves independent QA status',()=>{
+    expect(presentationDelivery(message(receipt()),'presentation_files',7)).toEqual({turnId:'7',paths:['/work/outputs/报告.pptx','/work/outputs/报告.pdf']})
+    expect(presentationDelivery(message(receipt()),'bash',7)).toBeUndefined()
+    expect(presentationDelivery(message(receipt()),'presentation_files',8)).toBeUndefined()
+    expect(presentationDelivery({...message(receipt()),source:{kind:'assistant',callId:'publish'}},'presentation_files',7)).toBeUndefined()
+    const bad=message(receipt());bad.content[0].toolCallId='other';expect(presentationDelivery(bad,'presentation_files',7)).toBeUndefined()
+  })
+  it.each([v=>v.ok=false,v=>v.status='pending',v=>v.qualityVerification='passed',v=>v.callId='other',v=>v.files[0].path='/work/../out/a.pptx',v=>v.files[0].sha256='bad',v=>v.files[0].bytes=0,v=>v.files[1].format='pptx',v=>v.files=[]])('rejects malformed and mismatched publication payload',mutate=>{
+    const value=receipt();mutate(value);expect(presentationDelivery(message(value),'presentation_files',7)).toBeUndefined()
+  })
+  it('accepts real Code Mode settlement events rather than a packet printed by the run_code wrapper',()=>{
+    const event={type:'tool/code-dispatch',data:{name:'presentation_files',rootCallId:'root',parentCallId:'root',subCallId:'publish',isError:false,content:[{type:'text',text:JSON.stringify(receipt())}]}}
+    expect(presentationCodeDelivery(event)).toEqual({turnId:'7',paths:['/work/outputs/报告.pptx','/work/outputs/报告.pdf']})
+    for(const change of [value=>value.type='tool/result',value=>value.data.name='bash',value=>value.data.isError=true,value=>value.data.subCallId='other']){const value=structuredClone(event);change(value);expect(presentationCodeDelivery(value)).toBeUndefined()}
   })
 })
 

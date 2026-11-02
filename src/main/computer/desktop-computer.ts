@@ -5,6 +5,7 @@ import { ComputerController, sameObservedElements, type ComputerDriver } from '.
 import { compactWindowElements } from './observation'
 import { cursorOverlayPositions, cursorTravelDuration, cursorTravelPoint } from './overlay-layout'
 import { createWindowCapture, type WindowCapture } from './capture-stream'
+import { createBackgroundApplicationInspector, createBackgroundApplicationLauncher, type BackgroundLaunchBinding } from './background-launch'
 import type { CuaDriverLike, EmbeddedCuaDriverHostLike } from '@trycua/cua-driver'
 
 export function createDesktopComputer(getMainWindow: () => BrowserWindow | null | undefined) {
@@ -22,6 +23,12 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
   let pointerMotion: { timer: ReturnType<typeof setInterval>; target: { x: number; y: number }; promise: Promise<void>; resolve(): void } | undefined
   let fadeTimer: ReturnType<typeof setTimeout> | undefined
   let strokeDriver: { draw(args: unknown): Promise<void>; cancel(): void; position(): { x: number; y: number } | undefined } | undefined
+  let launchDriver: BackgroundLaunchBinding | undefined
+  const launchNative = () => {
+    if (process.platform !== 'darwin') throw Error('后台启动仅支持 macOS。')
+    launchDriver ??= createRequire(import.meta.url)(join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'computer-launch.node'))
+    return launchDriver!
+  }
   const shortcut = 'CommandOrControl+Shift+Escape'
   const stop = () => { void controller.stop().catch(error => console.warn('[computer] stop failed', error)) }
   function overlay(html: string, width: number, height: number) {
@@ -83,6 +90,8 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
   powerMonitor.on('lock-screen', onLock)
   powerMonitor.on('suspend', onLock)
   const controller = new ComputerController({
+    launchApplication: createBackgroundApplicationLauncher(launchNative),
+    inspectApplication: createBackgroundApplicationInspector(launchNative),
     assertAvailable: () => {
       if (powerMonitor.getSystemIdleState(60) === 'locked') throw Error('Mac 已锁屏，桌面操作已暂停；请解锁后继续。')
       if (captureActive && capture?.state().stoppedBySystem) { stop(); throw Error('系统已停止共享，桌面控制已中止。') }

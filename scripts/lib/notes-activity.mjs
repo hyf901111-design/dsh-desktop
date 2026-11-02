@@ -62,7 +62,12 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     const stage = {model:noteUiText("正在思考"),thinking:noteUiText("正在思考"),writing:noteUiText("正在撰写内容"),validating:noteUiText("正在检查生成内容")}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
     const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("已将以下内容写入笔记。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
-    const conversation=row.result?.kind==='conversation'&&row.result.capabilityReceipts?.length?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):row.result?.markdown
+    const receiptSummary=row.result?.kind==='conversation'&&row.result.capabilityReceipts?.length?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):''
+    const originalSummary=row.result?.capabilitySummary|| (receiptSummary?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts):'')
+    const reply=row.result?.requiresReply===true?String(row.result.markdown||'').trim():''
+    const remainingReply=originalSummary&&reply.startsWith(originalSummary)?reply.slice(originalSummary.length).trim():reply
+    const remaining=row.result?.notice==='read-only-incomplete'&&remainingReply==='已读取当前内容，本次尚未生成修改或答复。'?noteUiText('已读取当前内容，本次尚未生成修改或答复。',document.documentElement.dataset.odysseyLocale):remainingReply
+    const conversation=receiptSummary?[receiptSummary,remaining&&remaining!==receiptSummary?remaining:''].filter(Boolean).join('\n\n'):row.result?.markdown
     const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress:[]
     const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts:[]
     const text=['text','conversation'].includes(row.result?.kind)?String(conversation||''):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()

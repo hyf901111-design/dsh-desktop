@@ -372,13 +372,17 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       if (marker) {
         ticket.pointerRun = marker
         await new Promise((resolve, reject) => {
-          const requestId = window.crypto.randomUUID(); let done = false
+          const requestId = window.crypto.randomUUID(); let done = false, pressed = false, released = false
+          const canvas=target.closest('[data-research-canvas]'),nativeConnection=action==='drag'&&fromTarget?.dataset.financialPort==='output'&&target.dataset.financialPort==='input'&&canvas&&canvas===fromTarget.closest('[data-research-canvas]')&&ticket.host.contains(canvas)
+          const pointerId=7101,gestureEpoch=ticket.selectionEpoch
+          const send=(element,type,point)=>react_dom.flushSync(()=>element.dispatchEvent(new window.PointerEvent(type,{bubbles:true,cancelable:true,composed:true,pointerId,pointerType:'mouse',isPrimary:true,button:0,buttons:type==='pointerup'||type==='pointercancel'?0:1,clientX:point.x,clientY:point.y})))
+          const progress=event=>{const value=event.detail;if(done||!nativeConnection||value?.runId!==marker||value.requestId!==requestId)return;try{check(ticket);if(ticket.selectionEpoch!==gestureEpoch||ticket.resource.workspace.getPreviewMode?.())throw changed();targetReady(ticket,fromTarget,true);targetReady(ticket,target,true);if(!Number.isFinite(value.x)||!Number.isFinite(value.y))throw changed();if(value.phase==='pressed'&&!pressed){pressed=true;send(fromTarget,'pointerdown',value)}else if(value.phase==='dragging'&&pressed&&!released)send(document,'pointermove',value);else if(value.phase==='released'&&pressed&&!released){released=true;send(document,'pointerup',value)}}catch(error){finish(error)}}
           const targetToken = marker + ':' + requestId + ':target', fromTargetToken = fromTarget ? marker + ':' + requestId + ':from' : undefined
           const targets = [[target, targetToken], ...(fromTarget ? [[fromTarget, fromTargetToken]] : [])]
-          const finish = error => { if (done) return; done = true; window.removeEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.removeEventListener('abort', abort); for (const [element, token] of targets) if (element.getAttribute('data-home-guide-cue-target') === token) element.removeAttribute('data-home-guide-cue-target'); error ? reject(error) : resolve() }
+          const finish = error => { if (done) return; done = true; window.removeEventListener('sherlock:home-guide-cue-reply', receive); window.removeEventListener('sherlock:home-guide-cue-progress', progress); if(pressed&&!released)send(document,'pointercancel',{x:0,y:0}); ticket.controller.signal.removeEventListener('abort', abort); for (const [element, token] of targets) if (element.getAttribute('data-home-guide-cue-target') === token) element.removeAttribute('data-home-guide-cue-target'); error ? reject(error) : resolve() }
           const abort = () => finish(changed())
-          const receive = event => { const result = event.detail; if (result?.runId !== marker || result.requestId !== requestId) return; finish(result.ok === true ? null : Error(result.message || '教程指针操作未完成。')) }
-          window.addEventListener('sherlock:home-guide-cue-reply', receive); ticket.controller.signal.addEventListener('abort', abort, { once: true })
+          const receive = event => { const result = event.detail; if (result?.runId !== marker || result.requestId !== requestId) return; finish(result.ok === true&&(!nativeConnection||released) ? null : Error(result.message || '教程指针操作未完成。')) }
+          window.addEventListener('sherlock:home-guide-cue-reply', receive); if(nativeConnection)window.addEventListener('sherlock:home-guide-cue-progress',progress); ticket.controller.signal.addEventListener('abort', abort, { once: true })
           void (async () => { let elapsed = 0, last = Date.now(); while (!done && elapsed < 10000) { await frame(ticket); if (done) return; check(ticket); const now = Date.now(); if (ticket.playing) elapsed += Math.min(80, now - last); last = now } if (!done) finish(Error('教程指针操作超时，请重试。')) })().catch(finish)
           try {
             for (const [element, token] of targets) element.setAttribute('data-home-guide-cue-target', token)
@@ -388,6 +392,12 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       } else {
         window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-cue', { detail: { runId: ticket.detail.runId, target, label } }))
         await delay(ticket, 450)
+        if(action==='drag'&&fromTarget?.dataset.financialPort==='output'&&target.dataset.financialPort==='input'){
+          const a=fromTarget.getBoundingClientRect(),b=target.getBoundingClientRect(),start={x:a.left+a.width/2,y:a.top+a.height/2},end={x:b.left+b.width/2,y:b.top+b.height/2},send=(element,type,p)=>react_dom.flushSync(()=>element.dispatchEvent(new window.PointerEvent(type,{bubbles:true,cancelable:true,composed:true,pointerId:7101,pointerType:'mouse',isPrimary:true,button:0,buttons:type==='pointerup'||type==='pointercancel'?0:1,clientX:p.x,clientY:p.y})))
+          const epoch=ticket.selectionEpoch;let released=false
+          const valid=()=>{check(ticket);if(ticket.selectionEpoch!==epoch||ticket.resource.workspace.getPreviewMode?.())throw changed();targetReady(ticket,fromTarget,true);targetReady(ticket,target,true)}
+          try{valid();send(fromTarget,'pointerdown',start);send(document,'pointermove',{x:(start.x+end.x)/2,y:(start.y+end.y)/2});await frame(ticket);await playing(ticket);valid();send(document,'pointermove',end);await frame(ticket);await playing(ticket);valid();send(document,'pointerup',end);released=true}finally{if(!released)send(document,'pointercancel',end)}
+        }
       }
       await playing(ticket); targetReady(ticket, target, true); if (fromTarget) targetReady(ticket, fromTarget, true)
     }
@@ -399,7 +409,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection)
       ticket.ownedSelectionEpoch = ticket.selectionEpoch
     }
-    const click = async (ticket, target, label, afterClick) => {
+    const click = async (ticket, target, label, afterClick, beforeClick) => {
       await cue(ticket, target, label, 'click')
       await playing(ticket); targetReady(ticket, target, true)
       const before = ticket.resource.workspace.getSnapshot().selection
@@ -407,7 +417,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         ticket.originalSelection = structuredClone(before); ticket.selectionBaselineEpoch = ticket.selectionEpoch
       }
       const canvas=ticket.host.querySelector('[data-research-canvas]'),pendingReveal=canvas?.__eworkReveal
-      react_dom.flushSync(() => { target.click(); afterClick?.() })
+      react_dom.flushSync(() => { beforeClick?.(); target.click(); afterClick?.() })
       // Cancel only this native click's queued reveal; the actor awaits its own
       // pause-aware scroll after the final grid geometry has settled.
       if(canvas?.__eworkReveal && canvas.__eworkReveal!==pendingReveal)delete canvas.__eworkReveal
@@ -630,12 +640,12 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           if (widget === 'indices') {
             const state = await workspace.canvasAction('inspect', { ids: [node.id] }); await playing(ticket)
             const symbols = [...node.containerSpec.symbols, ...[['^GSPC','标普500'],['^IXIC','纳斯达克综合指数'],['^NDX','纳斯达克100'],['^RUT','罗素2000']].map(([code,name])=>({market:'INDEX',code,name}))]
-            await workspace.canvasAction('apply', { requestId: detail.requestId + ':indices', revision: state.revision, changes: [{op:'update',id:node.id,fields:{containerSpec:{...node.containerSpec,symbols}}}] }, { isCancelled:()=>ticket.controller.signal.aborted })
+            await workspace.canvasAction('apply', { requestId: detail.requestId + ':indices', revision: state.revision, changes: [{op:'update',id:node.id,fields:{containerSpec:{...node.containerSpec,symbols}}}] }, { silent:true, isCancelled:()=>ticket.controller.signal.aborted })
           }
           if (widget === 'watchlist') {
             const state = await workspace.canvasAction('inspect', { ids: [node.id] }); check(ticket)
             await playing(ticket)
-            await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+            await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { silent:true, isCancelled: () => ticket.controller.signal.aborted })
           }
         }
         // Preserve native reading sizes on entry, wrapping when a row cannot fit.
@@ -724,9 +734,24 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
             if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
             if (ticket.selectionEpoch !== selectionLease.input) throw changed()
-            react_dom.flushSync(() => workspace.updateSelection([sourceId], 'replace'))
-            ticket.ownedSelection = JSON.stringify(workspace.getSnapshot().selection); ticket.ownedSelectionEpoch = ticket.selectionEpoch
             const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
+            if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId)){
+              // Click a visible, non-interactive part of the source through the
+              // real canvas handler before starting its native port gesture.
+              const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(sourceId)+'"]');if(!card)throw changed();await scrollTarget(ticket,card);await settle(ticket,()=>!!card.querySelector('[data-financial-widget]'))
+              const excluded='[data-workbench-drag-handle],[data-research-node-move-handle],[data-workbench-resize],input,textarea,button,a,select,[contenteditable],iframe,canvas,svg,[data-stock-code],.ew-watch-name,[role=option]:not([data-research-node-id]),[role=menu],[role=dialog]'
+              const selectTarget=[...card.querySelectorAll('[data-financial-widget],p,small,span,div')].find(element=>{if(element.closest(excluded))return false;for(let parent=element;parent&&parent!==card.parentElement;parent=parent.parentElement){const style=window.getComputedStyle(parent);if(parent.hidden||parent.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')return false}const box=element.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,hit=document.elementFromPoint(x,y);return box.width>8&&box.height>8&&hit&&hit.closest('[data-research-node-id]')===card&&!hit.closest(excluded)&&x>=0&&y>=0&&x<window.innerWidth&&y<window.innerHeight})
+              if(!selectTarget)throw Error('组件点选区域尚未显示，请重新打开示例。')
+              await click(ticket,selectTarget,'选择'+(sourceId===watchlist?'自选股':'行情')+'组件',undefined,()=>{
+                if(ticket.selectionEpoch!==selectionLease.input)throw changed()
+                const box=selectTarget.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,hit=document.elementFromPoint(x,y)
+                if(!hit||hit.closest('[data-research-node-id]')!==card||hit.closest(excluded))throw changed()
+                for(const type of ['pointerdown','pointerup'])hit.dispatchEvent(new window.PointerEvent(type,{bubbles:true,cancelable:true,composed:true,pointerId:7102,pointerType:'mouse',isPrimary:true,button:0,buttons:type==='pointerdown'?1:0,clientX:x,clientY:y}))
+              })
+              if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId))throw changed()
+              ticket.ownedSelection=JSON.stringify(workspace.getSnapshot().selection);ticket.ownedSelectionEpoch=ticket.selectionEpoch
+            }
+            if(!port(targetId,'input')){const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(targetId)+'"]');if(!card)throw changed();await scrollTarget(ticket,card)}
             await settle(ticket, () => !!port(sourceId, 'output') && !!port(targetId, 'input'))
             const from = port(sourceId, 'output'), target = port(targetId, 'input'), a = from.getBoundingClientRect(), b = target.getBoundingClientRect()
             let keepPairFrame = keepCanvasFrame
@@ -745,13 +770,9 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
               if (![from,target].every(port=>{const box=port.getBoundingClientRect();return box.top>=framed.top-1&&box.bottom<=framed.bottom-12*framed.scaleY+1})) throw Error('连接端点尚未完整显示，请增大研究区后重试。')
               keepPairFrame = true
             }
+            if(ticket.selectionEpoch!==selectionLease.input)throw changed()
             await cue(ticket, target, label, 'drag', from, keepPairFrame)
             if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
-            const state = await workspace.canvasAction('inspect', { ids: [sourceId, targetId] })
-            await playing(ticket); targetReady(ticket, from, true); targetReady(ticket, target, true)
-            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
-            const node = workspace.getSnapshot().artifacts.find(node => node.id === targetId)
-            await workspace.canvasAction('apply', { requestId: detail.requestId + ':link:' + targetId, revision: state.revision, changes: [{ op: 'update', id: targetId, fields: { containerSpec: { ...node.containerSpec, [field]: sourceId, refreshEnabled: true } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
             await playing(ticket)
             await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId && !!ticket.host.querySelector('[data-financial-link]'))
           }
@@ -784,7 +805,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         }
         const state = await workspace.canvasAction('inspect', { ids: [watchlist] }); await playing(ticket)
         const node = workspace.getSnapshot().artifacts.find(node => node.id === watchlist), order = new Map(provider.symbols.map((symbol, index) => [symbol.market + ':' + symbol.code, index]))
-        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: node.containerSpec.symbols.filter(symbol=>order.has(symbol.market+':'+symbol.code)).sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)), selectedSymbol: order.has(node.containerSpec.selectedSymbol)?node.containerSpec.selectedSymbol:'US:AAPL' } } }] }, { isCancelled: () => ticket.controller.signal.aborted })
+        await workspace.canvasAction('apply', { requestId: detail.requestId + ':order', revision: state.revision, changes: [{ op: 'update', id: watchlist, fields: { containerSpec: { ...node.containerSpec, symbols: node.containerSpec.symbols.filter(symbol=>order.has(symbol.market+':'+symbol.code)).sort((a,b) => order.get(a.market+':'+a.code)-order.get(b.market+':'+b.code)), selectedSymbol: order.has(node.containerSpec.selectedSymbol)?node.containerSpec.selectedSymbol:'US:AAPL' } } }] }, { silent:true, isCancelled: () => ticket.controller.signal.aborted })
         await settle(ticket, () => JSON.stringify([...(card()?.querySelectorAll('[data-stock-code]') ?? [])].map(row => row.dataset.stockMarket+':'+row.dataset.stockCode)) === JSON.stringify(provider.symbols.map(symbol => symbol.market+':'+symbol.code)))
         const stock = () => [...(card()?.querySelectorAll('[data-stock-code]') ?? [])].find(row => row.dataset.stockCode === '000858' && row.dataset.stockMarket === 'SZ')
         await settle(ticket, () => !!stock())
@@ -796,7 +817,8 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           await settle(ticket)
         }
       } else {
-        await arrangeBoard('整理六个组件，保留完整阅读空间')
+        if(!ticket.arranged)await arrangeBoard('整理六个组件，保留完整阅读空间')
+        else { clearOwnedSelection(ticket); await settle(ticket) }
       }
       await save(ticket)
     }

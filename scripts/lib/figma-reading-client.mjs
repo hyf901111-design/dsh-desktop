@@ -59,7 +59,11 @@ export function patchFigmaReadingConversation(source) {
     const a=source.indexOf('function OdysseyReadingStatus('), b=source.indexOf('function useOdysseyCompactTasks(',a);
     const h=helpers.indexOf('function OdysseyReadingStatus('), e=helpers.indexOf('function useOdysseyCompactTasks(',h);
     if(a<0||b<a)throw Error('Reading status/run info boundary drifted');
-    source=source.slice(0,a)+helpers.slice(h,e)+source.slice(b);
+    // The compact observer owns its preceding marker and measured footer budget.
+    // Leave that whole region intact when refreshing only status/run-info helpers.
+    const compactMarker='/* odyssey:task-reading-budget:20260913 */',compact=source.indexOf(compactMarker);
+    if(compact>=0&&(compact<=a||compact>=b||source.split(compactMarker).length!==2))throw Error('Reading compact owner boundary drifted');
+    source=source.slice(0,a)+helpers.slice(h,e)+source.slice(compact<0?b:compact);
     return patchFigmaCompactTasks(patchFigmaTaskProgress(source));
   }
   source=exact(source,'function scrollerOf(from) {\n\t\t\treturn from.closest("[data-conversation-scroll]") ?? from;', 'function scrollerOf(from) {\n\t\t\treturn from.closest(".sRp_messages,[data-conversation-scroll]") ?? from;');

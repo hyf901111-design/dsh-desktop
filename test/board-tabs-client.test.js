@@ -213,9 +213,10 @@ it('合并的最后松手坐标仍能从普通拖动进入页签，或从缩略�
  expect(f.document.querySelector('[data-release-animation]')).toBeNull()
 })
 
-it('缩略区收到新的布局后，松手或取消保留新布局并清理原生手势',async()=>{
- for(const action of ['pointerup','Escape','blur','pointermove']){
-  f=await fixture();let a,b;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');b=f.workspace.createFinancialWidget('watchlist');f.workspace.createBoardTabs()})
+// Each action owns a fresh DOM and its own default timeout. A timeout must not
+// leave a four-scenario loop assigning or disposing the next test's global f.
+it.each(['pointerup','Escape','blur','pointermove'])('缩略区收到新的布局后，%s保留新布局并清理原生手势',async action=>{
+  const f=await fixture();let a,b;await f.act(()=>{a=f.workspace.createFinancialWidget('indices');b=f.workspace.createFinancialWidget('watchlist');f.workspace.createBoardTabs()})
   const source=f.host.querySelector('[data-research-node-id="'+a.id+'"]'),handle=source.querySelector('[data-workbench-drag-handle]')
   source.getBoundingClientRect=()=>({left:12,top:180,right:675,bottom:640,width:663,height:460})
   f.document.querySelector('[data-board-tabs-nav]').getBoundingClientRect=()=>({left:12,top:12,right:988,bottom:46,width:976,height:34})
@@ -231,8 +232,6 @@ it('缩略区收到新的布局后，松手或取消保留新布局并清理原�
   expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
   expect(nav(f.workspace).containerSpec.tabs[1].nodeIds).toEqual([])
   await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull())
-  await f.dispose();f=null
- }
 })
 it('设置草稿取消、校验、删除确认撤销，保存和看板撤销恢复组件身份与连接',async()=>{
  const f=await fixture();let a,b

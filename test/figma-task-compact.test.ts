@@ -1,17 +1,22 @@
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
+import { createRequire } from 'node:module'
 import { expect, it } from 'vitest'
 import { patchFigmaReadingConversation } from '../scripts/lib/figma-reading-client.mjs'
-const source=patchFigmaReadingConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+const {patchTaskProgressClient}=createRequire(import.meta.url)('../scripts/lib/task-progress-client.mjs') as {patchTaskProgressClient:(source:string)=>string}
+// Match the real installer order instead of depending on the local SDK already
+// having the continuation footer installed before this fixture is loaded.
+const source=patchTaskProgressClient(patchFigmaReadingConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
 const start=source.indexOf('function useOdysseyCompactTasks('),end=source.indexOf('function OdysseyTaskSheet(',start)
 function fixture() {
  let compact=false,previousDeps:any[]|undefined,cleanup:any,effect:any,frameId=0
  const frames=new Map<number,()=>void>(),observers:any[]=[]
- let readingHeight=127,taskHeight=216,paneHeight=621,listHeight=196
+ let readingHeight=127,taskHeight=216,paneHeight=621,listHeight=196,continuationHeight=0
  const rect=(height:number)=>({height,width:780})
  const reading={getBoundingClientRect:()=>rect(readingHeight)},list={get scrollHeight(){return listHeight}},footer={}
+ const continuation={getBoundingClientRect:()=>rect(continuationHeight)}
  const pane={clientHeight:paneHeight,getBoundingClientRect:()=>rect(paneHeight),matches:()=>false,querySelector:(selector:string)=>selector.includes('scrollBody')?reading:null}
- const root={getBoundingClientRect:()=>rect(taskHeight),querySelector:()=>list,closest:(selector:string)=>selector.includes('.wSkVaW_root')?pane:footer}
+ const root={getBoundingClientRect:()=>rect(taskHeight),querySelector:(selector:string)=>selector==='.lXshSW_list'?list:selector==='[data-task-continuation]'&&continuationHeight>0?continuation:null,closest:(selector:string)=>selector.includes('.wSkVaW_root')?pane:footer}
  const ref:{current:any}={current:null}
  const react={useState:()=>[compact,(value:any)=>{compact=typeof value==='function'?value(compact):value}],useLayoutEffect:(fn:any,deps?:any[])=>{const changed=deps===undefined||previousDeps===undefined||deps.some((v,i)=>v!==previousDeps?.[i]);if(changed)effect=()=>{cleanup?.();cleanup=fn();previousDeps=deps}}}
  class ResizeObserver {callback:any;targets:any[]=[];active=true;constructor(callback:any){this.callback=callback;observers.push(this)}observe(target:any){this.targets.push(target)}disconnect(){this.active=false}}
@@ -19,7 +24,7 @@ function fixture() {
  const hook=runInNewContext(source.slice(start,end)+';useOdysseyCompactTasks',context)
  const render=()=>{effect=undefined;hook(ref);effect?.()}
  const resize=()=>{observers.filter(o=>o.active).forEach(o=>o.callback());const callbacks=[...frames.values()];frames.clear();callbacks.forEach(fn=>fn())}
- return {ref,root,reading,footer,list,pane,observers,render,resize,frames,get compact(){return compact},setGeometry:(reading:number,task:number,pane=621,rows=196)=>{readingHeight=reading;taskHeight=task;paneHeight=pane;listHeight=rows},cleanup:()=>cleanup?.()}
+ return {ref,root,reading,footer,list,pane,observers,render,resize,frames,get compact(){return compact},setGeometry:(reading:number,task:number,pane=621,rows=196)=>{readingHeight=reading;taskHeight=task;paneHeight=pane;listHeight=rows},setContinuationHeight:(height:number)=>{continuationHeight=height},cleanup:()=>cleanup?.()}
 }
 it('attaches after an initially empty todo render and observes the actual reading/footer budget',()=>{
  const f=fixture();f.render();expect(f.observers).toHaveLength(0)
@@ -47,4 +52,16 @@ it('uses actual task natural height and cancels pending resize work on unmount',
  f.setGeometry(260,76,621,28);f.render();expect(f.compact).toBe(false)
  f.observers[0].callback();expect(f.frames.size).toBe(1)
  f.cleanup();expect(f.frames.size).toBe(0)
+})
+it('reserves the actual continuation footer height and releases it when the action disappears',()=>{
+ const f=fixture();f.ref.current=f.root
+ f.setGeometry(260,76,621,28);f.render();expect(f.compact).toBe(false)
+ // The 40px action consumes the same 40px of reading space. Omitting it from
+ // the measured expanded budget would incorrectly keep the card unfolded.
+ f.setContinuationHeight(40);f.setGeometry(220,116,621,28);f.resize()
+ expect(f.compact).toBe(true)
+ f.setContinuationHeight(0);f.setGeometry(260,76,621,28);f.resize()
+ expect(f.compact).toBe(false)
+ expect(f.observers[0].targets).toContain(f.footer)
+ f.cleanup()
 })

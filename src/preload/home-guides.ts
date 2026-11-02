@@ -33,7 +33,7 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ['board-news','添加相关资讯','资讯面板用于跟踪所选股票的相关消息。',1100],
   ['board-announcements','添加公司公告','公司公告单独保留，便于与行情和资讯对照阅读。',1200],
   ['board-calendar','加入日历工具','日历已加入，可以安排后续研究。',1000],
-  ['board-arrange','整理并保存六组件看板','六个组件的布局已整理并保存，接下来连接行情、资讯与公告。',3000],
+  ['board-arrange','保存六组件看板','六个组件已保存，接下来连接行情、资讯与公告。',3000],
   ['board-link','连接行情、资讯与公告','自选股切换行情标的，行情再带动相关资讯和公告。',2200],
   ['board-add','补齐自选股，查看五粮液','5只自选股已齐，当前选中五粮液（000858），可以对照行情、资讯和公告。',2200],
   ['board-smart-container','在日历右侧加入智能容器','智能容器已加入，接下来输入研究观察清单的要求。',1000],
@@ -341,7 +341,8 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   if(typeof value.label==='string')run.status.textContent=value.label
   if(!run.pointer){reply(false,'指针尚未就绪。');return}
   const selection=run.kind==='note'&&value.action==='drag'&&value.selection===true&&typeof value.requestId==='string'&&value.targetToken===run.id+':'+value.requestId+':target'&&value.fromTargetToken===run.id+':'+value.requestId+':from'
-  const onFrame:HomeGuidePointerAction['onFrame']=selection?frame=>{
+  const connection=run.kind==='board'&&value.action==='drag'&&fromTarget?.dataset.financialPort==='output'&&target.dataset.financialPort==='input'&&fromTarget.closest('[data-research-canvas]')===target.closest('[data-research-canvas]')
+  const onFrame:HomeGuidePointerAction['onFrame']=selection||connection?frame=>{
    if(active!==run||run.abort.signal.aborted||selected()!==run.sessionId)throw aborted()
    win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-cue-progress',{detail:{runId:run.id,requestId:value.requestId,...frame}}))
   }:undefined

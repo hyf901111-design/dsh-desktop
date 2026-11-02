@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
 
 let browser,entry,source,shellEntry,runtime,conversation
-const evidence='/tmp/ework-task-continuation-browser-20261031'
+const evidence=process.env.SHERLOCK_TASK_CONTINUATION_EVIDENCE||'/tmp/ework-task-continuation-browser-20261031'
 beforeAll(async()=>{
  await mkdir(evidence,{recursive:true})
  const original=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchTaskProgressClient(original),start=patched.indexOf('function TodoPanel('),end=patched.indexOf('\n\t\t/**',patched.indexOf('function TodoDock(',start))

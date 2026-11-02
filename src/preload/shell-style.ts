@@ -27,6 +27,9 @@ const desktopShellStyles = `
   /* Native Modal icon buttons must not inherit workbench form padding. */
   body ._dialog_15u5s_22 ._close_15u5s_61 { padding: 0; }
   body ._dialog_15u5s_22 ._close_15u5s_61 > svg { display: block; width: 14px; height: 14px; flex: none; }
+  /* Keep the original-image grid button clear of global form-button padding. */
+  body ._close_18d3q_30 { padding: 0; }
+  body ._close_18d3q_30 > svg { display: block; width: 16px; height: 16px; margin: 0; }
 `
 
 export function mountDesktopShellStyles(document: Document): void {

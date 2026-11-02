@@ -39,6 +39,20 @@ it('only promotes clear inline-code deliveries in the actual closed turn tail',(
  expect(selector({...owner,turn:{...owner.turn,status:'open'}})).toBeNull()
  expect(selector({...owner,text:'当前候选文件：`outputs/final.pptx`，尚未通过原生验收，不正式交付。'})).toBeNull()
 })
+it('restores both original PPT 1.1.6 cards from the saved closing while keeping the QA review note unchanged',async()=>{
+ const text=readFileSync(new URL('./fixtures/ppt-116-missing-delivery-closing.txt',import.meta.url),'utf8'),owner={cwd:'/work',seq:154505,text,turn:{status:'closed',data:new Map()}}
+ const matched=selector(owner)
+ expect(matched).toEqual(['/work/outputs/宁德时代2025年报深度点评.pptx','/work/outputs/宁德时代2025年报深度点评.pdf'])
+ expect(selector({...owner,turn:{...owner.turn,status:'open'}})).toBeNull()
+ const el=await render({matched,text,cwd:'/work'})
+ expect(el.querySelectorAll('.ew-delivery-card')).toHaveLength(2);expect(el.querySelector('.ew-delivery-auxiliary')).toBeNull()
+ expect(text).toContain('待原生兼容性复核')
+})
+it('keeps the existing final-link fallback for Goal automatic rounds and older hosts without a publication tool',()=>{
+ const owner={cwd:'/work',seq:10,text:'文件已保存。\n[PPTX](<outputs/final deck.pptx>)\n[PDF](<outputs/final deck.pdf>)\n\n原生验收仍待完成。',turn:{status:'closed',data:new Map()}}
+ expect(selector(owner)).toEqual(['/work/outputs/final deck.pptx','/work/outputs/final deck.pdf'])
+ expect(selector({...owner,turn:{...owner.turn,status:'open'}})).toBeNull()
+})
 it('keeps an explicitly delivered custom inline-code format prominent',async()=>{
  const el=await render({matched:['/work/outputs/final.custom'],text:'交付文件：`outputs/final.custom`',cwd:'/work'})
  expect(el.querySelectorAll('.ew-delivery-list .ew-delivery-card')).toHaveLength(1)
@@ -168,6 +182,24 @@ it('keeps private demo files durable without a presenter and admits nothing befo
  expect(paths(finish(pending))).toEqual(['/work/报告 (中文).html','/work/报告 (中文).pdf'])
  const ordinary=call(initial(),'str_replace_editor',{for:'call',view:{card:'generic',kind:'edit',locations:[{path:'/work/ordinary.md'}]}})
  expect(paths(finish(ordinary))).toEqual(['/work/ordinary.md'])
+})
+
+it('durably collects verified native and Code Mode presentation publications without promoting stdout or other turns',()=>{
+ const packet={kind:'ework-presentation-files',version:1,tool:'presentation_files',ok:true,status:'available',sessionId:'session',turnId:'1',callId:'publish',qualityVerification:'not-evaluated',files:[{format:'pptx',path:'/work/final.pptx',bytes:100,sha256:'a'.repeat(64)},{format:'pdf',path:'/work/final.pdf',bytes:100,sha256:'b'.repeat(64)}]}
+ const initial=()=>definition.start({}, {event:{type:'turn/start',data:{turn:1}}})
+ const call=(state,name,id='publish')=>definition.update({state},{event:{type:'tool/call',seq:1,data:{turn:1,callId:id,name}}})
+ const native=(state,name='presentation_files',value=packet)=>definition.update({state:call(state,name)},{event:{type:'tool/result',seq:2,data:{message:{source:{kind:'tool',callId:'publish'},content:[{type:'tool-result',toolCallId:'publish',isError:false,content:[{type:'text',text:JSON.stringify(value)}]}]}}}})
+ const paths=(state,status='closed',seq=10)=>selector({cwd:'/work',seq,text:'文件可在卡片中打开；质量仍待原生复核。',turn:{status,data:new Map([['deliverables',definition.buildLocationData({state},'turn').value]])}})
+ expect(paths(native(initial()))).toEqual(['/work/final.pptx','/work/final.pdf'])
+ expect(paths(native(initial()),'open')).toBeNull();expect(paths(native(initial()),'closed',1)).toBeNull()
+ expect(paths(native(initial(),'bash'))).toBeNull();expect(paths(native(initial(),'presentation_files',{...packet,turnId:'2'}))).toBeNull()
+ const event={type:'tool/code-dispatch',seq:2,data:{name:'presentation_files',rootCallId:'root',parentCallId:'root',subCallId:'publish',isError:false,content:[{type:'text',text:JSON.stringify(packet)}]}}
+ expect(definition.match(event)).toEqual({id:'1',role:'update'})
+ const coded=(state,event2=event)=>definition.update({state},{event:event2})
+ const state=call(initial(),'run_code','root')
+ expect(paths(coded(state))).toEqual(['/work/final.pptx','/work/final.pdf'])
+ expect(paths(coded(initial()))).toBeNull();expect(paths(coded(call(initial(),'bash','root')))).toBeNull()
+ expect(paths(coded(state,{...event,data:{...event.data,isError:true}}))).toBeNull()
 })
 it('upgrades the exact legacy delivery accumulator once and rejects unknown or duplicate new hooks',()=>{
  const patched=patchDeliverableCards(source()),marker='/* ework:home-guide-delivery-accumulator:v1 */'

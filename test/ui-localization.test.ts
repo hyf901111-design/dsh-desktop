@@ -3,6 +3,18 @@ import {it,expect} from 'vitest'
 import {mountUiLocalization,translateUiCopy} from '../src/preload/ui-localization'
 import {patchDesktopLocaleBridge} from '../scripts/lib/desktop-locale-bridge.mjs'
 import {readFileSync} from 'node:fs'
+it('localizes the host-owned publication title without rewriting conversation content',async()=>{
+ const win=new Window(),doc=win.document
+ doc.body.innerHTML='<button><span>登记演示文稿交付文件</span></button><p>登记演示文稿交付文件</p>'
+ doc.documentElement.dataset.odysseyLocale='en'
+ const dispose=mountUiLocalization(doc as unknown as Document)
+ await win.happyDOM.waitUntilComplete()
+ expect(doc.querySelector('button')!.textContent).toBe('Publish presentation files')
+ expect(doc.querySelector('p')!.textContent).toBe('登记演示文稿交付文件')
+ doc.documentElement.dataset.odysseyLocale='zh';await win.happyDOM.waitUntilComplete()
+ expect(doc.querySelector('button')!.textContent).toBe('登记演示文稿交付文件')
+ dispose();await win.happyDOM.close()
+})
 it('localizes desktop controls, descriptions and dynamic copy while preserving user titles and input',async()=>{
  const win=new Window(),doc=win.document
  doc.body.innerHTML='<button>创建协作</button><div class="srb-dialog"><h2>邀请权限</h2><p>1 个组件</p><input placeholder="输入 10 位数字 ID" value="研究"></div><div class="rScV5Q_voiceFeedback">语音识别中断，请重试。</div><button class="odyssey-nav-title">研究</button><div data-research-artifact-content><button>研究</button></div><div class="sherlock-account-profile"><strong>研究</strong></div>'

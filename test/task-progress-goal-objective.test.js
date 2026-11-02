@@ -5,6 +5,7 @@ import {parse} from '@babel/parser'
 import {expect,it} from 'vitest'
 import {patchFigmaReadingConversation} from '../scripts/lib/figma-reading-client.mjs'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
+import {legacyTaskResumeClient} from './fixtures/task-resume-client-v3.js'
 
 const require=createRequire(import.meta.url)
 const {applyGoalProjection}=require('@deepseek-ai/dsh-goal')
@@ -51,7 +52,7 @@ function snapshot(extra=[]){
 function render(projection,state=snapshot()){
  const todos=[{content:'读取现金流',status:'completed'},{content:'输出两句结论',status:'in_progress'}]
  const rendered=dock({useSession:select=>select(state),useProjection:key=>key==='goal'?projection:key==='todos'?todos:null,useInput:select=>select({phase:'plain',draft:'',draftRev:0,imageIds:[],occurrences:[]}),inputActions:{},t:key=>key})
- const panel=rendered.props.children[0]
+ const panel=rendered
  expect(panel.type).toBe('panel');expect(panel.props.todos).toBe(todos);expect(panel.props.running).toBe(state.running)
  return panel.props.objective
 }
@@ -75,7 +76,7 @@ it('projects only visible human content and does not invent a new title from a p
 })
 it('migrates the prior v3 client once and preserves its continuation guards',()=>{
  const helper='/* sherlock:task-goal-objective:v1 */\n'+declarations.get('odysseyTaskHeaderObjective')+'\n'
- const previous=source.replace(helper,'').replace('const goal=useProjection("goal")?.goal,objective=useSession(snapshot=>odysseyTaskHeaderObjective(snapshot,goal)),running=','const objective=useSession(odysseyTaskObjective),running=').replace('TodoPanel,{todos,running,objective,t}','TodoPanel,{todos,running,objective:odysseyTaskVisibleText(useProjection("goal")?.goal?.objective)||objective,t}')
+ const previous=legacyTaskResumeClient(source).replace(helper,'').replace('const goal=useProjection("goal")?.goal,objective=useSession(snapshot=>odysseyTaskHeaderObjective(snapshot,goal)),running=','const objective=useSession(odysseyTaskObjective),running=').replace('TodoPanel,{todos,running,objective,t}','TodoPanel,{todos,running,objective:odysseyTaskVisibleText(useProjection("goal")?.goal?.objective)||objective,t}')
  expect(previous).not.toContain('function odysseyTaskHeaderObjective(')
  const patched=patchTaskProgressClient(previous)
  expect(patched).toBe(source);expect(patchTaskProgressClient(patched)).toBe(source)

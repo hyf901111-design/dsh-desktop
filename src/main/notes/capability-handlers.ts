@@ -32,7 +32,11 @@ export function createNoteCapabilityHandlers(options:Options):Handlers{
    return options.renderer('notes.export',{...args,path:destinations[0]})
   },
   alignBlocks:mutate('notes.blocks.align'),
-  readNoteBlocks:async(args)=>options.renderer('notes.blocks.read',args),
+  readNoteBlocks:async(args)=>{
+   const scope=(options.requestContext.context as any)?.scope
+   if(scope==='none'||scope==='selection'&&args.scope!=='selected')throw Error('读取目标不在本次笔记引用范围内。')
+   return options.renderer('notes.blocks.read',args)
+  },
   applyNoteBlocks:async(args)=>{writable();return options.renderer('notes.blocks.apply',{...args,sourceInstruction:options.sourceInstruction})},
   undoNoteBlocks:mutate('notes.blocks.undo'),
   inspectNoteComponent:async(args)=>options.renderer('notes.components.inspect',args),

@@ -111,7 +111,10 @@ it('publishes the actual resident render session and dedicated membership, upgra
 })
 
 it('preserves the strict shell rebuild anchor and migrates the previous render-owner position without weakening either patch',()=>{
- const current=guide.patchHomeGuideNative(withoutPresentation(installed)),marker='/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,',page='"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
+ // Normalize the currently owned shell CSS before comparing complete SDK
+ // bytes: an installed SDK can legitimately contain an older style payload.
+ const current=patchFigmaFinalConversation(guide.patchHomeGuideNative(withoutPresentation(installed))),marker='/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,',page='"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
+ expect(current).toContain('body .lXshSW_root:has([data-task-continuation])')
  expect(current).toContain('"data-phase": phase,\n\t\t\t\t'+page+'\n\t\t\t\tonClickCapture:');expect(patchFigmaFinalConversation(current)).toBe(current);expect(guide.patchHomeGuideNative(patchFigmaFinalConversation(current))).toBe(current)
  const previous=current.replace('\n'+marker,'').replace(page,page+'\n'+marker)
  expect(()=>patchFigmaFinalConversation(previous)).toThrow(/anchor drifted/);expect(guide.patchHomeGuideNative(previous)).toBe(current);expect(guide.stripHomeGuideNative(previous)).toBe(guide.stripHomeGuideNative(current));expect(patchFigmaFinalConversation(guide.patchHomeGuideNative(previous))).toBe(current)

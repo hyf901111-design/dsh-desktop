@@ -16,5 +16,5 @@ it('plans native read then apply through the existing capability loop without cr
  const f=fixture([{kind:'capabilities',calls:[{requestId:'read',capability:'notes.blocks.read',arguments:{scope:'note'}}]},{kind:'capabilities',calls:[{requestId:'apply',capability:'notes.blocks.apply',arguments:{revision:'actual-read',operations:[{op:'insert',anchor:{blockId:'anchor',placement:'before'},blocks:[{type:'table',content:{type:'tableContent',rows:[{cells:['','']}],headerRows:0}}]}]}}]},{kind:'conversation',markdown:''}]),executor=createCapabilityExecutor(f.registry,()=>f.context)
  const result=await runClientCapabilityLoop({preserveRemainingReply:true,generate:receipts=>generateNoteSuggestion(f.ctx,{...f.input,clientReceipts:receipts}),execute:call=>executor.execute(call,f.context)})
  expect(f.seen).toEqual(['read',expect.objectContaining({revision:'actual-read'})]);expect(result.capabilityReceipts.map(row=>row.capability)).toEqual(['notes.blocks.read','notes.blocks.apply']);expect(result.requiresReply).not.toBe(true)
- expect(f.requests[0].system).toMatch(/只有需要定位并编排现有块[^。]*notes\.blocks\.read[^。]*notes\.blocks\.apply/);expect(f.requests).toHaveLength(3)
+ expect(f.requests[0].system).toMatch(/需要定位并编排现有块[^。]*documentSnapshot[^。]*notes\.blocks\.apply[^。]*notes\.blocks\.read/);expect(f.requests).toHaveLength(3)
 })

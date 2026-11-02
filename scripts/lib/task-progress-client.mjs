@@ -24,7 +24,7 @@ export function patchTaskProgressClient(source) {
     replace('todos: useProjection("todos") ?? [],', 'todos: useProjection("todos") ?? [],\n                running: useSession(s=>s.running),')
   }
   const next='/* sherlock:task-progress-resume:v3 */'
-  if (source.includes(next)) return patchTaskGoalObjective(source)
+  if (source.includes(next)) return patchTaskContinueFooter(patchTaskGoalObjective(source))
   const previous=source.indexOf('/* sherlock:task-progress-resume:v2 */')
   if(previous<0){replace("'本轮已结束 · 清单待核对'", "'任务尚未完成 · 可继续'");replace("'Run ended · checklist needs review'", "'Task unfinished · can continue'")}
   const dock=source.indexOf('function TodoDock('),start=previous<0?dock:previous,end=source.indexOf('\n\t\t/**',dock)
@@ -40,7 +40,34 @@ function TodoDock({useProjection,useSession,useInput,inputActions,t}) {
  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(TodoPanel,{todos,running,objective:odysseyTaskVisibleText(useProjection("goal")?.goal?.objective)||objective,t}),canContinue&&react_jsx_runtime.jsx('button',{type:'button','data-task-continue':'','aria-label':document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务',disabled:blocked,onClick:()=>{if(clicked.current||blocked)return;clicked.current={revision:input.draftRev};if(!continueUnfinishedTask({inputActions,input,todos,running}))clicked.current=null},style:{display:'block',margin:'4px 12px 4px auto',padding:'4px 8px',border:0,borderRadius:6,background:'var(--dsw-alias-interactive-bg-hover)',color:'var(--dsw-alias-label-secondary)',fontSize:12,cursor:blocked?'default':'pointer',opacity:blocked ? .45 : 1},children:document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务'})]});
 }`
   source=source.slice(0,start)+after+source.slice(end)
-  return patchTaskGoalObjective(source)
+  return patchTaskContinueFooter(patchTaskGoalObjective(source))
+}
+
+/** Keep the explicit continuation action inside the measured task card. */
+function patchTaskContinueFooter(source) {
+  const marker='/* sherlock:task-continue-footer:v1 */'
+  const signature='function TodoPanel({ todos, objective, t, running = true }) {'
+  const nextSignature='function TodoPanel({ todos, objective, t, running = true, continuation }) {'+marker
+  const body='sheet && react_jsx_runtime.jsx(OdysseyTaskSheet,{onClose:()=>setSheet(false),children:taskList})]'
+  const nextBody='sheet && react_jsx_runtime.jsx(OdysseyTaskSheet,{onClose:()=>setSheet(false),children:taskList}), continuation && react_jsx_runtime.jsx("div",{"data-task-continuation":"",children:continuation})]'
+  const button="react_jsx_runtime.jsx('button',{type:'button','data-task-continue':'','aria-label':document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务',disabled:blocked,onClick:()=>{if(clicked.current||blocked)return;clicked.current={revision:input.draftRev};if(!continueUnfinishedTask({inputActions,input,todos,running}))clicked.current=null},style:{display:'block',margin:'4px 12px 4px auto',padding:'4px 8px',border:0,borderRadius:6,background:'var(--dsw-alias-interactive-bg-hover)',color:'var(--dsw-alias-label-secondary)',fontSize:12,cursor:blocked?'default':'pointer',opacity:blocked ? .45 : 1},children:document.documentElement.dataset.odysseyLocale==='en'?'Continue unfinished task':'继续未完成任务'})"
+  const dockPrefix=`function TodoDock({useProjection,useSession,useInput,inputActions,t}) {
+ const goal=useProjection("goal")?.goal,objective=useSession(snapshot=>odysseyTaskHeaderObjective(snapshot,goal)),running=useSession(s=>s.running),todos=useProjection("todos")??[],input=useInput(s=>s),clicked=react.useRef(null);
+ react.useEffect(()=>{if(running||clicked.current&&input?.phase==='plain'&&input.draft===''&&input.draftRev!==clicked.current.revision)clicked.current=null},[running,input]);
+ const canContinue=!running&&todos.some(item=>item.status!=="completed"),blocked=!input||input.phase!=="plain"||input.draft!==""||!!input.imageIds?.length||!!input.occurrences?.length;
+ `
+  const dock=dockPrefix+"return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(TodoPanel,{todos,running,objective,t}),canContinue&&"+button+"]});\n}"
+  const nextDock=dockPrefix+"return react_jsx_runtime.jsx(TodoPanel,{todos,running,objective,t,continuation:canContinue&&"+button.replace("margin:'4px 12px 4px auto'","margin:0,maxWidth:'100%',lineHeight:'20px',whiteSpace:'normal'")+"});\n}"
+  const budget='const expanded=40+Math.min(168,list.scrollHeight)+8;'
+  const nextBudget='const expanded=40+Math.min(168,list.scrollHeight)+8+(root.querySelector("[data-task-continuation]")?.getBoundingClientRect().height||0);'
+  const pairs=[[signature,nextSignature],[body,nextBody],[dock,nextDock],[budget,nextBudget]]
+  if(source.includes(marker)) {
+    if(source.split(marker).length!==2||pairs.some(([before,after])=>source.split(after).length!==2||source.includes(before)))throw Error('Task continuation footer installation drifted')
+    return source
+  }
+  if(source.includes('"data-task-continuation":""')||source.includes(nextDock))throw Error('Task continuation footer installation is incomplete')
+  for(const[before,after]of pairs){if(source.split(before).length!==2)throw Error('Task continuation footer anchor drifted: '+before);source=source.replace(before,after)}
+  return source
 }
 
 /** An inactive retained Goal must not label a new human request as the old task. */
