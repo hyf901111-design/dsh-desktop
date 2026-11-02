@@ -7,6 +7,7 @@ import {parse} from '@babel/parser'
 import {createHash} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
+import {patchFigmaReadingConversation} from '../scripts/lib/figma-reading-client.mjs'
 import {patchBashBackgroundLifecycle,stripBashBackgroundLifecycle} from '../scripts/lib/bash-background-lifecycle.mjs'
 import {legacyTaskProgressSource} from './fixtures/task-progress-v1.js'
 import {legacyTaskResumeClient} from './fixtures/task-resume-client-v3.js'
@@ -54,6 +55,24 @@ it('upgrades an older continuation marker and dock once without duplicating the 
  expect(client).toContain('/* sherlock:task-progress-resume:v3 */');expect(client).toContain('input.draftRev!==clicked.current.revision')
  expect(client.match(/function continueUnfinishedTask\(/g)).toHaveLength(1)
  expect(patchTaskProgressClient(client)).toBe(client)
+})
+it('preserves the compact owner and continuation budget when the real reading patch re-enters',async()=>{
+ const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),current=patchTaskProgressClient(raw)
+ const marker='/* odyssey:task-reading-budget:20260913 */',start=current.indexOf(marker),end=current.indexOf('function OdysseyTaskSheet(',start),hook=current.slice(start,end)
+ expect(start).toBeGreaterThan(0);expect(hook).toContain('root.querySelector("[data-task-continuation]")')
+ const reading=patchFigmaReadingConversation(current)
+ expect(reading.split(marker)).toHaveLength(2);expect(reading.includes(hook)).toBe(true)
+ expect(patchTaskProgressClient(reading)===reading).toBe(true)
+ expect(patchTaskProgressClient(patchFigmaReadingConversation(reading))===reading).toBe(true)
+ // A damaged footer budget is still rejected, never normalized by reading.
+ expect(()=>patchTaskProgressClient(patchFigmaReadingConversation(current.replace('+8+(root.querySelector("[data-task-continuation]")?.getBoundingClientRect().height||0);','+8;')))).toThrow('footer installation drifted')
+ expect(()=>patchFigmaReadingConversation(current+'\n'+marker)).toThrow('compact owner boundary drifted')
+ expect(()=>patchFigmaReadingConversation(marker+'\n'+current.replace(marker,''))).toThrow('compact owner boundary drifted')
+ // The known pre-marker reading hook still upgrades through its own patch.
+ const legacy=raw.replace(marker,'')
+ const upgraded=patchTaskProgressClient(patchFigmaReadingConversation(legacy))
+ expect(upgraded.split(marker)).toHaveLength(2);expect(upgraded.includes(hook)).toBe(true)
+ expect(patchTaskProgressClient(patchFigmaReadingConversation(upgraded))===upgraded).toBe(true)
 })
 it('fails closed on a truncated existing runtime or drifted current install rather than claiming it is current',async()=>{
  const original=await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8')

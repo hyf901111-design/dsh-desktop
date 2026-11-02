@@ -5,7 +5,7 @@ import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
 
-const evidence='/tmp/sherlock-task-resume-card-footer-20261102/layout'
+const evidence=process.env.SHERLOCK_TASK_RESUME_LAYOUT_EVIDENCE||'/tmp/sherlock-task-resume-card-footer-20261102/layout'
 let browser,entry,css
 beforeAll(async()=>{
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),source=patchTaskProgressClient(raw)
