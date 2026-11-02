@@ -23034,7 +23034,7 @@
         "featureName": "探索与笔记交互、电脑后台操作及PPT文件交付整合修复",
         "branch": "codex/feat/goal-notes-plan-combined-20261102",
         "baseCommit": "c9778b40b254631b812aab7d07298b37ed592737",
-        "tipCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
+        "tipCommit": "203297833d8c1203520bd41f42a348fea20a4547",
         "commits": [
           {
             "commit": "8153fff93d5de0ffe50c929dec8cd6877b8da1dd",
@@ -23330,6 +23330,21 @@
               "2eb4b8b13242eaf0fc5b94c38adc4df8f99dc1c1"
             ],
             "subject": "校准完整工作台演示测试预算并验证渲染清理"
+          },
+          {
+            "commit": "3259aa0c2638fbe7a371a92bdcfea2adb90f519f",
+            "parents": [
+              "024484fa9625edf9fc9d7768745ed381049959a5"
+            ],
+            "subject": "测试：隔离页签拖动场景防止超时后污染后续用例"
+          },
+          {
+            "commit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "parents": [
+              "024484fa9625edf9fc9d7768745ed381049959a5",
+              "3259aa0c2638fbe7a371a92bdcfea2adb90f519f"
+            ],
+            "subject": "隔离页签拖动验证场景并保留全部手势断言"
           }
         ],
         "files": [
@@ -23511,6 +23526,10 @@
           },
           {
             "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/build-and-run.test.ts"
           },
           {
@@ -23669,6 +23688,22 @@
         "checks": [
           {
             "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/board-tabs-declared-group.log SHA256 2c94dc2a8b72bc1e02a4092f2156fc8144a8ab14d703af224ae106f0a846c3ad",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:01:48.348159+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
@@ -23690,9 +23725,9 @@
               "test/home-guide-operations-entry.test.ts"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/workbench-declared-group.log SHA256 aa665f41e55ae8d8c7f68f168e895bdc1dd679c19ed885e2214aa2d84ad2ca90",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:56:25.765627+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/workbench-declared-group.log SHA256 28e9eacb5a93b79c25540cc4e1d322e678ac3d9edd245153ab218bd647d443d6",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:03.067594+00:00",
             "timeoutMs": 240000
           },
           {
@@ -23705,9 +23740,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/explore-card-edge-pixels.log SHA256 8fc2d0ba3caf66352f135ab4577198a2544587b981b54055b058c4008ac78aac",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:56:40.870041+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/explore-card-edge-pixels.log SHA256 8f136772686b1c11ebd86f2cb2f718f935a3471844ad1f8f4fd540a5ab20b44c",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:16.753001+00:00",
             "timeoutMs": 60000
           },
           {
@@ -23723,9 +23758,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/computer-background.log SHA256 f623921a388af3c68caa14f9fed155da68d0bf8ca464a8ed758183cacc435dbb",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:56:50.731119+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/computer-background.log SHA256 850d94fa66028af2d77fb32f17f7a31c3c16dcba671b984cf6f11c4b4acf5e7e",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:26.385682+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23734,9 +23769,9 @@
               "scripts/verify-computer-background-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/computer-background-native-compile.log SHA256 10d4c2c248524557407221a9ece4e5dd60777f911347b6873cb902230f166c5c",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:56:54.302897+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/computer-background-native-compile.log SHA256 10d4c2c248524557407221a9ece4e5dd60777f911347b6873cb902230f166c5c",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:29.177758+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23755,9 +23790,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/ppt-delivery.log SHA256 65a87cae7548055acad7e3893d83f75f0ee59019d8754ed71001448f7fa08f1c",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:57:01.199455+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/ppt-delivery.log SHA256 59a75d361e50505cceb4f3a9fb49f091145b79bb1f5c22b88ecba5424a940d39",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:34.494047+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23769,9 +23804,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:57:13.440410+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:43.861883+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23781,9 +23816,9 @@
               "packages/dsh-research-task-runtime/presentation-files.js"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/presentation-tool-syntax.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:57:13.531548+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/presentation-tool-syntax.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:43.944634+00:00",
             "timeoutMs": 10000
           },
           {
@@ -23793,15 +23828,15 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-workbench-budget/diff-check.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "024484fa9625edf9fc9d7768745ed381049959a5",
-            "completedAt": "2026-11-02T17:57:13.606593+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final-board-tabs-isolation/diff-check.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "203297833d8c1203520bd41f42a348fea20a4547",
+            "completedAt": "2026-11-02T19:03:44.003498+00:00",
             "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "精确组合024484fa源码聚焦369项（工作台78、PPT194、Cua95、Explore像素2）及TC/语法/原生隔离编译/diff全过；真实production CSS browser深浅440点检查通过。新包Native仍待构建后验证。"
+          "summary": "精确20329783源码：页签54、工作台78、PPT194、后台Computer Use95、Explore像素2，合计423项；另TC/语法/隔离原生编译/diff。仅源码和Browser证据，新包Native尚未执行。"
         },
         "acceptanceCriteria": [
           "使用本次可见编辑器授权快照与revision直接规划原生编辑，避免重复读取往返；模型和推理等级保持用户选择。",
@@ -23825,26 +23860,28 @@
           "旧宿主/自动Goal续轮保留精确Markdown链接fallback；不暗中扩大登记授权。",
           "PPT真实SDK权限夹具使用工具实际ESM同源Context/Scope，保留scope deny隐藏/真执行拒绝与恢复，未修改生产guard或共享SDK。",
           "原9文件182项仍作为120秒声明门禁，新增独立像素2项；Metal测试不增并发或删断言。",
-          "完整工作台25步和15卡/3页签/13生成请求/保存恢复保持；测试加速只作用于实际actor唯一hold且VM复验，dispose DOM清理保留，case有限60s与原group240s；不改产品时序。"
+          "完整工作台25步和15卡/3页签/13生成请求/保存恢复保持；测试加速只作用于实际actor唯一hold且VM复验，dispose DOM清理保留，case有限60s与原group240s；不改产品时序。",
+          "原页签4动作循环拆为各自默认5秒独立case，原布局/手势/归属/缩略断言全部保持；afterEach隔离回收，后继设置流程不变。"
         ],
         "risks": [
           "新包Native、真实商业模型墙钟尚未执行；不得把mock轮次减少或源码Browser时长当提速结果。",
           "评论或正文在途改变时保守拒绝旧事务并保留原文，需要新请求；不为了成功率覆盖较新内容。",
           "原Spring笔记、共享客户端与SDK未在功能树改写；不能把独立源码截图充作打包客户端验收。",
           "Root组合3b466曾因旧安装SDK样式夹具全字节对比失败，已保留日志并由59f93规范化当前受管CSS，严格drift/全字节断言未降低。aa43范围diff发现助手EOF空行，cd8b已清理且编译JS字节相同，最终199/TC/diff在cd8b重验。",
-          "完整97门禁和新UI约束/研究renderer、严格SDK两次安装及包内对照必须在最终integration精确tip执行；旧34a证明不冒充当前。",
+          "完整98声明检查组和新UI约束/研究renderer、严格SDK两次安装及包内对照必须在最终integration精确tip执行；旧34a证明不冒充当前。",
           "PPT冻结三模型质量基线均未通过；独立技能后继仍由授权PPT任务修正，本次不偷合其功能、不改公开发布或main。",
           "cd8b首次正式集成因reading重入删除compact marker导致footer drift被阻止，失败现场保留attempt1；本严格后继修正模块边界而不放宽footer识别，原任务续行语义和草稿保护不变。",
           "第二次官方集成cdd65在Notes选区门禁失败，现场保留attempt2；3ec修复hover属性改写编辑器DOM且旧版红/新版绿，未放宽选区guard。",
           "组合检查曾遇隔离启动fixture默认5s超时，f18只设置20s子进程/30s用例上限且断言未改；另Root过宽Explore+旧Home文件240s超时保留，最终只用直接相关6项聚焦Browser，不冒称80全过。",
           "PPT1.1.6由授权独立任务交付对比端，Root不混入该skill源或触碰其App；本次共享构建只针对主端确切路径，构建前仍须核验用户运行中任务。",
           "源码832d57dc首次串行PPT193/194失败已保留；根因现有node_modules/node_modules外部alias使ESM/CJS解析不同cohort，仅修两测试文件，未改共享SDK；最终raw全installer与最终包仍必须审计真实ESM单实例及外部symlink。",
-          "原98声明门禁必须完整执行，随后新UI与研究renderer、全新raw SDK严格两次安装和3237文件字节对照，再构建及真实Native；291源码不代替这些。",
+          "原98声明门禁必须完整执行，随后新UI与研究renderer、全新raw SDK严格两次安装和3237文件字节对照，再构建及真实Native；423源码不代替这些。",
           "ComputerUse原plus插件未安装；目标真实不抢指针/焦点及任务效果仍待隔离新包验收。",
           "PPT116真实产物完整但最终render-check记录failed，已交授权PPTchat查质量与false pass；可访问卡片不代表版式、Native或任务质量完成。",
-          "attempt4官方第14组actor单case30s超时已保留；profile86%为HappyDOM表格样式重算，Chromium对照普通后期步骤40/37/98ms正常。仅测试预算适配，原25步与断言完整，新包Native仍未执行。"
+          "attempt4官方第14组actor单case30s超时已保留；profile86%为HappyDOM表格样式重算，Chromium对照普通后期步骤40/37/98ms正常。仅测试预算适配，原25步与断言完整，新包Native仍未执行。",
+          "attempt5官方第11组4动作单case在5秒临界下超时，未结束循环污染下一设置case，原日志保留；3259只拆测试为独立case，原51→54是场景拆分不是新功能数。原组预算180s及每case默认5s不变，生产源码未变。"
         ],
-        "generatedAt": "2026-11-02T18:00:44.187Z"
+        "generatedAt": "2026-11-02T19:07:13.526Z"
       }
     },
     {
