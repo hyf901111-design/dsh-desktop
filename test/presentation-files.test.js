@@ -1,16 +1,12 @@
 import {afterEach,expect,it,vi} from 'vitest'
-import {Context} from '@deepseek-ai/cordis'
-import {createScope} from '@deepseek-ai/dsh-scope'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import {ToolRuntime,validateJsonSchemaValue,renderToolsSdk} from '@deepseek-ai/dsh-tools'
+import {execFileSync} from 'node:child_process'
+import {fileURLToPath} from 'node:url'
 import {mkdtemp,mkdir,realpath,rm,symlink,writeFile,readFile,utimes} from 'node:fs/promises'
 import {join} from 'node:path'
 import {tmpdir} from 'node:os'
 import {zipSync,strToU8} from 'fflate'
 import {registerPresentationFiles} from '../packages/dsh-research-task-runtime/presentation-files.js'
 import {presentationDelivery} from '../scripts/lib/delivery-file-model.mjs'
-import {registerWorkbenchExecutionPolicy} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
-import {registerConversationComponentsPolicy} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 
 const cleanups=[]
 afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup()})
@@ -97,24 +93,8 @@ it('invalidates publication on account, workspace, turn, human instruction, canc
 })
 
 it('exposes the actual native schema and Code Mode SDK without bypassing ordinary restrictions',async()=>{
- const f=await fixture(),context=new Context();new SystemPrompt(context,{});const runtime=new ToolRuntime(context),scope=createScope(context,f.agent)
- try{
-  const tool=f.tools.get('presentation_files'),off=runtime.register(tool)
-  try{
-   const schema=runtime.schemas().find(tool=>tool.name==='presentation_files')
-   expect(schema).toBeDefined();expect(schema.parameters.properties.paths.type).toBe('array')
-   expect(()=>validateJsonSchemaValue(schema.parameters,{paths:['outputs/研究 (定稿).pptx']})).not.toThrow()
-   const sdk=renderToolsSdk(runtime.schemas(f.agent))
-   expect(runtime.get('presentation_files')).toBe(tool)
-   expect(schema.description).toContain('质量');expect(sdk).toContain('presentation_files');expect(sdk).toContain('paths: string[]')
-   const restore=scope.ctx.tools.restrict({deny:['presentation_files']})
-   expect(runtime.schemas(f.agent).some(tool=>tool.name==='presentation_files')).toBe(false)
-   restore();expect(runtime.schemas(f.agent).some(tool=>tool.name==='presentation_files')).toBe(true)
-   const offWorkbench=registerWorkbenchExecutionPolicy(context),offComponents=registerConversationComponentsPolicy(context)
-   try{
-    const result=await runtime.execute({name:'presentation_files',arguments:{paths:['outputs/研究 (定稿).pptx']},agent:f.agent,callId:'sdk-publication',signal:new AbortController().signal})
-    expect(result.isError).toBe(false);expect(JSON.parse(result.value).status).toBe('available')
-   }finally{offWorkbench();offComponents()}
-  }finally{off()}
- }finally{await scope.dispose();await context.fiber.dispose()}
+ const f=await fixture()
+ const result=JSON.parse(execFileSync(process.execPath,['--experimental-import-meta-resolve',fileURLToPath(new URL('./fixtures/presentation-files-sdk-cohort.mjs',import.meta.url)),f.root],{encoding:'utf8',timeout:10000}))
+ expect(result).toMatchObject({nativeSchema:true,codeSdk:true,scoped:true,hidden:true,denied:true,globalUnchanged:true,restored:true,publication:'available'})
+ expect(result.cohort).toMatchObject({tools:expect.stringContaining('/dsh-tools/'),scope:expect.stringContaining('/dsh-scope/'),cordis:expect.stringContaining('/cordis/'),systemPrompt:expect.stringContaining('/dsh-system-prompt/')})
 })
