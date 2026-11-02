@@ -9,6 +9,7 @@ export const englishUiCopy: Record<string, string> = {
   "已复制":"Copied",
   "搜索结果":"Search results",
   "会话搜索结果":"Conversation search results",
+  "登记演示文稿交付文件":"Publish presentation files",
  ...NOTE_ENGLISH,
   ...financialUiCopy,
   "基础金融分析逻辑": "Core financial analysis",

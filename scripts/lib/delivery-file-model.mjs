@@ -314,10 +314,36 @@ export function homeGuideDeliveryPaths(message, toolName) {
   return []
 }
 
+/** Only the host's explicit, readable-file receipt establishes this publication. */
+export function presentationDelivery(message,toolName,turn) {
+  if(toolName!=='presentation_files'||message?.source?.kind!=='tool'||typeof message.source.callId!=='string'||!Array.isArray(message.content)||message.content.length!==1)return
+  const block=message.content[0]
+  if(block?.type!=='tool-result'||block.isError===true||block.toolCallId!==message.source.callId||!Array.isArray(block.content)||block.content.length!==1)return
+  const part=block.content[0]
+  if(part?.type!=='text'||typeof part.text!=='string'||part.text.length>16384)return
+  let value;try{value=JSON.parse(part.text)}catch{return}
+  if(value?.kind!=='ework-presentation-files'||value.version!==1||value.tool!==toolName||value.ok!==true||value.status!=='available'||value.qualityVerification!=='not-evaluated'||value.callId!==message.source.callId||typeof value.sessionId!=='string'||!value.sessionId||typeof value.turnId!=='string'||!value.turnId||turn!==undefined&&value.turnId!==String(turn)||!Array.isArray(value.files)||value.files.length<1||value.files.length>2)return
+  const paths=[],formats=new Set()
+  for(const file of value.files){
+    if(!['pptx','pdf'].includes(file?.format)||formats.has(file.format)||!Number.isSafeInteger(file.bytes)||file.bytes<1||file.bytes>128*1024*1024||typeof file.sha256!=='string'||!/^[a-f0-9]{64}$/.test(file.sha256)||typeof file.path!=='string'||!/^\//.test(file.path)||/(?:^|\/)\.\.(?:\/|$)/.test(file.path))return
+    const path=deliveryFilePath(file.path,undefined,false)
+    if(!path||!path.toLowerCase().endsWith('.'+file.format)||paths.includes(path))return
+    paths.push(path);formats.add(file.format)
+  }
+  return{turnId:value.turnId,paths}
+}
+
+/** Code Mode settlements are host events, not text printed by run_code. */
+export function presentationCodeDelivery(event) {
+  const data=event?.data
+  if(event?.type!=='tool/code-dispatch'||data?.name!=='presentation_files'||data.isError!==false||typeof data.rootCallId!=='string'||!data.rootCallId||typeof data.parentCallId!=='string'||!data.parentCallId||typeof data.subCallId!=='string'||!data.subCallId)return
+  return presentationDelivery({source:{kind:'tool',callId:data.subCallId},content:[{type:'tool-result',toolCallId:data.subCallId,isError:false,content:data.content}]},data.name)
+}
+
 /** Dependency-complete plain functions for injection into the upstream bundle. */
 export const deliveryModelSource = [
   deliveryLexicalPath, deliveryLocalPath, normaliseDeliveryPath, deliveryFilePath, deliveryWithoutFences,
   deliveryUnescapeMarkdown, deliveryReadDestination, deliveryReadTitle,
   deliveryPathsFromMarkdown, deliveryPathsFromFinalInlineCode, deliveryPathsFromFinalText,
-  mergeDeliveryPaths, verifiedResearchDeliveryPaths, homeGuideDeliveryPaths
+  mergeDeliveryPaths, verifiedResearchDeliveryPaths, homeGuideDeliveryPaths,presentationDelivery,presentationCodeDelivery
 ].map(fn => fn.toString()).join('\n')
