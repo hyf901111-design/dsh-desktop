@@ -209,6 +209,7 @@
         "filter": [
           "research-voice.node",
           "computer-stroke.node",
+          "computer-launch.node",
           "computer-capture.node",
           "youtube-player.node",
           "sherlock-power-helper",
