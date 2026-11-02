@@ -25018,6 +25018,96 @@
         ],
         "recordedAt": "2026-11-02T00:43:21.465Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "深空讯号圆角像素光环壁纸",
+        "branch": "codex/feat/aura-wallpaper-20261102",
+        "baseCommit": "3542b6a2c3594ecef42f084cebfb920524c53fdc",
+        "tipCommit": "c2e6710f2504718b9a009e7eb8a8eb353aea366c",
+        "commits": [
+          {
+            "commit": "c2e6710f2504718b9a009e7eb8a8eb353aea366c",
+            "parents": [
+              "3542b6a2c3594ecef42f084cebfb920524c53fdc"
+            ],
+            "subject": "功能：将深空讯号替换为圆角像素光环动态壁纸"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/design/aura-home-wallpaper.md"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-aura-renderer.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-theme-assets/aura-shaders.json"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-theme-assets/aura-square-atlas.json"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-renderer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-renderer-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查和主题聚焦验证通过",
+            "verifiedCommit": "c2e6710f2504718b9a009e7eb8a8eb353aea366c",
+            "completedAt": "2026-11-02T02:25:31.532937+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/home-theme-renderer-browser.test.js",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查和主题聚焦验证通过",
+            "verifiedCommit": "c2e6710f2504718b9a009e7eb8a8eb353aea366c",
+            "completedAt": "2026-11-02T02:25:31.532937+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立本地预览确认蓝青像素光环与圆角内发光；WebGL像素测试证明曲线内发光区别于裁剪直角；集成客户端待复核。"
+        },
+        "acceptanceCriteria": [
+          "深空讯号主题卡片和已有boz偏好显示新光环",
+          "首页面板四角内发光随12px/16px圆角与缩放变化",
+          "隐藏暂停、缩略图静止和资源释放正常"
+        ],
+        "risks": [
+          "共享客户端用户验收后才能晋升main；不发布公开更新。"
+        ],
+        "generatedAt": "2026-11-02T02:25:31.532937+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -26163,6 +26253,17 @@
         "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..545617e54a4b2e36e5096b63e1b4c0c65317725d"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/home-theme-renderer-browser.test.js",
+        "test/home-theme-controller.test.ts",
+        "test/home-theme-controls.test.ts"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
