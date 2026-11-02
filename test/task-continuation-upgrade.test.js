@@ -9,6 +9,7 @@ import {createRequire} from 'node:module'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
 import {patchBashBackgroundLifecycle,stripBashBackgroundLifecycle} from '../scripts/lib/bash-background-lifecycle.mjs'
 import {legacyTaskProgressSource} from './fixtures/task-progress-v1.js'
+import {legacyTaskResumeClient} from './fixtures/task-resume-client-v3.js'
 
 // Exercise exactly the Node installer, including its strict byte guard.
 const {patchTaskProgressRuntime}=createRequire(import.meta.url)('../scripts/lib/task-progress-runtime.mjs')
@@ -48,7 +49,7 @@ it('upgrades an older continuation marker and dock once without duplicating the 
  expect(upgraded).not.toContain('state.reconciled = true')
  expect(upgraded).not.toContain('/* sherlock:task-progress-continuation:v2 */')
  expect(patchTaskProgressRuntime(upgraded)).toBe(upgraded)
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),oldDock=patchTaskProgressClient(source).replace('/* sherlock:task-progress-resume:v3 */','/* sherlock:task-progress-resume:v2 */').replace('clicked=react.useRef(null)','clicked=react.useRef(false)')
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),oldDock=legacyTaskResumeClient(patchTaskProgressClient(source)).replace('/* sherlock:task-progress-resume:v3 */','/* sherlock:task-progress-resume:v2 */').replace('clicked=react.useRef(null)','clicked=react.useRef(false)')
  const client=patchTaskProgressClient(oldDock)
  expect(client).toContain('/* sherlock:task-progress-resume:v3 */');expect(client).toContain('input.draftRev!==clicked.current.revision')
  expect(client.match(/function continueUnfinishedTask\(/g)).toHaveLength(1)
