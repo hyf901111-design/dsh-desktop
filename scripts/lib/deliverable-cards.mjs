@@ -137,13 +137,25 @@ function patchHomeGuideDeliveryAccumulator(source){
  const before='calls.set(String(match.event.data.callId), match.view?.for === "call" ? match.view.view : null);'
  const after=marker+'\n\t\t\t\t\tcalls.set(String(match.event.data.callId), {name:match.event.data.name,view:match.view?.for === "call" ? match.view.view : null});'
  const oldAdditions='const additions = [...producedPaths(context.state.calls.get(callId) ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)].map((path) => ({'
- const newAdditions='const completedCall = context.state.calls.get(callId);\n\t\t\t\tconst demoPublisher = completedCall?.name === "home_presentation_publish" || completedCall?.name === "home_report_publish";\n\t\t\t\tconst additions = (demoPublisher ? homeGuideDeliveryPaths(match.event.data.message,completedCall.name) : [...producedPaths(completedCall?.view ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)]).map((path) => ({'
+ const previousAdditions='const completedCall = context.state.calls.get(callId);\n\t\t\t\tconst demoPublisher = completedCall?.name === "home_presentation_publish" || completedCall?.name === "home_report_publish";\n\t\t\t\tconst additions = (demoPublisher ? homeGuideDeliveryPaths(match.event.data.message,completedCall.name) : [...producedPaths(completedCall?.view ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)]).map((path) => ({'
+ const newAdditions=previousAdditions.replace('...verifiedResearchDeliveryPaths(match.event.data.message)]','...verifiedResearchDeliveryPaths(match.event.data.message),...(presentationDelivery(match.event.data.message,completedCall?.name,context.state.turn)?.paths??[])]')
  if(source.includes(marker)){
+  if(source.includes(previousAdditions))source=exact(source,previousAdditions,newAdditions)
   if(source.split(marker).length!==2||source.split(after).length!==2||source.split(newAdditions).length!==2)throw Error('Home guide delivery accumulator anchor drifted')
   return source
  }
  source=exact(source,before,after)
  return exact(source,oldAdditions,newAdditions)
+}
+
+function patchPresentationCodeDelivery(source){
+ const marker='/* ework:presentation-code-delivery:v1 */'
+ const match='if (event.type === "tool/result" && (0, _deepseek_ai_dsh_client_runtime_client.isAppendSurfaceEvent)(event)) return {'
+ const update='if (match.event.type !== "tool/result") return context.state;'
+ const matchCode=marker+'\n                if(event.type==="tool/code-dispatch"){const publication=presentationCodeDelivery(event);if(publication)return{id:publication.turnId,role:"update"};}\n                '+match
+ const updateCode='if(match.event.type==="tool/code-dispatch"){const publication=presentationCodeDelivery(match.event),root=context.state.calls.get(match.event.data.rootCallId);if(!publication||publication.turnId!==String(context.state.turn)||root?.name!=="run_code")return context.state;return{...context.state,produced:[...context.state.produced,...publication.paths.map(path=>({seq:match.event.seq,path}))]};}\n                '+update
+ if(source.includes(marker)){if(source.split(marker).length!==2||source.split(matchCode).length!==2||source.split(updateCode).length!==2)throw Error('Presentation delivery code accumulator anchor drifted');return source}
+ return exact(exact(source,match,matchCode),update,updateCode)
 }
 
 export function patchDeliverableCards(source){
@@ -152,7 +164,7 @@ export function patchDeliverableCards(source){
  if(source.includes(marker)){
   const start=source.indexOf(marker),end=source.indexOf('\n\t\t//#endregion',start)
   if(end<0||source.indexOf(marker,start+marker.length)!==-1)throw Error('Delivery cards runtime anchor drifted')
-  return patchHomeGuideDeliveryAccumulator(source.slice(0,start)+runtime+source.slice(end))
+  return patchPresentationCodeDelivery(patchHomeGuideDeliveryAccumulator(source.slice(0,start)+runtime+source.slice(end)))
  }
  const start=source.indexOf('\t\tfunction ProducedFiles('),end=source.indexOf('\n\t\t//#endregion',start)
  if(start<0||end<0)throw Error('Delivery cards anchor missing: ProducedFiles')
@@ -161,7 +173,7 @@ export function patchDeliverableCards(source){
  source=exact(source,'const additions = producedPaths(context.state.calls.get(callId) ?? null).map((path) => ({','const additions = [...producedPaths(context.state.calls.get(callId) ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)].map((path) => ({')
  source=exact(source,'"conversationEvents",\n\t\t\t"connection"','"conversationEvents",\n            "workspaces",\n\t\t\t"connection"')
  source=exact(source,'isLoopback: connection.isLoopback,\n','isLoopback: connection.isLoopback,\n                    openSystemFile: path=>ctx.get("workspaces").openPath(path),\n')
- return patchHomeGuideDeliveryAccumulator(source)
+ return patchPresentationCodeDelivery(patchHomeGuideDeliveryAccumulator(source))
 }
 
 export function patchDeliveryConversation(source){

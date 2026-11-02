@@ -5,6 +5,7 @@ import { registerHomeBoardSmartRuntime } from './home-board-smart-runtime.js'
 import { registerHomeWorkbenchRuntime } from './home-workbench-runtime.js'
 import {registerClientTools} from './client-tools.js'
 import {registerResearchReportTool} from './research-report-tool.js'
+import {registerPresentationFiles} from './presentation-files.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
 import {calendarEventEvidenceIssue,calendarEventRepairEvidence} from './calendar-event-evidence.js'
 import {articleTimelineRequired,restoreArticleTimelineScope} from './article-timeline-provenance.js'
@@ -3060,6 +3061,7 @@ export async function apply(ctx) {
     const disposeCanvasTools = registerCanvasTools(ctx)
     const disposeClientTools = registerClientTools(ctx)
     const disposeResearchReportTool = registerResearchReportTool(ctx)
+    const disposePresentationFiles = registerPresentationFiles(ctx)
     let context
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
@@ -3071,6 +3073,7 @@ export async function apply(ctx) {
       disposeCompletionNotifications()
       disposeCanvasTools();disposeClientTools()
       void disposeResearchReportTool()
+      disposePresentationFiles()
       disposeRoutes()
       disposeScheduledTitle()
       disposeScheduledTaskTool()
@@ -3098,6 +3101,7 @@ export async function apply(ctx) {
       await disposeWorkbench()
       disposeCanvasTools();disposeClientTools()
       await disposeResearchReportTool()
+      disposePresentationFiles()
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()
