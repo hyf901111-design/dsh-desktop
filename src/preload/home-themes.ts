@@ -176,7 +176,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       }
     }
     background.dataset.homeThemeId = selected
-    background.dataset.homeThemeFamily = selected === 'boz' ? 'aura' : selected === 'koi-pond' ? 'koi' : isReactBitsTheme(selected) ? 'react-bits' : 'open-shaders'
+    background.dataset.homeThemeFamily = selected === 'koi-pond' ? 'koi' : isReactBitsTheme(selected) ? 'react-bits' : 'open-shaders'
     resume()
   }
   const thumbnail = (theme: Theme): string | null => {

@@ -1,7 +1,7 @@
 import { HOME_THEME_CONFIGS, type HomeShaderThemeId as OpenShaderThemeId } from './home-theme-configs'
 import { createReactBitsRenderer, isReactBitsTheme, type ReactBitsThemeId } from './home-reactbits-renderer'
 import { HOME_THEME_FIELD_SHADER, HOME_THEME_POST_SHADERS, HOME_THEME_VERTEX_SHADER } from './home-theme-shaders'
-import { createAuraRenderer } from './home-aura-renderer'
+import glyphRuns from './home-theme-assets/boz-glyph-atlas.json'
 import { createKoiRenderer } from './home-koi-renderer'
 
 export type HomeShaderThemeId = OpenShaderThemeId | ReactBitsThemeId | 'koi-pond'
@@ -34,7 +34,6 @@ export function createHomeThemeRenderer(
   options: Options
 ): HomeThemeRenderer | null {
   if (isReactBitsTheme(theme)) return createReactBitsRenderer(canvas, theme, options)
-  if (theme === 'boz') return createAuraRenderer(canvas, options)
   if (theme === 'koi-pond') return createKoiRenderer(canvas, options)
   const config = HOME_THEME_CONFIGS[theme]
   if (!config) return null
@@ -145,6 +144,29 @@ export function createHomeThemeRenderer(
     context.uniform1f(postUniforms.uStrength, config.traits.strength)
     context.uniform1f(postUniforms.uScale, config.traits.scale)
     context.uniform1f(postUniforms.uSeed, config.traits.seed)
+    if (config.traits.rarity === 'ascii') {
+      // Exact atlas exported with the Figma theme: Menlo 500, " .:;+*oO8@".
+      // Keep it local and synchronous so the first frame never lacks glyphs.
+      glyphs = context.createTexture()
+      if (!glyphs) throw new Error('Cannot allocate homepage glyph atlas')
+      const pixels = new Uint8Array(480 * 80)
+      let at = 0
+      for (let i = 0; i < glyphRuns.length; i += 2) {
+        const count = glyphRuns[i]!, value = glyphRuns[i + 1]!
+        pixels.fill(value, at, at + count); at += count
+      }
+      context.activeTexture(context.TEXTURE1)
+      context.bindTexture(context.TEXTURE_2D, glyphs)
+      context.texImage2D(context.TEXTURE_2D, 0, context.R8, 480, 80, 0, context.RED, context.UNSIGNED_BYTE, pixels)
+      context.generateMipmap(context.TEXTURE_2D)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAX_LEVEL, 4)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.LINEAR_MIPMAP_LINEAR)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.LINEAR)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, context.CLAMP_TO_EDGE)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, context.CLAMP_TO_EDGE)
+      context.uniform1i(postUniforms.tGlyphs, 1)
+      context.activeTexture(context.TEXTURE0)
+    }
     const maxDimension = Math.min(4096, context.getParameter(context.MAX_TEXTURE_SIZE), context.getParameter(context.MAX_RENDERBUFFER_SIZE))
     canvas.addEventListener('webglcontextlost', contextLost)
 
