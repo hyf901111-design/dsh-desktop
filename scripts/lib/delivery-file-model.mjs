@@ -212,9 +212,17 @@ export function deliveryPathsFromFinalInlineCode(text, cwd) {
   const paragraph = []
   for (let i = first; i >= 0 && i < rows.length && !rows[i].blank; i++) paragraph.push(rows[i].context)
   const opening = paragraph.join('\n')
-  // A later qualification can revoke the whole delivery claim. This fallback
-  // deliberately prefers missing an ambiguous card over promoting a draft.
-  if (declined(rows.map(row => row.context).join('\n'))) return []
+  // A separate QA section may qualify acceptance without withdrawing files.
+  // Actual incomplete files or an explicit withdrawal still revoke delivery.
+  let qualityDepth
+  const deliveryClaim=rows.filter(row=>{
+    const heading=/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/.exec(row.context)
+    if(heading){if(qualityDepth&&heading[1].length<=qualityDepth)qualityDepth=undefined;if(/^(?:质量|验收|原生兼容性|已知事项|QA\b|quality\b|native\s+(?:QA|acceptance|verification|compatibility)\b)/iu.test(heading[2]))qualityDepth=heading[1].length}
+    return !qualityDepth
+  }).map(row=>row.context).join('\n')
+  const withdrawn=rows.some(row=>/非(?:正式)?交付|不(?:作为|列为|算作|用于)?(?:本次|此次)?(?:正式)?交付|不能(?:正式)?交付|(?:文件|成品|文稿|输出).{0,12}(?:尚未|还未|暂未|仍未|未|还没)(?:生成|写入|保存|完成|可用)|(?:请勿|不要|不能|不可)(?:使用|打开|下载).{0,16}(?:文件|路径|成品)|\bnot\s+(?:for\s+)?delivery\b|\b(?:files?|outputs?|presentations?|deliverables?)\b.{0,30}\b(?:not (?:yet )?(?:complete|ready|available)|incomplete|unavailable)\b|\bdo not (?:use|open|download)\b.{0,25}\b(?:files?|paths?|outputs?)\b/iu.test(row.context))
+  const draft=rows.some(row=>/候选|草稿|\b(?:candidate|drafts?|checkpoint|in progress|not (?:yet )?(?:ready|complete|delivered|validated))\b/iu.test(row.context))
+  if (declined(opening)||declined(deliveryClaim)||withdrawn||draft) return []
   const completed = /已(?:完成|生成|交付)|制作完成|生成完成|\b(?:completed|finished|done)\b/iu.test(opening)
   const paths = [], seen = new Set()
   let section = false
@@ -223,7 +231,7 @@ export function deliveryPathsFromFinalInlineCode(text, cwd) {
     if (row.blank) continue
     if (/^\s*>/.test(row.context) || declined(row.context)) { section = false; continue }
     if (/(?:参考|原始|源|输入|示例|日志|临时)\s*(?:文件|路径|资料|报告|PPTX?|PDF)|\b(?:reference|source|input|example|temporary|log)\s+(?:file|path|report|PPTX?|PDF)/iu.test(row.context)) { section = false; continue }
-    const heading = /交付(?:文件|成果|成品|材料|结果)(?:如下)?\s*[:：]|\b(?:final\s+)?deliverables?\s*:|\bdelivered files\s*:/iu.test(row.context)
+    const heading = /交付(?:文件|成果|成品|材料|结果)(?:如下)?\s*[:：]|\b(?:final\s+)?deliverables?\s*:|\bdelivered files\s*:/iu.test(row.context) || /^\s*(?:#{1,6}\s+)?(?:交付(?:文件|成果|成品|材料|结果)|(?:final\s+)?deliverables?|delivered files)\s*#*\s*$/iu.test(row.context)
     const field = /(?:^|[\s。.！!；;：:])(?:正式|最终|交付)?(?:文件|成品|PPTX?|PDF(?:\s*预览)?|演示文稿|报告|预览|下载|file|presentation|report|preview|download)\s*[:：]\s*$/iu.test(row.context)
     if (heading) section = true
     else if (section && row.context.trim() && !/^\s*(?:[-*+]\s|\d+[.)]\s)/.test(row.context) && !field) section = false
