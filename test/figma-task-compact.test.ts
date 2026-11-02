@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
+import { createRequire } from 'node:module'
 import { expect, it } from 'vitest'
 import { patchFigmaReadingConversation } from '../scripts/lib/figma-reading-client.mjs'
-import { patchTaskProgressClient } from '../scripts/lib/task-progress-client.mjs'
+const {patchTaskProgressClient}=createRequire(import.meta.url)('../scripts/lib/task-progress-client.mjs') as {patchTaskProgressClient:(source:string)=>string}
 // Match the real installer order instead of depending on the local SDK already
 // having the continuation footer installed before this fixture is loaded.
 const source=patchTaskProgressClient(patchFigmaReadingConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
