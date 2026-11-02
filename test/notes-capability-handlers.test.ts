@@ -70,3 +70,13 @@ it('preserves the supplied revision-aware component data handler and its cancell
  expect(componentData).toHaveBeenCalledWith({action:'refresh',revision:2},context,controller.signal,'refresh-request')
  expect(renderer).not.toHaveBeenCalled()
 })
+
+it('keeps current note comments and native blocks within the original none or selection reference scope',async()=>{
+ const renderer=vi.fn(async()=>({status:'succeeded' as const})),make=(scope:string)=>createNoteCapabilityHandlers({context,renderer,canWrite:()=>true,requestContext:{context:{scope,components:[]}},sourceInstruction:'处理这次引用的内容'})
+ await expect(make('none').readNoteBlocks!({scope:'note'},context)).rejects.toThrow('引用范围')
+ await expect(make('none').readNoteBlocks!({scope:'selected'},context)).rejects.toThrow('引用范围')
+ await expect(make('selection').readNoteBlocks!({scope:'note'},context)).rejects.toThrow('引用范围')
+ expect(renderer).not.toHaveBeenCalled()
+ await make('selection').readNoteBlocks!({scope:'selected'},context)
+ expect(renderer).toHaveBeenLastCalledWith('notes.blocks.read',{scope:'selected'})
+})

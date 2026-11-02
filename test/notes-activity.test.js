@@ -132,3 +132,24 @@ it('migrates the old Notes reasoning disclosure without changing canvas and nati
  const fresh=source.replace(previous,original).replace(details,'')
  expect(patchNotesActivity(patchFigmaFinalConversation(fresh))===installed).toBe(true)
 })
+
+it('shows remaining public replies after real receipts in the injected projection, live and on cold history replay',async()=>{
+ const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs')
+ const installed=patchNotesActivity(patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+ expect(installed).toContain(EWorkNoteConversationRow.toString())
+ const raw=await readFile('scripts/lib/notes-activity.mjs','utf8'),source=raw.slice(raw.indexOf('export function EWorkNoteConversationRow')+7,raw.indexOf('export function EWorkNotesActivity'))
+ const Projected=new Function('react','eworkNoteCapabilityReceiptText','noteUiText','useNotesActivityLocale','document','return ('+source+')')(React,capabilityReceiptText,value=>value,()=>{}, {documentElement:{dataset:{odysseyLocale:'en'}}})
+ const receipt={capability:'notes.blocks.read',status:'succeeded'},summary=capabilityReceiptText([receipt]),answer='No current comments are available; no edits were made.'
+ const result={kind:'conversation',capabilityReceipts:[receipt],capabilitySummary:summary,requiresReply:true,markdown:summary+'\n\n'+answer}
+ const doc=new EventTarget(),store=createNotesActivityStore(doc),props={sessionId:'s',t:key=>key,UserBubble:()=>null,Progress:()=>null,Markdown:({blocks})=>React.createElement('div',null,blocks.map(block=>block.text).join(''))}
+ const render=()=>renderToStaticMarkup(React.createElement(Projected,{...props,row:store.snapshot('s')[0]}))
+ try{
+  doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase:'preparing',prompt:'Optimize comments'}}))
+  doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase:'replied',result}}))
+  const live=render();expect(live).toContain(answer);expect(live).not.toContain(summary);expect(live.match(/No current comments/g)).toHaveLength(1)
+  const coldDoc=new EventTarget(),cold=createNotesActivityStore(coldDoc)
+  coldDoc.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'s',rows:JSON.parse(JSON.stringify(store.snapshot('s')))}}))
+  expect(renderToStaticMarkup(React.createElement(Projected,{...props,row:cold.snapshot('s')[0]}))).toBe(live)
+  cold.dispose()
+ }finally{store.dispose()}
+})

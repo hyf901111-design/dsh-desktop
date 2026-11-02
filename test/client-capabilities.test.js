@@ -97,3 +97,24 @@ it('keeps conversation create idempotency stable when object keys are reordered'
  expect(await executor.execute({...call,arguments:{title:'模拟表格',artifact:{rows:[[17]],columns:['模拟列'],title:'模拟表格',type:'table',version:1}}},context)).toEqual(first)
  expect(calls).toHaveLength(1)
 })
+
+it('settles a complete batch only from real write or preview receipts and preserves mixed continuation',async()=>{
+ const {runClientCapabilityLoop}=await import('../packages/dsh-research-task-runtime/client-capability-loop.js')
+ for(const receipt of [{status:'succeeded',effect:{state:'saved'}},{status:'succeeded',data:{pendingPreview:true}}]){
+  let rounds=0
+  const result=await runClientCapabilityLoop({preserveRemainingReply:true,generate:async()=>{rounds++;return{kind:'capabilities',completion:'complete',calls:[{requestId:'edit',capability:'notes.blocks.apply',arguments:{}}]}},execute:async()=>({...receipt,capability:'notes.blocks.apply'})})
+  expect(rounds).toBe(1);expect(result.capabilityReceipts).toHaveLength(1)
+ }
+ let rounds=0
+ const readOnly=await runClientCapabilityLoop({preserveRemainingReply:true,generate:async()=>++rounds===1?{kind:'capabilities',completion:'complete',calls:[{requestId:'read',capability:'notes.blocks.read',arguments:{}}]}:{kind:'conversation',markdown:''},execute:async()=>({capability:'notes.blocks.read',status:'succeeded',data:{revision:'real-revision'}})})
+ expect(rounds).toBe(2);expect(readOnly.requiresReply).toBe(true);expect(readOnly.markdown).toContain('尚未生成修改或答复')
+ rounds=0
+ const mixed=await runClientCapabilityLoop({preserveRemainingReply:true,generate:async()=>++rounds===1?{kind:'capabilities',calls:[{requestId:'part',capability:'notes.blocks.apply',arguments:{}}]}:{kind:'text',markdown:'批次之后仍需保留的完整正文'},execute:async()=>({capability:'notes.blocks.apply',status:'succeeded',data:{pendingPreview:true}})})
+ expect(rounds).toBe(2);expect(mixed.markdown).toBe('批次之后仍需保留的完整正文')
+})
+
+it('does not accept a failed later action as completion of an explicitly complete batch',async()=>{
+ const {runClientCapabilityLoop}=await import('../packages/dsh-research-task-runtime/client-capability-loop.js'),executed=[]
+ const result=await runClientCapabilityLoop({preserveRemainingReply:true,generate:async()=>({kind:'capabilities',completion:'complete',calls:[{requestId:'one',capability:'notes.blocks.apply'},{requestId:'two',capability:'notes.blocks.apply'},{requestId:'three',capability:'notes.blocks.apply'}]}),execute:async call=>{executed.push(call.requestId);return{capability:call.capability,status:call.requestId==='two'?'failed':'succeeded',...call.requestId==='one'?{data:{pendingPreview:true}}:{message:'较新修订，未应用'}}}})
+ expect(executed).toEqual(['one','two']);expect(result.requiresReply).toBe(true);expect(result.capabilityReceipts.map(receipt=>receipt.status)).toEqual(['succeeded','failed']);expect(result.markdown).toContain('较新修订')
+})

@@ -64,7 +64,7 @@ export function parseNotePublicOutput(text,{hasReceipts=false,recovery=false,wir
   if(!keys.length||keys.length===1&&['message','reply','summary'].includes(keys[0]))return
   if(envelope(item)&&item.kind===undefined)return
   if(typeof item.kind==='string'){
-   if(['component','capabilities'].includes(item.kind)){if(keys.some(key=>!['kind','wireToken',...item.kind==='component'?['artifact','targetBlockId']:['calls','inlineOrder']].includes(key))||item.inlineOrder!==undefined&&!['before-components','after-components'].includes(item.inlineOrder))return;return item}
+   if(['component','capabilities'].includes(item.kind)){if(keys.some(key=>!['kind','wireToken',...item.kind==='component'?['artifact','targetBlockId']:['calls','inlineOrder','completion']].includes(key))||item.kind==='capabilities'&&item.completion!==undefined&&item.completion!=='complete'||item.inlineOrder!==undefined&&!['before-components','after-components'].includes(item.inlineOrder))return;return item}
    if(!['text','conversation'].includes(item.kind)||keys.some(key=>!['kind','markdown','text','content',...item.kind==='text'?['inlineOrder']:[],...recovery?['replyRole']:[]].includes(key)))return
   }else if(!envelope(item)){
    if(['calls','operations','tool_calls','capability','artifact','targetBlockId'].some(key=>Object.hasOwn(item,key)))return

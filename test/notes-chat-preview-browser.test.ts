@@ -23,13 +23,15 @@ const entry='\0native-note-operations-fixture'
 beforeAll(async()=>{
  const config=(await resolveConfig({configFile:resolve('electron.vite.config.ts'),logLevel:'silent'},'build','production')).config!.preload!
  const fixture:Plugin={name:'native-note-operations-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
+ import {YjsThreadStore} from '@blocknote/core/yjs';import {DefaultThreadStoreAuth} from '@blocknote/core/comments';import {findChallengeQuote} from ${JSON.stringify(resolve('src/preload/notes/challenge-anchors.ts'))};import {CHALLENGE_KIND,CHALLENGE_USER} from ${JSON.stringify(resolve('src/preload/notes/challenge-controller.ts'))};
  import {noteInlineBlockIdentity} from ${JSON.stringify(resolve('src/preload/notes/inline-ai.ts'))}; window.identity=id=>noteInlineBlockIdentity(window.editor,id); import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from ${JSON.stringify(resolve('src/preload/notes/editor.tsx'))};
  import '@blocknote/mantine/style.css';import ${JSON.stringify(resolve('src/preload/notes/style.css'))};import ${JSON.stringify(resolve('src/preload/notes/challenge.css'))};
  window.armNativeTiming=dimension=>{let observer;const submit=()=>{window.fastTiming={submitAt:performance.now(),dimension};observer=new MutationObserver(()=>{const table=document.querySelector('.bn-editor table'),cells=table?.querySelectorAll('td');if(cells?.length===dimension*dimension&&table.getBoundingClientRect().width>0&&table.getBoundingClientRect().height>0){window.fastTiming.visibleAt=performance.now();window.fastTiming.visibleCells=[...cells].filter(cell=>{const r=cell.getBoundingClientRect();return r.width>0&&r.height>0&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth}).length;observer.disconnect()}});observer.observe(document.querySelector('.bn-editor'),{childList:true,subtree:true})};const key=e=>{if(e.key==='Enter'&&!e.shiftKey&&e.target.matches('.en-space-ai textarea')){document.removeEventListener('keydown',key,true);document.removeEventListener('sherlock:notes-submit',side,true);submit()}},side=()=>{document.removeEventListener('keydown',key,true);document.removeEventListener('sherlock:notes-submit',side,true);submit()};document.addEventListener('keydown',key,true);document.addEventListener('sherlock:notes-submit',side,true)};
+ window.seedComment=async(blockId,quote,message,extra={})=>{const store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor')),thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue:{blockId,quote,category:'grammar',message,evidence:[],...extra},sourceText:quote},initialComment:{body:[{type:'paragraph',content:message}]}});const range=findChallengeQuote(window.editor,blockId,quote);if(range)window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
  window.calls=[];window.saved={title:'原生操作验收',blocks:[{id:'before',type:'paragraph',content:'保留前段'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后段'}],yjs:'',revision:0,updatedAt:0};
  const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load'){const loaded=await window.nativeStore(method,input);window.saved=loaded.saved;return loaded}if(method==='save'){if(window.failSave)throw Error('保存失败样本');const result=await window.nativeStore(method,input);if(window.holdSaveAck&&input.content.blocks.some(block=>block.type==='table'))await new Promise(resolve=>window.releaseSaveAck=resolve);if(result.status==='saved'){window.saved=result.saved;if(window.fastTiming?.submitAt&&result.saved.blocks.some(b=>b.type==='table'&&b.content.rows.length===window.fastTiming.dimension&&b.content.rows[0].cells.length===window.fastTiming.dimension))window.fastTiming.saveAckAt??=performance.now()}return result}if(method==='capability-reply'){if(window.holdNativeEffect&&input.effect?.state==='applied')await new Promise(resolve=>window.releaseNativeEffect=resolve);return window.mainCapabilityReply(input)}if(method==='capability-ready'){if(window.holdNativeAdmission)await new Promise(resolve=>window.releaseNativeAdmission=resolve);return window.hostNativeReady(input,!!window.nativeReadOnly)}if(method==='render'||method==='native-table'||method==='conversation-state'||method==='conversation-load'||method==='stop')return window.hostNativeRequest(method,input);if(method==='generate'&&input.entryPoint==='component')return {kind:'component',node:{kind:'generated-container',title:'预览中的专业图表',containerSpec:{version:1,type:'chart',variant:'line',title:'预览中的专业图表',labels:['A','B'],series:[{name:'演示',values:[1,2]}]}}};if(method==='generate')return window.useNativeModel?window.hostNativeRequest(method,input):new Promise((resolve,reject)=>{window.modelResolve=resolve;window.modelReject=reject});if(method==='library-list')return[];return{}},draft:async input=>{window.pendingDraft=input;await window.nativeStore('draft',input)}};
  const root=createRoot(document.querySelector('#root'));window.openNativeGuide=()=>{document.documentElement.dataset.homeGuidePointerRun='core-guide-caret';root.unmount();const next=document.createElement('div');document.body.append(next);createRoot(next).render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){},guide:{native:{runId:'core-guide-caret'},ready(api){window.guideApi=api}}}))};window.reopen=()=>{root.unmount();const next=document.createElement('div');document.body.append(next);createRoot(next).render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){}}))};root.render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){}}));
- `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.ledger=proposals; const slashMenu = useMemo')}}
+ `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor;window.ledger=proposals;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo')}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
  script=(Array.isArray(output)?output:[output]).flatMap(x=>'output'in x?x.output:[]).filter(x=>x.type==='chunk').map(x=>x.code).join('\n')
  const {chromium}=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -41,7 +43,7 @@ async function open(modelOutput?:(request:any)=>unknown){
  const context=await browser.newContext({viewport:{width:1200,height:900}}),page=await context.newPage(),errors:string[]=[]
  const main=new NotesCapabilityBridge(value=>{void page.evaluate((input:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:input})),value)})
  let session=Session.create('native-fixture' as any);let historyWritable=true;const routes=new Map<string,any>(),modelRequests:any[]=[],historyPath=resolve(root,'sdk-session.json')
- const runtimeContext={sessions:{get:(id:string)=>id==='native-fixture'?session:undefined,flush:async(current:any)=>{if(!historyWritable)return false;writeFileSync(historyPath,JSON.stringify({header:current.header,events:current.events}));return true}},sessionTitle:{rename:(current:any,title:string)=>{current.append('session/title',{title});return{title}}},webServer:{register:(route:any)=>{routes.set(route.path,route.handler);return()=>{routes.delete(route.path)}}},apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'replay',model:'recorded-crud'},routable:true}}})}},llm:{stream:async function*(request:any){modelRequests.push(request);const value=modelOutput?.(request);yield{type:'text-delta',text:typeof value==='string'?value:JSON.stringify(value)};yield{type:'finish',reason:{kind:'stop'}}}}};const disposeRuntime=registerNoteSessions(runtimeContext,{isTrustedRequest:()=>true,readJsonBody:async(req:any)=>req.body}),disposeAi=registerNotesAi(runtimeContext,{isTrustedRequest:()=>true})
+ const runtimeContext={sessions:{get:(id:string)=>id==='native-fixture'?session:undefined,flush:async(current:any)=>{if(!historyWritable)return false;writeFileSync(historyPath,JSON.stringify({header:current.header,events:current.events}));return true}},sessionTitle:{rename:(current:any,title:string)=>{current.append('session/title',{title});return{title}}},webServer:{register:(route:any)=>{routes.set(route.path,route.handler);return()=>{routes.delete(route.path)}}},apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'replay',model:'recorded-crud'},routable:true}}})}},llm:{stream:async function*(request:any){modelRequests.push(request);const value=await modelOutput?.(request);yield{type:'text-delta',text:typeof value==='string'?value:JSON.stringify(value)};yield{type:'finish',reason:{kind:'stop'}}}}};const disposeRuntime=registerNoteSessions(runtimeContext,{isTrustedRequest:()=>true,readJsonBody:async(req:any)=>req.body}),disposeAi=registerNotesAi(runtimeContext,{isTrustedRequest:()=>true})
  const server=createServer(async(req,res)=>{try{const route=routes.get(req.url!);if(req.url==='/sherlock/notes/generate')return await route(req,res);let body='';for await(const chunk of req)body+=chunk;await route({method:req.method,body:JSON.parse(body)},res)}catch(error){res.writeHead(500);res.end(JSON.stringify({error:String(error)}))}});await new Promise<void>(done=>server.listen(0,'127.0.0.1',done))
  let handler:any,writable=true
  const hostWindow={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2},send:(channel:string,input:any)=>{if(channel==='notes:capability-action')void page.evaluate((input:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-capability-action',{detail:input})),input)}}}
@@ -52,7 +54,7 @@ async function open(modelOutput?:(request:any)=>unknown){
  page.on('pageerror',(error:Error)=>errors.push(error.message))
  await page.route('https://native-note.test/**',(route:any)=>route.fulfill({contentType:'text/html',body:'<!doctype html><body data-workspace-surface="notes"><header data-ework-notes-session="native-fixture"></header><section class="en-root"><div id="root" class="en-editor-host"></div></section></body>'}));await page.goto('https://native-note.test/');await page.addScriptTag({content:'var exports={};\n'+script});await page.locator('.bn-editor').waitFor()
  await page.evaluate(()=>{const w=window as any;w.editor.replaceBlocks(w.editor.document,w.saved.blocks);w.editor.focus();w.editor.setTextCursorPosition('anchor','start')})
- return{page,context,errors,store,main,session,host,modelRequests,setHistoryWritable:(value:boolean)=>{historyWritable=value},history:()=>noteConversationRows(session),restartHistory:()=>{const value=JSON.parse(readFileSync(historyPath,'utf8'));session=Session.fromRestore('native-fixture' as any,value.events,value.header)},async close(){main.dispose();disposeService();disposeRuntime();disposeAi();await new Promise<void>(done=>server.close(()=>done()));await context.close();rmSync(root,{recursive:true,force:true})}}
+ return{page,context,errors,store,main,session,host,modelRequests,setHistoryWritable:(value:boolean)=>{historyWritable=value},history:()=>noteConversationRows(session),flushHistory:()=>runtimeContext.sessions.flush(session),restartHistory:()=>{const value=JSON.parse(readFileSync(historyPath,'utf8'));session=Session.fromRestore('native-fixture' as any,value.events,value.header)},async close(){main.dispose();disposeService();disposeRuntime();disposeAi();await new Promise<void>(done=>server.close(()=>done()));await context.close();rmSync(root,{recursive:true,force:true})}}
 }
 
 async function capability(page:any,parent:any,action:string,args:any,id='native-'+Math.random()){
@@ -255,3 +257,114 @@ it('prepares the real empty guide line for Space while summary keeps the existin
   await f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true}).waitFor();expect(await f.page.locator('.en-space-ai').count()).toBe(1);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+it('polishes real native blocks from the host snapshot in one generation and waits for normal acceptance',async()=>{
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text)
+  expect(payload.document).toBe('');expect(payload.documentSnapshot).toMatchObject({scope:'note',comments:{status:'available',comments:[]}})
+  expect(payload.documentSnapshot.blocks.map((row:any)=>row.block.id)).toEqual(['before','anchor','after'])
+  return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'polish-all',capability:'notes.blocks.apply',arguments:{revision:payload.documentSnapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'清晰的前段。'}},{op:'update',blockId:'after',block:{content:'严谨的后段。'}}]}}]}
+ });try{
+  const before=await body(f.page);await f.page.evaluate(()=>(window as any).useNativeModel=true)
+  const parent=await submit(f.page,'把上面的文章润色一下');await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before)
+  expect(f.history().at(-1)?.result.capabilityReceipts).toMatchObject([{capability:'notes.blocks.apply',status:'succeeded',data:{pendingPreview:true}}])
+  expect(JSON.stringify(f.history().at(-1)?.result)).not.toContain('已写入')
+  const replay=await f.host('generate',parent);expect(replay.capabilityReceipts[0].data.pendingPreview).toBe(true);expect(f.modelRequests).toHaveLength(1)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click()
+  await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('清晰的前段')
+  await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor').waitFor()
+  expect(await f.page.locator('.bn-editor').textContent()).toContain('严谨的后段');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('optimizes actual anchored AI comments via snapshot and excludes resolved, deleted and orphaned threads',async()=>{
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text),snapshot=payload.documentSnapshot
+  expect(snapshot.comments).toMatchObject({status:'available',source:'current-note-ai-comments'})
+  expect(snapshot.comments.comments.map((row:any)=>row.issue.message)).toEqual(['语气需要更准确','后段表述需要简洁'])
+  return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'comments',capability:'notes.blocks.apply',arguments:{revision:snapshot.revision,operations:snapshot.comments.comments.map((row:any)=>({op:'update',blockId:row.issue.blockId,block:{content:'根据当前问题修订：'+row.issue.message}}))}}]}
+ });try{
+  await f.page.evaluate(async()=>{const w=window as any;await w.seedComment('before','保留前段','语气需要更准确');await w.seedComment('after','保留后段','后段表述需要简洁');const resolved=await w.seedComment('before','保留','已解决问题'),deleted=await w.seedComment('after','保留','已删除问题');w.noteDoc.getMap('threads').get(resolved).set('resolved',true);w.noteDoc.getMap('threads').get(deleted).set('deletedAt',new Date());await w.seedComment('before','已不存在的文字','无效锚点');w.useNativeModel=true})
+  const before=await body(f.page);await submit(f.page,'把评论气泡里的问题都优化好');try{await f.page.locator('[data-note-preview-state=ready]').waitFor({timeout:5000})}catch{throw Error(JSON.stringify({history:f.history(),snapshot:f.modelRequests.map(request=>JSON.parse(request.messages[0].content[0].text).documentSnapshot)}))}
+  expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before)
+  expect(await f.page.evaluate(()=>(window as any).challenge.readComments(new Set(['before','after'])).comments.length)).toBe(2)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('根据当前问题修订')
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('invalidates a comment-based candidate if the real comment changes before user acceptance',async()=>{
+ const f=await open(request=>{const payload=JSON.parse(request.messages[0].content[0].text);return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'fix',capability:'notes.blocks.apply',arguments:{revision:payload.documentSnapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'不应覆盖较新的评论状态'}}]}}]}})
+ try{
+  const id=await f.page.evaluate(async()=>{const w=window as any;w.useNativeModel=true;return w.seedComment('before','保留前段','需要修订')})
+  const before=await body(f.page);await submit(f.page,'优化评论指出的问题');await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  await f.page.evaluate((id:string)=>(window as any).noteDoc.getMap('threads').get(id).set('resolved',true),id)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();expect(await body(f.page)).toEqual(before);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it.each(['selection','none'])('limits the pre-read comments and blocks to the actual %s reference scope',async scope=>{
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content[0].text)
+  if(scope==='none'){expect(payload.documentSnapshot).toBeUndefined();expect(payload.document).toBe('');expect(payload.selection).toBe('')}
+  else{
+   expect(payload.documentSnapshot.scope).toBe('selected');expect(payload.documentSnapshot.blocks.map((row:any)=>row.block.id)).toEqual(['before'])
+   expect(payload.documentSnapshot.comments.comments).toHaveLength(1)
+   expect(payload.documentSnapshot.comments.comments[0].issue.evidence).toEqual([{kind:'note',label:'当前选段',blockId:'before',quote:'保留前段'}])
+   expect(JSON.stringify(payload.documentSnapshot)).not.toContain('不应泄露的后段评论')
+  }
+  return{kind:'conversation',markdown:scope==='none'?'未引用当前笔记。':'已阅读所选段落的实际问题，尚未修改正文。'}
+ });try{
+  await f.page.evaluate(async(scope:string)=>{const w=window as any;await w.seedComment('before','保留前段','当前选段问题',{evidence:[{kind:'note',label:'当前选段',blockId:'before',quote:'保留前段'},{kind:'note',label:'范围外证据',blockId:'after',quote:'保留后段'}]});await w.seedComment('after','保留后段','不应泄露的后段评论');if(scope==='selection'){let start=0;w.editor._tiptapEditor.state.doc.descendants((node:any,pos:number)=>{if(!start&&node.isText)start=pos});w.editor._tiptapEditor.commands.setTextSelection({from:start,to:start+4})}else document.dispatchEvent(new CustomEvent('sherlock:notes-reference-action',{detail:{sessionId:'native-fixture',action:'toggle'}}));w.useNativeModel=true},scope)
+  const before=await body(f.page);await submit(f.page,'解释当前引用中的问题，不修改正文');await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied')
+  expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state],.en-space-ai').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('keeps a read-only receipt from pretending that the requested edits were completed',async()=>{
+ const f=await open(request=>{const payload=JSON.parse(request.messages[0].content[0].text);return payload.clientReceipts.length?{kind:'conversation',markdown:''}:{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'read-only',capability:'notes.blocks.read',arguments:{scope:'note'}}]}})
+ try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,'优化全文')
+  await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied')
+  expect(f.modelRequests).toHaveLength(2);expect(f.history().at(-1)?.result).toMatchObject({requiresReply:true,markdown:expect.stringContaining('尚未生成修改或答复')})
+  expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0)
+  await f.flushHistory();f.restartHistory();expect(f.history().at(-1)?.result.markdown).toContain('尚未生成修改或答复');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('does not execute or regenerate a stopped snapshot-backed request when its transport is replayed',async()=>{
+ let release!:(value:any)=>void,started!:(request:any)=>void
+ const seen=new Promise<any>(resolve=>{started=resolve}),f=await open(request=>{started(request);return new Promise(resolve=>{release=resolve})})
+ try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page),parent=await submit(f.page,'润色全文'),request=await seen,payload=JSON.parse(request.messages[0].content[0].text)
+  await f.host('stop',{requestId:parent.requestId});release({kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'stopped-edit',capability:'notes.blocks.apply',arguments:{revision:payload.documentSnapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'已停止内容不得写入'}}]}}]})
+  await expect.poll(()=>f.history().at(-1)?.phase).toBe('stopped')
+  await expect.poll(async()=>{try{return(await f.host('generate',parent)).markdown}catch{return''}}).toBe('生成已停止。')
+  expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state=ready]').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{release?.({kind:'conversation',markdown:''});await f.close()}
+},20000)
+
+it('fails a normal polish closed if an in-flight reviewer changes its live comment snapshot before apply',async()=>{
+ let release!:(value:any)=>void,started!:(request:any)=>void
+ const seen=new Promise<any>(resolve=>{started=resolve}),f=await open(request=>{started(request);return new Promise(resolve=>{release=resolve})})
+ try{
+  const id=await f.page.evaluate(async()=>{const w=window as any;w.useNativeModel=true;return w.seedComment('before','保留前段','原评论')})
+  const before=await body(f.page);await submit(f.page,'润色全文');const request=await seen,payload=JSON.parse(request.messages[0].content[0].text)
+  await f.page.evaluate((id:string)=>{const thread=(window as any).noteDoc.getMap('threads').get(id),metadata=thread.get('metadata');thread.set('metadata',{...metadata,issue:{...metadata.issue,message:'较新的评论'}})},id)
+  release({kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'stale-comments',capability:'notes.blocks.apply',arguments:{revision:payload.documentSnapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'未核对较新评论的改写'}}]}}]})
+  await expect.poll(()=>f.history().at(-1)?.result?.capabilityReceipts?.length).toBe(1)
+  expect(f.history().at(-1)?.result).toMatchObject({requiresReply:true,capabilityReceipts:[{status:'failed',message:expect.stringContaining('评论已变化')}]})
+  expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state=ready]').count()).toBe(0);expect(f.modelRequests).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{release?.({kind:'conversation',markdown:''});await f.close()}
+},20000)
+
+it('settles a nonce-complete batch of real native preview deliveries once and keeps duplicate effects idempotent',async()=>{
+ const f=await open(request=>{const payload=JSON.parse(request.messages[0].content[0].text),call={requestId:'whole-batch',capability:'notes.blocks.apply',arguments:{revision:payload.documentSnapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'前段完整修订'}},{op:'update',blockId:'after',block:{content:'后段完整修订'}}]}};return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[call,call]}})
+ try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,'修订前后两段');await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  expect(f.modelRequests).toHaveLength(1);expect(f.history().at(-1)?.result.capabilityReceipts).toMatchObject([{status:'succeeded',data:{pendingPreview:true}},{status:'succeeded',data:{pendingPreview:true}}]);expect(await body(f.page)).toEqual(before)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('后段完整修订')
+  expect((await body(f.page)).filter((row:any)=>row.id==='before')).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)

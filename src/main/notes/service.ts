@@ -228,8 +228,19 @@ export function installNotesService(options: {
             ...options.resetZoom?{resetZoom:async()=>{await renderer('context',{});if(!current())throw Error('当前会话已变化。');await options.resetZoom!();return{status:'succeeded' as const}}}:{}
           }})
           const {registry}=host,executor=createNoteCapabilityExecutor(host,()=>current()?clientContext:undefined),receipts:CapabilityReceipt[]=[]
+          // Read once through the same visible-editor lease before asking the model.
+          // This revision is usable by native apply; it grants no new write authority.
+          let documentSnapshot:Record<string,unknown>|undefined
+          const referenceScope=input.context?.scope??'note'
+          if(binding?.nativeSnapshot===1&&clientContext&&referenceScope!=='none'&&(referenceScope==='note'||clientContext.selectedNativeBlockIds?.length)){
+            const scope=referenceScope==='selection'?'selected':'note'
+            const snapshot=await executor.execute({requestId:'host-snapshot-'+randomUUID(),capability:'notes.blocks.read',arguments:{scope}},clientContext,signal)
+            signal.throwIfAborted();if(!current())throw Error('笔记会话已变化，请重新生成。')
+            if(snapshot.status!=='succeeded')throw Error(snapshot.message||'当前笔记快照暂不可用，原文已保留。')
+            if(snapshot.status==='succeeded'&&snapshot.data&&JSON.stringify(snapshot.data).length<=500000)documentSnapshot={...snapshot.data as Record<string,unknown>,documentId:clientContext.documentId,scope}
+          }
           const generateResult=async(clientReceipts:CapabilityReceipt[],textOnly=false)=>{
-            const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint==='inline'?{insertionAnchor:input.insertionAnchor}:{},...cardLocal&&typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?{sourceInstruction:input.sourceInstruction}:{},...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:textOnly?[]:registry.catalog(clientContext),clientContext,clientReceipts}:{},...textOnly?{completionMode:'text-only'}:{},stream:true }) })
+            const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint==='inline'?{insertionAnchor:input.insertionAnchor}:{},...cardLocal&&typeof input.sourceInstruction==='string'&&input.sourceInstruction.length<=8000?{sourceInstruction:input.sourceInstruction}:{},...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},...clientContext?{clientCapabilities:textOnly?[]:registry.catalog(clientContext),clientContext,clientReceipts,...documentSnapshot?{documentSnapshot}:{}}:{},...textOnly?{completionMode:'text-only'}:{},stream:true }) })
             if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
             return readNoteGenerationStream(response,progress=>{
               if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
@@ -275,6 +286,9 @@ export function installNotesService(options: {
           if (options.owner() !== owner) throw Error('账号已变化，请重新生成。')
           return result
         } finally {
+          // A cancelled snapshot-backed request ID is terminal too. Replaying
+          // the transport must not start a fresh edit after the user's Stop.
+          if(input.capabilityContext?.nativeSnapshot===1&&controller.signal.aborted&&!capabilityResults.has(cacheKey))capabilityResults.set(cacheKey,{fingerprint,result:{kind:'conversation',markdown:'生成已停止。',requiresReply:true}})
           if(input.capabilityContext&&options.owner()===owner){
             const endUrl=new URL('/sherlock/notes/session',base)
             await fetch(endUrl,{method:'POST',headers:{'content-type':'application/json',origin:endUrl.origin},signal:AbortSignal.timeout(3000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities-end',requestId:input.requestId})}).catch(()=>{})
