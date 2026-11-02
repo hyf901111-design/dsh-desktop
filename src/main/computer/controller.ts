@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { setTimeout as settle } from 'node:timers/promises'
+import type { BackgroundApplication, BackgroundInspection, BackgroundLaunchResult } from './background-launch'
 
 export interface DriverResult {
   isError: boolean
@@ -26,6 +27,7 @@ export class ComputerController {
   private runId = ''
   private observation?: Observation
   private windows = new Map<string, Map<number, number>>()
+  private applicationDiscoveries = new Map<string, Map<string, BackgroundApplication>>()
   private sequence = 0
   private budgets = new Map<string, { started: number; actions: number; failures: number; keyboardRefusals: number }>()
   private busy = false
@@ -34,6 +36,8 @@ export class ComputerController {
   private idle?: ReturnType<typeof setTimeout>
   constructor(private options: {
     driver(): Promise<ComputerDriver>
+    launchApplication?(application: BackgroundApplication, signal: AbortSignal): Promise<BackgroundLaunchResult>
+    inspectApplication?(application: BackgroundApplication, signal: AbortSignal): Promise<BackgroundInspection>
     assertAvailable?(): void
     prepareObservation?(result: { data: RecordValue; screenshots: DriverResult['images'] }, target: RecordValue, freshAfterMs?: number): Promise<{ data: RecordValue; screenshots: DriverResult['images'] }> | { data: RecordValue; screenshots: DriverResult['images'] }
     windowStream?: boolean
@@ -49,7 +53,7 @@ export class ComputerController {
   async stop(sessionId = this.owner, block = true): Promise<void> {
     if (!sessionId) return
     if (block) this.stopped.add(sessionId)
-    else { this.stopped.delete(sessionId); this.budgets.delete(sessionId); this.windows.delete(sessionId) }
+    else { this.stopped.delete(sessionId); this.budgets.delete(sessionId); this.windows.delete(sessionId); this.applicationDiscoveries.delete(sessionId) }
     if (sessionId !== this.owner) return
     this.abort?.abort(new Error('桌面控制已停止。'))
     this.observation = undefined
@@ -66,7 +70,7 @@ export class ComputerController {
     try { await this.options.stopCapture?.() }
     finally {
       try { await (await this.options.driver()).callTool('end_session', JSON.stringify({ session: run }), { signal: AbortSignal.timeout(5000) }) }
-      finally { this.owner = undefined; this.observation = undefined; this.options.targetWindow?.(); this.options.visibility(false); this.options.pointer(); clearTimeout(this.idle) }
+      finally { this.applicationDiscoveries.delete(this.owner!); this.owner = undefined; this.observation = undefined; this.options.targetWindow?.(); this.options.visibility(false); this.options.pointer(); clearTimeout(this.idle) }
     }
   }
   async run(input: unknown, signal: AbortSignal): Promise<unknown> {
@@ -127,6 +131,15 @@ export class ComputerController {
       clearTimeout(this.idle)
       this.options.visibility(true)
       if (v.op === 'apps') {
+        if (v.launch_path !== undefined) {
+          if (!this.options.inspectApplication || typeof v.bundle_id !== 'string' || !v.bundle_id) throw Error('准确路径发现需要 bundle_id 和可用的宿主应用解析接口。')
+          const inspected = await this.options.inspectApplication({ bundle_id: text(v.bundle_id, 256), launch_path: text(v.launch_path, 4096) }, combined)
+          const discoveries = this.applicationDiscoveries.get(id) ?? new Map<string, BackgroundApplication>()
+          for (const app of inspected.apps) if (app.bundle_id === v.bundle_id && app.launch_path)
+            discoveries.set(app.launch_path, { bundle_id: app.bundle_id, launch_path: app.launch_path })
+          this.applicationDiscoveries.set(id, discoveries)
+          return { data: inspected }
+        }
         const result = await call('list_apps')
         const apps = (result.data.apps ?? []) as RecordValue[]
         const query = v.bundle_id !== undefined ? text(v.bundle_id, 256).toLocaleLowerCase()
@@ -135,7 +148,8 @@ export class ComputerController {
           ? String(v.bundle_id !== undefined ? a.bundle_id ?? '' : a.name ?? '').toLocaleLowerCase().includes(query)
           : a.running === true)
         return { ...result, data: { ...result.data, installedAppCount: apps.length,
-          apps: matches.map(a => ({ name: a.name, bundle_id: a.bundle_id, ...(a.pid ? { pid: a.pid } : {}), running: !!a.running, active: !!a.active })) } }
+          apps: matches.map(a => ({ name: a.name, bundle_id: a.bundle_id, ...(a.pid ? { pid: a.pid } : {}),
+            ...(typeof a.launch_path === 'string' ? { launch_path: a.launch_path } : {}), running: !!a.running, active: !!a.active })) } }
       }
       const resolvePid = async () => {
         let pid = v.pid
@@ -164,24 +178,50 @@ export class ComputerController {
       if (v.op === 'open') {
         this.observation = undefined
         if (typeof v.bundle_id !== 'string' && typeof v.name !== 'string') throw Error('请提供已发现的应用名称或 bundle_id。')
-        // This driver has no documented background-only launch contract.
-        // Reuse running instances without activation; do not guess open flags.
+        // Resolve every installed/running copy afresh. A model path only selects
+        // a listed app; it can never become an arbitrary launch command or URL.
         const listed = await call('list_apps')
-        const matches = (listed.data.apps ?? []).filter((a: RecordValue) => a.running
-          && (v.bundle_id ? a.bundle_id === v.bundle_id : a.name === v.name))
-        if (matches.length === 1) return { ...await listWindows(positiveInteger(matches[0].pid)), action: {
-          performed: false, code: 'application_already_running', delivery_mode: 'background',
-          reason: '应用已运行；未激活或重新启动，请选择本次返回的准确窗口。' } }
-        return { action: { performed: false, code: matches.length ? 'application_ambiguous' : 'background_launch_unavailable',
-          delivery_mode: 'background', reason: matches.length
-            ? '发现多个同名应用实例；未激活，请先选择准确的 PID 和窗口。'
-            : '当前启动接口不能保证后台启动；未打开或激活应用，可先手动打开目标应用后继续。' },
-          next: matches.map((a: RecordValue) => ({ op: 'windows', pid: positiveInteger(a.pid) })) }
+        let matches: RecordValue[] = (listed.data.apps ?? []).filter((a: RecordValue) =>
+          (v.bundle_id ? a.bundle_id === v.bundle_id : a.name === v.name))
+        if (v.launch_path !== undefined) {
+          const path = text(v.launch_path, 4096)
+          matches = matches.filter(a => a.launch_path === path)
+          const known = this.applicationDiscoveries.get(id)?.get(path)
+          if (!matches.length && known && this.options.inspectApplication && known.bundle_id === v.bundle_id)
+            matches = (await this.options.inspectApplication(known, combined)).apps
+        }
+        if (v.pid !== undefined) matches = matches.filter(a => a.running && a.pid === positiveInteger(v.pid))
+        if (matches.length !== 1) return { action: { performed: false, dispatched: false,
+          code: matches.length ? 'application_ambiguous' : 'application_not_found', delivery_mode: 'background',
+          reason: matches.length ? '发现多个应用副本或实例；请用准确 launch_path 或 PID 选择，未启动或激活。'
+            : '应用不在本次发现的准确列表中，未启动。请先 apps 查询名称、bundle_id 和 launch_path。' },
+          next: matches.map(a => a.running ? { op: 'windows', pid: positiveInteger(a.pid) }
+            : { op: 'open', bundle_id: a.bundle_id, ...(a.launch_path ? { launch_path: a.launch_path } : {}) }) }
+        const selected = matches[0]!
+        if (selected.running) return { ...await listWindows(positiveInteger(selected.pid)), action: {
+          performed: false, dispatched: false, code: 'application_already_running', delivery_mode: 'background',
+          pid: selected.pid, bundle_id: selected.bundle_id, launch_path: selected.launch_path,
+          reason: '准确应用已运行；未激活或重新启动，请选择本次返回的准确窗口。' } }
+        if (!this.options.launchApplication || typeof selected.bundle_id !== 'string' || !selected.bundle_id) return {
+          action: { performed: false, dispatched: false, code: 'background_launch_unavailable', delivery_mode: 'background',
+            reason: '宿主的后台启动接口不可用；未调用可能激活前台的驱动启动。' } }
+        const action = await this.options.launchApplication({ bundle_id: selected.bundle_id,
+          // Only an explicit exact-path choice disambiguates registered copies.
+          // Do not turn a driver's preferred installed path into silent consent.
+          ...(typeof v.launch_path === 'string' && typeof selected.launch_path === 'string' ? { launch_path: selected.launch_path } : {}) }, combined)
+        if ((action.performed === true || action.code === 'application_already_running') && action.pid) {
+          try { return { ...await listWindows(positiveInteger(action.pid)), action } }
+          catch { return { action: { ...action, ...(combined.aborted && action.dispatched
+              ? { performed: null, effect: 'unknown', code: 'launch_readback_interrupted_after_dispatch' } : {}), readback_unavailable: true,
+            reason: '后台启动已回报，但窗口回读未完成；请先重新发现准确 PID 和窗口，不自动重试启动。' } } }
+        }
+        if (action.code === 'launch_focus_changed') this.stopped.add(id)
+        return { action }
       }
       const observe = async (target: RecordValue, freshAfterMs?: number) => {
         this.observation = undefined
         // Observation must not activate or raise the target while the user works.
-        const focus = { requested: false, verified: false, appActive: false, policy: 'background-only' }
+        const focus = { requested: false, verified: false, appActive: null, policy: 'background-only' }
         let result = target.kind === 'desktop'
           ? await call('get_desktop_state', { session: this.runId })
           : await call('get_window_state', { pid: target.pid, window_id: target.window_id, session: this.runId, max_elements: 500, max_depth: 15,
@@ -192,7 +232,7 @@ export class ComputerController {
         if (!result.screenshots.length) throw Error('没有获得有效桌面截图，停止操作；请检查屏幕录制权限。')
         const revision = `view-${++this.sequence}`
         this.observation = { revision, target, data: result.data, screenshots: result.screenshots, at: Date.now() }
-        this.options.targetWindow?.(target.kind === 'window' ? target : undefined, target.kind === 'window' ? result.data.window_bounds : undefined, focus.appActive)
+        this.options.targetWindow?.(target.kind === 'window' ? target : undefined, target.kind === 'window' ? result.data.window_bounds : undefined, false)
         return { revision, target, focus, coordinateSpace: '返回图片的像素坐标；窗口图以窗口左上角为原点，桌面图以主显示器左上角为原点。', ...result }
       }
       if (v.op === 'observe') {
@@ -245,8 +285,10 @@ export class ComputerController {
       if (token !== undefined) {
         const element = observed.data.elements?.find((e: RecordValue) => e.element_token === token)
         if (!element) throw Error('控件不在最近一次观察中，请重新 observe。')
-        const webField = ['type', 'key', 'hotkey'].includes(v.op) && element.in_web_content === true
-          ? webFieldPixelPoint(observed.data, element) : undefined
+        // Semantic web-field refusal does not depend on usable geometry. A
+        // missing/off-window frame must not reopen the untrusted AXValue path.
+        webKeyboardTarget = ['type', 'key', 'hotkey'].includes(v.op) && element.in_web_content === true
+        const webField = webKeyboardTarget ? webFieldPixelPoint(observed.data, element) : undefined
         if (webField) {
           // Chromium/Electron AXValue can echo a write without the renderer
           // accepting it. Mark this unsupported route before dispatch instead.

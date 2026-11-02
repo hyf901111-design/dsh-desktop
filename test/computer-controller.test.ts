@@ -44,12 +44,104 @@ it('lists running applications by default and finds installed applications by na
     ] }) } : original(name, raw, options))
   const running = await run({ op: 'apps' })
   expect(running.data.apps).toEqual([
-    { name: '易飞书', bundle_id: 'com.example.lark', pid: 9, running: true, active: true },
+    { name: '易飞书', bundle_id: 'com.example.lark', pid: 9, launch_path: '/Applications/Lark.app', running: true, active: true },
     { name: '画板', bundle_id: 'com.example.board', pid: 10, running: true, active: false }
   ])
   expect(running.data.installedAppCount).toBe(3)
   const searched = await run({ op: 'apps', name: 'photo' })
   expect(searched.data.apps).toEqual([{ name: 'Photoshop 2025', bundle_id: 'com.adobe.Photoshop', running: false, active: false }])
+})
+it('launches only a fresh exact installed identity, ignores arbitrary options, and reads back its PID', async () => {
+  const launchApplication = vi.fn(async (_application: Record<string, any>) => ({ performed: true, dispatched: true, code: 'application_started', delivery_mode: 'background' as const, pid: 9 }))
+  const { run, callTool } = setup({ launchApplication })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_apps' ? { isError: false, text: '', images: [],
+    structuredJson: JSON.stringify({ apps: [{ name: 'Target', bundle_id: 'com.example.target', launch_path: '/Applications/Target.app', running: false }] }) }
+    : original(name, raw, options))
+  const result = await run({ op: 'open', name: 'Target', launch_path: '/Applications/Target.app', activates: true, additional_arguments: ['--unsafe'], urls: ['/private'] })
+  expect(launchApplication).toHaveBeenCalledWith({ bundle_id: 'com.example.target', launch_path: '/Applications/Target.app' }, expect.any(AbortSignal))
+  expect(result.action.performed).toBe(true)
+  expect(result.next).toEqual([{ op: 'observe', pid: 9, window_id: 10 }])
+  expect(callTool.mock.calls.some(([name]) => ['launch_app', 'bring_to_front'].includes(name))).toBe(false)
+  await run({ op: 'open', bundle_id: 'com.example.target', launch_path: '/private/Injected.app' })
+  expect(launchApplication).toHaveBeenCalledOnce()
+})
+it('never chooses among same-bundle copies and permits explicit discovered PID or app path', async () => {
+  const launchApplication = vi.fn(async (_application: Record<string, any>) => ({ performed: true, dispatched: true, code: 'application_started', delivery_mode: 'background' as const, pid: 9 }))
+  const { run, callTool } = setup({ launchApplication })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_apps' ? { isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [
+    { name: 'EWork', bundle_id: 'com.evanarts.sherlock', launch_path: '/Applications/EWork.app', pid: 9, running: true },
+    { name: 'EWork', bundle_id: 'com.evanarts.sherlock', launch_path: '/Applications/EWork 116.app', running: false }
+  ] }) } : original(name, raw, options))
+  expect((await run({ op: 'open', bundle_id: 'com.evanarts.sherlock' })).action.code).toBe('application_ambiguous')
+  expect(launchApplication).not.toHaveBeenCalled()
+  expect((await run({ op: 'open', name: 'EWork', pid: 9 })).action.code).toBe('application_already_running')
+  await run({ op: 'open', bundle_id: 'com.evanarts.sherlock', launch_path: '/Applications/EWork 116.app' })
+  expect(launchApplication).toHaveBeenCalledOnce()
+  expect(launchApplication.mock.calls[0]![0].launch_path).toBe('/Applications/EWork 116.app')
+})
+it('returns uncertain launch without retry or window readback after dispatch cancellation', async () => {
+  const launchApplication = vi.fn(async (_application: Record<string, any>) => ({ performed: null, dispatched: true, code: 'launch_cancelled_after_dispatch', effect: 'unknown', delivery_mode: 'background' as const }))
+  const { run, callTool } = setup({ launchApplication })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_apps' ? { isError: false, text: '', images: [],
+    structuredJson: JSON.stringify({ apps: [{ name: 'Target', bundle_id: 'com.example.target', running: false }] }) } : original(name, raw, options))
+  const result = await run({ op: 'open', name: 'Target' })
+  expect(result.action.performed).toBeNull()
+  expect(callTool.mock.calls.some(([name]) => name === 'list_windows')).toBe(false)
+  expect(launchApplication).toHaveBeenCalledOnce()
+})
+it('discovers an unregistered owned app read-only before allowing its exact identity to launch', async () => {
+  const application = { name: 'Owned QA', bundle_id: 'org.example.qa', launch_path: '/tmp/OwnedQA.app', running: false, active: false }
+  const inspectApplication = vi.fn(async () => ({ code: 'application_identity_verified', apps: [application] }))
+  const launchApplication = vi.fn(async () => ({ performed: true, dispatched: true, code: 'application_started', delivery_mode: 'background' as const, pid: 9 }))
+  const { run } = setup({ inspectApplication, launchApplication })
+  const target = { bundle_id: application.bundle_id, launch_path: application.launch_path }
+  expect((await run({ op: 'open', ...target })).action.code).toBe('application_not_found')
+  expect(launchApplication).not.toHaveBeenCalled()
+  const discovered = await run({ op: 'apps', ...target })
+  expect(discovered.data.apps).toEqual([application])
+  expect(launchApplication).not.toHaveBeenCalled()
+  await run({ op: 'open', ...target })
+  expect(inspectApplication).toHaveBeenCalledTimes(2)
+  expect(launchApplication).toHaveBeenCalledWith(target, expect.any(AbortSignal))
+  await run({ op: 'release' })
+  expect((await run({ op: 'open', ...target })).action.code).toBe('application_not_found')
+  expect(launchApplication).toHaveBeenCalledOnce()
+})
+it('does not launch if a discovered owned app identity changes before open', async () => {
+  const application = { name: 'Owned QA', bundle_id: 'org.example.qa', launch_path: '/tmp/OwnedQA.app', running: false, active: false }
+  const inspectApplication = vi.fn().mockResolvedValueOnce({ code: 'application_identity_verified', apps: [application] })
+    .mockResolvedValueOnce({ code: 'application_identity_mismatch', apps: [] })
+  const launchApplication = vi.fn()
+  const { run } = setup({ inspectApplication, launchApplication })
+  await run({ op: 'apps', bundle_id: application.bundle_id, launch_path: application.launch_path })
+  const result = await run({ op: 'open', bundle_id: application.bundle_id, launch_path: application.launch_path })
+  expect(result.action.code).toBe('application_not_found')
+  expect(launchApplication).not.toHaveBeenCalled()
+})
+it('halts the desktop lease when a background launch reports unexpected foreground activation', async () => {
+  const launchApplication = vi.fn(async () => ({ performed: null, dispatched: true, code: 'launch_focus_changed', terminal: true, delivery_mode: 'background' as const }))
+  const { run, callTool } = setup({ launchApplication })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_apps' ? { isError: false, text: '', images: [],
+    structuredJson: JSON.stringify({ apps: [{ name: 'Target', bundle_id: 'com.example.target', running: false }] }) } : original(name, raw, options))
+  expect((await run({ op: 'open', name: 'Target' })).action.terminal).toBe(true)
+  await expect(run({ op: 'observe', pid: 9, window_id: 10 })).rejects.toThrow('本轮桌面控制已停止')
+  expect(callTool.mock.calls.some(([name]) => name === 'bring_to_front')).toBe(false)
+})
+it.each(['type', 'key', 'hotkey'])('refuses web %s tokens even without usable field geometry', async op => {
+  for (const frame of [undefined, { x: 100, y: 60, w: 0, h: 40 }, { x: 9999, y: 9999, w: 40, h: 40 }]) {
+    const pointer = vi.fn()
+    const { run, callTool } = setup({ pointer, prepareObservation: result => ({ ...result,
+      data: { ...result.data, elements: [{ element_token: 'web', role: 'AXTextArea', in_web_content: true, frame }] } }) })
+    const observed = await run({ op: 'observe', pid: 9, window_id: 10 })
+    const result = await run({ op, element_token: 'web', revision: observed.revision, text: 'content', key: 'return', keys: ['cmd', 'a'] })
+    expect(result.action).toMatchObject({ performed: false, code: 'background_input_unavailable', unsupported_reason: 'web_text_field' })
+    expect(callTool.mock.calls.some(([name]) => ['type_text', 'press_key', 'hotkey', 'bring_to_front'].includes(name))).toBe(false)
+    expect(pointer.mock.calls.some(([position]) => position !== undefined)).toBe(false)
+  }
 })
 it.each([{ x: 800, y: 1 }, { x: -1, y: 1 }, { x: NaN, y: 1 }, { x: 1, y: 1, pid: 12 }, { element_token: 'guessed' }])('rejects out of frame and mismatched targets %j', async bad => {
   const { run, callTool } = setup()
@@ -192,10 +284,10 @@ it('observes a known app without activating it and skips its decorative watermar
   })
   const first = await run({ op: 'observe', name: '易飞书' })
   expect(first.target).toEqual({ kind: 'window', pid: 9, window_id: 10 })
-  expect(first.focus).toEqual({ requested: false, verified: false, appActive: false, policy: 'background-only' })
+  expect(first.focus).toEqual({ requested: false, verified: false, appActive: null, policy: 'background-only' })
   expect(targetWindow).toHaveBeenCalledWith(first.target, first.data.window_bounds, false)
   const second = await run({ op: 'observe', pid: 9, window_id: 10 })
-  expect(second.focus).toEqual({ requested: false, verified: false, appActive: false, policy: 'background-only' })
+  expect(second.focus).toEqual({ requested: false, verified: false, appActive: null, policy: 'background-only' })
   expect(callTool.mock.calls.filter(([name]) => name === 'bring_to_front')).toHaveLength(0)
   expect(callTool.mock.calls.some(([name]) => name === 'bring_to_front')).toBe(false)
 })
@@ -221,7 +313,7 @@ it('never requests activation even when the driver could only activate the appli
     ? { isError: true, text: 'Exact window unverified', images: [], structuredJson: JSON.stringify({ activated: false, process_activated: true, code: 'bring_to_front_exact_window_unverified' }) }
     : original(name, raw, options))
   const view = await run({ op: 'observe', pid: 9, window_id: 10 })
-  expect(view.focus).toEqual({ requested: false, verified: false, appActive: false, policy: 'background-only' })
+  expect(view.focus).toEqual({ requested: false, verified: false, appActive: null, policy: 'background-only' })
   expect(view.target.window_id).toBe(10)
 })
 it.each([
@@ -389,7 +481,7 @@ it('does not retain a focused window assumption between sibling-window observati
   const first = await run({ op: 'observe', pid: 9, window_id: 10 })
   const second = await run({ op: 'observe', pid: 9, window_id: 11 })
   const third = await run({ op: 'observe', pid: 12, window_id: 20 })
-  for (const result of [first, second, third]) expect(result.focus).toEqual({ requested: false, verified: false, appActive: false, policy: 'background-only' })
+  for (const result of [first, second, third]) expect(result.focus).toEqual({ requested: false, verified: false, appActive: null, policy: 'background-only' })
   expect(second.target.window_id).toBe(11)
   expect(third.target.pid).toBe(12)
   expect(callTool.mock.calls.some(([name]) => name === 'bring_to_front')).toBe(false)
