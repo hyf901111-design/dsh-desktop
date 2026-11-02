@@ -32,7 +32,14 @@ export function createHomeGuideHover(document:Document,runId:string){
   if(closed)return
   refresh()
   const hit=document.elementFromPoint?.(x,y)??null
-  if(current!==hit){restoreMarks();for(let node=hit;node;node=node.parentElement){marked.set(node,node.getAttribute(attribute));node.setAttribute(attribute,runId)}const previous=current;current=hit;if(previous?.isConnected)mouse(previous,'mouseout',hit,x,y);if(hit?.isConnected)mouse(hit,'mouseover',previous,x,y)}
+  if(current!==hit){restoreMarks();for(let node=hit;node;node=node.parentElement){
+    // Attribute writes inside a contenteditable host are document mutations to
+    // ProseMirror, even when the attribute is only a visual hover token. Keep
+    // text/marks and their SVG descendants untouched; non-editable NodeView
+    // controls and ancestors outside the editing host still mirror real hover.
+    let html:Element|null=node;while(html&&!(html instanceof win.HTMLElement))html=html.parentElement
+    if(html instanceof win.HTMLElement&&html.isContentEditable)continue
+    marked.set(node,node.getAttribute(attribute));node.setAttribute(attribute,runId)}const previous=current;current=hit;if(previous?.isConnected)mouse(previous,'mouseout',hit,x,y);if(hit?.isConnected)mouse(hit,'mouseover',previous,x,y)}
  }
  const clear=()=>{const previous=current;current=null;restoreMarks();if(previous?.isConnected)mouse(previous,'mouseout',null,0,0)}
  const observer=new win.MutationObserver(records=>{if(records.some(record=>record.target instanceof win.HTMLStyleElement||record.target instanceof win.HTMLLinkElement||[...record.addedNodes].some(node=>node instanceof win.Element&&(node.matches('style,link[rel=stylesheet]')||node.querySelector('style,link[rel=stylesheet]')))))dirty=true})
