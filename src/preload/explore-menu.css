@@ -120,6 +120,9 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 .odyssey-explore-quick .odyssey-operations-quick-card{--odyssey-operations-card-tint:rgb(235 245 255/.94)}
 [data-ds-dark-theme] .odyssey-explore-quick .odyssey-operations-quick-card{--odyssey-operations-card-tint:rgb(30 42 65/.90)}
 .odyssey-explore .odyssey-home-operations[data-odyssey-operations-deck]{left:50%;top:0;width:780px;height:346px;translate:none;transform:translateX(-50%) scale(var(--odyssey-operations-deck-scale,1));transform-origin:center top;opacity:1;overflow:visible}
+/* The modal already floats over a blurred page. Card outer shadows are clipped
+   by its quick-start viewport into vertical bands along the sides and gaps. */
+.odyssey-explore [data-odyssey-operations-deck] :is(.odyssey-operations-usecase,.odyssey-operations-quick-card){box-shadow:none}
 .odyssey-explore [data-odyssey-operations-deck]>.odyssey-operations-heading{display:none}
 .odyssey-explore [data-odyssey-operations-deck]>.odyssey-operations-grid{top:0}
 .odyssey-explore .odyssey-operations-description[data-explore-preparing]{padding-left:27px;animation:odyssey-explore-veil 200ms ease-out both}
