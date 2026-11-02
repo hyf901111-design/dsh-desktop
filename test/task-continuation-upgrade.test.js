@@ -68,8 +68,17 @@ it('preserves the compact owner and continuation budget when the real reading pa
  expect(()=>patchTaskProgressClient(patchFigmaReadingConversation(current.replace('+8+(root.querySelector("[data-task-continuation]")?.getBoundingClientRect().height||0);','+8;')))).toThrow('footer installation drifted')
  expect(()=>patchFigmaReadingConversation(current+'\n'+marker)).toThrow('compact owner boundary drifted')
  expect(()=>patchFigmaReadingConversation(marker+'\n'+current.replace(marker,''))).toThrow('compact owner boundary drifted')
- // The known pre-marker reading hook still upgrades through its own patch.
- const legacy=raw.replace(marker,'')
+ // A current footer with only its compact-owner marker removed is damaged;
+ // reading must not silently rebuild it into an accepted current install.
+ expect(()=>patchTaskProgressClient(patchFigmaReadingConversation(current.replace(marker,'')))).toThrow('footer installation drifted')
+ // Restore the exact frozen pre-footer declarations before removing their old
+ // reading marker. Deleting just a marker from an already current SDK is not
+ // a legacy installation and must not be used as a successful upgrade fixture.
+ const legacy=legacyTaskResumeClient(current).replace(marker,'')
+ expect(legacy).not.toContain('/* sherlock:task-continue-footer:v1 */')
+ expect(legacy).not.toContain('"data-task-continuation"')
+ expect(legacy).not.toContain('root.querySelector("[data-task-continuation]")')
+ expect(legacy).toContain('const expanded=40+Math.min(168,list.scrollHeight)+8;')
  const upgraded=patchTaskProgressClient(patchFigmaReadingConversation(legacy))
  expect(upgraded.split(marker)).toHaveLength(2);expect(upgraded.includes(hook)).toBe(true)
  expect(patchTaskProgressClient(patchFigmaReadingConversation(upgraded))===upgraded).toBe(true)
