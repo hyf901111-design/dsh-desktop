@@ -1,4 +1,4 @@
-import {expect,it,vi} from 'vitest'
+import {beforeAll,expect,it,vi} from 'vitest'
 import {createNotesActivityStore} from '../scripts/lib/notes-activity.mjs'
 import React from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
@@ -6,6 +6,19 @@ import {readFile} from 'node:fs/promises'
 import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 import {patchFigmaFinalConversation} from '../scripts/lib/patch-figma-final-shell.mjs'
 import {capabilityReceiptText} from '../packages/dsh-research-task-runtime/client-capabilities.js'
+
+// Full production fixture preparation is shared, but each test still executes
+// its own real rebuild/migration. Strings are immutable; no test can mutate the
+// installed source used by another case. Keep the default finite hook timeout.
+let activityPatchFixture
+beforeAll(async()=>{
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ activityPatchFixture=Object.freeze({source,installed:patchNotesActivity(patchFigmaFinalConversation(source))})
+})
+const conciseProgress='/* ework:notes-concise-progress:v1 */ const expandable = entry.noteTask ? false : !!entry.canvasTask || detailGroups.length > 0;'
+const originalProgress='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
+const previousProgress='/* ework:notes-shared-reasoning:v1 */ const expandable = !!entry.noteTask?.reasoning || !!entry.canvasTask || detailGroups.length > 0;'
+const previousDetails="open && entry.noteTask?.reasoning && react.createElement('div',{className:ChatView_module_css_default.executionDetails},react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:entry.noteTask.reasoning}],streaming:false,interrupted:false,t})), "
 
 it('keeps ordinary right-side replies unchanged while obsolete guide preview markers cannot create another card',async()=>{
  const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs');globalThis.react=React
@@ -25,8 +38,7 @@ it('keeps ordinary right-side replies unchanged while obsolete guide preview mar
 })
 
 it('retains note reference chips when the production shell patch runs again during a rebuild',async()=>{
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- const installed=patchNotesActivity(patchFigmaFinalConversation(source))
+ const {installed}=activityPatchFixture
  expect(patchFigmaFinalConversation(installed)).toBe(installed)
  expect(patchNotesActivity(patchFigmaFinalConversation(installed))).toBe(installed)
  expect(installed).toContain('noteReferences?.map(reference=>react.createElement(EWorkNoteMessageReference')
@@ -117,25 +129,39 @@ it('drops internal reasoning only from the Notes presentation store without chan
  expect(row.reasoning).toBe('old private protocol');store.dispose()
 })
 
-it('migrates the old Notes reasoning disclosure without changing canvas and native detail bodies',async()=>{
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- const installed=patchNotesActivity(patchFigmaFinalConversation(source))
+it('keeps concise Notes progress and canvas/native detail bodies during a current reinstall',async()=>{
+ const {installed}=activityPatchFixture
  expect(installed.includes('/* ework:notes-concise-progress:v1 */')).toBe(true)
  expect(installed.includes('const expandable = entry.noteTask ? false : !!entry.canvasTask || detailGroups.length > 0;')).toBe(true)
  expect(installed.includes('text:entry.noteTask.reasoning')).toBe(false)
  expect(installed.includes('row.outputChars,row.reasoning?.length')).toBe(false)
  expect(installed.includes('open && entry.canvasTask && react.createElement')).toBe(true)
  expect(patchNotesActivity(installed)).toBe(installed)
- const original='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
- const previous='/* ework:notes-shared-reasoning:v1 */ const expandable = !!entry.noteTask?.reasoning || !!entry.canvasTask || detailGroups.length > 0;'
- const details="open && entry.noteTask?.reasoning && react.createElement('div',{className:ChatView_module_css_default.executionDetails},react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:entry.noteTask.reasoning}],streaming:false,interrupted:false,t})), "
- const fresh=source.replace(previous,original).replace(details,'')
+})
+
+it('installs concise Notes progress from a real disclosure-free production-shell baseline',async()=>{
+ const {source,installed}=activityPatchFixture
+ // A fully patched SDK no longer contains the old disclosure. Explicitly
+ // restore the disclosure-free anchor rather than letting replace be a no-op.
+ const fresh=source.replace(previousProgress,originalProgress).replace(previousDetails,'').replace(conciseProgress,originalProgress)
+ expect(fresh).not.toContain('/* ework:notes-concise-progress:v1 */')
+ expect(fresh.split(originalProgress)).toHaveLength(2)
  expect(patchNotesActivity(patchFigmaFinalConversation(fresh))===installed).toBe(true)
+})
+
+it('migrates the old Notes reasoning disclosure without changing canvas and native detail bodies',async()=>{
+ const {installed}=activityPatchFixture,canvas='open && entry.canvasTask && react.createElement',signature='row.outputChars].join'
+ for(const anchor of [conciseProgress,canvas,signature])expect(installed.split(anchor)).toHaveLength(2)
+ const previous=installed.replace(conciseProgress,previousProgress).replace(canvas,previousDetails+canvas).replace(signature,'row.outputChars,row.reasoning?.length].join')
+ expect(previous).toContain(previousProgress);expect(previous).toContain(previousDetails)
+ expect(previous).toContain('row.outputChars,row.reasoning?.length')
+ expect(()=>patchNotesActivity(previous.replace(previousDetails,''))).toThrow('笔记无法移除旧思考过程。')
+ expect(patchNotesActivity(patchFigmaFinalConversation(previous))).toBe(installed)
 })
 
 it('shows remaining public replies after real receipts in the injected projection, live and on cold history replay',async()=>{
  const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs')
- const installed=patchNotesActivity(patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+ const {installed}=activityPatchFixture
  expect(installed).toContain(EWorkNoteConversationRow.toString())
  const raw=await readFile('scripts/lib/notes-activity.mjs','utf8'),source=raw.slice(raw.indexOf('export function EWorkNoteConversationRow')+7,raw.indexOf('export function EWorkNotesActivity'))
  const Projected=new Function('react','eworkNoteCapabilityReceiptText','noteUiText','useNotesActivityLocale','document','return ('+source+')')(React,capabilityReceiptText,value=>value,()=>{}, {documentElement:{dataset:{odysseyLocale:'en'}}})
