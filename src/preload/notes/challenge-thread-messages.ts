@@ -14,4 +14,3 @@ export function challengeThreadMessages(comments:any[],budget=10000):Array<{role
  }
  return result
 }
-
