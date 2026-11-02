@@ -594,7 +594,7 @@ function componentSkillInstruction(profile = 'full',templateType) {
   }
 }
 
-export function buildResearchTaskPrompt(request) {
+export function buildResearchTaskPrompt(request, { canonicalPolicySourceGuidance = false } = {}) {
   const validated = validateResearchTaskStart(request)
   if (validated.kind === 'create') {
     const plannedPanel = workbenchPanelPrompt(validated.prompt)
@@ -635,7 +635,7 @@ export function buildResearchTaskPrompt(request) {
     return [
       '请按用户的画布容器需求创建可直接呈现的交付物，以 JSON 对象返回。',
       componentSkillInstruction(),
-      ...(containerAllowsWebSearch(validated.prompt) ? [freeDataInstruction()] : []),
+      ...(containerAllowsWebSearch(validated.prompt) ? [freeDataInstruction(undefined, { includePolicySourceGuidance: !canonicalPolicySourceGuidance })] : []),
       '只生成用户要求的一种成品；不要附加未要求的摘要、指标卡、背景介绍、方法论、示例数据或重复结论。用户指定条数、章节、长度、格式时严格遵守。简单表格、指标、列表直接填写所需内容，不为它们生成 HTML 包装或额外解释；用户明确要求 HTML、交互、详细报告时保留该要求。',
       ...(/行情|股价|股票|证券|K\s*线|蜡烛图|candlestick|stock quote/iu.test(validated.prompt) && containerAllowsWebSearch(validated.prompt) ? [FINANCIAL_WIDGET_GUIDANCE] : []),
       '组件以用户要看的主体内容为中心，只做一两项直接相关的补充；不要添加内容目录、阅读切换、重复标题、导航链接条或无实际作用的搜索筛选。来源和指标解释放在相关内容的详情中。行情监控面板优先行情核心数值和必要趋势，缺失值在对应指标内简短注明，不扩写为公司全景研究或数据缺口报告。',
@@ -820,10 +820,10 @@ export async function loadResearchFileText(source, signal) {
 
 export async function buildResearchTaskExecutionPrompt(
   request,
-  { loadFileText = loadResearchFileText, signal, onResolvedSources } = {}
+  { loadFileText = loadResearchFileText, signal, onResolvedSources, canonicalPolicySourceGuidance = false } = {}
 ) {
   const validated = validateResearchTaskStart(request)
-  if (validated.kind === 'container') return buildResearchTaskPrompt(validated)
+  if (validated.kind === 'container') return buildResearchTaskPrompt(validated, { canonicalPolicySourceGuidance })
   signal?.throwIfAborted()
   // The bundled component skill is part of this prompt and can grow between
   // releases. Reserve its actual byte length before selecting file excerpts.
@@ -1555,8 +1555,12 @@ export class ResearchTaskRuntime {
         }catch(error){throw new ResearchTaskError('GENERATION_FAILED',error.message)}
       }
       if(task.newsCoverage?.draft&&(!acceptArtifactOutput(task.newsCoverage.draft)||componentFeedEvidenceIssue(task.newsCoverage.draft,sourceRecords,feedOptions)||newsTableIssueFor(task.newsCoverage.draft)))delete task.newsCoverage.draft
+      // The generic builder carries its policy outside the optional data skill.
+      // Pass ownership as host metadata, never infer it from user/evidence text.
+      const canonicalPolicySourceGuidance = task.kind === 'container' && !workbenchPanelFormat(task.prompt)
       const executionPrompt = (await buildResearchTaskExecutionPrompt(taskRequest(task), {
         signal: task.controller.signal,
+        canonicalPolicySourceGuidance,
         onResolvedSources: async (sources) => {
           if (task.cancelRequested || terminalState(task.state)) return
           task.sources = sources
@@ -1569,6 +1573,7 @@ export class ResearchTaskRuntime {
       const startHandle = (prompt, synthesisOnly = false, preservePrompt = false) => this.adapter.start({
         synthesisOnly,
         preservePrompt,
+        policySourceGuidanceIncluded: canonicalPolicySourceGuidance,
         ...(task.hostContext ? {hostContext:task.hostContext} : {}),
         taskId: task.taskId,
         parentSessionId: task.parentSessionId,
@@ -2254,7 +2259,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL){if(task.publicData)throw Error('宿主自动刷新绑定不可用');return}
       return callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
     },
-    async start({ parentSessionId, kind, query, prompt, hostContext, signal, onSessionEvent, onProgress, synthesisOnly = false, preservePrompt = false, onWorkbenchPlan, imageContent = [], executionContext = '' }) {
+    async start({ parentSessionId, kind, query, prompt, hostContext, signal, onSessionEvent, onProgress, synthesisOnly = false, preservePrompt = false, policySourceGuidanceIncluded = false, onWorkbenchPlan, imageContent = [], executionContext = '' }) {
       const parent = await resolveParent(parentSessionId)
       await ctx.get?.('eworkIntegrations')?.sync()
       const bundledSkills = { component: bundledSkillEnabled(ctx, 'ework-workbench-components'), data: bundledSkillEnabled(ctx, 'ework-free-data-sources') }
@@ -2306,6 +2311,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       let declaredChartContract
       if(kind==='container')workbenchPanelPrompt(query,bindingRequested,contract=>{declaredChartContract=contract})
       const canonicalBindingProtocol = boundTemplate && !preservePrompt && bindingRequested
+      // Initial typed requests replace the producer's prompt, so they cannot
+      // inherit ownership. Retained generic repair prompts keep their contract;
+      // synthesis-only repairs do not append online data/source guidance.
+      const retainsProducerPolicySourceGuidance = policySourceGuidanceIncluded && !(boundTemplate && !preservePrompt)
       let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
       const noteGuidance=surface==='note'&&permitsTools&&typeof noteSourceGuidance==='function'?noteSourceGuidance(scopedSchemas)||'':''
       if(kind==='container'&&permitsTools){
@@ -2322,12 +2331,12 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (deferredSynthesis) effectivePrompt += '\n当前为无工具的离线组件生成。所需组件技能、交付格式、宿主交互接口、原始需求和共同事实均已附在本请求；直接生成本组件，不再读取技能、文件或应用实现。保留要求的业务交互与全部记录，不以静态说明替代。'
       if (bundledSkills.data && permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) {
-        const guidance=freeDataInstruction()
+        const guidance=freeDataInstruction(undefined, { includePolicySourceGuidance: !retainsProducerPolicySourceGuidance })
         if(!effectivePrompt.includes(guidance))effectivePrompt += '\n' + guidance
       }
       if (permitsTools) effectivePrompt += preferredSources.length
         ? `\n${componentSourceInstruction(preferredSources, sourceRequest)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
-        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+POLICY_SOURCE_GUIDANCE+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
+        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+(retainsProducerPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -2924,7 +2933,7 @@ export function createSharedBoardExecutor(ctx) {
           canvasNodeId: request.taskId ?? 'shared-board',
           kind: 'container',
           prompt: '按照下方共享画板任务的明确需求和授权资料创建组件。'
-        }) + '\n\n' + prompt
+        }, { canonicalPolicySourceGuidance: true }) + '\n\n' + prompt
       }
       let workbenchPlan
       const start = (text, synthesisOnly = false) => (request.kind === 'board' || request.kind === 'qa' ? mainAdapter : sharedAdapter).start({
@@ -2934,6 +2943,7 @@ export function createSharedBoardExecutor(ctx) {
         query: request.query ?? request.prompt,
         prompt: text,
         synthesisOnly,
+        policySourceGuidanceIncluded: structured,
         signal,
         onSessionEvent: report,
         onProgress: event => {
