@@ -23031,10 +23031,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "暂停任务卡片内收与旧版阅读区升级重入修复",
+        "featureName": "探索卡片色带与笔记悬停修复及组件来源规则去重后继",
         "branch": "codex/feat/goal-notes-plan-combined-20261102",
         "baseCommit": "c9778b40b254631b812aab7d07298b37ed592737",
-        "tipCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
+        "tipCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
         "commits": [
           {
             "commit": "8153fff93d5de0ffe50c929dec8cd6877b8da1dd",
@@ -23153,9 +23153,79 @@
               "69a75b3685c6f25d0f7643c675b2cfd720c22c9c"
             ],
             "subject": "集成：修复阅读区重入覆盖暂停任务卡高度预算"
+          },
+          {
+            "commit": "0ec7edc881b81c4752d8aa6e6ee15f010ffa5073",
+            "parents": [
+              "cdd65cf520502715b054be594544db6fff3b2ea6"
+            ],
+            "subject": "修复：图片预览关闭图标保持圆形按钮内居中"
+          },
+          {
+            "commit": "b8ecc0cf4eef21a1c8dc649fde016b8e0fde0fd7",
+            "parents": [
+              "0ec7edc881b81c4752d8aa6e6ee15f010ffa5073"
+            ],
+            "subject": "修复：本地构建仅退出并核验当前应用路径，保留独立对比客户端"
+          },
+          {
+            "commit": "3ec61808da86db731e6094222fbc82aed9101e67",
+            "parents": [
+              "cdd65cf520502715b054be594544db6fff3b2ea6"
+            ],
+            "subject": "修复：模拟悬停避开笔记编辑DOM并保留框选与控件反馈"
+          },
+          {
+            "commit": "fa50405a86d8660835035d85a6922ef32c110c8c",
+            "parents": [
+              "b8ecc0cf4eef21a1c8dc649fde016b8e0fde0fd7",
+              "3ec61808da86db731e6094222fbc82aed9101e67"
+            ],
+            "subject": "集成：修复笔记演示悬停导致的选区中断并保留真实控件反馈"
+          },
+          {
+            "commit": "4d3fdeada3136745e94e92d496a3a4302b23b8b6",
+            "parents": [
+              "0ec7edc881b81c4752d8aa6e6ee15f010ffa5073"
+            ],
+            "subject": "优化研究组件请求中宿主来源规则的重复拼接"
+          },
+          {
+            "commit": "d6adf7dc5f20479bba51b5e19a2159ae0734c639",
+            "parents": [
+              "fa50405a86d8660835035d85a6922ef32c110c8c",
+              "4d3fdeada3136745e94e92d496a3a4302b23b8b6"
+            ],
+            "subject": "合入研究组件宿主来源规则去重修复"
+          },
+          {
+            "commit": "927c5f0bfda154db6adac93bd7d746ef04801487",
+            "parents": [
+              "fa50405a86d8660835035d85a6922ef32c110c8c"
+            ],
+            "subject": "修复探索页用例卡片边缘与间隙的竖向阴影色块"
+          },
+          {
+            "commit": "0f8981240903d177bb916d41683e4e1c232fc808",
+            "parents": [
+              "d6adf7dc5f20479bba51b5e19a2159ae0734c639",
+              "927c5f0bfda154db6adac93bd7d746ef04801487"
+            ],
+            "subject": "合入探索卡片外缘色块层修复"
+          },
+          {
+            "commit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "parents": [
+              "0f8981240903d177bb916d41683e4e1c232fc808"
+            ],
+            "subject": "为隔离客户端启动验证设置有限执行时间"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-local-test-runbook.md"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/client-capabilities.js"
@@ -23163,6 +23233,14 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/client-capability-loop.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
@@ -23179,6 +23257,10 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "M",
+            "path": "script/build_and_run.sh"
           },
           {
             "status": "M",
@@ -23250,7 +23332,15 @@
           },
           {
             "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
             "path": "src/shared/workspace-notes.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/build-and-run.test.ts"
           },
           {
             "status": "M",
@@ -23283,6 +23373,10 @@
           {
             "status": "M",
             "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
           },
           {
             "status": "M",
@@ -23321,6 +23415,10 @@
             "path": "test/notes-native-unmarked-response.test.js"
           },
           {
+            "status": "A",
+            "path": "test/research-policy-source-dedup.test.js"
+          },
+          {
             "status": "M",
             "path": "test/task-continuation-browser.test.js"
           },
@@ -23347,22 +23445,86 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/task-resume-layout-browser.test.js",
-              "test/task-progress-client.test.js",
-              "test/task-progress-goal-objective.test.js",
-              "test/task-continuation-upgrade.test.js",
-              "test/task-continuation-browser.test.js",
-              "test/figma-task-compact.test.ts",
-              "test/figma-task-progress.test.ts",
-              "test/composer-voice-patch.test.js",
+              "test/home-guide-notes-browser.test.js",
+              "-t",
+              "checks three actual evidence cards|grows the actual editor selection|stops before the public summary|sends both JSON-only strict-slider|checks the strict-slider drag",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-footer-upgrade/pause-card-upgrade-source.log SHA256 4d22b6cc780e72ab5538c5016e6c44149d23187b4ab5cb9358e24786762a040e",
-            "verifiedCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
-            "completedAt": "2026-11-02T06:43:47.992210+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/notes-demo-flow.log SHA256 7b3fb405b16566b22d91aa65a840696e9cb7e5ef392e2a275d21fa892b1fddd8",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:07:54.777456+00:00",
             "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-hover-browser.test.ts",
+              "test/home-guide-pointer.test.ts",
+              "test/home-guide-pointer-appearance.test.ts",
+              "test/home-guide-pointer-menu-browser.test.js",
+              "test/home-guide-notes-native-editor.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/hover-selection.log SHA256 4f02baabbf9828336a9024b55d625bf98b2f1b5d982f0ec6d44e4668d8b20df4",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:08:19.832864+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/session-export-dialog-browser.test.js",
+              "test/build-and-run.test.ts",
+              "test/brand-migration.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/image-and-local-build.log SHA256 c24ed353eb65b47b8913171d22bdbb8025e7b47917f4715c420cb5ed3bf8a428",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:08:33.475213+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "--maxWorkers=1",
+              "test/research-policy-source-dedup.test.js",
+              "test/note-binding-prompt-dedup.test.js",
+              "test/component-generation-prompt-routing.test.js",
+              "test/research-selected-create-prompt.test.js",
+              "test/free-data-sources.test.js",
+              "test/component-agent-scope.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/research-policy-source-dedup.log SHA256 353ac5c2a4ecc2f7dad2fe2d235c83e7a813ed5934e062ae9ae9d1e6cd497c1b",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:08:40.164997+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "./node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "free of clipped shadow bands|matches the original Home deck|reuses the original layered illustrations|advances all five cases"
+            ],
+            "outcome": "passed",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/explore-cards-focused.log SHA256 e6ee6a77a73b07a3a411a6c2ea6091681bbb37d03eb01eb098cb9d6f58bc0e6f",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:16:17.195232+00:00",
+            "timeoutMs": 90000
           },
           {
             "argv": [
@@ -23373,9 +23535,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-footer-upgrade/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
-            "completedAt": "2026-11-02T06:43:59.183415+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:16:27.953643+00:00",
             "timeoutMs": 180000
           },
           {
@@ -23386,15 +23548,15 @@
               "c9778b40b254631b812aab7d07298b37ed592737..HEAD"
             ],
             "outcome": "passed",
-            "summary": "真实完整功能范围diff检查exit0；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-footer-upgrade/full-diff-check.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
-            "completedAt": "2026-11-02T06:49:11.485255+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-layers-and-dedup/diff-check.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "f18e4b52ff503e7b492a03a77b071d52ac565093",
+            "completedAt": "2026-11-02T10:16:28.073605+00:00",
             "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "本后继精确tip执行暂停卡/完整entry升级39/39，TC与严格diff通过；Root直接查看中间深色展开/窄侧栏浅色英文布局截图。保留cd8b笔记199与各模块祖先证据，不冒称最终Native。"
+          "summary": "最终f18e4b52候选相关159项源码/Browser实际执行通过（6 Notes flow+52 hover/pointer+17 image/local build/brand+78 Research rules+6 Explore），TC/diff通过；Root直接查看深浅修后图。75祖先、199Notes祖先、39暂停祖先均保留原tip。新包Native/真实模型墙钟仍未执行。"
         },
         "acceptanceCriteria": [
           "使用本次可见编辑器授权快照与revision直接规划原生编辑，避免重复读取往返；模型和推理等级保持用户选择。",
@@ -23406,7 +23568,12 @@
           "所有用例虚拟鼠标复用真实hover样式与级联，运行结束只撤回自身标记/规则，不锁用户输入。",
           "暂停任务继续按钮属于同一规划卡，展开/收起/小窗紧凑/中英与中心/侧栏均可命中；继续行为仍明确点击，草稿附件与拒绝重试保护保持。",
           "保留c977既有Notes/Goal/Plan、菜单与历史会话来源修复；所有作者历史保留，仅测试夹具归一受管CSS和一行EOF清理，无共享App或用户数据改写。",
-          "阅读区更新只改自身helper边界，完整保留compact owner marker、observer和继续按钮高度预算；旧SDK升级与两次完整entry重入均可用，损坏预算/重复错位marker仍拒绝。"
+          "阅读区更新只改自身helper边界，完整保留compact owner marker、observer和继续按钮高度预算；旧SDK升级与两次完整entry重入均可用，损坏预算/重复错位marker仍拒绝。",
+          "探索仅关闭卡片被裁成色带的外投影；原主页以及卡片内部布局、玻璃、渐变、插画和hover保持，深浅440处边缘采样含五处hover/轮播/重开。",
+          "可编辑文字DOM不接受虚拟hover标记，真实组件按钮hover与人工选区变更保护保持。",
+          "原生图片关闭按钮恢复视觉居中且保持click/Escape/backdrop与focus restore。",
+          "本地构建仅停止/核验该checkout精确App路径，保留同名独立PPT端；隔离进程fixture有有限执行预算。",
+          "Research已知producer以显式宿主标记消除两份重复来源规则，真实builder→adapter初始3→1，用户/证据/默认数据契约、工具权限、离线/typed/repair/shared边界保持。"
         ],
         "risks": [
           "新包Native、真实商业模型墙钟尚未执行；不得把mock轮次减少或源码Browser时长当提速结果。",
@@ -23415,9 +23582,12 @@
           "Root组合3b466曾因旧安装SDK样式夹具全字节对比失败，已保留日志并由59f93规范化当前受管CSS，严格drift/全字节断言未降低。aa43范围diff发现助手EOF空行，cd8b已清理且编译JS字节相同，最终199/TC/diff在cd8b重验。",
           "完整97门禁和新UI约束/研究renderer、严格SDK两次安装及包内对照必须在最终integration精确tip执行；旧34a证明不冒充当前。",
           "PPT冻结三模型质量基线均未通过；独立技能后继仍由授权PPT任务修正，本次不偷合其功能、不改公开发布或main。",
-          "cd8b首次正式集成因reading重入删除compact marker导致footer drift被阻止，失败现场保留attempt1；本严格后继修正模块边界而不放宽footer识别，原任务续行语义和草稿保护不变。"
+          "cd8b首次正式集成因reading重入删除compact marker导致footer drift被阻止，失败现场保留attempt1；本严格后继修正模块边界而不放宽footer识别，原任务续行语义和草稿保护不变。",
+          "第二次官方集成cdd65在Notes选区门禁失败，现场保留attempt2；3ec修复hover属性改写编辑器DOM且旧版红/新版绿，未放宽选区guard。",
+          "组合检查曾遇隔离启动fixture默认5s超时，f18只设置20s子进程/30s用例上限且断言未改；另Root过宽Explore+旧Home文件240s超时保留，最终只用直接相关6项聚焦Browser，不冒称80全过。",
+          "PPT1.1.6由授权独立任务交付对比端，Root不混入该skill源或触碰其App；本次共享构建只针对主端确切路径，构建前仍须核验用户运行中任务。"
         ],
-        "generatedAt": "2026-11-02T06:49:11.485391+00:00"
+        "generatedAt": "2026-11-02T10:21:24.923276+00:00"
       }
     },
     {
