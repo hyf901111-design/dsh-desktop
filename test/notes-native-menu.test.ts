@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { BrowserWindow, screen } from 'electron'
 import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, noteSubmenuBounds, validateNoteMenu, noteMenuDocumentHtml } from '../src/main/notes/native-menu'
+import {noteMenuWorkArea} from '../src/shared/note-menu-geometry'
 import type { NoteMenuState } from '../src/shared/notes-menu'
 import { readFileSync } from 'node:fs'
 import React from 'react'
@@ -32,7 +33,7 @@ it('uses macOS native glass without blurring a transparent shadow gutter',async(
  expect(popup.options).toMatchObject({vibrancy:'menu',visualEffectState:'active',backgroundColor:'#00000000',hasShadow:true,roundedCorners:true})
  const presentation=noteMenuPresentation(input(),'ticket',{shadowInset:0})
  expect(presentation.root.width).toBe(264);expect(presentation.root.height).toBe(398)
- expect(popup.setBounds.mock.calls[0][0]).toMatchObject({width:264,height:398})
+ expect(popup.setBounds.mock.calls[0][0]).toMatchObject({width:264,height:186})
  const html=new Window()
  try{
   html.document.write(noteMenuDocumentHtml);html.document.body.className='dark native-material'
@@ -43,11 +44,11 @@ it('uses macOS native glass without blurring a transparent shadow gutter',async(
  }finally{await html.happyDOM.close()}
 })
 
-it('extends beyond the parent but fits the selected screen including negative origins',()=>{
+it('fits its declared viewport including negative origins and keeps the caret clear',()=>{
  const bounds=noteMenuBounds({x:600,y:250,width:1,height:20},{x:0,y:25,width:1440,height:1000},720)
  expect(bounds.y+bounds.height).toBeGreaterThan(350);expect(bounds.y+bounds.height).toBeLessThanOrEqual(1017)
  const other=noteMenuBounds({x:-20,y:940,width:1,height:20},{x:-1280,y:25,width:1280,height:1000},1800)
- expect(other.x+other.width).toBeLessThanOrEqual(-8);expect(other.y).toBe(33);expect(other.height).toBe(984)
+ expect(other.x+other.width).toBeLessThanOrEqual(-8);expect(other.y).toBe(33);expect(other.height).toBe(901);expect(other.y+other.height).toBeLessThanOrEqual(934)
 })
 it('keeps the menu surface beside the caret when its shadow has transparent window padding',()=>{
  const work={x:0,y:25,width:1440,height:1000}
@@ -55,6 +56,18 @@ it('keeps the menu surface beside the caret when its shadow has transparent wind
  expect(below.x+24).toBe(600);expect(below.y+24).toBe(276)
  const above=noteMenuBounds({x:600,y:900,width:1,height:20},work,566,1,312,24)
  expect(above.y+above.height-24).toBe(894)
+})
+it('intersects the parent content viewport with the display work area before placing a menu',()=>{
+ expect(noteMenuWorkArea({x:0,y:25,width:2000,height:1415},{x:100,y:400,width:1380,height:900})).toEqual({x:100,y:400,width:1380,height:900})
+ expect(noteMenuWorkArea({x:-1280,y:25,width:1280,height:1000},{x:-100,y:0,width:700,height:300})).toEqual({x:-100,y:25,width:100,height:275})
+})
+it.each([0,24])('keeps the visible menu above a low caret with zoom and shadow inset %i',shadow=>{
+ const anchor={x:400,y:790,width:1,height:24},work={x:100,y:400,width:1380,height:620},zoom=1.25
+ const bounds=noteMenuBounds(anchor,work,1000,zoom,264+shadow*2,shadow)
+ expect(bounds.y).toBeGreaterThanOrEqual(408);expect(bounds.y+bounds.height).toBeLessThanOrEqual(1012)
+ expect(bounds.y+bounds.height-shadow*zoom).toBeLessThanOrEqual(anchor.y-6)
+ const result=noteMenuPresentation(input(),'ticket',{height:(work.height-16)/zoom-shadow*2,shadowInset:shadow,rootHeight:bounds.height/zoom-shadow*2})
+ expect(result.root.height*zoom).toBeLessThanOrEqual(bounds.height+1)
 })
 it('rejects invalid payloads and escapes labels instead of rendering supplied markup',()=>{
  expect(()=>validateNoteMenu(input({anchor:{x:NaN,y:0,width:0,height:20}}))).toThrow()
@@ -111,7 +124,7 @@ it('keeps native clicks from stealing editor focus and accepts only a current se
  await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())
  expect(popup.options.focusable).toBe(false);expect(popup.options.parent).toBe(parent);expect(popup.options.webPreferences).toMatchObject({nodeIntegration:false,sandbox:true,contextIsolation:true,partition:'notes-menu'})
  popup.focus();expect(parent.isFocused()).toBe(true);expect(popup.isFocused()).toBe(false);expect(popup.destroyed).toBe(false)
- expect(popup.setBounds.mock.calls[0][0].y+popup.setBounds.mock.calls[0][0].height).toBeGreaterThan(350)
+ expect(popup.setBounds.mock.calls[0][0].y).toBeGreaterThanOrEqual(58);expect(popup.setBounds.mock.calls[0][0].y+popup.setBounds.mock.calls[0][0].height).toBeLessThanOrEqual(244)
  const js=popup.webContents.executeJavaScript.mock.calls.find((call:any[])=>call[0].includes('innerHTML'))[0],ticket=js.match(/ework-note-menu:\/\/([\w-]+)\//)[1],event={preventDefault:vi.fn()}
  popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/heading-0?revision=0`);expect(parent.webContents.send).not.toHaveBeenCalled()
  popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/missing?revision=1`);expect(parent.webContents.send).not.toHaveBeenCalled()

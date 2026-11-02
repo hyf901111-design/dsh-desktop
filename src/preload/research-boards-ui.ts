@@ -188,9 +188,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     >()
   const favoriteWatches = new Map<string, () => void>()
   const cleanups: Array<() => void> = []
+  let isGuideWorkspaceOriginal = (_id: string): boolean => false
   const notify = () => {
     const hidden = JSON.stringify([
-      ...state.favorites.filter(f => f.dedicated && f.pinned !== false).map(f => f.sessionId),
+      ...state.favorites.filter(f => f.dedicated && f.pinned !== false && !isGuideWorkspaceOriginal(f.sessionId)).map(f => f.sessionId),
       ...state.boards.filter(b => b.pinned && b.localSessionId).map(b => b.localSessionId)
     ].sort())
     if (doc.documentElement.dataset.srbHiddenSessions !== hidden) {
@@ -917,6 +918,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   }
   const guideWorkspaceKey = (entry: GuideSession) => JSON.stringify([guideOwner(), state.account.generation, guideIdentityRevision, entry.sessionId, entry.cwd])
   const hasGuideWorkspace = (entry: GuideSession) => deps.workspaces.list.getSnapshot().items.some((workspace: { workspaceId?: string; path?: string; sessionIds?: readonly string[] }) => workspace.workspaceId && workspace.path === entry.cwd && workspace.sessionIds?.includes(entry.sessionId))
+  // A registered guide is the original usable Workspace session, even when its
+  // canvas also has a dedicated board entry. Independent board copies and shared
+  // local mirrors retain the ordinary hiding policy; no persisted role is changed.
+  isGuideWorkspaceOriginal = id => {
+    const entry = getHomeGuideSession(id)
+    const summary = deps.sessions.list.getSnapshot().byId[id]
+    return !!entry && (entry.kind === 'board' || entry.kind === 'workbench') &&
+      !summary?.parentId && summary?.origin !== 'subagent' && !isShared(id) && hasGuideWorkspace(entry)
+  }
   const ensureGuideWorkspace = async (entry: GuideSession, valid: () => void) => {
     valid()
     if (!guideSessionAvailable(entry)) throw Error('示例会话已变化，请重新打开。')

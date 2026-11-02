@@ -4,7 +4,7 @@ import {noteLibraryItems,noteLibraryNode} from '../src/main/notes/component-libr
 import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
-import {readFile} from 'node:fs/promises'
+import {readFile,writeFile,mkdir} from 'node:fs/promises'
 import {mkdtempSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -25,7 +25,7 @@ beforeAll(async()=>{
  const homeNotesGuideChart=runId=>{const result=structuredClone(${JSON.stringify(productionChart)});result.node.id='home-note-chart-'+runId;return result};
  import{HOME_NOTES_CHART_PROMPT,HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_TASK_RESULT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
  window.noteLoads=[];window.originalInput=document.querySelector('#original-draft');window.originalInput.focus();window.originalInput.setSelectionRange(1,3);
- window.guideCueHistory=[];window.addEventListener('sherlock:home-guide-cue',event=>{const detail=event.detail,target=detail.target??[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===detail.targetToken);window.guideCueHistory.push({label:detail.label,tag:target?.tagName,className:target?.className});});
+ window.guideMenuCueGeometry=[];window.guideCueHistory=[];window.addEventListener('sherlock:home-guide-cue',event=>{const detail=event.detail,target=detail.target??[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.getAttribute('data-home-guide-cue-target')===detail.targetToken);window.guideCueHistory.push({label:detail.label,tag:target?.tagName,className:target?.className});if(target?.closest('[data-home-guide-note-menu]')){const pane=target.closest('.menu'),list=target.closest('[role=listbox]'),r=target.getBoundingClientRect(),area=list.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);window.guideMenuCueGeometry.push({label:detail.label,root:document.querySelector('[data-home-guide-note-menu] .root-menu').getBoundingClientRect().toJSON(),pane:pane.getBoundingClientRect().toJSON(),list:area.toJSON(),target:r.toJSON(),scrollTop:list.scrollTop,centerHit:target===hit||target.contains(hit)})}});
  const bridge={request:async(method,input)=>{if(method==='load')window.noteLoads.push(input.sessionId);if(method==='library-list'&&window.failGuideLibrary)throw Error('组件库读取失败（测试）');if(method==='save'&&window.deferNoteSave)await new Promise(resolve=>setTimeout(resolve,200));return window.noteStorageRequest(method,input)},draft:input=>window.noteStorageRequest('draft',input)};
  const workspaceHost=new WorkspaceSurfaceHost(document);window.nativeNotes=mountNotes(document,bridge,workspaceHost);
  window.sessionCount=0;window.latestExample=undefined;
@@ -70,7 +70,12 @@ async function fixture(paneWidth=600,{isolated=false,deferEngage=false}={}){
 async function complete(page,evaluate=fn=>page.evaluate(fn)){
  const deadline=Date.now()+110000;let capturedPopover=false
  while(Date.now()<deadline){
-  const failure=await evaluate(()=>window.__testHomeGuideError);if(failure)throw Error(JSON.stringify(failure)+' '+JSON.stringify(await evaluate(()=>window.__testNoteSentenceGeometry))+' '+JSON.stringify(await evaluate(()=>window.guideCueHistory)))
+  if(await page.locator('[data-home-guide-note-menu] .root-menu').count()&&!await page.evaluate(()=>window.__capturedSlashGeometry)){
+   await page.evaluate(()=>window.__capturedSlashGeometry=true)
+   const geometry=await page.evaluate(()=>{const host=document.querySelector('[data-home-guide-note-menu]'),root=host.querySelector('.root-menu'),list=root.querySelector('[role=listbox]'),parent=root.querySelector('a[data-submenu]'),rect=node=>node?.getBoundingClientRect().toJSON(),p=parent?.getBoundingClientRect(),hit=p&&document.elementFromPoint(p.x+p.width/2,p.y+p.height/2);return{viewport:{width:innerWidth,height:innerHeight},host:rect(host),root:rect(root),list:rect(list),parent:rect(parent),scrollTop:list.scrollTop,scrollHeight:list.scrollHeight,parentCenterHit:!!parent&&(parent===hit||parent.contains(hit))}})
+   const dir=process.env.SHERLOCK_SLASH_EVIDENCE_DIR||'/tmp/sherlock-note-slash-replay-viewport-successor-20261102/capture';await mkdir(dir,{recursive:true});await writeFile(dir+'/slash-geometry.json',JSON.stringify(geometry,null,2)+'\n');await page.screenshot({path:dir+'/slash-open.png'})
+  }
+  const failure=await evaluate(()=>window.__testHomeGuideError);if(failure)throw Error(JSON.stringify({...failure,menuGuards:await evaluate(()=>window.__testNoteMenuGuardSamples),menuItems:await evaluate(()=>window.__testNoteMenuItemSamples)})+' '+JSON.stringify(await evaluate(()=>window.__testNoteSentenceGeometry))+' '+JSON.stringify(await evaluate(()=>window.guideCueHistory)))
   if(await page.locator('[data-home-guide]').count()===0)return
   const phase=await page.locator('[data-home-guide]').getAttribute('data-phase');if(phase==='completed'){await expect.poll(()=>page.locator('[data-home-guide]').count()).toBe(0);return}
   if(phase==='error')throw Error(await page.locator('.odyssey-home-guide-status').innerText()+' '+JSON.stringify(await evaluate(()=>window.guideCueHistory)))
@@ -160,6 +165,10 @@ for(const width of [600,700])it(`saves and reopens the native note without clipp
   await page.screenshot({path:'/tmp/home-guide-note-virtual-pointer-'+width+'-20261025.png'})
   expect(await page.locator('[data-home-guide]').evaluate(root=>{const box=root.getBoundingClientRect(),pane=document.querySelector('.pI_x6G_centerCol').getBoundingClientRect(),footer=root.querySelector('.odyssey-home-guide-footer'),content=root.querySelector('[data-home-guide-content]').getBoundingClientRect();return box.left>=pane.left&&box.right<=pane.right+1&&box.bottom<=pane.bottom+1&&Math.abs(content.bottom-box.bottom)<1&&footer===null&&root.scrollWidth<=root.clientWidth})).toBe(true)
   await complete(page)
+  const menuCues=await page.evaluate(()=>window.guideMenuCueGeometry);expect(menuCues).toHaveLength(2)
+  const menuProof=await page.evaluate(()=>({cues:window.guideMenuCueGeometry,guards:window.__testNoteMenuGuardSamples,items:window.__testNoteMenuItemSamples}));const evidence=process.env.SHERLOCK_SLASH_EVIDENCE_DIR||'/tmp/sherlock-note-slash-replay-viewport-successor-20261102/capture';await mkdir(evidence,{recursive:true});await writeFile(evidence+'/slash-cues-'+width+'.json',JSON.stringify(menuProof,null,2)+'\n')
+  for(const cue of menuCues){expect(cue.centerHit).toBe(true);expect(cue.target.top).toBeGreaterThanOrEqual(cue.list.top);expect(cue.target.bottom).toBeLessThanOrEqual(cue.list.bottom);expect(cue.root.top).toBeGreaterThanOrEqual(8);expect(cue.root.bottom).toBeLessThanOrEqual(744)}
+  expect(menuCues[0].scrollTop).toBeGreaterThan(0);expect(menuCues[0].root).toEqual(menuCues[1].root)
   expect(await page.getByRole('tab',{name:'笔记'}).getAttribute('aria-selected')).toBe('true');expect(await page.locator('[data-note-editor-session="example-note-1"] .bn-editor').innerText()).toContain('环比增长14.29%')
   expect(await page.evaluate(()=>document.querySelector('#original-draft')===window.originalInput&&window.originalInput.value==='用户原有提示词与技能标签')).toBe(true)
   await page.screenshot({path:'/tmp/home-guide-notes-natural-shell-'+width+'-20261024.png'})

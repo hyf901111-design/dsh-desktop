@@ -26,12 +26,16 @@ export function createHomeGuideNoteMenu(document:Document,options:{runId:string;
  host.addEventListener('pointerdown',event=>event.preventDefault())
  host.addEventListener('pointerover',event=>{const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-submenu]');if(link)route(link,true)})
  host.addEventListener('click',event=>{event.preventDefault();const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a');if(link)route(link)})
- host.addEventListener('scroll',event=>{const list=host.querySelector<HTMLElement>('.root-menu>[role=listbox]');if(event.target===list&&list&&list.scrollTop!==rootScrollTop){rootScrollTop=list.scrollTop;if(state?.submenu)emit({action:'back'})}},true)
+ // This top-layer menu shares the editor document only during replay.
+ // Keep its own scrolling out of BlockNote's document capture listener,
+ // otherwise restoring scrollTop repaints the menu in an endless loop.
+ const scroll=(event:Event)=>{if(!current())return;const list=host.querySelector<HTMLElement>('.root-menu>[role=listbox]'),child=host.querySelector<HTMLElement>('.child-menu>[role=listbox]');if(event.target!==list&&event.target!==child)return;event.stopPropagation();if(event.target===list&&list&&list.scrollTop!==rootScrollTop){rootScrollTop=list.scrollTop;if(state?.submenu)emit({action:'back'})}}
+ win.addEventListener('scroll',scroll,true)
  const outside=(event:Event)=>{if(state&&!host.contains(event.target as Node))close(undefined,true)}
  document.addEventListener('pointerdown',outside,true)
  const blur=()=>{if(!document.hasFocus())close(undefined,true)},surface=(event:Event)=>{if((event as CustomEvent).detail?.surface!=='notes')close(undefined,true)}
  win.addEventListener('blur',blur);document.addEventListener('sherlock:workspace-surface-change',surface)
- const dispose=()=>{if(closed)return;close(undefined,true);closed=true;observer.disconnect();document.removeEventListener('pointerdown',outside,true);win.removeEventListener('blur',blur);document.removeEventListener('sherlock:workspace-surface-change',surface);options.signal.removeEventListener('abort',dispose)}
+ const dispose=()=>{if(closed)return;close(undefined,true);closed=true;observer.disconnect();document.removeEventListener('pointerdown',outside,true);win.removeEventListener('blur',blur);win.removeEventListener('scroll',scroll,true);document.removeEventListener('sherlock:workspace-surface-change',surface);options.signal.removeEventListener('abort',dispose)}
  options.signal.addEventListener('abort',dispose,{once:true});if(options.signal.aborted)dispose()
  return{sync(input:NoteMenuState){validateNoteMenu(input);if(!current()||input.sessionId!==options.sessionId||retired.has(input.menuId))throw new DOMException('演示菜单已结束。','AbortError');if(state&&(state.menuId!==input.menuId||input.revision<state.revision))throw Error('组件库菜单已变化。')
    const previous=state,sameRows=(a:NoteMenuState['items']|undefined,b:NoteMenuState['items'])=>!!a&&a.map(item=>item.id).join(',')===b.map(item=>item.id).join(',')
@@ -40,10 +44,12 @@ export function createHomeGuideNoteMenu(document:Document,options:{runId:string;
    const childScroll=previous?.submenu?.parentId===input.submenu?.parentId&&sameRows(previousParent?.children,nextParent?.children||[])?host.querySelector<HTMLElement>('.child-menu>[role=listbox]')?.scrollTop||0:0
    const restore=(selector:string,top:number,reveal:boolean)=>{const list=host.querySelector<HTMLElement>(selector+'>[role=listbox]');if(list){list.scrollTop=top;if(reveal)list.querySelector<HTMLElement>('[aria-selected=true]')?.scrollIntoView({block:'nearest'})}}
    state=input
-   const presentation=noteMenuPresentation(input,ticket,{height:win.innerHeight-24,width:win.innerWidth-24,shadowInset:0})
+   const limits={height:win.innerHeight-24,width:win.innerWidth-24,shadowInset:0}
+   const desired=noteMenuPresentation(input,ticket,limits)
+   const work={x:0,y:0,width:win.innerWidth,height:win.innerHeight},rootBounds=noteMenuBounds(input.anchor,work,desired.root.height,1,desired.root.width,0)
+   const presentation=noteMenuPresentation(input,ticket,{...limits,rootHeight:rootBounds.height})
    host.dataset.noteMenuId=input.menuId;host.dataset.noteMenuRevision=String(input.revision);host.className=(input.dark?'guide-menu-dark ':'')+'guide-native-material';host.innerHTML='<style>@scope ([data-home-guide-note-menu]){'+css+'}</style><main>'+presentation.root.html+(presentation.child?.html||'')+'</main>'
    // Match the native panels: opening a child must never reposition its root.
-   const work={x:0,y:0,width:win.innerWidth,height:win.innerHeight},rootBounds=noteMenuBounds(input.anchor,work,presentation.root.height,1,presentation.root.width,0)
    const root=host.querySelector<HTMLElement>('.root-menu')!,child=host.querySelector<HTMLElement>('.child-menu')
    const place=(node:HTMLElement,x:number,y:number)=>{node.style.position='absolute';node.style.left=x+'px';node.style.top=y+'px';node.style.margin='0'}
    const bounds=(left:number,top:number,width:number,height:number)=>{for(const [key,value] of Object.entries({width:width+'px',height:height+'px',background:'transparent','box-shadow':'none','backdrop-filter':'none'}))host.style.setProperty(key,value,'important');host.style.left=left+'px';host.style.top=top+'px'}

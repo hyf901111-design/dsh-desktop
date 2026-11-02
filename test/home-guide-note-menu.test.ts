@@ -39,3 +39,29 @@ it.each([{x:20,y:700},{x:980,y:700},{x:980,y:40}])('keeps the root menu anchored
  if(anchor.x>900)expect(child.x+child.width).toBeLessThanOrEqual(before.x)
  f.menu.sync({...input,revision:3});expect(rect(host,'.root-menu')).toEqual(before)
 })
+
+it.each([[900,554],[820,500],[620,390]])('keeps the long replay root on one safe side of the caret at %ipx', (height,caret)=>{
+ vi.spyOn(window,'innerWidth','get').mockReturnValue(1380);vi.spyOn(window,'innerHeight','get').mockReturnValue(height)
+ const f=fixture(),items=[...Array.from({length:40},(_,index)=>({id:'command-'+index,title:'Command '+index,icon:'quote',subtext:'',group:'',badge:''})),f.input.items[0]!],input={...f.input,anchor:{x:386,y:caret,width:1,height:24},items}
+ f.menu.sync(input);const host=f.menu.element()!,root=host.querySelector<HTMLElement>('.root-menu')!,top=parseFloat(host.style.top)+parseFloat(root.style.top),menuHeight=parseFloat(root.style.height)
+ expect(top).toBeGreaterThanOrEqual(8);expect(top+menuHeight).toBeLessThanOrEqual(caret-6);expect(top+menuHeight).toBeLessThanOrEqual(height-8);expect(root.style.width).toBe('264px');expect(root.querySelectorAll('[role=option]')).toHaveLength(41)
+ const before={top:host.style.top,rootTop:root.style.top,height:root.style.height}
+ f.menu.sync({...input,revision:2,submenu:{parentId:'library',selectedIndex:0,keyboardActive:false}})
+ const after=host.querySelector<HTMLElement>('.root-menu')!;expect({top:host.style.top,rootTop:after.style.top,height:after.style.height}).toEqual(before)
+})
+
+it('isolates only the owned replay list scrolling from editor document capture and removes the boundary on disposal',()=>{
+ const captured=vi.fn();document.addEventListener('scroll',captured,true)
+ const f=fixture();f.menu.sync(f.input);const host=f.menu.element()!,list=host.querySelector<HTMLElement>('.root-menu>[role=listbox]')!
+ list.scrollTop=32;list.dispatchEvent(new Event('scroll'));expect(captured).not.toHaveBeenCalled()
+ f.menu.sync({...f.input,revision:2,submenu:{parentId:'library',selectedIndex:0,keyboardActive:false}})
+ const child=host.querySelector<HTMLElement>('.child-menu>[role=listbox]')!;child.dispatchEvent(new Event('scroll'));expect(captured).not.toHaveBeenCalled();expect(f.events).toHaveLength(0)
+ const root=host.querySelector<HTMLElement>('.root-menu>[role=listbox]')!;root.scrollTop=64;root.dispatchEvent(new Event('scroll'));expect(f.events.at(-1)).toMatchObject({action:'back',revision:2})
+ const outside=document.createElement('div');document.body.append(outside);outside.dispatchEvent(new Event('scroll'));expect(captured).toHaveBeenCalledTimes(1)
+ f.expire();root.dispatchEvent(new Event('scroll'));expect(captured).toHaveBeenCalledTimes(2);f.menu.dispose();document.body.append(list);list.dispatchEvent(new Event('scroll'));expect(captured).toHaveBeenCalledTimes(3);document.removeEventListener('scroll',captured,true)
+})
+
+it('does not consume scrolling from a closed menu list',()=>{
+ const f=fixture();f.menu.sync(f.input);const list=f.menu.element()!.querySelector<HTMLElement>('.root-menu>[role=listbox]')!,captured=vi.fn();document.addEventListener('scroll',captured,true)
+ f.menu.close();document.body.append(list);list.dispatchEvent(new Event('scroll'));expect(captured).toHaveBeenCalledTimes(1);expect(f.events).toHaveLength(0);document.removeEventListener('scroll',captured,true)
+})

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import type { NoteMenuState, NotesNativeMenu } from '../../shared/notes-menu'
 import {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../../shared/note-menu-presentation'
 export {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../../shared/note-menu-presentation'
-import {noteMenuBounds,noteSubmenuBounds} from '../../shared/note-menu-geometry'
+import {noteMenuBounds,noteSubmenuBounds,noteMenuWorkArea} from '../../shared/note-menu-geometry'
 export {noteMenuBounds,noteSubmenuBounds} from '../../shared/note-menu-geometry'
 const MENU_SHADOW_INSET=24
 
@@ -128,9 +128,13 @@ export class NoteNativeMenu implements NotesNativeMenu {
         state.pending = false
         const input = state.input, previous=state.painted, sameRows=(a:NoteMenuState['items']|undefined,b:NoteMenuState['items'])=>!!a&&a.map(item=>item.id).join(',')===b.map(item=>item.id).join(','), content = state.parent.getContentBounds(), zoom = state.parent.webContents.getZoomFactor()
         const anchor = { x:content.x + input.anchor.x * zoom, y:content.y + input.anchor.y * zoom, width:input.anchor.width * zoom, height:input.anchor.height * zoom }
-        const work = screen.getDisplayNearestPoint({x:Math.round(anchor.x),y:Math.round(anchor.y)}).workArea
-        const presentation=noteMenuPresentation(input,state.ticket,{height:(work.height-16)/zoom-this.shadowInset*2,width:(work.width-16)/zoom-this.shadowInset*2,shadowInset:this.shadowInset})
-        const bounds=noteMenuBounds(anchor,work,presentation.root.height,zoom,presentation.root.width,this.shadowInset)
+        const display = screen.getDisplayNearestPoint({x:Math.round(anchor.x),y:Math.round(anchor.y)}).workArea
+        const work = noteMenuWorkArea(display,content)
+        if(work.width<=16||work.height<=16)throw Error('No visible notes menu viewport')
+        const limits={height:(work.height-16)/zoom-this.shadowInset*2,width:(work.width-16)/zoom-this.shadowInset*2,shadowInset:this.shadowInset}
+        const desired=noteMenuPresentation(input,state.ticket,limits)
+        const bounds=noteMenuBounds(anchor,work,desired.root.height,zoom,desired.root.width,this.shadowInset)
+        const presentation=noteMenuPresentation(input,state.ticket,{...limits,rootHeight:bounds.height/zoom-this.shadowInset*2})
         state.popup.setBounds(bounds)
         state.popup.webContents.setZoomFactor(zoom)
         const parentIndex=input.items.findIndex(item=>item.id===input.submenu?.parentId)
