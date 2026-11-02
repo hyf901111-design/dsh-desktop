@@ -13,9 +13,10 @@ import {paragraphChallengeFeedback,type ParagraphReview} from './challenge-cover
 import {noteEditorVisible} from './editor-visibility'
 import {noteUiText as t} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {restoreChallengeReviewState,saveChallengeReviewState} from './challenge-review-state'
-import {noteCommentSnapshot} from './challenge-capability-snapshot'
+import {createNoteCommentSnapshotReader} from './challenge-capability-snapshot'
+import {CHALLENGE_KIND,CHALLENGE_USER,challengeThreadMessages} from './challenge-thread-messages'
+export {CHALLENGE_KIND,CHALLENGE_USER,challengeThreadMessages} from './challenge-thread-messages'
 
-export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
 type ChallengeAnchor={quote:string;sourceText:string}
 type ChallengeAction={controller:AbortController;threadId:string;kind:'reply'|'optimize'}
 export type ChallengeThread={id:string;metadata:{kind:string;issue:ChallengeIssue;sourceText:string;draft?:string;anchorHistory?:ChallengeAnchor[]};comments:any[];createdAt:Date;resolved:boolean}
@@ -34,18 +35,6 @@ const anchorHistory=(prior:unknown,...added:ChallengeAnchor[]):ChallengeAnchor[]
  }
  return result
 }
-export function challengeThreadMessages(comments:any[],budget=10000):Array<{role:'assistant'|'user';text:string}>{
- const result:Array<{role:'assistant'|'user';text:string}>=[];let size=0
- for(const c of comments.filter(c=>!c.deletedAt).slice(-20).reverse()){
-  let text=noteText(c.body);if(!text.trim()||text.length>4000)continue
-  const suggestion=c.userId===CHALLENGE_USER&&c.metadata?.challengeReplacement
-  if(typeof suggestion?.replacement==='string'&&text.length<3800){const available=3900-text.length;text+='\n建议替换文本：'+suggestion.replacement.slice(0,available)+(suggestion.replacement.length>available?'（上下文长度有限，建议文字已截断）':'')}
-  const message={role:c.userId===CHALLENGE_USER?'assistant' as const:'user' as const,text},length=JSON.stringify(message).length
-  if(size+length>budget)break
-  result.unshift(message);size+=length
- }
- return result
-}
 
 /** Shares native Yjs comment storage; it never writes a parent conversation. */
 function replacementResolutionHistory(prior:any,...values:Array<{sourceText:string;resolved:boolean}>){
@@ -56,6 +45,7 @@ function replacementResolutionHistory(prior:any,...values:Array<{sourceText:stri
 }
 export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridge;sessionId:string;title:string;scroll:RefObject<HTMLDivElement>;busy:boolean;isBusy?():boolean;recovery:boolean;active?:boolean;activityId?:string;replacementSettleMs?:number;persist():void;persistConfirmed():Promise<void>}){
  const {editor,doc,bridge,sessionId}=options
+ const readCommentSnapshot=useMemo(()=>createNoteCommentSnapshotReader(),[doc,editor])
  const latest=useRef(options);latest.current=options
  const ai=useMemo(()=>new YjsThreadStore(CHALLENGE_USER,doc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor')),[doc])
  const comments=editor.getExtension(CommentsExtension),prefs=doc.getMap('note-challenge')
@@ -342,5 +332,5 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   settle.current=Date.now()+10000;window.setTimeout(()=>{if(live.current)sync()},10010);sync();refresh()
  }})
  const paragraphFeedback=paragraphChallengeFeedback(covered.current,blocks(),options.title,level,threads.map(thread=>({id:thread.id,blockId:thread.metadata.issue.blockId})))
- return {readComments:(allowed:ReadonlySet<string>)=>noteCommentSnapshot(visibleThreads(),allowed),paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,popupAnchor,busyId,actionKind,phase,running,revision,checks,syncScheduling:sync,configure,getConfiguration,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{setPopupAnchor(undefined);dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {readComments:(allowed:ReadonlySet<string>)=>readCommentSnapshot(visibleThreads(),allowed),paragraphFeedback,replacementReviews,level,marginExpanded,threads,selected,popupAnchor,busyId,actionKind,phase,running,revision,checks,syncScheduling:sync,configure,getConfiguration,setLevel:levelChange,setPickerOpen,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{setPopupAnchor(undefined);dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }

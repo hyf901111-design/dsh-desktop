@@ -153,3 +153,21 @@ it('shows remaining public replies after real receipts in the injected projectio
   cold.dispose()
  }finally{store.dispose()}
 })
+
+it('localizes only the explicit host read-only notice in live and cold English replies',async()=>{
+ const {noteUiText}=await import('../packages/dsh-research-task-runtime/notes-locale.js')
+ const raw=await readFile('scripts/lib/notes-activity.mjs','utf8'),source=raw.slice(raw.indexOf('export function EWorkNoteConversationRow')+7,raw.indexOf('export function EWorkNotesActivity'))
+ const document={documentElement:{dataset:{odysseyLocale:'en'}}},Projected=new Function('react','eworkNoteCapabilityReceiptText','noteUiText','useNotesActivityLocale','document','return ('+source+')')(React,capabilityReceiptText,noteUiText,()=>{},document)
+ const receipt={capability:'notes.blocks.read',status:'succeeded'},summary=capabilityReceiptText([receipt]),key='已读取当前内容，本次尚未生成修改或答复。',result={kind:'conversation',notice:'read-only-incomplete',capabilityReceipts:[receipt],capabilitySummary:summary,requiresReply:true,markdown:summary+'\n\n'+key}
+ const doc=new EventTarget(),store=createNotesActivityStore(doc),props={sessionId:'s',t:value=>value,UserBubble:()=>null,Progress:()=>null,Markdown:({blocks})=>React.createElement('div',null,blocks.map(block=>block.text).join(''))}
+ const render=row=>renderToStaticMarkup(React.createElement(Projected,{...props,row}))
+ try{
+  doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase:'preparing',prompt:'Polish notes'}}))
+  doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase:'replied',result}}))
+  const live=render(store.snapshot('s')[0]);expect(live).toContain('The current content was read. No edits or reply were generated.');expect(live).not.toContain(key)
+  const coldDoc=new EventTarget(),cold=createNotesActivityStore(coldDoc);coldDoc.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'s',rows:JSON.parse(JSON.stringify(store.snapshot('s')))}}));expect(render(cold.snapshot('s')[0])).toBe(live);cold.dispose()
+  document.documentElement.dataset.odysseyLocale='zh';expect(render(store.snapshot('s')[0])).toContain(key)
+  document.documentElement.dataset.odysseyLocale='en';expect(render({...store.snapshot('s')[0],result:{...result,notice:undefined}})).toContain(key)
+  expect(render({...store.snapshot('s')[0],result:{...result,markdown:summary+'\n\n'+key+'模型额外正文保留。'}})).toContain('模型额外正文保留')
+ }finally{store.dispose()}
+})
