@@ -23031,10 +23031,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记润色与评论编辑效率、研究演示反馈、探索拖窗及暂停任务卡布局后继",
+        "featureName": "暂停任务卡片内收与旧版阅读区升级重入修复",
         "branch": "codex/feat/goal-notes-plan-combined-20261102",
         "baseCommit": "c9778b40b254631b812aab7d07298b37ed592737",
-        "tipCommit": "cd8b8f8b690e8095712713492cd2938479df7300",
+        "tipCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
         "commits": [
           {
             "commit": "8153fff93d5de0ffe50c929dec8cd6877b8da1dd",
@@ -23138,6 +23138,21 @@
               "aa43f287a75c02794921a79f78ce76db80000b3c"
             ],
             "subject": "修正：清理评论消息助手末尾多余空行"
+          },
+          {
+            "commit": "69a75b3685c6f25d0f7643c675b2cfd720c22c9c",
+            "parents": [
+              "19406de5edb8b09dc94ca87c490283886698bb8e"
+            ],
+            "subject": "修复：阅读区补丁重入时保留暂停卡高度预算"
+          },
+          {
+            "commit": "cdd65cf520502715b054be594544db6fff3b2ea6",
+            "parents": [
+              "cd8b8f8b690e8095712713492cd2938479df7300",
+              "69a75b3685c6f25d0f7643c675b2cfd720c22c9c"
+            ],
+            "subject": "集成：修复阅读区重入覆盖暂停任务卡高度预算"
           }
         ],
         "files": [
@@ -23164,6 +23179,10 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-reading-client.mjs"
           },
           {
             "status": "M",
@@ -23303,6 +23322,10 @@
           },
           {
             "status": "M",
+            "path": "test/task-continuation-browser.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/task-continuation-upgrade.test.js"
           },
           {
@@ -23324,23 +23347,21 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/notes-chat-preview-browser.test.ts",
-              "test/notes-comment-snapshot.test.ts",
-              "test/notes-activity.test.js",
-              "test/client-capabilities.test.js",
-              "test/notes-capability-handlers.test.ts",
-              "test/notes-native-unmarked-response.test.js",
-              "test/notes-native-capability-contract.test.ts",
-              "test/notes-client-capability-runtime.test.js",
-              "test/notes-surface-prompt-contract.test.js",
-              "test/notes-ai-reasoning-route.test.js",
+              "test/task-resume-layout-browser.test.js",
+              "test/task-progress-client.test.js",
+              "test/task-progress-goal-objective.test.js",
+              "test/task-continuation-upgrade.test.js",
+              "test/task-continuation-browser.test.js",
+              "test/figma-task-compact.test.ts",
+              "test/figma-task-progress.test.ts",
+              "test/composer-voice-patch.test.js",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final/notes-end-to-end-source.log SHA256 85d1e3663881fb04ff06ed296d5d6fbcdfd1b6776c0ffa830b015e13bd3b3d9c",
-            "verifiedCommit": "cd8b8f8b690e8095712713492cd2938479df7300",
-            "completedAt": "2026-11-02T05:35:21.596050+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-footer-upgrade/pause-card-upgrade-source.log SHA256 4d22b6cc780e72ab5538c5016e6c44149d23187b4ab5cb9358e24786762a040e",
+            "verifiedCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
+            "completedAt": "2026-11-02T06:43:47.992210+00:00",
             "timeoutMs": 180000
           },
           {
@@ -23352,9 +23373,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "cd8b8f8b690e8095712713492cd2938479df7300",
-            "completedAt": "2026-11-02T05:35:30.328631+00:00",
+            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-footer-upgrade/typecheck.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
+            "completedAt": "2026-11-02T06:43:59.183415+00:00",
             "timeoutMs": 180000
           },
           {
@@ -23365,15 +23386,15 @@
               "c9778b40b254631b812aab7d07298b37ed592737..HEAD"
             ],
             "outcome": "passed",
-            "summary": "最终候选精确tip执行；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-final/diff-check.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "verifiedCommit": "cd8b8f8b690e8095712713492cd2938479df7300",
-            "completedAt": "2026-11-02T05:35:30.406520+00:00",
+            "summary": "真实完整功能范围diff检查exit0；日志 /tmp/sherlock-explore-drag-package-20261102/handoff-footer-upgrade/full-diff-check.log SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "cdd65cf520502715b054be594544db6fff3b2ea6",
+            "completedAt": "2026-11-02T06:49:11.485255+00:00",
             "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "本tip真实NotesApp/Host/runtime与契约199/199，TC0、严格范围diff0。父级组合的暂停34、演示84+138、Explore124等独立源码Browser证据按原tip保留；不冒称本tip Native或商业模型已通过。Root集成后继续全部原97门禁、额外新UI约束/真实研究renderer以及fresh SDK2pass。"
+          "summary": "本后继精确tip执行暂停卡/完整entry升级39/39，TC与严格diff通过；Root直接查看中间深色展开/窄侧栏浅色英文布局截图。保留cd8b笔记199与各模块祖先证据，不冒称最终Native。"
         },
         "acceptanceCriteria": [
           "使用本次可见编辑器授权快照与revision直接规划原生编辑，避免重复读取往返；模型和推理等级保持用户选择。",
@@ -23384,7 +23405,8 @@
           "研究示例单次整理、仅demo seed/order静默撤销提示，真实点击后才选中组件，连接由原生事件产生真实候选pulse/draft/保存反馈；人工操作优先且退出完整清理。",
           "所有用例虚拟鼠标复用真实hover样式与级联，运行结束只撤回自身标记/规则，不锁用户输入。",
           "暂停任务继续按钮属于同一规划卡，展开/收起/小窗紧凑/中英与中心/侧栏均可命中；继续行为仍明确点击，草稿附件与拒绝重试保护保持。",
-          "保留c977既有Notes/Goal/Plan、菜单与历史会话来源修复；所有作者历史保留，仅测试夹具归一受管CSS和一行EOF清理，无共享App或用户数据改写。"
+          "保留c977既有Notes/Goal/Plan、菜单与历史会话来源修复；所有作者历史保留，仅测试夹具归一受管CSS和一行EOF清理，无共享App或用户数据改写。",
+          "阅读区更新只改自身helper边界，完整保留compact owner marker、observer和继续按钮高度预算；旧SDK升级与两次完整entry重入均可用，损坏预算/重复错位marker仍拒绝。"
         ],
         "risks": [
           "新包Native、真实商业模型墙钟尚未执行；不得把mock轮次减少或源码Browser时长当提速结果。",
@@ -23392,9 +23414,10 @@
           "原Spring笔记、共享客户端与SDK未在功能树改写；不能把独立源码截图充作打包客户端验收。",
           "Root组合3b466曾因旧安装SDK样式夹具全字节对比失败，已保留日志并由59f93规范化当前受管CSS，严格drift/全字节断言未降低。aa43范围diff发现助手EOF空行，cd8b已清理且编译JS字节相同，最终199/TC/diff在cd8b重验。",
           "完整97门禁和新UI约束/研究renderer、严格SDK两次安装及包内对照必须在最终integration精确tip执行；旧34a证明不冒充当前。",
-          "PPT冻结三模型质量基线均未通过；独立技能后继仍由授权PPT任务修正，本次不偷合其功能、不改公开发布或main。"
+          "PPT冻结三模型质量基线均未通过；独立技能后继仍由授权PPT任务修正，本次不偷合其功能、不改公开发布或main。",
+          "cd8b首次正式集成因reading重入删除compact marker导致footer drift被阻止，失败现场保留attempt1；本严格后继修正模块边界而不放宽footer识别，原任务续行语义和草稿保护不变。"
         ],
-        "generatedAt": "2026-11-02T05:39:17.422394+00:00"
+        "generatedAt": "2026-11-02T06:49:11.485391+00:00"
       }
     },
     {
