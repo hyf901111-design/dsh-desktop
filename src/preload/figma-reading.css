@@ -54,6 +54,8 @@ body[data-ds-dark-theme] .lXshSW_root { background:var(--odyssey-composer-solid)
 body .sRp_composer .lXshSW_root { width:100%; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .lXshSW_root { width:calc(100% - 32px); }
 body .lXshSW_body { padding:0; gap:0; }
+body .lXshSW_root:has([data-task-continuation]) { max-height:252px; }
+body [data-task-continuation] { box-sizing:border-box; display:flex; justify-content:flex-end; min-width:0; padding:0 12px 8px; }
 body .lXshSW_header { box-sizing:border-box; height:40px; min-height:40px; flex:0 0 40px; padding:0 12px; gap:8px; }
 body .lXshSW_title { color:var(--odyssey-task-text); font:400 14px/22px var(--odyssey-font-ui); }
 body .lXshSW_progress { flex:0 0 auto; color:var(--odyssey-task-muted); font:400 12px/22px var(--odyssey-font-ui); }
