@@ -23031,10 +23031,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记生成与Goal Plan可靠性、菜单视窗和演示会话最终完整候选（含滚动重绘严格修复）",
+        "featureName": "统一笔记交付契约与Goal Plan可靠性最终候选（含旧集成断言纠正）",
         "branch": "codex/feat/goal-notes-plan-combined-20261102",
         "baseCommit": "ef5375ed680ed8de40c6b8cc95174699d27f5c6e",
-        "tipCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+        "tipCommit": "c9778b40b254631b812aab7d07298b37ed592737",
         "commits": [
           {
             "commit": "4801191c96de124afaff1984e268822807207338",
@@ -23185,6 +23185,21 @@
               "679504cd1dcd7d9affd7f6dee9e26bcd8c4a9114"
             ],
             "subject": "合并：修复演示斜杠菜单滚动重绘与目标定位"
+          },
+          {
+            "commit": "ed34351c5c4fa5b8d6b4548733594179bc3f1aa0",
+            "parents": [
+              "bd2c88fd4dfeb23015acb7d87ca35b1f39786212"
+            ],
+            "subject": "测试：按笔记空格与侧栏入口分别校验互斥交付规则"
+          },
+          {
+            "commit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "parents": [
+              "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
+              "ed34351c5c4fa5b8d6b4548733594179bc3f1aa0"
+            ],
+            "subject": "合并：区分空格与侧栏笔记交付契约的集成断言"
           }
         ],
         "files": [
@@ -23282,6 +23297,10 @@
           },
           {
             "status": "M",
+            "path": "test/notes-native-capability-contract.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/notes-native-menu.test.ts"
           },
           {
@@ -23334,9 +23353,9 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "新bd2实际安装后19文件263/263 Node。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:00:34.679836+00:00",
+            "summary": "本c977候选实际安装后19文件263/263 Node。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-1.log；SHA256=7a82c8fba0f81a119eb0d13cad0faaaac1e32762283d4c28d4a00578aef71174",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:39:33.263436+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23344,18 +23363,42 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-workspace.test.ts",
-              "test/home-guide-entry-native.test.ts",
-              "test/research-board-presence-final.test.ts",
-              "-t",
-              "^(?!registers a durable Workspace|shares a pending current-example|keeps an added private board|adds a dedicated private board).*",
+              "test/notes-native-capability-contract.test.ts",
+              "test/notes-native-capability-bridge.test.ts",
+              "test/notes-native-operations.test.ts",
+              "test/notes-native-planning.test.js",
+              "test/notes-native-review-history.test.js",
+              "test/client-capabilities.test.js",
+              "test/notes-document-capability-adapter.test.ts",
+              "test/notes-service.test.ts",
+              "test/notes-inline-proposals.test.ts",
+              "test/notes-inline-proposals-pm.test.ts",
+              "test/notes-client-capability-actions.test.ts",
+              "test/notes-client-capability-bridge.test.ts",
+              "test/notes-capability-handlers.test.ts",
+              "test/notes-external-capability-lease.test.ts",
+              "test/notes-native-table-layout.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "原第38门禁完整15文件241/241、exit0；原argv和240000ms保留，无skip/超时放宽。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-2.log；SHA256=a8394cc8674deb366239971a040d449c8e8b8e8b9903ff2c3bdcdf1b3d53870b",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:39:37.553767+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-surface-prompt-contract.test.js",
               "--maxWorkers=1",
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "新bd2三文件102 selected通过、7已确认旧基线skip；不声称整109均绿。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:02:48.637688+00:00",
+            "summary": "直接入口合同8/8、exit0；互斥Space/侧栏合同与当前facts不变。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-3.log；SHA256=ea7ab7cad8c7d8f0b18093713a5360631ccaab9c4fcf645d5f0705cee53c4b3f",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:39:39.123659+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23370,49 +23413,23 @@
               "--fileParallelism=false"
             ],
             "outcome": "passed",
-            "summary": "新bd2实际Notes Host6/6；35 scope外skip。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:03:39.378860+00:00",
+            "summary": "实际NotesApp/Host/runtime六个选中场景6/6；35个原scope外非选中项，不作为全41通过。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-4.log；SHA256=250e21947d0dc474e10bf2be3e2b54a211e36803fcc28c1b469e180325f1219d",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:39:51.698703+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-slash-viewport-browser.test.ts",
-              "test/notes-native-menu.test.ts",
-              "test/home-guide-note-menu.test.ts",
-              "test/notes-slash-fixed-width-browser.test.js",
-              "test/notes-menu-selection.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
+              "git",
+              "diff",
+              "--check",
+              "bd2c88fd4dfeb23015acb7d87ca35b1f39786212..HEAD"
             ],
             "outcome": "passed",
-            "summary": "新bd2五文件52/52，包含新owned-listbox scroll隔离与dispose边界，原viewport/focus/selection守卫保留；作者原6份证据恢复SHA，独立保存本次截图。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:04:40.642441+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "SHERLOCK_TEST_SIDEBAR_SOURCE=/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/integration-power-watchlist-20261028-02/dist-notarized/mac-arm64/EWork Odyssey.app/Contents/Resources/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js",
-              "SHERLOCK_SLASH_EVIDENCE_DIR=/tmp/sherlock-goal-notes-plan-combined-20261102/replay-successor/shell-evidence",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-notes-shell-browser.test.js",
-              "-t",
-              "saves and reopens the native note without clipping a",
-              "--maxWorkers=1",
-              "--fileParallelism=false"
-            ],
-            "outcome": "passed",
-            "summary": "新bd2原600/700完整Shell2/2，原每case130秒未改；完整写作、菜单hover二级、行情、review/替换/总结、保存重开和scope/无延迟修改原断言保留，新增真实target中心命中/完整可见/root不跳与compound ownership守卫。17非选中case。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:07:50.321430+00:00",
-            "timeoutMs": 300000
+            "summary": "仅1个测试文件、严格bd2直接后继，原业务/协议/安全断言保留；生产代码与共享SDK均未改。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-5.log；SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:39:51.751170+00:00",
+            "timeoutMs": 10000
           },
           {
             "argv": [
@@ -23423,20 +23440,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "新bd2 TypeScript检查exit0。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:08:59.830762+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "从Root冻结ef raw快照（captureSHA33b8db…、3237文件bytes/SHA完全匹配）fresh克隆开始，完整installer仅2遍，无warmup；第一次与第二次3237文件全树相同，digest 524462d3daeb7147e2687b2cdd096a09efd05c8c3665653b66895cbb749a0886；frozen原始snapshot未变。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T22:59:43.058340+00:00",
+            "summary": "本c977候选 TypeScript检查exit0。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-6.log；SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:40:00.519524+00:00",
             "timeoutMs": 120000
           },
           {
@@ -23444,18 +23450,18 @@
               "git",
               "diff",
               "--check",
-              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..bd2c88fd4dfeb23015acb7d87ca35b1f39786212"
+              "ef5375ed680ed8de40c6b8cc95174699d27f5c6e..c9778b40b254631b812aab7d07298b37ed592737"
             ],
             "outcome": "passed",
-            "summary": "完整29paths与545后继5paths diffcheck0；10作者history完整，26winning路径字节精确，3原安装接线组合路径保留；clean。",
-            "verifiedCommit": "bd2c88fd4dfeb23015acb7d87ca35b1f39786212",
-            "completedAt": "2026-11-01T23:10:49.198855+00:00",
+            "summary": "新tip30 paths diffcheck，严格bd2后继只改1个测试路径，生产29paths字节与bd2一致。 日志：/tmp/sherlock-goal-notes-plan-combined-20261102/contract-gate-successor/check-7.log；SHA256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "c9778b40b254631b812aab7d07298b37ed592737",
+            "completedAt": "2026-11-02T00:40:00.595604+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "新bd2实际headlessNotes Host6、真实popupHTML菜单52、600/700完整原NotesShell2；独立截图/几何和guard轨迹已保留。未使用共享NativeUI或模型，不等于最终打包客户端验收。"
+          "summary": "本tip实际Notes Host6项及原生语义能力241项；既有bd2菜单/600与700完整Shell证明保留为祖先。尚未运行打包Native或新模型，Root必须执行全部官方门禁及exact-tip私有2pass后才构建。"
         },
         "acceptanceCriteria": [
           "原723五项feature保持，严格追加Goalprofile e4ee、Facts24a8和菜单9ab；全部作者原提交保留，不偷改其scope。",
@@ -23464,16 +23470,15 @@
           "原生与guide斜杠菜单按实际窗口可见范围和caret可用侧限高，完整菜单在固定宽listbox滚动，submenu与root scroll/bounds稳定。",
           "演示board/workbench专属工作区的原始session保持可见，非此owned registry/cwd/成员边界不改变普通独立看板过滤。",
           "演示菜单不在可视区时只滚当前owned列表，guard保持、两稳定帧后真实pointer；window只隔离当前owned root/child内部scroll，其他滚动不拦，close/失权/dispose清理。",
-          "最终bd2的Node263、visibility102/7skip、Host6/35skip、菜单52、完整Shell2/17非选中、TC0与冻结ef raw严格2pass均实际通过；分组不合计成唯一case数。"
+          "最终bd2的Node263、visibility102/7skip、Host6/35skip、菜单52、完整Shell2/17非选中、TC0与冻结ef raw严格2pass均实际通过；分组不合计成唯一case数。",
+          "完整candidate保留原29paths生产/测试字节，仅strict后继修正1个旧契约测试；inline/sidebar实际generateNoteSuggestion分别断言互斥，保留所有原wire/权限/宿主操作断言。"
         ],
         "risks": [
-          "未运行92声明门禁或全功能测试；Root后续official gate/构建与Native和模型复验。",
-          "current-facts规则仅实际producer合同验证，尚不宣称真实模型质量提升。",
-          "visibility保留7旧基线skip，Host35与Shell17为scope外未选中项；各组分开报告。",
-          "旧723/ec0的旧donor+warmup SDK证据保留且被final-ef-raw545严格证据取代；本次又从Root冻结ef snapshot fresh严格两遍验证，不复用先前安装目录。",
-          "仅只读使用efApp sidebar asset（SHA590785…）供真实Shellfixture，未操作或修改共享客户端/SDK。"
+          "本次仅更新旧测试，无生产改动；bd2的SDK严格证明仅为祖先，不冒充当前tip。Root官方集成后必须以最终exact integration tip重新做fresh完整安装两遍和包对照。",
+          "未做新包Native与实际模型复验，旧Goal阶段越界/阻塞空转与Notes事实错误仍待关闭。",
+          "未修改任何baseline skip，Host35为原筛选范围外，241与263/8/6各组有重叠，不合计唯一总数。"
         ],
-        "generatedAt": "2026-11-01T23:10:49.198855+00:00"
+        "generatedAt": "2026-11-02T00:41:22.800029+00:00"
       }
     }
   ],
