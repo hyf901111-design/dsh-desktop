@@ -1,5 +1,6 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "已读取当前内容，本次尚未生成修改或答复。": "The current content was read. No edits or reply were generated.",
   "组件更多操作": "More component actions",
   "原生表格操作": "Native table actions",
   "表格操作": "Table actions",

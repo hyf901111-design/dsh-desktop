@@ -28,6 +28,8 @@ beforeAll(async()=>{
  import '@blocknote/mantine/style.css';import ${JSON.stringify(resolve('src/preload/notes/style.css'))};import ${JSON.stringify(resolve('src/preload/notes/challenge.css'))};
  window.armNativeTiming=dimension=>{let observer;const submit=()=>{window.fastTiming={submitAt:performance.now(),dimension};observer=new MutationObserver(()=>{const table=document.querySelector('.bn-editor table'),cells=table?.querySelectorAll('td');if(cells?.length===dimension*dimension&&table.getBoundingClientRect().width>0&&table.getBoundingClientRect().height>0){window.fastTiming.visibleAt=performance.now();window.fastTiming.visibleCells=[...cells].filter(cell=>{const r=cell.getBoundingClientRect();return r.width>0&&r.height>0&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth}).length;observer.disconnect()}});observer.observe(document.querySelector('.bn-editor'),{childList:true,subtree:true})};const key=e=>{if(e.key==='Enter'&&!e.shiftKey&&e.target.matches('.en-space-ai textarea')){document.removeEventListener('keydown',key,true);document.removeEventListener('sherlock:notes-submit',side,true);submit()}},side=()=>{document.removeEventListener('keydown',key,true);document.removeEventListener('sherlock:notes-submit',side,true);submit()};document.addEventListener('keydown',key,true);document.addEventListener('sherlock:notes-submit',side,true)};
  window.seedComment=async(blockId,quote,message,extra={})=>{const store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor')),thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue:{blockId,quote,category:'grammar',message,evidence:[],...extra},sourceText:quote},initialComment:{body:[{type:'paragraph',content:message}]}});const range=findChallengeQuote(window.editor,blockId,quote);if(range)window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
+ window.addComment=async(threadId,text,metadata,user='assistant')=>new YjsThreadStore(user==='assistant'?CHALLENGE_USER:user,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(user==='assistant'?CHALLENGE_USER:user,'editor')).addComment({threadId,comment:{body:[{type:'paragraph',content:text}],...metadata?{metadata}:{}}});
+ window.editComment=async(threadId,kind)=>{const thread=window.noteDoc.getMap('threads').get(threadId),comment=thread.get('comments').get(0),store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));if(kind==='reply')return window.addComment(threadId,'请保留结论，只修订论证。',undefined,'review-human');if(kind==='delete')return store.deleteComment({threadId,commentId:comment.get('id'),softDelete:true});return store.updateComment({threadId,commentId:comment.get('id'),comment:{body:kind==='body'?[{type:'paragraph',content:'评论正文已更新，请先核对依据。'}]:comment.get('body'),...kind==='replacement'?{metadata:{challengeReplacement:{scopeVersion:2,anchorQuote:'保留前段',blockId:'before',quote:'保留前段',sourceText:'保留前段',documentKey:'fixture-current-document',replacement:'依据核对后的前段。',status:'pending'}}}:{}}})};
  window.calls=[];window.saved={title:'原生操作验收',blocks:[{id:'before',type:'paragraph',content:'保留前段'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后段'}],yjs:'',revision:0,updatedAt:0};
  const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load'){const loaded=await window.nativeStore(method,input);window.saved=loaded.saved;return loaded}if(method==='save'){if(window.failSave)throw Error('保存失败样本');const result=await window.nativeStore(method,input);if(window.holdSaveAck&&input.content.blocks.some(block=>block.type==='table'))await new Promise(resolve=>window.releaseSaveAck=resolve);if(result.status==='saved'){window.saved=result.saved;if(window.fastTiming?.submitAt&&result.saved.blocks.some(b=>b.type==='table'&&b.content.rows.length===window.fastTiming.dimension&&b.content.rows[0].cells.length===window.fastTiming.dimension))window.fastTiming.saveAckAt??=performance.now()}return result}if(method==='capability-reply'){if(window.holdNativeEffect&&input.effect?.state==='applied')await new Promise(resolve=>window.releaseNativeEffect=resolve);return window.mainCapabilityReply(input)}if(method==='capability-ready'){if(window.holdNativeAdmission)await new Promise(resolve=>window.releaseNativeAdmission=resolve);return window.hostNativeReady(input,!!window.nativeReadOnly)}if(method==='render'||method==='native-table'||method==='conversation-state'||method==='conversation-load'||method==='stop')return window.hostNativeRequest(method,input);if(method==='generate'&&input.entryPoint==='component')return {kind:'component',node:{kind:'generated-container',title:'预览中的专业图表',containerSpec:{version:1,type:'chart',variant:'line',title:'预览中的专业图表',labels:['A','B'],series:[{name:'演示',values:[1,2]}]}}};if(method==='generate')return window.useNativeModel?window.hostNativeRequest(method,input):new Promise((resolve,reject)=>{window.modelResolve=resolve;window.modelReject=reject});if(method==='library-list')return[];return{}},draft:async input=>{window.pendingDraft=input;await window.nativeStore('draft',input)}};
  const root=createRoot(document.querySelector('#root'));window.openNativeGuide=()=>{document.documentElement.dataset.homeGuidePointerRun='core-guide-caret';root.unmount();const next=document.createElement('div');document.body.append(next);createRoot(next).render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){},guide:{native:{runId:'core-guide-caret'},ready(api){window.guideApi=api}}}))};window.reopen=()=>{root.unmount();const next=document.createElement('div');document.body.append(next);createRoot(next).render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){}}))};root.render(React.createElement(NotesApp,{sessionId:'native-fixture',bridge,dark:false,navigate(){}}));
@@ -327,9 +329,9 @@ it('keeps a read-only receipt from pretending that the requested edits were comp
  try{
   await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,'优化全文')
   await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied')
-  expect(f.modelRequests).toHaveLength(2);expect(f.history().at(-1)?.result).toMatchObject({requiresReply:true,markdown:expect.stringContaining('尚未生成修改或答复')})
+  expect(f.modelRequests).toHaveLength(2);expect(f.history().at(-1)?.result).toMatchObject({requiresReply:true,notice:'read-only-incomplete',markdown:expect.stringContaining('尚未生成修改或答复')})
   expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0)
-  await f.flushHistory();f.restartHistory();expect(f.history().at(-1)?.result.markdown).toContain('尚未生成修改或答复');expect(f.errors).toEqual([])
+  await f.flushHistory();f.restartHistory();expect(f.history().at(-1)?.result.notice).toBe('read-only-incomplete');expect(f.history().at(-1)?.result.markdown).toContain('尚未生成修改或答复');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
 
@@ -366,5 +368,47 @@ it('settles a nonce-complete batch of real native preview deliveries once and ke
   expect(f.modelRequests).toHaveLength(1);expect(f.history().at(-1)?.result.capabilityReceipts).toMatchObject([{status:'succeeded',data:{pendingPreview:true}},{status:'succeeded',data:{pendingPreview:true}}]);expect(await body(f.page)).toEqual(before)
   await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>JSON.stringify(f.store.load('fixture','native-fixture').saved.blocks)).toContain('后段完整修订')
   expect((await body(f.page)).filter((row:any)=>row.id==='before')).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it('reads actual comment bodies, human follow-ups and AI replacement metadata in the authorized host snapshot',async()=>{
+ const f=await open(request=>{
+  const snapshot=JSON.parse(request.messages[0].content[0].text).documentSnapshot,comment=snapshot.comments.comments[0]
+  expect(snapshot.comments.revision).toBeTruthy();expect(comment.issue.message).toBe('初始问题')
+  expect(comment.messages).toMatchObject([{role:'assistant',text:'评论正文已更新，请先核对依据。'},{role:'user',text:'请保留结论，只修订论证。'},{role:'assistant',text:expect.stringContaining('建议替换文本：依据核对后的前段。')}])
+  expect(comment.suggestions).toMatchObject([{commentId:expect.any(String),suggestion:{blockId:'before',replacement:'依据核对后的前段。',status:'pending'}}])
+  return{kind:'conversation',markdown:'已看到当前评论、补充要求和待确认建议，尚未改动正文。'}
+ });try{
+  await f.page.evaluate(async()=>{const w=window as any,id=await w.seedComment('before','保留前段','初始问题');await w.editComment(id,'body');await w.editComment(id,'reply');await w.addComment(id,'根据补充要求提供建议。',{challengeReplacement:{scopeVersion:2,anchorQuote:'保留前段',blockId:'before',quote:'保留前段',sourceText:'保留前段',documentKey:'fixture-current-document',replacement:'依据核对后的前段。',status:'pending'}});w.useNativeModel=true})
+  const before=await body(f.page);await submit(f.page,'看看当前评论和建议，不修改正文');await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied')
+  expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before);expect(await f.page.locator('[data-note-preview-state]').count()).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
+
+it.each([{phase:'generating',change:'body'},{phase:'generating',change:'reply'},{phase:'acceptance',change:'body'},{phase:'acceptance',change:'reply'},{phase:'acceptance',change:'delete'},{phase:'acceptance',change:'replacement'}])('rejects stale native edits after actual comment $change during $phase',async({phase,change})=>{
+ let release!:()=>void,started!:(request:any)=>void
+ const seen=new Promise<any>(resolve=>{started=resolve}),gate=new Promise<void>(resolve=>{release=resolve})
+ const f=await open(async request=>{started(request);if(phase==='generating')await gate;const snapshot=JSON.parse(request.messages[0].content[0].text).documentSnapshot;return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'comment-sensitive',capability:'notes.blocks.apply',arguments:{revision:snapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'旧讨论版本的修改不得采纳'}}]}}]}})
+ try{
+  const id=await f.page.evaluate(async()=>{const w=window as any;w.useNativeModel=true;return w.seedComment('before','保留前段','初始问题')})
+  const before=await body(f.page);await submit(f.page,'优化评论指出的问题');await seen
+  if(phase==='acceptance')await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  await f.page.evaluate(({id,change}:any)=>(window as any).editComment(id,change),{id,change});release()
+  if(phase==='generating'){
+   await expect.poll(()=>f.history().at(-1)?.result?.capabilityReceipts?.length).toBe(1)
+   expect(f.history().at(-1)?.result).toMatchObject({requiresReply:true,capabilityReceipts:[{status:'failed',message:expect.stringContaining('评论已变化')}]})
+   expect(await f.page.locator('[data-note-preview-state=ready]').count()).toBe(0)
+  }else await f.page.getByRole('button',{name:'添加至正文',exact:true}).click()
+  expect(await body(f.page)).toEqual(before);expect(f.modelRequests).toHaveLength(1);expect(f.errors).toEqual([])
+ }finally{release();await f.close()}
+},20000)
+
+it('rejects a comment edit omitted by the bounded model discussion view',async()=>{
+ const f=await open(request=>{const snapshot=JSON.parse(request.messages[0].content[0].text).documentSnapshot;expect(snapshot.comments.status).toBe('partial');expect(snapshot.comments.comments[0].messages).toHaveLength(20);expect(snapshot.comments.comments[0].messageCount).toBe(22);return{kind:'capabilities',wireToken:/wireToken=([a-f0-9-]+)/u.exec(request.system)![1],completion:'complete',calls:[{requestId:'bounded-comments',capability:'notes.blocks.apply',arguments:{revision:snapshot.revision,operations:[{op:'update',blockId:'before',block:{content:'已省略消息变化后的旧修改不得采纳'}}]}}]}})
+ try{
+  const id=await f.page.evaluate(async()=>{const w=window as any,id=await w.seedComment('before','保留前段','初始问题');for(let i=0;i<21;i++)await w.addComment(id,'补充要求 '+i,undefined,'review-human');w.useNativeModel=true;return id})
+  const before=await body(f.page);await submit(f.page,'根据当前讨论优化这段');await f.page.locator('[data-note-preview-state=ready]').waitFor()
+  await f.page.evaluate((id:string)=>(window as any).editComment(id,'body'),id)
+  await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();expect(await body(f.page)).toEqual(before);expect(f.modelRequests).toHaveLength(1);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)

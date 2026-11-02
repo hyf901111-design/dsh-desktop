@@ -65,7 +65,8 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     const receiptSummary=row.result?.kind==='conversation'&&row.result.capabilityReceipts?.length?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):''
     const originalSummary=row.result?.capabilitySummary|| (receiptSummary?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts):'')
     const reply=row.result?.requiresReply===true?String(row.result.markdown||'').trim():''
-    const remaining=originalSummary&&reply.startsWith(originalSummary)?reply.slice(originalSummary.length).trim():reply
+    const remainingReply=originalSummary&&reply.startsWith(originalSummary)?reply.slice(originalSummary.length).trim():reply
+    const remaining=row.result?.notice==='read-only-incomplete'&&remainingReply==='已读取当前内容，本次尚未生成修改或答复。'?noteUiText('已读取当前内容，本次尚未生成修改或答复。',document.documentElement.dataset.odysseyLocale):remainingReply
     const conversation=receiptSummary?[receiptSummary,remaining&&remaining!==receiptSummary?remaining:''].filter(Boolean).join('\n\n'):row.result?.markdown
     const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress:[]
     const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts:[]

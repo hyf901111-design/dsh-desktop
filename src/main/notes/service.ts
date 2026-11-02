@@ -261,7 +261,7 @@ export function installNotesService(options: {
               capabilityResults.set(cacheKey,{fingerprint,result})
               if(options.owner()===owner&&options.canRead(session)){
                 const receiptUrl=new URL('/sherlock/notes/session',base)
-                const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,...result?.kind==='conversation'&&result.requiresReply===true?{remainingReply:{markdown:result.markdown}}:{},receipts})}).catch(()=>undefined)
+                const recorded=await fetch(receiptUrl,{method:'POST',headers:{'content-type':'application/json',origin:receiptUrl.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:'conversation-capabilities',requestId:input.requestId,...result?.kind==='conversation'&&result.requiresReply===true?{remainingReply:{markdown:result.markdown,...result.notice==='read-only-incomplete'?{notice:result.notice}:{}}}:{},receipts})}).catch(()=>undefined)
                 if(!recorded?.ok)result.markdown=result.kind==='conversation'?result.markdown+'\n操作回执暂未写入会话历史。':result.markdown
               }
             }
