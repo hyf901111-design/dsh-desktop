@@ -40,6 +40,46 @@ async function fixture({dark=true,width=1600,height=1000,reduced=true,collapsed=
 }
 async function open(page:any){await page.getByRole('button',{name:'探索',exact:true}).click();await uiExpect(page.getByRole('dialog',{name:'探索',exact:true})).toBeVisible();await page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>Promise.all(node.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished)))}
 async function clickExploreControl(page:any,selector:string){const node=page.locator('dialog.odyssey-explore '+selector),box=await node.boundingBox();expect(box).not.toBeNull();const point={x:box.x+box.width/2,y:box.y+box.height/2};expect(await node.evaluate((node:HTMLElement,point:any)=>node.contains(document.elementFromPoint(point.x,point.y)),point)).toBe(true);await page.mouse.click(point.x,point.y)}
+it.each([[1600,1000,true],[1380,900,false],[850,600,true],[851,600,false],[540,600,true],[1000,640,false]])('limits Explore window dragging to its top chrome and keeps actual controls reachable at %sx%s dark=%s',async(width,height,dark)=>{
+ const f=await fixture({width:width as number,height:height as number,dark:dark as boolean});try{
+  await open(f.page)
+  const geometry=await f.page.locator('dialog.odyssey-explore').evaluate((dialog:HTMLElement)=>{
+   const drag=dialog.querySelector<HTMLElement>('[data-explore-window-drag]')!,system=dialog.querySelector<HTMLElement>('.odyssey-explore-system')!,content=dialog.querySelector<HTMLElement>('.odyssey-explore-content')!,account=system.querySelector<HTMLButtonElement>('.odyssey-explore-account')!,close=system.querySelector<HTMLButtonElement>('[data-explore-close]')!,search=content.querySelector<HTMLButtonElement>('.odyssey-explore-search-control>button')!
+   const rect=(node:HTMLElement)=>{const r=node.getBoundingClientRect();return{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}}
+   const control=(node:HTMLElement)=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{...rect(node),reachable:node.contains(hit),hit:hit?.className,region:getComputedStyle(node).getPropertyValue('-webkit-app-region')}}
+   const bounds=drag.getBoundingClientRect(),points=[{x:12,y:Math.min(system.getBoundingClientRect().top+24,bounds.bottom-8)},{x:innerWidth-12,y:Math.min(20,system.getBoundingClientRect().top/2)}]
+   return{drag:{...rect(drag),region:getComputedStyle(drag).getPropertyValue('-webkit-app-region'),hidden:drag.getAttribute('aria-hidden'),focusable:drag.tabIndex},dialogRegion:getComputedStyle(dialog).getPropertyValue('-webkit-app-region'),systemRegion:getComputedStyle(system).getPropertyValue('-webkit-app-region'),contentRegion:getComputedStyle(content).getPropertyValue('-webkit-app-region'),points:points.map(point=>({...point,hit:document.elementFromPoint(point.x,point.y)===drag})),account:control(account),close:control(close),search:control(search)}
+  })
+  await writeFile(evidence+'/window-drag-geometry-'+width+'-'+height+'.json',JSON.stringify(geometry,null,2))
+  await f.page.screenshot({path:evidence+'/window-drag-layout-'+width+'-'+height+'.png'})
+  if(![geometry.account,geometry.close,geometry.search].every(control=>control.reachable))await f.page.screenshot({path:evidence+'/window-drag-controls-'+width+'-'+height+'.png'})
+  expect(geometry.drag).toMatchObject({left:0,top:0,width,region:'drag',hidden:'true',focusable:-1});expect(geometry.drag.height).toBe((width as number)<=850?76:88)
+  expect(geometry.dialogRegion).toBe('no-drag');expect(geometry.contentRegion).toBe('no-drag');expect(geometry.systemRegion).toBe('no-drag');expect(geometry.points.every((point:any)=>point.hit)).toBe(true)
+  for(const control of[geometry.account,geometry.close,geometry.search]){expect(control.reachable).toBe(true);expect(control.region).toBe('no-drag');expect(control.left).toBeGreaterThanOrEqual(0);expect(control.right).toBeLessThanOrEqual(width)}
+  await f.page.mouse.click(geometry.points[0].x,geometry.points[0].y);await uiExpect(f.page.locator('dialog.odyssey-explore')).toBeVisible()
+  await clickExploreControl(f.page,'.odyssey-explore-account');await uiExpect(f.page.getByRole('menu')).toBeVisible();await f.page.keyboard.press('Escape');await uiExpect(f.page.getByRole('menu')).not.toBeVisible()
+  await clickExploreControl(f.page,'[data-explore-close]');await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible()
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('keeps Explore and its search open after a top-origin drag releases over the backdrop, while genuine outside clicks still dismiss in order',async()=>{
+ const f=await fixture();try{
+  await open(f.page);const dialog=f.page.locator('dialog.odyssey-explore');await f.page.getByRole('button',{name:'搜索会话',exact:true}).click();const input=f.page.getByRole('searchbox',{name:'搜索会话',exact:true});await input.fill('中际')
+  await f.page.mouse.move(16,24);await f.page.mouse.down();await f.page.mouse.move(8,400,{steps:8});await f.page.mouse.up()
+  await uiExpect(dialog).toBeVisible();await uiExpect(input).toBeVisible();expect(await input.inputValue()).toBe('中际');expect(await f.page.getByRole('option').count()).toBe(3)
+  await f.page.mouse.click(8,400);await uiExpect(input).not.toBeVisible();await uiExpect(dialog).toBeVisible()
+  await clickExploreControl(f.page,'.odyssey-explore-account');await uiExpect(f.page.getByRole('menu')).toBeVisible();await f.page.mouse.click(8,400);await uiExpect(f.page.getByRole('menu')).not.toBeVisible();await uiExpect(dialog).toBeVisible()
+  await f.page.mouse.click(8,400);await uiExpect(dialog).not.toBeVisible();expect(await f.page.getByRole('textbox',{name:'保留的原输入框'}).inputValue()).toBe('原草稿必须保留');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it.each(['pointercancel','blur','remount'])('releases the Explore drag-origin guard after %s without blocking subsequent clicks',async boundary=>{
+ const f=await fixture();try{
+  await open(f.page);await f.page.mouse.move(16,24);await f.page.mouse.down()
+  if(boundary==='remount'){await f.page.evaluate(()=>(window as any).fixture.restart());await f.page.mouse.up();await open(f.page)}
+  else{await f.page.evaluate((boundary:string)=>window.dispatchEvent(boundary==='blur'?new Event('blur'):new PointerEvent('pointercancel',{bubbles:true})),boundary);await f.page.mouse.up()}
+  await clickExploreControl(f.page,'.odyssey-explore-account');await uiExpect(f.page.getByRole('menu')).toBeVisible();await f.page.mouse.click(8,400);await uiExpect(f.page.getByRole('menu')).not.toBeVisible();await uiExpect(f.page.locator('dialog.odyssey-explore')).toBeVisible();await f.page.mouse.click(8,400);await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible();expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it('replaces the bottom account entry with an always-flowing orb and opens a centered full-client menu without changing the draft',async()=>{
  const f=await fixture({reduced:false});try{
   const input=f.page.getByRole('textbox',{name:'保留的原输入框'});await input.focus()

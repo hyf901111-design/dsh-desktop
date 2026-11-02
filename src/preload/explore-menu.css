@@ -22,6 +22,8 @@
 .odyssey-explore button:focus-visible,.odyssey-explore input:focus-visible{outline:2px solid var(--ds-focus-ring,#578cf5);outline-offset:3px}
 .odyssey-explore [hidden]{display:none!important}
 .odyssey-explore-edge{position:absolute;inset:0;pointer-events:none;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);mask-image:radial-gradient(ellipse 70% 68% at center,transparent 40%,#000 100%);opacity:.8}
+.odyssey-explore-window-drag{position:absolute;inset:0 0 auto;height:88px;background:transparent;user-select:none;-webkit-user-select:none;-webkit-app-region:drag}
+.odyssey-explore-content,.odyssey-explore-system{-webkit-app-region:no-drag}
 .odyssey-explore-content{position:relative;width:min(864px,100%);translate:0 -24px;min-width:0;max-height:100%;color:var(--explore-ink);animation:odyssey-explore-content-in 300ms cubic-bezier(.22,.61,.36,1) both}
 .odyssey-explore-header{height:40px;display:flex;align-items:center;justify-content:space-between;margin:0 0 26px;position:relative}
 .odyssey-explore-brand{display:flex;align-items:center;gap:8px;height:40px;font-size:16px;font-weight:500;white-space:nowrap}
@@ -104,7 +106,9 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 @keyframes odyssey-explore-veil{from{opacity:0}to{opacity:1}}
 @keyframes odyssey-explore-content-in{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes odyssey-explore-spinner{to{transform:rotate(360deg)}}
-@media(max-width:850px){.odyssey-explore{padding:88px 28px 32px}.odyssey-explore-content{width:100%}.odyssey-explore-system{right:24px;top:28px}.odyssey-explore-wallpapers .odyssey-wallpaper-name{font-size:13px;line-height:20px}}
+@media(max-width:850px){.odyssey-explore{padding:88px 28px 32px}.odyssey-explore-window-drag{height:76px}.odyssey-explore-content{width:100%}.odyssey-explore-system{right:24px;top:28px}.odyssey-explore-wallpapers .odyssey-wallpaper-name{font-size:13px;line-height:20px}}
+/* Short desktop windows still reserve the account/close chrome above content. */
+@media(min-width:851px) and (max-height:720px){.odyssey-explore[open]{align-items:flex-start;padding-top:100px}.odyssey-explore-content{translate:0 0}}
 @media(max-width:560px){.odyssey-explore{padding:84px 20px 20px}.odyssey-explore-tabs button{font-size:16px}.odyssey-explore-header{margin-bottom:16px}.odyssey-explore-viewport{height:calc(100dvh - 252px)}.odyssey-explore-search-control{transition-duration:240ms}.odyssey-explore-results{top:-50px;height:calc(100% + 50px)}.odyssey-explore-result strong{font-size:14px}.odyssey-explore-wallpapers .odyssey-wallpaper-name{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.odyssey-explore-orb img{animation:none}.odyssey-explore-orb img:not(:first-child){opacity:0}.odyssey-explore,.odyssey-explore::backdrop,.odyssey-explore-content,.odyssey-explore-results{animation:none!important}.odyssey-explore *{transition:none!important}}
 
