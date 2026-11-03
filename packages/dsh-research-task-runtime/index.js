@@ -518,7 +518,7 @@ function componentRepairEvidence(evidence,records) {
   }).join('\n')
 }
 
-function workbenchPanelPrompt(prompt, boundData = false, onChartContract) {
+function workbenchPanelPrompt(prompt, boundData = false, onChartContract, { canonicalPolicySourceGuidance = false } = {}) {
   const type = workbenchPanelFormat(prompt)
   if (!type) return null
   const scope = workbenchPanelScope(prompt)
@@ -554,6 +554,7 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract) {
     '为当前工作台填充一个预置组件。宿主负责全部显示样式与交互，只需取得真实数据并交付可重复执行的字段映射。',
     '直接输出一个完整 JSON 对象；不附前言、说明或代码围栏。',
     COMPONENT_BOUND_DATA_PROMPT,
+    ...(canonicalPolicySourceGuidance ? [POLICY_SOURCE_GUIDANCE] : []),
     `mapping 的模板结构：${schemas[type]}`,
     '数值、日期、单位与来源必须来自实际响应；保留主要字段，缺失就标注。取得足够数据后立即输出，不搜索应用代码，不启动子任务。请求参数和日期照抄实际成功调用，由宿主维护后续滚动日期。记录的日期、来源、正文和数值使用路径引用，静态标题与单位可以直接写文字。',
     '行情快照使用单次响应已有的核心字段，不为补充未提供的52周高低等可选字段额外拉取长历史。响应被截断时缩小范围；不能绑定不完整的JSON。只交付当前已有足够证据的内容。',
@@ -567,7 +568,8 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract) {
   return [
     '为EWork Odyssey生成一个独立面板，仅输出完整JSON，不附前言、推理、代码围栏或其他组件。',
     componentSkillInstruction('panel',type),
-    ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
+    ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction(undefined, { includePolicySourceGuidance: !canonicalPolicySourceGuidance })] : []),
+    ...(canonicalPolicySourceGuidance ? [POLICY_SOURCE_GUIDANCE] : []),
     `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；直接输出这个数据对象，items等字段放在根对象，不再包裹panel或artifact；` : ''}${schemas[type]}`,
     ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [['kpi','table','chart','market'].includes(type)?((type==='chart'||type==='market'&&selectedMarketVariant==='trend')&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:COMPONENT_STATIC_DATA_PROMPT):'本卡未要求刷新绑定；按当前模板提交已有的真实记录、来源及时点。'] : []),
     deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
@@ -630,7 +632,7 @@ export function buildResearchTaskPrompt(request, { canonicalPolicySourceGuidance
     ].join('\n\n')
   }
   if (validated.kind === 'container') {
-    const plannedPanel = workbenchPanelPrompt(validated.prompt)
+    const plannedPanel = workbenchPanelPrompt(validated.prompt, false, undefined, { canonicalPolicySourceGuidance })
     if (plannedPanel) return plannedPanel
     const allowsWeb = containerPromptHasExplicitWebUrl(validated.prompt)
     return [
@@ -1556,9 +1558,9 @@ export class ResearchTaskRuntime {
         }catch(error){throw new ResearchTaskError('GENERATION_FAILED',error.message)}
       }
       if(task.newsCoverage?.draft&&(!acceptArtifactOutput(task.newsCoverage.draft)||componentFeedEvidenceIssue(task.newsCoverage.draft,sourceRecords,feedOptions)||newsTableIssueFor(task.newsCoverage.draft)))delete task.newsCoverage.draft
-      // The generic builder carries its policy outside the optional data skill.
+      // Component builders carry one owned policy outside the optional data skill.
       // Pass ownership as host metadata, never infer it from user/evidence text.
-      const canonicalPolicySourceGuidance = task.kind === 'container' && !workbenchPanelFormat(task.prompt)
+      const canonicalPolicySourceGuidance = task.kind === 'container'
       const executionPrompt = (await buildResearchTaskExecutionPrompt(taskRequest(task), {
         signal: task.controller.signal,
         canonicalPolicySourceGuidance,
@@ -2312,11 +2314,11 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       let declaredChartContract
       if(kind==='container')workbenchPanelPrompt(query,bindingRequested,contract=>{declaredChartContract=contract})
       const canonicalBindingProtocol = boundTemplate && !preservePrompt && bindingRequested
-      // Initial typed requests replace the producer's prompt, so they cannot
-      // inherit ownership. Retained generic repair prompts keep their contract;
-      // synthesis-only repairs do not append online data/source guidance.
-      const retainsProducerPolicySourceGuidance = policySourceGuidanceIncluded && !(boundTemplate && !preservePrompt)
-      let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
+      // A typed rebuild owns its canonical policy; otherwise trust only the
+      // producer's metadata. Never infer ownership from user/evidence bytes.
+      // Repairs retain that owned contract and do not add online guidance.
+      const ownsPolicySourceGuidance = boundTemplate && !preservePrompt || policySourceGuidanceIncluded
+      let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested, undefined, { canonicalPolicySourceGuidance: true }) : prompt, bundledSkills)
       const noteGuidance=surface==='note'&&permitsTools&&typeof noteSourceGuidance==='function'?noteSourceGuidance(scopedSchemas)||'':''
       if(kind==='container'&&permitsTools){
         const {end}=chinaMarketWindow(new Date()),today=`${end.slice(0,4)}-${end.slice(4,6)}-${end.slice(6,8)}`
@@ -2332,12 +2334,12 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (deferredSynthesis) effectivePrompt += '\n当前为无工具的离线组件生成。所需组件技能、交付格式、宿主交互接口、原始需求和共同事实均已附在本请求；直接生成本组件，不再读取技能、文件或应用实现。保留要求的业务交互与全部记录，不以静态说明替代。'
       if (bundledSkills.data && permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) {
-        const guidance=freeDataInstruction(undefined, { includePolicySourceGuidance: !retainsProducerPolicySourceGuidance })
+        const guidance=freeDataInstruction(undefined, { includePolicySourceGuidance: !ownsPolicySourceGuidance })
         if(!effectivePrompt.includes(guidance))effectivePrompt += '\n' + guidance
       }
       if (permitsTools) effectivePrompt += preferredSources.length
         ? `\n${componentSourceInstruction(preferredSources, sourceRequest)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
-        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+(retainsProducerPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
+        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+(ownsPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
