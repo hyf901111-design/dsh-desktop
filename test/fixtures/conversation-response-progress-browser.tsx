@@ -44,7 +44,18 @@ function PendingAfterHistory(){
  return h(React.Fragment,null,...flow.map(entry=>h(native.__responseExecution,{key:entry.key,entry,activityNodes:[],startTime:timeline.turns.get(entry.turn)?.start?.time??null,endTime:timeline.turns.get(entry.turn)?.end?.time??null,seatProps:{},t,responseTiming:timings.get(entry.key)})))
 }
 const publish=()=>{const previous=projection.getSnapshot(),turns=new Map(previous.chat.timeline.turns);turns.set(turn,{turn,status:ended?'closed':'open',start:{time:turn===1?firstTurnStart:Date.now()-5_000},end:ended?{time:Date.now()}:null});projection.set({...previous,running:!ended,chat:{order:rows.map(n=>n.key),nodes:new Map(rows.map(n=>[n.key,n])),timeline:{turns}}})}
+const completedHistories=new Map<string,{end:number,duration:number}>()
+function historySession(id:string,duration:number,loaded=false){
+ let history=completedHistories.get(id)
+ if(!history){history={end:Date.now()-3600000,duration};completedHistories.set(id,history)}
+ activeSessionId=id;ended=true
+ const node=groupNode(1,'tool:'+id),previous=projection.getSnapshot()
+ projection.set({...previous,running:false,hasMore:!loaded,loadingOlder:false,chat:{order:[node.key],nodes:new Map([[node.key,node]]),timeline:{turns:new Map([[1,{turn:1,status:'closed',...(loaded?{start:{time:history.end-history.duration}}:{}),end:{time:history.end}}]])}}})
+ root.render(h(App))
+}
 w.responseFixture={
+ historySession,
+ loadHistory(){const history=completedHistories.get(activeSessionId)!;historySession(activeSessionId,history.duration,true)},
  pendingAfterHistory(){pendingObservedAt=Date.now()-3000;admittedPending=false;root.render(h(PendingAfterHistory))},
  admitAfterHistory(){admittedPending=true;projection.set({...projection.getSnapshot()})},
  switchSession(){activeSessionId='other';root.render(h(App))},

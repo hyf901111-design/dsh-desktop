@@ -110,3 +110,23 @@ it('keeps an older total frozen while a real pending projection waits for a new 
   await page.clock.runFor(2100);expect(await times(page)).toEqual(['· 用时 10秒','· 用时 7秒']);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+it('does not invent zero elapsed time when switching to a completed session before older history arrives',async()=>{
+ const{page,errors}=await fixture();try{
+  await page.evaluate(()=>window.responseFixture.historySession('old-ppt',176000));await page.clock.runFor(20)
+  await expect.poll(()=>page.locator('.Md3f7G_executionGroup').count()).toBe(1)
+  expect(await times(page)).toEqual([])
+  await page.clock.runFor(10000);expect(await times(page)).toEqual([])
+  await page.evaluate(()=>window.responseFixture.loadHistory());await page.clock.runFor(20)
+  expect(await times(page)).toEqual(['· 用时 2分56秒'])
+  await page.clock.runFor(5000);expect(await times(page)).toEqual(['· 用时 2分56秒'])
+  await page.evaluate(()=>window.responseFixture.historySession('other-completed',500));await page.clock.runFor(20)
+  expect(await times(page)).toEqual([])
+  await page.evaluate(()=>window.responseFixture.loadHistory());await page.clock.runFor(20)
+  expect(await times(page)).toEqual(['· 用时 0秒'])
+  await page.evaluate(()=>window.responseFixture.historySession('old-ppt',176000,true));await page.clock.runFor(20)
+  expect(await times(page)).toEqual(['· 用时 2分56秒'])
+  await page.clock.runFor(5000);expect(await times(page)).toEqual(['· 用时 2分56秒'])
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
