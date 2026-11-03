@@ -1878,7 +1878,7 @@ export class ResearchTaskRuntime {
           componentBindingEvidence(sourceRecords)||'',
           repairWebEvidence
         ].join('\n') : bindingRepairEvidence && !bindingRequested ? [
-          workbenchPanelPrompt(task.prompt) ?? executionPrompt,
+          workbenchPanelPrompt(task.prompt, false, undefined, { canonicalPolicySourceGuidance }) ?? executionPrompt,
           COMPONENT_STATIC_DATA_PROMPT,
           `具体校验问题：${generationError?.message ?? '组件格式不完整'}`,
           '本轮不建立自动更新绑定、不重新检索。下方 responseSample 只含部分字段样本，不是完整集合；指标、表格、列表或曲线均优先提交完整 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。financial_query 的 snapshotOnly:true 来源也可用于本次静态映射，不能绑定刷新。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
@@ -1894,7 +1894,7 @@ export class ResearchTaskRuntime {
           COMPONENT_BOUND_DATA_PROMPT,
           // Re-state the complete template even for a data-bound draft: its
           // malformed field structure is precisely what this repair must fix.
-          workbenchPanelPrompt(task.prompt, true) ?? '',
+          workbenchPanelPrompt(task.prompt, true, undefined, { canonicalPolicySourceGuidance }) ?? '',
           `具体校验问题：${generationError?.message ?? '缺少字段映射'}`,
           '来源缺少摘要时，用 $default:"来源未提供摘要"；保留路径映射与原请求，不退回静态数据。',
           'requests 只能引用下方 responseSample 实际存在的完整成功响应。缺少对应样本的请求必须删除，其可选指标用“—”并注明“本次未取得”，同时修正文案；不得重用截断结果或保留无依据的计算说明。保留有效请求和已有核心数据。',
@@ -1905,7 +1905,7 @@ export class ResearchTaskRuntime {
           repairEvidence,
           repairWebEvidence
         ].join('\n') : emptyWorkbenchDeadline ? [
-          workbenchPanelPrompt(task.prompt),
+          workbenchPanelPrompt(task.prompt, false, undefined, { canonicalPolicySourceGuidance }),
           '上一轮在限定时间内没有产生公开交付内容。此轮直接输出最终 JSON；仅使用本需求允许的样例或已取得的资料，不编造真实事实。'
         ].join('\n') : [
           executionPrompt, '',

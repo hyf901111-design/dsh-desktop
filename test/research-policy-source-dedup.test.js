@@ -168,3 +168,27 @@ it('keeps Notes typed refresh source and binding ownership independent in the ac
  expect(f.text()).toContain('只返回当前单个组件，不创建工作台、不修改研究画布、不读取其他本地文件')
  expect(f.sent[0].toolFilter.allow).toEqual(['public_data_query','web_search','web_fetch'])
 })
+
+
+it.each(['research','note'])('keeps one source policy through actual typed binding repair construction and final %s adapter admission',async surface=>{
+ const f=fixture({plugin:true}),native=createSubagentAdapter(f.ctx,{surface,noteBindingProtocol:surface==='note'}),sent=[]
+ const tool='ework__t_123abc',args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}},records=[{tool,args,response:{data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}}]
+ f.ctx.tools.schemas=()=>[{name:tool,description:'通联 DataYes financial business source'},{name:'public_data_query'}]
+ f.ctx.get=()=>({sync:async()=>{},snapshot:{skills:[{id:'builtin:ework-workbench-components',enabled:true},{id:'builtin:ework-free-data-sources',enabled:true}],tools:[{id:'t_123abc',effect:'read'}]}})
+ const staticData={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'}]}
+ const mapped={version:1,type:'data-bound',requests:[{key:'quote',tool,args}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
+ const frozen='FROZEN_NOTE_SCOPE_BYTES\n'+JSON.stringify({scope:'selection',title:'',document:'',selection:'仅授权这一段',references:{scope:'selection',components:[]}})
+ const bindData=vi.fn(async()=>{})
+ const adapter={start:async request=>{
+  sent.push(request)
+  await expect(native.start({...request,executionContext:frozen})).rejects.toThrow('AUDIT_CAPTURE_ONLY')
+  return{childSessionId:'synthetic-binding-'+sent.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(sent.length===1?staticData:mapped)}],sourceRecords:sent.length===1?records:[]})}
+ },bindData,dispose:()=>native.dispose()}
+ const runtime=new ResearchTaskRuntime({adapter,retryDelayMs:0,storage:{load:async()=>undefined,save:async()=>{}},createId:()=>base.canvasNodeId,now:()=>new Date('2026-09-26T08:00:00Z').getTime()});cleanup.push(()=>runtime.dispose())
+ const prompt='工作台：ETF研究\n本面板：ETF行情指标\n优先使用 market 类型；variant: metrics。使用通联真实数据，每分钟自动更新。'
+ await runtime.start({...base,prompt});await runtime.tasks.get(base.canvasNodeId).runPromise
+ expect(runtime.inspect({parentSessionId:base.parentSessionId,taskId:base.canvasNodeId}).state).toBe('completed')
+ expect(f.sent).toHaveLength(2);expect(sent[1]).toMatchObject({synthesisOnly:true,preservePrompt:true})
+ for(const request of f.sent){const text=request.prompt.filter(part=>part.type==='text').map(part=>part.text).join('\n');expect(occurrences(text)).toBe(1);expect(text).toContain(prompt);if(surface==='note')expect(text).toContain(frozen);else expect(text).not.toContain(frozen)}
+ expect(f.text()).toContain('"price":4.515');expect(f.sent[1].toolFilter.allow).toEqual([]);expect(bindData).toHaveBeenCalledOnce()
+})
