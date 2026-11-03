@@ -114,7 +114,7 @@ if(["save","delete","complete"].includes(action)&&researchPreviewWorkspaces.get(
  change('this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},','this.applyPointerGeometry(nodes,previewToken);if(persist)this.persist();return true;},')
  change('applyPointerGeometry(nodes) {','applyPointerGeometry(nodes,previewToken) {if(workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;')
  change('organizeCanvas(measured = new Map(), arrangeMode="standard") {','organizeCanvas(measured = new Map(), arrangeMode="standard",previewToken) {if(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;')
- change('arrangeMode),!measured.__workbenchDeferred);','arrangeMode),!measured.__workbenchDeferred,previewToken);')
+ change('arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred);','arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred,previewToken);')
  // The ordinary controller rejects structural AI edits. A separate controller is
  // reachable only by the existing trusted host refresh subscription and may only
  // replace one existing component's containerSpec, as the refresh service does.

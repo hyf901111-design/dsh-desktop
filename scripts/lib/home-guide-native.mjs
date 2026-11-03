@@ -554,16 +554,23 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       }
       const layoutBoard = (adding = false) => {
         const current = workspace.getSnapshot(), grid = createResearchGrid(), metrics = grid.metrics(current.canvasSize.availableWidth || current.canvasSize.width), pair = metrics.minColumns <= 20, calendarPair=pair&&metrics.width>=800
-        const watchRows = Math.ceil((600+metrics.gap)/metrics.rowStep), feedRows = Math.ceil((340+metrics.gap)/metrics.rowStep)
-        const readingRows = {watchlist:watchRows,quote:watchRows,news:feedRows,announcements:feedRows}
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
-        workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart&&!adding,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
+        const artifacts=current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart&&!adding,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node)
+        if(JSON.stringify(artifacts)!==JSON.stringify(current.artifacts))workspace.setArtifacts(artifacts)
+        if(!adding){
+          const cells=workspace.getWorkbenchCells(),planned=grid.authoredBoardPlan(artifacts,cells,metrics.width)
+          if(!planned)throw Error('示例组件的行分组已变化，请重新打开示例。')
+          // Later insertions fill the authored vacant slot. Already settled
+          // foundation rows retain exactly the same cells as native Arrange.
+          if(JSON.stringify(cells)!==JSON.stringify(planned)&&!workspace.applyWorkbenchCells(planned,false))throw Error('看板布局暂时无法调整。')
+          return
+        }
         const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ...(ticket.nodes.smart?(calendarPair?[['calendar','smart']]:[['calendar'],['smart']]):[['calendar']])]
         const heights = {indices:(metrics.width-48<=520?420:340),calendar:420,smart:420}, fitted = new Map()
         let top = 0
         for (const names of rows) {
           const members = names.filter(name => ticket.nodes[name])
-          if (adding) {
+          {
             let left = 0, height = 0
             for (const name of members) {
               const node = current.artifacts.find(node=>node.id===ticket.nodes[name])
@@ -575,13 +582,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
               left+=width; height=Math.max(height,rows)
             }
             top+=height
-          } else {
-            const height = Math.max(...members.map(name => readingRows[name] ?? Math.ceil((heights[name]+metrics.gap)/metrics.rowStep)),0)
-            for (const name of members) {
-              const index = names.indexOf(name), split = names.length===2 && names[0]==='watchlist' && metrics.minColumns<=16
-              fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:16):index*(40/names.length),y:top,w:split?(index===0?16:24):40/names.length,h:height})
-            }
-            if (members.length) top += height
+
           }
         }
         if (!workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell => fitted.get(cell.id) || cell), false)) throw Error('看板布局暂时无法调整。')
@@ -595,7 +596,8 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         await click(ticket, button, label)
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
-        layoutBoard()
+        // The real Arrange action and its deferred fit share authoredBoardPlan.
+        // There is no second actor-side layout after the native action settles.
         ticket.arranged = true
         clearOwnedSelection(ticket)
         await settle(ticket, () => {
