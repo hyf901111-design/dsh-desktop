@@ -10,7 +10,7 @@ import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
 // this fixture mounts production native components and blocks all live providers.
-const evidence = '/tmp/home-guide-native-browser-20261024'
+const evidence = process.env.SHERLOCK_HOME_GUIDE_EVIDENCE || '/tmp/home-guide-native-browser-20261024'
 const runId = 'guide-browser-run'
 const sessionId = 'guide-browser-session'
 const draft = '保留我的原生输入草稿\n第二行 🔎'
@@ -1149,7 +1149,7 @@ it.each([
  {width:1900,height:1400,right:384,reducedMotion:'no-preference',style:'light'}
 ])('commits one authored native Arrange plan and keeps real port feedback at $width × $height / $style / $reducedMotion',async options=>{
  const {page,errors}=await fixture({nativeLayout:true,...options,guideTop:34,guideBottom:10})
- const output='/tmp/sherlock-board-single-plan-20261103/browser/'+options.width+'-'+options.style+'-'+options.reducedMotion;await mkdir(output,{recursive:true})
+ const output=(process.env.SHERLOCK_BOARD_SINGLE_PLAN_EVIDENCE || '/tmp/sherlock-board-single-plan-20261103/browser')+'/'+options.width+'-'+options.style+'-'+options.reducedMotion;await mkdir(output,{recursive:true})
  try{
   await page.evaluate(({right,style})=>{
    const host=document.getElementById('guide-host'),p=window.guideProbe;host.style.left='0px';host.style.right=right+'px';p.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
