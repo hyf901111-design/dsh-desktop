@@ -5,11 +5,11 @@ import {createClientCapabilityRegistry,createCapabilityExecutor} from '../packag
 const clientContext={owner:'owner',sessionId:'session',documentId:'document',mode:'notes',editable:true,selectedBlockIds:['component']}
 const input={sessionId:'session',requestId:'request',title:'用户标题',markdown:'用户原文：在当前笔记末尾创建并保存。',selection:'',mode:'write',context:{scope:'note',components:[]},clientContext}
 const registry=()=>createClientCapabilityRegistry({readNoteBlocks:vi.fn(),applyNoteBlocks:vi.fn(),undoNoteBlocks:vi.fn(),createComponent:vi.fn(),inspectNoteComponent:vi.fn(),applyNoteComponent:vi.fn()})
-async function request(entryPoint,prompt,reply={kind:'text',markdown:'完整结果'}){
+async function request(entryPoint,prompt,reply={kind:'text',markdown:'完整结果'},overrides={}){
  const requests=[]
- const ctx={apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'provider',model:'model'},routable:true}}})}},llm:{stream:async function*(options){requests.push(options);yield{type:'text-delta',text:JSON.stringify(reply)};yield{type:'finish',reason:{kind:'stop'}}}}}
+ const ctx={apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'provider',model:'model'},routable:true}}})}},llm:{stream:async function*(options){requests.push(options);const value=typeof reply==='function'?reply(options):reply;yield{type:'text-delta',text:typeof value==='string'?value:JSON.stringify(value)};yield{type:'finish',reason:{kind:'stop'}}}}}
  const catalog=registry().catalog(clientContext)
- const result=await generateNoteSuggestion(ctx,{...input,entryPoint,prompt,clientCapabilities:catalog,...entryPoint==='inline'?{insertionAnchor:{documentId:'document',blockId:'anchor',position:{}}}:{}})
+ const result=await generateNoteSuggestion(ctx,{...input,...overrides,entryPoint,prompt,clientCapabilities:catalog,...entryPoint==='inline'?{insertionAnchor:{documentId:'document',blockId:'anchor',position:{}}}:{}})
  return{result,options:requests[0],requests,catalog}
 }
 
@@ -93,4 +93,60 @@ it.each(['inline','composer'])('uses current native-table facts ahead of intact 
  expect(requests[0].system).toContain('可用notes.blocks.read核对真实结构')
  expect(requests[0].system).toContain('资料已足够时直接处理，不为重复确认额外读取')
  expect(read).not.toHaveBeenCalled()
+})
+
+
+it.each(['inline','composer'])('keeps rewrite defaults conditional on the current authorized %s style request',async entryPoint=>{
+ const prompt='把选中段落的口语风格改为严谨、专业的研究笔记书面语，并按需要改成标题与列表。'
+ const {options,result,requests}=await request(entryPoint,prompt,{kind:'text',markdown:'## 经营观察\n- 收入增长仍需结合现金转化核对。'},{selection:'这公司涨得真猛，估值肯定没问题。',context:{scope:'selection',components:[]}})
+ expect(requests).toHaveLength(1);expect(result.kind).toBe('text')
+ expect(JSON.parse(options.messages[0].content[0].text).instruction).toBe(prompt)
+ expect(options.system).toContain('默认保留原有文字风格与结构')
+ expect(options.system).toContain('当前instruction明确要求改变风格、结构或格式时，按该要求生成')
+ expect(options.system).toContain('仍只处理已授权选区，不扩大修改范围，不补造事实或引用')
+ expect(options.system).not.toContain('保留原有文字风格，不额外添加标题、引用或段落缩进')
+ expect(options.system).toContain('scope 为 selection 时只针对这些选区或组件')
+})
+it('retains restrained default rewriting and the original user demand without broadening scope',async()=>{
+ const prompt='润色选中段落，让表达清楚一些。'
+ const {options,requests}=await request('composer',prompt,{kind:'text',markdown:'收入增长仍需结合现金转化核对。'},{selection:'收入涨了但现金还要看看。',context:{scope:'selection',components:[]}})
+ expect(requests).toHaveLength(1)
+ expect(options.system).toContain('不添加用户未要求的标题、引用或段落缩进')
+ expect(JSON.parse(options.messages[0].content[0].text).selection).toBe('收入涨了但现金还要看看。')
+ expect(JSON.parse(options.messages[0].content[0].text).instruction).toBe(prompt)
+})
+
+
+it('limits explicit sidebar QA to currently available read capabilities and omits writing contracts',async()=>{
+ const {options,result}=await request('composer','只解释这段代码，不修改笔记。',{kind:'conversation',markdown:'空列表返回 None。'})
+ const sent=JSON.parse(options.messages[0].content[0].text)
+ expect(result.kind).toBe('conversation')
+ expect(sent.clientCapabilities.map(capability=>capability.id)).toEqual(['notes.blocks.read','notes.components.inspect','canvas.inspect'])
+ expect(options.system).not.toContain('创建研究组件时格式')
+ expect(options.system).not.toContain('notes.components.create')
+ expect(options.system).not.toContain('notes.blocks.apply')
+ expect(options.system).not.toContain('正文与真实组件混合需求')
+ expect(options.system).toContain('不生成正文候选、组件或待确认事务')
+})
+it.each(['component','write-capability'])('does not forward a valid %s envelope for an explicitly read-only question',async mode=>{
+ const {requests,result}=await request('composer','只解释这张图表，不修改笔记，不生成新内容。',options=>{
+  if(options.purpose==='workspace-note-format-recovery')return {kind:'conversation',markdown:'甲和乙分别为1和2，仅用于演示。'}
+  const wireToken=/wireToken=([a-f0-9-]+)/u.exec(options.system)[1]
+  return mode==='component'?{kind:'component',wireToken,artifact:{version:1,type:'chart',variant:'line',title:'示例',labels:['甲','乙'],series:[{name:'演示',values:[1,2]}]}}:{kind:'capabilities',wireToken,calls:[{requestId:'unexpected',capability:'notes.components.create',arguments:{prompt:'创建示例图表'}}]}
+ })
+ expect(requests).toHaveLength(2)
+ expect(requests[1].purpose).toBe('workspace-note-format-recovery')
+ expect(result).toEqual({kind:'conversation',markdown:'甲和乙分别为1和2，仅用于演示。'})
+ expect(requests[1].system).not.toContain('notes.components.create')
+ expect(requests[1].system).toContain('不请求任何能力')
+})
+it('does not surface an unsupported write claim or internal envelope after a readonly recovery',async()=>{
+ const {requests,result}=await request('composer','只解释内容，不修改笔记。',()=>({kind:'conversation',markdown:'已将以下内容写入笔记。'}))
+ expect(requests).toHaveLength(2)
+ expect(result).toEqual({kind:'conversation',markdown:'本轮尚未形成可用答复，笔记内容未修改。'})
+})
+
+it('retains a useful plain readonly answer from the single controlled recovery',async()=>{
+ const {requests,result}=await request('composer','解释这张图，只回答，不修改笔记。',options=>options.purpose==='workspace-note-format-recovery'?'甲和乙分别为1和2。':{kind:'component',wireToken:/wireToken=([a-f0-9-]+)/u.exec(options.system)[1],artifact:{version:1,type:'chart',variant:'line',title:'示例',labels:['甲','乙'],series:[{name:'演示',values:[1,2]}]}})
+ expect(requests).toHaveLength(2);expect(result).toEqual({kind:'conversation',markdown:'甲和乙分别为1和2。'})
 })

@@ -1,11 +1,11 @@
-:is(.en-root,.en-challenge-tools,.en-challenge-popover){--en-challenge-bg:#fff;--en-challenge-border:#e4e4e4;--en-challenge-muted:#7b7b7b;--en-challenge-input:#f1f1f1;--en-challenge-action:#e8e8e8;--en-challenge-action-ink:#323232;--en-challenge-send-bg:#323232;--en-challenge-send-ink:#fff;--en-challenge-ink:#262626;--en-challenge-selected-border:#d1d1d1;--en-challenge-selected-glow:rgb(0 0 0 / .1);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .08);--en-challenge-mark:#fff0be;--en-challenge-mark-selected:#ffe291;--en-challenge-trigger-bg:#e9e9e9}
-:is(.en-root,.en-challenge-tools,.en-challenge-popover)[data-dark=true]{--en-challenge-bg:#252525;--en-challenge-border:#3a3a3a;--en-challenge-muted:#a1a1a1;--en-challenge-input:#2f2f2f;--en-challenge-action:#3a3a3a;--en-challenge-action-ink:#e6e6e6;--en-challenge-send-bg:#d9d9d9;--en-challenge-send-ink:#262626;--en-challenge-ink:#e8e8e8;--en-challenge-selected-border:#4d4d4d;--en-challenge-selected-glow:rgb(255 255 255 / .08);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .22);--en-challenge-mark:#514526;--en-challenge-mark-selected:#6d5b2d;--en-challenge-trigger-bg:#2c2c2c}
+:is(.en-root,.en-challenge-tools,.en-challenge-popover){--en-challenge-bg:#fff;--en-challenge-border:#e4e4e4;--en-challenge-muted:#7b7b7b;--en-challenge-input:#f1f1f1;--en-challenge-action:#e8e8e8;--en-challenge-action-ink:#323232;--en-challenge-send-bg:#323232;--en-challenge-send-ink:#fff;--en-challenge-ink:#262626;--en-challenge-selected-border:#d1d1d1;--en-challenge-selected-glow:rgb(0 0 0 / .1);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .08);--en-challenge-mark:#fff0be;--en-challenge-mark-selected:#ffe291;--en-challenge-trigger-bg:var(--en-challenge-bg)}
+:is(.en-root,.en-challenge-tools,.en-challenge-popover)[data-dark=true]{--en-challenge-bg:#252525;--en-challenge-border:#3a3a3a;--en-challenge-muted:#a1a1a1;--en-challenge-input:#2f2f2f;--en-challenge-action:#3a3a3a;--en-challenge-action-ink:#e6e6e6;--en-challenge-send-bg:#d9d9d9;--en-challenge-send-ink:#262626;--en-challenge-ink:#e8e8e8;--en-challenge-selected-border:#4d4d4d;--en-challenge-selected-glow:rgb(255 255 255 / .08);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .22);--en-challenge-mark:#514526;--en-challenge-mark-selected:#6d5b2d;--en-challenge-trigger-bg:var(--en-challenge-bg)}
 .en-challenge-header-slot{display:inline-flex;align-items:center;flex:none;position:relative;z-index:72;-webkit-app-region:no-drag}
 .en-challenge-tools{display:flex;align-items:center;gap:8px;flex:none;color:var(--en-challenge-ink);font:400 13px/20px "Noto Sans SC",system-ui,sans-serif;-webkit-app-region:no-drag}
 .en-challenge-tools[data-header=false]{position:absolute;right:18px;top:4px;z-index:72}
 .en-challenge-picker{position:relative;z-index:72;color:var(--en-challenge-ink)}
 .en-challenge-tools :is(.en-challenge-trigger,.en-challenge-margin-toggle){display:flex;align-items:center;justify-content:center;flex:none;height:30px;border:0;font:inherit;line-height:20px;cursor:pointer;white-space:nowrap}
-.en-challenge-tools .en-challenge-trigger{gap:4px;width:128px;padding:0 8px;border-radius:16px;background:var(--en-challenge-trigger-bg);color:inherit}
+.en-challenge-tools .en-challenge-trigger{gap:4px;width:128px;padding:0 8px;border-radius:16px;background:var(--en-challenge-trigger-bg);color:inherit;transition:background-color 120ms ease}
 .en-challenge-tools .en-challenge-margin-toggle{gap:6px;width:96px;padding:0 8px;border-radius:6px;background:transparent;color:var(--en-challenge-muted)}
 html[data-odyssey-locale=en] .en-challenge-tools .en-challenge-trigger{width:auto;min-width:128px}
 html[data-odyssey-locale=en] .en-challenge-tools .en-challenge-margin-toggle{width:auto;min-width:96px}
@@ -70,12 +70,15 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 @property --en-challenge-orbit-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
 .en-challenge-tools .en-challenge-trigger{position:relative;isolation:isolate;--en-challenge-beam:84 103 130}
 .en-challenge-tools[data-dark=true] .en-challenge-trigger{--en-challenge-beam:255 255 255}
-.en-challenge-tools .en-challenge-trigger:hover:not(:disabled){background:var(--en-challenge-trigger-bg)}
+.en-challenge-tools .en-challenge-trigger:is(:hover,[aria-expanded=true]):not(:disabled){background:var(--en-challenge-input)}
+.en-challenge-tools .en-challenge-trigger:active:not(:disabled){background:var(--en-challenge-action)}
+/* The trigger is available at every level, including Off. Only disabled tools fade. */
+.en-challenge-tools .en-challenge-trigger img{opacity:1}
 .en-challenge-trigger::before{content:"";position:absolute;inset:-1px;box-sizing:border-box;border-radius:inherit;padding:1.5px;pointer-events:none;opacity:0;background:conic-gradient(from var(--en-challenge-orbit-angle),transparent 0deg 275deg,rgb(var(--en-challenge-beam) / .08) 290deg,rgb(var(--en-challenge-beam) / .95) 315deg,rgb(var(--en-challenge-beam) / .08) 340deg,transparent 355deg 360deg);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;transition:opacity 180ms ease}
 .en-challenge-trigger[aria-busy=true]::before{opacity:1;animation:en-challenge-orbit 2.4s linear infinite}
 
 @keyframes en-challenge-orbit{to{--en-challenge-orbit-angle:360deg}}
-@media(prefers-reduced-motion:reduce){.en-challenge-trigger::before{transition:none}.en-challenge-trigger[aria-busy=true]::before{animation:none}}
+@media(prefers-reduced-motion:reduce){.en-challenge-tools .en-challenge-trigger{transition:none}.en-challenge-trigger::before{transition:none}.en-challenge-trigger[aria-busy=true]::before{animation:none}}
 
 .en-root .en-replacement-mark{background:#d8edff!important;color:inherit;box-shadow:inset 0 -1px #6ba5d4;cursor:pointer;border-radius:2px}
 .en-root[data-dark=true] .en-replacement-mark{background:#25465e!important;box-shadow:inset 0 -1px #6cb0d9}

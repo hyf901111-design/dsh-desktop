@@ -54,3 +54,19 @@ it.each([
 ])('allows an independently polite writing request after a how-to explanation: %s',prompt=>{
  expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(false)
 })
+
+
+it.each(['只解释这张图表，不修改笔记，不生成新内容。','请解释“创建表格”这句话的含义。','总结全文','只解释创建流程。','仅说明生成这张图的思路，不创建组件。','Explain this chart, do not generate or create new content.'])('keeps negated creation and qualified explanations read-only: %s',prompt=>{
+ expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(true)
+})
+it.each(['不要修改其他段落，在末尾创建一张图表，先给我预览。','只把解释部分改成列表。','Do not change the other paragraphs; create a chart preview.'])('retains independently authorized writing after a scoped negative: %s',prompt=>{
+ expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(false)
+})
+
+it.each(['能否帮我写一段关于中际旭创的研究摘要？','可否生成一张柱状图？','能否把选中的这一段改成专业书面语？','能否在笔记末尾加一段结论？'])('does not lock an explicit polite delivery request to readonly: %s',prompt=>{
+ expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(false)
+ expect(sidebarNoteConversationOnly({entryPoint:'inline',mode:'write',prompt})).toBe(false)
+})
+it.each(['能否不修改笔记，只解释这张图？','可否不要生成新组件，只回答这段代码的作用？','能否解释这句话的含义？','能否解释如何创建表格，但不修改笔记？','可否说明这张图为什么需要调整？','请解释“创建表格”这句话的含义。'])('keeps polite explanatory questions readonly: %s',prompt=>{
+ expect(sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt})).toBe(true)
+})

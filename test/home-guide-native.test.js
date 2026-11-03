@@ -304,3 +304,12 @@ it('types the stock code character by character through actual search and keeps 
  expect(nodes.find(node=>node.id===quote.id).containerSpec.symbols[0].code).toBe('000858')
  expect(JSON.parse(f.disk.get('sherlock.research.canvas.artifacts.v1:owner')).map(node=>node.id).sort()).toEqual([watch.id,quote.id,news.id].sort());expect(f.liveCalls()).toBeGreaterThan(0)
 },35000)
+
+it('keeps a real header ownership change rejected and reports only a private bounded diagnostic',async()=>{
+ const f=await fixture();expect((await f.command('mount-board')).ok).toBe(true)
+ f.doc.querySelector('[data-srb-session-header]').dataset.eworkNotesSession='another-session'
+ const reply=await f.command('board-watchlist')
+ expect(reply).toMatchObject({ok:false,message:'教程页面或对话已变化。',reason:'session-header-changed',command:'board-watchlist'})
+ expect(f.workspace.getSnapshot().artifacts).toEqual([])
+ expect(f.doc.body.textContent).not.toContain('session-header-changed')
+})

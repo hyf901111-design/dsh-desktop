@@ -5,6 +5,8 @@ import {Session} from '@deepseek-ai/dsh-session'
 import {registerNoteSessions,noteConversationRows} from '../packages/dsh-research-task-runtime/notes-session.js'
 // @ts-expect-error runtime module is JavaScript and has no declaration file.
 import {registerNotesAi} from '../packages/dsh-research-task-runtime/notes-ai.js'
+// @ts-expect-error runtime module is JavaScript and has no declaration file.
+import {sidebarNoteConversationOnly} from '../packages/dsh-research-task-runtime/notes-sidebar-intent.js'
 import recordedCrud from './fixtures/notes-native-crud-missing-token.json'
 import recordedEof from './fixtures/notes-native-crud-eof-containers.json'
 import {installNotesService} from '../src/main/notes/service'
@@ -129,7 +131,7 @@ it.each(['解释如何修改并在笔记末尾添加示例？','Explain how to m
  }finally{await f.close()}
 },15000)
 
-it.each(['不要改其他段落，只在笔记末尾追加两句总结，先给我预览','写一段文字','请解释这段代码并在笔记末尾添加一个代码示例','这段函数应该怎么修改？请把选中段落改写为完整说明','Explain this function and append a short example to the note.','请先解释这张图并给我正文预览'])('keeps a raw writing result as a normal candidate for %s',async prompt=>{
+it.each(['能否帮我写一段关于中际旭创的研究摘要？','可否生成一张柱状图？','能否把选中的这一段改成专业书面语？','能否在笔记末尾加一段结论？','不要改其他段落，只在笔记末尾追加两句总结，先给我预览','写一段文字','请解释这段代码并在笔记末尾添加一个代码示例','这段函数应该怎么修改？请把选中段落改写为完整说明','Explain this function and append a short example to the note.','请先解释这张图并给我正文预览'])('keeps a raw writing result as a normal candidate for %s',async prompt=>{
  const f=await open(()=>'后续核对增长与现金转化。');try{
   await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page);await submit(f.page,prompt)
   await f.page.locator('[data-note-preview-state=ready]').waitFor();expect(f.modelRequests).toHaveLength(1);expect(await body(f.page)).toEqual(before)
@@ -412,3 +414,24 @@ it('rejects a comment edit omitted by the bounded model discussion view',async()
   await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();expect(await body(f.page)).toEqual(before);expect(f.modelRequests).toHaveLength(1);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },20000)
+
+
+it.each([['component','解释这张图表，只回答，不修改笔记。','guard'],['capability-create','解释这张图表，只回答，不修改笔记。','guard'],['component','只解释这张图表，不修改笔记，不生成新内容。','intent'],['capability-create','只解释这张图表，不修改笔记，不生成新内容。','intent']])('keeps readonly provider %s mistakes out of real Host note preview cards: %s',async(kind,prompt,scenario)=>{
+ const candidate={version:1,type:'chart',variant:'line',title:'不应产生的问答候选',labels:['甲','乙'],series:[{name:'演示数据',values:[1,2]}]},answer='这张图中的甲和乙分别为1和2，仅用于演示。'
+ const f=await open(request=>{
+  if(request.purpose==='workspace-note-format-recovery')return{kind:'conversation',markdown:answer}
+  const wireToken=/wireToken=([a-f0-9-]+)/u.exec(request.system)![1]
+  return kind==='component'?{kind:'component',wireToken,artifact:candidate}:{kind:'capabilities',wireToken,completion:'complete',calls:[{requestId:'unexpected-readonly-card',capability:'notes.components.create',arguments:{prompt:'仅使用演示数据甲1乙2生成折线图，不联网。'}}]}
+ });try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true);const before=await body(f.page)
+  await submit(f.page,prompt)
+  await expect.poll(()=>f.history().at(-1)?.phase).toBe('replied')
+  expect(f.history().at(-1)?.result).toMatchObject({kind:'conversation',markdown:answer})
+  expect(f.modelRequests).toHaveLength(2)
+  for(const request of f.modelRequests){const payload=JSON.parse(request.messages[0].content[0].text);expect(payload.clientCapabilities.every((capability:any)=>['notes.blocks.read','notes.components.inspect','canvas.inspect'].includes(capability.id))).toBe(true)}
+  expect(await f.page.locator('[data-note-preview-state], .en-space-ai').count()).toBe(0)
+  expect(await body(f.page)).toEqual(before);await f.page.keyboard.press('Meta+s');expect(f.store.load('fixture','native-fixture').saved.blocks).toEqual(before)
+  expect(f.errors).toEqual([])
+  if(process.env.SHERLOCK_READONLY_NOTE_AUDIT_DIR){const directory=process.env.SHERLOCK_READONLY_NOTE_AUDIT_DIR;writeFileSync(resolve(directory,'readonly-host-green-'+scenario+'-'+kind+'.json'),JSON.stringify({kind,prompt,scenario,conversationOnly:sidebarNoteConversationOnly({entryPoint:'composer',mode:'write',prompt}),history:f.history(),modelCalls:f.modelRequests.length,readyCards:await f.page.locator('[data-note-preview-state=ready]').count(),bodyUnchanged:JSON.stringify(await body(f.page))===JSON.stringify(before),pageErrors:f.errors},null,2));await f.page.screenshot({path:resolve(directory,'readonly-host-green-'+scenario+'-'+kind+'.png')})}
+ }finally{await f.close()}
+},15000)
