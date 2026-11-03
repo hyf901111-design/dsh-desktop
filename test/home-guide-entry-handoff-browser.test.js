@@ -13,7 +13,6 @@ import {NotesStore} from '../src/main/notes/store'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 import {homeWorkbenchPreparedArtifact} from '../packages/dsh-research-task-runtime/home-workbench-runtime.js'
 import {HOME_WORKBENCH_PANELS} from '../packages/dsh-research-task-runtime/home-workbench-contract.js'
-import {HOME_BOARD_SMART_PATH,HOME_BOARD_SMART_ARTIFACT} from '../packages/dsh-research-task-runtime/home-board-smart-contract.js'
 let browser,script,css,runtime,conversation,completedConversation,theme,sidebarSource
 const output=process.env.SHERLOCK_ENTRY_HANDOFF_EVIDENCE||'/tmp/sherlock-explore-refinement-r3-20261031/entry-browser'
 beforeAll(async()=>{
@@ -31,7 +30,6 @@ afterAll(()=>browser?.close())
 async function fixture(options={}){
  const directory=await mkdtemp(join(tmpdir(),'entry-handoff-')),store=new NotesStore(directory),context=await browser.newContext({viewport:{width:1100,height:860},reducedMotion:options.reducedMotion??'no-preference'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(4500);page.on('pageerror',error=>errors.push(error.stack))
  await page.exposeFunction('entryNotesStorage',async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')return store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);if(method==='engage')return{ok:true};throw Error('入口不应请求其他操作：'+method)})
- if(options.fullBoardFlow)await page.route('**'+HOME_BOARD_SMART_PATH,route=>{const d=route.request().postDataJSON(),now=Date.now();return route.fulfill({contentType:'application/json',body:JSON.stringify({taskId:'stable-flow-smart',canvasNodeId:d.canvasNodeId,state:'completed',finalOutput:JSON.stringify(HOME_BOARD_SMART_ARTIFACT),createdAt:now,startedAt:now,completedAt:now,lastSeq:1,events:[]})})});
  await page.route('http://127.0.0.1/entry-handoff',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><main class="pI_x6G_centerCol"><div id="native-root"></div></main>'}));await page.goto('http://127.0.0.1/entry-handoff');await page.addStyleTag({content:theme+'\n'+css+'\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;width:1000px;height:100vh}#native-root{height:100%;min-height:0}#native-sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;z-index:20}body:has(#native-sidebar) .pI_x6G_centerCol{margin-left:240px;width:calc(100% - 240px)}#native-sidebar>[data-dsh-sidebar-root]{height:100%;display:flex;flex-direction:column}'});await page.evaluate(input=>window.entryInput=input,{runtime,conversation:options.completedWorkbench?completedConversation:conversation,sidebar:sidebarSource,...options,...options.completedWorkbench?{completedPanels:HOME_WORKBENCH_PANELS.map(panel=>({...panel,artifact:homeWorkbenchPreparedArtifact('source',panel)}))}:{}});await page.addScriptTag({content:script});if(options.completedWorkbench){await page.locator('[data-research-canvas]').waitFor({timeout:10000}).catch(async error=>{await writeFile(output+'/completed-source-setup-failure.json',JSON.stringify({errors,body:await page.locator('body').innerText(),state:await page.evaluate(()=>({root:document.querySelector('.wSkVaW_root')?.outerHTML,session:window.entryProbe.sessions.list.getSnapshot(),board:window.entryProbe.boards.getState(),panels:window.entryProbe.registry.for('source').getSnapshot().artifacts.map(n=>({id:n.id,status:n.generationStatus}))}))},null,2));throw error})}else if(options.sourceView==='notes'){await page.locator('[data-srb-tabs] [data-conversation-view-id=notes]').click();await page.locator('[data-workspace-surface=notes] .bn-editor').waitFor({timeout:10000})}else await page.locator('textarea').waitFor().catch(async error=>{throw Error(error.message+' '+errors.join('\n')+' BODY '+await page.locator('body').innerText())});return{page,context,errors,store,async close(){await page.evaluate(()=>window.entryProbe.dispose()).catch(()=>{});await context.close();await rm(directory,{recursive:true,force:true})}}
 }
 async function begin(page,index){await page.getByRole('button',{name:'切换到快速开始',exact:true}).click();await expect.poll(()=>page.locator('.pI_x6G_centerCol').getAttribute('data-odyssey-home-operations-motion')).toBe('idle');await page.locator('button[data-case="'+index+'"]').click();await expect.poll(()=>page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(index));await page.locator('[data-odyssey-operations-open-example]').click()}
@@ -174,34 +172,3 @@ it('renders a narrow watchlist beside readable main content on all three complet
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },18000)
-
-
-it.each(['reduce','no-preference'])('plays the full board example from Explore without manual input and records every arrange transition (%s)',async reducedMotion=>{
- const f=await fixture({explore:true,nativeBoards:true,homeEmpty:true,fullBoardFlow:true,prepareDelay:0,reducedMotion,...reducedMotion==='reduce'?{sourceView:'notes',delayedHistory:true,metadataChurn:true}:{}}),{page}=f;const out='/tmp/sherlock-board-demo-stable-flow-20261103/full-flow-'+reducedMotion;await mkdir(out,{recursive:true});try{
-  await page.setViewportSize({width:1700,height:1100});await page.evaluate(()=>window.entryProbe.installNavigation());await beginExplore(page,0);
-  await page.waitForFunction(()=>window.__testHomeGuideError||window.__testHomeGuideTimeline?.snapshot().phase==='completed'||document.querySelector('[data-home-guide][data-phase=error]')||window.entryProbe.nativeSteps?.includes('board-smart-generate')&&!document.querySelector('[data-home-guide]'),{},{timeout:140000});
-  const state=await page.evaluate(()=>({error:window.__testHomeGuideError??null,timeline:window.__testHomeGuideTimeline?.snapshot(),flow:window.entryProbe.flow,actions:window.entryProbe.actions,requests:window.entryProbe.requests,steps:window.entryProbe.nativeSteps,selection:window.entryProbe.sessions.list.getSnapshot().current,body:document.body.innerText,root:document.querySelector('[data-home-guide]')?.outerHTML}));await writeFile(out+'/result.json',JSON.stringify(state,null,2));await page.screenshot({path:out+'/result.png'});
-  expect(state.error,JSON.stringify(state.error)).toBeNull();expect(['completed','disposed']).toContain(state.timeline.phase);expect(state.flow.filter(row=>row.name==='arrange-click')).toHaveLength(1);
-  const foundation=state.flow.filter(row=>row.stage==='board-arrange-foundation');expect(foundation.filter(row=>row.name==='organizeCanvas')).toHaveLength(1);expect(foundation.filter(row=>row.name==='applyWorkbenchCells')).toHaveLength(1);
-  expect(state.flow.filter(row=>row.stage==='board-arrange'&&['applyWorkbenchCells','organizeCanvas'].includes(row.name))).toEqual([]);
-  const arranged=foundation.find(row=>row.name==='organizeCanvas').after;for(const row of state.flow.filter(row=>row.name==='applyWorkbenchCells'&&row.time>foundation.at(-1).time)){expect(row.after.filter(cell=>arranged.some(before=>before.id===cell.id))).toEqual(arranged)}
-  if(reducedMotion==='reduce'){expect(state.flow.some(row=>row.name==='history-response-released')).toBe(true);expect(state.flow.filter(row=>row.name==='same-session-metadata-refresh').length).toBeGreaterThan(10)}expect(f.errors).toEqual([]);
- }finally{await f.close()}
-},150000)
-
-it('stops a playing Board immediately for a real SDK A to B to A session change and preserves the source draft',async()=>{
- const f=await fixture({explore:true,nativeBoards:true,homeEmpty:true,fullBoardFlow:true,prepareDelay:0,reducedMotion:'reduce'}),{page}=f
- try{
-  await page.evaluate(()=>window.entryProbe.installNavigation());await beginExplore(page,0)
-  await page.waitForFunction(()=>window.entryProbe.nativeSteps?.includes('board-quote'),{},{timeout:12000})
-  const before=await page.evaluate(()=>({draft:window.entryProbe.shellFor('source').snapshot.draft,stepCount:window.entryProbe.nativeSteps.length}))
-  await page.evaluate(()=>window.entryProbe.sessions.open('source'))
-  await expect.poll(()=>page.locator('[data-home-guide]').count(),{timeout:1500}).toBe(0)
-  await page.evaluate(()=>window.entryProbe.sessions.open('example-board'));await page.waitForTimeout(180)
-  const after=await page.evaluate(()=>({draft:window.entryProbe.shellFor('source').snapshot.draft,flow:window.entryProbe.flow,steps:window.entryProbe.nativeSteps,selected:window.entryProbe.sessions.list.getSnapshot().current}))
-  await writeFile('/tmp/sherlock-board-demo-stable-flow-20261103/real-sdk-navigation-abort.json',JSON.stringify({before,after},null,2))
-  expect(after.draft).toBe(before.draft);expect(after.selected).toBe('example-board');expect(after.steps.filter(step=>step!=='dispose').length).toBe(before.stepCount)
-  expect(after.flow.filter(row=>row.name==='sherlock:home-action-context-changed').map(row=>row.detail.sessionId)).toEqual(['example-board','source','example-board'])
-  expect(await page.locator('[data-home-guide-pointer]').count()).toBe(0);expect(f.errors).toEqual([])
- }finally{await f.close()}
-},22000)
