@@ -5,11 +5,11 @@ import {createClientCapabilityRegistry,createCapabilityExecutor} from '../packag
 const clientContext={owner:'owner',sessionId:'session',documentId:'document',mode:'notes',editable:true,selectedBlockIds:['component']}
 const input={sessionId:'session',requestId:'request',title:'用户标题',markdown:'用户原文：在当前笔记末尾创建并保存。',selection:'',mode:'write',context:{scope:'note',components:[]},clientContext}
 const registry=()=>createClientCapabilityRegistry({readNoteBlocks:vi.fn(),applyNoteBlocks:vi.fn(),undoNoteBlocks:vi.fn(),createComponent:vi.fn(),inspectNoteComponent:vi.fn(),applyNoteComponent:vi.fn()})
-async function request(entryPoint,prompt,reply={kind:'text',markdown:'完整结果'}){
+async function request(entryPoint,prompt,reply={kind:'text',markdown:'完整结果'},overrides={}){
  const requests=[]
  const ctx={apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:{provider:'provider',model:'model'},routable:true}}})}},llm:{stream:async function*(options){requests.push(options);yield{type:'text-delta',text:JSON.stringify(reply)};yield{type:'finish',reason:{kind:'stop'}}}}}
  const catalog=registry().catalog(clientContext)
- const result=await generateNoteSuggestion(ctx,{...input,entryPoint,prompt,clientCapabilities:catalog,...entryPoint==='inline'?{insertionAnchor:{documentId:'document',blockId:'anchor',position:{}}}:{}})
+ const result=await generateNoteSuggestion(ctx,{...input,...overrides,entryPoint,prompt,clientCapabilities:catalog,...entryPoint==='inline'?{insertionAnchor:{documentId:'document',blockId:'anchor',position:{}}}:{}})
  return{result,options:requests[0],requests,catalog}
 }
 
@@ -93,4 +93,25 @@ it.each(['inline','composer'])('uses current native-table facts ahead of intact 
  expect(requests[0].system).toContain('可用notes.blocks.read核对真实结构')
  expect(requests[0].system).toContain('资料已足够时直接处理，不为重复确认额外读取')
  expect(read).not.toHaveBeenCalled()
+})
+
+
+it.each(['inline','composer'])('keeps rewrite defaults conditional on the current authorized %s style request',async entryPoint=>{
+ const prompt='把选中段落的口语风格改为严谨、专业的研究笔记书面语，并按需要改成标题与列表。'
+ const {options,result,requests}=await request(entryPoint,prompt,{kind:'text',markdown:'## 经营观察\n- 收入增长仍需结合现金转化核对。'},{selection:'这公司涨得真猛，估值肯定没问题。',context:{scope:'selection',components:[]}})
+ expect(requests).toHaveLength(1);expect(result.kind).toBe('text')
+ expect(JSON.parse(options.messages[0].content[0].text).instruction).toBe(prompt)
+ expect(options.system).toContain('默认保留原有文字风格与结构')
+ expect(options.system).toContain('当前instruction明确要求改变风格、结构或格式时，按该要求生成')
+ expect(options.system).toContain('仍只处理已授权选区，不扩大修改范围，不补造事实或引用')
+ expect(options.system).not.toContain('保留原有文字风格，不额外添加标题、引用或段落缩进')
+ expect(options.system).toContain('scope 为 selection 时只针对这些选区或组件')
+})
+it('retains restrained default rewriting and the original user demand without broadening scope',async()=>{
+ const prompt='润色选中段落，让表达清楚一些。'
+ const {options,requests}=await request('composer',prompt,{kind:'text',markdown:'收入增长仍需结合现金转化核对。'},{selection:'收入涨了但现金还要看看。',context:{scope:'selection',components:[]}})
+ expect(requests).toHaveLength(1)
+ expect(options.system).toContain('不添加用户未要求的标题、引用或段落缩进')
+ expect(JSON.parse(options.messages[0].content[0].text).selection).toBe('收入涨了但现金还要看看。')
+ expect(JSON.parse(options.messages[0].content[0].text).instruction).toBe(prompt)
 })
