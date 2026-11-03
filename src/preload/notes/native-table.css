@@ -6,6 +6,7 @@
    not intercept its menu items. Closing the menu restores every control. */
 .en-native-table-layer:has([role=menu]) :is(.en-native-table-boundary,.en-native-table-add,.en-native-table-width-handle){visibility:hidden;pointer-events:none}
 .en-native-table-layer:has(.en-native-table-menu) .en-native-table-edge{visibility:hidden;pointer-events:none}
+.en-native-table-layer:has(.bn-table-handle-menu) .en-native-table-toolbar{visibility:hidden;pointer-events:none}
 .en-native-table-layer::backdrop{background:transparent;pointer-events:none}
 .en-native-table-layer :is(button,input,[role=menu],.bn-table-handle,.bn-extend-button,.bn-table-cell-handle){pointer-events:auto}
 .en-native-table-layer button{font:inherit;color:inherit;cursor:pointer}

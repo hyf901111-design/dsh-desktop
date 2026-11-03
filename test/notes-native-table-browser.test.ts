@@ -359,6 +359,8 @@ it('keeps the native last-column context menu fully readable and clickable insid
   await clickCell(f.page,2,1);await f.page.locator('[data-id="native-table"] .tableWrapper').evaluate((node:HTMLElement)=>{node.scrollLeft=node.scrollWidth})
   const cell=f.page.locator('[data-id="native-table"] tr').nth(2).locator('td').nth(7);await cell.locator('p').hover();const rail=f.page.locator('.en-native-table-edge-column .bn-table-handle');await rail.click({button:'right'})
   const menu=f.page.getByRole('menu',{name:'列操作',exact:true});await menu.waitFor();const note=await f.page.locator('.en-document-scroll').boundingBox(),bounds=await menu.boundingBox();await proof(f.page,'narrow-last-column-menu',{note,bounds})
+  expect(bounds.width).toBeGreaterThanOrEqual(160)
+  for(const item of await menu.getByRole('menuitem').all())expect(await item.evaluate((node:HTMLElement)=>{const b=node.getBoundingClientRect();return[6,b.width/2,b.width-6].every(x=>node.contains(document.elementFromPoint(b.left+x,b.top+b.height/2)))})).toBe(true)
   expect(bounds.x).toBeGreaterThanOrEqual(note.x);expect(bounds.x+bounds.width).toBeLessThanOrEqual(note.x+note.width);expect(bounds.y).toBeGreaterThanOrEqual(note.y);expect(bounds.y+bounds.height).toBeLessThanOrEqual(note.y+note.height)
   const last=menu.getByRole('menuitem',{name:'右侧添加列',exact:true});expect(await last.evaluate((node:HTMLElement)=>{const box=node.getBoundingClientRect();return node.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2))})).toBe(true);await last.click();expect(await f.page.locator('[data-id="native-table"] tr').first().locator('td').count()).toBe(9);expect(f.errors).toEqual([])
  }finally{await f.close()}
