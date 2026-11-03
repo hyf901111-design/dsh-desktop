@@ -211,25 +211,20 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
     let stopped = false
     const requests = new Map()
     let playback = null
-    const changed = (reason = 'state-changed') => Object.assign(Error('教程页面或对话已变化。'), { homeGuideReason: reason })
-    const reply = (detail, ok, message, reason) => {
-      // A private, bounded reason lets a failing native run distinguish user
-      // navigation from geometry/selection drift. The controller renders only
-      // message, never this implementation detail.
-      if (!stopped) window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-native-reply', { detail: { requestId: detail.requestId, runId: detail.runId, ok, ...(message ? { message } : {}), ...(reason ? { reason, command: detail.command } : {}) } }))
+    const changed = () => Error('教程页面或对话已变化。')
+    const reply = (detail, ok, message) => {
+      if (!stopped) window.dispatchEvent(new window.CustomEvent('sherlock:home-guide-native-reply', { detail: { requestId: detail.requestId, runId: detail.runId, ok, ...(message ? { message } : {}) } }))
     }
     const mainHost = detail => {
       const host = document.getElementById(detail.hostId)
       const container = host?.closest('[data-home-guide]'), center = container?.closest('.pI_x6G_centerCol')
       if (!host || !host.isConnected || !center || container.dataset.homeGuide !== detail.runId || host.closest('[data-odyssey-subagent-panel]')) throw Error('教程挂载区域不可用。')
       const header = [...center.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].find(el => !el.closest('[data-odyssey-subagent-panel]'))
-      if (header && header.dataset.eworkNotesSession !== sessionId) throw changed('session-header-changed')
+      if (header && header.dataset.eworkNotesSession !== sessionId) throw changed()
       return host
     }
     const check = ticket => {
-      if (stopped || ticket.controller.signal.aborted || owned.current !== ticket || ticket.resource.owner !== ticket) throw changed(ticket.stopReason || 'lease-released')
-      if (!ticket.host.isConnected || mainHost(ticket.detail) !== ticket.host) throw changed('host-changed')
-      if (ticket.pointerRun && document.documentElement.dataset.homeGuidePointerRun !== ticket.pointerRun) throw changed('pointer-owner-changed')
+      if (stopped || ticket.controller.signal.aborted || owned.current !== ticket || ticket.resource.owner !== ticket || !ticket.host.isConnected || mainHost(ticket.detail) !== ticket.host || ticket.pointerRun && document.documentElement.dataset.homeGuidePointerRun !== ticket.pointerRun) throw changed()
     }
     const frame = ticket => new Promise((resolve, reject) => {
       if (ticket.controller.signal.aborted) { reject(changed()); return }
@@ -562,11 +557,6 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         const watchRows = Math.ceil((600+metrics.gap)/metrics.rowStep), feedRows = Math.ceil((340+metrics.gap)/metrics.rowStep)
         const readingRows = {watchlist:watchRows,quote:watchRows,news:feedRows,announcements:feedRows}
         const namesById = new Map(Object.entries(ticket.nodes).map(([name,nodeId])=>[nodeId,name]))
-        // Once the real Arrange tool has settled a row, later library additions
-        // keep that native row width instead of performing another whole-board
-        // resize. The watchlist remains the smaller peer of the quote panel.
-        const existing = workspace.getWorkbenchCells(), watch = existing.find(cell=>cell.id===ticket.nodes.watchlist), quote = existing.find(cell=>cell.id===ticket.nodes.quote)
-        const watchColumns = ticket.arranged && watch && quote && watch.x===0 && quote.x===watch.w && watch.y===quote.y && watch.w+quote.w===40 ? Math.min(16,watch.w) : 16
         workspace.setArtifacts(current.artifacts.map(node=>namesById.has(node.id)?{...node,workbenchId:'home-guide:'+id,workbenchIndex:['indices','watchlist','quote','news','announcements','calendar','smart'].indexOf(namesById.get(node.id)),workbenchColumns:2,workbenchSpan:namesById.get(node.id)==='indices'||namesById.get(node.id)==='calendar'&&!ticket.nodes.smart&&!adding,workbenchLayoutVersion:1,preserveGenerationSize:true,sizeMode:'manual'}:node))
         const rows = [['indices'], ...(pair ? [['watchlist','quote'],['news','announcements']] : [['watchlist'],['quote'],['news'],['announcements']]), ...(ticket.nodes.smart?(calendarPair?[['calendar','smart']]:[['calendar'],['smart']]):[['calendar']])]
         const heights = {indices:(metrics.width-48<=520?420:340),calendar:420,smart:420}, fitted = new Map()
@@ -589,7 +579,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             const height = Math.max(...members.map(name => readingRows[name] ?? Math.ceil((heights[name]+metrics.gap)/metrics.rowStep)),0)
             for (const name of members) {
               const index = names.indexOf(name), split = names.length===2 && names[0]==='watchlist' && metrics.minColumns<=16
-              fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:watchColumns):index*(40/names.length),y:top,w:split?(index===0?watchColumns:40-watchColumns):40/names.length,h:height})
+              fitted.set(ticket.nodes[name], {id:ticket.nodes[name],x:split?(index===0?0:16):index*(40/names.length),y:top,w:split?(index===0?16:24):40/names.length,h:height})
             }
             if (members.length) top += height
           }
@@ -605,9 +595,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         await click(ticket, button, label)
         await settle(ticket, () => !canvas?.__eworkContentFit)
         await playing(ticket)
-        // The button already ran the production Arrange action and its content
-        // fit. Keep that result; applying a second layout here visibly arranged
-        // the same cards twice despite there being only one pointer click.
+        layoutBoard()
         ticket.arranged = true
         clearOwnedSelection(ticket)
         await settle(ticket, () => {
@@ -743,9 +731,9 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           }
           for (const [sourceId, targetId, field, label] of [[watchlist, quote, 'linkedWatchlistId', '连接自选股与行情'], [quote, news, 'linkedSourceId', '连接行情与资讯'], ...(announcements ? [[quote, announcements, 'linkedSourceId', '连接行情与公告']] : [])]) {
             await playing(ticket)
-            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed('connection-layout-changed')
+            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
             if (workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId) continue
-            if (ticket.selectionEpoch !== selectionLease.input) throw changed('selection-taken-over')
+            if (ticket.selectionEpoch !== selectionLease.input) throw changed()
             const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
             if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId)){
               // Click a visible, non-interactive part of the source through the
@@ -755,12 +743,12 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
               const selectTarget=[...card.querySelectorAll('[data-financial-widget],p,small,span,div')].find(element=>{if(element.closest(excluded))return false;for(let parent=element;parent&&parent!==card.parentElement;parent=parent.parentElement){const style=window.getComputedStyle(parent);if(parent.hidden||parent.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')return false}const box=element.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,hit=document.elementFromPoint(x,y);return box.width>8&&box.height>8&&hit&&hit.closest('[data-research-node-id]')===card&&!hit.closest(excluded)&&x>=0&&y>=0&&x<window.innerWidth&&y<window.innerHeight})
               if(!selectTarget)throw Error('组件点选区域尚未显示，请重新打开示例。')
               await click(ticket,selectTarget,'选择'+(sourceId===watchlist?'自选股':'行情')+'组件',undefined,()=>{
-                if(ticket.selectionEpoch!==selectionLease.input)throw changed('selection-taken-over')
+                if(ticket.selectionEpoch!==selectionLease.input)throw changed()
                 const box=selectTarget.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,hit=document.elementFromPoint(x,y)
-                if(!hit||hit.closest('[data-research-node-id]')!==card||hit.closest(excluded))throw changed('selection-target-moved')
+                if(!hit||hit.closest('[data-research-node-id]')!==card||hit.closest(excluded))throw changed()
                 for(const type of ['pointerdown','pointerup'])hit.dispatchEvent(new window.PointerEvent(type,{bubbles:true,cancelable:true,composed:true,pointerId:7102,pointerType:'mouse',isPrimary:true,button:0,buttons:type==='pointerdown'?1:0,clientX:x,clientY:y}))
               })
-              if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId))throw changed('selection-not-applied')
+              if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId))throw changed()
               ticket.ownedSelection=JSON.stringify(workspace.getSnapshot().selection);ticket.ownedSelectionEpoch=ticket.selectionEpoch
             }
             if(!port(targetId,'input')){const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(targetId)+'"]');if(!card)throw changed();await scrollTarget(ticket,card)}
@@ -777,14 +765,14 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
               // real available height permits instead of starting at its footer.
               const top = Math.max(Math.min(sourceCard.top,targetCard.top),portsBottom-room)
               await scrollBoard(ticket,canvas,canvas.scrollTop+(top-view.top)/view.scaleY-12)
-              if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed('connection-layout-changed')
+              if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
               const framed = boardFrame(ticket,canvas)
               if (![from,target].every(port=>{const box=port.getBoundingClientRect();return box.top>=framed.top-1&&box.bottom<=framed.bottom-12*framed.scaleY+1})) throw Error('连接端点尚未完整显示，请增大研究区后重试。')
               keepPairFrame = true
             }
-            if(ticket.selectionEpoch!==selectionLease.input)throw changed('selection-taken-over')
+            if(ticket.selectionEpoch!==selectionLease.input)throw changed()
             await cue(ticket, target, label, 'drag', from, keepPairFrame)
-            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed('connection-layout-changed')
+            if(signature(workspace.getWorkbenchCells())!==beforeSignature)throw changed()
             await playing(ticket)
             await settle(ticket, () => workspace.getSnapshot().artifacts.find(node => node.id === targetId)?.containerSpec[field] === sourceId && !!ticket.host.querySelector('[data-financial-link]'))
           }
@@ -844,7 +832,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
       }
       const promise = execute(detail)
       requests.set(detail.requestId, { fingerprint, promise }); if (requests.size > 128) requests.delete(requests.keys().next().value)
-      promise.then(() => reply(detail, true), error => reply(detail, false, error?.message || '教程操作未完成，请重试。', error?.homeGuideReason))
+      promise.then(() => reply(detail, true), error => reply(detail, false, error?.message || '教程操作未完成，请重试。'))
     }
     const receivePlayback = event => {
       const value = event.detail
@@ -856,7 +844,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         react_dom.flushSync(() => syncSmartPlayback(ticket))
       }
     }
-    const reset = event => { if (owned.current) owned.current.stopReason = event.type; dispose(false) }
+    const reset = () => dispose(false)
     const disconnected = new MutationObserver(() => { if (owned.current && !owned.current.host.isConnected) dispose() })
     disconnected.observe(document.body, { childList: true, subtree: true })
     window.addEventListener('sherlock:home-guide-native-request', receive)
