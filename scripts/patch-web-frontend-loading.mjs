@@ -23,6 +23,7 @@ import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
 import {patchHomeGuideNative,stripHomeGuideNative} from './lib/home-guide-native.mjs'
 import {patchHomeGuidePresentationNative,stripHomeGuidePresentationNative} from './lib/home-guide-presentation-native.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
+import {patchImagePreviewGallery} from './lib/image-preview-gallery.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
 import {patchYoutubeClient} from './lib/youtube-client.mjs'
@@ -171,6 +172,9 @@ function patchStyles(path) {
 
 patchPrimitives(primitivesPath)
 writeFileSync(primitivesPath, patchFigmaReadingTables(readFileSync(primitivesPath, 'utf8')))
+const imageAtomsPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-attachment/lib/index.js')
+writeFileSync(imageAtomsPath,patchImagePreviewGallery(readFileSync(imageAtomsPath,'utf8')))
+writeFileSync(asset('.js'),patchImagePreviewGallery(readFileSync(asset('.js'),'utf8'),true))
 patchJavaScript(asset('.js'))
 writeFileSync(primitivesPath, patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8'))))
 writeFileSync(asset('.js'), patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true))
