@@ -24,6 +24,7 @@ import {patchHomeGuideNative,stripHomeGuideNative} from './lib/home-guide-native
 import {patchHomeGuidePresentationNative,stripHomeGuidePresentationNative} from './lib/home-guide-presentation-native.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchImagePreviewGallery} from './lib/image-preview-gallery.mjs'
+import {patchSessionTitleSubject,patchSessionTitleLlmSubject} from './lib/session-title-subject.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
 import {patchYoutubeClient} from './lib/youtube-client.mjs'
@@ -86,6 +87,10 @@ const assetsDirectory = join(
   'assets'
 )
 const historyRuntimeBundlePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
+for(const [name,patch] of [['dsh-session-title',patchSessionTitleSubject],['dsh-session-title-llm',patchSessionTitleLlmSubject]]){
+ const path=join(process.cwd(),'node_modules/@deepseek-ai',name,'lib/index.js')
+ writeFileSync(path,patch(readFileSync(path,'utf8')))
+}
 writeFileSync(historyRuntimeBundlePath,stripConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 const llmAdapterPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js')
 writeFileSync(llmAdapterPath, patchGlmReasoningCapabilities(readFileSync(llmAdapterPath, 'utf8')))
