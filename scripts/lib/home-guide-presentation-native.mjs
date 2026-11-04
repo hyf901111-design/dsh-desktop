@@ -46,6 +46,19 @@ function HomePresentationSubmittedUser({entry,loadImage,openFile,t}){
  return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-home-guide-user-submission':entry.rpcId},react.createElement(UserStyleBubble,{content:entry.content,imageLoader:loadImage,openFile,t}))
 }
 
+/** Disable only this demo's composer action tips; keep the real buttons intact. */
+function useHomePresentationTooltipSuppressed(sessionId){
+ const active=()=>[...document.querySelectorAll('[data-home-guide-active][data-home-guide-kind]')].some(center=>['ppt','report'].includes(center.dataset.homeGuideKind)&&[...center.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].some(header=>header.dataset.eworkNotesSession===sessionId))
+ const [suppressed,setSuppressed]=react.useState(active)
+ react.useLayoutEffect(()=>{
+  setSuppressed(active())
+  const receive=event=>{if(event.detail?.sessionId===sessionId)setSuppressed(event.detail.ending!==true&&active())}
+  window.addEventListener('sherlock:home-guide-playback',receive)
+  return()=>window.removeEventListener('sherlock:home-guide-playback',receive)
+ },[sessionId])
+ return suppressed
+}
+
 function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
  react.useEffect(()=>{
   if(subagentPanel||!sessionId||window.top!==window)return
@@ -275,11 +288,13 @@ const PRESENTATION_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researc
 const LEGACY_PAGE_EFFECT='ctx.effect(()=>{const deps={sessions,inputHub,researchSidebar,getHomeGuideSession:id=>sherlockBoardsPage.getHomeGuideSession(id)};HomePresentationNativeDeps=deps;return()=>{if(HomePresentationNativeDeps===deps)HomePresentationNativeDeps=null}},"Home presentation native dependencies");'
 const PRESENTATION_EXPORT='exports.NativeHomePresentationPortal = NativeHomePresentationPortal;'
 const SUBMISSION_HOOK='\n/* odyssey:home-presentation-submitted-user:v1 */\nconst homePresentationSubmission=useHomePresentationSubmission(sessionId,order,nodeStore);\n'
+const INPUT_TIP_HOOK='\n/* odyssey:home-presentation-composer-tips:v1 */\nconst homePresentationTipsSuppressed=useHomePresentationTooltipSuppressed(sessionId);\n'
+const INPUT_TIP_LABELS=['label: t("input.stop"),','label: primaryLabel,']
 const SUBMISSION_RENDER='homePresentationSubmission&&react.createElement(HomePresentationSubmittedUser,{entry:homePresentationSubmission,loadImage,openFile,t}),\n'
 
 /** Restore the prior (possibly board-wrapped) Root before exact legacy transforms. */
 export function stripHomeGuidePresentationNative(source){
- const ownedNames=['HomePresentationNativeDeps','HomePresentationOriginalConversationRoot','NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot','homePresentationSidebarSnapshot','createHomePresentationSubmissionStore','HomePresentationSubmissions','useHomePresentationSubmission','HomePresentationSubmittedUser','homePresentationSubmission','odyssey:home-presentation-submitted-user:']
+ const ownedNames=['HomePresentationNativeDeps','HomePresentationOriginalConversationRoot','NativeHomePresentationContent','NativeHomePresentationPortal','NativePresentationConversationRoot','homePresentationSidebarSnapshot','createHomePresentationSubmissionStore','HomePresentationSubmissions','useHomePresentationSubmission','HomePresentationSubmittedUser','homePresentationSubmission','odyssey:home-presentation-submitted-user:','useHomePresentationTooltipSuppressed','homePresentationTipsSuppressed','odyssey:home-presentation-composer-tips:']
  const traces=[START,END,PRESENTATION_BINDING,...ownedNames]
  const drift=()=>{throw Error('Home presentation native strip anchor drifted')}
  if(!source.includes(START)){if(traces.some(value=>source.includes(value)))drift();return source}
@@ -300,6 +315,11 @@ export function stripHomeGuidePresentationNative(source){
   if(restored.split(SUBMISSION_HOOK).length!==2||restored.split(SUBMISSION_RENDER).length!==2)drift()
   restored=restored.replace(SUBMISSION_HOOK,'').replace(SUBMISSION_RENDER,'')
  }
+ if(block.includes('function useHomePresentationTooltipSuppressed(')){
+  if(restored.split(INPUT_TIP_HOOK).length!==2)drift()
+  restored=restored.replace(INPUT_TIP_HOOK,'')
+  for(const label of INPUT_TIP_LABELS){const patched=label+'disabled:homePresentationTipsSuppressed,';if(restored.split(patched).length!==2)drift();restored=restored.replace(patched,label)}
+ }
  restored=restored.replace(bindings[0],'').replace('\n'+PRESENTATION_EXPORT,'')
  if(traces.some(value=>restored.includes(value)))drift()
  return restored
@@ -307,7 +327,11 @@ export function stripHomeGuidePresentationNative(source){
 
 export function patchHomeGuidePresentationNative(source){
  source=stripHomeGuidePresentationNative(source)
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const inputBar=source.match(/function InputBar\([^\n]+\) \{/g)
+ if(inputBar?.length!==1)throw Error('Home presentation composer hook anchor drifted')
+ source=one(source,inputBar[0],inputBar[0]+INPUT_TIP_HOOK)
+ for(const label of INPUT_TIP_LABELS)source=one(source,label,label+'disabled:homePresentationTipsSuppressed,')
  source=one(source,'const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);'+SUBMISSION_HOOK)
  const flow=['conversationComponentFlow.flatMap((entry) => {','renderFlow.flatMap((entry) => {'].filter(anchor=>source.includes(anchor))
  if(flow.length!==1)throw Error('Home presentation submitted-user flow anchor drifted')
