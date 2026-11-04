@@ -143,7 +143,7 @@ it('uses the real paragraph selection and AI rewrite control before replacing on
   // The tutorial's visual pointer acknowledges a target, then its actor calls
   // that native button once; it never synthesizes an OS pointer drag.
   await page.getByRole('button',{name:'AI 改写',exact:true}).evaluate(button=>{button.click();button.focus({preventScroll:true})})
-  expect(await page.evaluate(()=>window.events.findLast(event=>event.name==='notes-composer-draft').detail.text)).toBe(HOME_NOTES_REWRITE_PROMPT)
+  expect(await page.evaluate(()=>window.events.findLast(event=>event.name==='notes-composer-draft').detail.text)).toBe('改写选中文字，保留原意并让表达更清晰。')
   await page.evaluate(prompt=>window.submitNative(prompt),HOME_NOTES_REWRITE_PROMPT)
   await expect.poll(()=>page.evaluate(()=>window.results.length)).toBe(1)
   expect(await page.evaluate(()=>window.results[0].input)).toMatchObject({entryPoint:'composer',prompt:HOME_NOTES_REWRITE_PROMPT,selection:'订单增长不能保证利润翻倍，仍需验证产品价格和回款。',markdown:'',context:{scope:'selection',components:[]}})
