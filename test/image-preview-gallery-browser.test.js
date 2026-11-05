@@ -29,21 +29,36 @@ async function fixture(target,options={}){
 }
 for(const target of ['native','web']){
 
- it(target+' anchors navigation to the displayed image while switching size and resizing the window',async()=>{
+ it(target+' keeps navigation fixed while images change size and leaves room around enlarged images',async()=>{
   const{page,errors}=await fixture(target,{width:1380,height:900,count:3,sizes:[{width:620,height:340},{width:360,height:1000},{width:2400,height:900}]});try{
    await page.getByRole('button',{name:'放大 page-1.svg',exact:true}).click()
    const modal=page.getByRole('dialog'),image=modal.locator('[data-image-preview-image]'),previous=modal.locator('[data-image-preview-control=previous]'),next=modal.locator('[data-image-preview-control=next]')
-   const aligned=async(gap)=>{
-    const a=await image.boundingBox(),p=await previous.boundingBox(),n=await next.boundingBox(),width=page.viewportSize().width
-    return !!a&&!!p&&!!n&&Math.abs(a.x-p.x-p.width-gap)<1&&Math.abs(n.x-a.x-a.width-gap)<1&&Math.abs(p.y+p.height/2-a.y-a.height/2)<1&&Math.abs(n.y+n.height/2-a.y-a.height/2)<1&&p.x>=6&&n.x+n.width<=width-6
+   const spaced=async(gap)=>{
+    const a=await image.boundingBox(),p=await previous.boundingBox(),n=await next.boundingBox(),{width,height}=page.viewportSize()
+    return !!a&&!!p&&!!n&&a.x-p.x-p.width>=gap-1&&n.x-a.x-a.width>=gap-1&&Math.abs(p.y+p.height/2-height/2)<1&&Math.abs(n.y+n.height/2-height/2)<1&&p.x>=16&&n.x+n.width<=width-16&&n.x+n.width-p.x<=1440
    }
-   await expect.poll(()=>aligned(16)).toBe(true)
-   await page.screenshot({path:evidence+'/'+target+'-image-relative-small.png'})
-   await next.click();await expect.poll(()=>image.getAttribute('alt')).toBe('page-2.svg');await expect.poll(()=>aligned(16)).toBe(true)
-   await next.click();await expect.poll(()=>image.getAttribute('alt')).toBe('page-3.svg');await expect.poll(()=>aligned(16)).toBe(true)
-   await page.setViewportSize({width:390,height:720});await expect.poll(()=>aligned(8)).toBe(true)
-   await page.screenshot({path:evidence+'/'+target+'-image-relative-narrow.png'})
-   await page.keyboard.press('ArrowLeft');await expect.poll(()=>image.getAttribute('alt')).toBe('page-2.svg');await expect.poll(()=>aligned(8)).toBe(true)
+   await expect.poll(()=>spaced(16)).toBe(true)
+   const left=await previous.boundingBox(),right=await next.boundingBox()
+   expect(left.x).toBeGreaterThanOrEqual(64)
+   await page.screenshot({path:evidence+'/'+target+'-image-fixed-small.png'})
+   // Reuse the same pointer coordinates: changing aspect ratio must not move the target.
+   await page.mouse.click(right.x+right.width/2,right.y+right.height/2)
+   await expect.poll(()=>image.getAttribute('alt')).toBe('page-2.svg')
+   expect(await previous.boundingBox()).toEqual(left);expect(await next.boundingBox()).toEqual(right)
+   await page.mouse.click(right.x+right.width/2,right.y+right.height/2)
+   await expect.poll(()=>image.getAttribute('alt')).toBe('page-3.svg')
+   expect(await previous.boundingBox()).toEqual(left);expect(await next.boundingBox()).toEqual(right)
+   await expect.poll(()=>spaced(16)).toBe(true)
+   await page.screenshot({path:evidence+'/'+target+'-image-fixed-wide.png'})
+   await page.setViewportSize({width:3440,height:1322});await expect.poll(()=>spaced(16)).toBe(true)
+   await page.setViewportSize({width:390,height:720});await expect.poll(()=>spaced(8)).toBe(true)
+   const narrowLeft=await previous.boundingBox(),narrowRight=await next.boundingBox()
+   await page.screenshot({path:evidence+'/'+target+'-image-fixed-narrow.png'})
+   await page.keyboard.press('ArrowLeft');await expect.poll(()=>image.getAttribute('alt')).toBe('page-2.svg');await expect.poll(()=>spaced(8)).toBe(true)
+   expect(await previous.boundingBox()).toEqual(narrowLeft);expect(await next.boundingBox()).toEqual(narrowRight)
+   await page.setViewportSize({width:1380,height:900});await page.keyboard.press('ArrowLeft');await expect.poll(()=>image.getAttribute('alt')).toBe('page-1.svg')
+   // The fixed frame must not swallow a backdrop click in the empty area above the image.
+   await page.mouse.click(690,100);await expect.poll(()=>modal.count()).toBe(0)
    expect(errors).toEqual([])
   }finally{await page.close()}
  })
