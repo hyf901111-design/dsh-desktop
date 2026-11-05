@@ -246,6 +246,7 @@ export type IntegrationState = {
     schemaVersion: 1;
     revision: number;
     /** Account-scoped preferences; trusted bundled content is never copied into user state. */
+    bundledPluginPreferences?: Record<string, Record<string, {enabled: boolean; revision: number}>>;
     bundledSkillPreferences?: Record<string, Record<string, {enabled: boolean; revision: number}>>;
     connections: Record<string, Connection>;
     plugins: Record<string, PluginInstall>;

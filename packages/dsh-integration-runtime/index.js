@@ -1,3 +1,4 @@
+import { createComputerUseController } from './computer-use.js'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import { connectionAllows, isLiveAgent, resolveCapabilityContext } from './context.js'
 import { createToolProxy, toolRegistrationName, validateToolBinding } from './tool-proxy.js'
@@ -97,7 +98,7 @@ function createBridge(config, fetchRequest, timeoutMs) {
 export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchRequest = globalThis.fetch, pollIntervalMs = 2000, requestTimeoutMs = 65000 } = {}) {
   const bridge = createBridge(bridgeConfig(env), fetchRequest, requestTimeoutMs)
   const tools = new Map(), agents = new Map(), listeners = [], changes = new Set()
-  let snapshot, available = false, disposed = false, refreshingRestrictions = false, syncing, timer, disposal
+  let snapshot, available = false, disposed = false, refreshingRestrictions = false, syncing, timer, disposal, computerUse
   const currentConnections = () => new Map((snapshot?.connections ?? []).map(connection => [connection.id, connection]))
   const allowed = (binding, context) => available && context?.runtimeEpoch === snapshot.runtimeEpoch && context?.ownerAccountId === snapshot.ownerAccountId && connectionAllows(currentConnections().get(binding.connectionId), binding, context)
 
@@ -123,7 +124,7 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
   }
   const clearTools = () => { const entries = [...tools.values()]; tools.clear(); for (const entry of entries) entry.dispose(); refreshRestrictions() }
   const changed = () => { for (const listener of changes) listener() }
-  const failClosed = () => { const wasAvailable = available; available = false; for (const state of agents.values()) state.context = undefined; clearTools(); if (wasAvailable) changed() }
+  const failClosed = () => { const wasAvailable = available; available = false; for (const state of agents.values()) state.context = undefined; clearTools(); if (wasAvailable) changed(); void computerUse?.sync(undefined).catch(() => {}) }
 
   const runtime = {
     async request(path, body, signal) { try { return await bridge.request(path, body, signal) } catch (error) { if (!disposed && !signal?.aborted && !(error instanceof BridgeIntegrationError)) failClosed(); throw error } },
@@ -170,6 +171,7 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
             try { entry.dispose = ctx.tools.register(definition) } catch (error) { tools.delete(id); throw error }
           }
           refreshRestrictions()
+          await computerUse?.sync(next)
           if (notify) changed()
         } catch { if (!disposed) failClosed() }
       })()
@@ -185,10 +187,15 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
       for (const state of agents.values()) state.dispose?.()
       agents.clear()
       changes.clear()
-      disposal = (async () => { await bridge.dispose(); await syncing })()
+      disposal = (async () => { await computerUse?.dispose(); await bridge.dispose(); await syncing })()
       return disposal
     }
   }
+  if (env.EWORK_COMPUTER_USE_BINARY) computerUse = createComputerUseController(ctx, {
+    binaryPath: env.EWORK_COMPUTER_USE_BINARY, runtime,
+    report: value => bridge.request('/plugins/status', value),
+    allowed: agent => { const context = agents.get(agent)?.context; return available && isLiveAgent(ctx, agent) && context?.runtimeEpoch === snapshot.runtimeEpoch && context?.ownerAccountId === snapshot.ownerAccountId }
+  })
   listeners.push(ctx.tools.guard(exec => {
     if (!exec.name.startsWith('ework__')) return
     const entry = [...tools.values()].find(item => item.name === exec.name)

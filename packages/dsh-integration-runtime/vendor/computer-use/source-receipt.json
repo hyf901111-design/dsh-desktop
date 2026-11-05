@@ -1,0 +1,20 @@
+{
+  "archiveSha256": "066d1c5e003a5e4776d322aff58cce74ffff0c4a2cda4de7eb6d7033adc73c9b",
+  "files": {
+    "LICENSE": "78dd09e2dca062edf9121fb332884025b10ef890f39ca0c05f3b0a599c409022",
+    "lib/index.js": "bc863e566e507e6356a551d4499f651bc341649fb7fcbf66f30027e2c28540f8",
+    "lib/sdk.js": "1295c3c2ae2c73a3de326c77a1678338107bdd03392e908460643df44717949f",
+    "native/manifest.json": "4def939f16dd6290e1aeff10e5311420b2130cdde852f55483aa6dcdd31d226e",
+    "package.json": "c1371d327dab8eecd9f88289d55571bc1301c73c9815dc37d83f41c0a3fd08f4",
+    "native/NOTICE.md": "02f5914d6a11faf58a23c30c279c75238eeee995749b34ca3f1aa79ed4ecc39b",
+    "README.md": "0282b3833777a5097aa577f938e89a4e25eec8dbde4af384a04c9b3a4d6ae5cd",
+    "lib/types/cua-backend.d.ts": "0e3cbc5cf93878bb3c3331a706378b824c1ea03731aef04b6829d8a98e681f2d",
+    "lib/types/engine.d.ts": "d7e231e9de383e63049bf89bb3e409edfef83640ae74ecc91376ed64c384d316",
+    "lib/types/index.d.ts": "4fd93d2f2e074b3647d4597acc4fc238068a56bc1a2ab9b63af3d1488f128ea7",
+    "lib/types/observation.d.ts": "07c661e08306f9136656e1c5ce342189248b64711cbcb52ef2fe896f37379811",
+    "lib/types/protocol.d.ts": "245d1895242e27065dffb8368345a5ca3a9c5c9c7a268566eb8b4dd3bf6ec6e3",
+    "lib/types/sdk.d.ts": "a222247ab13ddfb63971d1b0af68618638c1019cb93cfbb81a9213fd6fb4235e",
+    "lib/types/tool.d.ts": "bcc997782a29212c1928e5069cd87a28aaf404495483ddb6346b559d7d05ddf4",
+    "native/LICENSE-cua-driver.txt": "c0779290c1d4783169aa3dbfb55feb505e563ef8a004bbf55298ceffcfbda8d9"
+  }
+}
