@@ -2734,7 +2734,11 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           const businessLimit=kind==='container'&&knownDiscoveryUsed?12:8
           if(prototypeTargets&&!bindingRequested&&!prototypeRecovery)prototypeRecovery=recoverPrototypeTable(sourceCollector.records,{panelType:workbenchPanelFormat(query??''),panelRequest:hostContext?.sourceRequirement,title:query?.match(/\n本面板：([^\n]+)/u)?.[1],workbenchRequest:hostContext?.workbenchRequest})
           if(prototypeTargets&&workbenchPanelFormat(query??'')==='html')prototypeDataReady=prototypeHtmlEvidence(sourceCollector.records,hostContext?.sourceRequirement,prototypeTargets)
-          if(prototypeRecovery||prototypeDataReady)closeResearch()
+          // A planner's named dataset is not an exhaustive dependency list.
+          // The live child may still need KPI inputs or source evidence from
+          // the same authorized prototype. Let its typed submission finish the
+          // source phase; the existing time/read budgets still bound retrieval.
+          if((prototypeRecovery||prototypeDataReady)&&!livePrototypeSubmission)closeResearch()
           if(researchLimitDue||discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
         }
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {

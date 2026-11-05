@@ -97,6 +97,30 @@ it('cancels and unregisters an initial submission without publishing an artifact
  expect(f.ctx.tools.schemas(f.child).map(tool=>tool.name)).not.toContain('submit_prototype_view')
  expect((await f.invoke()).isError).toBe(true)
 })
+it('keeps authorized source reads open after a named dataset is complete until the live HTML child submits',async()=>{
+ const ctx=new Context();new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1});new SubagentRuntime(ctx);spawn(ctx,{providerName:'spawn'});cleanup.push(()=>ctx.fiber.dispose())
+ const parent=(await ctx.agents.create({sessionId:'named-source-extra-evidence-parent',agentOptions:{provider:'fixture',model:'fixture'}})).agent,requests=[],children=[]
+ ctx.on('agent/created',({agent})=>{if(agent.id!==parent.id)children.push(agent)})
+ const extraArgs={file_path:file,section:'EV'},extra={section:'EV',value:{rows:[{code:'证据',tag:'甲',flow:5}]}}
+ ctx.tools.register(defineTool({name:'read_prototype',description:'Read authorized prototype',parameters:{file_path:{type:'string',required:true},section:{type:'string'},limit:{type:'integer'}},output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>true,execute(value){return value.section==='EV'?extra:record.response}}))
+ ctx.llm.registerAdapter(['fixture'],new class extends LlmAdapter{
+  async resolveModel(provider,id){return{provider,id,name:id}}
+  async listModels(){return[]}
+  async *stream(request){
+   requests.push(request);const n=requests.length
+   if(n>3)throw Error('The same child must finish after reading its remaining evidence')
+   if(n<3)expect(request.tools.map(tool=>tool.name)).toContain('read_prototype')
+   const value=n===1?args:n===2?extraArgs:{...input,sources:[...selection,{key:'evidence',section:'EV'}],view:{kind:'sections',sections:[{label:'产品',view},{label:'证据',view:{...view,source:'evidence',path:'value.rows'}}]}}
+   yield{type:'block-start',index:0,blockType:'tool-call'};yield{type:'block-end',index:0,block:{type:'tool-call',id:'additional-source-'+n,name:n<3?'read_prototype':'submit_prototype_view',arguments:JSON.stringify(value)}};yield{type:'finish',reason:{kind:'tool-calls'}}
+  }
+ }())
+ const adapter=createSubagentAdapter(ctx);cleanup.push(()=>adapter.dispose())
+ const requirement='读取 DYN.products，保留完整产品指标及其相关来源证据，所需资料由本卡继续读取。',query='工作台：根据 /fixture/user.html 创建工作台\n本面板：产品与证据\n'+requirement+'\n仅生成本面板，优先使用 html 类型。'
+ const handle=await adapter.start({parentSessionId:parent.id,kind:'container',query,prompt:query,hostContext:{workbenchRequest:{originalRequest:'根据 /fixture/user.html 创建工作台',dataMode:'source'},sourceRequirement:requirement},signal:new AbortController().signal,onSessionEvent:()=>{}});cleanup.push(()=>handle.dispose())
+ const result=await handle.result
+ expect(result.stopReason).toBe('completed');expect(children).toHaveLength(1);expect(requests).toHaveLength(3);expect(result.sourceRecords).toHaveLength(2)
+ expect(JSON.parse(result.output[0].text).requests.map(request=>request.args.section)).toEqual(['DYN.products','EV'])
+})
 it('returns complete-record feedback before typed acceptance and lets the original child correct the source',async()=>{
  const ctx=new Context();new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1});new SubagentRuntime(ctx);spawn(ctx,{providerName:'spawn'});cleanup.push(()=>ctx.fiber.dispose())
  const parent=(await ctx.agents.create({sessionId:'coverage-before-ack-parent',agentOptions:{provider:'fixture',model:'fixture'}})).agent,requests=[],children=[]
