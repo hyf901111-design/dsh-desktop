@@ -8,6 +8,7 @@ import {build} from 'esbuild'
 import {PNG} from 'pngjs'
 import {ensureDshFileDropResearchCanvasCompatibility} from '../src/main/state/dsh-file-drop-compat'
 const require=createRequire(import.meta.url),{patchSkillCommandPopup}=require('../scripts/lib/skill-command-menu.mjs')
+const {patchExpandedCommandMenu}=require('../scripts/lib/expanded-command-menu.mjs')
 const evidence='/tmp/composer-menu-drop-20261027'
 let browser,sources,script,styles,temp
 beforeAll(async()=>{
@@ -16,7 +17,7 @@ beforeAll(async()=>{
  await writeFile(join(directory,'package.json'),JSON.stringify({name:'dsh-file-drop',version:'1.0.0'}));await writeFile(join(directory,'client.js'),await readFile('test/fixtures/dsh-file-drop-1.0.0-client.js','utf8'))
  expect((await ensureDshFileDropResearchCanvasCompatibility(temp)).status).toBe('patched')
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- sources={runtime:await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),conversation:raw.replace('exports.apply = apply;','exports.__InputBar=InputBar;exports.__ComposerSurface=ComposerSurface;exports.apply = apply;'),commands:patchSkillCommandPopup(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')).replace('exports.apply = apply;','exports.__Popup=PopupSelectView;exports.apply = apply;'),fileDrop:await readFile(join(directory,'client.js'),'utf8')}
+ sources={runtime:await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),conversation:raw.replace('exports.apply = apply;','exports.__InputBar=InputBar;exports.__ComposerSurface=ComposerSurface;exports.apply = apply;'),commands:patchExpandedCommandMenu(patchSkillCommandPopup(await readFile('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')),'skills').replace('exports.apply = apply;','exports.__Popup=PopupSelectView;exports.apply = apply;'),fileDrop:await readFile(join(directory,'client.js'),'utf8')}
  const output=await build({entryPoints:['test/fixtures/composer-menu-drop-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'}});script=output.outputFiles[0].text
  const shell=await build({stdin:{resolveDir:process.cwd(),contents:"import{mountDesktopShellStyles}from'./src/preload/shell-style';mountDesktopShellStyles(document)",loader:'ts'},bundle:true,platform:'browser',format:'iife',write:false,plugins:[{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},a=>({path:a.path.startsWith('.')?resolve(a.resolveDir,a.path.slice(0,-4)):require.resolve(a.path.slice(0,-4)),namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async a=>({contents:'export default '+JSON.stringify(await readFile(a.path,'utf8')),loader:'js'}))}}]});styles=shell.outputFiles[0].text
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -50,6 +51,7 @@ for(const dark of [false,true])it(`paints both skill illustrations in the narrow
    side.className='sRp_root'
    // The real right-side panel is an inline-size query container.
    Object.assign(side.style,{containerType:'inline-size',overflow:'hidden',left:'auto',right:'14px',top:'475px',bottom:'18px',width:'316px',height:'auto'})
+   probe.extendSkillCatalog(8)
    probe.open()
   })
   const menu=f.page.locator('[data-ework-command=skills]'),rows=menu.getByRole('option'),art=rows.locator('.odyssey-deliverable-preview')
