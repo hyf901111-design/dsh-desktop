@@ -1,4 +1,5 @@
 import {patchImageGenerationClient} from './lib/image-generation-client.mjs'
+import {patchConversationImageIntake} from './lib/conversation-image-intake.mjs'
 import {patchHomeThemeAppearance} from './lib/home-theme-appearance.mjs'
 import {patchBoardTabsClient,stripBoardTabsClient} from './lib/board-tabs-client.mjs'
 import {patchSidebarNewNoteConversation,patchSidebarNewNoteShell,stripSidebarNewNoteConversation,stripSidebarNewNoteShell} from './lib/sidebar-new-note.mjs'
@@ -347,6 +348,7 @@ writeFileSync(conversationPath, patchComposerDeliverablePreview(readFileSync(con
 writeFileSync(conversationPath, patchHomeGuideWorkbenchNative(patchHomeWorkbenchClient(patchHomeGuidePresentationNative(patchHomeGuideNative(readFileSync(conversationPath, 'utf8'))))))
 // Reply components consume the final native renderers and input/reference helpers.
 writeFileSync(conversationPath,patchConversationComponents(readFileSync(conversationPath,'utf8')))
+writeFileSync(conversationPath, patchConversationImageIntake(readFileSync(conversationPath, 'utf8')))
 // A completed compaction keeps its published key, even when no checkpoint was produced.
 writeFileSync(conversationPath,patchConversationCompactionLifecycle(readFileSync(conversationPath,'utf8')))
 // The input coordinator wraps the final native sink and Root after every other renderer/input pass.
