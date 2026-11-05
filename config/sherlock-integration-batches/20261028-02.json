@@ -27852,6 +27852,55 @@
         "risks": [],
         "generatedAt": "2026-11-05T23:09:07.122Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "离线组件测试跟随实际数据源配置",
+        "branch": "codex/feat/conversation-offline-source-tests-20261106",
+        "baseCommit": "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0",
+        "tipCommit": "5efa4489cee44267a58b78502561e6949f411017",
+        "commits": [
+          {
+            "commit": "5efa4489cee44267a58b78502561e6949f411017",
+            "parents": [
+              "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0"
+            ],
+            "subject": "修复：离线组件测试跟随实际数据源配置"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/conversation-component-offline.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/conversation-component-offline.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "同一命令修复前6失败/3通过，修复后9项通过9.84秒。仅修正夹具请求来源，所有离线时间戳、冷启动及不脉冲断言保留。",
+            "verifiedCommit": "5efa4489cee44267a58b78502561e6949f411017",
+            "completedAt": "2026-11-05T23:11:52.994Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅修改一行测试夹具，无产品源码或客户端变更。"
+        },
+        "acceptanceCriteria": [
+          "冷启动离线用例按持久组件实际dataSource构造查询",
+          "quotes/history各保存组合及抛错/空结果路径继续保留历史数据且不推进时间"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-05T23:11:52.994Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -29267,6 +29316,15 @@
         "node_modules/.bin/vitest",
         "run",
         "test/conversation-component-service.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/conversation-component-offline.test.js",
         "--reporter=dot"
       ],
       "timeoutMs": 120000
