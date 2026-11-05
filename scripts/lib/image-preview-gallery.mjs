@@ -19,9 +19,11 @@ function EworkImageLightbox({src,alt,labels,onClose,index=0,total=1,onPrevious,o
     if(event.key==='ArrowRight'&&a.index<a.total-1)a.onNext?.()
    }else if(event.key==='Tab'){
     const buttons=[...root.current.querySelectorAll('button:not(:disabled)')]
-    const first=buttons[0],last=buttons.at(-1)
-    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}
-    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}
+    // A navigation button can become disabled (or a retry button disappear)
+    // while focused. Recover to an enabled control instead of tabbing behind the modal.
+    const current=buttons.indexOf(document.activeElement)
+    const next=event.shiftKey?(current<=0?buttons.length-1:current-1):(current+1)%buttons.length
+    event.preventDefault();buttons[next]?.focus()
    }
   }
   window.addEventListener('keydown',keydown,true)

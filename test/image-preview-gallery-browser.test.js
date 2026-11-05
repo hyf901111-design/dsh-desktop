@@ -5,7 +5,7 @@ import {build} from 'esbuild'
 import {beforeAll,afterAll,it,expect} from 'vitest'
 import {patchImagePreviewGallery} from '../scripts/lib/image-preview-gallery.mjs'
 let browser,bundle,sources={}
-const evidence='/tmp/image-preview-gallery-20261104'
+const evidence='/tmp/image-preview-gallery-focus-20261105'
 beforeAll(async()=>{
  bundle=(await build({entryPoints:['test/fixtures/image-preview-gallery-browser.tsx'],bundle:true,format:'iife',platform:'browser',write:false,define:{'process.env.NODE_ENV':'"development"'}})).outputFiles[0].text
  for(const web of [false,true]){
@@ -28,6 +28,39 @@ async function fixture(target,options={}){
  return{page,errors}
 }
 for(const target of ['native','web']){
+
+ for(const {opener,direction,boundary} of [
+  {opener:'page-1.svg',direction:'下一张图片',boundary:'2 / 2'},
+  {opener:'page-2.svg',direction:'上一张图片',boundary:'1 / 2'}
+ ])for(const key of ['Tab','Shift+Tab'])it(target+' traps '+key+' after '+direction+' becomes disabled',async()=>{
+  const{page,errors}=await fixture(target,{count:2});try{
+   const thumbnail=page.getByRole('button',{name:'放大 '+opener,exact:true})
+   await thumbnail.click()
+   await page.getByRole('button',{name:direction}).click()
+   await expect.poll(()=>page.locator('[data-image-preview-counter]').innerText()).toBe(boundary)
+   expect(await page.getByRole('button',{name:direction}).isDisabled()).toBe(true)
+   for(let i=0;i<4;i++){
+    await page.keyboard.press(key)
+    expect(await page.evaluate(()=>!!document.activeElement?.closest('[data-image-preview-dialog]')&&!document.activeElement.disabled)).toBe(true)
+   }
+   await page.keyboard.press('Escape')
+   await expect.poll(()=>page.getByRole('dialog').count()).toBe(0)
+   expect(await thumbnail.evaluate(el=>el===document.activeElement)).toBe(true)
+   expect(errors).toEqual([])
+  }finally{await page.close()}
+ })
+ it(target+' traps Tab after the focused retry control is replaced by the loaded image',async()=>{
+  const{page,errors}=await fixture(target,{count:2,fail:'image-1'});try{
+   await page.getByRole('button',{name:'放大 page-1.svg',exact:true}).click()
+   await page.keyboard.press('ArrowRight')
+   const modal=page.getByRole('dialog')
+   await modal.getByRole('button',{name:'重新载入图片'}).click()
+   await expect.poll(()=>modal.locator('img').getAttribute('alt')).toBe('page-2.svg')
+   await page.keyboard.press('Tab')
+   expect(await page.evaluate(()=>!!document.activeElement?.closest('[data-image-preview-dialog]'))).toBe(true)
+   expect(errors).toEqual([])
+  }finally{await page.close()}
+ })
  it(target+' navigates one thumbnail group using buttons and keyboard, honors boundaries and restores opener focus',async()=>{
   const{page,errors}=await fixture(target);try{
    const first=page.getByRole('button',{name:'放大 page-2.svg',exact:true});await first.focus();await first.click()
