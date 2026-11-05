@@ -5,6 +5,7 @@ import {pathToFileURL} from 'node:url'
 import {join,resolve} from 'node:path'
 import {tmpdir} from 'node:os'
 import {build} from 'esbuild'
+import {PNG} from 'pngjs'
 import {ensureDshFileDropResearchCanvasCompatibility} from '../src/main/state/dsh-file-drop-compat'
 const require=createRequire(import.meta.url),{patchSkillCommandPopup}=require('../scripts/lib/skill-command-menu.mjs')
 const evidence='/tmp/composer-menu-drop-20261027'
@@ -33,12 +34,49 @@ async function fixture(dark=false,width=900){
 for(const dark of [false,true])it(`prioritizes native skill options and shows only the two matching homepage illustrations, retaining native search and multi-pick (dark=${dark})`,async()=>{
  const f=await fixture(dark);try{
   await f.page.evaluate(()=>probe.open());const menu=f.page.locator('[data-ework-command=skills]');await menu.getByRole('option').first().waitFor().catch(async error=>{throw Error(JSON.stringify({state:await f.page.evaluate(()=>probe.popup.state.getSnapshot()),errors:f.errors,body:await f.page.locator('body').innerText()})+' '+error.message)})
-  expect(await menu.getByRole('option').allTextContents()).toEqual(['PPT制作助手创建专业演示文稿','研报写作研究报告的完整写作与来源核验','自定义财报分析分析财务报告与估值','基础数据源获取研究数据','PPT 自定义技能用户自己的演示工具'])
+  expect(await menu.getByRole('option').allTextContents()).toEqual(['PPT制作助手创建专业演示文稿','研报写作按照易方达配色规范创建和制作研究报告，支持公司研究、财报分析与估值核验。','自定义财报分析分析财务报告与估值','基础数据源获取研究数据','PPT 自定义技能用户自己的演示工具'])
   const metrics=await menu.getByRole('option').evaluateAll(rows=>rows.map(row=>{const b=row.getBoundingClientRect(),a=row.querySelector('.odyssey-deliverable-preview'),image=a?.querySelector('img'),label=row.querySelector('.mufS8W_label').getBoundingClientRect(),detail=row.querySelector('.mufS8W_detail').getBoundingClientRect();return{height:b.height,width:b.width,art:image?.getAttribute('src'),artWidth:a?.getBoundingClientRect().width,decoded:image?.complete&&image?.naturalWidth>0,label:label.x,detail:detail.x}}))
   for(const row of metrics.slice(0,2)){expect(row.art).toContain('data:image/png;base64,');expect(row.decoded).toBe(true);expect(row.artWidth).toBeGreaterThanOrEqual(32);expect(row.label).toBe(row.detail);expect(row.height).toBeLessThanOrEqual(58)}
   expect(metrics.slice(2).every(row=>row.art===undefined)).toBe(true);await f.page.screenshot({path:join(evidence,`skills-${dark?'dark':'light'}.png`)})
   await menu.getByRole('textbox').fill('财务');expect(await menu.getByRole('option').allTextContents()).toEqual(['自定义财报分析分析财务报告与估值']);await menu.getByRole('textbox').fill('专业演示');await menu.getByRole('option').click();await expect.poll(()=>f.page.evaluate(()=>probe.selections)).toEqual(['builtin:efund-ppt-maker'])
-  await f.page.evaluate(()=>probe.open());await menu.getByRole('textbox').fill('来源核验');await menu.getByRole('option').click();await expect.poll(()=>f.page.evaluate(()=>probe.selections)).toEqual(['builtin:efund-ppt-maker','builtin:ework-equity-research']);expect(await f.page.evaluate(()=>probe.shell.snapshot.occurrences.length)).toBe(2);expect(f.errors).toEqual([])
+  await f.page.evaluate(()=>probe.open());await menu.getByRole('textbox').fill('估值核验');await menu.getByRole('option').click();await expect.poll(()=>f.page.evaluate(()=>probe.selections)).toEqual(['builtin:efund-ppt-maker','builtin:ework-equity-research']);expect(await f.page.evaluate(()=>probe.shell.snapshot.occurrences.length)).toBe(2);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+for(const dark of [false,true])it(`paints both skill illustrations in the narrow research side conversation (dark=${dark})`,async()=>{
+ const f=await fixture(dark);try{
+  await f.page.evaluate(()=>{
+   document.querySelector('.wSkVaW_root').dataset.odysseyPage='research'
+   const side=document.querySelector('#menus')
+   side.className='sRp_root'
+   // The real right-side panel is an inline-size query container.
+   Object.assign(side.style,{containerType:'inline-size',overflow:'hidden',left:'auto',right:'14px',top:'475px',bottom:'18px',width:'316px',height:'auto'})
+   probe.open()
+  })
+  const menu=f.page.locator('[data-ework-command=skills]'),rows=menu.getByRole('option'),art=rows.locator('.odyssey-deliverable-preview')
+  await rows.first().waitFor()
+  expect(await art.count()).toBe(2)
+  for(const [index,kind] of ['ppt','report'].entries()){
+   const illustration=art.nth(index)
+   expect(await illustration.isVisible()).toBe(true)
+   expect(await illustration.locator('img').first().evaluate(image=>image.decode().then(()=>image.naturalWidth))).toBeGreaterThan(0)
+   const png=PNG.sync.read(await illustration.screenshot({path:join(evidence,`research-side-${kind}-${dark?'dark':'light'}.png`)}))
+   let bluePixels=0
+   for(let i=0;i<png.data.length;i+=4){
+    const [red,green,blue]=png.data.subarray(i,i+3)
+    if(blue>100&&blue>red+35&&blue>green+12)bluePixels++
+   }
+   expect(bluePixels).toBeGreaterThan(10)
+  }
+  const layout=await menu.evaluate(element=>{
+   const viewport=element.querySelector('.mufS8W_viewport'),bounds=element.getBoundingClientRect(),side=element.closest('.sRp_root').getBoundingClientRect()
+   return{left:bounds.left,right:bounds.right,sideLeft:side.left,sideRight:side.right,scroll:viewport.scrollHeight>viewport.clientHeight,columns:new Set([...viewport.children].map(row=>row.getBoundingClientRect().left)).size}
+  })
+  expect(layout.left).toBeGreaterThanOrEqual(layout.sideLeft)
+  expect(layout.right).toBeLessThanOrEqual(layout.sideRight)
+  expect(layout.scroll).toBe(true)
+  expect(layout.columns).toBe(1)
+  await menu.screenshot({path:join(evidence,`research-side-skills-${dark?'dark':'light'}.png`)})
+  expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 for(const dark of [false,true])it(`confines real global file-drop feedback to the input card and clears it after leave or outside drop (dark=${dark})`,async()=>{

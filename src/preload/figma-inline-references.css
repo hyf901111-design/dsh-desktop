@@ -122,7 +122,7 @@ body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-c
   body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-deliverable-slot:124px; --odyssey-deliverable-gap:12px; }
 }
 @container (max-width:410px) {
-  .odyssey-deliverable-preview { display:none; }
+  [data-odyssey-deliverable-preview] [data-composer-card] > .odyssey-deliverable-preview { display:none; }
   body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] { --odyssey-deliverable-slot:0px; --odyssey-deliverable-gap:0px; min-height:126px; }
   body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_card[data-composer-card] .uV2eYG_scroll,body .uV2eYG_root[data-odyssey-deliverable-preview] .uV2eYG_mirror { min-height:78px; }
 }
