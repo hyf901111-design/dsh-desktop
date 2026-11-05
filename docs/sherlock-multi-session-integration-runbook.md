@@ -76,6 +76,8 @@ npm run git:integration -- sync-main --repo /absolute/path/to/integration-202608
 
 用户先在批准的共享客户端中接受精确 integration tip；Plan B 到位前不在 feature worktree 构建共享客户端。接受只记录元数据，不推进 `main`：
 
+接受和晋升预检中，已登记合并的功能分支可以继续开发。只有原交接 tip 仍是该分支的祖先、原双父合并在集成第一父提交历史中且第二父提交精确匹配交接 tip、验证提交位于该合并之后并包含于当前集成时，才按原交接范围核对提交、文件和检查证据。报告明确列出留待另行交接的后继 tip；不会自动合入后继、移动引用或改写交接卡。分支回退、改写、脏工作树及不匹配的历史证据仍阻止验收。新功能的 merge/continue 预检继续要求 live tip 精确匹配。
+
 ```bash
 npm run git:integration:preflight -- --repo /absolute/path/to/integration-20260831-01 --phase accept --manifest /absolute/path/to/integration-20260831-01/config/sherlock-integration-batches/20260831-01.json --commit <accepted-integration-sha>
 npm run git:integration -- accept --repo /absolute/path/to/integration-20260831-01 --manifest /absolute/path/to/integration-20260831-01/config/sherlock-integration-batches/20260831-01.json --commit <accepted-integration-sha> --confirm-batch 20260831-01
