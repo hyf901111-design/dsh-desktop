@@ -249,8 +249,11 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
     if(!current||!list||!surface.contains(list))throw Error('组件库菜单已变化。')
     validTarget(current);const box=current.getBoundingClientRect(),area=list.getBoundingClientRect(),delta=box.top<area.top+2?box.top-area.top-2:box.bottom>area.bottom-2?box.bottom-area.bottom+2:0
     const distance=reduced?delta:Math.max(-24,Math.min(24,delta)),top=Math.max(0,Math.min(list.scrollHeight-list.clientHeight,list.scrollTop+distance))
-    if(top!==list.scrollTop){list.scrollTo({top,behavior:'instant'});previous=undefined;stable=0;return}
-    if(box.top<area.top||box.bottom>area.bottom){previous=undefined;stable=0;return}
+    // At non-integer zoom scrollTop keeps subpixels while scrollHeight and
+    // clientHeight are rounded. The clamped bottom can never equal their
+    // integer difference, even though the last command is already visible.
+    if(Math.abs(top-list.scrollTop)>1){list.scrollTo({top,behavior:'instant'});previous=undefined;stable=0;return}
+    if(box.top<area.top-1||box.bottom>area.bottom+1){previous=undefined;stable=0;return}
     validTarget(current,true);stable=previous&&Math.abs(previous.x-box.x)<.5&&Math.abs(previous.y-box.y)<.5?stable+1:0;previous=box;return stable>=2?current:undefined
    })
   }
