@@ -26764,71 +26764,103 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复笔记演示在非整数缩放下菜单提前中断",
+        "featureName": "PPT Skill 1.1.3：仅增加标题正文一行留白",
         "branch": "codex/feat/demo-acceptance-20261105",
-        "baseCommit": "5b174c4f37f0553b225bd9489a65734743521580",
-        "tipCommit": "f93158ad408a45caec6465a791cf98d5824f3ee1",
+        "baseCommit": "f93158ad408a45caec6465a791cf98d5824f3ee1",
+        "tipCommit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
         "commits": [
           {
-            "commit": "f93158ad408a45caec6465a791cf98d5824f3ee1",
+            "commit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
             "parents": [
-              "5b174c4f37f0553b225bd9489a65734743521580"
+              "f93158ad408a45caec6465a791cf98d5824f3ee1"
             ],
-            "subject": "修复缩放后笔记演示组件菜单滚动等待卡住"
+            "subject": "技能：基于1.1.2仅增加标题正文一行留白并升级1.1.3"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-guide-notes.tsx"
+            "path": "skills/efund-ppt-maker/SKILL.md"
           },
           {
             "status": "M",
-            "path": "test/home-guide-notes-browser.test.js"
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/authoring-guide.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-111.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/delivery-112.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/design-system.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/layout-design-playbook.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/references/typography-contract.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-rendered-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/efund-ppt-text-layout.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过。",
-            "verifiedCommit": "f93158ad408a45caec6465a791cf98d5824f3ee1",
-            "completedAt": "2026-11-05T13:47:02.408925+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-notes-browser.test.js",
-              "-t",
-              "full pointer playback|chart tail free|completes the real editor and Portal|moves the real pointer over the original library"
+              "test/efund-ppt-text-layout.test.js",
+              "test/efund-ppt-rendered-fit.test.js"
             ],
             "outcome": "passed",
-            "summary": "5 项聚焦回放通过：100%/110% 真实指针组件菜单、整段编辑器与 Portal、图表续写点击时序。",
-            "verifiedCommit": "f93158ad408a45caec6465a791cf98d5824f3ee1",
-            "completedAt": "2026-11-05T13:47:02.408925+00:00",
-            "timeoutMs": 180000
+            "summary": "7 项标题正文实际字形间距及渲染适配检查通过。",
+            "verifiedCommit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
+            "completedAt": "2026-11-05T14:21:58.071524+00:00",
+            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端稳定复现 slash 菜单就绪超时；浏览器 110% 对应场景先失败再通过，100% 与完整编辑器回归通过。新包原生验收待集成构建。"
+          "summary": "仅修改 1.1.2 的标题正文留白规则、对应检查器和间距样本；标准12pt正文以18pt行高留白，即960×540画布24px。实际客户端唯一版本检查待集成构建。"
         },
         "acceptanceCriteria": [
-          "非整数缩放时忽略滚动整数边界与亚像素位置的不足 1px 差异，原有菜单归属与目标有效性检查保留。",
-          "笔记完整流程通过组件库并保留行情组件；客户端完成后才勾选验收。"
+          "技能版本为v1.1.3，仅保留同一个builtin:efund-ppt-maker入口。",
+          "标题最后一行字形与正文第一行之间留一行正文行高；不通过空段落撑间距。",
+          "其余沿用1.1.2，暂停其他PPT优化。"
         ],
         "risks": [
-          "本次仅含两文件聚焦修复，不包含其他会话修改。",
-          "未运行全功能测试；该提交尚需本地包验证。"
+          "不改模板资产、目录与谢谢页；没有全功能测试。",
+          "通用quick_validate缺少本机PyYAML，前置描述未改变；直接相关7项检查已通过。"
         ],
-        "generatedAt": "2026-11-05T13:47:02.408925+00:00"
+        "generatedAt": "2026-11-05T14:21:58.071524+00:00"
       }
     }
   ],
