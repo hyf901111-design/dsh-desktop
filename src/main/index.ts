@@ -3,6 +3,7 @@ import {ConversationComponentStore} from './state/conversation-components'
 import {createConversationComponentService} from './conversation-components/service'
 import {installConversationComponentHandlers} from './conversation-components/ipc'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
+import {registerImageActions} from './image-actions'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import { PptxAnnotationService, registerPptxAnnotationHandlers, type PptxAnnotationHistoryEvent } from './pptx/annotations'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
@@ -809,6 +810,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
   })
 
   registerDeliveryFileClipboard({ipcMain,getMainWindow:()=>mainWindow,writeText:value=>clipboard.writeText(value)})
+  registerImageActions(() => mainWindow)
   registerPrivilegedMainWindowHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,

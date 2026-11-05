@@ -436,8 +436,9 @@ function mergeActions(featureBranch, checks) {
   ]
 }
 
-export function mergeIntegrationFeature({ integrationRepository, manifestPath, featureBranch, ownerToken, dryRun, now }) {
+export function mergeIntegrationFeature({ integrationRepository, manifestPath, featureBranch, ownerToken, dryRun, now, previewOnly = false }) {
   if (typeof dryRun !== 'boolean') fail('dryRun 必须为布尔值。')
+  if (typeof previewOnly !== 'boolean') fail('previewOnly 必须为布尔值。')
   checkedNow(now)
   const state = readManifestForMutation(integrationRepository, manifestPath)
   const feature = selectedFeature(state.manifest, featureBranch)
@@ -445,7 +446,10 @@ export function mergeIntegrationFeature({ integrationRepository, manifestPath, f
   requirePassingPreflight(state.context.worktreeRoot, 'merge', state.manifestPath, featureBranch)
   verifyMutationOwner(state.context, state.lease, ownerToken)
   if (isAncestor(state.context.worktreeRoot, feature.handoff.tipCommit, state.context.head)) fail('功能 tip 已在集成历史中；请使用 continue 恢复记录。')
-  const actions = mergeActions(featureBranch, state.manifest.integrationChecks)
+  const declared = previewOnly ? feature.handoff.checks : state.manifest.integrationChecks
+  if (previewOnly && !declared.length) fail('本地预览需要功能交接卡声明聚焦检查。')
+  const actions = mergeActions(featureBranch, declared)
+  if (previewOnly) actions.splice(-1, 1, action('preview-only', '仅准备本地预览；不记录完整合并验证，不允许验收或晋升。'))
   if (dryRun) return { schemaVersion: 1, status: 'planned', batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit: state.context.head, afterCommit: state.context.head, actions }
 
   const beforeCommit = state.context.head
@@ -467,7 +471,7 @@ export function mergeIntegrationFeature({ integrationRepository, manifestPath, f
     fail(`合并命令失败：${merge.stderr.trim() || merge.stdout.trim()}`)
   }
   try {
-    const stagedChecks = runDeclaredChecks(state.context.worktreeRoot, state.manifest.integrationChecks, '0'.repeat(40), now)
+    const stagedChecks = runDeclaredChecks(state.context.worktreeRoot, declared, '0'.repeat(40), now)
     runGit(state.context.worktreeRoot, ['commit', '-m', `集成：合并功能 ${featureBranch}`])
     const mergeCommit = resolveRepositoryContext(state.context.worktreeRoot).head
     const parents = mergeParents(state.context.worktreeRoot, mergeCommit)
@@ -481,6 +485,7 @@ export function mergeIntegrationFeature({ integrationRepository, manifestPath, f
       nextTip: mergeCommit,
       updatedAt: now
     })
+    if (previewOnly) return { schemaVersion: 1, status: 'preview-ready', batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit, afterCommit: mergeCommit, checks, actions }
     const afterCommit = recordMergedFeature({ repository: state.context.worktreeRoot, lease: advancedLease, manifest: state.manifest, manifestPath: state.manifestPath, featureBranch, mergeCommit, checks, now, ownerToken })
     return { schemaVersion: 1, status: 'merged', batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit, afterCommit, actions }
   } catch (error) {
@@ -491,6 +496,31 @@ export function mergeIntegrationFeature({ integrationRepository, manifestPath, f
     }
     return mergeRecoveryResult({ repository: state.context.worktreeRoot, manifestPath: state.manifestPath, featureBranch, beforeCommit, actions })
   }
+}
+
+/** Resume a preserved, committed merge for local preview without claiming full batch verification.
+ * A successor handoff may then be refreshed; accept/promote still reject the unrecorded feature.
+ */
+export function continueIntegrationPreview({ integrationRepository, manifestPath, featureBranch, ownerToken, confirmBatchId, confirmTip, dryRun, now }) {
+  if (typeof dryRun !== 'boolean') fail('dryRun 必须为布尔值。')
+  checkedNow(now)
+  const state = readManifestForMutation(integrationRepository, manifestPath)
+  requireExactConfirmation(confirmBatchId, state.lease.batchId, 'confirmBatchId')
+  requireExactConfirmation(confirmTip, state.context.head, 'confirmTip')
+  verifyMutationOwner(state.context, state.lease, ownerToken, { requireLeaseTip: false })
+  sourceClean(state.context.worktreeRoot, '集成 worktree')
+  const feature = selectedFeature(state.manifest, featureBranch), parents = mergeParents(state.context.worktreeRoot, state.context.head)
+  if (feature.merged || state.lease.acceptedTip || !feature.handoff.checks.length || parents.length !== 2 || parents[1] !== feature.handoff.tipCommit ||
+    state.lease.currentTip !== state.context.head && parents[0] !== state.lease.currentTip ||
+    !isAncestor(state.context.worktreeRoot, feature.handoff.tipCommit, resolveCommit(state.context.worktreeRoot, `refs/heads/${featureBranch}`))) fail('本地预览只接受匹配租约与原功能 tip 的未验收合并边界。')
+  const actions = feature.handoff.checks.map(check => action('run-feature-check', '仅运行功能聚焦检查；完整批次验证保持待完成。', check.argv))
+  if (dryRun) return { schemaVersion: 1, status: 'planned', batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit: state.context.head, afterCommit: state.context.head, actions }
+  const digest = manifestDigest(state.manifestPath)
+  const checks = runDeclaredChecks(state.context.worktreeRoot, feature.handoff.checks, state.context.head, now)
+  sourceClean(state.context.worktreeRoot, '集成 worktree')
+  if (resolveRepositoryContext(state.context.worktreeRoot).head !== state.context.head || manifestDigest(state.manifestPath) !== digest) fail('预览检查期间集成边界发生变化。')
+  if (state.lease.currentTip !== state.context.head) updateActiveBatchTip({ repository: state.context.worktreeRoot, ownerToken, expectedRevision: state.lease.revision, expectedTip: state.lease.currentTip, nextTip: state.context.head, updatedAt: now })
+  return { schemaVersion: 1, status: 'preview-ready', batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit: state.context.head, afterCommit: state.context.head, checks, actions }
 }
 
 export function continueIntegrationFeature({ integrationRepository, manifestPath, featureBranch, ownerToken, dryRun, now }) {
@@ -892,7 +922,8 @@ export function refreshIntegrationHandoff({ integrationRepository, manifestPath,
   if (state.lease.acceptedTip) fail('已接受的批次不能更新交接卡。')
   const handoff = validateFeatureHandoff(JSON.parse(readFileSync(handoffPath, 'utf8')))
   const previous = selectedFeature(state.manifest, handoff.branch)
-  if (handoff.baseCommit !== (previous.merged ? previous.handoff.tipCommit : previous.handoff.baseCommit) || handoff.tipCommit === previous.handoff.tipCommit ||
+  const previousIntegrated = previous.merged || isAncestor(state.context.worktreeRoot, previous.handoff.tipCommit, state.context.head)
+  if (handoff.baseCommit !== (previousIntegrated ? previous.handoff.tipCommit : previous.handoff.baseCommit) || handoff.tipCommit === previous.handoff.tipCommit ||
       !isAncestor(state.context.worktreeRoot, previous.handoff.tipCommit, handoff.tipCommit)) {
     fail('新交接卡必须以原功能 tip 为基线并指向其严格后继。')
   }

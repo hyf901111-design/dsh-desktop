@@ -36,6 +36,7 @@ import { isPluginLoadError } from './plugin-error-view'
 import { mountDesktopShellStyles } from './shell-style'
 import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
+import { mountImageGenerationFlow } from './image-generation-flow'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
 import {toggleHomeAppearance} from './home-theme-controls'
 import {mountPowerSettings} from './power-settings'
@@ -208,6 +209,7 @@ function initializeUi(): void {
     document.dispatchEvent(new CustomEvent('sherlock:memory-save-selection',{detail:{content:value.content,title:'选中的内容',sessionId,source:{kind:inNote?'note':'conversation',sessionId,...(inNote&&block&&note?{noteId:block.dataset.id,noteRevision:Number(note.dataset.noteSourceRevision)}:{}),...(!inNote&&message?{...(message.dataset.eventSeq?{seq:Number(message.dataset.eventSeq)}:{}),...(message.dataset.messageId?{messageId:message.dataset.messageId}:{})}:{}),title:'客户端中选中的内容',excerpt:value.content,createdAt:Date.now()}}}))
   })
   mountResearchBoardNotifications(document, boards)
+  window.addEventListener('unload', mountImageGenerationFlow(document), { once: true })
   mountDeveloperModeUi()
   if (process.platform === 'win32') {
     mountWindowsTitlebar({ document, ipcRenderer, locale })
@@ -349,6 +351,7 @@ contextBridge.exposeInMainWorld(
     homeGuideAssets: Object.freeze({ request: (input: unknown) => ipcRenderer.invoke('home-guide:assets', input) }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
+    imageAction: (input: unknown) => ipcRenderer.invoke('conversation:image-action', input),
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     showItemInFolder: (path: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('filesystem:show-item-in-folder', path),
