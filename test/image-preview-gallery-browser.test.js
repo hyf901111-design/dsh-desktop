@@ -5,7 +5,7 @@ import {build} from 'esbuild'
 import {beforeAll,afterAll,it,expect} from 'vitest'
 import {patchImagePreviewGallery} from '../scripts/lib/image-preview-gallery.mjs'
 let browser,bundle,sources={}
-const evidence='/tmp/image-preview-gallery-focus-20261105'
+const evidence=process.env.SHERLOCK_IMAGE_GALLERY_EVIDENCE||'/tmp/image-preview-gallery-focus-20261105'
 beforeAll(async()=>{
  bundle=(await build({entryPoints:['test/fixtures/image-preview-gallery-browser.tsx'],bundle:true,format:'iife',platform:'browser',write:false,define:{'process.env.NODE_ENV':'"development"'}})).outputFiles[0].text
  for(const web of [false,true]){
@@ -22,12 +22,32 @@ beforeAll(async()=>{
 })
 afterAll(async()=>browser?.close())
 async function fixture(target,options={}){
- const page=await browser.newPage({viewport:{width:options.width??1120,height:760}}),errors=[];page.on('pageerror',e=>errors.push(e.message))
+ const page=await browser.newPage({viewport:{width:options.width??1120,height:options.height??760}}),errors=[];page.on('pageerror',e=>errors.push(e.message))
  await page.setContent('<html><div id="app"></div></html>');await page.addStyleTag({content:'body{background:#1f1f1f;color:#fff;font-family:system-ui}.gallery{display:flex;gap:12px;margin:24px}.thumbnail{padding:0;width:64px;height:64px;overflow:hidden;border:0;border-radius:12px;cursor:pointer}.thumbnail img{width:100%;height:100%;object-fit:cover}#outside{margin:24px}'});await page.addScriptTag({content:sources[target]});await page.addScriptTag({content:bundle});await page.evaluate(options=>window.imagePreviewHarness(options),options)
  await expect.poll(()=>page.locator('section').first().locator('button img').count()).toBe((options.count??4)-(options.fail?1:0))
  return{page,errors}
 }
 for(const target of ['native','web']){
+
+ it(target+' anchors navigation to the displayed image while switching size and resizing the window',async()=>{
+  const{page,errors}=await fixture(target,{width:1380,height:900,count:3,sizes:[{width:620,height:340},{width:360,height:1000},{width:2400,height:900}]});try{
+   await page.getByRole('button',{name:'放大 page-1.svg',exact:true}).click()
+   const modal=page.getByRole('dialog'),image=modal.locator('[data-image-preview-image]'),previous=modal.locator('[data-image-preview-control=previous]'),next=modal.locator('[data-image-preview-control=next]')
+   const aligned=async(gap)=>{
+    const a=await image.boundingBox(),p=await previous.boundingBox(),n=await next.boundingBox(),width=page.viewportSize().width
+    return !!a&&!!p&&!!n&&Math.abs(a.x-p.x-p.width-gap)<1&&Math.abs(n.x-a.x-a.width-gap)<1&&Math.abs(p.y+p.height/2-a.y-a.height/2)<1&&Math.abs(n.y+n.height/2-a.y-a.height/2)<1&&p.x>=6&&n.x+n.width<=width-6
+   }
+   await expect.poll(()=>aligned(16)).toBe(true)
+   await page.screenshot({path:evidence+'/'+target+'-image-relative-small.png'})
+   await next.click();await expect.poll(()=>image.getAttribute('alt')).toBe('page-2.svg');await expect.poll(()=>aligned(16)).toBe(true)
+   await next.click();await expect.poll(()=>image.getAttribute('alt')).toBe('page-3.svg');await expect.poll(()=>aligned(16)).toBe(true)
+   await page.setViewportSize({width:390,height:720});await expect.poll(()=>aligned(8)).toBe(true)
+   await page.screenshot({path:evidence+'/'+target+'-image-relative-narrow.png'})
+   await page.keyboard.press('ArrowLeft');await expect.poll(()=>image.getAttribute('alt')).toBe('page-2.svg');await expect.poll(()=>aligned(8)).toBe(true)
+   expect(errors).toEqual([])
+  }finally{await page.close()}
+ })
+
 
  for(const {opener,direction,boundary} of [
   {opener:'page-1.svg',direction:'下一张图片',boundary:'2 / 2'},
