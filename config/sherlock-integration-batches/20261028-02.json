@@ -27341,6 +27341,88 @@
         ],
         "generatedAt": "2026-11-05T19:04:34.022321+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "上传图片进入原生视觉附件通道",
+        "branch": "codex/feat/image-picker-intake-20261106",
+        "baseCommit": "9579e72321cf9e9c758dcb6a1f75cda9e8931eee",
+        "tipCommit": "7fa5e8d34521c2814117acd138ec74816b3f59d5",
+        "commits": [
+          {
+            "commit": "7fa5e8d34521c2814117acd138ec74816b3f59d5",
+            "parents": [
+              "9579e72321cf9e9c758dcb6a1f75cda9e8931eee"
+            ],
+            "subject": "修复图片上传仅传递文件路径导致工作台规划无法看图"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-image-intake.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/dsh-file-drop-compat.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-image-intake.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dsh-file-drop-compat.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-image-intake.test.js",
+              "test/dsh-file-drop-compat.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "15项图片入口及兼容检查通过。",
+            "verifiedCommit": "7fa5e8d34521c2814117acd138ec74816b3f59d5",
+            "completedAt": "2026-11-05T19:57:43.585837+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "7fa5e8d34521c2814117acd138ec74816b3f59d5",
+            "completedAt": "2026-11-05T19:57:43.585837+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原生客户端已复现上传图片仅转为路径，规划器无法读图；15项聚焦检查验证实际File进入视觉附件、混合PDF引用保留、拒绝时不降级为路径及旧插件迁移。签名客户端最终复验待集成构建。"
+        },
+        "acceptanceCriteria": [
+          "上传或拖入图片后通过原生图片附件发送，规划器和组件子任务可直接读图。",
+          "普通文件仍保留原生文件引用；输入忙碌时拒绝添加且清理未采纳的图片预览。"
+        ],
+        "risks": [
+          "仅本地预览，尚未接受或晋升main。",
+          "图片数量和大小继续由现有发送校验限制；完整客户端验收在构建后执行。"
+        ],
+        "generatedAt": "2026-11-05T19:57:43.585837+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -28683,6 +28765,17 @@
         "test/notes-activity.test.js",
         "-t",
         "shows only a short note stage|retains note reference chips"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-image-intake.test.js",
+        "test/dsh-file-drop-compat.test.ts",
+        "--reporter=dot"
       ],
       "timeoutMs": 120000
     }
