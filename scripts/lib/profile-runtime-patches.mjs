@@ -2,6 +2,7 @@ import {patchCanvasTaskNotices} from './canvas-task-notices.mjs'
 import {patchTaskProgressRuntime} from './task-progress-runtime.mjs'
 import {patchMemoryRequestContext} from './memory-request-context.mjs'
 import {patchNoteFeedbackHost} from './notes-reply-actions.mjs'
+import {patchOpenAIResponsesToolOptionals} from './openai-responses-tool-optionals.mjs'
 import {readFile,writeFile,readdir,realpath} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
 import path from 'node:path'
@@ -9,6 +10,7 @@ import path from 'node:path'
 // These packages also exist in the independent plugin dependency tree. Copy
 // only the patched entry, and fail on version drift instead of mixing APIs.
 const entries = [
+  ['@earendil-works/pi-ai', '/* sherlock:openai-responses-tool-optionals:v1 */', true, 'dist/api/openai-responses.js'],
   ['@deepseek-ai/dsh-agent-loop', '/* ework:memory-request-context:rc7:v1 */', true],
   ['@deepseek-ai/dsh-subagent', '/* CANVAS_TASK_OWNED_SETTLEMENT */', true],
   ['@deepseek-ai/dsh-tool-todo', '/* sherlock:task-progress-sync:v1 */', true],
@@ -47,7 +49,7 @@ async function skillCopies(modulesRoot, packageName='@deepseek-ai/dsh-skill') {
   return [...targets].sort()
 }
 async function sources(projectRoot, modulesRoot) {
-  return (await Promise.all(entries.map(async ([name, marker, optional]) => {
+  return (await Promise.all(entries.map(async ([name, marker, optional, entry = 'lib/index.js']) => {
     const sourceRoot = path.join(projectRoot, 'node_modules', name)
     const targetRoot = path.join(modulesRoot, name)
     let targetManifest
@@ -55,16 +57,16 @@ async function sources(projectRoot, modulesRoot) {
     catch (error) { if (optional && error.code === 'ENOENT') return null; throw error }
     const [sourceManifest, originalSource] = await Promise.all([
       readFile(path.join(sourceRoot, 'package.json'), 'utf8'),
-      readFile(path.join(sourceRoot, 'lib/index.js'), 'utf8')
+      readFile(path.join(sourceRoot, entry), 'utf8')
     ])
-    const source = name === '@deepseek-ai/dsh-agent-loop' ? patchMemoryRequestContext(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
+    const source = name === '@earendil-works/pi-ai' ? patchOpenAIResponsesToolOptionals(originalSource) : name === '@deepseek-ai/dsh-agent-loop' ? patchMemoryRequestContext(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
     if (JSON.parse(sourceManifest).version !== JSON.parse(targetManifest).version) throw Error(`Plugin runtime version mismatch: ${name}`)
     if (!source.includes(marker)) throw Error(`Required runtime patch missing: ${name}`)
-    const targets=['@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot]
+    const targets=['@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop','@earendil-works/pi-ai'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot]
     const files=[]
     for(const target of targets){
       if(JSON.parse(await readFile(path.join(target,'package.json'),'utf8')).version!==JSON.parse(sourceManifest).version)throw Error(`Plugin runtime version mismatch: ${name}`)
-      files.push({name,source,target:path.join(target,'lib/index.js')})
+      files.push({name,source,target:path.join(target,entry)})
     }
     return files
   }))).filter(Boolean).flat()
