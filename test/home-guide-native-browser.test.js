@@ -7,6 +7,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest'
 import { patchNoteSessionRuntime } from '../scripts/lib/notes-session.mjs'
 import { HOME_BOARD_SMART_PATH, HOME_BOARD_SMART_PROMPT, HOME_BOARD_SMART_ARTIFACT } from '../packages/dsh-research-task-runtime/home-board-smart-contract.js'
 import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
+import {stripConversationLiveUi} from './fixtures/strip-conversation-live-ui.mjs'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
 // this fixture mounts production native components and blocks all live providers.
@@ -34,7 +35,7 @@ beforeAll(async () => {
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
   // Board tabs own the outer restore records, matching the production unwind
   // order before refreshing native guide and annotation renderer anchors.
-  const unTabbed = stripWorkbenchReplay(stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
+  const unTabbed = stripWorkbenchReplay(stripBoardTabsClient(stripConversationLiveUi(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))))
   const submitted = stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbed)))
   const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted))))))
   conversationSource = patchBoardTabsClient(patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native))))
