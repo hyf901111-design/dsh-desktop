@@ -116,7 +116,22 @@ function featureReport(repository, phase) {
   return reportFor(repository, phase)
 }
 
-export function verifyFeatureHandoff({ repository, handoff, batchMainCommit }) {
+export function verifyFeatureHandoff(options) {
+  return verifyFeatureHandoffAtTip(options)
+}
+
+// Only a recorded, reachable first-parent merge can pin a completed handoff.
+// New merges keep checking the live branch through the public entry point.
+function hasRecordedMergeBoundary(repository, handoff, merged, integrationHead) {
+  if (!merged) return false
+  const parents = runGit(repository, ['show', '-s', '--format=%P', merged.mergeCommit]).stdout.trim().split(/\s+/)
+  if (parents.length !== 2 || parents[1] !== handoff.tipCommit || isAncestor(repository, handoff.tipCommit, parents[0])) return false
+  if (!isAncestor(repository, merged.mergeCommit, merged.verificationCommit) ||
+      !isAncestor(repository, merged.verificationCommit, integrationHead)) return false
+  return runGit(repository, ['rev-list', '--first-parent', integrationHead]).stdout.trim().split('\n').includes(merged.mergeCommit)
+}
+
+function verifyFeatureHandoffAtTip({ repository, handoff, batchMainCommit }, recordedMerge) {
   const report = featureReport(repository, 'merge')
   let card
   try {
@@ -133,8 +148,17 @@ export function verifyFeatureHandoff({ repository, handoff, batchMainCommit }) {
   } catch (error) {
     addError(report, 'feature-ref-missing', `功能分支引用不可解析：${card.branch}`, { branch: card.branch })
   }
-  if (liveTip && liveTip !== card.tipCommit) {
+  const frozen = liveTip && liveTip !== card.tipCommit && recordedMerge &&
+    attempt(report, 'feature-recorded-boundary-check-failed', () =>
+      isAncestor(context.worktreeRoot, card.tipCommit, liveTip) &&
+      hasRecordedMergeBoundary(context.worktreeRoot, card, recordedMerge, batchMainCommit))
+  if (liveTip && liveTip !== card.tipCommit && !frozen) {
     addError(report, 'feature-ref-moved', '功能分支引用不再指向交接卡 tip。', { expected: card.tipCommit, actual: liveTip, branch: card.branch })
+  }
+  if (frozen) {
+    addInfo(report, 'feature-successor-outside-batch', '已合并功能按原交接 tip 验证；分支后继保留，须另行交接。', {
+      branch: card.branch, verifiedTip: card.tipCommit, successorTip: liveTip, mergeCommit: recordedMerge.mergeCommit
+    })
   }
 
   const worktrees = attempt(report, 'feature-worktree-list-failed', () => listRegisteredWorktrees(context.worktreeRoot)) ?? []
@@ -153,7 +177,7 @@ export function verifyFeatureHandoff({ repository, handoff, batchMainCommit }) {
     }
   }
 
-  const comparisonTip = liveTip ?? card.tipCommit
+  const comparisonTip = frozen ? card.tipCommit : liveTip ?? card.tipCommit
   const featureBaseAncestor = attempt(report, 'feature-ancestry-check-failed', () => isAncestor(context.worktreeRoot, card.baseCommit, comparisonTip))
   if (featureBaseAncestor === false) addError(report, 'feature-base-not-ancestor', '交接卡 base 不是功能 tip 的祖先。', { base: card.baseCommit, tip: comparisonTip })
   const batchBaseAncestor = attempt(report, 'batch-ancestry-check-failed', () => isAncestor(context.worktreeRoot, card.baseCommit, batchMainCommit))
@@ -377,7 +401,10 @@ export function preflightIntegrationAction({ repository, phase, manifestPath, fe
           : []
       const featureVerifications = new Map()
       for (const feature of featuresToVerify) {
-        const featureResult = attempt(report, 'feature-preflight-failed', () => verifyFeatureHandoff({ repository, handoff: feature.handoff, batchMainCommit: report.head }))
+        const featureResult = attempt(report, 'feature-preflight-failed', () => verifyFeatureHandoffAtTip(
+          { repository, handoff: feature.handoff, batchMainCommit: report.head },
+          requirements.allFeaturesMerged ? feature.merged : undefined
+        ))
         featureVerifications.set(feature.handoff.branch, featureResult)
         if (featureResult) {
           report.findings.push(...featureResult.findings)
