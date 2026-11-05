@@ -27727,6 +27727,68 @@
         ],
         "generatedAt": "2026-11-05T22:25:37.373Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补齐历史交接测试的严格类型声明",
+        "branch": "codex/feat/integration-handoff-test-types-20261106",
+        "baseCommit": "730179c090a3b013d0f8271d6d7d1f327d2e172f",
+        "tipCommit": "5d02ee9bd2ce8d590f5f0b6e62be698afaa39ffb",
+        "commits": [
+          {
+            "commit": "5d02ee9bd2ce8d590f5f0b6e62be698afaa39ffb",
+            "parents": [
+              "730179c090a3b013d0f8271d6d7d1f327d2e172f"
+            ],
+            "subject": "修复：补齐历史交接测试的严格类型声明"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/integration-frozen-handoff.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "tsc --noEmit -p tsconfig.node.json完整类型检查通过，exit0。",
+            "verifiedCommit": "5d02ee9bd2ce8d590f5f0b6e62be698afaa39ffb",
+            "completedAt": "2026-11-05T22:38:57.012Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/integration-frozen-handoff.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "直接受影响测试文件3项通过，6.54秒。",
+            "verifiedCommit": "5d02ee9bd2ce8d590f5f0b6e62be698afaa39ffb",
+            "completedAt": "2026-11-05T22:38:57.012Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "只修改测试的类型声明及非空标注，运行时逻辑和客户端代码不变。"
+        },
+        "acceptanceCriteria": [
+          "CheckEvidence.argv按声明为非空参数元组",
+          "固定单功能夹具的已知数组项在严格索引检查下通过编译",
+          "现有历史交接3项逻辑断言继续通过"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-05T22:38:57.012Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -29127,6 +29189,15 @@
         "--reporter=dot"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/integration-frozen-handoff.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
