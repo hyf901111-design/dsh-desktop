@@ -27248,6 +27248,88 @@
         ],
         "generatedAt": "2026-11-05T18:14:24.691086+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记修改预览与完成提示",
+        "branch": "codex/feat/notes-preview-actions-20261106",
+        "baseCommit": "b5dc10135df3e6b4a89518d9549625bab371d05f",
+        "tipCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+        "commits": [
+          {
+            "commit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+            "parents": [
+              "b5dc10135df3e6b4a89518d9549625bab371d05f"
+            ],
+            "subject": "修复：笔记修改预览与完成提示不再误称追加正文"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-chat-preview-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-activity.test.js",
+              "-t",
+              "shows only a short note stage|retains note reference chips"
+            ],
+            "outcome": "passed",
+            "summary": "2项聚焦渲染及重复补丁检查通过，10项不相关测试跳过。",
+            "verifiedCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+            "completedAt": "2026-11-05T18:47:52.715047+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+            "completedAt": "2026-11-05T18:47:52.715047+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原生签名客户端已复现删除后误称追加的文案问题；修改后的真实 React 会话行静态渲染已验证新状态及新回执，普通新增路径保留原标签。原生客户端按钮和删除结果将在集成构建后再次核对，当前不将此视为最终客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "修改和删除预览使用应用修改，新增文字继续使用添加至正文。",
+          "采纳后显示笔记已更新，不把被删除文字误称写入正文。"
+        ],
+        "risks": [
+          "仅文本标签调整；最终签名客户端验证待本地构建后进行。",
+          "本地预览，不发布、不接受或晋升 main。"
+        ],
+        "generatedAt": "2026-11-05T18:47:52.715047+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -28579,6 +28661,17 @@
         "test/integration-runtime-bridge.test.ts",
         "test/integration-service.test.ts",
         "test/integration-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-activity.test.js",
+        "-t",
+        "shows only a short note stage|retains note reference chips"
       ],
       "timeoutMs": 120000
     }
