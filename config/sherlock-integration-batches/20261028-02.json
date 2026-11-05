@@ -26375,88 +26375,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对话原生生图、静谧流动占位及统一图片菜单",
+        "featureName": "修复图片右键菜单撑出窗口边条",
         "branch": "codex/feat/image-studio-20261105",
-        "baseCommit": "825fd827bea0d977d645552aa674e61196153db9",
-        "tipCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
+        "baseCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
+        "tipCommit": "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
         "commits": [
           {
-            "commit": "73700ba11cbbc58e3f42b199aeef3bfe388b708b",
+            "commit": "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
             "parents": [
-              "825fd827bea0d977d645552aa674e61196153db9"
+              "73954c5c059c538b034c8ec7bf0c1192f7427946"
             ],
-            "subject": "工具：支持保留正式验收门禁的聚焦本地预览"
-          },
-          {
-            "commit": "740cb537bb910c5d6929e0639e3153f757b7c882",
-            "parents": [
-              "73700ba11cbbc58e3f42b199aeef3bfe388b708b"
-            ],
-            "subject": "优化：复用灰阶流动生图占位并统一图片操作菜单"
-          },
-          {
-            "commit": "70f3a5c5319031cf0e6d6eb72625cd8592fd623b",
-            "parents": [
-              "740cb537bb910c5d6929e0639e3153f757b7c882"
-            ],
-            "subject": "修复：允许已预览功能按原提交基线继续交接"
-          },
-          {
-            "commit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
-            "parents": [
-              "70f3a5c5319031cf0e6d6eb72625cd8592fd623b"
-            ],
-            "subject": "测试：为真实 Git 预览流程保留合理执行时限"
+            "subject": "修复：图片右键菜单不再撑出窗口外层滚动条"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/sherlock-multi-session-integration-runbook.md"
-          },
           {
             "status": "M",
             "path": "scripts/lib/image-generation-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/sherlock-integration-executor.d.mts"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/sherlock-integration-executor.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/main/image-actions.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-generation-flow.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/image-actions.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/image-generation-flow.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/image-generation-ui.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/integration-preview.test.ts"
           }
         ],
         "checks": [
@@ -26466,28 +26405,12 @@
               "vitest",
               "run",
               "test/image-generation-client.test.js",
-              "test/image-generation-ui.test.js",
-              "test/image-actions.test.ts",
-              "test/image-generation-flow.test.js",
-              "test/image-generation-tool.test.js"
+              "test/image-generation-ui.test.js"
             ],
             "outcome": "passed",
-            "summary": "24 项图片渲染、菜单动作、生命周期及模型工具聚焦检查通过",
-            "verifiedCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
-            "completedAt": "2026-11-05T03:11:53.181Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-preview.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "2 项预览所有权及正式验收门禁检查通过",
-            "verifiedCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
-            "completedAt": "2026-11-05T03:11:53.181Z",
+            "summary": "8 项图片组件聚焦检查通过，覆盖菜单定位节点不进入页面排版",
+            "verifiedCommit": "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
+            "completedAt": "2026-11-05T03:53:48.360437+00:00",
             "timeoutMs": 120000
           },
           {
@@ -26498,25 +26421,23 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
-            "completedAt": "2026-11-05T03:11:53.181Z",
+            "verifiedCommit": "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
+            "completedAt": "2026-11-05T03:53:48.360437+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "真实客户端加载与菜单验收将在集成预览构建执行。"
+          "outcome": "passed",
+          "summary": "真实旧客户端复现右侧边条；同组件渲染对照确认旧版增加 24px 页面高度及 8px 滚动条，修复版开关菜单宽高不变。新版真实客户端验收随集成预览构建执行。"
         },
         "acceptanceCriteria": [
-          "自然语言自动生图及连续改图",
-          "生图卡片复用静谧起航灰阶流动、实心呼吸星，无冗余提示",
-          "缩略图与放大预览统一菜单复制、下载原图"
+          "缩略图和原图预览右键菜单打开/关闭时窗口布局无横移或额外边条",
+          "保留统一复制图片与下载图片菜单"
         ],
         "risks": [
-          "本地预览不代表正式批次验收",
-          "生图依赖可用模型配额"
+          "本地预览不代表正式批次验收"
         ],
-        "generatedAt": "2026-11-05T03:16:50.521Z"
+        "generatedAt": "2026-11-05T03:53:48.360437+00:00"
       }
     }
   ],
