@@ -28050,6 +28050,62 @@
         ],
         "generatedAt": "2026-11-05T23:16:20.544Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图片预览固定切换按钮及安全留白",
+        "branch": "codex/feat/image-preview-fixed-controls-20261106",
+        "baseCommit": "aae8a6161e26e931a007d76fcb1de6564938d49e",
+        "tipCommit": "7d3deba8d445e6ded9f4a38d76b1010d82f7fab2",
+        "commits": [
+          {
+            "commit": "7d3deba8d445e6ded9f4a38d76b1010d82f7fab2",
+            "parents": [
+              "aae8a6161e26e931a007d76fcb1de6564938d49e"
+            ],
+            "subject": "优化：固定图片切换按钮并增加预览留白"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/image-preview-gallery.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/image-preview-gallery-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/image-preview-gallery-browser.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "18项直接相关浏览器检查通过，包含同坐标连续点击、横竖大小图、窗口缩放、空白关闭、键盘与焦点。仅CSS字符串及JS测试变化，无额外全功能测试。",
+            "verifiedCommit": "7d3deba8d445e6ded9f4a38d76b1010d82f7fab2",
+            "completedAt": "2026-11-05T23:38:15.017425+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产native/web附件函数浏览器渲染：按钮位置不随图片变化，桌面距窗口至少80px，宽屏固定预览区最多1440px，图片与按钮至少16px间距；窄屏16px窗口留边、8px图按钮间距。真实共享客户端尚待重建验证。"
+        },
+        "acceptanceCriteria": [
+          "同一个鼠标位置可连续点击上一张/下一张，不跟随图片大小移动",
+          "放大图片保留左右空间，按钮不贴窗口最外缘",
+          "窗口缩放适应，40px点击区、键盘、焦点、空白关闭维持正常"
+        ],
+        "risks": [
+          "待批准的共享本地客户端重建与原生验证；该版本取代此前跟随图片的布局。"
+        ],
+        "generatedAt": "2026-11-05T23:38:15.017425+00:00"
+      }
     }
   ],
   "integrationChecks": [
