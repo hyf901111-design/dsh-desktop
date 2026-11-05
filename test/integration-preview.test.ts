@@ -4,7 +4,7 @@ import { afterEach, expect, it } from 'vitest'
 import { createGitWorkflowFixture, type GitWorkflowFixture } from './helpers/git-workflow-fixture'
 import { buildFeatureHandoff } from '../scripts/lib/sherlock-integration-model.mjs'
 import { readActiveBatchLease } from '../scripts/lib/sherlock-active-batch.mjs'
-import { adoptIntegrationBatch, mergeIntegrationFeature, continueIntegrationPreview, continueIntegrationFeature, acceptIntegrationBatch, readPersistedIntegrationOwnerToken } from '../scripts/lib/sherlock-integration-executor.mjs'
+import { adoptIntegrationBatch, mergeIntegrationFeature, continueIntegrationPreview, continueIntegrationFeature, acceptIntegrationBatch, readPersistedIntegrationOwnerToken, refreshIntegrationHandoff } from '../scripts/lib/sherlock-integration-executor.mjs'
 const fixtures: GitWorkflowFixture[] = [], now = '2026-11-05T03:00:00.000Z', batchId = '20261105-01'
 function setup() {
   const f = createGitWorkflowFixture(); fixtures.push(f)
@@ -35,7 +35,7 @@ it('runs feature checks for a preview while keeping full validation and acceptan
   expect(continueIntegrationFeature(options).status).toBe('recovery-required')
 })
 it('checkpoints only an exact owned merge boundary without rewriting evidence, even when the feature has a successor', () => {
-  const { f, feature, integration, options } = setup()
+  const { f, feature, integration, tip: featureBase, options } = setup()
   f.git(integration, 'merge', '--no-ff', options.featureBranch, '-m', '集成：图片预览')
   const tip = f.git(integration, 'rev-parse', 'HEAD'), manifest = readFileSync(options.manifestPath)
   f.write(feature, 'followup.js', 'export const fix = true'); f.commit(feature, '修复：图片预览')
@@ -46,4 +46,12 @@ it('checkpoints only an exact owned merge boundary without rewriting evidence, e
   expect(readActiveBatchLease(integration)?.currentTip).toBe(tip)
   expect(readFileSync(options.manifestPath).equals(manifest)).toBe(true)
   expect(() => acceptIntegrationBatch({ ...options, commit: tip, confirmBatchId: batchId })).toThrow()
+  const old = JSON.parse(manifest.toString()).features[0].handoff, nextTip = f.git(feature, 'rev-parse', 'HEAD'), handoffPath = path.join(f.root, 'next.json')
+  writeFileSync(handoffPath, JSON.stringify(buildFeatureHandoff({ repository: feature, baseCommit: featureBase, generatedAt: now, metadata: {
+    featureName: old.featureName, checks: old.checks.map((check: any) => ({ ...check, verifiedCommit: nextTip })), uiVerification: old.uiVerification, acceptanceCriteria: old.acceptanceCriteria, risks: old.risks
+  } })))
+  const refreshed = refreshIntegrationHandoff({ ...input, handoffPath })
+  expect(refreshed.afterCommit).not.toBe(tip)
+  expect(JSON.parse(readFileSync(options.manifestPath, 'utf8')).features[0].merged).toBeUndefined()
+  expect(mergeIntegrationFeature({ ...options, previewOnly: true }).status).toBe('preview-ready')
 })

@@ -922,7 +922,8 @@ export function refreshIntegrationHandoff({ integrationRepository, manifestPath,
   if (state.lease.acceptedTip) fail('已接受的批次不能更新交接卡。')
   const handoff = validateFeatureHandoff(JSON.parse(readFileSync(handoffPath, 'utf8')))
   const previous = selectedFeature(state.manifest, handoff.branch)
-  if (handoff.baseCommit !== (previous.merged ? previous.handoff.tipCommit : previous.handoff.baseCommit) || handoff.tipCommit === previous.handoff.tipCommit ||
+  const previousIntegrated = previous.merged || isAncestor(state.context.worktreeRoot, previous.handoff.tipCommit, state.context.head)
+  if (handoff.baseCommit !== (previousIntegrated ? previous.handoff.tipCommit : previous.handoff.baseCommit) || handoff.tipCommit === previous.handoff.tipCommit ||
       !isAncestor(state.context.worktreeRoot, previous.handoff.tipCommit, handoff.tipCommit)) {
     fail('新交接卡必须以原功能 tip 为基线并指向其严格后继。')
   }
