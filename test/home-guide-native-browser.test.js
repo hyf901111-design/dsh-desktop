@@ -34,9 +34,9 @@ beforeAll(async () => {
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
   // Board tabs own the outer restore records, matching the production unwind
   // order before refreshing native guide and annotation renderer anchors.
-  const unTabbed = stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const unTabbed = stripWorkbenchReplay(stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
   const submitted = stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbed)))
-  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripWorkbenchReplay(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted)))))))
+  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted))))))
   conversationSource = patchBoardTabsClient(patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native))))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
   const workspaceSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'),pickerStart=workspaceSource.indexOf('function WorkspacePickFlow('),pickerEnd=workspaceSource.indexOf('\n\t\t/**',pickerStart),workspacePicker=workspaceSource.slice(pickerStart,pickerEnd)
