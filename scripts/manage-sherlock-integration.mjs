@@ -9,6 +9,7 @@ import {
   mergeIntegrationFeature,
   promoteIntegrationBatch,
   readPersistedIntegrationOwnerToken,
+  reconcileIntegrationRecords,
   recoverIntegrationOwnership,
   synchronizeIntegrationMain
 } from './lib/sherlock-integration-executor.mjs'
@@ -21,7 +22,7 @@ function fail(message) {
 function parse(argv) {
   if (argv.length === 1 && argv[0] === '--help') return { help: true }
   const command = argv[0]
-  if (!['create', 'adopt', 'merge', 'continue', 'recover-owner', 'sync-main', 'accept', 'promote', 'cancel'].includes(command)) fail('第一个参数必须为 create、adopt、merge、continue、recover-owner、sync-main、accept、promote 或 cancel。')
+  if (!['create', 'adopt', 'merge', 'continue', 'recover-owner', 'sync-main', 'reconcile-records', 'accept', 'promote', 'cancel'].includes(command)) fail('第一个参数必须为 create、adopt、merge、continue、recover-owner、sync-main、reconcile-records、accept、promote 或 cancel。')
   const options = { handoffs: [] }
   for (let index = 1; index < argv.length; index += 1) {
     const argument = argv[index]
@@ -31,7 +32,7 @@ function parse(argv) {
       options[key] = true
       continue
     }
-    if (!['--repo', '--worktree', '--batch', '--handoff', '--checks', '--manifest', '--feature', '--commit', '--confirm-batch', '--confirm-tip', '--main-worktree'].includes(argument)) fail(`未知参数：${argument}`)
+    if (!['--repo', '--worktree', '--batch', '--handoff', '--checks', '--manifest', '--feature', '--commit', '--confirm-batch', '--confirm-tip', '--confirm-main', '--main-worktree'].includes(argument)) fail(`未知参数：${argument}`)
     const value = argv[index + 1]
     if (!value || value.startsWith('--')) fail(`${argument} 缺少值。`)
     if (argument === '--handoff') {
@@ -43,6 +44,7 @@ function parse(argv) {
     }
     index += 1
   }
+  if (options.confirm_main && command !== 'reconcile-records') fail('--confirm-main 仅用于 reconcile-records。')
   if (command === 'create' || command === 'adopt') {
     if (!options.repo || !options.batch || options.handoffs.length === 0 || !options.checks) {
       fail('--repo、--batch、至少一个 --handoff 和 --checks 为必填参数。')
@@ -59,6 +61,9 @@ function parse(argv) {
   } else if (command === 'sync-main') {
     if (!options.repo || !options.manifest) fail('sync-main 必须提供 --repo 和 --manifest。')
     if (options.commit || options.confirm_batch || options.confirm_tip || options.main_worktree || options.explicit_cancellation || options.batch || options.handoffs.length > 0 || options.checks || options.worktree || options.feature) fail('sync-main 不接受批次创建、功能、验收、推进或取消参数。')
+  } else if (command === 'reconcile-records') {
+    if (!options.repo || !options.manifest || !options.confirm_batch || !options.confirm_tip || !options.confirm_main) fail('reconcile-records 必须提供 --repo、--manifest、--confirm-batch、--confirm-tip 和 --confirm-main。')
+    if (options.commit || options.main_worktree || options.explicit_cancellation || options.batch || options.handoffs.length > 0 || options.checks || options.worktree || options.feature) fail('reconcile-records 不接受批次创建、单功能、验收、推进或取消参数。')
   } else if (command === 'accept') {
     if (!options.repo || !options.manifest || !options.commit || !options.confirm_batch) fail('accept 必须提供 --repo、--manifest、--commit 和 --confirm-batch。')
     if (options.dry_run || options.confirm_tip || options.main_worktree || options.explicit_cancellation || options.batch || options.handoffs.length > 0 || options.checks || options.worktree || options.feature) fail('accept 不接受批次创建、功能、dry-run、confirm-tip、main-worktree 或 cancellation 参数。')
@@ -85,9 +90,10 @@ function printHuman(result) {
 }
 
 function printHelp() {
-  process.stdout.write('Usage: npm run git:integration -- <create|adopt|merge|continue|recover-owner|sync-main|accept|promote|cancel> [options]\n')
+  process.stdout.write('Usage: npm run git:integration -- <create|adopt|merge|continue|recover-owner|sync-main|reconcile-records|accept|promote|cancel> [options]\n')
   process.stdout.write('recover-owner --repo <integration-worktree> --manifest <manifest> --confirm-batch <batch> --confirm-tip <sha> [--json]\n')
   process.stdout.write('sync-main --repo <integration-worktree> --manifest <manifest> [--dry-run] [--json]\n')
+  process.stdout.write('reconcile-records --repo <integration-worktree> --manifest <manifest> --confirm-batch <batch> --confirm-tip <integration-sha> --confirm-main <main-sha> [--dry-run] [--json]\n')
   process.stdout.write('accept --repo <integration-worktree> --manifest <manifest> --commit <sha> --confirm-batch <batch> [--json]\n')
   process.stdout.write('promote --repo <integration-worktree> --manifest <manifest> --main-worktree <canonical-main> --confirm-batch <batch> --confirm-tip <sha> [--dry-run] [--json]\n')
   process.stdout.write('cancel --repo <integration-worktree> --manifest <manifest> --confirm-batch <batch> --explicit-cancellation [--dry-run] [--json]\n')
@@ -100,7 +106,18 @@ try {
     process.exitCode = 0
   } else {
   const now = new Date().toISOString()
-  const result = options.command === 'create' || options.command === 'adopt'
+  const result = options.command === 'reconcile-records'
+    ? reconcileIntegrationRecords({
+        integrationRepository: options.repo,
+        manifestPath: options.manifest,
+        confirmBatchId: options.confirm_batch,
+        confirmTip: options.confirm_tip,
+        confirmMainCommit: options.confirm_main,
+        ownerToken: readPersistedIntegrationOwnerToken(options.repo),
+        dryRun: Boolean(options.dry_run),
+        now
+      })
+    : options.command === 'create' || options.command === 'adopt'
     ? (options.command === 'create'
         ? createIntegrationBatch({ batchId: options.batch, handoffPaths: options.handoffs, integrationChecks: readChecks(options.checks), dryRun: Boolean(options.dry_run), now, mainRepository: options.repo, worktreePath: options.worktree })
         : adoptIntegrationBatch({ batchId: options.batch, handoffPaths: options.handoffs, integrationChecks: readChecks(options.checks), dryRun: Boolean(options.dry_run), now, integrationRepository: options.repo }))

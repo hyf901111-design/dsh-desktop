@@ -316,7 +316,7 @@ function requirePassingPreflight(repository, phase, manifestPath, featureBranch,
   return report
 }
 
-function runDeclaredChecks(repository, checks, verifiedCommit, now) {
+function runDeclaredChecks(repository, checks, verifiedCommit, now, label = '已在暂存合并树执行') {
   const evidence = []
   for (const check of checks) {
     const result = spawnSync(check.argv[0], check.argv.slice(1), {
@@ -335,7 +335,7 @@ function runDeclaredChecks(repository, checks, verifiedCommit, now) {
     evidence.push({
       argv: [...check.argv],
       outcome: 'passed',
-      summary: `已在暂存合并树执行：${check.argv.join(' ')}`,
+      summary: `${label}：${check.argv.join(' ')}`,
       verifiedCommit,
       completedAt: now,
       timeoutMs: check.timeoutMs
@@ -813,6 +813,97 @@ export function continueIntegrationMain({ integrationRepository, manifestPath, c
   } catch (error) {
     if (error?.checkFailure) fail(error.message)
     return recoveryResult({ batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit: state.context.head, repository: state.context.worktreeRoot, actions })
+  }
+}
+
+/** Record merges already present on the batch's first-parent history after testing its current tree. */
+export function reconcileIntegrationRecords({ integrationRepository, manifestPath, confirmBatchId, confirmTip, confirmMainCommit, ownerToken, dryRun, now }) {
+  if (typeof dryRun !== 'boolean') fail('dryRun 必须为布尔值。')
+  checkedNow(now)
+  const state = readManifestForMutation(integrationRepository, manifestPath)
+  const { context, lease, manifest } = state
+  const repository = context.worktreeRoot
+  verifyMutationOwner(context, lease, ownerToken)
+  requireExactConfirmation(confirmBatchId, lease.batchId, 'confirmBatchId')
+  requireExactConfirmation(confirmTip, context.head, 'confirmTip')
+  if (lease.acceptedTip) fail('已接受的批次不能恢复历史登记。')
+  sourceClean(repository, '集成 worktree')
+  if (runGit(repository, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { allowFailure: true }).status === 0) fail('必须先结束进行中的合并。')
+  const digest = manifestDigest(state.manifestPath)
+  const main = canonicalMainWorktree(repository)
+  sourceClean(main.worktreeRoot, '规范 main worktree')
+  requireExactConfirmation(confirmMainCommit, main.head, 'confirmMainCommit')
+  if (!isAncestor(repository, manifest.expectedMainCommit, main.head) || !isAncestor(repository, main.head, context.head)) {
+    fail('当前 main 必须继承批次已登记的 main，并已包含在当前集成提交中。')
+  }
+  const history = runGit(repository, ['rev-list', '--first-parent', '--parents', `${manifest.baseMainCommit}..${context.head}`])
+    .stdout.trim().split('\n').map(line => line.split(' '))
+  if (history.at(-1)?.[1] !== manifest.baseMainCommit) fail('批次基线不在当前集成的第一父提交历史上。')
+  const merges = history.filter(parents => parents.length === 3)
+  const featureMerges = new Map()
+  for (const feature of manifest.features.filter(entry => !entry.merged)) {
+    const { branch, tipCommit } = feature.handoff
+    const boundary = merges.find(([, first, second]) => second === tipCommit && !isAncestor(repository, tipCommit, first))
+    if (!boundary) fail(`${branch} 缺少精确的历史合并边界。`)
+    requirePassingPreflight(repository, 'continue', state.manifestPath, branch)
+    featureMerges.set(branch, boundary[0])
+  }
+  let mainMerge
+  if (manifest.expectedMainCommit !== main.head) {
+    const boundary = merges.find(([, first, second]) => !isAncestor(repository, main.head, first) && isAncestor(repository, main.head, second))
+    if (!boundary) fail('当前 main 缺少可核实的历史合并边界。')
+    mainMerge = boundary[0]
+  }
+  if (!mainMerge && featureMerges.size === 0) fail('没有待恢复的历史登记。')
+  if (!manifest.integrationChecks.length) fail('恢复历史登记需要批次声明验证命令。')
+
+  const actions = [
+    ...(mainMerge ? [action('recover-main-record', `恢复 main ${main.head} 的历史登记，原合并提交为 ${mainMerge}。`)] : []),
+    ...Array.from(featureMerges, ([branch, mergeCommit]) =>
+      action('recover-feature-record', `恢复 ${branch} 的历史登记，原合并提交为 ${mergeCommit}。`)),
+    ...manifest.integrationChecks.map(check =>
+      action('run-integration-check', `在当前集成提交 ${context.head} 执行声明的检查。`, [...check.argv])),
+    action('commit-historical-records', '检查全部成功后提交历史登记并推进租约。')
+  ]
+  if (dryRun) return resultFor('planned', state, context.head, context.head, actions)
+
+  let checks
+  try {
+    checks = runDeclaredChecks(repository, manifest.integrationChecks, context.head, now, '已在当前集成提交执行')
+  } catch (error) {
+    if (error?.checkFailure) fail(error.message)
+    throw error
+  }
+  const current = readManifestForMutation(repository, state.manifestPath)
+  verifyMutationOwner(current.context, current.lease, ownerToken)
+  sourceClean(repository, '集成 worktree')
+  sourceClean(main.worktreeRoot, '规范 main worktree')
+  if (current.context.head !== context.head || current.lease.revision !== lease.revision ||
+      manifestDigest(state.manifestPath) !== digest || currentMainTip(repository) !== main.head) {
+    fail('验证期间集成提交、租约、清单或 main 已变化，请重新预检。')
+  }
+  for (const feature of manifest.features.filter(entry => featureMerges.has(entry.handoff.branch))) assertLiveFeatureTip(repository, feature)
+  const evidence = { verificationCommit: context.head, checks, recordedAt: now }
+  const next = validateIntegrationBatchManifest({
+    ...manifest,
+    expectedMainCommit: main.head,
+    mainSynchronizations: mainMerge ? [...manifest.mainSynchronizations, {
+      previousMainCommit: manifest.expectedMainCommit, mainCommit: main.head, mergeCommit: mainMerge, ...evidence
+    }] : manifest.mainSynchronizations,
+    features: manifest.features.map(feature => {
+      const mergeCommit = featureMerges.get(feature.handoff.branch)
+      return mergeCommit ? { ...feature, merged: { mergeCommit, ...evidence } } : feature
+    })
+  })
+  try {
+    writeFileSync(state.manifestPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
+    runGit(repository, ['add', '--', lease.manifestPath])
+    runGit(repository, ['commit', '-m', '集成：恢复历史合并验证登记', '--only', '--', lease.manifestPath])
+    const afterCommit = resolveRepositoryContext(repository).head
+    updateActiveBatchTip({ repository, ownerToken, expectedRevision: lease.revision, expectedTip: context.head, nextTip: afterCommit, updatedAt: now })
+    return resultFor('records-reconciled', state, context.head, afterCommit, actions)
+  } catch {
+    return recoveryResult({ batchId: lease.batchId, branch: lease.branch, beforeCommit: context.head, repository, actions })
   }
 }
 
