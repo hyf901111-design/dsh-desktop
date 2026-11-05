@@ -202,13 +202,16 @@ function verifyFeatureHandoffAtTip({ repository, handoff, batchMainCommit }, rec
   }
 
   const equivalent = new Set()
-  const batchCommits = attempt(report, 'batch-history-read-failed', () => listRangeCommits(context.worktreeRoot, card.baseCommit, batchMainCommit)) ?? []
-  const batchPatchIds = new Set(batchCommits.map((commit) => readPatchId(context.worktreeRoot, commit.commit)).filter(Boolean))
+  let batchPatchIds
   for (const commit of card.commits) {
     const reachable = attempt(report, 'feature-merge-reachability-failed', () => isAncestor(context.worktreeRoot, commit.commit, batchMainCommit))
     if (reachable) {
       equivalent.add(commit.commit)
       continue
+    }
+    if (!batchPatchIds) {
+      const batchCommits = attempt(report, 'batch-history-read-failed', () => listRangeCommits(context.worktreeRoot, card.baseCommit, batchMainCommit)) ?? []
+      batchPatchIds = new Set(batchCommits.map((item) => readPatchId(context.worktreeRoot, item.commit)).filter(Boolean))
     }
     const patchId = readPatchId(context.worktreeRoot, commit.commit)
     if (patchId && batchPatchIds.has(patchId)) equivalent.add(commit.commit)
