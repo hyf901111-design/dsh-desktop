@@ -665,7 +665,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if(inlineTarget)proposals.begin(requestId,prompt,inlineTarget)
       const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, capabilityContext:{documentId:client.current,nativeSnapshot:1,selectedNativeBlockIds:selectedNativeNoteBlocks(editor,context.range),selectedParagraphIds:context.range?selectedNoteParagraphIds(editor,captured):[],selectedBlockIds:context.scope==='selection'?context.components.filter(item=>item.type==='research').map(item=>item.blockId):[]}, ...inlineTarget?{entryPoint:'inline',insertionAnchor:inlineTarget}:{entryPoint:'composer'}, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt||!nativeCurrent()||inlineTarget&&(!editorActive()||inlineRequest.current?.requestId!==requestId)) return
-      if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
+      // A successful native insertion can intentionally consume this empty
+      // anchor. Only our reversible proposal and its saved host receipt prove
+      // that removal; an absent/reused anchor alone never authorizes a result.
+      const consumedInlineAnchor=inlineTarget&&result.kind==='conversation'&&!result.requiresReply&&result.capabilityReceipts?.some(receipt=>receipt.capability==='notes.blocks.apply'&&receipt.status==='succeeded'&&receipt.effect&&'kind'in receipt.effect&&receipt.effect.kind==='native-blocks'&&receipt.effect.state==='saved'&&receipt.effect.changedBlockIds?.includes(inlineTarget.blockId))&&proposals.list().some(value=>value.id===requestId&&value.changes.some(change=>change.id===inlineTarget.blockId&&change.before?.type==='paragraph'&&!change.before.content?.length&&!change.before.children?.length&&!change.after)&&proposals.canUndoBlock(requestId,inlineTarget.blockId))
+      if(inlineTarget&&!consumedInlineAnchor)noteInlineAnchorBlock(editor,inlineTarget,client.current)
       if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
       // Legacy component results still honor explicit creation after the generic
       // conversation loop has completed; they never bypass capability planning.

@@ -60,6 +60,23 @@ async function finishCandidate(f:any,receipt?:any){
  expect(await f.page.locator('.en-space-ai').count()).toBe(0)
 }
 async function acceptCandidate(f:any){await f.page.getByRole('button',{name:'添加至正文',exact:true}).click();await expect.poll(()=>f.page.getByRole('button',{name:'添加至正文',exact:true}).count()).toBe(0)}
+it('finishes a saved inline native insertion that consumes its own empty anchor and accepts it on another paragraph click',async()=>{
+ const f=await open(request=>{
+  const payload=JSON.parse(request.messages[0].content.find((part:any)=>part.type==='text').text),wireToken=/顶层添加wireToken=([a-f0-9-]+)/.exec(request.system)?.[1]
+  expect(wireToken).toBeTruthy()
+  return{kind:'capabilities',wireToken,completion:'complete',calls:[{requestId:'insert-followup',capability:'notes.blocks.apply',arguments:{revision:payload.documentSnapshot.revision,operations:[{op:'insert',anchor:{blockId:'anchor',placement:'after'},consumeEmpty:true,blocks:[{id:'inserted-followup',type:'paragraph',content:'核对收入的交付依据，并继续跟踪回款。'}]}]}}]}
+ });try{
+  await f.page.evaluate(()=>(window as any).useNativeModel=true)
+  await f.page.keyboard.press('Space');const input=f.page.getByRole('textbox',{name:'行内 AI 需求',exact:true});await input.fill('补充两句后续核验事项，不增加数据。');await input.press('Enter')
+  await f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).waitFor()
+  expect(await f.page.locator('.en-space-ai').innerText()).not.toContain('部分未完成')
+  expect(await f.page.evaluate(()=>(window as any).editor.getBlock('anchor'))).toBeUndefined()
+  expect(f.modelRequests).toHaveLength(1)
+  await f.page.locator('[data-id="after"] p').click();await expect.poll(()=>f.page.getByRole('button',{name:'确认本次 AI 生成',exact:true}).count()).toBe(0)
+  await f.page.keyboard.press('Meta+s');await expect.poll(()=>f.store.load('fixture','native-fixture').saved.blocks.map((b:any)=>b.id)).toEqual(['before','inserted-followup','after'])
+  await f.page.evaluate(()=>(window as any).reopen());await f.page.locator('.bn-editor').waitFor();expect(await f.page.locator('.bn-editor').innerText()).toContain('核对收入的交付依据');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
 it.each([{entry:'space',size:8},{entry:'sidebar',size:8},{entry:'space',size:3},{entry:'sidebar',size:3}])('creates a directly editable native $size by $size table without a model or child through $entry',async({entry,size})=>{
  const f=await open();try{
   const original=await f.page.evaluate(()=>(window as any).editor.document),originalSaved=f.store.load('fixture','native-fixture').saved.blocks

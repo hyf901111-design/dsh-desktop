@@ -205,7 +205,7 @@ export function NativeTableControls({active=true,sessionId}:{active?:boolean;ses
    if(!allowed()||!layer.matches(':popover-open'))return
    const note=scroll.getBoundingClientRect(),left=Math.max(0,note.left)+4,right=Math.min(window.innerWidth,note.right)-4,top=Math.max(0,note.top)+4,bottom=Math.min(window.innerHeight,note.bottom)-4
    for(const popup of layer.querySelectorAll<HTMLElement>('[role="menu"]:not(.en-native-table-menu)')){
-    const styles={maxWidth:Math.max(0,right-left)+'px',maxHeight:Math.max(0,bottom-top)+'px',minWidth:'0px',overflow:'auto',boxSizing:'border-box'}
+    const styles={width:'max-content',maxWidth:Math.max(0,right-left)+'px',maxHeight:Math.max(0,bottom-top)+'px',minWidth:Math.min(200,Math.max(0,right-left))+'px',overflow:'auto',boxSizing:'border-box'}
     for(const [key,value]of Object.entries(styles))if((popup.style as any)[key]!==value)(popup.style as any)[key]=value
     const rect=popup.getBoundingClientRect(),x=Number(popup.dataset.enTableShiftX||0),y=Number(popup.dataset.enTableShiftY||0),nextX=x+Math.max(left,Math.min(rect.left,right-rect.width))-rect.left,nextY=y+Math.max(top,Math.min(rect.top,bottom-rect.height))-rect.top
     if(Math.abs(nextX-x)>.25||Math.abs(nextY-y)>.25){popup.dataset.enTableShiftX=String(nextX);popup.dataset.enTableShiftY=String(nextY);popup.style.translate=nextX+'px '+nextY+'px'}
