@@ -237,7 +237,6 @@ writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(delivera
 
 writeFileSync(conversationPath, patchRestoredFileMentions(readFileSync(conversationPath, 'utf8')))
 writeFileSync(deliverablesPath, patchDeliverableCards(readFileSync(deliverablesPath, 'utf8')))
-writeFileSync(conversationPath, patchDeliveryConversation(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchEmptyHeaderTitles(readFileSync(conversationPath, 'utf8')))
 
@@ -287,6 +286,8 @@ writeFileSync(conversationPath, patchResearchGridWorkbench(patchCalendarToolClie
 // Bind the owned note surface to the real native session after other patches.
 const notesConversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 writeFileSync(notesConversationPath, patchMemorySourceAnchors(patchNoteSessionClient(patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8'))))))
+// Notes installs the shared turn-tail signature that delivery cards extend.
+writeFileSync(notesConversationPath, patchDeliveryConversation(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchSessionViewPreferences(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchAssistantReveal(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchConversationThinkingStatus(readFileSync(notesConversationPath, 'utf8')))
