@@ -6,14 +6,20 @@ const TOOL='image_generate',KIND='odyssey-image-generation',MAX_BYTES=20*1024*10
 const fail=message=>{throw new ImageGenerationError(message)}
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v)
 const human=session=>session?.events?.findLast(e=>e.type==='user/message'&&e.data?.source?.kind==='user')?.data
+function conversationImageContents(session){
+ const contents=[]
+ for(const event of session?.events??[]){
+  if(event.type==='user/message'&&(event.data?.source?.kind==='user'||event.data?.source?.kind==='plugin'&&event.data.source.plugin==='tools-code-mode'))contents.push(event.data.content)
+  if(event.type==='tool/result'&&!event.data?.error)contents.push(event.data?.message?.content)
+  if(event.type==='tool/code-dispatch'&&!event.data?.isError)contents.push(event.data?.content)
+ }
+ return contents
+}
 /** References are obtained only from this session's durable upload/tool events. */
 export function conversationImageReferences(session){
  const images=new Map()
  const collect=(blocks,depth=0)=>{if(!Array.isArray(blocks)||depth>8)return;for(const block of blocks){if(block?.type==='image'&&typeof block.attachment?.attachmentId==='string')images.set(block.attachment.attachmentId,block.attachment);else if(block?.type==='tool-result'&&!block.isError)collect(block.content,depth+1)}}
- for(const event of session?.events??[]){
-  if(event.type==='user/message'&&event.data?.source?.kind==='user')collect(event.data.content)
-  if(event.type==='tool/result'&&!event.data?.error)collect(event.data?.message?.content)
- }
+ for(const content of conversationImageContents(session))collect(content)
  return images
 }
 function argumentsFor(args,models,defaultModel){
@@ -51,7 +57,12 @@ export function registerImageGenerationTool(ctx,options={}){
    const available=conversationImageReferences(session),references=input.reference_image_ids.map(id=>{const ref=available.get(id);if(!ref||!['image/png','image/jpeg','image/webp'].includes(ref.mediaType))fail('参考图必须是当前会话已有的 PNG、JPEG 或 WebP 图片。');return ref})
    const key=createHash('sha256').update(JSON.stringify([authority.id, input])).digest('hex')
    // Session history can recover completed deliveries after runtime restart.
-   for(const event of session.events??[])if(event.type==='tool/result'&&!event.data?.error)for(const result of event.data?.message?.content??[])if(result.type==='tool-result'&&!result.isError)for(const block of result.content??[])if(block.type==='text'){
+   const completed=[]
+   for(const event of session.events??[]){
+    if(event.type==='tool/result'&&!event.data?.error)for(const result of event.data?.message?.content??[])if(result.type==='tool-result'&&!result.isError)completed.push(...result.content??[])
+    if(event.type==='tool/code-dispatch'&&event.data?.name===TOOL&&!event.data.isError)completed.push(...event.data.content??[])
+   }
+   for(const block of completed)if(block.type==='text'){
     try{const saved=JSON.parse(block.text);if(saved.kind===KIND&&saved.requestKey===key&&saved.ok&&available.has(saved.image?.attachmentId))return saved}catch{}
    }
    let cache=receipts.get(agent);if(!cache){cache=new Map();receipts.set(agent,cache)}
@@ -64,7 +75,7 @@ export function registerImageGenerationTool(ctx,options={}){
      const maxBytes=Math.min(MAX_BYTES,attachments.imageLimits.maxImageBytes),loaded=[]
      for(const ref of references){check(agent,session,authority,signal);if(ref.bytes>maxBytes)fail('参考图过大，请使用 20MB 以内的图片。');const image=await attachments.readImage(ref,signal);loaded.push({data:image.data,mediaType:image.ref.mediaType})}
      check(agent,session,authority,signal)
-     const result=await models.get(input.model).provider.generate({...input,references:loaded},{signal,maxBytes})
+     const result=await models.get(input.model).provider.generate({...input,references:loaded},{signal,maxBytes,assertCurrent:()=>check(agent,session,authority,signal)})
      check(agent,session,authority,signal)
      validateGeneratedImage(result.data,maxBytes)
      let image;try{image=await attachments.saveImage({data:result.data,mediaType:'image/png',name:'生成图片.png'})}catch{fail('生成结果未能保存为有效图片，请检查附件存储空间。')}

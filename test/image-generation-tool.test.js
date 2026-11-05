@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest'
-import {registerImageGenerationTool} from '../packages/dsh-research-task-runtime/image-generation-tool.js'
+import {registerImageGenerationTool,conversationImageReferences} from '../packages/dsh-research-task-runtime/image-generation-tool.js'
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=','base64')
 const cleanups=[]
@@ -49,7 +49,7 @@ it('rejects arbitrary URLs, unknown models, invalid sizes, excess references and
 })
 it('never starts a request without credentials or with a custom endpoint credential',async()=>{
  const f=fixture();f.state.key='';await expect(f.call()).rejects.toThrow(/OpenAI/)
- f.state.key='test';f.state.profile.baseUrl='https://other.test/v1';await expect(f.call({prompt:'另一只猫'})).rejects.toThrow(/官方/)
+ f.state.key='test';f.state.profile.baseURL='https://other.test/v1';await expect(f.call({prompt:'另一只猫'})).rejects.toThrow(/官方/)
  expect(f.request).not.toHaveBeenCalled()
 })
 it('does not repeat a failed paid call or reflect provider errors / keys',async()=>{
@@ -78,4 +78,23 @@ it('supports a future built-in provider without changing the tool or image UI',a
  const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
  const f=fixture({providers:[{models:[{id:'builtin-art',name:'内置生图'}],generate}],defaultModel:'builtin-art'})
  const result=await f.call();expect(result.model).toBe('builtin-art');expect(generate).toHaveBeenCalledOnce();expect(f.request).not.toHaveBeenCalled()
+})
+it('recovers code-mode image receipts after restart and permits editing them in the next turn',async()=>{
+ const f=fixture(),result=await f.call(),content=f.tools.get('image_generate').output.render({},result)
+ const events=[...f.agent.session.events,{type:'tool/code-dispatch',data:{name:'image_generate',isError:false,content}},{type:'user/message',data:{source:{kind:'plugin',plugin:'tools-code-mode'},content}}]
+ expect(conversationImageReferences({events}).has(result.image.attachmentId)).toBe(true)
+ const fresh=fixture();fresh.agent.session.events=events
+ expect(await fresh.call()).toEqual(result);expect(fresh.request).not.toHaveBeenCalled()
+ fresh.agent.session.events.push({type:'user/message',data:{id:'human-2',source:{kind:'user'},content:[{type:'text',text:'修改刚才的图片'}]}})
+ await fresh.call({prompt:'换成蓝色',reference_image_ids:[result.image.attachmentId]})
+ expect(fresh.reads).toEqual([result.image])
+})
+it('rechecks the live human authority after credentials resolve, before a billed POST',async()=>{
+ const f=fixture();let release,started
+ const ready=new Promise(r=>started=r)
+ f.credentials.resolve.mockImplementation(()=>{started();return new Promise(r=>release=r)})
+ const pending=f.call();await ready
+ f.agent.session.events.push({type:'user/message',data:{id:'human-2',source:{kind:'user'},content:[{type:'text',text:'不用生成了'}]}})
+ release({value:'test-private-key'})
+ await expect(pending).rejects.toThrow(/会话|要求/);expect(f.request).not.toHaveBeenCalled()
 })

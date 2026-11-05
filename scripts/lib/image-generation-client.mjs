@@ -32,7 +32,9 @@ export const IMAGE_GENERATION_CSS=`
 .odyssey-image-generation figcaption{margin:8px 2px 0;font:400 12px/18px var(--odyssey-font-ui,system-ui,sans-serif);color:var(--dsw-alias-label-tertiary,#777)}
 .odyssey-image-generation[data-state=failed] .odyssey-image-generation-stage,.odyssey-image-generation[data-state=cancelled] .odyssey-image-generation-stage,.odyssey-image-generation[data-state=interrupted] .odyssey-image-generation-stage{background:var(--dsw-alias-bg-l1,#f4f4f6)}
 .odyssey-image-generation-result{border-radius:18px;overflow:hidden;max-width:100%}
-.odyssey-image-generation-result img{display:block;max-width:100%;height:auto}
+.odyssey-image-generation-result [data-align]{display:block;width:100%}
+.odyssey-image-generation-result button[data-variant=single]{width:100%!important;height:auto!important;aspect-ratio:var(--image-ratio,1);max-width:none;max-height:none;border-radius:18px}
+.odyssey-image-generation-result img{display:block;width:100%;max-width:100%;height:100%;object-fit:contain}
 body[data-ds-dark-theme] .odyssey-image-generation-stage{background:#2b2a35}
 body[data-ds-dark-theme] .odyssey-image-generation[data-state=running] .odyssey-image-generation-stage:before{background:conic-gradient(from 30deg,#49394f,#324a60,#4b4264,#5a3c44,#49394f)}
 body[data-ds-dark-theme] .odyssey-image-generation[data-state=running] .odyssey-image-generation-stage:after{opacity:.25}

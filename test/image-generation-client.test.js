@@ -29,3 +29,6 @@ it('patches the actual conversation bundle idempotently and keeps ordinary image
  expect(IMAGE_GENERATION_CSS).toContain('[data-state=running]')
  expect(IMAGE_GENERATION_CSS).toContain('@keyframes')
 })
+it('overrides native singleFit thumbnail bounds to preserve the image card geometry',()=>{
+ expect(IMAGE_GENERATION_CSS).toMatch(/button\[data-variant=single\][^{]*\{[^}]*width:100%!important;[^}]*height:auto!important;[^}]*aspect-ratio:var\(--image-ratio/)
+})

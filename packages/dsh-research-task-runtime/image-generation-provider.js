@@ -21,14 +21,14 @@ async function boundedJson(response,maxBytes){
 export function createOpenAIImageProvider(ctx,{fetch:request=globalThis.fetch}={}){
  return{
   models:[{id:'gpt-image-2.6-flare',name:'Image 2.6 Flare',description:'快速生成与迭代'},{id:'gpt-image-2.6-sunburst',name:'Image 2.6 Sunburst',description:'精细画面与复杂构图'}],
-  async generate(input,{signal,maxBytes}){
+  async generate(input,{signal,maxBytes,assertCurrent}){
    const profile=ctx.get?.('settings')?.get('llm-pi-ai')?.providers?.openai
-   if(profile?.baseUrl){let url;try{url=new URL(profile.baseUrl)}catch{};if(!url||url.origin!=='https://api.openai.com'||!['/v1','/v1/','/'].includes(url.pathname)||url.username||url.password||url.search||url.hash)fail('请在模型设置中配置 OpenAI 官方连接后生成图片。')}
+   if(profile?.baseURL){let url;try{url=new URL(profile.baseURL)}catch{};if(!url||url.origin!=='https://api.openai.com'||!['/v1','/v1/','/'].includes(url.pathname)||url.username||url.password||url.search||url.hash)fail('请在模型设置中配置 OpenAI 官方连接后生成图片。')}
    const ref=profile?.apiKeyEnv??'OPENAI_API_KEY'
    if(typeof ref!=='string'||!ref||ref.length>256)fail('OpenAI 凭据配置无效，请检查模型设置。')
    let key;try{key=(await ctx.get?.('credentials')?.resolve(ref))?.value}catch{fail('无法读取 OpenAI 凭据，请检查模型设置。')}
    if(typeof key!=='string'||!key.trim()||/[\r\n]/.test(key))fail('请先在设置 → 模型中配置 OpenAI API Key。')
-   signal.throwIfAborted()
+   signal.throwIfAborted();assertCurrent?.()
    const fields={model:input.model,prompt:input.prompt,n:1,size:input.size,quality:input.quality,background:input.background,output_format:'png'}
    const editing=input.references.length>0
    let body
