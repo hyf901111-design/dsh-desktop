@@ -125,6 +125,14 @@ npm run git:integration -- --help
 
 ## 已合并功能的后续修复
 
+### 仅供本地测试的聚焦预览
+
+当用户只要求本地测试且不允许重跑历史功能检查时，执行器 API `mergeIntegrationFeature` 可显式传入 `previewOnly: true`，先 `dryRun: true` 再执行。它仍执行正常合并预检、所有权检查和功能交接卡中的全部检查，创建并保留合并提交，但不会写入 `merged` 完整批次验证记录；`accept` 和 `promote` 继续阻止未完整验证的批次。
+
+如果已有解决冲突后提交的未记录合并，使用 `continueIntegrationPreview`，提供同一持久 owner token、精确 `confirmBatchId` 和 `confirmTip`，先 dry run。它只接受父提交精确匹配租约和原交接 tip 的干净合并边界，运行原功能聚焦检查后推进预览租约，不更改清单或伪造完整批次验证。原功能分支可以已有严格后继，以便随后通过正常 `refreshIntegrationHandoff` 更新交接卡。
+
+预览完成后仍按本地测试构建手册启动；不得把 `preview-ready` 当作正式验收。未来正式集成仍须使用原有 `continue` 完整验证当前声明检查。此入口不替代 Plan B 的共享构建器或 Plan C 的隔离预览。
+
 验收前功能分支继续修复时，先重新生成交接卡，再使用受所有权和精确 tip 保护的更新入口。旧卡和证据保留在 Git 历史；新卡必须是同一分支、以原交接 tip 为基线的严格后继，更新后必须重新执行 merge、accept、promote。已接受批次不能刷新。
 
 ```bash
