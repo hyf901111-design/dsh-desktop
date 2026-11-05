@@ -57,11 +57,11 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
   const reveal=typeof eworkNotesActivity==='undefined'?undefined:eworkNotesActivity.reveal(sessionId,row.requestId)
   // A pending row can leave the view before its first Markdown result exists.
   react.useEffect(()=>()=>{if(reveal)reveal.skipNext=true},[reveal])
-  const labels = {preparing:noteUiText("正在思考"),generating:noteUiText("正在思考"),ready:noteUiText("内容已生成，请在笔记中预览"),replied:noteUiText("已回复"),accepted:noteUiText("已写入笔记"),discarded:noteUiText("已放弃建议"),failed:noteUiText("生成失败"),stopped:noteUiText("已停止")}
+  const labels = {preparing:noteUiText("正在思考"),generating:noteUiText("正在思考"),ready:noteUiText("内容已生成，请在笔记中预览"),replied:noteUiText("已回复"),accepted:noteUiText("笔记已更新"),discarded:noteUiText("已放弃建议"),failed:noteUiText("生成失败"),stopped:noteUiText("已停止")}
     const pending = ['preparing','generating'].includes(row.phase)
     const stage = {model:noteUiText("正在思考"),thinking:noteUiText("正在思考"),writing:noteUiText("正在撰写内容"),validating:noteUiText("正在检查生成内容")}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
-    const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("已将以下内容写入笔记。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
+    const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("本次修改已应用，以下为修改预览。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
     const receiptSummary=row.result?.kind==='conversation'&&row.result.capabilityReceipts?.length?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):''
     const originalSummary=row.result?.capabilitySummary|| (receiptSummary?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts):'')
     const reply=row.result?.requiresReply===true?String(row.result.markdown||'').trim():''
