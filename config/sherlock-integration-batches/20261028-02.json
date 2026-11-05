@@ -27901,6 +27901,82 @@
         "risks": [],
         "generatedAt": "2026-11-05T23:11:52.994Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "集成登记集中诊断与预检提速",
+        "branch": "codex/feat/integration-check-diagnostics-20261106",
+        "baseCommit": "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0",
+        "tipCommit": "9410d02df675d6e648705294cb7dbd5b11ffe923",
+        "commits": [
+          {
+            "commit": "9410d02df675d6e648705294cb7dbd5b11ffe923",
+            "parents": [
+              "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0"
+            ],
+            "subject": "优化：一次收集历史登记检查失败并加快已合并预检"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-multi-session-integration-runbook.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-executor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-preflight.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-reconcile-records.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/integration-reconcile-records.test.ts",
+              "test/integration-cli-contract.test.ts",
+              "test/integration-preview.test.ts",
+              "test/integration-batch.test.ts",
+              "test/integration-frozen-handoff.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "19 项 Git 工作流聚焦测试通过",
+            "verifiedCommit": "9410d02df675d6e648705294cb7dbd5b11ffe923",
+            "completedAt": "2026-11-05T23:20:07.358Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 检查通过",
+            "verifiedCommit": "9410d02df675d6e648705294cb7dbd5b11ffe923",
+            "completedAt": "2026-11-05T23:20:07.358Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅 Git 集成工具"
+        },
+        "acceptanceCriteria": [
+          "已合并的精确历史无需计算补丁 ID；重复或部分合并仍由现有预检保护",
+          "一次返回所有失败命令；失败时不改清单和租约"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-05T23:20:07.358Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -29326,6 +29402,18 @@
         "run",
         "test/conversation-component-offline.test.js",
         "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/integration-reconcile-records.test.ts",
+        "test/integration-cli-contract.test.ts",
+        "test/integration-preview.test.ts",
+        "test/integration-batch.test.ts",
+        "test/integration-frozen-handoff.test.ts"
       ],
       "timeoutMs": 120000
     }
