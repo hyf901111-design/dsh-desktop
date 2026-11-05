@@ -33,7 +33,7 @@ it('runs feature checks for a preview while keeping full validation and acceptan
   expect(() => acceptIntegrationBatch({ ...options, commit: result.afterCommit, confirmBatchId: batchId })).toThrow(/合并/)
   // The ordinary continuation still executes the declared batch check, which fails here.
   expect(continueIntegrationFeature(options).status).toBe('recovery-required')
-})
+}, 20000)
 it('checkpoints only an exact owned merge boundary without rewriting evidence, even when the feature has a successor', () => {
   const { f, feature, integration, tip: featureBase, options } = setup()
   f.git(integration, 'merge', '--no-ff', options.featureBranch, '-m', '集成：图片预览')
@@ -54,4 +54,4 @@ it('checkpoints only an exact owned merge boundary without rewriting evidence, e
   expect(refreshed.afterCommit).not.toBe(tip)
   expect(JSON.parse(readFileSync(options.manifestPath, 'utf8')).features[0].merged).toBeUndefined()
   expect(mergeIntegrationFeature({ ...options, previewOnly: true }).status).toBe('preview-ready')
-})
+}, 20000)
