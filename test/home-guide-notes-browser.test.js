@@ -152,6 +152,20 @@ it('moves the real pointer over the original library submenu and clicks its quot
   expect(await page.locator('[data-home-guide-note-menu]').count()).toBe(0);const blocks=await page.evaluate(()=>window.lastGuideSaved.blocks);expect(blocks.filter(b=>b.type==='research').map(b=>JSON.parse(b.props.payload)).some(n=>n.containerSpec?.widget==='quote')).toBe(true);expect(errors).toEqual([]);await page.evaluate(()=>window.menuPointer.dispose())
  }finally{await context.close()}
 },30000)
+it.each([1,1.1])('keeps the slash menu available after full pointer playback at %s zoom',async zoom=>{
+ const{context,page,errors}=await fixture();try{
+  await page.setViewportSize({width:1380,height:900});await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(zoom=>document.documentElement.style.zoom=String(zoom),zoom);await page.locator('#guide').evaluate(node=>Object.assign(node.style,{left:'88px',top:'60px',right:'394px',bottom:'10px'}));await page.evaluate(()=>window.startNativeGuide())
+  await page.evaluate(()=>{
+   window.nativeAutoAck=false;window.pointerFailures=[];window.pointerSteps=[]
+   window.fullPointer=createHomeGuidePointer(document,{runId:'notes-natural-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
+   window.addEventListener('sherlock:home-guide-cue',event=>{const cue=event.detail;if(!cue.requestId||cue.selection)return;const reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok,message}}));window.fullPointer.perform({target:window.cueTarget(cue.targetToken),action:cue.action}).then(()=>{window.pointerSteps.push(cue.label);reply(true)},error=>{window.pointerFailures.push(error.message);reply(false,error.message)})})
+  })
+  for(const step of preReview.slice(0,6))await page.evaluate(step=>window.guide.runStep(step),step)
+  expect(await page.evaluate(()=>window.pointerFailures)).toEqual([])
+  expect(await page.evaluate(()=>window.pointerSteps)).toEqual(expect.arrayContaining(['移动到组件库，展开二级菜单','在组件库二级菜单选择行情面板']))
+  expect(await page.evaluate(()=>window.guidePopupProbe.editor.document.filter(block=>block.type==='research').length)).toBe(2);expect(errors).toEqual([])
+ }finally{await page.screenshot({path:join(evidenceDir,'native-sized-full-pointer-slash-'+zoom+'.png')});writeFileSync(join(evidenceDir,'native-sized-full-pointer-slash-'+zoom+'.json'),JSON.stringify(await page.evaluate(()=>({steps:window.pointerSteps,failures:window.pointerFailures,cues:window.guideCues,focus:document.activeElement?.outerHTML?.slice(0,500),menu:document.querySelector('.bn-editor')?.getAttribute('aria-controls')})),null,2));await context.close()}
+},60000)
 it('waits for the async original slash menu choices before opening the actual quote library item',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
