@@ -17,6 +17,21 @@ it('accepts a source-backed complete semantic table even when the host must rend
  const data={...incomplete,rows:Array.from({length:244},(_,i)=>[String(i),'原型记录'])}
  expect(prototypeTableCoverageIssue('rendered HTML is not the data contract',records,{...options,mappedData:data})).toBeNull()
 })
+it('does not treat a retained reading link as a promise that its external records are present',()=>{
+ const ownRows=Array.from({length:12},(_,i)=>[String(i),'渠道记录'])
+ const ownRecords=[{tool:'read_prototype',response:{section:'DYN.ours',total:12,rows:ownRows}}]
+ const panelRequest='根据 DYN.ours 还原我司12只渠道资金流表，完整保留所有字段。保留查看全部244只四分类明细、30条对账告警与执行档案的阅读入口；实际详情可用性及计数以完整原始记录为准。'
+ const scoped={...options,panelRequest,mappedData:{...incomplete,rows:ownRows}}
+ expect(prototypeTableCoverageIssue('',ownRecords,scoped)).toBeNull()
+ expect(prototypeTableCoverageIssue('',ownRecords,{...scoped,mappedData:{...incomplete,rows:ownRows.slice(0,3)}})).toContain('完整 12 条记录')
+ // A separate requirement to render all records is still binding.
+ expect(prototypeTableCoverageIssue('',ownRecords,{...scoped,panelRequest:panelRequest+'本卡完整展示全部244条渠道记录。'})).toContain('完整 244 条记录')
+ // The source itself is authoritative even if the request only describes a link.
+ expect(prototypeTableCoverageIssue('',records,{...scoped,panelRequest:'DYN.prods：保留查看全部244只明细的阅读入口，完整呈现来源。'})).toContain('完整 244 条记录')
+})
+it('does not exempt a record-display requirement merely because the same sentence also asks for a link',()=>{
+ expect(prototypeTableCoverageIssue(JSON.stringify(incomplete),[],{...options,panelRequest:'完整展示全部244条记录，并提供查看原始资料的入口。'})).toContain('完整 244 条记录')
+})
 it('keeps scoped top-N samples, other cards and requests without an authored prototype unchanged',()=>{
  expect(prototypeTableCoverageIssue(JSON.stringify(incomplete),records,{...options,panelRequest:'只显示前3只产品。'})).toBeNull()
  expect(prototypeTableCoverageIssue(JSON.stringify(incomplete),records,{...options,panelType:'kpi'})).toBeNull()

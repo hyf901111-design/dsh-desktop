@@ -5,7 +5,11 @@ import {prototypeHtmlSourceRows} from './prototype-html-snapshot.js'
 
 export function prototypeTableCoverageIssue(text,records,{panelType,panelRequest='',workbenchRequest,mappedData}={}){
  if(!['table','market','html'].includes(panelType)||panelType==='html'&&!/(?:表格|明细|产品|\btable\b|\bproducts\b)/iu.test(panelRequest)||!authoredPrototypeEvidence(workbenchRequest?.originalRequest).files.some(path=>/\.html?$/iu.test(path))||!/(?:全部|完整|全量|\b(?:all|complete|full)\b)/iu.test(panelRequest))return null
- const declared=[...panelRequest.matchAll(/\b(\d{1,5})\s*(?:条|只|行|records\b|rows\b|products\b)/giu)].map(match=>Number(match[1])).filter(count=>count>0&&count<=2000)
+ // Keeping a prototype's reading/download entry does not promise that the
+ // linked external dataset exists in this file. Separate display requirements
+ // and complete totals observed from a named source remain binding below.
+ const displayRequest=panelRequest.replace(/(?:保留|提供|添加)(?:查看|打开|阅读|下载)[^。；;\n]{0,160}?(?:入口|链接)/gu,'')
+ const declared=[...displayRequest.matchAll(/\b(\d{1,5})\s*(?:条|只|行|records\b|rows\b|products\b)/giu)].map(match=>Number(match[1])).filter(count=>count>0&&count<=2000)
  const observed=records.filter(record=>record.tool==='read_prototype'&&typeof record.response?.section==='string'&&panelRequest.includes(record.response.section)&&Array.isArray(record.response.rows)&&Number.isSafeInteger(record.response.total)&&record.response.total>0).map(record=>record.response.total)
  const expected=Math.max(0,...declared,...observed)
  if(!expected)return null
