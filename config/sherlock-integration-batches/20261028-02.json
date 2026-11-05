@@ -26378,7 +26378,7 @@
         "featureName": "对话原生生图、静谧流动占位及统一图片菜单",
         "branch": "codex/feat/image-studio-20261105",
         "baseCommit": "825fd827bea0d977d645552aa674e61196153db9",
-        "tipCommit": "70f3a5c5319031cf0e6d6eb72625cd8592fd623b",
+        "tipCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
         "commits": [
           {
             "commit": "73700ba11cbbc58e3f42b199aeef3bfe388b708b",
@@ -26400,6 +26400,13 @@
               "740cb537bb910c5d6929e0639e3153f757b7c882"
             ],
             "subject": "修复：允许已预览功能按原提交基线继续交接"
+          },
+          {
+            "commit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
+            "parents": [
+              "70f3a5c5319031cf0e6d6eb72625cd8592fd623b"
+            ],
+            "subject": "测试：为真实 Git 预览流程保留合理执行时限"
           }
         ],
         "files": [
@@ -26466,7 +26473,7 @@
             ],
             "outcome": "passed",
             "summary": "24 项图片渲染、菜单动作、生命周期及模型工具聚焦检查通过",
-            "verifiedCommit": "70f3a5c5319031cf0e6d6eb72625cd8592fd623b",
+            "verifiedCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
             "completedAt": "2026-11-05T03:11:53.181Z",
             "timeoutMs": 120000
           },
@@ -26479,7 +26486,7 @@
             ],
             "outcome": "passed",
             "summary": "2 项预览所有权及正式验收门禁检查通过",
-            "verifiedCommit": "70f3a5c5319031cf0e6d6eb72625cd8592fd623b",
+            "verifiedCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
             "completedAt": "2026-11-05T03:11:53.181Z",
             "timeoutMs": 120000
           },
@@ -26491,7 +26498,7 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "70f3a5c5319031cf0e6d6eb72625cd8592fd623b",
+            "verifiedCommit": "73954c5c059c538b034c8ec7bf0c1192f7427946",
             "completedAt": "2026-11-05T03:11:53.181Z",
             "timeoutMs": 120000
           }
@@ -26509,7 +26516,7 @@
           "本地预览不代表正式批次验收",
           "生图依赖可用模型配额"
         ],
-        "generatedAt": "2026-11-05T03:13:28.193Z"
+        "generatedAt": "2026-11-05T03:16:50.521Z"
       }
     }
   ],
