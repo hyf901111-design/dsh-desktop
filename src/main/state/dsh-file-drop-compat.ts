@@ -18,8 +18,9 @@ const LEGACY_PATCHED_CLIENT_SHA256 =
   'ef70d5f01c43a4a2451e46f6ef01eea8614a838a043a9eabe8a5e5597bf4ca77'
 const INLINE_REFERENCE_PATCHED_CLIENT_SHA256 =
   'c8e269525a469cb1733a8318ab429be3152835997c828eabc5568c07c2044cdf'
-const PATCHED_CLIENT_SHA256 =
+const PRE_IMAGE_PATCHED_CLIENT_SHA256 =
   'a466fa44bef9ab34fe42346f4afd6759d123009e7bc657e73194346f6ed49770'
+const PATCHED_CLIENT_SHA256 = '840ab68b054c85d91757b5be4db2cd82ab3575f98f81118982923d547da58a0f'
 const PRE_NOTES_PATCHED_CLIENT_SHA256 =
   '333b2a3b543af91176cd5ff7d56163290d15b84861fbd6dcc59d45c24c18e1c9'
 const ORIGINAL_FILE_GUARD = '          if (!hasFiles(e)) return'
@@ -82,10 +83,10 @@ function sourceIdentity(source: string): string {
   return createHash('sha256').update(source).digest('hex')
 }
 
-export function patchDshFileDropClientSource(source: string): string | undefined {
+function patchLegacyDshFileDropClientSource(source: string): string | undefined {
   const identity = sourceIdentity(source)
-  if (identity === PATCHED_CLIENT_SHA256) return source
-  if(identity===PRE_NOTES_PATCHED_CLIENT_SHA256){const next=source.replace("node.hasAttribute('data-research-canvas')","(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))");return sourceIdentity(next)===PATCHED_CLIENT_SHA256?next:undefined}
+  if (identity === PRE_IMAGE_PATCHED_CLIENT_SHA256) return source
+  if(identity===PRE_NOTES_PATCHED_CLIENT_SHA256){const next=source.replace("node.hasAttribute('data-research-canvas')","(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))");return sourceIdentity(next)===PRE_IMAGE_PATCHED_CLIENT_SHA256?next:undefined}
   const pristine = identity === PRISTINE_CLIENT_SHA256
   const legacyPatched = identity === LEGACY_PATCHED_CLIENT_SHA256
   const inlineReferencePatched = identity === INLINE_REFERENCE_PATCHED_CLIENT_SHA256
@@ -136,6 +137,33 @@ export function patchDshFileDropClientSource(source: string): string | undefined
     .replace(UPLOAD_STATUS_BLOCK, QUIET_UPLOAD_STATUS_BLOCK)
     .replace(SHELL_DROP_SUCCESS, QUIET_SHELL_DROP_SUCCESS)
     .replace(URI_DROP_SUCCESS, QUIET_URI_DROP_SUCCESS)
+  return sourceIdentity(patched) === PRE_IMAGE_PATCHED_CLIENT_SHA256 ? patched : undefined
+}
+
+export function patchDshFileDropClientSource(source: string): string | undefined {
+  if (sourceIdentity(source) === PATCHED_CLIENT_SHA256) return source
+  const legacy = patchLegacyDshFileDropClientSource(source)
+  if (!legacy) return undefined
+  const patched = legacy
+    .replace('      const { sessionId, inputActions, getDraft } = opts', `      const { sessionId, inputActions, getDraft } = opts
+      // odyssey:image-file-intake:start
+      const images = files.filter(file => file.type?.startsWith('image/'))
+      if (images.length && typeof inputActions?.addImageFiles === 'function') {
+        const error = inputActions.addImageFiles(images)
+        if (error) { statusStore.set(error); return }
+        files = files.filter(file => !images.includes(file))
+        statusStore.set(null)
+        if (!files.length) return
+      }
+      // odyssey:image-file-intake:end`)
+    .replace('        const shellPaths = drainShellPaths()', `        const shellPaths = drainShellPaths()
+        // odyssey:image-file-drop:start
+        if (files.some(file => file.type?.startsWith('image/')) && typeof optsRef.current.inputActions?.addImageFiles === 'function') {
+          busyRef.current = true
+          try { await processFiles(files, optsRef.current) } finally { busyRef.current = false }
+          return
+        }
+        // odyssey:image-file-drop:end`)
   return sourceIdentity(patched) === PATCHED_CLIENT_SHA256 ? patched : undefined
 }
 
@@ -262,7 +290,7 @@ export async function ensureDshFileDropResearchCanvasCompatibility(
   if (
     identity !== PRISTINE_CLIENT_SHA256 &&
     identity !== LEGACY_PATCHED_CLIENT_SHA256 &&
-    identity !== INLINE_REFERENCE_PATCHED_CLIENT_SHA256 && identity !== PRE_NOTES_PATCHED_CLIENT_SHA256
+    identity !== INLINE_REFERENCE_PATCHED_CLIENT_SHA256 && identity !== PRE_NOTES_PATCHED_CLIENT_SHA256 && identity !== PRE_IMAGE_PATCHED_CLIENT_SHA256
   ) {
     return {
       status: 'unsupported',

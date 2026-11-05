@@ -290,7 +290,7 @@ describe('dsh-file-drop Research canvas compatibility', () => {
     expect((await ensureDshFileDropResearchCanvasCompatibility(dshHome)).status)
       .toBe('patched')
     const current = await readFile(clientPath, 'utf8')
-    const legacy = current.replace("(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))", "node.hasAttribute('data-research-canvas')").replace(
+    const legacy = current.replace(/\n *\/\/ odyssey:image-file-(?:intake|drop):start[\s\S]*?\/\/ odyssey:image-file-(?:intake|drop):end/g, '').replace("(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))", "node.hasAttribute('data-research-canvas')").replace(
       `      if (!inputActions || !Array.isArray(paths) || paths.length === 0) return
       // ${DSH_FILE_DROP_INLINE_REFERENCE_MARKER}
       if (typeof inputActions.insertFilePaths === 'function') {
