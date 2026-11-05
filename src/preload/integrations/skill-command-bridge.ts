@@ -4,13 +4,23 @@ import {integrationUiCopy} from '../integration-ui-copy'
 import {englishUiCopy} from '../ui-copy'
 
 const REQUEST='sherlock:skill-menu-request',REPLY='sherlock:skill-menu-reply'
+const EQUITY_RESEARCH='builtin:ework-equity-research'
+const EQUITY_RESEARCH_DESCRIPTION={
+ zh:'按照易方达配色规范创建和制作研究报告，支持公司研究、财报分析与估值核验。',
+ en:'Create research reports using E Fund’s color standards, with company analysis, earnings review, and valuation verification.',
+}
 /** Isolated preload owns listing and the existing verified composer transfer. */
 export function installSkillCommandBridge(document:Document,bridge:Pick<IntegrationBridge,'request'|'useSkill'>) {
  const win=document.defaultView!
  const display=(row:{id:string;name:string;description?:string})=>{
   const english=document.documentElement.dataset.odysseyLocale==='en'&&row.id.startsWith('builtin:')
   const text=(value:string)=>integrationUiCopy[value]??englishUiCopy[value]??value
-  return {name:english?text(row.name):row.name,description:english?text(row.description??''):row.description}
+  return {
+   name:english?text(row.name):row.name,
+   description:row.id===EQUITY_RESEARCH
+    ?EQUITY_RESEARCH_DESCRIPTION[english?'en':'zh']
+    :english?text(row.description??''):row.description,
+  }
  }
  const pending=new Map<string,AbortController>()
  let generation=0,disposed=false
@@ -29,8 +39,11 @@ export function installSkillCommandBridge(document:Document,bridge:Pick<Integrat
    }else if(data.action==='list'){
     const reply=await bridge.request({type:'snapshot'})
     if(reply.type!=='snapshot')throw Error('技能列表暂不可用，请重试。')
-    const priority=(id:string)=>id==='builtin:efund-ppt-maker'?0:id==='builtin:ework-equity-research'?1:2
-    result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').sort((a,b)=>priority(a.id)-priority(b.id)).map(row=>({id:row.id,label:display(row).name,detail:display(row).description,revision:row.revision}))
+    const priority=(id:string)=>id==='builtin:efund-ppt-maker'?0:id===EQUITY_RESEARCH?1:2
+    result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').sort((a,b)=>priority(a.id)-priority(b.id)).map(row=>{
+     const {name,description}=display(row)
+     return {id:row.id,label:name,detail:description,revision:row.revision}
+    })
    } else if(data.action==='resolve'){
     const reference=decodeSkillReference(JSON.stringify(data.reference))
     const detail=await bridge.request({type:'skill-detail',id:reference.id,revision:reference.revision})

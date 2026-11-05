@@ -36,6 +36,8 @@ it('prioritizes the two exact built-ins once while retaining the stable order an
  const options=await f.command.ui.options({sessionId:'current'},new AbortController().signal)
  expect(options.map((row:any)=>row.id)).toEqual(['builtin:efund-ppt-maker','builtin:ework-equity-research','custom:first','builtin:other','custom:efund-ppt-maker','custom:last'])
  expect(new Set(options.map((row:any)=>row.id)).size).toBe(rows.length)
+ expect(options[1].detail).toMatch(/^按照易方达配色规范创建和制作研究报告/)
+ expect(options[2].detail).toBe(f.skill.description)
  await f.command.ui.onSelect(options[1],{sessionId:'current'})
  expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:'builtin:ework-equity-research',revision:2,sessionId:'current'}))
  f.dispose();f.bridge.dispose()
@@ -44,11 +46,13 @@ it('shows the English built-in skill names in the slash popup while preserving c
  const f=fixture();f.w.document.documentElement.dataset.odysseyLocale='en'
  const names=['PPT制作助手','工作台组件生成','基础数据源','基础金融分析逻辑']
  const rows=names.map((name,index)=>({...f.skill,id:'builtin:skill-'+index,name}))
- f.request.mockResolvedValueOnce({type:'snapshot',snapshot:{revision:1,rows:[...rows,{...f.skill,id:'custom:finance'}]}} as any)
+ const report={...f.skill,id:'builtin:ework-equity-research',name:'研报写作'}
+ f.request.mockResolvedValueOnce({type:'snapshot',snapshot:{revision:1,rows:[...rows,report,{...f.skill,id:'custom:finance'}]}} as any)
  const options=await f.command.ui.options({sessionId:'current'},new AbortController().signal)
- expect(options.map((row:any)=>row.label)).toEqual(['Presentation assistant','Workbench component builder','Core data sources','Core financial analysis','基础金融分析逻辑'])
- expect(options.map((row:any)=>row.id)).toEqual([...rows.map(row=>row.id),'custom:finance'])
- await f.command.ui.onSelect(options[0],{sessionId:'current'})
+ expect(options.map((row:any)=>row.label)).toEqual(['Equity research writing','Presentation assistant','Workbench component builder','Core data sources','Core financial analysis','基础金融分析逻辑'])
+ expect(options.map((row:any)=>row.id)).toEqual([report.id,...rows.map(row=>row.id),'custom:finance'])
+ expect(options[0].detail).toMatch(/^Create research reports using E Fund/)
+ await f.command.ui.onSelect(options[1],{sessionId:'current'})
  expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:'builtin:skill-0',revision:2,sessionId:'current'}))
  f.dispose();f.bridge.dispose()
 })
