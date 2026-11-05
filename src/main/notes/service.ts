@@ -252,7 +252,10 @@ export function installNotesService(options: {
             // Only validated host receipts may become visible action progress.
             // Read results stay in the model context, outside the conversation UI.
             if(options.owner()===owner&&options.canRead(session)&&generationWindow&&!generationWindow.isDestroyed()){
-              const capabilityProgress=receipts.map(({requestId,capability,status,message,path,effect})=>({requestId,capability,status,...message===undefined?{}:{message},...path===undefined?{}:{path},...effect===undefined?{}:{effect}}))
+              const capabilityProgress=receipts.map(({requestId,capability,status,message,path,effect,data})=>{
+                const preview=data&&typeof data==='object'?data as Record<string,unknown>:undefined
+                return {requestId,capability,status,...message===undefined?{}:{message},...path===undefined?{}:{path},...effect===undefined?{}:{effect},...preview?.pendingPreview===true&&preview.actionId===input.requestId?{data:{pendingPreview:true,actionId:preview.actionId}}:{}}
+              })
               ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,capabilityProgress})
             }
           },generate:generateResult})

@@ -197,3 +197,26 @@ it('localizes only the explicit host read-only notice in live and cold English r
   expect(render({...store.snapshot('s')[0],result:{...result,markdown:summary+'\n\n'+key+'模型额外正文保留。'}})).toContain('模型额外正文保留')
  }finally{store.dispose()}
 })
+
+
+it.each(['ready','accepted','discarded'])('renders settled native preview receipts correctly on replay: %s',async phase=>{
+ const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs')
+ vi.stubGlobal('react',React);vi.stubGlobal('eworkNoteCapabilityReceiptText',capabilityReceiptText)
+ vi.stubGlobal('document',{documentElement:{dataset:{odysseyLocale:'zh'}}})
+ const preview={requestId:'op',capability:'notes.blocks.apply',status:'succeeded',message:'修改建议已准备，等待用户确认；笔记正文尚未修改。',data:{pendingPreview:true,actionId:'r'}}
+ const saved={requestId:'style',capability:'notes.components.style',status:'succeeded',message:'已保存 1 个组件的样式。',effect:{state:'saved',changedBlockIds:['b']}}
+ const props={sessionId:'s',t:key=>key,UserBubble:()=>null,Progress:({entry})=>React.createElement('div',null,entry.noteTask.status),Markdown:({blocks})=>React.createElement('div',null,blocks.map(b=>b.text).join(''))}
+ try{
+  const result={kind:'conversation',markdown:capabilityReceiptText([preview,saved]),capabilityReceipts:[preview,saved]},row={requestId:'r',phase,result}
+  const html=renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row}))
+  expect(html).toContain('已保存 1 个组件的样式。')
+  if(phase==='ready'){expect(html).toContain('预览待确认');expect(html).toContain('笔记正文尚未修改')}
+  else{
+   expect(html).toContain(phase==='accepted'?'本次笔记修改已确认并应用。':'本次笔记修改已放弃，未应用到正文。')
+   expect(html).not.toContain('预览待确认');expect(html).not.toContain('笔记正文尚未修改')
+   const live=renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{...row,result:{kind:'text',markdown:'修改预览'},capabilityProgress:[preview,saved]}}))
+   expect(live).not.toContain('笔记正文尚未修改');expect(live).toContain('已保存 1 个组件的样式。')
+  }
+  expect(preview.data.pendingPreview).toBe(true)
+ }finally{vi.unstubAllGlobals()}
+})

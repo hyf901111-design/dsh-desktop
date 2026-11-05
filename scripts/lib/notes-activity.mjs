@@ -62,14 +62,18 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     const stage = {model:noteUiText("正在思考"),thinking:noteUiText("正在思考"),writing:noteUiText("正在撰写内容"),validating:noteUiText("正在检查生成内容")}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
     const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("本次修改已应用，以下为修改预览。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
-    const receiptSummary=row.result?.kind==='conversation'&&row.result.capabilityReceipts?.length?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):''
+    // The persisted acceptance event supersedes an earlier prepared receipt.
+    // Keep real external effects visible without rewriting the stored receipt.
+    const settledPreview=receipt=>['accepted','discarded'].includes(row.phase)&&receipt.status==='succeeded'&&receipt.effect===undefined&&receipt.data?.pendingPreview===true&&receipt.data.actionId===row.requestId&&['notes.blocks.apply','notes.blocks.undo','notes.components.create','notes.components.apply'].includes(receipt.capability)
+    const resultReceipts=row.result?.capabilityReceipts||[],previewSettled=resultReceipts.some(settledPreview)
+    const receiptSummary=row.result?.kind==='conversation'&&resultReceipts.length?[previewSettled?noteUiText(row.phase==='accepted'?'本次笔记修改已确认并应用。':'本次笔记修改已放弃，未应用到正文。'):'',eworkNoteCapabilityReceiptText(resultReceipts.filter(receipt=>!settledPreview(receipt)),document.documentElement.dataset.odysseyLocale)].filter(Boolean).join('\n\n'):''
     const originalSummary=row.result?.capabilitySummary|| (receiptSummary?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts):'')
     const reply=row.result?.requiresReply===true?String(row.result.markdown||'').trim():''
     const remainingReply=originalSummary&&reply.startsWith(originalSummary)?reply.slice(originalSummary.length).trim():reply
     const remaining=row.result?.notice==='read-only-incomplete'&&remainingReply==='已读取当前内容，本次尚未生成修改或答复。'?noteUiText('已读取当前内容，本次尚未生成修改或答复。',document.documentElement.dataset.odysseyLocale):remainingReply
     const conversation=receiptSummary?[receiptSummary,remaining&&remaining!==receiptSummary?remaining:''].filter(Boolean).join('\n\n'):row.result?.markdown
-    const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress:[]
-    const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts:[]
+    const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress.filter(receipt=>!settledPreview(receipt)):[]
+    const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts.filter(receipt=>!settledPreview(receipt)):[]
     const text=['text','conversation'].includes(row.result?.kind)?String(conversation||''):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
     // Read the durable final-event position after generation; the preparing seq is only for row ordering.
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])

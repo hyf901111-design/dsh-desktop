@@ -306,6 +306,8 @@ export const NOTE_ENGLISH = {
   "已回复": "Replied",
   "已写入笔记": "Added to note",
   "笔记已更新": "Note updated",
+  "本次笔记修改已确认并应用。": "The note changes were confirmed and applied.",
+  "本次笔记修改已放弃，未应用到正文。": "The note changes were discarded and were not applied.",
   "应用修改": "Apply changes",
   "本次修改已应用，以下为修改预览。": "Changes applied. The change preview is shown below.",
   "已放弃建议": "Suggestion discarded",
