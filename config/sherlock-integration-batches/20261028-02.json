@@ -26829,6 +26829,96 @@
         ],
         "generatedAt": "2026-11-05T14:48:52.280317+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一图片缩略图与放大预览的右键菜单",
+        "branch": "codex/feat/image-context-menu-20261105",
+        "baseCommit": "a320a28eace967e359a6240d56449ee29abd9c21",
+        "tipCommit": "99421e8cba4cdb7e157e921af59f4835676f2f23",
+        "commits": [
+          {
+            "commit": "99421e8cba4cdb7e157e921af59f4835676f2f23",
+            "parents": [
+              "a320a28eace967e359a6240d56449ee29abd9c21"
+            ],
+            "subject": "修复：统一图片缩略图与放大预览的右键菜单"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/image-context-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-ui.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "a320a28eace967e359a6240d56449ee29abd9c21",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "提交差异检查通过。",
+            "verifiedCommit": "99421e8cba4cdb7e157e921af59f4835676f2f23",
+            "completedAt": "2026-11-05T14:08:05.217180+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-generation-client.test.js",
+              "test/image-generation-ui.test.js",
+              "test/image-actions.test.ts",
+              "test/context-menu-home.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "25 项聚焦检查通过。",
+            "verifiedCommit": "99421e8cba4cdb7e157e921af59f4835676f2f23",
+            "completedAt": "2026-11-05T14:08:05.217180+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "99421e8cba4cdb7e157e921af59f4835676f2f23",
+            "completedAt": "2026-11-05T14:08:05.217180+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 中使用真实 SDK Menu 和多图预览。比较菜单背景、圆角、模糊与宽度，验收边缘定位、Esc、切图后复制和 JPEG 原始文件。截图和结果位于 /tmp/sherlock-image-context-menu-20261105。"
+        },
+        "acceptanceCriteria": [
+          "聊天生成图、普通缩略图与放大预览共用两项图片操作菜单。",
+          "放大预览中菜单保持在最上层，Esc 优先关闭菜单，切图后操作当前图片。",
+          "PNG 复制与保存沿用原图，JPEG 下载保留原始文件。"
+        ],
+        "risks": [
+          "界面证据来自 Chromium 夹具，桌面包需走集成预览。"
+        ],
+        "generatedAt": "2026-11-05T14:08:05.217180+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -28101,6 +28191,29 @@
         "task progress throughout|suppresses actual native composer tooltips"
       ],
       "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "a320a28eace967e359a6240d56449ee29abd9c21",
+        "HEAD"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-generation-client.test.js",
+        "test/image-generation-ui.test.js",
+        "test/image-actions.test.ts",
+        "test/context-menu-home.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
