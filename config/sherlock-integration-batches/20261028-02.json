@@ -26764,27 +26764,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复海外指数数据缺失",
+        "featureName": "彭博模式组件标题栏右侧操作统一灰色",
         "branch": "codex/feat/demo-acceptance-20261105",
-        "baseCommit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
-        "tipCommit": "4642905803865cd9415f6921007203e688342f28",
+        "baseCommit": "4642905803865cd9415f6921007203e688342f28",
+        "tipCommit": "f781eb32f95781e069853d94e4438c8db24a7523",
         "commits": [
           {
-            "commit": "4642905803865cd9415f6921007203e688342f28",
+            "commit": "f781eb32f95781e069853d94e4438c8db24a7523",
             "parents": [
-              "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202"
+              "4642905803865cd9415f6921007203e688342f28"
             ],
-            "subject": "修复：海外指数源缺失时使用校验后的备用行情"
+            "subject": "样式：彭博模式组件右上角操作统一为参考灰色"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/financial/backup-widget-data.ts"
+            "path": "docs/research-component-design-contract.md"
           },
           {
             "status": "M",
-            "path": "test/financial-widget-backup.test.ts"
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-surface-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
           }
         ],
         "checks": [
@@ -26793,41 +26801,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/financial-widget-backup.test.ts",
+              "test/board-tabs-theme-browser.test.js",
+              "test/component-surface-menu-browser.test.ts",
               "-t",
-              "falls back to identified Yahoo|keeps the Nasdaq Composite"
+              "四模式选中态|applies the four actual financial palettes"
             ],
             "outcome": "passed",
-            "summary": "4项聚焦测试通过，包括源为空、无效、接口异常、指数身份区分及错误身份拒绝。",
-            "verifiedCommit": "4642905803865cd9415f6921007203e688342f28",
-            "completedAt": "2026-11-05T14:48:52.280317+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过。",
-            "verifiedCommit": "4642905803865cd9415f6921007203e688342f28",
-            "completedAt": "2026-11-05T14:48:52.280317+00:00",
+            "summary": "2项直接相关界面检查通过，涵盖页签/普通组件前景一致、笔记和对话四模式切换。",
+            "verifiedCommit": "f781eb32f95781e069853d94e4438c8db24a7523",
+            "completedAt": "2026-11-05T15:03:17.871119+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生定位3个海外指数缺失；修复后真实请求3/3报价及60点走势返回，0错误。最终客户端显示待换包。"
+          "summary": "用户三处参考截图图标均取样到#808080，复用已有grid-muted/bt-muted；原Figma文档节点已失效，按用户截图实现。聚焦浏览器检查通过，原生显示待换包。"
         },
         "acceptanceCriteria": [
-          "保留分市场首选来源；仅在全球指数表缺少有效行情时使用Yahoo报价。",
-          "保留真实报价来源、交易时间、正确指数身份，不填造价。"
+          "彭博模式右上角提问、更多、关闭使用#808080，悬停仍为灰色。",
+          "研究、笔记、对话、页签组件同步，不改变标题和业务数据颜色。"
         ],
         "risks": [
-          "仅改海外指数缺失回退，未运行全功能测试。"
+          "仅CSS及设计规范修改，未增加或执行全功能测试。"
         ],
-        "generatedAt": "2026-11-05T14:48:52.280317+00:00"
+        "generatedAt": "2026-11-05T15:03:17.871119+00:00"
       }
     },
     {
