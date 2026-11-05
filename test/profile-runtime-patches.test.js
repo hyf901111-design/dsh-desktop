@@ -5,6 +5,7 @@ import {it,expect} from 'vitest'
 import {createRequire} from 'node:module'
 // Exercise the actual Node installer bytes; Vitest rewrites Function.toString().
 const {syncProfileRuntimePatches,verifyProfileRuntimePatches}=createRequire(import.meta.url)('../scripts/lib/profile-runtime-patches.mjs')
+const {patchOpenAIResponsesToolOptionals}=createRequire(import.meta.url)('../scripts/lib/openai-responses-tool-optionals.mjs')
 it('ships patched runtime into the independent plugin profile and verifies parity',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'profile-patches-'))
  try{
@@ -31,8 +32,18 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   await mkdir(path.join(nestedGoal,'lib'),{recursive:true})
   await writeFile(path.join(nestedGoal,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
   await writeFile(path.join(nestedGoal,'lib/index.js'),'unpatched nested goal policy')
+  const piName='@earendil-works/pi-ai',piEntry='dist/api/openai-responses.js'
+  const piVersion=JSON.parse(await readFile(`node_modules/${piName}/package.json`,'utf8')).version
+  const piTargets=[path.join(root,'node_modules',piName),path.join(root,'node_modules/.pnpm',`@earendil-works+pi-ai@${piVersion}`,'node_modules',piName)]
+  for(const target of piTargets){
+   await mkdir(path.join(target,'dist/api'),{recursive:true})
+   await writeFile(path.join(target,'package.json'),JSON.stringify({version:piVersion}))
+   await writeFile(path.join(target,piEntry),'unpatched provider')
+  }
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow()
   const digest=await syncProfileRuntimePatches(process.cwd(),root)
+  const expectedProvider=patchOpenAIResponsesToolOptionals(await readFile(`node_modules/${piName}/${piEntry}`,'utf8'))
+  for(const target of piTargets)expect(await readFile(path.join(target,piEntry),'utf8')).toBe(expectedProvider)
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-subagent/lib/index.js'),'utf8')).toContain('CANVAS_TASK_OWNED_SETTLEMENT')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js'),'utf8')).toContain('ework:note-feedback-target:v1')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-skill/lib/index.js'),'utf8')).toContain('registerCandidatePolicy(policy)')
@@ -58,6 +69,9 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   await writeFile(path.join(nestedPlan,'package.json'),JSON.stringify({version:'99'}))
   await expect(syncProfileRuntimePatches(process.cwd(),root)).rejects.toThrow(/version/)
   await writeFile(path.join(nestedPlan,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
+  await writeFile(path.join(piTargets[1],piEntry),'provider patch was dropped')
+  await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow(/parity/)
+  await syncProfileRuntimePatches(process.cwd(),root)
   await writeFile(path.join(nested,'lib/index.js'),'policy was dropped')
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow(/parity/)
   await syncProfileRuntimePatches(process.cwd(),root)

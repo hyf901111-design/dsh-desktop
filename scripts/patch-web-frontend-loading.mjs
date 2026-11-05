@@ -47,6 +47,7 @@ import { patchCanvasTaskNotices } from './lib/canvas-task-notices.mjs'
 import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
 import { patchQuestionCountdown } from './lib/question-countdown.mjs'
 import { patchGlmReasoningCapabilities } from './lib/glm-reasoning-capabilities.mjs'
+import { patchOpenAIResponsesToolOptionals } from './lib/openai-responses-tool-optionals.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
 import { patchDeliverableCards, patchDeliveryConversation } from './lib/deliverable-cards.mjs'
@@ -99,6 +100,8 @@ for(const [name,patch] of [['dsh-session-title',patchSessionTitleSubject],['dsh-
 writeFileSync(historyRuntimeBundlePath,stripConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 const llmAdapterPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js')
 writeFileSync(llmAdapterPath, patchGlmReasoningCapabilities(readFileSync(llmAdapterPath, 'utf8')))
+const openaiResponsesPath = join(process.cwd(), 'node_modules/@earendil-works/pi-ai/dist/api/openai-responses.js')
+writeFileSync(openaiResponsesPath, patchOpenAIResponsesToolOptionals(readFileSync(openaiResponsesPath, 'utf8')))
 const primitivesPath = join(
   process.cwd(),
   'node_modules',
