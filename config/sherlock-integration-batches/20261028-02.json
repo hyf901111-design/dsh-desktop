@@ -26920,66 +26920,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "持续任务反馈、真实滚底状态及模型设置图标",
+        "featureName": "OpenAI工具可选参数修复",
         "branch": "codex/feat/runtime-followups-20261105",
-        "baseCommit": "a320a28eace967e359a6240d56449ee29abd9c21",
-        "tipCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
+        "baseCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
+        "tipCommit": "992cabae79cda1c44116a7f3a8670232c7d38a84",
         "commits": [
           {
-            "commit": "02f7aa887788bd5570aed4b90048a2c09d931061",
+            "commit": "992cabae79cda1c44116a7f3a8670232c7d38a84",
             "parents": [
-              "a320a28eace967e359a6240d56449ee29abd9c21"
+              "ecb6a22b861763af614a27a800b87412fc175ba6"
             ],
-            "subject": "修复：模型配置操作图标保持清晰居中"
-          },
-          {
-            "commit": "ecb6a22b861763af614a27a800b87412fc175ba6",
-            "parents": [
-              "02f7aa887788bd5570aed4b90048a2c09d931061"
-            ],
-            "subject": "优化：对话持续反馈当前任务并准确显示滚底按钮"
+            "subject": "修复：保留 OpenAI 工具可选参数避免错误权限请求"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "scripts/lib/conversation-live-activity.mjs"
+            "path": "scripts/lib/openai-responses-tool-optionals.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-reading-client.mjs"
+            "path": "scripts/lib/profile-runtime-patches.mjs"
           },
           {
             "status": "M",
             "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
-            "status": "M",
-            "path": "src/preload/figma-settings.css"
-          },
-          {
             "status": "A",
-            "path": "test/conversation-live-activity-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/conversation-live-activity.test.js"
+            "path": "test/openai-responses-tool-optionals.test.js"
           },
           {
             "status": "M",
-            "path": "test/figma-reading-layout.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/conversation-response-progress-browser.tsx"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/model-settings-actions-browser.tsx"
-          },
-          {
-            "status": "A",
-            "path": "test/model-settings-actions-browser.test.js"
+            "path": "test/profile-runtime-patches.test.js"
           }
         ],
         "checks": [
@@ -26988,15 +26961,13 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/model-settings-actions-browser.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/figma-reading-layout.test.ts"
+              "test/openai-responses-tool-optionals.test.js",
+              "test/profile-runtime-patches.test.js"
             ],
             "outcome": "passed",
-            "summary": "16项直接检查通过，涵盖实际SDK组件的深浅窄宽布局、任务状态、右侧共享任务、真实内容滚底条件。",
-            "verifiedCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
-            "completedAt": "2026-11-05T15:27:26.205861+00:00",
+            "summary": "7项直接检查通过：官方端点保留可选参数、第三方兼容声明不变、插件依赖副本一致。",
+            "verifiedCommit": "992cabae79cda1c44116a7f3a8670232c7d38a84",
+            "completedAt": "2026-11-05T16:06:12.617956+00:00",
             "timeoutMs": 120000
           },
           {
@@ -27007,25 +26978,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
-            "completedAt": "2026-11-05T15:27:26.205861+00:00",
+            "verifiedCommit": "992cabae79cda1c44116a7f3a8670232c7d38a84",
+            "completedAt": "2026-11-05T16:06:12.617956+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "聚焦浏览器中真实SDK控件路径通过；原生客户端需集成换包后确认。"
+          "summary": "真实同模型最小请求从错误填满全部字段变为只填command及description；新客户端原始计算任务待集成装包后确认。"
         },
         "acceptanceCriteria": [
-          "对话及研究侧栏执行期间持续显示当前工作，结束后消失。",
-          "回到最新按钮只在视区下方还有实际内容时出现，滚到底或收起后隐藏。",
-          "模型设置28px操作按钮内16px图标居中显示，不挤压；不改变现有模型配置。"
+          "官方OpenAI Responses明确传strict:false保留工具原本可选字段。",
+          "同一普通计算请求无需错误后台参数或权限升级即可执行。",
+          "权限及后台任务语义校验不变，第三方端点及显式兼容配置不被覆盖。"
         ],
         "risks": [
-          "由原有60eb66b4b及322da8aaa候选提取为当前main的独立提交。",
-          "未运行全功能测试；复杂工作台候选不包含在本交接中。"
+          "仅聚焦检查，未运行全功能测试。",
+          "不修改用户模型配置、应用版本或PPT Skill版本。"
         ],
-        "generatedAt": "2026-11-05T15:27:26.205861+00:00"
+        "generatedAt": "2026-11-05T16:06:12.617956+00:00"
       }
     }
   ],
