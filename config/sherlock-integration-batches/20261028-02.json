@@ -26439,6 +26439,125 @@
         ],
         "generatedAt": "2026-11-05T03:53:48.360437+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记空格与原生表格本地预览",
+        "branch": "codex/feat/notes-native-editable-preview-20261105",
+        "baseCommit": "5be3b9f95f93c43890da8f451a39c9d484cac94a",
+        "tipCommit": "4b20476fa0cc9bd53d0db610c750a8ddbe82d789",
+        "commits": [
+          {
+            "commit": "055845a769f0114475ea4b56fdb3ec41e2c9e3c1",
+            "parents": [
+              "5be3b9f95f93c43890da8f451a39c9d484cac94a"
+            ],
+            "subject": "修复窄笔记表格列菜单的文字挤压和工具按钮遮挡"
+          },
+          {
+            "commit": "a093396f7beba9a1ef0cdca94e41157b5ed2519f",
+            "parents": [
+              "055845a769f0114475ea4b56fdb3ec41e2c9e3c1"
+            ],
+            "subject": "修复空格原生插入消费空行后被误判未完成及无法自动确认"
+          },
+          {
+            "commit": "4b20476fa0cc9bd53d0db610c750a8ddbe82d789",
+            "parents": [
+              "a093396f7beba9a1ef0cdca94e41157b5ed2519f"
+            ],
+            "subject": "优先将空格新增表格清单与代码直接生成可编辑正文"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-surface-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-table.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-operations-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-operations-browser.test.ts",
+              "test/notes-native-table-browser.test.ts",
+              "--testNamePattern",
+              "finishes a saved inline native insertion|previews a native list/code|keeps the native last-column",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "三个浏览器用例通过：成功保存消费空锚点后可自动确认，原生列表和代码可保存重开，窄表格的最右列菜单完整可点。 日志 /tmp/sherlock-notes-native-preview-20261105/notes-browser.log，SHA256 009d9ea06cfff0c4817830f704b11f283653326ffac9ceeee2897ae737483e9c",
+            "verifiedCommit": "4b20476fa0cc9bd53d0db610c750a8ddbe82d789",
+            "completedAt": "2026-11-05T11:12:23.059366+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-surface-prompt-contract.test.js",
+              "test/notes-output-compatibility.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "64 项笔记提示约束和输出兼容聚焦检查通过。 日志 /tmp/sherlock-notes-native-preview-20261105/notes-contract.log，SHA256 d4e9a6de5eea1ccf3b2820e86a5ea4bac1208e554431073fe8e73a25ec0cde39",
+            "verifiedCommit": "4b20476fa0cc9bd53d0db610c750a8ddbe82d789",
+            "completedAt": "2026-11-05T11:12:23.059366+00:00",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。 日志 /tmp/sherlock-notes-native-preview-20261105/typecheck.log，SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "verifiedCommit": "4b20476fa0cc9bd53d0db610c750a8ddbe82d789",
+            "completedAt": "2026-11-05T11:12:23.059366+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Playwright 运行实际 BlockNote 编辑器及 Host 笔记服务，3 个目标场景通过。"
+        },
+        "acceptanceCriteria": [
+          "在正文空白行生成普通表格、清单或代码，返回可编辑的原生块。",
+          "原生插入已经保存并消费锚点时，仍可点击其他段落确认。",
+          "窄屏表格最后一列的原生菜单文字和操作完整可用。"
+        ],
+        "risks": [
+          "已核验浏览器夹具和运行时契约，macOS 签名包内的实测待合并构建后进行。",
+          "复杂工作台生成的源码留在原分支。"
+        ],
+        "generatedAt": "2026-11-05T11:12:23.059366+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -27605,6 +27724,29 @@
         "test/image-generation-client.test.js"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-operations-browser.test.ts",
+        "test/notes-native-table-browser.test.ts",
+        "--testNamePattern",
+        "finishes a saved inline native insertion|previews a native list/code|keeps the native last-column",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-surface-prompt-contract.test.js",
+        "test/notes-output-compatibility.test.js"
+      ],
+      "timeoutMs": 60000
     }
   ],
   "mainSynchronizations": []
