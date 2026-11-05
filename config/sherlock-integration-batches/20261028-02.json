@@ -26558,6 +26558,208 @@
         ],
         "generatedAt": "2026-11-05T11:12:23.059366+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "技能菜单窄栏配图与中英文简介、会话标题、多图预览和交付卡片安装顺序",
+        "branch": "codex/feat/client-menu-gallery-20261105",
+        "baseCommit": "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
+        "tipCommit": "64a7a768c4772e0e6e9397c854eb3dac68ed69c9",
+        "commits": [
+          {
+            "commit": "ebbe6a2ae2ae69494bb0ca59a1c25aa6f0effe79",
+            "parents": [
+              "d6833b8d88c631c1dcfcaca1bc122be2f3921b11"
+            ],
+            "subject": "补全斜杠菜单研报写作的中英文简介"
+          },
+          {
+            "commit": "de5594f7b99a87022d0fa5f89c7e815f59601fc3",
+            "parents": [
+              "ebbe6a2ae2ae69494bb0ca59a1c25aa6f0effe79"
+            ],
+            "subject": "修复窄侧栏技能菜单的 PPT 和研报配图"
+          },
+          {
+            "commit": "06065a45f56991b4c2228cc77db051e0a86db1dd",
+            "parents": [
+              "de5594f7b99a87022d0fa5f89c7e815f59601fc3"
+            ],
+            "subject": "为多图片放大预览增加左右按钮和键盘切换"
+          },
+          {
+            "commit": "12a846635c12cf2ba939221c40d8c213615b4284",
+            "parents": [
+              "06065a45f56991b4c2228cc77db051e0a86db1dd"
+            ],
+            "subject": "按用户主题和任务生成会话标题并过滤技能路径噪声"
+          },
+          {
+            "commit": "1726bad45e79ffe136625870d1c072316da305ce",
+            "parents": [
+              "12a846635c12cf2ba939221c40d8c213615b4284"
+            ],
+            "subject": "对齐已集成的技能菜单单列滚动并核验窄侧栏"
+          },
+          {
+            "commit": "b5d8d81ac5e88582be71768937a95ee8ef628162",
+            "parents": [
+              "1726bad45e79ffe136625870d1c072316da305ce"
+            ],
+            "subject": "修复：多图预览到达边界后保持键盘焦点在弹窗内"
+          },
+          {
+            "commit": "a320a28eace967e359a6240d56449ee29abd9c21",
+            "parents": [
+              "d6833b8d88c631c1dcfcaca1bc122be2f3921b11"
+            ],
+            "subject": "修复：在笔记初始化后安装交付卡片前端补丁"
+          },
+          {
+            "commit": "64a7a768c4772e0e6e9397c854eb3dac68ed69c9",
+            "parents": [
+              "b5d8d81ac5e88582be71768937a95ee8ef628162",
+              "a320a28eace967e359a6240d56449ee29abd9c21"
+            ],
+            "subject": "合入笔记初始化后的交付卡片补丁顺序修复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/image-preview-gallery.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/session-title-subject.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-inline-references.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integration-ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-command-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/composer-menu-drop-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/composer-menu-drop-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/image-preview-gallery-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/image-preview-gallery-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/session-title-subject.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-command-menu.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "源提交无空白异常，a320 原提交已作为父提交纳入。/tmp/client-menu-gallery-handoff-20261105/tip-integrity.log SHA256 304ec1dacf68fce1fd999d4e59e392993da36e2321e37dd81ca15d415d604574",
+            "verifiedCommit": "64a7a768c4772e0e6e9397c854eb3dac68ed69c9",
+            "completedAt": "2026-11-05T11:58:52.679172+00:00",
+            "timeoutMs": 10000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。/tmp/client-menu-gallery-handoff-20261105/tip-typecheck.log SHA256 f3fc9c12ba0a5bb8fc95275ad82a99a28b1497de74903ae4d6b422bcaa1c63af",
+            "verifiedCommit": "64a7a768c4772e0e6e9397c854eb3dac68ed69c9",
+            "completedAt": "2026-11-05T11:58:52.794882+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/skill-command-menu.test.ts",
+              "test/integration-english-ui.test.ts",
+              "test/session-title-subject.test.js",
+              "test/image-preview-gallery-browser.test.js",
+              "test/deliverable-cards.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "技能命令、英文界面、会话标题、图片图库和交付卡片 50 项通过。/tmp/client-menu-gallery-handoff-20261105/tip-focus.log SHA256 8db14fb0223c8d9f644488c4542d4bdb340021c5a923b5dc00c79b2e71329033",
+            "verifiedCommit": "64a7a768c4772e0e6e9397c854eb3dac68ed69c9",
+            "completedAt": "2026-11-05T11:58:58.478059+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/composer-menu-drop-browser.test.js",
+              "-t",
+              "skill options|skill illustrations|translated pinned skills",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "原生 popup 浏览器 5 项通过，包括窄研究侧栏的两个插图与溢出单列滚动。/tmp/client-menu-gallery-handoff-20261105/tip-skills-browser.log SHA256 a38d57d4512cb294841cb0095cd19159a3a261ebe26fbb7aaa792770ef002cfc",
+            "verifiedCommit": "64a7a768c4772e0e6e9397c854eb3dac68ed69c9",
+            "completedAt": "2026-11-05T11:59:00.109727+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 中的真实 SDK 技能 popup 与多图预览路径已验；深浅主题截图见 /tmp/composer-menu-drop-20261027/research-side-skills-light.png 和 /tmp/composer-menu-drop-20261027/research-side-skills-dark.png。macOS 打包后的主界面由集成会话验收。"
+        },
+        "acceptanceCriteria": [
+          "右侧斜杠菜单显示两张内置技能配图，保持菜单边界内单列滚动。",
+          "研报写作在中文界面显示易方达配色规范简介，在英文界面保持英文。",
+          "同组多图可用左右箭头和键盘切换，首尾操作后 Tab 仍停留预览内。",
+          "新会话标题优先提取用户主题和任务，过滤斜杠技能、附件路径与链接噪声。",
+          "保留本地 main 的 a320a28ea 顺序修复，交付补丁在笔记会话安装后运行。"
+        ],
+        "risks": [
+          "本次隔离分支只跑直接受影响的聚焦用例。合并后实际安装链和真实 App 仍需核验。",
+          "历史手工命名会话不批量重命名。",
+          "视觉证据为 Chromium fixture，非共享正式客户端运行截图。"
+        ],
+        "generatedAt": "2026-11-05T12:06:05.944425+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -27747,6 +27949,43 @@
         "test/notes-output-compatibility.test.js"
       ],
       "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "d6833b8d88c631c1dcfcaca1bc122be2f3921b11",
+        "HEAD"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/skill-command-menu.test.ts",
+        "test/integration-english-ui.test.ts",
+        "test/session-title-subject.test.js",
+        "test/image-preview-gallery-browser.test.js",
+        "test/deliverable-cards.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/composer-menu-drop-browser.test.js",
+        "-t",
+        "skill options|skill illustrations|translated pinned skills",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
