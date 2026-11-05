@@ -90,7 +90,7 @@ PowerPoint OOXML 使用 pt。若编辑环境使用 96dpi 像素，换算为：
 - `standard-narrative-title`：15pt、加粗。
 - `standard-visual-title`：10pt、常规、不加粗，中文 run 显式使用 `华文黑体_易方达`。
 - `standard-narrative-body`：12pt、正文段落显式 150% 行距；完整长段不得全部加粗，局部关键词强调可保留。
-- `standard-narrative-title` 和 `standard-narrative-body` 均显式顶部锚定 `a:bodyPr anchor="t"`；正文实际首行位于小标题实际文字底边下方 12–16px。标题框高度跟随真实行数，不在大框中统一 middle；少量正文也从顶部开始。逐页导出两者的 `textLayout: {source: "rendered", bbox: [x, y, width, height], ...}`，bbox 是最终渲染文字边界，不是 Shape 边界。
+- `standard-narrative-title` 和 `standard-narrative-body` 均显式顶部锚定 `a:bodyPr anchor="t"`；正文实际首行位于小标题实际文字底边下方一行正文行高（标准 12pt／150% 行距为 24px，按 960×540 画布归一化）。标题框高度跟随真实行数，不在大框中统一 middle；少量正文也从顶部开始。逐页导出两者的 `textLayout: {source: "rendered", bbox: [x, y, width, height], ...}`，bbox 是最终渲染文字边界，不是 Shape 边界。
 
 `qa_efund_pptx.py` 会按对象名执行这组检查。该页型只在内容确实形成“解释 + 主视觉/证据”时使用，不是整稿配额。
 

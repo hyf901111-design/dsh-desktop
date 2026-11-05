@@ -8,7 +8,7 @@
 | --- | --- |
 | 封面部门、姓名等可编辑身份行清除占位空格，保持标准左边缘 | [封面契约](cover-contract.md)：替换后逐段拼接 runs 清理首尾空白；保留锁定的段落格式和框体几何。`check_efund_cover.py` 拦截 `cover-text-edge-whitespace`，不能靠移动文本框掩盖空格。 |
 | 蓝色表头文字垂直居中，与正文同列合理对齐 | [表格契约](table-layout-contract.md)：原生单元格显式设置 `anchor="ctr"` 和相等的上下内边距；同列表头与正文左对齐，左右内边距和段落缩进一致。`check_efund_delivery.py` 检查最终 XML 的锚定、对齐、边距、缩进及首尾空白。数字/短标签例外和拼文本框表格仍按原契约逐表核验。 |
-| 小标题后的正文靠上紧接，短文不在空区居中 | [1.1.1 成品规范](delivery-111.md) 与[实际文字边界](package-and-render-checks.md)：小标题、正文显式 top anchor；按真实标题文字高度收紧文本框，正文首行在标题实际底边下方 12–16px。标准说明正文保持 12pt/150% 行距，继承段距不变，以真实换行和段落分组检查间距；不能靠空段落填充或估算 bbox 通过。`check_efund_delivery.py` 与 `check_efund_readability.py` 分别核验最终 XML 和渲染文字。 |
+| 小标题后的正文靠上紧接，短文不在空区居中 | [1.1.1 成品规范](delivery-111.md) 与[实际文字边界](package-and-render-checks.md)：小标题、正文显式 top anchor；按真实标题文字高度收紧文本框，正文首行在标题实际底边下方一行正文行高（标准 12pt／150% 行距为 24px，按 960×540 画布归一化）。标准说明正文保持 12pt/150% 行距，继承段距不变，以真实换行和段落分组检查间距；不能靠空段落填充或估算 bbox 通过。`check_efund_delivery.py` 与 `check_efund_readability.py` 分别核验最终 XML 和渲染文字。 |
 | 已知 OOXML 和图表兼容问题在交付前阻断 | [成品包检查](package-and-render-checks.md)：检查真实逻辑页、关系、图表轴 ID/交叉轴引用和折线标签位置；结构检查继续拦截空 `AppVersion`、文本属性乱序和重复互斥属性。规范化只写新副本，保留数据符号、文字、字号和几何；重新保存后旧哈希与检查结果失效。 |
 
 ## 通过检查的范围

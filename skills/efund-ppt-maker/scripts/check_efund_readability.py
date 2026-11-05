@@ -59,9 +59,10 @@ def audit_layout(data):
         if len(boxes) == 2:
             title, body = boxes['standard-narrative-title'], boxes['standard-narrative-body']
             gap = body[1] - title[1] - title[3]
-            # The contract is 12–16px between actual glyph bounds, with 2px
-            # tolerance for renderer rounding. Shape bounds cannot prove it.
-            if not 10 * scale <= gap <= 18 * scale:
+            # One standard body line is 12pt at 150% spacing: 24px at
+            # 960px width. Allow 2px renderer rounding around actual glyph
+            # bounds; shape bounds and blank paragraphs cannot prove it.
+            if not 22 * scale <= gap <= 26 * scale:
                 add('narrative-title-body-gap', *narrative.values())
         body = boxes.get('standard-narrative-body')
         if body:
