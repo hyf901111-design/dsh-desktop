@@ -1,3 +1,5 @@
+import { mountImageContextMenu } from './image-context-menu.mjs'
+
 /** Project native tool lifecycle, including nested code-mode calls, into one image card. */
 export function imageGenerationCalls(nodes,running){
  const calls=new Map()
@@ -45,40 +47,11 @@ body [role=menu]:has([data-odyssey-image-action]){z-index:2147483001}
 `
 
 function GeneratedConversationImage({image,loadImage,t}){
- const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
- const [menu,setMenu]=react.useState(null),[notice,setNotice]=react.useState(''),busy=react.useRef(false)
- const en=document.documentElement.dataset.odysseyLocale==='en'
- const close=react.useCallback(()=>setMenu(null),[])
- const anchor=react.useCallback(()=>menu?{left:menu.x,right:menu.x,top:menu.y,bottom:menu.y,width:0,height:0}:null,[menu])
- react.useEffect(()=>{
-  if(!menu)return
-  const escape=event=>{if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();close()}}
-  window.addEventListener('keydown',escape,true)
-  return()=>window.removeEventListener('keydown',escape,true)
- },[menu,close])
- react.useEffect(()=>{if(!notice)return;const id=setTimeout(()=>setNotice(''),2800);return()=>clearTimeout(id)},[notice])
- const act=async action=>{
-  close();if(busy.current)return;busy.current=true
-  try{
-   if(!window.dshDesktop?.imageAction||!loadImage)throw Error('unavailable')
-   const url=await loadImage(image),response=await fetch(url)
-   if(!response.ok)throw Error('unavailable')
-   const blob=await response.blob();if(blob.type!=='image/png'||blob.size>20*1024*1024)throw Error('invalid')
-   const result=await window.dshDesktop.imageAction({action,name:image.name||'生成图片.png',data:new Uint8Array(await blob.arrayBuffer())})
-   if(!result?.ok)throw Error('failed')
-   if(!result.cancelled)setNotice(en?(action==='copy'?'Image copied':'Image downloaded'):(action==='copy'?'已复制图片':'已下载图片'))
-  }catch{setNotice(en?'Image action failed. Please try again.':'图片操作失败，请重试。')}finally{busy.current=false}
- }
- const icon=path=>jsx('svg',{viewBox:'0 0 24 24',width:16,height:16,fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true,children:jsx('path',{d:path})})
- const items=[{id:'copy',label:jsx('span',{'data-odyssey-image-action':'copy',children:en?'Copy Image':'复制图片'}),icon:icon('M8 8h12v12H8zM4 16V4h12')},{id:'download',label:jsx('span',{'data-odyssey-image-action':'download',children:en?'Download Image':'下载图片'}),icon:icon('M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5')}]
- return jsxs('div',{className:'odyssey-image-generation-result',onContextMenu:event=>{
-  if(!event.target?.closest?.('img'))return
-  event.preventDefault();event.stopPropagation()
-  setMenu({x:event.clientX,y:event.clientY,host:event.target.closest('[aria-modal="true"]')||document.body})
- },children:[jsx(_deepseek_ai_dsh_client_ui_attachment.ImageGallery,{images:[{attachment:image}],load:loadImage??(()=>Promise.reject(new Error(t('image.serviceUnavailable')))),align:'start',labels:messageImageLabels(t)}),
- menu&&react_dom.createPortal(jsx(_deepseek_ai_dsh_client_ui_primitives.Menu,{open:true,anchor:null,className:'odyssey-image-menu-anchor',items,onSelect:act,onClose:close,portal:true,getAnchorRect:anchor}),menu.host),
- notice&&react_dom.createPortal(jsx('div',{role:'status',className:'odyssey-image-action-notice',children:notice}),document.body)
- ]})
+ const jsx=react_jsx_runtime.jsx
+ return jsx('div',{className:'odyssey-image-generation-result',children:jsx(_deepseek_ai_dsh_client_ui_attachment.ImageGallery,{
+  images:[{attachment:image}],load:loadImage??(()=>Promise.reject(new Error(t('image.serviceUnavailable')))),
+  align:'start',labels:messageImageLabels(t)
+ })})
 }
 
 function ImageGenerationOutputs({nodes,running,loadImage,t}){
@@ -92,11 +65,13 @@ function ImageGenerationOutputs({nodes,running,loadImage,t}){
 }
 
 export function patchImageGenerationClient(source){
- const marker='/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V3 */'
+ const marker='/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V4 */'
  if(source.includes(marker))return source
  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Image generation client anchor drifted: '+before.slice(0,90));source=source.replace(before,()=>after)}
- const functions=`${marker}\n${imageGenerationCalls.toString()}\n${GeneratedConversationImage.toString()}\n${ImageGenerationOutputs.toString()}\nif(typeof document!=='undefined'&&!document.getElementById('odyssey-image-generation-style')){const style=document.createElement('style');style.id='odyssey-image-generation-style';style.textContent=${JSON.stringify(IMAGE_GENERATION_CSS)};document.head.append(style)}\n`
- const previous=source.search(/\/\* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V[12] \*\//)
+ const functions=`${marker}\n${imageGenerationCalls.toString()}\n${GeneratedConversationImage.toString()}\n${ImageGenerationOutputs.toString()}\n${mountImageContextMenu.toString()}\nif(typeof document!=='undefined'&&!document.getElementById('odyssey-image-generation-style')){const style=document.createElement('style');style.id='odyssey-image-generation-style';style.textContent=${JSON.stringify(IMAGE_GENERATION_CSS)};document.head.append(style)}\n`
+ const registration='ctx.effect(() => ctx.locale.register(NS, {'
+ replace(registration,'ctx.effect(() => mountImageContextMenu({jsx:react_jsx_runtime.jsx,Menu:_deepseek_ai_dsh_client_ui_primitives.Menu,createRoot:require("react-dom/client").createRoot,createPortal:react_dom.createPortal}));\n\t\t\t'+registration)
+ const previous=source.search(/\/\* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V[123] \*\//)
  if(previous>=0){const end=source.indexOf('function ToolImageOutputs(',previous);if(end<0)throw Error('Image generation legacy boundary drifted');return source.slice(0,previous)+functions+source.slice(end)}
  replace('function ToolImageOutputs(',functions+'function ToolImageOutputs(')
  const call='(0, react_jsx_runtime.jsx)(ToolImageOutputs, { nodes: activityNodes, openFile: seatProps.openFile, loadImage: seatProps.loadImage, t })'
