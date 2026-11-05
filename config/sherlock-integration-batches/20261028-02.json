@@ -27625,6 +27625,108 @@
         "risks": [],
         "generatedAt": "2026-11-05T22:26:03.156Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话测试夹具按生产顺序卸载外层补丁",
+        "branch": "codex/feat/integration-test-overlays-20261106",
+        "baseCommit": "445fcf8b37e441bc21bd8effbb9568bc0ff2c5d6",
+        "tipCommit": "ac62577ef9f1d501f10e6ef284391f5cdafe042a",
+        "commits": [
+          {
+            "commit": "ac62577ef9f1d501f10e6ef284391f5cdafe042a",
+            "parents": [
+              "445fcf8b37e441bc21bd8effbb9568bc0ff2c5d6"
+            ],
+            "subject": "修复：按生产顺序卸载对话测试夹具外层补丁"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-progress-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/strip-conversation-live-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-theme-menu-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/conversation-submission.test.js",
+              "test/conversation-response-progress.test.js",
+              "test/conversation-response-progress-browser.test.js",
+              "test/workbench-theme-menu-browser.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "--reporter=dot",
+              "--maxWorkers=1",
+              "--fileParallelism=false"
+            ],
+            "outcome": "passed",
+            "summary": "5个直接受影响文件58项通过，62.57秒。之后仅移除测试内一个未使用import，相关unwinds用例另行复验1项通过；生产代码及断言未改。",
+            "verifiedCommit": "ac62577ef9f1d501f10e6ef284391f5cdafe042a",
+            "completedAt": "2026-11-05T22:25:37.373Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/home-guide-native-browser.test.js",
+              "-t",
+              "commits one authored|one visible Arrange|retains the saved example",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已有批次声明的聚焦筛选：6项通过、82项未选中，91.81秒；未运行整套探索演示检查。",
+            "verifiedCommit": "ac62577ef9f1d501f10e6ef284391f5cdafe042a",
+            "completedAt": "2026-11-05T22:25:37.373Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "只修改测试/夹具；已有生产渲染器浏览器测试验证了挂载与交互，不修改或重建共享客户端。"
+        },
+        "acceptanceCriteria": [
+          "新增外层live-activity与voice先于submission/progress及grid剥离",
+          "相关提交、时钟、主题菜单、页签拖动与首页演示聚焦检查通过",
+          "不修改生产剥离保护、不删除断言、不降低失败门禁",
+          "不修改金融组件公共夹具以避免并发冲突"
+        ],
+        "risks": [
+          "本交接只含测试适配，完整批次恢复与精确提交用户接受仍由原session执行。"
+        ],
+        "generatedAt": "2026-11-05T22:25:37.373Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -28999,6 +29101,32 @@
         "test/integration-batch.test.ts"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/conversation-submission.test.js",
+        "test/conversation-response-progress.test.js",
+        "test/conversation-response-progress-browser.test.js",
+        "test/workbench-theme-menu-browser.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "--reporter=dot",
+        "--maxWorkers=1",
+        "--fileParallelism=false"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/home-guide-native-browser.test.js",
+        "-t",
+        "commits one authored|one visible Arrange|retains the saved example",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
