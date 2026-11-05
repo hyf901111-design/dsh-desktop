@@ -27423,6 +27423,91 @@
         ],
         "generatedAt": "2026-11-05T19:57:43.585837+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复集成批次的历史合并登记",
+        "branch": "codex/feat/integration-record-recovery-20261106",
+        "baseCommit": "a320a28eace967e359a6240d56449ee29abd9c21",
+        "tipCommit": "9651c26c05e4ae0eaa3b5c383c5bcb03c706d6cd",
+        "commits": [
+          {
+            "commit": "9651c26c05e4ae0eaa3b5c383c5bcb03c706d6cd",
+            "parents": [
+              "a320a28eace967e359a6240d56449ee29abd9c21"
+            ],
+            "subject": "修复：按真实历史合并恢复集成登记"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-multi-session-integration-runbook.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-cli-outcome.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-executor.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-executor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/manage-sherlock-integration.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-reconcile-records.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/integration-reconcile-records.test.ts",
+              "test/integration-cli-contract.test.ts",
+              "test/integration-preview.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "真实 Git 回归及既有 CLI、预览契约共 11 项通过",
+            "verifiedCommit": "9651c26c05e4ae0eaa3b5c383c5bcb03c706d6cd",
+            "completedAt": "2026-11-05T22:00:20.712Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 检查通过",
+            "verifiedCommit": "9651c26c05e4ae0eaa3b5c383c5bcb03c706d6cd",
+            "completedAt": "2026-11-05T22:00:20.712Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "只修改 Git 集成工具与手册，无客户端界面改动"
+        },
+        "acceptanceCriteria": [
+          "精确核对 owner、集成提交、规范主干和原清单摘要，识别真实的历史合并边界",
+          "检查全部通过后登记原合并 SHA 与验证 SHA，失败保留原清单和租约",
+          "恢复历史主干登记，不新增虚假的主干合并"
+        ],
+        "risks": [
+          "正式验收仍须依照精确候选提交、批次全部声明检查和用户确认流程"
+        ],
+        "generatedAt": "2026-11-05T22:00:20.712Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -28776,6 +28861,16 @@
         "test/conversation-image-intake.test.js",
         "test/dsh-file-drop-compat.test.ts",
         "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/integration-reconcile-records.test.ts",
+        "test/integration-cli-contract.test.ts",
+        "test/integration-preview.test.ts"
       ],
       "timeoutMs": 120000
     }
