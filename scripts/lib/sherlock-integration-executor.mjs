@@ -316,9 +316,16 @@ function requirePassingPreflight(repository, phase, manifestPath, featureBranch,
   return report
 }
 
-function runDeclaredChecks(repository, checks, verifiedCommit, now, label = '已在暂存合并树执行') {
+function declaredCheckFailure(diagnostic) {
+  const error = new Error(`集成检查失败：${diagnostic}`)
+  error.checkFailure = true
+  return error
+}
+
+function runDeclaredChecks(repository, checks, verifiedCommit, now, { label = '已在暂存合并树执行', collectFailures = false } = {}) {
   const evidence = []
-  for (const check of checks) {
+  const failures = []
+  for (const [index, check] of checks.entries()) {
     const result = spawnSync(check.argv[0], check.argv.slice(1), {
       cwd: repository,
       encoding: 'utf8',
@@ -328,9 +335,11 @@ function runDeclaredChecks(repository, checks, verifiedCommit, now, label = '已
     })
     if (result.error || result.status !== 0) {
       const diagnostic = result.error?.message || result.stderr || result.stdout || `退出码 ${result.status}`
-      const error = new Error(`集成检查失败：${check.argv.join(' ')}；${diagnostic.trim()}`)
-      error.checkFailure = true
-      throw error
+      const command = check.argv.join(' ')
+      if (!collectFailures) throw declaredCheckFailure(`${command}；${diagnostic.trim()}`)
+      const detail = diagnostic.trim()
+      failures.push(`第 ${index + 1} 组 ${command}；${detail.length > 5000 ? detail.slice(0, 5000) + '…' : detail}`)
+      continue
     }
     evidence.push({
       argv: [...check.argv],
@@ -341,6 +350,7 @@ function runDeclaredChecks(repository, checks, verifiedCommit, now, label = '已
       timeoutMs: check.timeoutMs
     })
   }
+  if (failures.length) throw declaredCheckFailure(`共 ${failures.length}/${checks.length} 组未通过，未补登记。\n${failures.join('\n\n')}`)
   return evidence
 }
 
@@ -869,7 +879,9 @@ export function reconcileIntegrationRecords({ integrationRepository, manifestPat
 
   let checks
   try {
-    checks = runDeclaredChecks(repository, manifest.integrationChecks, context.head, now, '已在当前集成提交执行')
+    checks = runDeclaredChecks(repository, manifest.integrationChecks, context.head, now, {
+      label: '已在当前集成提交执行', collectFailures: true
+    })
   } catch (error) {
     if (error?.checkFailure) fail(error.message)
     throw error

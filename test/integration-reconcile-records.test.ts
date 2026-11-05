@@ -41,9 +41,14 @@ function setup({ exitCode = 0, nestedFeature = false } = {}) {
   const manifestPath = path.join(integration, `config/sherlock-integration-batches/${batchId}.json`)
   const checkLog = path.join(f.root, 'check-log.txt')
   const checkScript = `const head = require('node:child_process').execFileSync('git', ['rev-parse', 'HEAD']); require('node:fs').appendFileSync(${JSON.stringify(checkLog)}, head); process.exit(${exitCode})`
+  const followupCheckLog = path.join(f.root, 'followup-check-log.txt')
+  const followupCheckScript = checkScript.replace(JSON.stringify(checkLog), JSON.stringify(followupCheckLog)).replace(`process.exit(${exitCode})`, 'process.exit(7)')
   adoptIntegrationBatch({
     integrationRepository: integration, batchId, handoffPaths: [handoff(a, 'alpha'), handoff(b, 'beta')],
-    integrationChecks: [{ argv: [process.execPath, '-e', checkScript], timeoutMs: 5000 }], dryRun: false, now
+    integrationChecks: [
+      { argv: [process.execPath, '-e', checkScript], timeoutMs: 5000 },
+      ...(exitCode ? [{ argv: [process.execPath, '-e', followupCheckScript] as [string, ...string[]], timeoutMs: 5000 }] : [])
+    ], dryRun: false, now
   })
   const ownerToken = readPersistedIntegrationOwnerToken(integration)
   const options = { integrationRepository: integration, manifestPath, ownerToken, dryRun: false, now }
@@ -67,7 +72,7 @@ function setup({ exitCode = 0, nestedFeature = false } = {}) {
   function manifest(): IntegrationBatchManifest {
     return JSON.parse(readFileSync(manifestPath, 'utf8'))
   }
-  return { f, base, integration, manifestPath, checkLog, mainTip, alphaMerge, betaMerge, tip, run, manifest }
+  return { f, base, integration, manifestPath, checkLog, followupCheckLog, mainTip, alphaMerge, betaMerge, tip, run, manifest }
 }
 
 afterEach(() => {
@@ -105,13 +110,16 @@ it('records earlier Git merges using one verification of the current integration
   expect(preflightIntegrationAction({ repository: s.integration, phase: 'accept', manifestPath: s.manifestPath, expectedAcceptedTip: record.afterCommit }).ok).toBe(true)
 }, 30000)
 
-it('leaves the manifest and lease untouched if a declared check fails', () => {
+it('collects all failed checks against one commit and leaves the manifest and lease untouched', () => {
   const s = setup({ exitCode: 9 })
   const before = s.f.snapshot()
   const result = s.run()
   expect(result.status).toBe(1)
   expect(result.stderr).toMatch(/集成检查失败/)
+  expect(result.stderr).toContain('退出码 9')
+  expect(result.stderr).toContain('退出码 7')
   expect(readFileSync(s.checkLog, 'utf8')).toBe(s.tip + '\n')
+  expect(readFileSync(s.followupCheckLog, 'utf8')).toBe(s.tip + '\n')
   expect(s.f.snapshot()).toEqual(before)
 }, 20000)
 
