@@ -26916,6 +26916,117 @@
         ],
         "generatedAt": "2026-11-05T14:08:05.217180+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "持续任务反馈、真实滚底状态及模型设置图标",
+        "branch": "codex/feat/runtime-followups-20261105",
+        "baseCommit": "a320a28eace967e359a6240d56449ee29abd9c21",
+        "tipCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
+        "commits": [
+          {
+            "commit": "02f7aa887788bd5570aed4b90048a2c09d931061",
+            "parents": [
+              "a320a28eace967e359a6240d56449ee29abd9c21"
+            ],
+            "subject": "修复：模型配置操作图标保持清晰居中"
+          },
+          {
+            "commit": "ecb6a22b861763af614a27a800b87412fc175ba6",
+            "parents": [
+              "02f7aa887788bd5570aed4b90048a2c09d931061"
+            ],
+            "subject": "优化：对话持续反馈当前任务并准确显示滚底按钮"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-reading-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-live-activity-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-reading-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/model-settings-actions-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/model-settings-actions-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/model-settings-actions-browser.test.js",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/figma-reading-layout.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "16项直接检查通过，涵盖实际SDK组件的深浅窄宽布局、任务状态、右侧共享任务、真实内容滚底条件。",
+            "verifiedCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
+            "completedAt": "2026-11-05T15:27:26.205861+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "ecb6a22b861763af614a27a800b87412fc175ba6",
+            "completedAt": "2026-11-05T15:27:26.205861+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "聚焦浏览器中真实SDK控件路径通过；原生客户端需集成换包后确认。"
+        },
+        "acceptanceCriteria": [
+          "对话及研究侧栏执行期间持续显示当前工作，结束后消失。",
+          "回到最新按钮只在视区下方还有实际内容时出现，滚到底或收起后隐藏。",
+          "模型设置28px操作按钮内16px图标居中显示，不挤压；不改变现有模型配置。"
+        ],
+        "risks": [
+          "由原有60eb66b4b及322da8aaa候选提取为当前main的独立提交。",
+          "未运行全功能测试；复杂工作台候选不包含在本交接中。"
+        ],
+        "generatedAt": "2026-11-05T15:27:26.205861+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -28209,6 +28320,18 @@
         "test/image-actions.test.ts",
         "test/context-menu-home.test.js",
         "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/model-settings-actions-browser.test.js",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
+        "test/figma-reading-layout.test.ts"
       ],
       "timeoutMs": 120000
     }
