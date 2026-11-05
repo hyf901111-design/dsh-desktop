@@ -67,7 +67,7 @@ body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] 
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-grid-active]{border-color:#ff9900!important;box-shadow:0 4px 16px #0008!important;transition:none!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header{border-bottom:1px solid #303030!important;border-radius:0!important;background:#111!important;color:#ff9900!important;font-family:var(--sherlock-font-sans)!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header button:hover{background:#272015!important}
-body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header button:not([data-workbench-refresh]):hover{color:#ffb64a!important}
+body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header>button{color:var(--grid-muted)!important}
 /* Series visibility is not a primary action: keep the real series swatches. */
 body [data-ework-grid][data-workbench-style=openterminal] .rScV5Q_chartLegend button[aria-pressed]{background:transparent!important;color:var(--grid-text)!important;border-color:transparent!important}
 /* Ordinary, derived and legacy maps share these nodes; editors keep their
