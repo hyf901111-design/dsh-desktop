@@ -6,6 +6,7 @@ import {patchAssistantReveal} from './lib/assistant-reveal.mjs'
 import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
 import {patchConversationThinkingStatus} from './lib/conversation-thinking-status.mjs'
+import {patchConversationLiveActivity,stripConversationLiveActivity} from './lib/conversation-live-activity.mjs'
 import {stripPptxAnnotationInput,patchPptxAnnotationInput} from './lib/pptx-annotation-native.mjs'
 import {stripPptxAnnotationMessages,patchPptxAnnotationMessages} from './lib/pptx-annotation-message.mjs'
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
@@ -192,7 +193,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(readFileSync(gridConversationPath,'utf8')))
+const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(readFileSync(gridConversationPath,'utf8'))))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
 const sidebarNewNotePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js')
@@ -365,3 +366,5 @@ writeFileSync(conversationPath,patchComposerVoice(readFileSync(conversationPath,
 
 // Keep image generation visible outside the folded execution details.
 writeFileSync(conversationPath,patchImageGenerationClient(readFileSync(conversationPath,'utf8')))
+// One live, read-only activity row follows the final native conversation flow.
+writeFileSync(conversationPath,patchConversationLiveActivity(readFileSync(conversationPath,'utf8')))

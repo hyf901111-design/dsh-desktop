@@ -7,16 +7,42 @@ function exact(source, before, after) {
   return source.replace(before, after)
 }
 const helpers = `
+function conversationHasContentBelow(local, scroller) {
+  if(!local||!scroller||scroller.clientHeight<=0)return false;
+  const viewport=scroller.getBoundingClientRect(),bottom=viewport.top+scroller.clientTop+scroller.clientHeight;
+  const column=local.querySelector('[data-chat-flow]');
+  if(!column)return false;
+  // The scroll height includes composer clearance and bottom breathing room.
+  // Only rendered messages/activity count as content that remains to be read.
+  return [...column.children].some(node=>{
+    const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
+    return rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&rect.bottom>bottom+2;
+  });
+}
 function OdysseyReadingStatus({ listRef, visible, onClick }) {
   const [host, setHost] = react.useState(null);
+  const [below,setBelow]=react.useState(false);
   react.useLayoutEffect(() => {
     const local = listRef.current;
     const pane = local?.closest('.sRp_root,.wSkVaW_root');
     setHost(pane?.querySelector('[data-odyssey-reading-status]') ?? null);
   });
-  if (!host || !visible) return null;
+  react.useLayoutEffect(()=>{
+    const local=listRef.current,scroller=local&&scrollerOf(local);
+    if(!local||!scroller){setBelow(false);return;}
+    let frame=0;
+    const measure=()=>{frame=0;setBelow(conversationHasContentBelow(local,scroller));};
+    const schedule=()=>{if(!frame)frame=requestAnimationFrame(measure);};
+    measure();scroller.addEventListener('scroll',schedule,{passive:true});window.addEventListener('resize',schedule);
+    const resize=new ResizeObserver(schedule);resize.observe(scroller);resize.observe(local);
+    const column=local.querySelector('[data-chat-flow]');if(column)resize.observe(column);
+    const mutations=new MutationObserver(schedule);mutations.observe(local,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','class','hidden','open']});
+    return()=>{if(frame)cancelAnimationFrame(frame);resize.disconnect();mutations.disconnect();scroller.removeEventListener('scroll',schedule);window.removeEventListener('resize',schedule);};
+  },[listRef,visible]);
+  if (!host || !visible || !below) return null;
+  const label=document.documentElement.dataset.odysseyLocale==='en'||document.documentElement.lang?.startsWith('en')?'Back to latest':'回到最新';
   return react_dom.createPortal(react_jsx_runtime.jsx('button', {
-    type:'button', onClick, 'aria-label':'回到最新', title:'回到最新',
+    type:'button', onClick, 'aria-label':label, title:label,
     children:react_jsx_runtime.jsx('svg', {
       width:20, height:20, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor',
       strokeWidth:1.5, strokeLinecap:'round', strokeLinejoin:'round', 'aria-hidden':true,
@@ -56,8 +82,8 @@ export function patchFigmaReadingConversation(source) {
     'if (destination === null || !destination.isConnected) { composerPortalHost.remove(); publishComposerHeight(0); return; }\n\t\t\t\tif (composerPortalHost.parentElement === destination) return;');
   const marker='/* odyssey:reading-layout:20260912 */';
   if(source.includes(marker)) {
-    const a=source.indexOf('function OdysseyReadingStatus('), b=source.indexOf('function useOdysseyCompactTasks(',a);
-    const h=helpers.indexOf('function OdysseyReadingStatus('), e=helpers.indexOf('function useOdysseyCompactTasks(',h);
+    const a=source.indexOf('function conversationHasContentBelow(')>=0?source.indexOf('function conversationHasContentBelow('):source.indexOf('function OdysseyReadingStatus('), b=source.indexOf('function useOdysseyCompactTasks(',a);
+    const h=helpers.indexOf('function conversationHasContentBelow('), e=helpers.indexOf('function useOdysseyCompactTasks(',h);
     if(a<0||b<a)throw Error('Reading status/run info boundary drifted');
     // The compact observer owns its preceding marker and measured footer budget.
     // Leave that whole region intact when refreshing only status/run-info helpers.

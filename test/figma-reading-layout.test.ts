@@ -9,10 +9,12 @@ function fn(name: string) {
 }
 describe('Figma long-content reading contract',()=>{
   it('detaches the composer when Research has no connected sidebar and reuses it on reopening',()=>{
-    const start=source.indexOf('const destination = research ? researchSidebarSnapshot.composerHost');
+    const destination=/const destination = (research|sidebarMode) \? researchSidebarSnapshot\.composerHost/.exec(source);
+    expect(destination).not.toBeNull();
+    const start=destination!.index;
     const end=source.indexOf('const active = document.activeElement;',start);
-    const place=runInNewContext('(function(research,researchSidebarSnapshot,centerComposerHostRef,composerPortalHost,publishComposerHeight){'+source.slice(start,end)+'destination.appendChild(composerPortalHost);})');
-    const draft={value:'保留的草稿',parentElement:null,remove(){this.parentElement=null}};
+    const place=runInNewContext('(function('+destination![1]+',researchSidebarSnapshot,centerComposerHostRef,composerPortalHost,publishComposerHeight){const activeView="chat",sessionId="reading-test";'+source.slice(start,end)+'destination.appendChild(composerPortalHost);})');
+    const draft={value:'保留的草稿',dataset:{},parentElement:null,remove(){this.parentElement=null}};
     const host={isConnected:true,appendChild(node:any){node.parentElement=this}};
     const center={...host};
     place(false,{}, {current:center},draft,()=>{}); expect(draft.parentElement).toBe(center);
