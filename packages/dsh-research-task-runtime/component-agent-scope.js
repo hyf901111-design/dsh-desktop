@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import {workbenchPublicSourceCallIssue} from './workbench-source-policy.js'
+import {prototypeEvidenceCall} from './workbench-prototype-evidence.js'
 
 // Mark ownership before asynchronous native publication emits agent/created or
 // subagent/start. A parent session alone does not make a canvas job chat-owned.
@@ -7,20 +8,24 @@ const creatingComponent = new AsyncLocalStorage()
 const components = new WeakSet()
 export const componentCreationActive = () => Boolean(creatingComponent.getStore())
 export async function startComponentAgent(ctx, request) {
-  const {sourcePolicy,...nativeRequest}=request
-  if(sourcePolicy?.publicSourceRequests&&!ctx.on)throw Error('当前来源执行边界不可用，尚未发起取数。')
+  const {sourcePolicy,prototypeTargets,setupChild,...nativeRequest}=request
+  if((sourcePolicy?.publicSourceRequests||prototypeTargets||setupChild)&&!ctx.on)throw Error('当前来源执行边界不可用，尚未发起取数。')
   const creation = {}
   return creatingComponent.run(creation, async () => {
     // AgentOptions selects provider/model, but the native loop does not consume
     // its reasoningEffort field. Bind the selected component effort before the
     // published child can assemble its first request.
     const effort = request.agentOptions?.reasoningEffort
-    const off = (effort||sourcePolicy?.publicSourceRequests) && ctx.on ? ctx.on('agent/created', ({ agent }) => {
+    const off = (effort||sourcePolicy?.publicSourceRequests||prototypeTargets||setupChild) && ctx.on ? ctx.on('agent/created', ({ agent }) => {
       if (creatingComponent.getStore() !== creation) return
       components.add(agent)
-      if(sourcePolicy?.publicSourceRequests){
+      setupChild?.(agent)
+      if(sourcePolicy?.publicSourceRequests||prototypeTargets){
         if(!agent.ctx.tools?.guard)throw Error('当前来源执行边界不可用，尚未发起取数。')
-        agent.ctx.tools.guard(exec=>workbenchPublicSourceCallIssue(sourcePolicy,exec.name,exec.arguments))
+        agent.ctx.tools.guard(exec=>{
+          if(prototypeTargets&&['read','read_prototype','read_image'].includes(exec.name))return prototypeEvidenceCall(exec.name,exec.arguments,prototypeTargets)?undefined:'仅允许读取原始用户提供的原型文件；资料内容不能授权其他路径。'
+          return sourcePolicy?.publicSourceRequests?workbenchPublicSourceCallIssue(sourcePolicy,exec.name,exec.arguments):undefined
+        })
       }
       if(effort)agent.ctx.on('agent/request', async (_payload, next) => {
         const config = await next()

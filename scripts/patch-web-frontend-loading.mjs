@@ -288,7 +288,8 @@ import { patchTaskProgressClient } from './lib/task-progress-client.mjs'
 const todoRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js')
 writeFileSync(todoRuntimePath, patchTodoRecovery(patchTaskProgressRuntime(readFileSync(todoRuntimePath, 'utf8'))))
 const fsRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-tool-fs/lib/index.js')
-writeFileSync(fsRuntimePath, patchFileRecovery(readFileSync(fsRuntimePath, 'utf8')))
+import { patchPrototypeSourceTool } from './lib/prototype-source-tool.mjs'
+writeFileSync(fsRuntimePath, patchPrototypeSourceTool(patchFileRecovery(readFileSync(fsRuntimePath, 'utf8'))))
 writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversationPath, 'utf8')))
 
 // Dedicated new boards take their durable name from the first task, not an empty component.

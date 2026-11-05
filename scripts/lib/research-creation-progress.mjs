@@ -1,5 +1,6 @@
 import {patchResearchPlanningFeedback} from './research-planning-feedback.mjs'
 import {patchComposerSubmitPolicy} from './composer-submit-policy.mjs'
+import {patchResearchSendAdmission} from './research-send-admission.mjs'
 // The planner may spend minutes before calling research_workbench_create. Keep
 // this first, deliberately provisional card in the renderer; only the accepted
 // tool plan is allowed to create persistent, named canvas components.
@@ -7,23 +8,26 @@ export function classifyResearchCreationRequest(raw) {
   if (typeof raw !== 'string') return null
   const text = raw.trim().replace(/\s+/g, ' ')
   if (!text || text.length > 4000) return null
+  if(/做出来的.{0,30}(?:是什么|什么意思|如何使用|怎么使用)/u.test(text))return null
   // Keep clause/negation boundaries aligned with workbenchCreationRequest.
   // This function is embedded with toString(), so its classifier is local.
   const action = raw.trim().split(/[，,。；;！？!?\n]+|(?=另外|另行|同时|然后|但是|但|并且|并(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|建(?:一个|一套|一张|个|套|张)))/u).filter(clause => {
+    if(/(?:暂不|先不|不要|不用|无需|不需要|别|禁止|不再)(?:再)?(?:把|将).{0,180}(?:做出来|搭出来|实现出来|还原出来|做成|转成|转换成|还原成)|(?:已经?|刚才|刚刚|之前|曾经).{0,8}(?:把|将).{0,180}(?:做出来|搭出来|实现出来|还原出来|做成|转成|转换成|还原成)/u.test(clause))return false
     const current = clause.replace(/已(?:经)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加)/gu, '')
       .replace(/建立(?:数据|来源|刷新|现有|已有|当前|组件|卡片|的)*(?:绑定|映射|关联|连接|关系)/gu, '')
     const build = /^(?:(?:另外|另行|同时|然后|并且|并|请|麻烦|帮我|给我|替我|为我|我想|我需要|先|再|立即|马上)\s*)*(?:建立|建(?!议|筑|模))(.+)$/u.exec(current.trim())?.[1]
     const operand = build?.split(/(?:用于|用来|给|为|到|在)(?=(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘|组件|卡片))|(?:并且?|然后|同时)(?=(?:绑定|配置|添加|连接|关联|启用|设置))/u)[0]
     const object = operand?.match(/工作台|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
     const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
-    const create = createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?|重新规划|\b(?:create|build|generate)\b/iu.test(current)
+    const resultative=/(?:把|将).{1,160}(?:做出来|搭出来|实现出来|还原出来)(?:一下|吧|即可)?$|(?:把|将).{1,140}?(?:做成|转成|转换成|还原成).{1,60}(?:工作台|看板|仪表盘|组件|卡片|图表)/u.test(current.trim())
+    const create = createBuild || resultative || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?|重新规划|\b(?:create|build|generate)\b/iu.test(current)
     const denied = /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|做(?:一个|些|个)?|要(?:一个|些|个)?|建)/u.test(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
     return create && !denied && !inspection
   }).join('；')
   if (!action) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/.test(raw.trim()) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|制作|做一个|建)/.test(action)) return null
-  if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|制作|构建|做一个|建)/.test(action)) return null
+  if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|制作|构建|做一个|做出来|做成|转成|还原成|建)/.test(action)) return null
   if (/(?:优化|调整|修复|解释|设计)(?:.{0,20})(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/.test(action)) return null
   const workbench = /(?:工作台|看板|仪表盘|dashboard)/i.test(action)
   const component = /(?:组件|卡片|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图)/i.test(action)
@@ -54,6 +58,12 @@ export function planningCardPosition(viewport, canvasSize, cardWidth = 320, card
 
 const BEGIN = '/* ODYSSEY_CREATION_PROGRESS_V3 */'
 const end = 'function InputBar({'
+function helperEnd(source, start) {
+  const card = source.indexOf('function ResearchCreationPlanningCard(', start), input = source.indexOf(end, start)
+  const finish = card < 0 ? -1 : source.indexOf('\n}\n', card)
+  if (card < start || finish < card || input < finish) throw Error('Creation progress owned helper drifted')
+  return finish + 3
+}
 const helper = `${BEGIN}
 ${workbenchDealMotion.toString()}
 ${planningCardPosition.toString()}
@@ -104,18 +114,16 @@ function odysseyCreationDeal(sessionId, plan, origin) {
 function odysseyCreationEmit(sessionId) {
   window.dispatchEvent(new CustomEvent('odyssey:creation-progress', { detail: { sessionId, intent: odysseyCreationIntents.get(sessionId) ?? null } }));
 }
-function odysseyCreationAnnounce(sessionId, draft, subagentPanel, busy, research = false) {
+function odysseyCreationAnnounce(sessionId, draft, subagentPanel, busy, research = false, sawRunning = false) {
   if (!sessionId || subagentPanel || busy || sherlockShared(sessionId)) return;
   const request = (${classifyResearchCreationRequest.toString()})(draft);
   // Chat components are saved by the main agent; only the canvas owns a
   // provisional component plan. An explicit workbench may still enter it.
   if (!request || request.kind === 'component' && !research) return;
-  odysseyCreationIntents.set(sessionId, { ...request, id: crypto.randomUUID(), startedAt: Date.now(), state: 'planning', sawRunning: false });
+  odysseyCreationIntents.set(sessionId, { ...request, id: crypto.randomUUID(), startedAt: Date.now(), state: 'planning', sawRunning });
   odysseyCreationEmit(sessionId);
-  const current = odysseyCreationIntents.get(sessionId);
-  setTimeout(() => {
-    if (odysseyCreationIntents.get(sessionId) === current && !current.sawRunning) odysseyCreationFinish(sessionId, true);
-  }, 15000);
+  // This intent is created only after native prompt admission. Waiting for
+  // the executor is not a failure and has no guessed renderer deadline.
 }
 function odysseyCreationFinish(sessionId, outcome = false) {
   const current = odysseyCreationIntents.get(sessionId);
@@ -138,7 +146,6 @@ function odysseyCreationRetry(sessionId) {
   const current = odysseyCreationIntents.get(sessionId);
   if (!current || !['failed', 'stopped'].includes(current.state)) return;
   const detail = { sessionId, request: current.request, handled: false };
-  odysseyCreationAnnounce(sessionId, current.request, false, false, true);
   window.dispatchEvent(new CustomEvent('odyssey:creation-retry', { detail }));
   if (!detail.handled) { odysseyCreationIntents.set(sessionId, current); odysseyCreationEmit(sessionId); }
 }
@@ -233,7 +240,7 @@ export function patchResearchCreationProgress(source) {
   const previous = ['/* ODYSSEY_CREATION_PROGRESS_V1 */', '/* ODYSSEY_CREATION_PROGRESS_V2 */'].find(marker => source.includes(marker))
   if (previous && !source.includes(BEGIN)) {
     const start = source.indexOf(previous)
-    const finish = source.indexOf(end, start)
+    const finish = helperEnd(source, start)
     if (finish < start) throw Error('Previous creation progress helper is incomplete')
     source = source.slice(0, start) + helper + source.slice(finish)
   }
@@ -246,7 +253,7 @@ export function patchResearchCreationProgress(source) {
       .replace("odysseyCreationFinish(sessionId, intent.state === 'stopping' ? 'stopped' : true); }, 3000);", "odysseyCreationFinish(sessionId, intent.state === 'stopping' ? 'stopped' : 'ended'); }, 3000);")
   }
   if (source.includes(BEGIN)) {
-    const at = source.indexOf(BEGIN), finish = source.indexOf(end, at)
+    const at = source.indexOf(BEGIN), finish = helperEnd(source, at)
     if (finish < at) throw Error('Creation progress helper is incomplete')
     source = source.slice(0, at) + helper + source.slice(finish)
   } else source = replaceOnce(source, end, helper + end)
@@ -422,5 +429,5 @@ export function patchResearchCreationProgress(source) {
     const pattern = new RegExp('/\\* ' + marker + ' \\*/\\n[^\\n]+')
     source = pattern.test(source) ? source.replace(pattern, style) : source + '\n' + style + '\n'
   }
-  return patchComposerSubmitPolicy(patchResearchPlanningFeedback(source,classifyResearchCreationRequest))
+  return patchResearchSendAdmission(patchComposerSubmitPolicy(patchResearchPlanningFeedback(source,classifyResearchCreationRequest)))
 }

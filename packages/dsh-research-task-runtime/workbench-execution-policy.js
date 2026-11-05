@@ -1,11 +1,12 @@
 import {DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
-import {componentCreationRequest,latestClientModeForAuthority} from './conversation-components-policy.js'
+import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import { workbenchPlanningContext } from './workbench-planning-context.js'
 import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
+import {MAX_PROTOTYPE_WINDOWS,planningPrototypeEvidence,prototypeEvidenceCall,prototypeEvidenceSchema,prototypeEvidenceProgress,prototypeEvidenceGuidance,prototypeEvidenceRequestCurrent,workbenchPlanningSession} from './workbench-prototype-evidence.js'
 
 export function workbenchCreationRequest(session) {
-  const request=componentCreationRequest(session)
+  const request=componentCreationRequest(workbenchPlanningSession(session))
   return request && (request.target==='workbench' || latestClientModeForAuthority(session)==='research') ? request : null
 }
 
@@ -71,6 +72,7 @@ const CREATE_TOOL = 'research_workbench_create'
 const MAX_PLANNING_DISCOVERIES = 2
 const SOURCE_MODE_GUIDANCE = '真实数据模式使用 dataMode:"source"（也可省略），必须省略 generationMode、sharedContext、originalRequest，这三项仅适用于模拟。已有真实记录直接保留完整 artifact 及来源、日期、单位；未取到的面板省略 artifact，把待取字段、来源和缺失处理写入 panel.prompt，由独立面板取数，不补模拟值。'
 const SOURCE_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，保留用户指定的数量、领域、来源和范围；先理解需求、拆解每卡内容和可视化，立即一次提交 title 与完整 panels，不先取整套数据、写报告或读取 skill/源码。'+SOURCE_MODE_GUIDANCE+'按内容选择 table/chart/news/reports/calendar/timeline/gantt/tasks/alerts/note 等模板，复杂交互保留 html，不能套固定金融样例。publicData 可交给宿主取真实来源；preset 仅在用户需求匹配真实预设时使用。requestId 重试保持一致。accepted 表示已受理并生成中，prepared 才表示已准备好，随后简短交付并结束本轮。'
+const PROTOTYPE_PLANNING_GUIDANCE = '【原型工作台规划】先读取用户本轮提供的原型，理解指定业务区域、页面分组和交互，再一次调用 research_workbench_create。首次只提交 title、dataMode:"source"、panels:[{title,prompt,type,size,layout?}] 及可选 requestId，不生成逐卡 artifact、不抄写全量记录或编写代码。每卡 prompt 保留原型路径、业务范围、筛选/排序/展开详情等交互和原有来源口径；独立组件会读取原型完成内容。按内容选择注册模板，模板不能表达的交互使用 html。不复制参考应用的外层侧栏、聊天或设置。原型内示例数据作为原型快照保留，不标为新取得的真实行情，也不另造模拟记录。尚未读到的完整记录交由组件读取，不把截断资料当作完整数据。accepted 仅表示已启动生成；prepared 才表示已准备好。受理后简短回报，不重复建卡或等待整套数据。'
 const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前理解需求、拆解组件并选择可视化后调用 research_workbench_create。模拟场景的同批对象可一次提供完整sharedDatasets及各卡view，由宿主直接准备；其他情况沿原规划路径。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
 const PLAN_FIRST_DENIAL = '首次规划阶段只允许有限来源发现和 research_workbench_create；请把待取字段与真实来源约束写进各 panel.prompt，省略未取得的 artifact，立即提交规划。'
 export function planningDataIntent(text) {
@@ -99,6 +101,17 @@ function sourceCreationParameters(parameters) {
     properties.panels={...properties.panels,items:{...properties.panels.items,properties:panelProperties}}
   }
   return { ...parameters, additionalProperties: false, properties, ...(parameters.required ? { required: parameters.required.filter(name => !omitted.has(name)) } : {}) }
+}
+function prototypeCreationParameters(parameters) {
+  const source=sourceCreationParameters(parameters)
+  if(!source?.properties)return source
+  const {preset, ...properties}=source.properties
+  const panel=properties.panels?.items
+  if(panel?.properties){
+    const allowed=new Set(['title','prompt','type','size','layout'])
+    properties.panels={...properties.panels,items:{...panel,additionalProperties:false,properties:Object.fromEntries(Object.entries(panel.properties).filter(([name])=>allowed.has(name))),...(panel.required?{required:panel.required.filter(name=>allowed.has(name))}:{})}}
+  }
+  return {...source,properties}
 }
 function planningDiscovery(name, args) {
   return (name === 'public_data_query' && args?.operation === 'catalog') ||
@@ -164,7 +177,14 @@ export function registerWorkbenchExecutionPolicy(ctx) {
   // parent's active planning request, including scoped tools and run_code.
   const disposeGuard = ctx.tools?.guard?.(exec => {
     const state = currentPlanning(exec.agent)
-    if (!state || exec.name === CREATE_TOOL) return
+    if (!state) return
+    if (exec.name === CREATE_TOOL) {
+      const {inspected,failed}=prototypeEvidenceProgress(state.session,state.messageId,state.evidenceTargets)
+      if([...state.evidenceReadable].some(resource=>!inspected.has(resource)&&!failed.has(resource)))return '先读取本轮可读的用户原型/附件内容，再提交工作台规划；读取失败或格式不支持时保留缺失，只据可读资料继续，不使用固定样例代替。'
+      return
+    }
+    const evidence=state.evidenceTools.has(exec.name)&&prototypeEvidenceCall(exec.name,exec.arguments,state.evidenceTargets)
+    if(evidence&&!state.evidenceUsed.has(evidence.key)&&[...state.evidenceUsed.values()].filter(resource=>resource===evidence.resource).length<MAX_PROTOTYPE_WINDOWS){state.evidenceUsed.set(evidence.key,evidence.resource);return}
     if (state.discoveryTools.has(exec.name) && planningDiscovery(exec.name, exec.arguments) && !state.calls.has(exec.callId) && state.calls.size < MAX_PLANNING_DISCOVERIES) {
       state.calls.add(exec.callId)
       return
@@ -186,13 +206,15 @@ export function registerWorkbenchExecutionPolicy(ctx) {
       if (!human) return ''
       const accepted = hasAcceptedPlan(agent.session, human.messageId)
       if (!accepted) {
-        const { sourceOnly } = planningDataIntent(human.text)
-        const direct = /行情|自选|指数|资讯|新闻|基金|ETF|加密|Kraken|腾讯|BTC|ETH/iu.test(human.text) &&
+        const { simulation, sourceOnly } = planningDataIntent(human.text)
+        const evidence=planningPrototypeEvidence(agent.session,human)
+        if(evidence.required.length&&!simulation)return workbenchPlanningContext()+'\n'+PROTOTYPE_PLANNING_GUIDANCE+'\n'+prototypeEvidenceGuidance(evidence)
+        const direct = !evidence.required.length && /行情|自选|指数|资讯|新闻|基金|ETF|加密|Kraken|腾讯|BTC|ETH/iu.test(human.text) &&
           !/模拟|虚构|演示|通联|DataYes|MCP|插件|财报|研报|宏观|持仓|基金净值|禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/iu.test(human.text) &&
           ctx.tools?.schemas?.(agent)?.some(tool => tool.name === 'public_data_query')
         const genericDomesticEtf = direct && /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(human.text) && /国内|中国|A股/iu.test(human.text) && /热门|主流|代表性/iu.test(human.text) && /基金|ETF/iu.test(human.text) &&
           !/(?:[一二三四五六七八九十\d]+\s*(?:张(?:卡片?)?|卡|(?:个)?(?:面板|组件)|只(?:基金|ETF))|\d{5,6}|\d+\s*(?:天|日|周|月|年)|每.{0,6}(?:分|小时|天)|只要|只需|仅|不含|不要.{0,8}(?:新闻|资讯|指数)|指定|上传|附件|资料|记录|收益|回撤|规模|费率|经理|对比|沪深|上证|创业|科创|行业|主题|黄金|医药|半导体)/iu.test(human.text)
-        return workbenchPlanningContext() + '\n' + (genericDomesticEtf ? WORKBENCH_LIVE_ETF_PLAN : direct ? WORKBENCH_FREE_DATA_PLAN : sourceOnly ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_EARLY_PLAN) + (sourceOnly && (genericDomesticEtf || direct) ? '\n' + SOURCE_MODE_GUIDANCE : '')
+        return workbenchPlanningContext() + '\n' + (genericDomesticEtf ? WORKBENCH_LIVE_ETF_PLAN : direct ? WORKBENCH_FREE_DATA_PLAN : sourceOnly ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_EARLY_PLAN) + (sourceOnly && (genericDomesticEtf || direct) ? '\n' + SOURCE_MODE_GUIDANCE : '')+(evidence.required.length?'\n'+prototypeEvidenceGuidance(evidence):'')
       }
       return accepted.inlineArtifacts && /自动(?:刷新|更新)|每.{0,12}分钟|定时(?:刷新|更新)|持续(?:刷新|更新)/u.test(human.text)
         ? WORKBENCH_INLINE_BINDING : WORKBENCH_PLAN_SUBMITTED
@@ -238,22 +260,50 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     try { signal?.throwIfAborted(); request = await next(); signal?.throwIfAborted() }
     catch (error) { releasePlanning(agent); throw error }
     const human = workbenchCreationRequest(agent?.session)
+    const claimed=request.messages?.findLast(message=>message.role==='user'&&message.source?.kind==='user')
+    const wireHuman=claimed&&workbenchCreationRequest({header:agent?.session?.header,events:[{type:'user/message',data:claimed}]})
+    // Preparing a request may await other plugins while another human is
+    // spliced in. Never turn that ID mismatch into an empty evidence list and
+    // dispatch A's wire under B's planning authority (including B cancelling).
+    // Legacy metadata-only/bootstrap callers can omit human wire messages;
+    // they get no reference authority. A real supplied reference still requires
+    // an identified human on the wire, as do all identified native requests.
+    const referenceRequired=human&&planningPrototypeEvidence(agent.session,human).required.length>0
+    if((human||wireHuman||planningScopes.has(agent))&&(claimed||referenceRequired)&&!prototypeEvidenceRequestCurrent(agent.session,planningHumanRequest(workbenchPlanningSession(agent.session)),request)){
+      releasePlanning(agent)
+      throw new Error('工作台需求已更新，上一条规划不再发送；请按当前消息继续。')
+    }
     if (!human || hasAcceptedPlan(agent.session, human.messageId) || !request.tools?.some(tool => tool.name === CREATE_TOOL)) {
       releasePlanning(agent); return request
     }
     const state = enterPlanning(agent, human, signal ?? request.signal)
+    state.evidenceTargets=planningPrototypeEvidence(agent.session,human,request)
+    state.evidenceUsed=prototypeEvidenceProgress(agent.session,human.messageId,state.evidenceTargets).used
+    state.evidenceTools=new Set()
+    state.evidenceReadable=new Set()
     const { simulation, sourceOnly } = planningDataIntent(human.text)
+    // Example figures already supplied in a prototype are source material,
+    // not permission to invent another dataset or serialize it into the plan.
+    const prototypeSource=state.evidenceTargets.required.length>0&&!simulation
+    const sourcePlanning=sourceOnly||prototypeSource
     const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !simulation && !/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
     const tools = request.tools.flatMap(tool => {
-      if (tool.name === CREATE_TOOL) return [{ ...tool, description: sourceOnly ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE,
-        ...(sourceOnly ? { parameters: sourceCreationParameters(tool.parameters) } : {}) }]
+      if (tool.name === CREATE_TOOL) return [{ ...tool, description: (prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
+        ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters) : sourceCreationParameters(tool.parameters) } : {}) }]
+      const evidence=prototypeEvidenceSchema(tool,state.evidenceTargets)
+      if(evidence){
+        state.evidenceTools.add(tool.name)
+        const field=tool.name==='web_fetch'?'url':'file_path'
+        for(const value of evidence.parameters.properties[field].enum){const call=prototypeEvidenceCall(tool.name,{[field]:value},state.evidenceTargets);if(call)state.evidenceReadable.add(call.resource)}
+        return[evidence]
+      }
       const discovery = discoveryAllowed && discoverySchema(tool)
       return discovery ? [discovery] : []
     })
     state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
     // Model route, effort, signal and the shared registry stay unchanged. The
     // low-cost plan has no complete-data prerequisite in any user domain.
-    return { ...request, system: [request.system, PLAN_FIRST_GUIDANCE, sourceOnly ? SOURCE_MODE_GUIDANCE : ''].filter(Boolean).join('\n'), tools }
+    return { ...request, system: [request.system, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets)].filter(Boolean).join('\n'), tools }
   })
   return () => {
     for (const state of activeScopes) releasePlanning(state.agent)

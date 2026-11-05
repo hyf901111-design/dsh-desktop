@@ -33,7 +33,7 @@ function stopReason(reason){
  */
 export function createNoteComponentRepair({ctx,child,signal,timeoutMs=90000,queueWait}={}){
  let used=false
- return async function repair({prompt,synthesisOnly=true}={}){
+ return async function repair({prompt,synthesisOnly=true,prepare,interruptOriginal=false}={}){
   if(used)throw repairError('NOTE_COMPONENT_REPAIR_USED','Note component repair can run only once')
   used=true
   if(!supportsRepair(ctx,child))throw repairError('NOTE_COMPONENT_REPAIR_UNAVAILABLE','Note component repair SDK capability unavailable')
@@ -78,16 +78,31 @@ export function createNoteComponentRepair({ctx,child,signal,timeoutMs=90000,queu
   signal?.addEventListener('abort',onAbort,{once:true})
   timer=setTimeout(deadline,timeoutMs)
   try{
+   // A source-phase handoff can return before its model turn has stopped.
+   // Cancel that owned turn before waiting; do not spend the repair budget
+   // allowing it to keep reasoning about already complete records.
+   if(interruptOriginal)cancel()
    // A bounded initial attempt may still be converging to idle. Never enqueue
    // its repair into an unfinished turn or count that turn as repair output.
    if(await Promise.race([waitForIdle(),terminal])===expired)return timedOut()
    assertNotAborted();assertLive()
    if(synthesisOnly)lift=child.ctx.tools.restrict({allow:[]})
    assertNotAborted();assertLive()
-   boundary=session.events.length
-   child.followup(createUserMessage({content:[{type:'text',text:prompt}],source:{kind:'plugin',plugin:'dsh-research-task-runtime'}}))
-   if(await Promise.race([waitForIdle(),terminal])===expired)return timedOut()
+   // Install a child-owned submission only after its original turn is idle.
+   // Preparation is synchronous so it cannot escape the same execution budget.
+   const prepared=prepare?.()
+   const followupPrompt=prepared?.prompt??prompt
+   if(typeof followupPrompt!=='string'||!followupPrompt.trim())throw new TypeError('Component repair prompt is required')
    assertNotAborted();assertLive()
+   boundary=session.events.length
+   child.followup(createUserMessage({content:[{type:'text',text:followupPrompt}],source:{kind:'plugin',plugin:'dsh-research-task-runtime'}}))
+   const completed=Symbol('owned submission')
+   const settled=await Promise.race([waitForIdle(),terminal,...prepared?.result?[Promise.resolve(prepared.result).then(result=>({kind:completed,result}))]:[]])
+   if(settled===expired)return timedOut()
+   assertNotAborted();assertLive()
+   // The host receipt already passed semantic validation and durable step-end.
+   // Stop further prose without releasing the restriction before actual idle.
+   if(settled?.kind===completed){cancel();return settled.result}
    const own=session.events.slice(boundary),work=foldConsumedWork(own)
    if(work.droppedUnrun)return {stopReason:'aborted',output:[]}
    return {stopReason:stopReason(work.end?.data.reason),output:finalAssistantOutput(own)??[]}
@@ -108,3 +123,8 @@ export function createNoteComponentRepair({ctx,child,signal,timeoutMs=90000,queu
   }
  }
 }
+
+// Notes and prototype components share the exact ownership, deadline and
+// cancellation lifecycle; retain the Notes exports for existing callers.
+export const canRepairComponentChild=canRepairNoteComponentChild
+export const createComponentRepair=createNoteComponentRepair

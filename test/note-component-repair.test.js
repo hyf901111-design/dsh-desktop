@@ -194,3 +194,36 @@ it('excludes only queue wait accrued by this repair from its execution budget',a
  await expect(result).resolves.toEqual({stopReason:'timeout',localDeadlineExceeded:true,output:[]})
  expect(vi.getTimerCount()).toBe(0)
 })
+
+it('prepares a scoped submission only after the original turn is idle and settles on its receipt',async()=>{
+ const f=fixture(),original=Promise.withResolvers(),nativeWhenIdle=f.child.whenIdle,accepted=Promise.withResolvers(),prepare=vi.fn(()=>({prompt:'只补充本轮错误',result:accepted.promise}))
+ let originalActive=true
+ f.child.whenIdle=()=>originalActive?original.promise:nativeWhenIdle()
+ const result=createNoteComponentRepair(f)({prompt:'完整备用提示',prepare})
+ expect(prepare).not.toHaveBeenCalled()
+ originalActive=false;original.resolve()
+ expect((await f.followed.promise).content[0].text).toBe('只补充本轮错误')
+ expect(prepare).toHaveBeenCalledTimes(1)
+ accepted.resolve({stopReason:'completed',output:[{type:'text',text:'VALIDATED_SUBMISSION'}]})
+ await expect(result).resolves.toMatchObject({output:[{text:'VALIDATED_SUBMISSION'}]})
+ expect(f.cancellations).toEqual([{kind:'parent'}]);expect(f.allowed()).toEqual([])
+ f.finish({text:'LATE_PROSE'});await Promise.resolve();await Promise.resolve()
+ expect(f.allowed()).toEqual(['web_search'])
+})
+
+it('does not accept a prepared submission after the owned child was replaced',async()=>{
+ const f=fixture(),accepted=Promise.withResolvers(),result=createNoteComponentRepair(f)({prompt:'修复',prepare:()=>({result:accepted.promise})})
+ await f.followed.promise;f.replace();accepted.resolve({stopReason:'completed',output:[{type:'text',text:'STALE'}]})
+ await expect(result).rejects.toMatchObject({code:'NOTE_COMPONENT_CHILD_CHANGED'})
+ expect(f.allowed()).toEqual([]);f.finish();await Promise.resolve();await Promise.resolve();expect(f.allowed()).toEqual(['web_search'])
+})
+
+it('stops a bounded source handoff before waiting for idle, then prepares and follows up in the same child',async()=>{
+ const f=fixture(),original=Promise.withResolvers(),nativeWhenIdle=f.child.whenIdle
+ let originalActive=true
+ f.child.whenIdle=()=>originalActive?original.promise:nativeWhenIdle()
+ f.child.cancel=()=>{originalActive=false;original.resolve()}
+ const prepared=vi.fn(),result=createNoteComponentRepair(f)({prompt:'继续已有资料',interruptOriginal:true,prepare:prepared})
+ await f.followed.promise;expect(originalActive).toBe(false);expect(prepared).toHaveBeenCalledTimes(1)
+ f.finish({text:'CURRENT'});await expect(result).resolves.toMatchObject({output:[{text:'CURRENT'}]})
+})

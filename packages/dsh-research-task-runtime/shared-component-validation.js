@@ -28,6 +28,7 @@ function walk(node, visit, parent) {
     else if (value && typeof value === 'object') walk(value, visit, node)
   }
 }
+const bindingNames = node => !node ? [] : node.type === 'Identifier' ? [node.name] : node.type === 'RestElement' ? bindingNames(node.argument) : node.type === 'AssignmentPattern' ? bindingNames(node.left) : node.type === 'ArrayPattern' ? node.elements.flatMap(bindingNames) : node.type === 'ObjectPattern' ? node.properties.flatMap(prop => bindingNames(prop.type === 'RestElement' ? prop.argument : prop.value)) : []
 
 
 // Resolve only lexical identifiers; the gate never executes generated code.
@@ -35,14 +36,13 @@ function bindingResolver(nodes, parents) {
   const global = {}, slots = new WeakMap()
   const isFunction = node => /^(?:FunctionDeclaration|FunctionExpression|ArrowFunctionExpression|ObjectMethod|ClassMethod|ClassPrivateMethod)$/.test(node?.type || '')
   const isScope = node => node?.type === 'Program' || node?.type === 'BlockStatement' || node?.type === 'CatchClause' || isFunction(node)
-  const names = node => !node ? [] : node.type === 'Identifier' ? [node.name] : node.type === 'RestElement' ? names(node.argument) : node.type === 'AssignmentPattern' ? names(node.left) : node.type === 'ArrayPattern' ? node.elements.flatMap(names) : node.type === 'ObjectPattern' ? node.properties.flatMap(prop => names(prop.type === 'RestElement' ? prop.argument : prop.value)) : []
   const owner = (node, variable = false) => { for (let p = parents.get(node); p; p = parents.get(p)) if (p.type === 'Program' || isFunction(p) || !variable && isScope(p)) return p.type === 'Program' ? global : p; return global }
   const bind = (scope, name) => { if (!slots.has(scope)) slots.set(scope, new Map()); const entries = slots.get(scope); if (!entries.has(name)) entries.set(name, {}); return entries.get(name) }
   for (const node of nodes) {
-    if (node.type === 'VariableDeclarator') for (const name of names(node.id)) bind(owner(node, parents.get(node)?.kind === 'var'), name)
+    if (node.type === 'VariableDeclarator') for (const name of bindingNames(node.id)) bind(owner(node, parents.get(node)?.kind === 'var'), name)
     if (node.type === 'FunctionDeclaration' || node.type === 'ClassDeclaration') if (node.id) bind(owner(node), node.id.name)
-    if (isFunction(node)) { for (const parameter of node.params || []) for (const name of names(parameter)) bind(node, name); if (node.type === 'FunctionExpression' && node.id) bind(node, node.id.name) }
-    if (node.type === 'CatchClause') for (const name of names(node.param)) bind(node, name)
+    if (isFunction(node)) { for (const parameter of node.params || []) for (const name of bindingNames(parameter)) bind(node, name); if (node.type === 'FunctionExpression' && node.id) bind(node, node.id.name) }
+    if (node.type === 'CatchClause') for (const name of bindingNames(node.param)) bind(node, name)
   }
   return (name, node) => { for (let p = node; p; p = parents.get(p)) { const token = slots.get(p.type === 'Program' ? global : p)?.get(name); if (token) return token } }
 }
@@ -120,9 +120,29 @@ export function sharedComponentIssue(html, { required = false } = {}) {
   // assignment must not establish (or retain) dispatch provenance.
   for (const assignment of assignments) if (returnsHandle(assignment.right)) handles.add(resolve(assignment.left.name, assignment))
   for (const assignment of assignments) if (!returnsHandle(assignment.right) && !inert(assignment.right)) handles.delete(resolve(assignment.left.name, assignment))
+  // Re-declaring a var is another write to the same lexical binding.
+  for (const node of nodes) if (node.type === 'VariableDeclarator' && node.init && !returnsHandle(node.init) && !inert(node.init)) for (const name of bindingNames(node.id)) handles.delete(resolve(name, node))
+  for (const node of nodes) if ((node.type === 'AssignmentExpression' && node.left.type !== 'Identifier') || node.type === 'UpdateExpression') for (const name of bindingNames(node.type === 'UpdateExpression' ? node.argument : node.left)) handles.delete(resolve(name, node))
   handles.delete(undefined)
-  const dispatched = calls.some(c => member(c.callee) && key(c.callee.property) === 'dispatch' && (!c.callee.computed || c.callee.property.type === 'StringLiteral') && c.callee.object.type === 'Identifier' && handles.has(resolve(c.callee.object.name, c)))
-  if (!dispatched && !fn(props.get('tick'))) return '注册后没有通过共享句柄 dispatch 提交操作，也没有共享 tick，不能把空注册当作同步。'
+  const dispatchReference = value => member(value) && key(value.property) === 'dispatch' && (!value.computed || value.property.type === 'StringLiteral') && (returnsHandle(value.object) || value.object.type === 'Identifier' && handles.has(resolve(value.object.name, value)))
+  // The frozen host handle's dispatch closes over its state and can be called
+  // without a receiver. Recognize a literal method reference, never a function
+  // merely named dispatch, and retain lexical provenance through destructuring.
+  const aliases = new Set(), writes = new Map()
+  const write = (name, node, trusted) => { const token = resolve(name, node); if (!token) return; if (!writes.has(token)) writes.set(token, []); writes.get(token).push(trusted); if (trusted) aliases.add(token) }
+  for (const node of nodes) {
+    if (node.type === 'VariableDeclarator' && node.init) {
+      if (node.id.type === 'Identifier') write(node.id.name, node, dispatchReference(node.init))
+      else if (node.id.type === 'ObjectPattern' && (returnsHandle(node.init) || node.init.type === 'Identifier' && handles.has(resolve(node.init.name, node)))) {
+        for (const property of node.id.properties) for (const name of bindingNames(property.type === 'RestElement' ? property.argument : property.value)) write(name, node, property.type === 'ObjectProperty' && key(property.key) === 'dispatch' && (!property.computed || property.key.type === 'StringLiteral') && property.value.type === 'Identifier')
+      } else for (const name of bindingNames(node.id)) write(name, node, false)
+    }
+    if (node.type === 'AssignmentExpression') for (const name of bindingNames(node.left)) write(name, node, node.operator === '=' && node.left.type === 'Identifier' && dispatchReference(node.right))
+    if (node.type === 'UpdateExpression') for (const name of bindingNames(node.argument)) write(name, node, false)
+  }
+  for (const [token, references] of writes) if (references.some(trusted => !trusted)) aliases.delete(token)
+  const dispatched = calls.some(c => dispatchReference(c.callee) || c.callee.type === 'Identifier' && aliases.has(resolve(c.callee.name, c)))
+  if (!dispatched && !fn(props.get('tick'))) return '注册后没有通过共享句柄 dispatch 提交操作，也没有共享 tick，不能把空注册当作同步。register 返回含 dispatch 的对象，事件应调用 shared.dispatch(action)，不能直接调用该对象；render(state,context) 第二参数是权限/连接上下文，不是 dispatch。'
   if (calls.some(c => ['setInterval','window.setInterval','globalThis.setInterval'].includes(path(c.callee)))) return '组件仍使用独立 setInterval；持续业务状态必须改由共享 tick 推进。'
   if (props.has('tick')) {
     const interval = props.get('tickMs')?.value

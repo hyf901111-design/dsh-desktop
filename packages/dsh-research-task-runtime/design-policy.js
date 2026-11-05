@@ -343,11 +343,15 @@ export function designPolicyIssue(html, { title } = {}) {
  let issue = null
  const isControl = element => $(element).is(CONTROLS) || $(element).closest(CONTROLS).length > 0
  $('style').each((_, element) => styles.push($(element).text()))
- $('[style]').each((_, element) => {
+ $('[style]').each((index, element) => {
   if (issue) return
   try {
    postcss.parse(`x{${$(element).attr('style')}}`).walkDecls(decl => {
-    issue ??= declarationIssue(decl.prop, decl.value, isControl(element), $(element).closest('svg').length > 0)
+    const detail=declarationIssue(decl.prop, decl.value, isControl(element), $(element).closest('svg').length > 0)
+    if(!issue&&detail){
+     const selector=element.name+($(element).attr('id')?'#'+$(element).attr('id'):'')+($(element).attr('class')?'.'+$(element).attr('class').trim().replace(/\s+/gu,'.'):'')
+     issue='内联样式第'+(index+1)+'项 '+JSON.stringify(selector.slice(0,160))+'，声明 '+JSON.stringify((decl.prop+':'+decl.value).slice(0,200))+'：'+detail
+    }
    })
   } catch { issue = '内联 CSS 无法解析，请修复完整声明后重试。' }
  })
@@ -355,7 +359,7 @@ export function designPolicyIssue(html, { title } = {}) {
   for (const property of ['fill','stroke']) if ($(element).attr(property)) issue ??= declarationIssue(property, $(element).attr(property), isControl(element), $(element).closest('svg').length > 0)
  })
  if (issue) return issue
- for (const source of styles) {
+ for (const [styleIndex, source] of styles.entries()) {
   let tree
   try { tree = postcss.parse(source) } catch { return 'CSS 无法解析，请修复样式规则后重试。' }
   tree.walkAtRules(rule => {
@@ -373,7 +377,10 @@ export function designPolicyIssue(html, { title } = {}) {
    const inherited = INHERITED_CONTROL_PROPERTIES.test(normalized(decl.prop).toLowerCase())
    const control = matches.toArray().some(element => isControl(element) || inherited && $(element).find(CONTROLS).length > 0)
    const dataGraphic = matches.length > 0 && matches.toArray().every(element => $(element).closest('svg').length > 0)
-   issue = declarationIssue(decl.prop, decl.value, control, dataGraphic)
+   const declarationError = declarationIssue(decl.prop, decl.value, control, dataGraphic)
+   // Keep the same gate; identify the exact declaration so a model can repair
+   // one rule instead of rewriting its entire interface from a vague color error.
+   if (declarationError) issue = `样式块 ${styleIndex + 1}，第${decl.source.start.line}行第${decl.source.start.column}列：${declarationError}`
   })
   if (issue) return issue
  }

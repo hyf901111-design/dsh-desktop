@@ -12,6 +12,15 @@ const profileKpiItem = '<div class="research-metric"><div class="research-metric
 const profileIndustryRow = '<div class="research-industry-row"><span class="research-industry-label">电子</span><div class="research-industry-track"><div class="research-industry-bar" style="width:82%"></div></div><span class="research-industry-value">24.6%</span></div>'
 const profileDocument = (profile, content) => `<main data-sherlock-profile="${profile}">${content}</main>`
 
+it('locates the rejected CSS declaration without changing the design gate or repeating business content',()=>{
+ const html='<style>p{color:var(--sherlock-text)}</style><p>保留业务原文 private-marker</p><style>\n.note {\n  color:#fff;\n}</style><aside class="note">来源说明保留</aside>'
+ const issue=designPolicyIssue(html)
+ expect(issue).toContain('样式块 2，第3行第3列')
+ expect(issue).toContain('color 请使用宿主')
+ expect(issue).not.toContain('private-marker')
+ expect(designPolicyIssue(html.replace('color:#fff','color:var(--sherlock-muted)'))).toBeNull()
+})
+
 describe('explicit generated source profile contract', () => {
  it.each(['fund72_kpi','fund72-unknown',''])('rejects an unknown explicit profile %s with a narrow repair instruction', profile => {
   const issue = designPolicyIssue(profileDocument(profile, '<p>业务数据保留</p>'))
