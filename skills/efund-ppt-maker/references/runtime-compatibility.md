@@ -65,7 +65,7 @@
 
 普通数据表的 `table-header` 与同列 `table-body` 均左对齐并使用相同左右内边距；表头 cell properties 显式 `anchor="ctr"` 且上下内边距相等。只有 table-layout-contract.md 中逐表逐列声明的数字/短标签例外可改变水平对齐，目录沿用源模板。
 
-标准说明区标题/正文必须在最终 PPTX 中显式 `a:bodyPr anchor="t"`。两者另导出 `textLayout: {"source": "rendered", "lineCount": 1, "lines": ["实际文字"], "bbox": [50, 123, 291, 20]}`；其中 bbox 为本次最终渲染的文字包围盒，单位与元素 bbox 相同，不能复制 Shape 框或按字符数估算。正文实际首行距小标题文字底边 12–16px，检查器仅允许 2px 渲染取整容差；缺少真实文字边界时返回待复核错误。
+标准说明区标题/正文必须在最终 PPTX 中显式 `a:bodyPr anchor="t"`。两者另导出 `textLayout: {"source": "rendered", "lineCount": 1, "lines": ["实际文字"], "bbox": [50, 123, 291, 20]}`；其中 bbox 为本次最终渲染的文字包围盒，单位与元素 bbox 相同，不能复制 Shape 框或按字符数估算。正文实际首行距小标题文字底边一行正文行高（标准 12pt／150% 行距为 24px，按 960×540 画布归一化），检查器仅允许 2px 渲染取整容差；缺少真实文字边界时返回待复核错误。
 
 文字 bbox 须完整装入各自文本框；标准正文与同栏下方结论框另按字形底边检查间距。图表类别使用 `chart-label-*` 名称或 `textRole: "chart-category-label"`，数值使用 `chart-value-*` 或 `textRole: "chart-value-label"`，两类均导出同样的实际文字 bbox，以便发现负值标签进入类别槽。原生图表内部对象无法逐项导出时，必须保留逐图视觉复核记录，不能把图表外框复制成每个标签的 bbox。具体成品包和图表计数要求见 [package-and-render-checks.md](package-and-render-checks.md)。
 

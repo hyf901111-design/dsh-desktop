@@ -6,7 +6,7 @@
 
 - 封面可编辑槽逐段拼接 runs 检查，不得保留段首/段尾占位空格；清空空白 run 文本，保留原始段落、字号和框体几何。固定布局品牌文字不改动。
 - 普通正文数据表表头 cell properties 显式垂直居中，上下内边距相等。同列 header/body 均左对齐，左右内边距分别相同并显式写入；目录沿用源模板，纯数字列/短标签列仅按 table-layout-contract.md 的 `tableLayoutExceptions` 精确声明改变水平对齐。
-- 左说明右图页的小标题和正文都显式 top anchor，正文实际首行紧接小标题实际文字底边下方 12–16px；短正文仍从顶部排列。按真实标题行高收紧标题框，不能只改 anchor 后保留空白高框。两者从最终渲染回读 `textLayout.bbox`，不以 Shape 边界或估算代替。
+- 左说明右图页的小标题和正文都显式 top anchor，正文实际首行紧接小标题实际文字底边下方一行正文行高（标准 12pt／150% 行距为 24px，按 960×540 画布归一化）；短正文仍从顶部排列。按真实标题行高收紧标题框，不能只改 anchor 后保留空白高框。两者从最终渲染回读 `textLayout.bbox`，不以 Shape 边界或估算代替。
 - `check_efund_cover.py` 拦截封面空白；`check_efund_delivery.py` 从最终 XML 检查表头、同列属性和说明区 anchor；`check_efund_readability.py` 检查实际文字间距，缺少 rendered bbox 返回错误。旧模板资产和旧预制稿通过过往门禁，不能代替新规则的复验。
 
 ## 正文布局须经实际换行核验

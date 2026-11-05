@@ -94,9 +94,21 @@ def element(name,frame,ink,text):return {'id':name,'name':name,'scope':'slide','
 data={'elements':[element('standard-narrative-title',[38,111,315,71],[50,123,291,20],'解释小标题'),element('standard-narrative-body',[38,193,315,177],[50,205,291,20],'解释正文')]}
 assert 'narrative-title-body-gap' in [i['code'] for i in audit_layout(data)]
 data['elements'][0]['bbox'][3]=32
-data['elements'][1]['bbox'][1]=143
-data['elements'][1]['textLayout']['bbox'][1]=155
+data['elements'][1]['bbox'][1]=155
+data['elements'][1]['textLayout']['bbox'][1]=167
 assert not audit_layout(data)
+# One body line is 12pt at 150% line spacing: 24px on a 960px-wide slide.
+# Old cramped spacing and an excessive blank area must both be rejected.
+for gap in [0,12,16,20,28,48]:
+ bad=copy.deepcopy(data)
+ bad['elements'][1]['bbox'][1]=143+gap-12
+ bad['elements'][1]['textLayout']['bbox'][1]=143+gap
+ assert 'narrative-title-body-gap' in [i['code'] for i in audit_layout(bad)]
+scaled=copy.deepcopy(data);scaled['slide']={'frame':{'width':1920}}
+for item in scaled['elements']:
+ item['bbox']=[v*2 for v in item['bbox']]
+ item['textLayout']['bbox']=[v*2 for v in item['textLayout']['bbox']]
+assert not audit_layout(scaled)
 del data['elements'][0]['textLayout']['bbox']
 assert 'narrative-rendered-bounds-required' in [i['code'] for i in audit_layout(data)]
 `))

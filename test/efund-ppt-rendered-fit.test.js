@@ -17,7 +17,7 @@ def e(name,frame,ink,text):
  return {'id':name,'name':name,'scope':'slide','bbox':frame,'text':text,'textLayout':{'source':'rendered','lineCount':1,'lines':[text],'bbox':ink}}
 def codes(data):return {i['code'] for i in audit_layout(data)}
 title=e('standard-narrative-title',[38,102,320,22],[38,105,300,20],'解释标题')
-body=e('standard-narrative-body',[38,136,320,200],[38,140,300,120],'解释正文')
+body=e('standard-narrative-body',[38,145,320,200],[38,149,300,120],'解释正文')
 callout={'id':'takeaway','name':'takeaway-13','scope':'slide','bbox':[38,372,320,84],'text':'研读结论'}
 good={'elements':[title,body,callout]}
 assert not audit_layout(good)
