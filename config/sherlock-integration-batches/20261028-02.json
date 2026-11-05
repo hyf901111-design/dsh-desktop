@@ -27508,6 +27508,68 @@
         ],
         "generatedAt": "2026-11-05T22:00:20.712Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按已合并历史范围验证功能交接",
+        "branch": "codex/feat/integration-frozen-handoff-20261106",
+        "baseCommit": "a320a28eace967e359a6240d56449ee29abd9c21",
+        "tipCommit": "f9c65ce3dfb1906ecf2f0eefae2fcb04e08d8da5",
+        "commits": [
+          {
+            "commit": "f9c65ce3dfb1906ecf2f0eefae2fcb04e08d8da5",
+            "parents": [
+              "a320a28eace967e359a6240d56449ee29abd9c21"
+            ],
+            "subject": "修复：按已合并历史范围验证功能交接"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-multi-session-integration-runbook.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sherlock-integration-preflight.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/integration-frozen-handoff.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/integration-frozen-handoff.test.ts",
+              "test/integration-batch.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "直接相关2个测试文件8项通过；验证源代码与提交相同，后续仅补充运行手册说明。",
+            "verifiedCommit": "f9c65ce3dfb1906ecf2f0eefae2fcb04e08d8da5",
+            "completedAt": "2026-11-05T21:56:35.294Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "只修改Git集成预检，没有客户端界面变化。"
+        },
+        "acceptanceCriteria": [
+          "accept/promote按真实历史合并的交接tip核对，不自动纳入严格后继",
+          "分支回退或改写、伪造合并边界、历史文件清单不匹配仍拒绝",
+          "新merge/continue及公开单功能预检继续严格匹配live tip",
+          "预检不修改分支、清单或工作区"
+        ],
+        "risks": [
+          "冻结范围只适用于已登记且能核实的双父合并；后继改动仍需独立交接。",
+          "本补丁不替代完整批次检查或用户对精确集成tip的验收。"
+        ],
+        "generatedAt": "2026-11-05T21:56:35.294Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -28871,6 +28933,15 @@
         "test/integration-reconcile-records.test.ts",
         "test/integration-cli-contract.test.ts",
         "test/integration-preview.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/integration-frozen-handoff.test.ts",
+        "test/integration-batch.test.ts"
       ],
       "timeoutMs": 120000
     }
