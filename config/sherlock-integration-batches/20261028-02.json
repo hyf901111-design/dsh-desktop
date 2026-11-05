@@ -26764,71 +26764,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "PPT Skill 1.1.3：仅增加标题正文一行留白",
+        "featureName": "修复海外指数数据缺失",
         "branch": "codex/feat/demo-acceptance-20261105",
-        "baseCommit": "f93158ad408a45caec6465a791cf98d5824f3ee1",
-        "tipCommit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
+        "baseCommit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
+        "tipCommit": "4642905803865cd9415f6921007203e688342f28",
         "commits": [
           {
-            "commit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
+            "commit": "4642905803865cd9415f6921007203e688342f28",
             "parents": [
-              "f93158ad408a45caec6465a791cf98d5824f3ee1"
+              "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202"
             ],
-            "subject": "技能：基于1.1.2仅增加标题正文一行留白并升级1.1.3"
+            "subject": "修复：海外指数源缺失时使用校验后的备用行情"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/SKILL.md"
+            "path": "src/main/financial/backup-widget-data.ts"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/authoring-guide.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/delivery-111.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/delivery-112.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/design-system.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/layout-design-playbook.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/package-and-render-checks.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/runtime-compatibility.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/references/typography-contract.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/check_efund_readability.py"
-          },
-          {
-            "status": "M",
-            "path": "test/efund-ppt-rendered-fit.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/efund-ppt-text-layout.test.js"
+            "path": "test/financial-widget-backup.test.ts"
           }
         ],
         "checks": [
@@ -26837,30 +26793,41 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/efund-ppt-text-layout.test.js",
-              "test/efund-ppt-rendered-fit.test.js"
+              "test/financial-widget-backup.test.ts",
+              "-t",
+              "falls back to identified Yahoo|keeps the Nasdaq Composite"
             ],
             "outcome": "passed",
-            "summary": "7 项标题正文实际字形间距及渲染适配检查通过。",
-            "verifiedCommit": "c54fe5495d1f79c7953c4901a5f0ed4e02cc0202",
-            "completedAt": "2026-11-05T14:21:58.071524+00:00",
+            "summary": "4项聚焦测试通过，包括源为空、无效、接口异常、指数身份区分及错误身份拒绝。",
+            "verifiedCommit": "4642905803865cd9415f6921007203e688342f28",
+            "completedAt": "2026-11-05T14:48:52.280317+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "4642905803865cd9415f6921007203e688342f28",
+            "completedAt": "2026-11-05T14:48:52.280317+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "仅修改 1.1.2 的标题正文留白规则、对应检查器和间距样本；标准12pt正文以18pt行高留白，即960×540画布24px。实际客户端唯一版本检查待集成构建。"
+          "summary": "原生定位3个海外指数缺失；修复后真实请求3/3报价及60点走势返回，0错误。最终客户端显示待换包。"
         },
         "acceptanceCriteria": [
-          "技能版本为v1.1.3，仅保留同一个builtin:efund-ppt-maker入口。",
-          "标题最后一行字形与正文第一行之间留一行正文行高；不通过空段落撑间距。",
-          "其余沿用1.1.2，暂停其他PPT优化。"
+          "保留分市场首选来源；仅在全球指数表缺少有效行情时使用Yahoo报价。",
+          "保留真实报价来源、交易时间、正确指数身份，不填造价。"
         ],
         "risks": [
-          "不改模板资产、目录与谢谢页；没有全功能测试。",
-          "通用quick_validate缺少本机PyYAML，前置描述未改变；直接相关7项检查已通过。"
+          "仅改海外指数缺失回退，未运行全功能测试。"
         ],
-        "generatedAt": "2026-11-05T14:21:58.071524+00:00"
+        "generatedAt": "2026-11-05T14:48:52.280317+00:00"
       }
     }
   ],
