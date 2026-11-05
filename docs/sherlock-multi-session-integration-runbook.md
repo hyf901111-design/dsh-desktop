@@ -72,6 +72,16 @@ npm run git:integration -- sync-main --repo /absolute/path/to/integration-202608
 
 若 `sync-main` 保留了 main 冲突，先在集成 worktree 中解决并提交合并，保留 `MERGE_HEAD` 指定的 main 父提交。然后调用执行器 API `continueIntegrationMain`，提供原批次 ID、该完整 main SHA、持久 owner token 并先 `dryRun: true`。该入口只接受干净的双父提交边界（第一个父提交必须是活动租约 tip，第二个必须是明确确认的规范 main 历史），要求原 manifest 字节未变，并重新执行声明检查；之后由执行器记录同步与 CAS 推进租约。不要手改 manifest 或 lease。恢复已记录边界后，再正常 `sync-main` 到 canonical main 的最新提交。
 
+### 恢复已合入的历史登记
+
+若当前规范 `main` 已随某个功能分支合入，或多个预览合并之后才补完整批次验证，先用以下命令核对历史边界：
+
+```bash
+npm run git:integration -- reconcile-records --repo <integration-worktree> --manifest <manifest> --confirm-batch <batch> --confirm-tip <current-integration-sha> --confirm-main <current-main-sha> --dry-run --json
+```
+
+执行器验证持久 owner、精确提交、干净工作树及原合并边界。待登记功能必须是历史双父合并的精确第二父提交，且交接卡仍与该功能分支匹配。确认 dry-run 后去掉该参数，执行器在当前集成提交上统一执行一次完整的声明检查。全部通过后提交历史登记，分别记录原合并提交和实际验证提交，再更新租约。后续仍须通过接受预检并取得用户对精确集成 tip 的验收。
+
 ## 5. 接受、晋升与取消
 
 用户先在批准的共享客户端中接受精确 integration tip；Plan B 到位前不在 feature worktree 构建共享客户端。接受只记录元数据，不推进 `main`：

@@ -2,7 +2,7 @@ import type { IntegrationBatchManifest } from './sherlock-integration-model.mjs'
 
 export interface IntegrationExecutionResult {
   schemaVersion: 1
-  status: 'planned' | 'prepared' | 'merged' | 'preview-ready' | 'conflict' | 'ownership-recovered' | 'main-synchronized' | 'accepted' | 'promoted' | 'cancelled' | 'recovery-required'
+  status: 'planned' | 'prepared' | 'merged' | 'preview-ready' | 'conflict' | 'ownership-recovered' | 'main-synchronized' | 'records-reconciled' | 'accepted' | 'promoted' | 'cancelled' | 'recovery-required'
   batchId: string
   branch: string
   beforeCommit: string
@@ -82,6 +82,16 @@ export function continueIntegrationMain(options: {
   integrationRepository: string
   manifestPath: string
   confirmBatchId: string
+  confirmMainCommit: string
+  ownerToken: string
+  dryRun: boolean
+  now: string
+}): IntegrationExecutionResult
+export function reconcileIntegrationRecords(options: {
+  integrationRepository: string
+  manifestPath: string
+  confirmBatchId: string
+  confirmTip: string
   confirmMainCommit: string
   ownerToken: string
   dryRun: boolean

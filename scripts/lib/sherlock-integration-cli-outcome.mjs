@@ -1,4 +1,5 @@
 function humanToken(status) {
+  if (status === 'records-reconciled') return 'INTEGRATION RECORDS_RECONCILED'
   return status === 'planned' ? 'INTEGRATION PLANNED'
     : status === 'prepared' ? 'INTEGRATION PREPARED'
       : status === 'merged' ? 'INTEGRATION MERGED'
