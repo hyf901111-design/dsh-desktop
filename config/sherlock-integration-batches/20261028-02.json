@@ -27977,6 +27977,79 @@
         "risks": [],
         "generatedAt": "2026-11-05T23:20:07.358Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图片放大预览切换按钮跟随图片定位",
+        "branch": "codex/feat/image-preview-relative-controls-20261106",
+        "baseCommit": "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0",
+        "tipCommit": "1b2482a9d610db8d017403252521bd7ca367286d",
+        "commits": [
+          {
+            "commit": "1b2482a9d610db8d017403252521bd7ca367286d",
+            "parents": [
+              "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0"
+            ],
+            "subject": "优化：图片预览切换按钮跟随图片定位"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/image-preview-gallery.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/image-preview-gallery-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-preview-gallery-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/image-preview-gallery-browser.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "生产客户端/web两个模块共18项通过6.06秒，覆盖相对图片几何、大小切换、桌面/窄屏缩放及既有导航、焦点、重试。",
+            "verifiedCommit": "1b2482a9d610db8d017403252521bd7ca367286d",
+            "completedAt": "2026-11-05T23:16:20.544Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "完整类型检查exit0。",
+            "verifiedCommit": "1b2482a9d610db8d017403252521bd7ca367286d",
+            "completedAt": "2026-11-05T23:16:20.544Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产渲染器浏览器验证已通过，截图及范围见/Users/heyafeng/.codex/visualizations/2026/11/05/01a1ab38-b5e2-70a2-854e-d64d973930d6/image-preview-relative-controls/验收记录.md；共享本地客户端仍需集成构建后验收，不等同最终原生接受。"
+        },
+        "acceptanceCriteria": [
+          "小图和竖图的左右按钮靠近实际图片两侧",
+          "切换不同尺寸图片和调整窗口时按钮随图片尺寸位置变化",
+          "宽图/窄窗口按钮保持可见可点击，保留键盘导航、边界与焦点行为",
+          "共享本地测试客户端构建后按用户截图场景实测"
+        ],
+        "risks": [
+          "当前截图来自实际生产函数的隔离浏览器场景，原生客户端尚待集成后验证。"
+        ],
+        "generatedAt": "2026-11-05T23:16:20.544Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -29414,6 +29487,15 @@
         "test/integration-preview.test.ts",
         "test/integration-batch.test.ts",
         "test/integration-frozen-handoff.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/image-preview-gallery-browser.test.js",
+        "--reporter=dot"
       ],
       "timeoutMs": 120000
     }
