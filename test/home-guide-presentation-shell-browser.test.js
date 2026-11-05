@@ -5,6 +5,7 @@ import {resolve} from 'node:path'
 import {build} from 'esbuild'
 import {beforeAll,afterAll,expect,it} from 'vitest'
 import {patchHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {patchHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {homeGuidePlaybackFixture} from './fixtures/home-guide-playback.js'
 
 // Browser plugin not available. This headless fixture keeps the production
@@ -16,11 +17,12 @@ let browser,runtimeSource,conversationSource,entry,styles
 beforeAll(async()=>{
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  conversationSource=patchHomeGuideNative(execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{stripConversationGridOverlays}from'./test/fixtures/strip-conversation-transient-ui.mjs';import{stripSidebarNewNoteConversation}from'./scripts/lib/sidebar-new-note.mjs';import{stripPptxAnnotationMessages}from'./scripts/lib/pptx-annotation-message.mjs';import{stripPptxAnnotationInput}from'./scripts/lib/pptx-annotation-native.mjs';process.stdout.write(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripConversationGridOverlays(readFileSync(0,'utf8'))))))"],{input:await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),encoding:'utf8',maxBuffer:64*1024*1024})).replace('exports.apply = apply;','exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__register=registerConversationNodes;exports.__TodoDock=TodoDock;')
+ conversationSource=patchHomeGuidePresentationNative(conversationSource)
  styles=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-reading','figma-refinements'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';
+ import {Tooltip}from'@deepseek-ai/dsh-client-ui-primitives';import * as React from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import {createRoot}from'react-dom/client';import{mountHomeGuides,playHomeGuideFromOperations}from'./src/preload/home-guides';import{mountHomeOperations}from'./src/preload/home-operations';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
- const empty=()=>null,primitives=new Proxy({Tooltip:({children})=>children},{get:(target,key)=>target[key]??empty}),cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
+ const empty=()=>null,primitives=new Proxy({Tooltip},{get:(target,key)=>target[key]??empty}),cordis={Service:class{constructor(ctx){this.ctx=ctx}}};
  const modules=id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?dom:id==='@deepseek-ai/cordis'?cordis:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{DropOverlay:empty,AttachmentRail:empty}:fake;
  const rt=window.runtimeDescriptor.factory(modules),native=window.conversationDescriptor.factory(id=>id==='@deepseek-ai/dsh-client-runtime/client'?rt:modules(id));
  const disposers=[],ctx={get:()=>undefined,reflect:{provide(){}},effect(start){const stop=start();if(typeof stop==='function')disposers.push(stop);return stop??(()=>{})}};
@@ -33,7 +35,7 @@ beforeAll(async()=>{
  const shell=new native.SessionInputShell({actx:{},defaultSink:async()=>{window.shellProbe.sent++}});shell.setDraft('根据 Vanguard 研报制作八页公司风格汇报。');
  const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=use({subscribe:fn=>session.subscribe(fn),getSnapshot:()=>session.getSnapshot()}),useInput=use(shell.state),useStore=use(view),useSessions=use(summary);
  const views={subscribe:()=>()=>{},version:()=>0,list:()=>[{id:'chat',label:'对话'},{id:'notes',label:'笔记'},{id:'research',label:'研究'}]},actions={setView:value=>view.update({view:value}),setDraft:draft=>view.update({draft}),select(){},setInspect(){},setResearchRightTab(){},setResearchConversationUnread(){}};
- const t=key=>({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.placeholder':'描述你的任务…','placeholder.hero':'描述你的任务…'})[key]??key;
+ const t=(key,args)=>key==='todo.progress.total'?args.done+'/'+args.total:({'hero.headline':'探索更远，洞见更深。','input.send':'发送消息','input.placeholder':'描述你的任务…','placeholder.hero':'描述你的任务…','todo.title':'任务'})[key]??key;
  const shared={sessionId:'shell-demo',useSession,useSessions,useStore,actions,views,t},inputProps={resolveSubmitMode:()=> 'queue',useSession,useInput,inputActions:shell.actions,keyboard:shell,useNotices:select=>select(null),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(null),useProjection:()=>undefined,sessionId:'shell-demo',t};
  const renderSlot=(name,props={})=>name==='conversation.input.dock'&&window.shellCase.planning?<native.__TodoDock {...inputProps} useProjection={useProjection}/>:name==='conversation.session.header'?<native.__header {...shared} renderSlot={renderSlot} open={()=>{}} rename={async()=>{}}/>:name==='conversation.session'?<native.ConversationSession {...shared} {...props} useInput={useInput} inputActions={shell.actions} renderSlot={renderSlot} bindDraftMirror={()=>()=>{}} releaseSessionImages={()=>{}} releaseResearchWorkspace={()=>{}}/>:name==='conversation.composer.bar'?<native.__InputBar {...inputProps} {...props} renderSlot={renderSlot}/>:name==='conversation.view'?<article data-native-history>{Array.from({length:18},(_,i)=><p key={i} data-history-row={i}>研报观点 {i+1}：核对数据时点、情景假设与配置逻辑，逐页保留来源。</p>)}</article>:null;
  const sidebarState={composerHost:null,conversationHost:null},sidebar={storeFor:()=>({subscribe:()=>()=>{},getSnapshot:()=>sidebarState}),publish(){},enter(){},leave(){}},registry=new native.ResearchWorkspaceRegistry({getItem:()=>null,setItem:()=>true});
@@ -46,8 +48,8 @@ beforeAll(async()=>{
  // Only the tutorial content boundary is acknowledged here; Root/header/input
  // and all entry pointer frames remain their actual production implementation.
  const boardBoundary=event=>{const value=event.detail;if(window.shellCase.entryKind==='board')window.dispatchEvent(new CustomEvent('sherlock:home-guide-native-reply',{detail:{requestId:value.requestId,runId:value.runId,ok:true}}))};window.addEventListener('sherlock:home-guide-native-request',boardBoundary);
- window.shellProbe={sent:0,shell,controller,entryTrace,status:text=>guideStatus(text),async start(kind='ppt'){await controller.start(kind);window.__testHomeGuideTimeline.pause()},showPlan(){projection.update({todos:[{content:'核对原始来源',status:'in_progress'},{content:'保存交付文件',status:'pending'}]})},async close(){await controller.reset(false)},async dispose(){cancelAnimationFrame(entryFrame);document.removeEventListener('click',observeEntry,true);window.removeEventListener('sherlock:home-guide-native-request',boardBoundary);disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
- `},bundle:true,loader:{'.svg':'dataurl'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
+ window.shellProbe={sent:0,shell,controller,entryTrace,status:text=>guideStatus(text),async start(kind='ppt'){await controller.start(kind);window.__testHomeGuideTimeline.pause()},showPlan(phase=0){session.handleRunning(phase<2);projection.update({todos:[{content:'核对原始来源',status:phase>0?'completed':'in_progress'},{content:'保存交付文件',status:phase>1?'completed':phase===1?'in_progress':'pending'}]})},async close(){await controller.reset(false)},async dispose(){cancelAnimationFrame(entryFrame);document.removeEventListener('click',observeEntry,true);window.removeEventListener('sherlock:home-guide-native-request',boardBoundary);disposeOperations();await controller.dispose();root.unmount();shell.dispose();window.removeEventListener('sherlock:home-guide-session-request',receive);disposers.reverse().forEach(fn=>fn())}};
+ `},bundle:true,loader:{'.svg':'dataurl','.css':'empty'},platform:'browser',format:'iife',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[homeGuidePlaybackFixture(),{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:'raw-css'}));b.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]})
  entry=output.outputFiles[0].text
  const mod=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href),pw=mod.default??mod
  browser=await pw.chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -180,13 +182,32 @@ it('shows a standalone action fault without playback controls and keeps exit rea
  try{await page.evaluate(async()=>{await window.shellProbe.start();window.__testHomeGuideTimeline.play()});await expect.poll(()=>page.locator('[data-home-guide]').getAttribute('data-phase')).toBe('error');expect(await page.locator('.odyssey-home-guide-footer,[data-home-guide] [role=toolbar]').count()).toBe(0);const status=page.locator('.odyssey-home-guide-status');expect(await status.innerText()).toContain('输入区已变化');expect(await status.evaluate(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return r.width>180&&(node===hit||node.contains(hit))})).toBe(true);expect(await page.getByRole('alert').isVisible()).toBe(true);await page.getByRole('button',{name:'关闭示例'}).click();expect(await page.locator('[data-home-guide]').count()).toBe(0);expect(f.errors).toEqual([])}finally{await f.close()}
 },15000)
 
-for(const kind of ['ppt','report'])it('keeps the owned '+kind+' send transition free of planning-strip flashes and restores normal Todo on release',async()=>{
+for(const kind of ['ppt','report'])it('keeps the owned '+kind+' entry free of stale planning flashes, then shows native task progress throughout generation and delivery',async()=>{
  const f=await fixture({width:1000,height:900,hero:false,planning:true}),{page}=f;try{
   await page.evaluate(kind=>window.shellProbe.start(kind),kind);expect(await page.locator('[data-home-guide-planning]').count()).toBe(1)
   const before=await geometry(page);await page.locator('button.uV2eYG_primary').click();expect(await page.evaluate(()=>window.shellProbe.sent)).toBe(1)
   const frames=await page.evaluate(async()=>{window.shellProbe.showPlan();const frames=[];for(let i=0;i<16;i++){await new Promise(requestAnimationFrame);const panel=document.querySelector('[data-testid="todo-panel"]'),input=document.querySelector('textarea');frames.push({display:panel?getComputedStyle(panel).display:'absent',height:panel?.getBoundingClientRect().height??0,bottom:input.getBoundingClientRect().bottom,rows:document.querySelectorAll('[data-history-row]').length})}return frames})
   expect(frames.every(frame=>frame.display==='none'&&frame.height===0&&frame.rows===18)).toBe(true);expect(frames.every(frame=>Math.abs(frame.bottom-before.input.bottom)<1)).toBe(true)
+  await page.evaluate(()=>window.__testHomeGuideTimeline.play());await page.waitForSelector('[data-home-guide-plan-ready]',{timeout:6500});await page.evaluate(()=>window.__testHomeGuideTimeline.pause())
+  expect(await page.locator('[data-testid="todo-panel"]').isVisible()).toBe(true);expect(await page.locator('[data-status="in_progress"]').count()).toBe(1)
+  expect(await page.locator('[data-task-continue]').count()).toBe(0);expect(await page.locator('[data-testid="todo-panel"]').innerText()).not.toContain('可继续')
+  await page.evaluate(()=>window.shellProbe.showPlan(1));await expect.poll(()=>page.locator('[data-status="completed"]').count()).toBe(1);expect(await page.locator('[data-status="in_progress"]').count()).toBe(1)
+  await page.screenshot({path:evidence+'/'+kind+'-planning-running.png'})
+  await page.evaluate(()=>window.shellProbe.showPlan(2));await expect.poll(()=>page.locator('[data-status="completed"]').count()).toBe(2)
+  expect(await page.locator('[data-task-continue]').count()).toBe(0);expect(await page.locator('[data-testid="todo-panel"]').innerText()).toContain('2/2')
+  await page.screenshot({path:evidence+'/'+kind+'-planning-completed.png'})
   await writeFile(evidence+'/'+kind+'-planning-frames.json',JSON.stringify(frames,null,2));await page.evaluate(()=>window.shellProbe.close())
   await expect.poll(()=>page.locator('[data-home-guide-planning]').count()).toBe(0);expect(await page.locator('[data-testid="todo-panel"]').isVisible()).toBe(true);expect(await page.locator('[data-testid="todo-panel"]').innerText()).toContain('核对原始来源');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
+for(const kind of ['ppt','report'])it('suppresses actual native composer tooltips during '+kind+' playback without leaving an orphan after release',async()=>{
+ const f=await fixture({width:1000,height:900,hero:false}),{page}=f;try{
+  const send=page.locator('button.uV2eYG_primary');await send.focus();await page.waitForSelector('[role="tooltip"]')
+  await page.evaluate(kind=>window.shellProbe.start(kind),kind);await expect.poll(()=>page.locator('[role="tooltip"]').count()).toBe(0)
+  await send.hover();await page.waitForTimeout(650);expect(await page.locator('[role="tooltip"]').count()).toBe(0)
+  await send.click();await page.locator('textarea').fill('');await send.focus();await page.waitForTimeout(650);expect(await page.locator('[role="tooltip"]').count()).toBe(0)
+  await page.mouse.move(1300,30);await page.evaluate(()=>window.shellProbe.close());await page.waitForTimeout(650);expect(await page.locator('[role="tooltip"]').count()).toBe(0)
+  await send.hover();await page.waitForSelector('[role="tooltip"]');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)

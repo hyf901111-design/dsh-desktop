@@ -283,7 +283,36 @@ export function createResearchGrid() {
     for(const row of rows)placeRow(row.cells)
     return items.map(c=>result.get(c.id)||bounded(c))
   }
-  function arrange(nodes,items,width,visibleHeight=0,mode='standard') {
+  // Only the explicitly authored native Board example owns these row groups.
+  // Normal Standard Arrange continues to preserve the user's existing rows.
+  // Both the first Arrange commit and its deferred content fit use this plan.
+  function authoredBoardPlan(nodes,items,width) {
+    const names=['indices','watchlist','quote','news','announcements','calendar','smart']
+    const group=nodes[0]?.workbenchId
+    if(!nodes.length||typeof group!=='string'||!group.startsWith('home-guide:')||nodes.some(n=>n.workbenchId!==group||n.workbenchLayoutVersion!==1||n.preserveGenerationSize!==true||n.sizeMode!=='manual'||!Number.isInteger(n.workbenchIndex)||n.workbenchIndex<0||n.workbenchIndex>6))return
+    const byName=new Map()
+    for(const node of nodes){
+      const name=names[node.workbenchIndex],spec=node.containerSpec
+      if(byName.has(name)||name==='calendar'&&spec?.type!=='calendar-tool'||!['calendar','smart'].includes(name)&&(spec?.type!=='financial-widget'||spec.widget!==name)||name==='smart'&&spec&&spec.type!=='table')return
+      byName.set(name,node)
+    }
+    if(items.length!==nodes.length||items.some(c=>!nodes.some(n=>n.id===c.id)))return
+    const m=metrics(width),pair=m.minColumns<=20,calendarPair=pair&&m.width>=800&&byName.has('smart')
+    const rows=[['indices'],...(pair?[['watchlist','quote'],['news','announcements']]:[['watchlist'],['quote'],['news'],['announcements']]),...(calendarPair?[['calendar','smart']]:[['calendar'],['smart']])]
+    const heights={indices:m.width-48<=520?420:340,watchlist:600,quote:600,news:340,announcements:340,calendar:420,smart:420}
+    const planned=new Map();let top=0
+    for(const row of rows){
+      const members=row.filter(name=>byName.has(name));if(!members.length)continue
+      const height=Math.max(...members.map(name=>Math.ceil((heights[name]+m.gap)/m.rowStep)))
+      const split=row[0]==='watchlist'&&pair&&m.minColumns<=16
+      for(const name of members){const index=row.indexOf(name),node=byName.get(name),{arrangeColumns,...cell}=items.find(c=>c.id===node.id);planned.set(node.id,{...cell,x:split?(index?16:0):index*(40/row.length),y:top,w:split?(index?24:16):40/row.length,h:height})}
+      top+=height
+    }
+    return items.map(c=>bounded(planned.get(c.id)||c))
+  }
+  function arrange(nodes,items,width,visibleHeight=0,mode='standard',options={}) {
+    const authored=options.authoredBoard===true&&mode==='standard'&&authoredBoardPlan(nodes,items,width)
+    if(authored)return authored
     const requested={three:3,two:2,one:1}[mode]
     // Explicit column modes retain their independent shortest-column packing.
     // Standard keeps existing row membership, including unequal peer widths.
@@ -347,5 +376,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,moveSlot,move,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,moveSlot,move,authoredBoardPlan,arrange,append,draw,migrate,project}
 }

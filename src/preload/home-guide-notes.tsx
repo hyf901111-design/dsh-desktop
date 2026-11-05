@@ -132,7 +132,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   if(disposed)return
   // Capture the final Yjs snapshot while the editor is still alive. Keep the
   // storage bridge open until this queue settles, even on a direct abort.
-  finalFlush=flush();disposed=true
+  finalFlush=flush();disposed=true;host.removeAttribute('data-notes-guide-caret-hidden')
   host.removeEventListener('beforeinput',interrupted,true);host.removeEventListener('paste',interrupted,true);host.removeEventListener('drop',interrupted,true)
   options.signal.removeEventListener('abort',dispose);native?.dispose();root.unmount();container.remove()
   void finalFlush.catch(()=>{}).finally(()=>{scope.abort(new DOMException('演示已结束。','AbortError'));bridge.dispose()})
@@ -158,12 +158,12 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
    const block=blocks[index]!
    if(index>0){const previous=blocks[index-1]!;editor!.typeParagraphBreak(previous.id,previous.content,block.id);expected=fingerprint();await frame()}
-   else if(!editor!.snapshot().blocks.some(item=>item.id===block.id)){editor!.appendBlock({...block,content:''});expected=fingerprint();await frame()}
+   else if(!editor!.snapshot().blocks.some(item=>item.id===block.id)){host.dataset.notesGuideCaretHidden='true';editor!.appendBlock({...block,content:''});expected=fingerprint();await frame()}
    const rendered=await until(()=>query<HTMLElement>('[data-id="'+block.id+'"] .bn-inline-content'));scrollTo(rendered,true)
    let previous:{top:number;left:number}|undefined,stable=0
    const box=await until(()=>{unchanged();const rect=rendered.getBoundingClientRect(),area=query<HTMLElement>('.en-document-scroll')!.getBoundingClientRect();if(rect.top<area.top+12||rect.bottom>area.bottom-12){stable=0;previous=undefined;return}stable=previous&&Math.abs(previous.top-rect.top)<1&&Math.abs(previous.left-rect.left)<1?stable+1:0;previous=rect;return stable>=2?rect:undefined})
    if(index===0){editor!.prepareNative();const caret=editor!.paragraphStartPoint(block.id),anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(caret.x-1)+'px;top:'+(caret.y-1)+'px';document.body.append(anchor)
-    try{await point(anchor,'在首行文字光标处落笔');unchanged();validTarget(rendered,true);rendered.click();rendered.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})}finally{anchor.remove()}}
+    try{await point(anchor,'在首行文字光标处落笔');unchanged();validTarget(rendered,true);rendered.click();host.dataset.notesGuideCaretHidden='false';rendered.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})}finally{anchor.remove()}}
    const stride=reduced?block.content.length:block.type==='heading'?4:8
    for(let offset=stride;offset<block.content.length+stride;offset+=stride){
     await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
@@ -200,13 +200,13 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   await flush()
  }
  const emptyTail=async(id:string)=>{
-  unchanged();editor!.appendBlock({id,type:'paragraph',content:''});expected=fingerprint();await frame()
+  unchanged();host.dataset.notesGuideCaretHidden='true';editor!.appendBlock({id,type:'paragraph',content:''});expected=fingerprint();await frame()
   const row=await until(()=>query<HTMLElement>('[data-id="'+id+'"] .bn-inline-content'));scrollTo(row,true);let previous:{top:number;left:number}|undefined,stable=0
   const box=await until(()=>{unchanged();const box=row.getBoundingClientRect(),area=query<HTMLElement>('.en-document-scroll')!.getBoundingClientRect();if(box.top<area.top+12||box.bottom>area.bottom-12){stable=0;previous=undefined;return}stable=previous&&Math.abs(previous.top-box.top)<1&&Math.abs(previous.left-box.left)<1?stable+1:0;previous=box;return stable>=2?box:undefined})
   // PM observes attributes inside editable text nodes. Keep pointer tokens on
   // an external position anchor, then click the still-current original line.
   const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(box.left+3)+'px;top:'+(box.top+Math.max(2,box.height/2))+'px';document.body.append(anchor)
-  try{await point(anchor,'在全新空白行继续');unchanged();validTarget(row,true);row.click();editor!.prepareNative()}finally{anchor.remove()}
+  try{await point(anchor,'在全新空白行继续');unchanged();validTarget(row,true);row.click();host.dataset.notesGuideCaretHidden='false';editor!.prepareNative()}finally{anchor.remove()}
   return row
  }
  const chartCompose=async()=>{
@@ -226,7 +226,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   expected=fingerprint();await flush()
  }
  const chartApply=async()=>{
-  unchanged();await click(await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]:not(:disabled)')),'确认一年股价与基准对比图')
+  unchanged();host.dataset.notesGuideCaretHidden='true';await click(await until(()=>query<HTMLButtonElement>('.en-space-ai[data-review] button[aria-label="'+t('确认本次 AI 生成')+'"]:not(:disabled)')),'确认一年股价与基准对比图')
   await until(()=>!query('.en-space-ai[data-review]'));await frame();expected=fingerprint();await flush()
  }
  const slashQuote=async()=>{

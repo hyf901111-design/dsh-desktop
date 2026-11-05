@@ -657,6 +657,10 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     const snapshot=workspace.getSnapshot(),ids=new Set(workspace.getWorkbenchCells().map(c=>c.id))
     return [...snapshot.files,...snapshot.artifacts,...(workspace.getWorkbenchPlanningNodes?.()??[])].filter(n=>ids.has(n.id))
   }
+  // The completed example becomes an ordinary user board. Its persisted
+  // metadata alone must not keep overriding future user-chosen Standard rows.
+  const authoredBoard=Boolean(root.closest('[data-home-guide][data-kind="board"]'))
+  measured.__homeGuideBoardLayout=authoredBoard
   measured.__workbenchDeferred=true
   if(!workspace.organizeCanvas(measured,mode,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken))return false
   const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
@@ -701,7 +705,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     const packed=grid.arrange(currentNodes.map(n=>{
       const c=measuredCells.get(n.id)
       return {...n,preferred:{height:c.h*m.step-m.gap-1e-7}}
-    }),next,width,0,mode)
+    }),next,width,0,mode,{authoredBoard})
     for(const c of packed){
       const target=expected.get(c.id),previous=cells.find(old=>old.id===c.id)
       if(target&&previous&&c.w!==previous.w){target.width=Math.round(target.width+(c.w-previous.w)*m.step);complete=false}

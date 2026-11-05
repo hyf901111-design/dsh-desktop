@@ -10,7 +10,7 @@ import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
 
 // Browser plugin not available. Use the existing Playwright/Chromium runtime;
 // this fixture mounts production native components and blocks all live providers.
-const evidence = '/tmp/home-guide-native-browser-20261024'
+const evidence = process.env.SHERLOCK_HOME_GUIDE_EVIDENCE || '/tmp/home-guide-native-browser-20261024'
 const runId = 'guide-browser-run'
 const sessionId = 'guide-browser-session'
 const draft = '保留我的原生输入草稿\n第二行 🔎'
@@ -34,9 +34,9 @@ beforeAll(async () => {
   runtimeSource = patchNoteSessionRuntime(await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8'))
   // Board tabs own the outer restore records, matching the production unwind
   // order before refreshing native guide and annotation renderer anchors.
-  const unTabbed = stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const unTabbed = stripWorkbenchReplay(stripBoardTabsClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
   const submitted = stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbed)))
-  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripWorkbenchReplay(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted)))))))
+  const native = stripHomeGuideNative(stripHomeGuidePresentationNative(stripPptxAnnotationInput(stripPptxAnnotationMessages(stripSidebarNewNoteConversation(stripPlainSlashInput(submitted))))))
   conversationSource = patchBoardTabsClient(patchHomeGuideNative(patchComposerDeliverablePreview(patchNotesSidebar(native))))
     .replace('exports.apply = apply;', 'exports.apply = apply;exports.__InputBar=InputBar;exports.__header=ConversationSessionHeader;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};exports.__page=sherlockBoardsPage;')
   const workspaceSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'),pickerStart=workspaceSource.indexOf('function WorkspacePickFlow('),pickerEnd=workspaceSource.indexOf('\n\t\t/**',pickerStart),workspacePicker=workspaceSource.slice(pickerStart,pickerEnd)
@@ -1141,3 +1141,64 @@ it.each(['note','ppt'])('keeps the real %s InputBar locked until legacy Workspac
   expect(errors).toEqual([])
  }finally{await page.close()}
 },10000)
+
+it.each([
+ {width:1380,height:900,right:384,reducedMotion:'reduce',style:'dark'},
+ {width:1255,height:818,right:348,reducedMotion:'no-preference',style:'openterminal'},
+ {width:580,height:1000,right:18,reducedMotion:'reduce',style:'openterminal'},
+ {width:1900,height:1400,right:384,reducedMotion:'no-preference',style:'light'}
+])('commits one authored native Arrange plan and keeps real port feedback at $width × $height / $style / $reducedMotion',async options=>{
+ const {page,errors}=await fixture({nativeLayout:true,...options,guideTop:34,guideBottom:10})
+ const output=(process.env.SHERLOCK_BOARD_SINGLE_PLAN_EVIDENCE || '/tmp/sherlock-board-single-plan-20261103/browser')+'/'+options.width+'-'+options.style+'-'+options.reducedMotion;await mkdir(output,{recursive:true})
+ try{
+  await page.evaluate(({right,style})=>{
+   const host=document.getElementById('guide-host'),p=window.guideProbe;host.style.left='0px';host.style.right=right+'px';p.view.update({view:'research'});document.documentElement.dataset.homeGuidePointerRun='guide-browser-run'
+   const w=p.registry.for('guide-browser-session');w.setWorkbenchStyle(style)
+   const cells=()=>w.getWorkbenchCells().map(({id,x,y,w,h})=>({id,x,y,w,h})),rects=()=>[...host.querySelectorAll('[data-research-node-id]')].map(card=>{const r=card.getBoundingClientRect();return{id:card.dataset.researchNodeId,width:r.width,height:r.height,font:card.querySelector('[data-financial-widget]')?getComputedStyle(card.querySelector('[data-financial-widget]')).fontSize:null}})
+   p.singlePlan={phase:'adding',mutations:[],frames:[],drags:[],clicks:0};p.singleCells=cells
+   for(const name of ['applyWorkbenchCells','organizeCanvas']){const original=w[name];w[name]=function(...args){const before=cells(),value=original.apply(this,args),after=cells();if(name==='organizeCanvas'||JSON.stringify(before)!==JSON.stringify(after))p.singlePlan.mutations.push({name,phase:p.singlePlan.phase,time:performance.now(),before,after});return value}}
+   document.addEventListener('click',event=>{if(event.target.closest('[data-research-global-arrange]'))p.singlePlan.clicks++},true)
+   const record=()=>{if(p.singlePlan.recording)p.singlePlan.frames.push({time:performance.now(),cells:cells(),rects:rects()});p.singlePlan.frame=requestAnimationFrame(record)};record()
+   const pointer=p.createPointer({runId:'guide-browser-run',signal:new AbortController().signal,wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),waitUntilPlaying:()=>Promise.resolve()})
+   window.addEventListener('sherlock:home-guide-cue',event=>{const d=event.detail;if(!d.requestId)return;const find=token=>[...document.querySelectorAll('[data-home-guide-cue-target]')].find(node=>node.dataset.homeGuideCueTarget===token),reply=(ok,message)=>window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:d.runId,requestId:d.requestId,ok,message}}));void pointer.perform({target:find(d.targetToken),fromTarget:find(d.fromTargetToken),action:d.action,onFrame:frame=>{window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail:{runId:d.runId,requestId:d.requestId,...frame}}));if(d.action==='drag'){const a=find(d.fromTargetToken),b=find(d.targetToken),canvas=host.querySelector('[data-research-canvas]');p.singlePlan.drags.push({phase:frame.phase,source:a.dataset.financialPortNode,target:b.dataset.financialPortNode,selected:w.getSnapshot().selection.selectedNodeIds,path:host.querySelector('.ew-financial-connection-draft')?.getAttribute('d'),eligible:host.querySelectorAll('[data-drop-eligible]').length,ports:[a,b].map(el=>el.getBoundingClientRect().toJSON()),canvas:canvas.getBoundingClientRect().toJSON()})}}}).then(()=>reply(true),error=>reply(false,error.message))})
+  },options)
+  for(const step of ['mount-board','board-indices','board-watchlist','board-quote'])await succeeds(page,step)
+  const before=await page.evaluate(()=>{const p=window.guideProbe;p.singlePlan.phase='foundation';p.singlePlan.recording=true;return p.singleCells()})
+  await succeeds(page,'board-arrange-foundation');await page.waitForTimeout(850)
+  const foundation=await page.evaluate(()=>{const p=window.guideProbe;p.singlePlan.recording=false;return p.singleCells()})
+  const staged=await page.evaluate(()=>window.guideProbe.singlePlan)
+  const changes=staged.mutations.filter(row=>row.phase==='foundation'&&row.name==='applyWorkbenchCells')
+  expect(changes).toHaveLength(1);expect(changes[0].after).toEqual(foundation);expect(changes[0].before).toEqual(before)
+  expect(staged.mutations.filter(row=>row.phase==='foundation'&&row.name==='organizeCanvas')).toHaveLength(1)
+  const firstFinal=staged.frames.findIndex(row=>JSON.stringify(row.cells)===JSON.stringify(foundation));expect(firstFinal).toBeGreaterThanOrEqual(0)
+  expect(staged.frames.length).toBeGreaterThan(20)
+  for(const frame of staged.frames.slice(firstFinal))expect(frame.cells).toEqual(foundation)
+  // Width/height transitions may interpolate during the one native commit.
+  // They must stay between their endpoints, then remain at the final frame;
+  // a later delayed second resize would introduce another cell transaction.
+  for(const target of staged.frames.at(-1).rects){
+   const samples=staged.frames.map(frame=>frame.rects.find(rect=>rect.id===target.id)).filter(Boolean)
+   for(const dimension of ['width','height']){
+    const start=samples[0][dimension],end=target[dimension]
+    for(const sample of samples)expect(sample[dimension]).toBeGreaterThanOrEqual(Math.min(start,end)-2)
+    for(const sample of samples)expect(sample[dimension]).toBeLessThanOrEqual(Math.max(start,end)+2)
+    const settled=samples.findIndex((sample,index)=>index>=3&&samples.slice(index-3,index+1).every(rect=>Math.abs(rect[dimension]-end)<=1))
+    if(settled>=0)for(const sample of samples.slice(settled))expect(Math.abs(sample[dimension]-end)).toBeLessThanOrEqual(1)
+   }
+  }
+  await page.screenshot({path:output+'/foundation.png'})
+  await page.evaluate(()=>window.guideProbe.singlePlan.phase='after-foundation')
+  for(const step of ['board-news','board-announcements','board-calendar','board-arrange','board-link'])await succeeds(page,step)
+  const result=await page.evaluate(()=>{const p=window.guideProbe,w=p.registry.for('guide-browser-session');cancelAnimationFrame(p.singlePlan.frame);return{trace:p.singlePlan,final:p.singleCells(),nodes:w.getSnapshot().artifacts.map(n=>({id:n.id,type:n.containerSpec?.widget||n.containerSpec?.type,width:n.width,height:n.height,linked:n.containerSpec?.linkedSourceId||n.containerSpec?.linkedWatchlistId})),viewport:w.getSnapshot().viewport}})
+  await writeFile(output+'/geometry.json',JSON.stringify({options,before,foundation,...result},null,2));await page.screenshot({path:output+'/linked.png'})
+  expect(result.trace.clicks).toBe(1);expect(result.trace.mutations.filter(row=>row.name==='organizeCanvas')).toHaveLength(1)
+  for(const row of result.trace.mutations.filter(row=>row.phase==='after-foundation'))expect(row.after.filter(c=>foundation.some(old=>old.id===c.id))).toEqual(foundation)
+  expect(result.final.filter(c=>foundation.some(old=>old.id===c.id))).toEqual(foundation)
+  expect(result.nodes.filter(n=>n.linked)).toHaveLength(3);expect(result.viewport.scale).toBe(1)
+  const dragging=result.trace.drags.filter(frame=>frame.phase==='dragging');expect(dragging.length).toBeGreaterThanOrEqual(options.reducedMotion==='reduce'?3:6);expect(dragging.some(frame=>frame.eligible>0)).toBe(true)
+  expect(new Set(dragging.map(frame=>frame.path).filter(Boolean)).size).toBeGreaterThanOrEqual(options.reducedMotion==='reduce'?3:6)
+  for(const frame of result.trace.drags){if(!['pressed','dragging','released'].includes(frame.phase))continue;expect(frame.selected).toEqual([frame.source]);for(const port of frame.ports){expect(port.top).toBeGreaterThanOrEqual(frame.canvas.top-1);expect(port.bottom).toBeLessThanOrEqual(frame.canvas.bottom-12)}}
+  for(const frame of staged.frames)for(const rect of frame.rects)if(rect.font)expect(parseFloat(rect.font)).toBeGreaterThanOrEqual(11)
+  await preserved(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+},100000)

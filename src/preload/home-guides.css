@@ -33,7 +33,6 @@
 [data-home-guide-active] .odyssey-home-operations,[data-home-guide-active] .odyssey-operations-toggle,[data-home-guide-active] [data-odyssey-theme-dock],[data-home-guide-resident]:not([data-home-guide-live]) .wSkVaW_composerHero{visibility:hidden!important;pointer-events:none!important}
 .odyssey-home-guide button{-webkit-app-region:no-drag}
 
-/* The owned PPT/report walkthrough already presents its plan in conversation.
- * Keep the native composer stable as the first todo projection arrives; remove
- * this marker on handoff so normal task planning remains available. */
-[data-home-guide-planning] [data-testid="todo-panel"]{display:none!important}
+/* Hide stale planning only during entry. From the planning step onward, use
+ * the native Todo dock and its real per-step status through delivery. */
+[data-home-guide-planning]:not([data-home-guide-plan-ready]) [data-testid="todo-panel"]{display:none!important}

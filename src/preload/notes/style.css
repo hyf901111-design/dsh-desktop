@@ -261,3 +261,6 @@ body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:
 .en-root .bn-block-outer.en-inline-ai-pending .bn-block-content:has(.en-research){outline:none!important}
 .en-root .bn-block-outer.en-inline-ai-pending .en-research:not([data-selected=true]){outline:1px solid #6ba5d4;outline-offset:0}
 .en-root[data-dark=true] .bn-block-outer.en-inline-ai-pending .en-research:not([data-selected=true]){outline-color:#6cb0d9}
+
+/* The demo reveals an empty-line hint only after its visible caret click. */
+[data-notes-guide-caret-hidden=true] .bn-block-content[data-content-type=paragraph]:is([data-is-empty-and-focused],[data-is-only-empty-block])::after{visibility:hidden!important}

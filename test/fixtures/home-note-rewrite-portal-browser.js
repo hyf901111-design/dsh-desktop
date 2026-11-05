@@ -12,6 +12,7 @@ export async function homeNoteRewritePortalBrowser(){
  if(!draftHandler)throw Error('Native draft adapter source missing')
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import {createHomeNotesNativeBridge} from './src/preload/home-guide-notes-native';
+ import {noteUiText} from './packages/dsh-research-task-runtime/notes-locale.js';
  import * as react from 'react';import * as jsx from 'react/jsx-runtime';import * as dom from 'react-dom';import{createRoot}from'react-dom/client';
  import{HOME_NOTES_CHART_PROMPT,HOME_NOTES_REWRITE_PROMPT,HOME_NOTES_TASK_PROMPT,HOME_NOTES_REWRITE_RESULT}from'./packages/dsh-research-task-runtime/home-notes-guide-contract.js';
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});

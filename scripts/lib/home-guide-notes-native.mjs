@@ -84,8 +84,14 @@ export function NativeHomeNotesGuidePortal({sessionId,subagentPanel=false,resear
      try{console.info('[notes-guide-step] '+JSON.stringify({version:1,at:Date.now(),runId:ticket.detail.runId,sessionId,step:stage==='selection'?'note-rewrite':'note-task-compose',phase:'guard-rejected',reason,imageCount:Math.min(1000,shell.snapshot.imageIds.length),occurrenceCount:Math.min(1000,shell.snapshot.occurrences?.length||0)}))}catch{}
      throw Error('输入内容已变化，已保留用户草稿。')
     }}
-    if(draft!==''&&!(stage==='selection'&&draft===prompt))throw Error('输入框已有草稿，已停止示例输入。')
-    await cue(ticket,input,stage==='note'?'输入当前笔记优化任务':'查看选区改写需求');cas();input.focus({preventScroll:true})
+    const defaultRewrite=noteUiText('改写选中文字，保留原意并让表达更清晰。')
+    if(draft!==''&&!(stage==='selection'&&draft===defaultRewrite))throw Error('输入框已有草稿，已停止示例输入。')
+    await cue(ticket,input,stage==='note'?'输入当前笔记优化任务':'点击默认改写提示词');cas();input.click();input.focus({preventScroll:true})
+    if(stage==='selection'){
+     if(draft!==defaultRewrite)throw Error('默认改写提示词已变化，已保留用户草稿。')
+     await delay(ticket,450);cas();input.setSelectionRange(0,input.value.length);input.dispatchEvent(new Event('select',{bubbles:true}));await delay(ticket,500);cas()
+     shell.setDraft('');draft=shell.snapshot.draft;revision=shell.snapshot.draftRev
+    }
     if(!draft)for(const character of Array.from(prompt)){await playing(ticket);cas();shell.setDraft(draft+character);draft=shell.snapshot.draft;revision=shell.snapshot.draftRev;await delay(ticket,65)}
     const button=await until(ticket,()=>{cas();const target=input.closest('.uV2eYG_root')?.querySelector('button.uV2eYG_primary');return target?.isConnected&&!target.disabled?target:undefined})
     await cue(ticket,button,'发送笔记优化需求');cas()

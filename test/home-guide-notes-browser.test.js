@@ -299,6 +299,28 @@ it('extends the saved native note with a research summary and an actual paragrap
   expect(errors).toEqual([]);await page.evaluate(()=>window.nativeRoot.unmount())
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },35000)
+it('keeps the chart tail free of extra blank paragraphs and hides its input hint until the demonstrated click',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
+  for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply'])await page.evaluate(step=>window.guide.runStep(step),step)
+  await page.evaluate(()=>{window.nativeAutoAck=false;window.guidePointerPending=[];window.pendingMiddle=window.guide.runStep('note-write-middle')})
+  await expect.poll(()=>page.evaluate(()=>window.guidePointerPending.length)).toBe(1)
+  const before=await page.evaluate(()=>{
+   const blocks=window.guidePopupProbe.editor.document,chart=blocks.findIndex(block=>block.type==='research'),tail=blocks.slice(chart+1)
+   const row=document.querySelector('[data-id="guide-note-consensus"] .bn-block-content'),hint=getComputedStyle(row,'::after')
+   return{tail:tail.map(block=>({id:block.id,type:block.type,text:(block.content||[]).map(part=>part.text||'').join('')})),hint:{content:hint.content,visibility:hint.visibility,display:hint.display}}
+  })
+  expect(before.tail).toEqual([{id:'guide-note-consensus',type:'paragraph',text:''}])
+  expect(before.hint.content==='none'||before.hint.content==='normal'||before.hint.content==='""'||before.hint.visibility==='hidden'||before.hint.display==='none').toBe(true)
+  await page.screenshot({path:join(evidenceDir,'chart-tail-before-click.png')})
+  await page.evaluate(()=>{const cue=window.guidePointerPending[0];window.nativeAutoAck=true;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})
+  await page.evaluate(()=>window.pendingMiddle)
+  expect(await page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toContain('上半年收入')
+  const ids=await page.evaluate(()=>{const blocks=window.guidePopupProbe.editor.document;return blocks.slice(blocks.findIndex(block=>block.type==='research')+1).map(block=>block.id)})
+  expect(ids).toEqual(['guide-note-consensus']);expect(errors).toEqual([])
+  writeFileSync(join(evidenceDir,'chart-tail-click-order.json'),JSON.stringify({before,afterIds:ids},null,2))
+ }finally{await context.close()}
+},30000)
 it('waits for the matching pointer acknowledgement before title and body input and cancels a pending click',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>{document.documentElement.dataset.homeGuidePointerRun='standalone-note-run';window.pointerWrite=window.guide.runStep('write').catch(error=>error.name)})
