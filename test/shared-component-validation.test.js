@@ -76,3 +76,46 @@ it('never treats a dynamically computed API guard or dispatch property as a lite
  expect(sharedComponentIssue(page(guarded.replaceAll('window.sherlockShared',"window['sherlockShared']").replace('shared.dispatch',"shared['dispatch']")),{required:true})).toBeUndefined()
  expect(sharedComponentIssue(page("const dispatch='missing';"+guarded.replace('shared.dispatch','shared[dispatch]')),{required:true})).toContain('空注册')
 })
+it.each([
+ 'const emit=shared.dispatch;',
+ "var emit=shared['dispatch'];",
+ 'let emit;emit=shared.dispatch;',
+ 'const {dispatch:emit}=shared;',
+ "const {['dispatch']:emit}=shared;"
+])('accepts a lexically verified extracted host dispatch method: %s',declaration=>{
+ const code=valid.replace("document.querySelector('button').onclick=()=>shared.dispatch",declaration+"document.querySelector('button').onclick=()=>emit")
+ expect(sharedComponentIssue(page(code),{required:true})).toBeUndefined()
+})
+it.each([
+ 'const emit=()=>{};',
+ 'const emit=unrelated.dispatch;',
+ "const method='dispatch';const emit=shared[method];",
+ 'let emit=shared.dispatch;emit=()=>{};',
+ 'let emit=shared.dispatch;({dispatch:emit}=unrelated);',
+ 'var emit=shared.dispatch;var emit=()=>{};',
+ 'let emit=shared.dispatch;emit++;',
+ 'const {...emit}=shared;'
+])('does not accept a foreign, computed, replaced or non-method dispatch alias: %s',declaration=>{
+ const code=valid.replace("document.querySelector('button').onclick=()=>shared.dispatch",declaration+"document.querySelector('button').onclick=()=>emit")
+ expect(sharedComponentIssue(page(code),{required:true})).toContain('空注册')
+})
+it('keeps alias provenance lexical and rejects handles overwritten by var redeclarations or destructuring',()=>{
+ const alias=valid.replace("document.querySelector('button').onclick=()=>shared.dispatch","const emit=shared.dispatch;document.querySelector('button').onclick=function(emit){return emit").replace("({type:'increment'});","({type:'increment'});}")
+ expect(sharedComponentIssue(page(alias),{required:true})).toContain('空注册')
+ const captured=valid.replace('const shared=','var shared=').replace(";document.querySelector",';var shared=unrelated;const emit=shared.dispatch;document.querySelector').replace('()=>shared.dispatch','()=>emit')
+ expect(sharedComponentIssue(page(captured),{required:true})).toContain('空注册')
+ const reassigned=valid.replace('const shared=','let shared=').replace(";document.querySelector",';({other:shared}=unrelated);const emit=shared.dispatch;document.querySelector').replace('()=>shared.dispatch','()=>emit')
+ expect(sharedComponentIssue(page(reassigned),{required:true})).toContain('空注册')
+})
+it.each(['method','bracket','destructure'])('accepts dispatch taken directly from the real registration result: %s',form=>{
+ const registration="window.sherlockShared.register({initialState:{count:0},reduce:(s,a)=>({...s,count:s.count+1}),render:s=>document.querySelector('p').textContent=s.count})"
+ const code=form==='destructure'?`const {dispatch:emit}=${registration};document.querySelector('button').onclick=()=>emit({type:'increment'});`:`var emit=${registration}${form==='bracket'?"['dispatch']":'.dispatch'};document.querySelector('button').onclick=()=>emit({type:'increment'});`
+ expect(sharedComponentIssue(page(code),{required:true})).toBeUndefined()
+ expect(sharedComponentIssue(page(code.replace("()=>emit(","function(emit){return emit(").replace("({type:'increment'});","({type:'increment'});}")),{required:true})).toBeTruthy()
+})
+it('rejects a direct registration dispatch alias replaced by a fallback or a fake host namespace',()=>{
+ const registration="window.sherlockShared.register({initialState:{},reduce:s=>s,render:s=>{}})"
+ expect(sharedComponentIssue(page(`var emit=${registration}.dispatch;emit=()=>{};document.onclick=()=>emit({type:'x'});`),{required:true})).toContain('空注册')
+ expect(sharedComponentIssue(page(`(function(window){var emit=${registration}.dispatch;document.onclick=()=>emit({type:'x'});})({});`),{required:true})).toContain('真实宿主接口')
+ expect(sharedComponentIssue(page(`var method='dispatch',emit=${registration}[method];document.onclick=()=>emit({type:'x'});`),{required:true})).toContain('空注册')
+})

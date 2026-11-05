@@ -5,16 +5,18 @@ export const TRUSTED_TYPES_COMPONENT_INSTRUCTION = `交互HTML内层沙箱启用
 const member = node => ['MemberExpression','OptionalMemberExpression'].includes(node?.type)
 const property = node => member(node) ? node.computed ? node.property.type === 'StringLiteral' ? node.property.value : undefined : node.property.name : undefined
 export function trustedTypesScriptIssue(nodes, resolve) {
- const initial = new Map(), changed = new Set()
+ const initial = new Map(), changed = new Set(), stringWrites = new Map()
+ const remember=(binding,value)=>{if(!binding)return;if(!stringWrites.has(binding))stringWrites.set(binding,[]);stringWrites.get(binding).push(value)}
  for (const node of nodes) {
   if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier' && node.init) {
    const binding = resolve(node.id.name, node)
    if (initial.has(binding)) changed.add(binding)
    initial.set(binding,node.init)
+   remember(binding,node.init)
   }
   if (['AssignmentExpression','UpdateExpression'].includes(node.type)) {
    const target=node.type==='AssignmentExpression'?node.left:node.argument
-   if (target.type==='Identifier') changed.add(resolve(target.name,node))
+   if (target.type==='Identifier') {const binding=resolve(target.name,node);changed.add(binding);if(node.type==='AssignmentExpression')remember(binding,node.right)}
   }
  }
  const alias=(node,seen,read)=>{
@@ -35,7 +37,13 @@ export function trustedTypesScriptIssue(nodes, resolve) {
  }
  const stringValue=(node,seen=new Set())=>{
   if(['StringLiteral','TemplateLiteral'].includes(node?.type))return true
-  if(alias(node,seen,stringValue))return true
+  // A template assembled with += is still a string at a TrustedHTML sink.
+  // Keep its lexical binding distinct from DOM-handle alias provenance: a
+  // write invalidates the latter but must not erase known markup fragments.
+  if(node?.type==='Identifier'){
+   const binding=resolve(node.name,node)
+   if(binding&&!seen.has(binding)&&stringWrites.get(binding)?.some(value=>stringValue(value,new Set([...seen,binding]))))return true
+  }
   if(node?.type==='BinaryExpression'&&node.operator==='+')return stringValue(node.left,seen)||stringValue(node.right,seen)
   if(node?.type==='ConditionalExpression')return stringValue(node.consequent,seen)&&stringValue(node.alternate,seen)
   if(node?.type==='SequenceExpression')return stringValue(node.expressions.at(-1),seen)

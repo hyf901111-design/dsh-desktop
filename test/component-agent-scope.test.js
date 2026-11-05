@@ -35,3 +35,18 @@ it.each([['before', false], ['during', false], ['before', true], ['during', true
   expect(cancelled).toBe(0)
   expect(child.status).toBe('running')
 })
+
+it('installs a child-owned submission before native first-request assembly and removes setup metadata from native arguments',async()=>{
+ const listeners=new Set(),configured=new Set(),seen=[],wait=()=>new Promise(resolve=>setTimeout(resolve,0))
+ const ctx={on(name,fn){expect(name).toBe('agent/created');listeners.add(fn);return()=>listeners.delete(fn)},subagents:{async start(_provider,request){
+  expect(request).not.toHaveProperty('setupChild')
+  await wait()
+  const child={id:request.label,ctx:{}}
+  for(const fn of listeners)fn({agent:child})
+  // Native publication assembles its first model request after agent/created.
+  expect(configured.has(child.id)).toBe(true);seen.push(child.id)
+  return{id:child.id,localAgent:child}
+ }}}
+ await Promise.all(['first','second'].map(label=>startComponentAgent(ctx,{label,setupChild(agent){expect(agent.id).toBe(label);configured.add(agent.id)}})))
+ expect(new Set(seen)).toEqual(new Set(['first','second']));expect(listeners.size).toBe(0)
+})

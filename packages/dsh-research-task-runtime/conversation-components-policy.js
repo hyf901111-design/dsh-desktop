@@ -37,7 +37,8 @@ function deliveryObjectText(tail){
  return /^(?:展示|显示|使用|利用|根据|基于|以|包含|带有|附有|含|比较|呈现|反映|分析|用于|用来).{0,160}的(.+)$/u.exec(phrase)?.[1]??phrase
 }
 function creationDenied(clause){
- return /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|展示|显示|呈现|绘制|提供|编写|撰写|修改|编辑|完成|导出|保存|交付|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause.replace(conversationScope,''))
+ if(/(?:暂不|先不|不要|不用|无需|不需要|别|禁止|不再)(?:再)?(?:把|将).{0,180}(?:做出来|搭出来|实现出来|还原出来|做成|转成|转换成|还原成)/u.test(clause))return true
+ return /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|直接|让我|让你|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|制作|构建|添加|规划|展示|显示|呈现|绘制|提供|编写|撰写|修改|编辑|完成|导出|保存|交付|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause.replace(conversationScope,''))
 }
 function documentDeliveryClause(clause){
  const action=normalizeComponentClause(clause)
@@ -67,7 +68,17 @@ function deliveryScope(session){
  return {human,request:document?ui.join('；'):request,documentOnly:document&&!ui.length}
 }
 function explicitComponentCreation(action){
- const predicate=action.match(/创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|建立|搭建|制作|构建|做(?:一个|一套|一张|个|套|张)|建(?:一个|一套|一张|个|套|张)|\b(?:create|build|generate)\b/iu)
+ // Users often put the deliverable before the verb (把原型里的看板做出来).
+ // Do not infer a fresh task from a past-tense report or a how-to question.
+ if(!/(?:已经?|刚才|刚刚|之前|曾经).{0,8}(?:把|将)/u.test(action)){
+  const conversion=/(?:把|将).{1,140}?(?:做成|转成|转换成|还原成)(.{1,60})$/u.exec(action)
+  const object=conversion?.[1].match(componentObject)
+  if(object)return{index:conversion.index,target:boardObject.test(object[0])?'workbench':'component'}
+  const materialized=/(?:把|将)(.{1,160})(?:做出来|搭出来|实现出来|还原出来)(?:一下|吧|即可)?$/u.exec(action.trim())
+  const target=materialized?.[1].match(componentObject)
+  if(target)return{index:materialized.index,target:boardObject.test(target[0])?'workbench':'component'}
+ }
+ const predicate=action.match(/创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|做(?:一个|一套|一张|个|套|张)|建(?:一个|一套|一张|个|套|张)|\b(?:create|build|generate)\b/iu)
  if(!predicate)return null
  const tail=action.slice(predicate.index+predicate[0].length).trim()
  if(/^(?:的)?(?:方法|方式|步骤|逻辑|规则|功能)/u.test(tail))return null
@@ -109,7 +120,7 @@ export function componentCreationRequest(session) {
     const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
     const deliveryText=action
     const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
-    const create = delivery || createBuild || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
+    const create = delivery || createBuild || !!explicitComponentCreation(action) || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = creationDenied(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
     const accepted=create&&!denied&&!inspection&&!readOnlyComponentDelivery(action)

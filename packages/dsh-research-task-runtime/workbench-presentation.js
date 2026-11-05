@@ -16,6 +16,9 @@ html,body{background:var(--sherlock-bg)!important;color:var(--sherlock-text)!imp
 body{margin:0!important;padding:8px 10px!important;box-sizing:border-box!important;min-width:0!important;min-height:0!important;overflow:auto!important;backdrop-filter:none!important}
 body :is(p,span,label,div,button,input,select,textarea,th,td,summary,small,strong,h1,h2,h3,h4){font-family:var(--sherlock-font-sans)!important}
 body :is(button,input,select,textarea){font-size:12px!important;line-height:18px!important;border-radius:3px!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)}
+/* Record selectors and evidence headers can contain several lines. Keep the
+   toolbar minimum, while allowing their content to determine the height. */
+body :is(button:not(.market-tile),[role="button"]:not(rect):not(circle)){height:auto!important;min-height:26px!important;padding:4px 8px!important}
 body :is(input,select,textarea){background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;padding:2px 7px!important;box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
 body :is(input,textarea)::placeholder{color:var(--sherlock-control-muted,var(--sherlock-muted))!important;opacity:1}
 body :is(input:not([type="checkbox"]):not([type="radio"]),select){height:26px!important;min-height:26px!important}
@@ -43,8 +46,16 @@ body .financial-profile :is(th,td){white-space:nowrap!important;overflow-wrap:no
 body th{position:sticky;top:0;z-index:1;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;font-weight:500!important}
 body th button{border:0!important;background:none!important;color:inherit!important;padding:0!important;text-align:inherit!important;font:inherit!important;min-height:0!important}
 body tbody tr{background:var(--sherlock-bg)!important}body tbody tr:nth-child(even){background:var(--sherlock-row-alternate)!important}body tbody tr:hover,body tbody tr[aria-selected="true"]{background:var(--sherlock-row-selected)!important}
-body td{background:transparent!important;color:var(--sherlock-text)!important}body :is(td,th)[data-numeric="true"]{text-align:right!important}body :is(td,th)[data-numeric="false"]{text-align:left!important}
-body :is([data-tone="positive"],.positive,.up){color:var(--sherlock-market-positive)!important}body :is([data-tone="negative"],.negative,.down){color:var(--sherlock-market-negative)!important}
+body td{background:transparent!important}body:where([data-sherlock-market]) td{color:var(--sherlock-text)!important}body:where(:not([data-sherlock-market])) :where(td){color:var(--sherlock-text)}body :is(td,th)[data-numeric="true"]{text-align:right!important}body :is(td,th)[data-numeric="false"]{text-align:left!important}
+/* Native observed-source tables retain explicit business markings under host defaults. */
+body[data-sherlock-source-view] tbody tr.highlight{background:var(--sherlock-row-selected)!important}
+body[data-sherlock-source-view] td.inflow{color:var(--sherlock-status-danger-fg)!important}
+body[data-sherlock-source-view] td.outflow{color:var(--sherlock-status-success-fg)!important}
+body [data-tone="positive"],body:where([data-sherlock-market]) :is(.positive,.up):not(button,summary,[role="button"],input,select,textarea){color:var(--sherlock-market-positive)!important}body [data-tone="negative"],body:where([data-sherlock-market]) :is(.negative,.down):not(button,summary,[role="button"],input,select,textarea){color:var(--sherlock-market-negative)!important}
+/* Class names alone do not define the business color convention of an authored
+   page. Keep a fallback, but let its explicit host-role color win (e.g. red
+   inflow / green outflow). Native market and explicit data-tone stay owned. */
+body:where(:not([data-sherlock-market])) :where(.positive,.up){color:var(--sherlock-market-positive)}body:where(:not([data-sherlock-market])) :where(.negative,.down){color:var(--sherlock-market-negative)}
 body :is(.market-metrics,.fund-kpis){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px 12px!important;border:0!important;min-height:0!important}
 body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi){padding:0!important;min-height:0!important;background:none!important;border:0!important;border-radius:0!important}
 body :is(.market-label,.fund-label,.research-metric-label,.kpi-label){font-size:12px!important;font-weight:400!important;color:var(--sherlock-muted)!important;line-height:18px!important}

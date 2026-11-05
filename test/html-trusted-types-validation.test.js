@@ -6,6 +6,9 @@ it.each([
  'var out=document.getElementById("out");out.innerHTML="<b>"+String(value)+"</b>";',
  'const out=document.querySelector("#out");out["outerHTML"]=`<p>${value}</p>`;',
  'const markup="<b>value</b>";document.body.innerHTML=markup;',
+ 'var markup="<thead>";markup+="<tr>row</tr>";markup+="</thead>";document.getElementById("out").innerHTML=markup;',
+ 'let markup;markup="<b>";markup+=String(value);document.body.insertAdjacentHTML("beforeend",markup);',
+ 'let markup="<b>";markup=markup+value;document.write(markup);',
  'document.getElementById("out").insertAdjacentHTML("beforeend","<b>value</b>");',
  'document.write("<b>value</b>");',
  'document.body.innerHTML += value;'
@@ -22,6 +25,8 @@ it.each([
  'let out=document.getElementById("out");out={};out.innerHTML="ordinary object";',
  'const out=document.getElementById("out");out.innerHTML=unknownTrustedValue;',
  'const out=document.getElementById("out");const other={innerHTML:""};{const out=other;out.innerHTML="ordinary object"}'
+ ,'let markup="<b>";markup+="x";const data={innerHTML:""};data.innerHTML=markup;'
+ ,'var markup="<b>";markup+="x";function f(markup){document.body.innerHTML=markup}'
 ])('does not mistake safe text, template strings or unproven values for a forbidden sink: %s',source=>{
  expect(sharedComponentIssue(wrap(source))).toBeUndefined()
 })

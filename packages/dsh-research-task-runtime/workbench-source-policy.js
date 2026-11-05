@@ -94,6 +94,7 @@ export function workbenchSourcePolicy(originalRequest, panel, options={}) {
 // this key. Re-freeze after storage restore and detach caller-owned objects.
 export function restoreWorkbenchHostContext(value) {
   if (value === undefined) return undefined
+  if (value?.sourceMessageId !== undefined && (typeof value.sourceMessageId !== 'string' || !value.sourceMessageId.trim() || value.sourceMessageId.length > 256)) ambiguous()
   const policy = value?.sourcePolicy
   if (!policy || typeof policy.pluginRequired !== 'boolean' || typeof policy.pluginProhibited !== 'boolean' ||
       policy.pluginRequired && policy.pluginProhibited || typeof policy.preferenceRequest !== 'string' || policy.preferenceRequest.length > 16000 ||
@@ -107,5 +108,5 @@ export function restoreWorkbenchHostContext(value) {
         request.dataMode !== undefined && !['source','simulated'].includes(request.dataMode)) ambiguous()
     workbenchRequest = Object.freeze({originalRequest:request.originalRequest,dataMode:request.dataMode ?? 'source'})
   }
-  return Object.freeze({...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest,...policy.publicSourceRequests===undefined?{}:{publicSourceRequests:strictPublicRequests(policy.publicSourceRequests)}}),sourceRequirement:value.sourceRequirement})
+  return Object.freeze({...(value.sourceMessageId === undefined ? {} : {sourceMessageId:value.sourceMessageId}),...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest,...policy.publicSourceRequests===undefined?{}:{publicSourceRequests:strictPublicRequests(policy.publicSourceRequests)}}),sourceRequirement:value.sourceRequirement})
 }

@@ -16,6 +16,7 @@ import {newsSourceScopeIssue,generalNewsScope,NEWS_CAPACITY_MARKER} from './news
 import {filterScopedNewsArtifact,newsSourceMatcher,controlledNewsHtml,NEWS_EMPTY_NOTE} from './news-topic-filter.js'
 import {newsQueryAttempt,mergeObservedNewsItems} from './news-query-coverage.js'
 import {componentReadableSnapshot,readableSnapshotUnavailable,pureMissingSourceText} from './component-readable-snapshot.js'
+import {resolvePrototypeHtmlSnapshot} from './prototype-html-snapshot.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -453,13 +454,14 @@ function normalizedHistoryMetadata(data,mapping,sources,now,options) {
 }
 export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
+  if(candidate?.mapping?.type==='html')return resolvePrototypeHtmlSnapshot(candidate,records,options)
   const contract=mappingContract(candidate?.mapping,options,candidate?.version)
   if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))return null
   const responses={},sources={}
   try {
     const keys=new Set()
     for(const request of candidate.requests){
-      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
+      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query','read_prototype'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
       keys.add(request.key)
       const args=evaluateMapping(normalizeRequestDates(request.args),{},now)
       const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&componentMappableSource(record))
