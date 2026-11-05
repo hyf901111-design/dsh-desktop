@@ -95,3 +95,21 @@ it('uses validated Yahoo identity and exchange timestamps for the alternate HK q
  f.fetch.mockResolvedValue(Response.json({chart:{result:[{meta:{symbol:'OTHER',regularMarketPrice:600,regularMarketTime:1792195200,exchangeTimezoneName:'Asia/Hong_Kong'}}]}}))
  expect((await f.service.query({action:'quotes',source:'backup',symbols:[symbol],refresh:true})).quotes).toEqual([])
 })
+it.each(['empty','invalid','unavailable'])('falls back to identified Yahoo index quotes when the global catalogue is %s',async mode=>{
+ const f=fixture(),symbols=[{code:'^IXIC',market:'INDEX',name:'纳斯达克综合指数'},{code:'^NDX',market:'INDEX',name:'纳斯达克100'}]
+ f.fetch.mockImplementation(async u=>{
+  const url=new URL(u)
+  if(url.hostname==='push2.eastmoney.com'){
+   if(mode==='unavailable')throw Error('接口暂不可用')
+   return Response.json({data:{diff:mode==='empty'?[]:[{f12:'NDX',f13:100,f2:'-',f124:1792195200},{f12:'NDX100',f13:100,f2:25000,f124:'-'}]}})
+  }
+  const code=decodeURIComponent(url.pathname.split('/').at(-1)!),price=code==='^IXIC'?23000:25000
+  return Response.json({chart:{result:[{meta:{symbol:code,regularMarketPrice:price,regularMarketTime:1792195200,exchangeTimezoneName:'America/New_York',chartPreviousClose:price-100},timestamp:[1792108800,1792195200],indicators:{quote:[{close:[price-100,price]}]}}],error:null}})
+ })
+ const r=await f.service.query({action:'quotes',asset:'index',source:'backup',symbols})
+ expect(r.quotes.map((p:any)=>[p.code,p.price,p.source,p.series])).toEqual([['^IXIC',23000,'Yahoo Finance',[22900,23000]],['^NDX',25000,'Yahoo Finance',[24900,25000]]])
+ expect(r.errors).toEqual([])
+ f.fetch.mockResolvedValue(Response.json({chart:{result:[{meta:{symbol:'OTHER',regularMarketPrice:600,regularMarketTime:1792195200,exchangeTimezoneName:'America/New_York'}}]}}))
+ const invalid=await f.service.query({action:'quotes',asset:'index',source:'backup',symbols,refresh:true})
+ expect(invalid.quotes).toEqual([]);expect(invalid.errors).toHaveLength(2)
+})

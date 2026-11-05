@@ -96,9 +96,14 @@ export async function queryBackupFinancialWidget(q:Row,io:BackupIO):Promise<Row>
    if(q.asset==='index')try{row.series=(await history(s,{period:'1d',adjustment:'none'},io)).bars.slice(-60).map((b:Row)=>b.close);if(row.series.length<2)throw Error('暂无有效走势')}catch(error){io.check();row.series=[];row.seriesError='走势更新失败：'+(error as Error).message}
   }else if(s.market==='INDEX'&&globalCodes[s.code]){
    const [code,zone]=globalCodes[s.code]!,r=globals.find(r=>r.f12===code&&r.f13===100),price=num(r?.f2),stamp=num(r?.f124)
-   if(!r||price===null||price<=0||stamp===null||stamp<946656000||stamp>=4102416000)throw Error('备用源暂无该指数有效报价')
-   row={...s,price,priceChange:num(r.f4),changePercent:num(r.f3),quotedAt:new Date(stamp*1000).toISOString(),asOf:dateAt(stamp,zone),timeZone:zone,source:'东方财富',quality:'公开报价 · 时效未确认',series:[]}
-   try{row.series=(await yahoo(s,io)).quote.series;if(row.series.length<2)throw Error('暂无有效走势');row.seriesSource='Yahoo Finance'}catch(error){io.check();row.series=[];row.seriesError='走势更新失败：'+(error as Error).message}
+   if(!r||price===null||price<=0||stamp===null||stamp<946656000||stamp>=4102416000){
+    // The public catalogue can omit a market. Reuse the validated chart quote
+    // and keep its actual provider and exchange timestamp instead of a blank.
+    row=(await yahoo(s,io)).quote
+   }else{
+    row={...s,price,priceChange:num(r.f4),changePercent:num(r.f3),quotedAt:new Date(stamp*1000).toISOString(),asOf:dateAt(stamp,zone),timeZone:zone,source:'东方财富',quality:'公开报价 · 时效未确认',series:[]}
+    try{row.series=(await yahoo(s,io)).quote.series;if(row.series.length<2)throw Error('暂无有效走势');row.seriesSource='Yahoo Finance'}catch(error){io.check();row.series=[];row.seriesError='走势更新失败：'+(error as Error).message}
+   }
   }else row=(await yahoo(s,io)).quote
   if(q.asset==='index'&&!(row.series?.length>1)&&!row.seriesError)row.seriesError='走势更新失败：暂无有效走势'
   if(row.seriesError)errors.set(key(s),{...s,error:row.seriesError})
