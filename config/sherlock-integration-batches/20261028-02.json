@@ -27002,231 +27002,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "原型工作台生成修复独立增量",
+        "featureName": "原型工作台取数结束时机修复",
         "branch": "codex/feat/prototype-delivery-20261106",
-        "baseCommit": "bf1649cff651579ef2e7165405be4ccac439324e",
-        "tipCommit": "55be245fed25631969c146ea4b49df155592af66",
+        "baseCommit": "55be245fed25631969c146ea4b49df155592af66",
+        "tipCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
         "commits": [
           {
-            "commit": "55be245fed25631969c146ea4b49df155592af66",
+            "commit": "76b83297607628c7d929132c9b06700ba95ee9f2",
             "parents": [
-              "bf1649cff651579ef2e7165405be4ccac439324e"
+              "55be245fed25631969c146ea4b49df155592af66"
             ],
-            "subject": "整合：按原型完整生成工作台并保留同任务修复及来源校验"
+            "subject": "修复：工作台组件读取完整指标和证据后再结束取数"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-trusted-types-validation.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/note-component-repair.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-html-snapshot.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-presentation-usage.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-presentation.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-record-view.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-source-tool.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-table-coverage.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-table-recovery.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/prototype-view-submission.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/shared-component-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-image-evidence.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-prototype-evidence.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-source-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/prototype-source-tool.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/research-send-admission.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/binding-repair-policy-dedup.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-agent-scope.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/html-trusted-types-validation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/note-component-repair.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-html-snapshot.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/prototype-live-submission.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-multi-view.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-presentation-usage.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-record-grouping.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-shared-handle-contract.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-source-mapping.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-source-palette.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-source-tool.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-stacked-sections.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-table-coverage.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-table-recovery.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/prototype-view-submission.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-design-policy.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-send-admission.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/shared-component-validation.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-image-evidence.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-prototype-component.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-prototype-evidence.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-prototype-ownership.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-resultative-request.test.js"
           }
         ],
         "checks": [
@@ -27235,17 +27031,12 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/prototype-html-snapshot.test.js",
-              "test/prototype-table-coverage.test.js",
-              "test/prototype-live-submission.test.js",
-              "test/workbench-prototype-component.test.js",
-              "test/prototype-source-tool.test.js",
-              "test/note-component-repair.test.js"
+              "test/prototype-live-submission.test.js"
             ],
             "outcome": "passed",
-            "summary": "独立增量133项直接相关检查通过。",
-            "verifiedCommit": "55be245fed25631969c146ea4b49df155592af66",
-            "completedAt": "2026-11-05T17:00:11.947539+00:00",
+            "summary": "20项直接相关检查通过；新用例确认命名数据集读完仍能读取同一原型的额外证据。",
+            "verifiedCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
+            "completedAt": "2026-11-05T17:20:24.057632+00:00",
             "timeoutMs": 120000
           },
           {
@@ -27256,28 +27047,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "55be245fed25631969c146ea4b49df155592af66",
-            "completedAt": "2026-11-05T17:00:11.947539+00:00",
+            "verifiedCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
+            "completedAt": "2026-11-05T17:20:24.057632+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "独立生产渲染器实测：完整运行67的5个成功卡加失败卡68重试，六卡均有正文；周期、榜单、12只筛选、单产品搜索、排序恢复、竞品9成员展开、渠道流出筛选、30条对账与5项异常筛选通过。尚非签名客户端整套验收。"
+          "outcome": "not-applicable",
+          "summary": "此增量仅改变子任务取数结束时机，无界面代码变化；原生内容完整性需构建后复验，不据此声明原生工作台通过。"
         },
         "acceptanceCriteria": [
-          "按原始HTML完整读取和注入来源，不用样本冒充完整记录。",
-          "同一组件子任务保留来源并局部修复；正确识别对象内明细，避免误判循环。",
-          "保留现有图片能力、最新演示、PPT1.1.3和工具可选参数修复；本地测试不发布。"
+          "正式提交前保留授权原型的后续读取。",
+          "既有时间、次数和授权范围保持约束。"
         ],
         "risks": [
-          "完整运行67最初5/6成功；失败卡在2ade3f07a修复后独立重试成功，非单次6/6无失败。",
-          "只执行与本次改动直接相关检查；没有全功能测试，不能接受或晋升main。",
-          "浏览器为生产内容渲染器的独立页面，未覆盖签名客户端外层容器与共享状态全链路。",
-          "竞品成员表的布尔值仍显示true/false，属于已记录显示细节。",
-          "原goal-notes分支已有补丁被单独集成，刷新整体交接被正确拒绝；本分支从canonical main创建后引用当前bf1649cff集成依赖，仅交接尚未集成的原型增量。"
+          "852565fc6原生6/6任务结束但市场卡缺总量指标和前十榜单；修复后原提示单卡实际模型复验正在执行。",
+          "仅本地预览集成；未接受或晋升main。"
         ],
-        "generatedAt": "2026-11-05T17:00:11.947539+00:00"
+        "generatedAt": "2026-11-05T17:20:24.057632+00:00"
       }
     }
   ],
