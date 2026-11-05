@@ -27252,17 +27252,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记修改预览与完成提示",
+        "featureName": "笔记采纳后的回执状态同步",
         "branch": "codex/feat/notes-preview-actions-20261106",
-        "baseCommit": "b5dc10135df3e6b4a89518d9549625bab371d05f",
-        "tipCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+        "baseCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+        "tipCommit": "408687b22984d2c68405a76fae3272b153a2598d",
         "commits": [
           {
-            "commit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
+            "commit": "408687b22984d2c68405a76fae3272b153a2598d",
             "parents": [
-              "b5dc10135df3e6b4a89518d9549625bab371d05f"
+              "7fd8d191c57ca1621fb29611ff133ed62821f1aa"
             ],
-            "subject": "修复：笔记修改预览与完成提示不再误称追加正文"
+            "subject": "修复：笔记采纳后不再显示过期的待确认回执"
           }
         ],
         "files": [
@@ -27276,15 +27276,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/notes/editor.tsx"
+            "path": "src/main/notes/service.ts"
           },
           {
             "status": "M",
             "path": "test/notes-activity.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-chat-preview-browser.test.ts"
           }
         ],
         "checks": [
@@ -27295,12 +27291,12 @@
               "run",
               "test/notes-activity.test.js",
               "-t",
-              "shows only a short note stage|retains note reference chips"
+              "settled native preview|shows completed host actions|retains note reference chips"
             ],
             "outcome": "passed",
-            "summary": "2项聚焦渲染及重复补丁检查通过，10项不相关测试跳过。",
-            "verifiedCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
-            "completedAt": "2026-11-05T18:47:52.715047+00:00",
+            "summary": "5项聚焦渲染检查通过：待确认、采纳、放弃和独立保存操作显示正确；重复补丁可重建。",
+            "verifiedCommit": "408687b22984d2c68405a76fae3272b153a2598d",
+            "completedAt": "2026-11-05T19:04:34.022321+00:00",
             "timeoutMs": 120000
           },
           {
@@ -27311,24 +27307,39 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "7fd8d191c57ca1621fb29611ff133ed62821f1aa",
-            "completedAt": "2026-11-05T18:47:52.715047+00:00",
+            "verifiedCommit": "408687b22984d2c68405a76fae3272b153a2598d",
+            "completedAt": "2026-11-05T19:04:34.022321+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-client-capability-service.test.ts",
+              "-t",
+              "reports actual saved actions"
+            ],
+            "outcome": "passed",
+            "summary": "实际服务进度桥检查通过，继续过滤读取内容等内部数据。",
+            "verifiedCommit": "408687b22984d2c68405a76fae3272b153a2598d",
+            "completedAt": "2026-11-05T19:04:34.022321+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生签名客户端已复现删除后误称追加的文案问题；修改后的真实 React 会话行静态渲染已验证新状态及新回执，普通新增路径保留原标签。原生客户端按钮和删除结果将在集成构建后再次核对，当前不将此视为最终客户端验收。"
+          "summary": "真实原生客户端复现历史回执矛盾；修复后的真实 React 行渲染覆盖 ready、accepted、discarded 三状态及同条任务的独立保存回执；最终客户端重开验收在集成构建后进行。"
         },
         "acceptanceCriteria": [
-          "修改和删除预览使用应用修改，新增文字继续使用添加至正文。",
-          "采纳后显示笔记已更新，不把被删除文字误称写入正文。"
+          "已采纳和已放弃的历史笔记任务不再显示待确认回执。",
+          "保留实际独立保存操作的完成记录，未确认预览仍准确显示待确认。"
         ],
         "risks": [
           "仅文本标签调整；最终签名客户端验证待本地构建后进行。",
           "本地预览，不发布、不接受或晋升 main。"
         ],
-        "generatedAt": "2026-11-05T18:47:52.715047+00:00"
+        "generatedAt": "2026-11-05T19:04:34.022321+00:00"
       }
     }
   ],
