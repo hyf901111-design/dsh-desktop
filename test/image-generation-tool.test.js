@@ -1,0 +1,100 @@
+import {afterEach, expect, it, vi} from 'vitest'
+import {registerImageGenerationTool,conversationImageReferences} from '../packages/dsh-research-task-runtime/image-generation-tool.js'
+
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=','base64')
+const cleanups=[]
+afterEach(async()=>{await Promise.all(cleanups.splice(0).map(fn=>fn()))})
+function fixture(options={}){
+ const tools=new Map(),prompts=[],saved=[],reads=[],state={live:true,key:'test-private-key',profile:{apiKeyEnv:'CUSTOM_IMAGE_KEY'}}
+ const ref={attachmentId:'user-image',mediaType:'image/png',bytes:png.length,width:1,height:1,name:'参考图.png'}
+ const agent={id:'chat',session:{id:'chat',header:{cwd:'/workspace'},events:[{type:'turn/start',data:{turn:1}},{type:'user/message',data:{id:'human-1',source:{kind:'user'},content:[{type:'text',text:'画一只猫'},{type:'image',attachment:ref}]}}]}}
+ const attachments={imageLimits:{maxImageBytes:20*1024*1024},readImage:async r=>{reads.push(r);return{ref:r,data:png}},saveImage:async input=>{saved.push(input);return{...ref,attachmentId:'generated-'+saved.length,name:input.name}}}
+ const credentials={resolve:vi.fn(async()=>state.key?{value:state.key}:undefined)}
+ const ctx={tools:{register:t=>{tools.set(t.name,t);return()=>tools.delete(t.name)},schemas:()=>[...tools.values()]},agents:{get:()=>state.live?agent:undefined},systemPrompt:{context:p=>{prompts.push(p);return()=>{}}},get:n=>({attachments,credentials,settings:{get:()=>({providers:{openai:state.profile}})}}[n])}
+ const request=vi.fn(async()=>new Response(JSON.stringify({data:[{b64_json:png.toString('base64')}]})))
+ const dispose=registerImageGenerationTool(ctx,{fetch:request,...options});cleanups.push(dispose)
+ const call=(args={},signal)=>tools.get('image_generate').execute({prompt:'水彩橘猫',...args},{agent,callId:'call-'+Math.random(),signal})
+ return{tools,prompts,state,agent,attachments,credentials,request,saved,reads,call,ref}
+}
+it('generates using the configured credential and returns a durable native image without credentials',async()=>{
+ const f=fixture(),result=await f.call()
+ expect(result).toMatchObject({kind:'odyssey-image-generation',ok:true,model:'gpt-image-2.6-flare',image:{attachmentId:'generated-1'}})
+ expect(f.credentials.resolve).toHaveBeenCalledWith('CUSTOM_IMAGE_KEY')
+ const [url,init]=f.request.mock.calls[0]
+ expect(url).toBe('https://api.openai.com/v1/images/generations');expect(init.redirect).toBe('error')
+ expect(JSON.parse(init.body)).toMatchObject({model:'gpt-image-2.6-flare',prompt:'水彩橘猫',n:1,output_format:'png'})
+ expect(f.saved[0].data).toEqual(png)
+ expect(JSON.stringify(f.tools.get('image_generate').output.render({},result))).not.toContain(f.state.key)
+ expect(f.tools.get('image_generate').output.render({},result)[1]).toEqual({type:'image',attachment:result.image})
+ expect(f.prompts[0].text({agent:f.agent})).toContain('image_generate')
+})
+it('deduplicates concurrent and repeated requests for the same human instruction, but permits the next request',async()=>{
+ const f=fixture(),[a,b]=await Promise.all([f.call(),f.call()]);expect(a).toEqual(b)
+ expect(await f.call()).toEqual(a);expect(f.request).toHaveBeenCalledTimes(1)
+ f.agent.session.events.push({type:'user/message',data:{id:'human-2',source:{kind:'user'},content:[{type:'text',text:'再画一张'}]}})
+ await f.call();expect(f.request).toHaveBeenCalledTimes(2)
+})
+it('edits only images already present in this session',async()=>{
+ const f=fixture();await f.call({reference_image_ids:[f.ref.attachmentId]})
+ expect(f.reads).toEqual([f.ref]);const [url,init]=f.request.mock.calls[0]
+ expect(url).toContain('/images/edits');expect(init.body).toBeInstanceOf(FormData);expect(init.body.get('image[]')).toBeInstanceOf(Blob)
+ await expect(f.call({reference_image_ids:['another-session-image']})).rejects.toThrow(/当前会话/)
+ expect(f.request).toHaveBeenCalledTimes(1)
+})
+it('rejects arbitrary URLs, unknown models, invalid sizes, excess references and delegate sessions before billing',async()=>{
+ const f=fixture()
+ for(const args of[{url:'https://other.test'},{model:'not-a-model'},{size:'9999x9999'},{prompt:' '},{reference_image_ids:Array(5).fill('user-image')}])await expect(f.call(args)).rejects.toThrow()
+ f.agent.session.header.origin='subagent';await expect(f.call()).rejects.toThrow(/主会话/)
+ expect(f.request).not.toHaveBeenCalled()
+})
+it('never starts a request without credentials or with a custom endpoint credential',async()=>{
+ const f=fixture();f.state.key='';await expect(f.call()).rejects.toThrow(/OpenAI/)
+ f.state.key='test';f.state.profile.baseURL='https://other.test/v1';await expect(f.call({prompt:'另一只猫'})).rejects.toThrow(/官方/)
+ expect(f.request).not.toHaveBeenCalled()
+})
+it('does not repeat a failed paid call or reflect provider errors / keys',async()=>{
+ const f=fixture();f.request.mockResolvedValue(new Response(JSON.stringify({error:{message:'test-private-key secret'}}),{status:429}))
+ await expect(f.call()).rejects.toThrow(/额度|频率/);await expect(f.call()).rejects.toThrow(/额度|频率/)
+ expect(f.request).toHaveBeenCalledTimes(1);expect(f.saved).toHaveLength(0)
+})
+it('cancellation discards late success and exposes no generated image',async()=>{
+ const f=fixture(),controller=new AbortController();let resolve,started
+ const ready=new Promise(r=>started=r);f.request.mockImplementation(()=>{started();return new Promise(r=>resolve=r)})
+ const pending=f.call({},controller.signal);await ready;controller.abort()
+ resolve(new Response(JSON.stringify({data:[{b64_json:png.toString('base64')}]})))
+ await expect(pending).rejects.toThrow(/取消/);expect(f.saved).toHaveLength(0)
+})
+it('rejects late results when the live session or human authority changes',async()=>{
+ const f=fixture();f.request.mockImplementation(async()=>{f.state.live=false;return new Response(JSON.stringify({data:[{b64_json:png.toString('base64')}]}))})
+ await expect(f.call()).rejects.toThrow(/会话/);expect(f.saved).toHaveLength(0)
+})
+it('bounds and validates provider response before publishing an attachment',async()=>{
+ const f=fixture();f.request.mockResolvedValue(new Response(JSON.stringify({data:[{b64_json:Buffer.from('not an image').toString('base64')}]})))
+ await expect(f.call()).rejects.toThrow(/图片/);expect(f.saved).toHaveLength(0)
+ f.request.mockResolvedValue(new Response('{}',{headers:{'content-length':'999999999'}}))
+ await expect(f.call({prompt:'different'})).rejects.toThrow(/过大/)
+})
+it('supports a future built-in provider without changing the tool or image UI',async()=>{
+ const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
+ const f=fixture({providers:[{models:[{id:'builtin-art',name:'内置生图'}],generate}],defaultModel:'builtin-art'})
+ const result=await f.call();expect(result.model).toBe('builtin-art');expect(generate).toHaveBeenCalledOnce();expect(f.request).not.toHaveBeenCalled()
+})
+it('recovers code-mode image receipts after restart and permits editing them in the next turn',async()=>{
+ const f=fixture(),result=await f.call(),content=f.tools.get('image_generate').output.render({},result)
+ const events=[...f.agent.session.events,{type:'tool/code-dispatch',data:{name:'image_generate',isError:false,content}},{type:'user/message',data:{source:{kind:'plugin',plugin:'tools-code-mode'},content}}]
+ expect(conversationImageReferences({events}).has(result.image.attachmentId)).toBe(true)
+ const fresh=fixture();fresh.agent.session.events=events
+ expect(await fresh.call()).toEqual(result);expect(fresh.request).not.toHaveBeenCalled()
+ fresh.agent.session.events.push({type:'user/message',data:{id:'human-2',source:{kind:'user'},content:[{type:'text',text:'修改刚才的图片'}]}})
+ await fresh.call({prompt:'换成蓝色',reference_image_ids:[result.image.attachmentId]})
+ expect(fresh.reads).toEqual([result.image])
+})
+it('rechecks the live human authority after credentials resolve, before a billed POST',async()=>{
+ const f=fixture();let release,started
+ const ready=new Promise(r=>started=r)
+ f.credentials.resolve.mockImplementation(()=>{started();return new Promise(r=>release=r)})
+ const pending=f.call();await ready
+ f.agent.session.events.push({type:'user/message',data:{id:'human-2',source:{kind:'user'},content:[{type:'text',text:'不用生成了'}]}})
+ release({value:'test-private-key'})
+ await expect(pending).rejects.toThrow(/会话|要求/);expect(f.request).not.toHaveBeenCalled()
+})

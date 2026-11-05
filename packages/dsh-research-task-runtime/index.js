@@ -1,3 +1,4 @@
+import {registerImageGenerationTool} from './image-generation-tool.js'
 import { registerHomePresentationRuntime } from './home-presentation-runtime.js'
 import { registerHomeReportRuntime } from './home-report-runtime.js'
 import { registerHomeNotesRuntime } from './home-notes-runtime.js'
@@ -3064,6 +3065,7 @@ export async function apply(ctx) {
     const disposeClientTools = registerClientTools(ctx)
     const disposeResearchReportTool = registerResearchReportTool(ctx)
     const disposePresentationFiles = registerPresentationFiles(ctx)
+    const disposeImageGenerationTool = registerImageGenerationTool(ctx)
     let context
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
@@ -3076,6 +3078,7 @@ export async function apply(ctx) {
       disposeCanvasTools();disposeClientTools()
       void disposeResearchReportTool()
       disposePresentationFiles()
+      disposeImageGenerationTool()
       disposeRoutes()
       disposeScheduledTitle()
       disposeScheduledTaskTool()
@@ -3104,6 +3107,7 @@ export async function apply(ctx) {
       disposeCanvasTools();disposeClientTools()
       await disposeResearchReportTool()
       disposePresentationFiles()
+      disposeImageGenerationTool()
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()
