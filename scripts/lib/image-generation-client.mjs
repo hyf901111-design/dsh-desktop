@@ -35,6 +35,9 @@ export const IMAGE_GENERATION_CSS=`
 .odyssey-image-generation-result img{display:block;width:100%;max-width:100%;height:100%;object-fit:contain}
 body[data-ds-dark-theme] .odyssey-image-generation-stage{background:#202020}
 body[data-ds-dark-theme] .odyssey-image-generation-status{color:#fff;text-shadow:0 1px 8px #0009}
+/* The shared Menu still renders an anchor span when anchor=null. A body-level
+   span after the full-height app would add a line box and a viewport scrollbar. */
+body .odyssey-image-menu-anchor{position:fixed;top:0;left:0;width:0;height:0}
 body [role=menu]:has([data-odyssey-image-action]){z-index:2147483001}
 .odyssey-image-action-notice{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2147483002;padding:10px 16px;border-radius:10px;background:var(--odyssey-menu,#333);color:var(--odyssey-text,#fff);box-shadow:var(--odyssey-menu-shadow);font:400 13px/20px var(--odyssey-font-ui,system-ui,sans-serif);pointer-events:none}
 @keyframes odyssey-image-breathe{0%,100%{opacity:.45;transform:scale(.82)}50%{opacity:1;transform:scale(1.08)}}
@@ -73,7 +76,7 @@ function GeneratedConversationImage({image,loadImage,t}){
   event.preventDefault();event.stopPropagation()
   setMenu({x:event.clientX,y:event.clientY,host:event.target.closest('[aria-modal="true"]')||document.body})
  },children:[jsx(_deepseek_ai_dsh_client_ui_attachment.ImageGallery,{images:[{attachment:image}],load:loadImage??(()=>Promise.reject(new Error(t('image.serviceUnavailable')))),align:'start',labels:messageImageLabels(t)}),
- menu&&react_dom.createPortal(jsx(_deepseek_ai_dsh_client_ui_primitives.Menu,{open:true,anchor:null,items,onSelect:act,onClose:close,portal:true,getAnchorRect:anchor}),menu.host),
+ menu&&react_dom.createPortal(jsx(_deepseek_ai_dsh_client_ui_primitives.Menu,{open:true,anchor:null,className:'odyssey-image-menu-anchor',items,onSelect:act,onClose:close,portal:true,getAnchorRect:anchor}),menu.host),
  notice&&react_dom.createPortal(jsx('div',{role:'status',className:'odyssey-image-action-notice',children:notice}),document.body)
  ]})
 }
@@ -89,12 +92,12 @@ function ImageGenerationOutputs({nodes,running,loadImage,t}){
 }
 
 export function patchImageGenerationClient(source){
- const marker='/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V2 */'
+ const marker='/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V3 */'
  if(source.includes(marker))return source
  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Image generation client anchor drifted: '+before.slice(0,90));source=source.replace(before,()=>after)}
  const functions=`${marker}\n${imageGenerationCalls.toString()}\n${GeneratedConversationImage.toString()}\n${ImageGenerationOutputs.toString()}\nif(typeof document!=='undefined'&&!document.getElementById('odyssey-image-generation-style')){const style=document.createElement('style');style.id='odyssey-image-generation-style';style.textContent=${JSON.stringify(IMAGE_GENERATION_CSS)};document.head.append(style)}\n`
- const previous=source.indexOf('/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V1 */')
- if(previous>=0){const end=source.indexOf('function ToolImageOutputs(',previous);if(end<0)throw Error('Image generation V1 boundary drifted');return source.slice(0,previous)+functions+source.slice(end)}
+ const previous=source.search(/\/\* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V[12] \*\//)
+ if(previous>=0){const end=source.indexOf('function ToolImageOutputs(',previous);if(end<0)throw Error('Image generation legacy boundary drifted');return source.slice(0,previous)+functions+source.slice(end)}
  replace('function ToolImageOutputs(',functions+'function ToolImageOutputs(')
  const call='(0, react_jsx_runtime.jsx)(ToolImageOutputs, { nodes: activityNodes, openFile: seatProps.openFile, loadImage: seatProps.loadImage, t })'
  replace(call,`(0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, {children:[(0, react_jsx_runtime.jsx)(ImageGenerationOutputs, {nodes:activityNodes, running: entry.running, loadImage:seatProps.loadImage, t}),${call}]})`)
