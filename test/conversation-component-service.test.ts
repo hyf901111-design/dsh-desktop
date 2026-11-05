@@ -8,7 +8,7 @@ import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/fin
 const dirs:string[]=[]
 afterEach(async()=>{await Promise.all(dirs.splice(0).map(d=>rm(d,{recursive:true,force:true})))})
 const table={artifact:{version:1,type:'table',title:'模拟表格',columns:['名称'],rows:[['模拟记录']]}} as any
-const native=()=>({artifact:{...financialWidgetDefaults('quote')!,title:'模拟行情',symbols:[{code:'AAPL',market:'US',name:'模拟标的'}]}} as any)
+const native=(source?:'default'|'backup')=>({artifact:{...financialWidgetDefaults('quote')!,...(source?{dataSource:source}:{}),title:'模拟行情',symbols:[{code:'AAPL',market:'US',name:'模拟标的'}]}} as any)
 async function fixture(){
  const dir=await mkdtemp(join(tmpdir(),'conversation-service-'));dirs.push(dir);const store=new ConversationComponentStore(join(dir,'components.json'));await store.load()
  let owner='owner',visible:any={ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'},current=true,writable=true
@@ -30,16 +30,16 @@ it('requires visible owner, session, lease and strict locating DTOs for every UI
  f.setVisible(undefined);await expect(f.service.reference(t)).rejects.toThrow()
  f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'});f.setOwner('other');await expect(f.service.read(t)).rejects.toThrow()
 })
-it('only queries the current native spec and merges quotes/history observations at one revision',async()=>{
- const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default'}
- const [quotes]=await Promise.all([f.service.queryNative({...t,expectedRevision:1,query}),f.service.queryNative({...t,expectedRevision:1,query:{action:'history',symbols:spec.symbols,source:'default',period:'1d',adjustment:'none'}})])
+it.each(['default','backup'] as const)('only queries the current native spec and merges quotes/history observations at one revision with %s source',async(source)=>{
+ const f=await fixture(),t=await f.create(native(source)),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:spec.dataSource??'default'}
+ const [quotes]=await Promise.all([f.service.queryNative({...t,expectedRevision:1,query}),f.service.queryNative({...t,expectedRevision:1,query:{action:'history',symbols:spec.symbols,source:spec.dataSource??'default',period:'1d',adjustment:'none'}})])
  expect(quotes).toMatchObject({quotes:[{price:17}]});const details=f.store.details('owner',t);expect(Object.keys(details.observations).sort()).toEqual(['history','quotes']);expect(details.revision).toBe(1);expect(details.provenance).toMatchObject({sourceState:'native-observed',fetchedAt:Date.parse('2026-10-24T01:01:00Z')})
- for(const q of [{...query,symbols:[{code:'MSFT',market:'US',name:'别的标的'}]},{...query,source:'backup'},{...query,action:'news',query:''},{...query,script:'bad'},{action:'history',symbols:spec.symbols,source:'default',period:'1w',adjustment:'none'}])await expect(f.service.queryNative({...t,expectedRevision:1,query:q as any})).rejects.toThrow()
+ for(const q of [{...query,symbols:[{code:'MSFT',market:'US',name:'别的标的'}]},{...query,source:query.source==='default'?'backup':'default'},{...query,action:'news',query:''},{...query,script:'bad'},{action:'history',symbols:spec.symbols,source:spec.dataSource??'default',period:'1w',adjustment:'none'}])await expect(f.service.queryNative({...t,expectedRevision:1,query:q as any})).rejects.toThrow()
  expect(f.nativeQuery).toHaveBeenCalledTimes(2)
  const ref=await f.service.reference(t),resolved=await f.service.resolveReference({sessionId:'s',reference:ref});expect(resolved.text).toContain('17');expect(resolved.text).toContain('模拟报价来源');expect(resolved.text).toContain('2026-10-23');expect(resolved.text).toContain('不可信资料')
 })
 it('does not save late results after spec or visible lease changes and preserves last success on failure',async()=>{
- const f=await fixture(),t=await f.create(native()),view=await f.service.read(t),spec=view.node.containerSpec as any,q={action:'quotes',symbols:spec.symbols,source:'default'}
+ const f=await fixture(),t=await f.create(native()),view=await f.service.read(t),spec=view.node.containerSpec as any,q={action:'quotes',symbols:spec.symbols,source:spec.dataSource??'default'}
  await f.service.queryNative({...t,expectedRevision:1,query:q});const old=await f.service.read(t);f.nativeQuery.mockRejectedValueOnce(Error('模拟源失败'));await expect(f.service.queryNative({...t,expectedRevision:1,query:q})).rejects.toThrow('模拟源失败');expect((await f.service.read(t)).provenance).toEqual(old.provenance)
  let finish!:(v:any)=>void;f.nativeQuery.mockImplementationOnce(()=>new Promise(resolve=>finish=resolve));const pending=f.service.queryNative({...t,expectedRevision:1,query:q});await Promise.resolve();await f.service.updateNativeSpec({...t,expectedRevision:1,spec:{...spec,symbols:[{code:'MSFT',market:'US',name:'模拟新标的'}]}})
  finish({source:'模拟旧源',receivedAt:'2026-10-24T02:00:00Z',quotes:[{...spec.symbols[0],price:999,asOf:'2026-10-23'}]});await expect(pending).rejects.toThrow(/版本/);expect(f.store.details('owner',t).observations).toEqual({})
@@ -57,7 +57,7 @@ it('copy changes only clipboard and saveLibrary rereads the host instance, never
  await expect(f.service.saveLibrary({...t,node:{title:'伪造'}} as any)).rejects.toThrow();expect(f.add).toHaveBeenCalledTimes(1)
 })
 it('discards native data after a visible window lease change and leaves the last recorded success intact',async()=>{
- const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,q={action:'quotes',symbols:spec.symbols,source:'default'};await f.service.queryNative({...t,expectedRevision:1,query:q});const saved=f.store.details('owner',t)
+ const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,q={action:'quotes',symbols:spec.symbols,source:spec.dataSource??'default'};await f.service.queryNative({...t,expectedRevision:1,query:q});const saved=f.store.details('owner',t)
  let finish!:(v:any)=>void;f.nativeQuery.mockImplementationOnce(()=>new Promise(resolve=>finish=resolve));const pending=f.service.queryNative({...t,expectedRevision:1,query:q});await Promise.resolve();f.setVisible({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'new-window'});finish({source:'晚到旧数据',receivedAt:'2026-10-24T02:00:00Z',quotes:[{...spec.symbols[0],price:999}]});await expect(pending).rejects.toThrow(/取消|变化/);expect(f.store.details('owner',t).provenance).toEqual(saved.provenance)
 })
 it('records a successfully fetched empty news list as actual observed data without inventing items',async()=>{
@@ -77,21 +77,21 @@ it('allows read-only committed receipt recovery after cancellation while retaini
  const f=await fixture(),receipt=await f.service.create(table,f.identity,new AbortController().signal,'recover');f.setCurrent(false);expect(await f.service.recover!(table,f.identity,'recover')).toEqual(receipt);f.setOwner('different');await expect(f.service.recover!(table,f.identity,'recover')).rejects.toThrow(/身份|账户/)
 })
 it('reads the persisted same-query native snapshot after reopening offline without hiding the refresh error or advancing fetchedAt',async()=>{
- const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default',refresh:false};await f.service.queryNative({...t,expectedRevision:1,query});const saved=await f.service.read(t),{readFile}=await import('node:fs/promises'),file=join(f.directory,'components.json'),before=await readFile(file,'utf8'),restart=new ConversationComponentStore(file);await restart.load()
+ const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:spec.dataSource??'default',refresh:false};await f.service.queryNative({...t,expectedRevision:1,query});const saved=await f.service.read(t),{readFile}=await import('node:fs/promises'),file=join(f.directory,'components.json'),before=await readFile(file,'utf8'),restart=new ConversationComponentStore(file);await restart.load()
  const offline=vi.fn(async(_q:any):Promise<any>=>{throw Error('模拟断网')}),service=createConversationComponentService({store:restart,owner:()=> 'owner',canReadSession:s=>s==='s',currentVisibleContext:()=>({ownerAccountId:'owner',sessionId:'s',mode:'conversation',generation:'g'}),nativeQuery:offline,clipboard:()=>undefined,library:()=>undefined})
- await expect(service.queryNative({...t,expectedRevision:1,query:{...query,refresh:true}})).rejects.toThrow('模拟断网');const snapshot=await service.readNativeSnapshot!({...t,expectedRevision:1,query:{source:'default',refresh:true,symbols:spec.symbols,action:'quotes'}});expect(snapshot).toMatchObject({specRevision:1,receivedAt:Date.parse('2026-10-24T01:00:00Z'),result:{source:'模拟报价来源',receivedAt:'2026-10-24T01:00:00Z',quotes:[{price:17}]}});expect(offline).toHaveBeenCalledTimes(1);expect((await service.read(t)).provenance).toEqual(saved.provenance);expect(await readFile(file,'utf8')).toBe(before)
+ await expect(service.queryNative({...t,expectedRevision:1,query:{...query,refresh:true}})).rejects.toThrow('模拟断网');const snapshot=await service.readNativeSnapshot!({...t,expectedRevision:1,query:{source:spec.dataSource??'default',refresh:true,symbols:spec.symbols,action:'quotes'}});expect(snapshot).toMatchObject({specRevision:1,receivedAt:Date.parse('2026-10-24T01:00:00Z'),result:{source:'模拟报价来源',receivedAt:'2026-10-24T01:00:00Z',quotes:[{price:17}]}});expect(offline).toHaveBeenCalledTimes(1);expect((await service.read(t)).provenance).toEqual(saved.provenance);expect(await readFile(file,'utf8')).toBe(before)
  ;(snapshot!.result.quotes as any[])[0].price=999;expect((await service.readNativeSnapshot!({...t,expectedRevision:1,query}))!.result).toMatchObject({quotes:[{price:17}]})
 })
 it('never returns native snapshots for a different revision, source, symbol, query or host session',async()=>{
- const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default'};await f.service.queryNative({...t,expectedRevision:1,query})
+ const f=await fixture(),t=await f.create(native()),spec=(await f.service.read(t)).node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:spec.dataSource??'default'};await f.service.queryNative({...t,expectedRevision:1,query})
  await expect(f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).rejects.toThrow(/版本/)
- for(const invalid of [{...query,source:'backup'},{...query,symbols:[{code:'MSFT',market:'US',name:'其他证券'}]},{...query,action:'news',query:'other'}])await expect(f.service.readNativeSnapshot!({...t,expectedRevision:1,query:invalid as any})).rejects.toThrow()
- expect(await f.service.readNativeSnapshot!({...t,expectedRevision:1,query:{action:'history',symbols:spec.symbols,source:'default',period:'1d',adjustment:'none'}})).toBeNull()
+ for(const invalid of [{...query,source:query.source==='default'?'backup':'default'},{...query,symbols:[{code:'MSFT',market:'US',name:'其他证券'}]},{...query,action:'news',query:'other'}])await expect(f.service.readNativeSnapshot!({...t,expectedRevision:1,query:invalid as any})).rejects.toThrow()
+ expect(await f.service.readNativeSnapshot!({...t,expectedRevision:1,query:{action:'history',symbols:spec.symbols,source:spec.dataSource??'default',period:'1d',adjustment:'none'}})).toBeNull()
  await f.service.updateNativeSpec({...t,expectedRevision:1,spec:{...spec,symbols:[{code:'MSFT',market:'US',name:'新证券'}]}});expect(await f.service.readNativeSnapshot!({...t,expectedRevision:2,query:{...query,symbols:[{code:'MSFT',market:'US',name:'新证券'}]}})).toBeNull()
  f.setOwner('other');await expect(f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).rejects.toThrow()
 })
 it('advertises theme editing with rename permission and retains native observations through a theme edit and refresh',async()=>{
- const f=await fixture(),t=await f.create(native()),view=await f.service.read(t),spec=view.node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:'default'}
+ const f=await fixture(),t=await f.create(native()),view=await f.service.read(t),spec=view.node.containerSpec as any,query={action:'quotes',symbols:spec.symbols,source:spec.dataSource??'default'}
  expect(view.menuCapabilities).toMatchObject({rename:true,theme:true});expect(typeof f.service.setTheme).toBe('function');await f.service.queryNative({...t,expectedRevision:1,query});const before=f.store.details('owner',t)
  expect(await f.service.setTheme!({...t,expectedRevision:1,theme:'openterminal'})).toMatchObject({revision:2,node:{componentTheme:'openterminal'},provenance:before.provenance});expect(await f.service.readNativeSnapshot!({...t,expectedRevision:2,query})).toMatchObject({specRevision:2,result:{quotes:[{price:17}]}})
  await f.service.queryNative({...t,expectedRevision:2,query:{...query,refresh:true}});expect((await f.service.read(t)).node.componentTheme).toBe('openterminal');expect(f.store.details('owner',t).readableText).toBe(before.readableText)
