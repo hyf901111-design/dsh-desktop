@@ -45,6 +45,16 @@ function PendingAfterHistory(){
 }
 const publish=()=>{const previous=projection.getSnapshot(),turns=new Map(previous.chat.timeline.turns);turns.set(turn,{turn,status:ended?'closed':'open',start:{time:turn===1?firstTurnStart:Date.now()-5_000},end:ended?{time:Date.now()}:null});projection.set({...previous,running:!ended,chat:{order:rows.map(n=>n.key),nodes:new Map(rows.map(n=>[n.key,n])),timeline:{turns}}})}
 w.responseFixture={
+ activity(kind:string,context=false){
+  const current=projection.getSnapshot(),position={kind:'step',turn:{turn:2,status:'open'}},node:any={key:'activity-current',kind:'tool-call',location:position,data:{root:{name:'read_file',argsRaw:'{}'}}}
+  if(kind==='reply'){node.kind='assistant-step';node.data={status:'streaming',blocks:[{kind:'text',text:'正在整理可用的结果。'}]}}
+  if(kind==='thinking'){node.kind='assistant-step';node.data={status:'streaming',blocks:[{kind:'reasoning',text:'private never shown'}]}}
+  if(kind==='compact'){node.kind='compaction';node.data={running:true}}
+  if(kind==='retry'){node.kind='model-retry';node.data={}}
+  if(kind==='waiting')node.data.root.name='request_user_input'
+  const activityRows=context?[first,prose,node]:[node]
+  projection.set({...current,running:kind!=='done',chat:{order:activityRows.map(item=>item.key),nodes:new Map(activityRows.map(item=>[item.key,item])),timeline:{turns:new Map([[2,{turn:2,status:kind==='done'?'closed':'open',start:{time:Date.now()-20000},end:kind==='done'?{time:Date.now()}:null}]])}}})
+ },
  pendingAfterHistory(){pendingObservedAt=Date.now()-3000;admittedPending=false;root.render(h(PendingAfterHistory))},
  admitAfterHistory(){admittedPending=true;projection.set({...projection.getSnapshot()})},
  switchSession(){activeSessionId='other';root.render(h(App))},
