@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { IntegrationError, type ToolCall } from '../../shared/integrations';
 type BridgeService = {
     runtimeSnapshot(): unknown;
+    reportPluginStatus?(input: unknown): unknown;
     execute(call: ToolCall, signal: AbortSignal): Promise<unknown>;
     readSkill(input: any): Promise<unknown>;
 };
@@ -37,7 +38,7 @@ export async function startIntegrationBridge(service: BridgeService): Promise<{
                 respond(200, service.runtimeSnapshot());
                 return;
             }
-            if (request.method !== 'POST' || !['/execute', '/skills/read'].includes(pathname)) {
+            if (request.method !== 'POST' || !['/execute', '/skills/read', '/plugins/status'].includes(pathname)) {
                 respond(404, { error: 'Not found' });
                 return;
             }
@@ -64,7 +65,7 @@ export async function startIntegrationBridge(service: BridgeService): Promise<{
                 respond(400, { error: 'Invalid request' });
                 return;
             }
-            const result = pathname === '/execute' ? await service.execute(input as ToolCall, controller.signal) : await service.readSkill(input);
+            const result = pathname === '/plugins/status' ? await service.reportPluginStatus?.(input) : pathname === '/execute' ? await service.execute(input as ToolCall, controller.signal) : await service.readSkill(input);
             respond(200, result);
         }
         catch (error) {

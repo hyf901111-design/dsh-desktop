@@ -5,11 +5,15 @@
   "private": true,
   "type": "module",
   "main": "./index.js",
-  "exports": { ".": "./index.js", "./package.json": "./package.json" },
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
   "dependencies": {
     "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
     "@deepseek-ai/dsh-skill": "0.1.0-rc.7",
-    "@deepseek-ai/dsh-llm": "0.1.0-rc.7"
+    "@deepseek-ai/dsh-llm": "0.1.0-rc.7",
+    "@trycua/cua-driver": "0.28.2"
   },
   "license": "MIT"
 }

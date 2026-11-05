@@ -9,9 +9,9 @@ function validate(value: unknown): asserts value is IntegrationState {
   for(const key of ['connections','plugins','skills','tools','operations','sources','taskBindings'] as const) {
     if(!v[key] || typeof v[key]!=='object' || Array.isArray(v[key])) throw Error('invalid collection')
   }
-  if(v.bundledSkillPreferences!==undefined) {
-    if(!v.bundledSkillPreferences || typeof v.bundledSkillPreferences!=='object' || Array.isArray(v.bundledSkillPreferences)) throw Error('invalid bundled preferences')
-    for(const preferences of Object.values(v.bundledSkillPreferences)) {
+  for(const key of ['bundledSkillPreferences','bundledPluginPreferences'] as const) if(v[key]!==undefined) {
+    if(!v[key] || typeof v[key]!=='object' || Array.isArray(v[key])) throw Error('invalid bundled preferences')
+    for(const preferences of Object.values(v[key])) {
       if(!preferences || typeof preferences!=='object' || Array.isArray(preferences)) throw Error('invalid bundled preferences')
       for(const [id,preference] of Object.entries(preferences)) if(!id.startsWith('builtin:') || !preference || typeof preference.enabled!=='boolean' || !Number.isSafeInteger(preference.revision) || preference.revision<0) throw Error('invalid bundled preference')
     }
