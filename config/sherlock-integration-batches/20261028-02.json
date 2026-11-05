@@ -27002,27 +27002,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "原型工作台取数结束时机修复",
+        "featureName": "原型外部明细入口计数修复",
         "branch": "codex/feat/prototype-delivery-20261106",
-        "baseCommit": "55be245fed25631969c146ea4b49df155592af66",
-        "tipCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
+        "baseCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
+        "tipCommit": "6c376fb2361e917e8cc995ee36801cda2048bdf1",
         "commits": [
           {
-            "commit": "76b83297607628c7d929132c9b06700ba95ee9f2",
+            "commit": "6c376fb2361e917e8cc995ee36801cda2048bdf1",
             "parents": [
-              "55be245fed25631969c146ea4b49df155592af66"
+              "76b83297607628c7d929132c9b06700ba95ee9f2"
             ],
-            "subject": "修复：工作台组件读取完整指标和证据后再结束取数"
+            "subject": "修复：区分原型明细展示数量与外部阅读入口"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/prototype-table-coverage.js"
           },
           {
             "status": "M",
-            "path": "test/prototype-live-submission.test.js"
+            "path": "test/prototype-table-coverage.test.js"
           }
         ],
         "checks": [
@@ -27031,12 +27031,13 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/prototype-live-submission.test.js"
+              "test/prototype-live-submission.test.js",
+              "test/prototype-table-coverage.test.js"
             ],
             "outcome": "passed",
-            "summary": "20项直接相关检查通过；新用例确认命名数据集读完仍能读取同一原型的额外证据。",
-            "verifiedCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
-            "completedAt": "2026-11-05T17:20:24.057632+00:00",
+            "summary": "27项直接相关检查通过；保留单独全量要求和实际来源完整性约束。",
+            "verifiedCommit": "6c376fb2361e917e8cc995ee36801cda2048bdf1",
+            "completedAt": "2026-11-05T17:40:37.920001+00:00",
             "timeoutMs": 120000
           },
           {
@@ -27047,24 +27048,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "76b83297607628c7d929132c9b06700ba95ee9f2",
-            "completedAt": "2026-11-05T17:20:24.057632+00:00",
+            "verifiedCommit": "6c376fb2361e917e8cc995ee36801cda2048bdf1",
+            "completedAt": "2026-11-05T17:40:37.920001+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "此增量仅改变子任务取数结束时机，无界面代码变化；原生内容完整性需构建后复验，不据此声明原生工作台通过。"
+          "summary": "仅改变原型数量校验，无界面代码变化。原生同一失败原稿重新校验通过；新包重试和真实交互待完成。"
         },
         "acceptanceCriteria": [
-          "正式提交前保留授权原型的后续读取。",
-          "既有时间、次数和授权范围保持约束。"
+          "阅读入口数量不冒充本文件已经提供的记录数量。",
+          "独立全量展示要求及已观察来源总量继续强制完整。"
         ],
         "risks": [
-          "852565fc6原生6/6任务结束但市场卡缺总量指标和前十榜单；修复后原提示单卡实际模型复验正在执行。",
+          "d8c24fc3原生5/6完成，渠道卡遭误判；其原始第一份输出未改字复验已通过，但新的原生重试待完成。",
           "仅本地预览集成；未接受或晋升main。"
         ],
-        "generatedAt": "2026-11-05T17:20:24.057632+00:00"
+        "generatedAt": "2026-11-05T17:40:37.920001+00:00"
       }
     }
   ],
