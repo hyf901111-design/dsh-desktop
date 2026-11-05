@@ -7,3 +7,7 @@
 .ew-component-surface-menu .ew-component-theme-check{margin-left:auto;min-width:14px;text-align:right;color:var(--fw-accent,#249bfa)}
 
 .ew-component-surface-menu.ew-component-theme-menu{width:168px;min-width:168px}.ew-component-theme-menu [role=menuitemradio]{white-space:nowrap}
+/* Bloomberg header actions share the reference's neutral icon color in every surface. */
+body :is([data-note-presentation],[data-conversation-component-id])[data-workbench-style=openterminal]>:is(.en-research-header,.ew-grid-header,.ew-conversation-component-header)>button:not([data-workbench-refresh],[data-conversation-action=refresh]){color:var(--grid-muted,#808080)!important}
+body [data-note-presentation][data-workbench-style=openterminal]>.en-research-header>.en-component-close:not(:disabled){opacity:1!important}
+body :is([data-note-presentation],[data-conversation-component-id])[data-workbench-style=openterminal]>.ew-component-reading-close{color:var(--grid-muted,#808080)!important}
