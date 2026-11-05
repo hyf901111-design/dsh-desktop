@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
 import {expect,it} from 'vitest'
+import {stripConversationLiveUi} from './fixtures/strip-conversation-live-ui.mjs'
 const require=createRequire(import.meta.url),{conversationResponseProgress,conversationResponseElapsed,patchConversationResponseProgress,stripConversationResponseProgress}=require('../scripts/lib/conversation-response-progress.mjs'),{stripConversationSubmission}=require('../scripts/lib/conversation-submission.mjs')
 it('distinguishes an unknown historical duration from a genuine zero or subsecond settlement',()=>{
  const clock={running:false,startTime:null,endTime:2000,now:9000,anchor:9000}
@@ -32,7 +33,7 @@ it('does not merge unowned or standalone Notes and canvas tasks into another res
  expect([...conversationResponseProgress(flow,3)]).toEqual([['unidentified',{visible:true,running:true}],['other-unidentified',{visible:true,running:false}],['known',{visible:true,running:true}]])
 })
 it('installs twice and precisely strips its real native layer while rejecting duplicate and drifted hooks',async()=>{
- const installed=stripConversationSubmission(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),source=stripConversationResponseProgress(installed),once=patchConversationResponseProgress(installed)
+ const installed=stripConversationSubmission(stripConversationLiveUi(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),source=stripConversationResponseProgress(installed),once=patchConversationResponseProgress(installed)
  expect(patchConversationResponseProgress(once)).toBe(once);expect(stripConversationResponseProgress(once)).toBe(source)
  expect(()=>new Function(once)).not.toThrow()
  expect(()=>patchConversationResponseProgress(once+'\n/* ework:conversation-response-progress:v3 */')).toThrow(/duplicate/)
@@ -43,7 +44,7 @@ it('installs twice and precisely strips its real native layer while rejecting du
 })
 
 it('upgrades only the exact old progress definition while preserving timer transform inverses',async()=>{
- const old=stripConversationSubmission(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),base=stripConversationResponseProgress(old),next=patchConversationResponseProgress(old)
+ const old=stripConversationSubmission(stripConversationLiveUi(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),base=stripConversationResponseProgress(old),next=patchConversationResponseProgress(old)
  expect(stripConversationResponseProgress(next)).toBe(base)
  expect(next).toContain('/* ework:conversation-response-progress:v3 */')
  expect(next).not.toContain('/* ework:conversation-response-progress:v2 */')

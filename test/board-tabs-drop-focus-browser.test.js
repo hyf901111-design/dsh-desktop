@@ -6,6 +6,7 @@ import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
 import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
+import {stripConversationLiveUi} from './fixtures/strip-conversation-live-ui.mjs'
 
 let browser,script
 const evidence=process.env.SHERLOCK_TEST_EVIDENCE_DIR
@@ -13,7 +14,7 @@ beforeAll(async()=>{
  const require=createRequire(import.meta.url)
  let source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  // Match production unwind order, including the parallel composer layer in integration.
- if(source.includes('/* sherlock:composer-voice:v1 */'))source=require('../scripts/lib/composer-voice.mjs').stripComposerVoice(source)
+ source=stripConversationLiveUi(source)
  for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']]){if(file==='home-guide-presentation-native')source=stripWorkbenchReplay(source);source=require('../scripts/lib/'+file+'.mjs')[strip](source)}
  const grid=require('../scripts/lib/research-grid-workbench.mjs')
  source=grid.patchResearchGridWorkbench(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))

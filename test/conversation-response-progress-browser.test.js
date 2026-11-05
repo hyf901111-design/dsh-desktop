@@ -3,11 +3,12 @@ import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {beforeAll,afterAll,expect,it} from 'vitest'
+import {stripConversationLiveUi} from './fixtures/strip-conversation-live-ui.mjs'
 const require=createRequire(import.meta.url),baseline=process.env.SHERLOCK_RESPONSE_PROGRESS_BASELINE==='1'
 let browser,bundle,nativeSource,css
 const evidence=process.env.SHERLOCK_RESPONSE_PROGRESS_EVIDENCE||'/tmp/conversation-controls-20261027'
 beforeAll(async()=>{
- const raw=require('../scripts/lib/conversation-submission.mjs').stripConversationSubmission(await readFile(process.env.SHERLOCK_RESPONSE_PROGRESS_NATIVE_SOURCE||'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const raw=require('../scripts/lib/conversation-submission.mjs').stripConversationSubmission(stripConversationLiveUi(await readFile(process.env.SHERLOCK_RESPONSE_PROGRESS_NATIVE_SOURCE||'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  // Match the production order: refresh Notes first, then install response clocks.
  // Normalize both the older SDK and an already refreshed SDK to this contract.
  const {patchNotesActivity}=require('../scripts/lib/notes-activity.mjs'),notes=patchNotesActivity(raw)
