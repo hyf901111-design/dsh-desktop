@@ -1,3 +1,4 @@
+import {patchImageGenerationClient} from './lib/image-generation-client.mjs'
 import {patchHomeThemeAppearance} from './lib/home-theme-appearance.mjs'
 import {patchBoardTabsClient,stripBoardTabsClient} from './lib/board-tabs-client.mjs'
 import {patchSidebarNewNoteConversation,patchSidebarNewNoteShell,stripSidebarNewNoteConversation,stripSidebarNewNoteShell} from './lib/sidebar-new-note.mjs'
@@ -333,3 +334,6 @@ writeFileSync(conversationPath,patchConversationHistoryClient(patchConversationS
 writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 // Board tabs wrap the final resident canvas and reverse before all earlier passes.
 writeFileSync(conversationPath,patchBoardTabsClient(readFileSync(conversationPath,'utf8')))
+
+// Keep image generation visible outside the folded execution details.
+writeFileSync(conversationPath,patchImageGenerationClient(readFileSync(conversationPath,'utf8')))
