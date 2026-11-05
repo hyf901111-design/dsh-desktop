@@ -344,6 +344,7 @@ export const integrationUiCopy: Record<string,string> = {
   "请先登录 EWork 后使用内置通联 MCP": "Sign in to EWork to use the built-in DataYes MCP",
   "官网 MCP 积分服务：股票、基金、指数、财务与估值等结构化数据": "Official MCP credit service for structured stock, fund, index, financial and valuation data",
   "PPT制作助手": "Presentation assistant",
+  "研报写作": "Equity research writing",
   "工作台组件生成": "Workbench component builder",
   "已断开": "Disconnected",
   "需要重新授权": "Reauthorization required",

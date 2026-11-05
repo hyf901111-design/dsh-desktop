@@ -19,6 +19,9 @@ const skills=[{id:'custom:finance',name:'自定义财报分析',description:'分
  {id:'builtin:other',name:'基础数据源',description:'获取研究数据'},
  {id:'builtin:efund-ppt-maker',name:'PPT制作助手',description:'创建专业演示文稿'},
  {id:'custom:efund-ppt-maker',name:'PPT 自定义技能',description:'用户自己的演示工具'}]
+probe.extendSkillCatalog=count=>{
+ for(let index=0;index<count;index++)skills.push({id:'custom:extra-'+index,name:'测试技能 '+index,description:'用于验证菜单滚动'})
+}
 const bridge=installSkillCommandBridge(document,{request:async()=>({type:'snapshot',snapshot:{revision:1,rows:skills.map(skill=>({...skill,kind:'skill',revision:1,enabled:true,status:'已启用'}))}}),useSkill:async input=>{probe.selections.push(input.id);shell.insertReference({source:'ework-managed-skill',ref:JSON.stringify({id:input.id,revision:1,label:input.name,invocationName:'ework-skill-1111111111111111'}),label:input.name,clipboardText:'/'+input.name},{start:shell.snapshot.draft.length,end:shell.snapshot.draft.length,draftRev:shell.snapshot.draftRev})}})
 effects.push(()=>bridge.dispose(),installSkillCommand({document,command:{register(value){definition=value;return()=>{}}},sessions:{subagentAddress:()=>undefined}}))
 window.dshDesktop={drainDroppedPaths:()=>['/qa/外部附件.pdf']}

@@ -25,6 +25,8 @@ import {patchHomeGuidePresentationNative,stripHomeGuidePresentationNative} from 
 import {patchHomeWorkbenchClient,stripHomeWorkbenchClient} from './lib/home-workbench-client.mjs'
 import {patchHomeGuideWorkbenchNative,stripHomeGuideWorkbenchNative} from './lib/home-guide-workbench-native.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
+import {patchImagePreviewGallery} from './lib/image-preview-gallery.mjs'
+import {patchSessionTitleSubject,patchSessionTitleLlmSubject} from './lib/session-title-subject.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
 import {patchYoutubeClient} from './lib/youtube-client.mjs'
@@ -89,6 +91,10 @@ const assetsDirectory = join(
   'assets'
 )
 const historyRuntimeBundlePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
+for(const [name,patch] of [['dsh-session-title',patchSessionTitleSubject],['dsh-session-title-llm',patchSessionTitleLlmSubject]]){
+ const path=join(process.cwd(),'node_modules/@deepseek-ai',name,'lib/index.js')
+ writeFileSync(path,patch(readFileSync(path,'utf8')))
+}
 writeFileSync(historyRuntimeBundlePath,stripConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 const llmAdapterPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js')
 writeFileSync(llmAdapterPath, patchGlmReasoningCapabilities(readFileSync(llmAdapterPath, 'utf8')))
@@ -175,6 +181,9 @@ function patchStyles(path) {
 
 patchPrimitives(primitivesPath)
 writeFileSync(primitivesPath, patchFigmaReadingTables(readFileSync(primitivesPath, 'utf8')))
+const imageAtomsPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-attachment/lib/index.js')
+writeFileSync(imageAtomsPath,patchImagePreviewGallery(readFileSync(imageAtomsPath,'utf8')))
+writeFileSync(asset('.js'),patchImagePreviewGallery(readFileSync(asset('.js'),'utf8'),true))
 patchJavaScript(asset('.js'))
 writeFileSync(primitivesPath, patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8'))))
 writeFileSync(asset('.js'), patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true))
@@ -241,7 +250,6 @@ writeFileSync(deliverablesPath, patchGeneratedFileMentions(readFileSync(delivera
 
 writeFileSync(conversationPath, patchRestoredFileMentions(readFileSync(conversationPath, 'utf8')))
 writeFileSync(deliverablesPath, patchDeliverableCards(readFileSync(deliverablesPath, 'utf8')))
-writeFileSync(conversationPath, patchDeliveryConversation(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchEmptyHeaderTitles(readFileSync(conversationPath, 'utf8')))
 
@@ -302,6 +310,8 @@ writeFileSync(conversationPath, patchResearchGridWorkbench(patchCalendarToolClie
 // Bind the owned note surface to the real native session after other patches.
 const notesConversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 writeFileSync(notesConversationPath, patchMemorySourceAnchors(patchNoteSessionClient(patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8'))))))
+// Notes installs the shared turn-tail signature that delivery cards extend.
+writeFileSync(notesConversationPath, patchDeliveryConversation(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchSessionViewPreferences(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchAssistantReveal(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchConversationThinkingStatus(readFileSync(notesConversationPath, 'utf8')))
