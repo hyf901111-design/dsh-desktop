@@ -27789,6 +27789,69 @@
         "risks": [],
         "generatedAt": "2026-11-05T22:38:57.012Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话组件测试按实际配置选择数据源",
+        "branch": "codex/feat/conversation-service-source-tests-20261106",
+        "baseCommit": "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0",
+        "tipCommit": "0df09876399ac4877be7fe8138eec467689a52d5",
+        "commits": [
+          {
+            "commit": "0df09876399ac4877be7fe8138eec467689a52d5",
+            "parents": [
+              "ab77c5808052bf74cf6acbce8dcf5d6e8c990fd0"
+            ],
+            "subject": "修复：对话组件测试按实际配置选择数据源"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/conversation-component-service.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/conversation-component-service.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "该文件28项通过（新增一个数据源参数化用例），1.46秒；原6处失败均修复。",
+            "verifiedCommit": "0df09876399ac4877be7fe8138eec467689a52d5",
+            "completedAt": "2026-11-05T23:09:07.122Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "完整tsc类型检查exit0。",
+            "verifiedCommit": "0df09876399ac4877be7fe8138eec467689a52d5",
+            "completedAt": "2026-11-05T23:09:07.122Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅调整测试数据以遵循当前金融组件配置，无生产或界面变更。"
+        },
+        "acceptanceCriteria": [
+          "查询与真实配置中的dataSource一致，不再硬编码旧默认来源",
+          "default和backup两种来源均验证quotes/history合并及错误来源拒绝",
+          "版本/宿主变化、断网快照、主题编辑既有断言保持通过",
+          "生产checkedQuery校验及金融默认来源均不变"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-05T23:09:07.122Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -29195,6 +29258,15 @@
         "node_modules/.bin/vitest",
         "run",
         "test/integration-frozen-handoff.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/conversation-component-service.test.ts",
         "--reporter=dot"
       ],
       "timeoutMs": 120000
