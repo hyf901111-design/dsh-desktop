@@ -27570,6 +27570,61 @@
         ],
         "generatedAt": "2026-11-05T21:56:35.294Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复集成金融组件的测试夹具",
+        "branch": "codex/feat/integration-financial-fixture-20261106",
+        "baseCommit": "445fcf8b37e441bc21bd8effbb9568bc0ff2c5d6",
+        "tipCommit": "9ddc41ab83aea9b5270ea8ff7332de4476a3946b",
+        "commits": [
+          {
+            "commit": "9ddc41ab83aea9b5270ea8ff7332de4476a3946b",
+            "parents": [
+              "445fcf8b37e441bc21bd8effbb9568bc0ff2c5d6"
+            ],
+            "subject": "修复：金融组件测试按生产顺序移除对话补丁"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/power-settings.test.ts",
+              "test/power-settings-ui.test.ts",
+              "test/power-lid-guard.test.ts",
+              "test/power-settings-ipc.test.ts",
+              "test/ipc-trust.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/research-grid-additions.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "首组集成声明检查 9 文件、84 项通过",
+            "verifiedCommit": "9ddc41ab83aea9b5270ea8ff7332de4476a3946b",
+            "completedAt": "2026-11-05T22:26:03.156Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "只修改测试夹具，无客户端界面改动"
+        },
+        "acceptanceCriteria": [
+          "对已安装最新对话补丁的 bundle，夹具按生产脚本逆序还原并跑通研究画布和金融组件检查"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-05T22:26:03.156Z"
+      }
     }
   ],
   "integrationChecks": [
