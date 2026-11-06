@@ -76,7 +76,7 @@ it('patches the real todo entry idempotently with existing projection behavior p
  const next=patchTaskProgressRuntime(source)
  expect(patchTaskProgressRuntime(next)).toBe(next)
  expect(next).toContain('installTaskProgressSync(ctx)')
- expect(next).toContain('/* sherlock:task-progress-continuation:v4 */')
+ expect(next).toContain('/* sherlock:task-progress-continuation:v5 */')
  expect(next).toContain('if (event.type === "todo/write") return event.data.todos;')
 })
 it('does not turn three unchanged background observation timeouts into progress or repeated model continuations',async()=>{
@@ -97,4 +97,11 @@ it('does not turn three unchanged background observation timeouts into progress 
   controller.abort();await wait
   expect(steered).toHaveLength(1);expect(listeners.size).toBe(0)
  }finally{vi.useRealTimers()}
+})
+
+it('adds real early public progress guidance without changing the request or adding a synthetic message',()=>{
+ const sections=[];installTaskProgressSync({on(){},inject(_services,install){install({systemPrompt:{section:section=>sections.push(section)}})}})
+ expect(sections.map(item=>item.name)).toEqual(['task:public-progress','task:verified-completion'])
+ expect(sections[0].text).toContain('before the first tool call')
+ expect(sections[0].text).toContain('JSON-only or no commentary')
 })

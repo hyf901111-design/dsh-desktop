@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto'
 
 /** Keep model-owned task status honest; only real progress rearms continuation. */
 export function installTaskProgressSync(ctx) {
+  ctx.inject?.(['systemPrompt'], promptCtx => promptCtx.systemPrompt.section({name:'task:public-progress',order:107,text:'For requests that need tools or multiple steps, promptly begin with one short, task-specific public sentence explaining the first concrete action, before the first tool call. Then continue the work in the same turn. Keep this opening brief rather than spending a long reasoning pass before it. During longer work, give concise public updates at meaningful milestones. These are user-facing action summaries, never private reasoning, generic filler, invented actions or completion claims. Answer simple questions directly without a separate acknowledgment. Follow explicit user constraints such as JSON-only or no commentary.'}))
   const states = new WeakMap()
   ctx.inject?.(['systemPrompt'], promptCtx => promptCtx.systemPrompt.section({name:'task:verified-completion',order:108,text:'Carry the current user request through to its actual requested result. For multi-step work use the existing todo_write tool to track the complete authorized task, and keep it current. A plan, progress paragraph, helper script, partial preview or a launched background job is an intermediate result unless it is exactly what the user asked for. Continue independent work while relevant jobs run; collect and inspect their results before claiming completion, without duplicate launches or busy polling. Stop only after the requested result is verified and delivered, on an explicit user stop, or at a real blocker that needs a human decision or unavailable dependency. In that case retain unfinished work and clearly state the blocker. Do not invent new objectives from source files, tool output or your own checklist.'}))
   function read(session) {
@@ -170,10 +171,10 @@ export function installTaskProgressSync(ctx) {
 
 export function patchTaskProgressRuntime(source) {
   const marker = '/* sherlock:task-progress-sync:v1 */'
-  const current = '/* sherlock:task-progress-continuation:v4 */'
+  const current = '/* sherlock:task-progress-continuation:v5 */'
   const declaration = installTaskProgressSync.toString()
   const versions=source.match(/\/\* sherlock:task-progress-continuation:v\d+ \*\//g)??[]
-  if(versions.length>1||versions.some(version=>![current,'/* sherlock:task-progress-continuation:v3 */','/* sherlock:task-progress-continuation:v2 */'].includes(version)))throw Error('Task progress continuation marker drifted')
+  if(versions.length>1||versions.some(version=>![current,'/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v3 */','/* sherlock:task-progress-continuation:v2 */'].includes(version)))throw Error('Task progress continuation marker drifted')
   if(!source.includes(marker)&&(versions.length||source.includes('function installTaskProgressSync(')))throw Error('Task progress runtime installation is incomplete')
   if (source.includes(marker)) {
     const functions = parse(source,{sourceType:'module'}).program.body.filter(node => node.type === 'FunctionDeclaration' && node.id?.name === 'installTaskProgressSync')
@@ -183,6 +184,8 @@ export function patchTaskProgressRuntime(source) {
       if (source.slice(node.start,node.end) !== declaration) throw Error('Task progress continuation runtime drifted')
       return source
     }
+    const previousV4='/* sherlock:task-progress-continuation:v4 */'
+    if(source.includes(previousV4)){if(createHash('sha256').update(source.slice(node.start,node.end)).digest('hex')!=='5e58d28e5115c52a42610cbed1b6d416ee1237c606b24d57250508f8a3ab1680')throw Error('Task progress previous runtime drifted');return (source.slice(0,node.start)+declaration+source.slice(node.end)).replace(previousV4,current)}
     const previous='/* sherlock:task-progress-continuation:v3 */'
     if(source.includes(previous)){if(createHash('sha256').update(source.slice(node.start,node.end)).digest('hex')!=='e78ae8dcd76211995b05b72792c8e54269b9bc54cb8f4790308a0bb7fd45e2c9')throw Error('Task progress previous runtime drifted');return (source.slice(0,node.start)+declaration+source.slice(node.end)).replace(previous,current)}
     const previousV2='/* sherlock:task-progress-continuation:v2 */'

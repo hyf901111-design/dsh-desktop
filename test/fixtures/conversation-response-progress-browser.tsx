@@ -54,6 +54,12 @@ function historySession(id:string,duration:number,loaded=false){
  root.render(h(App))
 }
 w.responseFixture={
+ statusSequence(phase:string){
+  const current=projection.getSnapshot(),position={kind:'step',turn:{turn:3,status:phase==='done'?'closed':'open'}},items:any[]=[{key:'status-user',kind:'user',location:position,data:{content:[{type:'text',text:'核对这项资料'}]}},{key:'status-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private hidden'}]}}]
+  if(phase!=='initial')items.push({key:'status-ack',kind:'assistant-step',location:position,data:{status:phase==='ack'?'streaming':'settled',blocks:[{kind:'reasoning',text:'private mixed reasoning'},{kind:'text',text:'我先核对资料来源，再整理关键变化。'}],finalNode:{seq:31}}})
+  if(['tools','done'].includes(phase))items.push({key:'status-search',kind:'tool-call',location:position,data:{root:{kind:'tool-call',call:{name:'web_search',argsRaw:JSON.stringify({query:'公开资料来源'})},status:'completed'}}},{key:'status-read',kind:'tool-call',location:position,data:{root:phase==='done'?{kind:'tool-call',call:{name:'read_file',argsRaw:'{}'},status:'completed'}:{name:'read_file',argsRaw:'{}'}}})
+  projection.set({...current,running:phase!=='done',chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[3,{turn:3,status:phase==='done'?'closed':'open',start:{time:Date.now()-20000},end:phase==='done'?{time:Date.now()}:null}]])}}})
+ },
  historySession,
  loadHistory(){const history=completedHistories.get(activeSessionId)!;historySession(activeSessionId,history.duration,true)},
  activity(kind:string,context=false){
