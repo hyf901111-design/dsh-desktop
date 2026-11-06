@@ -67,6 +67,7 @@ export function selectEtfSnapshot(snapshot,input){
  const sorted=[...filtered].sort((a,b)=>finite(a[key])&&finite(b[key])?order*(a[key]-b[key])||a.code.localeCompare(b.code):finite(a[key])?-1:finite(b[key])?1:a.code.localeCompare(b.code))
  const records=args.view==='overview'?[]:sorted.slice(args.offset,args.offset+args.limit),more=args.view!=='overview'&&args.offset+records.length<sorted.length
  return {...base,view:args.view,coverage:{...base.coverage,selectedProducts:selected.length,rankedProducts:filtered.length},summaryScope:'全部可用 ETF 记录；index_code 只筛选 records，不改变 summary',records,
+  ranking:args.view==='overview'?null:{field:key,unit:'亿元',direction:order===1?'ascending':'descending',meaning:key==='flowEstimateYi'?'按期末净值估算的份额变动金额':'期末规模'},
   fieldInfo:{sizeYi:'期末规模（亿元）',sizeChangeYi:'两期规模均有效的匹配产品规模变化（亿元）',sizeChangeCoverage:'规模变动所覆盖产品数（只）',shareYi:'期末份额（亿份）',shareChangeYi:'两期匹配份额变化（亿份）',flowEstimateYi:'按期末净值估算的份额变动金额（亿元）',returnPct:'区间未复权价格变化（%）',nav:'期末单位净值（元）',close:'期末收盘价（元）'},
   pagination:{offset:args.offset,limit:args.limit,total:args.view==='overview'?0:sorted.length,returned:records.length,possiblyMore:more,nextOffset:more?args.offset+records.length:null}}
 }
