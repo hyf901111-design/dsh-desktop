@@ -43,6 +43,27 @@ it.each([false,true])('creates a complete source-backed keyed table on the first
  else {expect(resolved.recipe.mapping.columns).toEqual(resolved.data.columns);expect(Array.isArray(resolved.recipe.mapping.rows.$map)).toBe(true)}
 })
 
+it('renders positional source rows with keyed column declarations and preserves refresh selectors',async()=>{
+ const f=fixture();f.mapping.rows.$map=f.fields.map(path)
+ const before=JSON.stringify(f.draft),{task,start}=await run(f)
+ expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce()
+ const resolved=resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(captured.createdAt))
+ expect(resolved.data.columns).toEqual(f.mapping.columns.map(column=>column.label))
+ expect(resolved.data.rows).toEqual(f.response.records.map(row=>f.fields.map(key=>String(row[key]))))
+ expect(resolved.recipe.mapping.rows.$map).toEqual(f.fields.map(path))
+ expect(materializeComponentMapping(resolved.recipe.mapping,{q:f.response})).toEqual(resolved.data)
+ expect(JSON.stringify(f.draft)).toBe(before)
+})
+
+it.each(['short','long','nested','mixed'])('rejects ambiguous positional rows (%s)',kind=>{
+ const data={version:1,type:'table',title:'列对齐',columns:[{key:'a',label:'甲'},{key:'b',label:'乙'}],rows:[[0,null]]}
+ if(kind==='short')data.rows[0].pop()
+ if(kind==='long')data.rows[0].push(3)
+ if(kind==='nested')data.rows[0][0]={value:1}
+ if(kind==='mixed')data.rows.push({a:1,b:2})
+ expect(normalizeKeyedTableProjection(data).data).toBe(data)
+})
+
 it.each(['generated-recipe','legacy-keyed-recipe'])('reloads and refreshes the same source projection without generation (%s)',async kind=>{
  const f=fixture(),resolved=resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(captured.createdAt))
  let stored=[],spec=JSON.parse(resolved.output),revision='r1'
