@@ -28770,31 +28770,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记演示空行聚焦停留与侧栏底部按钮下移",
+        "featureName": "修复全屏展开评论时笔记演示框选中断",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
-        "tipCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
+        "baseCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
+        "tipCommit": "897158cab06464f14144306861d673140c01ef66",
         "commits": [
           {
-            "commit": "aebcede4004eb19b623317f1719805ba4312abeb",
+            "commit": "897158cab06464f14144306861d673140c01ef66",
             "parents": [
-              "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe"
+              "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3"
             ],
-            "subject": "笔记演示点击空行后先显示提示和光标再输入"
-          },
-          {
-            "commit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
-            "parents": [
-              "aebcede4004eb19b623317f1719805ba4312abeb"
-            ],
-            "subject": "下移折叠侧栏的探索与消息按钮"
+            "subject": "修复全屏展开评论时笔记演示框选中断"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
           {
             "status": "M",
             "path": "src/preload/home-guide-notes.tsx"
@@ -28802,10 +28791,6 @@
           {
             "status": "M",
             "path": "test/home-guide-notes-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-account-rail-browser.test.js"
           }
         ],
         "checks": [
@@ -28816,25 +28801,12 @@
               "run",
               "test/home-guide-notes-browser.test.js",
               "-t",
-              "chart tail empty until click|moves the real pointer over the original library submenu"
+              "JSON-token actor drag before its rewrite step"
             ],
             "outcome": "passed",
-            "summary": "2 项真实笔记编辑器检查通过：点击前提示隐藏；点击后空行、光标和行控件先显示，再输入；空格与斜杠菜单流程可继续。",
-            "verifiedCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
-            "completedAt": "2026-11-06T06:00:22.125664+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-account-rail-browser.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "4 项侧栏检查通过：浅深色下移 8px，底部保留 18px，探索和消息菜单可打开。",
-            "verifiedCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
-            "completedAt": "2026-11-06T06:00:22.125664+00:00",
+            "summary": "2 项通过：1080px 普通窗口框选改写；2560×1409 全屏展开评论，完成后续改写、总结、保存与返回顶部。",
+            "verifiedCommit": "897158cab06464f14144306861d673140c01ef66",
+            "completedAt": "2026-11-06T06:27:01.401115+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28847,25 +28819,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
-            "completedAt": "2026-11-06T06:00:22.125664+00:00",
+            "verifiedCommit": "897158cab06464f14144306861d673140c01ef66",
+            "completedAt": "2026-11-06T06:27:01.401115+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际 NotesApp 浏览器检查与截图：空行提示、真实折叠光标选区、段落和拖动控件可见，点击 200ms 后正文仍为空；650ms 后继续输入。浅深色侧栏底部两按钮整体下移，点击路径可用。原生整包验收待本地构建。"
+          "summary": "在真实 NotesApp 浏览器夹具复现宽屏评论后返回正文导致目标失效；修复后窄屏通过，宽屏在评论保持展开时完成全流程并持久保存。原生整包待本地构建。"
         },
         "acceptanceCriteria": [
-          "笔记演示点击空白行后先显示提示、行控件和光标，约 0.65 秒后输入或打开命令",
-          "折叠侧栏探索与消息按钮一起下移 8 像素且可正常点击",
-          "保留前次已验收的按需阅读留白、语音按钮及网格修复"
+          "全屏放大、右侧评论展开时笔记演示不在整段框选处退出",
+          "继续完成改写、总结并保存",
+          "保留普通窗口评论关闭和框选路径以及已验收空行、侧栏修改"
         ],
         "risks": [
-          "等待沿用原演示的暂停和取消时钟；不改变真实手动编辑速度",
-          "仅修改截图所示折叠侧栏，展开侧栏现有底部距离保持不变"
+          "仅移除宽屏评论后多余的正文点击，继续复用原生框选拖动；文档和选区保护检查不变"
         ],
-        "generatedAt": "2026-11-06T06:00:22.125664+00:00"
+        "generatedAt": "2026-11-06T06:27:01.401115+00:00"
       }
     }
   ],
