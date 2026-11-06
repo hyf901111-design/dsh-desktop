@@ -1,5 +1,7 @@
 body [data-composer-voice-trigger=true]{background:#fff!important;color:#171717!important;opacity:1!important;border:1px solid #0000000a;cursor:pointer}
 body [data-composer-voice-trigger=true]:hover{background:#f0f0f0!important}
+body:not([data-ds-dark-theme]) [data-composer-voice-trigger=true]{background:#171717!important;color:#fff!important}
+body:not([data-ds-dark-theme]) [data-composer-voice-trigger=true]:hover{background:#303030!important}
 body [data-composer-voice-trigger=true]>svg{display:block;flex:none}
 [data-composer-voice-pill]{box-sizing:border-box;display:flex;justify-content:flex-end;flex:none;min-width:0;width:82px;height:30px;overflow:hidden;opacity:1;transform:translateX(0);margin-inline-start:0;transition:width 240ms ease-out,margin-inline-start 240ms ease-out,opacity 240ms ease-out,transform 240ms ease-out}
 [data-composer-voice-pill][data-open=false]{width:0;opacity:0;transform:translateX(4px);margin-inline-start:-12px;pointer-events:none}
