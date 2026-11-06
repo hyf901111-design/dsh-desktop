@@ -3,10 +3,10 @@ import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {beforeAll,afterAll,it,expect} from 'vitest'
-import {patchConversationLiveActivity,stripConversationLiveActivity} from '../scripts/lib/conversation-live-activity.mjs'
 import {patchFigmaReadingConversation} from '../scripts/lib/figma-reading-client.mjs'
 let browser,source,bundle,css
 const evidence=process.env.SHERLOCK_LIVE_ACTIVITY_EVIDENCE||'/tmp/conversation-live-activity-20261104',require=createRequire(import.meta.url)
+const {patchConversationLiveActivity,stripConversationLiveActivity}=require('../scripts/lib/conversation-live-activity.mjs')
 beforeAll(async()=>{
  let native=stripConversationLiveActivity(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  native=patchConversationLiveActivity(patchFigmaReadingConversation(native))

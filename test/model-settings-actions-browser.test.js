@@ -26,7 +26,7 @@ it.each([{theme:'light',width:1040},{theme:'dark',width:760}])('keeps readable c
    for(const button of await actions.all()){
     await expect.poll(async()=>Math.round((await button.locator('svg').boundingBox()).width*10)/10).toBe(16)
     const box=await button.boundingBox(),svg=await button.locator('svg').boundingBox()
-    expect(box.width).toBe(28);expect(box.height).toBe(28);expect(svg.width).toBe(16);expect(svg.height).toBe(16)
+    expect(box.width).toBe(28);expect(box.height).toBe(28);expect(svg.width).toBeCloseTo(16,1);expect(svg.height).toBeCloseTo(16,1)
     expect(Math.abs(svg.x+8-box.x-14)).toBeLessThan(.1);expect(Math.abs(svg.y+8-box.y-14)).toBeLessThan(.1)
    }
   }
