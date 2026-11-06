@@ -1,3 +1,4 @@
+import {createEtfSnapshotCache} from './tushare-snapshot-cache.js'
 import { authenticate, authError } from '../accounts/auth.js'
 import tools from '../../config/tushare-builtin-tools.json' with { type: 'json' }
 import {buildEtfSnapshot,selectEtfSnapshot,validateEtfSnapshot} from './tushare-etf-snapshot.js'
@@ -6,7 +7,7 @@ import catalog from '../../config/tushare-api-catalog.json' with { type: 'json' 
 export const TUSHARE_PATH = '/v1/tushare/mcp'
 // Worker env wrappers can change between requests. Scope the bounded cache to
 // a non-reversible credential digest, so rotation cannot reuse another source.
-const etfSnapshots = new Map()
+const readEtfSnapshot = createEtfSnapshotCache()
 const endpoint = 'https://api.tushare.pro'
 const json = (value, status = 200) => Response.json(value, {status, headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}})
 const failure = (code, status) => json({error:{code}}, status)
@@ -100,7 +101,7 @@ export async function handleTushareMcp(request,env) {
     return reply(result({source:'Tushare',kind:'catalog',queryLimits:{defaultLimit:200,maxLimit:1000,maxOffset:100000},interfaces:args.api_name?selected.map(api=>({...api,description:api.description.split(/限量：|积分：|权限：/u)[0].trim()})):selected.map(({api,name,documentation})=>({api,name,documentation})),note:'目录不是业务数据。用 api_name 读取具体参数和字段；实际权限以业务调用结果为准。'}))
   }
   if(!['tushare_query','tushare_etf_snapshot'].includes(name))return failure('INVALID_REQUEST',400)
-  try{name==='tushare_etf_snapshot'?validateEtfSnapshot(args):validateTushareQuery(args)}catch(error){return reply({isError:true,content:[{type:'text',text:error.message.startsWith('limit 必须')?error.message:'参数或字段无效，请按 tushare_catalog 的当前定义修正；limit 必须为 1–1000。只接受目录内接口，不接受 Token 或 URL。'}]})}
+  try{name==='tushare_etf_snapshot'?validateEtfSnapshot(args):validateTushareQuery(args)}catch(error){return reply({isError:true,content:[{type:'text',text:name==='tushare_etf_snapshot'?'ETF 汇总参数无效：limit 为 1–100（默认20），offset 为 0–5000；请按返回的 nextOffset 分页，end_date 用 YYYYMMDD，lookback_days 为 1–90。':error.message.startsWith('limit 必须')?error.message:'参数或字段无效，请按 tushare_catalog 的当前定义修正；limit 必须为 1–1000。只接受目录内接口，不接受 Token 或 URL。'}]})}
   const usage=crypto.randomUUID()
   let status=503
   try {
@@ -109,19 +110,16 @@ export async function handleTushareMcp(request,env) {
     if(name==='tushare_etf_snapshot'){
       const normalized=validateEtfSnapshot(args)
       const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.TUSHARE_TOKEN)))).map(b=>b.toString(16).padStart(2,'0')).join('')
-      const key=digest+':'+normalized.end_date+':'+normalized.lookback_days,cache=etfSnapshots
-      let entry=cache.get(key),cacheHit=Boolean(entry&&entry.expires>Date.now())
-      if(!cacheHit){
+      const key=digest+':'+normalized.end_date+':'+normalized.lookback_days
+      const {snapshot,cacheHit}=await readEtfSnapshot(key,async()=>{
         const signal=AbortSignal.timeout(24000)
-        entry={expires:Date.now()+120000,promise:buildEtfSnapshot({end_date:normalized.end_date,lookback_days:normalized.lookback_days},async(query)=>{
+        return buildEtfSnapshot({end_date:normalized.end_date,lookback_days:normalized.lookback_days},async(query)=>{
           const response=await queryTushare(query,env,signal)
           if(response.isError)throw Error('ETF 汇总来源不可用')
           return response.structuredContent
-        },signal)}
-        cache.set(key,entry);while(cache.size>8)cache.delete(cache.keys().next().value)
-        const current=entry;void entry.promise.catch(()=>{if(cache.get(key)===current)cache.delete(key)})
-      }
-      const snapshot=await entry.promise;request.signal.throwIfAborted()
+        },signal)
+      })
+      request.signal.throwIfAborted()
       value=result({...selectEtfSnapshot(snapshot,normalized),cacheHit})
     }else value=await queryTushare(args,env,AbortSignal.any([request.signal,AbortSignal.timeout(25000)]))
     status=value.isError?422:200;return reply(value)
