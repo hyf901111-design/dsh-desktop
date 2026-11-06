@@ -9,125 +9,98 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "云端 Tushare 数据源与全场景来源优先策略",
+        "featureName": "Tushare ETF 快照与投研组件生成修复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
-        "tipCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+        "baseCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+        "tipCommit": "db5c4dce29054301207431dd8fd1eefd3c2151af",
         "commits": [
           {
-            "commit": "730504f10e981ce7baed17568216b4610835368d",
+            "commit": "86f4f01e70d2eded81b333a78f37e421a6da0239",
             "parents": [
-              "e029994b5b5e5875a5d214e72fd93587c5607926"
+              "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b"
             ],
-            "subject": "优化：移除电脑控制详情中已过时的候选方案说明"
+            "subject": "修复：兼容带列键的顺序表格数据并保留刷新映射"
           },
           {
-            "commit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+            "commit": "9cbf0e263245733ee70549f8f6db9a8eeec0c589",
             "parents": [
-              "730504f10e981ce7baed17568216b4610835368d"
+              "86f4f01e70d2eded81b333a78f37e421a6da0239"
             ],
-            "subject": "功能：接入登录鉴权的云端 Tushare 数据源并替换内置通联"
+            "subject": "修复：统一 Tushare 分页约束与 ETF 披露日期提示"
+          },
+          {
+            "commit": "0a7204216b3c13f27d73c1204774b62cc31fb8b5",
+            "parents": [
+              "9cbf0e263245733ee70549f8f6db9a8eeec0c589"
+            ],
+            "subject": "功能：提供鉴权 ETF 运营快照与真实份额规模汇总"
+          },
+          {
+            "commit": "7e4d554e58b0bb53497a8fd95cd0f728ecea7086",
+            "parents": [
+              "0a7204216b3c13f27d73c1204774b62cc31fb8b5"
+            ],
+            "subject": "优化：合并组件批量绑定时的并发身份扫描"
+          },
+          {
+            "commit": "db5c4dce29054301207431dd8fd1eefd3c2151af",
+            "parents": [
+              "7e4d554e58b0bb53497a8fd95cd0f728ecea7086"
+            ],
+            "subject": "优化：按分析问题规划比较图表与宽窄组件布局"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "config/tushare-api-catalog.json"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "config/tushare-builtin-tools.json"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-integration-runtime/financial-source-policy.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-integration-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/table-projection.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-source-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "services/fund-data/financial/router.js"
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
           },
           {
             "status": "A",
-            "path": "services/fund-data/financial/tushare.js"
+            "path": "services/fund-data/tushare-etf-snapshot.js"
           },
           {
             "status": "M",
-            "path": "services/fund-data/http.js"
-          },
-          {
-            "status": "A",
             "path": "services/fund-data/tushare-mcp.js"
           },
           {
             "status": "M",
-            "path": "services/fund-data/wrangler.jsonc"
+            "path": "src/main/component-data/service.ts"
           },
           {
             "status": "M",
-            "path": "src/main/account-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/integrations/adapters/mcp.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/integrations/bundled-tushare.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/integrations/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/integrations/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-datayes-mcp.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-skill-preferences.test.ts"
-          },
-          {
-            "status": "A",
             "path": "test/bundled-tushare-mcp.test.ts"
           },
           {
             "status": "M",
-            "path": "test/computer-use-plugin-integration.test.js"
+            "path": "test/component-data-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-keyed-table-projection.test.js"
           },
           {
             "status": "A",
+            "path": "test/tushare-etf-snapshot.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/tushare-financial-routing.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/tushare-gateway.test.js"
           }
         ],
@@ -138,20 +111,20 @@
               "vitest",
               "run",
               "test/tushare-gateway.test.js",
+              "test/tushare-etf-snapshot.test.js",
               "test/tushare-financial-routing.test.js",
               "test/bundled-tushare-mcp.test.ts",
-              "test/bundled-datayes-mcp.test.ts",
-              "test/bundled-skill-preferences.test.ts",
               "test/research-component-source-tools.test.js",
-              "test/workbench-source-policy.test.js",
+              "test/component-keyed-table-projection.test.js",
+              "test/component-source-projection.test.js",
               "test/component-source-binding.test.js",
-              "test/financial-routing.test.js",
-              "test/financial-routing-review.test.js"
+              "test/component-data-service.test.ts",
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "对应聚焦检查已通过，集成时复验",
-            "verifiedCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
-            "completedAt": "2026-11-06T16:51:57.743260+00:00",
+            "summary": "194 项聚焦检查与类型检查通过",
+            "verifiedCommit": "db5c4dce29054301207431dd8fd1eefd3c2151af",
+            "completedAt": "2026-11-06T18:05:46.152679+00:00",
             "timeoutMs": 180000
           },
           {
@@ -161,9 +134,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "对应聚焦检查已通过，集成时复验",
-            "verifiedCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
-            "completedAt": "2026-11-06T16:51:57.743260+00:00",
+            "summary": "194 项聚焦检查与类型检查通过",
+            "verifiedCommit": "db5c4dce29054301207431dd8fd1eefd3c2151af",
+            "completedAt": "2026-11-06T18:05:46.152679+00:00",
             "timeoutMs": 180000
           },
           {
@@ -173,88 +146,26 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "对应聚焦检查已通过，集成时复验",
-            "verifiedCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
-            "completedAt": "2026-11-06T16:51:57.743260+00:00",
+            "summary": "194 项聚焦检查与类型检查通过",
+            "verifiedCommit": "db5c4dce29054301207431dd8fd1eefd3c2151af",
+            "completedAt": "2026-11-06T18:05:46.152679+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "本交接为数据源、鉴权与提示策略；未修改页面布局。MCP SDK 到 Worker 查询验证通过，实际客户端数据测试在集成后继续，不视为已验收。"
+          "summary": "数据汇总、绑定性能与规划提示变更，真实客户端验证在集成包中继续；未将源码测试视为视觉验收。"
         },
         "acceptanceCriteria": [
-          "内置通联移除，登录后可使用 Tushare，Token 不进入客户端",
-          "对话和组件可以取得真实数据，保留日期、单位、分页与来源",
-          "适用免费来源优先，其他已覆盖需求优先 Tushare"
+          "真实 ETF 分页取齐、日期回溯与估算口径完整",
+          "组件绑定减少并发历史扫描且保留账号校验",
+          "按问题选择可视化与宽窄布局"
         ],
         "risks": [
-          "部分接口受服务端权限与频率限制，不能把目录视为全数据已授权",
-          "港股 ETF 渠道结构可能无对应数据，必须明确缺失"
+          "历史布局测试直接对已叠加网格补丁的依赖重打单个补丁失败，未改布局实现；完整构建检查继续核验。",
+          "Kimi K3 实测数分钟无首段输出，已终止该次测试"
         ],
-        "generatedAt": "2026-11-06T16:51:57.743260+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
-        "verificationCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
-            "completedAt": "2026-11-06T16:54:00.511Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
-            "completedAt": "2026-11-06T16:54:00.511Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
-            "completedAt": "2026-11-06T16:54:00.511Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
-            "completedAt": "2026-11-06T16:54:00.511Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-11-06T16:54:00.511Z"
+        "generatedAt": "2026-11-06T18:05:46.152679+00:00"
       }
     }
   ],
