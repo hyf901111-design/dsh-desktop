@@ -9,7 +9,7 @@ it('installs one reversible activity footer on both native conversation hosts',a
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=stripConversationLiveActivity(source),next=patchConversationLiveActivity(base)
  expect(patchConversationLiveActivity(next)).toBe(next);expect(stripConversationLiveActivity(next)).toBe(base)
  expect(next.match(/react.createElement\(ConversationLiveActivity,/g)).toHaveLength(2)
- expect(()=>stripConversationLiveActivity(next.replace('flex:0 0 12px','flex:0 0 10px'))).toThrow(/drifted/)
+ expect(()=>stripConversationLiveActivity(next.replace('2.4s linear infinite','1s linear infinite'))).toThrow(/drifted/)
 })
 it('shows immediate preparation and never mistakes old completed tools for current work',()=>{
  expect(activity()).toEqual({kind:'thinking',label:'正在思考…'})

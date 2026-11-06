@@ -1,4 +1,6 @@
-const START='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
+import {createHash} from 'node:crypto'
+import {conversationPublicReplies,ConversationActivityDetails,statusPresentationCss,transformStatusPresentation} from './conversation-status-presentation.mjs'
+const START='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
 /** Read the current run only. Completed tools and private reasoning are never
  * republished as a new action, and a queued message does not start a new run. */
@@ -37,33 +39,35 @@ export function conversationLiveActivity({running,runningTurn,order=[],nodeStore
 }
 
 function ConversationLiveActivity(props) {
+ if(props.flow?.some(entry=>entry.kind==='execution'&&entry.running))return null
  const english=document.documentElement.dataset.odysseyLocale==='en'||document.documentElement.lang?.startsWith('en')
  const state=conversationLiveActivity({...props,english,labelForNode:executionActivityLabel,statusForNodes:executionStatusForNodes})
  if(!state)return null
  const parallel=state.parallelCount>1?(english?' · '+state.parallelCount+' actions running':' · '+state.parallelCount+' 项进行中'):''
  return react.createElement('div',{'data-conversation-live-activity':state.kind,role:'status','aria-live':'polite','aria-atomic':true},
-  react.createElement('span',{'data-live-activity-glyph':'','data-waiting':state.kind==='waiting'?'':undefined,'aria-hidden':true}),
   react.createElement('span',null,state.label+parallel))
 }
-const CSS='[data-conversation-live-activity]{display:flex;align-items:center;gap:8px;min-height:24px;padding:4px 0 12px;color:var(--dsw-alias-label-tertiary,#80858e);font-size:13px;line-height:20px;overflow-wrap:anywhere}'+
- '[data-live-activity-glyph]{display:block;flex:0 0 12px;width:12px;height:12px;box-sizing:border-box;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:ework-live-activity-spin 1s linear infinite;opacity:.8}'+
- '[data-live-activity-glyph][data-waiting]{animation:none;border-right-color:currentColor;opacity:.5}'+
- '@keyframes ework-live-activity-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){[data-live-activity-glyph]{animation:none}}'
-const definition=()=>START+'\n'+conversationLiveActivity.toString()+'\n'+ConversationLiveActivity.toString()+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-live-activity-style");if(!style){style=document.createElement("style");style.id="ework-live-activity-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
+const CSS=statusPresentationCss
+const definition=()=>START+'\n'+conversationLiveActivity.toString()+'\n'+ConversationLiveActivity.toString()+'\n'+conversationPublicReplies.toString()+'\n'+ConversationActivityDetails.toString()+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-live-activity-style");if(!style){style=document.createElement("style");style.id="ework-live-activity-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
 const CHAT_END='\n\t\t\t\t\t\t]\n\t\t\t\t\t}), (0, react_jsx_runtime.jsx)(OdysseyReadingStatus,'
 const CHAT_NEXT=',react.createElement(ConversationLiveActivity,{running,runningTurn:runningTurnNumber,order,nodeStore,flow:nativeSubmittedFlow,noteRows,canvasTasks,openState,t})'+CHAT_END
 const SHARED_END="!ongoing&&continuations.length>0&&!tails.length&&react.createElement(MessageIconActions,{text:continuations.at(-1).reason??'',t}))"
-const SHARED_NEXT=SHARED_END.slice(0,-1)+",react.createElement(ConversationLiveActivity,{running,runningTurn,order:slice.keys,nodeStore,canvasTasks:continuations,t}))"
+const SHARED_LEGACY=SHARED_END.slice(0,-1)+",react.createElement(ConversationLiveActivity,{running,runningTurn,order:slice.keys,nodeStore,canvasTasks:continuations,t}))"
+const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:body,canvasTasks')
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
- const a=source.indexOf(START);if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
- const block=definition();if(source.split(START).length!==2||source.split(block).length!==2)throw Error('Live activity definition drifted')
+ const legacy=source.includes(LEGACY),marker=legacy?LEGACY:START,a=source.indexOf(marker)
+ if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
+ const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)
+ if(source.split(marker).length!==2||source.split(END).length!==2||end<a||(legacy?createHash('sha256').update(block).digest('hex')!=='6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':block!==definition()))throw Error('Live activity definition drifted')
+ if(!legacy)source=transformStatusPresentation(source,true)
  source=scope(source,'function ChatView(',CHAT_NEXT,CHAT_END)
- source=scope(source,'function SharedResearchRequest(',SHARED_NEXT,SHARED_END)
+ source=scope(source,'function SharedResearchRequest(',legacy?SHARED_LEGACY:SHARED_NEXT,SHARED_END)
  return source.replace(block,'')
 }
+
 export function patchConversationLiveActivity(source){
- source=stripConversationLiveActivity(source)
+ source=transformStatusPresentation(stripConversationLiveActivity(source))
  source=scope(source,'function ChatView(',CHAT_END,CHAT_NEXT)
  source=scope(source,'function SharedResearchRequest(',SHARED_END,SHARED_NEXT)
  const anchor='function SharedResearchRequest(';return source.replace(anchor,definition()+anchor)
