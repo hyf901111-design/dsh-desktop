@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { requireComputerVision } from '../packages/dsh-research-task-runtime/computer-use-tools.js'
+import { requireComputerVision } from '../packages/dsh-integration-runtime/computer-use-tools.js'
 
 function fixture(modalities) {
   const resolveModelInfo = vi.fn(async () => ({ inputModalities: modalities }))
@@ -26,7 +26,7 @@ describe('computer use image admission', () => {
 
 it('registers valid stroke schemas and stops model waiting at the absolute deadline', async () => {
   vi.useFakeTimers()
-  const { registerComputerUseTool } = await import('../packages/dsh-research-task-runtime/computer-use-tools.js')
+  const { registerComputerUseTool } = await import('../packages/dsh-integration-runtime/computer-use-tools.js')
   let tool, onEvent
   const cancel = vi.fn()
   const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ screenshots: [] }) }))

@@ -240,6 +240,7 @@ export function createDesktopComputer(getMainWindow: () => BrowserWindow | null 
   })
   return {
     run: (input: unknown, signal: AbortSignal) => controller.run(input, signal),
+    cancel: stop,
     dispose: async () => {
       await controller.stop().catch(() => {})
       disposed = true

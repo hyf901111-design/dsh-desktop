@@ -42,7 +42,6 @@ import {registerScheduledTaskTool,SCHEDULED_TASK_TOOL} from './scheduled-task-to
 import { registerNotesAi } from './notes-ai.js'
 import { registerNotesChallenge } from './notes-challenge-runtime.js'
 import { registerNoteSessions } from './notes-session.js'
-import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import {generatedChartGeometry,chartGeometryRepairIssue} from './generated-chart-geometry.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
@@ -3220,7 +3219,6 @@ export async function apply(ctx) {
   const sharedRuntime = new SharedExecutionRuntime({ storage: fileExecutionStorage(join(dshHome(), 'sherlock-shared-execution.json')), execute: sharedExecutor.execute })
   await sharedRuntime.restore()
   const disposeShared=registerBoardRuntime(ctx,sharedRuntime)
-  const disposeComputerUseTool=registerComputerUseTool(ctx)
   const disposeBrowserUseTool=registerBrowserUseTool(ctx)
   const disposeCanvasUseTool=registerCanvasUseTool(ctx)
   const disposeCanvasUseTasks=await registerCanvasUseTasks(ctx,{filePath:join(dshHome(),'sherlock-canvas-tasks.json'),isTrustedRequest,readJsonBody})
@@ -3281,7 +3279,6 @@ export async function apply(ctx) {
       disposeModelQueue()
       disposeCompletionNotifications()
       await disposeShared()
-      await disposeComputerUseTool()
       disposeCanvasUseTool();disposeBrowserUseTool()
       await disposeCanvasUseTasks()
       await sharedExecutor.dispose()

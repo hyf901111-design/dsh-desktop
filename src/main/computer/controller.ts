@@ -24,6 +24,8 @@ export function sameObservedElements(a: unknown, b: unknown): boolean {
 /** The host, not a model argument, owns the desktop lease and driver session. */
 export class ComputerController {
   private owner?: string
+  private pendingSessionId?: string
+  private ending?: Promise<void>
   private runId = ''
   private observation?: Observation
   private windows = new Map<string, Map<number, number>>()
@@ -50,11 +52,11 @@ export class ComputerController {
     targetWindow?(target?: RecordValue, bounds?: RecordValue, focused?: boolean): void
   }) {}
 
-  async stop(sessionId = this.owner, block = true): Promise<void> {
+  async stop(sessionId = this.owner ?? this.pendingSessionId, block = true): Promise<void> {
     if (!sessionId) return
     if (block) this.stopped.add(sessionId)
     else { this.stopped.delete(sessionId); this.budgets.delete(sessionId); this.windows.delete(sessionId); this.applicationDiscoveries.delete(sessionId) }
-    if (sessionId !== this.owner) return
+    if (sessionId !== this.owner && sessionId !== this.pendingSessionId) return
     this.abort?.abort(new Error('桌面控制已停止。'))
     this.observation = undefined
     this.options.targetWindow?.()
@@ -65,13 +67,19 @@ export class ComputerController {
     if (!this.busy) await this.endLease()
   }
   private async endLease() {
+    if (this.ending) return this.ending
     if (!this.owner) return
-    const run = this.runId
-    try { await this.options.stopCapture?.() }
-    finally {
-      try { await (await this.options.driver()).callTool('end_session', JSON.stringify({ session: run }), { signal: AbortSignal.timeout(5000) }) }
-      finally { this.applicationDiscoveries.delete(this.owner!); this.owner = undefined; this.observation = undefined; this.options.targetWindow?.(); this.options.visibility(false); this.options.pointer(); clearTimeout(this.idle) }
-    }
+    const owner = this.owner, run = this.runId
+    const ending = (async () => {
+      try { await this.options.stopCapture?.() }
+      finally {
+        try { await (await this.options.driver()).callTool('end_session', JSON.stringify({ session: run }), { signal: AbortSignal.timeout(5000) }) }
+        finally { this.applicationDiscoveries.delete(owner); this.owner = undefined; this.observation = undefined; this.options.targetWindow?.(); this.options.visibility(false); this.options.pointer(); clearTimeout(this.idle) }
+      }
+    })()
+    this.ending = ending
+    try { await ending }
+    finally { if (this.ending === ending) this.ending = undefined }
   }
   async run(input: unknown, signal: AbortSignal): Promise<unknown> {
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw Error('无效桌面请求。')
@@ -80,7 +88,7 @@ export class ComputerController {
     if (v.op === 'release' || v.op === 'finish') { await this.stop(id, v.op !== 'release'); return { stopped: true } }
     if (!['apps','windows','open','observe','click','type','key','hotkey','scroll','drag','stroke'].includes(v.op)) throw Error('不支持的桌面操作。')
     if (this.stopped.has(id)) throw Error('本轮桌面控制已停止，请等待下一轮用户指令。')
-    if (this.busy || (this.owner && this.owner !== id)) throw Error('其他桌面操作正在进行，请等待当前会话结束。')
+    if (this.busy || this.ending || (this.owner && this.owner !== id)) throw Error('其他桌面操作正在进行，请等待当前会话结束。')
     const budget = this.budgets.get(id) ?? { started: Date.now(), actions: 0, failures: 0, keyboardRefusals: 0 }
     this.budgets.set(id, budget)
     if (Date.now() - budget.started >= 10 * 60 * 1000 || budget.actions >= 60 || budget.failures >= 3) {
@@ -91,6 +99,7 @@ export class ComputerController {
     signal.throwIfAborted()
     this.options.assertAvailable?.()
     this.busy = true
+    this.pendingSessionId = id
     const controller = new AbortController()
     this.abort = controller
     const combined = AbortSignal.any([signal, controller.signal, AbortSignal.timeout(80000)])
@@ -288,10 +297,10 @@ export class ComputerController {
         // Semantic web-field refusal does not depend on usable geometry. A
         // missing/off-window frame must not reopen the untrusted AXValue path.
         webKeyboardTarget = ['type', 'key', 'hotkey'].includes(v.op) && element.in_web_content === true
-        const webField = webKeyboardTarget ? webFieldPixelPoint(observed.data, element) : undefined
+        const webField = webKeyboardTarget && isTextInput(element) ? webFieldPixelPoint(observed.data, element) : undefined
         if (webField) {
-          // Chromium/Electron AXValue can echo a write without the renderer
-          // accepting it. Mark this unsupported route before dispatch instead.
+          // A Web/Electron AX write can echo without reaching the editor.
+          // Focus and type using this same window's screenshot coordinates.
           args.x = this.driverX(observed, webField.x); args.y = this.driverY(observed, webField.y)
           point = this.options.screenPoint(observed.target, observed.data, webField.x, webField.y)
           webKeyboardTarget = true
@@ -415,9 +424,29 @@ export class ComputerController {
         }
       }
       const keyboard = ['type', 'key', 'hotkey'].includes(v.op)
-      const knownKeyboardRefusal = keyboard && (samePidKeyboardUnavailable(observed.data, observed.target) || webKeyboardTarget)
-        ? backgroundKeyboardUnavailable(samePidKeyboardUnavailable(observed.data, observed.target) ? 'same_pid_keyboard_ambiguity' : 'web_text_field')
+      let knownKeyboardRefusal = keyboard && samePidKeyboardUnavailable(observed.data, observed.target)
+        ? backgroundKeyboardUnavailable('same_pid_keyboard_ambiguity')
         : undefined
+      if (webKeyboardTarget && !knownKeyboardRefusal) {
+        if (!point || args.x === undefined || args.y === undefined) {
+          knownKeyboardRefusal = backgroundKeyboardUnavailable('web_text_field')
+        } else {
+          // Refuse before dispatch if the live window moved or a sibling
+          // can intercept the focus click. Do not raise or switch windows.
+          const { data } = await call('list_windows', { pid: observed.target.pid })
+          const windows: RecordValue[] = data.windows ?? []
+          const inSpace = (w: RecordValue) => w.pid === observed!.target.pid && w.is_on_screen !== false && w.on_current_space !== false
+          const target = windows.find(w => inSpace(w) && w.window_id === observed!.target.window_id)
+          if (!target || !validBounds(target.bounds) || !sameBounds(target.bounds, observed.data.window_bounds) || !containsPoint(target.bounds, point)) {
+            knownKeyboardRefusal = { data: { performed: false, code: 'target_window_changed', delivery_mode: 'background',
+              reason: '输入窗口已移动或离开当前桌面，未输入，请按新截图重新选择输入框。' }, screenshots: [] }
+          } else if (windows.some(w => w !== target && inSpace(w) && validBounds(w.bounds) && containsPoint(w.bounds, point!)
+            && (!Number.isFinite(w.z_index) || !Number.isFinite(target.z_index) || w.z_index >= target.z_index))) {
+            knownKeyboardRefusal = { data: { performed: false, code: 'keyboard_window_covered', delivery_mode: 'background',
+              reason: '输入框被同一应用的其他窗口覆盖或无法确认叠放顺序，未输入，请先观察正确窗口。' }, screenshots: [] }
+          }
+        }
+      }
       this.observation = undefined // Never replay a gesture against the old snapshot, including on failure.
       if (point && !knownKeyboardRefusal) await this.options.pointer({ ...point, drag: !!strokes && !click }, combined)
       combined.throwIfAborted()
@@ -467,6 +496,7 @@ export class ComputerController {
       // Native gestures settle only after releasing the target's held button.
       if (!failed && !combined.aborted) budget.failures = 0
       this.busy = false
+      this.pendingSessionId = undefined
       this.abort = undefined
       if (failed || combined.aborted || this.stopped.has(id)) await this.endLease().catch(() => {})
       else if (this.owner) this.idle = setTimeout(() => { void this.stop().catch(() => {}) }, 5 * 60 * 1000)
@@ -529,6 +559,9 @@ function stableObservedTarget(before: Observation, after: Observation, input: Re
   const matches = candidates.filter((element: RecordValue) => equal(old, element))
   return { matched: matches.length === 1, token: matches.length === 1 ? matches[0].element_token : undefined }
 }
+function isTextInput(element: RecordValue): boolean {
+  return element.enabled !== false && /^(AXTextField|AXTextArea|AXSearchField|AXComboBox)$/i.test(element.role)
+}
 function validElementFrame(frame: RecordValue | undefined): boolean {
   return !!frame && [frame.x, frame.y, frame.w, frame.h].every(n => typeof n === 'number' && Number.isFinite(n)) && frame.w > 0 && frame.h > 0
 }
@@ -536,7 +569,7 @@ function backgroundKeyboardUnavailable(reason: 'same_pid_keyboard_ambiguity' | '
   return { data: { performed: false, code: 'background_input_unavailable', delivery_mode: 'background', unsupported_reason: reason,
     reason: reason === 'same_pid_keyboard_ambiguity'
       ? '当前驱动无法可靠定位同一应用多窗口的后台键盘目标；未输入，也不会切换到前台重试。可改用该任务已有的文档、网页或应用接口。'
-      : '当前驱动不能可靠验证网页编辑器的后台键盘输入；未输入，也不会切换到前台重试。请优先使用 browser_use 或该任务已有的内容编辑接口。' }, screenshots: [] }
+      : '无法定位网页编辑器的准确输入位置，未输入。请按新截图选择输入框坐标，或使用已授权的网页编辑工具。' }, screenshots: [] }
 }
 function samePidKeyboardUnavailable(data: RecordValue, target: RecordValue): boolean {
   const capability = data.background_input

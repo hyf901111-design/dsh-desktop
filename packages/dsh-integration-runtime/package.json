@@ -7,6 +7,7 @@
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
+    "./computer-use-tools.js": "./computer-use-tools.js",
     "./package.json": "./package.json"
   },
   "dependencies": {
