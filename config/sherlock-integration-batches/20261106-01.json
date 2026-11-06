@@ -9,63 +9,82 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "仅保留电脑控制插件并移除其他候选依赖",
+        "featureName": "云端 Tushare 数据源与全场景来源优先策略",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
-        "tipCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+        "baseCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+        "tipCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
         "commits": [
           {
-            "commit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+            "commit": "730504f10e981ce7baed17568216b4610835368d",
             "parents": [
-              "ec73e633351b7551d72850eaec70c344fd4c8715"
+              "e029994b5b5e5875a5d214e72fd93587c5607926"
             ],
-            "subject": "优化：仅保留 Peekaboo 电脑控制插件并移除其他方案依赖"
+            "subject": "优化：移除电脑控制详情中已过时的候选方案说明"
+          },
+          {
+            "commit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+            "parents": [
+              "730504f10e981ce7baed17568216b4610835368d"
+            ],
+            "subject": "功能：接入登录鉴权的云端 Tushare 数据源并替换内置通联"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "docs/research/computer-use-bakeoff-20261106.md"
+            "status": "A",
+            "path": "config/tushare-api-catalog.json"
+          },
+          {
+            "status": "A",
+            "path": "config/tushare-builtin-tools.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
           },
           {
             "status": "M",
-            "path": "package-lock.json"
+            "path": "packages/dsh-integration-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "package.json"
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-computer-backends/index.js"
+            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-computer-backends/package.json"
-          },
-          {
-            "status": "D",
-            "path": "packages/dsh-computer-backends/uitars.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-integration-runtime/computer-use.js"
+            "path": "packages/dsh-research-task-runtime/workbench-source-policy.js"
           },
           {
             "status": "M",
-            "path": "scripts/computer-use-benchmark/cross-app.mjs"
+            "path": "services/fund-data/financial/router.js"
+          },
+          {
+            "status": "A",
+            "path": "services/fund-data/financial/tushare.js"
           },
           {
             "status": "M",
-            "path": "scripts/computer-use-benchmark/run.mjs"
+            "path": "services/fund-data/http.js"
+          },
+          {
+            "status": "A",
+            "path": "services/fund-data/tushare-mcp.js"
           },
           {
             "status": "M",
-            "path": "scripts/prepare-computer-candidates.mjs"
+            "path": "services/fund-data/wrangler.jsonc"
           },
           {
             "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
+            "path": "src/main/account-service.ts"
           },
           {
             "status": "M",
@@ -73,23 +92,43 @@
           },
           {
             "status": "M",
-            "path": "src/main/integrations/bundled-computer-use.ts"
+            "path": "src/main/integrations/adapters/mcp.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/integrations/bundled-tushare.ts"
           },
           {
             "status": "M",
-            "path": "test/computer-backend-adapter.test.js"
+            "path": "src/main/integrations/service.ts"
           },
           {
             "status": "M",
-            "path": "test/computer-candidates-host.test.ts"
+            "path": "src/preload/integrations/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-datayes-mcp.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-skill-preferences.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/bundled-tushare-mcp.test.ts"
           },
           {
             "status": "M",
             "path": "test/computer-use-plugin-integration.test.js"
           },
           {
-            "status": "M",
-            "path": "test/macos-package-runtime.test.ts"
+            "status": "A",
+            "path": "test/tushare-financial-routing.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/tushare-gateway.test.js"
           }
         ],
         "checks": [
@@ -98,31 +137,21 @@
               "npx",
               "vitest",
               "run",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-backend-adapter.test.js",
-              "test/computer-vision.test.js",
-              "test/message-edit.test.js",
-              "test/message-edit-host.test.js",
-              "test/message-edit-browser.test.js"
+              "test/tushare-gateway.test.js",
+              "test/tushare-financial-routing.test.js",
+              "test/bundled-tushare-mcp.test.ts",
+              "test/bundled-datayes-mcp.test.ts",
+              "test/bundled-skill-preferences.test.ts",
+              "test/research-component-source-tools.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/component-source-binding.test.js",
+              "test/financial-routing.test.js",
+              "test/financial-routing-review.test.js"
             ],
             "outcome": "passed",
-            "summary": "33 项聚焦检查通过",
-            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
-            "completedAt": "2026-11-06T15:55:43.862349+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/macos-package-runtime.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "2 项打包检查通过",
-            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
-            "completedAt": "2026-11-06T15:55:43.862349+00:00",
+            "summary": "对应聚焦检查已通过，集成时复验",
+            "verifiedCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+            "completedAt": "2026-11-06T16:51:57.743260+00:00",
             "timeoutMs": 180000
           },
           {
@@ -132,9 +161,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
-            "completedAt": "2026-11-06T15:55:43.862349+00:00",
+            "summary": "对应聚焦检查已通过，集成时复验",
+            "verifiedCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+            "completedAt": "2026-11-06T16:51:57.743260+00:00",
             "timeoutMs": 180000
           },
           {
@@ -144,88 +173,26 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "差异检查通过",
-            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
-            "completedAt": "2026-11-06T15:55:43.862349+00:00",
-            "timeoutMs": 30000
+            "summary": "对应聚焦检查已通过，集成时复验",
+            "verifiedCommit": "e1b77a1a05f99e5114bbb9f2d3febdbdc9920f3b",
+            "completedAt": "2026-11-06T16:51:57.743260+00:00",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "插件真实服务快照只有电脑控制，旧入口被拒绝，开关保持账号隔离；消息编辑浏览器检查通过。更新包实际界面待本轮构建核验。"
+          "outcome": "not-applicable",
+          "summary": "本交接为数据源、鉴权与提示策略；未修改页面布局。MCP SDK 到 Worker 查询验证通过，实际客户端数据测试在集成后继续，不视为已验收。"
         },
         "acceptanceCriteria": [
-          "只有 Peekaboo 电脑控制插件，名称及正式功能介绍正确，开关正常",
-          "消息悬停显示时间和复制，空闲时支持编辑后分支重发",
-          "安装包不含 Cua 候选插件二进制及 UI-TARS 专用依赖"
+          "内置通联移除，登录后可使用 Tushare，Token 不进入客户端",
+          "对话和组件可以取得真实数据，保留日期、单位、分页与来源",
+          "适用免费来源优先，其他已覆盖需求优先 Tushare"
         ],
         "risks": [
-          "真实跨应用任务的性能仍待进一步改进；本轮不宣称已解决此前长耗时问题",
-          "电脑控制依赖 macOS 屏幕录制和辅助功能权限"
+          "部分接口受服务端权限与频率限制，不能把目录视为全数据已授权",
+          "港股 ETF 渠道结构可能无对应数据，必须明确缺失"
         ],
-        "generatedAt": "2026-11-06T15:55:43.862349+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cc6fa8919410fb107c4d5cbe8d21f413bc830973",
-        "verificationCommit": "cc6fa8919410fb107c4d5cbe8d21f413bc830973",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "cc6fa8919410fb107c4d5cbe8d21f413bc830973",
-            "completedAt": "2026-11-06T15:56:59.161Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "cc6fa8919410fb107c4d5cbe8d21f413bc830973",
-            "completedAt": "2026-11-06T15:56:59.161Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "cc6fa8919410fb107c4d5cbe8d21f413bc830973",
-            "completedAt": "2026-11-06T15:56:59.161Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "cc6fa8919410fb107c4d5cbe8d21f413bc830973",
-            "completedAt": "2026-11-06T15:56:59.161Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-11-06T15:56:59.161Z"
+        "generatedAt": "2026-11-06T16:51:57.743260+00:00"
       }
     }
   ],
