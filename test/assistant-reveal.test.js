@@ -33,6 +33,11 @@ it('refreshes an already patched runtime helper without duplicating its native w
  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchAssistantReveal(source),stale=next.replace(assistantRevealScrollTop.toString(), 'function assistantRevealScrollTop(el){return 0 /* previous packaged helper */}')
  expect(stale).not.toBe(next);expect(patchAssistantReveal(stale)).toBe(next);expect(patchAssistantReveal(next)).toBe(next)
 })
+it('upgrades the old physical-bottom boundary for both restored sessions and manual reading',()=>{
+ const next=patchAssistantReveal(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const old=next.replace('/* ework:assistant-reading-reserve:v1 */ const isAtBottom = assistantAtContentBottom(el);','const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 25;').replace('const isAtBottom = movedByReader ? assistantAtContentBottom(el) : atBottomRef.current;','const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;')
+ expect(old).not.toBe(next);expect(patchAssistantReveal(old)).toBe(next);expect(patchAssistantReveal(next)).toBe(next)
+})
 it('upgrades an already installed v1 reply seat to live progress and synchronous view revocation',()=>{
  const next=patchAssistantReveal(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const old=next.replace('openFile, t, reveal, revealRoute })','openFile, t, reveal })').replace('useAssistantTextPaint(react,interrupted?undefined:reveal,blocks,revealRoute);','useAssistantTextPaint(react,interrupted?undefined:reveal,blocks);').replace('revealRoute:"node",','').replace('/* ework:assistant-reveal-seats:v1 */ blocks: update.blocks,\nreveal:eworkAssistantRevealLedger.record(seatProps.useSession,activityNodes.find(node=>node.key===update.key)),revealRoute:"progress",','blocks: update.blocks,').replace('react.useLayoutEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),','react.useEffect(()=>()=>eworkAssistantRevealLedger.suspend(useSession),').replace('settleConversationScrollBottom(el,callback=>requestAnimationFrame(()=>{if(atBottomRef.current)callback()}), () => {','settleConversationScrollBottom(el, requestAnimationFrame, () => {')
