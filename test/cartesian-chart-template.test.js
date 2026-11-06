@@ -9,6 +9,23 @@ import {generateSimulatedPanel} from '../packages/dsh-research-task-runtime/simu
 
 const data=(variant,more={})=>({version:1,type:'chart',title:'经营分析',variant,labels:['一季度','二季度','三季度'],series:[{name:'产品',values:[20,35,50]},{name:'服务',values:[10,25,30]}],asOf:'2026-09-30 · 模拟数据',unit:'万元',...more});
 describe('Figma cartesian templates',()=>{
+ it.each(['净申购估算排名，用共享零轴的正负横条图展示','双向横条比较产品增减','横柱图展示区间收益'])('keeps signed ranking intent: %s',prompt=>{
+   const panel={title:'产品排名',type:'chart',size:'large',prompt};
+   expect(requestedChartVariant(prompt)).toBe('horizontal');
+   const contract=workbenchPanelPrompt({title:'运营',dataMode:'source'},panel);
+   expect(contract).toContain('必须输出 chart.horizontal 的结构化数据');
+   expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(data('line'))),contract)).toContain('chart.horizontal');
+ });
+ it('uses explicit sign colors and a shared zero axis without changing ranking values',()=>{
+   const spec=data('horizontal',{colorBySign:true,series:[{name:'份额变化',values:[20,-10,0]}]});
+   const accepted=JSON.parse(acceptArtifactOutput(JSON.stringify(spec)));
+   expect(readTemplateModel(accepted).data).toEqual(spec);
+   const svg=cartesianChartSvg(spec),marks=svg.elements.find(e=>e.attributes['data-series']===0).children;
+   expect(marks.map(m=>m.attributes.fill)).toEqual(['var(--sherlock-market-positive)','var(--sherlock-market-negative)','var(--sherlock-muted)']);
+   expect(marks[0].attributes.x).toBeCloseTo(marks[1].attributes.x+marks[1].attributes.width);
+   expect(chartDataIssue({...spec,colorBySign:'yes'})).toBeTruthy();
+   expect(chartDataIssue({...spec,variant:'line'})).toBeTruthy();
+ });
  it('keeps a real monthly comparison curve when a panel includes an optional chart syntax example',()=>{
    const panel={title:'近一月走势对比与相对沪深300强弱',type:'chart',size:'large',prompt:'取中际旭创(300308)、新易盛(300502)、工业富联(601138)及沪深300(000300)近一个月的日收盘价，统一归一化为近一月起点=100的累计涨跌幅对比曲线；并在附表中给出各标的近一月累计涨跌幅、相对沪深300超额收益（相对强弱），单位%。使用 financial_query 按确认后的代码取日线历史，注明来源与日期区间；普通柱状/折线用 chart 并可声明 chart.bar。数据取不到的标的明确标注缺失，不缩小研究范围。'};
    expect(requestedChartVariant(panel.title+'\n'+panel.prompt)).toBe('line');

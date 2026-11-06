@@ -45,19 +45,19 @@ export async function buildEtfSnapshot(input,query,signal){
   const p=prior.get(r.ts_code),b=metadata.get(r.ts_code),delta=p&&finite(r.total_share)&&finite(p.total_share)?r.total_share-p.total_share:null
   return {code:r.ts_code,name:b?.csname||r.etf_name||r.ts_code,indexCode:b?.index_code??null,indexName:b?.index_name??null,manager:b?.mgr_name??null,exchange:r.exchange,
    date:end.date,startDate:p?start.date:null,shareYi:yi(r.total_share),sizeYi:yi(r.total_size),nav:finite(r.nav)?r.nav:null,close:finite(r.close)?r.close:null,
-   shareChangeYi:yi(delta),flowEstimateYi:finite(delta)&&finite(r.nav)&&r.nav>0?delta*r.nav/10000:null,
+   shareChangeYi:yi(delta),sizeChangeYi:p&&finite(r.total_size)&&finite(p.total_size)?yi(r.total_size-p.total_size):null,flowEstimateYi:finite(delta)&&finite(r.nav)&&r.nav>0?delta*r.nav/10000:null,
    returnPct:p&&finite(r.close)&&finite(p.close)&&p.close>0?(r.close/p.close-1)*100:null,
    matched:Boolean(p)}
  })
  const summary={products:products.length,startProducts:start.rows.length,matchedProducts:products.filter(r=>r.matched).length,
   sizeYi:sum(products,'sizeYi'),shareYi:sum(products,'shareYi'),sizeCoverage:products.filter(r=>finite(r.sizeYi)).length,shareCoverage:products.filter(r=>finite(r.shareYi)).length,
   startSizeYi:sum(start.rows,'total_size')===null?null:sum(start.rows,'total_size')/10000,startShareYi:sum(start.rows,'total_share')===null?null:sum(start.rows,'total_share')/10000,
-  shareChangeYi:sum(products,'shareChangeYi'),flowEstimateYi:sum(products,'flowEstimateYi'),flowCoverage:products.filter(r=>finite(r.flowEstimateYi)).length,
+  shareChangeYi:sum(products,'shareChangeYi'),sizeChangeYi:sum(products,'sizeChangeYi'),sizeChangeCoverage:products.filter(r=>finite(r.sizeChangeYi)).length,flowEstimateYi:sum(products,'flowEstimateYi'),flowCoverage:products.filter(r=>finite(r.flowEstimateYi)).length,
   netCreatedProducts:products.filter(r=>r.shareChangeYi>0).length,netRedeemedProducts:products.filter(r=>r.shareChangeYi<0).length}
  return {source:'Tushare',api:'etf_share_size + etf_basic + trade_cal',sourceUrl:'https://tushare.pro/document/2?doc_id=408',receivedAt:new Date().toISOString(),
   period:{requestedEnd:end_date,start:start.date,end:end.date,lookbackDays:lookback_days},coverage:{complete:true,endProducts:products.length,startProducts:start.rows.length,matchedProducts:summary.matchedProducts},summary,products,
   formula:'份额变动按期末净值估算金额 = (期末份额−期初份额) × 期末净值；不是逐日净申购合计或官方资金流。区间收益为未复权收盘价变化，不含分红。万份/万元÷10000为亿份/亿元。',
-  note:'分页已取齐仅指 Tushare 对所查询日期的可用记录；入库可能分批，不能保证交易所全部产品齐全。规模/份额总计各按当日有效记录；变动只按两期匹配产品，缺失不补零，不把新增或消失产品当申赎。日期以实际返回为准，可能滞后。'}
+  note:'分页已取齐仅指 Tushare 对所查询日期的可用记录；入库可能分批，不能保证交易所全部产品齐全。规模/份额总计各按当日有效记录；变动使用 sizeChangeYi/shareChangeYi，只按两期匹配且两期该字段均有效的产品，缺失不补零，不把新增或消失产品当申赎。不要用覆盖范围不同的两期总计之差冒充同口径变动。日期以实际返回为准，可能滞后。'}
 }
 export function selectEtfSnapshot(snapshot,input){
  const args=validateEtfSnapshot(input),{products,...base}=snapshot
@@ -67,6 +67,6 @@ export function selectEtfSnapshot(snapshot,input){
  const sorted=[...filtered].sort((a,b)=>finite(a[key])&&finite(b[key])?order*(a[key]-b[key])||a.code.localeCompare(b.code):finite(a[key])?-1:finite(b[key])?1:a.code.localeCompare(b.code))
  const records=args.view==='overview'?[]:sorted.slice(args.offset,args.offset+args.limit),more=args.view!=='overview'&&args.offset+records.length<sorted.length
  return {...base,view:args.view,coverage:{...base.coverage,selectedProducts:selected.length,rankedProducts:filtered.length},summaryScope:'全部可用 ETF 记录；index_code 只筛选 records，不改变 summary',records,
-  fieldInfo:{sizeYi:'期末规模（亿元）',shareYi:'期末份额（亿份）',shareChangeYi:'两期匹配份额变化（亿份）',flowEstimateYi:'按期末净值估算的份额变动金额（亿元）',returnPct:'区间未复权价格变化（%）',nav:'期末单位净值（元）',close:'期末收盘价（元）'},
+  fieldInfo:{sizeYi:'期末规模（亿元）',sizeChangeYi:'两期规模均有效的匹配产品规模变化（亿元）',sizeChangeCoverage:'规模变动所覆盖产品数（只）',shareYi:'期末份额（亿份）',shareChangeYi:'两期匹配份额变化（亿份）',flowEstimateYi:'按期末净值估算的份额变动金额（亿元）',returnPct:'区间未复权价格变化（%）',nav:'期末单位净值（元）',close:'期末收盘价（元）'},
   pagination:{offset:args.offset,limit:args.limit,total:args.view==='overview'?0:sorted.length,returned:records.length,possiblyMore:more,nextOffset:more?args.offset+records.length:null}}
 }

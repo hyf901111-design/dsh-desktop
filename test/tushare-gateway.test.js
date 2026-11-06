@@ -78,8 +78,12 @@ it('ETF 汇总复用同一日期窗口、仍逐次鉴权，并保留真实来源
  const [one,two]=await Promise.all(['overview','inflows'].map(async view=>(await(await handleRequest(request('tushare_etf_snapshot',{...a,view}),env)).json()).result.structuredContent))
  expect(env.fetch).toHaveBeenCalledTimes(4)
  expect(one.summary.flowEstimateYi).toBe(0.2);expect(two.records[0].flowEstimateYi).toBe(0.2)
+ const reused=(await(await handleRequest(request('tushare_etf_snapshot',a),{...env})).json()).result.structuredContent
+ expect(reused.cacheHit).toBe(true);expect(env.fetch).toHaveBeenCalledTimes(4)
  expect(two.formula).toContain('不是逐日净申购')
  expect(JSON.stringify([one,two])).not.toContain(env.TUSHARE_TOKEN)
  expect((await handleRequest(request('tushare_etf_snapshot',a,false),env)).status).toBe(401)
  expect(env.fetch).toHaveBeenCalledTimes(4)
+ const rotated=(await(await handleRequest(request('tushare_etf_snapshot',a),{...env,TUSHARE_TOKEN:'rotated-test-only'})).json()).result.structuredContent
+ expect(rotated.cacheHit).toBe(false);expect(env.fetch).toHaveBeenCalledTimes(8)
 })

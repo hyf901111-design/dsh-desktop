@@ -4,6 +4,16 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {prepareSimulatedArtifact} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 const source={version:1,type:'kpi',title:'项目指标',subject:'项目概况',asOf:'用户提供 · 2026-10-01',range:'当前工作台 · 最近7天',note:'本地虚构测试记录',items:[{label:'累计完成',value:0,unit:'项',detail:'原口径，不将零视为缺失',change:'本周 -5',source:'用户提供的完整记录'},{label:'运行任务',value:-5,unit:'个',detail:'保留原负数'},{label:'平均耗时',value:null,unit:'秒',missing:'未提供耗时，不能补零'}]}
+it('摘要不复制长口径，展开仍保留全文，缺失原因保持可见',()=>{
+ const w=new Window();w.document.write(JSON.parse(acceptArtifactOutput(JSON.stringify(source))).html);
+ const summaries=[...w.document.querySelectorAll('.indicator-summary')];
+ expect(summaries[0].textContent).toContain('本周 -5');
+ expect(summaries[1].textContent).not.toContain('保留原负数');
+ expect(summaries[1].textContent).toContain('查看口径');
+ expect(summaries[2].textContent).toContain('未提供耗时，不能补零');
+ expect(w.document.querySelectorAll('.indicator-fields')[1].textContent).toContain('保留原负数');
+ w.happyDOM.abort();
+})
 it('指标卡使用当前设计源并保留零、负数、缺失和完整来源字段',()=>{
  const accepted=acceptArtifactOutput(JSON.stringify(source));expect(accepted).toBeDefined();const spec=JSON.parse(accepted),w=new Window();w.document.write(spec.html)
  expect(templateFor(source)).toMatchObject({figma:'1918:343978',width:656,height:286,minWidth:280,minHeight:180})
