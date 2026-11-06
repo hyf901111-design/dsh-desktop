@@ -7,6 +7,7 @@ import { registerManagedSkillProvider } from './skill-provider.js'
 import { validateManagedSkills, enabledManagedSkill, managedSkillInvocationName, stableBuiltinSkillAlias, stableBuiltinSkillAliases } from './skill-policy.js'
 import { projectMcpInputSchema } from './schema-projection.js'
 import { financeSkillGuidance, equityResearchSkillGuidance } from './skill-priority.js'
+import { financialSourceGuidance } from './financial-source-policy.js'
 
 export const name = 'ework-integrations'
 export const inject = ['tools', 'skills', 'agents', 'workspaceRegistry', 'llm', 'attachments']
@@ -232,6 +233,7 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
     // here, after the bridge sync, rather than inserting a Promise as text.
     const skillAvailable = ctx.tools.schemas(agent).some(tool => tool.name === 'skill')
     const guidance = [
+      {name:'ework:financial-source-policy',text:financialSourceGuidance(managed)},
       {name:'sherlock:computer-use-selection',text:managed.some(tool => tool.name === COMPUTER_USE_TOOL) ? COMPUTER_USE_GUIDANCE : ''},
       {name:'ework:finance-skill',text:skillAvailable?financeSkillGuidance(runtime.snapshot):''},
       {name:'ework:equity-research-skill',text:skillAvailable?equityResearchSkillGuidance(runtime.snapshot):''}

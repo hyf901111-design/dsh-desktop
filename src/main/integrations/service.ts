@@ -26,7 +26,8 @@ import { LegacySkillMigration, type LegacySkillRoot } from './legacy-skills';
 import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-connections';
 import { loadBundledSkills, readBundledSkill, isBundledSkillId, type BundledSkill } from './bundled-skills';
 import datayesHistoricalTools from '../../../config/datayes-tools.json';
-import {bundledDatayesConnection,bundledDatayesId,isBundledDatayesId,DATAYES_TOOLS,type BundledDatayesOptions} from './bundled-datayes';
+import {isBundledDatayesId} from './bundled-datayes';
+import {bundledTushareConnection,bundledTushareId,isBundledTushareId,TUSHARE_TOOLS,type BundledTushareOptions} from './bundled-tushare';
 export interface IntegrationServiceOptions {
     root: string;
     encryption: PlatformEncryption;
@@ -42,7 +43,7 @@ export interface IntegrationServiceOptions {
     providers?: Record<string, ProviderAdapter>;
     legacySkillRoots?: LegacySkillRoot[];
     legacyConnectionSources?: LegacyConnectionSource[];
-    bundledDatayes?: BundledDatayesOptions;
+    bundledTushare?: BundledTushareOptions;
 }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const text = (value: unknown, max = 4000) => { if (typeof value !== 'string' || value.length > max || value.includes('\0'))
@@ -74,25 +75,31 @@ export class IntegrationService {
     private migrations = new Map<string, Promise<void>>();
     private compatibility = new Map<string, string>();
     private disposed = false;
-    private bundledDatayesSync: Promise<void> = Promise.resolve();
+    private bundledTushareSync: Promise<void> = Promise.resolve();
     private constructor(readonly store: IntegrationStore, private options: IntegrationServiceOptions) {
         this.vault = new CredentialVault(join(options.root, 'vault'), options.encryption);
         this.operations = new OperationManager(store);
-        this.mcp = new McpSupervisor(this.vault, options.bundledDatayes?.request);
+        this.mcp = new McpSupervisor(this.vault, undefined, options.bundledTushare?.request);
         this.api = new HttpApiAdapter(this.vault);
         this.catalog = new IntegrationCatalog({ bundledRoot: options.bundledCatalogRoot ?? join(options.root, 'catalog'), clientVersion: options.clientVersion ?? '1.0.6', cacheRoot: join(options.root, 'catalog-cache'), readCredential: ref => this.vault.read(ref) });
         this.installer = new DeclarativeInstaller(join(options.root, 'packages'));
         this.providers = options.providers ?? {};
     }
-    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); service.computerUseBundle = await loadBundledComputerUse(options.bundledComputerUseRoot); await service.syncBundledDatayes(); return service; }
-    private syncBundledDatayes(resetAuthentication = false): Promise<void> {
-        const pending = this.bundledDatayesSync.then(() => this.updateBundledDatayes(resetAuthentication));
-        this.bundledDatayesSync = pending.catch(() => {});
+    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); service.computerUseBundle = await loadBundledComputerUse(options.bundledComputerUseRoot); await service.syncBundledTushare(); return service; }
+    private syncBundledTushare(resetAuthentication = false): Promise<void> {
+        const pending = this.bundledTushareSync.then(() => this.updateBundledTushare(resetAuthentication));
+        this.bundledTushareSync = pending.catch(() => {});
         return pending;
     }
-    private async updateBundledDatayes(resetAuthentication: boolean) {
-        const options=this.options.bundledDatayes,owner=this.options.getOwnerId();if(this.disposed||!options||!owner)return;
-        const authenticated=options.authenticated(),key=bundledDatayesId(owner),expected=bundledDatayesConnection(owner,authenticated);
+    private async updateBundledTushare(resetAuthentication: boolean) {
+        const options=this.options.bundledTushare,owner=this.options.getOwnerId();if(this.disposed||!options||!owner)return;
+        const authenticated=options.authenticated(),key=bundledTushareId(owner),expected=bundledTushareConnection(owner,authenticated);
+        // Retire only built-in DataYes connections; personal integrations and historical messages remain intact.
+        const retired=Object.values(this.store.snapshot().connections).filter(c=>isBundledDatayesId(c.id));
+        if(retired.length){
+            for(const c of retired){this.abortCalls(c.id);await this.mcp.dispose(c.id);}
+            await this.store.change(state=>{for(const c of retired){delete state.connections[c.id];for(const [id,tool] of Object.entries(state.tools))if(tool.connectionId===c.id)delete state.tools[id];}});
+        }
         // A successful discovery can legitimately have a different tool count
         // and schema from the bootstrap catalog. Keep that verified cache;
         // authentication rotation must not reintroduce removed wire names.
@@ -112,7 +119,7 @@ export class IntegrationService {
             const retainTools=hasCurrentTools(state,prior);
             const connection={...expected,...(retainTools?{toolGrants:[...prior!.toolGrants],workspaceGrant:prior!.workspaceGrant}:{}),enabled:prior?.enabled??true,revision:prior?(prior.revision+1):1,createdAt:prior?.createdAt??expected.createdAt};
             state.connections[key]=connection;
-            if(!retainTools)this.replaceTools(state,connection,DATAYES_TOOLS);
+            if(!retainTools)this.replaceTools(state,connection,TUSHARE_TOOLS);
         });
     }
     private async migrateDefaultToolGrants() {
@@ -254,10 +261,10 @@ export class IntegrationService {
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
         const connectionId=command.type==='save-connection'?command.draft?.id:'id' in command?command.id:undefined;
-        if(isBundledDatayesId(connectionId)&&['uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
-            this.owner();throw new IntegrationError('ACCESS_DENIED','内置通联 MCP 随客户端更新，可以启用或停用，不能删除或修改配置');
+        if(isBundledTushareId(connectionId)&&['uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
+            this.owner();throw new IntegrationError('ACCESS_DENIED','内置 Tushare 数据源 随客户端更新，可以启用或停用，不能删除或修改配置');
         }
-        await this.syncBundledDatayes();
+        await this.syncBundledTushare();
         if (command.type === 'uninstall' && (isBundledSkillId(command.id) || isComputerUsePlugin(command.id))) {
             this.owner();
             throw new IntegrationError('ACCESS_DENIED', '内置能力随客户端更新，可以启用或停用，不能删除');
@@ -710,7 +717,7 @@ export class IntegrationService {
                 if (before !== hash(Object.values(state.tools).filter(tool => tool.connectionId === c.id)))
                     c.revision++;
             } });
-            return { type: 'probe', status: verified ? 'verified' : 'config-valid', message: verified ? (isBundledDatayesId(previous.id) ? '内置通联连接成功，全部工具已可使用' : previous.kind === 'mcp' ? '连接成功，已发现的工具默认允许使用；可在连接详情中停用' : '只读请求已验证成功') : '配置有效；没有无需参数的只读探测接口，尚未验证调用' };
+            return { type: 'probe', status: verified ? 'verified' : 'config-valid', message: verified ? (isBundledTushareId(previous.id) ? '内置 Tushare 连接成功；具体数据权限以实际调用结果为准' : previous.kind === 'mcp' ? '连接成功，已发现的工具默认允许使用；可在连接详情中停用' : '只读请求已验证成功') : '配置有效；没有无需参数的只读探测接口，尚未验证调用' };
         }
         catch (error) {
             await this.store.change(state => { const c = state.connections[connectionId]; if (c?.revision === previous.revision && c.configDigest === previous.configDigest) {
@@ -739,7 +746,7 @@ export class IntegrationService {
                 rows.push({ id: computer.id, kind: 'plugin', tab: 'plugins', name: computer.name, description: computer.description,
                     enabled: computer.enabled, status: !computer.enabled ? '已停用' : connected && status?.registered ? '已启用' : '等待运行时连接',
                     source: 'EWork 内置', revision: computer.revision, removable: false, toggleable: true,
-                    detail: `版本 ${computer.version} · 三选一，开启会停用其他方案 · 需要辅助功能与屏幕录制权限`, toolCount: connected && status?.registered ? 1 : 0 });
+                    detail: `版本 ${computer.version} · 支持电脑应用操作 · 需要辅助功能与屏幕录制权限`, toolCount: connected && status?.registered ? 1 : 0 });
             }
             for (const p of Object.values(state.plugins))
                 if ((!p.ownerAccountId || p.ownerAccountId === owner) && p.catalogKind !== 'skill')
@@ -747,8 +754,8 @@ export class IntegrationService {
             for (const c of Object.values(state.connections))
                 if (c.ownerAccountId === owner) {
                     const tools = Object.values(state.tools).filter(tool => tool.connectionId === c.id);
-                    const bundled=isBundledDatayesId(c.id)&&!!this.options.bundledDatayes;
-                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'官网 MCP 积分服务：股票、基金、指数、财务与估值等结构化数据':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&c.enabled&&!this.options.bundledDatayes?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
+                    const bundled=isBundledTushareId(c.id)&&!!this.options.bundledTushare;
+                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'提供股票、指数、ETF、基金及财务等结构化数据，支持投研问答和看板组件取数。登录后可用。':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&c.enabled&&!this.options.bundledTushare?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
                         connectionSummary: {
                             workspaceLabel: c.workspaceGrant.mode === 'all-owned' ? '当前账号的所有工作区' : c.workspaceGrant.workspaceIds.length ? `已选择 ${c.workspaceGrant.workspaceIds.length} 个工作区` : '未选择工作区',
                             authLabel: bundled?'EWork 账号授权 · 云端密钥已配置':c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
@@ -875,13 +882,13 @@ export class IntegrationService {
     private async expireConnection(previous: Connection) { await this.store.change(state => { const c = state.connections[previous.id]; if (c?.revision === previous.revision) {
         c.authState = 'expired';
         c.health = 'unreachable';
-        c.lastError = isBundledDatayesId(c.id) ? 'EWork 登录已失效，请重新登录后测试连接' : '授权已失效，请重新授权';
+        c.lastError = isBundledTushareId(c.id) ? 'EWork 登录已失效，请重新登录后测试连接' : '授权已失效，请重新授权';
         c.revision++;
     } }); }
     private async recordCall(call: ToolCall, connectionId: string, status: 'succeeded' | 'failed' | 'unknown', errorCode?: import('../../shared/integrations').IntegrationErrorCode) { await this.store.change(state => { state.calls.push({ id: call.callId, toolId: call.toolId, connectionId, sessionId: call.context.sessionId, taskId: call.context.taskId, time: Date.now(), status, errorCode }); state.calls = state.calls.slice(-1000); }); }
     private abortCalls(connectionId: string) { for (const controller of this.calls.get(connectionId) ?? [])
         controller.abort(); }
     rotateIdentity() { this.runtimeEpoch = randomUUID(); this.computerUseStatus = {}; this.options.onComputerUseRevoked?.(); this.operations.abortAll(); for (const key of this.calls.keys())
-        this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledDatayes(true).catch(()=>{}); }
+        this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledTushare(true).catch(()=>{}); }
     async dispose() { this.disposed=true; this.rotateIdentity(); await this.operations.dispose(); await this.mcp.disposeAll(); }
 }

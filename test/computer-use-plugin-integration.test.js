@@ -63,6 +63,7 @@ async function fixture(binary = process.execPath) {
 it('loads the recommended native tool and releases its session through the persisted plugin switch', async () => {
   const f = await fixture()
   expect(await f.row()).toMatchObject({ name: '电脑控制', enabled: true, status: '已启用', removable: false, toolCount: 1 })
+  expect((await f.row()).detail).not.toContain('三选一')
   expect((await f.invoke()).isError).toBe(false)
   expect(f.ctx.tools.get('computer_use_plus')).toBeUndefined()
   expect(f.requests[0]).toMatchObject({ op: 'tools', name: 'get_window_state', ownerAccountId: 'one', runtimeEpoch: f.service.runtimeEpoch })

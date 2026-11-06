@@ -1,3 +1,4 @@
+import { tushareFinancial } from './tushare.js'
 import { serviceError } from '../../../packages/dsh-fund-research-runtime/contract.js'
 import { createMarketClient } from './market-mcp.js'
 import { POLICY, chinaDate, quoteQuality } from './policy.js'
@@ -129,7 +130,12 @@ export function createFinancialRouter({ env = {}, clock = () => new Date(), fetc
       }
       try {
         if (signal?.aborted) throw issue('cancelled')
-        if (q.intent === 'quote' || q.intent === 'history') {
+        let primary
+        try { primary = await tushareFinancial(q,env,fetchImpl,signal) } catch { if(signal.aborted)throw issue('cancelled') }
+        if (primary) {
+          for(const row of primary.rows) { add(row,'tushare',primary.raw);qualityNote(row.quality_state) }
+          if(primary.truncated)limit('truncated')
+        } else if (q.intent === 'quote' || q.intent === 'history') {
           if (!POLICY.quote[q.asset] || !available.tonghuashun || (q.intent === 'history' &&
               (!POLICY.history[q.asset]?.includes(q.interval) || (q.asset !== 'stock' && q.adjustment !== 'none')))) gap()
           else if (q.intent === 'quote') {

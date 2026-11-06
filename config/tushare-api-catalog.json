@@ -1,0 +1,1505 @@
+[
+  {
+    "api": "fund_basic",
+    "name": "公募基金列表",
+    "description": "， 描述：获取公募基金数据列表，包括场内和场外基金 积分：用户需要2000积分才可以调取，单次最大可以提取15000条数据，5000积分以上权限更高，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=19",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "基金代码"
+      },
+      "market": {
+        "type": "str",
+        "required": false,
+        "description": "交易市场: E场内 O场外（默认E）"
+      },
+      "status": {
+        "type": "str",
+        "required": false,
+        "description": "存续状态 D摘牌/已到期 I发行 L已上市/存续中"
+      }
+    },
+    "fields": {
+      "ts_code": "基金代码",
+      "name": "简称",
+      "management": "管理人",
+      "custodian": "托管人",
+      "fund_type": "投资类型",
+      "found_date": "成立日期",
+      "due_date": "到期日期",
+      "list_date": "上市时间",
+      "issue_date": "发行日期",
+      "delist_date": "退市日期",
+      "issue_amount": "发行份额(亿)",
+      "m_fee": "管理费",
+      "c_fee": "托管费",
+      "duration_year": "存续期",
+      "p_value": "面值",
+      "min_amount": "起点金额(万元)",
+      "exp_return": "预期收益率",
+      "benchmark": "业绩比较基准",
+      "status": "存续状态D摘牌/已到期 I发行 L已上市/存续中",
+      "invest_type": "投资风格",
+      "type": "基金类型",
+      "trustee": "受托人",
+      "purc_startdate": "日常申购起始日",
+      "redm_startdate": "日常赎回起始日",
+      "market": "E场内O场外"
+    }
+  },
+  {
+    "api": "shibor",
+    "name": "Shibor利率",
+    "description": " 描述：shibor利率 限量：单次最大2000，总量不限制，可通过设置开始和结束日期分段获取 积分：用户积累120积分可以调取，具体请参阅 积分获取办法 Shibor利率介绍 上海银行间同业拆放利率（Shanghai Interbank Offered Rate，简称Shibor），以位于上海的全国银行间同业拆借中心为技术平台计算、发布并命名，是由信用等级较高的银行组成报价团自主报出的人民币同业拆出利率计算确定的算术平均利率，是单利、无担保、批发性利率。目前，对社会公布的Shibor品种包括隔夜、1周、2周、1个月、3个月、6个月、9个月及1年。 Shibor报价银行团现由18家商业银行组成。报价银行是公开市场一级交易商或外汇市场做市商，在中国货币市场上人民币交易相对活跃、信息披露比较充分的银行。中国人民银行成立Shibor工作小组，依据《上海银行间同业拆放利率（Shibor）实施准则》确定和调整报价银行团成员、监督和管理Shibor运行、规范报价行与指定发布人行为。 全国银行间同业拆借中心受权Shibor的报价计算和信息发布。每个交易日根据各报价行的报价，剔除最高、最低各4家报价，对其余报价进行算术平均计算后，得出每一期限品种的Shibor，并于11:00对外发布。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=149",
+    "parameters": {
+      "date": {
+        "type": "str",
+        "required": false,
+        "description": "日期 (日期输入格式：YYYYMMDD，下同)"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      }
+    },
+    "fields": {
+      "date": "日期",
+      "on": "隔夜",
+      "1w": "1周",
+      "2w": "2周",
+      "1m": "1个月",
+      "3m": "3个月",
+      "6m": "6个月",
+      "9m": "9个月",
+      "1y": "1年"
+    }
+  },
+  {
+    "api": "stock_basic",
+    "name": "股票列表",
+    "description": "，此接口是基础信息，调取一次就可以拉取完，建议保存倒本地存储后使用 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=25",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "TS股票代码(格式说明)"
+      },
+      "name": {
+        "type": "str",
+        "required": false,
+        "description": "名称"
+      },
+      "market": {
+        "type": "str",
+        "required": false,
+        "description": "市场类别 （主板/创业板/科创板/CDR/北交所）"
+      },
+      "list_status": {
+        "type": "str",
+        "required": false,
+        "description": "上市状态 L上市 D退市 P暂停上市 G 未交易 UN未上市，默认是L"
+      },
+      "exchange": {
+        "type": "str",
+        "required": false,
+        "description": "交易所 SSE上交所 SZSE深交所 BSE北交所"
+      },
+      "is_hs": {
+        "type": "str",
+        "required": false,
+        "description": "是否沪深港通标的，N否 H沪股通 S深股通"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "symbol": "股票代码",
+      "name": "股票名称",
+      "area": "地域",
+      "industry": "所属行业",
+      "fullname": "股票全称",
+      "enname": "英文全称",
+      "cnspell": "拼音缩写",
+      "market": "市场类型（主板/创业板/科创板/CDR）",
+      "exchange": "交易所代码",
+      "curr_type": "交易货币",
+      "list_status": "上市状态 L上市 D退市 G过会未交易 P暂停上市 UN未上市",
+      "list_date": "上市日期",
+      "delist_date": "退市日期",
+      "is_hs": "是否沪深港通标的，N否 H沪股通 S深股通",
+      "act_name": "实控人名称",
+      "act_ent_type": "实控人企业性质"
+    }
+  },
+  {
+    "api": "trade_cal",
+    "name": "交易日历",
+    "description": "， 描述：获取各大交易所交易日历数据,默认提取的是上交所。 三大交易所的交易日历都是一样的，北交所交易日历参考上交所和深交所。 积分：需2000积分 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=26",
+    "parameters": {
+      "exchange": {
+        "type": "str",
+        "required": false,
+        "description": "交易所 SSE上交所,SZSE深交所,CFFEX 中金所,SHFE 上期所,CZCE 郑商所,DCE 大商所,INE 上能源"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期 （格式：YYYYMMDD 下同）"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      },
+      "is_open": {
+        "type": "str",
+        "required": false,
+        "description": "是否交易 '0'休市 '1'交易"
+      }
+    },
+    "fields": {
+      "exchange": "交易所 SSE上交所 SZSE深交所",
+      "cal_date": "日历日期",
+      "is_open": "是否交易 0休市 1交易",
+      "pretrade_date": "上一个交易日"
+    }
+  },
+  {
+    "api": "daily",
+    "name": "历史日线",
+    "description": "，本接口是未复权行情，停牌期间不提供数据 调取说明： 最低120积分可以免费试用，每分钟50频次。 基础5000积分每分钟内可调取500次，每次6000条数据，一次请求相当于提取一个股票23年历史。 描述：获取股票行情数据，或通过 通用行情接口 获取数据，包含了前后复权数据 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=27",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "股票代码"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期（YYYYMMDD）"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期(YYYYMMDD)"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期(YYYYMMDD)"
+      }
+    },
+    "fields": {
+      "ts_code": "股票代码",
+      "trade_date": "交易日期",
+      "open": "开盘价",
+      "high": "最高价",
+      "low": "最低价",
+      "close": "收盘价",
+      "pre_close": "昨收价【除权价】",
+      "change": "涨跌额",
+      "pct_chg": "涨跌幅（%） 【基于除权后的昨收计算的涨跌幅：（今收-除权昨收）/除权昨收 】",
+      "vol": "成交量 （手）",
+      "amount": "成交额 （千元）",
+      "ah_vol": "盘后成交量 （手）",
+      "ah_amount": "盘后成交额 （千元）"
+    }
+  },
+  {
+    "api": "adj_factor",
+    "name": "复权因子",
+    "description": "， 更新时间：盘前9点15~20分完成当日复权因子入库 描述：本接口由Tushare自行生产，获取股票复权因子，可提取单只股票全部历史复权因子，也可以提取单日全部股票的复权因子。 积分要求：2000积分起，5000以上可高频调取 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=28",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "股票代码"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期(YYYYMMDD，下同)"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      }
+    },
+    "fields": {
+      "ts_code": "股票代码",
+      "trade_date": "交易日期",
+      "adj_factor": "复权因子"
+    }
+  },
+  {
+    "api": "daily_basic",
+    "name": "每日指标",
+    "description": "， 更新时间：交易日每日15点～17点之间 描述：获取全部股票每日重要的基本面指标，可用于选股分析、报表展示等。单次请求最大返回6000条数据，可按日线循环提取全部历史。 积分：至少2000积分才可以调取，5000积分无总量限制，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=32",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": true,
+        "description": "股票代码（二选一）"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期 （二选一）"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期(YYYYMMDD)"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期(YYYYMMDD)"
+      }
+    },
+    "fields": {
+      "ts_code": "TS股票代码",
+      "trade_date": "交易日期",
+      "close": "当日收盘价",
+      "turnover_rate": "换手率（%） (成交量/无限售流通股数)",
+      "turnover_rate_f": "换手率（%）（自由流通股）(成交量/自由流通股数)",
+      "volume_ratio": "量比 VOL/MA",
+      "pe": "市盈率（总市值/净利润， 亏损的PE为空）",
+      "pe_ttm": "市盈率（ 总市值/净利润TTM，亏损的PE为空）",
+      "pb": "市净率（总市值/(净资产-其他权益工具)）",
+      "ps": "市销率 (总市值/营业收入(最新年报))",
+      "ps_ttm": "市销率（TTM）(总市值/营业收入TTM)",
+      "dv_ratio": "股息率 （%），除息日发生在去年期间的派现",
+      "dv_ttm": "股息率（TTM）（%），除息日在近12个月且分红报告期在12个月以内的派现",
+      "total_share": "总股本 （万股）",
+      "float_share": "流通股本 （万股）",
+      "free_share": "自由流通股本 （万股）",
+      "total_mv": "总市值 （万元）",
+      "circ_mv": "流通市值（万元）",
+      "limit_status": "收盘涨跌状态：0-平盘，1-上涨(不含涨停)，2-涨停(不含一字涨停)，3-一字涨停，4-下跌(不含跌停)，5-跌停(不含一字跌停)，6-一字跌停"
+    }
+  },
+  {
+    "api": "income",
+    "name": "利润表",
+    "description": "， 描述：获取上市公司财务利润表数据 积分：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 提示：当前接口只能按单只股票获取其历史数据，如果需要获取某一季度全部上市公司数据，请使用income_vip接口（参数一致），需积攒5000积分。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=33",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": true,
+        "description": "股票代码"
+      },
+      "ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日期（YYYYMMDD格式，下同）"
+      },
+      "f_ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "实际公告日期"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日结束日期"
+      },
+      "period": {
+        "type": "str",
+        "required": false,
+        "description": "报告期(每个季度最后一天的日期，比如20171231表示年报，20170630半年报，20170930三季报)"
+      },
+      "report_type": {
+        "type": "str",
+        "required": false,
+        "description": "报告类型，参考文档最下方说明"
+      },
+      "comp_type": {
+        "type": "str",
+        "required": false,
+        "description": "公司类型（1一般工商业2银行3保险4证券7多元金融）"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "ann_date": "公告日期",
+      "f_ann_date": "实际公告日期",
+      "end_date": "报告期",
+      "report_type": "报告类型 见底部表",
+      "comp_type": "公司类型(1一般工商业2银行3保险4证券7多元金融)",
+      "end_type": "报告期类型",
+      "basic_eps": "基本每股收益",
+      "diluted_eps": "稀释每股收益",
+      "total_revenue": "营业总收入",
+      "revenue": "营业收入",
+      "int_income": "利息收入",
+      "prem_earned": "已赚保费",
+      "comm_income": "手续费及佣金收入",
+      "n_commis_income": "手续费及佣金净收入",
+      "n_oth_income": "其他经营净收益",
+      "n_oth_b_income": "加:其他业务净收益",
+      "prem_income": "保险业务收入",
+      "out_prem": "减:分出保费",
+      "une_prem_reser": "提取未到期责任准备金",
+      "reins_income": "其中:分保费收入",
+      "n_sec_tb_income": "代理买卖证券业务净收入",
+      "n_sec_uw_income": "证券承销业务净收入",
+      "n_asset_mg_income": "受托客户资产管理业务净收入",
+      "oth_b_income": "其他业务收入",
+      "fv_value_chg_gain": "加:公允价值变动净收益",
+      "invest_income": "加:投资净收益",
+      "ass_invest_income": "其中:对联营企业和合营企业的投资收益",
+      "forex_gain": "加:汇兑净收益",
+      "total_cogs": "营业总成本",
+      "oper_cost": "减:营业成本",
+      "int_exp": "减:利息支出",
+      "comm_exp": "减:手续费及佣金支出",
+      "biz_tax_surchg": "减:营业税金及附加",
+      "sell_exp": "减:销售费用",
+      "admin_exp": "减:管理费用",
+      "fin_exp": "减:财务费用",
+      "assets_impair_loss": "减:资产减值损失",
+      "prem_refund": "退保金",
+      "compens_payout": "赔付总支出",
+      "reser_insur_liab": "提取保险责任准备金",
+      "div_payt": "保户红利支出",
+      "reins_exp": "分保费用",
+      "oper_exp": "营业支出",
+      "compens_payout_refu": "减:摊回赔付支出",
+      "insur_reser_refu": "减:摊回保险责任准备金",
+      "reins_cost_refund": "减:摊回分保费用",
+      "other_bus_cost": "其他业务成本",
+      "operate_profit": "营业利润",
+      "non_oper_income": "加:营业外收入",
+      "non_oper_exp": "减:营业外支出",
+      "nca_disploss": "其中:减:非流动资产处置净损失",
+      "total_profit": "利润总额",
+      "income_tax": "所得税费用",
+      "n_income": "净利润(含少数股东损益)",
+      "n_income_attr_p": "净利润(不含少数股东损益)",
+      "minority_gain": "少数股东损益",
+      "oth_compr_income": "其他综合收益",
+      "t_compr_income": "综合收益总额",
+      "compr_inc_attr_p": "归属于母公司(或股东)的综合收益总额",
+      "compr_inc_attr_m_s": "归属于少数股东的综合收益总额",
+      "ebit": "息税前利润",
+      "ebitda": "息税折旧摊销前利润",
+      "insurance_exp": "保险业务支出",
+      "undist_profit": "年初未分配利润",
+      "distable_profit": "可分配利润",
+      "rd_exp": "研发费用",
+      "fin_exp_int_exp": "财务费用:利息费用",
+      "fin_exp_int_inc": "财务费用:利息收入",
+      "transfer_surplus_rese": "盈余公积转入",
+      "transfer_housing_imprest": "住房周转金转入",
+      "transfer_oth": "其他转入",
+      "adj_lossgain": "调整以前年度损益",
+      "withdra_legal_surplus": "提取法定盈余公积",
+      "withdra_legal_pubfund": "提取法定公益金",
+      "withdra_biz_devfund": "提取企业发展基金",
+      "withdra_rese_fund": "提取储备基金",
+      "withdra_oth_ersu": "提取任意盈余公积金",
+      "workers_welfare": "职工奖金福利",
+      "distr_profit_shrhder": "可供股东分配的利润",
+      "prfshare_payable_dvd": "应付优先股股利",
+      "comshare_payable_dvd": "应付普通股股利",
+      "capit_comstock_div": "转作股本的普通股股利",
+      "net_after_nr_lp_correct": "扣除非经常性损益后的净利润（更正前）",
+      "credit_impa_loss": "信用减值损失",
+      "net_expo_hedging_benefits": "净敞口套期收益",
+      "oth_impair_loss_assets": "其他资产减值损失",
+      "total_opcost": "营业总成本（二）",
+      "amodcost_fin_assets": "以摊余成本计量的金融资产终止确认收益",
+      "oth_income": "其他收益",
+      "asset_disp_income": "资产处置收益",
+      "continued_net_profit": "持续经营净利润",
+      "end_net_profit": "终止经营净利润",
+      "update_flag": "更新标识"
+    }
+  },
+  {
+    "api": "balancesheet",
+    "name": "资产负债表",
+    "description": "， 描述：获取上市公司资产负债表 积分：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 提示：当前接口只能按单只股票获取其历史数据，如果需要获取某一季度全部上市公司数据，请使用balancesheet_vip接口（参数一致），需积攒5000积分。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=36",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": true,
+        "description": "股票代码"
+      },
+      "ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日期(YYYYMMDD格式，下同)"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日结束日期"
+      },
+      "period": {
+        "type": "str",
+        "required": false,
+        "description": "报告期(每个季度最后一天的日期，比如20171231表示年报，20170630半年报，20170930三季报)"
+      },
+      "report_type": {
+        "type": "str",
+        "required": false,
+        "description": "报告类型：见下方详细说明"
+      },
+      "comp_type": {
+        "type": "str",
+        "required": false,
+        "description": "公司类型：1一般工商业 2银行 3保险 4证券 7多元金融"
+      }
+    },
+    "fields": {
+      "ts_code": "TS股票代码",
+      "ann_date": "公告日期",
+      "f_ann_date": "实际公告日期",
+      "end_date": "报告期",
+      "report_type": "报表类型",
+      "comp_type": "公司类型(1一般工商业2银行3保险4证券7多元金融)",
+      "end_type": "报告期类型",
+      "total_share": "期末总股本（股）",
+      "cap_rese": "资本公积金",
+      "undistr_porfit": "未分配利润",
+      "surplus_rese": "盈余公积金",
+      "special_rese": "专项储备",
+      "money_cap": "货币资金",
+      "trad_asset": "交易性金融资产",
+      "notes_receiv": "应收票据",
+      "accounts_receiv": "应收账款",
+      "oth_receiv": "其他应收款",
+      "prepayment": "预付款项",
+      "div_receiv": "应收股利",
+      "int_receiv": "应收利息",
+      "inventories": "存货",
+      "amor_exp": "待摊费用",
+      "nca_within_1y": "一年内到期的非流动资产",
+      "sett_rsrv": "结算备付金",
+      "loanto_oth_bank_fi": "拆出资金",
+      "premium_receiv": "应收保费",
+      "reinsur_receiv": "应收分保账款",
+      "reinsur_res_receiv": "应收分保合同准备金",
+      "pur_resale_fa": "买入返售金融资产",
+      "oth_cur_assets": "其他流动资产",
+      "total_cur_assets": "流动资产合计",
+      "fa_avail_for_sale": "可供出售金融资产",
+      "htm_invest": "持有至到期投资",
+      "lt_eqt_invest": "长期股权投资",
+      "invest_real_estate": "投资性房地产",
+      "time_deposits": "定期存款",
+      "oth_assets": "其他资产",
+      "lt_rec": "长期应收款",
+      "fix_assets": "固定资产",
+      "cip": "在建工程",
+      "const_materials": "工程物资",
+      "fixed_assets_disp": "固定资产清理",
+      "produc_bio_assets": "生产性生物资产",
+      "oil_and_gas_assets": "油气资产",
+      "intan_assets": "无形资产",
+      "r_and_d": "研发支出",
+      "goodwill": "商誉",
+      "lt_amor_exp": "长期待摊费用",
+      "defer_tax_assets": "递延所得税资产",
+      "decr_in_disbur": "发放贷款及垫款",
+      "oth_nca": "其他非流动资产",
+      "total_nca": "非流动资产合计",
+      "cash_reser_cb": "现金及存放中央银行款项",
+      "depos_in_oth_bfi": "存放同业和其它金融机构款项",
+      "prec_metals": "贵金属",
+      "deriv_assets": "衍生金融资产",
+      "rr_reins_une_prem": "应收分保未到期责任准备金",
+      "rr_reins_outstd_cla": "应收分保未决赔款准备金",
+      "rr_reins_lins_liab": "应收分保寿险责任准备金",
+      "rr_reins_lthins_liab": "应收分保长期健康险责任准备金",
+      "refund_depos": "存出保证金",
+      "ph_pledge_loans": "保户质押贷款",
+      "refund_cap_depos": "存出资本保证金",
+      "indep_acct_assets": "独立账户资产",
+      "client_depos": "其中：客户资金存款",
+      "client_prov": "其中：客户备付金",
+      "transac_seat_fee": "其中:交易席位费",
+      "invest_as_receiv": "应收款项类投资",
+      "total_assets": "资产总计",
+      "lt_borr": "长期借款",
+      "st_borr": "短期借款",
+      "cb_borr": "向中央银行借款",
+      "depos_ib_deposits": "吸收存款及同业存放",
+      "loan_oth_bank": "拆入资金",
+      "trading_fl": "交易性金融负债",
+      "notes_payable": "应付票据",
+      "acct_payable": "应付账款",
+      "adv_receipts": "预收款项",
+      "sold_for_repur_fa": "卖出回购金融资产款",
+      "comm_payable": "应付手续费及佣金",
+      "payroll_payable": "应付职工薪酬",
+      "taxes_payable": "应交税费",
+      "int_payable": "应付利息",
+      "div_payable": "应付股利",
+      "oth_payable": "其他应付款",
+      "acc_exp": "预提费用",
+      "deferred_inc": "递延收益",
+      "st_bonds_payable": "应付短期债券",
+      "payable_to_reinsurer": "应付分保账款",
+      "rsrv_insur_cont": "保险合同准备金",
+      "acting_trading_sec": "代理买卖证券款",
+      "acting_uw_sec": "代理承销证券款",
+      "non_cur_liab_due_1y": "一年内到期的非流动负债",
+      "oth_cur_liab": "其他流动负债",
+      "total_cur_liab": "流动负债合计",
+      "bond_payable": "应付债券",
+      "lt_payable": "长期应付款",
+      "specific_payables": "专项应付款",
+      "estimated_liab": "预计负债",
+      "defer_tax_liab": "递延所得税负债",
+      "defer_inc_non_cur_liab": "递延收益-非流动负债",
+      "oth_ncl": "其他非流动负债",
+      "total_ncl": "非流动负债合计",
+      "depos_oth_bfi": "同业和其它金融机构存放款项",
+      "deriv_liab": "衍生金融负债",
+      "depos": "吸收存款",
+      "agency_bus_liab": "代理业务负债",
+      "oth_liab": "其他负债",
+      "prem_receiv_adva": "预收保费",
+      "depos_received": "存入保证金",
+      "ph_invest": "保户储金及投资款",
+      "reser_une_prem": "未到期责任准备金",
+      "reser_outstd_claims": "未决赔款准备金",
+      "reser_lins_liab": "寿险责任准备金",
+      "reser_lthins_liab": "长期健康险责任准备金",
+      "indept_acc_liab": "独立账户负债",
+      "pledge_borr": "其中:质押借款",
+      "indem_payable": "应付赔付款",
+      "policy_div_payable": "应付保单红利",
+      "total_liab": "负债合计",
+      "treasury_share": "减:库存股",
+      "ordin_risk_reser": "一般风险准备",
+      "forex_differ": "外币报表折算差额",
+      "invest_loss_unconf": "未确认的投资损失",
+      "minority_int": "少数股东权益",
+      "total_hldr_eqy_exc_min_int": "股东权益合计(不含少数股东权益)",
+      "total_hldr_eqy_inc_min_int": "股东权益合计(含少数股东权益)",
+      "total_liab_hldr_eqy": "负债及股东权益总计",
+      "lt_payroll_payable": "长期应付职工薪酬",
+      "oth_comp_income": "其他综合收益",
+      "oth_eqt_tools": "其他权益工具",
+      "oth_eqt_tools_p_shr": "其他权益工具(优先股)",
+      "lending_funds": "融出资金",
+      "acc_receivable": "应收款项",
+      "st_fin_payable": "应付短期融资款",
+      "payables": "应付款项",
+      "hfs_assets": "持有待售的资产",
+      "hfs_sales": "持有待售的负债",
+      "cost_fin_assets": "以摊余成本计量的金融资产",
+      "fair_value_fin_assets": "以公允价值计量且其变动计入其他综合收益的金融资产",
+      "cip_total": "在建工程(合计)(元)",
+      "oth_pay_total": "其他应付款(合计)(元)",
+      "long_pay_total": "长期应付款(合计)(元)",
+      "debt_invest": "债权投资(元)",
+      "oth_debt_invest": "其他债权投资(元)",
+      "oth_eq_invest": "其他权益工具投资(元)",
+      "oth_illiq_fin_assets": "其他非流动金融资产(元)",
+      "oth_eq_ppbond": "其他权益工具:永续债(元)",
+      "receiv_financing": "应收款项融资",
+      "use_right_assets": "使用权资产",
+      "lease_liab": "租赁负债",
+      "contract_assets": "合同资产",
+      "contract_liab": "合同负债",
+      "accounts_receiv_bill": "应收票据及应收账款",
+      "accounts_pay": "应付票据及应付账款",
+      "oth_rcv_total": "其他应收款(合计)（元）",
+      "fix_assets_total": "固定资产(合计)(元)",
+      "update_flag": "更新标识"
+    }
+  },
+  {
+    "api": "cashflow",
+    "name": "现金流量表",
+    "description": "， 描述：获取上市公司现金流量表 积分：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 提示：当前接口只能按单只股票获取其历史数据，如果需要获取某一季度全部上市公司数据，请使用cashflow_vip接口（参数一致），需积攒5000积分。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=44",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": true,
+        "description": "股票代码"
+      },
+      "ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日期（YYYYMMDD格式，下同）"
+      },
+      "f_ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "实际公告日期"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日结束日期"
+      },
+      "period": {
+        "type": "str",
+        "required": false,
+        "description": "报告期(每个季度最后一天的日期，比如20171231表示年报，20170630半年报，20170930三季报)"
+      },
+      "report_type": {
+        "type": "str",
+        "required": false,
+        "description": "报告类型：见下方详细说明"
+      },
+      "comp_type": {
+        "type": "str",
+        "required": false,
+        "description": "公司类型：1一般工商业 2银行 3保险 4证券 7多元金融"
+      },
+      "is_calc": {
+        "type": "int",
+        "required": false,
+        "description": "是否计算报表"
+      }
+    },
+    "fields": {
+      "ts_code": "TS股票代码",
+      "ann_date": "公告日期",
+      "f_ann_date": "实际公告日期",
+      "end_date": "报告期",
+      "comp_type": "公司类型(1一般工商业2银行3保险4证券7多元金融)",
+      "report_type": "报表类型",
+      "end_type": "报告期类型",
+      "net_profit": "净利润",
+      "finan_exp": "财务费用",
+      "c_fr_sale_sg": "销售商品、提供劳务收到的现金",
+      "recp_tax_rends": "收到的税费返还",
+      "n_depos_incr_fi": "客户存款和同业存放款项净增加额",
+      "n_incr_loans_cb": "向中央银行借款净增加额",
+      "n_inc_borr_oth_fi": "向其他金融机构拆入资金净增加额",
+      "prem_fr_orig_contr": "收到原保险合同保费取得的现金",
+      "n_incr_insured_dep": "保户储金净增加额",
+      "n_reinsur_prem": "收到再保业务现金净额",
+      "n_incr_disp_tfa": "处置交易性金融资产净增加额",
+      "ifc_cash_incr": "收取利息和手续费净增加额",
+      "n_incr_disp_faas": "处置可供出售金融资产净增加额",
+      "n_incr_loans_oth_bank": "拆入资金净增加额",
+      "n_cap_incr_repur": "回购业务资金净增加额",
+      "c_fr_oth_operate_a": "收到其他与经营活动有关的现金",
+      "c_inf_fr_operate_a": "经营活动现金流入小计",
+      "c_paid_goods_s": "购买商品、接受劳务支付的现金",
+      "c_paid_to_for_empl": "支付给职工以及为职工支付的现金",
+      "c_paid_for_taxes": "支付的各项税费",
+      "n_incr_clt_loan_adv": "客户贷款及垫款净增加额",
+      "n_incr_dep_cbob": "存放央行和同业款项净增加额",
+      "c_pay_claims_orig_inco": "支付原保险合同赔付款项的现金",
+      "pay_handling_chrg": "支付手续费的现金",
+      "pay_comm_insur_plcy": "支付保单红利的现金",
+      "oth_cash_pay_oper_act": "支付其他与经营活动有关的现金",
+      "st_cash_out_act": "经营活动现金流出小计",
+      "n_cashflow_act": "经营活动产生的现金流量净额",
+      "oth_recp_ral_inv_act": "收到其他与投资活动有关的现金",
+      "c_disp_withdrwl_invest": "收回投资收到的现金",
+      "c_recp_return_invest": "取得投资收益收到的现金",
+      "n_recp_disp_fiolta": "处置固定资产、无形资产和其他长期资产收回的现金净额",
+      "n_recp_disp_sobu": "处置子公司及其他营业单位收到的现金净额",
+      "stot_inflows_inv_act": "投资活动现金流入小计",
+      "c_pay_acq_const_fiolta": "购建固定资产、无形资产和其他长期资产支付的现金",
+      "c_paid_invest": "投资支付的现金",
+      "n_disp_subs_oth_biz": "取得子公司及其他营业单位支付的现金净额",
+      "oth_pay_ral_inv_act": "支付其他与投资活动有关的现金",
+      "n_incr_pledge_loan": "质押贷款净增加额",
+      "stot_out_inv_act": "投资活动现金流出小计",
+      "n_cashflow_inv_act": "投资活动产生的现金流量净额",
+      "c_recp_borrow": "取得借款收到的现金",
+      "proc_issue_bonds": "发行债券收到的现金",
+      "oth_cash_recp_ral_fnc_act": "收到其他与筹资活动有关的现金",
+      "stot_cash_in_fnc_act": "筹资活动现金流入小计",
+      "free_cashflow": "企业自由现金流量",
+      "c_prepay_amt_borr": "偿还债务支付的现金",
+      "c_pay_dist_dpcp_int_exp": "分配股利、利润或偿付利息支付的现金",
+      "incl_dvd_profit_paid_sc_ms": "其中:子公司支付给少数股东的股利、利润",
+      "oth_cashpay_ral_fnc_act": "支付其他与筹资活动有关的现金",
+      "stot_cashout_fnc_act": "筹资活动现金流出小计",
+      "n_cash_flows_fnc_act": "筹资活动产生的现金流量净额",
+      "eff_fx_flu_cash": "汇率变动对现金的影响",
+      "n_incr_cash_cash_equ": "现金及现金等价物净增加额",
+      "c_cash_equ_beg_period": "期初现金及现金等价物余额",
+      "c_cash_equ_end_period": "期末现金及现金等价物余额",
+      "c_recp_cap_contrib": "吸收投资收到的现金",
+      "incl_cash_rec_saims": "其中:子公司吸收少数股东投资收到的现金",
+      "uncon_invest_loss": "未确认投资损失",
+      "prov_depr_assets": "加:资产减值准备",
+      "depr_fa_coga_dpba": "固定资产折旧、油气资产折耗、生产性生物资产折旧",
+      "amort_intang_assets": "无形资产摊销",
+      "lt_amort_deferred_exp": "长期待摊费用摊销",
+      "decr_deferred_exp": "待摊费用减少",
+      "incr_acc_exp": "预提费用增加",
+      "loss_disp_fiolta": "处置固定、无形资产和其他长期资产的损失",
+      "loss_scr_fa": "固定资产报废损失",
+      "loss_fv_chg": "公允价值变动损失",
+      "invest_loss": "投资损失",
+      "decr_def_inc_tax_assets": "递延所得税资产减少",
+      "incr_def_inc_tax_liab": "递延所得税负债增加",
+      "decr_inventories": "存货的减少",
+      "decr_oper_payable": "经营性应收项目的减少",
+      "incr_oper_payable": "经营性应付项目的增加",
+      "others": "其他",
+      "im_net_cashflow_oper_act": "经营活动产生的现金流量净额(间接法)",
+      "conv_debt_into_cap": "债务转为资本",
+      "conv_copbonds_due_within_1y": "一年内到期的可转换公司债券",
+      "fa_fnc_leases": "融资租入固定资产",
+      "im_n_incr_cash_equ": "现金及现金等价物净增加额(间接法)",
+      "net_dism_capital_add": "拆出资金净增加额",
+      "net_cash_rece_sec": "代理买卖证券收到的现金净额(元)",
+      "credit_impa_loss": "信用减值损失",
+      "use_right_asset_dep": "使用权资产折旧",
+      "oth_loss_asset": "其他资产减值损失",
+      "end_bal_cash": "现金的期末余额",
+      "beg_bal_cash": "减:现金的期初余额",
+      "end_bal_cash_equ": "加:现金等价物的期末余额",
+      "beg_bal_cash_equ": "减:现金等价物的期初余额",
+      "update_flag": "更新标志(1最新）"
+    }
+  },
+  {
+    "api": "fina_indicator",
+    "name": "财务指标数据",
+    "description": "， 描述：获取上市公司财务指标数据，为避免服务器压力，现阶段每次请求最多返回100条记录，可通过设置日期多次请求获取更多数据。 权限：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 提示：当前接口只能按单只股票获取其历史数据，如果需要获取某一季度全部上市公司数据，请使用fina_indicator_vip接口（参数一致），需积攒5000积分。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=79",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": true,
+        "description": "TS股票代码,e.g. 600001.SH/000001.SZ"
+      },
+      "ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日期"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "报告期开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "报告期结束日期"
+      },
+      "period": {
+        "type": "str",
+        "required": false,
+        "description": "报告期(每个季度最后一天的日期,比如20171231表示年报)"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "ann_date": "公告日期",
+      "end_date": "报告期",
+      "eps": "基本每股收益",
+      "dt_eps": "稀释每股收益",
+      "total_revenue_ps": "每股营业总收入",
+      "revenue_ps": "每股营业收入",
+      "capital_rese_ps": "每股资本公积",
+      "surplus_rese_ps": "每股盈余公积",
+      "undist_profit_ps": "每股未分配利润",
+      "extra_item": "非经常性损益",
+      "profit_dedt": "扣除非经常性损益后的净利润（扣非净利润）",
+      "gross_margin": "毛利",
+      "current_ratio": "流动比率",
+      "quick_ratio": "速动比率",
+      "cash_ratio": "保守速动比率",
+      "invturn_days": "存货周转天数",
+      "arturn_days": "应收账款周转天数",
+      "inv_turn": "存货周转率",
+      "ar_turn": "应收账款周转率",
+      "ca_turn": "流动资产周转率",
+      "fa_turn": "固定资产周转率",
+      "assets_turn": "总资产周转率",
+      "op_income": "经营活动净收益",
+      "valuechange_income": "价值变动净收益",
+      "interst_income": "利息费用",
+      "daa": "折旧与摊销",
+      "ebit": "息税前利润",
+      "ebitda": "息税折旧摊销前利润",
+      "fcff": "企业自由现金流量",
+      "fcfe": "股权自由现金流量",
+      "current_exint": "无息流动负债",
+      "noncurrent_exint": "无息非流动负债",
+      "interestdebt": "带息债务",
+      "netdebt": "净债务",
+      "tangible_asset": "有形资产",
+      "working_capital": "营运资金",
+      "networking_capital": "营运流动资本",
+      "invest_capital": "全部投入资本",
+      "retained_earnings": "留存收益",
+      "diluted2_eps": "期末摊薄每股收益",
+      "bps": "每股净资产",
+      "ocfps": "每股经营活动产生的现金流量净额",
+      "retainedps": "每股留存收益",
+      "cfps": "每股现金流量净额",
+      "ebit_ps": "每股息税前利润",
+      "fcff_ps": "每股企业自由现金流量",
+      "fcfe_ps": "每股股东自由现金流量",
+      "netprofit_margin": "销售净利率",
+      "grossprofit_margin": "销售毛利率",
+      "cogs_of_sales": "销售成本率",
+      "expense_of_sales": "销售期间费用率",
+      "profit_to_gr": "净利润/营业总收入",
+      "saleexp_to_gr": "销售费用/营业总收入",
+      "adminexp_of_gr": "管理费用/营业总收入",
+      "finaexp_of_gr": "财务费用/营业总收入",
+      "impai_ttm": "资产减值损失/营业总收入",
+      "gc_of_gr": "营业总成本/营业总收入",
+      "op_of_gr": "营业利润/营业总收入",
+      "ebit_of_gr": "息税前利润/营业总收入",
+      "roe": "净资产收益率",
+      "roe_waa": "加权平均净资产收益率",
+      "roe_dt": "净资产收益率(扣除非经常损益)",
+      "roa": "总资产报酬率",
+      "npta": "总资产净利润",
+      "roic": "投入资本回报率",
+      "roe_yearly": "年化净资产收益率",
+      "roa2_yearly": "年化总资产报酬率",
+      "roe_avg": "平均净资产收益率(增发条件)",
+      "opincome_of_ebt": "经营活动净收益/利润总额",
+      "investincome_of_ebt": "价值变动净收益/利润总额",
+      "n_op_profit_of_ebt": "营业外收支净额/利润总额",
+      "tax_to_ebt": "所得税/利润总额",
+      "dtprofit_to_profit": "扣除非经常损益后的净利润/净利润",
+      "salescash_to_or": "销售商品提供劳务收到的现金/营业收入",
+      "ocf_to_or": "经营活动产生的现金流量净额/营业收入",
+      "ocf_to_opincome": "经营活动产生的现金流量净额/经营活动净收益",
+      "capitalized_to_da": "资本支出/折旧和摊销",
+      "debt_to_assets": "资产负债率",
+      "assets_to_eqt": "权益乘数",
+      "dp_assets_to_eqt": "权益乘数(杜邦分析)",
+      "ca_to_assets": "流动资产/总资产",
+      "nca_to_assets": "非流动资产/总资产",
+      "tbassets_to_totalassets": "有形资产/总资产",
+      "int_to_talcap": "带息债务/全部投入资本",
+      "eqt_to_talcapital": "归属于母公司的股东权益/全部投入资本",
+      "currentdebt_to_debt": "流动负债/负债合计",
+      "longdeb_to_debt": "非流动负债/负债合计",
+      "ocf_to_shortdebt": "经营活动产生的现金流量净额/流动负债",
+      "debt_to_eqt": "产权比率",
+      "eqt_to_debt": "归属于母公司的股东权益/负债合计",
+      "eqt_to_interestdebt": "归属于母公司的股东权益/带息债务",
+      "tangibleasset_to_debt": "有形资产/负债合计",
+      "tangasset_to_intdebt": "有形资产/带息债务",
+      "tangibleasset_to_netdebt": "有形资产/净债务",
+      "ocf_to_debt": "经营活动产生的现金流量净额/负债合计",
+      "ocf_to_interestdebt": "经营活动产生的现金流量净额/带息债务",
+      "ocf_to_netdebt": "经营活动产生的现金流量净额/净债务",
+      "ebit_to_interest": "已获利息倍数(EBIT/利息费用)",
+      "longdebt_to_workingcapital": "长期债务与营运资金比率",
+      "ebitda_to_debt": "息税折旧摊销前利润/负债合计",
+      "turn_days": "营业周期",
+      "roa_yearly": "年化总资产净利率",
+      "roa_dp": "总资产净利率(杜邦分析)",
+      "fixed_assets": "固定资产合计",
+      "profit_prefin_exp": "扣除财务费用前营业利润",
+      "non_op_profit": "非营业利润",
+      "op_to_ebt": "营业利润／利润总额",
+      "nop_to_ebt": "非营业利润／利润总额",
+      "ocf_to_profit": "经营活动产生的现金流量净额／营业利润",
+      "cash_to_liqdebt": "货币资金／流动负债",
+      "cash_to_liqdebt_withinterest": "货币资金／带息流动负债",
+      "op_to_liqdebt": "营业利润／流动负债",
+      "op_to_debt": "营业利润／负债合计",
+      "roic_yearly": "年化投入资本回报率",
+      "total_fa_trun": "固定资产合计周转率",
+      "profit_to_op": "利润总额／营业收入",
+      "q_opincome": "经营活动单季度净收益",
+      "q_investincome": "价值变动单季度净收益",
+      "q_dtprofit": "扣除非经常损益后的单季度净利润",
+      "q_eps": "每股收益(单季度)",
+      "q_netprofit_margin": "销售净利率(单季度)",
+      "q_gsprofit_margin": "销售毛利率(单季度)",
+      "q_exp_to_sales": "销售期间费用率(单季度)",
+      "q_profit_to_gr": "净利润／营业总收入(单季度)",
+      "q_saleexp_to_gr": "销售费用／营业总收入 (单季度)",
+      "q_adminexp_to_gr": "管理费用／营业总收入 (单季度)",
+      "q_finaexp_to_gr": "财务费用／营业总收入 (单季度)",
+      "q_impair_to_gr_ttm": "资产减值损失／营业总收入(单季度)",
+      "q_gc_to_gr": "营业总成本／营业总收入 (单季度)",
+      "q_op_to_gr": "营业利润／营业总收入(单季度)",
+      "q_roe": "净资产收益率(单季度)",
+      "q_dt_roe": "净资产单季度收益率(扣除非经常损益)",
+      "q_npta": "总资产净利润(单季度)",
+      "q_opincome_to_ebt": "经营活动净收益／利润总额(单季度)",
+      "q_investincome_to_ebt": "价值变动净收益／利润总额(单季度)",
+      "q_dtprofit_to_profit": "扣除非经常损益后的净利润／净利润(单季度)",
+      "q_salescash_to_or": "销售商品提供劳务收到的现金／营业收入(单季度)",
+      "q_ocf_to_sales": "经营活动产生的现金流量净额／营业收入(单季度)",
+      "q_ocf_to_or": "经营活动产生的现金流量净额／经营活动净收益(单季度)",
+      "basic_eps_yoy": "基本每股收益同比增长率(%)",
+      "dt_eps_yoy": "稀释每股收益同比增长率(%)",
+      "cfps_yoy": "每股经营活动产生的现金流量净额同比增长率(%)",
+      "op_yoy": "营业利润同比增长率(%)",
+      "ebt_yoy": "利润总额同比增长率(%)",
+      "netprofit_yoy": "归属母公司股东的净利润同比增长率(%)",
+      "dt_netprofit_yoy": "归属母公司股东的净利润-扣除非经常损益同比增长率(%)",
+      "ocf_yoy": "经营活动产生的现金流量净额同比增长率(%)",
+      "roe_yoy": "净资产收益率(摊薄)同比增长率(%)",
+      "bps_yoy": "每股净资产相对年初增长率(%)",
+      "assets_yoy": "资产总计相对年初增长率(%)",
+      "eqt_yoy": "归属母公司的股东权益相对年初增长率(%)",
+      "tr_yoy": "营业总收入同比增长率(%)",
+      "or_yoy": "营业收入同比增长率(%)",
+      "q_gr_yoy": "营业总收入同比增长率(%)(单季度)",
+      "q_gr_qoq": "营业总收入环比增长率(%)(单季度)",
+      "q_sales_yoy": "营业收入同比增长率(%)(单季度)",
+      "q_sales_qoq": "营业收入环比增长率(%)(单季度)",
+      "q_op_yoy": "营业利润同比增长率(%)(单季度)",
+      "q_op_qoq": "营业利润环比增长率(%)(单季度)",
+      "q_profit_yoy": "净利润同比增长率(%)(单季度)",
+      "q_profit_qoq": "净利润环比增长率(%)(单季度)",
+      "q_netprofit_yoy": "归属母公司股东的净利润同比增长率(%)(单季度)",
+      "q_netprofit_qoq": "归属母公司股东的净利润环比增长率(%)(单季度)",
+      "equity_yoy": "净资产同比增长率",
+      "rd_exp": "研发投入合计",
+      "update_flag": "更新标识"
+    }
+  },
+  {
+    "api": "etf_basic",
+    "name": "ETF基本信息",
+    "description": " 描述：获取国内ETF基础信息，包括了QDII。数据来源与沪深交易所公开披露信息。 限量：单次请求最大放回5000条数据（当前ETF总数未超过2000） 权限：用户至少5000积分可调取，8000积分会有500频次/min 具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=385",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "ETF代码（带.SZ/.SH后缀的6位数字，如：159526.SZ）"
+      },
+      "index_code": {
+        "type": "str",
+        "required": false,
+        "description": "跟踪指数代码"
+      },
+      "list_date": {
+        "type": "str",
+        "required": false,
+        "description": "上市日期（格式：YYYYMMDD）"
+      },
+      "list_status": {
+        "type": "str",
+        "required": false,
+        "description": "上市状态（L上市 D退市 P待上市）"
+      },
+      "exchange": {
+        "type": "str",
+        "required": false,
+        "description": "交易所（SH上交所 SZ深交所）"
+      },
+      "mgr": {
+        "type": "str",
+        "required": false,
+        "description": "管理人（简称，e.g.华夏基金)"
+      }
+    },
+    "fields": {
+      "ts_code": "基金交易代码",
+      "csname": "ETF中文简称",
+      "extname": "ETF扩位简称(对应交易所简称)",
+      "cname": "基金中文全称",
+      "index_code": "ETF基准指数代码",
+      "index_name": "ETF基准指数中文全称",
+      "setup_date": "设立日期（格式：YYYYMMDD）",
+      "list_date": "上市日期（格式：YYYYMMDD）",
+      "list_status": "存续状态（L上市 D退市 P待上市）",
+      "exchange": "交易所（上交所SH 深交所SZ）",
+      "mgr_name": "基金管理人简称",
+      "custod_name": "基金托管人名称",
+      "mgt_fee": "基金管理人收取的费用",
+      "etf_type": "基金投资通道类型（境内、QDII）"
+    }
+  },
+  {
+    "api": "etf_index",
+    "name": "ETF跟踪指数",
+    "description": " 描述：获取ETF基准指数列表信息 限量：单次请求最大返回5000行数据（当前未超过2000个） 权限：用户积累8000积分可调取，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=386",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "指数代码"
+      },
+      "pub_date": {
+        "type": "str",
+        "required": false,
+        "description": "发布日期（格式：YYYYMMDD）"
+      },
+      "base_date": {
+        "type": "str",
+        "required": false,
+        "description": "指数基期（格式：YYYYMMDD）"
+      }
+    },
+    "fields": {
+      "ts_code": "指数代码",
+      "indx_name": "指数全称",
+      "indx_csname": "指数简称",
+      "pub_party_name": "指数发布机构",
+      "pub_date": "指数发布日期",
+      "base_date": "指数基日",
+      "bp": "指数基点(点)",
+      "adj_circle": "指数成份证券调整周期"
+    }
+  },
+  {
+    "api": "fund_daily",
+    "name": "ETF日线行情",
+    "description": " 描述：开始于2000-01-03，获取ETF行情每日收盘后成交数据，历史超过10年 限量：单次最大5000行记录，可以根据ETF代码和日期循环获取历史，总量不限制 积分：需要至少5000积分才可以调取，8000积分频次更高，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=127",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "基金代码"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期(YYYYMMDD格式，下同)"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "trade_date": "交易日期",
+      "open": "开盘价(元)",
+      "high": "最高价(元)",
+      "low": "最低价(元)",
+      "close": "收盘价(元)",
+      "pre_close": "昨收盘价(元)",
+      "change": "涨跌额(元)",
+      "pct_chg": "涨跌幅(%)",
+      "vol": "成交量(手)",
+      "amount": "成交额(千元)"
+    }
+  },
+  {
+    "api": "etf_share_size",
+    "name": "ETF份额规模",
+    "description": " 描述：获取沪深ETF每日份额和规模数据，能体现规模份额的变化，掌握ETF资金动向，同时提供每日净值和收盘价；数据指标是分批入库，交易所于次日早8点30左右更新上一交易日的数据；另外，涉及海外的ETF数据更新会晚一些属于正常情况。 限量：单次最大5000条，可根据代码或日期循环提取 积分：需要8000积分可以调取，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=408",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "基金代码 （可从ETF基础信息接口提取）"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期（YYYYMMDD格式，下同）"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      },
+      "exchange": {
+        "type": "str",
+        "required": false,
+        "description": "交易所（SSE上交所 SZSE深交所）"
+      }
+    },
+    "fields": {
+      "trade_date": "交易日期",
+      "ts_code": "ETF代码",
+      "etf_name": "基金名称",
+      "total_share": "总份额（万份）",
+      "total_size": "总规模（万元）",
+      "nav": "基金份额净值(元)",
+      "close": "收盘价（元）",
+      "exchange": "交易所（SSE上交所 SZSE深交所 BSE北交所）"
+    }
+  },
+  {
+    "api": "index_basic",
+    "name": "指数基本信息",
+    "description": "， 描述：获取指数基础信息，数据起始时间1990-01-01，每天18点更新，2000积分起，单次返回8000行。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=94",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "TS指数代码"
+      },
+      "symbol": {
+        "type": "str",
+        "required": false,
+        "description": "指数代码，支持多值输入，如000300,000001"
+      },
+      "name": {
+        "type": "str",
+        "required": false,
+        "description": "指数简称"
+      },
+      "market": {
+        "type": "str",
+        "required": false,
+        "description": "交易所或服务商(默认SSE，详见下方说明)"
+      },
+      "publisher": {
+        "type": "str",
+        "required": false,
+        "description": "发布商"
+      },
+      "category": {
+        "type": "str",
+        "required": false,
+        "description": "指数类别"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "name": "简称",
+      "fullname": "指数全称",
+      "market": "市场",
+      "publisher": "发布方",
+      "index_type": "指数风格",
+      "category": "指数类别",
+      "base_date": "基期",
+      "base_point": "基点",
+      "list_date": "发布日期",
+      "weight_rule": "加权方式",
+      "desc": "描述",
+      "exp_date": "终止日期"
+    }
+  },
+  {
+    "api": "index_daily",
+    "name": "指数日线行情",
+    "description": "， 描述：获取各类指数每日行情，可通过指数代码和日期循环获取。本接口不包含 申万行业指数行情数据 。 权限：用户累积2000积分可调取，5000积分以上频次相对较高，具体请参阅 积分获取办法 注意： 1、为什么部分指数的价格和成交跟行情软件的数据不一样？比如深证成指（399001.SZ），该指数普遍看作反映深证A股整体表现的大盘，而实际上只包含500只成分股。而各类行情软件上展示的成交量、成交金额是深市所有A股的股票成交情况，如果需要获得与行情软件上一样的成交数据，可以调取深证A指（399107.SZ）。创业板指（399006）也类似，指数包含100只成份股，行情软件展示的是整个创业板股票成交情况，可以用创业板综指（399102.SZ）来提取数据。 2. 为什么同样是0开头的指数，有一些后缀是CSI有一些SH？这是根据指数的所属公司来定的：中证指数公司的指数为CSI，上交所的指数为SH，具体请参考pro.index_basic的ts_code。 3.这个接口数据正常更新时间是每日18点左右，但是少部分指数是次日下午更新，比如930609.CSI ",
+    "documentation": "https://tushare.pro/document/2?doc_id=95",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": true,
+        "description": "指数代码，来源指数基础信息接口"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期 （日期格式：YYYYMMDD，下同）"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      }
+    },
+    "fields": {
+      "ts_code": "TS指数代码",
+      "trade_date": "交易日",
+      "close": "收盘点位",
+      "open": "开盘点位",
+      "high": "最高点位",
+      "low": "最低点位",
+      "pre_close": "昨日收盘点",
+      "change": "涨跌点",
+      "pct_chg": "涨跌幅（%）",
+      "vol": "成交量（手）",
+      "amount": "成交额（千元）"
+    }
+  },
+  {
+    "api": "index_weight",
+    "name": "指数成分和权重",
+    "description": " 描述：获取各类指数成分和权重， 月度数据 ，交易日期取月末最后一个交易日。 来源：指数公司网站公开数据 积分：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=96",
+    "parameters": {
+      "index_code": {
+        "type": "str",
+        "required": true,
+        "description": "指数代码，来源指数基础信息接口"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期（格式YYYYMMDD，下同）"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始交易日期（格式YYYYMMDD，下同）"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束交易日期（格式YYYYMMDD，下同）"
+      }
+    },
+    "fields": {
+      "index_code": "指数代码",
+      "con_code": "成分代码",
+      "trade_date": "交易日期",
+      "weight": "权重"
+    }
+  },
+  {
+    "api": "fund_share",
+    "name": "基金规模",
+    "description": "， 描述：获取基金规模数据，包含上海和深圳ETF基金 限量：单次最大提取2000行数据 积分：用户需要至少2000积分可以调取，5000积分以上频次较高，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=207",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "TS基金代码"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      },
+      "market": {
+        "type": "str",
+        "required": false,
+        "description": "市场代码（SH上交所 ，SZ深交所）"
+      }
+    },
+    "fields": {
+      "ts_code": "基金代码，支持多只基金同时提取，用逗号分隔",
+      "trade_date": "交易（变动）日期，格式YYYYMMDD",
+      "fd_share": "基金份额（万）"
+    }
+  },
+  {
+    "api": "fund_nav",
+    "name": "基金净值",
+    "description": "， 描述：获取公募基金净值数据 积分：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=119",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "TS基金代码 （二选一）"
+      },
+      "nav_date": {
+        "type": "str",
+        "required": false,
+        "description": "净值日期 （二选一）"
+      },
+      "market": {
+        "type": "str",
+        "required": false,
+        "description": "E场内 O场外"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "净值开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "净值结束日期"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "ann_date": "公告日期",
+      "nav_date": "净值日期",
+      "unit_nav": "单位净值",
+      "accum_nav": "累计净值",
+      "accum_div": "累计分红",
+      "net_asset": "资产净值",
+      "total_netasset": "合计资产净值",
+      "adj_nav": "复权单位净值"
+    }
+  },
+  {
+    "api": "fund_portfolio",
+    "name": "基金持仓",
+    "description": " 描述：获取公募基金持仓数据，季度更新 积分：5000积分以上每分钟请求200次，8000积分以上每分钟请求500次，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=121",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "基金代码 (ts_code,ann_date,period至少输入一个参数)"
+      },
+      "symbol": {
+        "type": "str",
+        "required": false,
+        "description": "股票代码"
+      },
+      "ann_date": {
+        "type": "str",
+        "required": false,
+        "description": "公告日期（YYYYMMDD格式）"
+      },
+      "period": {
+        "type": "str",
+        "required": false,
+        "description": "季度（每个季度最后一天的日期，比如20131231表示2013年年报）"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "报告期开始日期（YYYYMMDD格式）"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "报告期结束日期（YYYYMMDD格式）"
+      }
+    },
+    "fields": {
+      "ts_code": "TS基金代码",
+      "ann_date": "公告日期",
+      "end_date": "截止日期",
+      "symbol": "股票代码",
+      "mkv": "持有股票市值(元)",
+      "amount": "持有股票数量（股）",
+      "stk_mkv_ratio": "占股票市值比",
+      "stk_float_ratio": "占流通股本比例"
+    }
+  },
+  {
+    "api": "hk_basic",
+    "name": "港股基础信息",
+    "description": " 描述：获取港股列表信息 数量：单次可提取全部在交易的港股列表数据 积分：用户需要至少2000积分才可以调取，具体请参阅 积分获取办法 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=191",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "TS代码"
+      },
+      "list_status": {
+        "type": "str",
+        "required": false,
+        "description": "上市状态 L上市 D退市 P暂停上市 ，默认L"
+      }
+    },
+    "fields": {
+      "ts_code": "TS代码",
+      "name": "股票简称",
+      "fullname": "公司全称",
+      "enname": "英文名称",
+      "cn_spell": "拼音",
+      "market": "市场类别",
+      "list_status": "上市状态",
+      "list_date": "上市日期",
+      "delist_date": "退市日期",
+      "trade_unit": "交易单位",
+      "isin": "ISIN代码",
+      "curr_type": "货币代码"
+    }
+  },
+  {
+    "api": "hk_daily",
+    "name": "港股日线行情",
+    "description": "， 描述：获取港股每日增量和历史行情（未复权），每日18点左右更新当日数据 限量：单次最大提取5000行记录，可多次提取，总量不限制 权限：本接口数据需单独开通权限，请参考 权限列表 ，前往 权限中心 申请（需勾选“港股历史日线”）。 注意： 港交所最高/最低价与开盘/收盘价\"交叉\"说明 最高价低于开盘价或收盘价、或最低价高于开盘价或收盘价，属正常现象，并非数据错误。 因开盘价、收盘价由集合竞价撮合产生，最高价、最低价仅统计连续交易时段的成交区间，两者统计窗口不同。 ",
+    "documentation": "https://tushare.pro/document/2?doc_id=192",
+    "parameters": {
+      "ts_code": {
+        "type": "str",
+        "required": false,
+        "description": "股票代码"
+      },
+      "trade_date": {
+        "type": "str",
+        "required": false,
+        "description": "交易日期"
+      },
+      "start_date": {
+        "type": "str",
+        "required": false,
+        "description": "开始日期"
+      },
+      "end_date": {
+        "type": "str",
+        "required": false,
+        "description": "结束日期"
+      }
+    },
+    "fields": {
+      "ts_code": "股票代码",
+      "trade_date": "交易日期",
+      "open": "开盘价",
+      "high": "最高价",
+      "low": "最低价",
+      "close": "收盘价",
+      "pre_close": "昨收价",
+      "change": "涨跌额",
+      "pct_chg": "涨跌幅(%)",
+      "vol": "成交量(股)",
+      "amount": "成交额(元)"
+    }
+  }
+]

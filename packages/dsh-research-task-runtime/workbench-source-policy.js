@@ -4,7 +4,7 @@ import {validatePublicDataPanel} from './workbench-public-data.js'
 import {isDeepStrictEqual} from 'node:util'
 
 const webOnly = /(?:(?:只|仅)(?:能|可)?(?:使用|用)|走|使用|用)\s*(?:公开)?网页/u
-const plugin = /通联|datayes|萝卜投研|\bMCP\b|插件/iu
+const plugin = /tushare|通联|datayes|萝卜投研|\bMCP\b|插件/iu
 // These providers have distinct identities beyond this policy's plugin flags.
 // Do not turn a human's exclusive provider into a generic plugin prohibition.
 const exclusivePublicSource = /(?:仅|只)(?:能|可)?(?:使用|用|调用|通过|接入|从)[^。；;，,\n]{0,24}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:来源|数据源)\s*(?:仅限|限定为)[^。；;，,\n]{0,24}(?:腾讯|新浪|tencent|sina|public_data_query)/iu
@@ -14,7 +14,7 @@ const groups = [
   /未来|事件|日历/u, /研报|报告/u
 ]
 const typeTopics = {news:'新闻资讯', reports:'研报报告', calendar:'未来事件日历'}
-const unquoted = text => text.replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|「[^」]*」|"[^"\n]*"|‘[^’]*’|'[^'\n]*'|^\s*>[^\n]*/gmu, quote => /^(?:通联|datayes|萝卜投研|MCP|插件|腾讯|新浪|tencent|sina|public_data_query)$/iu.test(quote.slice(1,-1).trim()) ? quote.slice(1,-1).trim() : '')
+const unquoted = text => text.replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|「[^」]*」|"[^"\n]*"|‘[^’]*’|'[^'\n]*'|^\s*>[^\n]*/gmu, quote => /^(?:tushare|通联|datayes|萝卜投研|MCP|插件|腾讯|新浪|tencent|sina|public_data_query)$/iu.test(quote.slice(1,-1).trim()) ? quote.slice(1,-1).trim() : '')
 const ambiguous = () => { throw Error('无法可靠确定本面板的人类来源约束，请明确来源适用的卡片及是否允许替代。') }
 const publicSourceDenied='本组件仅允许已校验的腾讯报价请求；其他来源或参数不能替代。'
 function strictPublicRequests(value){
@@ -86,7 +86,7 @@ export function workbenchSourcePolicy(originalRequest, panel, options={}) {
   if (pluginRequired && pluginProhibited) ambiguous()
   // Remove model source names from routing preferences, not from the task:
   // entities, fields, dates, units and template contracts remain untouched.
-  const preferenceRequest = `${panel.title}\n${panel.prompt}`.replace(/通联|datayes|萝卜投研|\bMCP\b|插件/giu, '') + (humanSource ? `\n${humanSource}` : '')
+  const preferenceRequest = `${panel.title}\n${panel.prompt}`.replace(/tushare|通联|datayes|萝卜投研|\bMCP\b|插件/giu, '') + (humanSource ? `\n${humanSource}` : '')
   return Object.freeze({pluginRequired, pluginProhibited, preferenceRequest,...publicSourceRequests?{publicSourceRequests}:{}})
 }
 

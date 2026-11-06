@@ -66,6 +66,13 @@ export class AccountService {
     }
     return response
   }
+  async tushareMcpRequest(body:string,signal:AbortSignal):Promise<Response> {
+    if(!this.authenticated)throw new IntegrationError('AUTH_REQUIRED','请先登录 EWork 后使用 Tushare 数据源')
+    const generation=this.generation
+    const response=await (this.collaborationOptions.fetch??fetch)(`${this.origin}/v1/tushare/mcp`,{method:'POST',redirect:'error',headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:`Bearer ${this.token}`},body,signal:AbortSignal.any([this.sessionAbort.signal,signal,AbortSignal.timeout(30000)])})
+    if(generation!==this.generation){await response.body?.cancel();throw new IntegrationError('ACCESS_DENIED','账户已变化，已取消 Tushare 请求')}
+    return response
+  }
   private changed() {
     this.sessionGeneration++
     this.sessionAbort.abort()

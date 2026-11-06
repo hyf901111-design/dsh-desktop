@@ -9,6 +9,10 @@
   "preview_urls": false,
   "routes": [
     {
+      "pattern": "updates.evanarts.com/v1/tushare/mcp",
+      "zone_id": "6f467b786713bdf33ed46e8a89d780d9"
+    },
+    {
       "pattern": "updates.evanarts.com/v1/datayes/mcp",
       "zone_id": "6f467b786713bdf33ed46e8a89d780d9"
     },
@@ -30,6 +34,14 @@
     "CACHE_TTL_SECONDS": "600"
   },
   "ratelimits": [
+    {
+      "name": "TUSHARE_REQUEST_LIMITER",
+      "namespace_id": "2026110701",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
     {
       "name": "DATAYES_REQUEST_LIMITER",
       "namespace_id": "2026100901",
