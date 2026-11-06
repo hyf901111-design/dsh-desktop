@@ -4,7 +4,9 @@ import {buildEtfSnapshot,selectEtfSnapshot,validateEtfSnapshot} from './tushare-
 import catalog from '../../config/tushare-api-catalog.json' with { type: 'json' }
 
 export const TUSHARE_PATH = '/v1/tushare/mcp'
-const etfSnapshots = new WeakMap()
+// Worker env wrappers can change between requests. Scope the bounded cache to
+// a non-reversible credential digest, so rotation cannot reuse another source.
+const etfSnapshots = new Map()
 const endpoint = 'https://api.tushare.pro'
 const json = (value, status = 200) => Response.json(value, {status, headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}})
 const failure = (code, status) => json({error:{code}}, status)
@@ -105,8 +107,9 @@ export async function handleTushareMcp(request,env) {
     await env.ACCOUNTS_DB.prepare('INSERT INTO usage_events(id,user_id,capability,started_at) VALUES(?,?,?,?)').bind(usage,user.id,'tushare',Math.floor(Date.now()/1000)).run()
     let value
     if(name==='tushare_etf_snapshot'){
-      const normalized=validateEtfSnapshot(args),key=normalized.end_date+':'+normalized.lookback_days
-      let cache=etfSnapshots.get(env);if(!cache){cache=new Map();etfSnapshots.set(env,cache)}
+      const normalized=validateEtfSnapshot(args)
+      const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.TUSHARE_TOKEN)))).map(b=>b.toString(16).padStart(2,'0')).join('')
+      const key=digest+':'+normalized.end_date+':'+normalized.lookback_days,cache=etfSnapshots
       let entry=cache.get(key),cacheHit=Boolean(entry&&entry.expires>Date.now())
       if(!cacheHit){
         const signal=AbortSignal.timeout(24000)
