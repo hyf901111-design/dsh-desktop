@@ -28106,6 +28106,111 @@
         ],
         "generatedAt": "2026-11-05T23:38:15.017425+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "历史浏览器验收夹具与当前笔记和演示交互对齐",
+        "branch": "codex/feat/integration-browser-fixtures-20261106",
+        "baseCommit": "977a88cf0c92fd0610542d538f8d7f6e8ab0460d",
+        "tipCommit": "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a",
+        "commits": [
+          {
+            "commit": "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a",
+            "parents": [
+              "977a88cf0c92fd0610542d538f8d7f6e8ab0460d"
+            ],
+            "subject": "测试：修复笔记确认及演示提示验收夹具与生产行为不一致"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-shell-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/model-settings-actions-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-operations-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/model-settings-actions-browser.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "12项通过；原生Node序列化边界严格不变，图标保留0.05px以内浮点误差容限。",
+            "verifiedCommit": "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a",
+            "completedAt": "2026-11-06T00:44:43.896422+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-native-operations-browser.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "37项通过；沿实际“应用修改”按钮确认，包含保存、撤销、重复回执和人工编辑保护。",
+            "verifiedCommit": "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a",
+            "completedAt": "2026-11-06T00:46:11.770381+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-presentation-shell-browser.test.js",
+              "-t",
+              "task progress throughout|suppresses actual native composer tooltips",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "4项通过；退出演示后恢复非空草稿，再验证可用发送按钮提示，不在禁用按钮上等悬停事件。",
+            "verifiedCommit": "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a",
+            "completedAt": "2026-11-06T00:46:22.820298+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "53项直接相关生产组件浏览器/逻辑检查通过；仅5个测试文件，无产品运行时代码修改。旧7组失败的对应直接用例已验证，不宣称整个124组批次通过。"
+        },
+        "acceptanceCriteria": [
+          "笔记原生操作检查使用当前真实确认按钮，保留全部效果与持久化断言",
+          "序列化补丁按生产Node加载，保留严格反向剥离保护",
+          "演示提示复现正确的可操作按钮前提，并验证演示期间抑制和结束恢复"
+        ],
+        "risks": [
+          "原共享客户端仍待本次UI与Computer Use构建；本卡不表示原生验收或批次接受。"
+        ],
+        "generatedAt": "2026-11-06T00:47:11.208984+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -29554,6 +29659,44 @@
         "--reporter=dot"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
+        "test/model-settings-actions-browser.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-native-operations-browser.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-presentation-shell-browser.test.js",
+        "-t",
+        "task progress throughout|suppresses actual native composer tooltips",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
