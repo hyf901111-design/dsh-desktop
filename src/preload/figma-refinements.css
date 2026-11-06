@@ -502,9 +502,8 @@ body [data-odyssey-subagent-panel] .gdEzaW_userStack{width:100%!important;max-wi
 body [data-odyssey-subagent-panel] .gdEzaW_bubble{width:100%!important;max-width:100%}
 body[data-ds-dark-theme] [data-odyssey-subagent-panel] [data-research-task-input]{background:#2e2e2e}
 
-/* The rail keeps its 80 px grid track while the expanded navigation paints over
-   the canvas. Use opaque material so covered canvas content cannot bleed through. */
-body [data-odyssey-sidebar-overlay=true] > .pI_x6G_sidebarCol { background:var(--odyssey-workspace)!important; box-shadow:8px 0 24px #00000024; }
+/* The narrow layout reserves the expanded sidebar's width in the center pane.
+   Keep the same window material as the wide layout; no canvas sits beneath it. */
 
 /* 711:28478: continuable child input; native send and running stop stay visible. */
 body [data-odyssey-subagent-panel] .wSkVaW_root[data-odyssey-page=conversation]>[data-center-composer-host]:has([data-odyssey-continuable-composer]){padding:16px 0 12px}

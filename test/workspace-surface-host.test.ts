@@ -1,5 +1,5 @@
 import { Window } from 'happy-dom';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host';
 import { IntegrationView } from '../src/preload/integrations/view';
 import type { IntegrationReply } from '../src/preload/integrations/bridge';
@@ -131,7 +131,18 @@ it('observes notes geometry when the native sidebar and center mount after the h
  const center=doc.querySelector<HTMLElement>('main')!,header=doc.querySelector<HTMLElement>('header')!;let right=1370;
  center.getBoundingClientRect=()=>({left:88,right,top:10,bottom:890} as DOMRect);header.getBoundingClientRect=()=>({bottom:54} as DOMRect);
  host.open('notes');await w.happyDOM.whenAsyncComplete();expect(observed.has(center)).toBe(true);expect(observed.has(header)).toBe(true);expect(observed.has(doc.querySelector('aside')!)).toBe(true);
- right=1030;resized();expect(notes.style.right).toBe('350px');host.dispose();
+ right=1030;resized();await w.happyDOM.whenAsyncComplete();expect(notes.style.right).toBe('350px');host.dispose();
+});
+
+it('does not measure hidden surfaces during ordinary tab and streaming mutations',async()=>{
+ const w=new Window();windows.push(w);const doc=w.document as unknown as Document;
+ doc.body.innerHTML='<aside data-dsh-sidebar-root></aside><main class="pI_x6G_centerCol"><header data-ework-notes-session="session"></header></main>';
+ const host=new WorkspaceSurfaceHost(doc),notes=doc.createElement('section');host.register('notes',notes);
+ const measure=vi.spyOn(doc.querySelector('aside')!,'getBoundingClientRect');
+ for(let i=0;i<5;i++){doc.querySelector('main')!.className='pI_x6G_centerCol view-'+i;await w.happyDOM.whenAsyncComplete()}
+ expect(measure).not.toHaveBeenCalled();
+ host.open('notes');expect(measure).toHaveBeenCalledTimes(1);
+ host.close('notes');measure.mockClear();doc.querySelector('main')!.append(doc.createElement('p'));await w.happyDOM.whenAsyncComplete();expect(measure).not.toHaveBeenCalled();host.dispose();
 });
 
 it('keeps a native notes view visible when reopening its current session or ordinary settings', async () => {

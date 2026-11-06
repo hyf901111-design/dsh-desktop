@@ -68,10 +68,10 @@ async function fixture({ storage, port = 4100, local = {} } = {}) {
   return {
     win, host, handle, get, input,
     open: async id => { await act(async () => root.render(h(Screen, { id, key: id }))) },
-    select: async id => { await act(async () => host.querySelector(`[data-conversation-view-id="${id}"]`).click()) },
+    select: async id => { await act(async () => host.querySelector(`[data-conversation-view-id="${id}"]`).click()); await win.happyDOM.whenAsyncComplete() },
     active: () => host.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-conversation-view-id'),
     recency: () => recencyEvents,
-    close: async () => { await act(async () => root.unmount()); win.happyDOM.abort() }
+    close: async () => { win.dispatchEvent(new win.Event('pagehide')); await act(async () => root.unmount()); win.happyDOM.abort() }
   }
 }
 
@@ -234,6 +234,25 @@ it('applies the production bundle patch idempotently and rejects missing recover
   const patched = patchSessionViewPreferences(source)
   expect(patchSessionViewPreferences(patched)).toBe(patched)
   expect(() => patchSessionViewPreferences('function createChatStore() {}')).toThrow('recovery anchors')
+})
+
+it('paints rapid tab choices before a coalesced desktop save and flushes the last choice on page exit', async () => {
+  const { storage } = desktopStorage(), set = vi.spyOn(storage,'setItem');
+  const f = await fixture({storage});
+  try {
+    await f.open('A'); const instance=f.get('A'); set.mockClear();
+    await act(async()=>{instance.actions.setView('notes');instance.actions.setView('research');instance.actions.setView('chat')});
+    expect(f.active()).toBe('chat');expect(set).not.toHaveBeenCalled();
+    expect(JSON.parse(f.win.localStorage.getItem('ework.session.view.v1:A.pending-native')).view).toBe('chat');
+    await f.win.happyDOM.whenAsyncComplete();expect(set).toHaveBeenCalledTimes(1);expect(storage.getItem('ework.session.view.v1:A')).toBe('chat');
+    await act(async()=>instance.actions.setView('notes'));
+    expect(JSON.parse(f.win.localStorage.getItem('ework.session.view.v1:A.pending-native')).previous).toBe('chat');
+    f.win.dispatchEvent(new f.win.Event('pagehide'));expect(storage.getItem('ework.session.view.v1:A')).toBe('notes');
+    await act(async()=>instance.actions.setView('research'));
+    storage.setItem('ework.session.view.v1:A','trajectory');
+    expect(f.handle.create('A').getSnapshot().view).toBe('trajectory');
+    await f.win.happyDOM.whenAsyncComplete();expect(storage.getItem('ework.session.view.v1:A')).toBe('trajectory');
+  } finally { await f.close() }
 })
 
 it('installs one lifecycle-owned Chat intent and strictly preserves each real scoped projection on reentry', async () => {
