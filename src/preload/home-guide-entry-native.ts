@@ -175,8 +175,21 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   let run=runs.get(d.runId)
   if(d.phase==='arm'){
    if(run||closedRuns.has(d.runId)||runs.size>=128||!kinds.includes(d.kind)||Object.keys(d).some(key=>!['phase','requestId','runId','kind','sourceSessionId'].includes(key)))return reply({runId:d.runId},d.requestId,{ok:false,cancelled:true})
-   const context=deps.context()
-   try{if(context.eligible===false||sourceComposing()||d.sourceSessionId!==undefined&&d.sourceSessionId!==context.sessionId||context.sessionId&&!context.input)throw cancelled();const fingerprint=snapshot(context.input);run={runId:d.runId,kind:d.kind,token:win.crypto.randomUUID(),context:{...context},selectionRevision,fingerprint,controller:new win.AbortController(),phase:'armed',pending:new Set<string>(),expires:Date.now()+(deps.ttlMs??30000)};runs.set(d.runId,run);run.timer=win.setTimeout(()=>revoke(run,'expired'),deps.ttlMs??30000);current(run);trace(run,'arm','armed');const source=context.input?.snapshot;reply(run,d.requestId,{ok:true,token:run.token,homeEmpty:!source||!source.draft?.trim()&&!source.imageIds?.length&&!source.occurrences?.length})}catch{return reply({runId:d.runId},d.requestId,{ok:false,cancelled:true})}
+   const context=deps.context();let denial:HomeGuideEntryDenial='operation-failed'
+   const deny=(reason:HomeGuideEntryDenial):never=>{denial=reason;throw cancelled()}
+   try{
+    if(context.eligible===false)deny('ineligible')
+    if(sourceComposing())deny('composition')
+    if(d.sourceSessionId!==undefined&&d.sourceSessionId!==context.sessionId)deny('session')
+    if(context.sessionId&&!context.input)deny('input')
+    const fingerprint=(()=>{try{return snapshot(context.input)}catch{return deny('phase')}})()
+    run={runId:d.runId,kind:d.kind,token:win.crypto.randomUUID(),context:{...context},selectionRevision,fingerprint,controller:new win.AbortController(),phase:'armed',pending:new Set<string>(),expires:Date.now()+(deps.ttlMs??30000)};runs.set(d.runId,run);run.timer=win.setTimeout(()=>revoke(run,'expired'),deps.ttlMs??30000);current(run);trace(run,'arm','armed');const source=context.input?.snapshot;reply(run,d.requestId,{ok:true,token:run.token,homeEmpty:!source||!source.draft?.trim()&&!source.imageIds?.length&&!source.occurrences?.length})
+   }catch{
+    // A denied arm has no registered lease in the usual case. Record the
+    // closed reason here; otherwise the renderer can only report operation-failed.
+    trace(run??{runId:d.runId,kind:d.kind,context},'arm',run?.denial??denial)
+    return reply({runId:d.runId},d.requestId,{ok:false,cancelled:true})
+   }
    return
   }
   if(!run||d.token!==run.token||d.kind!==run.kind||d.phase!=='prepare'||!actions.includes(d.action)||!id(d.targetKey)||Object.keys(d).some(key=>!['phase','requestId','runId','kind','sourceSessionId','token','targetKey','action'].includes(key)))return reply({runId:d.runId},d.requestId,{ok:false,cancelled:true})
