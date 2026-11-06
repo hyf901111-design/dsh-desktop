@@ -28770,31 +28770,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对话阅读留白仅随手动下滚进入",
+        "featureName": "笔记演示空行聚焦停留与侧栏底部按钮下移",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
-        "tipCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
+        "baseCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
+        "tipCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
         "commits": [
           {
-            "commit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
+            "commit": "aebcede4004eb19b623317f1719805ba4312abeb",
             "parents": [
-              "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d"
+              "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe"
             ],
-            "subject": "仅在手动下滚时显示对话阅读留白"
+            "subject": "笔记演示点击空行后先显示提示和光标再输入"
+          },
+          {
+            "commit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
+            "parents": [
+              "aebcede4004eb19b623317f1719805ba4312abeb"
+            ],
+            "subject": "下移折叠侧栏的探索与消息按钮"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/assistant-reveal.mjs"
+            "path": "src/preload/figma-final-shell.css"
           },
           {
             "status": "M",
-            "path": "test/assistant-reveal-browser.test.js"
+            "path": "src/preload/home-guide-notes.tsx"
           },
           {
             "status": "M",
-            "path": "test/assistant-reveal.test.js"
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-account-rail-browser.test.js"
           }
         ],
         "checks": [
@@ -28803,12 +28814,14 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/assistant-reveal.test.js"
+              "test/home-guide-notes-browser.test.js",
+              "-t",
+              "chart tail empty until click|moves the real pointer over the original library submenu"
             ],
             "outcome": "passed",
-            "summary": "8 项补丁重装、旧版滚动边界升级及状态基线检查通过",
-            "verifiedCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
-            "completedAt": "2026-11-06T05:29:13.881329+00:00",
+            "summary": "2 项真实笔记编辑器检查通过：点击前提示隐藏；点击后空行、光标和行控件先显示，再输入；空格与斜杠菜单流程可继续。",
+            "verifiedCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
+            "completedAt": "2026-11-06T06:00:22.125664+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28816,14 +28829,12 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/assistant-reveal-browser.test.js",
-              "-t",
-              "keeps streamed paragraphs stable|exposes reading space only|real native follower|settles a following reply|both actual native and Research followers|browser scroll anchoring"
+              "test/sidebar-account-rail-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "8 项聚焦滚动检查通过；动画及减少动态效果下均保留手动留白，物理滚动末端不错误恢复自动跟随",
-            "verifiedCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
-            "completedAt": "2026-11-06T05:29:13.881329+00:00",
+            "summary": "4 项侧栏检查通过：浅深色下移 8px，底部保留 18px，探索和消息菜单可打开。",
+            "verifiedCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
+            "completedAt": "2026-11-06T06:00:22.125664+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28835,27 +28846,26 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
-            "completedAt": "2026-11-06T05:29:13.881329+00:00",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
+            "completedAt": "2026-11-06T06:00:22.125664+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 ChatView、Markdown 和完整源码 CSS：1380×900 深色与 900×640 浅色，自动跟随均停在正文末尾、额外 288px/204.8px 滚动范围只由手动滚动进入；实鼠标滚轮下滚 120px 后布局更新保持位置；流式追加无反向写入。此为生产组件浏览器验证，原生用户验收待交付。"
+          "summary": "实际 NotesApp 浏览器检查与截图：空行提示、真实折叠光标选区、段落和拖动控件可见，点击 200ms 后正文仍为空；650ms 后继续输入。浅深色侧栏底部两按钮整体下移，点击路径可用。原生整包验收待本地构建。"
         },
         "acceptanceCriteria": [
-          "正常输出不露出预留阅读空白",
-          "用户可以继续向下滚动进入阅读留白",
-          "手动阅读时新内容和布局更新不拉回阅读位置",
-          "保留已验收的连续输出稳定性，减少动态效果模式行为一致"
+          "笔记演示点击空白行后先显示提示、行控件和光标，约 0.65 秒后输入或打开命令",
+          "折叠侧栏探索与消息按钮一起下移 8 像素且可正常点击",
+          "保留前次已验收的按需阅读留白、语音按钮及网格修复"
         ],
         "risks": [
-          "结束时状态行收起仍有正常单行布局变化；生产组件复现末段移动 13px，输出期间无反向跳动",
-          "本地包需按手册重新构建并打开；不公开发布"
+          "等待沿用原演示的暂停和取消时钟；不改变真实手动编辑速度",
+          "仅修改截图所示折叠侧栏，展开侧栏现有底部距离保持不变"
         ],
-        "generatedAt": "2026-11-06T05:29:13.881329+00:00"
+        "generatedAt": "2026-11-06T06:00:22.125664+00:00"
       }
     }
   ],
