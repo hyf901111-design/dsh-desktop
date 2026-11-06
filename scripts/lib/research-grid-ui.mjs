@@ -826,9 +826,9 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)root.__eworkContentFit?.finish();workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root)
     window.addEventListener('resize',measure)
-    const scroll=()=>{const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
+    const scroll=()=>{root.style.setProperty('--grid-scroll-top',root.scrollTop+'px');const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
+    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -836,6 +836,8 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     for(const [id,value] of root.__eworkContentMeasurements||[])if(!nodes.some(n=>n.id===id&&n.containerSpec?.html===value.html))root.__eworkContentMeasurements.delete(id)
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
     const viewport=snapshot.viewport;if(!root.hasAttribute('data-grid-operation')){const scrollTop=Math.max(0,Math.min(bottom-visibleHeight,-viewport.y));if(Math.abs(root.scrollTop-scrollTop)>.5)root.scrollTop=scrollTop;if(Math.abs(viewport.y+scrollTop)>.5)workspace.setViewport({x:0,y:-scrollTop,scale:1})}
+    // Paint the viewport too: the content layer intentionally excludes the stable scrollbar gutter.
+    root.style.setProperty('--grid-pattern',workbenchGridPattern(width));root.style.setProperty('--grid-step',m.step+'px');root.style.setProperty('--grid-scroll-top',root.scrollTop+'px')
     root.__eworkScrollbars?.()
     // Native market tables do not send iframe content reports. Fit their full
     // rows and context on first completion and responsive width changes too.
