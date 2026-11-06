@@ -28770,23 +28770,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "渐显检查匹配状态首行下的真实回复节点",
+        "featureName": "对话阅读留白仅随手动下滚进入",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
-        "tipCommit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
+        "baseCommit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
+        "tipCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
         "commits": [
           {
-            "commit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
+            "commit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
             "parents": [
-              "fac13b1e4b423980490f88efc1ead93c3aab5af6"
+              "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d"
             ],
-            "subject": "更新渐显检查以识别状态首行下的真实回复节点"
+            "subject": "仅在手动下滚时显示对话阅读留白"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/assistant-reveal.mjs"
+          },
+          {
+            "status": "M",
             "path": "test/assistant-reveal-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/assistant-reveal.test.js"
           }
         ],
         "checks": [
@@ -28795,30 +28803,59 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/assistant-reveal-browser.test.js",
-              "-t",
-              "actual public reply beneath|genuinely new final suffix"
+              "test/assistant-reveal.test.js"
             ],
             "outcome": "passed",
-            "summary": "3 项旧夹具检查已改为真实回复完成节点，渐显与追加内容断言保持并通过；同模块其余 56 项此前通过。",
-            "verifiedCommit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
-            "completedAt": "2026-11-06T05:14:37.481658+00:00",
+            "summary": "8 项补丁重装、旧版滚动边界升级及状态基线检查通过",
+            "verifiedCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
+            "completedAt": "2026-11-06T05:29:13.881329+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/assistant-reveal-browser.test.js",
+              "-t",
+              "keeps streamed paragraphs stable|exposes reading space only|real native follower|settles a following reply|both actual native and Research followers|browser scroll anchoring"
+            ],
+            "outcome": "passed",
+            "summary": "8 项聚焦滚动检查通过；动画及减少动态效果下均保留手动留白，物理滚动末端不错误恢复自动跟随",
+            "verifiedCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
+            "completedAt": "2026-11-06T05:29:13.881329+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ff0e47635bd5cbcae58d7a467bdbfd68af8b4bfe",
+            "completedAt": "2026-11-06T05:29:13.881329+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "仅更新同一浏览器测试文件中的两个断言位置及用例标题，无产品源码变化。流式滚动修复沿用 fac13b1e4 的生产渲染器证据。"
+          "summary": "真实 ChatView、Markdown 和完整源码 CSS：1380×900 深色与 900×640 浅色，自动跟随均停在正文末尾、额外 288px/204.8px 滚动范围只由手动滚动进入；实鼠标滚轮下滚 120px 后布局更新保持位置；流式追加无反向写入。此为生产组件浏览器验证，原生用户验收待交付。"
         },
         "acceptanceCriteria": [
-          "状态栏位于回复之前时，检查实际回复节点而非假定 flow[0] 为回复",
-          "保留连续渐显和新后缀的透明度断言"
+          "正常输出不露出预留阅读空白",
+          "用户可以继续向下滚动进入阅读留白",
+          "手动阅读时新内容和布局更新不拉回阅读位置",
+          "保留已验收的连续输出稳定性，减少动态效果模式行为一致"
         ],
         "risks": [
-          "不改变正在构建的 926d1440 产品源码",
-          "本地包仍待启动核验和用户验收"
+          "结束时状态行收起仍有正常单行布局变化；生产组件复现末段移动 13px，输出期间无反向跳动",
+          "本地包需按手册重新构建并打开；不公开发布"
         ],
-        "generatedAt": "2026-11-06T05:14:37.481658+00:00"
+        "generatedAt": "2026-11-06T05:29:13.881329+00:00"
       }
     }
   ],
