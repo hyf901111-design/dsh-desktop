@@ -312,7 +312,7 @@ function containerAllowsWebSearch(prompt) {
   if (/(?:调用|使用).{0,16}(?:web_search|financial_query|public_data_query|网页搜索|金融数据|免费数据)/iu.test(value)) return true
   // A requested MCP fetch remains online even when the result is an offline
   // card and the user explicitly forbids invented/sample observations.
-  if (!componentPluginSourceProhibited(value)&&/(?:使用|通过|调用|接入|用)[^。；;\n]{0,40}(?:通联|DataYes|萝卜投研|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实(?:数据|资料)|查(?:最近|公告|研报))/iu.test(value)) return true
+  if (!componentPluginSourceProhibited(value)&&/(?:使用|通过|调用|接入|用)[^。；;\n]{0,40}(?:Tushare|通联|DataYes|萝卜投研|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实(?:数据|资料)|查(?:最近|公告|研报))/iu.test(value)) return true
   if (/离线(?:页面|模式|运行)?/u.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
   // Rejecting invented observations is a retrieval requirement, not permission
@@ -701,7 +701,7 @@ export function buildResearchTaskPrompt(request, { canonicalPolicySourceGuidance
       allowsWeb
         ? '只有用户明确提供的 http 或 https 网址才能用于 web；不得把用户没有提供的网址替换成自行猜测的网站。'
         : '用户未提供明确网址时，不得生成 web，也不得自行猜测或推荐外部网站；这不限制使用 html 创建自包含页面。',
-      '当需求涉及实时、监控或最新数据时，用户指定来源优先；行情、宏观、天气等已有适配的数据先使用当前可见的 public_data_query 获取适用的免费数据；未覆盖时再使用获授权的专业工具或 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。'+POLICY_SOURCE_GUIDANCE,
+      '当需求涉及实时、监控或最新数据时，用户指定来源优先；行情、宏观、天气等已有适配的数据先使用当前可见的 public_data_query 获取适用的免费数据；未覆盖时优先使用当前可见 Tushare 工具，Tushare 未覆盖或不可用再使用其他获授权的专业工具或 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。'+POLICY_SOURCE_GUIDANCE,
       '不要输出代码围栏、解释、前言或 JSON 之外的文字；HTML/CSS/JavaScript 只能放在 html 字段内。',
       '图表容量遵守上方对应变体的 schema；表格最多 12 列和 100 行；KPI 最多 12 项。',
       '表格表头及所有单元格默认单行显示，列宽由完整内容决定，超宽时横向滚动；只有用户手动调整列宽后才允许该列换行。HTML 表格使用标准 table/thead/tbody，宿主提供拖动列宽。组合图表遵循自然内容高度，标准数据图表必须复用宿主market/chart模板，不能另写同类SVG或canvas。只有模板确实无法表达的自定义图形才使用HTML：监听实际绘图区ResizeObserver，按新宽高重算几何，字号保持CSS像素大小；禁止preserveAspectRatio="none"和scaleX/scaleY压缩含文字的图表。静态SVG保持自身宽高比，不用height:100%、100vh或flex:1撑高图表及竖向容器。',
@@ -970,7 +970,7 @@ function workbenchSourceEvidenceIssue(policy, records) {
   if(publicIssue)return publicIssue
   const pluginRecords = records.filter(record => record.tool?.startsWith('ework__'))
   if (policy.pluginProhibited && pluginRecords.length) return '人类来源约束禁止使用插件；不能接纳插件业务数据。'
-  if (policy.pluginRequired && !componentBindingEvidence(pluginRecords)) return '该组件指定通联 DataYes 来源，必须实际取得业务响应；不能用其他网站的静态记录或接口目录代替。'
+  if (policy.pluginRequired && !componentBindingEvidence(pluginRecords)) return '该组件指定专业数据来源，必须实际取得业务响应；不能用其他网站的静态记录或接口目录代替。'
 }
 
 function taskDocument(task) {
@@ -1874,11 +1874,11 @@ export class ResearchTaskRuntime {
             const observedBusiness = componentBindingEvidence(sourceRecords.filter(record=>record.tool?.startsWith('ework__')))
             // Custom pages are snapshots, not registered native mapping
             // templates. They still require an actual business response.
-            if(plannedFormat==='html'&&!observedBusiness)throw new ResearchTaskError('GENERATION_FAILED','该组件指定通联 DataYes 来源，必须实际取得业务响应；不能用其他网站的静态行情或接口目录代替。')
+            if(plannedFormat==='html'&&!observedBusiness)throw new ResearchTaskError('GENERATION_FAILED','该组件指定专业数据来源，必须实际取得业务响应；不能用其他网站的静态行情或接口目录代替。')
             if(bindablePanel&&(!observedBusiness||!mapped&&bindingRequested)){
               bindingRepairEvidence=observedBusiness
               throw new ResearchTaskError(bindingRepairEvidence?'INVALID_OUTPUT':'GENERATION_FAILED',
-                '该组件指定通联 DataYes 来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
+                '该组件指定专业数据来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
           output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
@@ -2473,7 +2473,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       if(prototypeTargets&&kind==='container'&&workbenchPanelFormat(query??'')==='table')effectivePrompt+="\n本卡普通平面表格可直接交付静态引用，不逐行重抄。示意协议：{\"version\":1,\"type\":\"data-bound\",\"requests\":[{\"key\":\"snapshot\",\"tool\":\"read_prototype\",\"args\":{\"file_path\":\"本次实际文件\",\"section\":\"实际数据段\",\"limit\":500}}],\"mapping\":{\"version\":1,\"type\":\"table\",\"title\":\"本卡标题\",\"columns\":[\"所需字段的显示名\"],\"rows\":{\"$from\":\"snapshot\",\"$each\":\"rows\",\"$map\":[{\"$path\":\"实际字段名\",\"$as\":\"string\"}]}}}。requests.args必须逐字复用成功读取的参数（省略过的字段也保持省略），列名与$map一一对应，字段路径来自真实记录，不能填猜测值。超过100条也保留完整映射，宿主会转为完整可搜索、排序的阅读表格，不受模型直接写rows的模板行数限制；不用读渲染函数或再生成HTML。"
       if (permitsTools&&!prototypeTargets) effectivePrompt += preferredSources.length
         ? `\n${componentSourceInstruction(preferredSources, sourceRequest)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
-        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+(ownsPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
+        : '\n用户指定来源优先；行情、宏观、天气等已有适配的数据先用当前可见 public_data_query 读取适用免费源。'+(ownsPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用当前可见 Tushare 工具，Tushare 未覆盖或不可用才调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -2489,7 +2489,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           effectivePrompt += `\n\n${evidence}\n以上仅是候选来源，不代表已经取得所需数据。先检查是否包含用户所需的实际数值、正文和数据时点；只有网站介绍、页面标题或网址时，先用 web_fetch 读取相关来源，仍缺字段再调用 web_search 更换检索词。已有的有效数据直接复用，不重复查询；完成必要取数前不要仅依据摘要不足返回错误。`
         } catch (error) {
           if (signal.aborted) throw error
-          effectivePrompt += '\n主机预检未取得可用资料。未指定来源时先用当前可见 public_data_query 查询适用免费源；无覆盖的金融数据再用 financial_query；其他资料先用 web_search 按用户的具体标的和字段检索，再用 web_fetch 读取命中的来源正文，不要搜索词语释义；查不到时如实说明，不得编造数据。'
+          effectivePrompt += '\n主机预检未取得可用资料。未指定来源时先用当前可见 public_data_query 查询适用免费源；无覆盖的金融数据优先使用当前可见 Tushare 工具，Tushare 未覆盖或不可用再用 financial_query；其他资料先用 web_search 按用户的具体标的和字段检索，再用 web_fetch 读取命中的来源正文，不要搜索词语释义；查不到时如实说明，不得编造数据。'
         } finally {
           clearTimeout(timer)
           lookup.abort()

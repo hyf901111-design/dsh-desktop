@@ -15,7 +15,7 @@ async function fixture(){
  await writeFile(join(directory,slug,'_meta.json'),JSON.stringify({slug,cnName:'PPT制作助手',version:'v1.1.1',source:'eSkill'}))
  let owner='one'
  const open=async()=>{
-  const service=await IntegrationService.open({root:join(root,'state'),encryption,getOwnerId:()=>owner,bundledSkillDirectory:directory,bundledDatayes:{authenticated:()=>true,request:async()=>{throw Error('unexpected network')}}})
+  const service=await IntegrationService.open({root:join(root,'state'),encryption,getOwnerId:()=>owner,bundledSkillDirectory:directory,bundledTushare:{authenticated:()=>true,request:async()=>{throw Error('unexpected network')}}})
   cleanups.push(()=>service.dispose());return service
  }
  cleanups.push(()=>rm(root,{recursive:true,force:true}))
@@ -44,7 +44,7 @@ it('defaults builtins on, persists skill opt-outs across restart and upgrade, an
  expect(f.service.store.snapshot().skills).toEqual({})
 })
 
-it('keeps DataYes off through snapshots, login refresh and restart, while protecting its fixed config',async()=>{
+it('keeps Tushare off through snapshots, login refresh and restart, while protecting its fixed config',async()=>{
  const f=await fixture(),snapshot=await f.service.request({type:'snapshot'}),id=(snapshot as any).snapshot.rows.find((r:any)=>r.kind==='connection').id
  expect(await row(f.service,id)).toMatchObject({enabled:true,toggleable:true,removable:false,configurable:false})
  await toggle(f.service,id,false)

@@ -11,6 +11,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { IntegrationError, type AdapterResult, type Connection, type IntegrationErrorCode, type McpConfig } from '../../../shared/integrations'
 import { networkFetch, validateNetworkTarget } from './network-policy'
 import {isBundledDatayesId,DATAYES_GATEWAY} from '../bundled-datayes'
+import {isBundledTushareId,TUSHARE_GATEWAY} from '../bundled-tushare'
 
 const MAX_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT = 30_000
@@ -115,7 +116,7 @@ async function terminateDescendants(pid: number): Promise<void> {
 export class McpSupervisor {
   private readonly entries = new Map<string, Entry>()
   private readonly datayesQuotaUntil = new Map<string, number>()
-  constructor(private readonly vault: { read(ref: string): Promise<string> },private readonly datayesRequest?:(body:string,signal:AbortSignal)=>Promise<Response>) {}
+  constructor(private readonly vault: { read(ref: string): Promise<string> },private readonly datayesRequest?:(body:string,signal:AbortSignal)=>Promise<Response>,private readonly tushareRequest?:(body:string,signal:AbortSignal)=>Promise<Response>) {}
 
   async connect(connection: Connection, signal: AbortSignal): Promise<McpConnectionResult> {
     return this.connectSession(connection, signal, true)
@@ -326,7 +327,11 @@ export class McpSupervisor {
       fetch: async (input, init = {}) => {
         const signal=AbortSignal.any([entry.controller.signal,...(init.signal?[init.signal]:[])])
         let response:Response
-        if(isBundledDatayesId(entry.id)) {
+        if(isBundledTushareId(entry.id)) {
+          if(url.href!==TUSHARE_GATEWAY||String(input)!==TUSHARE_GATEWAY||!this.tushareRequest)throw new IntegrationError('ACCESS_DENIED','内置 Tushare 服务地址无效')
+          if(init.method!=='POST'||typeof init.body!=='string')return new Response(null,{status:405})
+          response=await this.tushareRequest(init.body,signal)
+        } else if(isBundledDatayesId(entry.id)) {
           if(url.href!==DATAYES_GATEWAY||String(input)!==DATAYES_GATEWAY||!this.datayesRequest)throw new IntegrationError('ACCESS_DENIED','内置通联服务地址无效')
           if(init.method!=='POST'||typeof init.body!=='string')return new Response(null,{status:405})
           response=await this.datayesRequest(init.body,signal)

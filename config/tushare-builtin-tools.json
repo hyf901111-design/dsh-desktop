@@ -1,0 +1,12 @@
+[
+  {
+    "name": "tushare_catalog",
+    "description": "Tushare 金融数据接口目录与参数定义。免费数据源不能覆盖所需字段时，优先使用 Tushare。传 api_name 可一次取得该接口的参数、字段、单位和官方文档；query 可搜索股票、指数、ETF、基金、财务、港股、宏观等数据。目录不是业务数据，也不代表当前账户具有该接口权限。",
+    "inputSchema": {"type":"object","properties":{"api_name":{"type":"string"},"query":{"type":"string","maxLength":100}},"additionalProperties":false}
+  },
+  {
+    "name": "tushare_query",
+    "description": "调用 Tushare 官方接口取得真实金融数据。api_name、params、fields 按 tushare_catalog 定义填写；不传 Token 或 URL，EWork 登录后由云端鉴权调用。返回 records、字段口径、来源及获取时间；只可用实际交易/披露日期作为数据时点。分页未结束不能把样本当全市场；空值不补零。权限或频率错误不得重复循环调用。组件需绑定本次成功请求才能刷新。",
+    "inputSchema": {"type":"object","properties":{"api_name":{"type":"string","minLength":1},"params":{"type":"object","additionalProperties":{"type":"string"}},"fields":{"type":"string","description":"逗号分隔的已核验字段，只取展示需要的字段","maxLength":1000},"limit":{"type":"integer","minimum":1,"maximum":1000,"default":200},"offset":{"type":"integer","minimum":0,"maximum":100000}},"required":["api_name","params","fields"],"additionalProperties":false}
+  }
+]

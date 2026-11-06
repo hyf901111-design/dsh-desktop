@@ -1,3 +1,4 @@
+import { TUSHARE_SOURCE_GUIDANCE } from '../dsh-integration-runtime/financial-source-policy.js'
 import { freeDataInstruction } from './free-data-skill.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
@@ -5,10 +6,10 @@ import { bundledSkillEnabled } from './bundled-skill-preferences.js'
 import {latestStatementRequest} from './statement-evidence.js'
 import {statementOperatingRequested} from './statement-operating-coverage.js'
 
-const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
-const datayesSource = /通联|datayes|萝卜投研|官网\s*MCP/iu
+const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|tushare|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
+const datayesSource = /tushare|通联|datayes|萝卜投研|官网\s*MCP/iu
 const recentMarketRequest = /最近|最新|今日|当前|实时|日行情/iu
-const pluginName=String.raw`(?:通联|datayes|萝卜投研|\bMCP\b|插件)`
+const pluginName=String.raw`(?:tushare|通联|datayes|萝卜投研|\bMCP\b|插件)`
 
 export function componentPluginSourceProhibited(request='') {
   return new RegExp(`(?:(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|用|通过|接入)[^。；;，,\\n]{0,24}|\\b(?:do\\s+not|don't|never)\\s+(?:use|call|query)\\s+)${pluginName}`,'iu').test(request)
@@ -61,7 +62,8 @@ export function preferredComponentSourceTools(schemas, request, sourcePolicy) {
   if (!financialTopic.test(request ?? '') || !Array.isArray(schemas)) return []
   const text = request ?? ''
   if(sourcePolicy?.pluginProhibited ?? componentPluginSourceProhibited(text))return []
-  const professionalFields = /估值|市盈率|市净率|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|基金净值|持仓|研报|\b(?:valuation|fundamentals|earnings)\b/iu.test(text)
+  if(!sourcePolicy && /(?:仅|只)(?:使用|用).{0,16}(?:腾讯|新浪|tencent|sina|public_data_query)/iu.test(text) && !componentSourceAllowsAlternatives(text))return []
+  const professionalFields = /份额|规模|申购|净流入|资金流向|ETF运营|指数运营|成分|权重|估值|市盈率|市净率|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|基金净值|持仓|研报|\b(?:valuation|fundamentals|earnings)\b/iu.test(text)
   const explicitSource = sourcePolicy ? sourcePolicy.pluginProhibited : /(?:仅|只)(?:使用|用).{0,16}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:数据来源|数据源|来源)\s*(?:(?:[:：]|为|是|于|采用|使用)\s*[^，。；;\n]+|(?:腾讯|新浪|tencent|sina))/iu.test(text)
   // Basic quotes/history cannot supply financial statements or valuation
   // fields. Skip that discovery detour when an authorized professional source
@@ -75,6 +77,7 @@ export function preferredComponentSourceTools(schemas, request, sourcePolicy) {
 
 export function componentSourceInstruction(tools, request = '', now = new Date(), { planning = false } = {}) {
   if (!tools?.length) return ''
+  if (tools.some(tool=>/tushare/i.test(tool.description))) return (planning ? planningSourceInstruction(tools.map(tool=>`${tool.name}（${tool.description}）`)) : '【Tushare 取数】'+TUSHARE_SOURCE_GUIDANCE+' 当前授权工具：'+tools.map(tool=>`${tool.name}（${tool.description}）`).join('；'))
   if (planning) return planningSourceInstruction(tools.map(tool => `${tool.name}（${tool.description}）`))
   const statementRequest=request.replace(/(?:不要|不取|不看|无需)(?:读取|查询|使用|获取)?(?:财报|财务(?:报表|指标)?|利润表)/gu,'')
   const aShare=/A股|A[- ]?shares?|中国上市公司|\b(?:[69]\d{5}\.SH|[023]\d{5}\.SZ|[489]\d{5}\.BJ)\b/iu.test(statementRequest)

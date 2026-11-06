@@ -1511,7 +1511,7 @@ async function bootstrap(): Promise<void> {
       bundledSkillDirectory: bundledSkillDirectory(),
       bundledComputerUseRoot: process.platform === 'darwin' ? join(app.getAppPath(), 'node_modules/dsh-integration-runtime') : undefined,
       onComputerUseRevoked: () => desktopComputer?.cancel(),
-      bundledDatayes:{request:(body,signal)=>accountService!.datayesMcpRequest(body,signal),authenticated:()=>accountService!.authenticated},
+      bundledTushare:{request:(body,signal)=>accountService!.tushareMcpRequest(body,signal),authenticated:()=>accountService!.authenticated},
       clientVersion: app.getVersion(),
       legacySkillRoots: legacySkillRoots({ userDataRoot: app.getPath('userData'), bundledSkillDirectory: bundledSkillDirectory() }),
       legacyConnectionSources: legacyConnectionSources({userDataRoot:app.getPath('userData')}),
