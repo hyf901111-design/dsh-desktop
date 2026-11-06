@@ -28433,6 +28433,121 @@
         ],
         "generatedAt": "2026-11-06T01:06:49.259046+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复原生电脑操作插件和精确窗口后台输入",
+        "branch": "codex/feat/native-computer-use-plugin-20261106",
+        "baseCommit": "977a88cf0c92fd0610542d538f8d7f6e8ab0460d",
+        "tipCommit": "6e74c0a43ff629ae9c6a14afd2f6415d91328493",
+        "commits": [
+          {
+            "commit": "6e74c0a43ff629ae9c6a14afd2f6415d91328493",
+            "parents": [
+              "977a88cf0c92fd0610542d538f8d7f6e8ab0460d"
+            ],
+            "subject": "修复：恢复原生电脑操作插件和精确窗口后台输入"
+          }
+        ],
+        "files": [
+          {
+            "status": "C066",
+            "path": "packages/dsh-integration-runtime/computer-use-tools.js",
+            "previousPath": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/computer-use.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/bundled-computer-use.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-use-plugin-integration.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-vision.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-use-plugin-integration.test.js",
+              "test/computer-vision.test.js",
+              "test/computer-background-launch.test.ts",
+              "test/desktop-computer-overlay.test.ts",
+              "test/integration-service.test.ts",
+              "test/integration-runtime-bridge.test.ts",
+              "test/integration-runtime.test.js",
+              "test/harness-bundled-package-resolution.test.ts",
+              "--reporter=dot",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "131 项通过，覆盖插件开关、账号隔离、启动期间取消、精确窗口后台输入与实际插件上下文截图回传。",
+            "verifiedCommit": "6e74c0a43ff629ae9c6a14afd2f6415d91328493",
+            "completedAt": "2026-11-06T01:20:16.444Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "此交接仅核验运行时与后台执行合约；插件列表和真实 ZCode 的后台草稿回读留待本地包验收。"
+        },
+        "acceptanceCriteria": [
+          "插件管理页使用账号内持久的 Computer Use 开关，保留原生 computer_use 工具。",
+          "关闭或切换账号时取消待执行和在执行的操作。",
+          "Electron 界面能按观察坐标尝试后台输入，并用新截图回读。"
+        ],
+        "risks": [
+          "驱动报告同进程窗口歧义或系统拒绝时停止该操作。真实 ZCode 路径尚待验证。"
+        ],
+        "generatedAt": "2026-11-06T01:21:33.477125+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -29961,6 +30076,25 @@
         "--reporter=dot"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/computer-controller.test.ts",
+        "test/computer-use-plugin-integration.test.js",
+        "test/computer-vision.test.js",
+        "test/computer-background-launch.test.ts",
+        "test/desktop-computer-overlay.test.ts",
+        "test/integration-service.test.ts",
+        "test/integration-runtime-bridge.test.ts",
+        "test/integration-runtime.test.js",
+        "test/harness-bundled-package-resolution.test.ts",
+        "--reporter=dot",
+        "--maxWorkers=3"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
