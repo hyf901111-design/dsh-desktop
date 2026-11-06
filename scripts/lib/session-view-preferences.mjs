@@ -8,8 +8,11 @@ export function hasSessionViewPreference(sessionId, view) {
   // Old native snapshots also wrote the default Chat view. Only the separate
   // preference records an explicit Chat choice over legacy canvas recovery.
   const key = 'ework.session.view.v1:' + sessionId
+  // create() already reconciles the durable preference into its native store.
+  // A local explicit choice (including the pending journal) needs no sync IPC.
+  try { if (isSessionViewId(localStorage.getItem(key))) return true } catch {}
   try { if (isSessionViewId(window.dshDesktop?.researchCanvasStorage?.getItem(key))) return true } catch {}
-  try { return isSessionViewId(localStorage.getItem(key)) } catch { return false }
+  return false
 }
 
 // The workspace flow can reuse a blank scope which is not currently rendered.
@@ -85,6 +88,28 @@ export function useInitialChatSessionView(sessionId, storedView, actions) {
 /** Keep the native per-session store/drafts; persist only the navigation preference. */
 export function withSessionViewPreferences(handle) {
   const pendingBySession = new Map()
+  const durableBySession = new Map()
+  const writes = new Map()
+  let frame = 0, timer = 0
+  const viewWindow = typeof window === 'undefined' ? undefined : window
+  const flush = () => {
+    if (frame) viewWindow?.cancelAnimationFrame(frame)
+    if (timer) viewWindow?.clearTimeout(timer)
+    frame = timer = 0
+    const batch = [...writes.values()]; writes.clear()
+    for (const write of batch) write()
+  }
+  const schedule = () => {
+    if (frame || timer) return
+    // Paint the selected tab before the synchronous desktop disk bridge runs.
+    // The origin journal below already protects reloads during this interval.
+    if (viewWindow?.requestAnimationFrame) frame = viewWindow.requestAnimationFrame(() => {
+      frame = 0; timer = viewWindow.setTimeout(flush, 0)
+    })
+    else flush()
+  }
+  viewWindow?.addEventListener('pagehide', flush)
+  viewWindow?.document.addEventListener('visibilitychange', () => { if (viewWindow.document.hidden) flush() })
   return {
     ...handle,
     create(sessionId) {
@@ -100,9 +125,11 @@ export function withSessionViewPreferences(handle) {
         try { origin()?.removeItem(pendingKey) } catch {}
       }
       const save = value => {
+        writes.delete(sessionId)
         const previous = read(desktop)
         let acknowledged = false
-        try { acknowledged = desktop?.setItem(key, value) === true } catch {}
+        try { acknowledged = previous === value || desktop?.setItem(key, value) === true } catch {}
+        durableBySession.set(sessionId, acknowledged ? value : previous)
         if (desktop && !acknowledged) {
           const pending = { view: value, previous }
           pendingBySession.set(sessionId, pending)
@@ -120,6 +147,7 @@ export function withSessionViewPreferences(handle) {
         } catch {}
       }
       const durable = read(desktop)
+      durableBySession.set(sessionId, durable)
       // A failed write may be newer than disk. Do not overwrite a later choice
       // made by another page after that failed write.
       const retryPending = pending && (durable === null || durable === pending.previous)
@@ -138,7 +166,14 @@ export function withSessionViewPreferences(handle) {
           ...instance.actions,
           setView(view) {
             instance.actions.setView(view)
-            if (isSessionViewId(view)) save(view)
+            if (isSessionViewId(view)) {
+              // Keep the first durable baseline when rapid clicks coalesce.
+              const baseline = pendingBySession.get(sessionId)
+              const pending = { view, previous: baseline ? baseline.previous : durableBySession.get(sessionId) ?? null }
+              pendingBySession.set(sessionId, pending)
+              try { origin()?.setItem(pendingKey, JSON.stringify(pending)); origin()?.setItem(key, view) } catch {}
+              writes.set(sessionId, () => save(view)); schedule()
+            }
           }
         },
         clearPersisted() { instance.clearPersisted(); save('') }

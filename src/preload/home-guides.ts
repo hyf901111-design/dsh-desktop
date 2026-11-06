@@ -190,9 +190,12 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     try{
      await playExploreHomeGuideEntry(document,kind,{homeEmpty:client.homeEmpty,context:entry,signal:controller.signal,pointer:entryPointer,assert:ensurePending,nativeClick:target=>{ownedNavigation++;try{target.click()}finally{ownedNavigation--}},activate:async(target,action,beforeCommit)=>{
       prepared=await client.prepare(target,action);ensurePending();pending.target=prepared.sessionId
-      transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=pending.source
       await adapters.beforeOpen?.({...prepared,kind});ensurePending();preflighted=true
       await beforeCommit();ensurePending()
+      // The pointer is still demonstrating the source control until its click
+      // finishes. Borrow only the target session, at the actual native open.
+      // Borrowing the source here removes its canvas and relocates its composer.
+      transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=prepared.sessionId
       let opening:Promise<Session>;ownedNavigation++;try{opening=client.commit(target)}finally{ownedNavigation--}
       await opening;ensurePending();openedFromEntry=true
      }})

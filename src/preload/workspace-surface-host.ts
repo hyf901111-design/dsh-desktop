@@ -12,10 +12,11 @@ export class WorkspaceSurfaceHost {
     private observer?: MutationObserver;
     private resizeObserver?: ResizeObserver;
     private expanded = false;
+    private positionFrame = 0;
     constructor(private document: Document) {
         document.addEventListener('sherlock:search-session-opened', this.onSessionOpened);
         document.addEventListener('click', this.onNavigate, true);
-        document.defaultView?.addEventListener('resize', this.position);
+        document.defaultView?.addEventListener('resize', this.schedulePosition);
         document.defaultView?.addEventListener('sherlock:workspace-panel-state', this.onPanelState);
         const Observer = document.defaultView?.MutationObserver;
         if (Observer) {
@@ -25,7 +26,7 @@ export class WorkspaceSurfaceHost {
         const Resize = document.defaultView?.ResizeObserver;
         const sidebar = document.querySelector('[data-dsh-sidebar-root]');
         if (Resize) {
-            this.resizeObserver = new Resize(this.position);
+            this.resizeObserver = new Resize(this.schedulePosition);
             if (sidebar) this.resizeObserver.observe(sidebar);
         }
     }
@@ -37,7 +38,7 @@ export class WorkspaceSurfaceHost {
         // Notes use viewport coordinates from the shared header and pane.
         // The blurred frame creates a fixed-position containing block.
         (surface === 'notes' ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
-        this.position();
+        if (this.current()?.surface === surface) this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
         if (this.settingsOpen() && surface !== 'notes') { this.closeAll(); return; }
@@ -93,12 +94,22 @@ export class WorkspaceSurfaceHost {
     }
     private settingsOpen() { return !!this.document.querySelector('.VOzbGW_overlay'); }
     private onDomChanged = () => {
+        if (!this.current()) return;
         // Native settings can also mount through keyboard or programmatic navigation.
         // End the surface session instead of concealing it behind another layer.
         if (this.current() && this.current()?.surface !== 'notes' && this.settingsOpen()) { this.closeAll(); return; }
-        this.position();
+        this.schedulePosition();
+    };
+    private schedulePosition = () => {
+        const view = this.document.defaultView;
+        if (!this.current() || this.positionFrame || !view) return;
+        this.positionFrame = view.requestAnimationFrame(() => { this.positionFrame = 0; this.position(); });
     };
     private position = () => {
+        if (this.positionFrame) this.document.defaultView?.cancelAnimationFrame(this.positionFrame);
+        this.positionFrame = 0;
+        const current = this.current();
+        if (!current) return;
         const sidebarElement = this.document.querySelector('[data-dsh-sidebar-root]');
         if (sidebarElement) this.resizeObserver?.observe(sidebarElement);
         const sidebar = sidebarElement?.getBoundingClientRect();
@@ -106,7 +117,8 @@ export class WorkspaceSurfaceHost {
         const html = this.document.documentElement;
         const color = this.document.defaultView?.getComputedStyle(this.document.body).color || '';
         const dark = this.document.body.hasAttribute('data-ds-dark-theme') || html.dataset.theme === 'dark' || html.classList.contains('dark') || Number(color.match(/\d+/)?.[0] || 0) > 180;
-        for (const element of this.surfaces.values()) {
+        for (const [name, element] of this.surfaces) {
+            if (name !== current.surface) continue;
             element.dataset.settingsOpen = String(this.settingsOpen());
             if (element.style.left !== left)
                 element.style.left = left;
@@ -164,7 +176,7 @@ export class WorkspaceSurfaceHost {
         this.resizeObserver?.disconnect();
         this.document.removeEventListener('sherlock:search-session-opened', this.onSessionOpened);
         this.document.removeEventListener('click', this.onNavigate, true);
-        this.document.defaultView?.removeEventListener('resize', this.position);
+        this.document.defaultView?.removeEventListener('resize', this.schedulePosition);
         this.document.defaultView?.removeEventListener('sherlock:workspace-panel-state', this.onPanelState);
         this.surfaces.clear();
     }
