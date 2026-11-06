@@ -11,13 +11,49 @@ import {createRoot} from 'react-dom/client'
 
 const row=(nodeId,lastSuccess=1000,extra={})=>({nodeId,status:'success',lastSuccess,enabled:true,intervalMinutes:1,...extra})
 describe('component refresh status',()=>{
+ const staticNode=data=>({id:'static',containerSpec:{type:'html',html:'<script id="sherlock-template-data" type="application/json">'+JSON.stringify({templateId:'market.table',version:'1',data})+'</script>'}})
+ it('shows retained generation sources even without a refresh binding, with truthful unknown fallback',()=>{
+  const node=staticNode({sources:[{label:'Tushare / shibor'},{label:'中国货币网'},{label:'Tushare / shibor'}],asOf:'2026-11-06'})
+  expect(componentDataStatusView(null,null,node)).toMatchObject({source:'Tushare / 中国货币网',detail:'静态快照'})
+  expect(componentDataStatusView(null,null,node).title).toContain('Tushare / shibor')
+  expect(componentDataStatusView(null,null,node).title).toContain('2026-11-06')
+  expect(componentDataStatusView(null,null,staticNode({})).source).toBe('来源未标注')
+  expect(componentDataStatusView(null,null,{containerSpec:{type:'html',html:'<script>throw Error("do not execute")</script>'}}).source).toBe('来源未标注')
+ })
+ it('reads explicitly recorded source notes and article links without guessing a provider',()=>{
+  expect(componentDataStatusView(null,null,staticNode({type:'news',note:'来源：东方财富关键词新闻搜索（eastmoney-news），query=加密货币。'})).source).toBe('东方财富关键词新闻搜索（eastmoney-news）')
+  expect(componentDataStatusView(null,null,staticNode({type:'news',items:[{url:'https://finance.example.com/news/1'},{url:'https://finance.example.com/news/2'}]})).source).toBe('finance.example.com')
+ })
+ it('uses current binding provenance over stale snapshot sources and restores the snapshot after unbinding',()=>{
+  const node=staticNode({source:'原始导入文件'})
+  expect(componentDataStatusView(row('a',1000,{sourceNames:['Tushare / index_daily']}),null,node).source).toBe('Tushare')
+  expect(componentDataStatusView(row('a'),null,node).source).toBe('原始导入文件')
+  expect(componentDataStatusView(null,null,node).source).toBe('原始导入文件')
+ })
+ it('keeps provenance visible in the rendered unbound and shared card footers',async()=>{
+  const window=new Window(),document=window.document
+  vi.stubGlobal('window',window);vi.stubGlobal('document',document);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
+  document.body.innerHTML='<div id="mount"></div>'
+  let shared=false
+  const {ComponentDataStatusBar}=vm.runInNewContext(componentDataStatusDefinitions()+';({ComponentDataStatusBar})',{react,react_dom,react_jsx_runtime,sherlockShared:()=>shared,openComponentData:vi.fn(),setTimeout,clearTimeout})
+  const root=createRoot(document.querySelector('#mount')),node=staticNode({sources:[{label:'Tushare / shibor'}]})
+  try{
+   await react.act(async()=>root.render(react.createElement(ComponentDataStatusBar,{sessionId:'s',node})))
+   expect(document.querySelector('.odyssey-data-frequency').textContent).toBe('Tushare · 静态快照')
+   shared=true
+   await react.act(async()=>root.render(react.createElement(ComponentDataStatusBar,{sessionId:'s',node:{...node}})))
+   expect(document.querySelector('.odyssey-data-frequency').textContent).toBe('Tushare · 静态组件')
+   expect(document.querySelector('button').disabled).toBe(true)
+  }finally{await react.act(async()=>root.unmount());vi.unstubAllGlobals();await window.happyDOM.close()}
+ })
+
  it('keeps active provider names through list and compact status pushes, including failures and pauses',()=>{
   const store=createComponentDataStatusStore(),changed=vi.fn()
   store.subscribe('s','a',changed)
   store.publish('s',[row('a',1000,{intervalMinutes:1440,requests:[{sourceName:'通联 DataYes MCP / call_api'},{sourceName:'通联 DataYes MCP / fund_holdings'}]})])
   const view=()=>componentDataStatusView(store.read('s','a'))
   expect(view()).toMatchObject({source:'通联 DataYes',detail:'每 1440 分钟'})
-  expect(view().title).toContain('数据源：通联 DataYes MCP / call_api')
+  expect(view().title).toContain('数据来源：通联 DataYes MCP / call_api')
   changed.mockClear()
   store.publish('s',[row('a',1000,{intervalMinutes:1440,sourceNames:['通联 DataYes MCP / call_api','通联 DataYes MCP / fund_holdings']})])
   expect(changed).not.toHaveBeenCalled()
@@ -110,7 +146,7 @@ describe('component refresh status',()=>{
    expect(document.querySelectorAll('time')).toHaveLength(2);expect(document.querySelector('[data-workbench-value-changed]')).toBe(null)
    expect(document.querySelector('[data-refresh-feedback]')).toBeNull()
    await react.act(async()=>store.publish('s',[row('a',1000,{status:'refreshing'}),row('b')]))
-   expect(document.querySelector('[role=status]').textContent).toBe('正在更新数据…')
+   expect(document.querySelector('[role=status]').textContent).toBe('来源未标注 · 正在更新数据…')
    expect(document.querySelector('[data-research-preview-body]').getAttribute('aria-busy')).toBe('true')
    await react.act(async()=>{vi.advanceTimersByTime(301)})
    expect(document.querySelector('[data-component-updating]')).not.toBeNull()
@@ -120,21 +156,21 @@ describe('component refresh status',()=>{
    expect(document.querySelectorAll('[data-workbench-value-changed]')).toHaveLength(1)
    expect(document.querySelector('[data-workbench-value-changed]').closest('[data-research-node-id]').getAttribute('data-research-node-id')).toBe('a')
    expect(document.querySelector('iframe')).toBe(frame);expect(document.querySelector('input')).toBe(input);expect(input.value).toBe('保留筛选')
-   expect(document.querySelector('[role=status]').textContent).toBe('已更新')
+   expect(document.querySelector('[role=status]').textContent).toBe('来源未标注 · 已更新')
    expect(document.querySelector('[data-component-updating]')).toBeNull()
    expect(document.querySelector('[aria-busy]')).toBeNull()
    await react.act(async()=>{vi.advanceTimersByTime(1200)})
    expect(document.querySelector('[data-workbench-value-changed]')).toBe(null)
    await react.act(async()=>{vi.advanceTimersByTime(1200)})
-   expect(document.querySelector('[role=status]').textContent).toBe('每分钟')
+   expect(document.querySelector('[role=status]').textContent).toBe('来源未标注 · 每分钟')
    await react.act(async()=>store.publish('s',[row('a',3000,{status:'unchanged'}),row('b')]))
-   expect(document.querySelector('[role=status]').textContent).toBe('已检查 · 数据无变化')
+   expect(document.querySelector('[role=status]').textContent).toBe('来源未标注 · 已检查 · 数据无变化')
    expect(document.querySelector('[data-workbench-value-changed]')).toBeNull()
    await react.act(async()=>{vi.advanceTimersByTime(2401)})
-   expect(document.querySelector('[role=status]').textContent).toBe('每分钟')
+   expect(document.querySelector('[role=status]').textContent).toBe('来源未标注 · 每分钟')
    await react.act(async()=>store.publish('s',[row('a',2000,{status:'error'}),row('b')]))
    expect(document.querySelector('[data-workbench-value-changed]')).toBe(null)
-   expect(document.querySelector('[role=status]').textContent).toBe('更新失败 · 保留上次数据')
+   expect(document.querySelector('[role=status]').textContent).toBe('来源未标注 · 更新失败 · 保留上次数据')
    expect(document.querySelector('strong').textContent).toBe('101')
   }finally{await react.act(async()=>roots.forEach(root=>root.unmount()));vi.useRealTimers();vi.unstubAllGlobals();await window.happyDOM.close()}
  })

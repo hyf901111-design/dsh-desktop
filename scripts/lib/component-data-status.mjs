@@ -6,6 +6,28 @@ export function componentDataSourceNames(binding){
  const selected=binding?.sources?.find(source=>source.id===binding.sourceId)?.name
  return sources.length?sources:typeof selected==='string'&&selected.trim()?[selected.trim()]:[]
 }
+// Provenance belongs to the saved component, independently of its refresh job.
+// Only read inert metadata; never execute generated HTML or infer a provider.
+export function componentSavedProvenance(node){
+ const spec=node?.containerSpec||{},html=spec.html
+ let data=spec
+ if(typeof html==='string'){
+  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
+  if(encoded&&encoded.length<=512000){try{data=JSON.parse(encoded).data||spec}catch{}}
+ }
+ const label=value=>typeof value==='string'?value.trim():value&&typeof value==='object'?label(value.label||value.name||value.title||value.provider):''
+ const names=[...(Array.isArray(data.sources)?data.sources:[]),data.source].map(label).filter(Boolean)
+ const recorded=typeof data.note==='string'?data.note.match(/(?:^|\n)来源[：:]\s*([^，。；\n]+)/)?.[1]?.trim():''
+ if(!names.length&&recorded)names.push(recorded)
+ if(!names.length&&['news','reports'].includes(data.type)&&Array.isArray(data.items)){
+  for(const item of data.items){
+   const name=label(item.source)
+   if(name)names.push(name)
+   else{try{const url=new URL(item.url);if(['http:','https:'].includes(url.protocol))names.push(url.hostname)}catch{}}
+  }
+ }
+ return {names:[...new Set(names)],asOf:typeof data.asOf==='string'?data.asOf:''}
+}
 // One canvas subscription; publishing status never updates the canvas model or
 // replaces an iframe. Only the affected footer subscribes to its own snapshot.
 export function createComponentDataStatusStore(){
@@ -78,14 +100,15 @@ export function createComponentDataStatusMonitor({sessionId,bridge,store,isVisib
  return {refresh,dispose(){disposed=true;epoch++;unsubscribe?.();clearInterval(timer);store.clear(sessionId);void Promise.resolve(bridge.setVisible(sessionId,false)).catch(()=>{})}}
 }
 
-export function componentDataStatusView(binding,completion=null){
- const sourceNames=componentDataSourceNames(binding),source=[...new Set(sourceNames.map(name=>name.split(/\s+\/\s+/)[0].replace(/\s+MCP$/i,'').trim()))].join(' / ')
+export function componentDataStatusView(binding,completion=null,node=null){
+ const saved=componentSavedProvenance(node),boundNames=componentDataSourceNames(binding),sourceNames=boundNames.length?boundNames:saved.names,source=[...new Set(sourceNames.map(name=>name.split(/\s+\/\s+/)[0].replace(/\s+MCP$/i,'').trim()))].join(' / ')||'来源未标注'
  const valid=binding?.lastSuccess&&Number.isFinite(new Date(binding.lastSuccess).getTime())
  const time=valid?'刷新 '+new Date(binding.lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未刷新'
  const frequency=binding?.intervalMinutes===1?'每分钟':binding?.intervalMinutes>0?'每 '+binding.intervalMinutes+' 分钟':'仅手动'
  const phase=binding?.status==='refreshing'?'refreshing':binding?.status==='error'?'error':completion===binding?.status&&['success','unchanged'].includes(completion)?completion:null
- const detail=!binding?'未绑定数据源':phase==='refreshing'?'正在更新数据…':phase==='error'?'更新失败 · 保留上次数据':phase==='success'?'已更新':phase==='unchanged'?'已检查 · 数据无变化':binding.viewPaused?'离开看板已暂停':!binding.enabled&&binding.intervalMinutes>0?'已暂停':frequency
- return {time,detail,source,phase,title:(sourceNames.length?'数据源：'+sourceNames.join('；')+'\n':'')+(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
+ const detail=!binding?'静态快照':phase==='refreshing'?'正在更新数据…':phase==='error'?'更新失败 · 保留上次数据':phase==='success'?'已更新':phase==='unchanged'?'已检查 · 数据无变化':binding.viewPaused?'离开看板已暂停':!binding.enabled&&binding.intervalMinutes>0?'已暂停':frequency
+ const asOf=binding?.dataAsOf||saved.asOf
+ return {time,detail,source,phase,title:'数据来源：'+(sourceNames.length?sourceNames.join('；'):'来源未标注')+'\n'+(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(asOf?'\n数据时点：'+asOf:'')+'\n点击设置数据源与刷新频率'}
 }
 
 // Personal technical annotations survive a card unmount. Persist only its
@@ -176,7 +199,7 @@ export function componentRssStatusView(node){
  let model;try{model=JSON.parse(source)}catch{return null}
  if(model.templateId!=='rss'||!Array.isArray(model.data?.feeds))return null
  const feeds=model.data.feeds,times=feeds.map(f=>f.fetchedAt).filter(t=>typeof t==='string'&&Number.isFinite(new Date(t).getTime())).sort((a,b)=>new Date(b)-new Date(a)),lastSuccess=times[0]||null,failed=feeds.some(f=>f.error)
- return {lastSuccess,refreshable:feeds.some(feed=>typeof feed.url==='string'&&feed.url.trim()),time:lastSuccess?'读取 '+new Date(lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未读取',detail:!feeds.length?'尚未添加订阅':failed?'读取失败 · 保留上次条目':lastSuccess?'订阅 · 仅手动':'尚未读取订阅源',phase:failed?'error':null,title:feeds.map(f=>(f.title||f.url)+'：'+(f.error||'抓取 '+(f.fetchedAt||'尚未读取'))).join('\n')}
+ return {source:[...new Set(feeds.map(f=>f.title||f.url).filter(Boolean))].join(' / ')||'来源未标注',lastSuccess,refreshable:feeds.some(feed=>typeof feed.url==='string'&&feed.url.trim()),time:lastSuccess?'读取 '+new Date(lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未读取',detail:!feeds.length?'尚未添加订阅':failed?'读取失败 · 保留上次条目':lastSuccess?'订阅 · 仅手动':'尚未读取订阅源',phase:failed?'error':null,title:feeds.map(f=>(f.title||f.url)+'：'+(f.error||'抓取 '+(f.fetchedAt||'尚未读取'))).join('\n')}
 }
 
 export function ComponentDataStatusBar({sessionId,node,workbench=false}){
@@ -198,10 +221,10 @@ export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  const content=node.containerSpec?.html||JSON.stringify(node.containerSpec||{}),identity=node.containerSpec?.type==='html'?workbenchTemplateIdentity(content):node.containerSpec?.type+':'+node.containerSpec?.variant
  react.useLayoutEffect(()=>{const card=ref.current?.closest('[data-research-node-id]');if(workbench&&card){feedback.current=createComponentRefreshFeedback(card,{initialState:readPersonalChartView(node),onState:(state,revision)=>{if(typeof researchPersonalChartViewSinks!=='undefined')researchPersonalChartViewSinks.get(sessionId)?.(node.id,revision,state)}});feedback.current.update(binding,content,identity)}return()=>{feedback.current?.dispose();feedback.current=null}},[sessionId,node.id,workbench,node.containerSpec?.type==='html'])
  react.useLayoutEffect(()=>{feedback.current?.update(binding,content,identity)},[binding,content,identity])
- const rss=componentRssStatusView(node),view=rss||componentDataStatusView(binding,notice?.key===key?notice.status:null),shared=sherlockShared(sessionId),plain=Boolean(rss),lastSuccess=rss?rss.lastSuccess:binding?.lastSuccess
- const label=shared?'静态组件':(view.source?view.source+' · ':'')+view.detail
+ const rss=componentRssStatusView(node),view=rss||componentDataStatusView(binding,notice?.key===key?notice.status:null,node),shared=sherlockShared(sessionId),plain=Boolean(rss),lastSuccess=rss?rss.lastSuccess:binding?.lastSuccess
+ const label=(view.source||'来源未标注')+' · '+(shared?'静态组件':view.detail)
  if(['iframe','youtube'].includes(node.containerSpec?.type))return null;
- return react_jsx_runtime.jsxs(plain?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':label+'，'+view.time+(plain||shared?'':'，设置数据源与刷新频率'),...(!plain?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node,'settings',e.currentTarget)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:label})]}),react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time})]})
+ return react_jsx_runtime.jsxs(plain?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':label+'，'+view.time+(plain||shared?'':'，设置数据源与刷新频率'),...(!plain?{type:'button',title:shared?view.title+'\n共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node,'settings',e.currentTarget)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:label})]}),react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time})]})
 }
 
 export const componentDataStatusCss=workbenchRefreshCss+`
@@ -227,7 +250,7 @@ export const componentDataStatusCss=workbenchRefreshCss+`
 
 `
 
-export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,componentDataSourceNames,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
+export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,componentDataSourceNames,componentSavedProvenance,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
 
 export function patchComponentDataStatus(source){
  const replace=(a,b)=>{if(source.split(a).length!==2)throw Error('Component status anchor drifted: '+a.slice(0,80));source=source.replace(a,b)}
