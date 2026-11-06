@@ -26,6 +26,13 @@ describe('Figma cartesian templates',()=>{
    expect(chartDataIssue({...spec,colorBySign:'yes'})).toBeTruthy();
    expect(chartDataIssue({...spec,variant:'line'})).toBeTruthy();
  });
+ it('honors the explicit positive-green negative-red caption when the optional flag is omitted',()=>{
+   const spec=data('horizontal',{subtitle:'共享零轴 · 正绿负红',series:[{name:'净申购估算',values:[20,-10,0]}]});
+   const marks=cartesianChartSvg(spec).elements.find(e=>e.attributes['data-series']===0).children;
+   expect(marks.map(m=>m.attributes.fill)).toEqual(['var(--sherlock-market-positive)','var(--sherlock-market-negative)','var(--sherlock-muted)']);
+   const disabled=cartesianChartSvg({...spec,colorBySign:false}).elements.find(e=>e.attributes['data-series']===0).children;
+   expect(new Set(disabled.map(m=>m.attributes.fill)).size).toBe(1);
+ });
  it('keeps a real monthly comparison curve when a panel includes an optional chart syntax example',()=>{
    const panel={title:'近一月走势对比与相对沪深300强弱',type:'chart',size:'large',prompt:'取中际旭创(300308)、新易盛(300502)、工业富联(601138)及沪深300(000300)近一个月的日收盘价，统一归一化为近一月起点=100的累计涨跌幅对比曲线；并在附表中给出各标的近一月累计涨跌幅、相对沪深300超额收益（相对强弱），单位%。使用 financial_query 按确认后的代码取日线历史，注明来源与日期区间；普通柱状/折线用 chart 并可声明 chart.bar。数据取不到的标的明确标注缺失，不缩小研究范围。'};
    expect(requestedChartVariant(panel.title+'\n'+panel.prompt)).toBe('line');

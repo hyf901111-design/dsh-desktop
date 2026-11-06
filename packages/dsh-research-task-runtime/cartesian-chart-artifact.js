@@ -75,7 +75,8 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
       const band=(horizontal?ph:pw)/n*.7, thickness=band/(stacked?1:count), offset=stacked?0:barIndex*thickness;
       for(let i=0;i<n;i++) {
         const [a,b]=ranges[si][i], p=pos(a), q=pos(b), at=cat(i)-band/2+offset;
-        const fill=spec.colorBySign===true?`var(--sherlock-${b>0?'market-positive':b<0?'market-negative':'muted'})`:color(si);
+        const signColors=spec.colorBySign===true||spec.colorBySign===undefined&&['bar','horizontal','lollipop'].includes(kind)&&/正绿负红/u.test(spec.subtitle??'');
+        const fill=signColors?`var(--sherlock-${b>0?'market-positive':b<0?'market-negative':'muted'})`:color(si);
         if(type==='lollipop') {
           marks.push(node('line',{class:'plot-stem',x1:p,x2:q,y1:at+thickness/2,y2:at+thickness/2,stroke:fill,'stroke-width':2}));
           marks.push(node('circle',{'data-point':i,cx:q,cy:at+thickness/2,r:4,fill}));

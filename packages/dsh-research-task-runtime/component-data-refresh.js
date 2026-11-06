@@ -9,7 +9,7 @@ import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
 import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
-import {normalizeKeyedTableProjection} from './table-projection.js'
+import {normalizeKeyedTableProjection,normalizeIdentityTableMapping} from './table-projection.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
@@ -194,6 +194,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentProjection(mapping,responses,now=new Date(),sourceRecords=[]){
+ mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
  const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
  const qualityAlias=mapping?.type==='kpi'&&Object.hasOwn(mapping,'missing')

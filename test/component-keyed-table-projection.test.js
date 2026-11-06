@@ -150,3 +150,29 @@ it('does not let copied good HTML replace the failed financial projection proof'
  const bare=JSON.parse(completed.task.finalOutput);bare.html=bare.html.replace(/<script id="sherlock-template-data" type="application\/json">[^<]*<\/script>/gu,'')
  const {task}=await run(bad,[bad.draft,JSON.stringify(bare)]);expect(task.state).toBe('failed');expect(task.finalOutput).toBeUndefined()
 })
+
+// Captured ETF generator emitted {code:"code", name:"name", ...} inside $map.
+it('expands a fully declared identity row projection into observed field selectors',()=>{
+ const f=fixture();f.mapping.rows.$map=Object.fromEntries(f.fields.map(key=>[key,key]));
+ const before=JSON.stringify(f.draft),result=resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(captured.createdAt));
+ expect(result.data.rows).toEqual(f.response.records.map(row=>f.fields.map(key=>String(row[key]))));
+ expect(result.recipe.mapping.rows.$map).toEqual(f.fields.map(path));
+ const updated=structuredClone(f.response);updated.records[0].price=123.45;
+ expect(materializeComponentMapping(result.recipe.mapping,{q:updated}).rows[0][f.fields.indexOf('price')]).toBe('123.45');
+ expect(JSON.stringify(f.draft)).toBe(before);
+})
+it('does not accept a field-name projection when a declared field is absent',()=>{
+ const f=fixture();f.mapping.rows.$map=Object.fromEntries(f.fields.map(key=>[key,key]));delete f.response.records[0].price;
+ expect(()=>resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(captured.createdAt))).toThrow(/price/);
+})
+it('normalizes only the absent data envelope of an observed builtin public quote response',()=>{
+ const f=fixture();expect(f.records[0].tool).toBe('public_data_query');
+ f.mapping.rows.$each='data.records';
+ const result=resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(captured.createdAt));
+ expect(result.recipe.mapping.rows.$each).toBe('records');
+ expect(result.data.rows).toEqual(f.response.records.map(row=>f.fields.map(key=>String(row[key]))));
+ const ambiguous=structuredClone(f.records);ambiguous[0].response.data={records:[]};
+ expect(()=>resolveBoundComponent(JSON.stringify(f.draft),ambiguous,new Date(captured.createdAt))).toThrow();
+ const other=structuredClone(f);other.records[0].tool='ework__t_abc123';other.draft.requests[0].tool=other.records[0].tool;
+ expect(()=>resolveBoundComponent(JSON.stringify(other.draft),other.records,new Date(captured.createdAt))).toThrow(/列表字段/);
+})

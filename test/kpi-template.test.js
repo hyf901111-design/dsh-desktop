@@ -51,3 +51,11 @@ it('完整口径展开状态重建后恢复，只读查看不会写入持久状�
  const restored=fixture(f.state());expect(restored.d.querySelector('.indicator-tile').open).toBe(true);expect(restored.d.querySelector('.indicator-fields').textContent).toContain('原口径，不将零视为缺失');expect(restored.config().reduce(restored.state(),{kind:'details',index:99,open:true})).toBe(restored.state());
  const readonly=fixture(f.state(),true),rt=readonly.d.querySelector('.indicator-tile');rt.open=false;rt.dispatchEvent(new readonly.w.Event('toggle'));expect(readonly.state()).toEqual(f.state());expect(readonly.d.querySelector('#indicator-refresh').disabled).toBe(true);for(const item of [f,restored,readonly])await item.w.happyDOM.abort();
 })
+
+it('keeps long narrative values compact in the summary with full text available on expansion',()=>{
+ const value='份额变动按期末净值估算金额，不是逐日净申购合计或官方资金流。'.repeat(5),s={...source,items:[{label:'估算口径',value}]};
+ const out=JSON.parse(acceptArtifactOutput(JSON.stringify(s))),w=new Window();w.document.write(out.html);
+ expect(w.document.querySelector('.indicator-value-text')?.textContent).toBe(value);
+ expect(w.document.querySelector('.indicator-fields').textContent).toContain(value);
+ expect(readTemplateModel(out).data).toEqual(s);w.happyDOM.abort();
+})

@@ -61,3 +61,16 @@ export function normalizeKeyedTableProjection(data,mapping){
  if(mapping!==undefined&&rows===undefined)return unchanged
  return {data:{...data,columns:data.columns.map(column=>column.label),rows:data.rows.map(row=>positional?[...row]:keys.map(key=>row[key]))},mapping:mapping===undefined?undefined:{...mapping,columns:data.columns.map(column=>column.label),rows}}
 }
+
+// Some generators use an identity key map ({code:"code"}) as field shorthand.
+// Accept only a complete keyed column declaration and observed scalar fields.
+// Persist real selectors so refresh cannot later render literal field names.
+export function normalizeIdentityTableMapping(mapping,select){
+ if(!(mapping?.type==='table'||mapping?.type==='market'&&['table','fund-holdings'].includes(mapping.variant))||!Array.isArray(mapping.columns))return mapping
+ const keys=mapping.columns.map(c=>object(c)?c.key:undefined),rows=mapping.rows
+ if(!keys.length||keys.some(k=>typeof k!=='string'||!/^\w+$/.test(k)||forbidden.has(k))||new Set(keys).size!==keys.length||!object(rows)||rows.$each===undefined||!sameKeys(rows.$map,keys)||!keys.every(k=>rows.$map[k]===k))return mapping
+ const observed=select({...rows,$map:{$path:''}})
+ if(!Array.isArray(observed))throw Error('表格字段映射缺少真实列表')
+ for(const key of keys)if(observed.some(row=>!object(row)||!Object.hasOwn(row,key)||!scalar(row[key])))throw Error('接口缺少可用表格字段：'+key)
+ return {...mapping,rows:{...rows,$map:Object.fromEntries(keys.map(key=>[key,{$path:key}]))}}
+}
