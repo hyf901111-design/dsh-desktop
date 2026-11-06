@@ -3,17 +3,23 @@ import {createNotesActivityStore} from '../scripts/lib/notes-activity.mjs'
 import React from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {readFile} from 'node:fs/promises'
+import {createRequire} from 'node:module'
 import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 import {patchFigmaFinalConversation} from '../scripts/lib/patch-figma-final-shell.mjs'
 import {capabilityReceiptText} from '../packages/dsh-research-task-runtime/client-capabilities.js'
+const require=createRequire(import.meta.url)
+const {stripConversationResponseHistory}=require('../scripts/lib/conversation-response-history.mjs')
 
 // Full production fixture preparation is shared, but each test still executes
 // its own real rebuild/migration. Strings are immutable; no test can mutate the
 // installed source used by another case. Keep the default finite hook timeout.
 let activityPatchFixture
 beforeAll(async()=>{
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- activityPatchFixture=Object.freeze({source,installed:patchNotesActivity(patchFigmaFinalConversation(source))})
+ const production=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ // The later history layer extends the shared disclosure condition. Unwind it
+ // with the production inverse before exercising the older Notes migrations.
+ const source=stripConversationResponseHistory(production)
+ activityPatchFixture=Object.freeze({source,production,installed:patchNotesActivity(patchFigmaFinalConversation(source))})
 })
 const conciseProgress='/* ework:notes-concise-progress:v1 */ const expandable = entry.noteTask ? false : !!entry.canvasTask || detailGroups.length > 0;'
 const originalProgress='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
@@ -130,13 +136,16 @@ it('drops internal reasoning only from the Notes presentation store without chan
 })
 
 it('keeps concise Notes progress and canvas/native detail bodies during a current reinstall',async()=>{
- const {installed}=activityPatchFixture
+ const {installed,production}=activityPatchFixture
  expect(installed.includes('/* ework:notes-concise-progress:v1 */')).toBe(true)
  expect(installed.includes('const expandable = entry.noteTask ? false : !!entry.canvasTask || detailGroups.length > 0;')).toBe(true)
  expect(installed.includes('text:entry.noteTask.reasoning')).toBe(false)
  expect(installed.includes('row.outputChars,row.reasoning?.length')).toBe(false)
  expect(installed.includes('open && entry.canvasTask && react.createElement')).toBe(true)
  expect(patchNotesActivity(installed)).toBe(installed)
+ const rebuilt=patchNotesActivity(patchFigmaFinalConversation(production))
+ expect(stripConversationResponseHistory(rebuilt)===installed).toBe(true)
+ expect(patchNotesActivity(rebuilt)===rebuilt).toBe(true)
 })
 
 it('installs concise Notes progress from a real disclosure-free production-shell baseline',async()=>{
