@@ -64,6 +64,7 @@ it.each([800,720])('keeps notes, header and research toolbar beside the expanded
       if(await page.locator('[data-dsh-frame]').getAttribute('data-sidebar-collapsed'))await page.locator('.hHd-Xa_toggle').click()
       await page.waitForTimeout(80)
       let result=await page.evaluate(()=>window.__narrow.snapshot());measurements.push({width,dark,view,...result})
+      expect(await page.locator('.pI_x6G_sidebarCol').evaluate(node=>getComputedStyle(node).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
       expect(result.pane.left).toBeGreaterThanOrEqual(result.sidebar.right)
       expect(result.header.left).toBeGreaterThanOrEqual(result.sidebar.right)
       expect(result.pane.right).toBeLessThanOrEqual(width)
