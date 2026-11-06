@@ -43,7 +43,9 @@ export function normalizeCryptoTickerResult(request, outcome) {
   for (const field of ['price', 'bid', 'ask', 'high24h', 'low24h', 'volume24h']) {
     const value = record?.[field], suffix = unit(field === 'volume24h' ? 'volume24h' : 'price')
     display[field] = typeof value === 'number' && Number.isFinite(value)
-      ? value.toFixed(field === 'volume24h' ? 4 : 2) + (suffix ? ` ${suffix}` : `（${missing}单位）`)
+      ? (field !== 'volume24h' && value !== 0 && Math.abs(value) < 1
+        ? (Math.abs(value) < 1e-8 ? value.toExponential(5).replace(/\.?0+e/u, 'e') : value.toFixed(8).replace(/0+$/u, '').replace(/\.$/u, ''))
+        : value.toFixed(field === 'volume24h' ? 4 : 2)) + (suffix ? ` ${suffix}` : `（${missing}单位）`)
       : field === 'price' && missingDetail ? '本次未取得' : missing
   }
   return { ...response, ...(missingDetail ? { missingDetail } : {}), display }

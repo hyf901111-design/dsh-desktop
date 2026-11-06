@@ -14,10 +14,10 @@ describe('workbench execution policy', () => {
     registerWorkbenchExecutionPolicy(ctx)
     const text = request => prompt.text({ agent: { session: session(request) } })
     expect(text('使用免费源创建A股行情工作台，每分钟刷新')).toContain('publicData')
-    expect(text('使用免费源创建A股行情工作台，每分钟刷新').length).toBeLessThan(2500)
-    for (const request of ['禁止联网创建行情工作台', '使用通联MCP创建股票工作台', '创建股票财报与宏观工作台']) expect(text(request)).not.toContain('免费源直通')
+    expect(text('使用免费源创建A股行情工作台，每分钟刷新').length).toBeLessThan(3400)
+    for (const request of ['禁止联网创建行情工作台', '使用通联MCP创建股票工作台', '使用Tushare创建股票行情工作台', '创建股票财报与宏观工作台']) expect(text(request)).not.toContain('【已适配来源快捷路径】')
     ctx.tools.schemas = () => []
-    expect(text('创建免费股票行情工作台')).not.toContain('免费源直通')
+    expect(text('创建免费股票行情工作台')).not.toContain('【已适配来源快捷路径】')
   })
   it('keeps binding work open for accepted inline snapshots when the human requested minute updates', () => {
     let prompt
@@ -66,8 +66,8 @@ describe('workbench execution policy', () => {
   })
   it('recognizes human creation intent without changing coding questions or tool output', () => {
     expect(workbenchCreationRequest(session('使用通联mcp获取数据，创建一个股票研究工作台'))).not.toBeNull()
-    for(const text of ['帮我做一个A股宽基指数观察台，比较三条走势','做一个债券监控台'])expect(workbenchCreationRequest(session(text))?.target).toBe('workbench');
-    for(const text of ['为什么观察台会卡顿','不要创建监控台','修改当前观察台的标题'])expect(workbenchCreationRequest(session(text))).toBeNull();
+    for(const text of ['帮我做一个A股宽基指数观察台，比较三条走势','做一个债券监控台','创建一个主流加密货币行情监控面板','搭建ETF运营面板','帮我做个股票分析面板'])expect(workbenchCreationRequest(session(text))?.target).toBe('workbench');
+    for(const text of ['为什么观察台会卡顿','不要创建监控台','修改当前观察台的标题','为什么监控面板生成很慢','不要创建行情监控面板','修改当前分析面板的标题'])expect(workbenchCreationRequest(session(text))).toBeNull();
     for (const text of ['为什么生成工作台这么慢', '不要生成工作台', '修复组件生成逻辑', '请创建登录界面']) expect(workbenchCreationRequest(session(text))).toBeNull()
     const injected = session('创建工作台'); injected.events[0].data.source.kind = 'tool'
     expect(workbenchCreationRequest(injected)).toBeNull()

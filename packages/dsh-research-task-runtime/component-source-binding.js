@@ -1,3 +1,4 @@
+import {isCryptoTickerRequest} from './crypto-source-results.js'
 import {evidenceWindows,usesHumanSourceScope,applicableExplicitScope} from './workbench-explicit-scope.js'
 import {readTemplateModel} from './component-template-registry.js'
 import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
@@ -664,7 +665,10 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   mapping=projection.mapping
   const materialized=projection.data
   const data=filterScopedNewsArtifact(materialized,observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
-  const readable=componentReadableSnapshot(data,mapping,responses,observed,now)
+  // Fixed ticker recipes already render partial outages explicitly and can
+  // recover on refresh. Do not downgrade their bounded template to static HTML.
+  const partialTicker=contract.type==='market'&&['metrics','table'].includes(contract.variant)&&requests.every(isCryptoTickerRequest)&&!templateDataIssue(data)
+  const readable=partialTicker?null:componentReadableSnapshot(data,mapping,responses,observed,now)
   const unavailable=Boolean(readable)&&readableSnapshotUnavailable(data)
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue&&!unavailable)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})

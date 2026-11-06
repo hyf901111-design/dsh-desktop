@@ -135,9 +135,12 @@ describe('builtin free data sources', () => {
   it('keeps model tools read-only and validates JSON and operation', async () => {
     const api = { catalog, queryClient: { query: vi.fn(async () => ({ records: [] })) } }, tool = createPublicDataTool({ moduleLoader: async () => api }); const args = { operation: 'query', source: 'met-weather', parameters_json: '{"lat":31,"lon":121}' }; await tool.execute(args, {}); expect(api.queryClient.query).toHaveBeenCalledWith({ source: 'met-weather', parameters: { lat: 31, lon: 121 } }, undefined); await expect(tool.execute({ ...args, parameters_json: 'bad' }, {})).rejects.toThrow('JSON'); expect(tool.name).toBe('public_data_query');
   });
-  it('prefers free sources by default but keeps explicitly selected plugin sources and offline evidence', () => {
+  it('selects sources by user needs while keeping explicit plugin sources and offline evidence', () => {
     const schemas = [{ name: 'public_data_query' }, { name: 'ework__call', description: 'DataYes 数据' }]; expect(preferredComponentSourceTools(schemas, '股票最新行情')).toEqual([]); expect(preferredComponentSourceTools(schemas, '使用通联查询股票最新行情')).toHaveLength(1);
-    expect(buildResearchTaskPrompt(request('请联网生成最新天气预报组件'))).toContain('先使用当前可见的 public_data_query');
+    const prompt=buildResearchTaskPrompt(request('请联网生成最新天气预报组件'));
+    expect(prompt).toContain('按所需字段、覆盖范围、时间口径、更新频率及实际可用性');
+    expect(prompt).toContain('不以是否免费固定排序');
+    expect(prompt).toContain('不向用户宣讲');
     const offline = buildResearchTaskPrompt(request('不要联网，只用给定记录制作表格')); expect(offline).not.toContain('【EWork 内置免费数据源】');
     let registration; registerComponentSourceGuidance({ systemPrompt: { context: v => { registration = v; } }, tools: { schemas: () => schemas } }); expect(registration.name).toBe('sherlock:component-sources'); expect(freeDataInstruction()).toContain('不能称实时');
     expect(publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'public_data_query', arguments: { source: 'met-weather' } } })).toMatchObject({ tool: '读取免费数据源', detail: 'met-weather' });

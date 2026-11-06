@@ -26,6 +26,32 @@ function clientFixture() {
 }
 
 describe('Kraken component recipes', () => {
+  it.each([
+    ['SOLUSD','SOLUSD','SOL'], ['XRPUSD','XXRPZUSD','XRP'],
+    ['DOGEUSD','XDGUSD','DOGE'], ['ADAUSD','ADAUSD','ADA'],
+    ['LTCUSD','XLTCZUSD','LTC'], ['DOTUSD','DOTUSD','DOT']
+  ])('preserves verified currency units for %s in quotes and candles', (pair, key, base) => {
+    const result=prepareRequest('kraken-ticker',{pair}).normalize(tickerBody(key,0.073456));
+    expect(result.units).toMatchObject({price:'USD',volume24h:base});
+    const candle=prepareRequest('kraken-candles',{pair,interval:1440,limit:1}).normalize({error:[],result:{[key]:[[1700000000,'1','2','0.5','1.5','1','10',2]],last:1700000000}});
+    expect(candle.units).toMatchObject({price:'USD',volume:base});
+    const request={tool:'public_data_query',args:{operation:'query',source:'kraken-ticker',parameters_json:JSON.stringify({pair})}};
+    const formatted=normalizeCryptoTickerResult(request,{status:'fulfilled',value:{sourceId:'kraken-ticker',...result}});
+    expect(formatted.display.assetLabel).toBe(base);
+    expect(formatted.display.price).toBe('0.073456 USD');
+  });
+  it('does not invent currency units for an unrecognized pair or accept a mismatched known pair',()=>{
+    const result=prepareRequest('kraken-ticker',{pair:'UNKNOWNUSD'}).normalize(tickerBody('UNKNOWNUSD',1));
+    expect(result.units.price).toBeUndefined();
+    expect(result.units.volume24h).toBeUndefined();
+    expect(()=>prepareRequest('kraken-ticker',{pair:'SOLUSD'}).normalize(tickerBody('XETHZUSD',1))).toThrow();
+  });
+  it.each([[1e-10,'1e-10 USD'],[0,'0.00 USD'],[0.999999999,'1 USD'],[0.00001234,'0.00001234 USD']])('keeps small quotes legible without rounding %s to zero', (price, expected)=>{
+    const request={tool:'public_data_query',args:{operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"DOGEUSD"}'}};
+    const value={sourceId:'kraken-ticker',...prepareRequest('kraken-ticker',{pair:'DOGEUSD'}).normalize(tickerBody('XDGUSD',price))};
+    expect(normalizeCryptoTickerResult(request,{status:'fulfilled',value}).display.price).toBe(expected);
+  });
+
   it('canonicalizes misplaced candle metadata by source schema, retaining both pairs and the actual refresh policy', () => {
     const original = panel()
     original.publicData.requests.push({ source: 'kraken-ticker', parameters_json: JSON.stringify({ pair: 'ETHUSD', interval: 1, limit: 60 }) })

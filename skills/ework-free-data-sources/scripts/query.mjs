@@ -73,7 +73,19 @@ export function prepareRequest(sourceId, p = {}) {
         ? `日内涨跌幅 ${changePercentToday.toFixed(2)}%（UTC 00:00 起）` : '日内涨跌幅：来源未提供有效UTC开盘价';
       const records = candle ? values.slice(-limit).map(r => ({ time: new Date(r[0] * 1000).toISOString(), open: num(r[1]), high: num(r[2]), low: num(r[3]), close: num(r[4]), volume: num(r[6]), trades: num(r[7]), pair: key })) : [{ pair: key, price, bid: num(values.b?.[0]), ask: num(values.a?.[0]), volume24h: num(values.v?.[1]), high24h: num(values.h?.[1]), low24h: num(values.l?.[1]), openToday, changePercentToday: Number.isFinite(changePercentToday) ? changePercentToday : null, changeTodayDetail, time: null }];
       if (!records.length || (candle ? records.some(r => r.close === null) : records[0].price === null)) throw Error('no valid price');
-      const quoteUnit = { XBTUSD: 'USD', ETHUSD: 'USD', XBTEUR: 'EUR', ETHEUR: 'EUR', XBTUSDT: 'USDT', ETHUSDT: 'USDT' }[pair] ?? 'pair报价货币（来源未提供独立币种）', baseUnit = pair.startsWith('XBT') ? 'BTC' : pair.startsWith('ETH') ? 'ETH' : 'pair基础资产（来源未提供独立币种）';
+      // Verified AssetPairs identities, not a suffix guess. Unknown pairs keep
+      // their native identity with missing units; no prose is used as a currency.
+      const identities = {
+        XBTUSD:['XXBTZUSD','BTC','USD'], ETHUSD:['XETHZUSD','ETH','USD'],
+        XBTEUR:['XXBTZEUR','BTC','EUR'], ETHEUR:['XETHZEUR','ETH','EUR'],
+        XBTUSDT:['XBTUSDT','BTC','USDT'], ETHUSDT:['ETHUSDT','ETH','USDT'],
+        SOLUSD:['SOLUSD','SOL','USD'], XRPUSD:['XXRPZUSD','XRP','USD'],
+        DOGEUSD:['XDGUSD','DOGE','USD'], XDGUSD:['XDGUSD','DOGE','USD'],
+        ADAUSD:['ADAUSD','ADA','USD'], LTCUSD:['XLTCZUSD','LTC','USD'], DOTUSD:['DOTUSD','DOT','USD']
+      };
+      const identity = identities[pair] ?? Object.values(identities).find(value=>value[0]===pair);
+      if(identity && key!==identity[0] && key!==pair) throw Error('unexpected Kraken pair');
+      const [,baseUnit,quoteUnit] = identity ?? [];
       return { records, units: { price: quoteUnit, open: quoteUnit, high: quoteUnit, low: quoteUnit, close: quoteUnit, volume: baseUnit, volume24h: baseUnit, ...(!candle ? { openToday: quoteUnit, changePercentToday: '%' } : {}) }, dataTime: candle ? latest(records) : null, ...(candle ? { granularitySeconds: interval * 60, note: '最后一根可能尚未收盘' } : { timeMeaning: '报价时点未提供；receivedAt仅为获取时间；openToday为UTC 00:00开盘价，changePercentToday=(price-openToday)/openToday×100，不是滚动24h涨跌幅' }) };
     };
   } else if (sourceId.startsWith('coinbase-')) {
