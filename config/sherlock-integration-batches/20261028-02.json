@@ -28611,6 +28611,87 @@
         ],
         "generatedAt": "2026-11-06T01:32:13.762601+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复耗时前状态标题消失",
+        "branch": "codex/feat/conversation-status-visible-20261106",
+        "baseCommit": "e87b8d2155946c8536de45695f3487d1f6a321ef",
+        "tipCommit": "0e2f4b720f436acfa482522716cc9447753d255a",
+        "commits": [
+          {
+            "commit": "0e2f4b720f436acfa482522716cc9447753d255a",
+            "parents": [
+              "e87b8d2155946c8536de45695f3487d1f6a321ef"
+            ],
+            "subject": "修复：保留不可展开执行阶段的状态标题"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "design-qa.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-status-presentation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/conversation-live-activity-v2.json"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "14 项直接相关检查通过。新增中英文回归在修复前均复现标题不可见；修复后覆盖短回应前、普通问答完成、无详情按钮禁用、完整耗时行及 v2 到 v3 精确迁移。",
+            "verifiedCommit": "0e2f4b720f436acfa482522716cc9447753d255a",
+            "completedAt": "2026-11-06T01:56:35.304802+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产会话组件渲染截图已查看，短回应前与完成历史均显示完整状态标题及耗时。实际签名包待统一集成复验。"
+        },
+        "acceptanceCriteria": [
+          "不可展开的阶段也保留状态标题，不出现孤立的“· 用时”",
+          "展开箭头仍仅在存在真实记录时展示，活动流光和结束静态状态保持正确"
+        ],
+        "risks": [
+          "只改变状态标题可见性；不改变任务进度、真实时间或记录。",
+          "历史 v2 补丁以冻结定义精确校验后升级 v3。",
+          "原生包须与演示入口取消修复一起集成构建。"
+        ],
+        "generatedAt": "2026-11-06T01:56:35.304802+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -30166,6 +30247,19 @@
         "run",
         "test/task-continuation-upgrade.test.js",
         "test/profile-runtime-patches.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
         "--maxWorkers=1",
         "--fileParallelism=false",
         "--reporter=dot"
