@@ -1,6 +1,8 @@
 import {it,expect} from 'vitest'
 import {readFile} from 'node:fs/promises'
-import {conversationLiveActivity,patchConversationLiveActivity,stripConversationLiveActivity} from '../scripts/lib/conversation-live-activity.mjs'
+import {createRequire} from 'node:module'
+// Strict installation bytes must use Node's untransformed function source.
+const {conversationLiveActivity,patchConversationLiveActivity,stripConversationLiveActivity}=createRequire(import.meta.url)('../scripts/lib/conversation-live-activity.mjs')
 const tool=(name,done=false,turn=2)=>({kind:'tool-call',location:{turn:{turn}},data:{root:done?{kind:'tool-call',call:{name}}:{name}}})
 const activity=(nodes=[],rest={})=>conversationLiveActivity({running:true,runningTurn:2,order:nodes.map((_,i)=>i),nodeStore:new Map(nodes.map((n,i)=>[i,n])),labelForNode:n=>'Working: '+n.data.root.name,...rest})
 it('installs one reversible activity footer on both native conversation hosts',async()=>{

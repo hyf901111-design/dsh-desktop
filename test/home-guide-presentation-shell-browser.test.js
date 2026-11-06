@@ -203,11 +203,15 @@ for(const kind of ['ppt','report'])it('keeps the owned '+kind+' entry free of st
 
 for(const kind of ['ppt','report'])it('suppresses actual native composer tooltips during '+kind+' playback without leaving an orphan after release',async()=>{
  const f=await fixture({width:1000,height:900,hero:false}),{page}=f;try{
-  const send=page.locator('button.uV2eYG_primary');await send.focus();await page.waitForSelector('[role="tooltip"]')
+  const send=page.locator('button.uV2eYG_primary');await send.focus();await page.getByRole('tooltip').waitFor({timeout:3000})
   await page.evaluate(kind=>window.shellProbe.start(kind),kind);await expect.poll(()=>page.locator('[role="tooltip"]').count()).toBe(0)
   await send.hover();await page.waitForTimeout(650);expect(await page.locator('[role="tooltip"]').count()).toBe(0)
   await send.click();await page.locator('textarea').fill('');await send.focus();await page.waitForTimeout(650);expect(await page.locator('[role="tooltip"]').count()).toBe(0)
   await page.mouse.move(1300,30);await page.evaluate(()=>window.shellProbe.close());await page.waitForTimeout(650);expect(await page.locator('[role="tooltip"]').count()).toBe(0)
-  await send.hover();await page.waitForSelector('[role="tooltip"]');expect(f.errors).toEqual([])
+  // The previous step cleared the draft: the disabled Send button cannot
+  // receive React hover events. Restore an actionable draft before checking
+  // that the normal tooltip returns after tutorial suppression ends.
+  expect(await send.isEnabled()).toBe(false);await page.locator('textarea').fill('继续整理核验记录');expect(await send.isEnabled()).toBe(true)
+  await send.hover();await page.getByRole('tooltip').waitFor({timeout:3000});expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
