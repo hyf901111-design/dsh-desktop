@@ -2,7 +2,7 @@ import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {Script} from 'node:vm'
 import {patchCanvasUseClient} from '../scripts/lib/canvas-use-client.mjs'
-import {createAssistantRevealLedger,patchAssistantReveal} from '../scripts/lib/assistant-reveal.mjs'
+import {createAssistantRevealLedger,patchAssistantReveal,assistantRevealScrollTop} from '../scripts/lib/assistant-reveal.mjs'
 import {createNotesActivityStore,patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 const node=(key,seq,status='settled')=>({key,kind:'assistant-step',anchorSeq:seq,data:{status}})
 it('baselines native history and older pages, while distinguishing new fast results and live fragments per session',()=>{
@@ -30,7 +30,7 @@ it('patches the real keyed assistant renderer and Notes terminal props idempoten
  expect(next).not.toContain('return messageId === void 0 ? content :');expect(next).toContain('streaming:false,reveal,t');expect(next).toContain('eworkAssistantRevealLedger.observe(useSession,openState,order,nodeStore)')
 })
 it('refreshes an already patched runtime helper without duplicating its native wiring',()=>{
- const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchAssistantReveal(source),stale=next.replace('const visible=()=>doc.visibilityState', 'const visible=()=>false&&doc.visibilityState/* previous packaged helper */')
+ const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchAssistantReveal(source),stale=next.replace(assistantRevealScrollTop.toString(), 'function assistantRevealScrollTop(el){return 0 /* previous packaged helper */}')
  expect(stale).not.toBe(next);expect(patchAssistantReveal(stale)).toBe(next);expect(patchAssistantReveal(next)).toBe(next)
 })
 it('upgrades an already installed v1 reply seat to live progress and synchronous view revocation',()=>{
