@@ -28770,31 +28770,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复分段回复渐显与阅读留白导致的滚动跳动",
+        "featureName": "渐显检查匹配状态首行下的真实回复节点",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "c73e3919bfd593c545522b1d1a2f67997a1dacbe",
-        "tipCommit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
+        "baseCommit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
+        "tipCommit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
         "commits": [
           {
-            "commit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
+            "commit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
             "parents": [
-              "c73e3919bfd593c545522b1d1a2f67997a1dacbe"
+              "fac13b1e4b423980490f88efc1ead93c3aab5af6"
             ],
-            "subject": "修复分段回复渐显与底部留白引起的滚动跳动"
+            "subject": "更新渐显检查以识别状态首行下的真实回复节点"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/assistant-reveal.mjs"
-          },
-          {
-            "status": "M",
             "path": "test/assistant-reveal-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/assistant-reveal.test.js"
           }
         ],
         "checks": [
@@ -28803,59 +28795,30 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/assistant-reveal.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "7 项补丁重装与状态基线检查通过",
-            "verifiedCommit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
-            "completedAt": "2026-11-06T05:08:30.346144+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
               "test/assistant-reveal-browser.test.js",
               "-t",
-              "keeps streamed paragraphs stable|real native follower|settles a following reply|both actual native and Research followers|browser scroll anchoring"
+              "actual public reply beneath|genuinely new final suffix"
             ],
             "outcome": "passed",
-            "summary": "6 项分段渐显、滚动跟随、手动阅读、研究侧栏检查通过",
-            "verifiedCommit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
-            "completedAt": "2026-11-06T05:08:30.346144+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "fac13b1e4b423980490f88efc1ead93c3aab5af6",
-            "completedAt": "2026-11-06T05:08:30.346144+00:00",
+            "summary": "3 项旧夹具检查已改为真实回复完成节点，渐显与追加内容断言保持并通过；同模块其余 56 项此前通过。",
+            "verifiedCommit": "5fc40c5096cdcaaa200f5ed870d7d4833c1e885d",
+            "completedAt": "2026-11-06T05:14:37.481658+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产 ChatView、真实 Markdown 渐显及全部源码 CSS 复现并逐帧采样；修复后输出期间无反向滚动写入，分批完成不再跳过整段底部留白。保留手动阅读。该证据不等同于用户原生现场验收。"
+          "summary": "仅更新同一浏览器测试文件中的两个断言位置及用例标题，无产品源码变化。流式滚动修复沿用 fac13b1e4 的生产渲染器证据。"
         },
         "acceptanceCriteria": [
-          "多段真实 Markdown 流式追加不向上回拉滚动位置",
-          "空换行范围不会触发滚动至顶部",
-          "输出与结束使用一致的阅读留白",
-          "手动上滑后不强制跟随输出"
+          "状态栏位于回复之前时，检查实际回复节点而非假定 flow[0] 为回复",
+          "保留连续渐显和新后缀的透明度断言"
         ],
         "risks": [
-          "真实任务结束时执行状态行收起仍有正常的单行布局变化；生产复现最后段落移动 13px，非流式反复跳动",
-          "最终本地包和用户验收尚待完成，不做公开发布"
+          "不改变正在构建的 926d1440 产品源码",
+          "本地包仍待启动核验和用户验收"
         ],
-        "generatedAt": "2026-11-06T05:08:30.346144+00:00"
+        "generatedAt": "2026-11-06T05:14:37.481658+00:00"
       }
     }
   ],
