@@ -73,6 +73,24 @@ it('waits for a slow preparation before visibly pressing the real Notes tab, usi
 },20000)
 
 async function beginExplore(page,index){await page.getByRole('button',{name:'探索',exact:true}).click();await page.locator('.odyssey-explore-content').evaluate(node=>Promise.all(node.getAnimations().filter(animation=>animation.effect?.getTiming().iterations!==Infinity).map(animation=>animation.finished)));await page.locator('.odyssey-explore-pages button').nth(index).click();await expect.poll(()=>page.locator('.odyssey-explore-showcase').getAttribute('data-case')).toBe(String(index));await expect.poll(()=>page.locator('.odyssey-explore-showcase [data-odyssey-operations-case-blending]').count()).toBe(0);await page.locator('.odyssey-explore-example').click()}
+it('opens a Notes demo from a conversation after trusted Chinese IME input',async()=>{
+ const f=await fixture({explore:true}),{page}=f;try{
+  await page.evaluate(()=>{window.entryProbe.imeEvents=[];for(const type of ['compositionstart','compositionend'])document.addEventListener(type,event=>window.entryProbe.imeEvents.push({type:event.type,trusted:event.isTrusted}),true)})
+  await page.locator('textarea').first().focus()
+  const cdp=await f.context.newCDPSession(page)
+  await cdp.send('Input.imeSetComposition',{text:'你好',selectionStart:2,selectionEnd:2})
+  await cdp.send('Input.insertText',{text:'你好'})
+  const draft=await page.evaluate(()=>window.entryProbe.shellFor('source').snapshot.draft)
+  expect(draft).toContain('你好')
+  await beginExplore(page,1);await page.locator('[data-home-guide] .bn-editor').waitFor({timeout:10000})
+  // Chromium's CDP commit can report compositionend as untrusted. The native
+  // start plus focus/committed-input lifecycle must still release the owner.
+  expect(await page.evaluate(()=>window.entryProbe.imeEvents)).toEqual([{type:'compositionstart',trusted:true},expect.objectContaining({type:'compositionend'})])
+  expect(await page.evaluate(()=>window.entryProbe.sessions.list.getSnapshot().current)).toBe('example-note')
+  expect(await page.evaluate(()=>window.entryProbe.shellFor('source').snapshot.draft)).toBe(draft)
+  expect(await page.evaluate(()=>window.entryProbe.extraBlank??0)).toBe(0);expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)
 it('keeps Research intact until the Notes demonstration actually opens',async()=>{
  const f=await fixture({explore:true,sourceView:'research',collapsedSidebar:true}),{page}=f;
  try{

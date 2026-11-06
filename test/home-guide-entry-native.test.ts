@@ -76,8 +76,17 @@ it('rejects a selected subagent source instead of reading its parent or another 
  await expect(f.client('ppt')).rejects.toThrow();expect(f.requests.filter(row=>row[0]==='create')).toEqual([])
 })
 it('refuses an already active native IME composition before arming a run',async()=>{
- const f=await fixture(),event=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(event,'isTrusted',{value:true});f.document.querySelector('textarea')!.dispatchEvent(event as any)
+ const f=await fixture(),event=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(event,'isTrusted',{value:true});f.document.querySelector('textarea')!.focus();f.document.querySelector('textarea')!.dispatchEvent(event as any)
  await expect(f.client('ppt')).rejects.toThrow();expect(f.requests.filter(row=>row[0]==='create')).toEqual([])
+})
+it.each(['blur','committed-input'])('can open Explore after IME %s without a delivered compositionend',async finish=>{
+ const f=await fixture(),input=f.document.querySelector('textarea')!,before=JSON.stringify(f.ordinary.snapshot)
+ input.focus()
+ const start=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(start,'isTrusted',{value:true});input.dispatchEvent(start as any)
+ await expect(f.client('note')).rejects.toThrow()
+ if(finish==='blur'){input.blur();f.target('ppt').focus()}else{const event=new f.win.InputEvent('input',{bubbles:true,isComposing:false,inputType:'insertText',data:'好'});Object.defineProperty(event,'isTrusted',{value:true});input.dispatchEvent(event as any)}
+ const client=await f.client('ppt'),target=f.target('ppt'),entry=await client.prepare(target,'new-chat');await client.commit(target)
+ expect(f.opened).toEqual([entry.sessionId]);expect(JSON.stringify(f.ordinary.snapshot)).toBe(before);client.dispose()
 })
 it.each(['ineligible','session','input','phase','composition'] as const)('records the specific %s arm denial without recording source content',async reason=>{
  const f=await fixture(),messages:string[]=[],log=vi.spyOn(console,'info').mockImplementation(message=>{messages.push(String(message))})
@@ -85,7 +94,7 @@ it.each(['ineligible','session','input','phase','composition'] as const)('record
   if(reason==='ineligible'){const before=f.list.getSnapshot();f.list.set({...before,byId:{...before.byId,A:{...before.byId.A,subagent:true}}})}
   if(reason==='input')f.setEffective(undefined)
   if(reason==='phase')f.ordinary.snapshot.phase='submitting'
-  if(reason==='composition'){const event=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(event,'isTrusted',{value:true});f.document.querySelector('textarea')!.dispatchEvent(event as any)}
+  if(reason==='composition'){const event=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(event,'isTrusted',{value:true});f.document.querySelector('textarea')!.focus();f.document.querySelector('textarea')!.dispatchEvent(event as any)}
   await expect(createHomeGuideEntryClient(f.document,{runId:'denied-'+reason,kind:'note',signal:new AbortController().signal,sourceSessionId:reason==='session'?'B':'A'})).rejects.toThrow()
   const records=messages.map(parseHomeGuideEntryDiagnostic).filter(Boolean)
   expect(records).toEqual([expect.objectContaining({runId:'denied-'+reason,kind:'note',phase:'arm',reason})])
