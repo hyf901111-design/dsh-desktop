@@ -6,15 +6,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const candidates = [
-  { id: 'cua', version: '0.38.0', file: 'cua-driver', output: 'cua-driver-candidate',
-    url: 'https://github.com/trycua/cua/releases/download/cua-driver-rs-v0.38.0/cua-driver-rs-0.38.0-darwin-arm64.tar.gz',
-    sha256: '5f71191c082ca07c9dfc13b7c9a6eec60a82818c245a93534cc0eb7911471d72' },
   { id: 'peekaboo', version: '4.9.8', file: 'peekaboo', output: 'peekaboo',
     url: 'https://github.com/openclaw/Peekaboo/releases/download/v4.9.8/peekaboo-macos-arm64.tar.gz',
     sha256: '5b82b246cd7b257b68d15e136a8234848a8e70a5999cdf5526993fb860685bfe' }
 ]
 if (process.platform === 'darwin') {
-  if (process.arch !== 'arm64') throw Error('Computer Use 候选包目前仅验证 macOS arm64')
+  if (process.arch !== 'arm64') throw Error('电脑控制目前仅验证 macOS arm64')
   const root = join(dirname(fileURLToPath(import.meta.url)), '..')
   const cache = join(homedir(), 'Library/Caches/ework-computer-candidates')
   const native = join(root, 'build/native')

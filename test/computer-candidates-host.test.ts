@@ -22,7 +22,7 @@ function processFixture() {
   child.reply = result => child.stdout.write(JSON.stringify({ id: child.requests.at(-1).id, result }) + '\n')
   return child
 }
-const request = (sessionId = 'a', pluginId = 'builtin:computer-use') => ({ op: 'tools', sessionId, pluginId })
+const request = (sessionId = 'a', pluginId = 'builtin:computer-use-peekaboo') => ({ op: 'tools', sessionId, pluginId })
 beforeEach(() => {
   processes = []; mocks.spawn.mockReset(); mocks.register.mockClear()
   mocks.spawn.mockImplementation(() => { const child = processFixture(); processes.push(child); return child })
@@ -33,12 +33,12 @@ afterEach(async () => { await host.dispose() })
 it('serializes desktop ownership and derives the driver from the registered plugin', async () => {
   const first = host.run({ ...request(), backend: 'uitars' }, new AbortController().signal)
   await expect(host.run(request('other'), new AbortController().signal)).rejects.toThrow('另一个桌面操作')
-  expect(processes[0]!.requests[0].backend).toBe('cua')
+  expect(processes[0]!.requests[0].backend).toBe('peekaboo')
   const options = mocks.spawn.mock.calls[0]![2]
   expect(options.env.VOLCENGINE_AGENT_PLAN_API_KEY).toBeUndefined()
   expect(options.env.EWORK_INTEGRATION_BRIDGE).toBeUndefined()
   processes[0]!.reply({ data: { tools: [] } }); await first
-  await expect(host.run(request('a', 'builtin:computer-use-peekaboo'), new AbortController().signal)).rejects.toThrow('另一个桌面操作')
+  await expect(host.run(request('other', 'builtin:computer-use-peekaboo'), new AbortController().signal)).rejects.toThrow('另一个桌面操作')
   await host.run({ op: 'release', sessionId: 'a' }, new AbortController().signal)
   const next = host.run(request('b', 'builtin:computer-use-peekaboo'), new AbortController().signal)
   expect(processes[1]!.requests[0].backend).toBe('peekaboo')
@@ -62,4 +62,11 @@ it('screen lock stops active input and blocks new actions until unlock', async (
   mocks.power.get('unlock-screen')!()
   const next = host.run(request('b'), new AbortController().signal)
   processes[1]!.reply({ data: { tools: [] } }); await next
+})
+
+it('rejects removed plugin IDs without starting a driver', async () => {
+  for (const id of ['builtin:computer-use', 'builtin:computer-use-uitars']) {
+    await expect(host.run(request('removed', id), new AbortController().signal)).rejects.toThrow('未知桌面操作插件')
+  }
+  expect(mocks.spawn).not.toHaveBeenCalled()
 })

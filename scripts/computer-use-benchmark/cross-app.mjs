@@ -8,7 +8,7 @@ import YAML from 'yaml'
 import { createBackend, resultForHost } from '../../packages/dsh-computer-backends/index.js'
 
 const candidate=process.env.BENCH_BACKEND||'peekaboo'
-if(!['peekaboo','cua','uitars'].includes(candidate))throw Error('Unknown benchmark backend')
+if(candidate!=='peekaboo')throw Error('Unknown benchmark backend')
 const root=resolve(import.meta.dirname,'../..'), output=join(root,'output/computer-use-latency',candidate+'-'+Date.now())
 await mkdir(output,{recursive:true})
 const profile=join(process.env.HOME,'Library/Application Support/sherlock-desktop/harness')

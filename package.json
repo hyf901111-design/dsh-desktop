@@ -173,10 +173,6 @@
         "to": "third-party/Peekaboo-MIT.txt"
       },
       {
-        "from": "docs/licenses/ui-tars-Apache-2.0.txt",
-        "to": "third-party/UI-TARS-Apache-2.0.txt"
-      },
-      {
         "from": "build/figma-generation/LICENSE-react-bits.md",
         "to": "third-party/React-Bits-ShapeGrid-LICENSE.md"
       },
@@ -225,7 +221,6 @@
           "cua-driver",
           "cua-driver-version.json",
           "cua-driver-MIT.txt",
-          "cua-driver-candidate",
           "peekaboo",
           "computer-candidates.json"
         ]

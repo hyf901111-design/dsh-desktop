@@ -38,7 +38,8 @@ const cases = [
   { id: 'native-multiwindow', native: true, prompt: '当前 NativeFixture 应用有两个窗口。请在标题为“EWork 测试 · 目标窗口”的验收文本框输入“电脑操作验收 Flash 2026”，点击保存验收。不要改动干扰窗口。', verify: r => r?.index === 0 && r?.text === '电脑操作验收 Flash 2026' && r?.decoyText === '' }
   ,{ id: 'textedit-file', textedit: true, prompt: '使用 macOS 文本编辑 TextEdit，在刚打开的 EWork验收测试 文档中，将原有内容全选替换为“电脑操作验收 Flash 2026”，再按 Command+S 保存原文件。只操作此验收文档，不操作其他窗口或文档。', verify: r => r?.text?.trim() === '电脑操作验收 Flash 2026' }
 ]
-const requestedBackends = (process.env.BENCH_BACKENDS ?? 'cua,peekaboo,uitars').split(',')
+const requestedBackends = (process.env.BENCH_BACKENDS ?? 'peekaboo').split(',')
+if (requestedBackends.some(id => id !== 'peekaboo')) throw Error('当前客户端只提供 Peekaboo 电脑控制；历史三方案比较见研究记录。')
 const requestedCases = (process.env.BENCH_CASES ?? cases.map(x => x.id).join(',')).split(',')
 if (requestedCases.includes('native-multiwindow')) await prepareNativeFixture(output)
 const all = []

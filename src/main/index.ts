@@ -1559,11 +1559,9 @@ async function bootstrap(): Promise<void> {
     bundledMarketInstallerEntry: bundledMarketInstallerEntry(),
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
     bundledFundResearchEntry: bundledFundResearchEntry(),
-    computerUseBinary: process.platform === 'darwin' ? join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'cua-driver') : undefined,
+    computerUseBinary: process.platform === 'darwin' ? join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'peekaboo') : undefined,
     computerUseExecutables: process.platform === 'darwin' ? {
-      'builtin:computer-use': join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'cua-driver-candidate'),
-      'builtin:computer-use-peekaboo': join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'peekaboo'),
-      'builtin:computer-use-uitars': bundledNodePath()
+      'builtin:computer-use-peekaboo': join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'peekaboo')
     } : undefined,
     bundledIntegrationEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-integration-runtime/index.js')).href,
     bundledMemoryEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-memory-runtime/index.js')).href,

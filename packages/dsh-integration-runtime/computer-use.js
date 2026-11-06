@@ -4,7 +4,7 @@ import { constants } from 'node:fs'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import { computerHostEndpoint, registerComputerUseTool } from './computer-use-tools.js'
 
-const ids = ['builtin:computer-use', 'builtin:computer-use-peekaboo', 'builtin:computer-use-uitars']
+const ids = ['builtin:computer-use-peekaboo']
 export const COMPUTER_USE_TOOL = 'computer_use'
 const tool = COMPUTER_USE_TOOL
 
