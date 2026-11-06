@@ -9,27 +9,87 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复消息编辑入口渲染传递",
+        "featureName": "仅保留电脑控制插件并移除其他候选依赖",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "e34927ac2666da73a189b79876bce7812a45cd2b",
-        "tipCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
+        "baseCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
+        "tipCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
         "commits": [
           {
-            "commit": "ec73e633351b7551d72850eaec70c344fd4c8715",
+            "commit": "e029994b5b5e5875a5d214e72fd93587c5607926",
             "parents": [
-              "e34927ac2666da73a189b79876bce7812a45cd2b"
+              "ec73e633351b7551d72850eaec70c344fd4c8715"
             ],
-            "subject": "修复：打通消息渲染插槽的编辑与任务状态传递"
+            "subject": "优化：仅保留 Peekaboo 电脑控制插件并移除其他方案依赖"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/message-edit.mjs"
+            "path": "docs/research/computer-use-bakeoff-20261106.md"
           },
           {
             "status": "M",
-            "path": "test/message-edit-browser.test.js"
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-computer-backends/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-computer-backends/package.json"
+          },
+          {
+            "status": "D",
+            "path": "packages/dsh-computer-backends/uitars.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/computer-use.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/computer-use-benchmark/cross-app.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/computer-use-benchmark/run.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/prepare-computer-candidates.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/bundled-computer-use.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-backend-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-candidates-host.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-use-plugin-integration.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/macos-package-runtime.test.ts"
           }
         ],
         "checks": [
@@ -38,14 +98,43 @@
               "npx",
               "vitest",
               "run",
+              "test/computer-use-plugin-integration.test.js",
+              "test/computer-candidates-host.test.ts",
+              "test/computer-backend-adapter.test.js",
+              "test/computer-vision.test.js",
               "test/message-edit.test.js",
               "test/message-edit-host.test.js",
               "test/message-edit-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "13 项检查通过，浏览器覆盖真实 ChatNodeSeat 至消息渲染插槽的传递",
-            "verifiedCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
-            "completedAt": "2026-11-06T15:39:16.786628+00:00",
+            "summary": "33 项聚焦检查通过",
+            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+            "completedAt": "2026-11-06T15:55:43.862349+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/macos-package-runtime.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "2 项打包检查通过",
+            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+            "completedAt": "2026-11-06T15:55:43.862349+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+            "completedAt": "2026-11-06T15:55:43.862349+00:00",
             "timeoutMs": 180000
           },
           {
@@ -56,90 +145,25 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
-            "completedAt": "2026-11-06T15:39:16.786628+00:00",
+            "verifiedCommit": "e029994b5b5e5875a5d214e72fd93587c5607926",
+            "completedAt": "2026-11-06T15:55:43.862349+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 ChatNodeSeat 插槽路径的悬停编辑、取消、重发、忙碌禁用通过；等待更新包进行最终客户端重发验证。"
+          "summary": "插件真实服务快照只有电脑控制，旧入口被拒绝，开关保持账号隔离；消息编辑浏览器检查通过。更新包实际界面待本轮构建核验。"
         },
         "acceptanceCriteria": [
-          "用户消息悬停出现时间、复制，空闲时出现编辑",
-          "编辑后从该条消息此前的上下文重新生成，附件和原历史保留",
-          "任务运行中禁止编辑重发",
-          "电脑操作性能仍待真实跨应用复测通过"
+          "只有 Peekaboo 电脑控制插件，名称及正式功能介绍正确，开关正常",
+          "消息悬停显示时间和复制，空闲时支持编辑后分支重发",
+          "安装包不含 Cua 候选插件二进制及 UI-TARS 专用依赖"
         ],
         "risks": [
-          "UI-TARS 执行层在拖动、原生多窗口和 TextEdit 场景存在已记录失败，标记实验",
-          "本次原生候选依赖仅打包 macOS arm64",
-          "操作依赖 macOS 屏幕录制和辅助功能权限",
-          "同一模型同机有限场景的比较不代表普遍排名"
+          "真实跨应用任务的性能仍待进一步改进；本轮不宣称已解决此前长耗时问题",
+          "电脑控制依赖 macOS 屏幕录制和辅助功能权限"
         ],
-        "generatedAt": "2026-11-06T15:39:16.786628+00:00"
-      },
-      "merged": {
-        "mergeCommit": "558db8d8568d56820b47f580d44c1d1c1de2de52",
-        "verificationCommit": "558db8d8568d56820b47f580d44c1d1c1de2de52",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "558db8d8568d56820b47f580d44c1d1c1de2de52",
-            "completedAt": "2026-11-06T15:40:37.657Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "558db8d8568d56820b47f580d44c1d1c1de2de52",
-            "completedAt": "2026-11-06T15:40:37.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "558db8d8568d56820b47f580d44c1d1c1de2de52",
-            "completedAt": "2026-11-06T15:40:37.657Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "558db8d8568d56820b47f580d44c1d1c1de2de52",
-            "completedAt": "2026-11-06T15:40:37.657Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-11-06T15:40:37.657Z"
+        "generatedAt": "2026-11-06T15:55:43.862349+00:00"
       }
     }
   ],
