@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -50,9 +50,13 @@ describe('macOS package runtime verification', () => {
           })
           expect(prepared.status, prepared.stderr).toBe(0)
         }
-        symlinkSync(path.join(projectRoot, 'build', 'native'), path.join(resourcesPath, 'native'))
+        mkdirSync(path.join(resourcesPath, 'native'), { recursive: true })
+        const packageConfig = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf8'))
+        for (const file of packageConfig.build.extraResources.find((resource: { to: string; filter?: string[] }) => resource.to === 'native').filter) {
+          symlinkSync(path.join(projectRoot, 'build/native', file), path.join(resourcesPath, 'native', file))
+        }
         mkdirSync(path.join(resourcesPath, 'third-party'), { recursive: true })
-        for (const [source, target] of [['peekaboo-MIT.txt', 'Peekaboo-MIT.txt'], ['ui-tars-Apache-2.0.txt', 'UI-TARS-Apache-2.0.txt']]) {
+        for (const [source, target] of [['peekaboo-MIT.txt', 'Peekaboo-MIT.txt']]) {
           copyFileSync(path.join(projectRoot, 'docs/licenses', source!), path.join(resourcesPath, 'third-party', target!))
         }
         copyFileSync(

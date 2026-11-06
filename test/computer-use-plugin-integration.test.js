@@ -62,7 +62,7 @@ async function fixture(binary = process.execPath) {
 
 it('loads the recommended native tool and releases its session through the persisted plugin switch', async () => {
   const f = await fixture()
-  expect(await f.row()).toMatchObject({ name: 'Computer Use · Peekaboo', enabled: true, status: '已启用', removable: false, toolCount: 1 })
+  expect(await f.row()).toMatchObject({ name: '电脑控制', enabled: true, status: '已启用', removable: false, toolCount: 1 })
   expect((await f.invoke()).isError).toBe(false)
   expect(f.ctx.tools.get('computer_use_plus')).toBeUndefined()
   expect(f.requests[0]).toMatchObject({ op: 'tools', name: 'get_window_state', ownerAccountId: 'one', runtimeEpoch: f.service.runtimeEpoch })
@@ -112,24 +112,18 @@ it('retains byte-identical public plugin exports from the pinned distribution', 
   expect(receipt.archiveSha256).toBe('066d1c5e003a5e4776d322aff58cce74ffff0c4a2cda4de7eb6d7033adc73c9b')
 })
 
-it('switches candidate plugins exclusively and rejects calls from the retired backend', async () => {
+it('only exposes Peekaboo and rejects stale retired plugin requests', async () => {
   const f = await fixture()
   await f.invoke()
-  const oldRequest = f.requests[0]
+  const activeRequest = f.requests[0]
   const reply = await f.service.request({ type: 'snapshot' })
-  const peek = reply.snapshot.rows.find(row => row.id === 'builtin:computer-use')
-  const operation = await f.service.request({ type: 'set-enabled', kind: 'plugin', id: peek.id, enabled: true,
-    meta: { requestId: crypto.randomUUID(), expectedRevision: peek.revision } })
-  await f.service.operations.wait(operation.operation.id)
-  expect(() => f.service.assertComputerUseAccess(oldRequest)).toThrow()
-  await f.runtime.sync()
-  const enabled = f.service.runtimeSnapshot().plugins.filter(p => p.id.startsWith('builtin:computer-use') && p.enabled)
-  expect(enabled.map(p => p.id)).toEqual(['builtin:computer-use'])
+  expect(reply.snapshot.rows.filter(row => row.id.startsWith('builtin:computer-use')).map(row => row.id)).toEqual([DEFAULT_COMPUTER_USE_PLUGIN_ID])
+  for (const pluginId of ['builtin:computer-use', 'builtin:computer-use-uitars']) {
+    expect(() => f.service.assertComputerUseAccess({ ...activeRequest, pluginId })).toThrow()
+    await expect(f.service.request({ type: 'set-enabled', kind: 'plugin', id: pluginId, enabled: true,
+      meta: { requestId: crypto.randomUUID(), expectedRevision: 1 } })).rejects.toThrow()
+  }
+  expect(f.service.runtimeSnapshot().plugins.filter(p => p.id.startsWith('builtin:computer-use')).map(p => p.id)).toEqual([DEFAULT_COMPUTER_USE_PLUGIN_ID])
   expect((await f.invoke()).isError).toBe(false)
-  expect(f.requests.at(-1).pluginId).toBe('builtin:computer-use')
-  expect(f.requests.at(-1).sessionId).not.toBe(oldRequest.sessionId)
-  f.owner('two'); await f.runtime.sync()
-  expect(f.service.runtimeSnapshot().plugins.find(p => p.id === DEFAULT_COMPUTER_USE_PLUGIN_ID)?.enabled).toBe(true)
-  f.owner('one'); await f.runtime.sync()
-  expect(f.service.runtimeSnapshot().plugins.find(p => p.id === 'builtin:computer-use')?.enabled).toBe(true)
+  expect(f.requests.at(-1).pluginId).toBe(DEFAULT_COMPUTER_USE_PLUGIN_ID)
 })

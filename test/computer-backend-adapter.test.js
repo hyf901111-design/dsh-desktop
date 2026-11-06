@@ -47,3 +47,7 @@ it('observes a dispatched but unverified action without replaying or claiming su
   expect(result._meta).toMatchObject(metadata)
   expect(result.content.some(item => item.type === 'image')).toBe(true)
 })
+
+it('rejects removed drivers before opening a native connection', async () => {
+  for (const id of ['cua', 'uitars']) await expect(createBackend(id)).rejects.toThrow('未知电脑控制方案')
+})
