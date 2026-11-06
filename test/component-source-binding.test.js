@@ -552,3 +552,29 @@ it.each([{matched:true,failed:false},{matched:false,failed:false},{matched:true,
   if(matched&&!failed)expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toContain('1282')
  }finally{await runtime.dispose()}
 })
+
+const etfResponse={source:'Tushare',api:'etf_share_size + etf_basic + trade_cal',period:{start:'20261029',end:'20261105'},summary:{sizeYi:100,shareYi:50,netCreatedProducts:12,netRedeemedProducts:7},records:[],fieldInfo:{sizeYi:'期末规模（亿元）',shareYi:'期末份额（亿份）'}}
+const etfRecords=[{tool,args:{view:'overview'},response:etfResponse}]
+const etfDraft=()=>({version:1,type:'data-bound',requests:[{key:'q',tool,args:{view:'overview'}}],mapping:{version:1,type:'kpi',title:'ETF总览',asOf:{$from:'q',$path:'period.end'},items:[{label:'ETF总规模',value:{$from:'q',$path:'summary.sizeYi',$digits:2},unit:'亿元'}]}})
+it.each(['bound','snapshot'])('rejects repeated ETF unit conversion before displaying a %s',mode=>{
+ const d=etfDraft();d.mapping.items[0].value.$scale=100
+ if(mode==='bound')expect(()=>resolveBoundComponent(JSON.stringify(d),etfRecords,now)).toThrow(/summary.sizeYi.*亿元/)
+ else expect(resolveComponentSnapshot(JSON.stringify(d),etfRecords,now)).toBeNull()
+ d.mapping.items[0].value.$scale=1
+ expect(resolveBoundComponent(JSON.stringify(d),etfRecords,now).data.items[0].value).toBe('100')
+ d.mapping.items[0].value.$scale=.0001;d.mapping.items[0].unit='万亿元'
+ expect(resolveBoundComponent(JSON.stringify(d),etfRecords,now).data.items[0].value).toBe('0.01')
+})
+it('rejects swapped ETF creation/redemption counts and preserves correct bindings',()=>{
+ const d=etfDraft();d.mapping.items=[{label:'净申购产品数',value:{$from:'q',$path:'summary.netRedeemedProducts'},unit:'只'}]
+ expect(()=>resolveBoundComponent(JSON.stringify(d),etfRecords,now)).toThrow(/netCreatedProducts/)
+ d.mapping.items[0].value.$path='summary.netCreatedProducts'
+ expect(resolveBoundComponent(JSON.stringify(d),etfRecords,now).data.items[0].value).toBe('12')
+})
+
+it('normalizes only verified public record envelopes for static snapshots too',()=>{
+ const d={version:1,type:'data-bound',requests:[{key:'q',tool:'public_data_query',args:oilArgs}],mapping:{version:1,type:'market',variant:'metrics',title:'报价',asOf:{$from:'q',$path:'dataTime'},items:{$from:'q',$each:'data.records',$map:{label:{$path:'name'},value:{$path:'price',$as:'string'}}}}}
+ expect(resolveComponentSnapshot(JSON.stringify(d),oilRecords,now).data.items[0].value).toBe('2.059')
+ const ambiguous=[{...oilRecords[0],response:{...oilRecords[0].response,data:{}}}]
+ expect(resolveComponentSnapshot(JSON.stringify(d),ambiguous,now)).toBeNull()
+})

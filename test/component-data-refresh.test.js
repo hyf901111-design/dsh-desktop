@@ -373,3 +373,11 @@ it('publishes the actual refresh lifecycle before the request resolves and advan
  await f.service.refresh(b.id);expect(statuses.at(-1)).toEqual([['unchanged',2]])
  f.execute.mockRejectedValueOnce(Error('离线'));await f.service.refresh(b.id);expect(statuses.at(-1)).toEqual([['error',2]])
 })
+
+it.each([['ascending',[1,2]],['descending',[2,1]]])('accepts source-declared sort direction %s without changing values',(order,expected)=>{
+ const responses={q:{records:[{sizeYi:2},{sizeYi:1}]}}
+ const mapping={$from:'q',$each:'records',$sortBy:'sizeYi',$order:order,$map:{$path:'sizeYi'}}
+ expect(evaluateMapping(mapping,responses)).toEqual(expected)
+ expect(responses.q.records[0].sizeYi).toBe(2)
+ expect(()=>evaluateMapping({...mapping,$order:'reverse'},responses)).toThrow('列表排序无效')
+})
