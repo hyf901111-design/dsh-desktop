@@ -739,7 +739,7 @@ export class IntegrationService {
                 rows.push({ id: computer.id, kind: 'plugin', tab: 'plugins', name: computer.name, description: computer.description,
                     enabled: computer.enabled, status: !computer.enabled ? '已停用' : connected && status?.registered ? '已启用' : '等待运行时连接',
                     source: 'EWork 内置', revision: computer.revision, removable: false, toggleable: true,
-                    detail: `版本 ${computer.version} · 三选一，开启会停用其他方案 · 需要辅助功能与屏幕录制权限`, toolCount: connected && status?.registered ? 1 : 0 });
+                    detail: `版本 ${computer.version} · 支持电脑应用操作 · 需要辅助功能与屏幕录制权限`, toolCount: connected && status?.registered ? 1 : 0 });
             }
             for (const p of Object.values(state.plugins))
                 if ((!p.ownerAccountId || p.ownerAccountId === owner) && p.catalogKind !== 'skill')
