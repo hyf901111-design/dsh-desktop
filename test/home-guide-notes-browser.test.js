@@ -313,7 +313,7 @@ it('extends the saved native note with a research summary and an actual paragrap
   expect(errors).toEqual([]);await page.evaluate(()=>window.nativeRoot.unmount())
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },35000)
-it('keeps the chart tail free of extra blank paragraphs and hides its input hint until the demonstrated click',async()=>{
+it('keeps the chart tail empty until click then shows the real hint caret and row controls before typing',async()=>{
  const{context,page,errors}=await fixture();try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
   for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply'])await page.evaluate(step=>window.guide.runStep(step),step)
@@ -328,11 +328,20 @@ it('keeps the chart tail free of extra blank paragraphs and hides its input hint
   expect(before.hint.content==='none'||before.hint.content==='normal'||before.hint.content==='""'||before.hint.visibility==='hidden'||before.hint.display==='none').toBe(true)
   await page.screenshot({path:join(evidenceDir,'chart-tail-before-click.png')})
   await page.evaluate(()=>{const cue=window.guidePointerPending[0];window.nativeAutoAck=true;window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-reply',{detail:{runId:cue.runId,requestId:cue.requestId,ok:true}}))})
+  await page.waitForFunction(()=>document.querySelector('#guide').dataset.notesGuideCaretHidden==='false')
+  await page.waitForTimeout(200)
+  const focused=await page.evaluate(()=>{
+   const row=document.querySelector('[data-id="guide-note-consensus"] .bn-block-content'),line=row.querySelector('.bn-inline-content'),hint=getComputedStyle(row,'::after'),selection=getSelection(),side=document.querySelector('.en-side'),r=side?.getBoundingClientRect(),editor=window.guidePopupProbe.editor
+   return{text:line.textContent,hint:hint.content,visibility:hint.visibility,focused:document.activeElement===document.querySelector('.bn-editor'),collapsed:selection.isCollapsed,caretInside:line.contains(selection.anchorNode),cursor:editor.getTextCursorPosition().block.id,sideVisible:!!r&&r.width>0&&r.height>0&&getComputedStyle(side).visibility==='visible'}
+  })
+  expect(focused).toMatchObject({text:'',visibility:'visible',focused:true,collapsed:true,caretInside:true,cursor:'guide-note-consensus',sideVisible:true})
+  expect(focused.hint).toContain('space')
+  await page.screenshot({path:join(evidenceDir,'chart-tail-focused-before-typing.png')})
   await page.evaluate(()=>window.pendingMiddle)
   expect(await page.locator('[data-id="guide-note-consensus"] .bn-inline-content').innerText()).toContain('上半年收入')
   const ids=await page.evaluate(()=>{const blocks=window.guidePopupProbe.editor.document;return blocks.slice(blocks.findIndex(block=>block.type==='research')+1).map(block=>block.id)})
   expect(ids).toEqual(['guide-note-consensus']);expect(errors).toEqual([])
-  writeFileSync(join(evidenceDir,'chart-tail-click-order.json'),JSON.stringify({before,afterIds:ids},null,2))
+  writeFileSync(join(evidenceDir,'chart-tail-click-order.json'),JSON.stringify({before,focused,afterIds:ids},null,2))
  }finally{await context.close()}
 },30000)
 it('waits for the matching pointer acknowledgement before title and body input and cancels a pending click',async()=>{

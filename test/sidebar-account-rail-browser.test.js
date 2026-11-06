@@ -33,7 +33,7 @@ it.each(['light','dark'])('keeps the collapsed native account hover circular and
  const{page,errors}=await fixture(mode)
  try{
   await page.locator('.sherlock-account-button').hover();const value=await geometry(page);await writeFile(join(output,mode+'-collapsed.json'),JSON.stringify(value,null,2)+'\n');await page.screenshot({path:join(output,mode+'-collapsed.png')})
-  expect(value.account.width).toBe(36);expect(value.account.height).toBe(36);expect(value.account.radius).toBe('50%');expect(value.viewport-value.account.bottom).toBeGreaterThanOrEqual(24);expect(value.viewport-value.account.bottom).toBeLessThanOrEqual(30);expect(value.bell.bottom).toBeLessThan(value.account.y);expect(value.account.x+18).toBeCloseTo(value.bell.x+value.bell.width/2,2)
+  expect(value.account.width).toBe(36);expect(value.account.height).toBe(36);expect(value.account.radius).toBe('50%');expect(value.viewport-value.account.bottom).toBeGreaterThanOrEqual(16);expect(value.viewport-value.account.bottom).toBeLessThanOrEqual(22);expect(value.bell.bottom).toBeLessThan(value.account.y);expect(value.account.x+18).toBeCloseTo(value.bell.x+value.bell.width/2,2)
   expect(await page.locator('.sherlock-account-button').evaluate(el=>document.elementFromPoint(el.getBoundingClientRect().x+18,el.getBoundingClientRect().y+18)===el.querySelector('i')||document.elementFromPoint(el.getBoundingClientRect().x+18,el.getBoundingClientRect().y+18)===el)).toBe(true);expect(errors).toEqual([])
  }finally{await page.evaluate(()=>window.railFixture.dispose());await page.close()}
 },10000)

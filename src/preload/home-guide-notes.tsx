@@ -147,6 +147,17 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
  catch(error){dispose();throw error}
  const scrollBehavior=():ScrollBehavior=>document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'
  const scrollTo=(element:HTMLElement,onlyIfNeeded=false)=>{const scroll=query('.en-document-scroll');if(scroll){const rect=element.getBoundingClientRect(),area=scroll.getBoundingClientRect();if(onlyIfNeeded&&rect.top>=area.top+40&&rect.bottom<=area.bottom-50)return;scroll.scrollTo({top:scroll.scrollTop+rect.top-area.top-Math.max(70,area.height*.18),behavior:scrollBehavior()})}}
+ const revealEmptyLine=async(row:HTMLElement,blockId:string)=>{
+  unchanged();validTarget(row,true);editor!.prepareNative();row.click()
+  row.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})
+  host.dataset.notesGuideCaretHidden='false'
+  // The visual pointer is an overlay: forward its arrival to the real editor
+  // so the existing paragraph/drag controls accompany the placeholder and caret.
+  const caret=editor!.paragraphStartPoint(blockId)
+  row.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:caret.x,clientY:caret.y,view:document.defaultView}))
+  await frame();await wait(650)
+  unchanged();validTarget(row,true);editor!.paragraphStartPoint(blockId)
+ }
  const typeBlocks=async(blocks:typeof HOME_NOTES_GUIDE_BLOCKS)=>{
   const reduced=document.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches
   const focusText=(blockId:string)=>{
@@ -162,8 +173,8 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
    const rendered=await until(()=>query<HTMLElement>('[data-id="'+block.id+'"] .bn-inline-content'));scrollTo(rendered,true)
    let previous:{top:number;left:number}|undefined,stable=0
    const box=await until(()=>{unchanged();const rect=rendered.getBoundingClientRect(),area=query<HTMLElement>('.en-document-scroll')!.getBoundingClientRect();if(rect.top<area.top+12||rect.bottom>area.bottom-12){stable=0;previous=undefined;return}stable=previous&&Math.abs(previous.top-rect.top)<1&&Math.abs(previous.left-rect.left)<1?stable+1:0;previous=rect;return stable>=2?rect:undefined})
-   if(index===0){editor!.prepareNative();const caret=editor!.paragraphStartPoint(block.id),anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(caret.x-1)+'px;top:'+(caret.y-1)+'px';document.body.append(anchor)
-    try{await point(anchor,'在首行文字光标处落笔');unchanged();validTarget(rendered,true);rendered.click();host.dataset.notesGuideCaretHidden='false';rendered.closest<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true})}finally{anchor.remove()}}
+   if(index===0){host.dataset.notesGuideCaretHidden='true';editor!.prepareNative();const caret=editor!.paragraphStartPoint(block.id),anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(caret.x-1)+'px;top:'+(caret.y-1)+'px';document.body.append(anchor)
+    try{await point(anchor,'在首行文字光标处落笔');await revealEmptyLine(rendered,block.id)}finally{anchor.remove()}}
    const stride=reduced?block.content.length:block.type==='heading'?4:8
    for(let offset=stride;offset<block.content.length+stride;offset+=stride){
     await playing();if(fingerprint()!==expected)throw Error('演示笔记已被编辑，请重新播放。')
@@ -206,7 +217,7 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   // PM observes attributes inside editable text nodes. Keep pointer tokens on
   // an external position anchor, then click the still-current original line.
   const anchor=document.createElement('span');anchor.setAttribute('aria-hidden','true');anchor.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;left:'+(box.left+3)+'px;top:'+(box.top+Math.max(2,box.height/2))+'px';document.body.append(anchor)
-  try{await point(anchor,'在全新空白行继续');unchanged();validTarget(row,true);row.click();host.dataset.notesGuideCaretHidden='false';editor!.prepareNative()}finally{anchor.remove()}
+  try{await point(anchor,'在全新空白行继续');await revealEmptyLine(row,id)}finally{anchor.remove()}
   return row
  }
  const chartCompose=async()=>{
