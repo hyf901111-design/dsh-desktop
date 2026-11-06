@@ -67,6 +67,8 @@ it('上游重定向不会被跟随，登录失败不触达上游',async()=>{
 
 it('ETF 汇总复用同一日期窗口、仍逐次鉴权，并保留真实来源和估算口径',async()=>{
  const env=fixture()
+ const invalid=(await(await handleRequest(request('tushare_etf_snapshot',{limit:1000}),env)).json()).result
+ expect(invalid.isError).toBe(true);expect(invalid.content[0].text).toContain('1–100（默认20）');expect(invalid.content[0].text).not.toContain('1–1000');expect(env.fetch).not.toHaveBeenCalled()
  env.fetch.mockImplementation(async(_url,options)=>{
   const q=JSON.parse(options.body),fields=q.fields.split(',');let rows=[]
   if(q.api_name==='trade_cal')rows=[{cal_date:'20261105',is_open:1},{cal_date:'20261029',is_open:1}]
