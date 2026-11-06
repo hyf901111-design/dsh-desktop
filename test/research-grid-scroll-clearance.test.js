@@ -19,7 +19,7 @@ function scrollFixture({height=700,bottom=0,toolbar=true,planning=false,viewport
  const nodes=bottom?[Object.freeze({id:'last-card',kind:'pasted-text',x:300,y:bottom-100,width:560,height:200})]:[]
  let current={files:[],artifacts:planning?[]:nodes,canvasSize:{availableWidth:1000,height},viewport:{x:0,y:viewportY,scale:1},selection:{selectedNodeIds:[]}}
  const workspace={getWorkbenchPlanningNodes:()=>planning?nodes:[],getSnapshot:()=>current,setViewport:viewport=>{current={...current,viewport}}}
- const context={...gridState,createResearchGrid,react:{useLayoutEffect:effect=>effects.push(effect),useEffect:()=>{}}}
+ const context={...gridState,createResearchGrid,CSS:win.CSS,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,react:{useLayoutEffect:effect=>effects.push(effect),useEffect:()=>{}}}
  context.workbenchGridPattern=runInNewContext('('+workbenchGridPattern.toString()+')',context)
  const hook=runInNewContext('('+useWorkbenchGrid.toString()+')',context)
  const layout=()=>{effects.length=0;hook({rootRef:{current:root},workspace,sessionId:'scroll-clearance',snapshot:current});effects[1]()}

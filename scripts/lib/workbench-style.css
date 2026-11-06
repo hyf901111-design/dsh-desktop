@@ -92,3 +92,9 @@ body [data-research-canvas][data-workbench-style=openterminal] :is(.odyssey-crea
 body [data-research-canvas][data-workbench-style=openterminal] [data-research-node-id][data-research-generation-state]:not([data-research-generation-state=completed]):not([data-research-generation-state=draft]):is([data-research-generation-empty],:has(.odyssey-generation-surface)){border-width:0!important;border-radius:8px!important}
 
 }
+
+/* Paint through the reserved scrollbar gutter without changing card geometry.
+   The scroll offset keeps the viewport pattern aligned with the moving cards. */
+@layer ework-workbench {
+body [data-research-canvas][data-ework-grid],body [data-research-canvas][data-ework-grid][data-workbench-style]{background-image:var(--grid-pattern)!important;background-size:var(--grid-step) var(--grid-step)!important;background-position:12px calc(12px - var(--grid-scroll-top,0px))!important;background-repeat:repeat!important;background-origin:border-box!important;background-clip:border-box!important}
+}
