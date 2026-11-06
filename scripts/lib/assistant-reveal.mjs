@@ -113,8 +113,22 @@ export function useAssistantTextPaint(react,record,content,route){
 
 /** Used only by the existing native at-bottom follower. It never scrolls itself. */
 export function assistantRevealScrollTop(el){
- const active=[...el.querySelectorAll('[data-ai-revealing]')].at(-1),bottom=active?.__eworkAssistantRevealEnd?.getBoundingClientRect().bottom
- return Number.isFinite(bottom)?Math.max(0,Math.min(el.scrollHeight-el.clientHeight,el.scrollTop+bottom-el.getBoundingClientRect().top-el.clientHeight+32)):undefined
+ const active=[...el.querySelectorAll('[data-ai-revealing]')].at(-1)
+ if(!active)return undefined
+ const range=active.__eworkAssistantRevealEnd
+ // Markdown separators can be connected TextNodes with no rendered rectangle.
+ // Their zero bounding box is not the top of the reply; hold the reading position.
+ if(!range||!active.contains(range.startContainer)||!range.getClientRects().length)return el.scrollTop
+ const bottom=range.getBoundingClientRect().bottom
+ const flow=active.closest('[data-chat-flow]'),view=el.ownerDocument.defaultView
+ const readingSpace=flow?parseFloat(view.getComputedStyle(flow).paddingBottom)||0:0
+ // Match the padded transcript's final position during the reveal, instead of
+ // jumping across the whole reading space each time a streamed batch finishes.
+ const limit=el.scrollHeight-el.clientHeight
+ const target=readingSpace?limit-Math.max(0,active.getBoundingClientRect().bottom-bottom):el.scrollTop+bottom-el.getBoundingClientRect().top-el.clientHeight+32
+ // A later fragment may begin above the current reading-space boundary. Following
+ // may advance as text grows, but must never pull the reader back to that fragment.
+ return Number.isFinite(bottom)?Math.max(el.scrollTop,Math.min(limit,target)):el.scrollTop
 }
 export function finishAssistantReveals(local){for(const root of local.querySelectorAll('[data-ai-revealing]'))root.__eworkAssistantRevealFinish?.()}
 export function patchAssistantReveal(source){
