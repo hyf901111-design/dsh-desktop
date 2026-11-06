@@ -9,6 +9,7 @@ import {Session} from '@deepseek-ai/dsh-session'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives',()=>Object.fromEntries(['StateDot','Modal','Button','IconTrashOutline16','Menu','IconPlusOutline16','IconEllipsisOutline16','IconSearchOutline16','IconFolderOpenOutline16','IconEditOutline16','IconTriangleRightFill14'].map(name=>[name,()=>null])))
 import {createResearchBoardsPage} from '../src/preload/research-boards-ui'
 import {createHomeGuideEntryClient,installHomeGuideEntryNative,type HomeGuideEntryKind,type HomeGuideEntryAction} from '../src/preload/home-guide-entry-native'
+import {parseHomeGuideEntryDiagnostic} from '../src/shared/home-guide-entry-diagnostics'
 import {createSidebarNewNoteAction} from '../src/preload/sidebar-new-note'
 const cleanup:Array<()=>void>=[]
 afterEach(()=>{cleanup.splice(0).reverse().forEach(fn=>fn());vi.unstubAllGlobals()})
@@ -77,6 +78,20 @@ it('rejects a selected subagent source instead of reading its parent or another 
 it('refuses an already active native IME composition before arming a run',async()=>{
  const f=await fixture(),event=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(event,'isTrusted',{value:true});f.document.querySelector('textarea')!.dispatchEvent(event as any)
  await expect(f.client('ppt')).rejects.toThrow();expect(f.requests.filter(row=>row[0]==='create')).toEqual([])
+})
+it.each(['ineligible','session','input','phase','composition'] as const)('records the specific %s arm denial without recording source content',async reason=>{
+ const f=await fixture(),messages:string[]=[],log=vi.spyOn(console,'info').mockImplementation(message=>{messages.push(String(message))})
+ try{
+  if(reason==='ineligible'){const before=f.list.getSnapshot();f.list.set({...before,byId:{...before.byId,A:{...before.byId.A,subagent:true}}})}
+  if(reason==='input')f.setEffective(undefined)
+  if(reason==='phase')f.ordinary.snapshot.phase='submitting'
+  if(reason==='composition'){const event=new f.win.Event('compositionstart',{bubbles:true});Object.defineProperty(event,'isTrusted',{value:true});f.document.querySelector('textarea')!.dispatchEvent(event as any)}
+  await expect(createHomeGuideEntryClient(f.document,{runId:'denied-'+reason,kind:'note',signal:new AbortController().signal,sourceSessionId:reason==='session'?'B':'A'})).rejects.toThrow()
+  const records=messages.map(parseHomeGuideEntryDiagnostic).filter(Boolean)
+  expect(records).toEqual([expect.objectContaining({runId:'denied-'+reason,kind:'note',phase:'arm',reason})])
+  expect(messages.join('\n')).not.toMatch(/用户未发送|image-kept|skill-kept|\/source|token/)
+  expect(f.opened).toEqual([]);expect(f.requests.filter(row=>row[0]==='create')).toEqual([])
+ }finally{log.mockRestore()}
 })
 it.each(['aria-disabled','ancestor-display','ancestor-opacity','offscreen'])('rechecks %s visibility at the final native click boundary',async change=>{
  const f=await fixture(),client=await f.client('ppt'),target=f.target('ppt');await client.prepare(target,'new-chat')
