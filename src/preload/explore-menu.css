@@ -45,7 +45,7 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 .odyssey-explore-quick{position:absolute;inset:0;display:block;height:100%}
 .odyssey-explore .odyssey-operations-case-stack,.odyssey-explore .odyssey-operations-case-layer{position:absolute;inset:0}
 .odyssey-explore .odyssey-operations-case-stack{z-index:0;isolation:isolate}
-.odyssey-explore-wallpapers{position:absolute;inset:0;height:100%;padding:4px;overflow:auto;scrollbar-width:none}
+.odyssey-explore-wallpapers{position:absolute;inset:0;height:100%;padding:4px;overflow:clip;scrollbar-width:none}
 .odyssey-explore-wallpapers::-webkit-scrollbar{display:none}
 .odyssey-explore-wallpapers>.odyssey-theme-gallery{position:relative;display:grid;grid-template-columns:repeat(var(--odyssey-wallpaper-columns,5),minmax(0,1fr));gap:var(--odyssey-wallpaper-gap,12px);grid-auto-rows:var(--odyssey-wallpaper-row-height,106px);left:auto;top:auto;width:100%!important}
 .odyssey-explore-wallpapers .odyssey-wallpaper-card{display:flex;flex-direction:column;align-items:stretch;gap:var(--odyssey-wallpaper-name-gap,8px);min-width:0;text-align:left}

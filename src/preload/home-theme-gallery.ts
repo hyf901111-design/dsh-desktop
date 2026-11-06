@@ -182,6 +182,12 @@ export function createHomeThemeGallery(doc: Document, controller: HomeThemeContr
           const hiddenLines = english() ? column < 65 ? 3 : column < 115 ? 2 : 1 : column < 48 ? 2 : 1
           const labelHeight = Math.max(20, ...[...cards.values()].map(card => { const label = card.querySelector<HTMLElement>('.odyssey-wallpaper-name')!; return Math.max(label.offsetHeight, label.scrollHeight) || hiddenLines * 18 }))
           previewHeight = column * 78 / 146.4
+          // Fit small height differences before adding columns, preserving the
+          // balanced five-by-three desktop grid and every full wallpaper label.
+          const fittedPreviewHeight = (availableHeight - gaps) / rows - nameGap - labelHeight
+          if (options.fitHeight !== false && fittedPreviewHeight >= previewHeight * .75) {
+            previewHeight = Math.min(previewHeight, fittedPreviewHeight)
+          }
           rowHeight = previewHeight + nameGap + labelHeight
           totalHeight = rowHeight * rows + gaps
           if (options.fitHeight === false || totalHeight <= availableHeight) break
