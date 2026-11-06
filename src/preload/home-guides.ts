@@ -189,9 +189,11 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     const client=await createHomeGuideEntryClient(document,{runId:id,kind,signal:controller.signal,sourceSessionId:pending.source})
     try{
      await playExploreHomeGuideEntry(document,kind,{homeEmpty:client.homeEmpty,context:entry,signal:controller.signal,pointer:entryPointer,assert:ensurePending,nativeClick:target=>{ownedNavigation++;try{target.click()}finally{ownedNavigation--}},activate:async(target,action,beforeCommit)=>{
+      // Preparing registers a visible sidebar session. Finish the demonstrated
+      // click first so creation never appears ahead of the user's action.
+      await beforeCommit();ensurePending()
       prepared=await client.prepare(target,action);ensurePending();pending.target=prepared.sessionId
       await adapters.beforeOpen?.({...prepared,kind});ensurePending();preflighted=true
-      await beforeCommit();ensurePending()
       // The pointer is still demonstrating the source control until its click
       // finishes. Borrow only the target session, at the actual native open.
       // Borrowing the source here removes its canvas and relocates its composer.

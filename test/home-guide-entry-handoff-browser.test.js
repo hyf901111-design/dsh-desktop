@@ -185,3 +185,29 @@ it('renders a narrow watchlist beside readable main content on all three complet
   expect(f.errors).toEqual([])
  }finally{await f.close()}
 },18000)
+
+for(const[kind,index]of [['board',0],['note',1]])it('creates the '+kind+' session only after the visible sidebar click and matches normal note background',async()=>{
+ const f=await fixture({explore:true,prepareDelay:300}),{page}=f;try{
+  await page.evaluate(()=>document.body.setAttribute('data-ds-dark-theme',''))
+  await beginExplore(page,index)
+  await page.locator('[data-home-guide-kind="'+kind+'"]').waitFor({timeout:10000})
+  const value=await page.evaluate(()=>({frames:window.entryProbe.frames,requests:window.entryProbe.requests,actions:window.entryProbe.actions}))
+  const preparation=value.requests.find(row=>row.command==='prepare').time
+  const close=value.actions.find(row=>row.type==='explore-close').time
+  const finalPress=value.frames.filter(row=>row.time>close&&row.time<preparation&&row.phase==='pressed').at(-1)
+  expect(finalPress).toBeTruthy()
+  const after=value.frames.filter(row=>row.time>preparation&&row.time<value.requests.find(row=>row.command==='open').time)
+  expect(after.some(row=>row.phase==='pressed')).toBe(false)
+  expect(after.every(row=>row.id==='source')).toBe(true)
+  if(kind==='note'){
+   await page.locator('[data-home-guide] .bn-editor').waitFor()
+   const comparison=await page.evaluate(()=>{
+    const guide=document.querySelector('[data-home-guide]'),ordinary=document.createElement('div');ordinary.className='en-root';ordinary.dataset.dark='true';document.body.append(ordinary)
+    const result={guide:getComputedStyle(guide).backgroundColor,ordinary:getComputedStyle(ordinary).backgroundColor,guideRadius:getComputedStyle(guide).borderBottomLeftRadius,ordinaryRadius:getComputedStyle(ordinary).borderBottomLeftRadius};ordinary.remove();return result
+   })
+   expect(comparison.guide).toBe(comparison.ordinary);expect(comparison.guideRadius).toBe(comparison.ordinaryRadius)
+   await page.screenshot({path:output+'/note-matching-background.png'})
+  }
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},20000)

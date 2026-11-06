@@ -1,5 +1,7 @@
 .odyssey-home-guide{position:fixed;z-index:24;display:block;overflow:hidden;box-sizing:border-box;border-radius:0 0 12px 12px;background:var(--dsw-alias-bg-base,#f7f8fa);color:var(--dsw-alias-text-primary,#26313a);font:14px/1.5 "Noto Sans SC","PingFang SC",sans-serif;pointer-events:auto;-webkit-app-region:no-drag}
 [data-ds-dark-theme] .odyssey-home-guide{background:#111214;color:#eceef2}
+.odyssey-home-guide[data-kind="note"]{background:var(--odyssey-workspace,#f2f2f2);border-radius:0 0 16px 16px}
+[data-ds-dark-theme] .odyssey-home-guide[data-kind="note"]{background:var(--odyssey-workspace,#1f1f1f)}
 .odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"]){background:transparent;pointer-events:none}
 .odyssey-home-guide-content{position:absolute;inset:0;min-width:0;min-height:0;overflow:hidden;isolation:isolate}
 .odyssey-home-guide-content.en-root{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-height:0!important;overflow:hidden!important;background:transparent!important;box-sizing:border-box!important}
