@@ -28,9 +28,11 @@ it('未传触发器的生成组件设置仍从所属画布获取主题',()=>{
 })
 it('彭博生成状态保持深色，菜单复用全局中性磨砂且不影响外部浅色页面',async()=>{
  const doc=setup(),sheet=readFileSync('scripts/lib/workbench-style.css','utf8')
- // Happy DOM does not implement cascade layers; exercise identical OT declarations without the wrapper.
- const ot=sheet.slice(sheet.indexOf('/* OpenTerminal is'),sheet.lastIndexOf('}')),style=doc.createElement('style')
- style.textContent=canvasCss+readFileSync('scripts/lib/research-grid-workbench.css','utf8')+sheet.slice(0,sheet.indexOf('@layer ework-workbench'))+ot;doc.head.append(style)
+ // Happy DOM does not implement cascade layers. Parse the real stylesheet and
+ // unwrap every layer, including later additions, without cutting CSS braces.
+ const flat=postcss.parse(sheet);flat.walkAtRules('layer',rule=>{if(rule.nodes)rule.replaceWith(...rule.nodes)})
+ const style=doc.createElement('style')
+ style.textContent=canvasCss+readFileSync('scripts/lib/research-grid-workbench.css','utf8')+flat.toString();doc.head.append(style)
  doc.body.innerHTML='<main data-research-canvas data-ework-grid data-workbench-style="openterminal">'+['queued','running','retrying','failed','cancelled','interrupted'].map(s=>`<article data-research-node-id="${s}" data-research-artifact-card data-research-compact-chrome data-research-generation-state="${s}"><div class="odyssey-generation-surface"></div></article>`).join('')+'<article class="odyssey-creation-planning-card"><div class="odyssey-generation-surface"></div></article></main><div class="ew-grid-menu">菜单</div><div id="unrelated" style="background:#fff">外部页面</div>'
  // Happy DOM drops background shorthands with nested var() fallbacks. Check parsed material
  // ownership here; the Chromium menu matrix verifies actual colors and blur.
