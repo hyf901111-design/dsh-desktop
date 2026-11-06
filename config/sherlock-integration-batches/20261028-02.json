@@ -28770,58 +28770,57 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "输入法残留演示取消及执行中首行顺序修复",
+        "featureName": "对话阅读留白、浅色语音按钮及研究网格覆盖优化",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "0da25c5c9fff4cfa5dbf39df3ff187d25813c290",
-        "tipCommit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
+        "baseCommit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
+        "tipCommit": "47909acf195de05db7e977008ab1863b8ee1e14a",
         "commits": [
           {
-            "commit": "e76bc9509b220e5d89876d45c6c9bd552aa94904",
+            "commit": "787223e295fc2ed0ec2daa8ad4425b524e343518",
             "parents": [
-              "0da25c5c9fff4cfa5dbf39df3ff187d25813c290"
+              "2f94455b22bb4e868d4984bbdbb435baf2423a7b"
             ],
-            "subject": "修复：清除输入法结束后的演示入口残留状态"
+            "subject": "优化：增加对话末尾可滚动阅读留白"
           },
           {
-            "commit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
+            "commit": "4da3086c62dde199f4fc73400099fbda0a4f0b69",
             "parents": [
-              "e76bc9509b220e5d89876d45c6c9bd552aa94904"
+              "787223e295fc2ed0ec2daa8ad4425b524e343518"
             ],
-            "subject": "修复：将总用时置于回复首行并移除前置间隔点"
+            "subject": "修复：浅色模式语音按钮使用黑底白图标"
+          },
+          {
+            "commit": "47909acf195de05db7e977008ab1863b8ee1e14a",
+            "parents": [
+              "4da3086c62dde199f4fc73400099fbda0a4f0b69"
+            ],
+            "subject": "修复：研究看板网格覆盖右侧滚动条留白"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "design-qa.md"
+            "path": "scripts/lib/composer-voice.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/conversation-response-history.mjs"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-entry-native.ts"
+            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
-            "path": "test/conversation-response-history-browser.test.js"
+            "path": "scripts/lib/workbench-style.css"
           },
           {
             "status": "M",
-            "path": "test/conversation-response-history.test.js"
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
-            "path": "test/fixtures/conversation-response-progress-browser.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-entry-handoff-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-entry-native.test.ts"
+            "path": "test/research-grid-scroll-clearance.test.js"
           }
         ],
         "checks": [
@@ -28830,17 +28829,16 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-entry-native.test.ts",
-              "test/conversation-response-history.test.js",
-              "test/conversation-response-history-browser.test.js",
+              "test/research-grid-scroll-clearance.test.js",
+              "test/figma-reading-layout.test.ts",
               "--maxWorkers=1",
               "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "61 项直接相关原生入口协议及状态组件检查通过",
-            "verifiedCommit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
-            "completedAt": "2026-11-06T03:09:19.952076+00:00",
+            "summary": "13 项直接相关布局和滚动检查通过",
+            "verifiedCommit": "47909acf195de05db7e977008ab1863b8ee1e14a",
+            "completedAt": "2026-11-06T03:35:42.409295+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28848,34 +28846,17 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-entry-handoff-browser.test.js",
+              "test/composer-voice-browser.test.js",
               "-t",
-              "trusted Chinese IME input|creates the .* session only",
+              "fits a narrow composer",
               "--maxWorkers=1",
               "--fileParallelism=false",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "3 项中文输入后演示和新建时序检查通过",
-            "verifiedCommit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
-            "completedAt": "2026-11-06T03:09:19.952076+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-response-history.test.js",
-              "--maxWorkers=1",
-              "--fileParallelism=false",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "11 项补丁安装及当前状态回归通过，包含前组已运行的 4 项",
-            "verifiedCommit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
-            "completedAt": "2026-11-06T03:09:19.952076+00:00",
+            "summary": "2 项窄窗口浅深色真实语音组件检查通过，其余 21 项未运行",
+            "verifiedCommit": "47909acf195de05db7e977008ab1863b8ee1e14a",
+            "completedAt": "2026-11-06T03:35:42.409295+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28888,27 +28869,26 @@
             ],
             "outcome": "passed",
             "summary": "节点类型检查通过",
-            "verifiedCommit": "2f94455b22bb4e868d4984bbdbb435baf2423a7b",
-            "completedAt": "2026-11-06T03:09:19.952076+00:00",
+            "verifiedCommit": "47909acf195de05db7e977008ab1863b8ee1e14a",
+            "completedAt": "2026-11-06T03:35:42.409295+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已查看真实生产回复组件的总用时、公开回复、当前动作顺序截图；Chromium 实际 IME 路径旧实现失败，修复后正常进入演示，源草稿保留。签名客户端另行交付。"
+          "summary": "已检查生产对话组件的两种窗口尺寸、流式追加时阅读位置保持、回到最新及短回复；网格四种模式、两种宽度、两个滚动位置共16种状态覆盖右侧预留区；浅色语音按钮截图黑底白图标。原生签名包另行交付。"
         },
         "acceptanceCriteria": [
-          "从已有中文会话打开探索演示不会被已结束的输入法状态错误取消",
-          "正在组字及原草稿保护仍有效",
-          "所有用时前无小点",
-          "无前置推理事件时总用时仍在本轮回复前，当前动作在回复后，不重复用时"
+          "主对话可将最新回复向上滚动，手动阅读时不被追加消息拉回",
+          "浅色语音入口为黑底白图标",
+          "研究网格铺满右侧预留区，滚动时与卡片对齐，缩放不产生横向溢出"
         ],
         "risks": [
-          "仅修正临时展示和输入法生命周期，不改持久会话、原草稿或模型结果",
-          "新截图所指问题的原会话交互需要用户在本地包确认",
-          "未对外发布，不变更客户端或 PPT Skill 版本"
+          "仅改变展示，不改会话数据、模型结果或语音硬件能力",
+          "旧 research-grid-client 测试在已补丁包上重复局部补丁导致锚点错误；完整补丁安装及实际网格浏览器检查通过，此旧夹具未扩大修复",
+          "签名客户端现场交互待本次交付；不对外发布或更改版本"
         ],
-        "generatedAt": "2026-11-06T03:09:19.952076+00:00"
+        "generatedAt": "2026-11-06T03:35:42.409295+00:00"
       }
     }
   ],
