@@ -193,6 +193,68 @@
           "港股 ETF 渠道结构可能无对应数据，必须明确缺失"
         ],
         "generatedAt": "2026-11-06T16:51:57.743260+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
+        "verificationCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
+            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
+            "completedAt": "2026-11-06T16:54:00.511Z",
+            "timeoutMs": 900000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-candidates-host.test.ts",
+              "test/computer-use-plugin-integration.test.js",
+              "test/computer-vision.test.js",
+              "test/macos-package-runtime.test.ts",
+              "test/runtime.test.ts",
+              "test/integration-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
+            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
+            "completedAt": "2026-11-06T16:54:00.511Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
+            "completedAt": "2026-11-06T16:54:00.511Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "5ad65a6ec7648a30f600b93702e2940d26b5a72e",
+            "completedAt": "2026-11-06T16:54:00.511Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-11-06T16:54:00.511Z"
       }
     }
   ],
