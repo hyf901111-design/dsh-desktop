@@ -111,10 +111,22 @@ export function useAssistantTextPaint(react,record,content,route){
  return root
 }
 
+/** Keep the optional reading reserve outside the native follow boundary. */
+export function assistantContentScrollBottom(el){
+ const flow=el.querySelector('[data-chat-flow]'),view=el.ownerDocument.defaultView
+ const reserve=flow?parseFloat(view.getComputedStyle(flow).paddingBottom)||0:0
+ return Math.max(0,el.scrollHeight-el.clientHeight-reserve)
+}
+export function assistantAtContentBottom(el){
+ const distance=assistantContentScrollBottom(el)-el.scrollTop
+ // Scrolling below the content is an explicit reading choice, even at the
+ // physical scrollbar end. Do not pull that position back on the next fragment.
+ return distance>=-1&&distance<=25
+}
 /** Used only by the existing native at-bottom follower. It never scrolls itself. */
 export function assistantRevealScrollTop(el){
  const active=[...el.querySelectorAll('[data-ai-revealing]')].at(-1)
- if(!active)return undefined
+ if(!active)return assistantContentScrollBottom(el)
  const range=active.__eworkAssistantRevealEnd
  // Markdown separators can be connected TextNodes with no rendered rectangle.
  // Their zero bounding box is not the top of the reply; hold the reading position.
@@ -122,9 +134,9 @@ export function assistantRevealScrollTop(el){
  const bottom=range.getBoundingClientRect().bottom
  const flow=active.closest('[data-chat-flow]'),view=el.ownerDocument.defaultView
  const readingSpace=flow?parseFloat(view.getComputedStyle(flow).paddingBottom)||0:0
- // Match the padded transcript's final position during the reveal, instead of
- // jumping across the whole reading space each time a streamed batch finishes.
- const limit=el.scrollHeight-el.clientHeight
+ // Follow the content boundary; the reserved space remains available only to
+ // manual scrolling, including when a batch finishes or animations are disabled.
+ const limit=assistantContentScrollBottom(el)
  const target=readingSpace?limit-Math.max(0,active.getBoundingClientRect().bottom-bottom):el.scrollTop+bottom-el.getBoundingClientRect().top-el.clientHeight+32
  // A later fragment may begin above the current reading-space boundary. Following
  // may advance as text grows, but must never pull the reader back to that fragment.
@@ -132,7 +144,7 @@ export function assistantRevealScrollTop(el){
 }
 export function finishAssistantReveals(local){for(const root of local.querySelectorAll('[data-ai-revealing]'))root.__eworkAssistantRevealFinish?.()}
 export function patchAssistantReveal(source){
- const marker='/* ework:assistant-reveal:v1 */',helpers=`${marker}\n${[createAssistantRevealLedger,createAssistantTextPaint,useAssistantTextPaint,assistantRevealScrollTop,finishAssistantReveals].map(fn=>fn.toString()).join('\n')}\nconst eworkAssistantRevealLedger=createAssistantRevealLedger();\n`
+ const marker='/* ework:assistant-reveal:v1 */',helpers=`${marker}\n${[createAssistantRevealLedger,createAssistantTextPaint,useAssistantTextPaint,assistantContentScrollBottom,assistantAtContentBottom,assistantRevealScrollTop,finishAssistantReveals].map(fn=>fn.toString()).join('\n')}\nconst eworkAssistantRevealLedger=createAssistantRevealLedger();\n`
  if(source.includes(marker)){
   const start=source.indexOf(marker),end=source.indexOf('const AssistantMarkdown =',start)
   if(source.split(marker).length!==2||end<0||!source.slice(start,end).endsWith('const eworkAssistantRevealLedger=createAssistantRevealLedger();\n'))throw Error('Assistant reveal helper boundary drifted')
@@ -173,6 +185,11 @@ export function patchAssistantReveal(source){
   replace('el.addEventListener("scroll", onScroll, { passive: true });','el.addEventListener("scroll", onScroll, { passive: true });\nconst revealFrame=()=>followRef.current?.();local.addEventListener("sherlock:assistant-reveal-frame",revealFrame);')
   replace('el.removeEventListener("scroll", onScroll); stopAnchoring();','el.removeEventListener("scroll", onScroll);local.removeEventListener("sherlock:assistant-reveal-frame",revealFrame); stopAnchoring();')
   replace('atBottomRef.current = isAtBottom;\n\t\t\t\tsetAtBottom(isAtBottom);','atBottomRef.current = isAtBottom;\n\t\t\t\tsetAtBottom(isAtBottom);\nif(movedByReader)finishAssistantReveals(local);')
+ }
+ if(!source.includes('/* ework:assistant-reading-reserve:v1 */')){
+  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Assistant reading boundary drifted: '+before);source=source.replace(before,after)}
+  replace('const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 25;','/* ework:assistant-reading-reserve:v1 */ const isAtBottom = assistantAtContentBottom(el);')
+  replace('const isAtBottom = movedByReader ? floor - el.scrollTop <= 25 : atBottomRef.current;','const isAtBottom = movedByReader ? assistantAtContentBottom(el) : atBottomRef.current;')
  }
  return source
 }

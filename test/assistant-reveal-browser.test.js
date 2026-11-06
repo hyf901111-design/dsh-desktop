@@ -61,7 +61,7 @@ it('keeps streamed paragraphs stable across zero-size newline frontiers and read
   for(let i=0;i<3;i++){
    await page.evaluate(text=>window.reply(text,true),text);await page.clock.runFor(2400);
    const state=await page.evaluate(()=>window.nativeFollowState());
-   expect(state.following).toBe(true);expect(state.top).toBe(state.full);
+   expect(state.following).toBe(true);expect(state.top).toBe(state.full-288);
    text+='\n\n继续接收新的段落，保留底部阅读空间。'.repeat(3);
   }
   expect(await page.evaluate(()=>window.emptyFrontiers)).toBeGreaterThan(0);
@@ -71,6 +71,32 @@ it('keeps streamed paragraphs stable across zero-size newline frontiers and read
   const reader=await page.evaluate(()=>window.nativeFollowState());expect(reader.following).toBe(false);
   await page.evaluate(text=>window.reply(text,true),text);await page.clock.runFor(2400);
   expect((await page.evaluate(()=>window.nativeFollowState())).top).toBe(reader.top);
+  expect(errors).toEqual([]);
+ }finally{await context.close()}
+});
+
+it.each([false,true])('exposes reading space only after a manual downward scroll (reduced motion: %s)',async reduce=>{
+ const{context,page,errors}=await fixture(reduce);
+ try{
+  await page.evaluate(()=>{
+   const flow=document.querySelector('[data-chat-flow]');flow.style.paddingBottom='288px';flow.lastElementChild.style.height='0';
+   window.installNativeFollow();window.reply('正常输出应当贴近内容末尾。\n\n'.repeat(20),true);
+  });
+  await page.clock.runFor(2400);
+  await page.evaluate(()=>window.beginNativeFollow());await page.clock.runFor(32);
+  const initial=await page.evaluate(()=>window.nativeFollowState());
+  expect(initial.following).toBe(true);expect(initial.full-initial.top).toBe(288);
+  const box=await page.locator('#scroller').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
+  await page.mouse.wheel(0,160);await page.clock.runFor(96);
+  await expect.poll(()=>page.evaluate(()=>window.nativeFollowState().top)).toBeGreaterThan(initial.top+100);
+  const reader=await page.evaluate(()=>window.nativeFollowState());expect(reader.following).toBe(false);
+  await page.evaluate(()=>window.reply('正常输出应当贴近内容末尾。\n\n'.repeat(20)+'追加内容不应抢回手动阅读位置。',true));await page.clock.runFor(2400);
+  expect((await page.evaluate(()=>window.nativeFollowState())).top).toBe(reader.top);
+  await page.mouse.wheel(0,500);await page.clock.runFor(96);
+  await expect.poll(()=>page.evaluate(()=>{const s=window.nativeFollowState();return s.full-s.top})).toBe(0);
+  expect((await page.evaluate(()=>window.nativeFollowState())).following).toBe(false);
+  await page.evaluate(()=>window.beginNativeFollow());await page.clock.runFor(32);
+  const latest=await page.evaluate(()=>window.nativeFollowState());expect(latest.following).toBe(true);expect(latest.full-latest.top).toBe(288);
   expect(errors).toEqual([]);
  }finally{await context.close()}
 });
