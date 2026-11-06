@@ -27,6 +27,17 @@ export function componentRefreshBindings(requests:Array<{connectionId:string;con
 export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean;personalBoard?:(id:string)=>{sessionId:string;cwd?:string;dedicated?:boolean}|undefined;skillDirectory?:string;publicData?:{validate:(args:any)=>Promise<{sourceId:string;sourceName:string}>;query:(args:any,signal:AbortSignal)=>Promise<any>};onStatusChange?:(sessionId:string,rows:unknown[])=>void}){
  const ajv=new Ajv({strict:false,allErrors:false,validateFormats:false})
  const publicData=options.publicData??createPublicDataClient({root:options.skillDirectory})
+ // A component batch must not launch one expensive historical-session scan
+ // per card. Share only reads currently in flight, within the same account;
+ // every later authorization check still reads fresh host state.
+ const identityReads=new Map<string,{owner:string|undefined;promise:Promise<any>}>()
+ async function identityList(method:string){
+  const owner=options.owner(),pending=identityReads.get(method)
+  if(pending&&pending.owner===owner)return pending.promise
+  const entry={owner,promise:Promise.resolve().then(()=>options.rpc(method,{}))}
+  identityReads.set(method,entry)
+  try{return await entry.promise}finally{if(identityReads.get(method)===entry)identityReads.delete(method)}
+ }
  // The desktop's dedicated personal-board registry is authoritative for these
  // sessions. Builtin public sources do not need an MCP workspace grant, and
  // scanning every historical session/workspace can time out during a batch.
@@ -40,7 +51,7 @@ export async function createComponentDataService(options:{file:string;integratio
   if(options.isShared(sessionId))throw Error('当前数据刷新仅支持个人工作台')
   const personal=allowPersonalBoard&&personalIdentity(sessionId)
   if(personal)return personal.session
-  const sessions=await options.rpc('session.list',{})
+  const sessions=await identityList('session.list')
   const session=sessions.items.find((s:any)=>s.sessionId===sessionId)
   if(!session)throw Error('组件所属会话不可用，请重新打开看板后重试')
   return session
@@ -50,7 +61,7 @@ export async function createComponentDataService(options:{file:string;integratio
   const personal=allowPersonalBoard&&personalIdentity(sessionId)
   checkOwner();if(personal)return personal
   const session=await sessionIdentity(sessionId);checkOwner()
-  const workspaces=await options.rpc('workspace.list',{});checkOwner()
+  const workspaces=await identityList('workspace.list');checkOwner()
   const workspace=workspaces.items.find((w:any)=>session.cwd?w.path===session.cwd:w.sessionIds?.includes(sessionId))
   if(!workspace)throw Error('组件所属工作区未连接，请重新连接原工作区后再绑定或刷新数据；现有内容已保留')
   return {session,workspace}
