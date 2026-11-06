@@ -24,7 +24,7 @@ describe('computer use image admission', () => {
   })
 })
 
-it('registers valid stroke schemas and stops model waiting at the absolute deadline', async () => {
+it('registers structured candidate tool calls and stops model waiting at the absolute deadline', async () => {
   vi.useFakeTimers()
   const { registerComputerUseTool } = await import('../packages/dsh-integration-runtime/computer-use-tools.js')
   let tool, onEvent
@@ -37,8 +37,8 @@ it('registers valid stroke schemas and stops model waiting at the absolute deadl
   const dispose = registerComputerUseTool(ctx)
   const exec = { signal: new AbortController().signal, agent: { cancel, session: { id: 'test', requestHeader: () => ({ config: { provider: 'test', model: 'test' } }) } } }
   try {
-    await tool.execute({ op: 'stroke', revision: 'view-1', strokes: [[{ x: 10, y: 20 }, { x: 30, y: 40 }]] }, exec)
-    expect(JSON.parse(fetcher.mock.calls[0][1].body).strokes).toHaveLength(1)
+    await tool.execute({ op: 'call', name: 'click', arguments_json: '{"x":10,"y":20}' }, exec)
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).arguments).toEqual({ x: 10, y: 20 })
     await vi.advanceTimersByTimeAsync(600001)
     expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ kind: 'hook' }), { keepInbox: true })
     expect(JSON.parse(fetcher.mock.calls.at(-1)[1].body).op).toBe('finish')

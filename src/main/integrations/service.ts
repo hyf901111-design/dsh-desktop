@@ -1,4 +1,4 @@
-import { loadBundledComputerUse, computerUsePlugin, COMPUTER_USE_PLUGIN_ID, type BundledComputerUse } from './bundled-computer-use';
+import { loadBundledComputerUse, computerUsePlugin, COMPUTER_USE_PLUGIN_ID, COMPUTER_USE_PLUGINS, isComputerUsePlugin, type BundledComputerUse } from './bundled-computer-use';
 import { createHash, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
@@ -70,7 +70,7 @@ export class IntegrationService {
     private calls = new Map<string, Set<AbortController>>();
     private runtimeSeenAt = 0;
     private computerUseBundle?: BundledComputerUse;
-    private computerUseStatus?: { registered: boolean; seenAt: number };
+    private computerUseStatus: Record<string, { registered: boolean; seenAt: number }> = {};
     private migrations = new Map<string, Promise<void>>();
     private compatibility = new Map<string, string>();
     private disposed = false;
@@ -195,27 +195,27 @@ export class IntegrationService {
         const preference = owner ? state.bundledSkillPreferences?.[owner]?.[entityId] : undefined;
         return { ...bundled.skill, enabled: preference?.enabled ?? true, revision: bundled.skill.revision + (preference?.revision ?? 0) };
     }
-    private computerUse(state = this.store.snapshot()) {
+    private computerUse(state = this.store.snapshot(), pluginId = COMPUTER_USE_PLUGIN_ID) {
         const owner = this.options.getOwnerId();
-        return owner && this.computerUseBundle ? computerUsePlugin(this.computerUseBundle, owner, state) : undefined;
+        return owner && this.computerUseBundle ? computerUsePlugin(this.computerUseBundle, owner, state, pluginId) : undefined;
     }
     assertComputerUseAccess(input: unknown) {
-        const request = input as { op?: string; runtimeEpoch?: string; ownerAccountId?: string } | undefined;
+        const request = input as { pluginId?: string; op?: string; runtimeEpoch?: string; ownerAccountId?: string } | undefined;
         // A retiring runtime may only release the random lease it already owned.
         if (request?.op === 'release') return;
         const owner = this.options.getOwnerId();
-        if (this.disposed || !owner || request?.ownerAccountId !== owner || request.runtimeEpoch !== this.runtimeEpoch || !this.computerUse()?.enabled)
+        if (this.disposed || !owner || request?.ownerAccountId !== owner || request.runtimeEpoch !== this.runtimeEpoch || !isComputerUsePlugin(request.pluginId ?? COMPUTER_USE_PLUGIN_ID) || !this.computerUse(undefined, request.pluginId ?? COMPUTER_USE_PLUGIN_ID)?.enabled)
             throw new IntegrationError('ACCESS_DENIED', 'Computer Use 已停用或当前会话不可用');
     }
     reportPluginStatus(input: unknown) {
         const value = input as { id?: string; version?: string; runtimeEpoch?: string; ownerAccountId?: string; registered?: boolean };
-        if (!value || value.id !== COMPUTER_USE_PLUGIN_ID || !this.computerUseBundle || value.version !== this.computerUseBundle.version || typeof value.registered !== 'boolean') throw new IntegrationError('INVALID_CONFIG', '插件状态无效');
+        if (!value || !isComputerUsePlugin(value.id ?? '') || !this.computerUseBundle || value.version !== this.computerUseBundle.version || typeof value.registered !== 'boolean') throw new IntegrationError('INVALID_CONFIG', '插件状态无效');
         if (value.runtimeEpoch !== this.runtimeEpoch || !this.options.getOwnerId() || value.ownerAccountId !== this.options.getOwnerId()) throw new IntegrationError('ACCESS_DENIED', '插件运行时已变化');
-        this.computerUseStatus = { registered: value.registered, seenAt: Date.now() };
+        this.computerUseStatus[value.id!] = { registered: value.registered, seenAt: Date.now() };
         return { ok: true };
     }
     private entity(kind: EntityKind, entityId: string, state = this.store.snapshot()) {
-        const value = kind === 'connection' ? state.connections[id(entityId)] : kind === 'plugin' ? (entityId === COMPUTER_USE_PLUGIN_ID ? this.computerUse(state) : state.plugins[id(entityId)]) : this.bundledSkill(id(entityId), state) ?? state.skills[id(entityId)];
+        const value = kind === 'connection' ? state.connections[id(entityId)] : kind === 'plugin' ? (isComputerUsePlugin(entityId) ? this.computerUse(state, entityId) : state.plugins[id(entityId)]) : this.bundledSkill(id(entityId), state) ?? state.skills[id(entityId)];
         if (!value)
             throw new IntegrationError('NOT_FOUND', '项目不存在或已移除');
         if (value.ownerAccountId && value.ownerAccountId !== this.owner())
@@ -258,7 +258,7 @@ export class IntegrationService {
             this.owner();throw new IntegrationError('ACCESS_DENIED','内置通联 MCP 随客户端更新，可以启用或停用，不能删除或修改配置');
         }
         await this.syncBundledDatayes();
-        if (command.type === 'uninstall' && (isBundledSkillId(command.id) || command.id === COMPUTER_USE_PLUGIN_ID)) {
+        if (command.type === 'uninstall' && (isBundledSkillId(command.id) || isComputerUsePlugin(command.id))) {
             this.owner();
             throw new IntegrationError('ACCESS_DENIED', '内置能力随客户端更新，可以启用或停用，不能删除');
         }
@@ -281,13 +281,16 @@ export class IntegrationService {
                         const preferences = (state.bundledSkillPreferences ??= {});
                         const account = (preferences[owner] ??= {});
                         account[target] = { enabled: command.enabled, revision: (account[target]?.revision ?? 0) + 1 };
-                    } else if (command.kind === 'plugin' && target === COMPUTER_USE_PLUGIN_ID) {
+                    } else if (command.kind === 'plugin' && isComputerUsePlugin(target)) {
                         const preferences = (state.bundledPluginPreferences ??= {});
                         const account = (preferences[owner] ??= {});
                         account[target] = { enabled: command.enabled, revision: (account[target]?.revision ?? 0) + 1 };
+                        if (command.enabled) for (const candidate of COMPUTER_USE_PLUGINS) {
+                            if (candidate.id !== target) account[candidate.id] = { enabled: false, revision: (account[candidate.id]?.revision ?? 0) + 1 };
+                        }
                     } else { entity.enabled = command.enabled; entity.revision++; }
                 });
-                if (command.kind === 'plugin' && target === COMPUTER_USE_PLUGIN_ID && !command.enabled) this.options.onComputerUseRevoked?.();
+                if (command.kind === 'plugin' && isComputerUsePlugin(target)) this.options.onComputerUseRevoked?.();
                 if (command.kind === 'connection' && !command.enabled) {
                     this.abortCalls(target);
                     await this.mcp.dispose(target);
@@ -728,13 +731,15 @@ export class IntegrationService {
     private snapshot() {
         const state = this.store.snapshot(), owner = this.options.getOwnerId(), rows: IntegrationRow[] = [];
         if (owner) {
-            const computer = this.computerUse(state);
-            if (computer) {
-                const connected = this.computerUseStatus && Date.now() - this.computerUseStatus.seenAt < 30000;
+            for (const candidate of COMPUTER_USE_PLUGINS) {
+                const computer = this.computerUse(state, candidate.id);
+                if (!computer) continue;
+                const status = this.computerUseStatus[computer.id];
+                const connected = status && Date.now() - status.seenAt < 30000;
                 rows.push({ id: computer.id, kind: 'plugin', tab: 'plugins', name: computer.name, description: computer.description,
-                    enabled: computer.enabled, status: !computer.enabled ? '已停用' : connected && this.computerUseStatus?.registered ? '已启用' : '等待运行时连接',
+                    enabled: computer.enabled, status: !computer.enabled ? '已停用' : connected && status?.registered ? '已启用' : '等待运行时连接',
                     source: 'EWork 内置', revision: computer.revision, removable: false, toggleable: true,
-                    detail: `版本 ${computer.version} · 后台操作 · 首次使用需要辅助功能与屏幕录制权限`, toolCount: connected && this.computerUseStatus?.registered ? 1 : 0 });
+                    detail: `版本 ${computer.version} · 三选一，开启会停用其他方案 · 需要辅助功能与屏幕录制权限`, toolCount: connected && status?.registered ? 1 : 0 });
             }
             for (const p of Object.values(state.plugins))
                 if ((!p.ownerAccountId || p.ownerAccountId === owner) && p.catalogKind !== 'skill')
@@ -764,7 +769,7 @@ export class IntegrationService {
         return { revision: state.revision, ownerAccountId:owner??'',rows, historicalToolLabels: rows.filter(row=>row.kind==='connection'&&isBundledDatayesId(row.id)).flatMap(row=>datayesHistoricalTools.map(tool=>({wireName:`ework__t_${hash([row.id,tool.name]).slice(0,32)}`,label:row.name+' · '+tool.name}))),taskCapabilities: projectTaskCapabilities(state, owner), compatibilityStatus: owner ? this.compatibility.get(owner) : undefined, runtimeStatus: !owner ? '等待账户身份确认' : Date.now() - this.runtimeSeenAt < 30000 ? '运行时已连接' : '运行时尚未连接' };
     }
     dependencies(entityId: string): string[] { const state = this.store.snapshot(), tasks = Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(b => b.entityId === entityId)); return [...tasks.map(([task]) => `定时任务 ${task} 使用此能力`), '未显式绑定的对话或任务仍会在执行时检查权限；已有内容会保留']; }
-    runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: [...Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), ...(owner ? [...this.bundledSkills.keys()].map(id => this.bundledSkill(id, state)!) : [])], plugins: [...Object.values(state.plugins), ...(this.computerUse(state) ? [this.computerUse(state)!] : [])].filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
+    runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: [...Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), ...(owner ? [...this.bundledSkills.keys()].map(id => this.bundledSkill(id, state)!) : [])], plugins: [...Object.values(state.plugins), ...COMPUTER_USE_PLUGINS.map(candidate => this.computerUse(state, candidate.id)).filter((item): item is PluginInstall => !!item)].filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
     private async skillDetail(input: unknown): Promise<SkillDetail> {
         if (!isSkillDetailCommand(input)) throw new IntegrationError('INVALID_CONFIG', '技能详情请求无效');
         const owner = this.owner(), epoch = this.runtimeEpoch;
@@ -876,7 +881,7 @@ export class IntegrationService {
     private async recordCall(call: ToolCall, connectionId: string, status: 'succeeded' | 'failed' | 'unknown', errorCode?: import('../../shared/integrations').IntegrationErrorCode) { await this.store.change(state => { state.calls.push({ id: call.callId, toolId: call.toolId, connectionId, sessionId: call.context.sessionId, taskId: call.context.taskId, time: Date.now(), status, errorCode }); state.calls = state.calls.slice(-1000); }); }
     private abortCalls(connectionId: string) { for (const controller of this.calls.get(connectionId) ?? [])
         controller.abort(); }
-    rotateIdentity() { this.runtimeEpoch = randomUUID(); this.computerUseStatus = undefined; this.options.onComputerUseRevoked?.(); this.operations.abortAll(); for (const key of this.calls.keys())
+    rotateIdentity() { this.runtimeEpoch = randomUUID(); this.computerUseStatus = {}; this.options.onComputerUseRevoked?.(); this.operations.abortAll(); for (const key of this.calls.keys())
         this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledDatayes(true).catch(()=>{}); }
     async dispose() { this.disposed=true; this.rotateIdentity(); await this.operations.dispose(); await this.mcp.disposeAll(); }
 }

@@ -18,6 +18,7 @@ export interface HarnessRuntimeOptions {
   bundledFundResearchEntry?: string
   bundledIntegrationEntry?: string
   computerUseBinary?: string
+  computerUseExecutables?: Record<string, string>
   integrationEndpoint?: {url:string;token:string}
   bundledMemoryEntry?: string
   memoryEndpoint?: {url:string;token:string}
@@ -222,6 +223,7 @@ export class HarnessRuntime {
           process.platform,
           { ...process.env, SHERLOCK_ACCOUNT_BRIDGE: this.options.accountEndpoint ? JSON.stringify(this.options.accountEndpoint) : undefined,
             EWORK_COMPUTER_USE_BINARY:this.options.computerUseBinary,
+            EWORK_COMPUTER_USE_EXECUTABLES: this.options.computerUseExecutables ? JSON.stringify(this.options.computerUseExecutables) : undefined,
             EWORK_INTEGRATION_BRIDGE:this.options.integrationEndpoint?JSON.stringify(this.options.integrationEndpoint):undefined,
             EWORK_MEMORY_BRIDGE:this.options.memoryEndpoint?JSON.stringify(this.options.memoryEndpoint):undefined,
             DSH_DESKTOP_MEMORY_ENTRY:this.options.bundledMemoryEntry,

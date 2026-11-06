@@ -1,0 +1,21 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>EWork Computer Use Benchmark</title>
+<style>body{font:20px -apple-system;background:#f7f7fa;color:#20202a;margin:32px}h1{font-size:26px}button,input,textarea,select{font:inherit;padding:12px;margin:10px;border:1px solid #888;border-radius:8px}button{cursor:pointer;background:#1b60dd;color:white}textarea{display:block;width:85%;height:110px}.row{display:flex;align-items:center}.panel{background:white;border:1px solid #ccc;border-radius:14px;padding:24px;margin:20px 0}#result{color:#087640;font-weight:600}#drop{width:220px;height:150px;border:3px dashed #27855a;display:flex;align-items:center;justify-content:center}#drag{width:120px;padding:24px;background:#dae6ff;border:2px solid #2255bb;cursor:grab;margin-right:50px}label{display:block}</style>
+<h1>EWork Computer Use Benchmark · 自有测试页面</h1><p id="intro"></p><div id="content"></div><p id="result" aria-live="polite">尚未完成</p>
+<script>
+const query=new URLSearchParams(location.search), scenario=query.get('scenario')||'text', token=query.get('token');
+const content=document.getElementById('content');
+function complete(value){document.getElementById('result').textContent='已保存：'+JSON.stringify(value);fetch('/result',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,scenario,value})})}
+if(scenario==='text'){
+ intro.textContent='输入客户备注，勾选确认，再保存。';content.innerHTML='<div class="panel"><label>客户备注<textarea id="note" aria-label="客户备注"></textarea></label><label><input type="checkbox" id="confirm">确认内容</label><button id="save">保存备注</button></div>';
+ save.onclick=()=>complete({text:note.value,confirmed:document.getElementById('confirm').checked});
+}else if(scenario==='scroll'){
+ intro.textContent='向下滚动找到页尾表单，选择季度并提交。';content.innerHTML='<div style="height:1050px" class="panel">报告内容区（继续向下滚动）</div><div class="panel"><label>报告季度<select id="quarter"><option>请选择</option><option>第三季度</option><option>第四季度</option></select></label><label><input type="checkbox" id="confirm">已复核</label><button id="save">提交季度</button></div>';
+ save.onclick=()=>complete({quarter:quarter.value,confirmed:document.getElementById('confirm').checked});
+}else if(scenario==='drag'){
+ intro.textContent='将蓝色卡片拖入绿色目标框。';content.innerHTML='<div class="panel row"><div id="drag" draggable="true">研究卡片</div><div id="drop">拖到这里</div></div>';
+ drag.ondragstart=e=>e.dataTransfer.setData('text/plain','research');drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();complete({dropped:e.dataTransfer.getData('text/plain')==='research'});drop.textContent='卡片已接收'};
+}else if(scenario==='recovery'){
+ intro.textContent='点击载入，布局变化后输入新的验证码再确认。';content.innerHTML='<div class="panel"><button id="load">载入验证</button><div id="challenge"></div></div>';
+ load.onclick=()=>{load.disabled=true;challenge.innerHTML='<div style="height:180px"></div><p>本次测试码：B7K9</p><input aria-label="测试码" id="code"><button id="save">确认测试码</button>';save.onclick=()=>complete({code:code.value})};
+}
+</script></html>
