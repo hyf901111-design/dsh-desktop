@@ -28766,6 +28766,141 @@
         ],
         "generatedAt": "2026-11-06T02:17:48.563056+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "回复首行完整历史展开与笔记演示背景和新建时序",
+        "branch": "codex/feat/response-history-demo-order-20261106",
+        "baseCommit": "2e36c963c00508541a45915f1ec0a9807efc7936",
+        "tipCommit": "0da25c5c9fff4cfa5dbf39df3ff187d25813c290",
+        "commits": [
+          {
+            "commit": "3e45ff016fb8963d605e653819bbd9f78b1157c5",
+            "parents": [
+              "2e36c963c00508541a45915f1ec0a9807efc7936"
+            ],
+            "subject": "优化：紧凑显示回复用时并展开完整过程回报"
+          },
+          {
+            "commit": "0da25c5c9fff4cfa5dbf39df3ff187d25813c290",
+            "parents": [
+              "3e45ff016fb8963d605e653819bbd9f78b1157c5"
+            ],
+            "subject": "修复：统一笔记演示背景并在点击后创建演示会话"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "design-qa.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-response-history.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-response-history-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-response-history.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-response-history.test.js",
+              "test/conversation-response-history-browser.test.js",
+              "test/conversation-live-activity.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "13 项回复首行与公开历史过程聚焦检查通过",
+            "verifiedCommit": "0da25c5c9fff4cfa5dbf39df3ff187d25813c290",
+            "completedAt": "2026-11-06T02:45:59.262395+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-handoff-browser.test.js",
+              "-t",
+              "creates the .* session only|keeps Research intact|stops an in-flight native guide|keeps a failed Notes save",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "5 项演示时序、笔记背景、取消及原草稿保护检查通过",
+            "verifiedCommit": "0da25c5c9fff4cfa5dbf39df3ff187d25813c290",
+            "completedAt": "2026-11-06T02:45:59.262395+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "节点类型检查通过",
+            "verifiedCommit": "0da25c5c9fff4cfa5dbf39df3ff187d25813c290",
+            "completedAt": "2026-11-06T02:45:59.262395+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已查看生产组件浅深色折叠/展开截图及真实编辑器演示背景截图。聚焦浏览器通过，实际签名包待集成交付。"
+        },
+        "acceptanceCriteria": [
+          "用时首行采用13px字号和分隔线，有公开记录时显示箭头并允许展开完整历史进度和真实工具信息",
+          "最终答复保持正文，执行中保留最新回应和唯一当前状态，用户插入消息不被跨越",
+          "笔记演示复用普通笔记背景与圆角",
+          "笔记与看板在模拟点击完成后才准备和显示新会话"
+        ],
+        "risks": [
+          "更改展示投影，不改持久消息或原始工具结果；私有推理不加入公开回报",
+          "新建期间仍受原有草稿、身份及取消检查约束",
+          "此次为本地测试交付，不对外发布；最终批次门禁另行收尾"
+        ],
+        "generatedAt": "2026-11-06T02:45:59.262395+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -30347,6 +30482,34 @@
         "run",
         "test/home-guide-entry-native.test.ts",
         "test/home-guide-entry-diagnostics.test.ts",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-response-history.test.js",
+        "test/conversation-response-history-browser.test.js",
+        "test/conversation-live-activity.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-entry-handoff-browser.test.js",
+        "-t",
+        "creates the .* session only|keeps Research intact|stops an in-flight native guide|keeps a failed Notes save",
         "--maxWorkers=1",
         "--fileParallelism=false",
         "--reporter=dot"
