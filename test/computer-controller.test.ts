@@ -523,11 +523,61 @@ it('resolves one accessible search field and sends native background input', asy
   expect(result.action).toMatchObject({ delivery_mode: 'background' })
 })
 
-it.each([false, true])('refuses web-editor keyboard input without trusting AX echo or foreground focus (capability refusal=%s)', async knownRefusal => {
+it('cancels a first request waiting on the native driver before creating a session', async () => {
+  const callTool = vi.fn(async () => ({ isError: false, text: '', structuredJson: '{}', images: [] }))
+  let ready!: (driver: { callTool: typeof callTool }) => void
+  const starting = new Promise<{ callTool: typeof callTool }>(resolve => { ready = resolve })
+  const { run, c } = setup({ driver: () => starting })
+  const pending = run({ op: 'observe', pid: 9, window_id: 10 })
+  const rejected = expect(pending).rejects.toThrow('桌面控制已停止')
+  await c.stop()
+  ready({ callTool })
+  await rejected
+  expect(callTool).not.toHaveBeenCalled()
+})
+
+it('focuses a verified Electron composer by window pixels and reads back after one background input', async () => {
+  const { run, callTool } = setup({ screenPoint: (_t, data, x, y) => ({
+    x: data.window_bounds.x + x / 2, y: data.window_bounds.y + y / 2
+  }), prepareObservation: r => ({ ...r, data: { ...r.data,
+    elements: [{ element_token: 'message-field', role: 'AXTextArea', in_web_content: true,
+      frame: { x: 100, y: 110, w: 160, h: 40 } }]
+  } }) })
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const typed = await run({ op: 'type', text: '你好', element_token: 'message-field', revision: view.revision })
+  const inputs = callTool.mock.calls.filter(([name]) => name === 'type_text').map(([, raw]) => JSON.parse(raw))
+  expect(inputs).toEqual([expect.objectContaining({ delivery_mode: 'background', text: '你好',
+    target: { kind: 'window', pid: 9, window_id: 10 }, x: expect.any(Number), y: expect.any(Number) })])
+  expect(inputs[0]).not.toHaveProperty('element_token')
+  expect(typed.revision).not.toBe(view.revision)
+  expect(callTool.mock.calls.some(([name]) => name === 'bring_to_front')).toBe(false)
+})
+
+it.each(['moved', 'covered'])('refuses Electron input when the exact window became %s', async changed => {
+  const { run, callTool } = setup({ screenPoint: (_t, data, x, y) => ({
+    x: data.window_bounds.x + x / 2, y: data.window_bounds.y + y / 2
+  }), prepareObservation: r => ({ ...r, data: { ...r.data,
+    elements: [{ element_token: 'message-field', role: 'AXTextArea', in_web_content: true,
+      frame: { x: 100, y: 110, w: 160, h: 40 } }]
+  } }) })
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_windows' ? {
+    isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, z_index: 1, bounds: { x: changed === 'moved' ? 50 : 20, y: 30, width: 400, height: 300 } },
+      ...(changed === 'covered' ? [{ pid: 9, window_id: 11, z_index: 2, bounds: { x: 100, y: 110, width: 160, height: 40 } }] : [])
+    ] })
+  } : original(name, raw, options))
+  const typed = await run({ op: 'type', text: '你好', revision: view.revision, element_token: 'message-field' })
+  expect(typed.action).toMatchObject({ performed: false, code: changed === 'moved' ? 'target_window_changed' : 'keyboard_window_covered' })
+  expect(callTool.mock.calls.some(([name]) => ['type_text', 'bring_to_front'].includes(name))).toBe(false)
+})
+
+it.each([true, false])('refuses an unsafe web keyboard target without AX echo or foreground focus (same-PID refusal=%s)', async knownRefusal => {
   const pointer = vi.fn()
   const { run, callTool } = setup({ pointer, prepareObservation: r => ({ ...r, data: { ...r.data,
     elements: [{ element_token: 'message-field', role: 'AXTextArea', in_web_content: true,
-      frame: { x: 100, y: 110, w: 160, h: 40 } }],
+      frame: knownRefusal ? { x: 100, y: 110, w: 160, h: 40 } : undefined }],
     ...(knownRefusal ? { background_input: { exact_window: { status: 'matched', pid: 9, window_id: 10 },
       routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }] } } : {})
   } }) })

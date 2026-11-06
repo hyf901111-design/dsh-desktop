@@ -34,6 +34,7 @@ export interface IntegrationServiceOptions {
     bundledCatalogRoot?: string;
     bundledSkillDirectory?: string;
     bundledComputerUseRoot?: string;
+    onComputerUseRevoked?(): void;
     clientVersion?: string;
     selectSkill?(): Promise<string | null>;
     resolveContext?(context: CapabilityContext): Promise<CapabilityContext>;
@@ -198,6 +199,14 @@ export class IntegrationService {
         const owner = this.options.getOwnerId();
         return owner && this.computerUseBundle ? computerUsePlugin(this.computerUseBundle, owner, state) : undefined;
     }
+    assertComputerUseAccess(input: unknown) {
+        const request = input as { op?: string; runtimeEpoch?: string; ownerAccountId?: string } | undefined;
+        // A retiring runtime may only release the random lease it already owned.
+        if (request?.op === 'release') return;
+        const owner = this.options.getOwnerId();
+        if (this.disposed || !owner || request?.ownerAccountId !== owner || request.runtimeEpoch !== this.runtimeEpoch || !this.computerUse()?.enabled)
+            throw new IntegrationError('ACCESS_DENIED', 'Computer Use 已停用或当前会话不可用');
+    }
     reportPluginStatus(input: unknown) {
         const value = input as { id?: string; version?: string; runtimeEpoch?: string; ownerAccountId?: string; registered?: boolean };
         if (!value || value.id !== COMPUTER_USE_PLUGIN_ID || !this.computerUseBundle || value.version !== this.computerUseBundle.version || typeof value.registered !== 'boolean') throw new IntegrationError('INVALID_CONFIG', '插件状态无效');
@@ -278,6 +287,7 @@ export class IntegrationService {
                         account[target] = { enabled: command.enabled, revision: (account[target]?.revision ?? 0) + 1 };
                     } else { entity.enabled = command.enabled; entity.revision++; }
                 });
+                if (command.kind === 'plugin' && target === COMPUTER_USE_PLUGIN_ID && !command.enabled) this.options.onComputerUseRevoked?.();
                 if (command.kind === 'connection' && !command.enabled) {
                     this.abortCalls(target);
                     await this.mcp.dispose(target);
@@ -866,7 +876,7 @@ export class IntegrationService {
     private async recordCall(call: ToolCall, connectionId: string, status: 'succeeded' | 'failed' | 'unknown', errorCode?: import('../../shared/integrations').IntegrationErrorCode) { await this.store.change(state => { state.calls.push({ id: call.callId, toolId: call.toolId, connectionId, sessionId: call.context.sessionId, taskId: call.context.taskId, time: Date.now(), status, errorCode }); state.calls = state.calls.slice(-1000); }); }
     private abortCalls(connectionId: string) { for (const controller of this.calls.get(connectionId) ?? [])
         controller.abort(); }
-    rotateIdentity() { this.runtimeEpoch = randomUUID(); this.computerUseStatus = undefined; this.operations.abortAll(); for (const key of this.calls.keys())
+    rotateIdentity() { this.runtimeEpoch = randomUUID(); this.computerUseStatus = undefined; this.options.onComputerUseRevoked?.(); this.operations.abortAll(); for (const key of this.calls.keys())
         this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledDatayes(true).catch(()=>{}); }
     async dispose() { this.disposed=true; this.rotateIdentity(); await this.operations.dispose(); await this.mcp.disposeAll(); }
 }

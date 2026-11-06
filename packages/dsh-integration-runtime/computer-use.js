@@ -2,13 +2,14 @@ import { isAbsolute } from 'node:path'
 import { access } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
-import * as computerUse from './vendor/computer-use/lib/index.js'
+import { computerHostEndpoint, registerComputerUseTool } from './computer-use-tools.js'
 
-const id = 'builtin:computer-use', tool = 'computer_use_plus'
+const id = 'builtin:computer-use'
+export const COMPUTER_USE_TOOL = 'computer_use'
+const tool = COMPUTER_USE_TOOL
 
-/** The original plugin owns the native engine, desktop lease and drain/cancel.
- * This adapter only binds its lifecycle to the signed desktop's account switch. */
-export function createComputerUseController(ctx, { binaryPath, runtime, report, allowed, plugin = computerUse }) {
+/** Own the original desktop tool's registration and lease per enabled account. */
+export function createComputerUseController(ctx, { binaryPath, runtime, report, allowed, env, fetch }) {
   let fiber, identity, closed = false, queue = Promise.resolve()
   const desired = snapshot => !!snapshot?.plugins.some(item => item.id === id && item.enabled === true)
   const enabled = () => !closed && !!fiber && desired(runtime.snapshot) && identity === `${runtime.snapshot.runtimeEpoch}:${runtime.snapshot.ownerAccountId}`
@@ -20,7 +21,7 @@ export function createComputerUseController(ctx, { binaryPath, runtime, report, 
     if (!enabled() || !allowed(exec.agent)) throw denied()
     return next()
   })
-  const unload = async () => { const previous = fiber; fiber = undefined; identity = undefined; await previous?.dispose() }
+  const unload = async () => { const previous = fiber; fiber = undefined; identity = undefined; await previous?.() }
   return {
     sync(snapshot) {
       const work = queue.then(async () => {
@@ -33,9 +34,9 @@ export function createComputerUseController(ctx, { binaryPath, runtime, report, 
             if (ctx.tools.get(tool)) throw Error('Computer Use is already owned by another plugin')
             if (!isAbsolute(binaryPath)) throw Error('Native executable path is not absolute')
             await access(binaryPath, constants.X_OK)
-            const loading = ctx.plugin(plugin, { binaryPath, hostBundleId: 'com.evanarts.sherlock' })
-            fiber = loading; identity = key
-            await loading
+            const { runtimeEpoch, ownerAccountId } = snapshot
+            fiber = registerComputerUseTool(ctx, { endpoint: computerHostEndpoint(env), identity: { runtimeEpoch, ownerAccountId }, fetch })
+            identity = key
             if (!ctx.tools.get(tool)) throw Error('Computer Use did not register its tool')
           } catch (error) { await unload(); ctx.logger.warn('Computer Use plugin could not load: %s', error.message) }
         }

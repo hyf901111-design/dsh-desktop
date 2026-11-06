@@ -1,4 +1,5 @@
-import { createComputerUseController } from './computer-use.js'
+import { COMPUTER_USE_TOOL, createComputerUseController } from './computer-use.js'
+import { COMPUTER_USE_GUIDANCE } from './computer-use-tools.js'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import { connectionAllows, isLiveAgent, resolveCapabilityContext } from './context.js'
 import { createToolProxy, toolRegistrationName, validateToolBinding } from './tool-proxy.js'
@@ -8,7 +9,7 @@ import { projectMcpInputSchema } from './schema-projection.js'
 import { financeSkillGuidance, equityResearchSkillGuidance } from './skill-priority.js'
 
 export const name = 'ework-integrations'
-export const inject = ['tools', 'skills', 'agents', 'workspaceRegistry']
+export const inject = ['tools', 'skills', 'agents', 'workspaceRegistry', 'llm', 'attachments']
 const unavailable = () => Error('连接服务暂时不可用，请检查连接后重试')
 const explicitManagedSkillPattern = new RegExp(`(?:^|\\s)\\/(ework-skill-[a-f0-9]{16}|${Object.values(stableBuiltinSkillAliases).join('|')})(?=\\s|$)`, 'g')
 const identifier = value => typeof value === 'string' && value.length > 0 && value.length <= 256 && !/[\u0000-\u001f]/.test(value)
@@ -102,6 +103,10 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
   const currentConnections = () => new Map((snapshot?.connections ?? []).map(connection => [connection.id, connection]))
   const allowed = (binding, context) => available && context?.runtimeEpoch === snapshot.runtimeEpoch && context?.ownerAccountId === snapshot.ownerAccountId && connectionAllows(currentConnections().get(binding.connectionId), binding, context)
 
+  const allowsComputerUse = agent => {
+    const context = agents.get(agent)?.context
+    return available && isLiveAgent(ctx, agent) && context?.runtimeEpoch === snapshot.runtimeEpoch && context?.ownerAccountId === snapshot.ownerAccountId
+  }
   const refreshRestrictions = () => {
     if (refreshingRestrictions || disposed) return
     refreshingRestrictions = true
@@ -109,6 +114,7 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
       for (const [agent, state] of agents) {
         if (!isLiveAgent(ctx, agent)) continue
         const deny = [...tools.values()].filter(entry => !allowed(entry.binding, state.context)).map(entry => entry.name).sort()
+        if (ctx.tools.get(COMPUTER_USE_TOOL) && !allowsComputerUse(agent)) deny.push(COMPUTER_USE_TOOL)
         const key = JSON.stringify(deny)
         if (key === state.key) continue
         // Install the more restrictive replacement before releasing the old mask.
@@ -192,9 +198,9 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
     }
   }
   if (env.EWORK_COMPUTER_USE_BINARY) computerUse = createComputerUseController(ctx, {
-    binaryPath: env.EWORK_COMPUTER_USE_BINARY, runtime,
+    binaryPath: env.EWORK_COMPUTER_USE_BINARY, runtime, env, fetch: fetchRequest,
     report: value => bridge.request('/plugins/status', value),
-    allowed: agent => { const context = agents.get(agent)?.context; return available && isLiveAgent(ctx, agent) && context?.runtimeEpoch === snapshot.runtimeEpoch && context?.ownerAccountId === snapshot.ownerAccountId }
+    allowed: allowsComputerUse
   })
   listeners.push(ctx.tools.guard(exec => {
     if (!exec.name.startsWith('ework__')) return
@@ -220,15 +226,17 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
     }
     context.signal?.throwIfAborted()
     const result = await next()
-    const managed = ctx.tools.wireSchemas(agent).schemas.filter(tool => tool.name.startsWith('ework__'))
+    const isManaged = tool => tool.name.startsWith('ework__') || tool.name === COMPUTER_USE_TOOL
+    const managed = ctx.tools.wireSchemas(agent).schemas.filter(isManaged)
     // Context text providers are synchronous. Add the current routing guidance
     // here, after the bridge sync, rather than inserting a Promise as text.
     const skillAvailable = ctx.tools.schemas(agent).some(tool => tool.name === 'skill')
     const guidance = [
+      {name:'sherlock:computer-use-selection',text:managed.some(tool => tool.name === COMPUTER_USE_TOOL) ? COMPUTER_USE_GUIDANCE : ''},
       {name:'ework:finance-skill',text:skillAvailable?financeSkillGuidance(runtime.snapshot):''},
       {name:'ework:equity-research-skill',text:skillAvailable?equityResearchSkillGuidance(runtime.snapshot):''}
     ]
-    return { ...result, contexts: [...result.contexts.filter(entry => !guidance.some(item => item.name === entry.name)), ...guidance.filter(entry => entry.text)], tools: [...result.tools.filter(tool => !tool.name.startsWith('ework__')), ...managed] }
+    return { ...result, contexts: [...result.contexts.filter(entry => !guidance.some(item => item.name === entry.name)), ...guidance.filter(entry => entry.text)], tools: [...result.tools.filter(tool => !isManaged(tool)), ...managed] }
   }))
   listeners.push(ctx.on('agent/pre-step', async ({messages,signal}, next) => {
     await runtime.sync()

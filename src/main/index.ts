@@ -1413,7 +1413,11 @@ async function bootstrap(): Promise<void> {
     createWindow: createLocalSearchWindow,
     readPage: readBrowserPage,
     browserUse: (input,signal)=>conversationBrowser.run(input,signal),
-    computerUse: (input,signal)=>desktopComputer!.run(input,signal)
+    computerUse: (input, signal) => {
+      if (!integrationService) throw Error('Computer Use 插件服务不可用');
+      integrationService.assertComputerUseAccess(input);
+      return desktopComputer!.run(input, signal);
+    }
   })
   // Integrations are isolated from core startup: a damaged registry must never hide conversations.
   let scheduledStoreForIntegrations: TaskStore | undefined
@@ -1505,7 +1509,8 @@ async function bootstrap(): Promise<void> {
       root: join(app.getPath('userData'), 'integrations'), encryption: safeStorage,
       getOwnerId: integrationOwner, bundledCatalogRoot: desktopResourcePath('integration-catalog'),
       bundledSkillDirectory: bundledSkillDirectory(),
-      bundledComputerUseRoot: process.platform === 'darwin' ? join(app.getAppPath(), 'node_modules/dsh-integration-runtime/vendor/computer-use') : undefined,
+      bundledComputerUseRoot: process.platform === 'darwin' ? join(app.getAppPath(), 'node_modules/dsh-integration-runtime') : undefined,
+      onComputerUseRevoked: () => desktopComputer?.cancel(),
       bundledDatayes:{request:(body,signal)=>accountService!.datayesMcpRequest(body,signal),authenticated:()=>accountService!.authenticated},
       clientVersion: app.getVersion(),
       legacySkillRoots: legacySkillRoots({ userDataRoot: app.getPath('userData'), bundledSkillDirectory: bundledSkillDirectory() }),
