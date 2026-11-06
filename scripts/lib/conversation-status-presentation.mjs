@@ -36,7 +36,6 @@ body [data-response-progress][data-expanded=true]>.Md3f7G_executionTrigger .Md3f
 body [data-response-progress]>.Md3f7G_executionTrigger:is(:hover,:focus-visible):not(:disabled)>.Md3f7G_executionLeading,
 body [data-response-progress][data-expanded=true]>.Md3f7G_executionTrigger>.Md3f7G_executionLeading{opacity:1}
 body [data-response-progress]>.Md3f7G_executionTrigger:disabled>.Md3f7G_executionLeading{display:none}
-body [data-response-progress][data-state=complete]>.Md3f7G_executionTrigger:disabled>.Md3f7G_executionText{display:none}
 body [data-conversation-activity-details]{display:flex;flex-direction:column;gap:4px;border:0;margin:4px 0 0;padding:0}
 [data-activity-record]>summary{display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer;min-width:0;color:var(--dsw-alias-label-tertiary,#80858e);font-size:13px;line-height:22px}
 [data-activity-record]>summary::-webkit-details-marker{display:none}

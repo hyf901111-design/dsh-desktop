@@ -105,3 +105,23 @@ it('shows an actual brief reply above one animated status, with chronological de
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+
+it.each(['zh','en'])('keeps the elapsed header label visible before a public reply and after a simple answer in %s',async(locale)=>{
+ const {page,errors}=await fixture(locale);try{
+  await page.evaluate(()=>window.responseFixture.statusSequence('ack'))
+  const total=page.locator('[data-response-progress=total]').first(),label=total.locator('.Md3f7G_executionText'),trigger=total.locator('button').first()
+  await expect.poll(()=>total.locator('[data-response-total-time]').count()).toBe(1)
+  expect(await trigger.isDisabled()).toBe(true)
+  expect(await label.isVisible()).toBe(true)
+  expect((await trigger.innerText()).trim()).not.toMatch(/^[·•]/u)
+  await page.screenshot({path:evidence+'/elapsed-ack-'+locale+'.png'})
+  await page.evaluate(()=>window.responseFixture.simpleAnswer())
+  await expect.poll(()=>page.locator(liveSelector).count()).toBe(0)
+  expect(await label.isVisible()).toBe(true)
+  expect((await trigger.innerText()).trim()).not.toMatch(/^[·•]/u)
+  expect(await label.evaluate(node=>getComputedStyle(node).animationName)).toBe('none')
+  await page.screenshot({path:evidence+'/elapsed-completed-'+locale+'.png'})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
