@@ -28692,6 +28692,80 @@
         ],
         "generatedAt": "2026-11-06T01:56:35.304802+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示入口 arm 拒绝原因诊断",
+        "branch": "codex/feat/demo-entry-arm-diagnostics-20261106",
+        "baseCommit": "e87b8d2155946c8536de45695f3487d1f6a321ef",
+        "tipCommit": "efab1406db719570b34ae0818dc21b212d5633b4",
+        "commits": [
+          {
+            "commit": "efab1406db719570b34ae0818dc21b212d5633b4",
+            "parents": [
+              "e87b8d2155946c8536de45695f3487d1f6a321ef"
+            ],
+            "subject": "诊断：记录演示入口初始化被拒绝的具体原因"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-entry-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-native.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-entry-diagnostics.test.ts",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "53 项相关检查通过；新增五种拒绝路径在修改前均缺少诊断记录，修改后分别记录正确闭集原因，不包含草稿、附件、路径或 token。",
+            "verifiedCommit": "efab1406db719570b34ae0818dc21b212d5633b4",
+            "completedAt": "2026-11-06T02:17:48.563056+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "efab1406db719570b34ae0818dc21b212d5633b4",
+            "completedAt": "2026-11-06T02:17:48.563056+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅补充现有诊断日志，不修改用户界面或校验行为。需要在签名包下一次复现时读取原因。"
+        },
+        "acceptanceCriteria": [
+          "arm 早期拒绝记录 ineligible、composition、session、input 或 phase 等闭集原因",
+          "不改变原有取消规则，不记录用户输入或凭据"
+        ],
+        "risks": [
+          "这是诊断补充，不是演示中断根因修复。",
+          "需集成到共享测试包后采集真实失败原因；未运行全功能测试。"
+        ],
+        "generatedAt": "2026-11-06T02:17:48.563056+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -30260,6 +30334,19 @@
         "run",
         "test/conversation-live-activity.test.js",
         "test/conversation-live-activity-browser.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-entry-native.test.ts",
+        "test/home-guide-entry-diagnostics.test.ts",
         "--maxWorkers=1",
         "--fileParallelism=false",
         "--reporter=dot"
