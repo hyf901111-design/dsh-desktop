@@ -135,10 +135,10 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
    rows=rows.filter(item=>entries.every(([key,value])=>path(item,key)===value))
   }
   if(mapping.$sortBy!==undefined){
-   if(typeof mapping.$sortBy!=='string'||!['asc','desc',undefined].includes(mapping.$order))throw Error('列表排序无效')
+   if(typeof mapping.$sortBy!=='string'||!['asc','desc','ascending','descending',undefined].includes(mapping.$order))throw Error('列表排序无效')
    const keyed=rows.map(value=>({value,key:path(value,mapping.$sortBy)}))
    if(keyed.some(v=>typeof v.key!=='string'&&!(typeof v.key==='number'&&Number.isFinite(v.key))))throw Error('排序字段缺失或不是数值/文本')
-   rows=keyed.sort((a,b)=>(a.key<b.key?-1:a.key>b.key?1:0)*(mapping.$order==='desc'?-1:1)).map(v=>v.value)
+   rows=keyed.sort((a,b)=>(a.key<b.key?-1:a.key>b.key?1:0)*(['desc','descending'].includes(mapping.$order)?-1:1)).map(v=>v.value)
   }
   if(mapping.$take!==undefined){if(!Number.isInteger(mapping.$take)||!mapping.$take||Math.abs(mapping.$take)>2000)throw Error('列表数量无效');rows=mapping.$take>0?rows.slice(0,mapping.$take):rows.slice(mapping.$take)}
   // An explicit collection plus a field path is a scalar row selector. Keep
@@ -192,11 +192,38 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   }
  }))
 }
+// The built-in ETF snapshot already declares normalized units. A source path
+// alone does not prove a model's conversion or creation/redemption label.
+function validateEtfMetricMapping(mapping,metadata,responses,now){
+ if(!(mapping?.type==='kpi'||mapping?.type==='market'&&mapping.variant==='metrics'))return
+ const sources=new Map((metadata?.matched??[]).filter(({response:r})=>r.source==='Tushare'&&r.api==='etf_share_size + etf_basic + trade_cal'&&r.summary&&r.fieldInfo).map(s=>[s.key,s.response]))
+ if(!sources.size)return
+ const visit=(value,depth=0)=>{
+  if(depth>24)throw Error('字段映射超出限制')
+  if(!value||typeof value!=='object')return
+  const select=value.value,source=sources.get(select?.$from),field=select?.$path
+  if(source&&typeof field==='string'&&field.startsWith('summary.')){
+   const key=field.slice(8),label=typeof value.label==='string'?value.label:''
+   const unit=value.unit===undefined?(select.$suffix??'').trim():evaluateMapping(value.unit,responses,now)
+   const expected=/^(?:start)?(?:size|share)/i.test(key)&&key.endsWith('Yi')?(key.toLowerCase().includes('share')?'亿份':'亿元'):key==='flowEstimateYi'?'亿元':null
+   if(expected){
+    const factors=expected==='亿元'?{'亿元':1,'万亿元':.0001,'万元':10000,'元':100000000}:{'亿份':1,'万亿份':.0001,'万份':10000,'份':100000000}
+    const factor=select.$scale??1
+    if(unit&&(!Object.hasOwn(factors,unit)||factor!==factors[unit])||!unit&&factor!==1)throw Error(`ETF ${field} 已是${expected}；展示${unit||expected}必须使用正确单位换算，不能为保留小数重复乘100。小数位使用 $digits。`)
+   }
+   if(key==='netRedeemedProducts'&&/净申购|净创建/u.test(label))throw Error('ETF 净申购产品数必须引用 summary.netCreatedProducts；summary.netRedeemedProducts 是净赎回产品数。')
+   if(key==='netCreatedProducts'&&/净赎回/u.test(label))throw Error('ETF 净赎回产品数必须引用 summary.netRedeemedProducts；summary.netCreatedProducts 是净申购产品数。')
+  }
+  Object.values(value).forEach(child=>visit(child,depth+1))
+ }
+ visit(mapping.items)
+}
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentProjection(mapping,responses,now=new Date(),sourceRecords=[]){
  mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
  const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
+ validateEtfMetricMapping(mapping,metadata,responses,now)
  const qualityAlias=mapping?.type==='kpi'&&Object.hasOwn(mapping,'missing')
  if(qualityAlias){
   const selector=mapping.missing

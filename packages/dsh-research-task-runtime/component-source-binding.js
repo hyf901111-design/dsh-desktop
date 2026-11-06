@@ -479,7 +479,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
       return Object.entries(value).every(([k,v])=>k==='$default'?pureMissingSourceText(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
     }
     if(!sourceBacked(contract)||!paths)return null
-    let mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
+    let mapping=financialValueSelectors(publicRecordEnvelope(singleSourceMapping(contract,responses),responses,Object.entries(sources).map(([key,source])=>({key,toolId:source.tool,args:source.args}))),sources)
     const projection=materializeComponentProjection(mapping,responses,now,Object.values(sources))
     mapping=projection.mapping
     const data=projection.data
