@@ -54,6 +54,14 @@ function historySession(id:string,duration:number,loaded=false){
  root.render(h(App))
 }
 w.responseFixture={
+ historyReports(running=false){
+  const position={kind:'step',turn:{turn:5,status:running?'open':'closed'}},now=Date.now()
+  const reply=(key:string,text:string,seq:number)=>({key,kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private hidden'},{kind:'text',text}],finalNode:{seq}}})
+  const tool=(key:string,name:string)=>({key,kind:'tool-call',location:position,data:{root:running&&key==='history-read'?{name,argsRaw:'{}'}:{kind:'tool-call',call:{name,argsRaw:'真实工具参数'},status:'completed'}}})
+  const items:any[]=[{key:'history-user',kind:'user',location:position,data:{content:[{type:'text',text:'核对资料'}]}},reply('report-1','第一条实际进度回报',51),tool('history-search','web_search'),reply('report-2','第二条实际进度回报',53),tool('history-read','read_file')]
+  if(!running)items.push(reply('history-final','最终答复保留在正文',55))
+  projection.set({...projection.getSnapshot(),running,chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[5,{turn:5,status:running?'open':'closed',start:{time:now-20000},end:running?null:{time:now}}]])}}})
+ },
  simpleAnswer(){
   const current=projection.getSnapshot(),position={kind:'step',turn:{turn:4,status:'closed'}},now=Date.now(),items:any[]=[
    {key:'greeting-user',kind:'user',location:position,data:{content:[{type:'text',text:en?'Hello':'你好'}]}},

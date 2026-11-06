@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto'
+import {stripConversationResponseHistory} from './conversation-response-history.mjs'
 import {conversationPublicReplies,ConversationActivityDetails,statusPresentationCss,transformStatusPresentation} from './conversation-status-presentation.mjs'
 const START='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
@@ -56,6 +57,7 @@ const SHARED_LEGACY=SHARED_END.slice(0,-1)+",react.createElement(ConversationLiv
 const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:body,canvasTasks')
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
+ source=stripConversationResponseHistory(source)
  const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),marker=legacy?LEGACY:previous?PREVIOUS:START,a=source.indexOf(marker)
  if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
  const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)

@@ -8,6 +8,7 @@ import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
 import {patchConversationThinkingStatus} from './lib/conversation-thinking-status.mjs'
 import {patchConversationLiveActivity,stripConversationLiveActivity} from './lib/conversation-live-activity.mjs'
+import {patchConversationResponseHistory} from './lib/conversation-response-history.mjs'
 import {stripPptxAnnotationInput,patchPptxAnnotationInput} from './lib/pptx-annotation-native.mjs'
 import {stripPptxAnnotationMessages,patchPptxAnnotationMessages} from './lib/pptx-annotation-message.mjs'
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
@@ -373,4 +374,4 @@ writeFileSync(conversationPath,patchComposerVoice(readFileSync(conversationPath,
 // Keep image generation visible outside the folded execution details.
 writeFileSync(conversationPath,patchImageGenerationClient(readFileSync(conversationPath,'utf8')))
 // One live, read-only activity row follows the final native conversation flow.
-writeFileSync(conversationPath,patchConversationLiveActivity(readFileSync(conversationPath,'utf8')))
+writeFileSync(conversationPath,patchConversationResponseHistory(patchConversationLiveActivity(readFileSync(conversationPath,'utf8'))))
