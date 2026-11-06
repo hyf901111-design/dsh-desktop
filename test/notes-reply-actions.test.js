@@ -42,7 +42,7 @@ it('admits durable completed note replies through the actual host feedback targe
 })
 it('forks a note-only reply at its exact final event, excludes later note requests and retains native turn boundaries',async()=>{
  const source=patchNoteForkHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
- const start=source.indexOf('const events = source.events;',source.indexOf('async fork(request)')),end=source.indexOf('let workspace;',start),branch=new Function('source','atSeq','noteForkBoundary','err','request',source.slice(start,end)+'return source.events.slice(0,cut);')
+ const start=source.indexOf('const events = source.events;',source.indexOf('async fork(request)')),end=source.indexOf('let workspace;',start),branch=new Function('source','atSeq','noteForkBoundary','err','request','const beforeMessageSeq=undefined;'+source.slice(start,end)+'return source.events.slice(0,cut);')
  const events=[{seq:0,type:'workspace-note/edited',data:{}},{seq:1,type:'workspace-note/conversation',data:{requestId:'r',phase:'preparing'}},{seq:2,type:'workspace-note/conversation',data:{requestId:'r',phase:'ready',result:{kind:'text',markdown:'已完成'}}},{seq:3,type:'workspace-note/conversation',data:{requestId:'later',phase:'preparing'}}]
  expect(branch({events},2,noteForkBoundary,()=>null,{}).map(e=>e.seq)).toEqual([0,1,2])
  expect(noteForkBoundary(events,1)).toBeUndefined();expect(noteForkBoundary(events,3)).toBeUndefined()
