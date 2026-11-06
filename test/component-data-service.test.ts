@@ -6,6 +6,24 @@ import {componentRefreshBindings,createComponentDataService} from '../src/main/c
 import {validateIntegrationBindings} from '../src/shared/scheduled-tasks'
 const {acceptArtifactOutput}=await import(new URL('../packages/dsh-research-task-runtime/artifact-output.js',import.meta.url).href)
 
+it('合并同账号并发身份读取，后续检查重新读取，账号切换不复用旧请求',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'component-identity-flight-'))
+ let owner='alice'
+ const pending:Array<(value:any)=>void>=[]
+ const rpc=vi.fn(()=>new Promise(resolve=>pending.push(resolve)))
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=>owner,isShared:()=>false,rpc,integrations:{} as any,canvas:{} as any})
+ const release=()=>pending.shift()!({items:[{sessionId:'s',cwd:'/workspace'}]})
+ try{
+  const batch=Promise.all([1,2,3].map(()=>service.request('s',{action:'list'})))
+  await Promise.resolve();expect(rpc).toHaveBeenCalledTimes(1);release();await expect(batch).resolves.toEqual([[],[],[]])
+  const old=service.request('s',{action:'list'});const rejected=expect(old).rejects.toThrow('账号已变化')
+  await Promise.resolve();expect(rpc).toHaveBeenCalledTimes(2)
+  owner='bob';const current=service.request('s',{action:'list'})
+  await Promise.resolve();expect(rpc).toHaveBeenCalledTimes(3)
+  release();await rejected;release();await expect(current).resolves.toEqual([])
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
 it('新建个人看板直接绑定内置公开数据，不依赖工作区列表扫描，移除看板后停止取数',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'personal-board-data-'))
  const data={version:1,type:'kpi',title:'公开报价',asOf:'来源时点',items:[{label:'报价',value:'100'}]}

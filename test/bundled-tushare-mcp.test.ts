@@ -19,11 +19,11 @@ async function serviceFixture(options={}){
  const row=async()=>{const reply=await service.request({type:'snapshot'});return (reply as any).snapshot.rows.find((r:any)=>r.id.startsWith('builtin:tushare-mcp:'))}
  return {service,row,setOwner:(value:string)=>{owner=value;service.rotateIdentity()}}
 }
-it('新用户自动获得默认开启的2个Tushare工具，内置连接可以停用，不能删除或改写',async()=>{
+it('新用户自动获得默认开启的3个Tushare工具，内置连接可以停用，不能删除或改写',async()=>{
  const f=await serviceFixture(),row=await f.row()
- expect(row).toMatchObject({kind:'connection',tab:'mcp',enabled:true,toggleable:true,removable:false,configurable:false,toolCount:2,source:'EWork 内置'})
+ expect(row).toMatchObject({kind:'connection',tab:'mcp',enabled:true,toggleable:true,removable:false,configurable:false,toolCount:3,source:'EWork 内置'})
  const snapshot=f.service.runtimeSnapshot(),c=snapshot.connections.find(item=>item.id===row.id)
- expect(c?.toolGrants).toHaveLength(2)
+ expect(c?.toolGrants).toHaveLength(3)
  expect(snapshot.tools.filter(tool=>tool.connectionId===row.id).map(tool=>tool.rawName)).toContain('tushare_query')
  const meta={requestId:'locked-attempt',expectedRevision:row.revision}
  for(const command of [{type:'uninstall',kind:'connection',id:row.id,meta},{type:'disconnect',id:row.id,meta},{type:'save-connection',draft:{id:row.id},meta},{type:'save-connection',id:'misleading-extra-id',draft:{id:row.id},meta}])
@@ -58,7 +58,7 @@ it('保留已验证的实时目录，快照和同账号重新登录不再恢复�
  const invoke=vi.spyOn(f.service.mcp,'invoke').mockResolvedValue({content:[{type:'text',text:'真实业务资料'}]} as any)
  await f.service.probe(first.id)
  const snapshot=()=>Object.values(f.service.store.snapshot().tools).filter(tool=>tool.connectionId===first.id).sort((a,b)=>a.id.localeCompare(b.id))
- const learned=structuredClone(snapshot());expect(learned).toHaveLength(1)
+ const learned=structuredClone(snapshot());expect(learned).toHaveLength(2)
  await f.row();expect(snapshot()).toEqual(learned)
  f.service.rotateIdentity();await f.row();expect(snapshot()).toEqual(learned)
  const connection=f.service.store.snapshot().connections[first.id]!,tool=snapshot().find(tool=>tool.rawName==='tushare_catalog')!
@@ -87,7 +87,7 @@ it('缺少工具定义的内置缓存仍由已知预置安全修复',async()=>{
  const f=await serviceFixture(),first=await f.row(),connection=f.service.store.snapshot().connections[first.id]!
  await f.service.store.change(state=>{delete state.tools[connection.toolGrants[0]!]})
  await f.row()
- expect(Object.values(f.service.store.snapshot().tools).filter(tool=>tool.connectionId===first.id)).toHaveLength(2)
+ expect(Object.values(f.service.store.snapshot().tools).filter(tool=>tool.connectionId===first.id)).toHaveLength(3)
 })
 
 it('升级移除旧内置通联及其工具，保留个人连接和已保存历史',async()=>{
@@ -102,7 +102,7 @@ it('真实 MCP SDK 通过登录网关读取 Tushare 定义和业务数据',async
  const transport=new McpSupervisor(new CredentialVault(root,encryption),undefined,request)
  cleanup.push(async()=>{await transport.disposeAll();await rm(root,{recursive:true,force:true})})
  const c=bundledTushareConnection('one',true),signal=AbortSignal.timeout(5000)
- const connected=await transport.connect(c,signal);expect(connected.tools.map(t=>t.name)).toEqual(['tushare_catalog','tushare_query'])
+ const connected=await transport.connect(c,signal);expect(connected.tools.map(t=>t.name)).toEqual(['tushare_catalog','tushare_query','tushare_etf_snapshot'])
  const value=await transport.invoke(c.id,'tushare_query',{api_name:'index_daily',params:{ts_code:'000300.SH',start_date:'20261101',end_date:'20261107'},fields:'ts_code,trade_date,close'},signal)
  expect(value.isError).not.toBe(true);expect(JSON.stringify(value)).toContain('4054.2769');expect(JSON.stringify(value)).not.toContain('fixture-only')
 })

@@ -43,6 +43,16 @@ it('目录不是业务证据，分页达到上限明确提示可能未取齐',as
   const d=await(await handleRequest(request('tushare_query',{...args,limit:1}),env)).json()
   expect(d.result.structuredContent.pagination).toMatchObject({returned:1,possiblyMore:true,nextOffset:1})
 })
+it('目录明确代理分页上限，错误说明如何修正，空业务日期说明披露延迟',async()=>{
+ const env=fixture(),c=await(await handleRequest(request('tushare_catalog',{api_name:'etf_share_size'}),env)).json()
+ expect(c.result.structuredContent.queryLimits).toEqual({defaultLimit:200,maxLimit:1000,maxOffset:100000})
+ expect(c.result.structuredContent.interfaces[0].description).not.toContain('5000条')
+ const invalid=await(await handleRequest(request('tushare_query',{...args,limit:5000}),env)).json()
+ expect(invalid.result.content[0].text).toContain('limit 必须为 1–1000')
+ env.fetch.mockResolvedValue(Response.json({code:0,data:{fields:['trade_date'],items:[]}}))
+ const empty=await(await handleRequest(request('tushare_query',{api_name:'etf_share_size',params:{trade_date:'20261106'},fields:'trade_date'}),env)).json()
+ expect(empty.result.structuredContent.note).toContain('上一交易日')
+})
 it('不接受错列或嵌套的异常上游结果',async()=>{
   const env=fixture();env.fetch.mockResolvedValue(Response.json({code:0,data:{fields:['unrequested'],items:[[{token:'bad'}]]}}))
   const d=await(await handleRequest(request(),env)).json();expect(d.result.isError).toBe(true)
@@ -53,4 +63,23 @@ it('上游重定向不会被跟随，登录失败不触达上游',async()=>{
   const d=await(await handleRequest(request(),env)).json();expect(d.result.isError).toBe(true);expect(env.fetch).toHaveBeenCalledOnce()
   env.fetch.mockClear();env.ACCOUNTS_DB.prepare=()=>({bind:()=>({first:async()=>null})})
   expect((await handleRequest(request(),env)).status).toBe(401);expect(env.fetch).not.toHaveBeenCalled()
+})
+
+it('ETF 汇总复用同一日期窗口、仍逐次鉴权，并保留真实来源和估算口径',async()=>{
+ const env=fixture()
+ env.fetch.mockImplementation(async(_url,options)=>{
+  const q=JSON.parse(options.body),fields=q.fields.split(',');let rows=[]
+  if(q.api_name==='trade_cal')rows=[{cal_date:'20261105',is_open:1},{cal_date:'20261029',is_open:1}]
+  if(q.api_name==='etf_basic')rows=[{ts_code:'510300.SH',csname:'沪深300ETF',index_code:'000300.SH'}]
+  if(q.api_name==='etf_share_size')rows=[{ts_code:'510300.SH',trade_date:q.params.trade_date,etf_name:'沪深300ETF',total_share:q.params.trade_date==='20261105'?11000:10000,total_size:22000,nav:2,close:2,exchange:'SSE'}]
+  return Response.json({code:0,data:{fields,items:rows.map(r=>fields.map(f=>r[f]??null))}})
+ })
+ const a={end_date:'20261105',lookback_days:7}
+ const [one,two]=await Promise.all(['overview','inflows'].map(async view=>(await(await handleRequest(request('tushare_etf_snapshot',{...a,view}),env)).json()).result.structuredContent))
+ expect(env.fetch).toHaveBeenCalledTimes(4)
+ expect(one.summary.flowEstimateYi).toBe(0.2);expect(two.records[0].flowEstimateYi).toBe(0.2)
+ expect(two.formula).toContain('不是逐日净申购')
+ expect(JSON.stringify([one,two])).not.toContain(env.TUSHARE_TOKEN)
+ expect((await handleRequest(request('tushare_etf_snapshot',a,false),env)).status).toBe(401)
+ expect(env.fetch).toHaveBeenCalledTimes(4)
 })

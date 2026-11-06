@@ -7,7 +7,9 @@ const selected=(value,depth=0)=>depth<=24&&object(value)&&(Object.hasOwn(value,'
 // These are shape projections, not new mapping operators. Keep every existing
 // selector/conversion in its original scope and order by declared column keys.
 function rowProjection(value,keys,depth=0){
- if(depth>24||!object(value))return undefined
+ if(depth>24)return undefined
+ if(Array.isArray(value))return value.length===keys.length?value:undefined
+ if(!object(value))return undefined
  if(sameKeys(value,keys))return keys.map(key=>value[key])
  if(Object.hasOwn(value,'$map')){
   const child=rowProjection(value.$map,keys,depth+1)
@@ -53,8 +55,9 @@ export function normalizeKeyedTableProjection(data,mapping){
  // Materializing a dynamic column key/label once would freeze its future scope.
  if(mapping!==undefined&&(!Array.isArray(mapping.columns)||mapping.columns.length!==data.columns.length||mapping.columns.some((column,i)=>!object(column)||column.key!==data.columns[i].key||column.label!==data.columns[i].label)))return unchanged
  const keys=data.columns.map(column=>column.key)
- if(new Set(keys).size!==keys.length||data.rows.some(row=>!sameKeys(row,keys)||keys.some(key=>!scalar(row[key]))))return unchanged
+ const positional=data.rows.length>0&&data.rows.every(Array.isArray)
+ if(new Set(keys).size!==keys.length||data.rows.some(row=>positional?row.length!==keys.length||row.some(cell=>!scalar(cell)):!sameKeys(row,keys)||keys.some(key=>!scalar(row[key]))))return unchanged
  const rows=mapping===undefined?undefined:rowsProjection(mapping.rows,keys)
  if(mapping!==undefined&&rows===undefined)return unchanged
- return {data:{...data,columns:data.columns.map(column=>column.label),rows:data.rows.map(row=>keys.map(key=>row[key]))},mapping:mapping===undefined?undefined:{...mapping,columns:data.columns.map(column=>column.label),rows}}
+ return {data:{...data,columns:data.columns.map(column=>column.label),rows:data.rows.map(row=>positional?[...row]:keys.map(key=>row[key]))},mapping:mapping===undefined?undefined:{...mapping,columns:data.columns.map(column=>column.label),rows}}
 }
