@@ -9,34 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "真实数据映射与指标说明修复",
+        "featureName": "ETF数值口径及排序兼容修复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "07f5bdada32a6dff5647c293e8362b33a5fbbc64",
-        "tipCommit": "5509e57974bb37ea278902b2cf678029d6319bcd",
+        "baseCommit": "5509e57974bb37ea278902b2cf678029d6319bcd",
+        "tipCommit": "94b9f859641bda2aea79f59380a9fc1c298d7103",
         "commits": [
           {
-            "commit": "1ad9e3c591b50aaf325556c9bcfab7d64ab227eb",
+            "commit": "94b9f859641bda2aea79f59380a9fc1c298d7103",
             "parents": [
-              "07f5bdada32a6dff5647c293e8362b33a5fbbc64"
+              "5509e57974bb37ea278902b2cf678029d6319bcd"
             ],
-            "subject": "修复：真实数据表格字段映射并压缩指标长说明"
-          },
-          {
-            "commit": "5509e57974bb37ea278902b2cf678029d6319bcd",
-            "parents": [
-              "1ad9e3c591b50aaf325556c9bcfab7d64ab227eb"
-            ],
-            "subject": "文档：记录Tushare真实取数与工作台测试结果"
+            "subject": "修复：校验ETF指标单位与申赎口径并兼容来源排序方向"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/research/tushare-acceptance-20261107.md"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
           },
           {
             "status": "M",
@@ -48,27 +37,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+            "path": "test/component-data-refresh.test.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/table-projection.js"
-          },
-          {
-            "status": "M",
-            "path": "test/cartesian-chart-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-keyed-table-projection.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/kpi-template.test.js"
+            "path": "test/component-source-binding.test.js"
           }
         ],
         "checks": [
@@ -77,16 +50,15 @@
               "npx",
               "vitest",
               "run",
-              "test/component-keyed-table-projection.test.js",
-              "test/kpi-template.test.js",
-              "test/component-source-binding.test.js",
               "test/component-data-refresh.test.js",
-              "test/cartesian-chart-template.test.js"
+              "test/component-source-binding.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/component-keyed-table-projection.test.js"
             ],
             "outcome": "passed",
-            "summary": "278项聚焦检查通过；真实ETF响应重放100行正确",
-            "verifiedCommit": "5509e57974bb37ea278902b2cf678029d6319bcd",
-            "completedAt": "2026-11-06T19:38:13.493576+00:00",
+            "summary": "202项聚焦检查通过",
+            "verifiedCommit": "94b9f859641bda2aea79f59380a9fc1c298d7103",
+            "completedAt": "2026-11-06T20:05:12.356544+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -95,76 +67,14 @@
           "summary": "源码修正已聚焦验证，真实打包客户端将在集成分支继续测试，不将源码检查视为视觉验收。"
         },
         "acceptanceCriteria": [
-          "字段名投影转换为真实数据",
-          "报价冗余路径准确规范",
-          "长说明可展开且不撑高总览"
+          "ETF指标不重复换算亿元亿份",
+          "净申购和净赎回数量字段不颠倒",
+          "来源排序方向及静态报价映射正确"
         ],
         "risks": [
           "新打包客户端仍需聚焦复测"
         ],
-        "generatedAt": "2026-11-06T19:38:13.493576+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cde65ed8694767b5cd55b5e6d26759255f9a14a1",
-        "verificationCommit": "cde65ed8694767b5cd55b5e6d26759255f9a14a1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "cde65ed8694767b5cd55b5e6d26759255f9a14a1",
-            "completedAt": "2026-11-06T19:40:38.772Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "cde65ed8694767b5cd55b5e6d26759255f9a14a1",
-            "completedAt": "2026-11-06T19:40:38.772Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "cde65ed8694767b5cd55b5e6d26759255f9a14a1",
-            "completedAt": "2026-11-06T19:40:38.772Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "cde65ed8694767b5cd55b5e6d26759255f9a14a1",
-            "completedAt": "2026-11-06T19:40:38.772Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-11-06T19:40:38.772Z"
+        "generatedAt": "2026-11-06T20:05:12.356544+00:00"
       }
     }
   ],
