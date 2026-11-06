@@ -407,7 +407,10 @@ export async function mountHomeNotesGuide(document:Document,host:HTMLElement,opt
   const thread=mark.dataset.bnThreadId;scrollTo(mark);await wait(500);await click(mark,'先查看句内表达标记的 AI 评论')
   const card=await until(()=>query<HTMLElement>('.en-challenge-card[data-thread-id="'+CSS.escape(thread||'')+'"]'))
   await point(card,'阅读表达建议，再结合整段上下文改写','move');await wait(1100)
-  const close=card.querySelector<HTMLButtonElement>('.en-challenge-close');if(close)await click(close,'收起表达评论，返回正文');else await click(paragraph,'离开评论气泡，返回正文')
+  // Wide margin comments stay open. The selection drag below returns the
+  // pointer to the paragraph; tagging/clicking its ProseMirror-owned content
+  // wrapper first can replace that DOM node and invalidate the drag target.
+  const close=card.querySelector<HTMLButtonElement>('.en-challenge-close');if(close)await click(close,'收起表达评论，返回正文')
   scrollTo(paragraph);await wait(550)
   let previous:number[]|undefined,stable=0
   await until(()=>{unchanged();validTarget(paragraph,true);if(paragraph.textContent!==original)throw Error('演示段落已变化。');const box=paragraph.getBoundingClientRect(),next=[box.left,box.top,box.width,box.height,query<HTMLElement>('.en-document-scroll')!.scrollTop];stable=previous&&next.every((value,index)=>Math.abs(value-previous![index]!)<.5)?stable+1:0;previous=next;return stable>=3})
