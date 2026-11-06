@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto'
 import {conversationPublicReplies,ConversationActivityDetails,statusPresentationCss,transformStatusPresentation} from './conversation-status-presentation.mjs'
-const START='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
+const START='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
 /** Read the current run only. Completed tools and private reasoning are never
  * republished as a new action, and a queued message does not start a new run. */
@@ -56,10 +56,11 @@ const SHARED_LEGACY=SHARED_END.slice(0,-1)+",react.createElement(ConversationLiv
 const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:body,canvasTasks')
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
- const legacy=source.includes(LEGACY),marker=legacy?LEGACY:START,a=source.indexOf(marker)
+ const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),marker=legacy?LEGACY:previous?PREVIOUS:START,a=source.indexOf(marker)
  if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
  const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)
- if(source.split(marker).length!==2||source.split(END).length!==2||end<a||(legacy?createHash('sha256').update(block).digest('hex')!=='6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':block!==definition()))throw Error('Live activity definition drifted')
+ const historicalHash=legacy?'6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':previous?'e7f1ff04a7719a5abde00da1bd1fe91f49b155f61e1b013f5f3a0d319084b7a3':null
+ if(source.split(marker).length!==2||source.split(END).length!==2||end<a||(historicalHash?createHash('sha256').update(block).digest('hex')!==historicalHash:block!==definition()))throw Error('Live activity definition drifted')
  if(!legacy)source=transformStatusPresentation(source,true)
  source=scope(source,'function ChatView(',CHAT_NEXT,CHAT_END)
  source=scope(source,'function SharedResearchRequest(',legacy?SHARED_LEGACY:SHARED_NEXT,SHARED_END)

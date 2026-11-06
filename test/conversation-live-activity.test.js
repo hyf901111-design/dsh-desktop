@@ -39,3 +39,12 @@ it('retains honest note and canvas activity when those owners run without a pare
  expect(activity([],{running:false,canvasTasks:[{state:'waiting'}],english:true})).toEqual({kind:'canvas',label:'Waiting for canvas updates…'})
  expect(activity([],{running:false,canvasTasks:[{state:'paused'}]})).toBeNull()
 })
+
+it('upgrades the exact installed v2 status layer while rejecting a changed historical definition',async()=>{
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
+ const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
+ const start=next.indexOf('/* ework:conversation-live-activity:v3 */'),end=next.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const previous=next.slice(0,start)+frozen+next.slice(end)
+ expect(patchConversationLiveActivity(previous)).toBe(next)
+ expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
+})

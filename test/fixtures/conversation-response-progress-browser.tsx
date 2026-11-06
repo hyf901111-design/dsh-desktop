@@ -54,6 +54,14 @@ function historySession(id:string,duration:number,loaded=false){
  root.render(h(App))
 }
 w.responseFixture={
+ simpleAnswer(){
+  const current=projection.getSnapshot(),position={kind:'step',turn:{turn:4,status:'closed'}},now=Date.now(),items:any[]=[
+   {key:'greeting-user',kind:'user',location:position,data:{content:[{type:'text',text:en?'Hello':'你好'}]}},
+   {key:'greeting-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private greeting reasoning'}]}},
+   {key:'greeting-answer',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'text',text:en?'Hello! How can I help?':'你好！有什么我可以帮你的吗？'}],finalNode:{seq:41}}}
+  ]
+  projection.set({...current,running:false,chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[4,{turn:4,status:'closed',start:{time:now-6000},end:{time:now}}]])}}})
+ },
  statusSequence(phase:string){
   const current=projection.getSnapshot(),position={kind:'step',turn:{turn:3,status:phase==='done'?'closed':'open'}},items:any[]=[{key:'status-user',kind:'user',location:position,data:{content:[{type:'text',text:'核对这项资料'}]}},{key:'status-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private hidden'}]}}]
   if(phase!=='initial')items.push({key:'status-ack',kind:'assistant-step',location:position,data:{status:phase==='ack'?'streaming':'settled',blocks:[{kind:'reasoning',text:'private mixed reasoning'},{kind:'text',text:'我先核对资料来源，再整理关键变化。'}],finalNode:{seq:31}}})
