@@ -28548,6 +28548,69 @@
         ],
         "generatedAt": "2026-11-06T01:21:33.477125+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "同步回复状态升级后的迁移和运行时测试版本",
+        "branch": "codex/feat/conversation-status-checks-20261106",
+        "baseCommit": "29690f270742ee9005a409d02a2f24c9b8db1fad",
+        "tipCommit": "9ad1597a71948db4b2cdc709063f8cc523630542",
+        "commits": [
+          {
+            "commit": "9ad1597a71948db4b2cdc709063f8cc523630542",
+            "parents": [
+              "29690f270742ee9005a409d02a2f24c9b8db1fad"
+            ],
+            "subject": "测试：同步回复状态升级后的运行时版本校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/fixtures/task-progress-v1.js"
+          },
+          {
+            "status": "M",
+            "path": "test/profile-runtime-patches.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-continuation-upgrade.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/task-continuation-upgrade.test.js",
+              "test/profile-runtime-patches.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "2 个直接相关测试文件、7 项通过；v1/v2/v3 迁移、当前 v5 幂等性和篡改拒绝、独立插件运行时副本一致性。",
+            "verifiedCommit": "9ad1597a71948db4b2cdc709063f8cc523630542",
+            "completedAt": "2026-11-06T01:32:13.762601+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "只修改 3 个测试文件，不改变产品或客户端资源。"
+        },
+        "acceptanceCriteria": [
+          "测试期望与已合入的任务进度运行时 v5 一致",
+          "冻结的历史实现不变，旧版本迁移和漂移拒绝仍通过"
+        ],
+        "risks": [
+          "纯测试修正，不应打断已经开始的客户端构建；不需要因此重打产品包。"
+        ],
+        "generatedAt": "2026-11-06T01:32:13.762601+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -30095,6 +30158,19 @@
         "--maxWorkers=3"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/task-continuation-upgrade.test.js",
+        "test/profile-runtime-patches.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
