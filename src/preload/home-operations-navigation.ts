@@ -6,11 +6,13 @@ type Dependencies = {
     binding(id: string): { session: { getSnapshot(): { removed?: boolean; subagent?: unknown } } } | undefined
     subagentAddress(id: string): unknown
     open(id: string): void
+    create(options: { workspaceId: string }): Promise<string>
   }
   workspaces: {
-    list: { getSnapshot(): { items: readonly { workspaceId: string }[]; recentWorkspaceId?: string } }
+    list: { getSnapshot(): { items: readonly { workspaceId: string; sessionIds?: readonly string[] }[]; recentWorkspaceId?: string } }
     connectWorkspace(workspaceId: string): Promise<string>
   }
+  chatStore?: { create(id: string): { actions: { setView(view: 'chat' | 'research' | 'notes'): void } } }
   inputHub: { shell(id: string): { disposed?: boolean; snapshot: { phase: string; draftRev: number; researchContextPreparing?: boolean } } }
   composerBlocks: { storeFor(id: string): { getSnapshot(): unknown } }
 }
@@ -67,12 +69,29 @@ export function installHomeOperationsNavigation(deps: Dependencies): () => void 
     if (snapshot.subagent || deps.sessions.subagentAddress(id)) throw Error('请返回主对话使用此卡片。')
     return true
   }
-  const resolveSession = async (ticket: Ticket) => {
+  const resolveSession = async (ticket: Ticket, action: Action) => {
     current(ticket)
-    if (ticket.sessionId) return ticket.sessionId
+    // Only a visible blank chat is a reusable starting point. An existing
+    // research/note or a board route needs a new session, not a hidden tab click.
+    const header = [...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] [data-srb-session-header]')].find(element => element.dataset.eworkNotesSession === ticket.sessionId)
+    const activeView = header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected="true"]')?.dataset.conversationViewId
+    if (ticket.sessionId && header && !document.body.dataset.workspaceSurface && ['chat', 'conversation'].includes(activeView || '')) return ticket.sessionId
     const workspace = deps.workspaces.list.getSnapshot()
-    const target = workspace.items.find(item => item.workspaceId === workspace.recentWorkspaceId) ?? workspace.items[0]
+    const target = workspace.items.find(item => ticket.sessionId && item.sessionIds?.includes(ticket.sessionId)) ?? workspace.items.find(item => item.workspaceId === workspace.recentWorkspaceId) ?? workspace.items[0]
     if (!target) throw Error('请先选择或添加工作区，再使用此卡片。')
+    if (ticket.sessionId) {
+      const id = await deps.sessions.create({ workspaceId: target.workspaceId })
+      current(ticket)
+      if (!id || id === ticket.sessionId || !sessionAvailable(id)) throw Error('新会话尚未就绪，请稍后重试。')
+      if (!deps.workspaces.list.getSnapshot().items.some(item => item.workspaceId === target.workspaceId)) throw Error('工作区已变化，请重新选择工作区。')
+      // Commit the target view before mounting so notes do not flash a chat.
+      deps.chatStore?.create(id).actions.setView(action === 'composer' ? 'chat' : action)
+      ticket.sessionId = id
+      opening = ticket
+      try { deps.sessions.open(id) } finally { opening = undefined }
+      current(ticket)
+      return id
+    }
     // Native connectWorkspace reuses a blank session when available and otherwise
     // creates one. Keep one in-flight connection across rapidly replaced intents.
     if (!connection || connection.generation !== generation || connection.revision !== revision || connection.workspaceId !== target.workspaceId) {
@@ -110,7 +129,7 @@ export function installHomeOperationsNavigation(deps: Dependencies): () => void 
     check()
   })
   const activate = async (ticket: Ticket, action: Action) => {
-    const id = await resolveSession(ticket)
+    const id = await resolveSession(ticket, action)
     current(ticket)
     let draftRev: number | undefined
     if (action === 'composer') {

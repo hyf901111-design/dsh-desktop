@@ -35,6 +35,7 @@ return true;\n                    },`)
       return sherlockBoardsPage.installSkillCommand({command:scope.get("commandUi"),inputTriggers:scope.get("inputTriggers"),sessions});
     }, "EWork slash skill picker"));`)
   }
+  source = source.replace('installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks})', 'installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks,chatStore})')
   const navigationMarker = '/* sherlock:home-operations-navigation:v1 */'
   if (!source.includes(navigationMarker)) {
     const anchor = 'const composerBlocks = new ComposerBlockRegistry();'
@@ -43,7 +44,7 @@ return true;\n                    },`)
       ${navigationMarker}
       if (typeof workspaces !== "undefined") ctx.effect(() => {
         if (window.top !== window) return;
-        return sherlockBoardsPage.installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks});
+        return sherlockBoardsPage.installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks,chatStore});
       }, "Sherlock home operations navigation");`)
   }
   const marker = '/* sherlock:integration-skill-composer:v2 */'

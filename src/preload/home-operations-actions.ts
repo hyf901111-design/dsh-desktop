@@ -20,7 +20,7 @@ function prefill(card: 'ppt' | 'report', english: boolean): SkillComposerPrefill
 }
 
 /** Uses native navigation and verified skill references; never submits a prompt. */
-export function createHomeOperationsActions(document: Document, bridge: Pick<IntegrationBridge, 'request' | 'useSkill'>) {
+export function createHomeOperationsActions(document: Document, bridge: Pick<IntegrationBridge, 'request' | 'useSkill'>, options: { beforeNavigate?(): Promise<void> } = {}) {
   const win = document.defaultView!
   const pending = new Set<AbortController>()
   const navigationRequests = new Map<AbortSignal, string>()
@@ -70,6 +70,8 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
     pending.add(controller)
     const signal = controller.signal
     try {
+      if (options.beforeNavigate) await awaitActive(options.beforeNavigate(), signal)
+      check(signal)
       if (card === 'board' || card === 'note') { await navigate(card === 'board' ? 'research' : 'notes', signal); return }
       if (card !== 'ppt' && card !== 'report') throw Error('卡片操作无效，请重试。')
       await awaitActive(context.revealComposer(), signal)
