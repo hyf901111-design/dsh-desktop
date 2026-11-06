@@ -34,7 +34,7 @@ export function validateTushareQuery(args) {
   const fields=args.fields.split(',').map(field=>field.trim())
   if(new Set(fields).size!==fields.length||fields.some(field=>!Object.hasOwn(api.fields,field)))throw Error('Unknown field')
   const limit=args.limit??200,offset=args.offset??0
-  if(!Number.isInteger(limit)||limit<1||limit>1000||!Number.isInteger(offset)||offset<0||offset>100000)throw Error('Invalid page')
+  if(!Number.isInteger(limit)||limit<1||limit>1000||!Number.isInteger(offset)||offset<0||offset>100000)throw Error('limit 必须为 1–1000，offset 必须为 0–100000；用 nextOffset 分页，不使用上游文档中的 5000/15000 上限。')
   for(const [name,value] of Object.entries(args.params)) {
     if(!Object.hasOwn(api.parameters,name)||['limit','offset','fields','token','api_name'].includes(name)||typeof value!=='string'||value.length>500||/[\u0000-\u001f]/.test(value))throw Error('Invalid parameter')
     if(/(?:date|period)$/.test(name)&&value) {
@@ -67,7 +67,7 @@ export async function queryTushare(args, env, signal) {
     fields:safe.fields,fieldInfo:Object.fromEntries(safe.fields.map(field=>[field,api.fields[field]])),
     records:safe.items.slice(0,limit).map(row=>Object.fromEntries(safe.fields.map((field,index)=>[field,row[index]]))),
     pagination:{offset,limit,returned:Math.min(limit,safe.items.length),possiblyMore:safe.items.length>=limit,nextOffset:safe.items.length>=limit?offset+limit:null},
-    note:'仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。'})
+    note:(api.api==='etf_share_size'&&!safe.items.length?'该日期可能尚未入库，ETF 份额规模通常于次日更新上一交易日；查询较近日期范围并使用实际返回的最新 trade_date，不能把空结果当作零规模。':'')+'仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。'})
 }
 
 export async function handleTushareMcp(request,env) {
@@ -93,10 +93,10 @@ export async function handleTushareMcp(request,env) {
   if(name==='tushare_catalog') {
     if(!only(args,['api_name','query'])||args.api_name!==undefined&&typeof args.api_name!=='string'||args.query!==undefined&&(typeof args.query!=='string'||args.query.length>100))return failure('INVALID_REQUEST',400)
     const selected=args.api_name?catalog.filter(api=>api.api===args.api_name):catalog.filter(api=>!args.query||`${api.api} ${api.name} ${api.description}`.toLowerCase().includes(args.query.toLowerCase()))
-    return reply(result({source:'Tushare',kind:'catalog',interfaces:args.api_name?selected:selected.map(({api,name,documentation})=>({api,name,documentation})),note:'目录不是业务数据。用 api_name 读取具体参数和字段；实际权限以业务调用结果为准。'}))
+    return reply(result({source:'Tushare',kind:'catalog',queryLimits:{defaultLimit:200,maxLimit:1000,maxOffset:100000},interfaces:args.api_name?selected.map(api=>({...api,description:api.description.split(/限量：|积分：|权限：/u)[0].trim()})):selected.map(({api,name,documentation})=>({api,name,documentation})),note:'目录不是业务数据。用 api_name 读取具体参数和字段；实际权限以业务调用结果为准。'}))
   }
   if(name!=='tushare_query')return failure('INVALID_REQUEST',400)
-  try{validateTushareQuery(args)}catch{return reply({isError:true,content:[{type:'text',text:'参数、字段或分页无效，请按 tushare_catalog 的当前定义修正；只接受目录内接口，不接受 Token 或 URL。'}]})}
+  try{validateTushareQuery(args)}catch(error){return reply({isError:true,content:[{type:'text',text:error.message.startsWith('limit 必须')?error.message:'参数或字段无效，请按 tushare_catalog 的当前定义修正；limit 必须为 1–1000。只接受目录内接口，不接受 Token 或 URL。'}]})}
   const usage=crypto.randomUUID()
   let status=503
   try {

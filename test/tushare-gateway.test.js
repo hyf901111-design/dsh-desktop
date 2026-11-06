@@ -43,6 +43,16 @@ it('目录不是业务证据，分页达到上限明确提示可能未取齐',as
   const d=await(await handleRequest(request('tushare_query',{...args,limit:1}),env)).json()
   expect(d.result.structuredContent.pagination).toMatchObject({returned:1,possiblyMore:true,nextOffset:1})
 })
+it('目录明确代理分页上限，错误说明如何修正，空业务日期说明披露延迟',async()=>{
+ const env=fixture(),c=await(await handleRequest(request('tushare_catalog',{api_name:'etf_share_size'}),env)).json()
+ expect(c.result.structuredContent.queryLimits).toEqual({defaultLimit:200,maxLimit:1000,maxOffset:100000})
+ expect(c.result.structuredContent.interfaces[0].description).not.toContain('5000条')
+ const invalid=await(await handleRequest(request('tushare_query',{...args,limit:5000}),env)).json()
+ expect(invalid.result.content[0].text).toContain('limit 必须为 1–1000')
+ env.fetch.mockResolvedValue(Response.json({code:0,data:{fields:['trade_date'],items:[]}}))
+ const empty=await(await handleRequest(request('tushare_query',{api_name:'etf_share_size',params:{trade_date:'20261106'},fields:'trade_date'}),env)).json()
+ expect(empty.result.structuredContent.note).toContain('上一交易日')
+})
 it('不接受错列或嵌套的异常上游结果',async()=>{
   const env=fixture();env.fetch.mockResolvedValue(Response.json({code:0,data:{fields:['unrequested'],items:[[{token:'bad'}]]}}))
   const d=await(await handleRequest(request(),env)).json();expect(d.result.isError).toBe(true)
