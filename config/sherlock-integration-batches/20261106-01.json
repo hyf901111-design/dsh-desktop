@@ -75,6 +75,68 @@
           "新打包客户端仍需聚焦复测"
         ],
         "generatedAt": "2026-11-06T20:05:12.356544+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e3be299c47a768615b38531b539269da46f32a78",
+        "verificationCommit": "e3be299c47a768615b38531b539269da46f32a78",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
+            "verifiedCommit": "e3be299c47a768615b38531b539269da46f32a78",
+            "completedAt": "2026-11-06T20:07:05.835Z",
+            "timeoutMs": 900000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-candidates-host.test.ts",
+              "test/computer-use-plugin-integration.test.js",
+              "test/computer-vision.test.js",
+              "test/macos-package-runtime.test.ts",
+              "test/runtime.test.ts",
+              "test/integration-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
+            "verifiedCommit": "e3be299c47a768615b38531b539269da46f32a78",
+            "completedAt": "2026-11-06T20:07:05.835Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "e3be299c47a768615b38531b539269da46f32a78",
+            "completedAt": "2026-11-06T20:07:05.835Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e3be299c47a768615b38531b539269da46f32a78",
+            "completedAt": "2026-11-06T20:07:05.835Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-11-06T20:07:05.835Z"
       }
     }
   ],
