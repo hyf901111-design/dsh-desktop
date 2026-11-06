@@ -17,6 +17,13 @@ it('keeps latest running reply and active work outside the historical disclosure
  const nodes=new Map(['a','b'].map(key=>[key,text(key,1)])),flow=[{kind:'node',key:'a'},{kind:'execution',key:'e1',turn:1,nodeKeys:['tool1']},{kind:'node',key:'b'},{kind:'execution',key:'e2',turn:1,nodeKeys:['tool2'],running:true}]
  expect(fold(flow,nodes,1)).toEqual([{...flow[1],nodeKeys:['a','tool1'],running:false,responseHistory:true},flow[2],flow[3]])
 })
+it('places total time before the first public reply even when no earlier reasoning group exists',()=>{
+ const nodes=new Map([['a',text('a',1)]]),flow=[{kind:'node',key:'a'},{kind:'execution',key:'e1',turn:1,nodeKeys:['tool1'],running:true}]
+ const result=fold(flow,nodes,1)
+ expect(result[0]).toMatchObject({kind:'execution',turn:1,responseHistory:true,running:false,nodeKeys:[]})
+ expect(result.slice(1)).toEqual(flow)
+ expect(new Set(result.map(row=>row.key)).size).toBe(result.length)
+})
 it('installs and reverses the exact history layer without accepting altered patch bytes',()=>{
  const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=strip(raw),next=patch(base)
  expect(strip(next)).toBe(base);expect(patch(next)).toBe(next)

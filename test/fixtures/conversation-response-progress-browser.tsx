@@ -62,6 +62,14 @@ w.responseFixture={
   if(!running)items.push(reply('history-final','最终答复保留在正文',55))
   projection.set({...projection.getSnapshot(),running,chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[5,{turn:5,status:running?'open':'closed',start:{time:now-20000},end:running?null:{time:now}}]])}}})
  },
+ firstReplyWithTools(){
+  const position={kind:'step',turn:{turn:6,status:'open'}},now=Date.now(),items:any[]=[
+   {key:'first-user',kind:'user',location:position,data:{content:[{type:'text',text:'中国京津冀'}]}},
+   {key:'first-ack',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'text',text:'我先查京津冀三地的数据。'}],finalNode:{seq:61}}},
+   {key:'first-search',kind:'tool-call',location:position,data:{root:{name:'web_search',argsRaw:'{}'}}}
+  ]
+  projection.set({...projection.getSnapshot(),running:true,chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[6,{turn:6,status:'open',start:{time:now-20000},end:null}]])}}})
+ },
  simpleAnswer(){
   const current=projection.getSnapshot(),position={kind:'step',turn:{turn:4,status:'closed'}},now=Date.now(),items:any[]=[
    {key:'greeting-user',kind:'user',location:position,data:{content:[{type:'text',text:en?'Hello':'你好'}]}},

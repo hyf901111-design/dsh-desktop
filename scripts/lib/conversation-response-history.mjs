@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto'
+
 /** Fold public progress and real actions together, without crossing human input. */
 export function conversationResponseHistory(flow, nodeStore, runningTurn) {
  const turnOf=node=>node?.location?.turn?.turn??node?.data?.turn??null
@@ -18,7 +20,9 @@ export function conversationResponseHistory(flow, nodeStore, runningTurn) {
     for(const key of execution?row.nodeKeys:[row.key])if(!seen.has(key)){seen.add(key);gathered.push(key)}
    }else remaining.push(row)
   }
-  if(!header&&gathered.length)header={kind:'execution',key:'response-history:'+turn+':'+gathered[0],turn,nodeKeys:[],running:false}
+  // Some providers emit the public acknowledgment before any reasoning event.
+  // Reserve its total-time row above the reply; the current action stays below.
+  if(!header&&(gathered.length||active&&publicRows.length))header={kind:'execution',key:'response-history:'+turn+':'+(gathered[0]??publicRows[0].key),turn,nodeKeys:[],running:false}
   if(header){
    result.push({...header,nodeKeys:gathered,responseHistory:true,running:false},...remaining)
   }else result.push(...segment)
@@ -59,7 +63,7 @@ body [data-response-history-details] [data-response-history-report]{--odyssey-re
 body [data-response-history-report] p:first-child{margin-top:0}
 body [data-response-history-report] p:last-child{margin-bottom:0}
 `
-const START='/* ework:conversation-response-history:v1 */',END='/* ework:conversation-response-history:end */'
+const START='/* ework:conversation-response-history:v2 */',PREVIOUS='/* ework:conversation-response-history:v1 */',END='/* ework:conversation-response-history:end */'
 const definition=()=>START+'\n'+conversationResponseHistory.toString()+'\n'+ConversationResponseHistoryDetails.toString()+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-response-history-style");if(!style){style=document.createElement("style");style.id="ework-response-history-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
 const pairs=[
  ['!!entry.canvasTask || detailGroups.length > 0;', '!!entry.canvasTask || detailGroups.length > 0 || entry.responseHistory && activityNodes.some(node=>assistantStepText(node));'],
@@ -71,6 +75,7 @@ const pairs=[
  ['open && react.createElement(ConversationActivityDetails,{activityNodes,detailGroups:progressSurface.detailGroups,seatProps,t,running:entry.running})','open && (entry.responseHistory ? react.createElement(ConversationResponseHistoryDetails,{activityNodes,detailGroups:progressSurface.detailGroups,seatProps,t}) : react.createElement(ConversationActivityDetails,{activityNodes,detailGroups:progressSurface.detailGroups,seatProps,t,running:entry.running}))'],
  ['progressSurface.showProgress && activityNodes.some', '!entry.responseHistory && progressSurface.showProgress && activityNodes.some']
 ]
+const elapsedPair=['children: t("execution.status.elapsed", { duration: formatRunDuration(elapsedMs, t) })','children: t("execution.status.elapsed", { duration: formatRunDuration(elapsedMs, t) }).replace(/^[\\s·•]+/u, "")']
 function scope(source,start,end,pairs,inverse){
  const a=source.indexOf(start),b=source.indexOf(end,a+start.length)
  if(a<0||b<a)throw Error('Response history scope drifted')
@@ -78,15 +83,15 @@ function scope(source,start,end,pairs,inverse){
  for(const [before,after]of inverse?[...pairs].reverse():pairs){const from=inverse?after:before,to=inverse?before:after;if(part.split(from).length!==2)throw Error('Response history anchor drifted: '+from.slice(0,80));part=part.replace(from,to)}
  return source.slice(0,a)+part+source.slice(b)
 }
-function transform(source,inverse=false){
+function transform(source,inverse=false,previous=false){
  source=scope(source,'function compactConversationFlow(', '\n\t\t/** Merge transient steering', [['return entries;','return conversationResponseHistory(entries,nodeStore,runningTurn);']],inverse)
- return scope(source,'const ExecutionStatusGroup =','\n\t\t//#endregion',pairs,inverse)
+ return scope(source,'const ExecutionStatusGroup =','\n\t\t//#endregion',previous?pairs:[...pairs,elapsedPair],inverse)
 }
 export function stripConversationResponseHistory(source){
- const a=source.indexOf(START);if(a<0){if(source.includes('ework:conversation-response-history:')||source.includes('function conversationResponseHistory('))throw Error('Unknown response history layer');return source}
+ const previous=source.includes(PREVIOUS),marker=previous?PREVIOUS:START,a=source.indexOf(marker);if(a<0){if(source.includes('ework:conversation-response-history:')||source.includes('function conversationResponseHistory('))throw Error('Unknown response history layer');return source}
  const b=source.indexOf(END,a),block=source.slice(a,b+END.length+1)
- if(source.split(START).length!==2||source.split(END).length!==2||block!==definition())throw Error('Response history definition drifted')
- return transform(source.replace(block,''),true)
+ if(source.split(marker).length!==2||source.includes(previous?START:PREVIOUS)||source.split(END).length!==2||(previous?createHash('sha256').update(block).digest('hex')!=='f2776ffff6caa19670085e265d2622bdc2f20dfaf592040379c90f475a28eebd':block!==definition()))throw Error('Response history definition drifted')
+ return transform(source.replace(block,''),true,previous)
 }
 export function patchConversationResponseHistory(source){
  source=transform(stripConversationResponseHistory(source))
