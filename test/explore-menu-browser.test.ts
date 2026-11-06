@@ -266,6 +266,30 @@ it('keeps Explore open for the demo close-pointer step and cancels a user dismis
  }finally{await f.close()}
 },15000)
 
+it.each(['demo','dismiss'])('restores the original composer focus only for user dismissal, not the %s handoff',async mode=>{
+ const f=await fixture();try{
+  const input=f.page.getByRole('textbox',{name:'保留的原输入框'})
+  await input.focus()
+  await input.evaluate((node:HTMLTextAreaElement)=>{
+   // The home composer can create/select a session when it regains focus.
+   // Open by event as the client does, without focusing a fixture button first.
+   ;(window as any).composerRefocus=0
+   node.addEventListener('focus',()=>{(window as any).composerRefocus++})
+   window.dispatchEvent(new CustomEvent('sherlock:explore-open'))
+  })
+  await uiExpect(f.page.locator('dialog.odyssey-explore')).toBeVisible()
+  if(mode==='demo'){
+   await f.page.locator('.odyssey-explore-example').click()
+   await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.example).length)).toBe(1)
+  }else await f.page.keyboard.press('Escape')
+  await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible()
+  expect(await f.page.evaluate(()=>(window as any).composerRefocus)).toBe(mode==='dismiss'?1:0)
+  if(mode==='dismiss')await uiExpect(input).toBeFocused()
+  else await uiExpect(input).not.toBeFocused()
+  expect(await input.inputValue()).toBe('原草稿必须保留');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+
 it.concurrent.each([540,1600])('keeps appearance, settings and search in the requested single row at %spx',async width=>{
  const f=await fixture({width,height:820});try{await open(f.page);const tools=f.page.locator('.odyssey-explore-tools');const read=()=>tools.evaluate((node:HTMLElement)=>[...node.children].map((child:Element)=>{const r=child.getBoundingClientRect();return{label:child.getAttribute('aria-label')??child.querySelector('button')?.getAttribute('aria-label'),x:r.x,y:r.y,width:r.width,height:r.height}}));const rows=await read();expect(rows.map((row:any)=>row.label)).toEqual(['切换为浅色','设置','搜索会话']);expect(rows.map((row:any)=>row.height)).toEqual([40,40,40]);expect(rows.map((row:any)=>row.y)).toEqual([rows[0].y,rows[0].y,rows[0].y]);expect(rows[1].x-rows[0].x).toBe(52);expect(rows[2].x-rows[1].x).toBe(52);expect(rows[2].x+40).toBeLessThanOrEqual(width);await f.page.getByRole('button',{name:'搜索会话',exact:true}).click();await uiExpect(f.page.getByRole('button',{name:'设置',exact:true})).not.toBeVisible();await uiExpect(f.page.getByRole('button',{name:'切换为浅色',exact:true})).not.toBeVisible();expect(await f.page.locator('.odyssey-explore-brand').isVisible()).toBe(false);await f.page.getByRole('button',{name:'收起搜索',exact:true}).click();expect((await read()).map((row:any)=>row.label)).toEqual(['切换为浅色','设置','搜索会话']);expect(f.errors).toEqual([])}finally{await f.close()}
 },12000)
