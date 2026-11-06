@@ -28770,27 +28770,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复全屏展开评论时笔记演示框选中断",
+        "featureName": "修复探索演示关闭弹层时意外恢复输入框焦点",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3",
-        "tipCommit": "897158cab06464f14144306861d673140c01ef66",
+        "baseCommit": "897158cab06464f14144306861d673140c01ef66",
+        "tipCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
         "commits": [
           {
-            "commit": "897158cab06464f14144306861d673140c01ef66",
+            "commit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
             "parents": [
-              "8f1c3d08ad7e4a46f257db00cc4fe6b9388ba9f3"
+              "897158cab06464f14144306861d673140c01ef66"
             ],
-            "subject": "修复全屏展开评论时笔记演示框选中断"
+            "subject": "修复探索演示关闭弹层时意外恢复输入框焦点"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-guide-notes.tsx"
+            "path": "src/preload/explore-menu.ts"
           },
           {
             "status": "M",
-            "path": "test/home-guide-notes-browser.test.js"
+            "path": "test/explore-menu-browser.test.ts"
           }
         ],
         "checks": [
@@ -28799,14 +28799,29 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-notes-browser.test.js",
+              "test/explore-menu-browser.test.ts",
               "-t",
-              "JSON-token actor drag before its rewrite step"
+              "restores the original composer focus only|closes from the surrounding background|keeps Explore open for the demo close-pointer"
             ],
             "outcome": "passed",
-            "summary": "2 项通过：1080px 普通窗口框选改写；2560×1409 全屏展开评论，完成后续改写、总结、保存与返回顶部。",
-            "verifiedCommit": "897158cab06464f14144306861d673140c01ef66",
-            "completedAt": "2026-11-06T06:27:01.401115+00:00",
+            "summary": "4 项通过：进入演示不恢复旧输入焦点；手动关闭、Escape 和用户主动取消保持原行为。",
+            "verifiedCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
+            "completedAt": "2026-11-06T06:44:45.926790+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-handoff-browser.test.js",
+              "-t",
+              "hands the global Explore|opens a Notes demo from a conversation after trusted Chinese IME input|closes real Explore and activates the unselected native"
+            ],
+            "outcome": "passed",
+            "summary": "5 项通过：真实笔记/看板入口、空白首页入口及中文 IME 后进入笔记。",
+            "verifiedCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
+            "completedAt": "2026-11-06T06:44:45.926790+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28819,24 +28834,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "897158cab06464f14144306861d673140c01ef66",
-            "completedAt": "2026-11-06T06:27:01.401115+00:00",
+            "verifiedCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
+            "completedAt": "2026-11-06T06:44:45.926790+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在真实 NotesApp 浏览器夹具复现宽屏评论后返回正文导致目标失效；修复后窄屏通过，宽屏在评论保持展开时完成全流程并持久保存。原生整包待本地构建。"
+          "summary": "真实 Explore dialog 在修复前重现 close(false) 仍恢复 composer 焦点；修复后原生 dialog 关闭不会在演示交接时回焦，正常关闭恢复焦点，真实 NotesApp/原生会话入口检查通过。整包实测待交付。"
         },
         "acceptanceCriteria": [
-          "全屏放大、右侧评论展开时笔记演示不在整段框选处退出",
-          "继续完成改写、总结并保存",
-          "保留普通窗口评论关闭和框选路径以及已验收空行、侧栏修改"
+          "进入探索用例演示时，不因系统自动恢复原输入框焦点而中断",
+          "手动关闭探索仍恢复原焦点，保留草稿",
+          "笔记、看板的原生新建顺序及会话保护保持生效"
         ],
         "risks": [
-          "仅移除宽屏评论后多余的正文点击，继续复用原生框选拖动；文档和选区保护检查不变"
+          "只明确 Explore 原生模态框的焦点恢复所有权；不放宽会话、账户、输入和取消保护"
         ],
-        "generatedAt": "2026-11-06T06:27:01.401115+00:00"
+        "generatedAt": "2026-11-06T06:44:45.926790+00:00"
       }
     }
   ],
