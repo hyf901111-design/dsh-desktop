@@ -277,21 +277,28 @@ it('opens the actual evidence action in English without relying on its Chinese b
   expect(await page.locator('[data-notes-challenge-panel] article').count()).toBe(3);expect(errors).toEqual([])
  }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
 },20000)
-it('grows the actual editor selection during the JSON-token actor drag before its rewrite step',async()=>{
+it.each([{width:1080,height:900},{width:2560,height:1409}])('grows the actual editor selection during the JSON-token actor drag before its rewrite step at $width px',async viewport=>{
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-selection-')),store=new NotesStore(directory)
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
  const{context,page,errors}=await fixture(storage);try{
   await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.startNativeGuide())
   for(const step of ['write','note-chart-compose','note-chart-review','note-chart-apply','note-write-middle','note-slash-quote','note-quote-configure','note-write-tail','challenge','review','consensus-select','consensus-optimize','consensus-replace','select','growth-evidence','optimize','replace'])await page.evaluate(step=>window.guide.runStep(step),step)
-  await page.setViewportSize({width:1080,height:900});await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>{window.recordNativeScroll=true;window.selectAction=window.guide.runStep('note-select-paragraph').then(()=>window.selectionComplete=true,error=>window.selectionFailure=error.message)})
-  await expect.poll(()=>page.evaluate(()=>window.selectionFrames?.filter(row=>row.phase==='dragging'&&row.text.length>0).length||0),{timeout:5000,interval:30}).toBeGreaterThan(2)
+  await page.setViewportSize(viewport);await expect.poll(()=>page.locator('.en-main').getAttribute('data-challenge-wide')).toBe(String(viewport.width>2000))
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>{window.recordNativeScroll=true;window.selectAction=window.guide.runStep('note-select-paragraph').then(()=>window.selectionComplete=true,error=>window.selectionFailure=error.message)})
+  await expect.poll(async()=>{const progress=await page.evaluate(()=>({failure:window.selectionFailure,count:window.selectionFrames?.filter(row=>row.phase==='dragging'&&row.text.length>0).length||0}));if(progress.failure)throw Error(progress.failure);return progress.count},{timeout:5000,interval:30}).toBeGreaterThan(2)
   const mid=await page.evaluate(()=>({frames:window.selectionFrames,cue:window.selectionCue,complete:window.selectionComplete,requests:window.nativeGuideRequests.length}));expect(mid.complete).not.toBe(true);expect(mid.requests).toBe(1);expect(mid.cue.selection).toBe(true);expect(Object.values(mid.cue).every(value=>typeof value==='string'||value===true)).toBe(true)
   expect(await page.evaluate(()=>{const before=getSelection().toString();for(const detail of [{...window.selectionCue,runId:'foreign',x:1,y:1,phase:'dragging'},{...window.selectionCue,requestId:'foreign',x:1,y:1,phase:'dragging'}])window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail}));return getSelection().toString()===before})).toBe(true)
   await page.evaluate(()=>window.selectAction);const final=await page.evaluate(()=>({frames:window.selectionFrames,selected:getSelection().toString(),failure:window.selectionFailure,complete:window.selectionComplete,text:'接下来仍需把新增资本投入、营运资本占用与经营现金回款放在同一张检查清单中。后续将持续密切关注相关业务及各项指标的进一步变化情况。估值判断应保留情景边界，证据变化再调整结论。'}));expect(final.failure).toBeUndefined();expect(final.complete).toBe(true);expect(final.selected).toBe(final.text);expect(new Set(final.frames.filter(row=>row.phase==='dragging').map(row=>row.text)).size).toBeGreaterThan(2);expect(await page.locator('[data-home-guide-cue-target]').count()).toBe(0)
   expect(await page.evaluate(()=>{const before=getSelection().toString();window.dispatchEvent(new CustomEvent('sherlock:home-guide-cue-progress',{detail:{...window.selectionCue,x:0,y:0,phase:'pressed'}}));return getSelection().toString()===before})).toBe(true)
   await page.evaluate(()=>window.guide.runStep('note-rewrite'));expect((await page.evaluate(()=>window.nativeGuideRequests))[1].selection).toBe(final.text);expect(errors).toEqual([])
- }finally{await context.close();rmSync(directory,{recursive:true,force:true})}
-},30000)
+  if(viewport.width>2000){
+   for(const step of ['note-rewrite-apply','note-task-compose','note-task-review','note-task-apply','note-task-saved','note-return-top'])await page.evaluate(step=>window.guide.runStep(step),step)
+   await page.evaluate(()=>window.guide.flush());const saved=JSON.stringify(store.load('owner','real-guide-session').saved.blocks);expect(saved).toContain(HOME_NOTES_REWRITE_RESULT);expect(saved).toContain(HOME_NOTES_TASK_RESULT)
+   expect(await page.locator('.en-main').getAttribute('data-challenge-wide')).toBe('true');expect(errors).toEqual([])
+   writeFileSync(join(evidenceDir,'fullscreen-note-completed.json'),JSON.stringify({viewport,selected:final.selected,requests:(await page.evaluate(()=>window.nativeGuideRequests)).map(row=>row.context.scope),savedRewrite:true,savedSummary:true},null,2));await page.screenshot({path:join(evidenceDir,'fullscreen-note-completed.png')})
+  }
+ }catch(error){writeFileSync(join(evidenceDir,'selection-'+viewport.width+'-failure.json'),JSON.stringify(await page.evaluate(()=>({failure:window.selectionFailure,cues:window.guideCues,wide:document.querySelector('.en-main')?.dataset.challengeWide})),null,2));await page.screenshot({path:join(evidenceDir,'selection-'+viewport.width+'-failure.png')});throw error}finally{await context.close();rmSync(directory,{recursive:true,force:true})}
+},60000)
 it('extends the saved native note with a research summary and an actual paragraph rewrite without replacing the original document',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'home-guide-note-native-')),store=new NotesStore(directory)
  const storage=async(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save')return store.save('owner',input.sessionId,input.revision,input.content,input.clientId);if(method==='draft')store.draft('owner',input.sessionId,input.clientId,input.revision,input.content);return{ok:true}}
