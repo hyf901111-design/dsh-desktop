@@ -145,8 +145,8 @@ body:has([data-odyssey-page]) .wSkVaW_header { padding-right:20px; }
 /* An empty conversation in the right panel does not make the research canvas empty. */
 body:has([data-research-empty-state]):not(:has([data-research-node-id])) .wSkVaW_header .srb-actions:not([data-srb-board-bound="true"]) { display:none; }
 [data-sidebar-collapsed=true] .srb-account-controls > [data-research-board-bell-host] { order:-1; }
-/* Keep the collapsed account/notice pair clear of the window edge. */
-.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_footArea { padding-bottom:16px; }
+/* Lower both collapsed footer actions together, retaining a safe edge inset. */
+.hHd-Xa_root.hHd-Xa_collapsed .hHd-Xa_footArea { padding-bottom:8px; }
 .hHd-Xa_root.hHd-Xa_collapsed .srb-account-controls .sherlock-account-button { width:36px!important; height:36px!important; border-radius:50%!important; }
 /* Updated 304:879/1296: only 62% tint and 32 px background blur. */
 .t8lSSG_panel { background:transparent; overflow:clip; }
