@@ -28211,6 +28211,140 @@
         ],
         "generatedAt": "2026-11-06T00:47:11.208984+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示模式切换、日常Tab流畅度与窄窗口侧栏修复",
+        "branch": "codex/feat/mode-switch-smooth-20261106",
+        "baseCommit": "977a88cf0c92fd0610542d538f8d7f6e8ab0460d",
+        "tipCommit": "aa888e64f845a23fc6b6233e33cbd630440348f4",
+        "commits": [
+          {
+            "commit": "c7e16ec2e68a46f6550b57694de9169a1f7ee838",
+            "parents": [
+              "977a88cf0c92fd0610542d538f8d7f6e8ab0460d"
+            ],
+            "subject": "修复：消除笔记演示切换闪屏并优化模式切换开销"
+          },
+          {
+            "commit": "6693653b35cd61a2282d9e4a81cadbb1712ca009",
+            "parents": [
+              "c7e16ec2e68a46f6550b57694de9169a1f7ee838"
+            ],
+            "subject": "修复：缩小窗口时保持侧栏背景与宽屏一致"
+          },
+          {
+            "commit": "aa888e64f845a23fc6b6233e33cbd630440348f4",
+            "parents": [
+              "6693653b35cd61a2282d9e4a81cadbb1712ca009"
+            ],
+            "subject": "修复：取消已被更新选择替代的延迟模式存盘"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-handoff-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/session-view-preferences.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workspace-narrow-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workspace-surface-host.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/session-view-preferences.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/workspace-narrow-layout.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "35项通过，覆盖异步模式偏好持久化、退出刷新、窗口几何、720/800px 深浅侧栏。 最新补充21项模式偏好检查通过，晚到存盘不会覆盖其他窗口更新。",
+            "verifiedCommit": "aa888e64f845a23fc6b6233e33cbd630440348f4",
+            "completedAt": "2026-11-06T00:26:23.564958+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/home-guide-entry-handoff-browser.test.js",
+              "-t",
+              "keeps Research intact|hands the global Explore"
+            ],
+            "outcome": "passed",
+            "summary": "最新生产序列化补丁3项通过，覆盖研究到笔记演示与原生Explore两个入口；另9项取消、失败、原草稿保护检查通过。",
+            "verifiedCommit": "aa888e64f845a23fc6b6233e33cbd630440348f4",
+            "completedAt": "2026-11-06T00:26:23.564958+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "aa888e64f845a23fc6b6233e33cbd630440348f4",
+            "completedAt": "2026-11-06T00:26:23.564958+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/session-view-preferences.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "21项通过，含快速切换、退出补写、持久化失败/跨端恢复及取消已过期延迟写入。",
+            "verifiedCommit": "aa888e64f845a23fc6b6233e33cbd630440348f4",
+            "completedAt": "2026-11-06T00:26:23.564958+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实生产会话/头部/入口函数浏览器复现：旧版出现源研究页面提前被transition接管；新版362帧中0次提前接管，目标会话33帧全部为notes。720/800px深浅窄窗口侧栏保持透明，继承同一窗口材质。真实共享客户端待集成构建后验收。"
+        },
+        "acceptanceCriteria": [
+          "研究切入笔记演示不提前清空源页面、项目选择器不因过渡接管而移位",
+          "演示入口及普通Tab切换先显示选择结果，合并延后模式偏好持久化；隐藏页面不进行反复几何测量",
+          "窗口变窄时左侧栏与原宽窗口使用同一背景材质"
+        ],
+        "risks": [
+          "原生共享客户端尚未更新，不能将浏览器证据视为客户端验收。",
+          "不改变应用1.4.3或唯一PPT Skill1.1.3；不做对外发布。"
+        ],
+        "generatedAt": "2026-11-06T00:26:23.564958+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -29697,6 +29831,34 @@
         "--reporter=dot"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/session-view-preferences.test.js",
+        "test/workspace-surface-host.test.ts",
+        "test/workspace-narrow-layout.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/home-guide-entry-handoff-browser.test.js",
+        "-t",
+        "keeps Research intact|hands the global Explore"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/session-view-preferences.test.js"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
