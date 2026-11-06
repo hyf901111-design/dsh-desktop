@@ -17,8 +17,8 @@ export function planningHumanRequest(session) {
   return null
 }
 
-const componentObject=/工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:workbench|dashboard|canvas|component|card|table|chart)\b/iu
-const boardObject=/^(?:工作台|观察台|监控台|画布|看板|仪表盘|workbench|dashboard|canvas)$/iu
+const componentObject=/工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:workbench|dashboard|canvas|component|card|table|chart)\b/iu
+const boardObject=/^(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|workbench|dashboard|canvas)$/iu
 const conversationScope=/(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?/u
 const documentObject=/\b(?:PPTX?|PowerPoint|DOCX?|Word|XLSX?|Excel|PDF)\b|演示文稿|幻灯片|报告文件|文档文件|电子表格文件/iu
 function normalizeComponentClause(text){
@@ -113,13 +113,13 @@ export function componentCreationRequest(session) {
     // New build synonyms require an imperative head and a new canvas object.
     // Object-before-verb status/binding statements cannot establish this intent.
     const build = /^(?:(?:另外|另行|同时|然后|并且|并|请|麻烦|帮我|给我|替我|为我|我想|我需要|先|再|立即|马上)\s*)*(?:建立|建(?!议|筑|模))(.+)$/u.exec(action.trim())?.[1]
-    const operand = build?.split(/(?:用于|用来|给|为|到|在)(?=(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片))|(?:并且?|然后|同时)(?=(?:绑定|配置|添加|连接|关联|启用|设置))/u)[0]
+    const operand = build?.split(/(?:用于|用来|给|为|到|在)(?=(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片))|(?:并且?|然后|同时)(?=(?:绑定|配置|添加|连接|关联|启用|设置))/u)[0]
     // Domain modifiers precede the canvas noun (客户关系管理工作台);
     // binding complements follow it (工作台的数据源绑定).
-    const object = operand?.match(/工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
-    const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
+    const object = operand?.match(/工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
+    const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
     const deliveryText=action
-    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
+    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
     const create = delivery || createBuild || !!explicitComponentCreation(action) || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = creationDenied(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
@@ -130,7 +130,7 @@ export function componentCreationRequest(session) {
   if (!text || /(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|建立|搭建|制作|构建|规划|做一个|建)/u.test(text)) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|制作|做一个|建)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
-  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|观察台|监控台|画布|看板|仪表盘))/u.test(text)) return null
+  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘))/u.test(text)) return null
   const board = targets.includes('workbench')
   const component = /组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:component|card|table|chart)\b/iu.test(text)
   // New canvas cards use the same host planning tool. Coding requests and
@@ -172,7 +172,7 @@ export function latestClientModeForAuthority(session){
  }
  return mode
 }
-export const CONVERSATION_COMPONENT_GUIDANCE=COMPONENT_SURFACE_STYLE_RULES+"\n"+TRUSTED_TYPES_COMPONENT_INSTRUCTION+"\n"+PANEL_COLOR_INSTRUCTION+"\n"+'【对话内原生组件】主智能体可按用户问题判断组件是否更清楚；普通解释不强制建卡。用户明确要组件时直接交付已完成的完整 artifact 或原生 financial-widget spec。除非用户另有明确格式要求，先用简短自然的公开文字引出组件，再在对应的信息位置立即创建；保存成功后继续解释该组件或展开后续正文。多个组件按论述顺序逐个交付，各自的说明紧接在对应组件之后，不要等整篇回答结束后再集中创建；不要以占位符代替真实组件。面向用户的正文不展示工具名、requestId、manifest或协议标签；只依据真实成功回执说明已交付，创建失败时如实说明未完成。先顺序读取 client_capabilities 确认真实 mode 和 available 状态，不能把目录和依赖它的创建放在同一个并行工具批次。conversation 模式调用 client_action({requestId,capability:"conversation.components.create",arguments:{artifact,title?}})，仅由宿主校验保存，再依据真实 saved effect 与 ready manifest 说明完成。不默认启动子智能体，不接受 prompt/recipe 代生成，不创建隐藏画布。原始HTML的初始 HTML 正文必须直接包含用户所需的真实文字、初始数值和真实控件，清单应直接写出各项标签、复选框和初始完成数量；不能只给空容器再由脚本生成所有内容，也不能添加无关、隐藏或占位文字蒙混首屏验收。JavaScript 只渐进增强已有内容，通过共享状态更新勾选、计数等交互；脚本未执行时也应能阅读真实内容。共享复选框在 click 事件中 dispatch 并读取当前 checked，让同一次点击由语义状态处理，避免在后续 change 中重复提交。原始HTML会按现有脚本语法、共享交互和组件样式规则验收；失败时严格针对回执指出的原因修改，不猜测无关问题；同一原因经过一次定向修复仍未解决时，不再反复更换requestId盲重试，应如实说明未完成且保留用户需求。失败回执未保存新组件，按同一轮具体问题修复完整artifact后用新requestId重试，不能修改已失败requestId的参数冒充幂等，不能重放已成功写入的组件。不额外启动子任务或要求用户调整需求来修复内部协议；无法完成时保留真实结果并如实说明。对话HTML沙箱已注入window.sherlockShared，本地交互由独立对话存储自动保存，宿主真正落盘后才确认，重开从该组件记录恢复；不要自行localStorage、IndexedDB、fetch或伪造保存接口。紧凑范式：const shared=window.sherlockShared.register({initialState:{count:0,memo:""},reduce:(s,a)=>a.type==="increment"?{...s,count:s.count+1}:a.type==="memo"?{...s,memo:a.value}:s,render:(s,ctx)=>{count.textContent=s.count;if(memo.value!==s.memo)memo.value=s.memo;add.disabled=memo.disabled=ctx.readOnly||!ctx.connected;}});add.onclick=()=>shared.dispatch({type:"increment"});memo.oninput=()=>shared.dispatch({type:"memo",value:memo.value});DOM变量先获取再注册，render内不引用尚未返回的shared。dispatch返回true仅表示受理，不等于已保存；保存状态由宿主显示，成功回执前不要公开承诺已经持久化。股票/ETF单标的行情与K线优先 financial-widget.quote，仅提交已由用户或实际工具确认的 symbols/code/market/name 和周期配置，不填价格或OHLC数组；未知代码先通过实际来源解析。场外基金必须走 financial_query 的 fund 能力，使用 fund/table/chart 等现有模板，保留净值日、报告期和来源，不能伪装为股票 quote。真实数据先实际取数，保留来源、单位、原始时点与缺失状态，不把保存时间写成获取时间。研究模式沿原研究画布流程；notes 模式沿 notes.components.create 等现有笔记能力，不能偷换创建目标。'
+export const CONVERSATION_COMPONENT_GUIDANCE=COMPONENT_SURFACE_STYLE_RULES+"\n"+TRUSTED_TYPES_COMPONENT_INSTRUCTION+"\n"+PANEL_COLOR_INSTRUCTION+"\n"+'【对话内原生组件】主智能体可按用户问题判断组件是否更清楚；普通解释不强制建卡。用户明确要组件时直接交付已完成的完整 artifact 或原生 financial-widget spec。除非用户另有明确格式要求，先用简短自然的公开文字引出组件，再在对应的信息位置立即创建；保存成功后继续解释该组件或展开后续正文。多个组件按论述顺序逐个交付，各自的说明紧接在对应组件之后，不要等整篇回答结束后再集中创建；不要以占位符代替真实组件。面向用户的正文不展示工具名、requestId、manifest或协议标签；只依据真实成功回执说明已交付，创建失败时如实说明未完成。当前模式未由本轮目录确认时，在内部顺序读取 client_capabilities 确认真实 mode 和 available 状态；已有本轮结果直接复用，不向用户回报模式判断或能力发现，不能把目录和依赖它的创建放在同一个并行工具批次。conversation 模式调用 client_action({requestId,capability:"conversation.components.create",arguments:{artifact,title?}})，仅由宿主校验保存，再依据真实 saved effect 与 ready manifest 说明完成。不默认启动子智能体，不接受 prompt/recipe 代生成，不创建隐藏画布。原始HTML的初始 HTML 正文必须直接包含用户所需的真实文字、初始数值和真实控件，清单应直接写出各项标签、复选框和初始完成数量；不能只给空容器再由脚本生成所有内容，也不能添加无关、隐藏或占位文字蒙混首屏验收。JavaScript 只渐进增强已有内容，通过共享状态更新勾选、计数等交互；脚本未执行时也应能阅读真实内容。共享复选框在 click 事件中 dispatch 并读取当前 checked，让同一次点击由语义状态处理，避免在后续 change 中重复提交。原始HTML会按现有脚本语法、共享交互和组件样式规则验收；失败时严格针对回执指出的原因修改，不猜测无关问题；同一原因经过一次定向修复仍未解决时，不再反复更换requestId盲重试，应如实说明未完成且保留用户需求。失败回执未保存新组件，按同一轮具体问题修复完整artifact后用新requestId重试，不能修改已失败requestId的参数冒充幂等，不能重放已成功写入的组件。不额外启动子任务或要求用户调整需求来修复内部协议；无法完成时保留真实结果并如实说明。对话HTML沙箱已注入window.sherlockShared，本地交互由独立对话存储自动保存，宿主真正落盘后才确认，重开从该组件记录恢复；不要自行localStorage、IndexedDB、fetch或伪造保存接口。紧凑范式：const shared=window.sherlockShared.register({initialState:{count:0,memo:""},reduce:(s,a)=>a.type==="increment"?{...s,count:s.count+1}:a.type==="memo"?{...s,memo:a.value}:s,render:(s,ctx)=>{count.textContent=s.count;if(memo.value!==s.memo)memo.value=s.memo;add.disabled=memo.disabled=ctx.readOnly||!ctx.connected;}});add.onclick=()=>shared.dispatch({type:"increment"});memo.oninput=()=>shared.dispatch({type:"memo",value:memo.value});DOM变量先获取再注册，render内不引用尚未返回的shared。dispatch返回true仅表示受理，不等于已保存；保存状态由宿主显示，成功回执前不要公开承诺已经持久化。股票/ETF单标的行情与K线优先 financial-widget.quote，仅提交已由用户或实际工具确认的 symbols/code/market/name 和周期配置，不填价格或OHLC数组；未知代码先通过实际来源解析。场外基金必须走 financial_query 的 fund 能力，使用 fund/table/chart 等现有模板，保留净值日、报告期和来源，不能伪装为股票 quote。真实数据先实际取数，保留来源、单位、原始时点与缺失状态，不把保存时间写成获取时间。研究模式沿原研究画布流程；notes 模式沿 notes.components.create 等现有笔记能力，不能偷换创建目标。'
 const CATALOG_FIRST='裸组件请求尚无本轮真实模式：请先顺序调用 client_capabilities，再按实际模式提交完整组件；不能直接调用 research_workbench_create 创建隐藏画布。'
 export function registerConversationComponentsPolicy(ctx){
  const disposePrompt=ctx.systemPrompt.context({name:'sherlock:conversation-components',order:151,text:({agent})=>{
