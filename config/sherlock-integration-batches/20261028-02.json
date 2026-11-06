@@ -28345,6 +28345,94 @@
         ],
         "generatedAt": "2026-11-06T00:26:23.564958+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一回复状态、公开简短回应与按序执行记录",
+        "branch": "codex/feat/conversation-status-flow-20261106",
+        "baseCommit": "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a",
+        "tipCommit": "d57ccbac4411beb5fa044b08d8ec522f211edbee",
+        "commits": [
+          {
+            "commit": "d57ccbac4411beb5fa044b08d8ec522f211edbee",
+            "parents": [
+              "3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a"
+            ],
+            "subject": "优化：统一回复状态并先展示简短回应与可展开执行记录"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "design-qa.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-status-presentation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-progress-runtime.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/task-progress-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/task-progress-runtime.test.js",
+              "--maxWorkers=1",
+              "--fileParallelism=false",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "最终提交22项通过。覆盖单一活动状态、真实文本先于状态、混合推理块不进入公开正文、hover/键盘展开、原始工具记录、完成与缩减动态，以及运行时提示注入和补丁逆向。",
+            "verifiedCommit": "d57ccbac4411beb5fa044b08d8ec522f211edbee",
+            "completedAt": "2026-11-06T01:06:49.259046+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产会话组件中文浅/深色和英文窄屏浏览器检查通过；参考用户图5/6核对。原生签名客户端和实际模型首句待集成验证。"
+        },
+        "acceptanceCriteria": [
+          "收到消息只出现一条当前状态，无圆环；文字流光支持缩减动态",
+          "真实简短回应先显示，当前执行状态在回应后；不伪造固定回应",
+          "有真实记录才支持展开；hover或键盘聚焦出现贴近文字的箭头，展开按原时间顺序列出记录",
+          "任务完成停止活动动画，保留回复及可回看的工具原始记录"
+        ],
+        "risks": [
+          "本分支基于夹具提交3bae7da64569cbc48ccb5b26841c21d8c8f8bd0a，集成时先合入其handoff。",
+          "模型首句使用同一次请求的公开进展指引，不保证固定毫秒时延；必须在共享签名客户端采样实际先回应后工具调用。",
+          "功能分支未替换共享客户端；原会话统一构建，无发布、版本变更或main晋升。"
+        ],
+        "generatedAt": "2026-11-06T01:06:49.259046+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -29859,6 +29947,20 @@
         "test/session-view-preferences.test.js"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
+        "test/task-progress-runtime.test.js",
+        "--maxWorkers=1",
+        "--fileParallelism=false",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
