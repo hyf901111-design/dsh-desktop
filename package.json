@@ -65,7 +65,7 @@
     "build:native:youtube": "node scripts/build-youtube-player.mjs",
     "build:native:power": "node scripts/build-power-helper.mjs",
     "fund-service:capabilities": "node scripts/check-fund-research-capabilities.mjs",
-    "build:native:computer": "node scripts/prepare-computer-driver.mjs && node scripts/build-computer-stroke.mjs"
+    "build:native:computer": "node scripts/prepare-computer-driver.mjs && node scripts/build-computer-stroke.mjs && node scripts/prepare-computer-candidates.mjs"
   },
   "dependencies": {
     "@blocknote/core": "0.55.0",
@@ -116,7 +116,8 @@
     "sanitize-html": "^2.17.7",
     "y-prosemirror": "1.3.7",
     "y-protocols": "1.0.6",
-    "yjs": "13.6.32"
+    "yjs": "13.6.32",
+    "dsh-computer-backends": "file:packages/dsh-computer-backends"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
@@ -168,6 +169,14 @@
     ],
     "extraResources": [
       {
+        "from": "docs/licenses/peekaboo-MIT.txt",
+        "to": "third-party/Peekaboo-MIT.txt"
+      },
+      {
+        "from": "docs/licenses/ui-tars-Apache-2.0.txt",
+        "to": "third-party/UI-TARS-Apache-2.0.txt"
+      },
+      {
         "from": "build/figma-generation/LICENSE-react-bits.md",
         "to": "third-party/React-Bits-ShapeGrid-LICENSE.md"
       },
@@ -215,7 +224,10 @@
           "sherlock-power-helper",
           "cua-driver",
           "cua-driver-version.json",
-          "cua-driver-MIT.txt"
+          "cua-driver-MIT.txt",
+          "cua-driver-candidate",
+          "peekaboo",
+          "computer-candidates.json"
         ]
       },
       {

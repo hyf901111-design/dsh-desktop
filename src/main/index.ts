@@ -34,7 +34,7 @@ import { TaskRunner, harnessRpc } from './scheduled/task-runner'
 import { ScheduledMarketWatchExecutor } from './scheduled/market-watch-executor'
 import { createScheduledTaskService } from './scheduled/task-service'
 import { createPublicDataClient } from '../../packages/dsh-research-task-runtime/public-data-client.js'
-import { createDesktopComputer } from './computer/desktop-computer'
+import { createComputerCandidates } from './computer/candidates'
 import { registerConversationBrowser } from './search/conversation-browser'
 import {openClientLink} from './search/open-client-link'
 import { guardUnexpectedErrorDownloads } from './search/research-web-downloads'
@@ -214,7 +214,7 @@ let memoryService: MemoryService | undefined
 let memoryEndpoint: Awaited<ReturnType<typeof startMemoryBridge>> | undefined
 let stopIntegrationIdentity = () => {}
 let runtime: HarnessRuntime
-let desktopComputer: ReturnType<typeof createDesktopComputer> | undefined
+let desktopComputer: ReturnType<typeof createComputerCandidates> | undefined
 let localSearchRuntime: LocalSearchRuntime | undefined
 let researchBoardIntegration:ResearchBoardIntegration|undefined
 let researchClipboardService:ResearchCanvasClipboard|undefined
@@ -1407,7 +1407,7 @@ async function bootstrap(): Promise<void> {
   )
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
-  desktopComputer = createDesktopComputer(() => mainWindow)
+  desktopComputer = createComputerCandidates()
   const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
@@ -1560,6 +1560,11 @@ async function bootstrap(): Promise<void> {
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
     bundledFundResearchEntry: bundledFundResearchEntry(),
     computerUseBinary: process.platform === 'darwin' ? join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'cua-driver') : undefined,
+    computerUseExecutables: process.platform === 'darwin' ? {
+      'builtin:computer-use': join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'cua-driver-candidate'),
+      'builtin:computer-use-peekaboo': join(app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'build'), 'native', 'peekaboo'),
+      'builtin:computer-use-uitars': bundledNodePath()
+    } : undefined,
     bundledIntegrationEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-integration-runtime/index.js')).href,
     bundledMemoryEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-memory-runtime/index.js')).href,
     memoryEndpoint,

@@ -78,6 +78,8 @@ async function loadDependency(name, required) {
 Promise.resolve()
   .then(() => loadDependency('apache-arrow', true))
   .then(() => loadDependency('@trycua/cua-driver', true))
+  .then(() => loadDependency('dsh-computer-backends', true))
+  .then(() => loadDependency('@ui-tars/operator-nut-js', true))
   .then(() => loadDependency('@lancedb/lancedb', false))
   .catch((error) => {
     console.error(error && error.stack ? error.stack : error)
@@ -131,6 +133,13 @@ try {
     const driverVersion = execFileSync(computerDriver, ['--version'], { encoding: 'utf8' }).trim()
     if (driverVersion !== 'cua-driver 0.28.2') throw new Error(`Unexpected computer driver: ${driverVersion}`)
     if (!existsSync(path.join(resourcesPath, 'native', 'cua-driver-MIT.txt'))) throw new Error('Computer driver license is missing')
+    const candidateVersion = execFileSync(path.join(resourcesPath, 'native', 'cua-driver-candidate'), ['--version'], { encoding: 'utf8' }).trim()
+    if (candidateVersion !== 'cua-driver 0.38.0') throw new Error(`Unexpected candidate driver: ${candidateVersion}`)
+    const peekVersion = execFileSync(path.join(resourcesPath, 'native', 'peekaboo'), ['--version'], { encoding: 'utf8' }).trim()
+    if (!peekVersion.includes('4.9.8')) throw new Error(`Unexpected Peekaboo: ${peekVersion}`)
+    for (const file of ['Peekaboo-MIT.txt', 'UI-TARS-Apache-2.0.txt']) {
+      if (!existsSync(path.join(resourcesPath, 'third-party', file))) throw new Error(`Missing license: ${file}`)
+    }
     const powerHelper = path.join(resourcesPath, 'native', 'sherlock-power-helper')
     if (!existsSync(powerHelper) || execFileSync(powerHelper, ['--version'], {encoding: 'utf8'}).trim() !== '2') throw new Error('Power helper is missing or incompatible')
     if (!skipSignature) execFileSync('/usr/bin/codesign', ['--verify', '--strict', '-R', '=identifier "com.evanarts.sherlock.power-helper" and anchor apple generic and certificate leaf[subject.OU] = "FAV8TLDK73"', powerHelper], {stdio: 'inherit'})

@@ -43,7 +43,7 @@ describe('macOS package runtime verification', () => {
         mkdirSync(runtimeRoot, { recursive: true })
         mkdirSync(packagedSkillRoot, { recursive: true })
         // Include the real desktop-control resources checked in every macOS package.
-        for (const script of ['prepare-computer-driver.mjs', 'build-computer-stroke.mjs', 'build-youtube-player.mjs']) {
+        for (const script of ['prepare-computer-driver.mjs', 'prepare-computer-candidates.mjs', 'build-computer-stroke.mjs', 'build-youtube-player.mjs', 'build-power-helper.mjs']) {
           const prepared = spawnSync(process.execPath, [path.join(projectRoot, 'scripts', script)], {
             cwd: projectRoot,
             encoding: 'utf8'
@@ -51,6 +51,10 @@ describe('macOS package runtime verification', () => {
           expect(prepared.status, prepared.stderr).toBe(0)
         }
         symlinkSync(path.join(projectRoot, 'build', 'native'), path.join(resourcesPath, 'native'))
+        mkdirSync(path.join(resourcesPath, 'third-party'), { recursive: true })
+        for (const [source, target] of [['peekaboo-MIT.txt', 'Peekaboo-MIT.txt'], ['ui-tars-Apache-2.0.txt', 'UI-TARS-Apache-2.0.txt']]) {
+          copyFileSync(path.join(projectRoot, 'docs/licenses', source!), path.join(resourcesPath, 'third-party', target!))
+        }
         copyFileSync(
           path.join(projectRoot, 'scripts', 'macos', 'update-recovery.cjs'),
           path.join(resourcesPath, 'update-recovery.cjs')
@@ -109,7 +113,7 @@ describe('macOS package runtime verification', () => {
         expect(result.status, result.stderr).toBe(0)
         expect(result.stdout).toContain('apache-arrow: loadable')
         expect(result.stdout).toContain('signature: skipped (unsigned CI package)')
-        expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.39.3 (source parity)')
+        expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.39.5 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.8 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-finance-analysis v1.7.3 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-equity-research v1.4.0 (source parity)')
