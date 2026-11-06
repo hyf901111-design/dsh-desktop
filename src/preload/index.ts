@@ -269,7 +269,7 @@ function initializeUi(): void {
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
-  const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill })
+  const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill }, { beforeNavigate: () => notes.flushCurrent() })
   const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuideFromCurrent(session.sessionId), prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide,
     mountWorkbench: mountHomeWorkbenchGuide })
   const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}

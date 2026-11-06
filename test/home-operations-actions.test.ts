@@ -16,6 +16,7 @@ let descriptor: any
 runInNewContext(nativeSource.slice(0, nativeSource.indexOf('\n//# sourceMappingURL=client.js.map')), {
   window: { __ModuleLoader__: { load: (value: unknown) => { descriptor = value } } },
   navigator: { platform: 'MacIntel' }, AbortController, TextEncoder, TextDecoder, setTimeout, clearTimeout,
+  document: new Window().document,
 })
 function fakeModule(): any { let fake: any; fake = new Proxy(function () {}, { get: () => fake, apply: () => fake, construct: () => ({}) }); return fake }
 function store<T>(initial: T) {
@@ -33,7 +34,7 @@ const details: Record<string, SkillDetail> = {
   [ids.report]: { type: 'skill-detail', id: ids.report, revision: 7, enabled: true, invocationName: 'ework-skill-fedcba9876543210', invocationLabel: 'ework-equity-research', content: '# Fresh installed equity skill' },
 }
 
-function fixture({ draft = '', waitDetail = false, waitSnapshot = false } = {}) {
+function fixture({ draft = '', waitDetail = false, waitSnapshot = false, beforeNavigate }: { draft?: string; waitDetail?: boolean; waitSnapshot?: boolean; beforeNavigate?(): Promise<void> } = {}) {
   const window = new Window({ url: 'http://127.0.0.1/' }), document = window.document as unknown as Document
   document.body.innerHTML = `<div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="home">
     <header data-srb-session-header data-ework-notes-session="current"><div data-srb-tabs>
@@ -88,7 +89,7 @@ function fixture({ draft = '', waitDetail = false, waitSnapshot = false } = {}) 
     throw Error(`Unexpected external command ${command.type}`)
   })
   const skill = createSkillUseBridge(document, { request }, () => { trace.push('skill:reveal'); document.querySelector('main')!.removeAttribute('inert') })
-  const actions = createHomeOperationsActions(document, { request, useSkill: skill.useSkill })
+  const actions = createHomeOperationsActions(document, { request, useSkill: skill.useSkill }, { beforeNavigate })
   const abort = new AbortController(), reveal = deferred<void>()
   const context = { signal: abort.signal, revealComposer: vi.fn(async () => { trace.push('reveal:start'); await reveal.promise; document.querySelector('main')!.removeAttribute('inert'); trace.push('reveal:ready') }) }
   const textarea = document.querySelector<HTMLTextAreaElement>('[data-odyssey-file-reference-session="current"]')!
@@ -285,4 +286,26 @@ it.each(['changes', 'changes and returns to the same text'] as const)('rejects a
   expect(outcome.ok).toBe(false)
   expect(f.trace).not.toContain('compose:insert')
   expect(f.sent).toEqual([])
+})
+
+
+it('saves the current note before any quick-create navigation and preserves it on save failure', async () => {
+  const saved = deferred<void>(), f = fixture({beforeNavigate: () => saved.promise})
+  const operation = f.actions.run('note', f.context)
+  await Promise.resolve()
+  expect(f.trace).not.toContain('home:notes')
+  saved.resolve()
+  await operation
+  expect(f.trace).toContain('home:notes')
+  const failed = fixture({beforeNavigate: async () => { throw Error('笔记保存失败') }})
+  await expect(failed.actions.run('board', failed.context)).rejects.toThrow('笔记保存失败')
+  expect(failed.trace).not.toContain('home:research')
+})
+it('does not navigate after the user cancels while a note save is pending', async () => {
+  const saved = deferred<void>(), f = fixture({beforeNavigate: () => saved.promise})
+  const operation = f.actions.run('board', f.context)
+  const rejected = expect(operation).rejects.toThrow(/变化/)
+  f.abort.abort(); saved.resolve()
+  await rejected
+  expect(f.trace).not.toContain('home:research')
 })

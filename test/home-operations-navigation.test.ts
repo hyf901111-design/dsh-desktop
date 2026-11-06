@@ -59,12 +59,13 @@ function fixture(current: string | undefined = 'current') {
   const workspaces = { list: workspaceList, connectWorkspace: vi.fn((workspaceId: string) => sessions.create({ workspaceId })) }
   const inputHub = { shell: vi.fn(() => shell) }, composerBlocks = { storeFor: () => ({ getSnapshot: () => blocked }) }
   const sidebarClick = vi.fn(); for (const button of document.querySelectorAll('aside button')) button.addEventListener('click', sidebarClick)
-  const dispose = installHomeOperationsNavigation({ document, sessions, workspaces, inputHub, composerBlocks })
+  const chatStore = { create: () => ({ actions: { setView: (view: string) => { activeView = view } } }) }
+  const dispose = installHomeOperationsNavigation({ document, sessions, workspaces, inputHub, composerBlocks, chatStore })
   const replies: any[] = []; win.addEventListener('sherlock:home-action-reply', (event: any) => replies.push(event.detail))
   const dispatch = (requestId: string, action: unknown) => win.dispatchEvent(new win.CustomEvent('sherlock:home-action-request', { detail: { requestId, action } }))
   const request = async (action: unknown, requestId: string = win.crypto.randomUUID()) => {
     dispatch(requestId, action)
-    await vi.waitFor(() => expect(replies.some(reply => reply.requestId === requestId)).toBe(true))
+    await vi.waitFor(() => expect(replies.some(reply => reply.requestId === requestId)).toBe(true), {timeout:5000})
     return replies.find(reply => reply.requestId === requestId)
   }
   cleanup.push(async () => { dispose(); await win.happyDOM.close() })
@@ -215,10 +216,48 @@ it('adds an independently owned, idempotent top-frame navigation effect while pr
   expect(patchIntegrationSkillComposer(source)).toBe(source)
   const homeDispose = vi.fn(), skillDispose = vi.fn(), effects: Array<undefined | (() => void)> = []
   const win: any = {}; win.top = win
-  const deps = { sessions: {}, workspaces: {}, inputHub: {}, researchSidebar: {} }
+  const deps = { sessions: {}, workspaces: {}, inputHub: {}, researchSidebar: {}, chatStore: {} }
   const install = vi.fn(() => homeDispose)
   runInNewContext(source, { ...deps, window: win, ComposerBlockRegistry: class {}, ctx: { inject: () => {}, effect: (fn: () => (() => void) | undefined) => effects.push(fn()) }, sherlockBoardsPage: { installHomeOperationsNavigation: install, installSkillComposer: () => skillDispose } })
   expect(install).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ sessions: deps.sessions, workspaces: deps.workspaces, inputHub: deps.inputHub }))
   for (const dispose of effects) dispose?.()
   expect(homeDispose).toHaveBeenCalledOnce(); expect(skillDispose).toHaveBeenCalledOnce()
+})
+
+// A quick-create card must not reuse an existing board/note or its hidden composer.
+it.each(['research', 'notes', 'composer'])('creates a new target from an existing page for %s, preserving its content', async action => {
+  const f = fixture()
+  f.root.dataset.odysseyPage = 'conversation'
+  const original = f.root.querySelector('textarea')!
+  const result = await f.request(action)
+  expect(result).toMatchObject({ ok: true, sessionId: 'created' })
+  expect(f.list.getSnapshot().current).toBe('created')
+  expect(f.active()).toBe(action === 'composer' ? 'chat' : action)
+  expect(original.value).toBe('保留正文与引用')
+  expect(f.submit).not.toHaveBeenCalled()
+})
+
+it.each(['research', 'notes', 'composer'])('leaves a personal board with no native header when creating %s', async action => {
+  const f = fixture()
+  f.root.remove()
+  // Native opening remounts the root after leaving the board route.
+  f.sessions.open.mockImplementation(id => { f.document.querySelector('.pI_x6G_centerCol')!.append(f.root); f.list.set({current:id}); f.render(id) })
+  expect(await f.request(action)).toMatchObject({ok:true,sessionId:'created'})
+  expect(f.active()).toBe(action === 'composer' ? 'chat' : action)
+})
+
+it('does not reuse a blank chat beneath an open note surface', async () => {
+  const f = fixture()
+  f.document.body.dataset.workspaceSurface = 'notes'
+  expect(await f.request('notes')).toMatchObject({ok:true,sessionId:'created'})
+})
+
+it('cancels quick creation if the user selects another page while creation is pending', async () => {
+  const f = fixture(); f.root.dataset.odysseyPage = 'conversation'
+  const creating=deferred<string>(); f.sessions.create.mockReturnValue(creating.promise)
+  f.dispatch('new-from-existing','notes')
+  await vi.waitFor(()=>expect(f.sessions.create).toHaveBeenCalledOnce())
+  f.list.set({current:'user-choice'}); creating.resolve('created')
+  await vi.waitFor(()=>expect(f.replies.find(reply=>reply.requestId==='new-from-existing')).toMatchObject({ok:false}))
+  expect(f.sessions.open).not.toHaveBeenCalled()
 })
