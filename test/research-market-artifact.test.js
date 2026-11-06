@@ -5,6 +5,15 @@ import {acceptArtifactOutput, workbenchMarketVariantIssue, workbenchMarketRecenc
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 const render=spec=>{const out=acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'源稿行情',asOf:'09.21 15:00 · 情景模拟',...spec}));expect(out).toBeDefined();const w=new Window();w.document.write(JSON.parse(out).html);return w.document}
+it('keeps long trend methodology accessible without expanding the default card',()=>{
+ const note='两期匹配产品，缺失不补零；收益不含分红。'.repeat(20);
+ const d=render({variant:'trend',labels:['01','02'],series:[{name:'指标',values:[100,102]}],note});
+ const details=d.querySelector('.market-methodology');
+ expect(details).not.toBeNull();expect(details.open).toBe(false);
+ expect(details.textContent).toContain(note);
+ details.querySelector('summary').click();expect(details.open).toBe(true);
+ expect(d.querySelectorAll('.trend-line')).toHaveLength(1);
+})
 it('retains trend axes and historical endpoints on refresh until the reader resets the range',()=>{
  const old=render({variant:'trend',labels:['01','02','03'],series:[{name:'指标',values:[1,2,3]}]});old.defaultView.eval(old.querySelector('script').textContent)
  const previous=JSON.parse(old.querySelector('svg').getAttribute('data-workbench-chart-view'))
@@ -379,11 +388,11 @@ it('shows a missing stock explicitly without inventing candles',()=>{
  expect(d.body.textContent).toContain('历史日线来源未返回')
  expect(d.querySelectorAll('tbody tr')).toHaveLength(1)
 })
-it('preserves sourced KPI details through the host metrics template',()=>{
+it('preserves sourced KPI details through the dedicated KPI template',()=>{
  const output=acceptArtifactOutput(JSON.stringify({version:1,type:'kpi',title:'行业核心指标',items:[{label:'中证白酒',value:'6105.76 点',change:'-2.11%',detail:'2026-09-24 收盘 · 来源：行情接口'}]}))
  expect(output).toBeDefined()
  const w=new Window();w.document.write(JSON.parse(output).html)
- expect(w.document.querySelector('.market-detail').textContent).toContain('2026-09-24 收盘')
+ expect(w.document.querySelector('.indicator-fields').textContent).toContain('2026-09-24 收盘')
  expect(w.document.body.textContent).toContain('-2.11%')
  expect(acceptArtifactOutput(JSON.stringify({version:1,type:'kpi',title:'行业核心指标',items:[{label:'指标',value:{unexpected:true},detail:'来源'}]}))).toBeUndefined()
 })
