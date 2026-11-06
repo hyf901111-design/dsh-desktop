@@ -592,6 +592,20 @@ function singleSourceMapping(mapping,responses) {
   return visit(mapping)
 }
 
+// Builtin public queries expose a normalized top-level records envelope. Correct
+// only the redundant data prefix when the verified response has no data member;
+// never search for a similar field, change row scope, or alter connector results.
+function publicRecordEnvelope(mapping,responses,requests){
+ const keys=new Set(requests.filter(r=>r.toolId==='public_data_query'&&r.args?.operation==='query'&&Array.isArray(responses[r.key]?.records)&&!Object.hasOwn(responses[r.key],'data')).map(r=>r.key))
+ const visit=(v,depth=0)=>{
+  if(depth>24)throw Error('字段映射超出限制')
+  if(Array.isArray(v))return v.map(c=>visit(c,depth+1))
+  if(!v||typeof v!=='object')return v
+  return Object.fromEntries(Object.entries(v).map(([k,c])=>[k,keys.has(v.$from)&&['$each','$path'].includes(k)&&c==='data.records'?'records':visit(c,depth+1)]))
+ }
+ return keys.size?visit(mapping):mapping
+}
+
 function normalizeRequestDates(value,depth=0) {
   if(depth>24)throw Error('数据请求超出嵌套限制')
   if(Array.isArray(value))return value.map(v=>normalizeRequestDates(v,depth+1))
@@ -640,7 +654,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     // Group labels/status never prove a company search; actual queries below do.
     displayContract={...base,items:groups.map(group=>group.items)};grouped=true
   }
-  let mapping=singleSourceMapping(displayContract,responses)
+  let mapping=publicRecordEnvelope(singleSourceMapping(displayContract,responses),responses,requests)
   // Source identity comes from the exact observed call matched above, after
   // evaluating legal argument mappings such as source:{$default:'sina-news'}.
   // Keep original request expressions for refresh; never classify their shape.
