@@ -9,66 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "消息悬停编辑重发与电脑操作适配修正",
+        "featureName": "修复消息编辑入口渲染传递",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "b502e9c9be97968e56c53aa9be695187cb599225",
-        "tipCommit": "e34927ac2666da73a189b79876bce7812a45cd2b",
+        "baseCommit": "e34927ac2666da73a189b79876bce7812a45cd2b",
+        "tipCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
         "commits": [
           {
-            "commit": "ce6191d87d166db83188ba670b9e0bd12df9f514",
+            "commit": "ec73e633351b7551d72850eaec70c344fd4c8715",
             "parents": [
-              "b502e9c9be97968e56c53aa9be695187cb599225"
+              "e34927ac2666da73a189b79876bce7812a45cd2b"
             ],
-            "subject": "功能：支持用户消息悬停时间与编辑后分支重发"
-          },
-          {
-            "commit": "e34927ac2666da73a189b79876bce7812a45cd2b",
-            "parents": [
-              "ce6191d87d166db83188ba670b9e0bd12df9f514"
-            ],
-            "subject": "修复：补齐电脑操作入口并减少截图往返及错误坐标"
+            "subject": "修复：打通消息渲染插槽的编辑与任务状态传递"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/research/computer-use-bakeoff-20261106.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-computer-backends/index.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/computer-use-benchmark/cross-app.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/message-edit.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/computer-backend-adapter.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/message-edit-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/message-edit-host.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/message-edit.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-reply-actions.test.js"
           }
         ],
         "checks": [
@@ -79,18 +40,12 @@
               "run",
               "test/message-edit.test.js",
               "test/message-edit-host.test.js",
-              "test/message-edit-browser.test.js",
-              "test/notes-reply-actions.test.js",
-              "test/sent-reference-bubble-browser.test.js",
-              "test/computer-backend-adapter.test.js",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js"
+              "test/message-edit-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "54 项聚焦检查通过，4 个已有外部夹具用例跳过",
-            "verifiedCommit": "e34927ac2666da73a189b79876bce7812a45cd2b",
-            "completedAt": "2026-11-06T15:07:32.019875+00:00",
+            "summary": "13 项检查通过，浏览器覆盖真实 ChatNodeSeat 至消息渲染插槽的传递",
+            "verifiedCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
+            "completedAt": "2026-11-06T15:39:16.786628+00:00",
             "timeoutMs": 180000
           },
           {
@@ -101,14 +56,14 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "e34927ac2666da73a189b79876bce7812a45cd2b",
-            "completedAt": "2026-11-06T15:07:32.019875+00:00",
+            "verifiedCommit": "ec73e633351b7551d72850eaec70c344fd4c8715",
+            "completedAt": "2026-11-06T15:39:16.786628+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际前端 bundle 浏览器检查：悬停、时间、明暗主题、编辑取消、多行输入、忙碌禁用、附件保留与失败草稿；真实 AgentLoop 检查首条/中间消息分支重发。电脑操作真实跨应用任务尚未通过，不作为最终选型验收。"
+          "summary": "真实 ChatNodeSeat 插槽路径的悬停编辑、取消、重发、忙碌禁用通过；等待更新包进行最终客户端重发验证。"
         },
         "acceptanceCriteria": [
           "用户消息悬停出现时间、复制，空闲时出现编辑",
@@ -122,69 +77,7 @@
           "操作依赖 macOS 屏幕录制和辅助功能权限",
           "同一模型同机有限场景的比较不代表普遍排名"
         ],
-        "generatedAt": "2026-11-06T15:07:32.019875+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2c3e534f31b57d53de4df10c5f536ffc2e075098",
-        "verificationCommit": "2c3e534f31b57d53de4df10c5f536ffc2e075098",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "2c3e534f31b57d53de4df10c5f536ffc2e075098",
-            "completedAt": "2026-11-06T15:10:33.539Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "2c3e534f31b57d53de4df10c5f536ffc2e075098",
-            "completedAt": "2026-11-06T15:10:33.539Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "2c3e534f31b57d53de4df10c5f536ffc2e075098",
-            "completedAt": "2026-11-06T15:10:33.539Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "2c3e534f31b57d53de4df10c5f536ffc2e075098",
-            "completedAt": "2026-11-06T15:10:33.539Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-11-06T15:10:33.539Z"
+        "generatedAt": "2026-11-06T15:39:16.786628+00:00"
       }
     }
   ],
