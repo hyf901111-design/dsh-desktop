@@ -9,27 +9,42 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "指标摘要与ETF排名口径、观察台快速规划",
+        "featureName": "真实数据映射与指标说明修复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "a613e8f34097e2d23cc3c68a37a423318b6d494b",
-        "tipCommit": "07f5bdada32a6dff5647c293e8362b33a5fbbc64",
+        "baseCommit": "07f5bdada32a6dff5647c293e8362b33a5fbbc64",
+        "tipCommit": "5509e57974bb37ea278902b2cf678029d6319bcd",
         "commits": [
           {
-            "commit": "07f5bdada32a6dff5647c293e8362b33a5fbbc64",
+            "commit": "1ad9e3c591b50aaf325556c9bcfab7d64ab227eb",
             "parents": [
-              "a613e8f34097e2d23cc3c68a37a423318b6d494b"
+              "07f5bdada32a6dff5647c293e8362b33a5fbbc64"
             ],
-            "subject": "优化：压缩指标数值展示并统一ETF排名口径与观察台规划"
+            "subject": "修复：真实数据表格字段映射并压缩指标长说明"
+          },
+          {
+            "commit": "5509e57974bb37ea278902b2cf678029d6319bcd",
+            "parents": [
+              "1ad9e3c591b50aaf325556c9bcfab7d64ab227eb"
+            ],
+            "subject": "文档：记录Tushare真实取数与工作台测试结果"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
+            "status": "A",
+            "path": "docs/research/tushare-acceptance-20261107.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
@@ -41,23 +56,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+            "path": "packages/dsh-research-task-runtime/table-projection.js"
           },
           {
             "status": "M",
-            "path": "services/fund-data/tushare-etf-snapshot.js"
+            "path": "test/cartesian-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-keyed-table-projection.test.js"
           },
           {
             "status": "M",
             "path": "test/kpi-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/tushare-etf-snapshot.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-execution-policy.test.js"
           }
         ],
         "checks": [
@@ -66,16 +77,16 @@
               "npx",
               "vitest",
               "run",
+              "test/component-keyed-table-projection.test.js",
               "test/kpi-template.test.js",
-              "test/tushare-etf-snapshot.test.js",
-              "test/tushare-gateway.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/conversation-components-policy.test.js"
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/cartesian-chart-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "202项相关检查通过；小数保留原值、真实排名字段单位、观察台意图与原有权限边界",
-            "verifiedCommit": "07f5bdada32a6dff5647c293e8362b33a5fbbc64",
-            "completedAt": "2026-11-06T19:06:34.595840+00:00",
+            "summary": "278项聚焦检查通过；真实ETF响应重放100行正确",
+            "verifiedCommit": "5509e57974bb37ea278902b2cf678029d6319bcd",
+            "completedAt": "2026-11-06T19:38:13.493576+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -84,76 +95,14 @@
           "summary": "源码修正已聚焦验证，真实打包客户端将在集成分支继续测试，不将源码检查视为视觉验收。"
         },
         "acceptanceCriteria": [
-          "摘要可读，详情保留原值",
-          "排名字段单位一致",
-          "自然观察台请求快速规划"
+          "字段名投影转换为真实数据",
+          "报价冗余路径准确规范",
+          "长说明可展开且不撑高总览"
         ],
         "risks": [
-          "真实模型输出仍需实际数据场景核验"
+          "新打包客户端仍需聚焦复测"
         ],
-        "generatedAt": "2026-11-06T19:07:00.047562+00:00"
-      },
-      "merged": {
-        "mergeCommit": "069c713f0c4bda85d227c50846c8b280896319b2",
-        "verificationCommit": "069c713f0c4bda85d227c50846c8b280896319b2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "069c713f0c4bda85d227c50846c8b280896319b2",
-            "completedAt": "2026-11-06T19:08:31.864Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "069c713f0c4bda85d227c50846c8b280896319b2",
-            "completedAt": "2026-11-06T19:08:31.864Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "069c713f0c4bda85d227c50846c8b280896319b2",
-            "completedAt": "2026-11-06T19:08:31.864Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "069c713f0c4bda85d227c50846c8b280896319b2",
-            "completedAt": "2026-11-06T19:08:31.864Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-11-06T19:08:31.864Z"
+        "generatedAt": "2026-11-06T19:38:13.493576+00:00"
       }
     }
   ],
