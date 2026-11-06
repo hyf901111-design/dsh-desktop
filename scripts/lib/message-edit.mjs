@@ -111,6 +111,7 @@ export function patchMessageEditClient(source){
  const helpers=[editedPromptContent,sendMessageRevision,EWorkEditableUserMessage].map(f=>f.toString()).join('\n')
  swap(source.slice(start,end),helpers+`\nconst UserMessageNodeView=react.memo(EWorkEditableUserMessage);\nif(!document.getElementById('ework-message-edit-style')){const style=document.createElement('style');style.id='ework-message-edit-style';style.textContent=${JSON.stringify(messageEditCss)};document.head.append(style);}`)
  swap('chatScroll, forkAt, fileMentions, t }) {','chatScroll, forkAt, editMessage, fileMentions, t }) {')
+ swap('const routedOwner = {\n\t\t\t\tannotationSessionId:', 'const routedOwner = {\neditMessage:arguments[0].editMessage,editBusy:arguments[0].editBusy,\n\t\t\t\tannotationSessionId:')
  swap('const seatProps = (0, react.useMemo)(() => ({\n\t\t\t\tannotationSessionId:',`const editBusy=running||inbox.length>0||canvasTasks.some(task=>['pending','running','queued','preparing','generating'].includes(task.status||task.phase))||noteRows.some(row=>['preparing','generating'].includes(row.phase));\nconst seatProps = (0, react.useMemo)(() => ({\neditMessage,editBusy,\n\t\t\t\tannotationSessionId:`)
  swap('\n\t\t\t}), [\n\t\t\t\tsessionId,\n\t\t\t\tuseSession,','\n\t\t\t}), [\neditMessage,editBusy,\n\t\t\t\tsessionId,\n\t\t\t\tuseSession,')
  const anchor='forkAt: (seq) => {\n\t\t\t\t\t\t\tsessions.fork({'

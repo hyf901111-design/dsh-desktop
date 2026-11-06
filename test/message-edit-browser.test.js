@@ -12,7 +12,7 @@ beforeAll(async()=>{
  source=patchMessageEditClient(original)
  expect(patchMessageEditClient(source)).toBe(source)
  expect(stripMessageEditClient(source)).toBe(stripMessageEditClient(original))
- source=source.replace('exports.UserStyleBubble = UserStyleBubble;','exports.UserStyleBubble = UserStyleBubble; exports.EditableUserMessage=EWorkEditableUserMessage;')
+ source=source.replace('exports.UserStyleBubble = UserStyleBubble;','exports.UserStyleBubble = UserStyleBubble; exports.EditableUserMessage=EWorkEditableUserMessage; exports.EditableMessageSeat=ChatNodeSeat;')
  css=[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(m=>JSON.parse(m[1])).filter(s=>s.includes('gdEzaW_')||s.includes('p-xYUq_')).join('\n')
  bootstrap=(await build({stdin:{resolveDir:process.cwd(),loader:'js',contents:`
  import * as React from 'react';import * as JSX from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';import{mountDesktopShellStyles}from'./src/preload/shell-style';
@@ -22,11 +22,12 @@ beforeAll(async()=>{
  window.mountMessage=()=>{
   mountDesktopShellStyles(document);
   const client=window.descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?ReactDOM:id==='@deepseek-ai/dsh-client-ui-primitives'?primitives:id==='@deepseek-ai/dsh-client-ui-attachment'?{ImageGallery:({images})=>React.createElement('div',{'data-attachments':images.length})}:fake);
-  const root=createRoot(document.querySelector('#fixture')),listeners=new Set();let state={running:false,queue:[]};
+  const root=createRoot(document.querySelector('#fixture')),listeners=new Set();let state={running:false,queue:[],chat:{nodes:new Map()}};
   const useSession=selector=>React.useSyncExternalStore(fn=>{listeners.add(fn);return()=>listeners.delete(fn)},()=>selector(state));
   window.probe={requests:[],copied:null};window.setRunning=running=>{state={...state,running};listeners.forEach(fn=>fn())};
   const node={kind:'user',data:{seq:7,time:Date.now(),source:{kind:'user'},content:[{type:'text',text:'请帮我检查这张图片。'},{type:'image',attachment:{attachmentId:'image-one'}}]}};
-  ReactDOM.flushSync(()=>root.render(React.createElement(client.EditableUserMessage,{node,useSession,loadImage:async()=>'',openFile:()=>{},t:key=>({copy:'复制',copied:'已复制'}[key]||key),editMessage:async request=>{window.probe.requests.push(request);if(window.rejectSend)throw Error('模拟失败，草稿保留');await new Promise(r=>setTimeout(r,80))}})));
+  state.chat.nodes.set('test-node',node);
+  ReactDOM.flushSync(()=>root.render(React.createElement(client.EditableMessageSeat,{nodeKey:'test-node',renderSlot:(_slot,owner)=>React.createElement(client.EditableUserMessage,{...owner,useSession,t:key=>({copy:'复制',copied:'已复制'}[key]||key)}),useSession,loadImage:async()=>'',openFile:()=>{},t:key=>({copy:'复制',copied:'已复制'}[key]||key),editMessage:async request=>{window.probe.requests.push(request);if(window.rejectSend)throw Error('模拟失败，草稿保留');await new Promise(r=>setTimeout(r,80))}})));
  };
  `},bundle:true,write:false,format:'iife',platform:'browser',plugins:[{name:'raw-css',setup(b){b.onResolve({filter:/\.css\?raw$/},a=>({path:a.path.startsWith('.')?resolve(a.resolveDir,a.path.slice(0,-4)):require.resolve(a.path.slice(0,-4)),namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async a=>({contents:'export default '+JSON.stringify(await readFile(a.path,'utf8')),loader:'js'}))}}]})).outputFiles[0].text
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
