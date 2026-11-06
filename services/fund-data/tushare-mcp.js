@@ -1,8 +1,10 @@
 import { authenticate, authError } from '../accounts/auth.js'
 import tools from '../../config/tushare-builtin-tools.json' with { type: 'json' }
+import {buildEtfSnapshot,selectEtfSnapshot,validateEtfSnapshot} from './tushare-etf-snapshot.js'
 import catalog from '../../config/tushare-api-catalog.json' with { type: 'json' }
 
 export const TUSHARE_PATH = '/v1/tushare/mcp'
+const etfSnapshots = new WeakMap()
 const endpoint = 'https://api.tushare.pro'
 const json = (value, status = 200) => Response.json(value, {status, headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}})
 const failure = (code, status) => json({error:{code}}, status)
@@ -95,13 +97,30 @@ export async function handleTushareMcp(request,env) {
     const selected=args.api_name?catalog.filter(api=>api.api===args.api_name):catalog.filter(api=>!args.query||`${api.api} ${api.name} ${api.description}`.toLowerCase().includes(args.query.toLowerCase()))
     return reply(result({source:'Tushare',kind:'catalog',queryLimits:{defaultLimit:200,maxLimit:1000,maxOffset:100000},interfaces:args.api_name?selected.map(api=>({...api,description:api.description.split(/限量：|积分：|权限：/u)[0].trim()})):selected.map(({api,name,documentation})=>({api,name,documentation})),note:'目录不是业务数据。用 api_name 读取具体参数和字段；实际权限以业务调用结果为准。'}))
   }
-  if(name!=='tushare_query')return failure('INVALID_REQUEST',400)
-  try{validateTushareQuery(args)}catch(error){return reply({isError:true,content:[{type:'text',text:error.message.startsWith('limit 必须')?error.message:'参数或字段无效，请按 tushare_catalog 的当前定义修正；limit 必须为 1–1000。只接受目录内接口，不接受 Token 或 URL。'}]})}
+  if(!['tushare_query','tushare_etf_snapshot'].includes(name))return failure('INVALID_REQUEST',400)
+  try{name==='tushare_etf_snapshot'?validateEtfSnapshot(args):validateTushareQuery(args)}catch(error){return reply({isError:true,content:[{type:'text',text:error.message.startsWith('limit 必须')?error.message:'参数或字段无效，请按 tushare_catalog 的当前定义修正；limit 必须为 1–1000。只接受目录内接口，不接受 Token 或 URL。'}]})}
   const usage=crypto.randomUUID()
   let status=503
   try {
     await env.ACCOUNTS_DB.prepare('INSERT INTO usage_events(id,user_id,capability,started_at) VALUES(?,?,?,?)').bind(usage,user.id,'tushare',Math.floor(Date.now()/1000)).run()
-    const value=await queryTushare(args,env,AbortSignal.any([request.signal,AbortSignal.timeout(25000)]))
+    let value
+    if(name==='tushare_etf_snapshot'){
+      const normalized=validateEtfSnapshot(args),key=normalized.end_date+':'+normalized.lookback_days
+      let cache=etfSnapshots.get(env);if(!cache){cache=new Map();etfSnapshots.set(env,cache)}
+      let entry=cache.get(key),cacheHit=Boolean(entry&&entry.expires>Date.now())
+      if(!cacheHit){
+        const signal=AbortSignal.timeout(24000)
+        entry={expires:Date.now()+120000,promise:buildEtfSnapshot({end_date:normalized.end_date,lookback_days:normalized.lookback_days},async(query)=>{
+          const response=await queryTushare(query,env,signal)
+          if(response.isError)throw Error('ETF 汇总来源不可用')
+          return response.structuredContent
+        },signal)}
+        cache.set(key,entry);while(cache.size>8)cache.delete(cache.keys().next().value)
+        const current=entry;void entry.promise.catch(()=>{if(cache.get(key)===current)cache.delete(key)})
+      }
+      const snapshot=await entry.promise;request.signal.throwIfAborted()
+      value=result({...selectEtfSnapshot(snapshot,normalized),cacheHit})
+    }else value=await queryTushare(args,env,AbortSignal.any([request.signal,AbortSignal.timeout(25000)]))
     status=value.isError?422:200;return reply(value)
   }catch{return reply({isError:true,content:[{type:'text',text:'Tushare 数据服务暂时不可用，未取得业务数据。请稍后重试或使用其他已授权来源。'}]})}
   finally{try{await env.ACCOUNTS_DB.prepare('UPDATE usage_events SET status=?,completed_at=? WHERE id=?').bind(status,Math.floor(Date.now()/1000),usage).run()}catch{}}

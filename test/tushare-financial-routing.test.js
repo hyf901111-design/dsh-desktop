@@ -30,7 +30,7 @@ it('不把免费来源排他需求改为 Tushare；金融数据上下文可在�
  const schemas=tools.map(t=>({...t,name:t.name==='tushare_catalog'?'ework__t_aaa':'ework__t_bbb'}))
  expect(preferredComponentSourceTools(schemas,'仅使用腾讯行情展示最新报价')).toEqual([])
  const preferred=preferredComponentSourceTools(schemas,'沪深300 ETF 本周份额和规模变化')
- expect(preferred).toHaveLength(2)
+ expect(preferred).toHaveLength(3)
  expect(componentSourceInstruction(preferred,'沪深300 ETF 份额规模')).toContain('Tushare')
  expect(financialSourceGuidance(schemas)).toContain('分页未完成不能宣称全量')
  expect(financialSourceGuidance([])).toBe('')

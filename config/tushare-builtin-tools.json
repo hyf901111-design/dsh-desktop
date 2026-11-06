@@ -2,11 +2,105 @@
   {
     "name": "tushare_catalog",
     "description": "Tushare 金融数据接口目录与参数定义。免费数据源不能覆盖所需字段时，优先使用 Tushare。传 api_name 可一次取得该接口的参数、字段、单位和官方文档；query 可搜索股票、指数、ETF、基金、财务、港股、宏观等数据。目录不是业务数据，也不代表当前账户具有该接口权限。",
-    "inputSchema": {"type":"object","properties":{"api_name":{"type":"string"},"query":{"type":"string","maxLength":100}},"additionalProperties":false}
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api_name": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "additionalProperties": false
+    }
   },
   {
     "name": "tushare_query",
     "description": "调用 Tushare 官方接口取得真实金融数据。api_name、params、fields 按 tushare_catalog 定义填写；不传 Token 或 URL，EWork 登录后由云端鉴权调用。返回 records、字段口径、来源及获取时间；只可用实际交易/披露日期作为数据时点。分页未结束不能把样本当全市场；空值不补零。权限或频率错误不得重复循环调用。组件需绑定本次成功请求才能刷新。",
-    "inputSchema": {"type":"object","properties":{"api_name":{"type":"string","minLength":1},"params":{"type":"object","additionalProperties":{"type":"string"}},"fields":{"type":"string","description":"逗号分隔的已核验字段，只取展示需要的字段","maxLength":1000},"limit":{"type":"integer","minimum":1,"maximum":1000,"default":200},"offset":{"type":"integer","minimum":0,"maximum":100000}},"required":["api_name","params","fields"],"additionalProperties":false}
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "api_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "fields": {
+          "type": "string",
+          "description": "逗号分隔的已核验字段，只取展示需要的字段",
+          "maxLength": 1000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 200
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      },
+      "required": [
+        "api_name",
+        "params",
+        "fields"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "tushare_etf_snapshot",
+    "description": "Tushare ETF 运营汇总。指数运营、ETF市场规模/份额变化、申赎估算排名优先一次调用本工具，不逐卡重新查询上千只产品。云端自动查找已入库交易日、取齐两期分页并按代码对齐计算，短时复用同一份真实快照。overview 返回 summary；inflows/outflows 返回估算金额正/负排名；products 返回可搜索产品记录，支持 index_code。summary 始终是全部可用记录，index_code只筛选 records。lookback_days 为日历天数（默认7），实际区间见 period；金额亿元、份额亿份。估算=(期末份额−期初份额)×期末净值，不等于官方资金流或逐日净申购合计。returnPct为未复权收盘价变化，不含分红。无 Token/URL 参数，登录后才可用。组件直接映射 summary 或 records，不抄写源数据；说明 coverage/formula。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "end_date": {
+          "type": "string",
+          "description": "可选 YYYYMMDD，默认北京时间今日；自动回溯到已入库交易日。"
+        },
+        "lookback_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90,
+          "default": 7
+        },
+        "view": {
+          "type": "string",
+          "enum": [
+            "overview",
+            "inflows",
+            "outflows",
+            "products"
+          ],
+          "default": "overview"
+        },
+        "index_code": {
+          "type": "string",
+          "description": "仅筛选产品/排名，六位跟踪指数代码，可带交易所后缀。"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000,
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    }
   }
 ]
