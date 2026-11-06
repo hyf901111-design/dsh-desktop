@@ -28770,23 +28770,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复探索演示关闭弹层时意外恢复输入框焦点",
+        "featureName": "主题壁纸完整适配窗口并取消上下滚动",
         "branch": "codex/feat/response-history-demo-order-20261106",
-        "baseCommit": "897158cab06464f14144306861d673140c01ef66",
-        "tipCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
+        "baseCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
+        "tipCommit": "91c7af4d5a2cd7f7764ff1c0259a48e5b939a0f3",
         "commits": [
           {
-            "commit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
+            "commit": "91c7af4d5a2cd7f7764ff1c0259a48e5b939a0f3",
             "parents": [
-              "897158cab06464f14144306861d673140c01ef66"
+              "e720b7c7dfe042b174b92d7a3b52205233bf04c6"
             ],
-            "subject": "修复探索演示关闭弹层时意外恢复输入框焦点"
+            "subject": "让探索主题壁纸完整适配窗口并取消上下滚动"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
             "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-gallery.ts"
           },
           {
             "status": "M",
@@ -28801,27 +28809,12 @@
               "run",
               "test/explore-menu-browser.test.ts",
               "-t",
-              "restores the original composer focus only|closes from the surrounding background|keeps Explore open for the demo close-pointer"
+              "fits every wallpaper without vertical scrolling|uses native wallpaper preferences"
             ],
             "outcome": "passed",
-            "summary": "4 项通过：进入演示不恢复旧输入焦点；手动关闭、Escape 和用户主动取消保持原行为。",
-            "verifiedCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
-            "completedAt": "2026-11-06T06:44:45.926790+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guide-entry-handoff-browser.test.js",
-              "-t",
-              "hands the global Explore|opens a Notes demo from a conversation after trusted Chinese IME input|closes real Explore and activates the unselected native"
-            ],
-            "outcome": "passed",
-            "summary": "5 项通过：真实笔记/看板入口、空白首页入口及中文 IME 后进入笔记。",
-            "verifiedCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
-            "completedAt": "2026-11-06T06:44:45.926790+00:00",
+            "summary": "5 项通过：深浅色、常规和窄窗口下15张壁纸完整可见，滚轮与键盘不滚动，缩窗和英文标签完整，选择偏好保存。",
+            "verifiedCommit": "91c7af4d5a2cd7f7764ff1c0259a48e5b939a0f3",
+            "completedAt": "2026-11-06T07:29:26.662709+00:00",
             "timeoutMs": 180000
           },
           {
@@ -28834,24 +28827,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "e720b7c7dfe042b174b92d7a3b52205233bf04c6",
-            "completedAt": "2026-11-06T06:44:45.926790+00:00",
+            "verifiedCommit": "91c7af4d5a2cd7f7764ff1c0259a48e5b939a0f3",
+            "completedAt": "2026-11-06T07:29:26.662709+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Explore dialog 在修复前重现 close(false) 仍恢复 composer 焦点；修复后原生 dialog 关闭不会在演示交接时回焦，正常关闭恢复焦点，真实 NotesApp/原生会话入口检查通过。整包实测待交付。"
+          "summary": "真实 Explore DOM 浏览器检查和截图通过，常规窗口保持五列三行，小窗口及英文模式全部15张卡片可见可选。签名本地包待交付。"
         },
         "acceptanceCriteria": [
-          "进入探索用例演示时，不因系统自动恢复原输入框焦点而中断",
-          "手动关闭探索仍恢复原焦点，保留草稿",
-          "笔记、看板的原生新建顺序及会话保护保持生效"
+          "主题壁纸列表不随滚轮上下移动",
+          "全部15张壁纸及完整名称可见可选",
+          "窗口缩小后重新排列，常规尺寸保持五列三行"
         ],
         "risks": [
-          "只明确 Explore 原生模态框的焦点恢复所有权；不放宽会话、账户、输入和取消保护"
+          "按可用高度适当调整缩略图高度，保留完整文字标签及实时预览。"
         ],
-        "generatedAt": "2026-11-06T06:44:45.926790+00:00"
+        "generatedAt": "2026-11-06T07:29:26.662709+00:00"
       }
     }
   ],
