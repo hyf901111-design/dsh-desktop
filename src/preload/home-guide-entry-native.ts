@@ -100,7 +100,12 @@ export async function createHomeGuideEntryClient(document:Document,options:{runI
 /** Page-world owner. One lease can reserve and open exactly one dedicated session. */
 export function installHomeGuideEntryNative(deps:NativeDependencies){
  const document=deps.document,win=document.defaultView!,runs=new Map<string,any>(),closedRuns=new Set<string>(),closedNotes=new Set<string>(),composing=new Set<Element>();let stopped=false,selectionRevision=0,selected=deps.context().sessionId,opening:any,activeNote:any
- const sourceComposing=()=>[...composing].some(el=>el.isConnected&&!el.closest('[data-odyssey-subagent-panel]')&&!!el.closest('.pI_x6G_centerCol,[data-ework-notes-composer-host]'))
+ const sourceComposing=()=>{
+  // Chromium may retire or blur an IME owner without delivering compositionend.
+  // A retained, hidden composer must not block a later Explore entry forever.
+  for(const el of composing)if(!el.isConnected||!el.contains(document.activeElement))composing.delete(el)
+  return [...composing].some(el=>!el.closest('[data-odyssey-subagent-panel]')&&!!el.closest('.pI_x6G_centerCol,[data-ework-notes-composer-host]'))
+ }
  const retain=(set:Set<string>,value:string)=>{set.add(value);if(set.size>256)set.delete(set.values().next().value!)}
  const retire=(run:any)=>{runs.delete(run.runId);retain(closedRuns,run.runId);if(run.noteToken)retain(closedNotes,run.noteToken)}
  const reply=(run:any,requestId:string,value:Record<string,unknown>)=>win.dispatchEvent(new win.CustomEvent(REPLY,{detail:{requestId,runId:run.runId,...value}}))
@@ -168,7 +173,8 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
    void open(run).then(()=>nativeReply({ok:true,sessionId:run.entry.sessionId}),()=>{revoke(run);nativeReply({ok:false,cancelled:true})})
   }catch{revoke(run);nativeReply({ok:false,cancelled:true})}
  }
- const input=(event:Event)=>{if(!event.isTrusted)return;if(event.target instanceof win.Element){if(event.type==='compositionstart')composing.add(event.target);if(event.type==='compositionend')composing.delete(event.target)}for(const run of runs.values())revoke(run,'trusted-input')}
+ const input=(event:Event)=>{if(!event.isTrusted)return;if(event.target instanceof win.Element){if(event.type==='compositionstart')composing.add(event.target);if(event.type==='compositionend'||event.type==='input'&&event instanceof win.InputEvent&&!event.isComposing)composing.delete(event.target)}for(const run of runs.values())revoke(run,'trusted-input')}
+ const blur=(event:Event)=>{if(event.isTrusted&&event.target instanceof win.Element)composing.delete(event.target)}
  const receive=(event:Event)=>{
   const d=(event as CustomEvent).detail;if(stopped||!d||!id(d.requestId)||!id(d.runId))return
   if(d.phase==='cancel'){const run=runs.get(d.runId);if(run&&(!d.token||d.token===run.token))revoke(run,'client-cancel');return}
@@ -200,5 +206,6 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
  }
  win.addEventListener(REQUEST,receive);win.addEventListener('sherlock:sidebar-new-note-request',note,true);document.addEventListener('click',click,true)
  for(const type of ['pointerdown','keydown','beforeinput','input','compositionstart','compositionend'])document.addEventListener(type,input,true)
- return()=>{if(stopped)return;for(const run of runs.values())revoke(run,'disposed');stopped=true;unsubscribe();win.removeEventListener(REQUEST,receive);win.removeEventListener('sherlock:sidebar-new-note-request',note,true);document.removeEventListener('click',click,true);for(const type of ['pointerdown','keydown','beforeinput','input','compositionstart','compositionend'])document.removeEventListener(type,input,true);composing.clear()}
+ document.addEventListener('focusout',blur,true)
+ return()=>{if(stopped)return;for(const run of runs.values())revoke(run,'disposed');stopped=true;unsubscribe();win.removeEventListener(REQUEST,receive);win.removeEventListener('sherlock:sidebar-new-note-request',note,true);document.removeEventListener('click',click,true);for(const type of ['pointerdown','keydown','beforeinput','input','compositionstart','compositionend'])document.removeEventListener(type,input,true);document.removeEventListener('focusout',blur,true);composing.clear()}
 }

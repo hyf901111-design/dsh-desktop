@@ -64,3 +64,18 @@ it('does not offer disclosure for a simple answer without public progress or act
   expect(await button.innerText()).toContain('用时')
  }finally{await page.close()}
 })
+it('keeps the total header above an initial reply and live tools, with no elapsed bullet',async()=>{
+ const{page,errors}=await fixture();try{
+  await page.evaluate(()=>window.responseFixture.statusSequence('initial'))
+  expect(await page.locator('[data-response-progress=total] button').first().innerText()).not.toMatch(/[·•]/u)
+  await page.evaluate(()=>window.responseFixture.firstReplyWithTools())
+  const header=page.locator('[data-response-progress=total]').first(),reply=page.getByText('我先查京津冀三地的数据。',{exact:true}),live=page.locator(liveSelector)
+  expect(await header.innerText()).toMatch(/用时.*20秒/)
+  expect(await live.count()).toBe(1)
+  const boxes=await Promise.all([header,reply,live].map(node=>node.boundingBox()))
+  expect(boxes[0].y+boxes[0].height).toBeLessThanOrEqual(boxes[1].y)
+  expect(boxes[1].y+boxes[1].height).toBeLessThanOrEqual(boxes[2].y)
+  expect(await page.locator('[data-response-total-time]').count()).toBe(0)
+  await page.screenshot({path:evidence+'/running-header-first.png'});expect(errors).toEqual([])
+ }finally{await page.close()}
+})
