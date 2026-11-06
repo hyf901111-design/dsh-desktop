@@ -17,8 +17,8 @@ export function planningHumanRequest(session) {
   return null
 }
 
-const componentObject=/工作台|画布|看板|仪表盘|组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:workbench|dashboard|canvas|component|card|table|chart)\b/iu
-const boardObject=/^(?:工作台|画布|看板|仪表盘|workbench|dashboard|canvas)$/iu
+const componentObject=/工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:workbench|dashboard|canvas|component|card|table|chart)\b/iu
+const boardObject=/^(?:工作台|观察台|监控台|画布|看板|仪表盘|workbench|dashboard|canvas)$/iu
 const conversationScope=/(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?/u
 const documentObject=/\b(?:PPTX?|PowerPoint|DOCX?|Word|XLSX?|Excel|PDF)\b|演示文稿|幻灯片|报告文件|文档文件|电子表格文件/iu
 function normalizeComponentClause(text){
@@ -113,13 +113,13 @@ export function componentCreationRequest(session) {
     // New build synonyms require an imperative head and a new canvas object.
     // Object-before-verb status/binding statements cannot establish this intent.
     const build = /^(?:(?:另外|另行|同时|然后|并且|并|请|麻烦|帮我|给我|替我|为我|我想|我需要|先|再|立即|马上)\s*)*(?:建立|建(?!议|筑|模))(.+)$/u.exec(action.trim())?.[1]
-    const operand = build?.split(/(?:用于|用来|给|为|到|在)(?=(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|画布|看板|仪表盘|组件|卡片))|(?:并且?|然后|同时)(?=(?:绑定|配置|添加|连接|关联|启用|设置))/u)[0]
+    const operand = build?.split(/(?:用于|用来|给|为|到|在)(?=(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片))|(?:并且?|然后|同时)(?=(?:绑定|配置|添加|连接|关联|启用|设置))/u)[0]
     // Domain modifiers precede the canvas noun (客户关系管理工作台);
     // binding complements follow it (工作台的数据源绑定).
-    const object = operand?.match(/工作台|画布|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
-    const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
+    const object = operand?.match(/工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片|绑定|映射|关联|连接|关系/gu)?.at(-1)
+    const createBuild = !!operand && !/^(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片)/u.test(operand) && /^(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片)$/u.test(object ?? '')
     const deliveryText=action
-    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
+    const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|需要).{0,80}(?:工作台|观察台|监控台|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(deliveryText) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(deliveryText)
     const create = delivery || createBuild || !!explicitComponentCreation(action) || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|一套|一张|个|套|张)|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = creationDenied(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
@@ -130,7 +130,7 @@ export function componentCreationRequest(session) {
   if (!text || /(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|建立|搭建|制作|构建|规划|做一个|建)/u.test(text)) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|制作|做一个|建)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
-  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|画布|看板|仪表盘))/u.test(text)) return null
+  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|观察台|监控台|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|观察台|监控台|画布|看板|仪表盘))/u.test(text)) return null
   const board = targets.includes('workbench')
   const component = /组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|\b(?:component|card|table|chart)\b/iu.test(text)
   // New canvas cards use the same host planning tool. Coding requests and

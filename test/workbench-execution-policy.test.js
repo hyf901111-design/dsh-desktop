@@ -66,6 +66,8 @@ describe('workbench execution policy', () => {
   })
   it('recognizes human creation intent without changing coding questions or tool output', () => {
     expect(workbenchCreationRequest(session('使用通联mcp获取数据，创建一个股票研究工作台'))).not.toBeNull()
+    for(const text of ['帮我做一个A股宽基指数观察台，比较三条走势','做一个债券监控台'])expect(workbenchCreationRequest(session(text))?.target).toBe('workbench');
+    for(const text of ['为什么观察台会卡顿','不要创建监控台','修改当前观察台的标题'])expect(workbenchCreationRequest(session(text))).toBeNull();
     for (const text of ['为什么生成工作台这么慢', '不要生成工作台', '修复组件生成逻辑', '请创建登录界面']) expect(workbenchCreationRequest(session(text))).toBeNull()
     const injected = session('创建工作台'); injected.events[0].data.source.kind = 'tool'
     expect(workbenchCreationRequest(injected)).toBeNull()

@@ -4,6 +4,15 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {prepareSimulatedArtifact} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 const source={version:1,type:'kpi',title:'项目指标',subject:'项目概况',asOf:'用户提供 · 2026-10-01',range:'当前工作台 · 最近7天',note:'本地虚构测试记录',items:[{label:'累计完成',value:0,unit:'项',detail:'原口径，不将零视为缺失',change:'本周 -5',source:'用户提供的完整记录'},{label:'运行任务',value:-5,unit:'个',detail:'保留原负数'},{label:'平均耗时',value:null,unit:'秒',missing:'未提供耗时，不能补零'}]}
+it('长浮点数仅在摘要舍入，原值保留，微小非零值与标识字符串不被误改',()=>{
+ const s={...source,items:[{label:'规模',value:'49204.49070019001',unit:'亿元',change:2966.863557459995},{label:'微小变动',value:-0.00000034},{label:'代码',value:'000300'},{label:'原格式',value:'1.2345%'},{label:'大整数',value:'12345678901234567890'}]};
+ const out=JSON.parse(acceptArtifactOutput(JSON.stringify(s))),w=new Window();w.document.write(out.html);
+ const values=[...w.document.querySelectorAll('.indicator-value')].map(e=>e.textContent);
+ expect(values).toEqual(['49,204.49 亿元','-0.00000034','000300','1.2345%','12345678901234567890']);
+ expect(w.document.querySelector('.indicator-change').textContent).toBe('2,966.86');
+ expect(w.document.querySelector('.indicator-fields').textContent).toContain('49204.49070019001');
+ expect(readTemplateModel(out).data).toEqual(s);w.happyDOM.abort();
+})
 it('摘要不复制长口径，展开仍保留全文，缺失原因保持可见',()=>{
  const w=new Window();w.document.write(JSON.parse(acceptArtifactOutput(JSON.stringify(source))).html);
  const summaries=[...w.document.querySelectorAll('.indicator-summary')];

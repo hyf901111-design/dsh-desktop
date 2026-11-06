@@ -29,6 +29,8 @@ it('uses actual available dates, joins by code, keeps missing values, and conver
  expect(selection.coverage.selectedProducts).toBe(1)
  const out=selectEtfSnapshot(s,{view:'outflows',limit:20,offset:0})
  expect(out.records.map(r=>r.code)).toEqual(['510500.SH'])
+ expect(out.ranking).toEqual({field:'flowEstimateYi',unit:'亿元',direction:'ascending',meaning:'按期末净值估算的份额变动金额'});
+ expect(selection.ranking.field).toBe('sizeYi');
 })
 it('does not publish partial aggregates when pagination or duplicate data are invalid',async()=>{
  const q=source();q.mockImplementation(async({api_name,params})=>api_name==='trade_cal'?{records:dates.map(cal_date=>({cal_date,is_open:1})),pagination:{possiblyMore:false}}:{records:end,pagination:{possiblyMore:true,nextOffset:(params.offset??0)+1000}})
