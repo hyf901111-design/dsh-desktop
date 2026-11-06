@@ -46,7 +46,7 @@ it('upgrades an already installed v1 runtime and produces identical bytes on a s
 it('upgrades an older continuation marker and dock once without duplicating the helper or losing original schemas',async()=>{
  const runtime=legacyTaskProgressSource(await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8')).replace('/* sherlock:task-progress-sync:v1 */','/* sherlock:task-progress-sync:v1 */\n/* sherlock:task-progress-continuation:v2 */')
  const upgraded=patchTaskProgressRuntime(runtime)
- expect(upgraded).toContain('/* sherlock:task-progress-continuation:v4 */')
+ expect(upgraded).toContain('/* sherlock:task-progress-continuation:v5 */')
  expect(upgraded).not.toContain('state.reconciled = true')
  expect(upgraded).not.toContain('/* sherlock:task-progress-continuation:v2 */')
  expect(patchTaskProgressRuntime(upgraded)).toBe(upgraded)
@@ -89,14 +89,14 @@ it('fails closed on a truncated existing runtime or drifted current install rath
  const current=patchTaskProgressRuntime(original)
  expect(()=>patchTaskProgressRuntime(current.replace('state.noProgress >= 2','state.noProgress >= 999'))).toThrow('runtime drifted')
  expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-sync:v1 */',''))).toThrow('installation is incomplete')
- expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v4 */\n/* sherlock:task-progress-continuation:v4 */'))).toThrow('marker drifted')
- expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v99 */'))).toThrow('marker drifted')
+ expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-continuation:v5 */','/* sherlock:task-progress-continuation:v5 */\n/* sherlock:task-progress-continuation:v5 */'))).toThrow('marker drifted')
+ expect(()=>patchTaskProgressRuntime(current.replace('/* sherlock:task-progress-continuation:v5 */','/* sherlock:task-progress-continuation:v99 */'))).toThrow('marker drifted')
 })
 
-it('migrates only the exact prior v3 declaration and leaves the current v4 idempotent',async()=>{
+it('migrates only the exact prior v3 declaration and leaves the current v5 idempotent',async()=>{
  const raw=await readFile('node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js','utf8'),current=patchTaskProgressRuntime(raw),frozen=JSON.parse(await readFile('test/fixtures/task-progress-v3.json','utf8')).declaration
  const node=parse(current,{sourceType:'module'}).program.body.find(node=>node.type==='FunctionDeclaration'&&node.id?.name==='installTaskProgressSync')
- const previous=(current.slice(0,node.start)+frozen+current.slice(node.end)).replace('/* sherlock:task-progress-continuation:v4 */','/* sherlock:task-progress-continuation:v3 */')
+ const previous=(current.slice(0,node.start)+frozen+current.slice(node.end)).replace('/* sherlock:task-progress-continuation:v5 */','/* sherlock:task-progress-continuation:v3 */')
  expect(patchTaskProgressRuntime(previous)).toBe(current);expect(patchTaskProgressRuntime(current)).toBe(current)
  expect(()=>patchTaskProgressRuntime(previous.replace('!unfinished(state)) return','!unfinished(state)) return; // drift'))).toThrow('previous runtime drifted')
 })

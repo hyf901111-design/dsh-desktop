@@ -54,7 +54,7 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   const plan=await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-plan-mode/lib/index.js'),'utf8')
   expect(plan).toContain('sherlock:plan-pending-replay:rc7:v1')
   expect(await readFile(path.join(nestedPlan,'lib/index.js'),'utf8')).toBe(plan)
-  expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js'),'utf8')).toContain('task-progress-continuation:v4')
+  expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js'),'utf8')).toContain('task-progress-continuation:v5')
   const goal=await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-tool-goal/lib/index.js'),'utf8')
   expect(goal).toContain('sherlock:goal-tool-stage-guidance:rc7:v1')
   expect(await readFile(path.join(nestedGoal,'lib/index.js'),'utf8')).toBe(goal)
