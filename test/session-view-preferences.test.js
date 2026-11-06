@@ -248,6 +248,10 @@ it('paints rapid tab choices before a coalesced desktop save and flushes the las
     await act(async()=>instance.actions.setView('notes'));
     expect(JSON.parse(f.win.localStorage.getItem('ework.session.view.v1:A.pending-native')).previous).toBe('chat');
     f.win.dispatchEvent(new f.win.Event('pagehide'));expect(storage.getItem('ework.session.view.v1:A')).toBe('notes');
+    await act(async()=>instance.actions.setView('research'));
+    storage.setItem('ework.session.view.v1:A','trajectory');
+    expect(f.handle.create('A').getSnapshot().view).toBe('trajectory');
+    await f.win.happyDOM.whenAsyncComplete();expect(storage.getItem('ework.session.view.v1:A')).toBe('trajectory');
   } finally { await f.close() }
 })
 

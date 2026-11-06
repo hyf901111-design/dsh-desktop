@@ -122,6 +122,7 @@ export function withSessionViewPreferences(handle) {
       const read = storage => { try { return storage?.getItem(key) ?? null } catch { return null } }
       const clearPending = () => {
         pendingBySession.delete(sessionId)
+        writes.delete(sessionId)
         try { origin()?.removeItem(pendingKey) } catch {}
       }
       const save = value => {
