@@ -9,77 +9,99 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "探索跨页面快速创建与组件来源底栏",
+        "featureName": "研究工作台按需求选源与生成质量优化",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "94b9f859641bda2aea79f59380a9fc1c298d7103",
-        "tipCommit": "055e673194df32705283cc27c03f3388e6b1f40b",
+        "baseCommit": "055e673194df32705283cc27c03f3388e6b1f40b",
+        "tipCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
         "commits": [
           {
-            "commit": "eedde08f3b363742a758c9857ae041e7b4d8f273",
+            "commit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
             "parents": [
-              "94b9f859641bda2aea79f59380a9fc1c298d7103"
+              "055e673194df32705283cc27c03f3388e6b1f40b"
             ],
-            "subject": "文档：补充Tushare最终本地包真实场景验收记录"
-          },
-          {
-            "commit": "40d6b9a1d4afdee360b837bfccf65caa3da538f2",
-            "parents": [
-              "eedde08f3b363742a758c9857ae041e7b4d8f273"
-            ],
-            "subject": "修复：探索快速创建支持从看板和笔记打开新会话"
-          },
-          {
-            "commit": "055e673194df32705283cc27c03f3388e6b1f40b",
-            "parents": [
-              "40d6b9a1d4afdee360b837bfccf65caa3da538f2"
-            ],
-            "subject": "优化：组件底栏独立展示静态与可刷新数据来源"
+            "subject": "优化：研究工作台按需求选源并精简规划回报与行情展示"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "docs/research/tushare-acceptance-20261107.md"
+            "status": "A",
+            "path": "docs/verification/2026-11-07-research-workbench-quality.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-integration-skill-composer.mjs"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "src/preload/home-operations-actions.ts"
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
           },
           {
             "status": "M",
-            "path": "src/preload/home-operations-navigation.ts"
+            "path": "packages/dsh-research-task-runtime/crypto-source-results.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/data-source-policy.js"
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
           },
           {
             "status": "M",
-            "path": "test/component-data-status.test.js"
+            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
           },
           {
             "status": "M",
-            "path": "test/helpers/explore-menu-browser-fixture.ts"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "test/home-operations-actions.test.ts"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
-            "path": "test/home-operations-navigation.test.ts"
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/references/generation.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/scripts/query.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "test/crypto-public-data.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/free-data-sources.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
           }
         ],
         "checks": [
@@ -88,15 +110,22 @@
               "npx",
               "vitest",
               "run",
-              "test/home-operations-navigation.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/component-data-status.test.js",
-              "test/component-data-ui.test.js"
+              "test/crypto-public-data.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/public-data-capacity.test.js",
+              "test/crypto-partial-refresh.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/free-data-sources.test.js",
+              "test/tushare-financial-routing.test.js",
+              "test/client-tools.test.js",
+              "test/component-readable-snapshot.test.js",
+              "test/workbench-public-data.test.js",
+              "test/research-design-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "相关聚焦检查通过",
-            "verifiedCommit": "055e673194df32705283cc27c03f3388e6b1f40b",
-            "completedAt": "2026-11-06T22:53:21.667740+00:00",
+            "summary": "直接相关聚焦检查通过",
+            "verifiedCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
+            "completedAt": "2026-11-06T23:24:01.283493+00:00",
             "timeoutMs": 180000
           },
           {
@@ -108,9 +137,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "相关聚焦检查通过",
-            "verifiedCommit": "055e673194df32705283cc27c03f3388e6b1f40b",
-            "completedAt": "2026-11-06T22:53:21.667740+00:00",
+            "summary": "直接相关聚焦检查通过",
+            "verifiedCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
+            "completedAt": "2026-11-06T23:24:01.283493+00:00",
             "timeoutMs": 180000
           },
           {
@@ -120,25 +149,26 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "相关聚焦检查通过",
-            "verifiedCommit": "055e673194df32705283cc27c03f3388e6b1f40b",
-            "completedAt": "2026-11-06T22:53:21.667740+00:00",
+            "summary": "直接相关聚焦检查通过",
+            "verifiedCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
+            "completedAt": "2026-11-06T23:24:01.283493+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "浏览器卡片回归已通过；将在集成本地包验证真实点击和来源底栏。"
+          "summary": "即将构建同一集成提交进行真实多场景生成评估，不将单元检查等同于UI验收"
         },
         "acceptanceCriteria": [
-          "四张快速创建卡片可从看板和笔记进入新会话",
-          "静态组件与可刷新组件均显示来源",
-          "不自动发送草稿，保存现有笔记"
+          "自然语言面板创建直接规划",
+          "数据源按用户需求选择，回报不宣讲内部规则",
+          "行情单位与精度正确，部分失败可刷新恢复"
         ],
         "risks": [
-          "本地包真实交互待验证"
+          "实际生成质量和耗时待客户端评估",
+          "workbench-planning-phase四项既有失败在基线同样复现，未算通过"
         ],
-        "generatedAt": "2026-11-06T22:53:21.667740+00:00"
+        "generatedAt": "2026-11-06T23:24:01.283493+00:00"
       }
     }
   ],
