@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "完整历史行情与图表读数优化",
+        "featureName": "组件口径展开箭头修复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
-        "tipCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
+        "baseCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
+        "tipCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
         "commits": [
           {
-            "commit": "f5fb02d2e6177d4cdb4e93c117c8543e8cd4c64d",
+            "commit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
             "parents": [
-              "19e8877e885d828bbc61aced0727805351ae7f77"
+              "f63fdb08aab357f2659a67b8fa9853dc18b296cb"
             ],
-            "subject": "修复历史行情区间截断并并行汇总完整日线"
-          },
-          {
-            "commit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
-            "parents": [
-              "f5fb02d2e6177d4cdb4e93c117c8543e8cd4c64d"
-            ],
-            "subject": "优化排名图刻度和单位呈现并精简生成说明"
+            "subject": "修复组件口径展开箭头重叠与偏移"
           }
         ],
         "files": [
@@ -36,35 +29,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-fund-research-runtime/financial-contract.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-fund-research-runtime/financial-history.js"
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-fund-research-runtime/financial-tool.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "test/cartesian-chart-reading.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/cartesian-chart-template.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-history.test.js"
+            "path": "test/component-reading-footer.test.js"
           }
         ],
         "checks": [
@@ -73,19 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/financial-history.test.js",
-              "test/financial-routing.test.js",
-              "test/tushare-financial-routing.test.js",
+              "test/component-reading-footer.test.js",
               "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
               "test/cartesian-chart-details.test.js"
             ],
             "outcome": "passed",
-            "summary": "191项聚焦检查通过，含日线范围、并行边界及图表读数",
-            "verifiedCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
-            "completedAt": "2026-11-07T08:44:53.805Z",
+            "summary": "29项聚焦检查通过，包含旧版阅读层升级与详情交互",
+            "verifiedCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
+            "completedAt": "2026-11-07T09:07:11.670Z",
             "timeoutMs": 180000
           },
           {
@@ -96,24 +60,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
-            "completedAt": "2026-11-07T08:44:53.805Z",
+            "verifiedCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
+            "completedAt": "2026-11-07T09:07:11.670Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原始已保存图表在深浅主题Chromium复验：易读刻度、单位去重、详情切换、读数居中；打包及真实取数另验"
+          "summary": "实际Chromium深浅色、320/600px、表格/排名图8组：固定线性箭头，鼠标收起、Enter展开，文字偏移不变；打包复验另记"
         },
         "acceptanceCriteria": [
-          "季度日线完整分段汇总，原有托管协议不变",
-          "排名图刻度易读，数据与含义保持",
-          "不重复单位，说明不暴露实现细节"
+          "清除旧三角与新箭头重叠",
+          "展开收起仅旋转箭头，文字与点击区域不移动",
+          "保留默认展开、键盘交互和原始组件数据"
         ],
         "risks": [
-          "分段取数仍受上游实际覆盖和服务可用性约束；端到端耗时需真实客户端验证"
+          "需在打包客户端复验旧组件自动升级"
         ],
-        "generatedAt": "2026-11-07T08:44:53.805Z"
+        "generatedAt": "2026-11-07T09:07:11.670Z"
       }
     },
     {
