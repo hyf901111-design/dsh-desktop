@@ -14,6 +14,14 @@ export class MemoryDocument {
   private check(owner:string){const location=this.location(owner);for(const p of [this.root,join(this.root,'documents'),location.directory,location.file]){try{if(lstatSync(p).isSymbolicLink())throw Error('记忆目录或文件为符号链接，无法读取。')}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}return location}
   raw(owner:string){const {file}=this.check(owner);if(!existsSync(file))return undefined;if(!lstatSync(file).isFile()||lstatSync(file).size>16*1024*1024)throw Error('记忆文件过大或不可读取，原文件已保留。');const value=readFileSync(file,'utf8');return {value,hash:digest(value)}}
   preserveConflict(owner:string){const raw=this.raw(owner);if(!raw)return;const {directory}=this.check(owner),file=join(directory,`记忆冲突-${randomUUID()}.md`);writeFileSync(file,raw.value,{flag:'wx',mode:0o600});return file}
+  preserveBeforeCandidateCleanup(owner:string){
+    const raw=this.raw(owner);if(!raw)throw Error('记忆文档暂不可备份，原有内容已保留。')
+    const {directory}=this.check(owner),file=join(directory,`记忆整理前-${raw.hash}.md`)
+    try{writeFileSync(file,raw.value,{flag:'wx',mode:0o600})}catch(error){
+      if((error as NodeJS.ErrnoException).code!=='EEXIST'||!lstatSync(file).isFile()||digest(readFileSync(file,'utf8'))!==raw.hash)throw Error('记忆文档备份未完成，原有内容已保留。')
+    }
+    chmodSync(file,0o600);return file
+  }
   read(owner:string){const {file}=this.check(owner);if(!existsSync(file))return undefined
     if(!lstatSync(file).isFile()||lstatSync(file).size>16*1024*1024)throw Error('记忆文件过大或不可读取，原文件已保留。')
     return this.parse(owner,readFileSync(file,'utf8'))
