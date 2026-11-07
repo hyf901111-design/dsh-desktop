@@ -9,39 +9,47 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究组件结构化编辑与明细去重规划",
+        "featureName": "图表底部紧凑收纳与小高度适配",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "d05af6cabd02c7f0735efe89a097b6b486ce2dd5",
-        "tipCommit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
+        "baseCommit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
+        "tipCommit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
         "commits": [
           {
-            "commit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
+            "commit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
             "parents": [
-              "d05af6cabd02c7f0735efe89a097b6b486ce2dd5"
+              "170cace2f797df74f53ecd1c5c0d617427adcb33"
             ],
-            "subject": "精简研究组件编辑读取并避免重复拆分图表明细"
+            "subject": "优化图表底部收纳布局并保证紧凑卡片展开入口可见"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-canvas-tools.test.js"
+            "path": "test/cartesian-chart-axis-precision.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
           }
         ],
         "checks": [
@@ -50,32 +58,34 @@
               "npx",
               "vitest",
               "run",
-              "test/research-canvas-tools.test.js",
-              "test/research-canvas-structured-apply.test.js",
-              "test/research-canvas-actions.test.js",
-              "test/workbench-execution-policy.test.js"
+              "test/component-reading-footer-browser.test.js",
+              "test/component-reading-footer.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/cartesian-chart-details.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-axis-precision.test.js"
             ],
             "outcome": "passed",
-            "summary": "33项聚焦检查通过：完整数据读取、原始代码入口、自定义组件兼容、原子更新与规划路由。",
-            "verifiedCommit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
-            "completedAt": "2026-11-07T05:34:17.957971+00:00",
+            "summary": "154项相关检查通过；包含真实卡片566×303视口、明细展开排序列宽、历史卡片精度与交互兼容。",
+            "verifiedCommit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
+            "completedAt": "2026-11-07T06:05:02.333Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本次修改工具返回与规划提示，不改可视组件；协议聚焦检查通过，真实模型耗时另在集成包验证。"
+          "outcome": "passed",
+          "summary": "浏览器复现并修复紧凑卡片折叠入口超出视口；真实客户端将在本地集成包验证。"
         },
         "acceptanceCriteria": [
-          "读取已有标准组件保留完整可编辑数据并省略冗长渲染代码",
-          "自定义HTML和显式渲染代码检查保留原入口",
-          "同一批记录的补充明细默认收纳在主图，避免重复卡片"
+          "完整数据与口径入口并排紧凑呈现",
+          "真实紧凑卡片尺寸下两入口均可见",
+          "展开保留原始字段和数值，旧卡片可获得相同布局"
         ],
         "risks": [
-          "真实模型的规划和编辑耗时需本地包验证；不以提示词断言代替实际生成。",
-          "先前跨类型工作台映射和缺失项继续保留待验证。"
+          "密集长图表仍允许自然滚动，不压缩到不可阅读。",
+          "真实模型对旧卡片修改的耗时和字段保留另行记录，不以布局检查替代。"
         ],
-        "generatedAt": "2026-11-07T05:34:17.957971+00:00"
+        "generatedAt": "2026-11-07T06:05:02.333Z"
       }
     },
     {
