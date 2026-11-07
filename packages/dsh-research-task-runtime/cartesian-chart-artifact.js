@@ -36,6 +36,15 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   }
   if (percent) {low=0;high=100;}
   if (high===low) high=low+1;
+  // Five stable grid nodes keep saved interaction routes intact. Round the
+  // display domain outwards to readable steps; never round the observations.
+  if (['horizontal','lollipop'].includes(kind)) {
+    const rawStep=(high-low)/4, magnitude=10**Math.floor(Math.log10(rawStep));
+    let step=[1,2,2.5,3,4,5,10].find(value=>value*magnitude>=rawStep)*magnitude;
+    let floor=Math.floor(low/step)*step;
+    while(floor+4*step<high-rawStep*1e-10){step*=2;floor=Math.floor(low/step)*step;}
+    low=Number(floor.toPrecision(14));high=Number((floor+4*step).toPrecision(14));
+  }
   const pos = value => horizontal ? left+(value-low)/(high-low)*pw : top+(high-value)/(high-low)*ph;
   const cat = i => horizontal ? top+(i+.5)*ph/n : left+(i+.5)*pw/n;
   const tickText = value => fmt(value)+(percent?'%':'');
@@ -114,9 +123,25 @@ export function cartesianChartRuntime(spec, geometry) {
   const svg=document.querySelector('.template-chart'),readout=document.querySelector('.chart-readout');
   const legend=[...document.querySelectorAll('[data-chart-series]')], visible=spec.series.map(()=>true);
   let selected=0, size=null, frame=0;
+  const seriesName=name=>{
+    const match=name.match(/\s*[（(]([^（）()]+)[）)]\s*$/u);
+    return spec.unit&&match?.[1].trim()===spec.unit.trim()?name.slice(0,match.index).trimEnd():name;
+  };
+  // Old saved headers receive the same display-only normalization. Do not
+  // replace buttons or column handles: their saved interaction paths persist.
+  const headers=[...document.querySelectorAll('details table thead th')];
+  spec.series.forEach((series,i)=>{
+    const header=headers[i+1];if(!header)return;
+    const label=seriesName(series.name)+(spec.unit?'（'+spec.unit+'）':'');
+    const button=header.querySelector('button');
+    const text=[...(button??header).childNodes].find(node=>node.nodeType===3);
+    if(text)text.textContent=label;
+    if(header.hasAttribute('data-column-label'))header.setAttribute('data-column-label',label);
+    if(button?.hasAttribute('aria-label'))button.setAttribute('aria-label','按'+label+'排序');
+  });
   const describe=()=>{
     const total=spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0);
-    const parts=spec.series.flatMap((s,i)=>visible[i]?[s.name+' '+s.values[selected]+(spec.unit?' '+spec.unit:'')+(spec.variant==='percentBar'?' ('+(total?s.values[selected]/total*100:0).toFixed(1)+'%)':'')]:[]);
+    const parts=spec.series.flatMap((s,i)=>visible[i]?[seriesName(s.name)+' '+s.values[selected]+(spec.unit?' '+spec.unit:'')+(spec.variant==='percentBar'?' ('+(total?s.values[selected]/total*100:0).toFixed(1)+'%)':'')]:[]);
     readout.textContent=spec.labels[selected]+' · '+parts.join(' · ');
     svg.setAttribute('aria-label',readout.textContent+'；左右方向键查看相邻数据');
     if(size){const p=size.categoryStart+(selected+.5)*size.categorySize,cursor=svg.querySelector('.chart-cursor');for(const key of size.horizontal?['y1','y2']:['x1','x2'])cursor.setAttribute(key,String(p));}
