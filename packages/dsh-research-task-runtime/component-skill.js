@@ -39,7 +39,7 @@ export function loadBundledComponentSkill(root = process.env.DSH_BUNDLED_SKILL_D
         !section.startsWith('YouTube视频用panel.type=youtube')||templateType==='youtube').filter(section=>
         !section.startsWith('音频使用 panel.type=audio')||templateType==='audio').filter(section=>
         !section.startsWith('文件使用 panel.type=files')||['files','gallery'].includes(templateType)).join('\n\n').split('\n').filter(line=>
-        !line.startsWith('- 只填指定模板数据，不重复样式：金融')||templateType==='market').filter(line=>
+        !line.startsWith('- 根据实际数据选用适合的宿主视图，不重复样式：金融')||templateType==='market').filter(line=>
         !line.startsWith('- 通用正文 12/18px；金融指标')).join('\n')
       return [name,body]
     })
