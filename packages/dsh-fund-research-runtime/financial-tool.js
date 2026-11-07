@@ -1,6 +1,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { ASSETS, INTENTS, validateFinancialQuery, validateFinancialResult } from './financial-contract.js'
 import { serviceError, toPublicFundResearchError } from './contract.js'
+import { queryFinancialHistory } from './financial-history.js'
 
 export function createFinancialTool(provider) {
   const string = { type: 'string' }
@@ -40,6 +41,7 @@ export function createFinancialTool(provider) {
         // harmless discriminator; keep the hosted wire contract canonical.
         if (input.intent === 'research' && input.asset === 'fund') delete input.asset
         const query = validateFinancialQuery(input)
+        if (query.intent === 'history') return await queryFinancialHistory(provider, query, { signal: exec.signal })
         return validateFinancialResult(await provider.financial(query, { signal: exec.signal }), query)
       } catch (error) {
         const failure = toPublicFundResearchError(error, exec.signal)
