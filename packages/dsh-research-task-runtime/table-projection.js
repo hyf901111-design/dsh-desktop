@@ -4,6 +4,15 @@ const scalar=value=>value===null||typeof value==='string'||typeof value==='numbe
 const sameKeys=(value,keys)=>object(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key))
 const selected=(value,depth=0)=>depth<=24&&object(value)&&(Object.hasOwn(value,'$path')||Object.hasOwn(value,'$each')||Object.values(value).some(child=>selected(child,depth+1)))||depth<=24&&Array.isArray(value)&&value.some(child=>selected(child,depth+1))
 
+// A single explicit collection already produces the complete rows array.
+// Remove only its redundant wrapper, never merge sources or flatten cells.
+export function normalizeTableListMapping(mapping){
+ if(!(mapping?.type==='table'||mapping?.type==='market'&&['table','fund-holdings'].includes(mapping.variant))||!Array.isArray(mapping.columns)||!Array.isArray(mapping.rows)||mapping.rows.length!==1)return mapping
+ const rows=mapping.rows[0]
+ if(!object(rows)||typeof rows.$each!=='string'||rows.$single===true||!Array.isArray(rows.$map)||rows.$map.length!==mapping.columns.length)return mapping
+ return {...mapping,rows}
+}
+
 // These are shape projections, not new mapping operators. Keep every existing
 // selector/conversion in its original scope and order by declared column keys.
 function rowProjection(value,keys,depth=0){

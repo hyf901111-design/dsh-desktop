@@ -17,7 +17,7 @@ export function componentSavedProvenance(node){
  }
  const label=value=>typeof value==='string'?value.trim():value&&typeof value==='object'?label(value.label||value.name||value.title||value.provider):''
  const names=[...(Array.isArray(data.sources)?data.sources:[]),data.source].map(label).filter(Boolean)
- const recorded=typeof data.note==='string'?data.note.match(/(?:^|\n)来源[：:]\s*([^，。；\n]+)/)?.[1]?.trim():''
+ const recorded=typeof data.note==='string'?data.note.match(/(?:^|\n)\s*(?:数据)?来源(?:[：:]\s*|[ \t]+)([^，。；\n·]+)/)?.[1]?.trim():''
  if(!names.length&&recorded)names.push(recorded)
  if(!names.length&&['news','reports'].includes(data.type)&&Array.isArray(data.items)){
   for(const item of data.items){

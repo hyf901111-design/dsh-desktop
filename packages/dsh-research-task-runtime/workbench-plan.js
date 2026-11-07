@@ -350,6 +350,9 @@ function sourceTableProfile(panel) {
     const data=panel.publicData;
     if(!data||typeof data!=='object'||Array.isArray(data)||Object.hasOwn(data,'profile')||
         Object.hasOwn(panel,'profile')||Object.hasOwn(panel,'requests')||!['table','market'].includes(panel.type))return panel;
+    // This recovery is specific to Tencent quotes. Never diagnose a missing
+    // crypto profile as an oversized Tencent request or change its provider.
+    if(!Array.isArray(data.requests)||data.requests.some(request=>request?.source!=='tencent-quotes'))return panel;
     const variants=[...panel.prompt.matchAll(/\bmarket\.([a-z][a-z-]*)\b|(?:\bvariant|变体)\s*[:：=]\s*([a-z][a-z-]*)\b/giu)].map(match=>(match[1]??match[2]).toLowerCase());
     if(variants.some(variant=>variant!=='table'))return panel;
     const artifact=panel.artifact;

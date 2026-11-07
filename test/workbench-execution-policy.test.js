@@ -66,8 +66,8 @@ describe('workbench execution policy', () => {
   })
   it('recognizes human creation intent without changing coding questions or tool output', () => {
     expect(workbenchCreationRequest(session('使用通联mcp获取数据，创建一个股票研究工作台'))).not.toBeNull()
-    for(const text of ['帮我做一个A股宽基指数观察台，比较三条走势','做一个债券监控台','创建一个主流加密货币行情监控面板','搭建ETF运营面板','帮我做个股票分析面板'])expect(workbenchCreationRequest(session(text))?.target).toBe('workbench');
-    for(const text of ['为什么观察台会卡顿','不要创建监控台','修改当前观察台的标题','为什么监控面板生成很慢','不要创建行情监控面板','修改当前分析面板的标题'])expect(workbenchCreationRequest(session(text))).toBeNull();
+    for(const text of ['帮我做一个A股宽基指数观察台，比较三条走势','做一个债券监控台','创建一个主流加密货币行情监控面板','搭建ETF运营面板','帮我做个股票分析面板','帮我搭一个ETF指数运营工作台，看看最近一周规模变化和资金进出前五','搭个固收看板'])expect(workbenchCreationRequest(session(text))?.target).toBe('workbench');
+    for(const text of ['为什么观察台会卡顿','不要创建监控台','修改当前观察台的标题','为什么监控面板生成很慢','不要创建行情监控面板','修改当前分析面板的标题','不要搭一个ETF工作台','怎么搭个固收看板','解释“搭一个工作台”的意思'])expect(workbenchCreationRequest(session(text))).toBeNull();
     for (const text of ['为什么生成工作台这么慢', '不要生成工作台', '修复组件生成逻辑', '请创建登录界面']) expect(workbenchCreationRequest(session(text))).toBeNull()
     const injected = session('创建工作台'); injected.events[0].data.source.kind = 'tool'
     expect(workbenchCreationRequest(injected)).toBeNull()

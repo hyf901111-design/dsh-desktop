@@ -21,9 +21,14 @@ export function publicDataPanelVariant(value) {
   return value?.profile==='crypto-metrics'&&value.requests?.length>2?'table':PUBLIC_DATA_PROFILES[value?.profile]?.variant
 }
 export function validatePublicDataPanel(value, type, { strictParameters = false } = {}) {
+  if (object(value) && !Object.hasOwn(value, 'profile')) {
+    const sources = [...new Set((Array.isArray(value.requests) ? value.requests : []).map(r => r?.source))]
+    const hint = sources.length === 1 ? ({'kraken-ticker':'crypto-metrics','kraken-candles':'price-volume','sina-news':'news'})[sources[0]] : undefined
+    throw Error(`缺少 publicData.profile；必须将${hint ? ` "profile":"${hint}" ` : '实际模板 profile '}写入 publicData 对象，写在 prompt 中不生效。保留原标的、请求及面板范围，只补齐此字段后重试，无需改交易对或查询来源目录。`)
+  }
   const profile = object(value) && PUBLIC_DATA_PROFILES[value.profile]
   if (!profile || profile.type !== type || Object.keys(value).some(k => !['profile', 'requests', 'intervalMinutes', 'layoutProfile'].includes(k))) throw Error('免费源组件类型或参数无效')
-  if (value.layoutProfile !== undefined && (value.layoutProfile !== 'openterminal' || !['quotes-table', 'price-volume', 'news'].includes(value.profile))) throw Error('当前免费源模板不支持此专用布局')
+  if (value.layoutProfile !== undefined && (value.layoutProfile !== 'openterminal' || !['quotes-table', 'price-volume', 'news'].includes(value.profile))) throw Error(`publicData.layoutProfile 不支持 ${value.profile}；仅 quotes-table、price-volume、news 可设 openterminal。保留 profile、原请求和 panel.layout，只移除此不兼容的 layoutProfile，不改数据范围。`)
   const intervalMinutes = value.intervalMinutes ?? 1
   if (!Number.isInteger(intervalMinutes) || intervalMinutes < 0 || intervalMinutes > 10080) throw Error('免费源组件刷新频率无效')
   // Eight is the existing data-bound request budget, not a larger metrics grid.
