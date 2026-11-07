@@ -4,6 +4,47 @@ const scalar=value=>value===null||typeof value==='string'||typeof value==='numbe
 const sameKeys=(value,keys)=>object(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key))
 const selected=(value,depth=0)=>depth<=24&&object(value)&&(Object.hasOwn(value,'$path')||Object.hasOwn(value,'$each')||Object.values(value).some(child=>selected(child,depth+1)))||depth<=24&&Array.isArray(value)&&value.some(child=>selected(child,depth+1))
 
+// Compile only source-proven table structure. Never infer a field from its
+// display label or invent a missing value. Ambiguous row scopes stay invalid.
+export function normalizeObservedTableMapping(mapping,responses){
+ if(mapping?.type!=='table'||!Array.isArray(mapping.columns)||!Array.isArray(mapping.rows))return mapping
+ const keys=mapping.columns.map(column=>object(column)?column.key:undefined)
+ const keyed=keys.length>0&&keys.every(key=>typeof key==='string'&&!forbidden.has(key))&&new Set(keys).size===keys.length
+ const field=value=>object(value)&&typeof value.$path==='string'&&/^[A-Za-z][\w]*$/u.test(value.$path)?value.$path:undefined
+ const sourceRows=value=>typeof value?.$from==='string'&&Object.hasOwn(responses,value.$from)&&Array.isArray(responses[value.$from]?.records)?responses[value.$from].records:null
+ const cell=value=>{
+  if(!object(value))return value
+  const rows=sourceRows(value),path=field(value),source=responses[value.$from]
+  const uniqueRows=rows&&Object.values(source).filter(value=>Array.isArray(value)&&value.some(object)).length===1
+  if(value.$each===undefined&&value.$map===undefined&&value.$filter!==undefined&&value.$single===true&&path&&uniqueRows&&rows?.length&&rows.every(row=>object(row)&&Object.hasOwn(row,path))&&!Object.hasOwn(responses[value.$from],path))return {...value,$each:'records'}
+  return value
+ }
+ const row=value=>{
+  if(Array.isArray(value))return value.map(cell)
+  if(!keyed||!object(value)||Object.keys(value).some(key=>!keys.includes(key)))return value
+  const result=Object.fromEntries(Object.entries(value).map(([key,value])=>[key,cell(value)])),declared=Object.values(result)
+  for(const key of keys){
+   if(Object.hasOwn(result,key)||!/^[A-Za-z][\w]*$/u.test(key))continue
+   const candidates=[]
+   for(const sibling of declared){
+    if(!object(sibling)||sibling.$each!=='records'||!(sibling.$single===true||['first','last'].includes(sibling.$reduce))||sibling.$normalize!==undefined||sibling.$calc!==undefined)continue
+    const path=field(sibling.$map??sibling),rows=sourceRows(sibling)
+    if(!path||!rows?.length||!rows.every(row=>object(row)&&Object.hasOwn(row,key)&&Object.hasOwn(row,path)))continue
+    // Only a plain direct field selector can establish a sibling row scope.
+    if(sibling.$map!==undefined&&(!object(sibling.$map)||Object.keys(sibling.$map).some(key=>key!=='$path')))continue
+    if(Object.keys(sibling).some(key=>!['$from','$each','$filter','$sortBy','$order','$take','$single','$reduce','$map','$path','$scale','$digits','$as','$optional'].includes(key)))continue
+    const scope=Object.fromEntries(['$from','$each','$filter','$sortBy','$order','$take','$single','$reduce'].filter(key=>Object.hasOwn(sibling,key)).map(key=>[key,sibling[key]]))
+    candidates.push({scope,path})
+   }
+   // At least two independently declared cells must agree exactly. Conflicting
+   // requests/filters/order cannot be resolved by choosing the first candidate.
+   if(new Set(candidates.map(candidate=>candidate.path)).size>=2&&candidates.every(candidate=>JSON.stringify(candidate.scope)===JSON.stringify(candidates[0].scope)))result[key]={...candidates[0].scope,$map:{$path:key},$optional:true}
+  }
+  return result
+ }
+ return {...mapping,rows:mapping.rows.map(row)}
+}
+
 // A table cell has scalar cardinality. Compile that context into the existing
 // selector language rather than asking a model to rewrite every source path.
 // $single retains its original ambiguity check, filtering, order, units and
