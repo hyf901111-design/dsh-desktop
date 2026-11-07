@@ -95,6 +95,434 @@
         ],
         "generatedAt": "2026-11-07T01:56:34.843801+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "本地语义记忆与无答案防误用及设置管理",
+        "branch": "codex/feat/hindsight-local-validation-20261107",
+        "baseCommit": "9035f11cfedbf60e580e9272bef8603e4fd34fab",
+        "tipCommit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
+        "commits": [
+          {
+            "commit": "484d47f64a7e308c4332151f1472bf3aa7d9558f",
+            "parents": [
+              "9035f11cfedbf60e580e9272bef8603e4fd34fab"
+            ],
+            "subject": "验证：建立 Hindsight 中文召回对照语料与评分基线"
+          },
+          {
+            "commit": "d162bf0c1f39ed6173099830d30bd82bf3f82c1c",
+            "parents": [
+              "484d47f64a7e308c4332151f1472bf3aa7d9558f"
+            ],
+            "subject": "验证：完成 Hindsight 中文召回与本地资源实测"
+          },
+          {
+            "commit": "da5e9fef3a8f83f78623d504edb5062323858a72",
+            "parents": [
+              "d162bf0c1f39ed6173099830d30bd82bf3f82c1c"
+            ],
+            "subject": "修正：独立计算完整字节预算覆盖率并记录复核结论"
+          },
+          {
+            "commit": "31c34ee5fccfb46187894de537eee16c8402261d",
+            "parents": [
+              "da5e9fef3a8f83f78623d504edb5062323858a72"
+            ],
+            "subject": "验证：建立统一记忆后端鉴权边界与独立中文保留集"
+          },
+          {
+            "commit": "16952fc3f7aa80308d70dad300dce73d78c64442",
+            "parents": [
+              "31c34ee5fccfb46187894de537eee16c8402261d"
+            ],
+            "subject": "方案：改用嵌入式本地记忆并冻结替代验证范围"
+          },
+          {
+            "commit": "dde1c3f0af71bd7394e4ab101d0599f5433c5c8e",
+            "parents": [
+              "16952fc3f7aa80308d70dad300dce73d78c64442"
+            ],
+            "subject": "验证：完成 SQLite 本地语义记忆样机与中文召回实测"
+          },
+          {
+            "commit": "35153e3f4e6af9c81f1426f897c667c44c3be846",
+            "parents": [
+              "dde1c3f0af71bd7394e4ab101d0599f5433c5c8e"
+            ],
+            "subject": "计划：落实本地记忆防误用与客户端接入验收"
+          },
+          {
+            "commit": "447048e7acc7719ebd7a0e5f3faedf5bb359603c",
+            "parents": [
+              "35153e3f4e6af9c81f1426f897c667c44c3be846"
+            ],
+            "subject": "修复：以可核验原文筛选记忆并验证无答案不注入"
+          },
+          {
+            "commit": "8f03edf05266dede403d9e77a39d8c91751a083a",
+            "parents": [
+              "447048e7acc7719ebd7a0e5f3faedf5bb359603c"
+            ],
+            "subject": "接入本地语义记忆进程并增加依据核对与独立开关"
+          },
+          {
+            "commit": "0c6d0295386369ce93fa8f2410d7b4dfffb55b2e",
+            "parents": [
+              "8f03edf05266dede403d9e77a39d8c91751a083a"
+            ],
+            "subject": "完善记忆设置与来源管理并记录实际模型复测边界"
+          },
+          {
+            "commit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
+            "parents": [
+              "0c6d0295386369ce93fa8f2410d7b4dfffb55b2e"
+            ],
+            "subject": "修复大批量后台索引、过期记忆复用和关键词候选遗漏"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": ".gitignore"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-07-hindsight-backend-validation.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-07-hindsight-local-validation.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-07-local-memory-alternative.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-07-local-memory-product.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/reviews/2026-11-07-hindsight-local-validation.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/reviews/2026-11-07-local-memory-alternative.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/reviews/2026-11-07-memory-answerability.md"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-backend-validation/fixtures.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-backend-validation/gateway.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-backend-validation/gateway.test.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-backend-validation/heldout.json"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-backend-validation/tenant_extension.py"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-backend-validation/test_tenant_extension.py"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/README.md"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/analyze.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/baseline.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/benchmark.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/corpus.json"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/fault-probe.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/metrics.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/metrics.test.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/requirements-lock.txt"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/requirements.txt"
+          },
+          {
+            "status": "A",
+            "path": "experiments/hindsight-local-validation/service.py"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/README.md"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/answerability-heldout.json"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/benchmark.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/engine.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/engine.test.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/evidence-benchmark.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/package-lock.json"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/package.json"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/relevance-benchmark.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/relevance.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/relevance.test.mjs"
+          },
+          {
+            "status": "A",
+            "path": "experiments/local-memory-spike/worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/README.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/local/embedding.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/local/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/local/manifest.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/local/worker.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/prepare-memory-model.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/retriever.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/semantic.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/memory.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-evidence.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-local-index.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-search.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-semantic.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-view.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--prefer-offline",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "按锁文件安装全部直接依赖与postinstall通过",
+            "verifiedCommit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
+            "completedAt": "2026-11-07T02:14:52.882062+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/prepare-memory-model.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "固定版本模型文件校验通过",
+            "verifiedCommit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
+            "completedAt": "2026-11-07T02:14:52.882062+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-runtime.test.js",
+              "test/memory-evidence.test.js",
+              "test/memory-local-index.test.js",
+              "test/memory-semantic.test.ts",
+              "test/memory-search.test.ts",
+              "test/memory-bridge.test.ts",
+              "test/memory-source.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-import.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "记忆聚焦116项通过",
+            "verifiedCommit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
+            "completedAt": "2026-11-07T02:14:52.882062+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript通过",
+            "verifiedCommit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
+            "completedAt": "2026-11-07T02:14:52.882062+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产view/style在Chromium浅色深色1160/720px开关、新增和无横溢出通过；最终原生包验收待集成构建。"
+        },
+        "acceptanceCriteria": [
+          "无答案不得注入未核验候选",
+          "独立开关、来源、候选采用忽略、搜索筛选与新增编辑删除可用",
+          "后台索引和账户/范围/到期失效保护",
+          "最终本地签名包运行并保留真实主界面供测试"
+        ],
+        "risks": [
+          "GLM产品配置两轮218/220选择可用，格式/超时失败关闭，其他模型质量未全面评估",
+          "模型检查若使用云端会发送有限候选；记忆.md仍为明文副本",
+          "小样本worker峰值RSS739MiB，空闲两分钟释放",
+          "只本地构建，不接受晋升、不发布、不推送"
+        ],
+        "generatedAt": "2026-11-07T02:14:52.882062+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -136,6 +564,49 @@
         "--check"
       ],
       "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefer-offline",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/prepare-memory-model.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/memory-view.test.ts",
+        "test/memory-service.test.ts",
+        "test/memory-runtime.test.js",
+        "test/memory-evidence.test.js",
+        "test/memory-local-index.test.js",
+        "test/memory-semantic.test.ts",
+        "test/memory-search.test.ts",
+        "test/memory-bridge.test.ts",
+        "test/memory-source.test.ts",
+        "test/memory-document.test.ts",
+        "test/memory-import.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
