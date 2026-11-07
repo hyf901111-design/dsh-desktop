@@ -202,7 +202,7 @@ export function ResearchMarketNativeTable({ data }) {
           (0, react_jsx_runtime.jsx)('td', { 'data-tone': cell.tone, title:cell.text, children: cell.parts ? renderParts(cell.parts) : display(cell,data.columns[index]) }, index)) }, rowIndex)) })
     ] }) }),
     selectedRow && (0,react_jsx_runtime.jsx)('div',{className:'terminal-native-readout',role:'status',children:selectedRow.map((cell,i)=>(0,react_jsx_runtime.jsxs)('span',{children:[i ? ' · ' : '', `${data.columns[i]}：`,cell.parts ? renderParts(cell.parts) : cell.text]},i))})
-    ,data.footer?.length > 0 && (0,react_jsx_runtime.jsx)('footer',{className:'terminal-native-context',tabIndex:0,'aria-label':'日期、来源与备注',children:data.footer.map((line,i)=>(0,react_jsx_runtime.jsx)('div',{children:renderParts(line)},i))})
+    ,data.footer?.length > 0 && (0,react_jsx_runtime.jsx)('footer',{className:'terminal-native-context','aria-label':'组件数据说明',children:(0,react_jsx_runtime.jsxs)('details',{children:[(0,react_jsx_runtime.jsx)('summary',{children:'口径与来源'}),(0,react_jsx_runtime.jsx)('div',{className:'terminal-native-context-lines',children:data.footer.map((line,i)=>(0,react_jsx_runtime.jsx)('div',{children:renderParts(line)},i))})]})})
   ] });
 }
 
@@ -211,9 +211,13 @@ export const researchMarketNativeTableCss = `
 [data-sherlock-market-native] table{color:inherit}
 [data-sherlock-market-native] .terminal-native-filters{flex:0 0 auto;min-width:0}
 [data-sherlock-market-native] .terminal-native-context{flex:0 1 auto;min-height:0;max-height:32%;overflow:auto;padding-top:6px;border-top:1px solid var(--research-completed-divider,#a3aeb955);font-size:11px;line-height:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+[data-sherlock-market-native] .terminal-native-context details{margin:0;padding:0;border:0;background:transparent}
+[data-sherlock-market-native] .terminal-native-context summary{min-height:22px;padding:2px 0;cursor:pointer;list-style:disclosure-closed inside;font-family:inherit;font-size:11px;line-height:18px;color:var(--research-completed-muted,inherit)}
+[data-sherlock-market-native] .terminal-native-context details[open]>summary{list-style:disclosure-open inside}
+[data-sherlock-market-native] .terminal-native-context-lines{display:grid;gap:6px;padding-top:6px}
 [data-sherlock-market-native] a{color:var(--research-completed-link,#1568ac);text-decoration:underline;text-underline-offset:2px}
 body[data-ds-dark-theme] [data-sherlock-market-native] a{color:var(--research-completed-link,#8ac6ff)}
-[data-sherlock-market-native] a:focus-visible,[data-sherlock-market-native] .terminal-native-context:focus-visible{outline:2px solid #0d99ff;outline-offset:-2px}
+[data-sherlock-market-native] a:focus-visible,[data-sherlock-market-native] .terminal-native-context summary:focus-visible{outline:2px solid #0d99ff;outline-offset:-2px}
 
 [data-sherlock-market-native] .terminal-native-filters{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;line-height:18px}
 [data-sherlock-market-native] .terminal-native-filters input{box-sizing:border-box;min-width:60px;flex:1;height:24px;padding:2px 7px;border:1px solid #b8c7d2;border-radius:2px;background:#f3f6f8;color:inherit;font-family:inherit;font-size:12px;line-height:18px}
