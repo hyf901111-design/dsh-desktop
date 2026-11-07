@@ -304,12 +304,13 @@ describe('工作台首次规划阶段预算', () => {
     expect(planned.system).toContain('真实来源')
   })
 
-  it('allows at most two source discoveries across steps and concurrent calls, then advertises only create', async () => {
+  it('allows bounded discovery for multiple companies across steps and concurrent calls, then advertises only create', async () => {
     const h = harness(), agent = { session: session('创建股票与宏观工作台，使用真实来源') }, request = wireRequest()
     await h.context(agent, request)
     expect(h.guard(invocation(agent, 'financial_query', { intent: 'resolve', query: '用户指定标的' }, 'first'))).toBeUndefined()
     expect(h.guard(invocation(agent, 'public_data_query', { operation: 'catalog' }, 'second'))).toBeUndefined()
-    expect(h.guard(invocation(agent, 'financial_query', { intent: 'catalog' }, 'third'))).toContain('research_workbench_create')
+    for (let i=2;i<6;i++) expect(h.guard(invocation(agent, 'financial_query', { intent: 'resolve', query: '公司'+i }, 'resolve-'+i))).toBeUndefined()
+    expect(h.guard(invocation(agent, 'financial_query', { intent: 'catalog' }, 'seventh'))).toContain('research_workbench_create')
     expect((await h.context(agent, request)).tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
     // Attempts to use a hidden query or Code Mode cannot bypass the guard.
     expect(h.guard(invocation(agent, 'public_data_query', { operation: 'query' }, 'fourth'))).toContain('research_workbench_create')
@@ -322,6 +323,7 @@ describe('工作台首次规划阶段预算', () => {
       { type: 'tool/call', data: { name: 'financial_query', callId: 'old-discovery', arguments: { intent: 'resolve' } } })
     agent.session.events.push({ type: 'tool/call', data: { name: 'public_data_query', callId: 'catalog', arguments: '{"operation":"catalog"}' } },
       { type: 'tool/call', data: { name: 'financial_query', callId: 'resolve', arguments: { intent: 'resolve' } } })
+    for (let i=2;i<6;i++) agent.session.events.push({type:'tool/call',data:{name:'financial_query',callId:'resolve-'+i,arguments:{intent:'resolve',query:'公司'+i}}})
     const resumed = harness()
     expect((await resumed.context(agent, wireRequest())).tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
     expect(resumed.guard(invocation(agent, 'financial_query', { intent: 'catalog' }))).toContain('research_workbench_create')

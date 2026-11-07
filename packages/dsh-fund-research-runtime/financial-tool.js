@@ -11,8 +11,8 @@ export function createFinancialTool(provider) {
     parameters: {
       intent: { ...string, enum: INTENTS, required: true },
       asset: { ...string, enum: ASSETS, description: 'resolve/quote/history/nav/profile 必填。fund 表示场外基金，etf 表示场内 ETF。research 为基金研究，不需要传 asset，也兼容 fund。' },
-      symbols: { type: 'array', items: string, description: '最多六个明确代码；history/nav/profile 限一个；research 使用六位基金代码。' },
-      query: { ...string, description: 'resolve 的名称或代码。多个候选时按交易所及份额类别确认，不猜测代码。' },
+      symbols: { type: 'array', items: string, description: 'quote/history/nav/profile/research 的明确代码，最多六个；history/nav/profile 限一个；research 使用六位基金代码。resolve 使用 query，不需要 symbols。' },
+      query: { ...string, description: 'resolve 每次查询一个名称或代码，例如 {intent:"resolve",asset:"stock",query:"中芯国际"}。多家公司分别查询；返回多个候选时按交易所及份额类别确认，不猜测代码。' },
       start: { ...string, description: 'history 起始日期 YYYY-MM-DD，最多一年。' },
       end: { ...string, description: 'history 结束日期 YYYY-MM-DD。' },
       interval: { ...string, enum: ['1m','5m','15m','30m','60m','1d','1w','1mo'] },
@@ -30,6 +30,12 @@ export function createFinancialTool(provider) {
       try {
         if (Object.hasOwn(args, 'operation')) throw serviceError('FINANCIAL_ARGUMENTS_INVALID')
         const input = { ...args, operation: 'financial' }
+        // Discovery is driven by query. Some models also repeat tentative codes;
+        // they are not verified identities or filters and must not reach the wire.
+        if (input.intent === 'resolve' && typeof input.query === 'string' && Object.hasOwn(input, 'symbols')) {
+          if (!Array.isArray(input.symbols) || input.symbols.length > 6 || input.symbols.some(v => typeof v !== 'string' || !/^\d{6}(?:\.(?:SH|SZ|BJ))?$/.test(v))) throw serviceError('FINANCIAL_ARGUMENTS_INVALID')
+          delete input.symbols
+        }
         // resolve is the discovery operation: an omitted asset must not turn
         // an otherwise usable name into a repeated validation failure.
         if (input.intent === 'resolve' && input.asset === undefined && typeof input.query === 'string') {

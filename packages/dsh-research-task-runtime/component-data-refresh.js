@@ -20,7 +20,7 @@ const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
 const sourceId=v=>typeof v==='string'&&/^[a-zA-Z0-9][\w.-]{0,63}$/.test(v)
-const sourceRecipe=(s,templateId)=>record(s)&&sourceId(s.id)&&typeof s.name==='string'&&s.name.trim().length>0&&s.name.length<=128&&!/[\u0000-\u001f]/.test(s.name)&&Array.isArray(s.requests)&&s.requests.length>0&&s.requests.length<=8&&record(s.mapping)&&templateFor(s.mapping)?.id===templateId
+const sourceRecipe=(s,templateId)=>record(s)&&sourceId(s.id)&&typeof s.name==='string'&&s.name.trim().length>0&&s.name.length<=128&&!/[\u0000-\u001f]/.test(s.name)&&Array.isArray(s.requests)&&s.requests.length>0&&s.requests.length<=16&&record(s.mapping)&&templateFor(s.mapping)?.id===templateId
 const refreshNewsScopeIssue=(mapping,requests,scope,now)=>newsSourceScopeIssue(mapping,requests.map(request=>({...request,args:evaluateMapping(request.args,{},now)})),scope)
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
@@ -175,6 +175,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   if(mapping.$normalize!==undefined&&rowMapping===undefined)throw Error('归一化列表缺少数值选择：请提供 $map:{"$path":"真实数值字段"}，不能直接归一化整条记录')
   let mapped=rows.map(item=>next(rowMapping,item,context==='items'?'item':context))
   if(mapping.$reduce!==undefined){
+   if(!mapped.length&&mapping.$optional===true)return scalarMapping(undefined,mapping)
    if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))
    return scalarMapping(reduceSourceValues(mapping.$reduce,mapped),mapping)
   }
@@ -337,7 +338,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
   })
  }
  if(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant)){
-  if(Array.isArray(data.rows))data.rows=data.rows.map(row=>Array.isArray(row)?row.map(display):row)
+  if(Array.isArray(data.rows))data.rows=data.rows.map(row=>Array.isArray(row)?row.map(value=>value==null?'本次未取得':display(value)):row)
  }
  if(['news','reports','calendar'].includes(data?.type)&&Array.isArray(data.items)){
   data.items=data.items.map(item=>{
@@ -424,13 +425,13 @@ export class ComponentDataRefresh {
   if(active)this.visible.set(sessionId,{owner:this.options.owner(),until:this.now()+20000});else this.visible.delete(sessionId)
   for(const [key,run]of this.active)if(run.automatic&&this.records.find(b=>b.id===key)?.sessionId===sessionId&&!active)run.controller.abort()
  }
- async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)||b.sources!==undefined&&(!Array.isArray(b.sources)||!b.sources.length||b.sources.length>5||b.sources.some(s=>!sourceRecipe(s,b.templateId))||new Set(b.sources.map(s=>s.id)).size!==b.sources.length||!b.sources.some(s=>s.id===b.sourceId))||b.sourceId!==undefined&&!b.sources))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
+ async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>16||!record(b.mapping)||b.sources!==undefined&&(!Array.isArray(b.sources)||!b.sources.length||b.sources.length>5||b.sources.some(s=>!sourceRecipe(s,b.templateId))||new Set(b.sources.map(s=>s.id)).size!==b.sources.length||!b.sources.some(s=>s.id===b.sourceId))||b.sourceId!==undefined&&!b.sources))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
  list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)).map(b=>({...b,viewPaused:b.enabled&&!this.isVisible(b.sessionId)})))}
  persist(){const snapshot=structuredClone(this.records);try{this.options.onChange?.(snapshot)}catch{};const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
  async bind(input,initialSpec,{preserveSettings=false}={}){
   input=bounded(input);rejectCredentials(input)
   input.intervalMinutes??=1
-  if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>8||!record(input.mapping))throw Error('数据绑定参数无效')
+  if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>16||!record(input.mapping))throw Error('数据绑定参数无效')
   if(input.newsScope!==undefined&&(typeof input.newsScope!=='string'||!input.newsScope.trim()||input.newsScope.length>18000))throw Error('新闻主题约束无效')
   const owner=this.options.owner();if(!owner)throw Error('当前账户不可用')
   const checkOwner=()=>{if(this.options.owner()!==owner)throw Error('账号已变化，请重新打开后重试。')}

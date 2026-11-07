@@ -13,6 +13,18 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('persists and refreshes a nine-query financial binding across restart',async()=>{
+  const f=setup();await f.service.load()
+  const requests=Array.from({length:9},(_,i)=>({...f.input.requests[0],key:'q'+i,args:{company:i%3,metric:Math.floor(i/3)}}))
+  const mapping={...f.input.mapping,asOf:{$from:'q0',$path:'date'},items:requests.map((r,i)=>({label:'指标'+i,value:{$from:r.key,$path:'items[0].price',$as:'string'}}))}
+  const b=await f.service.bind({...f.input,requests,mapping})
+  await f.service.refresh(b.id)
+  expect(f.execute).toHaveBeenCalledTimes(9)
+  expect(readTemplateModel(f.spec()).data.items).toHaveLength(9)
+  const restarted=new ComponentDataRefresh({...f.service.options,load:async()=>f.store()});await restarted.load()
+  expect(restarted.list()[0].requests).toHaveLength(9)
+  await expect(f.service.bind({...f.input,requests:Array.from({length:17},(_,i)=>({...requests[0],key:'r'+i}))})).rejects.toThrow('数据绑定参数无效')
+ })
  it('switches a complete verified source recipe and persists its distinct field mapping',async()=>{
   const f=setup();await f.service.load()
   const backup={id:'backup',name:'备用行情',requests:[{key:'prices',toolId:'backup-prices',args:{}},{key:'date',toolId:'backup-date',args:{}}],mapping:{...data,asOf:{$from:'date',$path:'day'},items:{$from:'prices',$each:'values',$map:{label:{$path:'label'},value:{$path:'last',$as:'string'}}}}}

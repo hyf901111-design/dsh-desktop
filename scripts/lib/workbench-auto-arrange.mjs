@@ -5,8 +5,8 @@ export function createWorkbenchAutoArrangeState(storage,sessionId) {
   try{
     const saved=JSON.parse(storage?.getItem(key)||'{}')
     if(Array.isArray(saved.done))for(const id of saved.done)if(typeof id==='string')consumed.add(id)
-    // applyWorkbench admits 1–10 panels; this restores the same exact contract.
-    if(Array.isArray(saved.pending))for(const item of saved.pending)if(typeof item?.id==='string'&&!consumed.has(item.id)&&Array.isArray(item.ids)&&item.ids.length>0&&item.ids.length<=10&&item.ids.every(id=>typeof id==='string'))pending.set(item.id,[...new Set(item.ids)])
+    // applyWorkbench admits 1–30 panels; this restores the same exact contract.
+    if(Array.isArray(saved.pending))for(const item of saved.pending)if(typeof item?.id==='string'&&!consumed.has(item.id)&&Array.isArray(item.ids)&&item.ids.length>0&&item.ids.length<=30&&item.ids.every(id=>typeof id==='string'))pending.set(item.id,[...new Set(item.ids)])
   }catch{/* A malformed local marker cannot grant historical arrange ownership. */}
   const save=()=>{try{storage?.setItem(key,JSON.stringify({pending:[...pending].map(([id,ids])=>({id,ids})),done:[...consumed]}));return true}catch{return false}}
   return {

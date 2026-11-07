@@ -259,6 +259,13 @@ describe('financial admission, hosted transport and storage',()=>{
       }
       await tool.execute({intent:'resolve',asset:'stock',query:'沪深300'},{})
       expect(calls.at(-1).asset).toBe('stock')
+      const args={intent:'resolve',asset:'stock',query:'中芯国际',symbols:['688981']}
+      await tool.execute(args,{})
+      expect(calls.at(-1)).toEqual({operation:'financial',intent:'resolve',asset:'stock',query:'中芯国际'})
+      expect(args.symbols).toEqual(['688981'])
+      const count=calls.length
+      for(const invalid of [{symbols:'688981'},{symbols:['bad']},{provider:'other'}])await expect(tool.execute({...args,...invalid},{})).rejects.toThrow()
+      expect(calls).toHaveLength(count)
     } finally {vi.useRealTimers()}
   })
 })

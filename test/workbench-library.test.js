@@ -11,6 +11,20 @@ import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench
 const a={market:'SH',code:'688981',name:'中芯国际'},b={market:'SZ',code:'002371',name:'北方华创'}
 const native=(widget,options={})=>({title:widget,prompt:'显示该组件的真实内容',type:widget==='calendar'?'calendar-tool':'financial-widget',library:{id:'builtin-'+widget,options}})
 const mixed={requestId:'library-links',title:'芯片研究',dataMode:'source',panels:[native('news'),native('quote'),native('watchlist',{symbols:[a,b]}),native('announcements'),{title:'经营与估值',prompt:'比较营收、研发、毛利率和估值，保留实际来源，缺失如实标注',type:'table'}],links:[{sourcePanel:1,targetPanel:0},{sourcePanel:2,targetPanel:1},{sourcePanel:2,targetPanel:3}],tabs:[{name:'监控',panelIndexes:[0,1,2,3]},{name:'基本面',panelIndexes:[4]}]}
+it('keeps twelve complementary panels across three pages without dropping financial dimensions',()=>{
+ const companies=[a,b,{market:'SH',code:'603501',name:'韦尔股份'}]
+ const panels=companies.flatMap(company=>[
+  ...['quote','news','announcements'].map(widget=>({...native(widget,{symbols:[company]}),title:company.name+widget})),
+  {title:company.name+'财务估值',prompt:'读取真实财报并呈现营收、利润、研发与估值',type:'table'}
+ ])
+ const tabs=companies.map((company,i)=>({name:company.name,panelIndexes:[i*4,i*4+1,i*4+2,i*4+3]}))
+ const plan=validateWorkbench({requestId:'twelve',title:'三龙头监控',dataMode:'source',panels,tabs})
+ expect(plan.panels.filter(p=>p.artifact)).toHaveLength(9)
+ expect(plan.panels.filter(p=>!p.artifact)).toHaveLength(3)
+ const layout=layoutWorkbench(plan.panels,undefined,plan.tabs)
+ expect(layout[0].y).toBe(layout[4].y);expect(layout[4].y).toBe(layout[8].y)
+ expect(()=>validateWorkbench({...plan,panels:Array.from({length:31},(_,i)=>({...panels[0],title:'卡'+i}))})).toThrow('1–30')
+})
 it('uses every visible builtin directly without a model session or fabricated market values',async()=>{
  const plan=validateWorkbench({requestId:'catalog',title:'组件库能力',panels:componentLibraryBuiltins().map(item=>native(item.widget))})
  const start=vi.fn(),saved=[]
@@ -21,6 +35,11 @@ it('uses every visible builtin directly without a model session or fabricated ma
   expect(start).not.toHaveBeenCalled()
   expect(saved.at(-1).tasks.map(t=>JSON.parse(t.finalOutput).type)).toContain('calendar-tool')
  }finally{await runtime.dispose()}
+})
+it('accepts a redundant display title without downgrading a linked native panel',()=>{
+ const plan=validateWorkbench({...mixed,panels:mixed.panels.map((p,i)=>i===1?{...p,library:{...p.library,options:{title:'冗余标题'}}}:p)})
+ expect(plan.panels[1].artifact).toMatchObject({type:'financial-widget',widget:'quote',title:'quote'})
+ expect(plan.links).toEqual(mixed.links)
 })
 it('links actual IDs in dependency order and follows stock selection across dependent feeds',()=>{
  const plan=validateWorkbench(mixed)
