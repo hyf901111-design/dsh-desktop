@@ -81,3 +81,12 @@ it('moves a long subject to the source notes without discarding it or filling th
  expect(w.document.querySelector('.component-reading-footer').textContent).toContain(data.subject);
  expect(readTemplateModel(out).data).toEqual(data);w.close();
 });
+it('formats report dates and identifiers by meaning while keeping equally shaped measurements numeric',()=>{
+ const data={...source,items:[{label:'报告期',value:'20260630'},{label:'证券代码',value:'688041'},{label:'基金代码',value:'000001'},{label:'数量',value:20260630,unit:'份'},{label:'报告期',value:'20260230'},{label:'总市值',value:'4404.6207',unit:'亿元'}]},out=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),w=new Window();w.document.write(out.html);
+ expect([...w.document.querySelectorAll('.indicator-value')].map(node=>node.textContent)).toEqual(['2026-06-30','688041','000001','20,260,630 份','20260230','4,404.62 亿元']);
+ expect(readTemplateModel(out).data).toEqual(data);expect(w.document.body.textContent).toContain('4404.6207');w.close();
+})
+it('removes only exact repeated detail without confusing total revenue with revenue',()=>{
+ const data={...source,items:[{label:'规模',value:1234.56,unit:'亿元',detail:'规模：1,234.56 亿元'},{label:'营业总收入',value:149.55,unit:'亿元',detail:'营业收入 149.55亿元'},{label:'规模',value:1234.56,unit:'亿元',detail:'两期匹配产品规模：1,234.56亿元'}]},w=new Window();w.document.write(JSON.parse(acceptArtifactOutput(JSON.stringify(data))).html);
+ const tiles=w.document.querySelectorAll('.indicator-tile');expect(tiles[0].tagName).toBe('ARTICLE');expect(tiles[1].textContent).toContain('营业收入 149.55亿元');expect(tiles[2].textContent).toContain('两期匹配');w.close();
+})

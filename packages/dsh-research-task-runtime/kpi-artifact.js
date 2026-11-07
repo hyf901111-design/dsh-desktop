@@ -1,15 +1,9 @@
 import {kpiDataIssue} from './kpi-template-contract.js';
 import {KPI_PRESENTATION_CSS} from './kpi-presentation.js';
+import {displayKpiValue} from './kpi-value-format.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Display precision must not destroy the source value stored in the template/details.
-function displayNumber(value){
- if(value===null)return '—';
- if(typeof value==='string'&&!/^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(value))return value;
- const n=Number(value);
- if(!Number.isFinite(n)||Math.abs(n)>Number.MAX_SAFE_INTEGER)return String(value);
- const options=n!==0&&Math.abs(n)<.01?{maximumSignificantDigits:3}:{maximumFractionDigits:2};
- return (typeof value==='string'&&value.startsWith('+')&&n>=0?'+':'')+n.toLocaleString('en-US',options);
-}
+const displayNumber=value=>displayKpiValue(value);
 function indicatorRuntime(){
  const button=document.getElementById('indicator-refresh'),status=document.getElementById('indicator-status'),tiles=[...document.querySelectorAll('.indicator-tile')];let shared=false,busy=false,context={readOnly:true,connected:false},request,current={version:1,open:tiles.flatMap((el,i)=>el.tagName==='DETAILS'&&el.open?[i]:[])};
  const paint=()=>{button.disabled=busy||shared||context.readOnly||!context.connected;};
@@ -33,12 +27,16 @@ export function renderKpiArtifact(spec){if(kpiDataIssue(spec))return null;
    if(key==='value')return longValue||rounded(value);
    if(key==='change')return rounded(value);
    if(key==='source'&&spec.sources?.some(source=>source.name===value))return false;
+   if(key==='detail'){
+    const compact=text=>String(text).replace(/[\s,:：，]/gu,'');
+    if(compact(value)===compact(item.label+String(item.value)+(item.unit??'')))return false;
+   }
    return value!==null&&String(value).trim()!=='';
   });
   const url=item.url&&!spec.sources?.some(source=>source.url===item.url)?item.url:null;
   const details=fields.length>0||url,tag=details?'details':'article',summary=details?'summary':'div';
   const change=item.change!==undefined?displayNumber(item.change):item.missing;
-  return `<${tag} class="indicator-tile"${details?' open':''}><${summary} class="indicator-summary"${details?' aria-label="'+esc(item.label)+'，查看完整口径"':''}><span class="indicator-label">${esc(item.label)}</span><strong class="indicator-value${longValue?' indicator-value-text':''}" data-refresh-key="kpi-${index}" data-refresh-value="${esc(item.value===null?'—':String(item.value)+(item.unit?' '+item.unit:''))}">${esc(displayNumber(item.value))}${item.value!==null&&item.unit?' <span class="indicator-unit">'+esc(item.unit)+'</span>':''}</strong>${change!==undefined?'<span class="indicator-change">'+esc(change)+'</span>':''}</${summary}>${details?'<div class="indicator-fields">'+fields.map(([key,value])=>'<p>'+esc(fieldLabels[key]??key)+'：'+esc(value)+'</p>').join('')+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">原文来源 ↗</a>':'')+'</div>':''}</${tag}>`;
+  return `<${tag} class="indicator-tile"${details?' open':''}><${summary} class="indicator-summary"${details?' aria-label="'+esc(item.label)+'，查看完整口径"':''}><span class="indicator-label">${esc(item.label)}</span><strong class="indicator-value${longValue?' indicator-value-text':''}" data-refresh-key="kpi-${index}" data-refresh-value="${esc(item.value===null?'—':String(item.value)+(item.unit?' '+item.unit:''))}">${esc(displayKpiValue(item.value,item.label,item.unit))}${item.value!==null&&item.unit?' <span class="indicator-unit">'+esc(item.unit)+'</span>':''}</strong>${change!==undefined?'<span class="indicator-change">'+esc(change)+'</span>':''}</${summary}>${details?'<div class="indicator-fields">'+fields.map(([key,value])=>'<p>'+esc(fieldLabels[key]??key)+'：'+esc(value)+'</p>').join('')+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">原文来源 ↗</a>':'')+'</div>':''}</${tag}>`;
  }).join('');
  return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${KPI_PRESENTATION_CSS}</style></head><body data-sherlock-template="kpi" data-research-kind="kpi" aria-label="${esc(spec.title)}"><div class="indicator-heading"><span>${esc(longSubject?'指标概况':spec.subject??'指标概况')}</span><span class="indicator-asof">${esc(spec.asOf??'数据时点未提供')}</span></div><section class="indicator-grid" aria-label="完整指标">${tiles}</section><footer class="indicator-footer">${spec.range?'<p>数据范围：'+esc(spec.range)+'</p>':''}${spec.note||longSubject?'<details class="indicator-method"><summary>口径与说明</summary>'+[spec.note,longSubject?spec.subject:null].filter(Boolean).map(text=>'<p>'+esc(text)+'</p>').join('')+'</details>':''}${spec.sources?.map(s=>'<p>来源：'+(s.url?'<a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+' ↗</a>':esc(s.name))+'</p>').join('')??''}<button id="indicator-refresh" type="button" disabled>刷新指标</button><p id="indicator-status" class="indicator-status" role="status"></p></footer><script>(${indicatorRuntime.toString()})();</script></body></html>`};
 }

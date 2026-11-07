@@ -130,9 +130,9 @@ describe('saved host template display refinements',()=>{
  it('fits stored KPI values without rewriting source records or saved expansion routes',()=>{
   const data={version:1,type:'kpi',title:'本人指标',items:[{label:'本月收入',value:0,unit:'万元'},{label:'变化',value:-120,unit:'万元'},{label:'退款',value:null,missing:'本人未提供退款记录'}]};
   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),next=refineStoredTemplateHtml(spec.html);
-  expect(next).toContain('data-kpi-value-fit="v3"');expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(embeddedRoutes(next)).toEqual(embeddedRoutes(spec.html));expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(spec.html));expect(refineStoredTemplateHtml(next)).toBe(next);
+  expect(next).toContain('data-kpi-value-fit="v4"');expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(embeddedRoutes(next)).toEqual(embeddedRoutes(spec.html));expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(spec.html));expect(refineStoredTemplateHtml(next)).toBe(next);
   const previous=spec.html+'<style data-kpi-value-fit="v2">body[data-sherlock-template="kpi"] .indicator-value{font-size:clamp(18px,18cqi,28px)!important}</style>';
-  const migrated=refineStoredTemplateHtml(previous);expect(migrated).toContain('data-kpi-value-fit="v3"');expect(migrated).toContain('@layer ework-workbench{body[data-sherlock-template="kpi"] .indicator-tile');expect(readTemplateModel({...spec,html:migrated}).data).toEqual(data);expect(refineStoredTemplateHtml(migrated)).toBe(migrated);
+  const migrated=refineStoredTemplateHtml(previous);expect(migrated).toContain('data-kpi-value-fit="v4"');expect(migrated).toContain('@layer ework-workbench{body[data-sherlock-template="kpi"] .indicator-tile');expect(readTemplateModel({...spec,html:migrated}).data).toEqual(data);expect(refineStoredTemplateHtml(migrated)).toBe(migrated);
  });
  it('does not reinterpret custom HTML or mismatched template identities',()=>{
   expect(refineStoredTemplateHtml('<html><head></head><body>用户页面</body></html>')).toBe('<html><head></head><body>用户页面</body></html>');
@@ -148,4 +148,12 @@ describe('saved host template display refinements',()=>{
   expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));
   expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(refineStoredTemplateHtml(next)).toBe(next);
  });
+});
+it('corrects saved KPI date text without altering records or expansion routes',()=>{
+ const data={version:1,type:'kpi',title:'财务',items:[{label:'报告期',value:'20260630',detail:'财报实际报告期'},{label:'总市值',value:'4404.62',unit:'亿元'}]},spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),old=spec.html.replace('>2026-06-30</strong>','>20,260,630</strong>')+'<style data-kpi-value-fit="v3"></style>';
+ const next=refineStoredTemplateHtml(old);
+ expect(next).toContain('>2026-06-30</strong>');expect(next).not.toContain('>20,260,630</strong>');expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(embeddedRoutes(next)).toEqual(embeddedRoutes(old));expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));expect(refineStoredTemplateHtml(next)).toBe(next);
+ const shipped=patchLegacyDashboardPreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+ const start=shipped.indexOf('const MARKET_PRESENTATION_CSS = '),end=shipped.indexOf('const TERMINAL_PRESENTATION_CSS = ',start);
+ expect(vm.runInNewContext(shipped.slice(start,end)+'\nrefineStoredTemplateHtml')(old)).toBe(next);
 });

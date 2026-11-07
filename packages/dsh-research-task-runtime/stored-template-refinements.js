@@ -1,4 +1,8 @@
-import {KPI_VALUE_FIT_CSS} from './kpi-presentation.js';
+import {displayKpiValue as formatKpiValue} from './kpi-value-format.js';
+const displayKpiValue=formatKpiValue;
+export {displayKpiValue};
+import {KPI_VALUE_FIT_CSS as KPI_VALUE_FIT_STYLE} from './kpi-presentation.js';
+const KPI_VALUE_FIT_CSS=KPI_VALUE_FIT_STYLE;
 export {KPI_VALUE_FIT_CSS};
 import {specialChartRuntime} from './special-chart-artifact.js';
 import {advancedChartView} from './advanced-chart-view.js';
@@ -105,7 +109,14 @@ export function refineStoredTemplateHtml(html){
   if(!script)return html;
   return html.replace(oldScript,()=>`<script>${script}</script>`).replace(/<svg\b([^>]*)>/,(match,attrs)=>'<svg'+attrs.replace(/\s*preserveAspectRatio="[^"]*"/,'').replace(/\s*data-series-viewport="[^"]*"/,'')+' preserveAspectRatio="xMidYMid meet" data-series-viewport="v2">');
  }
- if(model.templateId==='kpi'&&model.data.type==='kpi'&&html.includes('EWORK_KPI_SOURCE_V1')&&!html.includes('data-kpi-value-fit="v3"'))return html+`<style data-kpi-value-fit="v3">${KPI_VALUE_FIT_CSS}</style>`;
+ if(model.templateId==='kpi'&&model.data.type==='kpi'&&html.includes('EWORK_KPI_SOURCE_V1')&&Array.isArray(model.data.items)&&!html.includes('data-kpi-value-fit="v4"')){
+  const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  html=html.replace(/(<strong class="indicator-value(?: indicator-value-text)?" data-refresh-key="kpi-(\d+)"[^>]*>)[^<]*/g,(full,open,index)=>{
+   const item=model.data.items[Number(index)];
+   return item&&Object.hasOwn(item,'value')?open+escape(displayKpiValue(item.value,item.label,item.unit))+(item.value!==null&&item.unit?' ':''):full;
+  });
+  return html+`<style data-kpi-value-fit="v4">${KPI_VALUE_FIT_CSS}</style>`;
+ }
  if(model.templateId==='market.price-performance'&&model.data.type==='market'&&model.data.variant==='price-performance'&&html.includes('class="financial-profile financial-series"')&&!html.includes('data-series-date-labels="v2"')){
   const script=/<script>\(function performanceRuntime\(s\)\s*\{[\s\S]*?<\/script>/;
   if(!script.test(html))return html;
