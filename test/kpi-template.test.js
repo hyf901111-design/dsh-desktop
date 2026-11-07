@@ -23,7 +23,7 @@ it('摘要不复制长口径，展开仍保留全文，缺失原因保持可见'
  const summaries=[...w.document.querySelectorAll('.indicator-summary')];
  expect(summaries[0].textContent).toContain('本周 -5');
  expect(summaries[1].textContent).not.toContain('保留原负数');
- expect(summaries[1].textContent).toContain('查看口径');
+ expect(summaries[1].textContent).not.toContain('查看口径');
  expect(summaries[2].textContent).toContain('未提供耗时，不能补零');
  expect(w.document.querySelectorAll('.indicator-fields')[1].textContent).toContain('保留原负数');
  w.happyDOM.abort();
@@ -52,7 +52,7 @@ it('公开调用首次提交完整指标即prepared，不启逐卡模型',async(
 it('完整口径展开状态重建后恢复，只读查看不会写入持久状态',async()=>{
  const {runInNewContext}=await import('node:vm'),html=JSON.parse(acceptArtifactOutput(JSON.stringify(source))).html;
  function fixture(saved,readOnly=false){const w=new Window(),d=w.document;d.write(html);let config,state=structuredClone(saved);w.sherlockShared={register(c){config=c;state??=c.initialState;c.render(state,{connected:true,readOnly});return{dispatch(a){state=c.reduce(state,a);c.render(state,{connected:true,readOnly});return true;}}}};const js=d.querySelector('script').textContent;runInNewContext(js,{window:w,document:d,parent:{},addEventListener:w.addEventListener.bind(w),setTimeout:()=>{},crypto:{randomUUID:()=> 'test'}});return{w,d,state:()=>state,config:()=>config};}
- const f=fixture();const tile=f.d.querySelector('.indicator-tile');tile.open=true;tile.dispatchEvent(new f.w.Event('toggle'));expect(f.state()).toEqual({version:1,open:[0]});
+ const f=fixture();const tile=f.d.querySelector('.indicator-tile');expect(f.state()).toEqual({version:1,open:[0,1]});tile.open=false;tile.dispatchEvent(new f.w.Event('toggle'));expect(f.state()).toEqual({version:1,open:[1]});tile.open=true;tile.dispatchEvent(new f.w.Event('toggle'));
  const restored=fixture(f.state());expect(restored.d.querySelector('.indicator-tile').open).toBe(true);expect(restored.d.querySelector('.indicator-fields').textContent).toContain('原口径，不将零视为缺失');expect(restored.config().reduce(restored.state(),{kind:'details',index:99,open:true})).toBe(restored.state());
  const readonly=fixture(f.state(),true),rt=readonly.d.querySelector('.indicator-tile');rt.open=false;rt.dispatchEvent(new readonly.w.Event('toggle'));expect(readonly.state()).toEqual(f.state());expect(readonly.d.querySelector('#indicator-refresh').disabled).toBe(true);for(const item of [f,restored,readonly])await item.w.happyDOM.abort();
 })
@@ -64,3 +64,20 @@ it('keeps long narrative values compact in the summary with full text available 
  expect(w.document.querySelector('.indicator-fields').textContent).toContain(value);
  expect(readTemplateModel(out).data).toEqual(s);w.happyDOM.abort();
 })
+
+it('does not repeat metric names, units or exact values as per-item details or offer empty disclosures',()=>{
+ const data={...source,sources:[{name:'来源甲',url:'https://example.com'}],items:[{label:'产品数',value:605,unit:'只',source:'来源甲',url:'https://example.com'},{label:'规模',value:123.45,unit:'亿元',detail:'两期匹配产品',change:'+5'}]};
+ const out=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),w=new Window();w.document.write(out.html);
+ const tiles=w.document.querySelectorAll('.indicator-tile');expect(tiles[0].tagName).toBe('ARTICLE');expect(tiles[0].querySelector('summary')).toBeNull();
+ expect(tiles[1].tagName).toBe('DETAILS');expect(tiles[1].open).toBe(true);
+ expect(tiles[1].querySelector('.indicator-fields').textContent).toBe('完整口径：两期匹配产品');
+ expect(w.document.body.textContent).not.toContain('查看口径');expect(readTemplateModel(out).data).toEqual(data);w.close();
+});
+it('moves a long subject to the source notes without discarding it or filling the heading with prose',async()=>{
+ const {compactHostDashboardHtml}=await import('../packages/dsh-research-task-runtime/html-artifact.js');
+ const data={...source,subject:'按两期规模均有效的匹配产品计算，缺失记录不补零。'.repeat(5)};
+ const out=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),w=new Window();w.document.write(compactHostDashboardHtml(out.html));
+ expect(w.document.querySelector('.indicator-heading').textContent).not.toContain(data.subject);
+ expect(w.document.querySelector('.component-reading-footer').textContent).toContain(data.subject);
+ expect(readTemplateModel(out).data).toEqual(data);w.close();
+});

@@ -30,7 +30,7 @@ export function refineComponentReadingFooter(html){
   const name=text(source)||text(source?.name)||text(source?.label)||text(source?.title)||text(source?.provider),url=link(source?.url);
   return name?(url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(name)} ↗</a>`:esc(name)):'';
  }).filter(Boolean);
- const rows=[['数据时点',text(data.asOf)],['统计区间',text(data.range)],['统计口径',text(data.note)]].filter(([,value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`);
+ const rows=[['数据时点',text(data.asOf)],['统计区间',text(data.range)],['统计口径',text(data.note)],['补充说明',kpi&&text(data.subject).length>48?text(data.subject):'']].filter(([,value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`);
  if(sourceRows.length)rows.push(`<div><dt>数据来源</dt><dd>${[...new Set(sourceRows)].join('<br>')}</dd></div>`);
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.

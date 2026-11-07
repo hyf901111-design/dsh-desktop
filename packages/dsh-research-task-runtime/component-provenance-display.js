@@ -31,9 +31,13 @@ export function observedPresentationMetadata(matched) {
  }
  return {period,sources}
 }
-export function applyObservedPresentation(data,metadata) {
+export function applyObservedPresentation(data,metadata,asOfSelector) {
  if(!metadata)return data
  const {period,sources}=observedPresentationMetadata(metadata.matched)
+ // A direct retrieval-time reference is not a data timestamp. Correct it only
+ // when tied to a verified response already supplying this component's values.
+ const retrieved=asOfSelector&&typeof asOfSelector==='object'&&!Array.isArray(asOfSelector)&&Object.keys(asOfSelector).every(key=>['$from','$path'].includes(key))&&asOfSelector.$path==='receivedAt'&&metadata.matched.some(({key,response})=>key===asOfSelector.$from&&Object.hasOwn(response,'receivedAt'))
+ if(retrieved)data.asOf=period?.label??metadata.time??'数据时点未提供'
  // Only absent or exact period-boundary headers can be expanded to a range.
  // A distinct quote/date or authored scope is never overwritten.
  if(period&&(!data.asOf||[period.start,period.end,period.start.replaceAll('-',''),period.end.replaceAll('-','')].includes(data.asOf)))data.asOf=period.label
