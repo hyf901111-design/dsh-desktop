@@ -83,7 +83,7 @@ function setup(bridge: MemoryBridge & { openDirectory?: () => Promise<void> }) {
         el.getAttribute('aria-label') === label || el.textContent === label
     )!
   const toggle = () =>
-    doc.querySelector<HTMLInputElement>('input[aria-label="启用记忆"]')!
+    doc.querySelector<HTMLInputElement>('input[aria-label="使用已保存的记忆"]')!
   const open = async () => {
     button('记忆').click()
     await tick()
@@ -108,11 +108,11 @@ afterEach(async () => {
 })
 
 describe('simple ordinary memory settings', () => {
-  it('shows original saved records and one master switch without an AI summary', async () => {
+  it('shows original saved records and independent switches without an AI summary', async () => {
     const state = snapshot({ rows: [{ ...record, content: '<img src=x onerror=alert(1)>原始正文' }] })
     const { doc, toggle, open } = setup({ request: async () => state, openDirectory: async () => {} })
     await open()
-    expect(doc.querySelectorAll('input[aria-label="启用记忆"]')).toHaveLength(1)
+    expect(doc.querySelectorAll('input[aria-label="使用已保存的记忆"]')).toHaveLength(1)
     expect(doc.querySelectorAll('[data-memory-row] input[role=switch]')).toHaveLength(1)
     expect(toggle().checked).toBe(true)
     expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain('/actual/memory/local')
@@ -271,33 +271,20 @@ describe('simple ordinary memory settings', () => {
     button('Cancel deletion').click()
     expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('尚未保存')
   })
-  it('turns use and auto on together when the stored switches disagree, then turns both off', async () => {
+  it('changes use independently while preserving automatic saving', async () => {
     let state = snapshot({ settings: { use: true, auto: false } })
     const commands: MemoryCommand[] = []
-    const { toggle, open } = setup({
-      request: async (command) => {
-        commands.push(command)
-        if (command.type === 'settings')
-          state = {
-            ...state,
-            settings: { use: command.use!, auto: command.auto! }
-          }
-        return state
-      }
-    })
-    await open()
-    expect(toggle().checked).toBe(false)
-    toggle().click()
-    await tick()
-    expect(commands.at(-1)).toEqual({ type: 'settings', use: true, auto: true })
-    expect(toggle().checked).toBe(true)
-    toggle().click()
-    await tick()
-    expect(commands.at(-1)).toEqual({
-      type: 'settings',
-      use: false,
-      auto: false
-    })
+    const { doc, toggle, open } = setup({request:async command=>{
+      commands.push(command)
+      if(command.type==='settings') state={...state,settings:{...state.settings,...Object.fromEntries(Object.entries(command).filter(([k])=>k!=='type'))}}
+      return state
+    }})
+    await open();expect(toggle().checked).toBe(true)
+    toggle().click();await tick()
+    expect(commands.at(-1)).toEqual({type:'settings',use:false})
+    expect(state.settings.auto).toBe(false)
+    doc.querySelector<HTMLInputElement>('input[aria-label="自动保存记忆"]')!.click();await tick()
+    expect(commands.at(-1)).toEqual({type:'settings',auto:true})
     expect(toggle().checked).toBe(false)
   })
   it('restores the saved master switch state when its write fails', async () => {
@@ -751,4 +738,48 @@ describe('simple ordinary memory settings', () => {
       )
     ).toBeNull()
   })
+})
+
+it('shows retrieval state, rebuilds on demand and disables only the current session',async()=>{
+ const commands:MemoryCommand[]=[]
+ const {doc,button,open}=setup({request:async c=>{commands.push(c);return snapshot({retrieval:{state:'fallback',message:'模型损坏，使用关键词'},session:{id:'s1',disabled:false}})}})
+ await open();expect(doc.body.textContent).toContain('模型损坏')
+ button('重建索引').click();await tick();expect(commands.at(-1)).toEqual({type:'rebuild-index'})
+ doc.querySelector<HTMLInputElement>('input[aria-label="本对话停用记忆"]')!.click();await tick()
+ expect(commands.at(-1)).toEqual({type:'session',sessionId:'s1',disabled:true})
+ expect(doc.body.textContent).toContain('候选记忆')
+ expect(doc.body.textContent).toContain('明文')
+})
+it('filters locally, creates a manual memory, ignores a pending record and opens the real source',async()=>{
+ const source:MemorySource={kind:'conversation',sessionId:'source-session',seq:2,title:'来源会话',excerpt:'原文依据',createdAt:at},commands:MemoryCommand[]=[],opened:MemorySource[]=[]
+ let state=snapshot({rows:[{...record,sources:[source]},{...record,id:'pending',title:'待确认的项目决定',kind:'decision',scope:'project',projectId:'p1',status:'candidate'}]})
+ const {doc,window,button,open}=setup({request:async c=>{commands.push(c);if(c.type==='source')return {...state,source};if(c.type==='action')state={...state,rows:state.rows.filter(r=>!c.ids.includes(r.id))};return state},openSource:async s=>{opened.push(s)}})
+ await open()
+ const search=doc.querySelector<HTMLInputElement>('input[aria-label="搜索记忆"]')!;search.value='项目决定';search.dispatchEvent(new window.Event('input') as unknown as Event)
+ expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(1)
+ button('忽略').click();await tick();expect(commands.some(c=>c.type==='action'&&c.action==='ignore')).toBe(true)
+ const reset=doc.querySelector<HTMLInputElement>('input[aria-label="搜索记忆"]')!;reset.value='';reset.dispatchEvent(new window.Event('input') as unknown as Event)
+ button('查看来源').click();await tick();expect(opened).toEqual([source])
+ button('新增记忆').click()
+ const title=doc.querySelector<HTMLInputElement>('[data-memory-new] [data-memory-field=title]')!,content=doc.querySelector<HTMLTextAreaElement>('[data-memory-new] [data-memory-field=content]')!
+ title.value='手动偏好';title.dispatchEvent(new window.Event('input') as unknown as Event);content.value='以后报告保留来源';content.dispatchEvent(new window.Event('input') as unknown as Event)
+ button('保存新记忆').click();await tick()
+ expect(commands.find(c=>c.type==='save')).toMatchObject({input:{title:'手动偏好',content:'以后报告保留来源',scope:'global'}})
+})
+
+it('combines category, project and status filters without changing saved data',async()=>{
+ const rows=[record,{...record,id:'project',kind:'decision' as const,scope:'project' as const,projectId:'p1',status:'candidate' as const},{...record,id:'global',kind:'decision' as const,status:'candidate' as const}]
+ const commands:MemoryCommand[]=[],{doc,window,open}=setup({request:async c=>{commands.push(c);return snapshot({rows})}})
+ await open()
+ for(const [label,value] of [['记忆分类','decision'],['记忆范围','p1'],['记忆状态','candidate']]){const select=doc.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;select.value=value!;select.dispatchEvent(new window.Event('change') as unknown as Event)}
+ expect([...doc.querySelectorAll<HTMLElement>('[data-memory-row]')].map(e=>e.dataset.memoryRow)).toEqual(['project'])
+ expect(commands.every(c=>c.type==='snapshot')).toBe(true)
+})
+it('clears an unsaved new memory on identity change and ignores its late save',async()=>{
+ let owner='old',finish:(s:Snapshot)=>void=()=>{}
+ const {doc,window,ui,button,open}=setup({request:async c=>c.type==='save'?new Promise(r=>{finish=r}):snapshot({owner})})
+ await open();button('新增记忆').click()
+ for(const [field,value] of [['title','旧账户私密标题'],['content','旧账户私密内容']]){const el=doc.querySelector<HTMLInputElement>(`[data-memory-new] [data-memory-field=${field}]`)!;el.value=value!;el.dispatchEvent(new window.Event('input') as unknown as Event)}
+ button('保存新记忆').click();owner='new';ui.resetIdentity();await tick();finish(snapshot({owner:'old'}));await tick()
+ expect(doc.querySelector('[data-memory-new]')).toBeNull();expect(doc.body.textContent).not.toContain('旧账户私密')
 })

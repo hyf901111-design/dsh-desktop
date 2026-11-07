@@ -30,3 +30,5 @@ build/sherlock-plugin-profile/
 .worktrees/
 
 build/native/
+
+/build/memory-model/

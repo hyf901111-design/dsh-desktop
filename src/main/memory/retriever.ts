@@ -12,7 +12,7 @@ export function canonicalMemoryKey(content: string, kind: string, supplied?: str
   return supplied && /^[a-zA-Z0-9._:-]{1,120}$/.test(supplied) ? supplied : `${kind}:${content.toLowerCase().replace(/\s|[，。！？、,.!?]/gu,'').slice(0,100)}`
 }
 export function normalizedMemoryText(text: string) { return text.normalize('NFKC').toLowerCase().replace(/\s|[，。！？、,.!?]/gu, '') }
-export function chooseMemories(rows: MemoryRecord[], query: string, projectId: string | undefined, now: number, indexedMatches=new Set<string>()) {
+export function chooseMemories(rows: MemoryRecord[], query: string, projectId: string | undefined, now: number, indexedMatches=new Set<string>(),candidatesOnly=false) {
   if (/^(?:你好|您好|嗨|hello|hi|谢谢|thanks)[！!。.\s]*$/iu.test(query.trim())) return []
   const normalized = normalizedMemoryText(query), terms = new Set(query.toLowerCase().match(/[a-z0-9_-]{2,}/g) ?? [])
   const chinese = query.match(/[\p{Script=Han}]+/gu) ?? []
@@ -35,10 +35,10 @@ export function chooseMemories(rows: MemoryRecord[], query: string, projectId: s
     if (row.kind==='preference' && preferences.get(row.semanticKey)!==item) continue
     const charge=Buffer.byteLength(`[记忆 ${row.id} v${row.revision}] ${row.title}\n${row.content}\n\n`,'utf8')
     // Conservative byte-based upper bound: a token cannot contain less than a byte.
-    if (bytes+charge+Buffer.byteLength(MEMORY_BACKGROUND_INTRO,'utf8')>1200 || row.scope==='global' && globalBytes+charge>300) continue
+    if (!candidatesOnly&&(bytes+charge+Buffer.byteLength(MEMORY_BACKGROUND_INTRO,'utf8')>1200 || row.scope==='global' && globalBytes+charge>300)) continue
     result.push({row,reason:row.kind==='preference'?'已保存的表达偏好':item.hits?'与本次问题相关':'当前项目的已确认背景'})
     bytes+=charge;if(row.scope==='global')globalBytes+=charge
-    if(result.length===8)break
+    if(result.length===(candidatesOnly?30:8))break
   }
   return result
 }
@@ -48,12 +48,16 @@ export class MemoryRetriever {
   private db?: DatabaseSync
   private signature=''
   private unavailable=false
+  candidates(rows:MemoryRecord[],query:string,projectId:string|undefined,now:number){
+    if(/^(?:你好|您好|嗨|hello|hi|谢谢|thanks)[！!。.\s]*$/iu.test(query.trim()))return []
+    return this.select(rows,query,projectId,now,true).map(item=>item.row)
+  }
   private open(){
     if(this.db||this.unavailable)return
     try{const db=new DatabaseSync(':memory:');try{db.exec("CREATE VIRTUAL TABLE memory_search USING fts5(id UNINDEXED,title,content,tokenize='trigram');");this.db=db}catch{db.close();this.unavailable=true}}
     catch{this.unavailable=true}
   }
-  select(rows:MemoryRecord[],query:string,projectId:string|undefined,now:number){
+  select(rows:MemoryRecord[],query:string,projectId:string|undefined,now:number,candidatesOnly=false){
     this.open()
     const matches=new Set<string>()
     if(this.db){
@@ -71,7 +75,7 @@ export class MemoryRetriever {
       }
     }
     // Short Chinese queries and unavailable FTS use the complete scoped scan.
-    return chooseMemories(rows,query,projectId,now,matches)
+    return chooseMemories(rows,query,projectId,now,matches,candidatesOnly)
   }
   clear(){this.db?.close();this.db=undefined;this.signature='';this.unavailable=false}
   close(){this.clear()}

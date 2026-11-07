@@ -5,7 +5,17 @@
   "private": true,
   "type": "module",
   "main": "./index.js",
-  "exports": { ".": "./index.js", "./package.json": "./package.json" },
-  "dependencies": { "@deepseek-ai/dsh-llm": "0.1.0-rc.7" },
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./local/worker": "./local/worker.js",
+    "./evidence": "./evidence.js"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-llm": "0.1.0-rc.7",
+    "@huggingface/tokenizers": "0.2.0",
+    "onnxruntime-node": "1.31.1",
+    "sqlite-vec": "0.1.9"
+  },
   "license": "MIT"
 }

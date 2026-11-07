@@ -1,5 +1,5 @@
 import { assertTrustedMainWindowEvent, type TrustedWindow, type TrustedWindowEvent } from '../ipc-trust'
-const commands=new Set(['snapshot','save','action','settings','project','bind','session','source','legacy-preview','import-legacy'])
+const commands=new Set(['rebuild-index','snapshot','save','action','settings','project','bind','session','source','legacy-preview','import-legacy'])
 export function registerMemoryIpc(ipc:{handle(name:string,fn:(event:TrustedWindowEvent,command:any)=>Promise<unknown>):unknown},window:()=>TrustedWindow|undefined,service:{request(command:any):Promise<unknown>}) {
   ipc.handle('memory:request',async(event,command)=>{
     assertTrustedMainWindowEvent(event,window())

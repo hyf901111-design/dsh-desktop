@@ -1,6 +1,7 @@
 import { noteUiText as localize } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {
   MemoryBridge,
+  MemoryCommand,
   MemoryInput,
   MemoryRecord,
   MemorySnapshot,
@@ -34,7 +35,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     page: HTMLElement | undefined
   let sessionOverride: string | undefined,
     explicitSession = false
-  let settingPending: boolean | undefined,
+  let settingPending: { key: string; value?: boolean } | undefined,
     directoryPending = false,
     refreshPending = false
   let notice = '',
@@ -45,6 +46,12 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
   const drafts = new Map<string, Draft>()
   const deleting = new Set<string>()
   const changing = new Set<string>()
+  const filters = { query: '', kind: '', scope: '', status: '' }
+  const expanded = new Set<string>()
+  let newDraft: { input: MemoryInput; pending: boolean; error?: string } | undefined
+  const kinds = { preference: '偏好', background: '背景', decision: '决定', progress: '进展' }
+  const statuses = { active: '已启用', candidate: '待确认', disabled: '已停用', superseded: '已被替代' }
+
   let deleteDialog: HTMLDialogElement | undefined,
     deleteTarget: MemoryRecord | undefined,
     renderDeleteDialog: (() => void) | undefined
@@ -168,19 +175,15 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       render()
     }
   }
-  async function setEnabled(value: boolean) {
+  async function changeSetting(command: MemoryCommand, key: string, value?: boolean) {
     if (disposed || settingPending !== undefined) return
     const epoch = identityEpoch
     ++readSequence
-    settingPending = value
+    settingPending = { key, value }
     setNotice()
     render()
     try {
-      const next = await bridge.request({
-        type: 'settings',
-        use: value,
-        auto: value
-      })
+      const next = await bridge.request(command)
       if (!current(epoch)) return
       accept(next, epoch)
     } catch {
@@ -253,9 +256,9 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       if (current(epoch)) render()
     }
   }
-  async function changeRowStatus(row: MemoryRecord) {
-    const action = row.status === 'active' ? 'disable' : row.status === 'disabled' ? 'enable' : row.status === 'candidate' ? 'accept' : undefined
-    if (!action || !data || changing.has(row.id) || deleting.has(row.id) || drafts.get(row.id)?.pending || row.status === 'candidate' && row.scope === 'project' && !row.projectId) return
+  async function changeRowStatus(row: MemoryRecord, explicitAction?: 'ignore') {
+    const action = explicitAction ?? (row.status === 'active' ? 'disable' : row.status === 'disabled' ? 'enable' : row.status === 'candidate' ? 'accept' : undefined)
+    if (!action || !data || changing.has(row.id) || deleting.has(row.id) || drafts.get(row.id)?.pending || action === 'accept' && row.scope === 'project' && !row.projectId) return
     const epoch = identityEpoch, owner = data.owner, draft = drafts.get(row.id)
     changing.add(row.id)
     setNotice()
@@ -369,7 +372,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     const meta = node('p', undefined, 'ew-memory-meta')
     const scope = row.scope === 'global' ? t('全局') : data?.projects.find(project => project.id === row.projectId)?.name || t('项目')
     const state = t({ active: '已启用', candidate: '待确认', disabled: '已停用', superseded: '已被替代' }[row.status])
-    meta.textContent = `${scope} · ${state} · ${date(row.updatedAt)}`
+    meta.textContent = `${scope} · ${t(kinds[row.kind])} · ${state} · ${date(row.updatedAt)}`
     if (draft) {
       item.dataset.memoryEditor = row.id
       const titleLabel = node('label', t('记忆标题'), 'ew-memory-field')
@@ -410,9 +413,75 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
         editor?.querySelector<HTMLInputElement>('[data-memory-field=title]')?.focus()
       })
       edit.disabled = deleting.has(row.id) || changing.has(row.id)
-      actions.append(edit, remove); item.append(meta, text, actions)
+      actions.append(edit, remove)
+      if(row.status==='candidate'){
+        const adopt=button(t('采用'),()=>void changeRowStatus(row));adopt.disabled=toggle.disabled
+        const ignore=button(t('忽略'),()=>void changeRowStatus(row,'ignore'));ignore.disabled=changing.has(row.id)
+        actions.prepend(adopt,ignore)
+      }
+      if(row.sources.some(source=>source.sessionId||source.noteId)&&bridge.openSource) actions.prepend(button(t('查看来源'),()=>void openSource(row)))
+      item.append(meta, text, actions)
+      const details=node('details',undefined,'ew-memory-details');details.open=expanded.has(row.id)
+      details.append(node('summary',t('来源与使用记录')))
+      details.ontoggle=()=>{if(!details.isConnected)return;if(details.open)expanded.add(row.id);else expanded.delete(row.id)}
+      for(const source of row.sources){const line=node('p');line.append(node('strong',source.title),node('span',` · ${date(source.createdAt)}`),node('p',source.excerpt));details.append(line)}
+      if(!row.sources.length)details.append(node('p',t('手动保存的记忆。')))
+      if(row.manualLocked)details.append(node('p',t('已手动确认，自动整理不会覆盖。')))
+      if(row.lastUsedAt)details.append(node('p',`${t('最近使用')}：${date(row.lastUsedAt)}`))
+      const usage=data?.usages.find(value=>value.entries.some(entry=>entry.id===row.id))
+      if(usage)details.append(node('p',usage.entries.find(entry=>entry.id===row.id)?.reason??''))
+      item.append(details)
     }
     return item
+  }
+  function settingRow(title:string,description:string,value:boolean,change:(value:boolean)=>void){
+    const label=node('label',undefined,'ew-memory-switch-row'),copy=node('span',undefined,'ew-memory-row-copy'),toggle=node('input')
+    copy.append(node('strong',t(title)),node('small',t(description)))
+    toggle.type='checkbox';toggle.role='switch';toggle.setAttribute('aria-label',t(title));toggle.checked=value;toggle.disabled=settingPending!==undefined
+    toggle.onchange=()=>change(toggle.checked);label.append(copy,toggle);return label
+  }
+  function selectControl(label:string,options:string[][],value:string,change:(value:string)=>void){
+    const select=node('select');select.setAttribute('aria-label',t(label))
+    for(const [key,title] of options){const option=node('option',t(title!));option.value=key!;select.append(option)}
+    select.value=value;select.onchange=()=>change(select.value);return select
+  }
+  async function openSource(row:MemoryRecord){
+    const epoch=identityEpoch,owner=data?.owner
+    try{
+      const next=await bridge.request({type:'source',id:row.id})
+      if(!current(epoch))return
+      if(next.owner!==owner){resetIdentity();return}
+      if(next.source)await bridge.openSource?.(next.source)
+      else setNotice(t('来源已不可用。'),true)
+    }catch{if(current(epoch))setNotice(t('来源暂时无法打开。'),true)}
+  }
+  async function saveNew(draft:NonNullable<typeof newDraft>){
+    if(draft.pending||!data)return
+    const epoch=identityEpoch,owner=data.owner
+    if(!draft.input.title.trim()||!draft.input.content.trim()){draft.error='请填写标题和内容。';render();return}
+    draft.pending=true;draft.error=undefined;render()
+    try{
+      const next=await bridge.request({type:'save',input:structuredClone(draft.input)})
+      if(!current(epoch))return
+      if(next.owner!==owner){resetIdentity();return}
+      if(accept(next,epoch)) {newDraft=undefined;Object.assign(filters,{query:'',kind:'',scope:'',status:''})}
+    }catch{if(current(epoch)&&newDraft===draft)draft.error='保存未完成，输入已保留。'}
+    finally{if(current(epoch)){draft.pending=false;render()}}
+  }
+  function renderNewDraft(draft:NonNullable<typeof newDraft>){
+    const form=node('section',undefined,'ew-memory-record');form.dataset.memoryNew='';form.dataset.memoryEditor='new'
+    form.append(node('h3',t('新增记忆')))
+    for(const key of ['title','content'] as const){
+      const label=node('label',t(key==='title'?'记忆标题':'记忆内容'),'ew-memory-field'),field=key==='title'?node('input'):node('textarea')
+      field.value=draft.input[key];field.maxLength=key==='title'?120:600;field.dataset.memoryField=key;field.setAttribute('aria-label',label.textContent!);field.disabled=draft.pending
+      field.oninput=()=>{draft.input[key]=field.value};label.append(field);form.append(label)
+    }
+    const category=selectControl('记忆分类',Object.entries(kinds),draft.input.kind,value=>{draft.input.kind=value as MemoryInput['kind']}),scope=selectControl('记忆范围',[['global','全局'],...data!.projects.map(p=>[p.id,p.name])],draft.input.projectId??'global',value=>{draft.input.scope=value==='global'?'global':'project';draft.input.projectId=value==='global'?undefined:value})
+    category.disabled=scope.disabled=draft.pending
+    form.append(category,scope)
+    if(draft.error){const error=node('p',t(draft.error),'ew-memory-conflict');error.role='alert';form.append(error)}
+    const actions=node('div',undefined,'ew-memory-actions'),save=button(t('保存新记忆'),()=>void saveNew(draft)),cancel=button(t('取消新增'),()=>{newDraft=undefined;render()})
+    save.disabled=cancel.disabled=draft.pending;actions.append(save,cancel);form.append(actions);return form
   }
   function render() {
     if (!page?.isConnected) return
@@ -450,21 +519,22 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       return
     }
     const settings = node('section', undefined, 'ew-memory-controls')
-    const label = node('label', undefined, 'ew-memory-switch-row'),
-      copy = node('span', undefined, 'ew-memory-row-copy')
-    copy.append(
-      node('strong', t("启用记忆")),
-      node('small', t("自动记住偏好与项目上下文，在新对话中继续使用。"))
-    )
-    const toggle = node('input')
-    toggle.type = 'checkbox'
-    toggle.role = 'switch'
-    toggle.setAttribute('aria-label', t("启用记忆"))
-    toggle.checked = settingPending ?? (data.settings.use && data.settings.auto)
-    toggle.disabled = settingPending !== undefined
-    toggle.onchange = () => void setEnabled(toggle.checked)
-    label.append(copy, toggle)
-    settings.append(label)
+    for(const [key,title,description] of [
+      ['use','使用已保存的记忆','在私人对话中使用有依据的记忆；关闭后仍可管理。'],
+      ['auto','自动保存记忆','从私人对话提炼长期偏好与项目事实，不确定内容待你确认。'],
+      ['semantic','本地语义检索','支持中文改写检索；关闭后只查关键词，仍会核对依据。']
+    ] as const){
+      const value=data.settings[key]!==false
+      settings.append(settingRow(title,description,settingPending?.key===key?settingPending.value===true:value,checked=>void changeSetting({type:'settings',[key]:checked},key,checked)))
+    }
+    if(data.session)settings.append(settingRow('本对话停用记忆','仅影响当前对话，不读取或自动保存记忆。',settingPending?.key==='session'?settingPending.value===true:data.session.disabled,disabled=>void changeSetting({type:'session',sessionId:data!.session!.id,disabled},'session',disabled)))
+    const privacy=node('p',t('记忆与语义检索保存在本机。使用前由当前会话模型核对依据；若模型在云端，会发送问题和候选记忆。无依据或核对失败时不使用记忆。'),'ew-memory-privacy')
+    const retrieval=node('div',undefined,'ew-memory-index')
+    const retrievalText=node('span',t(data.retrieval?.message??'本地语义检索按需加载。'))
+    retrievalText.role='status';retrievalText.dataset.memoryRetrieval=''
+    const rebuild=button(t('重建索引'),()=>void changeSetting({type:'rebuild-index'},'rebuild'))
+    rebuild.disabled=settingPending!==undefined
+    retrieval.append(retrievalText,rebuild);settings.append(privacy,retrieval)
     const storage = data.document
     const directory = button(
       '',
@@ -489,7 +559,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     const action = node('span', t("打开目录"), 'ew-memory-directory-action')
     action.append(icon('arrow'))
     directory.append(folder, location, action)
-    settings.append(directory)
+    settings.append(directory,node('p',t('记忆.md 是可读、可编辑的明文副本。可复制备份，编辑保存后会同步；请勿在共享目录存放私人记忆。'),'ew-memory-privacy'))
     if (storage?.error) {
       const error = node('p', storage.error, 'ew-memory-document-error')
       error.dataset.memoryDocumentError = ''
@@ -500,21 +570,35 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     const list = node('section', undefined, 'ew-memory-list')
     list.dataset.memoryList = ''
     list.setAttribute('aria-label', t('已保存的记忆'))
-    list.append(node('h2', t('已保存的记忆')))
-    const rows = [...data.rows]
+    const toolbar=node('header',undefined,'ew-memory-toolbar')
+    toolbar.append(node('h2', t('已保存的记忆')),button(t('新增记忆'),()=>{if(!newDraft)newDraft={input:{title:'',content:'',kind:'preference',scope:'global'},pending:false};render();page?.querySelector<HTMLInputElement>('[data-memory-new] input')?.focus()}))
+    list.append(toolbar)
+    const filterBar=node('div',undefined,'ew-memory-filters'),search=node('input')
+    search.type='search';search.value=filters.query;search.placeholder=t('搜索记忆');search.setAttribute('aria-label',t('搜索记忆'));search.dataset.memoryField='search'
+    search.oninput=()=>{filters.query=search.value;render()}
+    filterBar.append(search,
+      selectControl('记忆分类',[['','全部分类'],...Object.entries(kinds)],filters.kind,value=>{filters.kind=value;render()}),
+      selectControl('记忆范围',[['','全部范围'],['global','全局'],...data.projects.map(p=>[p.id,p.name])],filters.scope,value=>{filters.scope=value;render()}),
+      selectControl('记忆状态',[['','全部状态'],...Object.entries(statuses)],filters.status,value=>{filters.status=value;render()}))
+    list.append(filterBar)
+    if(newDraft)list.append(renderNewDraft(newDraft))
+    const query=filters.query.trim().normalize('NFKC').toLowerCase()
+    const rows = data.rows.filter(row=>drafts.has(row.id)||((!query||(row.title+' '+row.content).normalize('NFKC').toLowerCase().includes(query))&&(!filters.kind||row.kind===filters.kind)&&(!filters.status||row.status===filters.status)&&(!filters.scope||(filters.scope==='global'?row.scope==='global':row.projectId===filters.scope))))
     // A record deleted elsewhere may still have a private draft the user needs to copy or cancel.
     for (const [id, draft] of drafts) if (!rows.some(row => row.id === id)) rows.push(draft.base)
-    if (!rows.length) list.append(node('p', t('还没有保存记忆。'), 'ew-memory-empty'))
+    if (!rows.length) list.append(node('p', t(data.rows.length?'没有符合筛选条件的记忆。':'还没有保存记忆。'), 'ew-memory-empty'))
     for (const row of rows) list.append(renderRow(row, data.rows.find(latest => latest.id === row.id)))
     content.append(list)
     if (editorId && field) {
       const restored = [...page.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-memory-field]')].find(element => element.closest<HTMLElement>('[data-memory-editor]')?.dataset.memoryEditor === editorId && element.dataset.memoryField === field)
       restored?.focus({ preventScroll: true })
       if (selection) restored?.setSelectionRange(selection[0], selection[1])
-    } else if (focused)
-      [...page.querySelectorAll<HTMLElement>('[aria-label]')]
+    } else if (focused) {
+      const restored=[...page.querySelectorAll<HTMLElement>('[aria-label]')]
         .find((element) => element.getAttribute('aria-label') === focused && (!focusedRowId || element.closest<HTMLElement>('[data-memory-row]')?.dataset.memoryRow === focusedRowId))
-        ?.focus({ preventScroll: true })
+      restored?.focus({ preventScroll: true })
+      if(selection&&restored?.tagName==='INPUT'&&['text','search'].includes((restored as HTMLInputElement).type))(restored as HTMLInputElement).setSelectionRange(selection[0],selection[1])
+    }
     page.scrollTop = scrollTop
   }
 
@@ -592,6 +676,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     readSequence++
     data = undefined
     drafts.clear()
+    newDraft=undefined;expanded.clear();Object.assign(filters,{query:'',kind:'',scope:'',status:''})
     deleting.clear()
     changing.clear()
     closeDeleteDialog(false)
@@ -718,6 +803,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     style.remove()
     data = undefined
     drafts.clear()
+    newDraft=undefined;expanded.clear();Object.assign(filters,{query:'',kind:'',scope:'',status:''})
     deleting.clear()
     changing.clear()
     for (const nav of navs) nav.remove()
