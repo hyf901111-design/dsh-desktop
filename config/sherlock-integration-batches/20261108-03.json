@@ -103,6 +103,55 @@
           "公开数据源仍可能暂时不可用"
         ],
         "generatedAt": "2026-11-07T23:03:52.948638+00:00"
+      },
+      "merged": {
+        "mergeCommit": "27109364cfd6176e006b672313670d56dd02192e",
+        "verificationCommit": "27109364cfd6176e006b672313670d56dd02192e",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/workbench-generation-fill-browser.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-feedback-upgrade-preservation.test.js test/research-workbench-feedback-actions.test.js test/research-workbench-feedback.test.js test/research-generation-watch.test.js test/research-planning-feedback.test.js test/workbench-generation-fill-browser.test.js --maxWorkers=4",
+            "verifiedCommit": "27109364cfd6176e006b672313670d56dd02192e",
+            "completedAt": "2026-11-07T23:07:57.967Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "27109364cfd6176e006b672313670d56dd02192e",
+            "completedAt": "2026-11-07T23:07:57.967Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "27109364cfd6176e006b672313670d56dd02192e",
+            "completedAt": "2026-11-07T23:07:57.967Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-07T23:07:57.967Z"
       }
     }
   ],
