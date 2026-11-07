@@ -1,0 +1,758 @@
+{
+  "draft": {
+    "mapping": {
+      "asOf": {
+        "$from": "q_db_mt",
+        "$path": "records.0.trade_date"
+      },
+      "columns": [
+        {
+          "key": "name",
+          "label": "公司"
+        },
+        {
+          "key": "code",
+          "label": "证券代码"
+        },
+        {
+          "key": "close",
+          "label": "收盘价（元）"
+        },
+        {
+          "key": "pe_ttm",
+          "label": "PE（TTM）"
+        },
+        {
+          "key": "pb",
+          "label": "PB"
+        },
+        {
+          "key": "total_mv",
+          "label": "总市值（亿元）"
+        },
+        {
+          "key": "period",
+          "label": "报告期"
+        },
+        {
+          "key": "revenue",
+          "label": "营业总收入（亿元）"
+        },
+        {
+          "key": "netprofit",
+          "label": "归母净利润（亿元）"
+        },
+        {
+          "key": "eps",
+          "label": "基本EPS（元）"
+        },
+        {
+          "key": "ann_date",
+          "label": "财报公告日"
+        }
+      ],
+      "note": "估值为2026-11-06交易日收盘数据；财报为最近一期报告期2026-09-30（2026年三季报）。总市值由万元换算为亿元，营收与净利润由元换算为亿元。",
+      "rows": [
+        {
+          "ann_date": {
+            "$from": "q_inc_mt",
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$map": {
+              "$path": "ann_date"
+            },
+            "$reduce": "first"
+          },
+          "close": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "600519.SH"
+            },
+            "$from": "q_db_mt",
+            "$map": {
+              "$path": "close"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$sortBy": "trade_date"
+          },
+          "code": {
+            "$each": "records",
+            "$filter": {
+              "ts_code": "600519.SH"
+            },
+            "$from": "q_db_mt",
+            "$map": {
+              "$path": "ts_code"
+            },
+            "$order": "asc",
+            "$reduce": "first",
+            "$sortBy": "trade_date"
+          },
+          "eps": {
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_mt",
+            "$map": {
+              "$path": "basic_eps"
+            },
+            "$reduce": "first"
+          },
+          "name": "贵州茅台",
+          "netprofit": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_mt",
+            "$map": {
+              "$path": "n_income_attr_p"
+            },
+            "$reduce": "first",
+            "$scale": 100000000
+          },
+          "pb": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "600519.SH"
+            },
+            "$from": "q_db_mt",
+            "$map": {
+              "$path": "pb"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$sortBy": "trade_date"
+          },
+          "pe_ttm": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "600519.SH"
+            },
+            "$from": "q_db_mt",
+            "$map": {
+              "$path": "pe_ttm"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$sortBy": "trade_date"
+          },
+          "period": {
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_mt",
+            "$map": {
+              "$path": "end_date"
+            },
+            "$reduce": "first"
+          },
+          "revenue": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_mt",
+            "$map": {
+              "$path": "total_revenue"
+            },
+            "$reduce": "first",
+            "$scale": 100000000
+          },
+          "total_mv": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "600519.SH"
+            },
+            "$from": "q_db_mt",
+            "$map": {
+              "$path": "total_mv"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$scale": 10000,
+            "$sortBy": "trade_date"
+          }
+        },
+        {
+          "ann_date": {
+            "$from": "q_inc_wly",
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$map": {
+              "$path": "ann_date"
+            },
+            "$reduce": "first"
+          },
+          "close": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "000858.SZ"
+            },
+            "$from": "q_db_wly",
+            "$map": {
+              "$path": "close"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$sortBy": "trade_date"
+          },
+          "code": {
+            "$each": "records",
+            "$filter": {
+              "ts_code": "000858.SZ"
+            },
+            "$from": "q_db_wly",
+            "$map": {
+              "$path": "ts_code"
+            },
+            "$order": "asc",
+            "$reduce": "first",
+            "$sortBy": "trade_date"
+          },
+          "eps": {
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_wly",
+            "$map": {
+              "$path": "basic_eps"
+            },
+            "$reduce": "first"
+          },
+          "name": "五粮液",
+          "netprofit": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_wly",
+            "$map": {
+              "$path": "n_income_attr_p"
+            },
+            "$reduce": "first",
+            "$scale": 100000000
+          },
+          "pb": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "000858.SZ"
+            },
+            "$from": "q_db_wly",
+            "$map": {
+              "$path": "pb"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$sortBy": "trade_date"
+          },
+          "pe_ttm": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "000858.SZ"
+            },
+            "$from": "q_db_wly",
+            "$map": {
+              "$path": "pe_ttm"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$sortBy": "trade_date"
+          },
+          "period": {
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_wly",
+            "$map": {
+              "$path": "end_date"
+            },
+            "$reduce": "first"
+          },
+          "revenue": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "end_date": "20260930"
+            },
+            "$from": "q_inc_wly",
+            "$map": {
+              "$path": "total_revenue"
+            },
+            "$reduce": "first",
+            "$scale": 100000000
+          },
+          "total_mv": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "ts_code": "000858.SZ"
+            },
+            "$from": "q_db_wly",
+            "$map": {
+              "$path": "total_mv"
+            },
+            "$order": "asc",
+            "$reduce": "last",
+            "$scale": 10000,
+            "$sortBy": "trade_date"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tushare daily_basic / income",
+          "url": "https://tushare.pro/document/2?doc_id=32"
+        }
+      ],
+      "title": "白酒两股估值与最近一期财务对比（贵州茅台 vs 五粮液）",
+      "type": "table",
+      "version": 1
+    },
+    "requests": [
+      {
+        "args": {
+          "api_name": "daily_basic",
+          "fields": "ts_code,trade_date,close,pe,pe_ttm,pb,total_mv",
+          "limit": 10,
+          "params": {
+            "end_date": "20261108",
+            "start_date": "20261030",
+            "ts_code": "600519.SH"
+          }
+        },
+        "key": "q_db_mt",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      },
+      {
+        "args": {
+          "api_name": "daily_basic",
+          "fields": "ts_code,trade_date,close,pe,pe_ttm,pb,total_mv",
+          "limit": 10,
+          "params": {
+            "end_date": "20261108",
+            "start_date": "20261030",
+            "ts_code": "000858.SZ"
+          }
+        },
+        "key": "q_db_wly",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      },
+      {
+        "args": {
+          "api_name": "income",
+          "fields": "ts_code,ann_date,f_ann_date,end_date,basic_eps,total_revenue,revenue,n_income,n_income_attr_p",
+          "limit": 3,
+          "params": {
+            "ts_code": "600519.SH"
+          }
+        },
+        "key": "q_inc_mt",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      },
+      {
+        "args": {
+          "api_name": "income",
+          "fields": "ts_code,ann_date,f_ann_date,end_date,basic_eps,total_revenue,revenue,n_income,n_income_attr_p",
+          "limit": 3,
+          "params": {
+            "ts_code": "000858.SZ"
+          }
+        },
+        "key": "q_inc_wly",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      }
+    ]
+  },
+  "records": [
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "daily_basic",
+        "fields": "ts_code,trade_date,close,pe,pe_ttm,pb,total_mv",
+        "limit": 10,
+        "params": {
+          "ts_code": "600519.SH",
+          "end_date": "20261108",
+          "start_date": "20261030"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "daily_basic",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=32",
+        "receivedAt": "2026-11-07T23:18:17.514Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "trade_date",
+          "close",
+          "pe",
+          "pe_ttm",
+          "pb",
+          "total_mv"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS股票代码",
+          "trade_date": "交易日期",
+          "close": "当日收盘价",
+          "pe": "市盈率（总市值/净利润， 亏损的PE为空）",
+          "pe_ttm": "市盈率（ 总市值/净利润TTM，亏损的PE为空）",
+          "pb": "市净率（总市值/(净资产-其他权益工具)）",
+          "total_mv": "总市值 （万元）"
+        },
+        "records": [
+          {
+            "ts_code": "600519.SH",
+            "trade_date": "20261106",
+            "close": 1453,
+            "pe": 22.0647,
+            "pe_ttm": 22.1075,
+            "pb": 6.6974,
+            "total_mv": 181636856.48
+          },
+          {
+            "ts_code": "600519.SH",
+            "trade_date": "20261105",
+            "close": 1452,
+            "pe": 22.0495,
+            "pe_ttm": 22.0923,
+            "pb": 6.6928,
+            "total_mv": 181511848.32
+          },
+          {
+            "ts_code": "600519.SH",
+            "trade_date": "20261104",
+            "close": 1446.44,
+            "pe": 21.9651,
+            "pe_ttm": 22.0077,
+            "pb": 6.6672,
+            "total_mv": 180816802.9504
+          },
+          {
+            "ts_code": "600519.SH",
+            "trade_date": "20261103",
+            "close": 1480,
+            "pe": 22.4747,
+            "pe_ttm": 22.5183,
+            "pb": 6.8219,
+            "total_mv": 185012076.8
+          },
+          {
+            "ts_code": "600519.SH",
+            "trade_date": "20261102",
+            "close": 1439.1,
+            "pe": 21.8536,
+            "pe_ttm": 21.896,
+            "pb": 6.6333,
+            "total_mv": 179899243.056
+          },
+          {
+            "ts_code": "600519.SH",
+            "trade_date": "20261030",
+            "close": 1392.05,
+            "pe": 21.1391,
+            "pe_ttm": 21.3692,
+            "pb": 6.926,
+            "total_mv": 174017609.128
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 10,
+          "returned": 6,
+          "possiblyMore": false,
+          "nextOffset": null
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    },
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "daily_basic",
+        "fields": "ts_code,trade_date,close,pe,pe_ttm,pb,total_mv",
+        "limit": 10,
+        "params": {
+          "ts_code": "000858.SZ",
+          "end_date": "20261108",
+          "start_date": "20261030"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "daily_basic",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=32",
+        "receivedAt": "2026-11-07T23:18:36.124Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "trade_date",
+          "close",
+          "pe",
+          "pe_ttm",
+          "pb",
+          "total_mv"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS股票代码",
+          "trade_date": "交易日期",
+          "close": "当日收盘价",
+          "pe": "市盈率（总市值/净利润， 亏损的PE为空）",
+          "pe_ttm": "市盈率（ 总市值/净利润TTM，亏损的PE为空）",
+          "pb": "市净率（总市值/(净资产-其他权益工具)）",
+          "total_mv": "总市值 （万元）"
+        },
+        "records": [
+          {
+            "ts_code": "000858.SZ",
+            "trade_date": "20261106",
+            "close": 75.34,
+            "pe": 32.6594,
+            "pe_ttm": 23.9895,
+            "pb": 2.4692,
+            "total_mv": 29244034.672
+          },
+          {
+            "ts_code": "000858.SZ",
+            "trade_date": "20261105",
+            "close": 75.82,
+            "pe": 32.8674,
+            "pe_ttm": 24.1423,
+            "pb": 2.4849,
+            "total_mv": 29430351.856
+          },
+          {
+            "ts_code": "000858.SZ",
+            "trade_date": "20261104",
+            "close": 75.1,
+            "pe": 32.5553,
+            "pe_ttm": 23.9131,
+            "pb": 2.4613,
+            "total_mv": 29150876.08
+          },
+          {
+            "ts_code": "000858.SZ",
+            "trade_date": "20261103",
+            "close": 75.55,
+            "pe": 32.7504,
+            "pe_ttm": 24.0564,
+            "pb": 2.476,
+            "total_mv": 29325548.44
+          },
+          {
+            "ts_code": "000858.SZ",
+            "trade_date": "20261102",
+            "close": 74.25,
+            "pe": 32.1869,
+            "pe_ttm": 23.6424,
+            "pb": 2.4334,
+            "total_mv": 28820939.4
+          },
+          {
+            "ts_code": "000858.SZ",
+            "trade_date": "20261030",
+            "close": 74.7,
+            "pe": 32.3819,
+            "pe_ttm": 23.7857,
+            "pb": 2.4482,
+            "total_mv": 28995611.76
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 10,
+          "returned": 6,
+          "possiblyMore": false,
+          "nextOffset": null
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    },
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "income",
+        "fields": "ts_code,ann_date,f_ann_date,end_date,basic_eps,total_revenue,revenue,n_income,n_income_attr_p",
+        "limit": 3,
+        "params": {
+          "ts_code": "600519.SH"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "income",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=33",
+        "receivedAt": "2026-11-07T23:18:53.745Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "ann_date",
+          "f_ann_date",
+          "end_date",
+          "basic_eps",
+          "total_revenue",
+          "revenue",
+          "n_income",
+          "n_income_attr_p"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS代码",
+          "ann_date": "公告日期",
+          "f_ann_date": "实际公告日期",
+          "end_date": "报告期",
+          "basic_eps": "基本每股收益",
+          "total_revenue": "营业总收入",
+          "revenue": "营业收入",
+          "n_income": "净利润(含少数股东损益)",
+          "n_income_attr_p": "净利润(不含少数股东损益)"
+        },
+        "records": [
+          {
+            "ts_code": "600519.SH",
+            "ann_date": "20261031",
+            "f_ann_date": "20261031",
+            "end_date": "20260930",
+            "basic_eps": 51.53,
+            "total_revenue": 133283652508.95,
+            "revenue": 130970743649.04,
+            "n_income": 66717143218.04,
+            "n_income_attr_p": 64467425981.95
+          },
+          {
+            "ts_code": "600519.SH",
+            "ann_date": "20261031",
+            "f_ann_date": "20261031",
+            "end_date": "20260930",
+            "basic_eps": 51.53,
+            "total_revenue": 133283652508.95,
+            "revenue": 130970743649.04,
+            "n_income": 66717143218.04,
+            "n_income_attr_p": 64467425981.95
+          },
+          {
+            "ts_code": "600519.SH",
+            "ann_date": "20260815",
+            "f_ann_date": "20260815",
+            "end_date": "20260630",
+            "basic_eps": 35.57,
+            "total_revenue": 92278072083.21,
+            "revenue": 90703260964.48,
+            "n_income": 46033330566.78,
+            "n_income_attr_p": 44516880421.86
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 3,
+          "returned": 3,
+          "possiblyMore": true,
+          "nextOffset": 3
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    },
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "income",
+        "fields": "ts_code,ann_date,f_ann_date,end_date,basic_eps,total_revenue,revenue,n_income,n_income_attr_p",
+        "limit": 3,
+        "params": {
+          "ts_code": "000858.SZ"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "income",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=33",
+        "receivedAt": "2026-11-07T23:19:11.173Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "ann_date",
+          "f_ann_date",
+          "end_date",
+          "basic_eps",
+          "total_revenue",
+          "revenue",
+          "n_income",
+          "n_income_attr_p"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS代码",
+          "ann_date": "公告日期",
+          "f_ann_date": "实际公告日期",
+          "end_date": "报告期",
+          "basic_eps": "基本每股收益",
+          "total_revenue": "营业总收入",
+          "revenue": "营业收入",
+          "n_income": "净利润(含少数股东损益)",
+          "n_income_attr_p": "净利润(不含少数股东损益)"
+        },
+        "records": [
+          {
+            "ts_code": "000858.SZ",
+            "ann_date": "20261028",
+            "f_ann_date": "20261028",
+            "end_date": "20260930",
+            "basic_eps": 2.5043,
+            "total_revenue": 32858473964.34,
+            "revenue": 32858473964.34,
+            "n_income": 9969286777.24,
+            "n_income_attr_p": 9710647471.03
+          },
+          {
+            "ts_code": "000858.SZ",
+            "ann_date": "20260829",
+            "f_ann_date": "20260829",
+            "end_date": "20260630",
+            "basic_eps": 2.2551,
+            "total_revenue": 28416674541.77,
+            "revenue": 28416674541.77,
+            "n_income": 8996132822.3,
+            "n_income_attr_p": 8752942991.31
+          },
+          {
+            "ts_code": "000858.SZ",
+            "ann_date": "20260829",
+            "f_ann_date": "20260829",
+            "end_date": "20260630",
+            "basic_eps": 2.2551,
+            "total_revenue": 28416674541.77,
+            "revenue": 28416674541.77,
+            "n_income": 8996132822.3,
+            "n_income_attr_p": 8752942991.31
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 3,
+          "returned": 3,
+          "possiblyMore": true,
+          "nextOffset": 3
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    }
+  ]
+}

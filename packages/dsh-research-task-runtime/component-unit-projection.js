@@ -2,6 +2,15 @@
 // matched business response. Labels, magnitudes and model prose are not evidence.
 const units={元:['money',1],万元:['money',1e4],亿元:['money',1e8],万亿元:['money',1e12],股:['shares',1],万股:['shares',1e4],亿股:['shares',1e8],份:['units',1],万份:['units',1e4],亿份:['units',1e8],'%':['percent',1]}
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)
+// The existing Tushare source contract declares mainland income amounts in
+// yuan. Keep this finite API/field dictionary separate from display labels;
+// EPS, ratios, foreign statements and unknown fields are never guessed.
+const incomeYuan=new Set(['revenue','total_revenue','n_income','n_income_attr_p','operate_profit','total_profit','income_tax'])
+function observedFieldUnit(response,field){
+ const explicit=fieldUnit(response.fieldInfo?.[field])
+ if(explicit)return explicit
+ return response.api==='income'&&incomeYuan.has(field)?'元':undefined
+}
 function fieldUnit(info){
  if(typeof info!=='string')return undefined
  const found=[...info.matchAll(/[（(]\s*(元|万元|亿元|万亿元|股|万股|亿股|份|万份|亿份|%)\s*[）)]/gu)].map(match=>match[1])
@@ -23,7 +32,7 @@ function directMeasurement(selector,context,sources){
  const path=[prefix,node.$path].filter(Boolean).join('.').replace(/\[(\d+)\]/gu,'.$1')
  const match=/^records\.(?:\[\$row\]|\d+)\.([A-Za-z][\w]*)$/u.exec(path),response=sources.get(key)
  if(!match||!response)return null
- const field=match[1],unit=fieldUnit(response.fieldInfo?.[field])
+ const field=match[1],unit=observedFieldUnit(response,field)
  // Numeric strings and missing values retain their existing interpretation.
  if(!unit||!Array.isArray(response.records)||!response.records.some(row=>typeof row?.[field]==='number')||response.records.some(row=>row?.[field]!=null&&typeof row[field]!=='number'))return null
  return {chain,unit,field}
@@ -40,7 +49,8 @@ export function normalizeObservedUnitMapping(mapping,metadata,evaluate){
   const [dimension,base]=units[measured.unit],[targetDimension,targetBase]=units[target]
   if(dimension!==targetDimension)throw Error(`字段 ${measured.field} 的来源单位是${measured.unit}，不能标为${target}；请保留实际量纲，无需重新取数。`)
   const factor=measured.chain.reduce((n,part)=>n*(part.$scale??1),1),expected=base/targetBase
-  if(!Number.isFinite(factor)||factor<=0||Math.abs(factor-expected)<=expected*1e-12)return selector
+  if(!Number.isFinite(factor)||factor<=0)throw Error(`字段 ${measured.field} 的单位换算系数必须是正有限数；保留来源数值的正负与缺失，不用0或负系数替代。`)
+  if(Math.abs(factor-expected)<=expected*1e-12)return selector
   // Correct the direct unit conversion before rounding, preserving the exact
   // selector/filter/order and all source values. Persist this recipe for refresh.
   const replace=index=>{
@@ -66,6 +76,18 @@ export function normalizeObservedUnitMapping(mapping,metadata,evaluate){
   return result
  }
  let result=visit(mapping)
+ if(result.type==='table'&&Array.isArray(result.columns)){
+  const columns=result.columns.map((column,index)=>({key:typeof column==='string'?index:column?.key,unit:fieldUnit(typeof column==='string'?column:column?.label)}))
+  const cells=(row,scope)=>{
+   if(!object(row)&&!Array.isArray(row))return row
+   const next=Array.isArray(row)?[...row]:{...row}
+   for(const column of columns)if(column.unit&&Object.hasOwn(next,column.key))next[column.key]=convert(next[column.key],column.unit,scope)
+   return next
+  }
+  const rows=result.rows
+  if(Array.isArray(rows))result={...result,rows:rows.map(row=>cells(row,{}))}
+  else if(object(rows)&&typeof rows.$from==='string'&&typeof rows.$each==='string'&&Object.hasOwn(rows,'$map'))result={...result,rows:{...rows,$map:cells(rows.$map,{key:rows.$from,prefix:rows.$each+'.[$row]'})}}
+ }
  if(result.type==='chart'&&Array.isArray(result.series)&&result.unit)result={...result,series:result.series.map(series=>({...series,values:convert(series.values,series.unit??result.unit,{})}))}
  return result
 }
