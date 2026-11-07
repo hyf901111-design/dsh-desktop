@@ -4,6 +4,11 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {prepareSimulatedArtifact} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 const source={version:1,type:'kpi',title:'项目指标',subject:'项目概况',asOf:'用户提供 · 2026-10-01',range:'当前工作台 · 最近7天',note:'本地虚构测试记录',items:[{label:'累计完成',value:0,unit:'项',detail:'原口径，不将零视为缺失',change:'本周 -5',source:'用户提供的完整记录'},{label:'运行任务',value:-5,unit:'个',detail:'保留原负数'},{label:'平均耗时',value:null,unit:'秒',missing:'未提供耗时，不能补零'}]}
+it('keeps methodology collapsed without deleting its text or changing the original data',()=>{
+ const spec={...source,note:'完整口径与覆盖范围。'.repeat(30)},w=new Window();w.document.write(JSON.parse(acceptArtifactOutput(JSON.stringify(spec))).html)
+ const note=w.document.querySelector('.indicator-method');expect(note.open).toBe(false);expect(note.querySelector('p').textContent).toBe(spec.note)
+ expect(w.document.querySelectorAll('.indicator-tile')).toHaveLength(3);w.happyDOM.abort()
+})
 it('长浮点数仅在摘要舍入，原值保留，微小非零值与标识字符串不被误改',()=>{
  const s={...source,items:[{label:'规模',value:'49204.49070019001',unit:'亿元',change:2966.863557459995},{label:'微小变动',value:-0.00000034},{label:'代码',value:'000300'},{label:'原格式',value:'1.2345%'},{label:'大整数',value:'12345678901234567890'}]};
  const out=JSON.parse(acceptArtifactOutput(JSON.stringify(s))),w=new Window();w.document.write(out.html);

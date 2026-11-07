@@ -1,3 +1,4 @@
+import {chartSourcesIssue} from './component-provenance-display.js';
 import {ADVANCED_CHART_TEMPLATES,ADVANCED_CHART_VARIANTS,advancedChartSchema,advancedChartDataIssue} from './advanced-chart-contract.js';
 import {SPECIAL_CHART_TEMPLATES,SPECIAL_CHART_VARIANTS,specialChartSchema,specialChartDataIssue} from './special-chart-contract.js';
 // Semantic chart contracts from the current Figma 22A library. Only implemented
@@ -74,12 +75,13 @@ export function requireSimulatedChartData(panel) {
   throw Error(`面板「${panel.title}」需要与需求匹配的模拟图表数据。请在本次工作台调用的 panel.artifact 中补齐 ${chartTemplateSchema(variant)} labels、系列名、单位和数据范围必须对应用户需求；只生成明确标注的虚构值，不联网、不编写 HTML、不启动逐卡模型。宿主不会用通用行业样例替代季度或产品数据。`);
 }
 export function chartDataIssue(spec) {
+ const sourceIssue=chartSourcesIssue(spec?.sources);if(sourceIssue)return sourceIssue;
   if(ADVANCED_CHART_VARIANTS.includes(spec?.variant))return advancedChartDataIssue(spec);
   if(SPECIAL_CHART_VARIANTS.includes(spec?.variant))return specialChartDataIssue(spec);
   if (spec?.type !== 'chart' || !CHART_VARIANTS.includes(spec.variant)) return '未注册的图表变体';
   const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
   if(spec.axisDecimals!==undefined&&(!Number.isInteger(spec.axisDecimals)||spec.axisDecimals<0||spec.axisDecimals>4))return 'axisDecimals 必须为0–4的整数';
-  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note','axisDecimals','colorBySign'];
+  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note','sources','axisDecimals','colorBySign'];
   if(spec.colorBySign!==undefined&&(typeof spec.colorBySign!=='boolean'||!['bar','horizontal','lollipop'].includes(spec.variant)))return 'colorBySign 仅支持 bar/horizontal/lollipop 的布尔值';
   if (spec.version !== 1 || !string(spec.title,256) || Object.keys(spec).some(k => !allowed.includes(k))) return '图表版本、标题或字段无效';
   for (const key of ['unit','asOf','subtitle','note']) if (spec[key] !== undefined && !string(spec[key], key === 'note' ? 2000 : 256)) return `${key} 无效`;

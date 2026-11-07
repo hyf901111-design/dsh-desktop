@@ -7769,7 +7769,7 @@ index 4b8524b..be24dfc 100644
 +				else {
 +					flush(id);
 +					if (event?.type === 'tool-started' && event.detail) append(id, `${event.tool}：${event.detail}`);
-+					if (event?.type === 'tool-finished' && event.failed) append(id, '本次资料获取未完成，正在调整检索');
++					if (event?.type === 'tool-finished' && event.failed) append(id, '正在调整这一步的处理，已取得的内容会保留');
 +				}
 +			}
 +			flush('latest');

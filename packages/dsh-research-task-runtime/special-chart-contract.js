@@ -1,3 +1,4 @@
+import {chartSourcesIssue} from './component-provenance-display.js';
 // Data contracts for the composition, distribution and target charts in Figma.
 // A parent has children OR a leaf value, never a second independently summed value.
 export const SPECIAL_CHART_TEMPLATES = Object.freeze([
@@ -28,13 +29,14 @@ export function specialChartSchema(variant){
  return variant ? base+`chart.${variant}：${shapes[variant]}` : base+SPECIAL_CHART_VARIANTS.map(v=>`chart.${v}：${shapes[v]}`).join('；');
 }
 export function specialChartDataIssue(s){
+ const sourceIssue=chartSourcesIssue(s?.sources);if(sourceIssue)return sourceIssue;
  const text=(v,max=256)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
  const num=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e12;
  const obj=(o,keys)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>keys.includes(k));
  const list=(a,max)=>Array.isArray(a)&&a.length>0&&a.length<=max;
  const unique=names=>new Set(names).size===names.length;
  const fields={pie:['items'],donut:['items'],treemap:['root'],sunburst:['root'],radar:['labels','series','normalization'],histogram:['samples','binCount','bins'],box:['groups','whiskerMethod'],bullet:['min','max','rows','bands'],gauge:['min','max','value','target']};
- if(!fields[s?.variant]||s.type!=='chart'||s.version!==1||!text(s.title)||!obj(s,['version','type','title','variant','unit','asOf','subtitle','note',...fields[s.variant]]))return '图表版本、类型或字段无效';
+ if(!fields[s?.variant]||s.type!=='chart'||s.version!==1||!text(s.title)||!obj(s,['version','type','title','variant','unit','asOf','subtitle','note','sources',...fields[s.variant]]))return '图表版本、类型或字段无效';
  for(const k of ['unit','asOf','subtitle','note'])if(s[k]!==undefined&&!text(s[k],k==='note'?2000:256))return `${k} 无效`;
  if(['pie','donut'].includes(s.variant)){
   if(!list(s.items,20)||!s.items.every(i=>obj(i,['label','value'])&&text(i.label,128)&&num(i.value)&&i.value>=0)||!unique(s.items.map(i=>i.label)))return '占比图需1–20个名称不同且非负的原值';

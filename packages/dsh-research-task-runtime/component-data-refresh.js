@@ -10,6 +10,7 @@ import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
 import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping} from './table-projection.js'
+import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
@@ -242,7 +243,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
    if(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined)throw error
    // A broken presentation formatter cannot replace actual quote time with a
    // fetched/current date. Disagreeing source times remain an error.
-   data.asOf=metadata.time??'来源未提供'
+   data.asOf=metadata.time??observedPresentationMetadata(metadata.matched).period?.label??'来源未提供'
   }
  }
  if(metadata?.gaps.length){
@@ -273,7 +274,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
    data.asOf=dates.reduce((a,b)=>a>b?a:b)+' · 数据截至最后交易日'
   }
  }
- data=normalizeChartMetadata(data)
+ data=normalizeChartMetadata(applyObservedPresentation(data,metadata))
  // Multiple source selections naturally produce groups of item records. The
  // template owns a flat item list; preserve every record and its source order.
  // Never flatten table rows or arrays of scalar field values.

@@ -17,7 +17,7 @@ describe('Figma composition, distribution and target templates',()=>{
   expect(result.type).toBe('html');expect(readTemplateModel(result).data).toEqual(input);
   expect(templateFor(input).schema).toContain('chart.'+variant);
   expect(workbenchDesignTemplate(panel).id).toBe('research.chart.'+variant);
-  expect(workbenchPanelPrompt({title:'工作台'},panel)).toContain('必须输出 chart.'+variant);
+  expect(workbenchPanelPrompt({title:'工作台',dataMode:'simulated'},panel)).toContain('必须输出 chart.'+variant);
   expect(requestedChartVariant('chart.'+variant)).toBe(variant);
   expect(JSON.stringify(specialChartView(input,304))).not.toMatch(/NaN|Infinity/);
  });

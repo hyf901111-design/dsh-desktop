@@ -1,3 +1,4 @@
+import {chartSourcesIssue} from './component-provenance-display.js';
 // Figma 22A: flows, paired measurements, correlation, calendar and OHLC data.
 export const ADVANCED_CHART_TEMPLATES=Object.freeze([
  ['waterfall','瀑布图','1918:357949',['增减明细','累计值','完整数据']],
@@ -27,6 +28,7 @@ export function advancedChartSchema(variant){
  return base+(variant?`chart.${variant}：${shapes[variant]}`:ADVANCED_CHART_VARIANTS.map(v=>`chart.${v}：${shapes[v]}`).join('；'));
 }
 export function advancedChartDataIssue(s){
+ const sourceIssue=chartSourcesIssue(s?.sources);if(sourceIssue)return sourceIssue;
  const text=(v,n=256)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;
  const num=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e12;
  const obj=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>keys.includes(k));
@@ -34,7 +36,7 @@ export function advancedChartDataIssue(s){
  const unique=a=>new Set(a).size===a.length;
  const date=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
  const fields={waterfall:['start','steps','endLabel'],funnel:['stages'],sankey:['columns','nodes','links'],scatter:['xAxis','yAxis','points'],bubble:['xAxis','yAxis','points','sizeLabel','sizeUnit'],heatmap:['labels','values'],calendar:['start','end','values'],candlestick:['candles','volumeUnit'],ohlc:['candles','volumeUnit']};
- if(!fields[s?.variant]||s.version!==1||s.type!=='chart'||!text(s.title)||!obj(s,['version','type','title','variant','unit','asOf','subtitle','note',...fields[s.variant]]))return '图表版本、类型或字段无效';
+ if(!fields[s?.variant]||s.version!==1||s.type!=='chart'||!text(s.title)||!obj(s,['version','type','title','variant','unit','asOf','subtitle','note','sources',...fields[s.variant]]))return '图表版本、类型或字段无效';
  for(const k of ['unit','asOf','subtitle','note'])if(s[k]!==undefined&&!text(s[k],k==='note'?2000:256))return `${k} 无效`;
  if(s.variant==='waterfall'){
   if(!obj(s.start,['label','value'])||!text(s.start.label,128)||!num(s.start.value)||!list(s.steps,24)||!s.steps.every(t=>obj(t,['label','delta'])&&text(t.label,128)&&num(t.delta))||s.endLabel!==undefined&&!text(s.endLabel,128))return '瀑布图需期初值及1–24项具名增减delta';

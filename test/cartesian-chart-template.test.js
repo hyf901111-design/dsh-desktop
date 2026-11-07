@@ -12,7 +12,7 @@ describe('Figma cartesian templates',()=>{
  it.each(['净申购估算排名，用共享零轴的正负横条图展示','双向横条比较产品增减','横柱图展示区间收益'])('keeps signed ranking intent: %s',prompt=>{
    const panel={title:'产品排名',type:'chart',size:'large',prompt};
    expect(requestedChartVariant(prompt)).toBe('horizontal');
-   const contract=workbenchPanelPrompt({title:'运营',dataMode:'source'},panel);
+   const contract=workbenchPanelPrompt({title:'运营',dataMode:'source',originalRequest:prompt},panel);
    expect(contract).toContain('必须输出 chart.horizontal 的结构化数据');
    expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(data('line'))),contract)).toContain('chart.horizontal');
  });
@@ -37,7 +37,7 @@ describe('Figma cartesian templates',()=>{
    const panel={title:'近一月走势对比与相对沪深300强弱',type:'chart',size:'large',prompt:'取中际旭创(300308)、新易盛(300502)、工业富联(601138)及沪深300(000300)近一个月的日收盘价，统一归一化为近一月起点=100的累计涨跌幅对比曲线；并在附表中给出各标的近一月累计涨跌幅、相对沪深300超额收益（相对强弱），单位%。使用 financial_query 按确认后的代码取日线历史，注明来源与日期区间；普通柱状/折线用 chart 并可声明 chart.bar。数据取不到的标的明确标注缺失，不缩小研究范围。'};
    expect(requestedChartVariant(panel.title+'\n'+panel.prompt)).toBe('line');
    expect(workbenchDesignTemplate(panel).id).toBe('research.chart.line');
-   const prompt=workbenchPanelPrompt({title:'算力产业链真实金融研究',dataMode:'source'},panel);
+   const prompt=workbenchPanelPrompt({title:'算力产业链真实金融研究',dataMode:'source',originalRequest:panel.prompt},panel);
    expect(prompt).toContain('必须输出 chart.line 的结构化数据');
    const output=acceptArtifactOutput(JSON.stringify(data('line')));
    expect(workbenchMarketVariantIssue(output,prompt)).toBeNull();
@@ -96,7 +96,7 @@ describe('Figma cartesian templates',()=>{
    expect(requestedChartVariant(prompt)).toBe(variant);
    const panel={title:'按要求展示数据',type:'chart',size:'large',prompt};
    expect(workbenchDesignTemplate(panel).id).toBe('research.chart.'+variant);
-   expect(workbenchPanelPrompt({title:'经营分析',dataMode:'source'},panel)).toContain('必须输出 chart.'+variant+' 的结构化数据');
+   expect(workbenchPanelPrompt({title:'经营分析',dataMode:'source',originalRequest:prompt},panel)).toContain('必须输出 chart.'+variant+' 的结构化数据');
  });
  it('keeps a long source/date explanation in the native chart note instead of rejecting or truncating the chart',()=>{
    const asOf='腾讯财经公开日K，数据日期2026-09-01至2026-10-20；'+('各公司保留原始证券代码、日期、前复权口径、价格单位和区间首尾收盘价。').repeat(9)
@@ -118,7 +118,7 @@ describe('Figma cartesian templates',()=>{
    const panel={title:'模拟经营分析',prompt:'chart.'+variant,type:'chart',size:'large',artifact:input};
    expect(prepareSimulatedArtifact(panel)).toMatchObject({variant,labels:input.labels,series:input.series,unit:'万元',asOf:input.asOf});
    expect(workbenchDesignTemplate(panel).id).toBe('research.chart.'+variant);
-   expect(workbenchPanelPrompt({title:'经营看板'},panel)).toContain('必须输出 chart.'+variant);
+   expect(workbenchPanelPrompt({title:'经营看板',dataMode:'simulated'},panel)).toContain('必须输出 chart.'+variant);
    expect(templateFor(input).figma).toMatch(/^1918:/);
    expect(templateFor(input).schema).toContain('不超过600');
  });

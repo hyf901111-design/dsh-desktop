@@ -1,7 +1,7 @@
 [
   {
     "name": "tushare_catalog",
-    "description": "Tushare 金融数据接口目录与参数定义。免费数据源不能覆盖所需字段时，优先使用 Tushare。传 api_name 可一次取得该接口的参数、字段、单位和官方文档；query 可搜索股票、指数、ETF、基金、财务、港股、宏观等数据。目录不是业务数据，也不代表当前账户具有该接口权限。",
+    "description": "Tushare 金融数据接口目录与参数定义。按用户所需字段、时效、覆盖范围和可用权限选择适合的数据源。传 api_name 可一次取得该接口的参数、字段、单位和官方文档；query 可搜索股票、指数、ETF、基金、财务、港股、宏观等数据。目录不是业务数据，也不代表当前账户具有该接口权限。",
     "inputSchema": {
       "type": "object",
       "properties": {

@@ -8532,7 +8532,8 @@ describe('Sherlock workspace and composer controls', () => {
   })
 
   it('turns real generation events into bounded terminal rows without exposing code or tool arguments', async () => {
-    const client = await loadClientBundle('dsh-client-ui-conversation')
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, { document: browserWindow.document, window: browserWindow })
     expect(client.researchGenerationLog).toBeTypeOf('function')
     if (typeof client.researchGenerationLog !== 'function') return
     const rows = client.researchGenerationLog({
@@ -8554,8 +8555,9 @@ describe('Sherlock workspace and composer controls', () => {
     const failed = client.researchGenerationLog({ generationStatus: 'running', generationEvents: [
       { seq: 1, type: 'tool-started', tool: '检索网页' }, { seq: 2, type: 'tool-finished', failed: true }
     ] })
-    expect(JSON.stringify(failed)).toContain('本次资料获取未完成，正在调整检索')
+    expect(JSON.stringify(failed)).toContain('正在调整这一步的处理，已取得的内容会保留')
     expect(JSON.stringify(failed)).not.toContain('检索响应已返回')
+    await browserWindow.happyDOM.abort()
   })
 
   it('shows real progress immediately without simulated activity and stops timers after unmount', async () => {
