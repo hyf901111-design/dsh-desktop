@@ -9,103 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究工作台来源区间与紧凑信息结构",
+        "featureName": "指标卡对齐与间距规范",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
-        "tipCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+        "baseCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+        "tipCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
         "commits": [
           {
-            "commit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+            "commit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
             "parents": [
-              "d98aa3723f75fc14af248e2b556fbe06bd31f19c"
+              "07a4dc3a36e2eac4734fa0bb75ad07c80de64323"
             ],
-            "subject": "优化：按实际数据补齐来源区间并精简工作台信息结构"
+            "subject": "优化：统一指标卡标题数值单位的对齐和同排高度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "config/tushare-builtin-tools.json"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/advanced-chart-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-provenance-display.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/special-chart-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
-          },
-          {
-            "status": "M",
-            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
-          },
-          {
-            "status": "M",
-            "path": "test/advanced-chart-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/cartesian-chart-template.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-observed-presentation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/kpi-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sherlock-composer-workspace-ui.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/special-chart-template.test.js"
           }
         ],
         "checks": [
@@ -114,62 +34,12 @@
               "npx",
               "vitest",
               "run",
-              "test/component-observed-presentation.test.js",
-              "test/component-source-metadata.test.js",
-              "test/component-display-templates.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-submission.test.js",
-              "test/kpi-template.test.js",
-              "test/workbench-execution-policy.test.js"
+              "test/kpi-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "147项数据映射及同任务恢复聚焦检查",
-            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
-            "completedAt": "2026-11-07T01:31:44.636765+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/cartesian-chart-template.test.js",
-              "test/special-chart-template.test.js",
-              "test/advanced-chart-template.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "184项直接受影响图表合同检查",
-            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
-            "completedAt": "2026-11-07T01:31:44.636765+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/sherlock-composer-workspace-ui.test.ts",
-              "-t",
-              "turns real generation events"
-            ],
-            "outcome": "passed",
-            "summary": "1项过程回报检查",
-            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
-            "completedAt": "2026-11-07T01:31:44.636765+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查",
-            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
-            "completedAt": "2026-11-07T01:31:44.636765+00:00",
+            "summary": "10项指标数据和展开功能检查",
+            "verifiedCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
+            "completedAt": "2026-11-07T01:37:15.571047+00:00",
             "timeoutMs": 180000
           },
           {
@@ -180,24 +50,24 @@
             ],
             "outcome": "passed",
             "summary": "差异检查",
-            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
-            "completedAt": "2026-11-07T01:31:44.636765+00:00",
+            "verifiedCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
+            "completedAt": "2026-11-07T01:37:15.571047+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "等待集成包进行实际模型多场景评估，聚焦检查不作为UI验收"
+          "summary": "等待真实集成包宽窄组件检查"
         },
         "acceptanceCriteria": [
-          "ETF不因展示结构结束为失败",
-          "来源区间可见且准确",
-          "三类工作台内容与交互实际验证"
+          "指标标题数值单位基线一致",
+          "同排高度一致",
+          "数据完整保留"
         ],
         "risks": [
-          "尚需实际模型与可视化评估"
+          "需真实组件宽窄验收"
         ],
-        "generatedAt": "2026-11-07T01:31:44.636765+00:00"
+        "generatedAt": "2026-11-07T01:37:15.571047+00:00"
       }
     }
   ],
