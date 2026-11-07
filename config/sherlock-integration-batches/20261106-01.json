@@ -9,27 +9,67 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究组件数据先行与同任务提交恢复",
+        "featureName": "研究工作台来源区间与紧凑信息结构",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "e465ab934dffc8dc25e2817af17892269936257e",
-        "tipCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+        "baseCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+        "tipCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
         "commits": [
           {
-            "commit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+            "commit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
             "parents": [
-              "e465ab934dffc8dc25e2817af17892269936257e"
+              "d98aa3723f75fc14af248e2b556fbe06bd31f19c"
             ],
-            "subject": "优化：按真实数据选择组件呈现并在同一任务内修正交付"
+            "subject": "优化：按实际数据补齐来源区间并精简工作台信息结构"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+            "status": "M",
+            "path": "config/tushare-builtin-tools.json"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/advanced-chart-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-provenance-display.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/special-chart-contract.js"
           },
           {
             "status": "M",
@@ -37,19 +77,35 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-client-ui-conversation+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "M",
+            "path": "test/advanced-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/cartesian-chart-template.test.js"
           },
           {
             "status": "A",
-            "path": "test/component-data-submission.test.js"
+            "path": "test/component-observed-presentation.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/kpi-template.test.js"
           },
           {
             "status": "M",
-            "path": "test/workbench-design-contract.test.js"
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/special-chart-template.test.js"
           }
         ],
         "checks": [
@@ -58,15 +114,18 @@
               "npx",
               "vitest",
               "run",
-              "test/component-data-submission.test.js",
+              "test/component-observed-presentation.test.js",
+              "test/component-source-metadata.test.js",
+              "test/component-display-templates.test.js",
               "test/component-source-binding.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/prototype-live-submission.test.js"
+              "test/component-data-submission.test.js",
+              "test/kpi-template.test.js",
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "112项通过",
-            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
-            "completedAt": "2026-11-07T01:11:33.284912+00:00",
+            "summary": "147项数据映射及同任务恢复聚焦检查",
+            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+            "completedAt": "2026-11-07T01:31:44.636765+00:00",
             "timeoutMs": 180000
           },
           {
@@ -74,15 +133,29 @@
               "npx",
               "vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "test/workbench-design-contract.test.js",
-              "-t",
-              "restores the exact native table contract|keeps the requested multi-security trend"
+              "test/cartesian-chart-template.test.js",
+              "test/special-chart-template.test.js",
+              "test/advanced-chart-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "6项通过",
-            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
-            "completedAt": "2026-11-07T01:11:33.284912+00:00",
+            "summary": "184项直接受影响图表合同检查",
+            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+            "completedAt": "2026-11-07T01:31:44.636765+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "turns real generation events"
+            ],
+            "outcome": "passed",
+            "summary": "1项过程回报检查",
+            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+            "completedAt": "2026-11-07T01:31:44.636765+00:00",
             "timeoutMs": 180000
           },
           {
@@ -94,9 +167,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
-            "completedAt": "2026-11-07T01:11:33.284912+00:00",
+            "summary": "类型检查",
+            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+            "completedAt": "2026-11-07T01:31:44.636765+00:00",
             "timeoutMs": 180000
           },
           {
@@ -106,26 +179,25 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "差异检查通过",
-            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
-            "completedAt": "2026-11-07T01:11:33.284912+00:00",
+            "summary": "差异检查",
+            "verifiedCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
+            "completedAt": "2026-11-07T01:31:44.636765+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "待集成测试包以实际模型重跑ETF及其他用户需求；聚焦检查不作为UI验收"
+          "summary": "等待集成包进行实际模型多场景评估，聚焦检查不作为UI验收"
         },
         "acceptanceCriteria": [
-          "真实数据决定呈现形式",
-          "同一个子任务修正映射而不重新取数",
-          "ETF周度规模及资金进出四卡实际成功且数据口径正确"
+          "ETF不因展示结构结束为失败",
+          "来源区间可见且准确",
+          "三类工作台内容与交互实际验证"
         ],
         "risks": [
-          "已有基线18项宽范围断言失败已对比确认，含旧来源优先策略和尺寸断言；本次直接改动聚焦118项通过",
-          "实际模型和打包UI仍待验证"
+          "尚需实际模型与可视化评估"
         ],
-        "generatedAt": "2026-11-07T01:11:33.284912+00:00"
+        "generatedAt": "2026-11-07T01:31:44.636765+00:00"
       }
     }
   ],
