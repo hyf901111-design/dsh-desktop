@@ -59,3 +59,7 @@
 首个本地包在真实 Electron 进程中出现语义检索回退，而直接用 Node 启动同包 worker 正常。定位为 Electron 与内置 Node 的 V8 序列化版本不兼容：`serialization: advanced` 导致子进程报 `Unable to deserialize cloned data due to invalid or unsupported version`。这说明单独启动 worker 不能替代宿主链路验收。
 
 消息全部为普通对象，向量缓存已编码为 base64，因此跨进程协议改为 JSON。新增以真实 Electron V8 启动产品 LocalMemoryEngine、连接内置 Node/实际模型的自动回归：修正前 fallback 失败，修正后索引、缓存返回和中文查询通过。此次直接相关的 67 项测试及 typecheck 通过；最终包须重新构建并再验收。
+
+重新构建后，真实客户端语义索引就绪、加密向量缓存写入、编辑后的修订被新对话正确使用；未知手机号不注入，删除会同时清除向量及使用记录条目，删除后新对话回答不知道。使用/自动保存两组相反配置及编辑、删除、自动保存结果在重启后保留。实际完整回答样本为有答案 9.37 秒、无答案 37.35 秒、删除后 8.57 秒，不能将本地检索耗时或依据筛选 p95 当作整体响应时间。
+
+来源跳转实机检查另发现旧主进程校验读取 `session.list` 的 `id` 字段，而当前真实接口和安装依赖 schema 使用 `sessionId`。原生 IPC 复现 `SOURCE_UNAVAILABLE` 后改为正确字段，保留记忆所有者、来源原文/位置和可见会话检查。来源/UI/桥接 38 项聚焦测试及类型检查通过；后续最终签名包再次验证真实来源跳转。

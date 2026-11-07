@@ -1454,8 +1454,8 @@ async function bootstrap(): Promise<void> {
       const block=blocks(note.blocks).find(b=>b.id===source.noteId)
       if(note.revision!==source.noteRevision||!block)throw Error('SOURCE_UNAVAILABLE')
     }else if(source.kind!=='conversation'||!Number.isSafeInteger(source.seq)&&!source.messageId)throw Error('SOURCE_UNAVAILABLE')
-    const response=await taskRpc<{items:{id:string}[]}>('session.list',{})
-    if(!response.items.some(s=>s.id===source.sessionId))throw Error('SOURCE_UNAVAILABLE')
+    const response=await taskRpc<{items:{sessionId:string}[]}>('session.list',{})
+    if(!response.items.some(s=>s.sessionId===source.sessionId))throw Error('SOURCE_UNAVAILABLE')
     return {ok:true}
   })
   let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
