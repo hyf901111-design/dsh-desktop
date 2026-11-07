@@ -11,36 +11,21 @@
         "schemaVersion": 1,
         "featureName": "组件库复用、节点联动与真实页签工作台",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
-        "tipCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
+        "baseCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
+        "tipCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
         "commits": [
           {
-            "commit": "3b2f4aaee62d385d72983b90674e0f9fa87f2036",
+            "commit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
             "parents": [
-              "20045e5cfa159148d48a11a0c153c3a973e0a509"
+              "1a57c7f7856a043df46616bd32f0015f906298f1"
             ],
-            "subject": "按真实页签组织工作台并恢复新闻组件生成失败"
-          },
-          {
-            "commit": "1a57c7f7856a043df46616bd32f0015f906298f1",
-            "parents": [
-              "3b2f4aaee62d385d72983b90674e0f9fa87f2036"
-            ],
-            "subject": "将组件库复用与节点联动纳入看板创建并按页签布局"
+            "subject": "完善多页签组件复用与多源财务缺项容错"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/board-tabs-contract.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/board-tabs-contract.js"
+            "path": "packages/dsh-fund-research-runtime/financial-tool.js"
           },
           {
             "status": "M",
@@ -48,43 +33,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+            "path": "packages/dsh-research-task-runtime/component-derived-values.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/news-topic-filter.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-library.d.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-library.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.d.ts"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-tabs.js"
           },
           {
             "status": "M",
@@ -92,15 +57,15 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/board-tabs-client.mjs"
+            "path": "scripts/lib/figma-canvas-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/research-board-integration.ts"
+            "path": "scripts/lib/workbench-auto-arrange.mjs"
           },
           {
             "status": "M",
-            "path": "test/board-tabs-client.test.js"
+            "path": "src/main/state/component-library.ts"
           },
           {
             "status": "M",
@@ -108,27 +73,27 @@
           },
           {
             "status": "M",
-            "path": "test/news-query-coverage.test.js"
+            "path": "test/component-derived-values.test.js"
           },
           {
             "status": "M",
-            "path": "test/news-topic-delivery.test.js"
+            "path": "test/component-source-binding.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-board-generation.test.ts"
+            "path": "test/financial-routing.test.js"
           },
           {
             "status": "M",
             "path": "test/research-workbench.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/workbench-library.test.js"
           },
           {
-            "status": "A",
-            "path": "test/workbench-tabs.test.js"
+            "status": "M",
+            "path": "test/workbench-planning-phase.test.js"
           }
         ],
         "checks": [
@@ -137,14 +102,47 @@
               "npx",
               "vitest",
               "run",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-derived-values.test.js",
               "test/workbench-library.test.js",
               "test/workbench-execution-policy.test.js",
+              "test/financial-routing.test.js",
               "test/research-board-generation.test.ts"
             ],
             "outcome": "passed",
-            "summary": "36项聚焦检查通过，覆盖原生复用、节点联动、页签布局、协作CRDT和恢复",
-            "verifiedCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
-            "completedAt": "2026-11-07T10:45:05.704Z",
+            "summary": "247项聚焦检查通过",
+            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+            "completedAt": "2026-11-07T11:09:00.157Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-library.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "83项规划与组件库检查通过，与上一组重叠6项",
+            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+            "completedAt": "2026-11-07T11:09:00.157Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-workbench.test.js",
+              "-t",
+              "accepts an explicitly requested single panel|patches the shipped canvas mount guard"
+            ],
+            "outcome": "passed",
+            "summary": "2项单卡与30卡挂载边界检查通过；合计326项不同检查",
+            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+            "completedAt": "2026-11-07T11:09:00.157Z",
             "timeoutMs": 180000
           },
           {
@@ -155,14 +153,14 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
-            "completedAt": "2026-11-07T10:45:05.704Z",
+            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+            "completedAt": "2026-11-07T11:09:00.157Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "本批为工具协议、宿主调度与原生能力接入，已验证组件与协作集成夹具；真实打包UI尚未验收，此次仅准备previewOnly本地候选，不做accept或promote。"
+          "summary": "上一候选acdc8c83已通过真实客户端自选股联动行情、新闻和公告；本次补充多源缺项与多页签容量修复，尚待新包复验，仅previewOnly，不做accept或promote。"
         },
         "acceptanceCriteria": [
           "直接复用六类原生组件，无子模型任务",
@@ -173,7 +171,7 @@
         "risks": [
           "需在打包客户端复验模型规划与交互；不保证所有模型首次提交正确"
         ],
-        "generatedAt": "2026-11-07T10:45:05.704Z"
+        "generatedAt": "2026-11-07T11:09:00.157Z"
       }
     },
     {
