@@ -10,6 +10,35 @@ const calc=(op)=>({$calc:{op,args:[{$from:'a',$path:'close'},{$from:'b',$path:'c
 it.each([['first',100],['last',99],['min',99],['max',110],['sum',309],['mean',103],['change',-1],['pctChange',-1],['maxDrawdown',-10],['returnStdDev',14.14]])('derives %s from selected chronological observations, not model values',(kind,want)=>{
  expect(evaluateMapping({...prices,$reduce:kind,$digits:2},responses)).toBe(want)
 })
+it('selects first and last source dates without coercing them into financial numbers',()=>{
+ const dates={...prices,$map:{$path:'date'}}
+ expect(evaluateMapping({...dates,$reduce:'first'},responses)).toBe('2026-11-01')
+ expect(evaluateMapping({...dates,$reduce:'last'},responses)).toBe('2026-11-03')
+ expect(evaluateMapping({...dates,$map:{$path:'date',$as:'string'},$reduce:'last'},responses)).toBe('2026-11-03')
+ for(const op of ['sum','mean','change','pctChange'])expect(()=>evaluateMapping({...dates,$reduce:op},responses)).toThrow()
+ expect(()=>evaluateMapping({$calc:{op:'subtract',args:[{...dates,$reduce:'last'},{...dates,$reduce:'first'}]}},responses)).toThrow()
+})
+it('keeps a real last-observation date through snapshot and bound delivery alongside derived metrics',()=>{
+ const record={tool:'ework__t_aabb',args:{},response:responses.q}
+ const mapping={version:1,type:'table',title:'区间表现',asOf:{...prices,$map:{$path:'date'},$reduce:'last'},columns:['最新收盘','区间涨跌幅'],rows:[[{...prices,$reduce:'last'},{...prices,$reduce:'pctChange',$digits:2}]]}
+ const draft={version:1,type:'data-bound',requests:[{key:'q',tool:record.tool,args:record.args}],mapping}
+ for(const resolve of [resolveComponentSnapshot,resolveBoundComponent]){
+  const result=resolve(JSON.stringify(draft),[record])
+  expect(result?.data.asOf).toContain('2026-11-03')
+  expect(result?.data.rows).toEqual([['99','-1']])
+ }
+})
+it('does not backfill or fabricate a selected endpoint when its actual field is absent',()=>{
+ for(const value of [null,'',{},[],Infinity]){
+  const sources=structuredClone(responses);sources.q.records[0].close=value
+  expect(()=>evaluateMapping({...prices,$reduce:'last'},sources)).toThrow()
+ }
+ for(const rowMapping of ['2026-11-03',{$path:'unknown',$default:'2026-11-03'},{$path:'date',$suffix:'00'}])expect(()=>evaluateMapping({...prices,$map:rowMapping,$reduce:'last'},responses)).toThrow()
+})
+it('explains a missing reduction field without guessing which numeric observation to use',()=>{
+ const expression={...prices,$reduce:'pctChange'};delete expression.$map
+ expect(()=>evaluateMapping(expression,responses)).toThrow(/\$map.*\$path/)
+})
 it('accepts nested source calculations and never treats numeric defaults or display labels as operands',()=>{
  const nested={$calc:{op:'subtract',args:[calc('pctChange'),{...prices,$reduce:'pctChange'}]},$digits:2}
  expect(evaluateMapping(nested,responses)).toBe(26)
