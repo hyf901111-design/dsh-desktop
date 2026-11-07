@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件口径展开箭头修复",
+        "featureName": "静态组件反馈与历史说明修正",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
-        "tipCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
+        "baseCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
+        "tipCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
         "commits": [
           {
-            "commit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
+            "commit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
             "parents": [
-              "f63fdb08aab357f2659a67b8fa9853dc18b296cb"
+              "76bae4750433444b6aa66fea82d1d4a2ec3c963b"
             ],
-            "subject": "修复组件口径展开箭头重叠与偏移"
+            "subject": "修正静态组件提交反馈并核对历史图表区间说明"
           }
         ],
         "files": [
@@ -29,11 +29,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
           },
           {
             "status": "M",
-            "path": "test/component-reading-footer.test.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-snapshot-chart.test.js"
           }
         ],
         "checks": [
@@ -42,14 +54,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-reading-footer.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-details.test.js"
+              "test/component-data-submission.test.js",
+              "test/component-source-snapshot-chart.test.js",
+              "test/component-source-binding.test.js"
             ],
             "outcome": "passed",
-            "summary": "29项聚焦检查通过，包含旧版阅读层升级与详情交互",
-            "verifiedCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
-            "completedAt": "2026-11-07T09:07:11.670Z",
+            "summary": "121项聚焦检查通过，包含静态映射纠正、来源边界与实际子任务完成路径",
+            "verifiedCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
+            "completedAt": "2026-11-07T09:23:11.013Z",
             "timeoutMs": 180000
           },
           {
@@ -60,24 +72,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
-            "completedAt": "2026-11-07T09:07:11.670Z",
+            "verifiedCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
+            "completedAt": "2026-11-07T09:23:11.013Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际Chromium深浅色、320/600px、表格/排名图8组：固定线性箭头，鼠标收起、Enter展开，文字偏移不变；打包复验另记"
+          "summary": "原始真实客户端三指数响应回放：60个交易日说明与数据一致，错误指向实际映射；打包新任务复验另记"
         },
         "acceptanceCriteria": [
-          "清除旧三角与新箭头重叠",
-          "展开收起仅旋转箭头，文字与点击区域不移动",
-          "保留默认展开、键盘交互和原始组件数据"
+          "静态金融映射返回实际错误",
+          "静态归一化历史图按实际数据标注区间与数量",
+          "保留刷新来源门禁、原数值与自定义序列"
         ],
         "risks": [
-          "需在打包客户端复验旧组件自动升级"
+          "需在打包客户端复验新生成，不保证所有模型首次提交正确"
         ],
-        "generatedAt": "2026-11-07T09:07:11.670Z"
+        "generatedAt": "2026-11-07T09:23:11.013Z"
       }
     },
     {
