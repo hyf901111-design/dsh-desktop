@@ -29,6 +29,13 @@ function path(root,path){
  for(const key of path?path.split('.'):[]){if(forbidden.has(key)||!/^([\w-]+)$/.test(key))throw Error('字段路径无效');if(value==null||!Object.hasOwn(Object(value),key))return undefined;value=value[key]}
  return value
 }
+function filterDay(value){
+ if(typeof value!=='string')throw Error('日期筛选字段必须为真实日期文本，不能缺失或使用数值')
+ const match=/^(?:\d{4}-\d{2}-\d{2}|\d{8})$/u.test(value)?/^(\d{4})-?(\d{2})-?(\d{2})$/u.exec(value):null
+ const day=match?`${match[1]}-${match[2]}-${match[3]}`:''
+ if(!day||!Number.isFinite(Date.parse(day))||new Date(day).toISOString().slice(0,10)!==day)throw Error('日期筛选仅接受有效的 YYYY-MM-DD 或 YYYYMMDD 日期')
+ return day
+}
 function formattedDate(rule,now){
  if(!record(rule)||!['yyyyMMdd','yyyy-MM-dd','yyyyMMdd000000'].includes(rule.format)||!Number.isInteger(rule.offsetDays??0)||Math.abs(rule.offsetDays??0)>3660)throw Error('日期窗口无效')
  const date=new Date(now.getTime()+(rule.offsetDays??0)*86400000)
@@ -130,13 +137,21 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
    const filter=mapping.$filter
    if(!record(filter)||!Object.keys(filter).length||Object.keys(filter).length>16)throw Error('列表筛选需要 1–16 个字段条件')
    const entries=Object.entries(filter)
-   for(const [key,value]of entries){
+   const matches=entries.map(([key,value])=>{
     // Validate even when the source list is empty. Conditions are literal scalar
-    // equality only, never code or recursively evaluated mapping expressions.
+    // equality or bounded date ranges, never code or mapping expressions.
     path({},key)
+    if(!key)throw Error('筛选字段路径不能为空')
+    if(record(value)){
+     if(!Object.keys(value).length||Object.keys(value).some(k=>!['$gte','$lte'].includes(k)))throw Error('日期筛选范围只支持 $gte/$lte 边界')
+     const start=value.$gte===undefined?undefined:filterDay(value.$gte),end=value.$lte===undefined?undefined:filterDay(value.$lte)
+     if(start&&end&&start>end)throw Error('日期筛选起点不能晚于终点')
+     return item=>{const day=filterDay(path(item,key));return (!start||day>=start)&&(!end||day<=end)}
+    }
     if(!key||value!==null&&!['string','number','boolean'].includes(typeof value)||typeof value==='number'&&!Number.isFinite(value))throw Error('列表筛选只支持标量等值条件')
-   }
-   rows=rows.filter(item=>entries.every(([key,value])=>path(item,key)===value))
+    return item=>path(item,key)===value
+   })
+   rows=rows.filter(item=>matches.every(match=>match(item)))
   }
   if(mapping.$sortBy!==undefined){
    if(typeof mapping.$sortBy!=='string'||!['asc','desc','ascending','descending',undefined].includes(mapping.$order))throw Error('列表排序无效')

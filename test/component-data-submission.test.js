@@ -45,6 +45,26 @@ it.each(['unobserved','wrong-args','discovery','wrong-path'])('does not accept %
  if(mode==='wrong-path')candidate.mapping.series[0].values.$map.$path='notThere'
  expect((await f.invoke(candidate)).isError).toBe(true)
 })
+it.each(['object','reordered-json'])('reuses the observed public query for equivalent %s parameters without changing its replay arguments',async(kind)=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].args={operation:'query',source:'fixture',parameters_json:'{"symbol":"sh000300","limit":65}'}
+ candidate.requests[0].args={source:'fixture',parameters_json:kind==='object'?{limit:65,symbol:'sh000300'}:'{ "limit": 65, "symbol": "sh000300" }'}
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ const resolved=resolveBoundComponent(JSON.stringify({version:1,type:'data-bound',...candidate}),f.records)
+ expect(resolved.recipe.requests[0].args).toEqual(f.records[0].args)
+ expect(resolved.data.series[0].values).toEqual([2.1,-3.2])
+})
+it.each(['symbol','limit','source','extra','catalog'])('does not canonicalize a changed %s into an observed query',async(kind)=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].args={operation:'query',source:'fixture',parameters_json:'{"symbol":"sh000300","limit":65}'}
+ candidate.requests[0].args={source:'fixture',parameters_json:{symbol:'sh000300',limit:65}}
+ if(kind==='symbol')candidate.requests[0].args.parameters_json.symbol='sh000905'
+ if(kind==='limit')candidate.requests[0].args.parameters_json.limit=64
+ if(kind==='source')candidate.requests[0].args.source='different'
+ if(kind==='extra')candidate.requests[0].args.extra=true
+ if(kind==='catalog')candidate.requests[0].args.operation='catalog'
+ expect((await f.invoke(candidate)).isError).toBe(true)
+})
 it('returns the exact observed tool name when a model invents a source alias',async()=>{
  const f=await fixture(),candidate=structuredClone(input)
  candidate.requests[0].tool='fixture_query'

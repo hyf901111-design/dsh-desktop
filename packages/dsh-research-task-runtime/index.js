@@ -159,10 +159,20 @@ const TOOL_LABELS = new Map([
   ['web_search', '搜索资料'],
   ['web_fetch', '读取网页'],
   ['financial_query', '查询金融数据'],
-  ['public_data_query', '读取免费数据源'],
+  ['public_data_query', '获取数据'],
   ['bash', '运行命令'],
   ['subagent', '委派子智能体任务'],
   ['research_workbench_create', '规划工作台组件']
+])
+const PUBLIC_DATA_PROGRESS = new Map([
+  ['tencent-quotes','腾讯财经行情'], ['tencent-history','腾讯财经历史行情'],
+  ['kraken-ticker','Kraken 行情'], ['kraken-candles','Kraken 历史行情'],
+  ['coinbase-ticker','Coinbase 行情'], ['coinbase-candles','Coinbase 历史行情'],
+  ['sina-news','新浪财经资讯'], ['eastmoney-news','东方财富资讯'],
+  ['eastmoney-announcements','公司公告'], ['gdelt-news','新闻资讯'],
+  ['met-weather','天气预报'], ['open-meteo','天气预报'],
+  ['world-bank','世界银行数据'], ['ecb-fx','欧洲央行汇率'],
+  ['crossref','论文信息'], ['github-repo','公开仓库信息'], ['npm-downloads','下载统计']
 ])
 
 export class ResearchTaskError extends Error {
@@ -937,7 +947,7 @@ export function publicEventFromSessionEvent(event) {
     return text === undefined ? null : { type: 'assistant-delta', text }
   }
   if (event?.type === 'tool/call') {
-    const tool = TOOL_LABELS.get(event.data?.name) ?? '处理资料'
+    let tool = TOOL_LABELS.get(event.data?.name) ?? '处理资料'
     let detail
     if (event.data?.name === 'web_search') {
       try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.query) } catch {}
@@ -946,7 +956,11 @@ export function publicEventFromSessionEvent(event) {
       try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.url) } catch {}
     }
     if (event.data?.name === 'public_data_query') {
-      try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.source ?? args?.category) } catch {}
+      try {
+        const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments
+        if(args?.operation && args.operation!=='query')tool='查找相关数据'
+        else detail=PUBLIC_DATA_PROGRESS.get(args?.source)
+      } catch {}
     }
     if (event.data?.name === 'financial_query') {
       try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText([args?.intent, args?.query, Array.isArray(args?.symbols) ? args.symbols.join('、') : '', args?.start, args?.end].filter(Boolean).join(' · ')) } catch {}

@@ -538,7 +538,7 @@ export const COMPONENT_BOUND_DATA_PROMPT = `${MAPPING_SHAPE_GUIDANCE}
 public_data_query 请求必须保留 operation:"query"、source 和 parameters_json 原字符串；catalog 只是目录不能绑定。内置返回 records 为数组、source 为来源、dataTime 为数据时点（可为 null）、receivedAt 仅为获取时间；未知报价时点写“报价时点未提供”，不可用获取时间冒充交易时间。
 data-bound 的验证依据是当前面板任务实际成功调用的工具响应，父任务附在 prompt 的记录只供参考，不能替代该凭证。当前已获联网授权且工具可见时，即使父任务写“已有记录、不要重复取数”，也须用相同的真实参数调用一次来源工具来建立绑定凭证（免费工具可命中共享缓存，不重新搜索接口）。用户或宿主禁止联网、工具不可见时只交付快照并明确未绑定，不伪造调用。
 mapping 内的整体结构必须符合上文当前模板 schema；仅需要变体的模板填写 variant，kpi 不使用 variant；来源名称只引用本轮真实响应，不从范例复制供应商名。例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。完整表格使用 columns:["名称","权重"]、rows:{"$from":"q","$each":"真实列表路径","$map":[{"$path":"name"},{"$path":"weight","$as":"number"}]}；rows 直接放列表映射对象，不再套一层数组。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
-批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 只支持 1–16 个标量条件，多个条件同时成立，不支持表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。共同基期100比较可在 values 的 $each 同层添加 $normalize:"base100"，宿主在筛选、排序、截取后执行 值/首值×100，再按 $digits 控制精度；起点不能为0、不能填补缺失值，原始值需求不归一化。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
+批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 支持 1–16 个标量等值条件或日期字段的 {$gte:"YYYY-MM-DD",$lte:"YYYY-MM-DD"} 边界，多个条件同时成立，不支持执行表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。共同基期100比较可在 values 的 $each 同层添加 $normalize:"base100"，宿主在筛选、排序、截取后执行 值/首值×100，再按 $digits 控制精度；起点不能为0、不能填补缺失值，原始值需求不归一化。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
 最新单值的完整例子：{"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number","$scale":100,"$digits":2,"$suffix":"%"}。数据日期使用同一结构，$map 改为 {"$path":"真实日期字段"}，删除 $as:number、$scale、$digits。$path 读取字段，$each 选择列表，$map 在行内读取；只能用上述运算符，禁止发明 $path2、$field 或把整条记录格式化成文字。
 来源完全未提供的字段直接写文字“本次未取得”，或使用 {"$default":"本次未取得"}；独立 $default 仅接受非空文字，不与数值换算混用。不要为缺失字段猜造路径。表格逐行保留真实日期与数值；扩展查询窗口的记录必须明确说明在原需求区间之外。
 来源只有非结构化文本或映射不能表达必要内容时，保留正常模板 JSON 和可核查来源，不伪造可刷新绑定。`
@@ -646,6 +646,15 @@ function normalizeRequestDates(value,depth=0) {
   return parsed
 }
 
+function equivalentPublicQueryArgs(value) {
+  if(!value||typeof value!=='object'||Array.isArray(value)||!['query',undefined].includes(value.operation))return null
+  try {
+    const parameters=typeof value.parameters_json==='string'?JSON.parse(value.parameters_json):value.parameters_json
+    if(!parameters||typeof parameters!=='object'||Array.isArray(parameters))return null
+    return {...value,operation:'query',parameters_json:parameters}
+  } catch {return null}
+}
+
 export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
   if(!candidate)return null
@@ -655,9 +664,17 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const requests=[],responses={},observed=[]
   for(const request of candidate.requests) {
     if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||Object.hasOwn(responses,request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/i.test(request.tool??'')))throw Error('自动更新的数据引用无效。')
-    const requestArgs=normalizeRequestDates(request.args)
+    let requestArgs=normalizeRequestDates(request.args)
     const args=evaluateMapping(requestArgs,{},now)
-    const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args))
+    let source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args))
+    // JSON serialization and the implicit query operation do not change a
+    // business request. Replay the exact successful call, never the model's
+    // altered representation. Different fields/values remain different calls.
+    const normalized=request.tool==='public_data_query'?equivalentPublicQueryArgs(args):null
+    if(!source&&normalized){
+      source=records.findLast(record=>record.tool===request.tool&&record.args?.operation==='query'&&isDeepStrictEqual(equivalentPublicQueryArgs(record.args),normalized))
+      if(source)requestArgs=structuredClone(source.args)
+    }
     if(source?.purpose==='discovery'){const error=Error('接口目录和参数定义不是业务数据；必须继续调用已确认的业务接口取得真实数值，再生成映射。');error.code='SOURCE_DATA_REQUIRED';throw error}
     if(!source)throw Error('自动更新只能绑定本轮已成功取数且参数一致的数据接口，请保留原请求及真实字段。')
     responses[request.key]=source.response

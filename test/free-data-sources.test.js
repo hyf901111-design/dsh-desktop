@@ -143,7 +143,13 @@ describe('builtin free data sources', () => {
     expect(prompt).toContain('不向用户宣讲');
     const offline = buildResearchTaskPrompt(request('不要联网，只用给定记录制作表格')); expect(offline).not.toContain('【EWork 内置免费数据源】');
     let registration; registerComponentSourceGuidance({ systemPrompt: { context: v => { registration = v; } }, tools: { schemas: () => schemas } }); expect(registration.name).toBe('sherlock:component-sources'); expect(freeDataInstruction()).toContain('不能称实时');
-    expect(publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'public_data_query', arguments: { source: 'met-weather' } } })).toMatchObject({ tool: '读取免费数据源', detail: 'met-weather' });
+    expect(publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'public_data_query', arguments: { source: 'met-weather' } } })).toMatchObject({ tool: '获取数据', detail: '天气预报' });
+  });
+  it('keeps source implementation identifiers and unknown arguments out of progress copy',()=>{
+    const event=arguments_=>publicEventFromSessionEvent({type:'tool/call',data:{name:'public_data_query',arguments:arguments_}});
+    expect(event({operation:'query',source:'tencent-history'})).toEqual({type:'tool-started',tool:'获取数据',detail:'腾讯财经历史行情'});
+    expect(event({operation:'catalog',category:'market'})).toEqual({type:'tool-started',tool:'查找相关数据'});
+    expect(event({source:'internal-source-id',parameters_json:'private'})).toEqual({type:'tool-started',tool:'获取数据'});
   });
   it('routes policy originals to official web sources rather than a generic rolling news feed',()=>{
     expect(freeDataInstruction()).toContain('政策、法规或部委通知优先');

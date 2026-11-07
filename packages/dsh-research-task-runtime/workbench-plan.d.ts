@@ -3,4 +3,4 @@ export type WorkbenchPlan = { requestId: string; title: string; dataMode?: 'simu
 export const PANEL_SIZES: Record<WorkbenchPanel['size'], number>
 export function validateWorkbench(value: unknown): WorkbenchPlan
 export function layoutWorkbench(panels: WorkbenchPanel[]): (WorkbenchPanel & { x: number; y: number; width: number })[]
-export function workbenchPanelPrompt(plan: WorkbenchPlan, panel: WorkbenchPanel & { width: number }): string
+export function workbenchPanelPrompt(plan: WorkbenchPlan, panel: WorkbenchPanel & { width: number }, now?: Date): string
