@@ -9,23 +9,70 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一公开数据工具选源说明",
+        "featureName": "研究分析规划与组件表格交互",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
-        "tipCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
+        "baseCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
+        "tipCommit": "e465ab934dffc8dc25e2817af17892269936257e",
         "commits": [
           {
-            "commit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
+            "commit": "bb69badfca9693498988f7f0c8189483bf85e371",
             "parents": [
-              "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1"
+              "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4"
             ],
-            "subject": "优化：移除公开数据工具说明中的固定来源优先级"
+            "subject": "优化：统一组件表格排序箭头与紧凑表头并强化列宽拖动提示"
+          },
+          {
+            "commit": "e465ab934dffc8dc25e2817af17892269936257e",
+            "parents": [
+              "bb69badfca9693498988f7f0c8189483bf85e371"
+            ],
+            "subject": "修复：区分研究分析与行情快捷规划并规范数据映射交付"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/public-data-tool.js"
+            "path": "docs/verification/2026-11-07-research-workbench-quality.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-native-interactivity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/openterminal-table-header-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-native-context-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
           }
         ],
         "checks": [
@@ -34,12 +81,44 @@
               "npx",
               "vitest",
               "run",
-              "test/free-data-sources.test.js"
+              "test/workbench-execution-policy.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "公开数据工具相关25项检查通过",
-            "verifiedCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
-            "completedAt": "2026-11-07T00:10:15.676324+00:00",
+            "summary": "映射及规划131项检查通过",
+            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
+            "completedAt": "2026-11-07T00:50:46.198538+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/openterminal-table-header-browser.test.js",
+              "test/research-market-native-context-browser.test.js",
+              "test/workbench-table-columns.test.js",
+              "test/financial-profile.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "表格交互24项聚焦检查通过",
+            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
+            "completedAt": "2026-11-07T00:50:46.198538+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "Node类型检查通过",
+            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
+            "completedAt": "2026-11-07T00:50:46.198538+00:00",
             "timeoutMs": 180000
           },
           {
@@ -50,25 +129,24 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
-            "completedAt": "2026-11-07T00:10:15.676324+00:00",
+            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
+            "completedAt": "2026-11-07T00:50:46.198538+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "即将构建同一集成提交进行真实多场景生成评估，不将单元检查等同于UI验收"
+          "summary": "待合并集成测试包验证原生表格交互及重新生成，不将源码检查当作产品验收"
         },
         "acceptanceCriteria": [
-          "自然语言面板创建直接规划",
-          "数据源按用户需求选择，回报不宣讲内部规则",
-          "行情单位与精度正确，部分失败可刷新恢复"
+          "排序箭头与列宽拖动和紧凑表头",
+          "分析需求不强套行情模板",
+          "ETF实际生成成功且保留正确来源口径"
         ],
         "risks": [
-          "第二轮打包实际生成待复验",
-          "workbench-source-capability一项与planning-phase四项既有失败已在修改前复现，未计通过"
+          "ETF与指数比较新包生成待复验"
         ],
-        "generatedAt": "2026-11-07T00:10:15.676324+00:00"
+        "generatedAt": "2026-11-07T00:50:46.198538+00:00"
       }
     }
   ],
