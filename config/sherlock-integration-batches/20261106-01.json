@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "静态组件反馈与历史说明修正",
+        "featureName": "复用已验证请求减少参数抄写重试",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "76bae4750433444b6aa66fea82d1d4a2ec3c963b",
-        "tipCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
+        "baseCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
+        "tipCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
         "commits": [
           {
-            "commit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
+            "commit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
             "parents": [
-              "76bae4750433444b6aa66fea82d1d4a2ec3c963b"
+              "343e23c1688afd8e1de4f525b21a6250d59ad8e0"
             ],
-            "subject": "修正静态组件提交反馈并核对历史图表区间说明"
+            "subject": "复用组件已验证请求并减少参数抄写重试"
           }
         ],
         "files": [
@@ -33,19 +33,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
             "path": "test/component-data-submission.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-snapshot-chart.test.js"
           }
         ],
         "checks": [
@@ -59,9 +47,9 @@
               "test/component-source-binding.test.js"
             ],
             "outcome": "passed",
-            "summary": "121项聚焦检查通过，包含静态映射纠正、来源边界与实际子任务完成路径",
-            "verifiedCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
-            "completedAt": "2026-11-07T09:23:11.013Z",
+            "summary": "128项聚焦检查通过，包含唯一请求复用、歧义拒绝、配方完整持久化和实际子任务完成路径",
+            "verifiedCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
+            "completedAt": "2026-11-07T09:46:39.768Z",
             "timeoutMs": 180000
           },
           {
@@ -72,24 +60,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
-            "completedAt": "2026-11-07T09:23:11.013Z",
+            "verifiedCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
+            "completedAt": "2026-11-07T09:46:39.768Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "原始真实客户端三指数响应回放：60个交易日说明与数据一致，错误指向实际映射；打包新任务复验另记"
+          "outcome": "not-applicable",
+          "summary": "本次仅修改宿主提交协议，无直接界面样式变更；实际客户端生成效果在预览包复验，不由聚焦检查推断"
         },
         "acceptanceCriteria": [
-          "静态金融映射返回实际错误",
-          "静态归一化历史图按实际数据标注区间与数量",
-          "保留刷新来源门禁、原数值与自定义序列"
+          "唯一业务请求可省略参数并保留完整来源配方",
+          "多请求必须明确选择",
+          "显式错误参数与其他组件数据仍拒绝"
         ],
         "risks": [
           "需在打包客户端复验新生成，不保证所有模型首次提交正确"
         ],
-        "generatedAt": "2026-11-07T09:23:11.013Z"
+        "generatedAt": "2026-11-07T09:46:39.768Z"
       }
     },
     {
