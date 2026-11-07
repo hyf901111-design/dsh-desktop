@@ -130,9 +130,9 @@ describe('saved host template display refinements',()=>{
  it('fits stored KPI values without rewriting source records or saved expansion routes',()=>{
   const data={version:1,type:'kpi',title:'本人指标',items:[{label:'本月收入',value:0,unit:'万元'},{label:'变化',value:-120,unit:'万元'},{label:'退款',value:null,missing:'本人未提供退款记录'}]};
   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),next=refineStoredTemplateHtml(spec.html);
-  expect(next).toContain('data-kpi-value-fit="v4"');expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(embeddedRoutes(next)).toEqual(embeddedRoutes(spec.html));expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(spec.html));expect(refineStoredTemplateHtml(next)).toBe(next);
-  const previous=spec.html+'<style data-kpi-value-fit="v2">body[data-sherlock-template="kpi"] .indicator-value{font-size:clamp(18px,18cqi,28px)!important}</style>';
-  const migrated=refineStoredTemplateHtml(previous);expect(migrated).toContain('data-kpi-value-fit="v4"');expect(migrated).toContain('@layer ework-workbench{body[data-sherlock-template="kpi"] .indicator-tile');expect(readTemplateModel({...spec,html:migrated}).data).toEqual(data);expect(refineStoredTemplateHtml(migrated)).toBe(migrated);
+  expect(next).toContain('data-kpi-value-fit="v5"');expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(embeddedRoutes(next)).toEqual(embeddedRoutes(spec.html));expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(spec.html));expect(refineStoredTemplateHtml(next)).toBe(next);
+  const previous=spec.html+'<style data-kpi-value-fit="v4">body[data-sherlock-template="kpi"] .indicator-value{font-size:clamp(18px,18cqi,28px)!important}</style>';
+  const migrated=refineStoredTemplateHtml(previous);expect(migrated).toContain('data-kpi-value-fit="v5"');expect(migrated).toContain('@layer ework-workbench{body[data-sherlock-template="kpi"] .indicator-tile');expect(readTemplateModel({...spec,html:migrated}).data).toEqual(data);expect(refineStoredTemplateHtml(migrated)).toBe(migrated);
  });
  it('does not reinterpret custom HTML or mismatched template identities',()=>{
   expect(refineStoredTemplateHtml('<html><head></head><body>用户页面</body></html>')).toBe('<html><head></head><body>用户页面</body></html>');

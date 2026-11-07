@@ -111,7 +111,7 @@ it('keeps KPI footers compact in narrow and wide themed previews, with accessibl
    expect((await footer.boundingBox()).height).toBeLessThanOrEqual(241);
    expect(await frame.locator('#indicator-refresh').isVisible()).toBe(false);expect(await frame.locator('.indicator-asof').isVisible()).toBe(false);
    expect(await footer.locator('dd').first().isVisible()).toBe(true);
-   expect(await frame.locator('.indicator-tile').evaluateAll(nodes=>nodes.every(el=>el.open))).toBe(true);
+   expect(await frame.locator('details.indicator-tile').evaluateAll(nodes=>nodes.every(el=>el.open))).toBe(true);
    expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
    const tiles=await frame.locator('.indicator-tile').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}}));
    for(let i=1;i<tiles.length;i++)if(tiles[i].top===tiles[i-1].top)expect(tiles[i].left).toBeGreaterThanOrEqual(tiles[i-1].right);
@@ -185,6 +185,36 @@ it('centers single and wrapped readouts and keeps the detail switch separate fro
    const after=await frame.getByRole('tablist').boundingBox();expect(Math.abs(after.y-beforeSwitch.y)).toBeLessThan(1);
    await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(false);
    await frame.getByRole('button',{name:'展开组件详情'}).focus();await page.keyboard.press('Enter');expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(true);
+  }finally{await page.close();}
+ }
+},20000);
+
+it('packs twelve financial metrics without oversized gaps, clipped dates or detached units',async()=>{
+ const items=[
+  {label:'报告期',value:'20260630',detail:'财务报表实际报告期'},
+  {label:'销售毛利率',value:23.16,unit:'%'},{label:'净资产收益率(ROE)',value:2.77,unit:'%'},{label:'扣非ROE',value:1.86,unit:'%'},
+  {label:'基本每股收益(EPS)',value:.56,unit:'元'},{label:'市盈率(静态PE)',value:188.38,unit:'倍'},{label:'市盈率(TTM)',value:131.75,unit:'倍'},{label:'市净率(PB)',value:5.54,unit:'倍'},
+  {label:'总市值',value:9495.71,unit:'亿元'},...['营业收入','归母净利润','研发费用'].map(label=>({label,value:null,missing:'当前财务报告未提供该项数据'}))
+ ];
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'kpi',title:'合成财务布局检查',items,asOf:'2026-06-30',note:'合成数据，仅验证布局。'})));
+ for(const mode of ['enterprise','dark'])for(const width of [320,480,960]){
+  const page=await browser.newPage({viewport:{width,height:900}});
+  try{
+   await page.route('**/*',r=>r.abort());
+   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'light',{workbench:true}));
+   const frame=page.frames()[1];await frame.waitForSelector('.indicator-tile');
+   await page.evaluate(mode=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-workbench-style',mode,controlTheme:mode==='dark'?'dark':'light'},'*'),mode);
+   await frame.waitForFunction(mode=>document.documentElement.dataset.workbenchStyle===mode,mode);
+   const metrics=await frame.evaluate(()=>{
+    const box=e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:r.height}};
+    return {grid:box(document.querySelector('.indicator-grid')),tiles:[...document.querySelectorAll('.indicator-tile')].map(e=>({box:box(e),font:parseFloat(getComputedStyle(e.querySelector('.indicator-value')).fontSize),overflow:e.scrollWidth>e.clientWidth+1})),text:document.body.innerText,date:document.querySelector('.indicator-value').textContent,unit:getComputedStyle(document.querySelector('.indicator-unit')).display};
+   });
+   expect(metrics.tiles).toHaveLength(12);expect(metrics.date).toBe('2026-06-30');expect(metrics.unit).toBe('inline-block');
+   expect(metrics.grid.height).toBeLessThan(width===960?340:640);
+   for(const tile of metrics.tiles){expect(tile.font).toBeLessThanOrEqual(22);expect(tile.overflow).toBe(false);}
+   expect(metrics.text).toContain('当前财务报告未提供该项数据');expect(metrics.text).toContain('财务报表实际报告期');
+   for(let i=1;i<metrics.tiles.length;i++){const a=metrics.tiles[i-1].box,b=metrics.tiles[i].box;if(a.top===b.top)expect(a.bottom).toBe(b.bottom);}
+   if(mode==='enterprise'&&width!==320){mkdirSync('output/research-quality/kpi-density',{recursive:true});await page.screenshot({path:`output/research-quality/kpi-density/${width}.png`});}
   }finally{await page.close();}
  }
 },20000);

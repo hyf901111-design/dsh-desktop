@@ -28,18 +28,18 @@ it('keeps the actual bridge failure instead of returning tutorial prices or news
  await pump(()=>card.textContent.includes('测试行情服务确实中断'))
  expect(card.textContent).not.toContain('1,456.80');expect(card.textContent).not.toContain('离线教程示例')
 })
-async function fixture({sessionId='owner',subagentPanel=false}={}){
- const win=new Window({url:'https://guide.test',width:1100,height:1800}),doc=win.document,previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
+async function fixture({sessionId='owner',subagentPanel=false,width=1100}={}){
+ const canvasWidth=width,win=new Window({url:'https://guide.test',width,height:1800}),doc=win.document,previous=new Map(['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
  for(const[k,v]of Object.entries({window:win,document:doc,navigator:win.navigator,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,k,{value:v,configurable:true})
  doc.body.innerHTML='<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="owner"></header><textarea>原草稿</textarea></div><section data-home-guide="run-a"><div id="guide-host"></div></section></main><div id="outside"></div>'
- Object.defineProperty(win.HTMLElement.prototype,'clientWidth',{configurable:true,get(){return 1100}})
+ Object.defineProperty(win.HTMLElement.prototype,'clientWidth',{configurable:true,get(){return canvasWidth}})
  Object.defineProperty(win.HTMLElement.prototype,'clientHeight',{configurable:true,get(){return 1800}})
  // Happy DOM has no layout engine. Expose native card inline geometry here;
  // actual CSS transitions, viewport fitting and footer bounds run in Chromium.
  Object.defineProperty(win.HTMLElement.prototype,'scrollHeight',{configurable:true,get(){return this.hasAttribute('data-research-canvas')?Math.max(1800,...[...this.querySelectorAll('[data-research-node-id]')].map(card=>parseFloat(card.style.top)+parseFloat(card.style.height)/2+86).filter(Number.isFinite)):0}})
  win.HTMLElement.prototype.getBoundingClientRect=function(){
   const card=this.hasAttribute('data-research-node-id'),canvas=this.closest('[data-research-canvas]'),port=this.getAttribute('data-financial-port')
-  let width=card?parseFloat(this.style.width):1100,height=card?parseFloat(this.style.height):1800,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2-(canvas?.scrollTop||0):0
+  let width=card?parseFloat(this.style.width):canvasWidth,height=card?parseFloat(this.style.height):1800,left=card?parseFloat(this.style.left)-width/2:0,top=card?parseFloat(this.style.top)-height/2-(canvas?.scrollTop||0):0
   if(port){const bounds=this.closest('[data-research-node-id]').getBoundingClientRect();width=height=20;left=port==='output'?bounds.right-26:bounds.left+6;top=bounds.bottom-30}
   else if(!card&&this.closest('[data-research-node-id]')){const bounds=this.closest('[data-research-node-id]').getBoundingClientRect();width=bounds.width;height=bounds.height;left=bounds.left;top=bounds.top}
   return{x:left,y:top,left,top,right:left+width,bottom:top+height,width,height,toJSON(){return{left,top,width,height}}}
@@ -68,6 +68,16 @@ async function fixture({sessionId='owner',subagentPanel=false}={}){
  cleanup.push(async()=>{await React.act(async()=>root.unmount());await win.happyDOM.abort();for(const[k,d]of previous)d?Object.defineProperty(globalThis,k,d):delete globalThis[k]})
  return{win,doc,native,root,registry,disk,workspace:registry.for(sessionId),command,send,liveCalls:()=>liveCalls}
 }
+it.each([1100,760,620])('fits demo quotes beside the watchlist when the remaining width is usable: %s',async width=>{
+ const f=await fixture({width});expect((await f.command('mount-board')).ok).toBe(true)
+ for(const widget of ['watchlist','quote'])expect(await f.command('board-'+widget)).toMatchObject({ok:true})
+ const nodes=f.workspace.getSnapshot().artifacts,watch=nodes.find(n=>n.containerSpec.widget==='watchlist'),quote=nodes.find(n=>n.containerSpec.widget==='quote')
+ const cells=f.workspace.getWorkbenchCells(),w=cells.find(c=>c.id===watch.id),q=cells.find(c=>c.id===quote.id)
+ if(width>=760){expect(q.y).toBe(w.y);expect(q.x).toBe(w.x+w.w);expect(q.x+q.w).toBe(40);expect(quote.width).toBeGreaterThanOrEqual(280)}
+ else {expect(q.x).toBe(0);expect(q.y).toBeGreaterThanOrEqual(w.y+w.h)}
+ expect(quote.x+quote.width/2).toBeLessThanOrEqual(width-12+.01)
+ expect(watch.width).toBeLessThan(400)
+},20000)
 it('patches installed native code idempotently and refreshes its own serialized runtime',()=>{
  const patched=patchHomeGuideNative(source);new Script(patched)
  expect(patchHomeGuideNative(patched)).toBe(patched)
