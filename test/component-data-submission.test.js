@@ -26,6 +26,17 @@ async function fixture(validateSnapshot){
  return{ctx,child,parent,records,submission,controller,invoke:(value=input,agent=child,id='data-submit')=>ctx.tools.execute({name:'submit_component_data',arguments:value,callId:id,agent,signal:controller.signal})}
 }
 const receipt=(callId='data-submit',isError=false)=>({type:'tool/result',data:{message:{source:{callId},content:[{type:'tool-result',toolCallId:callId,isError,content:[{type:'text',text:'{"accepted":true}'}]}]}}})
+it('accepts source-backed chart labels with redundant numeric precision without losing leading zeroes',async()=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].response.records=[{name:'000300.SH',value:-13.644},{name:'000905.SH',value:-17.334}]
+ candidate.mapping.labels.$map.$digits=0
+ candidate.mapping.series[0].values.$map.$digits=2
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ const resolved=resolveBoundComponent(JSON.stringify({version:1,type:'data-bound',...candidate}),f.records)
+ expect(resolved.data.labels).toEqual(['000300.SH','000905.SH'])
+ expect(resolved.data.series[0].values).toEqual([-13.64,-17.33])
+ expect(f.records[0].response.records[0].value).toBe(-13.644)
+})
 it('rejects malformed mapping inside the same child and accepts corrected data without another query',async()=>{
  const f=await fixture(),bad=structuredClone(input);bad.mapping.labels.$map={$concat:[{$path:'name'},'产品']}
  let done=false;f.submission.result.then(()=>{done=true})

@@ -48,7 +48,14 @@ function scalarMapping(value,mapping){
  if(value==null&&mapping.$optional===true)return null
  if(mapping.$as==='number'){if(!['number','string'].includes(typeof value)||typeof value==='string'&&!value.trim()||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
  if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale;if(!Number.isFinite(value))throw Error('数值换算超出范围')}
- if(mapping.$digits!==undefined){if(typeof value!=='number'||!Number.isFinite(value)||!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效');value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))}
+ if(mapping.$digits!==undefined){
+  if(!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效')
+  // Precision is a presentation setting, not a request to parse identifiers or
+  // dates as numbers. Mixed source rows keep their exact text, including zeros.
+  // Numeric strings still require an explicit $as:"number" before rounding.
+  if(typeof value==='number'&&Number.isFinite(value))value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))
+  else if(typeof value!=='string')throw Error('显示精度无效')
+ }
  if(mapping.$as==='string'||mapping.$prefix!==undefined||mapping.$suffix!==undefined){
   if(value!==null&&typeof value==='object'||mapping.$prefix!==undefined&&typeof mapping.$prefix!=='string'||mapping.$suffix!==undefined&&typeof mapping.$suffix!=='string')throw Error('文本字段需要单个值，不能直接使用对象或数组')
   if(mapping.$as==='string'&&value!==null)value=String(value)

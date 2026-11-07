@@ -18,6 +18,15 @@ it('selects first and last source dates without coercing them into financial num
  for(const op of ['sum','mean','change','pctChange'])expect(()=>evaluateMapping({...dates,$reduce:op},responses)).toThrow()
  expect(()=>evaluateMapping({$calc:{op:'subtract',args:[{...dates,$reduce:'last'},{...dates,$reduce:'first'}]}},responses)).toThrow()
 })
+it('preserves source identifiers and dates when a numeric display precision is applied to a mixed row',()=>{
+ const source={q:{records:[{date:'2026-11-01',code:'000300.SH',close:100.125},{date:'2026-11-02',code:'000300.SH',close:102.375}]}}
+ const select=field=>({...prices,$map:{$path:field},$reduce:'last',$digits:2})
+ expect(evaluateMapping([select('code'),select('date'),select('close')],source)).toEqual(['000300.SH','2026-11-02',102.38])
+ expect(evaluateMapping({$from:'q',$path:'code',$digits:0},{q:{code:'000300'}})).toBe('000300')
+ expect(evaluateMapping({$from:'q',$path:'price',$as:'number',$digits:2},{q:{price:'102.375'}})).toBe(102.38)
+ for(const digits of [-1,9,1.5,'2'])expect(()=>evaluateMapping({...select('code'),$digits:digits},source)).toThrow('显示精度无效')
+ expect(()=>evaluateMapping({...select('code'),$scale:100},source)).toThrow('数值换算无效')
+})
 it('keeps a real last-observation date through snapshot and bound delivery alongside derived metrics',()=>{
  const record={tool:'ework__t_aabb',args:{},response:responses.q}
  const mapping={version:1,type:'table',title:'区间表现',asOf:{...prices,$map:{$path:'date'},$reduce:'last'},columns:['最新收盘','区间涨跌幅'],rows:[[{...prices,$reduce:'last'},{...prices,$reduce:'pctChange',$digits:2}]]}
