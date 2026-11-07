@@ -7,7 +7,7 @@ import {parseEditableMemory,renderEditableMemory} from './editable-document'
 import { MemoryStore, type MemoryEncryption } from './store'
 import { LocalMemoryEngine, type MemorySemanticProvider, type LocalMemoryConfig } from './semantic'
 import { splitMemoryImport } from './import'
-import { unresolvedMemoryReference } from './capture-policy'
+import { contextualMemoryEvidence, unresolvedMemoryReference } from './capture-policy'
 import { canonicalMemoryKey, MemoryRetriever, normalizedMemoryText, MEMORY_BACKGROUND_INTRO } from './retriever'
 
 type Summary = {signature:string;scopeEpoch:number;state:'pending'|'ready'|'failed';text?:string;updatedAt?:number;model?:string;attempts:number;ownerEpoch?:string}
@@ -291,8 +291,8 @@ export class MemoryService {
     for(const candidate of input.candidates){
       const source=capture.turn.events.find(e=>e.seq===candidate.sourceSeq&&e.role==='user')
       if(!source||typeof candidate.evidence!=='string'||!candidate.evidence.trim()||!source.text.includes(candidate.evidence)||secretContent(candidate.evidence))continue
-      const evidence=candidate.evidence.trim()
-      if(unresolvedMemoryReference(evidence))continue
+      const evidence=contextualMemoryEvidence(source.text,candidate.evidence)
+      if(secretContent(evidence)||unresolvedMemoryReference(evidence))continue
       if(/^\s*>|```|引用(?:网页|文档|文章|原文)|(?:网页|文档|文章|他说|她说).{0,10}[:：]|<external_/imu.test(source.text))continue
       // Judge the complete source; an extractor cannot remove temporary qualifiers.
       if(/这次|本次|临时|这回|this time|for now|temporarily/iu.test(source.text))continue
@@ -304,7 +304,7 @@ export class MemoryService {
       if(state.suppression.some(s=>s.key===this.hash(state,key)||s.content===this.hash(state,content)||s.sessionId===capture.turn.sessionId&&s.seq!==undefined&&source.seq<=s.seq))continue
       if(Object.values(state.rows).length>=5000)continue
       const same=Object.values(state.rows).find(r=>r.scope===scope&&r.projectId===projectId&&r.semanticKey===key&&(r.status==='active'||r.status==='disabled'))
-      const explicit=!confirmedProposal&&candidate.explicit===true&&(candidate.kind==='preference'?/以后|今后|默认|一直|每次|长期|始终|记住|我(?:更|比较|通常|习惯|喜欢)|prefer|always|default|remember/iu.test(evidence):/决定|确定|采用|基线|约定|暂存|暂停|必须|不要|目标|目前|下一步|已完成|project|decid|baseline/iu.test(evidence))
+      const explicit=!confirmedProposal&&candidate.explicit===true&&!/(?:待|尚未|还未|未)(?:确认|确定)|\b(?:tentative|unconfirmed)\b/iu.test(evidence)&&(candidate.kind==='preference'?/以后|今后|默认|一直|每次|长期|始终|记住|我(?:更|比较|通常|习惯|喜欢)|prefer|always|default|remember/iu.test(evidence):/决定|确定|采用|基线|约定|暂存|暂停|必须|不要|目标|目前|下一步|已完成|project|decid|baseline/iu.test(evidence))
       const sourceRef:MemorySource={kind:'conversation',sessionId:capture.turn.sessionId,seq:source.seq,title:'对话中明确表达',excerpt:evidence,createdAt:this.now()}
       if(same?.status==='disabled'&&normalizedMemoryText(same.content)===normalizedMemoryText(content))continue
       if(same&&normalizedMemoryText(same.content)===normalizedMemoryText(content)){same.sources=[...same.sources,sourceRef].slice(-20);continue}
