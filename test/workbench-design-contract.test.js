@@ -21,7 +21,8 @@ describe('research workbench Figma design contract', () => {
     const input=validateWorkbench({requestId:'trend-intent',title:'金融研究',panels:[{title,type:'market',size:'large',prompt}]});
     const task=workbenchPanelPrompt(input,input.panels[0]);
     expect(marketVariant(input.panels[0])).toBe('trend');
-    expect(task).toContain('必须输出 market.trend 的结构化数据');
+    expect(task).toContain('模板提供样式功能参考，不是业务字段要求');
+    expect(task).toContain(prompt);
     expect(task).not.toContain('必须输出 market.table');
     expect(buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'node',kind:'container',prompt:task})).toContain('"variant":"trend"');
   });
