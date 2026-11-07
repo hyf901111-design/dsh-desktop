@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-04",
+  "branch": "codex/integration/20261108-04",
+  "baseMainCommit": "14da66a23994c2e29c7a11b44df8956ab3e57f84",
+  "expectedMainCommit": "14da66a23994c2e29c7a11b44df8956ab3e57f84",
+  "createdAt": "2026-11-07T23:26:14.169Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "真实来源驱动的表格单位换算修复",
+        "branch": "codex/feat/table-unit-recovery-20261108",
+        "baseCommit": "14da66a23994c2e29c7a11b44df8956ab3e57f84",
+        "tipCommit": "d5229a85a222381a16236023c3a0b225bd67d85b",
+        "commits": [
+          {
+            "commit": "d5229a85a222381a16236023c3a0b225bd67d85b",
+            "parents": [
+              "14da66a23994c2e29c7a11b44df8956ab3e57f84"
+            ],
+            "subject": "修复：按真实来源单位编译财务表格换算并保留刷新配方"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-11-08-native-generation-recovery.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-unit-projection.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-table-unit-recovery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/component-native-unit-table-20261108.json"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-table-unit-recovery.test.js",
+              "test/component-unit-projection.test.js",
+              "test/component-table-scalar-recovery.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  7 passed (7)\n      Tests  200 passed (200)\n   Start at  07:25:46\n   Duration  3.54s (transform 4.20s, setup 0ms, import 8.30s, tests 2.64s, environment 0ms)",
+            "verifiedCommit": "d5229a85a222381a16236023c3a0b225bd67d85b",
+            "completedAt": "2026-11-07T23:25:50.004835+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "d5229a85a222381a16236023c3a0b225bd67d85b",
+            "completedAt": "2026-11-07T23:25:59.416340+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "d5229a85a222381a16236023c3a0b225bd67d85b",
+            "completedAt": "2026-11-07T23:25:59.433515+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端第二轮两张失败财务卡已重试成功，进一步内容验收发现亿元换算错误；现使用完整真实提交与响应重放验证正确值、刷新配方、零值及单位冲突。当前修复仍待main重建及原生验证。"
+        },
+        "acceptanceCriteria": [
+          "表格固定行与集合行复用来源单位编译器，不把scale当除数",
+          "直接已知单位按来源契约换算并保存正确配方，零值与来源不变",
+          "未知来源不猜单位，量纲冲突和0/负系数继续拒绝",
+          "规则明确乘法系数及万元/元转亿元比例，包内规则更新v1.39.8"
+        ],
+        "risks": [
+          "外部行情源仍可能暂时不可用",
+          "当前修复待本地main构建与原生内容验证"
+        ],
+        "generatedAt": "2026-11-07T23:25:59.433549+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-table-unit-recovery.test.js",
+        "test/component-unit-projection.test.js",
+        "test/component-table-scalar-recovery.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
