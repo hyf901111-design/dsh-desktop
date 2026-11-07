@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-05",
+  "branch": "codex/integration/20261108-05",
+  "baseMainCommit": "6a476ab3f3181effaa9ed8077a7b49cc4133aa65",
+  "expectedMainCommit": "6a476ab3f3181effaa9ed8077a7b49cc4133aa65",
+  "createdAt": "2026-11-07T23:44:33.240Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "基于已观察记录的表格结构编译",
+        "branch": "codex/feat/observed-table-compiler-20261108",
+        "baseCommit": "6a476ab3f3181effaa9ed8077a7b49cc4133aa65",
+        "tipCommit": "222eb005afdd2424342eaab116a72aa3207df3a6",
+        "commits": [
+          {
+            "commit": "222eb005afdd2424342eaab116a72aa3207df3a6",
+            "parents": [
+              "6a476ab3f3181effaa9ed8077a7b49cc4133aa65"
+            ],
+            "subject": "修复：依据真实记录编译表格列表作用域及缺失同名字段"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-11-08-native-generation-recovery.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/table-projection.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-observed-table-compiler.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/component-native-table-scope-20261108.json"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-observed-table-compiler.test.js",
+              "test/component-table-unit-recovery.test.js",
+              "test/component-unit-projection.test.js",
+              "test/component-table-scalar-recovery.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  8 passed (8)\n      Tests  205 passed (205)\n   Start at  07:43:55\n   Duration  3.52s (transform 4.20s, setup 0ms, import 8.75s, tests 2.64s, environment 0ms)",
+            "verifiedCommit": "222eb005afdd2424342eaab116a72aa3207df3a6",
+            "completedAt": "2026-11-07T23:43:58.872943+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "222eb005afdd2424342eaab116a72aa3207df3a6",
+            "completedAt": "2026-11-07T23:44:08.303806+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "222eb005afdd2424342eaab116a72aa3207df3a6",
+            "completedAt": "2026-11-07T23:44:08.319372+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实原生第三轮5/6失败样本回放验证通过，编译列表作用域与精确同名缺失单元格；零值、冲突、歧义、未知字段及刷新反例通过。待main重建后原生重试。"
+        },
+        "acceptanceCriteria": [
+          "仅由唯一真实记录集合补单值选择的列表上下文",
+          "至少两个不同字段的选择作用域完全一致且真实源含同名字段才补缺失列映射",
+          "不推断字段别名，不忽略选择歧义，不使用已补全字段继续推导",
+          "205项聚焦检查与类型检查通过"
+        ],
+        "risks": [
+          "当前修复待main重建原生验证",
+          "外部数据源仍可能暂时不可用"
+        ],
+        "generatedAt": "2026-11-07T23:44:08.319409+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-observed-table-compiler.test.js",
+        "test/component-table-unit-recovery.test.js",
+        "test/component-unit-projection.test.js",
+        "test/component-table-scalar-recovery.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
