@@ -539,3 +539,15 @@ it('失败的工作台卡片参与整理补位，运行中的输入草稿仍保�
  const g=createResearchGrid(),m=g.metrics(1000),arranged=g.arrange(state.get().map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),state.get(),1000)
  expect(arranged.find(c=>c.id==='failed').y).toBe(24)
 })
+
+it('新页签首次接收已规划组件即铺满看板，跨列行上方的生成卡填满空位且完成时不跳动',()=>{
+ const state=createWorkbenchGridState(null,'first-tab-generation');state.enable(1000)
+ const panels=[{id:'overview',width:420,height:220},{id:'chart',width:656,height:456},{id:'comparison',width:980,height:410,workbenchSpan:true,workbenchLayoutVersion:1},{id:'news',width:656,height:340},{id:'filings',width:656,height:340}].map((n,i)=>({...n,kind:'generated-container',workbenchId:'first-page',workbenchIndex:i,sizeMode:'auto',generationStatus:'queued',x:i%2?1000:210,y:i<2?250:800+i*450}))
+ let snap=state.reconcile({files:[],artifacts:panels,viewport:{y:0}})
+ const before=state.get().map(({freePosition,...c})=>c)
+ expect(before[0]).toMatchObject({x:0,y:0,w:20});expect(before[1]).toMatchObject({x:20,y:0,w:20})
+ expect(before[0].h).toBe(before[1].h);expect(before[2]).toMatchObject({x:0,y:before[1].h,w:40})
+ expect(before[3]).toMatchObject({x:0,y:before[2].y+before[2].h,w:20});expect(before[4]).toMatchObject({x:20,y:before[3].y,w:20})
+ snap=state.reconcile({...snap,artifacts:snap.artifacts.map((n,i)=>i===0?{...n,generationStatus:'completed',containerSpec:{type:'table'}}:{...n,generationStatus:'running'})})
+ expect(state.get().map(({freePosition,...c})=>c)).toEqual(before)
+})

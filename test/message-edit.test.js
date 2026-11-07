@@ -24,21 +24,21 @@ describe('editing a sent message',()=>{
   await expect(sendMessageRevision({isBusy:()=>busy,readImage:async()=>{busy=true;return{mediaType:'image/png',data:'cG5n'}},fork}, {seq:2,content:[{type:'image',attachment:{attachmentId:'a'}}],text:'new'})).rejects.toThrow(/处理/)
   expect(fork).not.toHaveBeenCalled()
  })
- it('sends once into a new branch, preserving the original and opening the new result',async()=>{
+ it('resends edited text into the original session without creating or opening a branch',async()=>{
   const prompt=vi.fn(async()=>({ok:true})),open=vi.fn(),fork=vi.fn(async()=> 'child')
-  await sendMessageRevision({isBusy:()=>false,fork,prompt,open},{seq:6,content:[{type:'text',text:'old'}],text:'new'})
-  expect(fork).toHaveBeenCalledWith(6);expect(prompt).toHaveBeenCalledExactlyOnceWith('child',[{type:'text',text:'new'}]);expect(open).toHaveBeenCalledWith('child')
+  await sendMessageRevision({sessionId:'original',isBusy:()=>false,fork,prompt,open},{seq:6,content:[{type:'text',text:'old'}],text:'new'})
+  expect(fork).not.toHaveBeenCalled();expect(prompt).toHaveBeenCalledExactlyOnceWith('original',[{type:'text',text:'new'}]);expect(open).not.toHaveBeenCalled()
  })
  it('does not replay a submission when its outcome is unknown',async()=>{
   const prompt=vi.fn(async()=>{throw Error('transport')}),open=vi.fn()
-  await expect(sendMessageRevision({isBusy:()=>false,fork:async()=> 'child',prompt,open},{seq:2,content:[{type:'text',text:'old'}],text:'new'})).rejects.toThrow(/未确认/)
-  expect(prompt).toHaveBeenCalledTimes(1);expect(open).toHaveBeenCalledWith('child')
+  await expect(sendMessageRevision({sessionId:'original',isBusy:()=>false,fork:async()=> 'child',prompt,open},{seq:2,content:[{type:'text',text:'old'}],text:'new'})).rejects.toThrow(/未确认/)
+  expect(prompt).toHaveBeenCalledTimes(1);expect(open).not.toHaveBeenCalled()
  })
- it('reuses a prepared child after a definite rejection, without losing the edited text',async()=>{
+ it('retries a definite rejection in the original session without losing edited text',async()=>{
   const fork=vi.fn(async()=> 'child'),prompt=vi.fn().mockResolvedValueOnce({ok:false,error:{code:'attachment-error',message:'图片不可用'}}).mockResolvedValueOnce({ok:true}),open=vi.fn()
-  const api={isBusy:()=>false,fork,prompt,open},request={seq:2,content:[{type:'text',text:'old'}],text:'new'}
+  const api={sessionId:'original',isBusy:()=>false,fork,prompt,open},request={seq:2,content:[{type:'text',text:'old'}],text:'new'}
   await expect(sendMessageRevision(api,request)).rejects.toThrow('图片不可用');expect(open).not.toHaveBeenCalled()
-  await sendMessageRevision(api,request);expect(fork).toHaveBeenCalledTimes(1);expect(prompt).toHaveBeenCalledTimes(2)
+  await sendMessageRevision(api,request);expect(fork).not.toHaveBeenCalled();expect(prompt).toHaveBeenCalledTimes(2);expect(prompt).toHaveBeenLastCalledWith('original',[{type:'text',text:'new'}])
  })
  it('uses the actual patched host boundary and rejects a busy source',async()=>{
   const source=patchMessageEditHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))

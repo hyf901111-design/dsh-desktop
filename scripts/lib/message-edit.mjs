@@ -23,21 +23,20 @@ export async function editedPromptContent(content, text, readImage) {
 }
 
 export async function sendMessageRevision(api, request) {
- const {seq,content,text}=request
+ const {content,text}=request
  const idle=()=>{if(api.isBusy())throw Error('当前仍有任务正在处理，请稍后编辑。')}
  idle()
  const prompt=await editedPromptContent(content,text,api.readImage)
  idle()
- if(request.submitted)throw Error('发送结果未确认，请先查看新分支，避免重复发送。')
- const child=request.child||await api.fork(seq);request.child=child
- // A transport failure is not a rejected send: open the child and never silently replay.
+ if(request.submitted)throw Error('发送结果未确认，请先查看当前对话，避免重复发送。')
+ // The message belongs to this conversation, including its research board.
+ // A transport failure must never silently replay an accepted submission.
  let result
- try{request.submitted=true;result=await api.prompt(child,prompt)}catch{api.open(child);throw Error('发送结果未确认，已打开新分支，请先查看实际状态。')}
- if(!result.ok&&result.error?.code==='internal'){api.open(child);throw Error('发送结果未确认，已打开新分支，请先查看实际状态。')}
+ try{request.submitted=true;result=await api.prompt(api.sessionId,prompt)}catch{throw Error('发送结果未确认，请先查看当前对话中的实际状态。')}
+ if(!result.ok&&result.error?.code==='internal')throw Error('发送结果未确认，请先查看当前对话中的实际状态。')
  if(!result.ok)request.submitted=false
  if(!result.ok)throw Error(result.error?.message||'发送失败，原消息已保留。')
- api.open(child)
- return child
+ return api.sessionId
 }
 
 function EWorkEditableUserMessage(props) {
@@ -67,7 +66,7 @@ function EWorkEditableUserMessage(props) {
  return h('div',{'data-ework-user-message':'','data-editing':editing||undefined},editing?
   h('div',{'data-ework-message-editor':''},images.length>0&&h(_deepseek_ai_dsh_client_ui_attachment.ImageGallery,{images,load:loadImage,align:'end',labels:messageImageLabels(t)}),
    h('div',{'data-edit-bubble':''},h('textarea',{ref:input,value:draft,'aria-label':'编辑消息',disabled:sending,onChange:e=>setDraft(e.target.value),onKeyDown:e=>{if(e.nativeEvent.isComposing)return;if(e.key==='Escape'){e.preventDefault();cancel()}else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();void send()}}}),
-    h('div',{'data-edit-footer':''},h('small',null,busy?'当前任务完成后可发送':'发送后从此处重新生成，原对话保留'),h('button',{type:'button',disabled:sending,onClick:cancel},'取消'),h('button',{type:'button','data-edit-send':'',disabled:busy||sending||!draft.trim(),onClick:send},sending?'发送中…':'发送'))),error&&h('div',{role:'alert'},error)):
+    h('div',{'data-edit-footer':''},h('button',{type:'button',disabled:sending,onClick:cancel},'取消'),h('button',{type:'button','data-edit-send':'',disabled:busy||sending||!draft.trim(),onClick:send},sending?'发送中…':'发送'))),error&&h('div',{role:'alert'},error)):
   h(UserStyleBubble,{eventSeq:data.seq,annotationIdentity:{sessionId:props.annotationSessionId,source:data.source},content:data.content,openFile,imageLoader:loadImage,t,
    actions:text=>h('div',{'data-ework-user-actions':''},Number.isFinite(data.time)&&h('time',{dateTime:new Date(data.time).toISOString(),title:new Date(data.time).toLocaleString()},formatMessageClock(data.time,t)),
     h(MessageIconActions,{text,className:MessageItem_module_css_default.actions,t,extraActions:canEdit&&h('button',{type:'button','aria-label':'编辑消息',title:'编辑消息',onClick:begin,className:MessageIconActions_module_css_default.action},pencil)}))}))
@@ -85,7 +84,6 @@ export const messageEditCss=`
 body[data-ds-dark-theme] [data-edit-bubble],html[data-ds-dark-theme] [data-edit-bubble]{--ework-edit-bubble:#292929}
 [data-edit-bubble] textarea{display:block;width:100%;min-height:52px;max-height:320px;box-sizing:border-box;background:transparent;color:inherit;border:0;outline:0;resize:none;font:inherit;line-height:1.55;padding:0}
 [data-edit-footer]{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:10px}
-[data-edit-footer] small{font-size:12px;color:#888;margin-right:auto}
 [data-edit-footer] button{border:1px solid #8883;border-radius:9px;background:transparent;color:inherit;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
 [data-edit-footer] [data-edit-send]{background:#171717;color:#fff}
 body[data-ds-dark-theme] [data-edit-send],html[data-ds-dark-theme] [data-edit-send]{background:#fff;color:#171717}
@@ -116,11 +114,10 @@ export function patchMessageEditClient(source){
  swap('\n\t\t\t}), [\n\t\t\t\tsessionId,\n\t\t\t\tuseSession,','\n\t\t\t}), [\neditMessage,editBusy,\n\t\t\t\tsessionId,\n\t\t\t\tuseSession,')
  const anchor='forkAt: (seq) => {\n\t\t\t\t\t\t\tsessions.fork({'
  swap(anchor,`editMessage: request=>sendMessageRevision({
+ sessionId,
  isBusy:()=>{const state=sessions.binding(sessionId)?.session.getSnapshot();return !state||state.running||state.queue?.length>0},
  readImage:async attachment=>{const result=await sessions.binding(sessionId).session.readAttachment(attachment.attachmentId);if(!result.ok)throw Error(result.error.message);return {mediaType:result.value.attachment.mediaType,data:bytesToBase64(result.value.data)}},
- fork:beforeMessageSeq=>sessions.fork({sessionId,beforeMessageSeq}),
- prompt:(child,content)=>sessions.binding(child).session.prompt(content,'queue'),
- open:child=>sessions.open(child)
+ prompt:(target,content)=>sessions.binding(target).session.prompt(content,'queue')
 },request),\n${anchor}`)
  return source+marker+JSON.stringify(swaps).replaceAll('*/','*\\u002f')+' */'
 }

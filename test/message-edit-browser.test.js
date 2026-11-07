@@ -5,7 +5,7 @@ import {resolve} from 'node:path'
 import {build} from 'esbuild'
 import {beforeAll,afterAll,it,expect} from 'vitest'
 import {patchMessageEditClient,stripMessageEditClient} from '../scripts/lib/message-edit.mjs'
-const require=createRequire(import.meta.url),evidence=resolve('output/message-edit')
+const require=createRequire(import.meta.url),evidence='/tmp/odyssey-history-edit-board-fill/message-edit'
 let browser,source,bootstrap,css
 beforeAll(async()=>{
  const original=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
@@ -63,6 +63,7 @@ it('supports cancel, task races, multiline edit, attachment retention and single
   await page.getByRole('button',{name:'取消',exact:true}).click();expect(await page.locator('.gdEzaW_bubble').textContent()).toContain('请帮我检查')
   await page.evaluate(()=>window.setRunning(true));expect(await page.getByRole('button',{name:'编辑消息'}).count()).toBe(0)
   await page.evaluate(()=>window.setRunning(false));await page.getByRole('button',{name:'编辑消息'}).click()
+  expect(await page.locator('[data-edit-footer] small').count()).toBe(0)
   await page.getByRole('textbox').fill('新内容\n第二行');await page.evaluate(()=>window.setRunning(true))
   expect(await page.getByRole('button',{name:'发送',exact:true}).isDisabled()).toBe(true)
   await page.evaluate(()=>window.setRunning(false));await page.screenshot({path:resolve(evidence,'editor.png')})
