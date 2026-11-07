@@ -2,6 +2,7 @@ import {it,expect} from 'vitest'
 import {materializeComponentMapping} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {kpiDataIssue} from '../packages/dsh-research-task-runtime/kpi-template-contract.js'
 import {chartDataIssue} from '../packages/dsh-research-task-runtime/chart-template-contract.js'
+import {templateDataIssue} from '../packages/dsh-research-task-runtime/template-data-contract.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {specialChartSamples} from './fixtures/special-chart-samples.js'
@@ -36,10 +37,29 @@ it('retains actual quote timestamps, explicitly authored scopes and conflicting 
 })
 it('uses the renderer source shape and refreshes a new actual period without keeping stale dates',()=>{
  const m={version:1,type:'table',title:'规模',columns:['规模'],rows:[[{...mapping.items[0].value}]]}
- expect(materialize(m).sources).toEqual([{label:'Tushare',url:response.sourceUrl}])
+ const table=materialize(m)
+ expect(table.sources).toEqual([{label:'Tushare',url:response.sourceUrl}])
+ expect(templateDataIssue(table)).toBeNull()
+ const output=acceptArtifactOutput(JSON.stringify(table))
+ expect(output).toBeDefined()
+ const artifact=JSON.parse(output),model=readTemplateModel(artifact)
+ expect(model.data.rows).toEqual(table.rows)
+ expect(model.data.sources).toEqual(table.sources)
+ expect(model.data.asOf).toBe(table.asOf)
+ expect(artifact.html).toContain(response.sourceUrl)
  expect(materialize(mapping,{...response,period:{start:'20261106',end:'20261113'}}).asOf).toBe('2026-11-06 至 2026-11-13')
  const kept=[{name:'原始公告',url:'https://example.test/filing'}]
  expect(materialize({...mapping,sources:kept}).sources).toEqual(kept)
+})
+it('retains sources without a reported period and rejects malformed source metadata before rendering',()=>{
+ const table=materialize({version:1,type:'table',title:'规模',columns:['规模'],rows:[[{...mapping.items[0].value}]]},{...response,period:undefined})
+ const output=acceptArtifactOutput(JSON.stringify(table))
+ expect(output).toBeDefined()
+ expect(readTemplateModel(JSON.parse(output)).data.sources).toEqual(table.sources)
+ for(const source of [{label:'Tushare',url:'javascript:alert(1)'},{label:'Tushare',url:'https://user:password@example.test'},{name:'Tushare'},{label:'Tushare',extra:'unvalidated'}]){
+  expect(templateDataIssue({...table,sources:[source]})).not.toBeNull()
+  expect(acceptArtifactOutput(JSON.stringify({...table,sources:[source]}))).toBeUndefined()
+ }
 })
 it('points to the exact repair when KPI version or source metadata is malformed',()=>{
  const data=materialize()

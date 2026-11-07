@@ -55,7 +55,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
  const dispose=()=>{if(disposed)return;disposed=true;for(const release of releases.splice(0).reverse())release();signal?.removeEventListener('abort',dispose);pending=accepted=undefined}
  signal?.addEventListener('abort',dispose,{once:true})
  return{
-  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区，排名适合横向条形图，时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得足够数据后调用 submit_component_data，传 requests 与 mapping 两个对象；不再把完整 JSON 写成最终回复。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
+  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得足够数据后调用 submit_component_data，传 requests 与 mapping 两个对象；不再把完整 JSON 写成最终回复。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
   result,
   register(agent){
    signal?.throwIfAborted()
