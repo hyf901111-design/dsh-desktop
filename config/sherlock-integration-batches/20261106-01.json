@@ -9,23 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "已保存指标卡统一布局",
+        "featureName": "工作台真实来源与呈现修正",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
-        "tipCommit": "e84039942092978f33fb4880112b88de1b640586",
+        "baseCommit": "e84039942092978f33fb4880112b88de1b640586",
+        "tipCommit": "d235bed7c019f1e644883f40a5068e20e5165898",
         "commits": [
           {
-            "commit": "e84039942092978f33fb4880112b88de1b640586",
+            "commit": "d235bed7c019f1e644883f40a5068e20e5165898",
             "parents": [
-              "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4"
+              "e84039942092978f33fb4880112b88de1b640586"
             ],
-            "subject": "修复：已保存指标卡同步应用统一对齐规范"
+            "subject": "修复：保留表格真实来源并强化工作台比较与排名呈现"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-observed-presentation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-planning-phase.test.js"
           }
         ],
         "checks": [
@@ -34,12 +54,18 @@
               "npx",
               "vitest",
               "run",
+              "test/component-observed-presentation.test.js",
+              "test/workbench-sourced-table-delivery.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/workbench-sourced-wide-table.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-execution-policy.test.js",
               "test/kpi-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "10项指标数据和展开功能检查",
-            "verifiedCommit": "e84039942092978f33fb4880112b88de1b640586",
-            "completedAt": "2026-11-07T01:40:30.061876+00:00",
+            "summary": "167项来源呈现与工作台规划聚焦检查",
+            "verifiedCommit": "d235bed7c019f1e644883f40a5068e20e5165898",
+            "completedAt": "2026-11-07T01:56:34.843801+00:00",
             "timeoutMs": 180000
           },
           {
@@ -50,8 +76,8 @@
             ],
             "outcome": "passed",
             "summary": "差异检查",
-            "verifiedCommit": "e84039942092978f33fb4880112b88de1b640586",
-            "completedAt": "2026-11-07T01:40:30.061876+00:00",
+            "verifiedCommit": "d235bed7c019f1e644883f40a5068e20e5165898",
+            "completedAt": "2026-11-07T01:56:34.843801+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -60,14 +86,14 @@
           "summary": "等待真实集成包宽窄组件检查"
         },
         "acceptanceCriteria": [
-          "指标标题数值单位基线一致",
-          "同排高度一致",
-          "数据完整保留"
+          "表格保留真实来源并可交付",
+          "比较与排名遵循数据语义",
+          "沿用指标对齐规范"
         ],
         "risks": [
-          "需真实组件宽窄验收"
+          "需真实模型生成与客户端布局复验"
         ],
-        "generatedAt": "2026-11-07T01:40:30.061876+00:00"
+        "generatedAt": "2026-11-07T01:56:34.843801+00:00"
       }
     }
   ],
