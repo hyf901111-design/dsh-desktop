@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究组件来源计算与映射纠错",
+        "featureName": "研究日期口径与取数提交优化",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "0e5f7f4b3bb2f4a5ac832ba330d48c3157a7f228",
-        "tipCommit": "fadc47f9fdb89b7d551b6fe9544a4d35121a270e",
+        "baseCommit": "fadc47f9fdb89b7d551b6fe9544a4d35121a270e",
+        "tipCommit": "ba29bc1170228c18ab438e87ec56e5ca05eadca9",
         "commits": [
           {
-            "commit": "fadc47f9fdb89b7d551b6fe9544a4d35121a270e",
+            "commit": "ba29bc1170228c18ab438e87ec56e5ca05eadca9",
             "parents": [
-              "0e5f7f4b3bb2f4a5ac832ba330d48c3157a7f228"
+              "fadc47f9fdb89b7d551b6fe9544a4d35121a270e"
             ],
-            "subject": "支持研究组件基于真实来源计算区间指标并改进映射纠错"
+            "subject": "统一研究比较日期窗口并减少等价数据请求重试"
           }
         ],
         "files": [
@@ -32,24 +32,40 @@
             "path": "packages/dsh-research-task-runtime/component-data-submission.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-derived-values.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
-          },
-          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-comparison-window.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
             "path": "test/component-data-submission.test.js"
           },
           {
+            "status": "M",
+            "path": "test/free-data-sources.test.js"
+          },
+          {
             "status": "A",
-            "path": "test/component-derived-values.test.js"
+            "path": "test/workbench-comparison-window.test.js"
           }
         ],
         "checks": [
@@ -58,153 +74,34 @@
               "npx",
               "vitest",
               "run",
-              "test/component-derived-values.test.js",
+              "test/workbench-comparison-window.test.js",
               "test/component-data-refresh.test.js",
+              "test/component-derived-values.test.js",
+              "test/component-data-submission.test.js",
               "test/component-source-binding.test.js",
-              "test/component-readable-snapshot.test.js",
-              "test/component-data-submission.test.js"
+              "test/free-data-sources.test.js",
+              "test/workbench-planning-phase.test.js"
             ],
             "outcome": "passed",
-            "summary": "221项直接相关检查通过，覆盖来源派生值、日期序列校验、刷新重算、完整表格及提交纠错",
-            "verifiedCommit": "fadc47f9fdb89b7d551b6fe9544a4d35121a270e",
-            "completedAt": "2026-11-07T04:04:39.188340+00:00",
+            "summary": "297项相关检查通过；旧工作台套件24项失败已在修改前fadc47复现，失败名称完全一致。",
+            "verifiedCommit": "ba29bc1170228c18ab438e87ec56e5ca05eadca9",
+            "completedAt": "2026-11-07T04:32:07.704771+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "本次计算运行时与模型提交协议；集成后使用真实客户端重新生成指数对比工作台验收。"
+          "summary": "日期计算与取数匹配协议修改；集成后实际重新生成工作台验收。"
         },
         "acceptanceCriteria": [
-          "派生数值引用真实字段，由宿主计算并在刷新后重算",
-          "不以手填数值或缺失补零伪装生成成功",
-          "工具别名错误在当前任务修正，不重复取数"
+          "同一自然月比较的图表、排名、明细采用共同日期窗口",
+          "JSON表示差异不触发重复取数，刷新保留实际原请求",
+          "过程信息使用用户可读来源名称，不展示内部来源标识"
         ],
         "risks": [
-          "尚需实际模型验证采用新计算协议的成功率与耗时"
+          "实际模型仍需验证遵循日期窗口和生成耗时；原有工作台测试中24项既存失败未处理。"
         ],
-        "generatedAt": "2026-11-07T04:04:39.188662+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-        "verificationCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--prefer-offline",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --prefer-offline --no-audit --no-fund",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/prepare-memory-model.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/prepare-memory-model.mjs",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-evidence.test.js",
-              "test/memory-local-index.test.js",
-              "test/memory-semantic.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-source.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-import.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-runtime.test.js test/memory-evidence.test.js test/memory-local-index.test.js test/memory-semantic.test.ts test/memory-search.test.ts test/memory-bridge.test.ts test/memory-source.test.ts test/memory-document.test.ts test/memory-import.test.ts",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
-            "completedAt": "2026-11-07T04:05:05.742Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-07T04:05:05.742Z"
+        "generatedAt": "2026-11-07T04:32:07.704771+00:00"
       }
     },
     {
