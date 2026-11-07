@@ -203,14 +203,22 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 
 export function researchWorkbenchFeedbackDefinitions(){return [isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v10 */'
+ const marker='/* ework:workbench-feedback:v11 */',ending='/* ework:workbench-feedback:end */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
- const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[123456789] \*\//)
+ const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'+ending+'\n'
+ const previous=source.search(/\/\* ework:workbench-feedback:v(?:10|[1-9]) \*\//)
  if(previous>=0){
-  const end=source.indexOf('const ExecutionStatusGroup =',previous)
+  // Several later patches append their own helpers before ExecutionStatusGroup.
+  // Replace this patch's functions only; never consume those adjacent owners.
+  const ownedEnd=source.indexOf(ending,previous)
+  const tail=source.indexOf('const ExecutionStatusGroup =',previous)
+  const foreign=source.slice(previous+1).search(/^\/\* ework:(?!workbench-feedback:)[^\n]*\*\/$/mu)
+  const foreignEnd=foreign<0?-1:previous+1+foreign
+  const end=ownedEnd>=0?ownedEnd+ending.length+(source[ownedEnd+ending.length]==='\n'?1:0):foreignEnd>=0&&foreignEnd<tail?foreignEnd:tail
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')
+  const owned=source.slice(previous,end)
+  if(!owned.includes('function ResearchWorkbenchProgress('))throw Error('Workbench feedback owned helper boundary drifted')
   source=source.slice(0,previous)+helpers+source.slice(end)
  }else{
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t, planningRequest }) {'
