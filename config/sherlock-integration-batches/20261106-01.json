@@ -9,79 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究工作台多场景实测修正",
+        "featureName": "统一公开数据工具选源说明",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
-        "tipCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
+        "baseCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
+        "tipCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
         "commits": [
           {
-            "commit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
+            "commit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
             "parents": [
-              "cf17cca33b896aaf1335e8be18cb32df508877d9"
+              "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1"
             ],
-            "subject": "修复：研究工作台实测中的规划绕路与来源表格错误"
+            "subject": "优化：移除公开数据工具说明中的固定来源优先级"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/verification/2026-11-07-research-workbench-quality.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/table-projection.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-status.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-keyed-table-projection.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/public-data-capacity.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-execution-policy.test.js"
+            "path": "packages/dsh-research-task-runtime/public-data-tool.js"
           }
         ],
         "checks": [
@@ -90,34 +34,12 @@
               "npx",
               "vitest",
               "run",
-              "test/component-data-status.test.js",
-              "test/component-keyed-table-projection.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-readable-snapshot.test.js",
-              "test/public-data-capacity.test.js",
-              "test/workbench-public-data-profile.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/workbench-public-data.test.js"
+              "test/free-data-sources.test.js"
             ],
             "outcome": "passed",
-            "summary": "直接相关聚焦检查通过",
-            "verifiedCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
-            "completedAt": "2026-11-07T00:03:16.128934+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "直接相关聚焦检查通过",
-            "verifiedCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
-            "completedAt": "2026-11-07T00:03:16.128934+00:00",
+            "summary": "公开数据工具相关25项检查通过",
+            "verifiedCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
+            "completedAt": "2026-11-07T00:10:15.676324+00:00",
             "timeoutMs": 180000
           },
           {
@@ -127,9 +49,9 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "直接相关聚焦检查通过",
-            "verifiedCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
-            "completedAt": "2026-11-07T00:03:16.128934+00:00",
+            "summary": "差异检查通过",
+            "verifiedCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
+            "completedAt": "2026-11-07T00:10:15.676324+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -146,7 +68,7 @@
           "第二轮打包实际生成待复验",
           "workbench-source-capability一项与planning-phase四项既有失败已在修改前复现，未计通过"
         ],
-        "generatedAt": "2026-11-07T00:03:16.128934+00:00"
+        "generatedAt": "2026-11-07T00:10:15.676324+00:00"
       }
     }
   ],
