@@ -60,15 +60,15 @@
         "schemaVersion": 1,
         "featureName": "本地语义记忆与无答案防误用及设置管理",
         "branch": "codex/feat/hindsight-local-validation-20261107",
-        "baseCommit": "6f80203ab83f41e3e642a02a062e925102f6ed01",
-        "tipCommit": "2d8fe7727e524b2fcea80678272058619132b1f3",
+        "baseCommit": "2d8fe7727e524b2fcea80678272058619132b1f3",
+        "tipCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
         "commits": [
           {
-            "commit": "2d8fe7727e524b2fcea80678272058619132b1f3",
+            "commit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
             "parents": [
-              "6f80203ab83f41e3e642a02a062e925102f6ed01"
+              "2d8fe7727e524b2fcea80678272058619132b1f3"
             ],
-            "subject": "修复 Electron 与记忆进程序列化兼容并加入真实宿主回归"
+            "subject": "修复记忆来源跳转的会话字段校验并记录实机验收"
           }
         ],
         "files": [
@@ -78,11 +78,7 @@
           },
           {
             "status": "M",
-            "path": "src/main/memory/semantic.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/memory-semantic.test.ts"
+            "path": "src/main/index.ts"
           }
         ],
         "checks": [
@@ -90,14 +86,14 @@
             "argv": [
               "node_modules/.bin/vitest",
               "run",
-              "test/memory-semantic.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-runtime.test.js"
+              "test/memory-source.test.ts",
+              "test/memory-view.test.ts",
+              "test/memory-bridge.test.ts"
             ],
             "outcome": "passed",
-            "summary": "修正后67项聚焦测试通过，包含真实Electron跨版本IPC",
-            "verifiedCommit": "2d8fe7727e524b2fcea80678272058619132b1f3",
-            "completedAt": "2026-11-07T02:36:21.942123+00:00",
+            "summary": "记忆来源/界面/桥接38项聚焦测试通过",
+            "verifiedCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
+            "completedAt": "2026-11-07T02:50:34.566952+00:00",
             "timeoutMs": 180000
           },
           {
@@ -108,14 +104,14 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript通过",
-            "verifiedCommit": "2d8fe7727e524b2fcea80678272058619132b1f3",
-            "completedAt": "2026-11-07T02:36:21.942123+00:00",
+            "verifiedCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
+            "completedAt": "2026-11-07T02:50:34.566952+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "同一签名包在隔离客户端新增、编辑、正例回答及未知手机号拒答通过，未知问题未新增使用记录；发现语义IPC不兼容已修复，最终包待重新构建验收。"
+          "summary": "原生签名包语义索引/加密缓存/跨对话召回/无答案不注入/编辑删除/双独立开关与自动保存及重启通过；来源IPC字段已修正，最后签名包再验收来源。"
         },
         "acceptanceCriteria": [
           "无答案不得注入未核验候选",
@@ -129,7 +125,7 @@
           "小样本worker峰值RSS739MiB，空闲两分钟释放",
           "只本地构建，不接受晋升、不发布、不推送"
         ],
-        "generatedAt": "2026-11-07T02:36:21.942123+00:00"
+        "generatedAt": "2026-11-07T02:50:34.566952+00:00"
       }
     }
   ],
