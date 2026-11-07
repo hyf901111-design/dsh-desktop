@@ -5,11 +5,12 @@ import * as React from 'react'
 import * as jsx from 'react/jsx-runtime'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {componentDataStatusDefinitions} from '../scripts/lib/component-data-status.mjs'
+import {stripHomeWorkbenchProgress} from '../scripts/lib/home-workbench-progress.mjs'
 import {publishResearchWorkbenchProgress,patchResearchWorkbenchFeedback,researchWorkbenchFeedbackDefinitions} from '../scripts/lib/research-workbench-feedback.mjs'
 
 // Upgrade the real installed helper in place. Unwinding unrelated canvas and
 // composer patches would couple these receipt controls to old grid anchors.
-const source=patchResearchWorkbenchFeedback(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+const source=patchResearchWorkbenchFeedback(stripHomeWorkbenchProgress(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
 const start=source.search(/\/\* ework:workbench-feedback:v\d+ \*\//),end=source.indexOf('const ExecutionStatusGroup =',start)
 const definitions=researchWorkbenchFeedbackDefinitions()
 expect(source.slice(start,end)).toContain(definitions)
