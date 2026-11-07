@@ -204,27 +204,92 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "本地语义记忆与无答案防误用及设置管理",
+        "featureName": "全局记忆开关与Markdown文档统一管理",
         "branch": "codex/feat/hindsight-local-validation-20261107",
-        "baseCommit": "2d8fe7727e524b2fcea80678272058619132b1f3",
-        "tipCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
+        "baseCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
+        "tipCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
         "commits": [
           {
-            "commit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
+            "commit": "ee8817b850b70a5c864d16997923026d6ebf54ed",
             "parents": [
-              "2d8fe7727e524b2fcea80678272058619132b1f3"
+              "a22289df36cfc25e62c700c6adfe4b68124d5f94"
             ],
-            "subject": "修复记忆来源跳转的会话字段校验并记录实机验收"
+            "subject": "优化记忆设置文案并说明查找方式与当前对话暂停范围"
+          },
+          {
+            "commit": "ac2b2e5895c57d2b1888bbe208d3e644bf77c596",
+            "parents": [
+              "ee8817b850b70a5c864d16997923026d6ebf54ed"
+            ],
+            "subject": "简化全局记忆开关并通过 Markdown 弹窗统一管理记忆"
+          },
+          {
+            "commit": "50c73505504f2ebdd56812e0d380931a1ad4c5a4",
+            "parents": [
+              "ac2b2e5895c57d2b1888bbe208d3e644bf77c596"
+            ],
+            "subject": "保留 Markdown 状态修改对应的记忆身份与项目归属"
+          },
+          {
+            "commit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
+            "parents": [
+              "50c73505504f2ebdd56812e0d380931a1ad4c5a4"
+            ],
+            "subject": "同步文档确认与冲突记忆替代规则"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/superpowers/reviews/2026-11-07-memory-answerability.md"
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
           },
           {
             "status": "M",
-            "path": "src/main/index.ts"
+            "path": "src/main/memory/document.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/editable-document.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/memory/document-editor.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/memory.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-bridge.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-editable-document.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-view.test.ts"
           }
         ],
         "checks": [
@@ -232,14 +297,17 @@
             "argv": [
               "node_modules/.bin/vitest",
               "run",
-              "test/memory-source.test.ts",
               "test/memory-view.test.ts",
-              "test/memory-bridge.test.ts"
+              "test/memory-document.test.ts",
+              "test/memory-editable-document.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-bridge.test.ts",
+              "test/memory-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "记忆来源/界面/桥接38项聚焦测试通过",
-            "verifiedCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
-            "completedAt": "2026-11-07T02:50:34.566952+00:00",
+            "summary": "92项记忆聚焦检查通过，包括全局开关、旧设置迁移、Markdown编辑持久化、冲突与隔离、无答案保护",
+            "verifiedCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
+            "completedAt": "2026-11-07T03:35:32.071816+00:00",
             "timeoutMs": 180000
           },
           {
@@ -250,28 +318,27 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript通过",
-            "verifiedCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
-            "completedAt": "2026-11-07T02:50:34.566952+00:00",
+            "verifiedCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
+            "completedAt": "2026-11-07T03:35:32.071816+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生签名包语义索引/加密缓存/跨对话召回/无答案不注入/编辑删除/双独立开关与自动保存及重启通过；来源IPC字段已修正，最后签名包再验收来源。"
+          "summary": "真实Chromium连接实际MemoryService，验证仅一个全局开关、Markdown预览编辑、保存到文件、服务重启后重开、并发修改冲突、明暗主题及1160/720宽度；等待最终签名包复核。"
         },
         "acceptanceCriteria": [
-          "无答案不得注入未核验候选",
-          "独立开关、来源、候选采用忽略、搜索筛选与新增编辑删除可用",
-          "后台索引和账户/范围/到期失效保护",
-          "最终本地签名包运行并保留真实主界面供测试"
+          "设置页仅保留全局启用记忆与记忆.md编辑入口",
+          "编辑弹窗提供预览、修改、保存和取消，隐藏内部编号和版本元数据",
+          "全局关闭同时停止读取及自动保存，旧单对话暂停迁移后不存在隐藏例外",
+          "保存同步到已有记忆文件及检索状态，保留项目与账户隔离，冲突不覆盖草稿",
+          "构建并保留真实本地客户端供测试"
         ],
         "risks": [
-          "GLM产品配置两轮218/220选择可用，格式/超时失败关闭，其他模型质量未全面评估",
-          "模型检查若使用云端会发送有限候选；记忆.md仍为明文副本",
-          "小样本worker峰值RSS739MiB，空闲两分钟释放",
-          "只本地构建，不接受晋升、不发布、不推送"
+          "物理记忆.md保留内部追踪注释，弹窗呈现可读Markdown正文；加密缓存和索引仍是内部实现",
+          "本次只做记忆相关验证，不做全功能测试，不接受晋升、不发布、不推送"
         ],
-        "generatedAt": "2026-11-07T02:50:34.566952+00:00"
+        "generatedAt": "2026-11-07T03:35:32.071816+00:00"
       }
     }
   ],
