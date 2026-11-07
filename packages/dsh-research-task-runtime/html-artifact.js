@@ -6,6 +6,7 @@ import {validWorkbenchStyleMessage,installWorkbenchStyleMessages,validWorkbenchL
 import { installWorkbenchScrollbars, isWorkbenchScrollbarMessage } from './workbench-scrollbars.js'
 import { refineStoredSpecialChartHtml } from './special-chart-layout.js'
 import { refineStoredTemplateHtml } from './stored-template-refinements.js'
+import { refineComponentReadingFooter } from './component-reading-footer.js'
 import { refineCandlestickHtml } from './market-candlestick.js'
 import { createWorkbenchRefreshSurface, installWorkbenchRefresh, isWorkbenchViewState, workbenchContentRevision, workbenchRefreshCss } from './workbench-refresh.js'
 import { serializeWorkbenchContent, installWorkbenchExport } from './workbench-export.js'
@@ -48,7 +49,7 @@ export function researchHtmlText(html) {
 // their expandable detail. The signature avoids rewriting arbitrary model HTML.
 export function compactHostDashboardHtml(html) {
   if (typeof html !== 'string') return html
-  html = refineStoredTemplateHtml(refineStoredSpecialChartHtml(refineCandlestickHtml(html)))
+  html = refineComponentReadingFooter(refineStoredTemplateHtml(refineStoredSpecialChartHtml(refineCandlestickHtml(html))))
   // Previously saved host-rendered market cards keep their original HTML.
   // Apply the same surface and disclosure geometry while loading their preview.
   if (html.includes('data-sherlock-market=') && html.includes('data-sherlock-design=') && !html.includes('ODYSSEY_MARKET_PRESENTATION_V3'))
