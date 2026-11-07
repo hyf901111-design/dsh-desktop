@@ -21,7 +21,7 @@ it('keeps long table source notes scrollable without covering table rows',async(
  }finally{await page.close();}
 },20000);
 afterAll(async()=>{await browser?.close();});
-it('restores legacy summary clicks into one visible tab panel without moving original controls',async()=>{
+it('ignores relative legacy disclosure clicks while preserving explicit new open states',async()=>{
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'保存的排名',unit:'亿元',note:'完整口径',labels:['甲','乙'],series:[{name:'估算',values:[20,10]}]})));
  const page=await browser.newPage({viewport:{width:566,height:360}});
  try{
@@ -30,10 +30,17 @@ it('restores legacy summary clicks into one visible tab panel without moving ori
   const routes=await frame.locator('body>details>summary,.component-reading-footer>details>summary').evaluateAll(nodes=>nodes.map(el=>{const route=[];for(let e=el;e!==document.body;e=e.parentElement)route.unshift([...e.parentElement.children].indexOf(e));return route;}));
   const events=Object.fromEntries(routes.map((targetRoute,i)=>['saved-'+i,{id:'saved-'+i,clock:i+1,targetRoute,tag:'SUMMARY',type:'click'}]));
   await page.evaluate(events=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events},readOnly:false},'*'),events);
-  await expect.poll(()=>frame.getByRole('tab',{name:'口径与来源'}).getAttribute('aria-selected')).toBe('true');
-  expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(true);expect(await frame.locator('table').isVisible()).toBe(false);
-  await frame.getByRole('tab',{name:'完整数据'}).click();expect(await frame.locator('table').isVisible()).toBe(true);
+  await page.waitForTimeout(200);
+  expect(await frame.getByRole('tab',{name:'完整数据'}).getAttribute('aria-selected')).toBe('true');
+  expect(await frame.locator('table').isVisible()).toBe(true);
   expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(false);
+  events.close={id:'close',clock:3,targetRoute:routes[0],tag:'SUMMARY',type:'click',checked:false};
+  await page.evaluate(events=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events},readOnly:false},'*'),events);
+  await expect.poll(()=>frame.locator('table').isVisible()).toBe(false);
+  events.source={id:'source',clock:4,targetRoute:routes[1],tag:'SUMMARY',type:'click',checked:true};
+  await page.evaluate(events=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events},readOnly:false},'*'),events);
+  await expect.poll(()=>frame.getByRole('tab',{name:'口径与来源'}).getAttribute('aria-selected')).toBe('true');
+  expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(true);
   expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').content)).toBe('""');
   expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').borderRightStyle)).toBe('solid');
  }finally{await page.close();}
@@ -116,6 +123,8 @@ it('opens supplemental chart data by default and supports compact sortable resiz
    await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
    expect(await frame.locator('table').isVisible()).toBe(true);
    expect((await frame.locator('.component-reading-tabs').boundingBox()).height).toBeLessThanOrEqual(34);
+   const tabStyle=await frame.getByRole('tab',{name:'完整数据'}).evaluate(el=>{const s=getComputedStyle(el);return {background:s.backgroundColor,padding:s.padding,border:s.borderBottomStyle,radius:s.borderRadius};});
+   expect(tabStyle).toEqual({background:'rgba(0, 0, 0, 0)',padding:'0px 1px',border:'solid',radius:'0px'});
    await frame.getByRole('tab',{name:'完整数据'}).click();await frame.locator('table').waitFor({state:'visible'});
    expect(await frame.locator('tbody tr').allTextContents()).toEqual(['甲20001120甲基金','乙10002—乙基金']);
    const header=frame.locator('thead th').nth(1);await header.locator('button').click();

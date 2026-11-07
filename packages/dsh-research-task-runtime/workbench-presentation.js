@@ -45,6 +45,13 @@ body :is(th,td){height:26px!important;box-sizing:border-box!important;padding:4p
 body .financial-profile :is(th,td){white-space:nowrap!important;overflow-wrap:normal!important}
 body th{position:sticky;top:0;z-index:1;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;font-weight:500!important}
 body th button{border:0!important;background:none!important;color:inherit!important;padding:0!important;text-align:inherit!important;font:inherit!important;min-height:0!important}
+/* Reading tabs share a fixed row; generic action-button styling must not
+   turn them into filled controls or remove the selected-tab underline. */
+body .component-reading-tabs button{background:transparent!important;color:inherit!important;border:0!important;border-radius:0!important;margin:0!important;padding:0!important;min-height:0!important;font:inherit!important}
+body .component-reading-tabs [role=tab]{padding:0 1px!important;height:28px!important;border-bottom:1px solid transparent!important}
+body[data-component-reading-tabs=expanded] .component-reading-tabs [role=tab][aria-selected=true]{color:var(--sherlock-text)!important;border-bottom-color:currentColor!important}
+body .component-reading-tabs button:hover{color:var(--sherlock-text)!important}
+body .component-reading-tabs .component-reading-toggle{height:24px!important;width:22px!important}
 body tbody tr{background:var(--sherlock-bg)!important}body tbody tr:nth-child(even){background:var(--sherlock-row-alternate)!important}body tbody tr:hover,body tbody tr[aria-selected="true"]{background:var(--sherlock-row-selected)!important}
 body td{background:transparent!important}body:where([data-sherlock-market]) td{color:var(--sherlock-text)!important}body:where(:not([data-sherlock-market])) :where(td){color:var(--sherlock-text)}body :is(td,th)[data-numeric="true"]{text-align:right!important}body :is(td,th)[data-numeric="false"]{text-align:left!important}
 /* Native observed-source tables retain explicit business markings under host defaults. */
