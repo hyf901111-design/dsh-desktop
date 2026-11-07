@@ -84,6 +84,127 @@
           "尚需实际模型验证采用新计算协议的成功率与耗时"
         ],
         "generatedAt": "2026-11-07T04:04:39.188662+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+        "verificationCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/ensure-local-dependencies.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 900000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-candidates-host.test.ts",
+              "test/computer-use-plugin-integration.test.js",
+              "test/computer-vision.test.js",
+              "test/macos-package-runtime.test.ts",
+              "test/runtime.test.ts",
+              "test/integration-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "ci",
+              "--prefer-offline",
+              "--no-audit",
+              "--no-fund"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci --prefer-offline --no-audit --no-fund",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/prepare-memory-model.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/prepare-memory-model.mjs",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-runtime.test.js",
+              "test/memory-evidence.test.js",
+              "test/memory-local-index.test.js",
+              "test/memory-semantic.test.ts",
+              "test/memory-search.test.ts",
+              "test/memory-bridge.test.ts",
+              "test/memory-source.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-import.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-runtime.test.js test/memory-evidence.test.js test/memory-local-index.test.js test/memory-semantic.test.ts test/memory-search.test.ts test/memory-bridge.test.ts test/memory-source.test.ts test/memory-document.test.ts test/memory-import.test.ts",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a056db1de495837427ee640843ab5152ddf7be34",
+            "completedAt": "2026-11-07T04:05:05.742Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-07T04:05:05.742Z"
       }
     },
     {
