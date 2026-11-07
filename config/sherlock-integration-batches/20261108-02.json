@@ -219,6 +219,78 @@
           "多卡原需求有明确图形而无可信每卡人类范围时，保守阻止静态来源替代；公开行情源仍可能暂时不可用"
         ],
         "generatedAt": "2026-11-07T22:53:28.983356+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c12af10bb11db923a49fc8d7064b9ae3a6f002df",
+        "verificationCommit": "c12af10bb11db923a49fc8d7064b9ae3a6f002df",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-table-scalar-recovery.test.js",
+              "test/component-generation-reliability.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/workbench-generation-fill-browser.test.js",
+              "test/explore-random-wallpapers-browser.test.ts",
+              "test/statement-evidence.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-planning-feedback.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-table-scalar-recovery.test.js test/component-generation-reliability.test.js test/component-data-refresh.test.js test/component-source-binding.test.js test/component-data-submission.test.js test/workbench-table-input-contract.test.js test/bundled-component-skill.test.js test/research-generation-watch.test.js test/research-workbench-feedback-actions.test.js test/workbench-generation-fill-browser.test.js test/explore-random-wallpapers-browser.test.ts test/statement-evidence.test.js test/research-component-source-tools.test.js test/research-workbench-feedback.test.js test/research-planning-feedback.test.js --maxWorkers=4",
+            "verifiedCommit": "c12af10bb11db923a49fc8d7064b9ae3a6f002df",
+            "completedAt": "2026-11-07T22:54:10.771Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "keeps source tools on a|shows a safe .* cause|recovers once from provider pressure|cancels queued|cancels a running|shared generation does not repair or publish"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t keeps source tools on a|shows a safe .* cause|recovers once from provider pressure|cancels queued|cancels a running|shared generation does not repair or publish",
+            "verifiedCommit": "c12af10bb11db923a49fc8d7064b9ae3a6f002df",
+            "completedAt": "2026-11-07T22:54:10.771Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c12af10bb11db923a49fc8d7064b9ae3a6f002df",
+            "completedAt": "2026-11-07T22:54:10.771Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c12af10bb11db923a49fc8d7064b9ae3a6f002df",
+            "completedAt": "2026-11-07T22:54:10.771Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-07T22:54:10.771Z"
       }
     }
   ],
