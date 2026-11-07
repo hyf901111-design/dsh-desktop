@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-06",
+  "branch": "codex/integration/20261108-06",
+  "baseMainCommit": "28b351ccdeda30c4c0757dc0db66672670656b07",
+  "expectedMainCommit": "28b351ccdeda30c4c0757dc0db66672670656b07",
+  "createdAt": "2026-11-07T23:48:48.058Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "JSON格式恢复失败后的来源明细备用交付",
+        "branch": "codex/feat/table-format-fallback-20261108",
+        "baseCommit": "28b351ccdeda30c4c0757dc0db66672670656b07",
+        "tipCommit": "cd11f0776d2155d485081890d8d9e78a199e3b40",
+        "commits": [
+          {
+            "commit": "cd11f0776d2155d485081890d8d9e78a199e3b40",
+            "parents": [
+              "28b351ccdeda30c4c0757dc0db66672670656b07"
+            ],
+            "subject": "修复：呈现JSON恢复失败后保留来源明细并允许再次重试"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-11-08-native-generation-recovery.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-table-recovery.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-table-scalar-recovery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-observed-table-compiler.test.js",
+              "test/component-table-unit-recovery.test.js",
+              "test/component-unit-projection.test.js",
+              "test/component-table-scalar-recovery.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  8 passed (8)\n      Tests  207 passed (207)\n   Start at  07:48:16\n   Duration  3.50s (transform 4.15s, setup 0ms, import 8.77s, tests 2.66s, environment 0ms)",
+            "verifiedCommit": "cd11f0776d2155d485081890d8d9e78a199e3b40",
+            "completedAt": "2026-11-07T23:48:20.059418+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "cd11f0776d2155d485081890d8d9e78a199e3b40",
+            "completedAt": "2026-11-07T23:48:29.521253+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "cd11f0776d2155d485081890d8d9e78a199e3b40",
+            "completedAt": "2026-11-07T23:48:29.537846+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "完整运行时回归验证一次模型修复后切换来源明细，持久partial及再次重试；实际已取得数据保留，原约束反例通过。当前修复待main构建原生验证。"
+        },
+        "acceptanceCriteria": [
+          "无有效JSON时仍可从本任务已成功的业务响应交付来源明细",
+          "来源明细明确partial，不计为原功能完整完成，可再次尝试",
+          "原始图形、交互、刷新、来源和权限约束不绕过",
+          "207项聚焦检查和类型检查通过，规则v1.39.9"
+        ],
+        "risks": [
+          "当前修复待main重建原生验证",
+          "公开数据源仍可能暂时不可用"
+        ],
+        "generatedAt": "2026-11-07T23:48:29.537877+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-observed-table-compiler.test.js",
+        "test/component-table-unit-recovery.test.js",
+        "test/component-unit-projection.test.js",
+        "test/component-table-scalar-recovery.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
