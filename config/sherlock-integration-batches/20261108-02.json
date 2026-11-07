@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-02",
+  "branch": "codex/integration/20261108-02",
+  "baseMainCommit": "66e8a35ee2a14bb59177bfc4efd9f998a3b47b05",
+  "expectedMainCommit": "66e8a35ee2a14bb59177bfc4efd9f998a3b47b05",
+  "createdAt": "2026-11-07T22:54:07.643Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件单值编译和分级恢复、壁纸悬停描边与锚点优化",
+        "branch": "codex/feat/native-acceptance-recovery-20261108",
+        "baseCommit": "66e8a35ee2a14bb59177bfc4efd9f998a3b47b05",
+        "tipCommit": "325430394e80b54f0979c2b49e39619c841a1081",
+        "commits": [
+          {
+            "commit": "81fe70396f7bd0c6c92daacbdc9251b1a556dcd5",
+            "parents": [
+              "66e8a35ee2a14bb59177bfc4efd9f998a3b47b05"
+            ],
+            "subject": "修复：主题壁纸悬停时保留完整选中描边"
+          },
+          {
+            "commit": "25b9894a82542b6bee9dbd50cb75a733d2f95676",
+            "parents": [
+              "81fe70396f7bd0c6c92daacbdc9251b1a556dcd5"
+            ],
+            "subject": "优化：收紧主题页锚点间距并略微放大圆点"
+          },
+          {
+            "commit": "51211b7cccf115ce0561751dba456ed9aee48be9",
+            "parents": [
+              "25b9894a82542b6bee9dbd50cb75a733d2f95676"
+            ],
+            "subject": "修复：按单值语义编译表格并增加分级重试与来源明细恢复"
+          },
+          {
+            "commit": "325430394e80b54f0979c2b49e39619c841a1081",
+            "parents": [
+              "51211b7cccf115ce0561751dba456ed9aee48be9"
+            ],
+            "subject": "测试：隔离演示进度层验证真实工作台恢复控件"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-08-native-generation-recovery.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/observed-table-recovery.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/statement-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/table-projection.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-generation-watch.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-table-scalar-recovery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-random-wallpapers-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/component-native-scalar-tables-20261108.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-watch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback-actions.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-generation-fill-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-table-scalar-recovery.test.js",
+              "test/component-generation-reliability.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/workbench-generation-fill-browser.test.js",
+              "test/explore-random-wallpapers-browser.test.ts",
+              "test/statement-evidence.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-planning-feedback.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  15 passed (15)\n      Tests  304 passed (304)\n   Start at  06:52:36\n   Duration  40.49s (transform 3.50s, setup 0ms, import 10.95s, tests 71.29s, environment 1ms)",
+            "verifiedCommit": "325430394e80b54f0979c2b49e39619c841a1081",
+            "completedAt": "2026-11-07T22:53:17.381934+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "keeps source tools on a|shows a safe .* cause|recovers once from provider pressure|cancels queued|cancels a running|shared generation does not repair or publish"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  1 passed (1)\n      Tests  11 passed | 259 skipped (270)\n   Start at  06:53:17\n   Duration  2.03s (transform 1.19s, setup 0ms, import 1.46s, tests 449ms, environment 0ms)",
+            "verifiedCommit": "325430394e80b54f0979c2b49e39619c841a1081",
+            "completedAt": "2026-11-07T22:53:19.683604+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "325430394e80b54f0979c2b49e39619c841a1081",
+            "completedAt": "2026-11-07T22:53:28.964028+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "325430394e80b54f0979c2b49e39619c841a1081",
+            "completedAt": "2026-11-07T22:53:28.983320+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "两个真实失败财务表及完整来源回放通过；真实序列化控件、原生 workspace 部分视图重试保留旧内容、宽窄屏 hover 描边与分页浏览器检查通过。原 main 原生验收已发现并保留4/6首次生成失败证据，当前修复待集成后重新构建及原生重试，不以浏览器检查冒充已安装客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "选中壁纸hover上浮后上边框完整，页间仍裁切且不露相邻页",
+          "主题锚点间距2px、圆点5px并保持24px点击区",
+          "真实表格单值映射由宿主编译，保留来源、单位、零值、缺失与歧义约束，错误定位具体单元格",
+          "暂时性失败有限重试并保留已成功响应，取消与权限拒绝不绕过",
+          "定向修复失败后允许普通表格来源明细替代，持久标注partial且汇总不算完整成功；可再次尝试并保留旧内容",
+          "明确图形、交互、刷新或指定来源要求不被静态替代；来源明细保留完整字段与元数据",
+          "最近一期财务按实际披露记录发现报告期，固定报告期不改写"
+        ],
+        "risks": [
+          "native修复后尚未重新构建和验证；不声明整体零失败或线上失败率",
+          "旧component-keyed-table-projection已有7项基线断言失败，旧research-task-runtime已有11项文案/路由断言失败，均在干净66e8a35ee复现；相关新路径及取消/重试用例已独立验证",
+          "多卡原需求有明确图形而无可信每卡人类范围时，保守阻止静态来源替代；公开行情源仍可能暂时不可用"
+        ],
+        "generatedAt": "2026-11-07T22:53:28.983356+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-table-scalar-recovery.test.js",
+        "test/component-generation-reliability.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/workbench-table-input-contract.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/research-generation-watch.test.js",
+        "test/research-workbench-feedback-actions.test.js",
+        "test/workbench-generation-fill-browser.test.js",
+        "test/explore-random-wallpapers-browser.test.ts",
+        "test/statement-evidence.test.js",
+        "test/research-component-source-tools.test.js",
+        "test/research-workbench-feedback.test.js",
+        "test/research-planning-feedback.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "keeps source tools on a|shows a safe .* cause|recovers once from provider pressure|cancels queued|cancels a running|shared generation does not repair or publish"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
