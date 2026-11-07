@@ -1,3 +1,4 @@
+import {validateWorkbenchTabs} from './workbench-tabs.js';
 import {comparisonWindowInstruction} from './workbench-comparison-window.js';
 import {workbenchLayoutFrames} from './workbench-layout.js';
 import {ATTACHMENT_GUIDANCE} from './attachment-template-contract.js';
@@ -446,6 +447,7 @@ export function validateWorkbench(value) {
     if (value.sharedContext !== undefined && (!(deferred || datasets) || !str(value.sharedContext, 3000))) throw Error('共同场景约束仅支持延后模拟生成或完整共同记录，限3000字符。');
     if (value.originalRequest !== undefined && !str(value.originalRequest, 8000)) throw Error('原始工作台需求快照无效或超过8000字符。');
     if (deferred && !value.sharedContext && !value.originalRequest) throw Error('延后模拟生成需要原始需求或共同场景约束。');
+    const tabs = validateWorkbenchTabs(value.tabs, value.panels.length, value.originalRequest);
     const seen = new Set();
     const panels = resolveWorkbenchSamples(value.panels).map(p => {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || ((p.size !== undefined || p.height !== undefined) && !Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
@@ -602,7 +604,7 @@ export function validateWorkbench(value) {
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
-    const result = { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(datasets ? {sharedDatasets:datasets} : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
+    const result = { requestId: value.requestId.trim(), title, ...(tabs ? {tabs} : {}), ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(datasets ? {sharedDatasets:datasets} : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
     if ((deferred || value.originalRequest || value.sharedContext) && panels.some(panel => workbenchPanelPrompt(result, panel).length > 18000)) throw Error('共同场景与面板需求超过单卡生成上限，请压缩面板说明，保留原始需求。');
     return result;
 }

@@ -2060,6 +2060,18 @@ export class ResearchTaskRuntime {
         sourceAttempts.push(...(result.sourceAttempts??[]))
         if (task.cancelRequested || terminalState(task.state)) return
       }
+      // A malformed news presentation must not discard verified articles after
+      // the bounded model repair. Build the ordinary list from observed rows;
+      // retain the same topic and evidence gates, never invent a publication date.
+      if(output===undefined&&plannedFormat==='news'&&!articleTimeline&&!prototypeIssue&&generationError?.code==='INVALID_OUTPUT'&&!sharedStateError&&!chartGeometryError&&!designPolicyError&&canSynthesizeResult(result)){
+        const seed=JSON.stringify({version:1,type:'news',title:panelTitle??'相关新闻',items:[]})
+        const recovered=coverageNewsData(seed,{records:sourceRecords.filter(record=>record.purpose!=='discovery')},task.prompt,{verified:data=>!componentFeedEvidenceIssue(JSON.stringify(data),sourceRecords,feedOptions)})
+        const data=extractArtifactObjects(recovered)[0]
+        if(data?.type==='news'&&data.items.length&&!componentFeedEvidenceIssue(recovered,sourceRecords,feedOptions)){
+          output=acceptArtifactOutput(JSON.stringify(componentSnapshotData(data)))
+          binding=undefined
+        }
+      }
       if(output===undefined&&verifiedSnapshot&&!prototypeIssue&&generationError?.code==='INVALID_OUTPUT'&&!sharedStateError&&!chartGeometryError&&!designPolicyError&&canSynthesizeResult(result)){
         const variantIssue=workbenchMarketVariantIssue(verifiedSnapshot.output,task.prompt)
         const recencyIssue=workbenchMarketRecencyIssue(JSON.stringify(verifiedSnapshot.data),task.prompt,new Date(this.now()))

@@ -510,3 +510,22 @@ it('沙盒网页直接缩放原组件，拖放不复制或重载iframe',async()=
  expect(f.document.querySelectorAll('[data-research-node-id="'+node.id+'"]')).toHaveLength(1);expect(source.querySelector('iframe')).toBe(frame);expect(source.hasAttribute('data-board-tabs-live-preview')).toBe(true)
  await f.event('keydown',f.win,{key:'Escape'});await vi.waitFor(()=>expect(f.document.querySelector('.ew-board-tabs-live-preview')).toBeNull())
 })
+
+
+it('工作台创建真实三个页签，异步完成和重复挂载保留归属且可切换',async()=>{
+ const f=await fixture()
+ const plan={id:'three-companies',createdAt:1000,tabs:[{name:'中芯国际',panelIndexes:[0,1]},{name:'北方华创',panelIndexes:[2,3]},{name:'韦尔股份',panelIndexes:[4,5]}],panels:Array.from({length:6},(_,i)=>({nodeId:'company-panel-'+i,title:'面板'+i,prompt:'测试',pending:true,x:0,y:i*300,width:400,height:280}))}
+ await f.act(()=>expect(f.workspace.applyWorkbench(plan)).toBe(true))
+ expect(nav(f.workspace).containerSpec.tabs.map(t=>t.name)).toEqual(['中芯国际','北方华创','韦尔股份'])
+ expect(f.document.querySelectorAll('[data-board-tab]')).toHaveLength(3)
+ for(let i=0;i<3;i++){
+  await f.event('click',f.document.querySelectorAll('[data-board-tab]')[i])
+  expect(f.workspace.getVisibleBoardSnapshot().artifacts.map(n=>n.id)).toEqual(['company-panel-'+(i*2),'company-panel-'+(i*2+1)])
+ }
+ const names=nav(f.workspace).containerSpec.tabs.map(t=>t.id)
+ await f.act(()=>expect(f.workspace.applyWorkbench({...plan,panels:plan.panels.map((p,i)=>({...p,taskId:'task-'+i}))})).toBe(true))
+ expect(nav(f.workspace).containerSpec.tabs.map(t=>t.id)).toEqual(names)
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(7)
+ expect(f.workspace.getActiveBoardTab()).toBe(names[2])
+ const reloaded=f.registry.for('financial-test');expect(nav(reloaded).containerSpec.tabs.map(t=>t.nodeIds)).toEqual(plan.tabs.map(t=>t.panelIndexes.map(i=>plan.panels[i].nodeId)))
+})

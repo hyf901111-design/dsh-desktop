@@ -1,3 +1,4 @@
+import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
 import {DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
@@ -288,7 +289,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     const sourcePlanning=sourceOnly||prototypeSource
     const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !simulation && !/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
     const tools = request.tools.flatMap(tool => {
-      if (tool.name === CREATE_TOOL) return [{ ...tool, description: (prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
+      if (tool.name === CREATE_TOOL) return [{ ...tool, description: WORKBENCH_TABS_GUIDANCE+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
         ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters) : sourceCreationParameters(tool.parameters) } : {}) }]
       const evidence=prototypeEvidenceSchema(tool,state.evidenceTargets)
       if(evidence){
@@ -303,7 +304,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
     // Model route, effort, signal and the shared registry stay unchanged. The
     // low-cost plan has no complete-data prerequisite in any user domain.
-    return { ...request, system: [request.system, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets),
+    return { ...request, system: [request.system, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets),
       '【本轮呈现与回报】历史表现比较把共同基期走势图放首屏第一张，配区间收益对照；未要求实时监控或技术分析时，不用最新报价和各标的独立K线替代比较。同组汇总和变化合为一张wide总览，排名只画排名指标，代码、规模、管理人等同批辅助信息写入该图的detailColumns/detailRows，默认展开；不再单建重复的明细卡，独立分析或用户明确要求时除外。只用一句话说明将交付的内容，不要公开接口目录、来源选择原则、当前模式判断、模板映射或面板任务分工。数据限制仅说明对结果的影响。'].filter(Boolean).join('\n'), tools }
   })
   return () => {

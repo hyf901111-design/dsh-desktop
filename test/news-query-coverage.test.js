@@ -30,6 +30,21 @@ async function fixture({rows=[record(plan[0],[article(names[0])])],attempts=[],o
 function visible(task){const window=new Window();try{window.document.body.innerHTML=JSON.parse(task.finalOutput).html;return window.document.querySelector('[data-news-query-coverage]')?.textContent??''}finally{void window.happyDOM.abort()}}
 async function settled(f){await f.runtime.tasks.get(f.receipt.taskId).runPromise;const task=f.runtime.inspect({parentSessionId:'p',taskId:f.receipt.taskId});return {task,model:task.finalOutput&&readTemplateModel(JSON.parse(task.finalOutput))}}
 
+it('新闻两次格式修复仍失败时直接呈现已核验的相关新闻，不重复取数',async()=>{
+ const rows=[record(plan[0],[article(names[0]),article('无关公司')])]
+ const f=await fixture({rows,outputs:[{invalid:true},{invalid:true}]}),{task,model}=await settled(f)
+ expect(task.state,task.error).toBe('completed')
+ expect(f.start).toHaveBeenCalledTimes(2)
+ expect(model.data.items).toHaveLength(1)
+ expect(model.data.items[0]).toMatchObject({title:article(names[0]).title,date:article(names[0]).time,url:article(names[0]).url})
+ expect(JSON.parse(task.finalOutput).html).not.toContain('宿主按用户')
+})
+it('没有已核验业务记录时不能用新闻回退伪装生成成功',async()=>{
+ const f=await fixture({rows:[],outputs:[{invalid:true},{invalid:true}]}),{task}=await settled(f)
+ expect(task.state).toBe('failed')
+ expect(task.finalOutput).toBeUndefined()
+})
+
 it('captures the finite validated plan through normalization without exposing an arbitrary URL or page cursor',()=>{
  expect(plannedNewsQueries(prompt)).toEqual(plan)
  expect(validateWorkbench(normalized)).toEqual(normalized)

@@ -52,3 +52,42 @@ export function boardTabsVisible(snapshot,activeId) {
  const tab=nav.containerSpec.tabs.find(t=>t.id===activeId)||nav.containerSpec.tabs[0],ids=new Set(tab.nodeIds)
  return {...snapshot,files:snapshot.files.filter(n=>ids.has(n.id)),artifacts:snapshot.artifacts.filter(n=>n.id!==nav.id&&ids.has(n.id))}
 }
+
+// Install the navigation and its exact node ownership in the same canvas
+// transaction as the cards. Async completions/reloads then retain membership.
+export function boardTabsApplyWorkbench(snapshot,plan) {
+ if(!plan.tabs)return snapshot
+ const members=new Set(),names=new Set()
+ const desired=plan.tabs.map((tab,i)=>{
+  const nodeIds=tab.panelIndexes?.map(index=>{
+   const id=Number.isInteger(index)&&plan.panels[index]?.nodeId
+   if(!id||members.has(id))throw Error('工作台页签组件归属无效')
+   members.add(id);return id
+  })
+  const key=tab.name?.trim().normalize('NFKC').toLocaleLowerCase()
+  if(names.has(key))throw Error('工作台页签名称重复')
+  names.add(key)
+  return {id:plan.id+'-tab-'+i,name:tab.name,nodeIds}
+ })
+ if(members.size!==plan.panels.length||boardTabsIssue(desired))throw Error('工作台页签结构无效')
+ const previous=boardTabsNode(snapshot)
+ const live=new Set([...snapshot.files,...snapshot.artifacts].map(n=>n.id))
+ if([...members].some(id=>!live.has(id)))throw Error('工作台组件尚未就绪')
+ // Replaying an already mounted plan never resurrects deleted tabs or undoes
+ // a user's later rename/move. The caller only runs this when adding cards.
+ let tabs=previous?previous.containerSpec.tabs.map(t=>({...t,nodeIds:t.nodeIds.filter(id=>!members.has(id))})):[]
+ if(!previous){
+  const prior=[...snapshot.files,...snapshot.artifacts].filter(n=>!members.has(n.id)).map(n=>n.id)
+  if(prior.length){let name='原有内容';while(names.has(name.normalize('NFKC').toLocaleLowerCase()))name+=' ·';tabs.push({id:plan.id+'-existing',name,nodeIds:prior})}
+ }
+ for(const tab of desired){
+  const same=tabs.find(t=>t.name.normalize('NFKC').toLocaleLowerCase()===tab.name.normalize('NFKC').toLocaleLowerCase())
+  if(same)same.nodeIds.push(...tab.nodeIds)
+  else tabs.push(tab)
+ }
+ const spec=boardTabsSpec({version:1,type:'board-tabs',title:'页签',revision:previous?previous.containerSpec.revision+1:0,tabs})
+ if(!spec)throw Error('工作台页签结构无效')
+ const id=previous?.id??plan.id+'-tabs'
+ const node=previous?{...previous,containerSpec:spec}:{id,messageId:id,kind:'generated-container',title:'页签',excerpt:'页签',containerPrompt:'看板页签导航',containerSpec:spec,generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,sizeMode:'manual',x:500,y:29,width:976,height:34}
+ return {...snapshot,artifacts:previous?snapshot.artifacts.map(n=>n.id===id?node:n):[...snapshot.artifacts,node]}
+}
