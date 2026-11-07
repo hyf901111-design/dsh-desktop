@@ -65,6 +65,41 @@ it.each(['symbol','limit','source','extra','catalog'])('does not canonicalize a 
  if(kind==='catalog')candidate.requests[0].args.operation='catalog'
  expect((await f.invoke(candidate)).isError).toBe(true)
 })
+it.each(['flattened','missing-source'])('explains an incomplete %s public request and accepts the original call without refetching',async(kind)=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ const original={operation:'query',source:'fixture',parameters_json:'{"symbol":"sh000300","limit":100}'}
+ f.records[0].args=structuredClone(original)
+ candidate.requests[0].args=kind==='flattened'?{symbol:'sh000300',limit:100}:{operation:'query',parameters_json:original.parameters_json}
+ const rejected=await f.invoke(candidate)
+ expect(rejected.isError).toBe(true)
+ expect(JSON.stringify(rejected)).toContain('requests[q].args')
+ expect(JSON.stringify(rejected)).toContain('source')
+ expect(JSON.stringify(rejected)).toContain('parameters_json')
+ expect(JSON.stringify(rejected)).toContain('无需重新取数')
+ candidate.requests[0].args=original
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ expect(f.records).toHaveLength(1);expect(f.records[0].args).toEqual(original)
+})
+it('corrects a claimed per-series observation count against the selected dates without discarding source records',async()=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].response={...response,records:[{date:'2026-11-05',value:100},{date:'2026-11-06',value:102}]}
+ candidate.mapping.variant='line';candidate.mapping.labels.$map.$path='date'
+ candidate.mapping.note='两条序列均为3个交易日，以首日为100。'
+ const rejected=await f.invoke(candidate)
+ expect(rejected.isError).toBe(true);expect(JSON.stringify(rejected)).toContain('实际为2条')
+ candidate.mapping.note='实际观测均为2个交易日，以首日为100。'
+ expect((await f.invoke(candidate)).isError).toBe(false);expect(f.records[0].response.records).toHaveLength(2)
+})
+it.each(['近90个交易日的可用记录，基期为100。','数据源覆盖62个交易日，本图展示其中两日。','三个指数合计6个数据点。'])('does not confuse a window or source coverage with a plotted count: %s',async(note)=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].response={...response,records:[{date:'2026-11-05',value:100},{date:'2026-11-06',value:102}]}
+ candidate.mapping.variant='line';candidate.mapping.labels.$map.$path='date';candidate.mapping.note=note
+ expect((await f.invoke(candidate)).isError).toBe(false)
+})
+it('does not treat a category ranking as a daily observation count',async()=>{
+ const f=await fixture(),candidate=structuredClone(input);candidate.mapping.note='两指数均为60个交易日的区间收益。'
+ expect((await f.invoke(candidate)).isError).toBe(false)
+})
 it('returns the exact observed tool name when a model invents a source alias',async()=>{
  const f=await fixture(),candidate=structuredClone(input)
  candidate.requests[0].tool='fixture_query'

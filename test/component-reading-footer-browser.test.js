@@ -21,6 +21,27 @@ it('keeps long table source notes scrollable without covering table rows',async(
  }finally{await page.close();}
 },20000);
 afterAll(async()=>{await browser?.close();});
+it('keeps real date labels readable when resizing a chart with expanded details',async()=>{
+ const labels=Array.from({length:60},(_,i)=>new Date(Date.UTC(2026,7,7+i)).toISOString().slice(0,10));
+ for(const axisDecimals of [undefined,2]){
+  const page=await browser.newPage({viewport:{width:566,height:650}});page.setDefaultTimeout(3000);
+  try{
+   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'line',title:'三指数对比',unit:'基期=100',...(axisDecimals===undefined?{}:{axisDecimals}),labels,series:[{name:'指数甲',values:labels.map((_,i)=>100-i/3)},{name:'指数乙',values:labels.map((_,i)=>100+i/4)}],note:'各序列以首日为100。'})));
+   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.getByRole('tab',{name:'完整数据'}).waitFor();
+   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
+   for(const width of [320,566,880]){
+    await page.setViewportSize({width,height:650});await page.waitForTimeout(120);
+    const ticks=await frame.locator('svg text').evaluateAll(nodes=>nodes.filter(el=>el.querySelector('title')&&getComputedStyle(el).visibility!=='hidden').map(el=>{const r=el.getBBox();return{label:el.querySelector('title').textContent,left:r.x,right:r.x+r.width}}));
+    expect(ticks[0].label).toBe(labels[0]);expect(ticks.at(-1).label).toBe(labels.at(-1));
+    for(let i=1;i<ticks.length;i++)expect(ticks[i].left-ticks[i-1].right).toBeGreaterThanOrEqual(8);
+    expect(ticks[0].left).toBeGreaterThanOrEqual(0);expect(ticks.at(-1).right).toBeLessThanOrEqual(width-24);
+    expect(await frame.locator('tbody tr').count()).toBe(60);expect(await frame.locator('circle[data-point]').count()).toBe(120);
+    expect(await frame.locator('table').isVisible()).toBe(true);
+   }
+   await frame.locator('svg').focus();await page.keyboard.press('End');expect(await frame.locator('.chart-readout').textContent()).toContain(labels.at(-1));
+  }finally{await page.close();}
+ }
+},15000);
 it('ignores relative legacy disclosure clicks while preserving explicit new open states',async()=>{
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'保存的排名',unit:'亿元',note:'完整口径',labels:['甲','乙'],series:[{name:'估算',values:[20,10]}]})));
  const page=await browser.newPage({viewport:{width:566,height:360}});

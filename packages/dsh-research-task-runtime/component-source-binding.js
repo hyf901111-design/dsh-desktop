@@ -676,7 +676,10 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
       if(source)requestArgs=structuredClone(source.args)
     }
     if(source?.purpose==='discovery'){const error=Error('接口目录和参数定义不是业务数据；必须继续调用已确认的业务接口取得真实数值，再生成映射。');error.code='SOURCE_DATA_REQUIRED';throw error}
-    if(!source)throw Error('自动更新只能绑定本轮已成功取数且参数一致的数据接口，请保留原请求及真实字段。')
+    if(!source){
+      const shape=request.tool==='public_data_query'?'public_data_query 的 args 必须保留完整调用结构 {operation:"query",source:"原来源标识",parameters_json:"原查询 JSON"}；symbol、limit 等业务参数放在 parameters_json 内，不能平铺到 args 或省略 source。':''
+      throw Error(`requests[${request.key}].args 未匹配本轮已成功取数的原参数。${shape}逐字复用已成功调用的完整参数，保留真实字段路径，无需重新取数。`)
+    }
     responses[request.key]=source.response
     observed.push(source)
     requests.push({key:request.key,toolId:request.tool==='public_data_query'?request.tool:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})

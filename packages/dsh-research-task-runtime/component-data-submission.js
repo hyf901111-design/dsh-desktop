@@ -10,11 +10,24 @@ const NAME='submit_component_data'
 const SCHEMA='component_presentation_schema'
 
 export const COMPONENT_SUBMISSION_MAPPING_GUIDANCE = `requests 只引用本卡已成功执行的工具名和原参数；mapping 描述呈现结构，数据用真实字段路径引用完整响应，不复制整组数值。
+public_data_query 的 requests 项为 {key:"q",tool:"public_data_query",args:{operation:"query",source:"实际来源标识",parameters_json:"成功查询时的原 JSON"}}；完整复用调用的外层 args，不把 symbol、limit 等内层参数平铺出来。
 ${COMPONENT_DERIVED_VALUE_GUIDANCE}
 $from 指 requests.key；$path 为响应内的点分路径；$each 选择实际数组，$map 映射每行字段。表格 rows 使用 {$from:"q",$each:"实际列表",$map:[{$path:"名称字段"},{$path:"数值字段"}]}，columns 与单元格一一对应。
 列表可用 $filter:{字段:原值} 等值筛选、$sortBy:"字段"、$order:"asc|desc" 排序、$take:5 取前五或 $take:-20 取末二十；$single:true 在筛选后恰好一条时取单值。$as:"number|string" 转标量，$scale 换单位，$digits:2 控制精度，$prefix/$suffix 加文字。图表 labels 和 series.values 的 $map 必须是单个字段选择器，不用表格行的数组写法；每个标的聚合后得到单值时，使用由这些选择器组成的 values 数组。日期区间可用 $filter:{真实日期字段:{$gte:"YYYY-MM-DD",$lte:"YYYY-MM-DD"}}，边界包含当天，支持实际 YYYY-MM-DD/ YYYYMMDD 日期，先筛选再统计；自然月不能替换为固定交易日数量。共同基期比较在 values 的列表选择器用 $normalize:"base100"；日期和值必须采用完全相同的筛选排序，不把缺失填成0。
 可用字段才使用相应示例：指标 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.metric)}；排名 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.ranking)}。排名保留负号。不支持 $concat/$join/$format；名称直接选原字段，代码放明细。chart 的补充明细用 detailColumns 与 detailRows（二维数组，和表格 rows 的映射相同）；首格对应 labels，其余为辅助字段，两者必须同批筛选排序、表头与每行等长。宿主将绘图数值合并进折叠明细，主图不堆放这些字段。
-$optional/$default 写在字段选择器内，不能和 label/value 并列。不存在的非必需字段直接省略；关键缺失明确说明，不能猜路径或填假数值。来源、数据日期、单位保留真实含义；获取时间不冒充报价时间。容量不足仍引用完整响应，不删记录。宿主会从本卡实际响应补齐来源和统计区间，不必拼接 asOf；如需显式来源，kpi 使用 sources:[{name,url?}]，table/chart/market 使用 sources:[{label,url?}]，没有顶层 source 字段。非必需口径字段不存在时省略，不猜 summary.note 等路径。note 只写影响理解的一两句口径，详细来源由底栏提供，不重述所有数值、工具参数或生成过程。`
+$optional/$default 写在字段选择器内，不能和 label/value 并列。不存在的非必需字段直接省略；关键缺失明确说明，不能猜路径或填假数值。来源、数据日期、单位保留真实含义；获取时间不冒充报价时间。容量不足仍引用完整响应，不删记录。宿主会从本卡实际响应补齐来源和统计区间，不必拼接 asOf；如需显式来源，kpi 使用 sources:[{name,url?}]，table/chart/market 使用 sources:[{label,url?}]，没有顶层 source 字段。非必需口径字段不存在时省略，不猜 summary.note 等路径。note 只写影响理解的一两句口径，详细来源由底栏提供，不重述所有数值、工具参数或生成过程。不要凭日历推算交易日数；如说明实际观测数量，必须按筛选后真实记录计数，不用查询 limit 或原始响应条数代替。`
+
+// Validate only an explicit per-series count for a daily chart. A requested
+// lookback, source coverage or the combined point count is a different fact.
+// Run at submission, not when opening a saved chart; records stay untouched.
+function observationCountIssue(data){
+ if(data?.type!=='chart'||!Array.isArray(data.labels)||!data.labels.length||!data.labels.every(label=>/^\d{4}-\d{2}-\d{2}$/u.test(label))||!data.series?.every(series=>series.values?.length===data.labels.length))return null
+ for(const key of ['note','subtitle']){
+  const claims=String(data[key]??'').matchAll(/(?:均为|均有|各为|各有|每条序列(?:包含|含有|有)|每个指数(?:包含|含有|有))\s*(\d+)\s*个?\s*(?:交易日|数据点|观测(?:值|点|记录))/gu)
+  for(const claim of claims)if(Number(claim[1])!==data.labels.length)return `${key} 中每条序列的观测数量写为${claim[1]}，但筛选后实际为${data.labels.length}条。只修正或省略这句数量说明，保留完整日期与数值，无需重新取数。`
+ }
+ return null
+}
 
 // Acquisition and presentation are separate. The child chooses a renderer
 // after seeing its own complete responses, and receives correctable validation
@@ -50,6 +63,8 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
     if(!snapshot)throw error
    }
    if(!snapshot)throw Error('No verified component data yet. Obtain the requested records, then submit their exact request parameters and real field paths.')
+   const countIssue=observationCountIssue(snapshot.data)
+   if(countIssue)throw Error(countIssue)
    validateSnapshot?.(snapshot,records)
    check(exec)
    pending={callId:exec.callId,text}
