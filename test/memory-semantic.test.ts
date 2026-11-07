@@ -3,6 +3,10 @@ import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join,resolve} from 'node:path'
 import {createCipheriv,createDecipheriv,randomBytes} from 'node:crypto'
+import {execFile} from 'node:child_process'
+import {createRequire} from 'node:module'
+import {promisify} from 'node:util'
+import {transform} from 'esbuild'
 import {MemoryStore} from '../src/main/memory/store'
 import {LocalMemoryEngine} from '../src/main/memory/semantic'
 const cleanups:(()=>Promise<unknown>)[]=[]
@@ -10,6 +14,25 @@ afterEach(async()=>{for(const f of cleanups.splice(0).reverse())await f()})
 const key=randomBytes(32), encryption={isEncryptionAvailable:()=>true,encryptString(s:string){const iv=randomBytes(12),c=createCipheriv('aes-256-gcm',key,iv);return Buffer.concat([iv,c.update(s),c.final(),c.getAuthTag()])},decryptString(b:Buffer){const d=createDecipheriv('aes-256-gcm',key,b.subarray(0,12));d.setAuthTag(b.subarray(-16));return Buffer.concat([d.update(b.subarray(12,-16)),d.final()]).toString()}}
 async function store(){const dir=await mkdtemp(join(tmpdir(),'memory-semantic-'));cleanups.push(()=>rm(dir,{recursive:true,force:true}));const db=await MemoryStore.open(dir,encryption);cleanups.push(async()=>db.close());return {dir,db}}
 const rows:any[]=[{id:'one',revision:1,title:'离线阅读',content:'飞舟允许断网阅读，但不能在离线状态下编辑。',status:'active',scope:'project',projectId:'p'}]
+it('exchanges index checkpoints and recall across Electron and the shipped Node versions',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memory-electron-'));cleanups.push(()=>rm(dir,{recursive:true,force:true}))
+ const compiled=await transform(await readFile(resolve('src/main/memory/semantic.ts'),'utf8'),{loader:'ts',format:'esm'})
+ await writeFile(join(dir,'engine.mjs'),compiled.code)
+ const config={node:resolve('node_modules/node/bin/node'),worker:resolve('packages/dsh-memory-runtime/local/worker.js'),model:resolve('build/memory-model')}
+ await writeFile(join(dir,'probe.mjs'),`import {LocalMemoryEngine} from './engine.mjs';
+ let cache;const engine=new LocalMemoryEngine(${JSON.stringify(config)},{readVectors:()=>undefined,writeVectors:(_owner,value)=>cache=value});
+ try{
+  await engine.select(${JSON.stringify(rows)},'断网可以修改吗','p',Date.now(),'alice').catch(()=>{});
+  for(let i=0;i<200&&engine.status().state==='loading';i++)await new Promise(r=>setTimeout(r,20));
+  if(engine.status().state!=='ready')throw Error('Electron worker transport failed: '+engine.status().state);
+  const candidates=await engine.select(${JSON.stringify(rows)},'断网可以修改吗','p',Date.now(),'alice');
+  if(candidates[0]?.id!=='one'||!cache?.items?.one?.vector)throw Error('Missing recall or persisted vector');
+  console.log(JSON.stringify({passed:true}));
+ }finally{engine.close()}`)
+ const electron=createRequire(import.meta.url)('electron') as string
+ const {stdout}=await promisify(execFile)(electron,[join(dir,'probe.mjs')],{env:{...process.env,ELECTRON_RUN_AS_NODE:'1'},timeout:15000})
+ expect(JSON.parse(stdout.trim())).toEqual({passed:true})
+},20000)
 it('runs the real local worker with the shipped Node and verifies model assets, encrypted cache and idle release',async()=>{
  const {dir,db}=await store(),engine=new LocalMemoryEngine({node:resolve('node_modules/node/bin/node'),worker:resolve('packages/dsh-memory-runtime/local/worker.js'),model:resolve('build/memory-model'),idleMs:30},db)
  cleanups.push(async()=>engine.close())

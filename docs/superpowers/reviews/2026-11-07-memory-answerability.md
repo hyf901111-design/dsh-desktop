@@ -53,3 +53,9 @@
 索引改为后台可取消建立，期间立即返回关键词候选并继续受依据核对保护；每 128 条保存加密缓存进度。独立账户、状态与项目过滤保留。500 字级长记忆不再拖住聊天调用，最终校验重新检查到期时间与来源修订。
 
 实际产品 worker 对 919 条合成记忆测得首次建立 7.25 秒；暖查询 p95 单并发 4.95ms、3 并发 12.35ms、10 并发 36.82ms，分别为 3/9/30 次样本。进程峰值 RSS 739MiB，空闲两分钟释放；这是小样本本机结果，不是服务端容量或完整聊天响应时间。界面使用生产 view/style 在 Chromium 验证浅色/深色与 1160/720px，无横向溢出，独立开关与新增编辑正常。最终 Electron 实包验收另行记录。
+
+## 实包发现的进程通信兼容性修正
+
+首个本地包在真实 Electron 进程中出现语义检索回退，而直接用 Node 启动同包 worker 正常。定位为 Electron 与内置 Node 的 V8 序列化版本不兼容：`serialization: advanced` 导致子进程报 `Unable to deserialize cloned data due to invalid or unsupported version`。这说明单独启动 worker 不能替代宿主链路验收。
+
+消息全部为普通对象，向量缓存已编码为 base64，因此跨进程协议改为 JSON。新增以真实 Electron V8 启动产品 LocalMemoryEngine、连接内置 Node/实际模型的自动回归：修正前 fallback 失败，修正后索引、缓存返回和中文查询通过。此次直接相关的 67 项测试及 typecheck 通过；最终包须重新构建并再验收。
