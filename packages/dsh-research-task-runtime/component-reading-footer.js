@@ -2,7 +2,7 @@
 // controls so saved interaction paths and the inert source model stay intact.
 // Kept self-contained because the preview client serializes this function.
 export function refineComponentReadingFooter(html){
- if(typeof html!=='string'||html.includes('data-component-reading-footer="v4"'))return html;
+ if(typeof html!=='string'||html.includes('data-component-reading-footer="v5"'))return html;
  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
@@ -13,7 +13,7 @@ export function refineComponentReadingFooter(html){
  if(!kpi&&!chart&&!market)return html;
  // Replace only our previous display layer. The original model and every
  // existing control remain in their original DOM positions for saved replay.
- html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[123]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
+ html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[1234]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
  // Only real disclosure markup in verified host templates receives the new
  // default. Source JSON and executable strings must remain byte-for-byte intact.
  html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>{
@@ -35,7 +35,7 @@ export function refineComponentReadingFooter(html){
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.
  const hidden=[...(kpi?['.indicator-asof','.indicator-footer']:[]),...(chart?['figure>figcaption']:[]),...(market?['body>footer.market-footer']:[])];
- const style=`<style data-component-reading-footer="v4">${hidden.map(selector=>selector+'{display:none!important}').join('')}
+ const style=`<style data-component-reading-footer="v5">${hidden.map(selector=>selector+'{display:none!important}').join('')}
  body>.component-reading-footer{box-sizing:border-box;display:block;clear:both;flex:none;margin:8px 0 0!important;padding:6px 0 2px!important;border:0;border-top:1px solid var(--sherlock-border,#8883);color:var(--sherlock-muted,#888);font:11px/18px var(--sherlock-font-sans,system-ui);text-align:left}
  .component-reading-footer details{margin:0!important;padding:0!important;border:0;background:transparent;font:inherit}
  .component-reading-footer summary{min-height:22px;padding:2px 0!important;cursor:pointer;color:inherit;font:inherit}
@@ -52,23 +52,27 @@ export function refineComponentReadingFooter(html){
  .component-reading-footer a{color:var(--sherlock-link);text-underline-offset:3px}
  /* Flatten only the two host disclosures into one visual row. Original
     parents stay intact, preserving data controls and old interaction routes. */
- body[data-chart-template]:has(svg.template-chart) .chart-readout{min-height:30px;padding:4px 6px;margin:4px 0}
+ body[data-chart-template]:has(svg.template-chart) .chart-readout{display:flex;align-items:center;min-height:32px;padding:7px 10px;margin:6px 0 0;line-height:18px;border-radius:4px;overflow-wrap:anywhere}
  body[data-component-reading-tabs]{display:grid;grid-template-columns:minmax(0,1fr);align-content:start}
  body[data-component-reading-tabs]>figure{grid-row:1;grid-column:1}
  body[data-component-reading-tabs]>details,body[data-component-reading-tabs]>.component-reading-footer,body[data-component-reading-tabs]>.component-reading-footer>details{display:contents!important}
  body[data-component-reading-tabs]>details>summary,body[data-component-reading-tabs]>.component-reading-footer>details>summary{display:none!important}
- .component-reading-tabs{grid-row:2;grid-column:1;display:flex;align-items:center;gap:6px;position:sticky;top:0;z-index:3;margin-top:4px;height:28px;background:var(--sherlock-surface);color:var(--sherlock-muted);font:11px/18px var(--sherlock-font-sans,system-ui)}
+ .component-reading-tabs{grid-row:2;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:3;margin-top:8px;height:34px;background:var(--sherlock-surface);color:var(--sherlock-muted);font:11px/18px var(--sherlock-font-sans,system-ui)}
  .component-reading-tabs[hidden]{display:none}
- .component-reading-tabs [role=tablist]{display:flex;align-items:stretch;gap:16px;height:100%}
- .component-reading-tabs button{appearance:none;border:0;border-radius:0;margin:0;background:transparent;color:inherit;font:inherit;white-space:nowrap;cursor:pointer}
- .component-reading-tabs [role=tab]{padding:0 1px;border-bottom:1px solid transparent}
- body[data-component-reading-tabs=expanded] .component-reading-tabs [role=tab][aria-selected=true]{color:var(--sherlock-text);border-bottom-color:currentColor}
- .component-reading-tabs button:hover{color:var(--sherlock-text)}
- .component-reading-tabs button:focus-visible{outline:1px solid var(--sherlock-control-primary);outline-offset:-1px}
- .component-reading-toggle{height:24px;width:22px;display:grid;place-items:center;flex:none;padding:0}
+ .component-reading-tabs [role=tablist]{display:flex;align-items:center;gap:2px;padding:2px;height:30px;border-radius:7px;background:var(--sherlock-surface-muted)}
+ /* Own these controls in the host layer as well as standalone previews, so
+    general action-button geometry cannot distort the detail navigation. */
+ @layer ework-workbench{
+ body .component-reading-tabs button{appearance:none;border:0!important;border-radius:5px!important;margin:0!important;padding:0 10px!important;min-height:0!important;height:26px!important;background:transparent!important;color:inherit!important;font:inherit!important;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+ body .component-reading-tabs [role=tab][aria-selected=true]{color:var(--sherlock-text)!important;background:var(--sherlock-surface)!important;box-shadow:0 1px 3px #00000014!important}
+ body .component-reading-tabs button:hover{color:var(--sherlock-text)!important}
+ body .component-reading-tabs button:focus-visible{outline:1px solid var(--sherlock-muted)!important;outline-offset:1px!important}
+ body .component-reading-tabs .component-reading-toggle{order:2;height:28px!important;width:28px!important;flex:none;padding:0!important;border-radius:6px!important}
+ body .component-reading-tabs .component-reading-toggle:hover{background:var(--sherlock-surface-muted)!important}
+ }
  .component-reading-toggle::before{content:"";width:6px;height:6px;border:solid currentColor;border-width:0 1.2px 1.2px 0;transform:rotate(-45deg)}
- .component-reading-toggle[aria-expanded=true]::before{transform:rotate(45deg)}
- body[data-component-reading-tabs] [role=tabpanel]{grid-row:3;grid-column:1;min-width:0;max-width:100%;margin-top:6px}
+ .component-reading-toggle[aria-expanded=true]::before{transform:translateY(-2px) rotate(45deg)}
+ body[data-component-reading-tabs] [role=tabpanel]{grid-row:3;grid-column:1;min-width:0;max-width:100%;margin-top:8px}
  body[data-component-reading-tabs] [role=tabpanel][hidden]{display:none!important}
  body[data-component-reading-tabs] dl[role=tabpanel]{max-height:240px;overflow:auto;padding:6px 0;font:11px/18px var(--sherlock-font-sans,system-ui)}
  @media(max-width:360px){.component-reading-footer dl>div{grid-template-columns:1fr;gap:1px}}
@@ -88,6 +92,7 @@ export function refineComponentReadingFooter(html){
    document.body.dataset.componentReadingTabs=expanded?'expanded':'collapsed';
    disclosures.forEach((detail,i)=>{detail.open=expanded&&i===active;panels[i].hidden=!detail.open;tabs[i].setAttribute('aria-selected',String(i===active));tabs[i].tabIndex=i===active?0:-1;});
    toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',expanded?'收起组件详情':'展开组件详情');toggle.setAttribute('aria-controls',panels[active].id);
+   toggle.title=expanded?'收起详情':'展开详情';
    window.dispatchEvent(new Event('sherlock-presentation-change'));
   };
   tabs.forEach((tab,i)=>{

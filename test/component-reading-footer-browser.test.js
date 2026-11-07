@@ -143,9 +143,9 @@ it('opens supplemental chart data by default and supports compact sortable resiz
    await frame.locator('.component-reading-footer').waitFor();
    await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
    expect(await frame.locator('table').isVisible()).toBe(true);
-   expect((await frame.locator('.component-reading-tabs').boundingBox()).height).toBeLessThanOrEqual(34);
-   const tabStyle=await frame.getByRole('tab',{name:'完整数据'}).evaluate(el=>{const s=getComputedStyle(el);return {background:s.backgroundColor,padding:s.padding,border:s.borderBottomStyle,radius:s.borderRadius};});
-   expect(tabStyle).toEqual({background:'rgba(0, 0, 0, 0)',padding:'0px 1px',border:'solid',radius:'0px'});
+   expect((await frame.locator('.component-reading-tabs').boundingBox()).height).toBeLessThanOrEqual(40);
+   const tabStyle=await frame.getByRole('tab',{name:'完整数据'}).evaluate(el=>{const s=getComputedStyle(el);return {background:s.backgroundColor,padding:parseFloat(s.paddingLeft),radius:parseFloat(s.borderRadius)};});
+   expect(tabStyle.background).not.toBe('rgba(0, 0, 0, 0)');expect(tabStyle.padding).toBeGreaterThanOrEqual(8);expect(tabStyle.radius).toBeGreaterThanOrEqual(4);
    await frame.getByRole('tab',{name:'完整数据'}).click();await frame.locator('table').waitFor({state:'visible'});
    expect(await frame.locator('tbody tr').allTextContents()).toEqual(['甲20001120甲基金','乙10002—乙基金']);
    const header=frame.locator('thead th').nth(1);await header.locator('button').click();
@@ -164,3 +164,27 @@ it('opens supplemental chart data by default and supports compact sortable resiz
   }finally{await page.close();}
  }
 },30000);
+it('centers single and wrapped readouts and keeps the detail switch separate from its collapse action',async()=>{
+ for(const width of [320,600])for(const theme of ['light','dark']){
+  const labels=['沪深300','沪深300、中证500和创业板指数的近三个月区间涨跌幅及对照结果'];
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'收益对比',unit:'%',note:'以共同区间的实际收盘数据计算。',labels,series:[{name:'区间涨跌幅',values:[-13.64,-17.33]}]})));
+  const page=await browser.newPage({viewport:{width,height:640},colorScheme:theme});
+  try{
+   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
+   await frame.getByRole('tab',{name:'完整数据'}).waitFor();
+   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
+   const group=await frame.getByRole('tablist').boundingBox(),toggle=await frame.getByRole('button',{name:'收起组件详情'}).boundingBox();
+   expect(toggle.x).toBeGreaterThanOrEqual(group.x+group.width+12);expect(Math.abs(toggle.y+toggle.height/2-group.y-group.height/2)).toBeLessThan(1);
+   for(const key of ['Home','End']){
+    await frame.locator('svg').focus();await page.keyboard.press(key);
+    const balance=await frame.locator('.chart-readout').evaluate(el=>{const r=el.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(el);const t=range.getBoundingClientRect();return {above:t.top-r.top,below:r.bottom-t.bottom,height:r.height,scroll:el.scrollWidth,client:el.clientWidth};});
+    expect(Math.abs(balance.above-balance.below)).toBeLessThanOrEqual(2);expect(balance.height).toBeGreaterThanOrEqual(32);expect(balance.scroll).toBeLessThanOrEqual(balance.client+1);
+   }
+   const beforeSwitch=await frame.getByRole('tablist').boundingBox();
+   await frame.getByRole('tab',{name:'口径与来源'}).click();expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(true);
+   const after=await frame.getByRole('tablist').boundingBox();expect(Math.abs(after.y-beforeSwitch.y)).toBeLessThan(1);
+   await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(false);
+   await frame.getByRole('button',{name:'展开组件详情'}).focus();await page.keyboard.press('Enter');expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(true);
+  }finally{await page.close();}
+ }
+},20000);
