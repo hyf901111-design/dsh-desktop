@@ -14,7 +14,10 @@ import {installDefaultWebLinks} from '../scripts/lib/default-web-links-client.mj
 const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valuation-observed.json',import.meta.url),'utf8'))
 // This production-retained HTML is byte-identical to the observed persisted
 // 79,846-character artifact (verified independently in the round1 report).
-const persistedObserved=retainTemplateModel(renderMarketArtifact(observed),observed)
+// Recreate the persisted pre-collapsible-note envelope. New long-note artifacts
+// intentionally retain their richer iframe composition instead of projecting.
+const legacyArtifact=model=>{const artifact=renderMarketArtifact(model);return {...artifact,html:artifact.html.replace('<details class="market-methodology"><summary>完整口径与说明</summary><span>','<span>').replace('</span></details><span>','</span><span>')}}
+const persistedObserved=retainTemplateModel(legacyArtifact(observed),observed)
 const longNote=observed.note+'续注 <脚本> & "原样文本"。'.repeat(200).slice(0,2000-observed.note.length-2)+'终点'
 let browser,bundle
 beforeAll(async()=>{
@@ -49,10 +52,12 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('preserves na
   const source='https://example.com/source?x=1&y=2#original',detail='https://example.org/detail?code=300308&view=full'
   expect(longNote).toHaveLength(2000)
   const linkedModel={...observed,note:longNote,sources:[{label:'来源 <甲>',url:source},{label:'无链接来源'}],rowLinks:[detail,null,null]}
-  const html=retainTemplateModel(renderMarketArtifact(linkedModel),linkedModel).html
+  const html=retainTemplateModel(legacyArtifact(linkedModel),linkedModel).html
   await page.evaluate(html=>window.renderNative(html),html)
   await page.addScriptTag({content:`window.disposeWidths=(${installWorkbenchTableColumns.toString()})(document.querySelector('#fixture'));window.opened=[];window.disposeLinks=(${installDefaultWebLinks.toString()})({documentTarget:document,bridge:{subscribe:()=>()=>{},openSource:async request=>window.opened.push(request)},sessions:{list:{getSnapshot:()=>({current:'fixture-session'})}}});`})
   const context=page.locator('.terminal-native-context'),wrap=page.locator('.fund-native-table-wrap'),headers=page.locator('thead th'),rows=page.locator('tbody tr')
+  expect(await headers.first().locator('button').evaluate(el=>getComputedStyle(el,'::after').content)).toBe('"↕"')
+  expect((await headers.first().boundingBox()).height).toBeLessThanOrEqual(28)
   expect(await context.textContent()).toBe(observed.asOf+longNote+'来源 <甲> ↗ · 无链接来源')
   expect(await page.locator('#sherlock-template-data').count()).toBe(0)
   expect(await page.locator('script').count()).toBe(2) // Only fixture and installers, never artifact scripts.
@@ -92,6 +97,7 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('preserves na
   expect(await context.evaluate(el=>{const end=el.lastElementChild;const b=end.getBoundingClientRect(),box=el.getBoundingClientRect();return b.bottom<=box.bottom+1&&b.top>=box.top})).toBe(true)
   await page.screenshot({path:`/tmp/workbench-native-persisted-long-note-${width}-${theme}.png`,fullPage:true})
   await headers.first().locator('button').click();await headers.first().locator('button').click()
+  expect(await headers.first().locator('button').evaluate(el=>getComputedStyle(el,'::after').content)).toBe('"↓"')
   expect(await rows.first().locator('td').first().textContent()).toBe('601138')
   await page.getByRole('searchbox',{name:'搜索表格内容'}).fill('新易盛')
   expect(await rows.count()).toBe(1);expect(await rows.first().textContent()).toContain('新易盛')
