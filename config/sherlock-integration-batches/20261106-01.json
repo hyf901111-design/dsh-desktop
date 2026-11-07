@@ -9,23 +9,59 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件内部对齐间距生成规范",
+        "featureName": "研究组件底部信息收纳与来源日期",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
-        "tipCommit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
+        "baseCommit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
+        "tipCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
         "commits": [
           {
-            "commit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
+            "commit": "9c4a86efc1fd970aff840285620e9933c3245415",
             "parents": [
-              "7ccf13e50c21396574c69cb0e6bee0d75650e558"
+              "7f228c65d6c897a746f8478cd40ab1025f9546a9"
             ],
-            "subject": "优化：将组件对齐间距与表格基础交互纳入生成规范"
+            "subject": "优化研究组件底部信息层级与来源日期展示"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+          },
+          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-status.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-reading-footer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
           }
         ],
         "checks": [
@@ -34,25 +70,46 @@
               "npx",
               "vitest",
               "run",
-              "test/research-design-policy.test.js",
-              "test/component-surface-style.test.js"
+              "test/component-reading-footer.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "test/component-data-status.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/kpi-template.test.js",
+              "test/workbench-kpi-refresh.test.js",
+              "test/research-design-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "98 项相关检查通过",
-            "verifiedCommit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
-            "completedAt": "2026-11-07T02:36:59.911Z",
+            "summary": "142项聚焦检查通过，含宽窄深浅色浏览器交互、保存数据及旧控件路径保持",
+            "verifiedCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
+            "completedAt": "2026-11-07T03:20:25.112667+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查通过",
+            "verifiedCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
+            "completedAt": "2026-11-07T03:20:25.112667+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "补充生成提示词，不修改运行界面"
+          "outcome": "passed",
+          "summary": "真实Chromium中指标卡、图表、表格说明默认折叠，点击与键盘可展开；等待集成包已有ETF工作台验证"
         },
         "acceptanceCriteria": [
-          "生成规范包含同组指标对齐及紧凑表格交互"
+          "主视图区保留完整指标，重复说明收纳至口径与来源",
+          "静态快照底栏显示简短来源与真实数据日期，不显示无效刷新按钮",
+          "已保存卡片原数据及表格图例交互保持"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-07T02:36:59.911Z"
+        "risks": [
+          "暂仅自动整理已知版本宿主模板，自定义HTML仍依照更新后的生成规范"
+        ],
+        "generatedAt": "2026-11-07T03:20:25.112667+00:00"
       }
     },
     {
