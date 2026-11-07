@@ -21,6 +21,23 @@ it('keeps long table source notes scrollable without covering table rows',async(
  }finally{await page.close();}
 },20000);
 afterAll(async()=>{await browser?.close();});
+it('restores legacy summary clicks into one visible tab panel without moving original controls',async()=>{
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'保存的排名',unit:'亿元',note:'完整口径',labels:['甲','乙'],series:[{name:'估算',values:[20,10]}]})));
+ const page=await browser.newPage({viewport:{width:566,height:360}});
+ try{
+  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
+  await frame.getByRole('tab',{name:'完整数据'}).waitFor();
+  const routes=await frame.locator('body>details>summary,.component-reading-footer>details>summary').evaluateAll(nodes=>nodes.map(el=>{const route=[];for(let e=el;e!==document.body;e=e.parentElement)route.unshift([...e.parentElement.children].indexOf(e));return route;}));
+  const events=Object.fromEntries(routes.map((targetRoute,i)=>['saved-'+i,{id:'saved-'+i,clock:i+1,targetRoute,tag:'SUMMARY',type:'click'}]));
+  await page.evaluate(events=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events},readOnly:false},'*'),events);
+  await expect.poll(()=>frame.getByRole('tab',{name:'口径与来源'}).getAttribute('aria-selected')).toBe('true');
+  expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(true);expect(await frame.locator('table').isVisible()).toBe(false);
+  await frame.getByRole('tab',{name:'完整数据'}).click();expect(await frame.locator('table').isVisible()).toBe(true);
+  expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(false);
+  expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').content)).toBe('""');
+  expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').borderRightStyle)).toBe('solid');
+ }finally{await page.close();}
+},15000);
 it('keeps chart detail entries visible together at the real compact card height',async()=>{
  const labels=['华泰柏瑞沪深300ETF','华夏上证科创板50成份ETF','南方中证1000ETF','南方中证500ETF','易方达创业板ETF'];
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'ETF流入前五',unit:'亿元',asOf:'2026-10-30 至 2026-11-06',note:'估算金额为份额变动乘以期末净值。',labels,series:[{name:'净流入估算',values:[321.13,234,216.07,199.55,182.89]}],detailColumns:['产品','代码'],detailRows:labels.map((label,i)=>[label,String(i)]),sources:[{label:'Tushare',url:'https://tushare.pro'}]})));
@@ -30,13 +47,20 @@ it('keeps chart detail entries visible together at the real compact card height'
   await frame.locator('.component-reading-footer').waitFor();
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
   await expect.poll(()=>frame.locator('body').evaluate(el=>el.scrollHeight<=innerHeight+1)).toBe(true);
-  const entries=await frame.locator('details>summary').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom}}));
+  const entries=await frame.getByRole('tab').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom}}));
   expect(entries).toHaveLength(2);expect(Math.abs(entries[0].top-entries[1].top)).toBeLessThanOrEqual(3);
   for(const entry of entries)expect(entry.bottom).toBeLessThanOrEqual(303);
   expect((await frame.locator('svg').boundingBox()).height).toBeGreaterThanOrEqual(160);
-  await frame.getByText('查看完整数据',{exact:true}).click();expect(await frame.locator('tbody tr').count()).toBe(5);
-  await frame.getByText('查看完整数据',{exact:true}).click();
-  await frame.getByText('口径与来源',{exact:true}).click();expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);
+  const dataTab=frame.getByRole('tab',{name:'完整数据'}),sourceTab=frame.getByRole('tab',{name:'口径与来源'});
+  await dataTab.click();expect(await frame.locator('tbody tr').count()).toBe(5);
+  const expanded=await sourceTab.boundingBox();expect(Math.abs(expanded.y-entries[1].top)).toBeLessThanOrEqual(1);
+  await sourceTab.click();expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);
+  expect(await frame.locator('table').isVisible()).toBe(false);expect(await sourceTab.getAttribute('aria-selected')).toBe('true');
+  await sourceTab.focus();await page.keyboard.press('ArrowLeft');expect(await dataTab.getAttribute('aria-selected')).toBe('true');
+  expect(await frame.locator('table').isVisible()).toBe(true);expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(false);
+  await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('table').isVisible()).toBe(false);
+  expect(await frame.getByRole('button',{name:'展开组件详情'}).getAttribute('aria-expanded')).toBe('false');
+  await expect.poll(()=>frame.locator('body').evaluate(el=>el.scrollHeight<=innerHeight+1)).toBe(true);
  }finally{await page.close();}
 },15000);
 const meta={asOf:'2026-11-06 · 静态快照，自动更新未绑定',range:'2026-10-30 至 2026-11-06',note:'估算金额采用期末净值，缺失记录不补零。'.repeat(25),sources:[{name:'Tushare etf_share_size + etf_basic + trade_cal（ETF运营汇总 overview）',url:'https://tushare.pro/document/2?doc_id=408'}]};
@@ -67,9 +91,9 @@ it('folds chart methodology while leaving legend filtering and full data usable'
   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.locator('.component-reading-footer').waitFor();
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
   expect(await frame.locator('figcaption').isVisible()).toBe(false);
-  await frame.getByText('查看完整数据',{exact:true}).click();await frame.locator('table').waitFor({state:'visible',timeout:2000});
+  await frame.getByRole('tab',{name:'完整数据'}).click();await frame.locator('table').waitFor({state:'visible',timeout:2000});
   await frame.locator('[data-chart-series="0"]').click();expect(await frame.locator('[data-chart-series="0"]').getAttribute('aria-pressed')).toBe('false');
-  await frame.getByText('口径与来源',{exact:true}).click();expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
+  await frame.getByRole('tab',{name:'口径与来源'}).click();expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
  }finally{await page.close();}
 },20000);
 it('keeps supplemental chart data collapsed and supports compact sortable resizable detail tables',async()=>{
@@ -81,8 +105,8 @@ it('keeps supplemental chart data collapsed and supports compact sortable resiza
    await frame.locator('.component-reading-footer').waitFor();
    await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
    expect(await frame.locator('table').isVisible()).toBe(false);
-   expect((await frame.locator('.component-reading-footer').boundingBox()).height).toBeLessThanOrEqual(34);
-   await frame.getByText('查看完整数据',{exact:true}).click();await frame.locator('table').waitFor({state:'visible'});
+   expect((await frame.locator('.component-reading-tabs').boundingBox()).height).toBeLessThanOrEqual(34);
+   await frame.getByRole('tab',{name:'完整数据'}).click();await frame.locator('table').waitFor({state:'visible'});
    expect(await frame.locator('tbody tr').allTextContents()).toEqual(['甲20001120甲基金','乙10002—乙基金']);
    const header=frame.locator('thead th').nth(1);await header.locator('button').click();
    expect(await header.getAttribute('aria-sort')).toBe('ascending');expect(await frame.locator('tbody tr').first().textContent()).toContain('乙10');
@@ -96,7 +120,7 @@ it('keeps supplemental chart data collapsed and supports compact sortable resiza
    const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+45,box.y+box.height/2,{steps:5});await page.mouse.up();
    expect(Number(await handle.getAttribute('aria-valuenow'))).toBeGreaterThan(start+30);
    expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
-   await frame.getByText('查看完整数据',{exact:true}).click();expect(await frame.locator('table').isVisible()).toBe(false);
+   await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('table').isVisible()).toBe(false);
   }finally{await page.close();}
  }
 },30000);

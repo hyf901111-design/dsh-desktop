@@ -127,7 +127,8 @@ export function cartesianChartRuntime(spec, geometry) {
     });
     // Expanded records scroll naturally; they must not squash the chart.
     const compactFooter=document.querySelector('.component-reading-footer');
-    const footerHeight=compactFooter?Math.max(0,...disclosures):disclosures.reduce((sum,h)=>sum+h,0);
+    const tabBar=document.querySelector('.component-reading-tabs:not([hidden])');
+    const footerHeight=tabBar?outerHeight(tabBar):compactFooter?Math.max(0,...disclosures):disclosures.reduce((sum,h)=>sum+h,0);
     const chrome=[...document.querySelectorAll('.chart-context,.legend,.chart-readout,figcaption')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+footerHeight+2;
     size=geometry(spec,lastWidth,visible,lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
   };
