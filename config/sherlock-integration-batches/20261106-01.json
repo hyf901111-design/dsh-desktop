@@ -9,42 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究分析规划与组件表格交互",
+        "featureName": "研究组件数据先行与同任务提交恢复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4",
-        "tipCommit": "e465ab934dffc8dc25e2817af17892269936257e",
+        "baseCommit": "e465ab934dffc8dc25e2817af17892269936257e",
+        "tipCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
         "commits": [
           {
-            "commit": "bb69badfca9693498988f7f0c8189483bf85e371",
+            "commit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
             "parents": [
-              "6efb92702a8ac878a3aae6501bd9c92c6f3c45c4"
+              "e465ab934dffc8dc25e2817af17892269936257e"
             ],
-            "subject": "优化：统一组件表格排序箭头与紧凑表头并强化列宽拖动提示"
-          },
-          {
-            "commit": "e465ab934dffc8dc25e2817af17892269936257e",
-            "parents": [
-              "bb69badfca9693498988f7f0c8189483bf85e371"
-            ],
-            "subject": "修复：区分研究分析与行情快捷规划并规范数据映射交付"
+            "subject": "优化：按真实数据选择组件呈现并在同一任务内修正交付"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "docs/verification/2026-11-07-research-workbench-quality.md"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-profile.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
@@ -52,27 +37,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-data-submission.test.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-native-interactivity.mjs"
+            "path": "test/research-task-runtime.test.js"
           },
           {
             "status": "M",
-            "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/openterminal-table-header-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-native-context-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-execution-policy.test.js"
+            "path": "test/workbench-design-contract.test.js"
           }
         ],
         "checks": [
@@ -81,14 +58,15 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-execution-policy.test.js",
+              "test/component-data-submission.test.js",
               "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js"
+              "test/workbench-execution-policy.test.js",
+              "test/prototype-live-submission.test.js"
             ],
             "outcome": "passed",
-            "summary": "映射及规划131项检查通过",
-            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
-            "completedAt": "2026-11-07T00:50:46.198538+00:00",
+            "summary": "112项通过",
+            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+            "completedAt": "2026-11-07T01:11:33.284912+00:00",
             "timeoutMs": 180000
           },
           {
@@ -96,15 +74,15 @@
               "npx",
               "vitest",
               "run",
-              "test/openterminal-table-header-browser.test.js",
-              "test/research-market-native-context-browser.test.js",
-              "test/workbench-table-columns.test.js",
-              "test/financial-profile.test.js"
+              "test/research-task-runtime.test.js",
+              "test/workbench-design-contract.test.js",
+              "-t",
+              "restores the exact native table contract|keeps the requested multi-security trend"
             ],
             "outcome": "passed",
-            "summary": "表格交互24项聚焦检查通过",
-            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
-            "completedAt": "2026-11-07T00:50:46.198538+00:00",
+            "summary": "6项通过",
+            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+            "completedAt": "2026-11-07T01:11:33.284912+00:00",
             "timeoutMs": 180000
           },
           {
@@ -116,9 +94,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "Node类型检查通过",
-            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
-            "completedAt": "2026-11-07T00:50:46.198538+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+            "completedAt": "2026-11-07T01:11:33.284912+00:00",
             "timeoutMs": 180000
           },
           {
@@ -129,24 +107,25 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "e465ab934dffc8dc25e2817af17892269936257e",
-            "completedAt": "2026-11-07T00:50:46.198538+00:00",
+            "verifiedCommit": "d98aa3723f75fc14af248e2b556fbe06bd31f19c",
+            "completedAt": "2026-11-07T01:11:33.284912+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "待合并集成测试包验证原生表格交互及重新生成，不将源码检查当作产品验收"
+          "summary": "待集成测试包以实际模型重跑ETF及其他用户需求；聚焦检查不作为UI验收"
         },
         "acceptanceCriteria": [
-          "排序箭头与列宽拖动和紧凑表头",
-          "分析需求不强套行情模板",
-          "ETF实际生成成功且保留正确来源口径"
+          "真实数据决定呈现形式",
+          "同一个子任务修正映射而不重新取数",
+          "ETF周度规模及资金进出四卡实际成功且数据口径正确"
         ],
         "risks": [
-          "ETF与指数比较新包生成待复验"
+          "已有基线18项宽范围断言失败已对比确认，含旧来源优先策略和尺寸断言；本次直接改动聚焦118项通过",
+          "实际模型和打包UI仍待验证"
         ],
-        "generatedAt": "2026-11-07T00:50:46.198538+00:00"
+        "generatedAt": "2026-11-07T01:11:33.284912+00:00"
       }
     }
   ],
