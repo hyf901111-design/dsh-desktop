@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "指标卡对齐与间距规范",
+        "featureName": "已保存指标卡统一布局",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "07a4dc3a36e2eac4734fa0bb75ad07c80de64323",
-        "tipCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
+        "baseCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
+        "tipCommit": "e84039942092978f33fb4880112b88de1b640586",
         "commits": [
           {
-            "commit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
+            "commit": "e84039942092978f33fb4880112b88de1b640586",
             "parents": [
-              "07a4dc3a36e2eac4734fa0bb75ad07c80de64323"
+              "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4"
             ],
-            "subject": "优化：统一指标卡标题数值单位的对齐和同排高度"
+            "subject": "修复：已保存指标卡同步应用统一对齐规范"
           }
         ],
         "files": [
@@ -38,8 +38,8 @@
             ],
             "outcome": "passed",
             "summary": "10项指标数据和展开功能检查",
-            "verifiedCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
-            "completedAt": "2026-11-07T01:37:15.571047+00:00",
+            "verifiedCommit": "e84039942092978f33fb4880112b88de1b640586",
+            "completedAt": "2026-11-07T01:40:30.061876+00:00",
             "timeoutMs": 180000
           },
           {
@@ -50,8 +50,8 @@
             ],
             "outcome": "passed",
             "summary": "差异检查",
-            "verifiedCommit": "cbd0fd10daef7d9e61cc478fe0962d5a695a76a4",
-            "completedAt": "2026-11-07T01:37:15.571047+00:00",
+            "verifiedCommit": "e84039942092978f33fb4880112b88de1b640586",
+            "completedAt": "2026-11-07T01:40:30.061876+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -67,7 +67,7 @@
         "risks": [
           "需真实组件宽窄验收"
         ],
-        "generatedAt": "2026-11-07T01:37:15.571047+00:00"
+        "generatedAt": "2026-11-07T01:40:30.061876+00:00"
       }
     }
   ],
