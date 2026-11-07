@@ -86,18 +86,21 @@ export function businessText(value, max = 120) {
   return typeof value === 'string' && value.length > 0 && value.length <= max && !technical.test(value) && !/[\u0000-\u001f]/.test(value) ? value : undefined
 }
 // Strict public envelope. Unknown keys and provider prose are rejected at both boundaries.
-export function validateFinancialResult(value, query, clock = () => new Date()) {
+export function validateFinancialResult(value, query, clock = () => new Date(), { historyAggregate = false } = {}) {
   const expected = validateFinancialQuery(query)
+  // Wire responses keep their existing budget. Only the local, individually
+  // validated daily-history pages may use the one-year aggregate budget.
+  const aggregate = historyAggregate && expected.intent === 'history' && expected.interval === '1d'
   const fail = () => { throw serviceError('FINANCIAL_UNAVAILABLE') }
   if (!value || value.schema_version !== 'financial-1' || value.request_hash !== financialHash(validateFinancialQuery(query)) ||
       !['complete', 'partial', 'unavailable', 'unsupported', 'ambiguous'].includes(value.status) ||
       Object.keys(value).some(k => !['schema_version','request_hash','received_at','status','records','catalog','limitations'].includes(k)) ||
-      Buffer.byteLength(JSON.stringify(value)) > 64 * 1024) fail()
+      Buffer.byteLength(JSON.stringify(value)) > (aggregate ? 512 : 64) * 1024) fail()
   const now = clock().valueOf()
   if (typeof value.received_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value.received_at)) fail()
   const age = now - Date.parse(value.received_at)
   if (!Number.isFinite(age) || age < -60000 || age > 15 * 60000) fail()
-  if (!Array.isArray(value.records) || value.records.length > 500 || !Array.isArray(value.limitations) ||
+  if (!Array.isArray(value.records) || value.records.length > (aggregate ? 1468 : 500) || !Array.isArray(value.limitations) ||
       value.limitations.some(s => !Object.values(LIMITATIONS).includes(s))) fail()
   if (value.status === 'complete' && (value.limitations.length || (!value.records.length && expected.intent !== 'catalog'))) fail()
   if (['unavailable','unsupported'].includes(value.status) && value.records.length) fail()

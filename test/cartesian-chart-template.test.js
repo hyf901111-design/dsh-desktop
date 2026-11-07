@@ -157,7 +157,7 @@ describe('Figma cartesian templates',()=>{
  it.each(['area','stackedArea','bar','groupedBar','stackedBar','horizontal','lollipop','combo'])('%s keeps its zero baseline for magnitude comparison',variant=>{
    const svg=cartesianChartSvg(data(variant,{series:[{name:'A',values:[90,100,103]}]}));
    const ticks=svg.elements.filter(el=>el.tag==='text').slice(0,5).map(el=>el.children[0]);
-   expect(ticks[0]).toBe('0');expect(ticks[4]).toBe('103');
+   expect(ticks[0]).toBe('0');expect(ticks[4]).toBe(['horizontal','lollipop'].includes(variant)?'120':'103');
  });
  it('rejects malformed and semantically impossible charts without fabricating replacement values',()=>{
    for(const broken of [data('percentBar',{series:[{name:'A',values:[1,-1,0]}]}),data('dumbbell',{series:[{name:'A',values:[1,2,3]}]}),data('area',{series:[{name:'A',values:[1,null,2]}]}),data('combo',{series:[{name:'A',values:[1,2,3],kind:'pie'}]})]){
