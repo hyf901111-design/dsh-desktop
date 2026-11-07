@@ -27,3 +27,21 @@
 检索候选通过核对之前不能出现在可被旧版 runtime 直接注入的 `block` 中。主进程返回候选、运行时核对并打包；提交前再次验证 ownerEpoch/scopeEpoch/revision。
 
 证据：仓库外 `local-memory-product/relevance-minilm/relevance-results.json` 与 `local-memory-product/evidence-model/evidence-results.json`；可复现脚本为 `experiments/local-memory-spike/{relevance-benchmark,evidence-benchmark}.mjs`。当前模型 API 原始输出仅来自合成题目。
+
+## 产品实际推理配置复测
+
+适配器能力声明中 GLM 5.3 只提供 low/high/max，因此产品不强行发送不支持的 off。选择可用的最低推理档（优先 off，否则 low），temperature 0；有推理模型给 2,000 输出 token，8 秒独立硬截止。对不响应取消的适配器也可按时退出，且不会接纳迟到结果。
+
+以产品的 `thinking=enabled, reasoning_effort=low, max_tokens=2000, deadline=8s` 重新运行原封不动的 110 题两轮：
+
+| 指标 | 第一轮 | 第二轮 |
+| --- | --- | --- |
+| 原始正例完整命中 | 37/40（92.5%） | 37/40（92.5%） |
+| 独立正例完整命中 | 40/40（100%） | 39/40（97.5%） |
+| 无答案未注入 | 30/30 | 30/30 |
+| 格式或超时失败 | 1（q01 JSON 不合法） | 1（q06 超过 8 秒） |
+| 独立选择延迟 p95 | 2.09 秒 | 1.60 秒 |
+
+失败计入漏召回，不剔除，均失败关闭。旧 benchmark 的 `pass` 同时要求零 API/格式失败，因此这两份报告严格标记为 false，不能称为全调用成功。产品接入依据是两轮均满足已定“正例 ≥90%、无答案误用 0”的功能门槛，服务可用性实测 218/220，保留约 0.9% 本轮跳过记忆的限制。此为本地测试候选，不承诺所有模型质量，也不宣称全链路只需几毫秒。
+
+复测证据分别保留在仓库外 `local-memory-product/evidence-product-config/evidence-results.json`、`evidence-product-repeat/evidence-results.json`，未覆盖先前报告。
