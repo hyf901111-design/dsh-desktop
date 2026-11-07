@@ -140,15 +140,45 @@ export function cartesianChartRuntime(spec, geometry) {
 export function renderCartesianChart(spec) {
   if(!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===spec?.variant)||chartDataIssue(spec))return undefined;
   // Keep the original native line/bar data path for existing saved consumers.
-  if(['line','bar'].includes(spec.variant)&&!['asOf','unit','subtitle','note','axisDecimals'].some(k=>spec[k]!==undefined)&&spec.labels.length<=24&&spec.series.length<=6)return undefined;
+  if(['line','bar'].includes(spec.variant)&&!['asOf','unit','subtitle','note','axisDecimals','detailRows'].some(k=>spec[k]!==undefined)&&spec.labels.length<=24&&spec.series.length<=6)return undefined;
   const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const precise=spec.axisDecimals!==undefined,geometryProgram=precise?'('+cartesianChartAxisPrecision.toString()+')('+cartesianChartSvg.toString()+')':cartesianChartSvg.toString();
   const geometry=(precise?cartesianChartAxisPrecision(cartesianChartSvg):cartesianChartSvg)(spec);
-  const rows=spec.labels.map((l,i)=>`<tr><td>${esc(l)}</td>${spec.series.map(s=>`<td>${s.values[i]}</td>`).join('')}</tr>`).join('');
+  const rows=spec.labels.map((l,i)=>`<tr><td>${esc(l)}</td>${spec.series.map(s=>`<td>${s.values[i]}</td>`).join('')}${(spec.detailRows?.[i]?.slice(1)??[]).map(value=>`<td>${esc(value===null?'—':value)}</td>`).join('')}</tr>`).join('');
   const html=`<!doctype html><html><head><meta charset="utf-8"><style>
 body{margin:0;padding:10px 12px;font:12px/1.5 var(--sherlock-font-sans);color:var(--sherlock-text);background:var(--sherlock-surface)}*{box-sizing:border-box}figure{margin:0;min-width:0}.chart-context,figcaption{color:var(--sherlock-muted);overflow-wrap:anywhere}.chart-context{margin-bottom:4px}.legend{display:flex;gap:4px 12px;flex-wrap:wrap;margin-bottom:6px}.legend button{font:inherit;display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--sherlock-control-text,var(--sherlock-text));padding:3px 0;cursor:pointer}.legend i{width:12px;height:3px;background:var(--series)}.legend button[aria-pressed="false"]{opacity:.4}.legend button:focus-visible{outline:1px solid var(--sherlock-muted)}svg{display:block;width:100%;max-width:100%;overflow:visible}svg text{fill:var(--sherlock-muted);font:11px var(--sherlock-font-sans)}.grid{stroke:var(--sherlock-border);stroke-width:.5}.chart-cursor{stroke:var(--sherlock-muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}.chart-readout{background:var(--sherlock-surface-muted);color:var(--sherlock-text);min-height:36px;padding:6px 8px;margin:6px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}figcaption{font-size:11px}details{border-top:1px solid var(--sherlock-border);margin-top:8px;padding-top:6px}summary{cursor:pointer}.data-scroll{max-height:200px;overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--sherlock-border)}th:first-child,td:first-child{text-align:left}thead{color:var(--sherlock-text);background:var(--sherlock-surface-muted)}tbody tr:hover{background:var(--sherlock-surface-muted)}
-</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure><div class="chart-context">${esc([spec.subtitle,spec.variant==='percentBar'?'占比 · 原值单位：'+(spec.unit||'未提供'):spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((s,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(s.name)}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(s.name)}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>分类</th>${spec.series.map(s=>`<th>${esc(s.name)}${spec.unit?' ('+esc(spec.unit)+')':''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>(${cartesianChartRuntime.toString()})(${JSON.stringify(spec).replace(/</g,'\\u003c')},${geometryProgram});</script></body></html>`;
-  return {version:1,type:'html',title:spec.title,html};
+</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure><div class="chart-context">${esc([spec.subtitle,spec.variant==='percentBar'?'占比 · 原值单位：'+(spec.unit||'未提供'):spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((s,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(s.name)}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(s.name)}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>${esc(spec.detailColumns?.[0]??'分类')}</th>${spec.series.map(s=>`<th>${esc(s.name)}${spec.unit?' ('+esc(spec.unit)+')':''}</th>`).join('')}${(spec.detailColumns?.slice(1)??[]).map(name=>`<th>${esc(name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>(${cartesianChartRuntime.toString()})(${JSON.stringify(spec).replace(/</g,'\\u003c')},${geometryProgram});</script></body></html>`;
+  const content=spec.detailRows?html.replace('</body>',`<script>(${installCartesianChartDetails.toString()})(${JSON.stringify(spec).replace(/</g,'\\u003c')});</script></body>`):html;
+  return {version:1,type:'html',title:spec.title,html:content};
+}
+
+// Supplementary fields stay in one collapsed table. Sorting changes its view,
+// never the chart's source order or the relationship between labels and values.
+export function installCartesianChartDetails(spec) {
+  const table=document.querySelector('body[data-chart-template] details table');
+  if(!table||!spec.detailRows)return;
+  const rows=[...table.tBodies[0].rows],headers=[...table.tHead.rows[0].cells];
+  const values=spec.labels.map((label,i)=>[label,...spec.series.map(series=>series.values[i]),...spec.detailRows[i].slice(1)]);
+  const collator=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
+  let selected=-1,ascending=true;
+  headers.forEach((header,column)=>{
+    const label=header.getAttribute('data-column-label')||header.textContent.trim();
+    const button=document.createElement('button');button.type='button';button.textContent=label;
+    button.setAttribute('aria-label','按'+label+'排序');button.dataset.chartDetailColumn=String(column);
+    button.style.cssText='display:flex;align-items:center;color:inherit;background:transparent;border:0;font:inherit;cursor:pointer';
+    [...header.childNodes].filter(node=>node.nodeType===3).forEach(node=>node.remove());header.prepend(button);header.setAttribute('aria-sort','none');
+    button.addEventListener('click',()=>{
+      ascending=selected===column?!ascending:true;selected=column;
+      headers.forEach((cell,i)=>cell.setAttribute('aria-sort',i===column?(ascending?'ascending':'descending'):'none'));
+      const ordered=rows.map((row,i)=>({row,i,value:values[i][column]})).sort((a,b)=>{
+        const missing=value=>value===null||value==='';
+        if(missing(a.value)!==missing(b.value))return missing(a.value)?1:-1;
+        const order=typeof a.value==='number'&&typeof b.value==='number'?a.value-b.value:collator.compare(String(a.value??''),String(b.value??''));
+        return (ascending?order:-order)||a.i-b.i;
+      });
+      table.tBodies[0].append(...ordered.map(entry=>entry.row));
+    });
+  });
 }
 
 /** Optional presentation only: preserve every original coordinate and observation.
