@@ -2,7 +2,7 @@
 // controls so saved interaction paths and the inert source model stay intact.
 // Kept self-contained because the preview client serializes this function.
 export function refineComponentReadingFooter(html){
- if(typeof html!=='string'||html.includes('data-component-reading-footer="v3"'))return html;
+ if(typeof html!=='string'||html.includes('data-component-reading-footer="v4"'))return html;
  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
@@ -13,10 +13,14 @@ export function refineComponentReadingFooter(html){
  if(!kpi&&!chart&&!market)return html;
  // Replace only our previous display layer. The original model and every
  // existing control remain in their original DOM positions for saved replay.
- html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[12]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
+ html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[123]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
  // Only real disclosure markup in verified host templates receives the new
  // default. Source JSON and executable strings must remain byte-for-byte intact.
- html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>/^<details\b/i.test(tag)&&!/^<details\b[^>]*\sopen(?:\s|=|>)/i.test(tag)?tag.slice(0,-1)+' open>':tag);
+ html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>{
+  if(!/^<details\b/i.test(tag))return tag;
+  if(!/\sdata-workbench-default-open\s*=/i.test(tag))tag=tag.slice(0,-1)+' data-workbench-default-open="component-details-v1">';
+  return /\sopen(?:\s|=|>)/i.test(tag)?tag:tag.slice(0,-1)+' open>';
+ });
  if(kpi)html=html.replaceAll('current={version:1,open:[]}','current={version:1,open:tiles.map((_,i)=>i)}').replaceAll('current=valid(s)?s:{version:1,open:[]}','current=valid(s)?s:{version:1,open:tiles.map((_,i)=>i)}');
  html=html.replace(/(<summary\b[^>]*>)[▸▶►▼▾]\s*/gu,'$1');
  const text=value=>typeof value==='string'&&value.trim()&&value.length<=8000?value.trim():'';
@@ -31,7 +35,7 @@ export function refineComponentReadingFooter(html){
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.
  const hidden=[...(kpi?['.indicator-asof','.indicator-footer']:[]),...(chart?['figure>figcaption']:[]),...(market?['body>footer.market-footer']:[])];
- const style=`<style data-component-reading-footer="v3">${hidden.map(selector=>selector+'{display:none!important}').join('')}
+ const style=`<style data-component-reading-footer="v4">${hidden.map(selector=>selector+'{display:none!important}').join('')}
  body>.component-reading-footer{box-sizing:border-box;display:block;clear:both;flex:none;margin:8px 0 0!important;padding:6px 0 2px!important;border:0;border-top:1px solid var(--sherlock-border,#8883);color:var(--sherlock-muted,#888);font:11px/18px var(--sherlock-font-sans,system-ui);text-align:left}
  .component-reading-footer details{margin:0!important;padding:0!important;border:0;background:transparent;font:inherit}
  .component-reading-footer summary{min-height:22px;padding:2px 0!important;cursor:pointer;color:inherit;font:inherit}
@@ -103,5 +107,5 @@ export function refineComponentReadingFooter(html){
   bar.hidden=false;render();
  }
  const tabs=chart&&html.includes('svg class="template-chart"')?'<div class="component-reading-tabs" hidden><button class="component-reading-toggle" type="button" aria-label="展开组件详情" aria-expanded="false"></button><div role="tablist" aria-label="组件详情"><button id="component-reading-tab-0" type="button" role="tab" aria-selected="true">完整数据</button><button id="component-reading-tab-1" type="button" role="tab" aria-selected="false" tabindex="-1">口径与来源</button></div></div>':'';
- return html.replace('</body>',`<footer class="component-reading-footer" aria-label="组件数据说明"><details open><summary>口径与来源</summary><dl>${rows.join('')}</dl></details>${tabs}</footer>${style}${tabs?'<script>('+installReadingTabs.toString()+')();</script>':''}</body>`);
+ return html.replace('</body>',`<footer class="component-reading-footer" aria-label="组件数据说明"><details open data-workbench-default-open="component-details-v1"><summary>口径与来源</summary><dl>${rows.join('')}</dl></details>${tabs}</footer>${style}${tabs?'<script>('+installReadingTabs.toString()+')();</script>':''}</body>`);
 }

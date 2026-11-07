@@ -797,7 +797,7 @@ export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInt
   const resolve=p=>p.reduce((el,n)=>el?.children[n],document.body);
   const defaultDisclosure=el=>{
     const summary=el.closest('summary'),details=summary?.parentElement;
-    return details?.tagName==='DETAILS' && details.getAttribute('data-workbench-default-open')==='price-volume-v1' ? details : null;
+    return details?.tagName==='DETAILS' && ['price-volume-v1','component-details-v1'].includes(details.getAttribute('data-workbench-default-open')) ? details : null;
   };
   const post=(type,extra={})=>parent.postMessage({type,...extra},'*');
   function apply(e){
