@@ -7,15 +7,15 @@ import {parseEditableMemory,renderEditableMemory} from './editable-document'
 import { MemoryStore, type MemoryEncryption } from './store'
 import { LocalMemoryEngine, type MemorySemanticProvider, type LocalMemoryConfig } from './semantic'
 import { splitMemoryImport } from './import'
-import { contextualMemoryEvidence, unresolvedMemoryReference } from './capture-policy'
+import { contextualMemoryEvidence, reusableMemoryEvidence, unresolvedMemoryReference } from './capture-policy'
 import { canonicalMemoryKey, MemoryRetriever, normalizedMemoryText, MEMORY_BACKGROUND_INTRO } from './retriever'
 
 type Summary = {signature:string;scopeEpoch:number;state:'pending'|'ready'|'failed';text?:string;updatedAt?:number;model?:string;attempts:number;ownerEpoch?:string}
-type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string|null>; disabled: Record<string,boolean>; settings: MemorySettings; settingsVersion?:2; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string;attempts?:number}>; imported:string[]; documentHash?:string;documentSignature?:string;documentPending?:{previousHash?:string;targetHash:string;signature:string};summary?:Summary;summaryRoute?:{provider:string;model:string};warning?:string }
+type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string|null>; disabled: Record<string,boolean>; settings: MemorySettings; settingsVersion?:2; candidatePolicyVersion?:1; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string;attempts?:number}>; imported:string[]; documentHash?:string;documentSignature?:string;documentPending?:{previousHash?:string;targetHash:string;signature:string};summary?:Summary;summaryRoute?:{provider:string;model:string};warning?:string }
 type Options = {root:string;encryption:MemoryEncryption;owner():string;isShared(sessionId:string):boolean;workspaceRoot(sessionId:string):Promise<string|null>;now?():number;legacyRoot?:string;changed?():void;semantic?:MemorySemanticProvider;semanticConfig?:LocalMemoryConfig}
 type Capture = {owner:string;epoch:string;scopeEpoch:number;jobKey:string;turn:MemoryRuntimeTurn;projectId?:string}
 const kinds=new Set(['preference','background','decision','progress']), scopes=new Set(['global','project'])
-function fresh():State {return {schemaVersion:1,revision:0,scopeEpoch:0,secret:randomBytes(32).toString('hex'),rows:{},versions:{},projects:{},bindings:{},disabled:{},settings:{use:true,auto:true,semantic:true},settingsVersion:2,suppression:[],usages:[],jobs:{},imported:[]}}
+function fresh():State {return {schemaVersion:1,revision:0,scopeEpoch:0,secret:randomBytes(32).toString('hex'),rows:{},versions:{},projects:{},bindings:{},disabled:{},settings:{use:true,auto:true,semantic:true},settingsVersion:2,candidatePolicyVersion:1,suppression:[],usages:[],jobs:{},imported:[]}}
 function text(v:unknown,max=600):string {if(typeof v!=='string'||!v.trim()||v.length>max)throw Error('记忆内容或标题无效，请精简后重试。');return v.trim()}
 function identifier(v:unknown):string {if(typeof v!=='string'||!v.length||v.length>256||/[\0\r\n]/u.test(v))throw Error('记忆参数无效。');return v}
 function secretContent(value:string) {return /(?:sk-[A-Za-z0-9]{16,}|(?:password|api[_ -]?key|access[_ -]?token|密码|密钥|验证码)\s*[:：=]\s*\S{4,}|\b\d{15,19}\b)/iu.test(value)}
@@ -46,13 +46,26 @@ export class MemoryService {
     const owner=this.owner(),epoch=this.epoch
     const operation=this.queue.then(async()=>{
       if(this.closed||owner!==this.owner()||epoch!==this.epoch)throw Error('账户状态已变化，请重新打开记忆。')
-      const result=await work(this.syncDocument(this.state(owner),owner),owner)
+      const result=await work(this.cleanupLegacyCandidates(this.syncDocument(this.state(owner),owner),owner),owner)
       if(owner!==this.owner()||epoch!==this.epoch)throw Error('账户状态已变化，请重试。')
       return result
     })
     this.queue=operation.catch(()=>{});return operation
   }
   private documentEntries(state:State):DocumentEntry[]{return Object.values(state.rows).map(({id,revision,title,content,kind,scope,projectId,status,pinned,expiresAt})=>({id,revision,title,content,kind,scope,projectId,status,pinned,expiresAt}))}
+  private cleanupLegacyCandidates(original:State,owner:string):State {
+    if(original.candidatePolicyVersion===1||this.documentError?.owner===owner)return original
+    const state=structuredClone(original),removed=new Set(Object.values(state.rows).filter(row=>row.status==='candidate').map(row=>row.id))
+    // Archive the synchronized Markdown before changing either persisted store.
+    // The content hash makes retrying after interruption safe and idempotent.
+    if(removed.size)this.documents.preserveBeforeCandidateCleanup(owner)
+    for(const id of removed){delete state.rows[id];delete state.versions[id]}
+    for(const usage of state.usages)usage.entries=usage.entries.filter(entry=>!removed.has(entry.id))
+    state.candidatePolicyVersion=1;state.scopeEpoch++
+    this.cancelPending(state);this.captures.clear();this.retriever.clear();this.semantic?.clear()
+    this.persist(state,owner,removed.size>0)
+    return state
+  }
   private documentSignature(state:State){return createHash('sha256').update(JSON.stringify([this.documentEntries(state).sort((a,b)=>a.id!.localeCompare(b.id!)),Object.values(state.projects).map(p=>({id:p.id,name:p.name})).sort((a,b)=>a.id.localeCompare(b.id))])).digest('hex')}
   private summaryRecords(state:State){return Object.values(state.rows).filter(r=>r.status==='active'&&(r.expiresAt===undefined||r.expiresAt>this.now())).sort((a,b)=>a.id.localeCompare(b.id)).map(r=>({id:r.id,revision:r.revision,title:r.title,content:r.content,kind:r.kind,scope:r.scope,projectName:r.projectId?state.projects[r.projectId]?.name:undefined}))}
   private summarySignature(state:State){return createHash('sha256').update(JSON.stringify(this.summaryRecords(state))).digest('hex')}
@@ -304,13 +317,15 @@ export class MemoryService {
       if(state.suppression.some(s=>s.key===this.hash(state,key)||s.content===this.hash(state,content)||s.sessionId===capture.turn.sessionId&&s.seq!==undefined&&source.seq<=s.seq))continue
       if(Object.values(state.rows).length>=5000)continue
       const same=Object.values(state.rows).find(r=>r.scope===scope&&r.projectId===projectId&&r.semanticKey===key&&(r.status==='active'||r.status==='disabled'))
-      const explicit=!confirmedProposal&&candidate.explicit===true&&!/(?:待|尚未|还未|未)(?:确认|确定)|\b(?:tentative|unconfirmed)\b/iu.test(evidence)&&(candidate.kind==='preference'?/以后|今后|默认|一直|每次|长期|始终|记住|我(?:更|比较|通常|习惯|喜欢)|prefer|always|default|remember/iu.test(evidence):/决定|确定|采用|基线|约定|暂存|暂停|必须|不要|目标|目前|下一步|已完成|project|decid|baseline/iu.test(evidence))
+      const explicit=!confirmedProposal&&candidate.explicit===true&&reusableMemoryEvidence(evidence,candidate.kind)
       const sourceRef:MemorySource={kind:'conversation',sessionId:capture.turn.sessionId,seq:source.seq,title:'对话中明确表达',excerpt:evidence,createdAt:this.now()}
       if(same?.status==='disabled'&&normalizedMemoryText(same.content)===normalizedMemoryText(content))continue
       if(same&&normalizedMemoryText(same.content)===normalizedMemoryText(content)){same.sources=[...same.sources,sourceRef].slice(-20);continue}
       const status:MemoryRecord['status']=explicit&&same?.status!=='disabled'&&!same?.manualLocked&&(scope==='global'||!!projectId)?'active':'candidate'
-      if(same&&status==='active'){same.status='superseded';same.updatedAt=this.now()}
-      this.save(state,{title:typeof candidate.title==='string'&&candidate.title.trim()?candidate.title.slice(0,120):'新记忆',content,kind:candidate.kind,scope,projectId,source:sourceRef},undefined,status,false,key)
+      // An uncertain extraction is not a task for the user to review. Only
+      // fully admitted facts enter the document; legacy candidates remain readable.
+      if(status!=='active')continue
+      this.save(state,{title:typeof candidate.title==='string'&&candidate.title.trim()?candidate.title.slice(0,120):'新记忆',content,kind:candidate.kind,scope,projectId,source:sourceRef},same,status,false,key)
     }
     state.jobs[capture.jobKey]={turn:{...capture.turn,events:[]},state:'done',attempts:state.jobs[capture.jobKey]?.attempts??0}
     this.captures.delete(input.captureId);this.persist(state,owner);return this.snapshot(state)

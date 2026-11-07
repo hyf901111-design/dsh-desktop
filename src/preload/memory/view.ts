@@ -196,7 +196,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     content.append(heading,status);page.append(content);setNotice(notice,noticeError)
     if(!data){content.append(node('p',t(noticeError?'已保存的记忆会保留。':'正在读取记忆…'),'ew-memory-muted'));if(noticeError)content.append(button(t('重试'),()=>void load(),'ew-memory-retry'));return}
     const settings=node('section',undefined,'ew-memory-controls')
-    settings.append(settingRow('启用记忆','在对话中保存和使用记忆。关闭后，已保存的内容仍会保留。',settingPending?.value??data.settings.use,checked=>void changeSetting({type:'settings',use:checked},'use',checked)))
+    settings.append(settingRow('启用记忆','保存有助于后续对话的偏好和约定，在相关时使用。关闭后，已保存的内容仍会保留。',settingPending?.value??data.settings.use,checked=>void changeSetting({type:'settings',use:checked},'use',checked)))
     const row=node('div',undefined,'ew-memory-document-row'),copy=node('div',undefined,'ew-memory-row-copy'),edit=button(t('编辑'),openDocument,'ew-memory-document-edit')
     copy.append(node('strong',t('记忆.md')),node('small',t('在文档中预览、修改和删除记忆内容。')))
     edit.setAttribute('aria-label',t('编辑记忆.md'));edit.dataset.memoryDocumentOpen='';row.append(icon('folder'),copy,edit);settings.append(row)
