@@ -65,7 +65,7 @@ export function mountExploreMenu(doc:Document,options:Options){
   showcase.querySelector('.odyssey-operations-pagination')!.classList.add('odyssey-explore-pages')
   createButtons.forEach((node,index)=>{node.classList.add('odyssey-explore-create');node.dataset.exploreCard=cards[index]!})
   const wallpapers=doc.createElement('div');wallpapers.className='odyssey-explore-wallpapers';wallpapers.id='odyssey-explore-wallpapers';wallpapers.role='tabpanel';wallpapers.setAttribute('aria-labelledby',wallpaperTab.id)
-  const gallery=createHomeThemeGallery(doc,options.themeController,{fitHeight:true,livePreview:true});wallpapers.append(gallery.element)
+  const gallery=createHomeThemeGallery(doc,options.themeController,{fitHeight:true,livePreview:true,paged:true});wallpapers.append(gallery.element)
   const searchPanel=doc.createElement('section');searchPanel.className='odyssey-explore-results';searchPanel.setAttribute('aria-label','搜索结果');searchPanel.hidden=true
   const categories=doc.createElement('div');categories.className='odyssey-explore-categories';categories.role='tablist'
   const categoryButtons=new Map<string,HTMLButtonElement>()
