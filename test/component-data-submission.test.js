@@ -48,6 +48,47 @@ it('rejects malformed mapping inside the same child and accepts corrected data w
  const output=(await f.submission.result).output[0].text
  expect(resolveBoundComponent(output,f.records).data.series[0].values).toEqual([2.1,-3.2]);expect(f.records).toHaveLength(1)
 })
+it.each(['public_data_query','ework__t_48cd5c8d6962ae3cb7caba80a77c15fe'])('reuses the sole successful %s call without model-authored defaults and persists a complete recipe',async(tool)=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].tool=tool;f.records[0].args=tool==='public_data_query'?args:{view:'overview'}
+ f.records.unshift({tool,args:{operation:'catalog'},purpose:'discovery',response:{tools:[]}})
+ candidate.requests=[{key:'q',tool}]
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ const text=(await f.submission.result).output[0].text,stored=JSON.parse(text)
+ expect(stored.requests).toEqual([{key:'q',tool,args:f.records[1].args}])
+ expect(resolveBoundComponent(text,f.records).data.series[0].values).toEqual([2.1,-3.2])
+ expect(candidate.requests[0]).not.toHaveProperty('args')
+})
+it('requires explicit selection when a tool has multiple successful requests and returns their exact parameters',async()=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].args={...args,parameters_json:'{"symbol":"sh000300"}'}
+ f.records.push({...record,args:{...args,parameters_json:'{"symbol":"sh000905"}'},response:{...response,records:[{name:'其他',value:10}]}})
+ delete candidate.requests[0].args
+ const rejected=await f.invoke(candidate)
+ expect(rejected.isError).toBe(true)
+ expect(JSON.stringify(rejected)).toContain('sh000300');expect(JSON.stringify(rejected)).toContain('sh000905')
+ candidate.requests[0].args=f.records[0].args
+ expect((await f.invoke(candidate)).isError).toBe(false)
+})
+it.each(['none','discovery','other-tool'])('does not infer a source from %s observations',async(kind)=>{
+ const f=await fixture(),candidate=structuredClone(input);delete candidate.requests[0].args
+ if(kind==='none')f.records.length=0
+ if(kind==='discovery')f.records[0].purpose='discovery'
+ if(kind==='other-tool')f.records[0].tool='financial_query'
+ expect((await f.invoke(candidate)).isError).toBe(true)
+})
+it('rejects explicit altered defaults and offers the original business call for a correction',async()=>{
+ const f=await fixture(),candidate=structuredClone(input),tool='ework__t_48cd5c8d6962ae3cb7caba80a77c15fe'
+ f.records[0].tool=tool;f.records[0].args={view:'overview'}
+ candidate.requests=[{key:'q',tool,args:{view:'overview',end_date:null,lookback_days:7}}]
+ const rejected=await f.invoke(candidate)
+ expect(rejected.isError).toBe(true);expect(JSON.stringify(rejected)).toContain('省略 args')
+ expect(JSON.stringify(rejected)).toContain('本卡已成功请求')
+ delete candidate.requests[0].args
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ expect(f.records).toHaveLength(1);expect(f.records[0].args).toEqual({view:'overview'})
+})
 it.each(['operator','path'])('reports the actual %s error in financial snapshots and accepts a correction without refetching',async(kind)=>{
  const f=await fixture(),candidate=structuredClone(input)
  f.records[0]={tool:'financial_query',purpose:'snapshot',args:{intent:'history',symbols:['000300.SH']},response:{schema_version:'financial-1',status:'complete',records:response.records}}
@@ -179,7 +220,8 @@ it('uses one real child through acquisition, rejected mapping and adaptive corre
    requests.push(request);const n=requests.length;if(n>3)throw Error('Repeated acquisition or child restart')
    expect(request.tools.map(t=>t.name)).toContain('submit_component_data')
    const bad=structuredClone(input);bad.mapping.labels.$map={$concat:[{$path:'name'},'产品']}
-   const value=n===1?args:n===2?bad:input
+   const reused=structuredClone(input);delete reused.requests[0].args
+   const value=n===1?args:n===2?bad:reused
    yield{type:'block-start',index:0,blockType:'tool-call'};yield{type:'block-end',index:0,block:{type:'tool-call',id:'call-'+n,name:n===1?'public_data_query':'submit_component_data',arguments:JSON.stringify(value)}};yield{type:'finish',reason:{kind:'tool-calls'}}
   }
  }())
@@ -187,7 +229,7 @@ it('uses one real child through acquisition, rejected mapping and adaptive corre
  const query=workbenchPanelPrompt({title:'ETF',dataMode:'source',originalRequest:'看看资金进出前五'},{title:'资金变动',prompt:'读取真实来源，比较产品资金变动',type:'kpi'})
  const handle=await adapter.start({parentSessionId:parent.id,kind:'container',query,prompt:query,hostContext:{workbenchRequest:{originalRequest:'看看资金进出前五',dataMode:'source'}},signal:controller.signal,onSessionEvent:()=>{}});cleanup.push(()=>handle.dispose())
  const result=await handle.result;expect(result.stopReason).toBe('completed');expect(children).toHaveLength(1);expect(requests).toHaveLength(3);expect(result.sourceRecords).toHaveLength(1)
- expect(JSON.parse(result.output[0].text).mapping.type).toBe('chart');expect(JSON.stringify(requests.at(-1).messages)).toContain('$concat')
+ expect(JSON.parse(result.output[0].text).mapping.type).toBe('chart');expect(JSON.parse(result.output[0].text).requests[0].args).toEqual(args);expect(JSON.stringify(requests.at(-1).messages)).toContain('$concat')
  const prompt=requests[0].messages.filter(m=>m.role==='user').flatMap(m=>m.content??[]).map(b=>b.text??'').join('')
  expect(prompt).not.toContain('唯一交付格式');expect(prompt).toContain('规划类型只是建议')
  expect(prompt).not.toContain('最终输出严格 JSON');expect(prompt).not.toContain('仅输出完整JSON');expect(prompt.length).toBeLessThan(12000)
