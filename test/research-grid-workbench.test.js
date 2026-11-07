@@ -3,6 +3,20 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('图表默认展开明细后按内容自动补高并让后续卡片避让，保留共享布局与手动尺寸',()=>{
+ const state=createWorkbenchGridState(null,'expanded-chart'),g=createResearchGrid(),html='<body data-research-kind="chart" data-chart-template="horizontal"></body>';
+ state.enable(600);
+ let snap=state.reconcile({files:[],artifacts:[{id:'chart',kind:'generated-container',width:576,height:320,containerSpec:{type:'html',html}},{id:'next',kind:'pasted-text',width:576,height:240}],viewport:{y:0}});
+ const canonical=state.document(snap),width=snap.artifacts[0].width;
+ expect(state.contentHeight('chart',{html,width,height:640})).toBe(true);snap=state.reconcile(snap);
+ expect(snap.artifacts[0].height).toBeGreaterThanOrEqual(640);
+ expect(g.overlap(...state.visible())).toBe(false);expect(state.document(snap)).toEqual(canonical);
+ expect(state.contentHeight('chart',{html,width,height:640})).toBe(false);
+ expect(state.contentHeight('chart',{html:'stale',width,height:900})).toBe(false);
+ const resized=state.get().map(c=>c.id==='chart'?{...c,h:30}:c);state.set(resized);snap=state.reconcile(snap);
+ expect(state.contentHeight('chart',{html,width,height:900})).toBe(false);
+ expect(state.document(snap)).not.toEqual(canonical);
+});
 it('新规划的宽排程跨整行，支持卡片分列且手动缩放仍可用',()=>{
  const g=createResearchGrid(),state=createWorkbenchGridState(null,'semantic-wide');state.enable(1104);
  let snap=state.reconcile({files:[],artifacts:[],viewport:{y:0}});
