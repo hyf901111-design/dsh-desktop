@@ -240,7 +240,7 @@ it.each(['manual','auto','scoped'])('restores the exact native table contract on
   expect(restored).toContain(saved)
   expect(restored).toContain(geometry)
   if(mode==='scoped')expect(restored.indexOf(geometry)).toBeLessThan(restored.indexOf('【原始工作台需求】'))
-  expect(buildResearchTaskPrompt({...containerRequest('native-table'),prompt:restored})).toContain('唯一交付格式：')
+  expect(buildResearchTaskPrompt({...containerRequest('native-table'),prompt:restored})).toContain('建议呈现结构（可按实际数据调整）')
  }finally{await runtime.dispose()}
 })
 
