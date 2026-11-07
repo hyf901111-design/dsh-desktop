@@ -1,10 +1,14 @@
 import {readFile,writeFile,readdir} from 'node:fs/promises'
-import {percentile} from './metrics.mjs'
+import {percentile,scoreEvidenceBudget} from './metrics.mjs'
 const [output,label='rrf']=process.argv.slice(2)
 if(!output)throw Error('Usage: analyze.mjs EVIDENCE_DIRECTORY [LABEL]')
 const json=async name=>JSON.parse(await readFile(output+'/'+name+'.json','utf8'))
 const baseline=await json('baseline'),hindsight=await json('hindsight-'+label)
 const corpus=JSON.parse(await readFile(new URL('./corpus.json',import.meta.url),'utf8'))
+// Recompute derived coverage from raw evidence, including captures made before
+// the separate byte-budget scorer was introduced.
+baseline.budget1200=scoreEvidenceBudget(corpus.queries,baseline.results)
+hindsight.quality.budget1200=scoreEvidenceBudget(corpus.queries,hindsight.rounds[0])
 const allResults=[...hindsight.rounds.flat(),...hindsight.parallel]
 const allScopeLeaks=allResults.flatMap(r=>{
   const q=corpus.queries.find(q=>q.id===r.id)

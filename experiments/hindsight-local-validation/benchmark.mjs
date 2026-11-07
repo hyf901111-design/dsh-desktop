@@ -1,6 +1,6 @@
 import {readFile,writeFile,appendFile,mkdir} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
-import {score,packEvidence,percentile} from './metrics.mjs'
+import {score,packEvidence,percentile,scoreEvidenceBudget} from './metrics.mjs'
 import {MEMORY_BACKGROUND_INTRO} from '../../src/main/memory/retriever.ts'
 
 const [command,output,label='rrf']=process.argv.slice(2)
@@ -62,7 +62,7 @@ function summarize(results){
   return {overall:score(corpus.queries,results),paraphrase:score(corpus.queries.filter(q=>q.category==='paraphrase'),
     results.filter(r=>corpus.queries.find(q=>q.id===r.id)?.category==='paraphrase')),
     governed:score(corpus.queries,results.map(r=>({...r,ids:r.governed}))),
-    budget1200:score(corpus.queries,results.map(r=>({...r,ids:r.packed.ids}))),
+    budget1200:scoreEvidenceBudget(corpus.queries,results),
     scopeLeaks:results.flatMap(r=>r.ids.filter(id=>{
       const row=rows.get(id),q=corpus.queries.find(q=>q.id===r.id)
       return !row||row.owner!==(q.owner??'a')||(row.scope!=='global'&&row.projectId!==(q.projectId??'alpha'))

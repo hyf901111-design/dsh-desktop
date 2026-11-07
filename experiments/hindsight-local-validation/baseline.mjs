@@ -1,7 +1,7 @@
 import {readFile,writeFile,mkdir} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
 import {MemoryRetriever,MEMORY_BACKGROUND_INTRO} from '../../src/main/memory/retriever.ts'
-import {score,packEvidence} from './metrics.mjs'
+import {score,packEvidence,scoreEvidenceBudget} from './metrics.mjs'
 const file=new URL('./corpus.json',import.meta.url),raw=await readFile(file,'utf8'),corpus=JSON.parse(raw)
 const output=process.argv[2];if(!output)throw Error('Pass an explicit output directory')
 await mkdir(output,{recursive:true})
@@ -14,6 +14,6 @@ for(const q of corpus.queries){
   results.push({id:q.id,ids,latencyMs:performance.now()-t,packed:packEvidence(selected.map(x=>x.row),1200,MEMORY_BACKGROUND_INTRO)})
 }
 retriever.close()
-const summary={baseline:'unmodified MemoryRetriever from main 9035f11cf',corpusSha256:createHash('sha256').update(raw).digest('hex'),records:rows.length,overall:score(corpus.queries,results),paraphrase:score(corpus.queries.filter(q=>q.category==='paraphrase'),results.filter(r=>corpus.queries.find(q=>q.id===r.id)?.category==='paraphrase')),budget1200:score(corpus.queries,results.map(r=>({...r,ids:r.packed.ids}))),results}
+const summary={baseline:'unmodified MemoryRetriever from main 9035f11cf',corpusSha256:createHash('sha256').update(raw).digest('hex'),records:rows.length,overall:score(corpus.queries,results),paraphrase:score(corpus.queries.filter(q=>q.category==='paraphrase'),results.filter(r=>corpus.queries.find(q=>q.id===r.id)?.category==='paraphrase')),budget1200:scoreEvidenceBudget(corpus.queries,results),results}
 await writeFile(output+'/baseline.json',JSON.stringify(summary,null,2)+'\n')
 console.log(JSON.stringify({corpusSha256:summary.corpusSha256,records:rows.length,queries:corpus.queries.length,completeHitRate:summary.overall.completeHitRate,paraphraseHitRate:summary.paraphrase.completeHitRate,negativeFalsePositiveRate:summary.overall.negativeFalsePositiveRate}))

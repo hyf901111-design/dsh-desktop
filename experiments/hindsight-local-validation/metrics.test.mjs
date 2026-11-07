@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { score, percentile, packEvidence } from './metrics.mjs'
+import * as metrics from './metrics.mjs'
 
 test('multiple gold sources require all sources, with duplicate IDs ignored', () => {
   const queries = [{id:'q',expected:['a','b']}]
@@ -29,4 +30,12 @@ test('context limit counts UTF-8 bytes and does not split a record', () => {
   const cut=packEvidence(rows,Buffer.byteLength(first.text)-1,'提示\n')
   assert.deepEqual(cut.ids,['a'])
   assert.ok(Buffer.byteLength(cut.text)<=Buffer.byteLength(first.text)-1)
+})
+test('byte-budget coverage counts evidence beyond rank five independently of top-5', () => {
+  const rows=Array.from({length:8},(_,i)=>({id:'m'+i,title:'来源',content:'合成证据'}))
+  const packed=packEvidence(rows,1200,'背景\n')
+  const queries=[{id:'q',expected:['m0','m6']}]
+  const results=[{id:'q',ids:packed.ids,packed,latencyMs:1}]
+  assert.equal(score(queries,results).completeHitRate,0)
+  assert.equal(metrics.scoreEvidenceBudget(queries,results).completeHitRate,1)
 })

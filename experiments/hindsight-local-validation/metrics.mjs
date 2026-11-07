@@ -29,3 +29,9 @@ export function score(queries,results,limit=5) {
   const latencies=results.map(r=>r.latencyMs).filter(Number.isFinite)
   return {queries:queries.length,positives,negatives:negative,completeHits:complete,completeHitRate:positives?complete/positives:null,meanEvidenceRecall:positives?partial/positives:null,mrr:positives?reciprocal/positives:null,negativeFalsePositiveRate:negative?falsePositive/negative:null,failures,forbiddenHits:forbidden,latencyMs:{samples:latencies.length,p50:percentile(latencies,.5),p95:percentile(latencies,.95),max:latencies.length?Math.max(...latencies):null},detail}
 }
+// A byte budget already limits the supplied evidence. Do not impose a second,
+// unrelated top-k cut on a context that may legitimately contain more sources.
+export function scoreEvidenceBudget(queries,results) {
+  return score(queries,results.map(r=>({...r,ids:r.packed?.ids??[],
+    error:r.error??(!r.packed?'missing packed evidence':undefined)})),Infinity)
+}
