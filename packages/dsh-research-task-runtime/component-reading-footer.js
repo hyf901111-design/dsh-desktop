@@ -2,7 +2,7 @@
 // controls so saved interaction paths and the inert source model stay intact.
 // Kept self-contained because the preview client serializes this function.
 export function refineComponentReadingFooter(html){
- if(typeof html!=='string'||html.includes('data-component-reading-footer="v5"'))return html;
+ if(typeof html!=='string'||html.includes('data-component-reading-footer="v6"'))return html;
  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
@@ -13,7 +13,7 @@ export function refineComponentReadingFooter(html){
  if(!kpi&&!chart&&!market)return html;
  // Replace only our previous display layer. The original model and every
  // existing control remain in their original DOM positions for saved replay.
- html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[1234]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
+ html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[12345]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
  // Only real disclosure markup in verified host templates receives the new
  // default. Source JSON and executable strings must remain byte-for-byte intact.
  html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>{
@@ -35,14 +35,12 @@ export function refineComponentReadingFooter(html){
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.
  const hidden=[...(kpi?['.indicator-asof','.indicator-footer']:[]),...(chart?['figure>figcaption']:[]),...(market?['body>footer.market-footer']:[])];
- const style=`<style data-component-reading-footer="v5">${hidden.map(selector=>selector+'{display:none!important}').join('')}
+ const style=`<style data-component-reading-footer="v6">${hidden.map(selector=>selector+'{display:none!important}').join('')}
  body>.component-reading-footer{box-sizing:border-box;display:block;clear:both;flex:none;margin:8px 0 0!important;padding:6px 0 2px!important;border:0;border-top:1px solid var(--sherlock-border,#8883);color:var(--sherlock-muted,#888);font:11px/18px var(--sherlock-font-sans,system-ui);text-align:left}
  .component-reading-footer details{margin:0!important;padding:0!important;border:0;background:transparent;font:inherit}
- .component-reading-footer summary{min-height:22px;padding:2px 0!important;cursor:pointer;color:inherit;font:inherit}
+ .component-reading-footer summary{display:flex;align-items:center;gap:6px;min-height:26px;padding:2px 0!important;cursor:pointer;color:inherit;font:inherit}
  summary:not(.indicator-summary){list-style:none!important}
  summary:not(.indicator-summary)::-webkit-details-marker{display:none}
- summary:not(.indicator-summary)::before{content:"";display:inline-block;width:5px;height:5px;margin:0 8px 1px 2px;border:solid currentColor;border-width:0 1.2px 1.2px 0;transform:rotate(-45deg)}
- details[open]>summary:not(.indicator-summary)::before{transform:rotate(45deg);margin-bottom:3px}
  .component-reading-footer summary:focus-visible{outline:1px solid var(--sherlock-control-primary);outline-offset:2px}
  body>.component-reading-footer{max-height:240px;overflow:auto}
  .component-reading-footer dl{margin:6px 0 0;padding:0;display:grid;gap:6px}
@@ -69,9 +67,11 @@ export function refineComponentReadingFooter(html){
  body .component-reading-tabs button:focus-visible{outline:1px solid var(--sherlock-muted)!important;outline-offset:1px!important}
  body .component-reading-tabs .component-reading-toggle{order:2;height:28px!important;width:28px!important;flex:none;padding:0!important;border-radius:6px!important}
  body .component-reading-tabs .component-reading-toggle:hover{background:var(--sherlock-surface-muted)!important}
+ /* Replace the legacy market triangle rather than drawing a border around
+    its glyph. A fixed icon box keeps the label and hit target stationary. */
+ body summary:not(.indicator-summary)::before,body .component-reading-toggle::before{content:""!important;display:block!important;box-sizing:border-box;width:12px!important;height:12px!important;flex:0 0 12px!important;margin:0!important;padding:0!important;border:0!important;background:currentColor!important;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='black' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px 12px no-repeat!important;transform:rotate(-90deg)!important;transform-origin:center!important}
+ body details[open]>summary:not(.indicator-summary)::before,body .component-reading-toggle[aria-expanded=true]::before{transform:rotate(0deg)!important}
  }
- .component-reading-toggle::before{content:"";width:6px;height:6px;border:solid currentColor;border-width:0 1.2px 1.2px 0;transform:rotate(-45deg)}
- .component-reading-toggle[aria-expanded=true]::before{transform:translateY(-2px) rotate(45deg)}
  body[data-component-reading-tabs] [role=tabpanel]{grid-row:3;grid-column:1;min-width:0;max-width:100%;margin-top:8px}
  body[data-component-reading-tabs] [role=tabpanel][hidden]{display:none!important}
  body[data-component-reading-tabs] dl[role=tabpanel]{max-height:240px;overflow:auto;padding:6px 0;font:11px/18px var(--sherlock-font-sans,system-ui)}
