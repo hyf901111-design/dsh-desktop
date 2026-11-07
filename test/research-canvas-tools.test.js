@@ -13,7 +13,7 @@ it('inspects complete editable chart data without loading rendered code, includi
   for(const detail of [undefined,'summary','full']){
    const out=JSON.parse(await inspect.execute({ids:['chart','custom'],...(detail?{detail}:{})},exec))
    expect(out.nodes[0].contentSummary.data).toEqual(data)
-   expect(out.nodes[0].contentSummary.message).toContain('默认折叠')
+   expect(out.nodes[0].contentSummary.message).toContain('默认展开')
    expect(out.nodes[0].content.containerSpec).toBeUndefined()
    expect(JSON.stringify(out).length).toBeLessThan(JSON.stringify(original).length/10)
    expect(out.revision).toBe('r1')

@@ -130,7 +130,11 @@ export function cartesianChartRuntime(spec, geometry) {
     const tabBar=document.querySelector('.component-reading-tabs:not([hidden])');
     const footerHeight=tabBar?outerHeight(tabBar):compactFooter?Math.max(0,...disclosures):disclosures.reduce((sum,h)=>sum+h,0);
     const chrome=[...document.querySelectorAll('.chart-context,.legend,.chart-readout,figcaption')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+footerHeight+2;
-    size=geometry(spec,lastWidth,visible,lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
+    // The host fits the card to its open records. Use an intrinsic plot height
+    // here instead of feeding the newly enlarged iframe back into the plot.
+    // This also keeps the tabs in place when switching between detail panels.
+    const expanded=document.body.dataset.componentReadingTabs==='expanded'||!tabBar&&document.querySelector('body>details[open]');
+    size=geometry(spec,lastWidth,visible,expanded?240:lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
   };
   const select=i=>{selected=Math.max(0,Math.min(spec.labels.length-1,i));describe();};
   svg.addEventListener('pointermove',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
@@ -142,9 +146,11 @@ export function cartesianChartRuntime(spec, geometry) {
   }));
   const schedule=()=>{if((svg.parentElement.clientWidth!==lastWidth||window.innerHeight!==lastHeight)&&!frame)frame=requestAnimationFrame(draw);};
   const observer=new ResizeObserver(schedule);observer.observe(svg.parentElement);window.addEventListener('resize',schedule);draw();
+  const presentation=()=>{if(!frame)frame=requestAnimationFrame(draw);};
+  window.addEventListener('sherlock-presentation-change',presentation);
   // Host metadata/styles are appended after this script in saved previews.
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',draw,{once:true});
-  window.addEventListener('pagehide',()=>{observer.disconnect();window.removeEventListener('resize',schedule);if(frame)cancelAnimationFrame(frame);},{once:true});
+  window.addEventListener('pagehide',()=>{observer.disconnect();window.removeEventListener('resize',schedule);window.removeEventListener('sherlock-presentation-change',presentation);if(frame)cancelAnimationFrame(frame);},{once:true});
 }
 
 export function renderCartesianChart(spec) {

@@ -11,14 +11,14 @@ const render=data=>JSON.parse(acceptArtifactOutput(JSON.stringify(data)));
 const dom=html=>{const w=new Window();w.document.write(html);return w;};
 const routes=w=>[...w.document.querySelectorAll('button,input,select,summary,svg,tr')].filter(e=>!e.closest('.component-reading-footer')).map(el=>{const p=[];for(let e=el;e!==w.document.body;e=e.parentElement)p.unshift([...e.parentElement.children].indexOf(e));return [el.tagName,el.id,p];});
 
-it('collects saved metadata in one closed disclosure without changing values or existing control routes',()=>{
+it('collects saved metadata in one initially expanded disclosure without changing values or existing control routes',()=>{
  const spec=render(footerFixture),next=compactHostDashboardHtml(spec.html),old=dom(spec.html),w=dom(next);
  try{
-  const details=w.document.querySelector('.component-reading-footer details');expect(details).not.toBeNull();expect(details.open).toBe(false);
+  const details=w.document.querySelector('.component-reading-footer details');expect(details).not.toBeNull();expect(details.open).toBe(true);
   expect(details.querySelector('summary').textContent).toBe('口径与来源');
   expect(details.textContent).toContain(footerFixture.note);expect(details.querySelector('b')).toBeNull();
   expect(details.querySelector('a').href).toBe(footerFixture.sources[0].url);
-  details.querySelector('summary').click();expect(details.open).toBe(true);
+  details.querySelector('summary').click();expect(details.open).toBe(false);
   expect(routes(w)).toEqual(routes(old));expect(readTemplateModel({...spec,html:next})).toEqual(readTemplateModel(spec));
   expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(spec.html));expect(compactHostDashboardHtml(next)).toBe(next);
  }finally{w.close();old.close();}

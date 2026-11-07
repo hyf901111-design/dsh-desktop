@@ -15,7 +15,7 @@ it('keeps long table source notes scrollable without covering table rows',async(
   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.locator('.component-reading-footer').waitFor();
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
   expect(await frame.locator('body>footer.market-footer').isVisible()).toBe(false);
-  await frame.getByText('口径与来源',{exact:true}).click();expect((await frame.locator('.component-reading-footer').boundingBox()).height).toBeLessThanOrEqual(169);
+  expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);expect((await frame.locator('.component-reading-footer').boundingBox()).height).toBeLessThanOrEqual(241);
   expect(await frame.locator('tbody tr').count()).toBe(2);expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
   const t=await frame.locator('.market-table-wrap').boundingBox(),f=await frame.locator('.component-reading-footer').boundingBox();expect(t.y+t.height).toBeLessThanOrEqual(f.y+1);
  }finally{await page.close();}
@@ -43,16 +43,25 @@ it('keeps chart detail entries visible together at the real compact card height'
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'ETF流入前五',unit:'亿元',asOf:'2026-10-30 至 2026-11-06',note:'估算金额为份额变动乘以期末净值。',labels,series:[{name:'净流入估算',values:[321.13,234,216.07,199.55,182.89]}],detailColumns:['产品','代码'],detailRows:labels.map((label,i)=>[label,String(i)]),sources:[{label:'Tushare',url:'https://tushare.pro'}]})));
  const page=await browser.newPage({viewport:{width:566,height:303}});page.setDefaultTimeout(3000);
  try{
-  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
+  await page.setContent('<script>window.detailSizes=[];addEventListener("message",event=>{if(event.data?.type==="sherlock-workbench-content-size")window.detailSizes.push(event.data)})</script>'+buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
   await frame.locator('.component-reading-footer').waitFor();
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
+  expect(await frame.locator('table').isVisible()).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>window.detailSizes.at(-1)?.height||0)).toBeGreaterThan(303);
+  // Simulate host fitting while font/layout measurements settle.
+  let fittedHeight;
+  for(let i=0;i<3;i++){fittedHeight=await page.evaluate(()=>window.detailSizes.at(-1).height);await page.setViewportSize({width:566,height:fittedHeight});await page.waitForTimeout(250);}
+  expect(fittedHeight).toBeLessThan(650);
   await expect.poll(()=>frame.locator('body').evaluate(el=>el.scrollHeight<=innerHeight+1)).toBe(true);
+  await page.waitForTimeout(550);
+  expect(await page.evaluate(()=>window.detailSizes.at(-1).height)).toBe(fittedHeight);
   const entries=await frame.getByRole('tab').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom}}));
   expect(entries).toHaveLength(2);expect(Math.abs(entries[0].top-entries[1].top)).toBeLessThanOrEqual(3);
-  for(const entry of entries)expect(entry.bottom).toBeLessThanOrEqual(303);
+  for(const entry of entries)expect(entry.bottom).toBeLessThanOrEqual(fittedHeight);
   expect((await frame.locator('svg').boundingBox()).height).toBeGreaterThanOrEqual(160);
   const dataTab=frame.getByRole('tab',{name:'完整数据'}),sourceTab=frame.getByRole('tab',{name:'口径与来源'});
-  await dataTab.click();expect(await frame.locator('tbody tr').count()).toBe(5);
+  expect(await frame.locator('tbody tr').count()).toBe(5);
+  expect(await frame.locator('.data-scroll').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
   const expanded=await sourceTab.boundingBox();expect(Math.abs(expanded.y-entries[1].top)).toBeLessThanOrEqual(1);
   await sourceTab.click();expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);
   expect(await frame.locator('table').isVisible()).toBe(false);expect(await sourceTab.getAttribute('aria-selected')).toBe('true');
@@ -71,14 +80,15 @@ it('keeps KPI footers compact in narrow and wide themed previews, with accessibl
   try{
    await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench:true,notoFont:'runtime'}));
    const frame=page.frameLocator('iframe'),footer=frame.locator('.component-reading-footer');await footer.waitFor();
-   expect((await footer.boundingBox()).height).toBeLessThanOrEqual(34);
+   expect((await footer.boundingBox()).height).toBeLessThanOrEqual(241);
    expect(await frame.locator('#indicator-refresh').isVisible()).toBe(false);expect(await frame.locator('.indicator-asof').isVisible()).toBe(false);
-   expect(await footer.locator('dd').first().isVisible()).toBe(false);
+   expect(await footer.locator('dd').first().isVisible()).toBe(true);
+   expect(await frame.locator('.indicator-tile').evaluateAll(nodes=>nodes.every(el=>el.open))).toBe(true);
    expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
    const tiles=await frame.locator('.indicator-tile').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}}));
    for(let i=1;i<tiles.length;i++)if(tiles[i].top===tiles[i-1].top)expect(tiles[i].left).toBeGreaterThanOrEqual(tiles[i-1].right);
    if(width===880&&theme==='dark'){mkdirSync('output/research-quality/footer',{recursive:true});await page.screenshot({path:'output/research-quality/footer/kpi-compact.png'});}
-   await footer.locator('summary').click();expect(await footer.locator('dd').first().isVisible()).toBe(true);expect(await footer.textContent()).toContain(meta.note);
+   expect(await footer.locator('dd').first().isVisible()).toBe(true);expect(await footer.textContent()).toContain(meta.note);
    expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
    await footer.locator('summary').focus();await page.keyboard.press('Enter');expect(await footer.locator('dd').first().isVisible()).toBe(false);
   }finally{await page.close();}
@@ -96,7 +106,7 @@ it('folds chart methodology while leaving legend filtering and full data usable'
   await frame.getByRole('tab',{name:'口径与来源'}).click();expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
  }finally{await page.close();}
 },20000);
-it('keeps supplemental chart data collapsed and supports compact sortable resizable detail tables',async()=>{
+it('opens supplemental chart data by default and supports compact sortable resizable detail tables',async()=>{
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'净流入前列',asOf:meta.asOf,note:meta.note,unit:'亿元',labels:['甲','乙'],series:[{name:'净流入估算',values:[20,10]}],detailColumns:['产品','代码','规模（亿元）','管理人'],detailRows:[['甲','001',120,'甲基金'],['乙','002',null,'乙基金']],sources:[{label:'Tushare',url:'https://tushare.pro'}]})));
  for(const width of [360,880])for(const theme of ['light','dark']){
   const page=await browser.newPage({viewport:{width,height:680},colorScheme:theme});page.setDefaultTimeout(3000);
@@ -104,7 +114,7 @@ it('keeps supplemental chart data collapsed and supports compact sortable resiza
    await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
    await frame.locator('.component-reading-footer').waitFor();
    await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
-   expect(await frame.locator('table').isVisible()).toBe(false);
+   expect(await frame.locator('table').isVisible()).toBe(true);
    expect((await frame.locator('.component-reading-tabs').boundingBox()).height).toBeLessThanOrEqual(34);
    await frame.getByRole('tab',{name:'完整数据'}).click();await frame.locator('table').waitFor({state:'visible'});
    expect(await frame.locator('tbody tr').allTextContents()).toEqual(['甲20001120甲基金','乙10002—乙基金']);
