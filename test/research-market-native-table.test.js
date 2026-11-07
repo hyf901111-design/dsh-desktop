@@ -5,11 +5,15 @@ import { retainTemplateModel } from '../packages/dsh-research-task-runtime/compo
 import { renderMarketArtifact } from '../packages/dsh-research-task-runtime/market-artifact.js';
 import { parseResearchMarketNativeTable, researchMarketNativeTableCss } from '../scripts/lib/research-market-native-table.mjs';
 
+// Saved tables predate the current iframe methodology disclosure. Recreate
+// that exact envelope to test native projection; new rich HTML stays sandboxed.
+const legacyArtifact=model=>{const artifact=renderMarketArtifact(model);return {...artifact,html:artifact.html.replace('<details class="market-methodology"><summary>完整口径与说明</summary><span>','<span>').replace('</span></details><span>','</span><span>')}};
+
 describe('host market table text rendering', () => {
   it('retains the observed valuation date and all 336 characters of source methodology after serialization', () => {
     const observed = JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valuation-observed.json', import.meta.url), 'utf8'));
     const win = new Window();
-    const html = renderMarketArtifact(observed).html;
+    const html = legacyArtifact(observed).html;
     const parse = new Function(`return (${parseResearchMarketNativeTable.toString()})`)();
     const parsed = parse(html, win.document);
     expect(observed.note).toHaveLength(336);
@@ -63,7 +67,7 @@ const project = html => {
 };
 it('projects note-only, escaped text, complete long notes and empty sources without creating HTML', () => {
   for (const note of ['日期与口径 <script>alert(1)</script> & "保持文本"', '注'.repeat(1998) + '终点']) {
-    const html = renderMarketArtifact({...model,note,sources:[]}).html;
+    const html = legacyArtifact({...model,note,sources:[]}).html;
     expect(project(html).footer).toEqual([[{text:model.asOf}],[{text:note}]]);
   }
   const html = renderMarketArtifact(model).html;
@@ -133,7 +137,7 @@ it('projects every cell of the supported single-header and multi-data-row hierar
 });
 it('accepts actual persisted host shape with inert retained metadata through serialized parser', () => {
   const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valuation-observed.json', import.meta.url),'utf8'));
-  const persisted=retainTemplateModel(renderMarketArtifact(observed),observed);
+  const persisted=retainTemplateModel(legacyArtifact(observed),observed);
   expect(persisted.html).toHaveLength(79846);
   expect(persisted.html).toContain('<script id="sherlock-template-data" type="application/json">');
   const parsed=project(persisted.html);
