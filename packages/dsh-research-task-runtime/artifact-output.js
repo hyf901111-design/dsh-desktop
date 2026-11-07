@@ -149,8 +149,8 @@ function normalizeTemplateAliases(value) {
  // to the trusted interactive template instead of retrying or losing its notes.
  // A note-only snapshot must keep its actual dates/sources in the note/rows;
  // the host supplies only a status label, never an inferred observation date.
- if(value?.type==='table'&&(typeof value.asOf==='string'&&value.asOf.trim()||value.asOf===undefined&&typeof value.note==='string'&&value.note.trim())&&
-   Object.keys(value).every(key=>['version','type','title','columns','rows','asOf','note'].includes(key))&&
+ if(value?.type==='table'&&(typeof value.asOf==='string'&&value.asOf.trim()||value.asOf===undefined&&(typeof value.note==='string'&&value.note.trim()||Array.isArray(value.sources)&&value.sources.length))&&
+   Object.keys(value).every(key=>['version','type','title','columns','rows','asOf','note','sources'].includes(key))&&
    (value.note===undefined||typeof value.note==='string'&&value.note.trim())) {
   if(!templateDataIssue(value))return {...value,type:'market',variant:'table',asOf:value.asOf??'静态快照 · 来源与时点见表格及说明'};
  }

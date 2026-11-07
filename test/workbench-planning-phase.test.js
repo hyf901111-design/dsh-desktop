@@ -49,6 +49,16 @@ async function registeredCreationSchema() {
 }
 
 describe('工作台首次规划阶段预算', () => {
+  it('preserves comparison and concise progress guidance in the final model request', async () => {
+    const tool=await registeredCreationSchema()
+    const h=harness(undefined,[tool,...planningTools.slice(1)])
+    const agent={session:session('做个A股宽基指数对比工作台，看看沪深300、中证500和创业板近三个月的表现')}
+    const wire=await h.context(agent,{...wireRequest(),tools:[tool,...planningTools.slice(1)]})
+    expect(wire.tools[0].parameters).toBe(tool.parameters)
+    expect(wire.system).toContain('历史表现比较把共同基期走势图放首屏第一张')
+    expect(wire.system).toContain('不要公开接口目录、来源选择原则')
+    h.dispose()
+  })
   it('rejects simulated output at the actual creation boundary for an authored real-data request', async()=>{
     const tool=await registeredCreationSchema()
     const args={requestId:'wrong-simulation',title:'航空观察',dataMode:'simulated',panels:[{title:'行情',prompt:'模拟行情记录',type:'market',size:'medium'}]}
@@ -167,7 +177,7 @@ describe('工作台首次规划阶段预算', () => {
     agent.session.events.push(...session('取消，不再创建工作台', 'cancel').events)
     expect(await h.request(agent, { ...first })).toEqual(config)
     expect(h.text(agent)).toBe('')
-    agent.session.events.push(...session('重新规划这个工作台，用模拟数据', 'again').events)
+    agent.session.events.push(...session('重新创建一个工作台，用模拟数据', 'again').events)
     expect(await h.request(agent, config)).toEqual(first)
   })
 
@@ -237,7 +247,8 @@ describe('工作台首次规划阶段预算', () => {
     const h = harness()
     for (const domain of ['海边三天夜间艺术节', '研究生实验排期', '仓储配送', '社区义诊', '博物馆巡展']) {
       const text = h.text({ session: session(`创建${domain}工作台，用自洽模拟数据；需要排期、人员、物资、预算和风险预案。`) })
-      expect(text.length).toBeLessThan(2200)
+      // The shared-dataset/view contract is included once, without sample rows.
+      expect(text.length).toBeLessThan(4000)
       expect(text).toContain('generationMode:"deferred"')
       expect(text).toContain('sharedContext')
       expect(text).toContain('立即调用 research_workbench_create')
@@ -267,7 +278,7 @@ describe('工作台首次规划阶段预算', () => {
     const hook = h.hooks.get('agent/request-context')
     expect(hook).toBeTypeOf('function')
     const short = await hook({ agent }, async () => request)
-    expect(short.tools[0].description.length).toBeLessThan(1500)
+    expect(short.tools[0].description.length).toBeLessThan(2000)
     expect(short.tools[0].description).toContain('deferred')
     expect(short.tools[0].parameters).toBe(originalTool.parameters)
     expect(short.tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
@@ -400,7 +411,10 @@ describe('工作台首次规划阶段预算', () => {
       expect(schema.additionalProperties).toBe(false)
       expect(schema.properties.preset.enum).not.toContain('openterminal-research')
       for (const key of ['generationMode', 'sharedContext', 'originalRequest']) expect(schema.properties).not.toHaveProperty(key)
-      expect(schema.properties.panels).toBe(originalTool.parameters.properties.panels)
+      const panel = schema.properties.panels.items
+      expect(panel.properties).not.toHaveProperty('view')
+      expect(panel.properties.type.enum).not.toContain('view')
+      for (const key of ['prompt','artifact','publicData','layout']) expect(panel.properties[key]).toEqual(originalTool.parameters.properties.panels.items.properties[key])
       const input = { requestId: 'actual-source', title: '真实记录', dataMode: 'source', panels: [{ title: '观察记录', prompt: '实际来源，缺失字段明确标注', type: 'table', size: 'large' }] }
       expect(validateJsonSchemaValue(schema, input)).toEqual([])
       expect(validateJsonSchemaValue(schema, { ...input, dataMode: 'simulated' }).length).toBeGreaterThan(0)

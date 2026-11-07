@@ -1,6 +1,7 @@
 import {timelineDataIssue} from './timeline-template-contract.js'
 import {kpiDataIssue} from './kpi-template-contract.js'
 import {chartDataIssue} from './chart-template-contract.js'
+import {chartSourcesIssue} from './component-provenance-display.js'
 import {operationsDataIssue} from './operations-template-contract.js'
 import {FINANCIAL_PROFILE_VARIANTS,financialProfileDataIssue} from './financial-profile.js'
 // Shared by prompt construction, renderers and mapping validation. Keep data
@@ -17,7 +18,7 @@ export const TEMPLATE_RULES=Object.freeze({
  'fund-holdings':`1–${TEMPLATE_LIMITS.holdingsColumns} 列、1–${TEMPLATE_LIMITS.holdingsRows} 行；${TABLE_INPUT_GUIDANCE}`,
  'fund-industry':`1–${TEMPLATE_LIMITS.fundIndustries} 项；weight 是0–100百分数；benchmark 可省略或null，缺失时只展示实际权重，不编造基准和偏离`
 })
-export const TABLE_GUIDANCE=`table 仅支持 version/type/title/columns/rows/asOf/note；不使用 variant 或 notes，完整说明合并为 note 单个非空字符串，asOf/note 可省略，提供时为1–2000字。带 asOf 或 note 的可信交互表格支持${TEMPLATE_RULES.table}；无来源原生表格仍限1–12列、1–100行。title 为1–256字，列名为1–128字，单元格为1–512字非空文字或绝对值不超过1e15的有限数值。证券代码、名称、单位和报价时间必须引用各行真实字段，不把一个证券代码或交易所固定拼到所有行；缺失字段明确说明。`
+export const TABLE_GUIDANCE=`table 仅支持 version/type/title/columns/rows/asOf/note/sources；sources 可选，使用 [{label,url?}] 保存真实来源，链接仅限安全http/https。不使用 variant 或 notes，完整说明合并为 note 单个非空字符串，asOf/note 可省略，提供时为1–2000字。带 asOf、note 或 sources 的可信交互表格支持${TEMPLATE_RULES.table}；无来源原生表格仍限1–12列、1–100行。title 为1–256字，列名为1–128字，单元格为1–512字非空文字或绝对值不超过1e15的有限数值。证券代码、名称、单位和报价时间必须引用各行真实字段，不把一个证券代码或交易所固定拼到所有行；缺失字段明确说明。`
 // Only dimensions are relaxed for trusted tables. Sourced generic tables keep
 // the native scalar/text capacities; existing market tables keep theirs.
 export function tableShapeIssue(data,{generic=false,maxColumns=TEMPLATE_LIMITS.tableColumns}={}){
@@ -56,12 +57,14 @@ export function templateDataIssue(data){
  if(['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(data?.type))return operationsDataIssue(data)
  if(data?.type==='chart')return chartDataIssue(data)
  if(data?.type==='table'){
-  const unsupported=Object.keys(data).filter(key=>!['version','type','title','columns','rows','asOf','note'].includes(key))
+  const unsupported=Object.keys(data).filter(key=>!['version','type','title','columns','rows','asOf','note','sources'].includes(key))
   if(unsupported.length)return `table 不支持字段：${unsupported.join('、')}。${TABLE_GUIDANCE}`
+  const sourceIssue=chartSourcesIssue(data.sources)
+  if(sourceIssue)return `table.${sourceIssue}`
   for(const key of ['asOf','note'])if(data[key]!==undefined&&(typeof data[key]!=='string'||!data[key].trim()||data[key].length>2000))return `table.${key} 必须为1–2000字的非空文字。${TABLE_GUIDANCE}`
   if(data.version!==1)return `table.version 必须为1。${TABLE_GUIDANCE}`
   if(typeof data.title!=='string'||!data.title.trim()||data.title.length>256)return `table.title 必须为1–256字的非空文字。${TABLE_GUIDANCE}`
-  const issue=tableShapeIssue(data,{generic:true,maxColumns:data.asOf!==undefined||data.note!==undefined?TEMPLATE_LIMITS.tableColumns:12})
+  const issue=tableShapeIssue(data,{generic:true,maxColumns:data.asOf!==undefined||data.note!==undefined||data.sources?.length?TEMPLATE_LIMITS.tableColumns:12})
   return issue?`table.${issue}。${TABLE_GUIDANCE}`:null
  }
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
