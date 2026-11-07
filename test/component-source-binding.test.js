@@ -1,5 +1,5 @@
 import {it,expect,vi} from 'vitest'
-import {componentSourceCollector,componentBindingEvidence,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {componentSourceCollector,componentBindingEvidence,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot,COMPONENT_MAPPING_EXAMPLES} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import officialSchemas from './fixtures/official-mcp-source-schemas.json'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {ComponentDataRefresh} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
@@ -556,6 +556,20 @@ it.each([{matched:true,failed:false},{matched:false,failed:false},{matched:true,
 const etfResponse={source:'Tushare',api:'etf_share_size + etf_basic + trade_cal',period:{start:'20261029',end:'20261105'},summary:{sizeYi:100,shareYi:50,netCreatedProducts:12,netRedeemedProducts:7},records:[],fieldInfo:{sizeYi:'期末规模（亿元）',shareYi:'期末份额（亿份）'}}
 const etfRecords=[{tool,args:{view:'overview'},response:etfResponse}]
 const etfDraft=()=>({version:1,type:'data-bound',requests:[{key:'q',tool,args:{view:'overview'}}],mapping:{version:1,type:'kpi',title:'ETF总览',asOf:{$from:'q',$path:'period.end'},items:[{label:'ETF总规模',value:{$from:'q',$path:'summary.sizeYi',$digits:2},unit:'亿元'}]}})
+it('executes the synthesis and repair examples against real-shaped ETF responses without fabricated defaults',()=>{
+ const d=etfDraft();d.mapping.items=[COMPONENT_MAPPING_EXAMPLES.metric,COMPONENT_MAPPING_EXAMPLES.missing]
+ const snapshot=resolveComponentSnapshot(JSON.stringify(d),etfRecords,now)
+ expect(snapshot.data.items.map(item=>item.value)).toEqual(['100','本次未取得'])
+ const ranking=structuredClone(COMPONENT_MAPPING_EXAMPLES.ranking)
+ const rows=[{name:'ETF甲',flowEstimateYi:-31.788},{name:'ETF乙',flowEstimateYi:-27.61}]
+ const ranked={...d,mapping:ranking}
+ const result=resolveComponentSnapshot(JSON.stringify(ranked),[{...etfRecords[0],response:{...etfResponse,records:rows}}],now)
+ expect(result.data.variant).toBe('horizontal')
+ expect(result.data.labels).toEqual(['ETF甲','ETF乙'])
+ expect(result.data.series[0].values).toEqual([-31.79,-27.61])
+ // A successfully rendered template must still be tied to an observed call.
+ expect(resolveComponentSnapshot(JSON.stringify(ranked),[],now)).toBeNull()
+})
 it.each(['bound','snapshot'])('rejects repeated ETF unit conversion before displaying a %s',mode=>{
  const d=etfDraft();d.mapping.items[0].value.$scale=100
  if(mode==='bound')expect(()=>resolveBoundComponent(JSON.stringify(d),etfRecords,now)).toThrow(/summary.sizeYi.*亿元/)

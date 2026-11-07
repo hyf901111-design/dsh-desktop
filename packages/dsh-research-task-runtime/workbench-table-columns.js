@@ -141,8 +141,15 @@ body table[data-workbench-table-columns] :is(th,td)[data-column-wrap="true"]{whi
 body table[data-workbench-table-columns] :is(th,td)[data-column-align="left"]{text-align:left!important}
 body table[data-workbench-table-columns] :is(th,td)[data-column-align="right"]{text-align:right!important;font-variant-numeric:tabular-nums}
 body table[data-workbench-table-columns] :is(th,td)[data-column-align="center"]{text-align:center!important}
-body table[data-workbench-table-columns] th{position:sticky!important;top:0;padding-left:var(--workbench-column-padding-left,8px)!important;padding-right:var(--workbench-column-padding-right,8px)!important}
-body table[data-workbench-table-columns] th button{white-space:inherit!important;overflow-wrap:inherit!important;text-align:inherit!important;justify-content:var(--workbench-column-justify,flex-start)!important;box-sizing:border-box;width:100%;padding-left:0!important;padding-right:0!important}
-body [data-workbench-column-resize]{position:absolute;inset:0 -4px 0 auto;width:9px;cursor:col-resize;touch-action:none;user-select:none;z-index:3;background:transparent!important}
-body [data-workbench-column-resize]:is(:hover,:focus-visible){background:var(--sherlock-border,#aaa)!important;outline:none}
+body table[data-workbench-table-columns] th{position:sticky!important;top:0;height:26px!important;font-size:12px!important;line-height:18px!important;padding-top:4px!important;padding-bottom:4px!important;padding-left:var(--workbench-column-padding-left,8px)!important;padding-right:var(--workbench-column-padding-right,8px)!important}
+body table[data-workbench-table-columns] th button{white-space:inherit!important;overflow-wrap:inherit!important;text-align:inherit!important;justify-content:var(--workbench-column-justify,flex-start)!important;box-sizing:border-box;width:100%;height:auto!important;min-height:0!important;line-height:18px!important;padding:0!important}
+/* Follow the renderer's actual sort state; do not add pretend sorting to plain
+   data headers, or write arrow characters into labels used for width identity. */
+body table[data-workbench-table-columns] th:is([aria-sort],:has(>button[data-column]),:has(>button[aria-label*="排序"]),:has(>button[aria-label^="Sort "]))>button::after{content:"↕";display:inline-block;width:10px;margin-left:4px;font:12px/18px system-ui,sans-serif;color:inherit;opacity:.55}
+body table[data-workbench-table-columns] th[aria-sort="ascending"]>button::after{content:"↑"!important;opacity:1!important}
+body table[data-workbench-table-columns] th[aria-sort="descending"]>button::after{content:"↓"!important;opacity:1!important}
+body [data-workbench-column-resize]{position:absolute;inset:0 0 0 auto;width:8px;cursor:col-resize;touch-action:none;user-select:none;z-index:3;background:transparent!important}
+body [data-workbench-column-resize]::after{content:"";position:absolute;inset:5px 0 5px auto;width:1px;background:currentColor;opacity:.25}
+body [data-workbench-column-resize]:is(:hover,:focus-visible)::after{width:2px;background:var(--sherlock-control-primary,#168cf0);opacity:1}
+body [data-workbench-column-resize]:focus-visible{outline:1px solid var(--sherlock-control-primary,#168cf0);outline-offset:-1px}
 `

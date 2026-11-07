@@ -59,3 +59,27 @@ it('keeps the first column frozen while horizontal scrolling, sorting and resizi
   expect(await first.locator('button').textContent()).toBe('证券名称')
  }finally{await page.close()}
 },15000)
+
+it('shows sort direction without inflating headers or sorting while a column is dragged',async()=>{
+ const page=await fixture()
+ try{
+  const header=page.locator('thead th').nth(1),button=header.locator('button')
+  const arrow=()=>button.evaluate(el=>getComputedStyle(el,'::after').content)
+  for(const mode of ['enterprise','dark','light','openterminal']){
+   await page.evaluate(mode=>document.documentElement.dataset.workbenchStyle=mode,mode)
+   expect(await arrow()).toBe('"↕"')
+   expect((await header.boundingBox()).height).toBeLessThanOrEqual(28)
+  }
+  await button.click();expect(await arrow()).toBe('"↑"')
+  expect(await page.locator('tbody tr:first-child td').nth(1).textContent()).toBe('10')
+  await button.click();expect(await arrow()).toBe('"↓"')
+  expect(await page.locator('tbody tr:first-child td').nth(1).textContent()).toBe('20')
+  const handle=header.locator('[data-workbench-column-resize]'),box=await handle.boundingBox(),before=(await header.boundingBox()).width
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down()
+  await page.mouse.move(box.x+box.width/2+45,box.y+box.height/2,{steps:5});await page.mouse.up()
+  expect((await header.boundingBox()).width).toBeGreaterThan(before+35)
+  expect(await header.getAttribute('aria-sort')).toBe('descending')
+  await page.locator('thead th').first().locator('button').click()
+  expect(await arrow()).toBe('"↕"')
+ }finally{await page.close()}
+},15000)

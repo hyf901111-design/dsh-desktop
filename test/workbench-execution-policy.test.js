@@ -15,7 +15,10 @@ describe('workbench execution policy', () => {
     const text = request => prompt.text({ agent: { session: session(request) } })
     expect(text('使用免费源创建A股行情工作台，每分钟刷新')).toContain('publicData')
     expect(text('使用免费源创建A股行情工作台，每分钟刷新').length).toBeLessThan(3400)
-    for (const request of ['禁止联网创建行情工作台', '使用通联MCP创建股票工作台', '使用Tushare创建股票行情工作台', '创建股票财报与宏观工作台']) expect(text(request)).not.toContain('【已适配来源快捷路径】')
+    for (const request of ['禁止联网创建行情工作台', '使用通联MCP创建股票工作台', '使用Tushare创建股票行情工作台', '创建股票财报与宏观工作台', '做个A股宽基指数对比工作台，看看沪深300、中证500和创业板近三个月的表现', '帮我搭一个ETF指数运营工作台，看看最近一周规模变化和资金进出前五', '创建ETF收益与回撤比较看板']) expect(text(request)).not.toContain('【已适配来源快捷路径】')
+    expect(text('创建一个主流加密货币行情监控面板')).toContain('【已适配来源快捷路径】')
+    expect(text('创建一张沪深300近三个月日K行情看板')).toContain('【已适配来源快捷路径】')
+    expect(text('帮我搭一个ETF指数运营工作台，看看最近一周规模变化和资金进出前五')).toContain('真实数据模式使用 dataMode:"source"')
     ctx.tools.schemas = () => []
     expect(text('创建免费股票行情工作台')).not.toContain('【已适配来源快捷路径】')
   })

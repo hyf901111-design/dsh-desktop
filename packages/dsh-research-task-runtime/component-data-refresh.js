@@ -174,7 +174,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  // provide. Treat this as explicit display text, never as a numeric fallback
  // or an expression that could conceal a malformed field mapping.
  if(Object.hasOwn(mapping,'$default')){
-  if(Object.keys(mapping).length!==1||typeof mapping.$default!=='string'||!mapping.$default.trim())throw Error('独立缺失说明只能使用非空文字；数值必须引用真实字段路径')
+  if(Object.keys(mapping).length!==1||typeof mapping.$default!=='string'||!mapping.$default.trim())throw Error('缺失处理位置错误：$optional/$default 必须在 value 的字段选择器内，如 {"label":"指标","value":{"$from":"q","$path":"实际字段","$optional":true,"$default":"本次未取得"}}，不能与 label/value 并列。独立缺失说明只能使用非空文字；数值必须引用真实字段路径。')
   return mapping.$default
  }
  return Object.fromEntries(Object.entries(mapping).flatMap(([k,v])=>{

@@ -36,7 +36,7 @@ export function ResearchInteractiveTable({ spec }) {
               children: react_jsx_runtime.jsx('button', { type: 'button',
                 onClick: () => setSort(previous => ({ column: index,
                   descending: previous.column === index && !previous.descending })),
-                'aria-label': '按' + column + '排序', children: column + (sort.column === index ? sort.descending ? ' ↓' : ' ↑' : '') }) }, index)) }) }),
+                'aria-label': '按' + column + '排序', children: column }) }, index)) }) }),
           react_jsx_runtime.jsx('tbody', { children: rows.map(({ row, index }) =>
             react_jsx_runtime.jsx('tr', { children: row.map((cell, cellIndex) =>
               react_jsx_runtime.jsx('td', { 'data-numeric': numericColumns[cellIndex] ? 'true' : void 0,
