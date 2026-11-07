@@ -9,6 +9,22 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('combines nine verified company financial queries without forcing absent metrics into the card',()=>{
+ const observations=Array.from({length:9},(_,i)=>({tool,args:{company:i%3,metric:Math.floor(i/3)},response:{source:'验收数据',date:'2026-11-06',records:i===8?[]:[{value:100+i}]}}))
+ const requests=observations.map((r,i)=>({key:'q'+i,tool:r.tool,args:r.args}))
+ const mapping={version:1,type:'table',title:'三家公司财务对比',asOf:{$from:'q0',$path:'date'},columns:['公司','估值','营收','利润'],rows:Array.from({length:3},(_,i)=>['公司'+i,...[i,i+3,i+6].map(j=>({$from:'q'+j,$each:'records',$map:{$path:'value'},$reduce:'first',$optional:true}))])}
+ const input={version:1,type:'data-bound',requests,mapping}
+ expect(componentBindingEvidence(observations).split('\n')).toHaveLength(9)
+ for(const resolve of [resolveBoundComponent,resolveComponentSnapshot]){
+  const result=resolve(JSON.stringify(input),observations,now)
+  expect(result?.data.rows.slice(0,2)).toEqual([['公司0','100','103','106'],['公司1','101','104','107']])
+  expect(result?.data.rows[2].slice(0,3)).toEqual(['公司2','102','105'])
+  expect(result?.data.rows[2][3]).toBe('本次未取得')
+ }
+ const tooMany={...input,requests:Array.from({length:17},(_,i)=>({...requests[0],key:'r'+i}))}
+ expect(()=>resolveBoundComponent(JSON.stringify(tooMany),observations,now)).toThrow()
+ expect(resolveComponentSnapshot(JSON.stringify(tooMany),observations,now)).toBeNull()
+})
 it('never supplies a transport-successful MCP parameter rejection as usable business evidence',()=>{
  const collector=componentSourceCollector([tool])
  collector.accept({type:'tool/call',data:{callId:'invalid-parameters',name:tool,arguments:JSON.stringify({api_name:'getFdmtISLT2018',url_params:{ticker:'600011',mergedFlag:'1'}})}})

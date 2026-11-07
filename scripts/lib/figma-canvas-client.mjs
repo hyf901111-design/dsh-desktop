@@ -88,13 +88,20 @@ function patchCreationAfterCanvasUse(source) {
   // The creation controls consume the canvas-use stop/queue handlers.
   return source.includes('stop=()=>{if(canvasRunning)') ? patchResearchCreationProgress(source) : source;
 }
+export function patchWorkbenchPanelGuard(source) {
+  const singleWorkbenchGuard = 'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 1 || plan.panels.length > 30) return false;'
+  if (!source.includes(singleWorkbenchGuard)) {
+    const previousGuard = source.includes(singleWorkbenchGuard.replace('> 30','> 10'))
+      ? singleWorkbenchGuard.replace('> 30','> 10')
+      : singleWorkbenchGuard.replace('length < 1','length < 2').replace('> 30','> 10')
+    source = exact(source,previousGuard,singleWorkbenchGuard)
+  }
+  return source
+}
 export function patchFigmaFinalCanvas(source) {
   source = patchResearchCanvasDeferredHtml(source)
   source = patchResearchCanvasViewportPersistence(source)
-  const singleWorkbenchGuard = 'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 1 || plan.panels.length > 10) return false;'
-  if (!source.includes(singleWorkbenchGuard)) source = exact(source,
-    'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 2 || plan.panels.length > 10) return false;',
-    singleWorkbenchGuard)
+  source = patchWorkbenchPanelGuard(source)
   const marketResizeSource = `/* ODYSSEY_MARKET_METRICS_RESIZE */
         function researchCanvasMinimumHeight(node, policy) {
             if (node?.kind !== "generated-container") return policy.minHeight;

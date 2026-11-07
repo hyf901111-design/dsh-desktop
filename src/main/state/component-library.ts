@@ -54,12 +54,12 @@ function snapshot(value: unknown) {
 function recipe(value: any): Recipe | undefined {
     if (value === undefined)
         return;
-    if (!value || typeof value.templateId !== 'string' || typeof value.templateVersion !== 'string' || !Number.isInteger(value.intervalMinutes) || value.intervalMinutes < 0 || value.intervalMinutes > 10080 || typeof value.enabled !== 'boolean' || !Array.isArray(value.requests) || !value.requests.length || value.requests.length > 8 || !value.mapping || typeof value.mapping !== 'object' || Array.isArray(value.mapping))
+    if (!value || typeof value.templateId !== 'string' || typeof value.templateVersion !== 'string' || !Number.isInteger(value.intervalMinutes) || value.intervalMinutes < 0 || value.intervalMinutes > 10080 || typeof value.enabled !== 'boolean' || !Array.isArray(value.requests) || !value.requests.length || value.requests.length > 16 || !value.mapping || typeof value.mapping !== 'object' || Array.isArray(value.mapping))
         throw Error('组件数据配置无效');
     const requests=(rows:any[])=>rows.map((r:any)=>({key:r.key,toolId:r.toolId,args:r.args}));
     const result:Recipe = { templateId: value.templateId, templateVersion: value.templateVersion, intervalMinutes: value.intervalMinutes, enabled: value.enabled, requests: requests(value.requests), mapping: value.mapping };
     if(value.sources!==undefined){
-        if(!Array.isArray(value.sources)||!value.sources.length||value.sources.length>5||new Set(value.sources.map((s:any)=>s?.id)).size!==value.sources.length||!value.sources.some((s:any)=>s.id===value.sourceId)||value.sources.some((s:any)=>!s||typeof s.id!=='string'||!/^[a-zA-Z0-9][\w.-]{0,63}$/.test(s.id)||typeof s.name!=='string'||!s.name.trim()||s.name.length>128||!Array.isArray(s.requests)||!s.requests.length||s.requests.length>8||!s.mapping||typeof s.mapping!=='object'||Array.isArray(s.mapping)))throw Error('组件数据源方案无效');
+        if(!Array.isArray(value.sources)||!value.sources.length||value.sources.length>5||new Set(value.sources.map((s:any)=>s?.id)).size!==value.sources.length||!value.sources.some((s:any)=>s.id===value.sourceId)||value.sources.some((s:any)=>!s||typeof s.id!=='string'||!/^[a-zA-Z0-9][\w.-]{0,63}$/.test(s.id)||typeof s.name!=='string'||!s.name.trim()||s.name.length>128||!Array.isArray(s.requests)||!s.requests.length||s.requests.length>16||!s.mapping||typeof s.mapping!=='object'||Array.isArray(s.mapping)))throw Error('组件数据源方案无效');
         result.sourceId=value.sourceId;
         result.sources=value.sources.map((s:any)=>({id:s.id,name:s.name,requests:requests(s.requests),mapping:s.mapping}));
     }

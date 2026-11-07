@@ -1,5 +1,5 @@
 import { Window } from 'happy-dom';
-import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
+import { patchFigmaFinalCanvas, patchWorkbenchPanelGuard } from '../scripts/lib/figma-canvas-client.mjs';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -78,14 +78,15 @@ describe('研究工作台', () => {
         expect(single.panels).toHaveLength(1);
         expect(layoutWorkbench(single.panels)[0]).toMatchObject({ x: 0, y: 0 });
         expect(validateWorkbench({ requestId: 'a', title: '行业', panels: [panel(1), panel(2)] }).panels).toHaveLength(2);
-        for (const panels of [[], [panel(1), panel(1)], Array.from({ length: 11 }, (_, i) => panel(i)), [panel(1), { ...panel(2), height: 99999 }]])
+        for (const panels of [[], [panel(1), panel(1)], Array.from({ length: 31 }, (_, i) => panel(i)), [panel(1), { ...panel(2), height: 99999 }]])
             expect(() => validateWorkbench({ requestId: 'a', title: '行业', panels })).toThrow();
     });
     it('patches the shipped canvas mount guard so a single prepared panel can appear', async () => {
         const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8');
-        const guard = 'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 1 || plan.panels.length > 10) return false;';
-        const older = source.replace(guard, guard.replace('length < 1', 'length < 2'));
-        expect(patchFigmaFinalCanvas(older)).toContain(guard);
+        const guard = 'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 1 || plan.panels.length > 30) return false;';
+        const older = source.replace(/if \(!plan \|\| !Array.isArray\(plan.panels\) \|\| plan.panels.length < [12] \|\| plan.panels.length > (?:10|30)\) return false;/, guard.replace('length < 1', 'length < 2').replace('> 30','> 10'));
+        expect(patchWorkbenchPanelGuard(older)).toContain(guard);
+        expect(patchWorkbenchPanelGuard(patchWorkbenchPanelGuard(older))).toContain(guard);
     });
     it('keeps Figma template sizes and non-overlapping source order',()=>{
         const panels=layoutWorkbench(['small','large','medium','small','small','large','medium','small','large'].map((size,i)=>({...panel(i),size})));

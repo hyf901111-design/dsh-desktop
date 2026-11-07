@@ -51,7 +51,10 @@ export function validateSourceReduction(mapping,rowMapping,rows,read){
  const op=mapping.$reduce
  if(rowMapping===undefined)throw Error('$reduce 缺少字段选择：请提供 $map:{"$path":"已观察的真实字段"}；统计价格时选择实际价格字段，不能聚合整条记录或猜测字段。')
  if(!reductions.has(op)||mapping.$single!==undefined||mapping.$normalize!==undefined||!(endpoints.has(op)?sourceScalarExpression(rowMapping):sourceNumericExpression(rowMapping)))throw Error('$reduce 必须选择真实字段，不能与 $single/$normalize 混用或手填列表值；first/last 可取日期或文本，其他聚合只接受数值字段')
- if(!rows.length)throw Error('没有可计算的观测记录，不能把空列表当成0')
+ if(!rows.length){
+  if(endpoints.has(op)&&mapping.$optional===true)return
+  throw Error('没有可计算的观测记录，不能把空列表当成0')
+ }
  if(!chronological.has(op))return
  if(!mapping.$sortBy||!['asc','ascending'].includes(mapping.$order)||rows.length<(op==='returnStdDev'?3:2))throw Error('区间指标必须按实际日期显式升序排列；涨跌幅至少两条，收益波动率至少三条价格记录')
  const dates=rows.map(row=>read(row,mapping.$sortBy))
@@ -97,4 +100,4 @@ export function reduceSourceValues(op,values){
  return finite(result)
 }
 
-export const COMPONENT_DERIVED_VALUE_GUIDANCE='派生数值由宿主计算，不手填结果、不重复取数。列表选择器在 $each/$map 同层可加 $reduce:"first|last|min|max|sum|mean|change|pctChange|maxDrawdown|returnStdDev"；$map 必须明确选取实际字段。first/last 取选定字段的首末标量，可用于日期、名称和数值；其余聚合只处理真实数值。先筛选实际标的和指标，再按真实日期 $sortBy/$order:"asc" 排序。例如实际响应为 records:[{trade_date,close}] 时，区间涨跌幅为 {"$from":"q","$each":"records","$sortBy":"trade_date","$order":"asc","$map":{"$path":"close"},"$reduce":"pctChange","$digits":2}；末日用同一列表和排序、$map:{"$path":"trade_date"}、$reduce:"last"，不加数值精度。多个标的对比用一条 series，values:[标的一的聚合选择器,标的二的聚合选择器]，与 labels 一一对应；不能把标量当成整条 values 列表。pctChange=(末值/首值−1)×100，change=末值−首值；maxDrawdown 返回非正百分数；returnStdDev 是相邻简单收益率的样本标准差（百分数，至少三条价格，不年化）。跨字段计算用 {$calc:{op:"pctChange",args:[起点字段选择器,终点字段选择器]},$digits:2}；其他 op 为 add/subtract/multiply/divide，args 必须是两个真实字段选择器或派生表达式，不填数字常量。保留完整观测，缺失不补零、零分母不计算；$digits 仅在最终显示时舍入。';
+export const COMPONENT_DERIVED_VALUE_GUIDANCE='派生数值由宿主计算，不手填结果、不重复取数。列表选择器在 $each/$map 同层可加 $reduce:"first|last|min|max|sum|mean|change|pctChange|maxDrawdown|returnStdDev"；$map 必须明确选取实际字段。first/last 取排序后选定字段的首末标量，可用于日期、名称和数值；取最新值须升序配 last 或降序配 first，不能降序后取 last 当最新值。明确可选的首末值在已成功查询的空列表中保留 null，不能补零；其余聚合只处理真实数值。先筛选实际标的和指标，再按真实日期 $sortBy/$order:"asc" 排序。例如实际响应为 records:[{trade_date,close}] 时，区间涨跌幅为 {"$from":"q","$each":"records","$sortBy":"trade_date","$order":"asc","$map":{"$path":"close"},"$reduce":"pctChange","$digits":2}；末日用同一列表和排序、$map:{"$path":"trade_date"}、$reduce:"last"，不加数值精度。多个标的对比用一条 series，values:[标的一的聚合选择器,标的二的聚合选择器]，与 labels 一一对应；不能把标量当成整条 values 列表。pctChange=(末值/首值−1)×100，change=末值−首值；maxDrawdown 返回非正百分数；returnStdDev 是相邻简单收益率的样本标准差（百分数，至少三条价格，不年化）。跨字段计算用 {$calc:{op:"pctChange",args:[起点字段选择器,终点字段选择器]},$digits:2}；其他 op 为 add/subtract/multiply/divide，args 必须是两个真实字段选择器或派生表达式，不填数字常量。保留完整观测，缺失不补零、零分母不计算；$digits 仅在最终显示时舍入。';

@@ -17,9 +17,9 @@ export function resolveWorkbenchLibraryPanel(panel){
   if(Object.keys(options).length)throw Error('日历工具复用已有日历，不接受生成的事件或提醒；经济事件请使用数据日历卡。')
   return {...rest,type:'calendar-tool',artifact:{version:1,type:'calendar-tool',title:panel.title}}
  }
- const safeKeys=['symbols','query','period','adjustment','indicators','market','selectedSymbol','visibleBars','dataSource','refreshMinutes','refreshEnabled']
+ const safeKeys=['title','symbols','query','period','adjustment','indicators','market','selectedSymbol','visibleBars','dataSource','refreshMinutes','refreshEnabled']
  const defaults=financialWidgetDefaults(widget)
- const spec=Object.keys(options).every(key=>safeKeys.includes(key))&&financialWidgetSpec({...defaults,symbols:[],...options,title:panel.title})
+ const spec=(options.title===undefined||typeof options.title==='string'&&options.title.length<=256)&&Object.keys(options).every(key=>safeKeys.includes(key))&&financialWidgetSpec({...defaults,symbols:[],...options,title:panel.title})
  const content=(panel.title??'')+' '+(panel.prompt??'')
  const missingFinancialFields=widget==='quote'&&/市盈率|市净率|\bPE\b|\bPB\b|研发费用率|毛利率|净利率|营业收入|财务报表/iu.test(content)
  if(spec&&!missingFinancialFields)return {...rest,type:'financial-widget',artifact:spec}

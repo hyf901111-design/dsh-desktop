@@ -430,9 +430,9 @@ export function validateWorkbench(value) {
     if (value?.generationMode === 'deferred' && value.preset !== undefined) throw Error('延后模拟生成不能混用固定预设。');
     value = expandSimulatedWorkbenchPreset(expandLiveWorkbenchPreset(value));
     if (value && value.panels === undefined)
-        throw Error('缺少工作台内容参数：不能只传 title。标准模拟工作台请完整提交 {"title":"工作台标题","dataMode":"simulated","preset":"medical-21h"}（另有 market-overview-21h、research-operations-21m）；其他需求必须提供 1–10 个 panels，每项包含 title、prompt、type，size 可省略由宿主按内容排版。preset 是工具参数，不是文件路径。请按用户需求补齐参数后重试，不要重复原调用。');
-    if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > 10)
-        throw Error('工作台需要 1–10 个独立面板。');
+        throw Error('缺少工作台内容参数：不能只传 title。标准模拟工作台请完整提交 {"title":"工作台标题","dataMode":"simulated","preset":"medical-21h"}（另有 market-overview-21h、research-operations-21m）；其他需求必须提供 1–30 个 panels，每项包含 title、prompt、type，size 可省略由宿主按内容排版。preset 是工具参数，不是文件路径。请按用户需求补齐参数后重试，不要重复原调用。');
+    if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > 30)
+        throw Error('工作台需要 1–30 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';

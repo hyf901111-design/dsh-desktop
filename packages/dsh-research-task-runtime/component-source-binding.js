@@ -458,7 +458,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
   const candidate=dataBoundCandidate(text)
   if(candidate?.mapping?.type==='html')return resolvePrototypeHtmlSnapshot(candidate,records,options)
   const contract=mappingContract(candidate?.mapping,options,candidate?.version)
-  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))return null
+  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||!templateFor(contract))return null
   const responses={},sources={}
   try {
     const keys=new Set()
@@ -558,7 +558,7 @@ export function componentBindingEvidence(records) {
   return typeof value==='string'?value.slice(0,3000):value
  }
  let used=0
- return records.filter(componentMappableSource).slice(-8).flatMap(record=>{
+ return records.filter(componentMappableSource).slice(-16).flatMap(record=>{
   const text=JSON.stringify({tool:record.tool,args:record.args,...(record.purpose==='snapshot'?{snapshotOnly:true}:{}),responseSample:sample(record.response,0,record.tool==='financial_query')})
   if(used+Buffer.byteLength(text)>100000)return []
   used+=Buffer.byteLength(text);return [text]
@@ -663,7 +663,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const contract=mappingContract(candidate.mapping,options,candidate.version)
   if(contract?.type==='chart'&&contract.variant===undefined)throw Error('chart.variant 缺失：mapping 必须保留本卡设计合同中的具体图表变体。')
   if(contract?.type==='chart'&&!CHART_VARIANTS.includes(contract.variant))throw Error(`chart.variant 不支持 ${String(contract.variant).slice(0,64)}。趋势折线用 line，横向排名用 horizontal；其余可用值：${CHART_VARIANTS.join('、')}。仅修正呈现类型，保留已取得数据及字段映射，无需重新取数。`)
-  if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))throw Error('数据映射需要已成功调用的接口及当前模板字段，核对 mapping.version/type/variant。')
+  if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||!templateFor(contract))throw Error('数据映射需要已成功调用的接口及当前模板字段，核对 mapping.version/type/variant。')
   const requests=[],responses={},observed=[]
   for(const request of candidate.requests) {
     if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||Object.hasOwn(responses,request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/i.test(request.tool??'')))throw Error('自动更新的数据引用无效。')

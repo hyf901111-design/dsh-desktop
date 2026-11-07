@@ -10,6 +10,15 @@ const calc=(op)=>({$calc:{op,args:[{$from:'a',$path:'close'},{$from:'b',$path:'c
 it.each([['first',100],['last',99],['min',99],['max',110],['sum',309],['mean',103],['change',-1],['pctChange',-1],['maxDrawdown',-10],['returnStdDev',14.14]])('derives %s from selected chronological observations, not model values',(kind,want)=>{
  expect(evaluateMapping({...prices,$reduce:kind,$digits:2},responses)).toBe(want)
 })
+it('keeps an explicitly optional endpoint absent for an empty verified response, never zero',()=>{
+ for(const op of ['first','last']){
+  const expression={...prices,$reduce:op,$optional:true,$scale:1e-8,$digits:2}
+  expect(evaluateMapping(expression,{q:{records:[]}})).toBeNull()
+  expect(()=>evaluateMapping({...expression,$optional:false},{q:{records:[]}})).toThrow('观测记录')
+  expect(()=>evaluateMapping({...expression,$map:'invented'},{q:{records:[]}})).toThrow('真实字段')
+ }
+ expect(()=>evaluateMapping({...prices,$reduce:'sum',$optional:true},{q:{records:[]}})).toThrow('观测记录')
+})
 it('selects first and last source dates without coercing them into financial numbers',()=>{
  const dates={...prices,$map:{$path:'date'}}
  expect(evaluateMapping({...dates,$reduce:'first'},responses)).toBe('2026-11-01')
