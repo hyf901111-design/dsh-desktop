@@ -2470,7 +2470,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const pluginProhibited = sourcePolicy?.pluginProhibited ?? componentPluginSourceProhibited(sourceRequest ?? '')
       const bindingRequested = componentBindingRequested(sourceRequest)
       const liveDataSubmission = !synthesisOnly && surface !== 'note' && boundTemplate && !deferredWorkbenchPanel(query??'') && typeof ctx.tools?.register==='function' && typeof ctx.tools?.guard==='function'
-      if(liveDataSubmission)submission=createComponentDataSubmission({
+      const createDataSubmission=()=>createComponentDataSubmission({
         observeRecords:()=>sourceCollector?.records??[],signal,bindingRequested,
         options:{panelRequest:workbenchPanelIntent(query),newsScope:query,intervalMinutes:requestedComponentRefreshInterval(sourceRequest)},
         validateSnapshot:(snapshot,records)=>{
@@ -2480,6 +2480,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
         }
       })
+      if(liveDataSubmission)submission=createDataSubmission()
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
       // A single exact host chart schema may supply only an absent variant.
@@ -2898,13 +2899,18 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         }
       }
       const prototypeRepairable=!synthesisOnly&&prototypeTargets&&workbenchPanelFormat(query??'')==='html'&&typeof child.ctx.tools?.register==='function'&&typeof child.ctx.tools?.guard==='function'
-      if(kind==='container'&&(surface==='note'||prototypeRepairable)&&canRepairComponentChild({ctx,child})){
+      if(kind==='container'&&(surface==='note'||prototypeRepairable||liveDataSubmission)&&canRepairComponentChild({ctx,child})){
         const repair=createComponentRepair({ctx,child,signal,queueWait:()=>workbenchModelQueueWaitMs(ctx,child.id)})
         let repairStarted=false
         handle.repair=({prompt,synthesisOnly,prototypeSubmission})=>{
           if(disposed||repairStarted)throw new ResearchTaskError('NOTE_COMPONENT_REPAIR_USED','组件格式恢复已结束，请重试。')
           let nextSubmission
-          if(surface!=='note'){
+          if(liveDataSubmission){
+            // Keep the original child's complete observations and validation
+            // tools through bounded repair. A JSON format error must not
+            // restart acquisition or become a one-shot template failure.
+            nextSubmission=createDataSubmission()
+          }else if(surface!=='note'){
             if(!prototypeSubmission)return
             // Evidence comes from this exact child's observed calls, never the
             // caller's records or another panel's source responses.
@@ -2919,7 +2925,11 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
             submission=nextSubmission
             sourceProjectionStops.add(stopSubmission)
             submission.register(child)
-            return{prompt:(prototypeSubmission.retainedRepairPrompt??prompt)+'\n'+submission.instruction,result:submission.result}
+            return{prompt:liveDataSubmission?[
+              '继续本卡修复。原需求和成功查询的完整响应保留在本子会话中，不重新取数、不删减有效业务内容。只开放呈现 schema 和提交工具；以实际数据选择呈现形式，修正后调用 submit_component_data，校验错误可继续修正，不能把 JSON 当作最终回复。',
+              prompt.match(/具体校验问题：[^\n]+/u)?.[0]??'修正上一轮未被接受的呈现。',
+              COMPONENT_SUBMISSION_MAPPING_GUIDANCE,submission.instruction
+            ].join('\n'):(prototypeSubmission?.retainedRepairPrompt??prompt)+'\n'+submission.instruction,result:submission.result}
           }}:{}}).then(result=>withEvidence(result,recordOffset,attemptOffset)).finally(()=>{nextSubmission?.dispose();resultSettled()})
           return handle
         }

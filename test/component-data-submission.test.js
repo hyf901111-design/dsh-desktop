@@ -235,3 +235,38 @@ it('uses one real child through acquisition, rejected mapping and adaptive corre
  expect(prompt).not.toContain('最终输出严格 JSON');expect(prompt).not.toContain('仅输出完整JSON');expect(prompt.length).toBeLessThan(12000)
  expect(ctx.tools.schemas(children[0]).map(t=>t.name)).not.toContain('submit_component_data')
 })
+
+it('retains source-owned submission tools during bounded repair and lets the same child correct again',async()=>{
+ const ctx=context();new SubagentRuntime(ctx);spawn(ctx,{providerName:'spawn'})
+ const parent=(await ctx.agents.create({sessionId:'repair-data-parent',agentOptions:{provider:'fixture',model:'fixture'}})).agent,requests=[],children=[]
+ let queries=0
+ ctx.on('agent/created',({agent})=>{if(agent.id!==parent.id)children.push(agent)})
+ ctx.tools.register(defineTool({name:'public_data_query',description:'Read data',parameters:{operation:{type:'string'},source:{type:'string'},parameters_json:{type:'string'}},output:{schema:{type:'object',additionalProperties:true},render:(_a,v)=>[{type:'text',text:JSON.stringify(v)}]},isConcurrencySafe:()=>true,execute(){queries++;return response}}))
+ ctx.llm.registerAdapter(['fixture'],new class extends LlmAdapter{
+  async resolveModel(provider,id){return{provider,id,name:id}}async listModels(){return[]}
+  async *stream(request){
+   requests.push(request);const n=requests.length;if(n>4)throw Error('Repair did not finish')
+   if(n===2){yield{type:'block-start',index:0,blockType:'text'};yield{type:'block-end',index:0,block:{type:'text',text:'{"version":1,"type":"kpi","table":[]}'}};yield{type:'finish',reason:{kind:'completed'}};return}
+   expect(request.tools.map(t=>t.name)).toContain('submit_component_data')
+   if(n>=3){expect(request.tools.map(t=>t.name)).not.toContain('public_data_query');expect(request.tools.map(t=>t.name)).toContain('component_presentation_schema')}
+   const value=n===1?args:structuredClone(input)
+   if(n===3)value.mapping.labels.$map={$concat:[{$path:'name'},'产品']}
+   if(n===4)delete value.requests[0].args
+   yield{type:'block-start',index:0,blockType:'tool-call'};yield{type:'block-end',index:0,block:{type:'tool-call',id:'repair-call-'+n,name:n===1?'public_data_query':'submit_component_data',arguments:JSON.stringify(value)}};yield{type:'finish',reason:{kind:'tool-calls'}}
+  }
+ }())
+ const adapter=createSubagentAdapter(ctx),controller=new AbortController();cleanup.push(()=>adapter.dispose())
+ const query=workbenchPanelPrompt({title:'ETF',dataMode:'source',originalRequest:'看看资金进出前五'},{title:'资金变动',prompt:'读取真实来源比较产品资金变动',type:'kpi'})
+ const handle=await adapter.start({parentSessionId:parent.id,kind:'container',query,prompt:query,signal:controller.signal,onSessionEvent:()=>{}});cleanup.push(()=>handle.dispose())
+ const original=await handle.result
+ expect(original.sourceRecords).toHaveLength(1)
+ const repaired=handle.repair({synthesisOnly:true,prompt:'具体校验问题：指标卡不支持 table，保留内容选择合适呈现。'})
+ expect(repaired).toBe(handle)
+ const result=await repaired.result
+ expect(result.stopReason).toBe('completed');expect(result.sourceRecords).toHaveLength(0)
+ expect(children).toHaveLength(1);expect(queries).toBe(1);expect(requests).toHaveLength(4)
+ expect(resolveBoundComponent(result.output[0].text,original.sourceRecords).data.series[0].values).toEqual([2.1,-3.2])
+ expect(JSON.stringify(requests[2].messages)).toContain('指标卡不支持 table')
+ expect(ctx.tools.schemas(children[0]).map(t=>t.name)).not.toContain('submit_component_data')
+ expect(()=>handle.repair({synthesisOnly:true,prompt:'again'})).toThrow('恢复已结束')
+})
