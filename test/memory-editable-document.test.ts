@@ -29,3 +29,11 @@ it('rejects empty entries, oversized bodies and ambiguous new project assignment
   expect(()=>parseEditableMemory('x'.repeat(601),[],[])).toThrow(/过长/)
   expect(()=>parseEditableMemory('## 项目「项目甲」 · 新标题\n正文',[],[...projects,{...projects[0]!,id:'other'}])).toThrow(/不唯一/)
 })
+
+it('allows explicit lifecycle changes in Markdown while preserving the original identity and project',()=>{
+  const rows=[entry({scope:'project',projectId:'p',status:'candidate'})]
+  const confirmed=renderEditableMemory(rows,projects).replace('待确认 · ','')
+  expect(parseEditableMemory(confirmed,rows,projects)[0]).toMatchObject({id:'r',scope:'project',projectId:'p',status:'active'})
+  const disabled=confirmed.replace('## 项目','## 已停用 · 项目')
+  expect(parseEditableMemory(disabled,rows,projects)[0]).toMatchObject({id:'r',scope:'project',projectId:'p',status:'disabled'})
+})

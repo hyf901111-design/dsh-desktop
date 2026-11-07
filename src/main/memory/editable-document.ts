@@ -53,8 +53,9 @@ export function parseEditableMemory(content:string,rows:readonly DocumentEntry[]
     if(matchingProjects.length>1)throw Error('项目名称不唯一，请保留文档中原有的项目标题。')
     const project=matchingProjects[0]
     if(project)cleanTitle=cleanTitle.slice(`项目「${titleLine(project.name)}」 · `.length)
-    const old=sameBody.length===1?sameBody[0]!.row:undefined
-    if(old){used.add(old.id!);entries.push({...old,title:cleanTitle,content:body});continue}
+    const sameTitle=mapped.filter(item=>titleLine(item.row.title)===cleanTitle&&item.row.scope===(project?'project':'global')&&item.row.projectId===project?.id&&!used.has(item.row.id!))
+    const old=sameTitle.length===1?sameTitle[0]!.row:sameBody.length===1?sameBody[0]!.row:undefined
+    if(old){used.add(old.id!);entries.push({...old,title:cleanTitle,content:body,status,scope:project?'project':'global',projectId:project?.id});continue}
     const chunks=splitMemoryImport(body)
     for(let index=0;index<chunks.length;index++)entries.push({title:cleanTitle+(chunks.length>1?`（${index+1}/${chunks.length}）`:''),content:chunks[index]!,scope:project?'project':'global',projectId:project?.id,kind:project?'background':'preference',status,pinned:false})
   }
