@@ -187,7 +187,15 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
    mapped=mapped.map(value=>value/base*100)
    if(mapped.some(value=>!Number.isFinite(value)))throw Error('归一化结果超出数值范围')
   }
-  if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return scalarMapping(mapped[0],mapping)}
+  if(mapping.$single===true){
+   if(!rows.length&&mapping.$optional===true)return null
+   // A provider can repeat the exact same financial record. This is one
+   // scalar observation, but only when every original field is identical.
+   // Equal mapped values from distinct records remain ambiguous; list and
+   // aggregate operations above retain all observations, including duplicates.
+   if(rows.length!==1&&(!rows.length||!rows.every(row=>isDeepStrictEqual(row,rows[0]))))throw Error(`单值映射必须恰好匹配一条记录，实际匹配 ${rows.length} 条不同记录；请按标的、报告期、报表类型或公告日期明确筛选，选择最新记录时显式排序并取一条；缺失且允许空值时使用 $optional:true。`)
+   return scalarMapping(mapped[0],mapping)
+  }
   return mapped.map(value=>scalarMapping(value,mapping))
  }
  if(mapping.$filter!==undefined)throw Error('筛选必须指定列表 $each')
@@ -267,7 +275,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  mapping=normalizeChartDetailMapping(mapping)
  mapping=normalizeTableListMapping(mapping)
  mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
- const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
+ const candle=['market','chart'].includes(mapping?.type)&&mapping.variant==='candlestick'
  const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
  validateEtfMetricMapping(mapping,metadata,responses,now)
  mapping=normalizeObservedUnitMapping(mapping,metadata,value=>evaluateMapping(value,responses,now))
@@ -282,6 +290,9 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  const projection=normalizeKeyedTableProjection(evaluateMapping(body,responses,now,responses,0,{nodes:0},'component'),mapping)
  mapping=projection.mapping
  let data=normalizeIndexedTableRows(projection.data)
+ // Normalize only an equivalent, valid source date representation. Never
+ // guess timestamps, reorder observations, change OHLC or fill missing values.
+ if(candle&&Array.isArray(data.candles))data={...data,candles:data.candles.map(row=>record(row)&&typeof row.date==='string'&&/^\d{8}$/u.test(row.date)?{...row,date:filterDay(row.date)}:row)}
  if(!candle&&Object.hasOwn(mapping,'asOf')){
   try{data.asOf=evaluateMapping(asOf,responses,now,responses,0,{nodes:0},'timestamp')}
   catch(error){

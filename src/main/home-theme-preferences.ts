@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { isHomeTheme, normalizeHomeTheme, type HomeTheme } from '../shared/home-themes'
+import { isHomeThemeSelection, normalizeHomeTheme, type HomeThemeSelection } from '../shared/home-themes'
 import { registerTrustedMainWindowListener, type TrustedWindow, type TrustedWindowEvent } from './ipc-trust'
 
 /** A desktop preference is independent of Harness's changing localhost port. */
@@ -8,7 +8,7 @@ export class HomeThemePreferenceStore {
   private readonly file: string
   constructor(private readonly userData: string) { this.file = join(userData, 'home-theme.json') }
 
-  get(): HomeTheme | null {
+  get(): HomeThemeSelection | null {
     try {
       if (statSync(this.file).size > 512) return null
       const saved: unknown = JSON.parse(readFileSync(this.file, 'utf8'))
@@ -19,7 +19,7 @@ export class HomeThemePreferenceStore {
   }
 
   set(theme: unknown): boolean {
-    if (!isHomeTheme(theme)) return false
+    if (!isHomeThemeSelection(theme)) return false
     const temporary = `${this.file}.${process.pid}.tmp`
     try {
       mkdirSync(this.userData, { recursive: true, mode: 0o700 })

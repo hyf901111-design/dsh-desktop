@@ -1,4 +1,4 @@
-import type {HomeTheme} from '../shared/home-themes'
+import type {HomeTheme, HomeThemeSelection} from '../shared/home-themes'
 
 export type HomeThemePreview = {
   canvas: HTMLCanvasElement
@@ -8,8 +8,8 @@ export type HomeThemePreview = {
 }
 
 export type HomeThemeController = {
-  getSelected(): HomeTheme
-  select(id: HomeTheme): void
+  getSelected(): HomeThemeSelection
+  select(id: HomeThemeSelection): void
   getThumbnail(id: HomeTheme): string | null
   /** A transient view of the real wallpaper renderer; callers own its lifetime. */
   createPreview?(id: HomeTheme): HomeThemePreview | null

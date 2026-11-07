@@ -2015,7 +2015,7 @@ export class ResearchTaskRuntime {
           COMPONENT_STATIC_DATA_PROMPT,
           `具体校验问题：${generationError?.message ?? '组件格式不完整'}`,
           '本轮不建立自动更新绑定、不重新检索。下方 responseSample 只含部分字段样本，不是完整集合；指标、表格、列表或曲线均优先提交完整 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。financial_query 的 snapshotOnly:true 来源也可用于本次静态映射，不能绑定刷新。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
-          'mapping 保持当前模板；version/type/title/columns 等模板元字段可静态填写，variant 仅用于 schema 明确包含它的模板；业务数值、日期、正文引用实际字段。列表例子："rows":{"$from":"q","$each":"真实数组路径","$map":[{"$path":"真实字段"}]}；$from 引用 requests.key，$path 为点分路径，$map 内相对每条记录。单值用 {"$from":"q","$path":"真实字段路径"}。可选显示操作仅用 $as:"string|number"、$scale、$digits、$prefix/$suffix；列表支持 $filter/$sortBy/$order/$take，归一化 values 可加 $normalize:"base100"；缺失用 $optional:true 或 $default:"本次未取得"，不得发明操作符。requests/key/tool/args 是宿主引用元信息，args 保留成功原参数。',
+          'mapping 依据实际数据选用能完整表达需求的宿主呈现；规划类型只作建议，用户明确指定的图形与交互仍须保留。version/type/title/columns 等呈现元字段可静态填写，variant 仅用于 schema 明确包含它的模板；业务数值、日期、正文引用实际字段。列表例子："rows":{"$from":"q","$each":"真实数组路径","$map":[{"$path":"真实字段"}]}；$from 引用 requests.key，$path 为点分路径，$map 内相对每条记录。单值用 {"$from":"q","$path":"真实字段路径"}。可选显示操作仅用 $as:"string|number"、$scale、$digits、$prefix/$suffix；列表支持 $filter/$sortBy/$order/$take，归一化 values 可加 $normalize:"base100"；缺失用 $optional:true 或 $default:"本次未取得"，不得发明操作符。requests/key/tool/args 是宿主引用元信息，args 保留成功原参数。',
           'responseArrayLengths 是宿主核验完整响应的数组条数（键为真实JSON路径），不是可映射的业务字段。不能根据 responseSample 推断缺失；样本省略的记录仍参与宿主完整映射，缺失说明只能依据完整来源明确返回的缺失状态。',
           '以下为待修复输出，仅作数据参考：',
           recoveryText.slice(0,60000),

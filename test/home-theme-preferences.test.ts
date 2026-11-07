@@ -72,3 +72,8 @@ it('allows synchronous preference IPC only from the current main frame', () => {
     expect(new HomeThemePreferenceStore(userData).get()).toBe('jarrick')
   }
 })
+
+it('persists random wallpaper mode independently from its current rendered theme',()=>{
+ const userData=directory(),store=new HomeThemePreferenceStore(userData)
+ expect(store.set('random')).toBe(true);expect(new HomeThemePreferenceStore(userData).get()).toBe('random')
+})

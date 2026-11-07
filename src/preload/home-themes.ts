@@ -7,7 +7,7 @@ import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
 import koiLight from './home-theme-assets/koi-pond-light.png?inline'
 import koiDark from './home-theme-assets/koi-pond-dark.png?inline'
-import { HOME_THEMES as THEMES, HOME_THEME_STORAGE_KEY as STORAGE_KEY, isHomeTheme as validTheme, normalizeHomeTheme, type HomeTheme as Theme, type HomeThemePreferences } from '../shared/home-themes'
+import { HOME_THEMES as THEMES, HOME_THEME_STORAGE_KEY as STORAGE_KEY, isHomeTheme as validTheme, isHomeThemeSelection, normalizeHomeTheme, type HomeThemeSelection as Selection, type HomeTheme as Theme, type HomeThemePreferences } from '../shared/home-themes'
 
 const PENDING_STORAGE_KEY = `${STORAGE_KEY}.pending-native`
 const mounted = new WeakMap<Document, () => void>()
@@ -22,16 +22,16 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
   const win = doc.defaultView
   if (!win) return () => {}
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
-  let durable: Theme | null = null, legacy: Theme | null = null
+  let durable: Selection | null = null, legacy: Selection | null = null
   try { durable = normalizeHomeTheme(preferences?.get()) } catch { /* Preview or unavailable desktop bridge. */ }
   try { legacy = normalizeHomeTheme(win.localStorage.getItem(STORAGE_KEY)) } catch { /* Private storage may be unavailable. */ }
-  let pending: { theme: Theme; previous: Theme | null } | undefined
+  let pending: { theme: Selection; previous: Selection | null } | undefined
   try {
     const raw = win.localStorage.getItem(PENDING_STORAGE_KEY)
     const value = raw && raw.length <= 256 ? JSON.parse(raw) : null
-    if (value && validTheme(value.theme) && (value.previous === null || validTheme(value.previous))) pending = value
+    if (value && isHomeThemeSelection(value.theme) && (value.previous === null || isHomeThemeSelection(value.previous))) pending = value
   } catch {}
-  const savePreference = (theme: Theme) => {
+  const savePreference = (theme: Selection) => {
     const previous = durable
     let saved = false
     try { saved = preferences?.set(theme) === true } catch {}
@@ -45,12 +45,15 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
   // An explicit failed write is newer than its original durable value, but an
   // old page must not overwrite a choice successfully saved by another page.
   const recoverPending = !!preferences && !!pending && (durable === null || durable === pending.previous)
-  let selected: Theme = recoverPending ? pending!.theme : durable ?? legacy ?? 'default'
+  let selected: Selection = recoverPending ? pending!.theme : durable ?? legacy ?? 'default'
   if (recoverPending || (durable === null && legacy !== null)) savePreference(selected)
   else if (durable !== null || legacy !== null) try {
     win.localStorage.setItem(STORAGE_KEY, selected)
     win.localStorage.removeItem(PENDING_STORAGE_KEY)
   } catch {}
+  const randomTheme = (previous?: Theme): Theme => { const choices = THEMES.filter(id => id !== previous); return choices[Math.min(choices.length - 1, Math.floor(Math.random() * choices.length))]! }
+  let renderedTheme: Theme = selected === 'random' ? randomTheme() : selected
+  let rotationTimer = 0, rotateAt = Date.now() + 300000
   let host: HTMLElement | null = null, background: HTMLElement | null = null
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
   let disposed = false, frame = 0, previous = 0, elapsed = 0, cleanupTimer = 0
@@ -166,7 +169,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     }
     clearTransition()
     old?.dispose(); old?.canvas.remove()
-    surface = makeSurface(selected)
+    surface = makeSurface(renderedTheme)
     if (surface) {
       background.append(surface.canvas); resize()
       if (freeze) {
@@ -175,8 +178,9 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
         cleanupTimer = win.setTimeout(clearTransition, 460)
       }
     }
-    background.dataset.homeThemeId = selected
-    background.dataset.homeThemeFamily = selected === 'koi-pond' ? 'koi' : isReactBitsTheme(selected) ? 'react-bits' : 'open-shaders'
+    background.dataset.homeThemeId = renderedTheme
+    background.dataset.homeThemeSelection = selected
+    background.dataset.homeThemeFamily = renderedTheme === 'koi-pond' ? 'koi' : isReactBitsTheme(renderedTheme) ? 'react-bits' : 'open-shaders'
     resume()
   }
   const thumbnail = (theme: Theme): string | null => {
@@ -198,9 +202,21 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     } catch { return null } finally { renderer.dispose() }
   }
   const notify = () => { for (const listener of listeners) { try { listener() } catch {} } }
-  const select = (id: Theme, persist = true) => {
-    if (disposed || !validTheme(id) || id === selected) return
-    selected = id
+  const scheduleRotation = () => {
+    win.clearTimeout(rotationTimer); rotationTimer = 0
+    if (disposed || selected !== 'random' || doc.hidden) return
+    rotationTimer = win.setTimeout(() => {
+      rotationTimer = 0
+      if (disposed || selected !== 'random' || doc.hidden) return
+      renderedTheme = randomTheme(renderedTheme); rotateAt = Date.now() + 300000
+      if (visible) replaceSurface(true)
+      notify(); scheduleRotation()
+    }, Math.max(0, rotateAt - Date.now()))
+  }
+  const select = (id: Selection, persist = true) => {
+    if (disposed || !isHomeThemeSelection(id) || id === selected) return
+    selected = id; renderedTheme = id === 'random' ? randomTheme(renderedTheme) : id
+    rotateAt = Date.now() + 300000; scheduleRotation()
     if (persist) savePreference(id)
     if (visible) replaceSurface(true)
     notify()
@@ -252,22 +268,22 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     if (background && background.hidden === visible) background.hidden = !visible
     if (themeChanged) notify()
     if (!visible) { stop(); clearTransition(); return }
-    if (background?.dataset.homeThemeId !== selected) replaceSurface(false)
+    if (background?.dataset.homeThemeId !== renderedTheme) replaceSurface(false)
     else if (themeChanged && (doc.hidden || reduced.matches)) render()
     if (!wasVisible || !surface) { if (!surface) replaceSurface(false); resume() }
   }
-  const onVisibility = () => { if (doc.hidden) { stop(); clearTransition() } else { sync(); resume() } }
+  const onVisibility = () => { if (doc.hidden) { stop(); clearTransition(); win.clearTimeout(rotationTimer); rotationTimer = 0 } else { sync(); resume(); scheduleRotation() } }
   const onReduced = () => { clearTransition(); resume() }
-  const onStorage = (event: StorageEvent) => { if (event.key !== STORAGE_KEY) return; const value = event.newValue === null ? 'default' : event.newValue; if (validTheme(value)) select(value, false) }
+  const onStorage = (event: StorageEvent) => { if (event.key !== STORAGE_KEY) return; const value = event.newValue === null ? 'default' : event.newValue; if (isHomeThemeSelection(value)) select(value, false) }
   const changes = new win.MutationObserver(sync)
   changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-ds-dark-theme', 'data-workspace-surface', 'hidden', 'class', 'style'] })
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', sync)
   reduced.addEventListener('change', onReduced); win.addEventListener('storage', onStorage)
-  sync()
+  sync(); scheduleRotation()
   const dispose = () => {
     if (disposed) return
-    disposed = true; changes.disconnect(); teardown()
+    disposed = true; win.clearTimeout(rotationTimer); changes.disconnect(); teardown()
     doc.removeEventListener('visibilitychange', onVisibility); doc.removeEventListener('sherlock:workspace-surface-change', sync)
     reduced.removeEventListener('change', onReduced); win.removeEventListener('storage', onStorage)
     for (const preview of previews) preview.dispose()

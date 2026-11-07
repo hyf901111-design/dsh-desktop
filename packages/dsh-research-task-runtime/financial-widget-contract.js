@@ -21,7 +21,7 @@ export function financialWidgetSpec(value){
   const id=s.market+':'+s.code;if(ids.has(id))return null;ids.add(id)
  }
  if(!['1m','1d','1w','1mo','1y'].includes(value.period)||!['none','forward','backward'].includes(value.adjustment)||!Array.isArray(value.indicators)||new Set(value.indicators).size!==value.indicators.length||value.indicators.some(i=>!['MA','VOL','MACD'].includes(i))||!['all','SH','SZ','BJ','HK','US'].includes(value.market)||typeof value.query!=='string'||value.query.length>100||/[\u0000-\u001f]/.test(value.query))return null
- if(value.selectedSymbol!==undefined&&(value.widget!=='watchlist'||typeof value.selectedSymbol!=='string'||!ids.has(value.selectedSymbol)))return null
+ if(value.selectedSymbol!==undefined&&(!['watchlist','quote'].includes(value.widget)||typeof value.selectedSymbol!=='string'||!ids.has(value.selectedSymbol)))return null
  if(value.visibleBars!==undefined&&(value.widget!=='quote'||!Number.isInteger(value.visibleBars)||value.visibleBars<1||value.visibleBars>320))return null
  if(value.dataSource!==undefined&&!['default','backup'].includes(value.dataSource)||value.refreshMinutes!==undefined&&(!Number.isInteger(value.refreshMinutes)||value.refreshMinutes<0||value.refreshMinutes>10080)||value.refreshEnabled!==undefined&&typeof value.refreshEnabled!=='boolean')return null
  if(value.linkedWatchlistId!==undefined&&(value.widget!=='quote'||typeof value.linkedWatchlistId!=='string'||!value.linkedWatchlistId.trim()||value.linkedWatchlistId.length>200||/[\u0000-\u001f]/.test(value.linkedWatchlistId)))return null

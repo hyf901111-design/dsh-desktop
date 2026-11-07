@@ -1,4 +1,7 @@
 import {it,expect} from 'vitest'
+import {patchMessageEditClient} from '../scripts/lib/message-edit.mjs'
+import {readFile} from 'node:fs/promises'
+import {createRequire} from 'node:module'
 import {randomUUID} from 'node:crypto'
 import {Context} from '@deepseek-ai/cordis'
 import {SessionStore} from '@deepseek-ai/dsh-session'
@@ -10,7 +13,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import {createApiProxy} from '@deepseek-ai/dsh-host-apiproxy'
 
-it('forks and regenerates first and later messages through the real host and agent loop',async()=>{
+it('keeps explicit forks separate and resends an edited message through the original host session',async()=>{
  const ctx=new Context(),requests=[],handles=[]
  try{
   new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);new SkillRegistry(ctx)
@@ -46,5 +49,18 @@ it('forks and regenerates first and later messages through the real host and age
    else{expect(history).toContain('first question');expect(history).toContain('answer-1')}
    expect(JSON.stringify(ctx.sessions.get('original').events)).toBe(original)
   }
+  const native=createRequire(import.meta.url),helpers=native('../scripts/lib/message-edit.mjs')
+  const client=patchMessageEditClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+  const start=client.indexOf('editMessage: request=>sendMessageRevision('),end=client.indexOf('\nforkAt:',start)
+  const binding={getSnapshot:()=>({running:false,queue:[]}),prompt:async(content,mode)=>(await api.sessions.prompt(rpc({sessionId:'original',content,mode}))).result}
+  const sessions={binding:id=>{expect(id).toBe('original');return {session:binding}},fork:()=>{throw Error('unexpected fork')},open:()=>{throw Error('unexpected navigation')}}
+  const edit=new Function('sessions','sessionId','sendMessageRevision','return ({'+client.slice(start,end)+'}).editMessage')(sessions,'original',helpers.sendMessageRevision)
+  const count=ctx.sessions.get('original').events.filter(e=>e.type==='turn/end').length
+  await edit({seq:messages[0].seq,content:[{type:'text',text:'first question'}],text:'revised in this conversation'})
+  await expect.poll(()=>ctx.sessions.get('original').events.filter(e=>e.type==='turn/end').length,{timeout:3000}).toBe(count+1)
+  expect(JSON.stringify(requests.at(-1))).toContain('revised in this conversation')
+  expect(JSON.stringify(requests.at(-1))).toContain('second question')
+  expect(ctx.sessions.get('original').events.filter(e=>e.type==='user/message').at(-1).data.content).toEqual([{type:'text',text:'revised in this conversation'}])
+
  }finally{await ctx.fiber.dispose()}
 },15000)

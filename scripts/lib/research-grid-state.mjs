@@ -76,7 +76,14 @@ export function createWorkbenchGridState(storage,sessionId) {
     // Convert the old fixed 35px rows once, using the first actual viewport.
     // Keep card content and horizontal spans; round vertical bounds to squares.
     if(legacyRows){const m=grid.metrics(width);cells=grid.compact(cells.map(c=>grid.bounded({...c,y:c.y*35/m.rowStep,h:Math.ceil(c.h*35/m.rowStep)})));legacyRows=false;try{storage?.setItem(key,JSON.stringify({version:2,cells:durableCells()}))}catch{}}
-    if(!initialized){cells=grid.migrate(nodes,width);initialized=true}
+    if(!initialized){
+      // New tab grids first see an already populated plan. Leave automatic
+      // groups for the same full-width allocation used by an empty canvas;
+      // migrating their template pixels preserves narrow cards and gutters.
+      const automatic=nodes.filter(n=>n.workbenchId&&n.sizeMode!=='manual'&&!n.preserveGenerationSize)
+      const planned=new Set(automatic.filter(n=>automatic.filter(p=>p.workbenchId===n.workbenchId).length>=2).map(n=>n.id))
+      cells=grid.migrate(nodes.filter(n=>!planned.has(n.id)),width);initialized=true
+    }
     const removed=cells.some(n=>!ids.has(n.id));cells=cells.filter(n=>ids.has(n.id))
     const m=grid.metrics(width)
     // A draft's visible minimum can exceed its saved cell span. Preserve that
@@ -106,6 +113,10 @@ export function createWorkbenchGridState(storage,sessionId) {
       for(const n of group.sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0))){
         if(n.workbenchSpan===true&&n.workbenchLayoutVersion===1||grid.minimum(n,m,true).w>span){
           const y=Math.max(...tails),h=Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))
+          // Status cards can fill the reserved row while their content is
+          // still unknown. Close the shorter lane before a spanning panel,
+          // and keep those frames stable as individual results arrive.
+          for(const c of cells){const draft=group.find(p=>p.id===c.id);if(draft&&!draft.containerSpec&&['queued','running','retrying'].includes(draft.generationStatus)&&tails.some(t=>c.y+c.h===t)&&c.y+c.h<y)c.h=y-c.y}
           cells.push(grid.bounded({id:n.id,x:0,y,w:40,h}));tails.fill(y+h);known.add(n.id);continue
         }
         const lane=tails.indexOf(Math.min(...tails)),h=Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))
