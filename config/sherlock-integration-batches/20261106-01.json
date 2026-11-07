@@ -9,71 +9,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件详情默认展开与高度适配",
+        "featureName": "组件详情默认展开兼容与页签样式修复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
-        "tipCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
+        "baseCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
+        "tipCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
         "commits": [
           {
-            "commit": "69ce662e730d98a446634c0e9a26b9116bd17111",
+            "commit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
             "parents": [
-              "79910702b2f6b14bfe793baf30ae39ab19e96882"
+              "69ce662e730d98a446634c0e9a26b9116bd17111"
             ],
-            "subject": "默认展开组件详情并按内容自动适配卡片高度"
+            "subject": "修复旧组件详情恢复状态与页签主题样式"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "test/component-interaction-state.test.js"
           },
           {
             "status": "M",
             "path": "test/component-reading-footer-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-reading-footer.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -85,13 +53,12 @@
               "test/component-reading-footer.test.js",
               "test/component-reading-footer-browser.test.js",
               "test/stored-template-refinements.test.js",
-              "test/cartesian-chart-details.test.js",
               "test/research-grid-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "90项通过：默认展开、真实窄卡片尺寸、页签固定、自动高度收敛及相邻卡片排布",
-            "verifiedCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
-            "completedAt": "2026-11-07T06:50:12.220204+00:00",
+            "summary": "76项通过：默认展开、旧日志恢复、深浅主题页签、尺寸收敛与相邻组件排布",
+            "verifiedCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
+            "completedAt": "2026-11-07T07:07:53.469754+00:00",
             "timeoutMs": 180000
           },
           {
@@ -99,35 +66,20 @@
               "npx",
               "vitest",
               "run",
-              "test/research-design-policy.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/research-canvas-tools.test.js"
+              "test/component-interaction-state.test.js",
+              "-t",
+              "^(?!patches the actual renderer)"
             ],
             "outcome": "passed",
-            "summary": "99项通过：生成规范与编辑上下文一致使用默认展开",
-            "verifiedCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
-            "completedAt": "2026-11-07T06:50:12.220204+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/kpi-template.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "126项通过：图表布局、轴精度及指标交互",
-            "verifiedCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
-            "completedAt": "2026-11-07T06:50:12.220204+00:00",
+            "summary": "12项通过：新旧展开记录和其他交互保持；排除既有安装包补丁还原锚点夹具",
+            "verifiedCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
+            "completedAt": "2026-11-07T07:07:53.469754+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器真实卡片尺寸与深浅主题验证通过，打包客户端将在预览合并后核验"
+          "summary": "真实浏览器复现并修复旧日志覆盖展开、主题实心按钮问题；打包应用待本次预览集成后核验"
         },
         "acceptanceCriteria": [
           "默认展开组件详情，多页签默认完整数据",
@@ -135,10 +87,10 @@
           "保留线性箭头、排序、调整列宽和已保存数据"
         ],
         "risks": [
-          "长明细与来源说明在展开区域内滚动，避免整张卡片无限增高",
-          "额外运行的component-template-registry测试有一条既有null artifact拒绝断言失败；HEAD隔离源码复现同一行为，与本次展示变更无关。"
+          "长明细与来源说明在展开区域内滚动，避免卡片无限增长",
+          "component-interaction-state里补丁还原夹具受既有ResearchCanvas锚点变更影响，未通过该项；实际构建补丁及最终包另行验证。"
         ],
-        "generatedAt": "2026-11-07T06:50:12.220204+00:00"
+        "generatedAt": "2026-11-07T07:07:53.469754+00:00"
       }
     },
     {
