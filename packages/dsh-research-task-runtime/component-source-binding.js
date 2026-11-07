@@ -488,12 +488,14 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
     const normalized=normalizedHistoryMetadata(data,mapping,sources,now,options)
     const readable=componentReadableSnapshot(normalized,mapping,responses,Object.values(sources),now)
     const unavailable=Boolean(readable)&&readableSnapshotUnavailable(normalized)
-    if(templateSourceDataIssue(data)&&!unavailable)return null
+    const sourceIssue=templateSourceDataIssue(data)
+    if(sourceIssue&&!unavailable)throw Object.assign(Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
     if(readable){const output=acceptArtifactOutput(JSON.stringify(readable));return output?{data:normalized,output,capacitySnapshot:true,dataUnavailable:unavailable}:null}
-    if(templateDataIssue(data))return null
-    const snapshot=normalizeChartMetadata(componentSnapshotData(normalizedHistoryMetadata(data,mapping,sources,now,options))),output=acceptArtifactOutput(JSON.stringify(snapshot))
+    const issue=templateDataIssue(data)
+    if(issue)throw Error(issue)
+    const snapshot=normalizeChartMetadata(componentSnapshotData(normalized)),output=acceptArtifactOutput(JSON.stringify(snapshot))
     return output?{data:snapshot,output}:null
-  }catch{return null}
+  }catch(error){options.onSnapshotError?.(error);return null}
 }
 
 // Shared by initial synthesis and the one bounded repair; examples are executable
@@ -660,6 +662,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   if(!candidate)return null
   const contract=mappingContract(candidate.mapping,options,candidate.version)
   if(contract?.type==='chart'&&contract.variant===undefined)throw Error('chart.variant 缺失：mapping 必须保留本卡设计合同中的具体图表变体。')
+  if(contract?.type==='chart'&&!CHART_VARIANTS.includes(contract.variant))throw Error(`chart.variant 不支持 ${String(contract.variant).slice(0,64)}。趋势折线用 line，横向排名用 horizontal；其余可用值：${CHART_VARIANTS.join('、')}。仅修正呈现类型，保留已取得数据及字段映射，无需重新取数。`)
   if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))throw Error('数据映射需要已成功调用的接口及当前模板字段，核对 mapping.version/type/variant。')
   const requests=[],responses={},observed=[]
   for(const request of candidate.requests) {
@@ -705,7 +708,11 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const projection=materializeComponentProjection(mapping,responses,now,observed)
   mapping=projection.mapping
   const materialized=projection.data
-  const data=filterScopedNewsArtifact(materialized,observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
+  const scoped=filterScopedNewsArtifact(materialized,observed,options.newsScope??'',{general:generalNewsScope(options.newsScope??mapping.title??'')})
+  // Static public-data charts may pass this resolver before the snapshot
+  // fallback. Apply the same verified history captions on both routes; leave
+  // refresh recipes and unsupported/custom series untouched.
+  const data=options.staticSnapshot?normalizedHistoryMetadata(scoped,mapping,Object.fromEntries(requests.map((request,index)=>[request.key,observed[index]])),now,options):scoped
   // Fixed ticker recipes already render partial outages explicitly and can
   // recover on refresh. Do not downgrade their bounded template to static HTML.
   const partialTicker=contract.type==='market'&&['metrics','table'].includes(contract.variant)&&requests.every(isCryptoTickerRequest)&&!templateDataIssue(data)

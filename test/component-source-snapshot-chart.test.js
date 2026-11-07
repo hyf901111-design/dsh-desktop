@@ -134,6 +134,42 @@ it('retains custom notes for raw values and unknown financial response contracts
  expect(resolveComponentSnapshot(JSON.stringify(unknown),sources,now).data.note).toBe(unknown.mapping.note)
 })
 
+it('normalizes static public history captions on the first resolver path while retaining refresh and custom semantics',()=>{
+ const input=draft(),sources=[records[0]]
+ input.requests=input.requests.slice(0,1);input.mapping.series=input.mapping.series.slice(0,1)
+ input.mapping.labels.$take=-26;input.mapping.series[0].values.$take=-26
+ input.mapping.note='共28个交易日，来源无缺口。';input.mapping.subtitle='28个交易日'
+ // Equivalent public arguments take the bound route rather than the exact
+ // argument snapshot fallback; both must use the actual selected dates.
+ input.requests[0].args={source:'tencent-history',parameters_json:JSON.parse(records[0].args.parameters_json)}
+ const text=JSON.stringify(input),result=resolveBoundComponent(text,sources,now,{staticSnapshot:true})
+ expect(result.data.labels).toHaveLength(26)
+ expect(result.data.subtitle).toContain('26个实际交易日')
+ expect(result.data.note).not.toContain('28个')
+ expect(result.data.note).not.toContain('无缺口')
+ expect(result.data.note).toContain('未复权')
+ expect(result.data.note).toContain(records[0].response.limitations)
+ expect(result.recipe.requests[0].args).toEqual(records[0].args)
+ expect(resolveBoundComponent(text,sources,now).data.note).toBe(input.mapping.note)
+ delete input.mapping.series[0].values.$normalize
+ expect(resolveBoundComponent(JSON.stringify(input),sources,now,{staticSnapshot:true}).data.note).toBe(input.mapping.note)
+})
+
+it('uses the same corrected static public history captions in the actual worker completion path',async()=>{
+ const input=draft();input.requests=input.requests.slice(0,1);input.mapping.series=input.mapping.series.slice(0,1)
+ input.mapping.note='共64个交易日，来源无缺口。'
+ const start=vi.fn(async()=>({childSessionId:'public-chart',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(input)}],sourceRecords:[records[0]]}),dispose:async()=>{}})),bindData=vi.fn()
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{save:async()=>{}},createId:()=> 'public-chart',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'chart',kind:'container',prompt:'工作台：沪深300走势\n本面板：沪深300归一化走势\n仅生成本面板，优先使用 chart 类型；必须输出 chart.line。仅本次静态快照，不要求刷新绑定。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'public-chart'}).state).toBe('completed'))
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'public-chart'}).finalOutput)).data
+  expect(data.subtitle).toContain('30个实际交易日')
+  expect(data.note).not.toContain('64个')
+  expect(start).toHaveBeenCalledOnce();expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+
 it('completes the actual multi-source static chart in one worker without a refresh recipe',async()=>{
  const input=draft();delete input.mapping.variant
  for(const [i,source]of records.entries())if(source.tool==='financial_query')delete input.mapping.series[i].values.$map
