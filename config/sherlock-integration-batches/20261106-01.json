@@ -9,30 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "关联图表真实明细并精简指标卡重复信息",
+        "featureName": "组件库复用、节点联动与真实页签工作台",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
-        "tipCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
+        "baseCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
+        "tipCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
         "commits": [
           {
-            "commit": "ccdfe55d068b10127f592e7288bb5d7b085a6f61",
+            "commit": "3b2f4aaee62d385d72983b90674e0f9fa87f2036",
             "parents": [
-              "ae0c449f8a4040c8de23de380eabcc68fb3ac80e"
+              "20045e5cfa159148d48a11a0c153c3a973e0a509"
             ],
-            "subject": "按真实记录关联图表明细，减少列顺序造成的生成重试"
+            "subject": "按真实页签组织工作台并恢复新闻组件生成失败"
           },
           {
-            "commit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
+            "commit": "1a57c7f7856a043df46616bd32f0015f906298f1",
             "parents": [
-              "ccdfe55d068b10127f592e7288bb5d7b085a6f61"
+              "3b2f4aaee62d385d72983b90674e0f9fa87f2036"
             ],
-            "subject": "精简指标卡重复详情并使用真实统计时点"
+            "subject": "将组件库复用与节点联动纳入看板创建并按页签布局"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
+          },
+          {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/chart-detail-projection.js"
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.js"
           },
           {
             "status": "M",
@@ -40,39 +48,87 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-provenance-display.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+            "path": "packages/dsh-research-task-runtime/news-topic-filter.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "A",
-            "path": "test/chart-detail-projection.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-library.d.ts"
           },
           {
             "status": "A",
-            "path": "test/component-data-time.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-library.js"
           },
           {
             "status": "M",
-            "path": "test/kpi-template.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-tabs.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/news-query-coverage.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/news-topic-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-generation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-library.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-tabs.test.js"
           }
         ],
         "checks": [
@@ -81,18 +137,14 @@
               "npx",
               "vitest",
               "run",
-              "test/chart-detail-projection.test.js",
-              "test/component-data-submission.test.js",
-              "test/component-source-binding.test.js",
-              "test/kpi-template.test.js",
-              "test/component-data-time.test.js",
-              "test/component-source-metadata.test.js",
-              "test/component-reading-footer.test.js"
+              "test/workbench-library.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/research-board-generation.test.ts"
             ],
             "outcome": "passed",
-            "summary": "163项聚焦检查通过，覆盖同源明细关联、真实时点、指标详情与原有提交边界",
-            "verifiedCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
-            "completedAt": "2026-11-07T10:10:26.854Z",
+            "summary": "36项聚焦检查通过，覆盖原生复用、节点联动、页签布局、协作CRDT和恢复",
+            "verifiedCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
+            "completedAt": "2026-11-07T10:45:05.704Z",
             "timeoutMs": 180000
           },
           {
@@ -103,24 +155,25 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
-            "completedAt": "2026-11-07T10:10:26.854Z",
+            "verifiedCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
+            "completedAt": "2026-11-07T10:45:05.704Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "Browser plugin not available；Playwright Chromium实际渲染原ETF记录，深浅色360/656px无横向溢出，同排指标对齐，鼠标和键盘展开收起通过，无页面错误；证据/tmp/kpi-reading-preview.json。真实打包生成另验。"
+          "outcome": "not-applicable",
+          "summary": "本批为工具协议、宿主调度与原生能力接入，已验证组件与协作集成夹具；真实打包UI尚未验收，此次仅准备previewOnly本地候选，不做accept或promote。"
         },
         "acceptanceCriteria": [
-          "图表同源同筛选排序明细完整关联，不混合不同记录",
-          "指标详情不重复名称数值单位，缺失和原精度保留",
-          "统计时点不使用请求获取时间"
+          "直接复用六类原生组件，无子模型任务",
+          "真实页签、独立布局和节点联动",
+          "超出原生能力保留数据生成需求",
+          "资讯缺失可选时点不丢失真实内容"
         ],
         "risks": [
-          "需在打包客户端复验新生成，不保证所有模型首次提交正确"
+          "需在打包客户端复验模型规划与交互；不保证所有模型首次提交正确"
         ],
-        "generatedAt": "2026-11-07T10:10:26.854Z"
+        "generatedAt": "2026-11-07T10:45:05.704Z"
       }
     },
     {
