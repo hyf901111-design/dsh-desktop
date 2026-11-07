@@ -9,7 +9,7 @@ import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
 import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
-import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping,normalizeTableScalarMapping,tableScalarCellIssue} from './table-projection.js'
+import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping,normalizeTableScalarMapping,normalizeObservedTableMapping,tableScalarCellIssue} from './table-projection.js'
 import {normalizeChartDetailMapping} from './chart-detail-projection.js'
 import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
 import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from './component-derived-values.js'
@@ -274,6 +274,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  }
  mapping=normalizeChartDetailMapping(mapping)
  mapping=normalizeTableListMapping(mapping)
+ mapping=normalizeObservedTableMapping(mapping,responses)
  mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
  mapping=normalizeTableScalarMapping(mapping)
  const candle=['market','chart'].includes(mapping?.type)&&mapping.variant==='candlestick'

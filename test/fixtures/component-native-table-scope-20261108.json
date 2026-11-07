@@ -1,0 +1,725 @@
+{
+  "draft": {
+    "mapping": {
+      "asOf": "估值：2026-11-06 收盘；财报为各公司最近实际披露记录",
+      "columns": [
+        {
+          "key": "code",
+          "label": "证券代码"
+        },
+        {
+          "key": "close",
+          "label": "最新收盘价（元，2026-11-06）"
+        },
+        {
+          "key": "pe",
+          "label": "PE（动态）"
+        },
+        {
+          "key": "pb",
+          "label": "PB"
+        },
+        {
+          "key": "mv",
+          "label": "总市值（亿元）"
+        },
+        {
+          "key": "endDate",
+          "label": "报告期（最近已披露）"
+        },
+        {
+          "key": "revenue",
+          "label": "营业总收入（亿元）"
+        },
+        {
+          "key": "netProfit",
+          "label": "归母净利润（亿元）"
+        },
+        {
+          "key": "eps",
+          "label": "基本每股收益（元）"
+        },
+        {
+          "key": "annDate",
+          "label": "公告日"
+        }
+      ],
+      "note": "估值取 Tushare daily_basic 2026-11-06（两股最新共同交易日）收盘数据，总市值由万元换算为亿元；财报取 Tushare income（update_flag=1）各公司不带报告期限量查询后按报告期选取的最近记录：中芯国际为 2026-06-30 中报，北方华创为 2026-09-30 三季报，收入与净利润由元换算为亿元，PE 为总市值/净利润口径。接口未返回证券名称字段，故以代码列示。",
+      "rows": [
+        {
+          "annDate": {
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qi",
+            "$map": {
+              "$path": "ann_date"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$sortBy": "end_date"
+          },
+          "code": {
+            "$from": "qs",
+            "$path": "records[0].ts_code"
+          },
+          "endDate": {
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qi",
+            "$map": {
+              "$path": "end_date"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$sortBy": "end_date"
+          },
+          "eps": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qi",
+            "$map": {
+              "$path": "basic_eps"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$sortBy": "end_date"
+          },
+          "mv": {
+            "$digits": 2,
+            "$filter": {
+              "trade_date": "20261106"
+            },
+            "$from": "qs",
+            "$path": "total_mv",
+            "$scale": 0.0001,
+            "$single": true
+          },
+          "netProfit": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qi",
+            "$map": {
+              "$path": "n_income_attr_p"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$scale": 1e-08,
+            "$sortBy": "end_date"
+          },
+          "pe": {
+            "$digits": 2,
+            "$filter": {
+              "trade_date": "20261106"
+            },
+            "$from": "qs",
+            "$path": "pe",
+            "$single": true
+          },
+          "pb": {
+            "$digits": 2,
+            "$filter": {
+              "trade_date": "20261106"
+            },
+            "$from": "qs",
+            "$path": "pb",
+            "$single": true
+          },
+          "revenue": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qi",
+            "$map": {
+              "$path": "total_revenue"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$scale": 1e-08,
+            "$sortBy": "end_date"
+          }
+        },
+        {
+          "annDate": {
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qj",
+            "$map": {
+              "$path": "ann_date"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$sortBy": "end_date"
+          },
+          "code": {
+            "$from": "qn",
+            "$path": "records[0].ts_code"
+          },
+          "endDate": {
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qj",
+            "$map": {
+              "$path": "end_date"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$sortBy": "end_date"
+          },
+          "eps": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qj",
+            "$map": {
+              "$path": "basic_eps"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$sortBy": "end_date"
+          },
+          "mv": {
+            "$digits": 2,
+            "$filter": {
+              "trade_date": "20261106"
+            },
+            "$from": "qn",
+            "$path": "total_mv",
+            "$scale": 0.0001,
+            "$single": true
+          },
+          "netProfit": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qj",
+            "$map": {
+              "$path": "n_income_attr_p"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$scale": 1e-08,
+            "$sortBy": "end_date"
+          },
+          "pe": {
+            "$digits": 2,
+            "$filter": {
+              "trade_date": "20261106"
+            },
+            "$from": "qn",
+            "$path": "pe",
+            "$single": true
+          },
+          "pb": {
+            "$digits": 2,
+            "$filter": {
+              "trade_date": "20261106"
+            },
+            "$from": "qn",
+            "$path": "pb",
+            "$single": true
+          },
+          "revenue": {
+            "$digits": 2,
+            "$each": "records",
+            "$filter": {
+              "update_flag": "1"
+            },
+            "$from": "qj",
+            "$map": {
+              "$path": "total_revenue"
+            },
+            "$order": "desc",
+            "$reduce": "first",
+            "$scale": 1e-08,
+            "$sortBy": "end_date"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tushare daily_basic",
+          "url": "https://tushare.pro/document/2?doc_id=32"
+        },
+        {
+          "label": "Tushare income",
+          "url": "https://tushare.pro/document/2?doc_id=33"
+        }
+      ],
+      "title": "半导体两股估值与最近一期财务对比：中芯国际（688981.SH） vs 北方华创（002371.SZ）",
+      "type": "table",
+      "version": 1
+    },
+    "requests": [
+      {
+        "args": {
+          "api_name": "daily_basic",
+          "fields": "ts_code,trade_date,close,pe,pb,total_mv",
+          "limit": 10,
+          "params": {
+            "end_date": "20261108",
+            "start_date": "20261101",
+            "ts_code": "688981.SH"
+          }
+        },
+        "key": "qs",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      },
+      {
+        "args": {
+          "api_name": "daily_basic",
+          "fields": "ts_code,trade_date,close,pe,pb,total_mv",
+          "limit": 10,
+          "params": {
+            "end_date": "20261108",
+            "start_date": "20261101",
+            "ts_code": "002371.SZ"
+          }
+        },
+        "key": "qn",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      },
+      {
+        "args": {
+          "api_name": "income",
+          "fields": "ts_code,ann_date,f_ann_date,end_date,report_type,basic_eps,total_revenue,revenue,n_income_attr_p,update_flag",
+          "limit": 5,
+          "params": {
+            "ts_code": "688981.SH"
+          }
+        },
+        "key": "qi",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      },
+      {
+        "args": {
+          "api_name": "income",
+          "fields": "ts_code,ann_date,f_ann_date,end_date,report_type,basic_eps,total_revenue,revenue,n_income_attr_p,update_flag",
+          "limit": 5,
+          "params": {
+            "ts_code": "002371.SZ"
+          }
+        },
+        "key": "qj",
+        "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d"
+      }
+    ]
+  },
+  "records": [
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "daily_basic",
+        "fields": "ts_code,trade_date,close,pe,pb,total_mv",
+        "limit": 10,
+        "params": {
+          "end_date": "20261108",
+          "start_date": "20261101",
+          "ts_code": "688981.SH"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "daily_basic",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=32",
+        "receivedAt": "2026-11-07T23:37:08.108Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "trade_date",
+          "close",
+          "pe",
+          "pb",
+          "total_mv"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS股票代码",
+          "trade_date": "交易日期",
+          "close": "当日收盘价",
+          "pe": "市盈率（总市值/净利润， 亏损的PE为空）",
+          "pb": "市净率（总市值/(净资产-其他权益工具)）",
+          "total_mv": "总市值 （万元）"
+        },
+        "records": [
+          {
+            "ts_code": "688981.SH",
+            "trade_date": "20261106",
+            "close": 110.9,
+            "pe": 188.3795,
+            "pb": 5.5383,
+            "total_mv": 94957074.777
+          },
+          {
+            "ts_code": "688981.SH",
+            "trade_date": "20261105",
+            "close": 110.69,
+            "pe": 188.0222,
+            "pb": 5.5278,
+            "total_mv": 94777005.2511
+          },
+          {
+            "ts_code": "688981.SH",
+            "trade_date": "20261104",
+            "close": 111.3,
+            "pe": 189.0584,
+            "pb": 5.5582,
+            "total_mv": 95299310.547
+          },
+          {
+            "ts_code": "688981.SH",
+            "trade_date": "20261103",
+            "close": 102.11,
+            "pe": 173.4479,
+            "pb": 5.0993,
+            "total_mv": 87430481.5809
+          },
+          {
+            "ts_code": "688981.SH",
+            "trade_date": "20261102",
+            "close": 100,
+            "pe": 169.8638,
+            "pb": 4.9939,
+            "total_mv": 85623819
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 10,
+          "returned": 5,
+          "possiblyMore": false,
+          "nextOffset": null
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    },
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "daily_basic",
+        "fields": "ts_code,trade_date,close,pe,pb,total_mv",
+        "limit": 10,
+        "params": {
+          "end_date": "20261108",
+          "start_date": "20261101",
+          "ts_code": "002371.SZ"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "daily_basic",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=32",
+        "receivedAt": "2026-11-07T23:37:21.303Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "trade_date",
+          "close",
+          "pe",
+          "pb",
+          "total_mv"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS股票代码",
+          "trade_date": "交易日期",
+          "close": "当日收盘价",
+          "pe": "市盈率（总市值/净利润， 亏损的PE为空）",
+          "pb": "市净率（总市值/(净资产-其他权益工具)）",
+          "total_mv": "总市值 （万元）"
+        },
+        "records": [
+          {
+            "ts_code": "002371.SZ",
+            "trade_date": "20261106",
+            "close": 560,
+            "pe": 73.8237,
+            "pb": 9.5261,
+            "total_mv": 40765412.744
+          },
+          {
+            "ts_code": "002371.SZ",
+            "trade_date": "20261105",
+            "close": 561.01,
+            "pe": 73.9569,
+            "pb": 9.5433,
+            "total_mv": 40838936.0777
+          },
+          {
+            "ts_code": "002371.SZ",
+            "trade_date": "20261104",
+            "close": 535.5,
+            "pe": 70.5939,
+            "pb": 9.1094,
+            "total_mv": 38981925.9365
+          },
+          {
+            "ts_code": "002371.SZ",
+            "trade_date": "20261103",
+            "close": 486.82,
+            "pe": 64.1766,
+            "pb": 8.2813,
+            "total_mv": 35438246.8429
+          },
+          {
+            "ts_code": "002371.SZ",
+            "trade_date": "20261102",
+            "close": 504,
+            "pe": 66.4414,
+            "pb": 8.5735,
+            "total_mv": 36688871.4696
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 10,
+          "returned": 5,
+          "possiblyMore": false,
+          "nextOffset": null
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    },
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "income",
+        "fields": "ts_code,ann_date,f_ann_date,end_date,report_type,basic_eps,total_revenue,revenue,n_income_attr_p,update_flag",
+        "limit": 5,
+        "params": {
+          "ts_code": "688981.SH"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "income",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=33",
+        "receivedAt": "2026-11-07T23:37:39.195Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "ann_date",
+          "f_ann_date",
+          "end_date",
+          "report_type",
+          "basic_eps",
+          "total_revenue",
+          "revenue",
+          "n_income_attr_p",
+          "update_flag"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS代码",
+          "ann_date": "公告日期",
+          "f_ann_date": "实际公告日期",
+          "end_date": "报告期",
+          "report_type": "报告类型 见底部表",
+          "basic_eps": "基本每股收益",
+          "total_revenue": "营业总收入",
+          "revenue": "营业收入",
+          "n_income_attr_p": "净利润(不含少数股东损益)",
+          "update_flag": "更新标识"
+        },
+        "records": [
+          {
+            "ts_code": "688981.SH",
+            "ann_date": "20260828",
+            "f_ann_date": "20260828",
+            "end_date": "20260630",
+            "report_type": "1",
+            "basic_eps": 0.56,
+            "total_revenue": 38635115000,
+            "revenue": 38635115000,
+            "n_income_attr_p": 4467431000,
+            "update_flag": "1"
+          },
+          {
+            "ts_code": "688981.SH",
+            "ann_date": "20260515",
+            "f_ann_date": "20260515",
+            "end_date": "20260331",
+            "report_type": "1",
+            "basic_eps": 0.17,
+            "total_revenue": 17617218000,
+            "revenue": 17617218000,
+            "n_income_attr_p": 1361209000,
+            "update_flag": "1"
+          },
+          {
+            "ts_code": "688981.SH",
+            "ann_date": "20260327",
+            "f_ann_date": "20260327",
+            "end_date": "20251231",
+            "report_type": "1",
+            "basic_eps": 0.63,
+            "total_revenue": 67323192000,
+            "revenue": 67323192000,
+            "n_income_attr_p": 5040734000,
+            "update_flag": "1"
+          },
+          {
+            "ts_code": "688981.SH",
+            "ann_date": "20260327",
+            "f_ann_date": "20260327",
+            "end_date": "20251231",
+            "report_type": "1",
+            "basic_eps": 0.63,
+            "total_revenue": 67323192000,
+            "revenue": 67323192000,
+            "n_income_attr_p": 5040734000,
+            "update_flag": "0"
+          },
+          {
+            "ts_code": "688981.SH",
+            "ann_date": "20251114",
+            "f_ann_date": "20251114",
+            "end_date": "20250930",
+            "report_type": "1",
+            "basic_eps": 0.48,
+            "total_revenue": 49510416000,
+            "revenue": 49510416000,
+            "n_income_attr_p": 3818071000,
+            "update_flag": "1"
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 5,
+          "returned": 5,
+          "possiblyMore": true,
+          "nextOffset": 5
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    },
+    {
+      "tool": "ework__t_6bb75fe9b973690b8a9e3c63f0b3188d",
+      "args": {
+        "api_name": "income",
+        "fields": "ts_code,ann_date,f_ann_date,end_date,report_type,basic_eps,total_revenue,revenue,n_income_attr_p,update_flag",
+        "limit": 5,
+        "params": {
+          "ts_code": "002371.SZ"
+        }
+      },
+      "response": {
+        "source": "Tushare",
+        "api": "income",
+        "sourceUrl": "https://tushare.pro/document/2?doc_id=33",
+        "receivedAt": "2026-11-07T23:37:57.630Z",
+        "timezone": "Asia/Shanghai",
+        "fields": [
+          "ts_code",
+          "ann_date",
+          "f_ann_date",
+          "end_date",
+          "report_type",
+          "basic_eps",
+          "total_revenue",
+          "revenue",
+          "n_income_attr_p",
+          "update_flag"
+        ],
+        "fieldInfo": {
+          "ts_code": "TS代码",
+          "ann_date": "公告日期",
+          "f_ann_date": "实际公告日期",
+          "end_date": "报告期",
+          "report_type": "报告类型 见底部表",
+          "basic_eps": "基本每股收益",
+          "total_revenue": "营业总收入",
+          "revenue": "营业收入",
+          "n_income_attr_p": "净利润(不含少数股东损益)",
+          "update_flag": "更新标识"
+        },
+        "records": [
+          {
+            "ts_code": "002371.SZ",
+            "ann_date": "20261030",
+            "f_ann_date": "20261030",
+            "end_date": "20260930",
+            "report_type": "1",
+            "basic_eps": 7.4351,
+            "total_revenue": 31467092379.45,
+            "revenue": 31467092379.45,
+            "n_income_attr_p": 5391953807.41,
+            "update_flag": "1"
+          },
+          {
+            "ts_code": "002371.SZ",
+            "ann_date": "20261030",
+            "f_ann_date": "20261030",
+            "end_date": "20260930",
+            "report_type": "1",
+            "basic_eps": 7.4351,
+            "total_revenue": 31467092379.45,
+            "revenue": 31467092379.45,
+            "n_income_attr_p": 5391953807.41,
+            "update_flag": "0"
+          },
+          {
+            "ts_code": "002371.SZ",
+            "ann_date": "20260826",
+            "f_ann_date": "20260826",
+            "end_date": "20260630",
+            "report_type": "1",
+            "basic_eps": 4.6486,
+            "total_revenue": 20161416890.56,
+            "revenue": 20161416890.56,
+            "n_income_attr_p": 3370020676.75,
+            "update_flag": "1"
+          },
+          {
+            "ts_code": "002371.SZ",
+            "ann_date": "20260826",
+            "f_ann_date": "20260826",
+            "end_date": "20260630",
+            "report_type": "1",
+            "basic_eps": 4.6486,
+            "total_revenue": 20161416890.56,
+            "revenue": 20161416890.56,
+            "n_income_attr_p": 3370020676.75,
+            "update_flag": "0"
+          },
+          {
+            "ts_code": "002371.SZ",
+            "ann_date": "20260430",
+            "f_ann_date": "20260430",
+            "end_date": "20260331",
+            "report_type": "1",
+            "basic_eps": 2.2556,
+            "total_revenue": 10322863908.82,
+            "revenue": 10322863908.82,
+            "n_income_attr_p": 1634739048.68,
+            "update_flag": "0"
+          }
+        ],
+        "pagination": {
+          "offset": 0,
+          "limit": 5,
+          "returned": 5,
+          "possiblyMore": true,
+          "nextOffset": 5
+        },
+        "note": "仅为所查询接口和范围的返回记录。receivedAt 是获取时间；交易、净值、披露和报告期各按实际字段，不能当实时。分页未完成不代表全市场；规模变化不等于净申购。"
+      }
+    }
+  ]
+}
