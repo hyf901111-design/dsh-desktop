@@ -34,7 +34,9 @@ export class LocalMemoryEngine implements MemorySemanticProvider {
   }
   private rpc(command:unknown,timeoutMs:number,progress?:(value:any)=>void):Promise<any>{
     if(!this.child){
-      const child=fork(this.config.worker,[],{execPath:this.config.node,stdio:['ignore','ignore','ignore','ipc'],env:{...process.env,EWORK_MEMORY_MODEL_DIRECTORY:this.config.model},serialization:'advanced'})
+      // Electron and the bundled Node may use incompatible V8 binary formats.
+      // Vectors are already base64 strings, so JSON preserves the full protocol.
+      const child=fork(this.config.worker,[],{execPath:this.config.node,stdio:['ignore','ignore','ignore','ipc'],env:{...process.env,EWORK_MEMORY_MODEL_DIRECTORY:this.config.model},serialization:'json'})
       this.child=child
       child.on('message',(response:any)=>{
         const item=this.pending.get(response?.id);if(!item)return
