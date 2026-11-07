@@ -56,6 +56,20 @@ describe('长期记忆真实行为',()=>{
     expect((await service.request({type:'snapshot'})).rows).toEqual([expect.objectContaining({content:evidence,status:'active'})])
   })
 
+  it.each([
+    {source:'星桥项目的周会约定：固定每周二下午三点，在槐树会议室开会。帮我整理一句通知草稿。',evidence:'固定每周二下午三点，在槐树会议室开会',content:'星桥项目的周会约定：固定每周二下午三点，在槐树会议室开会',status:'active'},
+    {source:'星桥项目的周会约定：固定每周二下午三点，在槐树会议室开会。',evidence:'星桥项目的周会约定：固定每周二下午三点，在槐树会议室开会',content:'星桥项目的周会约定：固定每周二下午三点，在槐树会议室开会',status:'active'},
+    {source:'待确认的星桥项目周会约定：固定每周二下午三点，在槐树会议室开会。',evidence:'固定每周二下午三点，在槐树会议室开会',content:'待确认的星桥项目周会约定：固定每周二下午三点，在槐树会议室开会',status:'candidate'},
+    {source:'另一个项目已经确定。固定每周二下午三点，在槐树会议室开会。',evidence:'固定每周二下午三点，在槐树会议室开会',content:'固定每周二下午三点，在槐树会议室开会',status:'candidate'}
+  ])('preserves the directly attached subject without borrowing confirmation: $source',async({source,evidence,content,status})=>{
+    const {service}=await setup()
+    const capture=await authorizedCapture(service,{sessionId:'meeting',turnId:'1',events:[{seq:7,role:'user',text:source}]})
+    await service.commitExtraction({captureId:capture.captureId,candidates:[{title:'星桥周会',content:evidence,kind:'decision',scope:'project',sourceSeq:7,evidence,explicit:true}]})
+    const rows=(await service.request({type:'snapshot'})).rows
+    expect(rows).toEqual([expect.objectContaining({content,status,sources:[expect.objectContaining({excerpt:content,seq:7})]})])
+    expect((await service.recall({sessionId:'another-chat',query:'星桥周会'})).candidates).toHaveLength(status==='active'?1:0)
+  })
+
   it('only enables disabled records and accepts candidates without reviving superseded memories',async()=>{
     const {service}=await setup()
     const original=(await service.request({type:'save',input:preference()})).rows[0]!

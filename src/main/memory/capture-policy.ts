@@ -1,3 +1,12 @@
+// Preserve a subject immediately before a colon when the extractor quotes only
+// its value. The result remains one exact source span, never a generated fact.
+export function contextualMemoryEvidence(source: string, evidence: string): string {
+  const quote = evidence.trim(), start = source.indexOf(quote)
+  if (start < 0 || start !== source.lastIndexOf(quote)) return quote
+  const prefix = source.slice(0, start).match(/(?:^|[。.!?！？；;\n])([^。.!?！？；;\n]{1,120}[:：]\s*)$/u)?.[1]
+  return prefix ? prefix.trimStart() + quote : quote
+}
+
 // A request to reuse an unspecified habit is not a new, self-contained fact.
 // Keep this admission check independent of the extractor's `explicit` claim.
 export function unresolvedMemoryReference(value: string): boolean {
