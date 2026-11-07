@@ -99,7 +99,7 @@ it('patches the real progress component and its owning turn without duplicating 
  const original=currentClient()
  const patched=patchResearchCreationProgress(original)
  expect(patchResearchCreationProgress(patched)).toBe(patched)
- expect(patched).toContain('/* ework:workbench-feedback:v9 */')
+ expect(patched).toContain('/* ework:workbench-feedback:v10 */')
  expect(patched).toContain('function publishResearchWorkbenchProgress(')
  expect(patched).toContain('data-research-planning-feedback')
  expect(patched).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,')

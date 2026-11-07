@@ -4,6 +4,46 @@ const scalar=value=>value===null||typeof value==='string'||typeof value==='numbe
 const sameKeys=(value,keys)=>object(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key))
 const selected=(value,depth=0)=>depth<=24&&object(value)&&(Object.hasOwn(value,'$path')||Object.hasOwn(value,'$each')||Object.values(value).some(child=>selected(child,depth+1)))||depth<=24&&Array.isArray(value)&&value.some(child=>selected(child,depth+1))
 
+// A table cell has scalar cardinality. Compile that context into the existing
+// selector language rather than asking a model to rewrite every source path.
+// $single retains its original ambiguity check, filtering, order, units and
+// missing-value handling; it never chooses among distinct source records.
+export function normalizeTableScalarMapping(mapping){
+ if(!(mapping?.type==='table'||mapping?.type==='market'&&['table','fund-holdings'].includes(mapping.variant))||!Array.isArray(mapping.columns))return mapping
+ const keys=mapping.columns.map(c=>object(c)?c.key:undefined)
+ const keyed=keys.length>0&&keys.every(k=>typeof k==='string'&&!forbidden.has(k))&&new Set(keys).size===keys.length
+ const cell=value=>{
+  if(!object(value)||typeof value.$each!=='string'||value.$single!==undefined&&value.$single!==true||value.$reduce!==undefined||value.$normalize!==undefined)return value
+  let child=value.$map
+  // A one-column row envelope inside an explicitly scalar cell carries no
+  // additional business field. Real multi-field tuples stay invalid.
+  if(Array.isArray(child)&&child.length===1)child=child[0]
+  if(child!==undefined&&(!object(child)||!Object.hasOwn(child,'$path')&&!Object.hasOwn(child,'$calc')||child.$each!==undefined))return value
+  if(child===undefined&&!Object.hasOwn(value,'$path'))return value
+  return {...value,$single:true,...(child!==undefined?{$map:child}:{})}
+ }
+ const row=value=>{
+  if(Array.isArray(value))return value.length===mapping.columns.length?value.map(cell):value
+  if(keyed&&sameKeys(value,keys))return Object.fromEntries(keys.map(key=>[key,cell(value[key])]))
+  if(object(value)&&Object.hasOwn(value,'$map'))return {...value,$map:row(value.$map)}
+  return value
+ }
+ return {...mapping,rows:Array.isArray(mapping.rows)?mapping.rows.map(row):row(mapping.rows)}
+}
+
+// Report the actual cell before keyed-column normalization. Otherwise a valid
+// {key,label} declaration is misleadingly blamed for a nested source value.
+export function tableScalarCellIssue(data){
+ if(!(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant))||!Array.isArray(data.columns)||!Array.isArray(data.rows))return
+ const keys=data.columns.map(c=>object(c)?c.key:undefined),keyed=keys.every(k=>typeof k==='string')
+ for(const [i,row] of data.rows.entries()){
+  const cells=Array.isArray(row)?row:keyed&&sameKeys(row,keys)?keys.map(k=>row[k]):undefined
+  if(!cells||cells.length!==data.columns.length)continue
+  const j=cells.findIndex(v=>!scalar(v));if(j<0)continue
+  return `table.rows[${i}]${keyed?'.'+keys[j]:'['+j+']'} 的单元格必须是单值，实际为${Array.isArray(cells[j])?'列表':'对象'}；按真实标的、日期筛选并使用 $single:true，或改为完整明细表保留全部记录，不任取、合计或丢弃数值。`
+ }
+}
+
 // A single explicit collection already produces the complete rows array.
 // Remove only its redundant wrapper, never merge sources or flatten cells.
 export function normalizeTableListMapping(mapping){

@@ -9,7 +9,7 @@ import {newsSourceScopeIssue,generalNewsScope} from './news-source-scope.js'
 import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
-import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping} from './table-projection.js'
+import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping,normalizeTableScalarMapping,tableScalarCellIssue} from './table-projection.js'
 import {normalizeChartDetailMapping} from './chart-detail-projection.js'
 import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
 import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from './component-derived-values.js'
@@ -275,6 +275,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  mapping=normalizeChartDetailMapping(mapping)
  mapping=normalizeTableListMapping(mapping)
  mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
+ mapping=normalizeTableScalarMapping(mapping)
  const candle=['market','chart'].includes(mapping?.type)&&mapping.variant==='candlestick'
  const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
  validateEtfMetricMapping(mapping,metadata,responses,now)
@@ -287,7 +288,10 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  const asOf=mapping.asOf,body={...mapping}
  if(qualityAlias)delete body.missing
  if(Object.hasOwn(mapping,'asOf'))body.asOf=''
- const projection=normalizeKeyedTableProjection(evaluateMapping(body,responses,now,responses,0,{nodes:0},'component'),mapping)
+ const evaluated=evaluateMapping(body,responses,now,responses,0,{nodes:0},'component')
+ const cellIssue=tableScalarCellIssue(evaluated)
+ if(cellIssue)throw Error(cellIssue)
+ const projection=normalizeKeyedTableProjection(evaluated,mapping)
  mapping=projection.mapping
  let data=normalizeIndexedTableRows(projection.data)
  // Normalize only an equivalent, valid source date representation. Never

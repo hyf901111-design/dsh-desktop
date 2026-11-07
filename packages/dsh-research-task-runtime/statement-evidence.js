@@ -1,7 +1,7 @@
 // Latest-report tasks do not need decades of ascending financial records in
 // their synthesis prompt. Explicit historical/series requests keep every row.
 export function latestStatementRequest(request='') {
- return /最新|最近已披露|latest|most recent/iu.test(request)&&/财报|财务|定期报告|利润表|financial statements?|income statements?/iu.test(request)&&
+ return /最新|最近(?:已披露|一期)|latest|most recent/iu.test(request)&&/财报|财务|定期报告|利润表|financial statements?|income statements?/iu.test(request)&&
   !/(?<!\d)(?:19|20)(?:\d{2}|\d{6})(?!\d)|历年|历史|逐年|逐季|各年|各期|趋势|走势|序列|去年|前年|近\s*\d+\s*(?:年|季)|histor|series|trend/iu.test(request)
 }
 

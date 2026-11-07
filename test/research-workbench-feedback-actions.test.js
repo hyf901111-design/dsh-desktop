@@ -4,20 +4,22 @@ import {runInNewContext} from 'node:vm'
 import * as React from 'react'
 import * as jsx from 'react/jsx-runtime'
 import {renderToStaticMarkup} from 'react-dom/server'
-import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
-import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {componentDataStatusDefinitions} from '../scripts/lib/component-data-status.mjs'
-import {publishResearchWorkbenchProgress} from '../scripts/lib/research-workbench-feedback.mjs'
+import {stripHomeWorkbenchProgress} from '../scripts/lib/home-workbench-progress.mjs'
+import {publishResearchWorkbenchProgress,patchResearchWorkbenchFeedback,researchWorkbenchFeedbackDefinitions} from '../scripts/lib/research-workbench-feedback.mjs'
 
-const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
-const source=patchResearchCreationProgress(original)
+// Upgrade the real installed helper in place. Unwinding unrelated canvas and
+// composer patches would couple these receipt controls to old grid anchors.
+const source=patchResearchWorkbenchFeedback(stripHomeWorkbenchProgress(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
 const start=source.search(/\/\* ework:workbench-feedback:v\d+ \*\//),end=source.indexOf('const ExecutionStatusGroup =',start)
+const definitions=researchWorkbenchFeedbackDefinitions()
+expect(source.slice(start,end)).toContain(definitions)
 const plans=[{id:'plan',count:4}]
-const card=(id,status)=>({id,workbenchId:'plan',generationTaskId:'task-'+id,generationStatus:status,...(status==='completed'?{containerSpec:{type:'html',html:'PRIVATE BODY'}}:{})})
+const card=(id,status)=>({id,workbenchId:'plan',generationTaskId:'task-'+id,generationStatus:status==='partial'?'completed':status,...(['completed','partial'].includes(status)?{containerSpec:{type:'html',html:status==='partial'?'<body data-observed-table-recovery>PRIVATE BODY</body>':'PRIVATE BODY'}}:{})})
 function fixture(statuses,english=false){
  const target=new EventTarget()
  const snapshot=publishResearchWorkbenchProgress(target,'session',statuses.map((s,i)=>card('node-'+i,s)),true,true)
- const api=runInNewContext(componentDataStatusDefinitions()+source.slice(start,end)+`;({Component:ResearchWorkbenchProgress,install:typeof installResearchWorkbenchRetry==='function'?installResearchWorkbenchRetry:null,request:typeof requestResearchWorkbenchRetry==='function'?requestResearchWorkbenchRetry:null})`,{react:React,react_jsx_runtime:jsx,window:target,document:{documentElement:{dataset:{odysseyLocale:english?'en':'zh'}}},CustomEvent})
+ const api=runInNewContext(componentDataStatusDefinitions()+definitions+`;({Component:ResearchWorkbenchProgress,install:typeof installResearchWorkbenchRetry==='function'?installResearchWorkbenchRetry:null,request:typeof requestResearchWorkbenchRetry==='function'?requestResearchWorkbenchRetry:null})`,{react:React,react_jsx_runtime:jsx,window:target,document:{documentElement:{dataset:{odysseyLocale:english?'en':'zh'}}},CustomEvent})
  return {...api,target,snapshot,html:()=>renderToStaticMarkup(React.createElement(api.Component,{sessionId:'session',plans,footer:true}))}
 }
 it('shows a circular loading indicator for real pending components, then a completed label only when all planned components exist',()=>{
@@ -38,6 +40,13 @@ it('offers retry beside real failures even while other components are still runn
  const mixed=fixture(['completed','running','failed','completed']).html()
  expect(mixed).toContain('aria-label="正在生成组件"')
  expect(mixed).toMatch(/<button[^>]*>重试<\/button>/)
+})
+it('does not label source-detail recovery as complete and keeps its retry control',()=>{
+ const html=fixture(['completed','partial','completed','completed']).html()
+ expect(html).toContain('来源明细 1（原功能未完成）')
+ expect(html).not.toContain('>已完成<')
+ expect(html).toMatch(/<button[^>]*>重试<\/button>/)
+ expect(html).not.toContain('PRIVATE BODY')
 })
 it('rechecks current plan, task identity, permission and status before retry, and never retries successful or already running components',async()=>{
  const f=fixture(['completed','running','failed','interrupted'])
