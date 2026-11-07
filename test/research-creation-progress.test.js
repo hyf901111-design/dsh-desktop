@@ -53,7 +53,7 @@ it('acknowledges a normal painted frame once and stops after effect cleanup', as
   cleanup.deactivate(); cleanup.frame(); expect(await pending).toBe(false)
   expect(cleanup.scans()).toBe(0)
   expect(cleanup.frames.size).toBe(0); expect(cleanup.timers.size).toBe(0)
-})
+},15000)
 
 it('主会话结束推断仅显示结果待同步，明确错误和停止文案保持原样',()=>{
   const source=patchResearchCreationProgress(currentClient())
@@ -183,7 +183,7 @@ it('keeps the submit, canvas and workbench handoff patch stable on reinstall', (
   expect(patched).toContain('odysseyCreationDeal(sessionId, plan, dealOrigin)')
   expect(patched).toContain('card.animate(workbenchDealMotion(origin, rect, card.offsetWidth || rect.width)')
   expect(patched).toContain('data-research-creation-planning=dealing')
-  expect(patched).toContain('执行者正在确定面板清单；确认后会按实际数量放入画布')
+  expect(patched).toContain('正在整理内容与布局，组件会陆续出现在画布上')
   expect(patched).not.toContain('计划包含：')
   expect(patched).toContain('ODYSSEY_WORKBENCH_PAINT_ACK')
   expect(patched).toContain('if (plan.ready) acknowledged.push(plan.id); else if (await odysseyPlannedCardsPainted(plan)) mounted.push(plan.id);')

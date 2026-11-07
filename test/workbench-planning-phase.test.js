@@ -417,6 +417,9 @@ describe('工作台首次规划阶段预算', () => {
       for (const key of ['prompt','artifact','publicData','layout']) expect(panel.properties[key]).toEqual(originalTool.parameters.properties.panels.items.properties[key])
       const input = { requestId: 'actual-source', title: '真实记录', dataMode: 'source', panels: [{ title: '观察记录', prompt: '实际来源，缺失字段明确标注', type: 'table', size: 'large' }] }
       expect(validateJsonSchemaValue(schema, input)).toEqual([])
+      const {size, ...autoSizedPanel}=input.panels[0]
+      expect(validateJsonSchemaValue(schema,{...input,panels:[autoSizedPanel]})).toEqual([])
+      expect(validateWorkbench({...input,panels:[autoSizedPanel]}).panels[0].size).toBeTruthy()
       expect(validateJsonSchemaValue(schema, { ...input, dataMode: 'simulated' }).length).toBeGreaterThan(0)
       expect(validateJsonSchemaValue(schema, { ...input, generationMode: 'deferred', sharedContext: '真实数据的公共约束' }).length).toBeGreaterThan(0)
       const snapshot = { ...input, panels: [{ ...input.panels[0], artifact: { version: 1, type: 'table', title: '已有真实记录', columns: ['字段', '记录'], rows: [['实测数量', '3']] } }] }

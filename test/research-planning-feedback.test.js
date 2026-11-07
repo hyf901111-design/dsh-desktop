@@ -23,7 +23,7 @@ it('distinguishes waiting, active streaming, a stalled response and an actual ac
  expect(planningFeedbackState(empty,null,0,20000,true)).toMatchObject({phase:'waiting',warning:''})
  const meta=planningResponseMetadata([model()]),beat=advancePlanningHeartbeat(null,meta,120000)
  const active=planningFeedbackState(meta,beat,0,125000,true)
- expect(active.phase).toBe('responding');expect(active.warning).toContain('模型仍在响应')
+ expect(active.phase).toBe('responding');expect(active.warning).toContain('仍在处理中')
  expect(active.warning).not.toContain('%');expect(active.detail).toContain('内容生成还未开始')
  expect(planningFeedbackState(meta,beat,0,170000,true).warning).toContain('暂未收到新的进展')
  expect(planningFeedbackState(meta,beat,0,170000,false)).toMatchObject({phase:'ended',warning:''})
@@ -51,7 +51,7 @@ it('shows transport feedback for a single-component creation without exposing pr
  const original=currentClient()
  const current=patchResearchCreationProgress(original)
  const legacy=current.replace("return request?.kind==='workbench'||research&&request?.kind==='component'?request:null", "return request?.kind==='workbench'?request:null")
- const reinstalled=patchResearchCreationProgress(legacy),start=reinstalled.indexOf('/* ework:planning-feedback:v1 */'),end=reinstalled.indexOf('const ExecutionStatusGroup =',start)
+ const reinstalled=patchResearchCreationProgress(legacy),start=reinstalled.indexOf('/* ework:planning-feedback:v1 */'),end=reinstalled.indexOf('/* ework:workbench-feedback:',start)
  const installed=runInNewContext(reinstalled.slice(start,end)+';researchPlanningRequest',{})
  expect(installed(['single'],nodes,7,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''),true)).toMatchObject({kind:'component'})
 })
@@ -70,7 +70,7 @@ it('excludes coding requests from fresh and previously installed planning feedba
  const oldHelper="function researchPlanningRequest(order,nodeStore,turn,classify,readText) {\n if(turn===null||turn===undefined)return null\n for(let i=order.length-1;i>=0;i--){\n  const node=nodeStore.get(order[i]);if(node?.kind!=='user')continue\n  const location=node.location,number=node.data?.turn??location?.turn?.turn??location?.turn\n  if(number!==turn)continue\n  const request=classify(readText(node.data?.content||[]))\n  return request?.kind==='workbench'||request?.kind==='component'?request:null\n }\n return null\n}"
  const legacy=fresh.replace(researchPlanningRequest.toString(),oldHelper)
  for(const source of [fresh,patchResearchCreationProgress(legacy)]){
-  const start=source.indexOf('/* ework:planning-feedback:v1 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+  const start=source.indexOf('/* ework:planning-feedback:v1 */'),end=source.indexOf('/* ework:workbench-feedback:',start)
   const installed=runInNewContext(source.slice(start,end)+';researchPlanningRequest',{})
   expect(installed([...nodes.keys()],nodes,3,classifyResearchCreationRequest,read)).toBeNull()
   expect(installed([...nodes.keys()],nodes,4,classifyResearchCreationRequest,read,true)).toMatchObject({kind:'component'})
@@ -86,7 +86,7 @@ it('refreshes the actual inlined classifier when upgrading an installed planning
  const legacyClassifier='function oldClassify(text){return /生成/.test(text)&&/工作台|组件/.test(text)?{kind:"workbench",request:text}:null}'
  const legacy=patchResearchGridWorkbench(fresh.slice(0,start+prefix.length)+legacyClassifier+fresh.slice(end))
  const reinstalled=patchResearchCreationProgress(restoreResearchGridWorkbench(legacy))
- const helpersStart=reinstalled.indexOf('/* ework:planning-feedback:v1 */'),helpersEnd=reinstalled.indexOf('const ExecutionStatusGroup =',helpersStart)
+ const helpersStart=reinstalled.indexOf('/* ework:planning-feedback:v1 */'),helpersEnd=reinstalled.indexOf('/* ework:workbench-feedback:',helpersStart)
  const callStart=reinstalled.indexOf(prefix),callEnd=reinstalled.indexOf(suffix,callStart)+suffix.length
  const nodes=new Map([['repair',{kind:'user',data:{turn:6,content:[{text:'修复现有工作台的图表生成失败问题，保留原组件和数据。'}]}}]])
  const request=runInNewContext(reinstalled.slice(helpersStart,helpersEnd)+reinstalled.slice(callStart,callEnd)+';planningRequest',{
@@ -99,18 +99,23 @@ it('patches the real progress component and its owning turn without duplicating 
  const original=currentClient()
  const patched=patchResearchCreationProgress(original)
  expect(patchResearchCreationProgress(patched)).toBe(patched)
+ expect(patched).toContain('/* ework:workbench-feedback:v9 */')
+ expect(patched).toContain('function publishResearchWorkbenchProgress(')
  expect(patched).toContain('data-research-planning-feedback')
  expect(patched).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,')
  expect(patched).toContain('planningRequest,\n\t\t\t\t\t\t\t\t\tstartTime:')
- const start=patched.indexOf('/* ework:planning-feedback:v1 */'),end=patched.indexOf('const ExecutionStatusGroup =',start)
+ const start=patched.indexOf('/* ework:planning-feedback:v1 */'),end=patched.indexOf('/* ework:workbench-feedback:',start)
  const statuses=[]
  const react={useRef:()=>({current:null})},jsx=(type,props)=>({type,props})
  const win=new Window()
  const Feedback=runInNewContext(patched.slice(start,end)+';ResearchPlanningFeedback',{react,react_jsx_runtime:{jsx,jsxs:jsx},document:win.document})
  const view=Feedback({meta:planningResponseMetadata([model('SECRET_REASONS')]),startedAt:0,now:20000,running:true})
  expect(JSON.stringify(view)).not.toContain('SECRET_REASONS')
- expect(view.props['data-research-planning-feedback']).toBe('responding')
- expect(view.props.children[0].props.children).toContain('已收到模型响应')
+ expect(view).toBeNull()
+ const delayed=Feedback({meta:planningResponseMetadata([model('SECRET_REASONS')]),startedAt:0,now:130000,running:true})
+ expect(delayed.props.children).toContain('准备已超过 2 分钟')
+ expect(JSON.stringify(delayed)).not.toMatch(/SECRET_REASONS|最近响应|模型|组件清单/)
+ expect(planningFeedbackState(planningResponseMetadata([model()]),null,0,20000,true).title).toBe('正在准备工作台')
  void win.happyDOM.abort()
 })
 it('upgrades the legacy production planning call without a surface argument exactly once',()=>{

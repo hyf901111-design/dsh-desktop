@@ -40,10 +40,10 @@ export function advancePlanningHeartbeat(previous,meta,now) {
 export function planningFeedbackState(meta,heartbeat,startedAt,now,running,english=false) {
  const elapsed=Math.max(0,now-startedAt),since=heartbeat?Math.max(0,Math.floor((now-heartbeat.lastAt)/1000)):null
  const say=(zh,en)=>english?en:zh
- const title=!running?say('本轮规划已结束','Planning run ended'):meta.prepared?say('组件内容已准备好','Component content prepared'):meta.accepted?say('规划已受理，正在生成组件','Plan accepted; generating components'):meta.toolCount?say('正在执行规划工具','Running planning tools'):meta.responding?say('已收到模型响应，正在形成组件清单','Model responding; preparing component list'):say('任务已提交，等待模型响应','Request sent; awaiting model response')
+ const title=!running?say('本轮准备已结束','Preparation ended'):meta.prepared?say('组件内容已准备好','Component content prepared'):meta.accepted?say('正在生成组件','Generating components'):meta.toolCount?say('正在整理数据与图表','Preparing data and charts'):say('正在准备工作台','Preparing your workbench')
  const activity=heartbeat?say('最近响应：'+since+' 秒前','Last activity: '+since+'s ago'):say('尚未收到模型输出','No model output received yet')
  const detail=!running?say(meta.accepted?'本轮已提交组件计划，最终状态以各组件为准。':'本轮未提交组件计划。',meta.accepted?'A component plan was submitted; see each component for its final status.':'No component plan was submitted in this run.'):meta.accepted?(meta.count?say('已受理 '+meta.count+' 个组件；各组件会分别显示生成状态。',meta.count+' components accepted; each reports its own generation status.'):say('组件计划已受理；受理不等于全部生成完成。','Plan accepted; component generation is still in progress.')):meta.toolCount?say('已开始 '+meta.toolCount+' 次工具调用'+(meta.failedTools?'，其中 '+meta.failedTools+' 次未成功。':'。'),'Started '+meta.toolCount+' tool calls'+(meta.failedTools?'; '+meta.failedTools+' failed.':'.')):say('正在确定内容分工；尚未提交组件计划，内容生成还未开始。','Determining content responsibilities; no component plan has been submitted yet.')
- const warning=running&&!meta.accepted&&elapsed>=120000?say('规划已超过 2 分钟。'+(since!==null&&since<30?'模型仍在响应。':'暂未收到新的进展。')+'可以继续等待或停止后重试。','Planning has exceeded 2 minutes. '+(since!==null&&since<30?'The model is still responding. ':'No recent progress received. ')+'You can keep waiting or stop and retry.'):''
+ const warning=running&&!meta.accepted&&elapsed>=120000?say('准备已超过 2 分钟。'+(since!==null&&since<30?'仍在处理中。':'暂未收到新的进展。')+'可以继续等待或停止后重试。','Preparation has exceeded 2 minutes. '+(since!==null&&since<30?'Work is still in progress. ':'No recent progress received. ')+'You can keep waiting or stop and retry.'):''
  return {title,activity,detail,warning,phase:!running?'ended':meta.prepared?'prepared':meta.accepted?'accepted':meta.toolCount?'tools':meta.responding?'responding':'waiting'}
 }
 export function researchPlanningRequest(order,nodeStore,turn,classify,readText,research=false) {
@@ -64,12 +64,10 @@ function ResearchPlanningFeedback({meta,startedAt,now,running}) {
  const heartbeat=react.useRef(null)
  heartbeat.current=advancePlanningHeartbeat(heartbeat.current,meta,now)
  const english=document.documentElement.dataset.odysseyLocale==='en',state=planningFeedbackState(meta,heartbeat.current,startedAt,now,running,english)
- return react_jsx_runtime.jsxs('div',{'data-research-planning-feedback':state.phase,style:{margin:'4px 0 8px 20px',padding:'8px 10px',borderLeft:'2px solid var(--dsw-alias-border-l2)',fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
-  react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{fontWeight:500},children:state.title}),
-  react_jsx_runtime.jsx('div',{'data-planning-heartbeat':'',children:state.activity}),
-  react_jsx_runtime.jsx('div',{children:state.detail}),
-  state.warning?react_jsx_runtime.jsx('div',{role:'status',style:{marginTop:5},children:state.warning}):null
- ]})
+ // The primary execution row already owns the live status. Only exceptional
+ // waits need another visible message; transport details stay out of the UI.
+ if(!state.warning)return null
+ return react_jsx_runtime.jsx('div',{'data-research-planning-feedback':state.phase,role:'status','aria-live':'polite',style:{margin:'4px 0 8px',fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:state.warning})
 }
 export function patchResearchPlanningFeedback(source,classify) {
  const marker='/* ework:planning-feedback:v1 */'
@@ -81,6 +79,12 @@ export function patchResearchPlanningFeedback(source,classify) {
  }
  const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text,researchPlanningSurface) : null;'
  if(source.includes(marker)){
+  const stateStart=source.indexOf('function planningFeedbackState('),stateEnd=source.indexOf('\nfunction researchPlanningRequest(',stateStart)
+  if(stateStart<0||stateEnd<0)throw Error('Planning status helper missing on reinstall')
+  source=source.slice(0,stateStart)+planningFeedbackState.toString()+source.slice(stateEnd)
+  const feedbackStart=source.indexOf('function ResearchPlanningFeedback('),feedbackClose=source.indexOf('\n}\n',feedbackStart),feedbackEnd=feedbackClose<0?-1:feedbackClose+2
+  if(feedbackStart<0||feedbackEnd<0)throw Error('Planning feedback view missing on reinstall')
+  source=source.slice(0,feedbackStart)+ResearchPlanningFeedback.toString()+source.slice(feedbackEnd)
   const metaStart=source.indexOf('function planningResponseMetadata('),metaEnd=source.indexOf('\nfunction advancePlanningHeartbeat(',metaStart)
   if(metaStart<0||metaEnd<0)throw Error('Planning receipt metadata helper missing on reinstall')
   source=source.slice(0,metaStart)+planningResponseMetadata.toString()+source.slice(metaEnd)

@@ -44,7 +44,7 @@ describe('research workbench Figma design contract', () => {
     expect(researchMarketDimensions({containerSpec,sizeMode:'manual'})).toBeNull();
     expect(researchMarketDimensions({containerSpec:{type:'html',html:`<style>body[data-research-kind="calendar"]{color:red}body[data-research-kind="dashboard"]{color:black}</style><body data-sherlock-market="trend" data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"></body>`}})).toEqual({width:656,height:300});
     const huge={...quote,items:Array.from({length:12},(_,i)=>({label:`指标${i}`,value:'100'})),note:'来源说明'.repeat(128)};
-    expect(workbenchDesignTemplate({type:'market',artifact:huge}).height).toBe(456);
+    expect(workbenchDesignTemplate({type:'market',artifact:huge}).height).toBe(638);
   });
   it('uses host rendered templates for simulated K-line and metrics without a per-panel model', () => {
     const input = validateWorkbench({ requestId: 'figma-smoke', title: '模拟行情', dataMode: 'simulated', panels: [
@@ -118,7 +118,7 @@ describe('research workbench Figma design contract', () => {
       panel('交易明细', 'table', '交易数据', { columns: ['时间', '价格'], rows: [['09:30', '1462']] })
     ] });
     expect(input.panels.map(p => [p.type, p.artifact.variant])).toEqual([['market', 'metrics'], ['market', 'trend'], ['market', 'table']]);
-    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[656, 233], [656, 300], [656, 155]]);
+    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[656, 233], [656, 300], [656, 213]]);
     expect(input.panels.map(p => renderMarketArtifact(p.artifact)?.html.includes('data-sherlock-design'))).toEqual([true, true, true]);
     const bad = { requestId: 'no-financial-bar', title: '金融分析工作台', dataMode: 'simulated', panels: [
       panel('柱图', 'chart', '财务柱图', { variant: 'bar', labels: ['一','二'], series: [{ name: '值', values: [1,2] }] }),
@@ -145,11 +145,11 @@ describe('research workbench Figma design contract', () => {
       columns:['名称','代码','价格','涨跌','市盈率','市净率','市值'],rows:Array.from({length:8},(_,i)=>[`银行${i}`,'600000.SH','8.5','+0.2','6.2','0.8','1000'])};
     const denseMetrics = {version:1,type:'market',variant:'metrics',title:'关键指标',asOf:'模拟',
       items:Array.from({length:9},(_,i)=>({label:`指标${i}`,value:String(i)}))};
-    expect(workbenchDesignTemplate({type:'market',artifact:denseTable})).toMatchObject({width:656,height:280});
-    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:656,height:456});
-    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseTable).html}})).toEqual({width:656,height:280});
-    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:656,height:456});
-    expect(workbenchDesignTemplate({type:'market',artifact:{...denseTable,columns:['名称','价格'],rows:[['A','8.5']]}})).toMatchObject({width:656,height:155});
+    expect(workbenchDesignTemplate({type:'market',artifact:denseTable})).toMatchObject({width:656,height:395});
+    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:656,height:469});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseTable).html}})).toEqual({width:656,height:395});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:656,height:469});
+    expect(workbenchDesignTemplate({type:'market',artifact:{...denseTable,columns:['名称','价格'],rows:[['A','8.5']]}})).toMatchObject({width:656,height:213});
   });
 
   it('packs contracted financial cards across a wide canvas before shrinking them', () => {

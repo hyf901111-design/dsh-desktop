@@ -11,7 +11,7 @@ import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
 import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
 import { researchBentoSize } from './bento-layout.js';
 import { resolveWorkbenchSamples } from './workbench-shared-samples.js';
-import {chartDataIssue,chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
+import {chartDataIssue,chartTemplateSchema,requestedChartVariant,requireSimulatedChartData,positiveChartIntent} from './chart-template-contract.js';
 import { templateFor } from './component-template-registry.js';
 import {operationsDataIssue,operationsTemplateSchema} from './operations-template-contract.js';
 import {FINANCIAL_PROFILE_VARIANTS,FINANCIAL_PROFILE_FIELDS,financialProfileDataIssue} from './financial-profile.js';
@@ -427,7 +427,7 @@ export function validateWorkbench(value) {
     if (value?.generationMode === 'deferred' && value.preset !== undefined) throw Error('延后模拟生成不能混用固定预设。');
     value = expandSimulatedWorkbenchPreset(expandLiveWorkbenchPreset(value));
     if (value && value.panels === undefined)
-        throw Error('缺少工作台内容参数：不能只传 title。标准模拟工作台请完整提交 {"title":"工作台标题","dataMode":"simulated","preset":"medical-21h"}（另有 market-overview-21h、research-operations-21m）；其他需求必须提供 1–10 个 panels，每项包含 title、prompt、type、size。preset 是工具参数，不是文件路径。请按用户需求补齐参数后重试，不要重复原调用。');
+        throw Error('缺少工作台内容参数：不能只传 title。标准模拟工作台请完整提交 {"title":"工作台标题","dataMode":"simulated","preset":"medical-21h"}（另有 market-overview-21h、research-operations-21m）；其他需求必须提供 1–10 个 panels，每项包含 title、prompt、type，size 可省略由宿主按内容排版。preset 是工具参数，不是文件路径。请按用户需求补齐参数后重试，不要重复原调用。');
     if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > 10)
         throw Error('工作台需要 1–10 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
@@ -447,7 +447,7 @@ export function validateWorkbench(value) {
     if (deferred && !value.sharedContext && !value.originalRequest) throw Error('延后模拟生成需要原始需求或共同场景约束。');
     const seen = new Set();
     const panels = resolveWorkbenchSamples(value.panels).map(p => {
-        if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
+        if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || ((p.size !== undefined || p.height !== undefined) && !Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         // A flat table cannot implement per-row detail panels. Keep the actual
         // source request and interaction; change only an unmaterialized plan's
@@ -566,8 +566,8 @@ export function validateWorkbench(value) {
             const {artifact,...planned}=p;
             p={...planned,prompt:`variant: ${draft.variant}；${p.prompt}`};
         }
-        const requestsCandlestick = /K\s*线|蜡烛图|candlestick/iu.test(p.title) ||
-            (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(p.prompt));
+        const requestsCandlestick = /K\s*线|蜡烛图|candlestick/iu.test(positiveChartIntent(p.title)) ||
+            (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(positiveChartIntent(p.prompt)));
         const chartVariant = p.type === 'chart' ? p.artifact?.variant ?? requestedChartVariant(`${p.title} ${p.prompt}`) : null;
         if (requestsCandlestick && !(p.type==='financial-widget'&&p.artifact.widget==='quote') && !(p.type === 'market' && marketVariant(p) === 'candlestick') && chartVariant !== 'candlestick')
             throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
