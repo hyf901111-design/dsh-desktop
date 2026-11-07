@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-03",
+  "branch": "codex/integration/20261108-03",
+  "baseMainCommit": "be177bf993786843a13e6f4e987f4b804d7b4b83",
+  "expectedMainCommit": "be177bf993786843a13e6f4e987f4b804d7b4b83",
+  "createdAt": "2026-11-07T23:07:47.055Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台反馈补丁升级边界修复",
+        "branch": "codex/feat/recovery-patch-upgrade-20261108",
+        "baseCommit": "be177bf993786843a13e6f4e987f4b804d7b4b83",
+        "tipCommit": "4ae6caa6ef22a53afed9dd02bf9969a599d2acee",
+        "commits": [
+          {
+            "commit": "4ae6caa6ef22a53afed9dd02bf9969a599d2acee",
+            "parents": [
+              "be177bf993786843a13e6f4e987f4b804d7b4b83"
+            ],
+            "subject": "修复：升级工作台反馈补丁时保留相邻组件模块"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/superpowers/plans/2026-11-08-native-generation-recovery.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-feedback-upgrade-preservation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/workbench-generation-fill-browser.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  6 passed (6)\n      Tests  47 passed (47)\n   Start at  07:03:13\n   Duration  31.10s (transform 2.17s, setup 0ms, import 4.13s, tests 49.96s, environment 0ms)",
+            "verifiedCommit": "4ae6caa6ef22a53afed9dd02bf9969a599d2acee",
+            "completedAt": "2026-11-07T23:03:44.389524+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "4ae6caa6ef22a53afed9dd02bf9969a599d2acee",
+            "completedAt": "2026-11-07T23:03:52.933697+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "4ae6caa6ef22a53afed9dd02bf9969a599d2acee",
+            "completedAt": "2026-11-07T23:03:52.948610+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实已安装bundle迁移回放通过：相邻组件、回复进度和历史消息代码逐字保留；新旧补丁幂等、语法及47项相关控件与布局检查通过。集成后仍需重新构建并验证原生客户端。"
+        },
+        "acceptanceCriteria": [
+          "反馈补丁仅替换自己拥有的区域，迁移V1至V10时保留相邻模块",
+          "新版本增加明确结束标记，重复应用保持稳定",
+          "47项聚焦验证、类型检查和差异格式检查通过"
+        ],
+        "risks": [
+          "原生重建及失败组件重试将在集成后完成",
+          "共享生成依赖已从之前签名包恢复，未更改用户数据",
+          "公开数据源仍可能暂时不可用"
+        ],
+        "generatedAt": "2026-11-07T23:03:52.948638+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-feedback-upgrade-preservation.test.js",
+        "test/research-workbench-feedback-actions.test.js",
+        "test/research-workbench-feedback.test.js",
+        "test/research-generation-watch.test.js",
+        "test/research-planning-feedback.test.js",
+        "test/workbench-generation-fill-browser.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
