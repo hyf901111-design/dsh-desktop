@@ -9,31 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "原生表格底部说明折叠",
+        "featureName": "研究组件底栏完整统计区间",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
-        "tipCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
+        "baseCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
+        "tipCommit": "0e5f7f4b3bb2f4a5ac832ba330d48c3157a7f228",
         "commits": [
           {
-            "commit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
+            "commit": "0e5f7f4b3bb2f4a5ac832ba330d48c3157a7f228",
             "parents": [
-              "9c4a86efc1fd970aff840285620e9933c3245415"
+              "72782506e69e67b7f3095bc60bfefb93c1a6eab4"
             ],
-            "subject": "统一原生表格底部说明的折叠布局"
+            "subject": "保留组件底栏数据时点中的完整统计区间"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/research-market-native-table.mjs"
+            "path": "scripts/lib/component-data-status.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-market-native-context-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-native-table.test.js"
+            "path": "test/component-data-status.test.js"
           }
         ],
         "checks": [
@@ -42,32 +38,18 @@
               "npx",
               "vitest",
               "run",
-              "test/research-market-native-context-browser.test.js",
-              "test/research-market-native-interaction.test.js",
-              "test/research-market-native-table.test.js"
+              "test/component-data-status.test.js"
             ],
             "outcome": "passed",
-            "summary": "58项原生表格聚焦检查通过；保留旧表格完整口径、来源跳转、排序、列宽与行选中，默认折叠说明",
-            "verifiedCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
-            "completedAt": "2026-11-07T03:25:06.135282+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "差异检查通过",
-            "verifiedCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
-            "completedAt": "2026-11-07T03:25:06.135282+00:00",
+            "summary": "16项来源与日期状态检查通过，包含已保存图表将区间放在asOf的回归场景",
+            "verifiedCommit": "0e5f7f4b3bb2f4a5ac832ba330d48c3157a7f228",
+            "completedAt": "2026-11-07T03:39:29.489890+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实Chromium中指标卡、图表、表格说明默认折叠，点击与键盘可展开；等待集成包已有ETF工作台验证"
+          "outcome": "not-applicable",
+          "summary": "本次仅日期格式化，16项直接测试通过；最终包显示将再复核。原ETF折叠操作及六指标布局已实测。"
         },
         "acceptanceCriteria": [
           "主视图区保留完整指标，重复说明收纳至口径与来源",
@@ -78,127 +60,6 @@
           "暂仅自动整理已知版本宿主模板，自定义HTML仍依照更新后的生成规范"
         ],
         "generatedAt": "2026-11-07T03:25:06.135282+00:00"
-      },
-      "merged": {
-        "mergeCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-        "verificationCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--prefer-offline",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --prefer-offline --no-audit --no-fund",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/prepare-memory-model.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/prepare-memory-model.mjs",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-evidence.test.js",
-              "test/memory-local-index.test.js",
-              "test/memory-semantic.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-source.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-import.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-runtime.test.js test/memory-evidence.test.js test/memory-local-index.test.js test/memory-semantic.test.ts test/memory-search.test.ts test/memory-bridge.test.ts test/memory-source.test.ts test/memory-document.test.ts test/memory-import.test.ts",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fc2c7e7358819edb79b2cbb429cb21958b7d6020",
-            "completedAt": "2026-11-07T03:29:38.877Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-07T03:29:38.877Z"
       }
     },
     {
