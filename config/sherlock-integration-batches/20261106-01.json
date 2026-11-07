@@ -9,97 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "工作台指标布局与需求识别优化",
+        "featureName": "组件内部对齐间距生成规范",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "d235bed7c019f1e644883f40a5068e20e5165898",
-        "tipCommit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
+        "baseCommit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
+        "tipCommit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
         "commits": [
           {
-            "commit": "2137d8ac38ba8ac9c4c4ee8c6ba00a90da0d0e9a",
+            "commit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
             "parents": [
-              "d235bed7c019f1e644883f40a5068e20e5165898"
+              "7ccf13e50c21396574c69cb0e6bee0d75650e558"
             ],
-            "subject": "修复：尊重指数对比的非K线要求并自动补齐规划尺寸"
-          },
-          {
-            "commit": "a731c286adf352406223f249a0d16479f3166541",
-            "parents": [
-              "2137d8ac38ba8ac9c4c4ee8c6ba00a90da0d0e9a"
-            ],
-            "subject": "优化：六项指标均衡分列并校准内容与来源留白验证"
-          },
-          {
-            "commit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
-            "parents": [
-              "a731c286adf352406223f249a0d16479f3166541"
-            ],
-            "subject": "优化：精简研究准备状态并保留组件进度与重试记录"
+            "subject": "优化：将组件对齐间距与表格基础交互纳入生成规范"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-planning-feedback.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-research-generation-design.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/strip-conversation-live-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-creation-progress.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-planning-feedback.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-comparison-intent.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
           }
         ],
         "checks": [
@@ -108,59 +34,25 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-comparison-intent.test.js",
-              "test/workbench-planning-phase.test.js",
-              "test/workbench-execution-policy.test.js"
+              "test/research-design-policy.test.js",
+              "test/component-surface-style.test.js"
             ],
             "outcome": "passed",
-            "summary": "相关聚焦检查通过",
-            "verifiedCommit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
-            "completedAt": "2026-11-07T02:19:58.187Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/workbench-design-contract.test.js",
-              "test/kpi-template.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "相关聚焦检查通过",
-            "verifiedCommit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
-            "completedAt": "2026-11-07T02:19:58.187Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-planning-feedback.test.js",
-              "test/research-creation-progress.test.js",
-              "test/research-grid-workbench.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "相关聚焦检查通过",
-            "verifiedCommit": "7ccf13e50c21396574c69cb0e6bee0d75650e558",
-            "completedAt": "2026-11-07T02:19:58.187Z",
+            "summary": "98 项相关检查通过",
+            "verifiedCommit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
+            "completedAt": "2026-11-07T02:36:59.911Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已完成指标宽窄浏览器检查，等待最终集成包复验"
+          "summary": "补充生成提示词，不修改运行界面"
         },
         "acceptanceCriteria": [
-          "指标数值单位对齐，宽屏六项均衡分列",
-          "比较需求不被否定句误判为K线",
-          "准备反馈简洁，真实组件进度保留"
+          "生成规范包含同组指标对齐及紧凑表格交互"
         ],
-        "risks": [
-          "需真实集成包新建工作台验证"
-        ],
-        "generatedAt": "2026-11-07T02:19:58.187Z"
+        "risks": [],
+        "generatedAt": "2026-11-07T02:36:59.911Z"
       }
     },
     {
