@@ -575,8 +575,11 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             for (const name of members) {
               const node = current.artifacts.find(node=>node.id===ticket.nodes[name])
               const normal = name==='calendar'?{width:620,height:420}:financialWidgetDimensions(node.containerSpec,true)??{width:node.width,height:node.height}
-              const width = name==='indices'?40:Math.min(40,Math.max(metrics.minColumns,Math.ceil((normal.width+metrics.gap)/metrics.step)))
+              let width = name==='indices'?40:Math.min(40,Math.max(metrics.minColumns,Math.ceil((normal.width+metrics.gap)/metrics.step)))
               const rows = Math.ceil(((name==='indices'?heights.indices:['watchlist','quote'].includes(name)?600:normal.height)+metrics.gap)/metrics.rowStep)
+              // Preferred size is not a minimum. Use a readable vacant slot
+              // beside the previous card before starting another row.
+              if (left && 40-left >= grid.minimum(node,metrics).w) width=Math.min(width,40-left)
               if (left && left+width>40) { top+=height; left=0; height=0 }
               fitted.set(node.id,{id:node.id,x:left,y:top,w:width,h:rows})
               left+=width; height=Math.max(height,rows)
@@ -650,7 +653,7 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { silent:true, isCancelled: () => ticket.controller.signal.aborted })
           }
         }
-        // Preserve native reading sizes on entry, wrapping when a row cannot fit.
+        // Prefer native sizes, fitting a usable neighbour slot before wrapping.
         // Only the visible Arrange action fills the available row widths.
         await playing(ticket); layoutBoard(!ticket.arranged)
         await settle(ticket, () => !!ticket.host.querySelector(widget === 'calendar' ? '[data-calendar-tool]' : '[data-financial-widget="' + widget + '"]'))

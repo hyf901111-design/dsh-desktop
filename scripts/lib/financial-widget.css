@@ -136,10 +136,10 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body .ew-financial-port:disabled{opacity:.5;cursor:default!important}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-footer>button.ew-financial-retry{height:20px!important;min-height:20px!important;flex:none;white-space:nowrap}
  body .ew-financial-symbol-search{position:relative;width:100%;min-width:0;color:var(--fw-text);font:400 12px/16px Inter,'Noto Sans SC',system-ui}
- body .ew-financial-search-line{box-sizing:border-box;height:24px;display:flex;gap:6px;align-items:center;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-card);padding:0 6px 0 8px}
+ body .ew-financial-search-line{box-sizing:border-box;height:24px;display:flex;gap:6px;align-items:center;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-card);padding:0 8px}
  body .ew-financial-search-line:focus-within{border-color:var(--fw-accent)}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-search-line input[type=search][role=combobox],body [data-ework-grid] .ew-financial-header-selector .ew-financial-search-line input[type=search]{flex:1;width:100%!important;height:22px!important;min-height:22px!important;padding:0!important;border:0!important;background:transparent!important;outline:0!important;color:var(--fw-text)!important;box-shadow:none!important}
- body [data-ework-grid] .ew-financial-search-line>button{display:grid!important;place-items:center!important;width:16px!important;height:22px!important;min-height:22px!important;padding:0!important;flex:0 0 16px!important;border:0!important;background:transparent!important}
+ body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-financial-search-line>button,body [data-ework-grid] .ew-financial-header-selector .ew-financial-search-line>button{display:grid!important;place-items:center!important;width:16px!important;height:22px!important;min-height:22px!important;padding:0!important;margin:0!important;flex:0 0 16px!important;border:0!important;background:transparent!important}
  /* The generated-content focus rule is more specific than its base input rule.
     Keep the sole blue outline on the shared field wrapper in both locations. */
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-search-line input[type=search][role=combobox]:not([readonly]):enabled:is(:focus,:focus-visible){border:0!important;outline:0!important;box-shadow:none!important}
