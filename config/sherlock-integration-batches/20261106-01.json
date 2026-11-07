@@ -9,31 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究工作台按需求选源与生成质量优化",
+        "featureName": "研究工作台多场景实测修正",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "055e673194df32705283cc27c03f3388e6b1f40b",
-        "tipCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
+        "baseCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
+        "tipCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
         "commits": [
           {
-            "commit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
+            "commit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
             "parents": [
-              "055e673194df32705283cc27c03f3388e6b1f40b"
+              "cf17cca33b896aaf1335e8be18cb32df508877d9"
             ],
-            "subject": "优化：研究工作台按需求选源并精简规划回报与行情展示"
+            "subject": "修复：研究工作台实测中的规划绕路与来源表格错误"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/verification/2026-11-07-research-workbench-quality.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-tools.js"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
@@ -45,23 +41,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/crypto-source-results.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/data-source-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/table-projection.js"
           },
           {
             "status": "M",
@@ -69,7 +49,15 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
           },
           {
             "status": "M",
@@ -77,27 +65,19 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-free-data-sources/SKILL.md"
+            "path": "scripts/lib/component-data-status.mjs"
           },
           {
             "status": "M",
-            "path": "skills/ework-free-data-sources/references/generation.md"
+            "path": "test/component-data-status.test.js"
           },
           {
             "status": "M",
-            "path": "skills/ework-free-data-sources/scripts/query.mjs"
+            "path": "test/component-keyed-table-projection.test.js"
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "test/crypto-public-data.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/free-data-sources.test.js"
+            "path": "test/public-data-capacity.test.js"
           },
           {
             "status": "M",
@@ -110,22 +90,20 @@
               "npx",
               "vitest",
               "run",
-              "test/crypto-public-data.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/public-data-capacity.test.js",
-              "test/crypto-partial-refresh.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/free-data-sources.test.js",
-              "test/tushare-financial-routing.test.js",
-              "test/client-tools.test.js",
+              "test/component-data-status.test.js",
+              "test/component-keyed-table-projection.test.js",
+              "test/component-data-refresh.test.js",
               "test/component-readable-snapshot.test.js",
-              "test/workbench-public-data.test.js",
-              "test/research-design-policy.test.js"
+              "test/public-data-capacity.test.js",
+              "test/workbench-public-data-profile.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/workbench-public-data.test.js"
             ],
             "outcome": "passed",
             "summary": "直接相关聚焦检查通过",
-            "verifiedCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
-            "completedAt": "2026-11-06T23:24:01.283493+00:00",
+            "verifiedCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
+            "completedAt": "2026-11-07T00:03:16.128934+00:00",
             "timeoutMs": 180000
           },
           {
@@ -138,8 +116,8 @@
             ],
             "outcome": "passed",
             "summary": "直接相关聚焦检查通过",
-            "verifiedCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
-            "completedAt": "2026-11-06T23:24:01.283493+00:00",
+            "verifiedCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
+            "completedAt": "2026-11-07T00:03:16.128934+00:00",
             "timeoutMs": 180000
           },
           {
@@ -150,8 +128,8 @@
             ],
             "outcome": "passed",
             "summary": "直接相关聚焦检查通过",
-            "verifiedCommit": "cf17cca33b896aaf1335e8be18cb32df508877d9",
-            "completedAt": "2026-11-06T23:24:01.283493+00:00",
+            "verifiedCommit": "b6f36c1f2b82d54c385e1e6b7ad66bf6a73917e1",
+            "completedAt": "2026-11-07T00:03:16.128934+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -165,10 +143,10 @@
           "行情单位与精度正确，部分失败可刷新恢复"
         ],
         "risks": [
-          "实际生成质量和耗时待客户端评估",
-          "workbench-planning-phase四项既有失败在基线同样复现，未算通过"
+          "第二轮打包实际生成待复验",
+          "workbench-source-capability一项与planning-phase四项既有失败已在修改前复现，未计通过"
         ],
-        "generatedAt": "2026-11-06T23:24:01.283493+00:00"
+        "generatedAt": "2026-11-07T00:03:16.128934+00:00"
       }
     }
   ],
