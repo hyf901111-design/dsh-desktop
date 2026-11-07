@@ -230,6 +230,65 @@
           "额外旧布局测试research-grid-additions和workbench-semantic-layout因既有补丁锚点漂移阻塞；本次布局由真实序列化客户端浏览器验证覆盖"
         ],
         "generatedAt": "2026-11-07T15:13:23.821842+00:00"
+      },
+      "merged": {
+        "mergeCommit": "444fea1fcc9216cd0b829eba14f9ec638d6c1182",
+        "verificationCommit": "444fea1fcc9216cd0b829eba14f9ec638d6c1182",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/message-edit.test.js",
+              "test/message-edit-host.test.js",
+              "test/message-edit-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-generation-fill-browser.test.js",
+              "test/component-generation-reliability.test.js",
+              "test/workbench-library.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/financial-widget-contract.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-controls.test.ts",
+              "test/home-theme-preferences.test.ts",
+              "test/home-operations-navigation.test.ts",
+              "test/explore-random-wallpapers-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/message-edit.test.js test/message-edit-host.test.js test/message-edit-browser.test.js test/research-grid-workbench.test.js test/workbench-generation-fill-browser.test.js test/component-generation-reliability.test.js test/workbench-library.test.js test/component-data-refresh.test.js test/component-source-binding.test.js test/component-data-submission.test.js test/financial-widget-contract.test.js test/bundled-component-skill.test.js test/home-theme-controller.test.ts test/home-theme-controls.test.ts test/home-theme-preferences.test.ts test/home-operations-navigation.test.ts test/explore-random-wallpapers-browser.test.ts",
+            "verifiedCommit": "444fea1fcc9216cd0b829eba14f9ec638d6c1182",
+            "completedAt": "2026-11-07T21:52:59.996Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "444fea1fcc9216cd0b829eba14f9ec638d6c1182",
+            "completedAt": "2026-11-07T21:52:59.996Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "444fea1fcc9216cd0b829eba14f9ec638d6c1182",
+            "completedAt": "2026-11-07T21:52:59.996Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-07T21:52:59.996Z"
       }
     }
   ],
