@@ -10,6 +10,7 @@ import {filterScopedNewsArtifact} from './news-topic-filter.js'
 import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-query-coverage.js'
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
 import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping} from './table-projection.js'
+import {normalizeChartDetailMapping} from './chart-detail-projection.js'
 import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
 import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from './component-derived-values.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
@@ -251,6 +252,7 @@ function validateEtfMetricMapping(mapping,metadata,responses,now){
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentProjection(mapping,responses,now=new Date(),sourceRecords=[]){
+ mapping=normalizeChartDetailMapping(mapping)
  mapping=normalizeTableListMapping(mapping)
  mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
