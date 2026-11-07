@@ -1,5 +1,31 @@
 import { it, expect } from 'vitest'
 import { registerCanvasTools, bindCanvasChild, normalizeCanvasChanges, summarizeMarketCanvasInspect } from '../packages/dsh-research-task-runtime/canvas-tools.js'
+import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js'
+it('inspects complete editable chart data without loading rendered code, including legacy full requests',async()=>{
+ const data={version:1,type:'chart',variant:'horizontal',title:'流入排名',unit:'亿元',labels:['甲','乙'],series:[{name:'流入',values:[20,10]}],detailColumns:['产品','代码','规模'],detailRows:[['甲','001',120],['乙','002',null]],sources:[{label:'资料来源',url:'https://example.com'}]}
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
+ const custom={version:1,type:'html',title:'自定义组件',html:'<div>独立交互</div>'}
+ const original={revision:'r1',nodes:[{id:'chart',content:{title:data.title,containerSpec:spec}},{id:'custom',content:{containerSpec:custom}}]}
+ const tools=new Map(),calls=[]
+ const dispose=registerCanvasTools({tools:{register:t=>{tools.set(t.name,t);return()=>{}}}},{env:{SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'secret'},fetch:async(_url,init)=>{calls.push(JSON.parse(init.body));return new Response(JSON.stringify(original))}})
+ const inspect=tools.get('research_canvas_inspect'),exec={agent:{session:{id:'session'}}}
+ try{
+  for(const detail of [undefined,'summary','full']){
+   const out=JSON.parse(await inspect.execute({ids:['chart','custom'],...(detail?{detail}:{})},exec))
+   expect(out.nodes[0].contentSummary.data).toEqual(data)
+   expect(out.nodes[0].contentSummary.message).toContain('默认折叠')
+   expect(out.nodes[0].content.containerSpec).toBeUndefined()
+   expect(JSON.stringify(out).length).toBeLessThan(JSON.stringify(original).length/10)
+   expect(out.revision).toBe('r1')
+   if(detail==='full')expect(out.nodes[1].content.containerSpec).toEqual(custom)
+   else expect(out.nodes[1].content.containerSpec).toBeUndefined()
+  }
+  const raw=JSON.parse(await inspect.execute({ids:['chart'],detail:'rendered'},exec))
+  expect(raw).toEqual(original)
+  expect(calls.every(call=>!Object.hasOwn(call.args,'detail'))).toBe(true)
+  expect(spec.html).toContain('sherlock-template-data')
+ }finally{dispose()}
+})
 it('derives board identity from execution and rejects model-supplied session IDs',async()=>{
  const tools=new Map(),calls=[]
  const dispose=registerCanvasTools({tools:{register:t=>{tools.set(t.name,t);return()=>tools.delete(t.name)}}},{env:{SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'secret'},fetch:async(url,init)=>{calls.push(JSON.parse(init.body));return new Response(JSON.stringify({revision:'r',nodes:[]}))}})

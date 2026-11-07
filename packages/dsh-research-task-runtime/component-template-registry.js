@@ -70,5 +70,6 @@ export function templateSummary(spec){
  const model=readTemplateModel(spec)
  if(!model)return null
  const t=templates.get(model.templateId)
- return {templateId:t.id,templateVersion:model.version,data:model.data,interactions:t.interactions,message:t.id==='view'?'已保留共同记录与组合视图配置。更新提交结构化数据和视图配置，不读取或重写HTML；保留原记录、单位、缺失值与说明。':'已保留结构化数据。更新只提交此数据对象，不读取或重写 HTML；样式由宿主固定模板提供。'}
+ const chartDetails=model.data.type==='chart'&&Array.isArray(model.data.detailRows)?'补充明细已在图表下方默认折叠，包含 detailColumns/detailRows，可展开排序并拖动列宽；无需另建同一批记录的明细卡。':''
+ return {templateId:t.id,templateVersion:model.version,data:model.data,interactions:t.interactions,message:(t.id==='view'?'已保留共同记录与组合视图配置。更新提交结构化数据和视图配置，不读取或重写HTML；保留原记录、单位、缺失值与说明。':'data 是完整的可编辑内容，直接修改需要的字段并通过 research_canvas_apply 提交 fields.containerSpec；保留其余数据、来源和日期，不读取或重写 HTML。')+chartDetails}
 }
