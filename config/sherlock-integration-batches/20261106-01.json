@@ -9,43 +9,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究图表折叠明细与来源兼容优化",
+        "featureName": "研究组件结构化编辑与明细去重规划",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "ba29bc1170228c18ab438e87ec56e5ca05eadca9",
-        "tipCommit": "d05af6cabd02c7f0735efe89a097b6b486ce2dd5",
+        "baseCommit": "d05af6cabd02c7f0735efe89a097b6b486ce2dd5",
+        "tipCommit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
         "commits": [
           {
-            "commit": "d05af6cabd02c7f0735efe89a097b6b486ce2dd5",
+            "commit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
             "parents": [
-              "ba29bc1170228c18ab438e87ec56e5ca05eadca9"
+              "d05af6cabd02c7f0735efe89a097b6b486ce2dd5"
             ],
-            "subject": "将研究图表补充明细收纳为可排序可调列宽的折叠表格"
+            "subject": "精简研究组件编辑读取并避免重复拆分图表明细"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
-          },
-          {
-            "status": "A",
-            "path": "test/cartesian-chart-details.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
           },
           {
             "status": "M",
-            "path": "test/component-reading-footer-browser.test.js"
+            "path": "test/research-canvas-tools.test.js"
           }
         ],
         "checks": [
@@ -54,34 +50,32 @@
               "npx",
               "vitest",
               "run",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/component-data-submission.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
+              "test/research-canvas-tools.test.js",
+              "test/research-canvas-structured-apply.test.js",
+              "test/research-canvas-actions.test.js",
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "271项相关检查通过；含四种宽度主题组合下折叠、排序、拖动列宽和来源展示。",
-            "verifiedCommit": "d05af6cabd02c7f0735efe89a097b6b486ce2dd5",
-            "completedAt": "2026-11-07T05:01:22.386658+00:00",
+            "summary": "33项聚焦检查通过：完整数据读取、原始代码入口、自定义组件兼容、原子更新与规划路由。",
+            "verifiedCommit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
+            "completedAt": "2026-11-07T05:34:17.957971+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "隔离浏览器通过真实预览管线验证：360/880宽、浅/深色，补充明细默认折叠，排序箭头/拖动列宽/缺失值/页面溢出正常。集成客户端模型生成仍需验收。"
+          "outcome": "not-applicable",
+          "summary": "本次修改工具返回与规划提示，不改可视组件；协议聚焦检查通过，真实模型耗时另在集成包验证。"
         },
         "acceptanceCriteria": [
-          "图表主区域保留核心信息，补充明细默认折叠且保留真实字段",
-          "明细表提供紧凑表头、排序状态与列宽拖动",
-          "来源名称写法差异不导致已有数据拒绝，冲突和不安全URL仍拒绝"
+          "读取已有标准组件保留完整可编辑数据并省略冗长渲染代码",
+          "自定义HTML和显式渲染代码检查保留原入口",
+          "同一批记录的补充明细默认收纳在主图，避免重复卡片"
         ],
         "risks": [
-          "既存轴精度哈希测试在修改前文件中同样失败，当前与修改前默认HTML字节一致。",
-          "上一轮真实指数工作台仍有缺失和映射失败，不作为本次已完成；本次仅处理图表补充字段与来源展示。"
+          "真实模型的规划和编辑耗时需本地包验证；不以提示词断言代替实际生成。",
+          "先前跨类型工作台映射和缺失项继续保留待验证。"
         ],
-        "generatedAt": "2026-11-07T05:01:22.386842+00:00"
+        "generatedAt": "2026-11-07T05:34:17.957971+00:00"
       }
     },
     {
