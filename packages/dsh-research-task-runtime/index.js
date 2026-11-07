@@ -1809,10 +1809,10 @@ export class ResearchTaskRuntime {
           if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords,feedOptions))throw new ResearchTaskError('GENERATION_FAILED',componentFeedEvidenceIssue(deliveredText,sourceRecords,feedOptions)??(sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。'))
           let mapped
           const chartVariant=plannedFormat==='chart'?(panelContract?.includes(DATA_FIRST_PRESENTATION)?panelContract.match(/必须输出 chart\.([a-zA-Z]+) 的结构化数据/u)?.[1]:requestedChartVariant(panelContract??task.prompt)):undefined
-          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,newsScope:task.prompt,feedOptions,intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
+          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,...historyOptions,staticSnapshot:!bindingRequested,newsScope:task.prompt,feedOptions,intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
           catch(error){
-            let prototypeScaleIssue
-            const snapshot=resolveComponentSnapshot(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,panelRequest,...historyOptions,onPrototypeScaleIssue:issue=>{prototypeScaleIssue=issue},onPrototypeViewIssue:issue=>{prototypeScaleIssue=issue}})
+            let prototypeScaleIssue,snapshotError
+            const snapshot=resolveComponentSnapshot(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,panelRequest,...historyOptions,onSnapshotError:issue=>{snapshotError=issue},onPrototypeScaleIssue:issue=>{prototypeScaleIssue=issue},onPrototypeViewIssue:issue=>{prototypeScaleIssue=issue}})
             if(prototypeScaleIssue){
               const invalid=new ResearchTaskError('INVALID_OUTPUT',prototypeScaleIssue)
               const drafts=extractArtifactObjects(deliveredText),draft=drafts.length===1?drafts[0]?.mapping:undefined
@@ -1831,7 +1831,10 @@ export class ResearchTaskRuntime {
               throw invalid
             }
             if(snapshot&&!snapshot.capacitySnapshot)verifiedSnapshot=snapshot
-            if(!snapshot||bindingRequested)throw new ResearchTaskError(error.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',error.message)
+            if(!snapshot||bindingRequested){
+              const cause=!bindingRequested&&snapshotError?snapshotError:error
+              throw new ResearchTaskError(cause.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',cause.message)
+            }
             mapped=snapshot
           }
           if(prototypeRepairEvidence&&!mapped?.prototypeHtmlSnapshot)throw new ResearchTaskError('GENERATION_FAILED','完整原型来源已保留，恢复必须引用这些真实记录；不能用未取得资料的说明或无数据卡片冒充原交互组件。')

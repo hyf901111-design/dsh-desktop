@@ -48,6 +48,32 @@ it('rejects malformed mapping inside the same child and accepts corrected data w
  const output=(await f.submission.result).output[0].text
  expect(resolveBoundComponent(output,f.records).data.series[0].values).toEqual([2.1,-3.2]);expect(f.records).toHaveLength(1)
 })
+it.each(['operator','path'])('reports the actual %s error in financial snapshots and accepts a correction without refetching',async(kind)=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0]={tool:'financial_query',purpose:'snapshot',args:{intent:'history',symbols:['000300.SH']},response:{schema_version:'financial-1',status:'complete',records:response.records}}
+ candidate.requests[0]={key:'q',tool:'financial_query',args:f.records[0].args}
+ delete candidate.mapping.asOf
+ const bad=structuredClone(candidate)
+ if(kind==='operator')bad.mapping.labels.$map={$concat:[{$path:'name'},'产品']}
+ else bad.mapping.series[0].values.$map.$path='missingValue'
+ const rejected=await f.invoke(bad)
+ expect(rejected.isError).toBe(true)
+ expect(JSON.stringify(rejected)).toContain(kind==='operator'?'$concat':'missingValue')
+ expect(JSON.stringify(rejected)).not.toContain('自动更新的数据引用无效')
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ expect(f.records).toHaveLength(1)
+})
+it('explains an unsupported chart variant without silently changing the selected presentation',async()=>{
+ const f=await fixture(),candidate=structuredClone(input);candidate.mapping.variant='trend'
+ const rejected=await f.invoke(candidate)
+ expect(rejected.isError).toBe(true)
+ expect(JSON.stringify(rejected)).toContain('趋势折线用 line')
+ expect(JSON.stringify(rejected)).toContain('无需重新取数')
+ expect(candidate.mapping.variant).toBe('trend')
+ candidate.mapping.variant='line'
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ expect(f.records).toHaveLength(1)
+})
 it.each(['unobserved','wrong-args','discovery','wrong-path'])('does not accept %s data or turn it into empty success',async(mode)=>{
  const f=await fixture(),candidate=structuredClone(input)
  if(mode==='unobserved')f.records.length=0

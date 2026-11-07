@@ -58,9 +58,10 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
    const observedTools=[...new Set(records.filter(record=>record.purpose!=='discovery').map(record=>record.tool))]
    if(observedTools.length&&Array.isArray(args.requests)&&args.requests.some(request=>!observedTools.includes(request?.tool)))throw Error('数据引用的工具名必须逐字复用本卡成功调用，不能使用来源别名。本卡实际工具名：'+observedTools.slice(0,8).join('、')+'。保留其原参数及真实字段，无需重新取数。')
    let snapshot
-   try{snapshot=resolveBoundComponent(text,records,now,options)}catch(error){
-    if(!bindingRequested)snapshot=resolveComponentSnapshot(text,records,now,options)
-    if(!snapshot)throw error
+   try{snapshot=resolveBoundComponent(text,records,now,{...options,staticSnapshot:!bindingRequested})}catch(error){
+    let snapshotError
+    if(!bindingRequested)snapshot=resolveComponentSnapshot(text,records,now,{...options,onSnapshotError:issue=>{snapshotError=issue}})
+    if(!snapshot)throw snapshotError??error
    }
    if(!snapshot)throw Error('No verified component data yet. Obtain the requested records, then submit their exact request parameters and real field paths.')
    const countIssue=observationCountIssue(snapshot.data)
