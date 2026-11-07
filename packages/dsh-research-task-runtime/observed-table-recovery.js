@@ -13,7 +13,8 @@ const safeUrl=value=>{try{const u=new URL(value);return ['https:','http:'].inclu
 // It is explicitly a source-record view, never a claim that the requested
 // comparison, custom interaction or refresh recipe has been completed.
 export function recoverObservedTable(records,{panelType,panelRequest='',originalRequest='',title,draft,error}={}){
- if(panelType!=='table'||!/^table\.(?:columns|rows)(?:\[|\b)/u.test(error??''))return null
+ const lostPresentation=/^生成内容格式无效(?:，自动恢复未完成)?[。.]?$/u.test(error??'')
+ if(panelType!=='table'||!lostPresentation&&!/^table\.(?:columns|rows)(?:\[|\b)/u.test(error??''))return null
  if(componentBindingRequested(originalRequest)||/筛选|排序|联动|编辑|钻取|可点击|点击.{0,12}(?:详情|切换)|filter|sort|drill|interactive/iu.test(originalRequest))return null
  // A model's table plan cannot override a human's chart requirement. When a
  // multi-card request has no trusted per-card human scope, stay conservative.
@@ -21,12 +22,23 @@ export function recoverObservedTable(records,{panelType,panelRequest='',original
  if(/(?:只|仅|必须|指定).{0,16}(?:来源|Tushare|通联|DataYes|官方|网站|接口|插件)/iu.test(originalRequest))return null
  if(/(?:必须|保留|需要).{0,12}(?:K线|蜡烛|趋势图|交互)/iu.test(panelRequest))return null
  const candidates=extractArtifactObjects(draft??''),candidate=candidates.length===1?candidates[0]:undefined
- if(candidate?.type!=='data-bound'||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||candidate.mapping?.type!=='table')return null
  const observed=[]
+ if(!candidate&&lostPresentation&&candidates.length===0){
+  // A malformed final reply must not erase independently verified tool data.
+  // These are this task's actual successful responses, not requests invented
+  // by the failed model. Keep the same human scope and partial-delivery gates.
+  for(const record of [...records].reverse()){
+   if(!componentMappableSource(record)||['discovery','snapshot'].includes(record.purpose))continue
+   if(!observed.some(r=>r.tool===record.tool&&isDeepStrictEqual(r.args,record.args)))observed.push(record)
+  }
+  if(!observed.length||observed.length>16)return null
+ }else{
+ if(candidate?.type!=='data-bound'||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||candidate.mapping?.type!=='table')return null
  for(const request of candidate.requests){
   const record=records.findLast(r=>r.tool===request.tool&&isDeepStrictEqual(r.args,request.args)&&componentMappableSource(r)&&!['discovery','snapshot'].includes(r.purpose))
   if(!record)return null
   if(!observed.some(r=>r.tool===record.tool&&isDeepStrictEqual(r.args,record.args)))observed.push(record)
+ }
  }
  const sections=[];let rowCount=0
  for(const record of observed){

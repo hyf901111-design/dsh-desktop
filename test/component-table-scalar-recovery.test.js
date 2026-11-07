@@ -42,9 +42,9 @@ it('does not unwrap real multi-field tuples into a scalar column',()=>{
  expect(()=>materializeComponentMapping(bad,{q:{records:[{value:0,other:2}]}})).toThrow(/rows\[0\].*value|单元格/)
 })
 
-async function fallbackTask(originalRequest='创建一张来源数据表',policy){
+async function fallbackTask(originalRequest='创建一张来源数据表',policy,lostPresentation=false){
  const f=structuredClone(captured[0]);f.draft.mapping.columns[0].label={invalid:'label'}
- const start=vi.fn(async()=>({childSessionId:'table-recovery-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',sourceRecords:start.mock.calls.length===1?f.records:[],output:[{type:'text',text:JSON.stringify(f.draft)}]})}))
+ const start=vi.fn(async()=>({childSessionId:'table-recovery-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',sourceRecords:start.mock.calls.length===1?f.records:[],output:[{type:'text',text:lostPresentation?'最终JSON未能完成':JSON.stringify(f.draft)}]})}))
  let saved
  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async document=>{saved=structuredClone(document)}},retryDelayMs:0})
  try{
@@ -123,4 +123,21 @@ it('retains structured business responses on transport retry and only fetches re
   expect(calls[1].prompt).toContain('更换可用来源')
   expect(calls[1].prompt).toContain('181636856.48')
  }finally{await runtime.dispose()}
+})
+it('uses owned successful source responses when the bounded repair loses the JSON presentation entirely',()=>{
+ const f=structuredClone(captured[0]),options={panelType:'table',originalRequest:'创建普通财务数据表',draft:'最终JSON未能完成',error:'生成内容格式无效，自动恢复未完成。'}
+ const result=recoverObservedTable(f.records,options)
+ expect(result).toMatchObject({deliveryStatus:'partial',recoveryMode:'source-snapshot'})
+ expect(JSON.parse(result.output).html).toContain('94957074.777')
+ for(const originalRequest of ['按K线展示','创建可排序表格','财务表每5分钟刷新','只用Tushare来源'])expect(recoverObservedTable(f.records,{...options,originalRequest})).toBeNull()
+ for(const error of ['来源单位冲突','日期不一致','权限不足','请求参数未匹配'])expect(recoverObservedTable(f.records,{...options,error})).toBeNull()
+ for(const r of f.records)r.purpose='discovery'
+ expect(recoverObservedTable(f.records,options)).toBeNull()
+})
+
+it('finishes malformed JSON recovery as partial after exactly one model repair',async()=>{
+ const {task,start}=await fallbackTask('创建普通财务数据表',undefined,true)
+ expect(start).toHaveBeenCalledTimes(2)
+ expect(task).toMatchObject({state:'completed',deliveryStatus:'partial',recoveryMode:'source-snapshot'})
+ expect(JSON.parse(task.finalOutput).html).toContain('94957074.777')
 })
