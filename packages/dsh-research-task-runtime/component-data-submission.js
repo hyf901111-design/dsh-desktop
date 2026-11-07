@@ -9,8 +9,9 @@ import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 const NAME='submit_component_data'
 const SCHEMA='component_presentation_schema'
 
-export const COMPONENT_SUBMISSION_MAPPING_GUIDANCE = `requests 只引用本卡已成功执行的工具名和原参数；mapping 描述呈现结构，数据用真实字段路径引用完整响应，不复制整组数值。
-public_data_query 的 requests 项为 {key:"q",tool:"public_data_query",args:{operation:"query",source:"实际来源标识",parameters_json:"成功查询时的原 JSON"}}；完整复用调用的外层 args，不把 symbol、limit 等内层参数平铺出来。
+export const COMPONENT_SUBMISSION_MAPPING_GUIDANCE = `requests 引用本卡已成功执行的数据请求；mapping 描述呈现结构，数据用真实字段路径引用完整响应，不复制整组数值。
+同一工具在本卡仅有一个成功业务请求时，优先写 {key:"q",tool:"实际工具名"}，省略 args，由宿主复用其完整原参数；不要补写默认值或 null。若同一工具有多个成功业务请求，才提供原 args 明确选择，不能省略；接口目录不计为业务请求。
+需要明确选择 public_data_query 的多次请求时，requests 项为 {key:"q",tool:"public_data_query",args:{operation:"query",source:"实际来源标识",parameters_json:"成功查询时的原 JSON"}}；完整复用调用的外层 args，不把 symbol、limit 等内层参数平铺出来。
 ${COMPONENT_DERIVED_VALUE_GUIDANCE}
 $from 指 requests.key；$path 为响应内的点分路径；$each 选择实际数组，$map 映射每行字段。表格 rows 使用 {$from:"q",$each:"实际列表",$map:[{$path:"名称字段"},{$path:"数值字段"}]}，columns 与单元格一一对应。
 列表可用 $filter:{字段:原值} 等值筛选、$sortBy:"字段"、$order:"asc|desc" 排序、$take:5 取前五或 $take:-20 取末二十；$single:true 在筛选后恰好一条时取单值。$as:"number|string" 转标量，$scale 换单位，$digits:2 控制精度，$prefix/$suffix 加文字。图表 labels 和 series.values 的 $map 必须是单个字段选择器，不用表格行的数组写法；每个标的聚合后得到单值时，使用由这些选择器组成的 values 数组。日期区间可用 $filter:{真实日期字段:{$gte:"YYYY-MM-DD",$lte:"YYYY-MM-DD"}}，边界包含当天，支持实际 YYYY-MM-DD/ YYYYMMDD 日期，先筛选再统计；自然月不能替换为固定交易日数量。共同基期比较在 values 的列表选择器用 $normalize:"base100"；日期和值必须采用完全相同的筛选排序，不把缺失填成0。
@@ -27,6 +28,26 @@ function observationCountIssue(data){
   for(const claim of claims)if(Number(claim[1])!==data.labels.length)return `${key} 中每条序列的观测数量写为${claim[1]}，但筛选后实际为${data.labels.length}条。只修正或省略这句数量说明，保留完整日期与数值，无需重新取数。`
  }
  return null
+}
+
+function observedRequestChoices(records,tool){
+ const choices=records.filter(record=>record.tool===tool&&record.purpose!=='discovery').map(({tool,args})=>({tool,args}))
+ // Return only request identity, never response records. Keep the error bounded
+ // without truncating JSON into an unusable correction.
+ const text=JSON.stringify(choices.slice(0,8))
+ return text.length<=4096?` 本卡已成功请求（tool/args）：${text}`:''
+}
+
+function reuseObservedRequests(requests,records){
+ if(!Array.isArray(requests))throw Error('requests 必须列出本卡已成功执行的数据请求。')
+ return requests.map(request=>{
+  if(Object.hasOwn(request,'args'))return request
+  const matches=records.filter(record=>record.tool===request.tool&&record.purpose!=='discovery')
+  if(matches.length!==1)throw Error(matches.length
+   ?`同一工具有多个成功业务请求，请用原 args 明确选择；不会自动选取最近一次。${observedRequestChoices(records,request.tool)}`
+   :'该工具在本卡没有成功业务请求，不能引用目录、失败调用或其他组件的数据。')
+  return {...request,args:structuredClone(matches[0].args)}
+ })
 }
 
 // Acquisition and presentation are separate. The child chooses a renderer
@@ -46,22 +67,30 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
   execute(args,exec){check(exec);return{schema:args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}',guidance:args.type==='kpi'?KPI_GUIDANCE:'Use real observed source paths. Template fields describe presentation, never required business metrics.'}}
  })
  const definition=defineTool({
-  name:NAME,description:'Submit this component using already observed data. requests identify exact successful calls; mapping chooses the appropriate presentation (kpi/table/chart/market etc.) and references actual fields. Validation errors are returned here: fix only the presentation and resubmit using the same data. Acceptance ends this component. Never submit placeholders to probe.',
-  parameters:{requests:{type:'array',required:true,items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string',required:true},args:{type:'object',required:true,additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',required:true,additionalProperties:true}},
+  name:NAME,description:'Submit this component using already observed data. Prefer requests:[{key,tool}] when that tool has exactly one successful business call: the host reuses its original arguments. If multiple calls exist, include exact args to select one. Never add defaults. mapping chooses the appropriate presentation and references actual fields. Fix validation errors here using the same data. Acceptance ends this component.',
+  parameters:{requests:{type:'array',required:true,items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string',required:true},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',required:true,additionalProperties:true}},
   output:{schema:{type:'object',properties:{accepted:{type:'boolean',required:true}},additionalProperties:false},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>false,
   execute(args,exec){
    check(exec)
    if(!args||Object.keys(args).some(key=>!['requests','mapping'].includes(key)))throw Error('Submit only requests and mapping; do not include source response values.')
-   const candidate={version:1,type:'data-bound',requests:args.requests,mapping:args.mapping},text=JSON.stringify(candidate)
-   if(Buffer.byteLength(text)>256000)throw Error('Use paths into the complete observed responses instead of copying source records into the submission.')
+   if(Buffer.byteLength(JSON.stringify(args))>256000)throw Error('Use paths into the complete observed responses instead of copying source records into the submission.')
    const records=structuredClone(observeRecords()),now=new Date()
    const observedTools=[...new Set(records.filter(record=>record.purpose!=='discovery').map(record=>record.tool))]
    if(observedTools.length&&Array.isArray(args.requests)&&args.requests.some(request=>!observedTools.includes(request?.tool)))throw Error('数据引用的工具名必须逐字复用本卡成功调用，不能使用来源别名。本卡实际工具名：'+observedTools.slice(0,8).join('、')+'。保留其原参数及真实字段，无需重新取数。')
+   const candidate={version:1,type:'data-bound',requests:reuseObservedRequests(args.requests,records),mapping:args.mapping},text=JSON.stringify(candidate)
+   if(Buffer.byteLength(text)>256000)throw Error('完整数据请求与映射超过容量限制，不能截断来源参数。')
    let snapshot
    try{snapshot=resolveBoundComponent(text,records,now,{...options,staticSnapshot:!bindingRequested})}catch(error){
     let snapshotError
     if(!bindingRequested)snapshot=resolveComponentSnapshot(text,records,now,{...options,onSnapshotError:issue=>{snapshotError=issue}})
-    if(!snapshot)throw snapshotError??error
+    if(!snapshot){
+     const issue=snapshotError??error
+     if(String(issue?.message).includes('未匹配本轮已成功取数的原参数')){
+      const choices=[...new Set(candidate.requests.map(request=>request.tool))].map(tool=>observedRequestChoices(records,tool)).join('')
+      throw Error(issue.message+' 同一工具仅有一个成功业务请求时，可省略 args 直接复用。'+choices)
+     }
+     throw issue
+    }
    }
    if(!snapshot)throw Error('No verified component data yet. Obtain the requested records, then submit their exact request parameters and real field paths.')
    const countIssue=observationCountIssue(snapshot.data)
