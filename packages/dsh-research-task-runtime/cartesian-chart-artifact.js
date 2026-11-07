@@ -12,7 +12,7 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   const horizontal = ['horizontal','lollipop','dumbbell'].includes(kind);
   const stacked = ['stackedArea','stackedBar','percentBar'].includes(kind);
   const percent = kind === 'percentBar';
-  const w = Math.max(280, width), h = horizontal ? Math.max(160, n * 30 + 50, Math.min(240, availableHeight)) : Math.max(160, Math.min(240, availableHeight));
+  const w = Math.max(280, width), h = horizontal ? Math.max(160, n <= 6 ? n * 24 + 46 : n * 30 + 50, Math.min(240, availableHeight)) : Math.max(160, Math.min(240, availableHeight));
   const left = horizontal ? Math.min(110, w * .27) : 48, right = 16, top = 16, bottom = 30;
   const pw = w-left-right, ph = h-top-bottom;
   const totals = spec.labels.map((_, i) => spec.series.reduce((sum,s,si) => sum + (visible[si]?s.values[i]:0), 0));
@@ -119,9 +119,16 @@ export function cartesianChartRuntime(spec, geometry) {
   let lastWidth=0,lastHeight=0;
   const draw=()=>{
     frame=0;lastWidth=svg.parentElement.clientWidth;lastHeight=window.innerHeight;describe();
-    const outerHeight=element=>{const style=getComputedStyle(element);return element.getBoundingClientRect().height+parseFloat(style.marginTop||0)+parseFloat(style.marginBottom||0);};
+    const outerHeight=element=>{const style=getComputedStyle(element);return style.display==='none'?0:element.getBoundingClientRect().height+parseFloat(style.marginTop||0)+parseFloat(style.marginBottom||0);};
     const bodyStyle=getComputedStyle(document.body);
-    const chrome=[...document.querySelectorAll('.chart-context,.legend,.chart-readout,figcaption,summary')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+16;
+    const disclosures=[...document.querySelectorAll('body>details,body>.component-reading-footer')].map(el=>{
+      const style=getComputedStyle(el),summary=el.querySelector('summary');
+      return (summary?outerHeight(summary):0)+['marginTop','marginBottom','paddingTop','paddingBottom','borderTopWidth','borderBottomWidth'].reduce((sum,key)=>sum+(parseFloat(style[key])||0),0);
+    });
+    // Expanded records scroll naturally; they must not squash the chart.
+    const compactFooter=document.querySelector('.component-reading-footer');
+    const footerHeight=compactFooter?Math.max(0,...disclosures):disclosures.reduce((sum,h)=>sum+h,0);
+    const chrome=[...document.querySelectorAll('.chart-context,.legend,.chart-readout,figcaption')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+footerHeight+2;
     size=geometry(spec,lastWidth,visible,lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
   };
   const select=i=>{selected=Math.max(0,Math.min(spec.labels.length-1,i));describe();};
@@ -134,6 +141,8 @@ export function cartesianChartRuntime(spec, geometry) {
   }));
   const schedule=()=>{if((svg.parentElement.clientWidth!==lastWidth||window.innerHeight!==lastHeight)&&!frame)frame=requestAnimationFrame(draw);};
   const observer=new ResizeObserver(schedule);observer.observe(svg.parentElement);window.addEventListener('resize',schedule);draw();
+  // Host metadata/styles are appended after this script in saved previews.
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',draw,{once:true});
   window.addEventListener('pagehide',()=>{observer.disconnect();window.removeEventListener('resize',schedule);if(frame)cancelAnimationFrame(frame);},{once:true});
 }
 
