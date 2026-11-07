@@ -21,6 +21,13 @@ describe('component refresh status',()=>{
   expect(componentDataStatusView(null,null,staticNode({asOf:'腾讯财经 · 最后报价 2026-11-06 16:14:57'})).time).toBe('数据 2026-11-06')
   expect(componentDataStatusView(row('a',null),null,staticNode({asOf:'2026-11-06'})).time).toBe('尚未刷新')
  })
+ it('preserves explicitly recorded snapshot periods without confusing later acquisition dates',()=>{
+  for(const asOf of ['2026-10-30 至 2026-11-06 · 静态快照，自动更新未绑定','20261030~20261106','2026-10-30 – 2026-11-06']){
+   expect(componentDataStatusView(null,null,staticNode({asOf})).time).toBe('数据 2026-10-30 至 2026-11-06')
+  }
+  expect(componentDataStatusView(null,null,staticNode({asOf:'数据 2026-11-06 · 获取时间 2026-11-07'})).time).toBe('数据 2026-11-06')
+  expect(componentDataStatusView(null,null,staticNode({asOf:'获取时间 2026-10-30 至 2026-11-06'})).time).toBe('')
+ })
  it('shows retained generation sources even without a refresh binding, with truthful unknown fallback',()=>{
   const node=staticNode({sources:[{label:'Tushare / shibor'},{label:'中国货币网'},{label:'Tushare / shibor'}],asOf:'2026-11-06'})
   expect(componentDataStatusView(null,null,node)).toMatchObject({source:'Tushare / 中国货币网',detail:'静态快照'})

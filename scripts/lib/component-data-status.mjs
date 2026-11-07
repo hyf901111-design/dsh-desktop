@@ -39,7 +39,13 @@ export function componentSnapshotDate(saved){
   const iso=m[1]+'-'+m[2]+'-'+m[3],date=new Date(iso+'T00:00:00Z')
   return Number.isFinite(date.getTime())&&date.toISOString().startsWith(iso)&&!/(?:获取|刷新|保存|生成)[^·；。\n]*$/.test(text.slice(0,m.index))
  }).map(m=>m[1]+'-'+m[2]+'-'+m[3])
- const range=dates(saved.range),asOf=dates(saved.asOf),values=range.length?range:asOf.slice(0,1)
+ const range=dates(saved.range),asOf=dates(saved.asOf)
+ // Some saved templates store the entire period in asOf rather than range.
+ // Only carry the second date when an explicit range separator connects it;
+ // a later received/generated date must not become the period end.
+ const explicitPeriod=saved.asOf.match(/\b20\d{2}-?\d{2}-?\d{2}\s*(?:至|到|[~～–—-])\s*20\d{2}-?\d{2}-?\d{2}\b/)
+ const period=explicitPeriod?dates(explicitPeriod[0]):[]
+ const values=range.length?range:period.length===2&&period[0]===asOf[0]?period:asOf.slice(0,1)
  return values.length?'数据 '+(values.length>1&&values[0]!==values[1]?values[0]+' 至 '+values[1]:values[0]):''
 }
 // One canvas subscription; publishing status never updates the canvas model or
