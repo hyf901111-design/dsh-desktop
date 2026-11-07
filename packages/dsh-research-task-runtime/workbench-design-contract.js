@@ -9,7 +9,7 @@ import {TIMELINE_TEMPLATES} from './timeline-template-contract.js';
 import {KPI_TEMPLATES} from './kpi-template-contract.js';
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
-import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
+import {CHART_TEMPLATES,requestedChartVariant,positiveChartIntent} from './chart-template-contract.js';
 import {OPERATIONS_TEMPLATES} from './operations-template-contract.js';
 import {inferFinancialSnapshotVariant} from './financial-snapshot.js';
 import {inferFinancialSeriesVariant} from './financial-series.js';
@@ -97,6 +97,7 @@ const generic = Object.freeze({
 const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
+  panel = {...panel,title:positiveChartIntent(panel.title??''),prompt:positiveChartIntent(panel.prompt??'')};
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
   if(/技术图表|技术指标|技术分析|可绘图.?K线|market\.charting/iu.test(panel.title??'')&&(!requestedMarketVariant(panel.prompt)||requestedMarketVariant(panel.prompt)==='charting'))return 'charting';
   const recordsTitle=inferFinancialRecordsVariant(panel.title),declaredRecords=requestedMarketVariant(panel.prompt);

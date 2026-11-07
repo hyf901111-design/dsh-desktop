@@ -24,7 +24,15 @@ export function normalizeChartMetadata(data) {
   const first=data.asOf.split(/[；;。\n]/u)[0].trim();
   return {...data,asOf:first&&first.length<=256?first:'数据时点与来源详见完整说明',note};
 }
+// A negative comparison instruction is not a request for a different chart.
+// Keep the original prompt intact; remove only excluded candlestick mentions
+// from the text used by presentation inference and its validation guards.
+export function positiveChartIntent(text = '') {
+  return text.replace(/(?:不要|不用|无需|不必|不需要|不再|避免|禁止|不)(?:(?:再|分别|各自|单独|独立|额外)\s*)*(?:绘制|画|展示|显示|生成|使用|采用)?\s*(?:K\s*线(?:图)?|蜡烛图|(?:chart\.)?candlesticks?)/giu, '')
+    .replace(/\b(?:do not|don't|without|avoid|rather than|instead of)\s+(?:(?:draw|drawing|use|using|show|showing|separate|individual)\s+)*(?:chart\.)?candlesticks?(?:\s+charts?)?/giu, '');
+}
 export function requestedChartVariant(text = '') {
+  text = positiveChartIntent(text);
   // Ignore chart syntax examples together with their human-readable labels.
   // A business-data example must not hide a later explicit chart selection.
   let intent = '', consumed = 0, previousEnd = 0, previousExample = false;
