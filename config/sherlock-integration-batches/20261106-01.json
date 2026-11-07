@@ -9,33 +9,47 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件库复用后的财务数据与呈现修正",
+        "featureName": "财务指标卡紧凑布局与自选演示并排摆放",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
-        "tipCommit": "cb784d4da33d140c73a3567d365318299dcba380",
+        "baseCommit": "cb784d4da33d140c73a3567d365318299dcba380",
+        "tipCommit": "7a92996eac869fb3b3ab42a659baf62806773d92",
         "commits": [
           {
-            "commit": "3583fe385d2ebb7425bfcd7b5f3d19ee12be3225",
+            "commit": "278e46172292d5fd34e4bb92879a726dd57888d2",
             "parents": [
-              "ed550b2e41c06188c29b43670a8d55ce83a6501a"
+              "cb784d4da33d140c73a3567d365318299dcba380"
             ],
-            "subject": "记录组件库复用、节点联动及三页签工作台实测结果"
+            "subject": "记录组件库工作台财务修正与客户端重开验收"
           },
           {
-            "commit": "cb784d4da33d140c73a3567d365318299dcba380",
+            "commit": "1adebb109624787cd13531e7d7214e9349d993de",
             "parents": [
-              "3583fe385d2ebb7425bfcd7b5f3d19ee12be3225"
+              "278e46172292d5fd34e4bb92879a726dd57888d2"
             ],
-            "subject": "修正财务指标单位换算、报告期格式与窄卡排版"
+            "subject": "修正财报查询提示并为参数纠错保留一次有界重试"
+          },
+          {
+            "commit": "c920de65b1c74b0c517ebfd72d17612ad6faef8f",
+            "parents": [
+              "1adebb109624787cd13531e7d7214e9349d993de"
+            ],
+            "subject": "优化自选搜索按钮留白与演示行情面板并排布局"
+          },
+          {
+            "commit": "7a92996eac869fb3b3ab42a659baf62806773d92",
+            "parents": [
+              "c920de65b1c74b0c517ebfd72d17612ad6faef8f"
+            ],
+            "subject": "压缩财务指标卡字号间距并同步已有工作台紧凑布局"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/verification/2026-11-07-financial-kpi-quality.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/verification/2026-11-07-workbench-library-reuse.md"
           },
           {
@@ -44,15 +58,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-unit-projection.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
@@ -60,7 +66,7 @@
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/kpi-value-format.js"
+            "path": "packages/dsh-research-task-runtime/research-parameter-repair.js"
           },
           {
             "status": "M",
@@ -68,15 +74,27 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/component-unit-projection.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-library.js"
           },
           {
             "status": "M",
-            "path": "test/kpi-template.test.js"
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
           },
           {
             "status": "M",
@@ -89,16 +107,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-unit-projection.test.js",
-              "test/component-data-submission.test.js",
-              "test/component-observed-presentation.test.js",
               "test/kpi-template.test.js",
-              "test/workbench-kpi-refresh.test.js"
+              "test/home-guide-native.test.js",
+              "test/home-guide-native-strip.test.js"
             ],
             "outcome": "passed",
-            "summary": "75项财务单位、绑定、指标与刷新检查通过",
-            "verifiedCommit": "cb784d4da33d140c73a3567d365318299dcba380",
-            "completedAt": "2026-11-07T11:59:58.861Z",
+            "summary": "财务指标与演示布局聚焦检查",
+            "verifiedCommit": "7a92996eac869fb3b3ab42a659baf62806773d92",
+            "completedAt": "2026-11-07T12:36:45.160Z",
             "timeoutMs": 180000
           },
           {
@@ -107,13 +123,43 @@
               "vitest",
               "run",
               "test/stored-template-refinements.test.js",
+              "test/component-reading-footer-browser.test.js",
               "-t",
-              "KPI"
+              "KPI|twelve financial"
             ],
             "outcome": "passed",
-            "summary": "2项保存指标与客户端序列化检查通过",
-            "verifiedCommit": "cb784d4da33d140c73a3567d365318299dcba380",
-            "completedAt": "2026-11-07T11:59:58.861Z",
+            "summary": "已有指标卡迁移及六组深浅主题宽度浏览器检查",
+            "verifiedCommit": "7a92996eac869fb3b3ab42a659baf62806773d92",
+            "completedAt": "2026-11-07T12:36:45.160Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-source-policy.test.js",
+              "test/workbench-library.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "财务字段与原生组件复用规则聚焦检查",
+            "verifiedCommit": "7a92996eac869fb3b3ab42a659baf62806773d92",
+            "completedAt": "2026-11-07T12:36:45.160Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "bounds parameter repair|verified interface discovery|synthesis"
+            ],
+            "outcome": "passed",
+            "summary": "有界参数修复与收集阶段聚焦检查",
+            "verifiedCommit": "7a92996eac869fb3b3ab42a659baf62806773d92",
+            "completedAt": "2026-11-07T12:36:45.160Z",
             "timeoutMs": 180000
           },
           {
@@ -123,27 +169,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "Node类型检查通过",
-            "verifiedCommit": "cb784d4da33d140c73a3567d365318299dcba380",
-            "completedAt": "2026-11-07T11:59:58.861Z",
+            "summary": "Node类型检查",
+            "verifiedCommit": "7a92996eac869fb3b3ab42a659baf62806773d92",
+            "completedAt": "2026-11-07T12:36:45.160Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已完成四组浏览器深浅主题与窄卡呈现检查；新包及原工作台内容仍待复验，仅previewOnly。"
+          "summary": "浏览器验证通过；打包客户端仍待复验，仅 previewOnly。"
         },
         "acceptanceCriteria": [
-          "明确来源单位在舍入前正确换算且刷新一致",
-          "报告期和代码不误用数值格式",
-          "窄卡两列且数值无溢出",
-          "保留原数据与交互路径"
+          "指标卡紧凑且保留数据、口径与既有交互",
+          "自选搜索按钮右侧留白稳定",
+          "演示行情组件在剩余宽度足够时放在自选右侧",
+          "财报参数错误允许一次有界纠正"
         ],
         "risks": [
-          "旧市值快照需要正常更新流程修正",
-          "既有排名轴测试与基线刻度实现不一致，本次未修改"
+          "保存排名轴刻度检查与已有基线不一致，本次未修改；指标相关检查通过",
+          "实际客户端待构建后核验"
         ],
-        "generatedAt": "2026-11-07T11:59:58.861Z"
+        "generatedAt": "2026-11-07T12:36:45.160Z"
       }
     },
     {
