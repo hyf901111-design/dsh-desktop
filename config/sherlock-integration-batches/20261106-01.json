@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件详情固定页签与来源字段选择修复",
+        "featureName": "组件详情默认展开与高度适配",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
-        "tipCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
+        "baseCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
+        "tipCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
         "commits": [
           {
-            "commit": "cf4d21a2399edbe72926fd34d5c9ae0badb87772",
+            "commit": "69ce662e730d98a446634c0e9a26b9116bd17111",
             "parents": [
-              "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9"
+              "79910702b2f6b14bfe793baf30ae39ab19e96882"
             ],
-            "subject": "修复组件日期首末值选取并完善多标的统计映射指导"
-          },
-          {
-            "commit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
-            "parents": [
-              "cf4d21a2399edbe72926fd34d5c9ae0badb87772"
-            ],
-            "subject": "将组件明细与口径改为固定页签并统一线性展开箭头"
+            "subject": "默认展开组件详情并按内容自动适配卡片高度"
           }
         ],
         "files": [
@@ -36,15 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-derived-values.js"
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
           },
           {
             "status": "M",
@@ -52,7 +37,27 @@
           },
           {
             "status": "M",
-            "path": "test/component-derived-values.test.js"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
@@ -61,6 +66,14 @@
           {
             "status": "M",
             "path": "test/component-reading-footer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-tools.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -69,17 +82,16 @@
               "npx",
               "vitest",
               "run",
-              "test/component-reading-footer-browser.test.js",
               "test/component-reading-footer.test.js",
+              "test/component-reading-footer-browser.test.js",
               "test/stored-template-refinements.test.js",
               "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-axis-precision.test.js"
+              "test/research-grid-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "156项相关检查通过；固定页签、线性箭头、旧展开记录兼容、真实566×303尺寸及窄卡片深浅主题表格交互。",
-            "verifiedCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
-            "completedAt": "2026-11-07T06:36:48.658Z",
+            "summary": "90项通过：默认展开、真实窄卡片尺寸、页签固定、自动高度收敛及相邻卡片排布",
+            "verifiedCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
+            "completedAt": "2026-11-07T06:50:12.220204+00:00",
             "timeoutMs": 180000
           },
           {
@@ -87,32 +99,46 @@
               "npx",
               "vitest",
               "run",
-              "test/component-derived-values.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-submission.test.js"
+              "test/research-design-policy.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/research-canvas-tools.test.js"
             ],
             "outcome": "passed",
-            "summary": "183项相关检查通过；来源日期首末值选择及多标的数值统计映射。",
-            "verifiedCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
-            "completedAt": "2026-11-07T06:36:48.659Z",
+            "summary": "99项通过：生成规范与编辑上下文一致使用默认展开",
+            "verifiedCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
+            "completedAt": "2026-11-07T06:50:12.220204+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-axis-precision.test.js",
+              "test/kpi-template.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "126项通过：图表布局、轴精度及指标交互",
+            "verifiedCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
+            "completedAt": "2026-11-07T06:50:12.220204+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器已验证页签始终同排、单面板切换与旧记录兼容；真实客户端在本地集成包复核。"
+          "summary": "浏览器真实卡片尺寸与深浅主题验证通过，打包客户端将在预览合并后核验"
         },
         "acceptanceCriteria": [
-          "完整数据和口径与来源始终同排，切换只替换下方内容",
-          "展开收起使用线性箭头，保留表格排序与列宽调整",
-          "旧卡片的数据与原交互记录保留"
+          "默认展开组件详情，多页签默认完整数据",
+          "展开与切换后高度自动适配，相邻卡片不重叠",
+          "保留线性箭头、排序、调整列宽和已保存数据"
         ],
         "risks": [
-          "只精简展示层，不改写已有来源数据。",
-          "实际模型多标的生成效果仍需另外评估，字段映射单测不能替代生成成功率。"
+          "长明细与来源说明在展开区域内滚动，避免整张卡片无限增高",
+          "额外运行的component-template-registry测试有一条既有null artifact拒绝断言失败；HEAD隔离源码复现同一行为，与本次展示变更无关。"
         ],
-        "generatedAt": "2026-11-07T06:36:48.659Z"
+        "generatedAt": "2026-11-07T06:50:12.220204+00:00"
       }
     },
     {
