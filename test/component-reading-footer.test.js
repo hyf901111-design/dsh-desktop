@@ -36,6 +36,18 @@ it('ignores unknown versions and never creates executable markup from saved meta
  const malicious=spec.html.replace('"url":"https://tushare.pro/document/2?doc_id=408"','"url":"javascript:alert(1)"');
  const w=dom(refineComponentReadingFooter(malicious));try{expect(w.document.querySelector('.component-reading-footer a')).toBeNull();}finally{w.close();}
 });
+it('upgrades the previous paired disclosures while preserving original data and summary routes',()=>{
+ const data={version:1,type:'chart',variant:'horizontal',title:'原排名',unit:'亿元',asOf:'2026-11-06',note:'原口径',labels:['甲','乙'],series:[{name:'净流入',values:[20,10]}]};
+ const spec=render(data),legacy=spec.html.replace('</body>','<footer class="component-reading-footer" aria-label="组件数据说明"><details><summary>口径与来源</summary><dl><div><dt>统计口径</dt><dd>原口径</dd></div></dl></details></footer><style data-component-reading-footer="v1">details{display:inline-block}</style></body>');
+ const next=refineComponentReadingFooter(legacy),old=dom(legacy),w=dom(next);
+ try{
+  expect(w.document.querySelectorAll('.component-reading-footer')).toHaveLength(1);
+  expect(w.document.querySelectorAll('.component-reading-tabs')).toHaveLength(1);
+  expect(next).not.toContain('data-component-reading-footer="v1"');
+  expect(routes(w)).toEqual(routes(old));expect(readTemplateModel({...spec,html:next})).toEqual(readTemplateModel(spec));
+  expect(refineComponentReadingFooter(next)).toBe(next);
+ }finally{old.close();w.close();}
+});
 it('ships the same saved-component refinement in the real serialized client factory',()=>{
  const output=execFileSync(process.execPath,['--input-type=module','-e',`
  import vm from 'node:vm';import {readFileSync} from 'node:fs'; import {patchLegacyDashboardPreview} from './scripts/lib/patch-research-board-client.mjs';

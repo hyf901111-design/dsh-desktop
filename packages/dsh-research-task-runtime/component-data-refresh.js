@@ -128,7 +128,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
- if(mapping.$reduce!==undefined&&eachPath===undefined)throw Error('$reduce 必须指定真实列表 $each 和数值字段 $map')
+ if(mapping.$reduce!==undefined&&eachPath===undefined)throw Error('$reduce 必须指定真实列表 $each 和字段选择 $map:{"$path":"实际字段"}')
  if(mapping.$normalize!==undefined&&(mapping.$normalize!=='base100'||eachPath===undefined||mapping.$single===true))throw Error('归一化仅支持列表 $each 的 $normalize:"base100"，不能用于单值或表达式')
  if(eachPath!==undefined){
   let rows=path(source,eachPath)
