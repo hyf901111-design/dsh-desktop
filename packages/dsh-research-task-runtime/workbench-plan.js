@@ -1,3 +1,5 @@
+import {resolveWorkbenchLibraryPanel,validateWorkbenchLinks} from './workbench-library.js';
+import {validateWorkbenchTabs} from './workbench-tabs.js';
 import {comparisonWindowInstruction} from './workbench-comparison-window.js';
 import {workbenchLayoutFrames} from './workbench-layout.js';
 import {ATTACHMENT_GUIDANCE} from './attachment-template-contract.js';
@@ -39,7 +41,7 @@ function customPrototypeControls(panel,request){
 }
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['view','financial-widget','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['view','financial-widget','calendar-tool','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 export const DEFERRED_WORKBENCH_TYPES = Object.freeze(['html','table','chart','kpi','news','reports','calendar','dashboard','market','gantt','progress','tasks','approval','alerts','form','code','clock','note','timeline']);
 export const DEFERRED_WORKBENCH_MARKER = '【宿主延后模拟生成】';
 export const DATA_FIRST_PRESENTATION = '【数据先行呈现】';
@@ -446,8 +448,10 @@ export function validateWorkbench(value) {
     if (value.sharedContext !== undefined && (!(deferred || datasets) || !str(value.sharedContext, 3000))) throw Error('共同场景约束仅支持延后模拟生成或完整共同记录，限3000字符。');
     if (value.originalRequest !== undefined && !str(value.originalRequest, 8000)) throw Error('原始工作台需求快照无效或超过8000字符。');
     if (deferred && !value.sharedContext && !value.originalRequest) throw Error('延后模拟生成需要原始需求或共同场景约束。');
+    const tabs = validateWorkbenchTabs(value.tabs, value.panels.length, value.originalRequest);
     const seen = new Set();
-    const panels = resolveWorkbenchSamples(value.panels).map(p => {
+    const panels = resolveWorkbenchSamples(value.panels).map(candidate => {
+        let p=resolveWorkbenchLibraryPanel(candidate);
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || ((p.size !== undefined || p.height !== undefined) && !Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         // A flat table cannot implement per-row detail panels. Keep the actual
@@ -510,6 +514,7 @@ export function validateWorkbench(value) {
         // A declarative recipe already states its renderer. Recover only an
         // absent artifact's metadata alias; never discard supplied records.
         if(!isSimulated&&p.type==='financial-widget'&&p.artifact===undefined&&p.publicData?.profile==='quotes-table')p={...p,type:'market'};
+        if(p.type==='calendar-tool' && (isSimulated || !p.artifact || !acceptArtifactOutput(JSON.stringify(p.artifact))))throw Error('日历工具需使用组件库的真实日历配置。');
         if(p.type==='financial-widget'){
             if(isSimulated)throw Error('内置金融组件读取真实行情，不能用于模拟数据；请使用market/chart模拟模板。');
             if(p.artifact===undefined&&p.publicData===undefined&&/市盈率|市净率|\bPE\b|\bPB\b/iu.test(p.title+' '+p.prompt)){
@@ -579,7 +584,7 @@ export function validateWorkbench(value) {
         if(p.type==='audio' && p.artifact===undefined)throw Error('音频必须提供 artifact 及音频原网址或显式 url:null。'+AUDIO_GUIDANCE);
         if(p.type==='youtube' && p.artifact===undefined)throw Error('YouTube必须同时提供 artifact 及视频原网址或显式 url:null。'+YOUTUBE_GUIDANCE);
         if(p.type==='iframe' && p.artifact===undefined)throw Error('嵌入网页必须同时提供 artifact 及用户网址或显式 url:null。'+IFRAME_GUIDANCE);
-        if (!isSimulated && p.artifact !== undefined && p.type!=='financial-widget') {
+        if (!isSimulated && p.artifact !== undefined && !['financial-widget','calendar-tool'].includes(p.type)) {
             if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error(`面板「${p.title}」的真实数据格式无效。${simulatedArtifactProblem(p.artifact)} 请复用已取得的数据，只修正字段格式，不重新取数或编写 HTML。`);
             const issue = workbenchMarketRecencyIssue(JSON.stringify(p.artifact), p.prompt);
             if (issue) throw Error(issue);
@@ -602,19 +607,27 @@ export function validateWorkbench(value) {
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
-    const result = { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(datasets ? {sharedDatasets:datasets} : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
+    const links=validateWorkbenchLinks(value.links,panels);
+    const result = { ...(links ? {links} : {}), requestId: value.requestId.trim(), title, ...(tabs ? {tabs} : {}), ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(datasets ? {sharedDatasets:datasets} : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
     if ((deferred || value.originalRequest || value.sharedContext) && panels.some(panel => workbenchPanelPrompt(result, panel).length > 18000)) throw Error('共同场景与面板需求超过单卡生成上限，请压缩面板说明，保留原始需求。');
     return result;
 }
-export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }) {
+export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }, tabs) {
     const sized=panels.map(p=>{const template=workbenchDesignTemplate(p);return {...p,size:template.size,width:template.width,height:template.height,...(p.layout==='wide'||p.type==='gantt'?{workbenchSpan:true,workbenchLayoutVersion:1}:{})}});
-    return workbenchLayoutFrames(sized);
+    if(!tabs?.length)return workbenchLayoutFrames(sized);
+    const frames=[...sized];
+    for(const tab of tabs){
+        const page=workbenchLayoutFrames(tab.panelIndexes.map(i=>sized[i]));
+        tab.panelIndexes.forEach((index,i)=>{frames[index]=page[i]});
+    }
+    return frames;
 }
 
 export function workbenchPanelPrompt(input, p, now = new Date()) {
     const prototypeRead = /\.html?\b/iu.test(input.originalRequest??'') ? '本地HTML原型的数值仅代表已提供的快照。' : '';
     const original = input.generationMode !== 'deferred' && input.originalRequest ? `\n${WORKBENCH_REQUEST_MARKER}\n以下原始用户需求仅约束本卡的研究对象、时间范围、数据来源和真实性；只完成本面板，不生成其他卡或整份工作台。沿用明确实体与约束，不用旧聊天记忆、行业样例或自行猜测替换；缺失就注明。${prototypeRead}\n${input.originalRequest}` : '';
-    if(p.type==='financial-widget')return `工作台：${input.title}\n本面板：${p.title}\n使用内置个股行情等组件库金融组件，直接挂载已验证的标的配置，由客户端读取行情并每60秒刷新。${FINANCIAL_WIDGET_GUIDANCE}${original}`;
+    if(p.type==='calendar-tool')return `工作台：${input.title}\n本面板：${p.title}\n挂载组件库日历工具，沿用已有日历，不生成日程或提醒。`;
+    if(p.type==='financial-widget')return `工作台：${input.title}\n本面板：${p.title}\n使用内置个股行情等组件库金融组件，直接挂载已验证的标的配置，由客户端按各组件配置读取数据；实际来源及刷新状态以组件显示为准。${FINANCIAL_WIDGET_GUIDANCE}${original}`;
     const template = workbenchDesignTemplate(p);
     const origin = ['chart','reports','news','gantt'].includes(p.type) ? 'Figma 组件族参考' : 'Figma 节点';
     const adaptive = input.dataMode !== 'simulated' && input.generationMode !== 'deferred' && ['kpi','dashboard','table','chart','market'].includes(p.type);

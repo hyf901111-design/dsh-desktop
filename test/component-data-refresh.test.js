@@ -381,3 +381,15 @@ it.each([['ascending',[1,2]],['descending',[2,1]]])('accepts source-declared sor
  expect(responses.q.records[0].sizeYi).toBe(2)
  expect(()=>evaluateMapping({...mapping,$order:'reverse'},responses)).toThrow('列表排序无效')
 })
+
+
+it('资讯缺少顶层 dataTime 仍保留真实新闻并修正具名路径元组',()=>{
+ const response={source:'eastmoney-news',records:[{title:'中芯国际公告',summary:'实际摘要',time:'2026-11-06T10:00:00+08:00',publisher:'公司',url:'https://example.org/news'}]}
+ const mapping={version:1,type:'news',title:'资讯',asOf:{$from:'q',$path:'dataTime'},items:{$from:'q',$each:'records',$map:[{$path:'title'},{$path:'summary'},{$path:'time'},{$path:'publisher'},{$path:'url'}]}}
+ const value=materializeComponentMapping(mapping,{q:response},new Date('2026-11-07'),[{response}])
+ expect(value.items[0]).toEqual({title:'中芯国际公告',summary:'实际摘要',date:'2026-11-06T10:00:00+08:00',category:'公司',url:'https://example.org/news'})
+ expect(acceptArtifactOutput(JSON.stringify(value))).toBeTruthy()
+ expect(value.asOf).not.toContain('2026-11-07')
+ expect(()=>materializeComponentMapping({...mapping,items:{...mapping.items,$map:{title:{$path:'missingTitle'},url:{$path:'url'}}}},{q:response},new Date(),[{response}])).toThrow('missingTitle')
+ expect(()=>materializeComponentMapping({...mapping,asOf:{$from:'missing',$path:'dataTime'}},{q:response},new Date(),[{response}])).toThrow('来源不存在')
+})

@@ -20,8 +20,8 @@ import {
   digest
 } from './state/research-board-request-journal'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
-import { freezeSnapshot, createDocument, encodeDocument } from '../../packages/dsh-research-collaboration/document.js'
-import { taskFailureMessage, toBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
+import { freezeSnapshot, createDocument, encodeDocument, decodeDocument, projectDocument, applyCanvasDiff } from '../../packages/dsh-research-collaboration/document.js'
+import { taskFailureMessage, toBase64, fromBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
 import type {
   ResearchBoardsService,
   ResearchBoardHooks
@@ -33,6 +33,8 @@ import type { CollaborationClient } from './collaboration-client'
 import type { Canvas } from '../shared/research-boards'
 import { ResearchBoardsError } from '../shared/research-boards'
 import { validateWorkbench, layoutWorkbench, workbenchPanelPrompt } from '../../packages/dsh-research-task-runtime/workbench-plan.js'
+import { bindWorkbenchLibraryLinks } from '../../packages/dsh-research-task-runtime/workbench-library.js'
+import { boardTabsApplyWorkbench } from '../../packages/dsh-research-task-runtime/board-tabs-contract.js'
 type Options = {
   root: string
   storage: ResearchCanvasStorage
@@ -1471,28 +1473,37 @@ export class ResearchBoardIntegration {
       const canvas = authority.snapshot.snapshot.canvas
       if (canvas.files.length + canvas.artifacts.length + plan.panels.length > 1000) throw Error('画板组件数量已达上限。')
       const top = Math.max(0, ...[...canvas.files, ...canvas.artifacts].map(n => Number(n.y ?? 0) + Number(n.height ?? 380) / 2)) + 48
-      const panels = layoutWorkbench(plan.panels).map((p: any, index: number) => ({
+      const configured = bindWorkbenchLibraryLinks(layoutWorkbench(plan.panels,undefined,plan.tabs).map((p: any) => ({...p, nodeId: randomUUID()})), plan.links)
+      const panels = configured.map((p: any, index: number) => ({
         mutation: randomUUID(),
         node: {
-          id: randomUUID(), messageId: randomUUID(), kind: 'generated-container', title: p.title,
-          excerpt: '正在准备任务…', containerPrompt: workbenchPanelPrompt(plan, p), refreshMinutes: 0,
+          id: p.nodeId, messageId: randomUUID(), kind: 'generated-container', title: p.title,
+          ...(p.artifact ? {containerSpec: p.artifact} : {}),
+          excerpt: p.artifact ? '组件已就绪' : '正在准备任务…', containerPrompt: workbenchPanelPrompt(plan, p), refreshMinutes: 0,
           sourceNodeIds: context.references.map((ref: any) => ref.nodeId),
           x: p.x + p.width / 2, y: top + p.y + p.height / 2, width: p.width, height: p.height,
-          containerSizePreset: p.size, sizeMode: 'auto', generationStatus: 'queued',
+          containerSizePreset: p.size, sizeMode: 'auto', generationStatus: p.artifact ? 'completed' : 'queued',
           stackOrder: Math.max(0, ...[...canvas.files, ...canvas.artifacts].map(n => Number(n.stackOrder) || 0)) + index + 1,
           workbenchId: id, workbenchIndex: index, workbenchColumns: plan.panels.length === 2 || plan.panels.length === 4 ? 2 : 3,
           ...(p.workbenchSpan===true&&p.workbenchLayoutVersion===1?{workbenchSpan:true,workbenchLayoutVersion:1}:{}),
           workbenchRevealAt: Date.now() + index * 500
         }
       }))
-      const doc = createDocument({ files: [], artifacts: panels.map((p: any) => p.node) })
-      workbench = { plan, panels, update: toBase64(encodeDocument(doc)) }
+      // Fork the authoritative CRDT before editing existing tab membership;
+      // re-creating an existing navigation map would overwrite a peer's fields.
+      const bytes = authority.snapshot.documentUpdate
+      const doc = bytes ? decodeDocument(fromBase64(bytes)) : createDocument()
+      const before = projectDocument(doc)
+      const next = boardTabsApplyWorkbench({files: before.files, artifacts: [...before.artifacts, ...panels.map((p: any) => p.node)]}, {id, panels: configured, tabs: plan.tabs})
+      // The task sequence number is local runtime state, never shared content.
+      next.artifacts = next.artifacts.map(({generationLastSeq, ...node}: any) => node)
+      workbench = { plan, panels, update: toBase64(applyCanvasDiff(doc, before, next)) }
       doc.destroy()
       // Reserve every node, operation and child request before any network write.
       this.journal.update(key, { workbench })
     }
     await this.step(key, 'workbenchCreate', 'update', { update: workbench.update }, signal)
-    const replies = await Promise.allSettled(workbench.panels.map((p: any) => this.submit({
+    const replies = await Promise.allSettled(workbench.panels.filter((p: any) => !p.node.containerSpec).map((p: any) => this.submit({
       accountId: record.accountId, boardId: record.boardId, expectedEpoch: record.epoch,
       text: p.node.containerPrompt, context, clientMutationId: p.mutation,
       targetId: p.node.id, targetCollection: 'artifacts', source: 'manual', workbenchRequestId: requestMessageId, signal: authority.signal

@@ -119,7 +119,7 @@ const textOf=item=>[item?.title,item?.summary,item?.content,...(Array.isArray(it
 const esc=value=>String(value??'').replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const safeUrl=value=>{try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:null}catch{return null}}
 const sourceRows=records=>records.filter(record=>record.purpose!=='discovery').flatMap(record=>Array.isArray(record.snapshotRows)?record.snapshotRows.map(row=>({...row,title:row.sourceTitle??row.title,url:row.urls?.find(safeUrl)})):Array.isArray(record.response?.records)?record.response.records:Array.isArray(record.response?.sources)?record.response.sources:[]).filter(row=>typeof row?.title==='string')
-const note=(prior,count)=>[prior, count?`宿主按用户原需求核对主题，已剔除 ${count} 条不相关记录。`:null].filter(Boolean).join('\n').slice(0,2000)
+const note=prior=>typeof prior==='string'?prior.slice(0,2000):''
 const isScopedNews=(data,requirement)=>data?.type==='news'||String(requirement).includes(capacity)&&(['html','table'].includes(data?.type)||data?.type==='market'&&data.variant==='table')
 
 export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){

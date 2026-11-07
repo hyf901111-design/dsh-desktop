@@ -137,7 +137,7 @@ it.each(['只展示 News Corp 相关新闻','Only show News Corp news','Only Sho
 it.each([['ONLY','“','”'],['Research In Motion','"','"'],['The Trade Desk','‘','’']])('retains the explicitly quoted name %s without keeping generic brand or suffix terms', (name,left,right)=>{
  const r=request('gdelt-news',name),wanted=article(`${name} business update`,'wanted'),other=article('Other brands publish a research news report','other','其他品牌的业务动态')
  const result=resolveBoundComponent(JSON.stringify(draft(r)),[observed(r,[other,wanted])],new Date(),{newsScope:`只展示${left}${name}${right}品牌相关新闻`})
- expect(result.data.items.map(item=>item.title)).toEqual([wanted.title]);expect(result.data.note).not.toContain('未取得')
+ expect(result.data.items.map(item=>item.title)).toEqual([wanted.title]);expect(result.data.note??'').not.toContain('未取得')
 })
 
 it.each(['只展示 ONLY 品牌相关新闻','Only show ONLY品牌相关新闻','只展示Only公司相关新闻'])('preserves the explicitly named single-word entity in %s',newsScope=>{

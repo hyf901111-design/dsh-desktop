@@ -1,3 +1,5 @@
+import {WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
+import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
 import {DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
@@ -72,8 +74,8 @@ const CREATE_TOOL = 'research_workbench_create'
 const MAX_PLANNING_DISCOVERIES = 2
 const SOURCE_MODE_GUIDANCE = '真实数据模式使用 dataMode:"source"（也可省略），必须省略 generationMode、sharedContext、originalRequest，这三项仅适用于模拟。已有真实记录直接保留完整 artifact 及来源、日期、单位；未取到的面板省略 artifact，把待取字段、来源和缺失处理写入 panel.prompt，由独立面板取数，不补模拟值。'
 const SOURCE_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，保留用户指定的数量、领域、来源和范围；先理解需求、拆解每卡要回答的问题，立即调用 research_workbench_create，一次提交 title 与完整 panels，不先取整套数据、写报告或读取 skill/源码。'+SOURCE_MODE_GUIDANCE+'panel.type 只表示取数前的呈现建议；各卡取得真实数据后再选择可视化和交互，不让数据迁就预设字段。按问题选择 table/chart/news/reports/calendar/timeline/gantt/tasks/alerts/note 等形式，复杂交互保留 html，不能套固定金融样例。publicData 可交给宿主取真实来源；preset 仅在用户需求匹配真实预设时使用。requestId 重试保持一致。accepted 表示已受理并生成中，prepared 才表示已准备好，随后简短交付并结束本轮。'
-const PROTOTYPE_PLANNING_GUIDANCE = '【原型工作台规划】先读取用户本轮提供的原型，理解指定业务区域、页面分组和交互，再一次调用 research_workbench_create。首次只提交 title、dataMode:"source"、panels:[{title,prompt,type,size,layout?}] 及可选 requestId，不生成逐卡 artifact、不抄写全量记录或编写代码。每卡 prompt 保留原型路径、业务范围、筛选/排序/展开详情等交互和原有来源口径；独立组件会读取原型完成内容。按内容选择注册模板，模板不能表达的交互使用 html。不复制参考应用的外层侧栏、聊天或设置。原型内示例数据作为原型快照保留，不标为新取得的真实行情，也不另造模拟记录。尚未读到的完整记录交由组件读取，不把截断资料当作完整数据。accepted 仅表示已启动生成；prepared 才表示已准备好。受理后简短回报，不重复建卡或等待整套数据。'
-const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前理解需求、拆解每卡问题后调用 research_workbench_create；真实数据卡的可视化在取数后确定，此时 type 仅作初步布局建议。模拟场景的同批对象可一次提供完整sharedDatasets及各卡view，由宿主直接准备；其他情况沿原规划路径。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
+const PROTOTYPE_PLANNING_GUIDANCE = '【原型工作台规划】先读取用户本轮提供的原型，理解指定业务区域、页面分组和交互，再一次调用 research_workbench_create。首次只提交 title、dataMode:"source"、panels:[{title,prompt,type,size,layout?,library?}] 及可选 requestId/tabs/links；可复用的原生组件直接提供library配置，不生成逐卡 artifact、不抄写全量记录或编写代码。每卡 prompt 保留原型路径、业务范围、筛选/排序/展开详情等交互和原有来源口径；独立组件会读取原型完成内容。按内容选择注册模板，模板不能表达的交互使用 html。不复制参考应用的外层侧栏、聊天或设置。原型内示例数据作为原型快照保留，不标为新取得的真实行情，也不另造模拟记录。尚未读到的完整记录交由组件读取，不把截断资料当作完整数据。accepted 仅表示已启动生成；prepared 才表示已准备好。受理后简短回报，不重复建卡或等待整套数据。'
+const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前理解需求、优先匹配组件库与节点联动能力，拆解剩余每卡问题后调用 research_workbench_create；真实数据卡的可视化在取数后确定，此时 type 仅作初步布局建议。模拟场景的同批对象可一次提供完整sharedDatasets及各卡view，由宿主直接准备；其他情况沿原规划路径。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
 const PLAN_FIRST_DENIAL = '首次规划阶段只允许有限来源发现和 research_workbench_create；请把待取字段与真实来源约束写进各 panel.prompt，省略未取得的 artifact，立即提交规划。'
 export function planningDataIntent(text) {
   // Negated simulation is a source requirement, not permission to simulate.
@@ -108,7 +110,7 @@ function prototypeCreationParameters(parameters) {
   const {preset, ...properties}=source.properties
   const panel=properties.panels?.items
   if(panel?.properties){
-    const allowed=new Set(['title','prompt','type','size','layout'])
+    const allowed=new Set(['title','prompt','type','size','layout','library'])
     properties.panels={...properties.panels,items:{...panel,additionalProperties:false,properties:Object.fromEntries(Object.entries(panel.properties).filter(([name])=>allowed.has(name))),...(panel.required?{required:panel.required.filter(name=>allowed.has(name))}:{})}}
   }
   return {...source,properties}
@@ -288,7 +290,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     const sourcePlanning=sourceOnly||prototypeSource
     const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !simulation && !/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
     const tools = request.tools.flatMap(tool => {
-      if (tool.name === CREATE_TOOL) return [{ ...tool, description: (prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
+      if (tool.name === CREATE_TOOL) return [{ ...tool, description: WORKBENCH_LIBRARY_GUIDANCE+WORKBENCH_TABS_GUIDANCE+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
         ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters) : sourceCreationParameters(tool.parameters) } : {}) }]
       const evidence=prototypeEvidenceSchema(tool,state.evidenceTargets)
       if(evidence){
@@ -303,7 +305,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
     // Model route, effort, signal and the shared registry stay unchanged. The
     // low-cost plan has no complete-data prerequisite in any user domain.
-    return { ...request, system: [request.system, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets),
+    return { ...request, system: [request.system, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets),
       '【本轮呈现与回报】历史表现比较把共同基期走势图放首屏第一张，配区间收益对照；未要求实时监控或技术分析时，不用最新报价和各标的独立K线替代比较。同组汇总和变化合为一张wide总览，排名只画排名指标，代码、规模、管理人等同批辅助信息写入该图的detailColumns/detailRows，默认展开；不再单建重复的明细卡，独立分析或用户明确要求时除外。只用一句话说明将交付的内容，不要公开接口目录、来源选择原则、当前模式判断、模板映射或面板任务分工。数据限制仅说明对结果的影响。'].filter(Boolean).join('\n'), tools }
   })
   return () => {

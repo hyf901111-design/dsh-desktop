@@ -252,6 +252,16 @@ function validateEtfMetricMapping(mapping,metadata,responses,now){
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentProjection(mapping,responses,now=new Date(),sourceRecords=[]){
+ // News items are named records, not table tuples. Recover only explicit,
+ // unambiguous source selectors; never guess fields by their array position.
+ if(mapping?.type==='news'&&record(mapping.items)&&Array.isArray(mapping.items.$map)){
+  const fields={title:'title',summary:'summary',time:'date',date:'date',publisher:'category',category:'category',url:'url'},named={}
+  const recoverable=mapping.items.$map.every(selector=>{
+   if(!record(selector)||Object.keys(selector).some(key=>!['$path','$optional','$default'].includes(key))||!fields[selector.$path]||Object.hasOwn(named,fields[selector.$path]))return false
+   named[fields[selector.$path]]=selector;return true
+  })
+  if(recoverable&&named.title&&named.url)mapping={...mapping,items:{...mapping.items,$map:named}}
+ }
  mapping=normalizeChartDetailMapping(mapping)
  mapping=normalizeTableListMapping(mapping)
  mapping=normalizeIdentityTableMapping(mapping,selector=>evaluateMapping(selector,responses,now))
@@ -272,7 +282,8 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  if(!candle&&Object.hasOwn(mapping,'asOf')){
   try{data.asOf=evaluateMapping(asOf,responses,now,responses,0,{nodes:0},'timestamp')}
   catch(error){
-   if(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined)throw error
+   const absentNewsTime=mapping.type==='news'&&record(asOf)&&Object.keys(asOf).every(key=>['$from','$path'].includes(key))&&['dataTime','asOf','updatedAt'].includes(asOf.$path)&&metadata?.matched.some(source=>source.key===asOf.$from&&!Object.hasOwn(source.response,asOf.$path))&&error.message==='接口缺少字段：'+asOf.$path
+   if(!absentNewsTime&&(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined))throw error
    // A broken presentation formatter cannot replace actual quote time with a
    // fetched/current date. Disagreeing source times remain an error.
    data.asOf=metadata.time??observedPresentationMetadata(metadata.matched).period?.label??'来源未提供'

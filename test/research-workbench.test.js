@@ -338,10 +338,12 @@ describe('研究工作台', () => {
         let dispose;
         try {
             dispose = await registerWorkbench(ctx, { start }, options);
-            const args = { requestId: 'one', title: '医药行业研究', panels: Array.from({ length: 10 }, (_, i) => toolPanel(i)) };
+            const tabs=[{name:'临床与经营',panelIndexes:[0,1,2,3,4]},{name:'市场与政策',panelIndexes:[5,6,7,8,9]}];
+            const args = { requestId: 'one', title: '医药行业研究', tabs, panels: Array.from({ length: 10 }, (_, i) => toolPanel(i)) };
             const exec = { agent: { session: { id: 'parent' } }, signal: new AbortController().signal };
             const [first, repeated] = await Promise.all([tool.execute(args, exec), tool.execute(args, exec)]);
             expect(repeated.planId).toBe(first.planId);
+            expect(first.tabs).toEqual(tabs.map(t=>t.name));
             expect(start).toHaveBeenCalledTimes(10);
             expect((await tool.execute(args, exec)).planId).toBe(first.planId);
             expect(start).toHaveBeenCalledTimes(10);
@@ -351,6 +353,7 @@ describe('研究工作台', () => {
             let result;
             await handler({ method: 'POST' }, { writeHead: vi.fn(), end: (body) => { result = JSON.parse(body); } });
             expect(result.plans[0].createdAt).toEqual(expect.any(Number));
+            expect(result.plans[0].tabs).toEqual(tabs);
             expect(result.plans[0].panels).toHaveLength(10);
             expect(result.plans[0].panels.every((p) => p.taskId)).toBe(true);
         }
