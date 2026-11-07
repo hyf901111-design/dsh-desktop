@@ -15,6 +15,23 @@ const response = (pair, i) => ({ sourceId: 'kraken-ticker', source: 'Kraken 公�
 const refreshResponsesFor = (result, responses) => Object.fromEntries(result.recipe.requests.map(request => [request.key, normalizeCryptoTickerResult(request, { status: 'fulfilled', value: responses[request.key] })]))
 
 describe('public-data presentation capacity', () => {
+  it('identifies the missing crypto display profile without blaming pair count or changing the source', () => {
+    const panel = cryptoPanel(6)
+    delete panel.publicData.profile
+    panel.prompt += '；profile: crypto-metrics；variant: table'
+    const before = structuredClone(panel)
+    expect(() => validateWorkbench({requestId:'missing-crypto-profile',title:'加密监控',panels:[panel]})).toThrow(/publicData\.profile.*crypto-metrics/)
+    expect(panel).toEqual(before)
+    panel.publicData.profile = 'crypto-metrics'
+    expect(validateWorkbench({requestId:'fixed-crypto-profile',title:'加密监控',panels:[panel]}).panels[0].publicData.requests).toHaveLength(6)
+  })
+
+  it('reports an unsupported crypto layout separately from a valid six-pair recipe', () => {
+    const panel = cryptoPanel(6)
+    panel.publicData.layoutProfile = 'openterminal'
+    expect(() => validatePublicDataPanel(panel.publicData,'market')).toThrow(/publicData\.layoutProfile.*crypto-metrics/)
+  })
+
   it.each([3, 8])('organizes %i valid crypto pairs as a complete bound table instead of overflowing 12 metrics', async count => {
     const original = cryptoPanel(count), before = structuredClone(original)
     const panel = { ...original, publicData: validatePublicDataPanel(original.publicData, original.type, { strictParameters: true }) }

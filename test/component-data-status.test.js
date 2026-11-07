@@ -24,6 +24,12 @@ describe('component refresh status',()=>{
   expect(componentDataStatusView(null,null,staticNode({type:'news',note:'来源：东方财富关键词新闻搜索（eastmoney-news），query=加密货币。'})).source).toBe('东方财富关键词新闻搜索（eastmoney-news）')
   expect(componentDataStatusView(null,null,staticNode({type:'news',items:[{url:'https://finance.example.com/news/1'},{url:'https://finance.example.com/news/2'}]})).source).toBe('finance.example.com')
  })
+ it('retains explicitly labelled table provenance with common Chinese source prefixes',()=>{
+  for(const note of ['数据来源：腾讯财经公开报价，报价时点以接口为准','来源 Tushare etf_share_size · 数据日期2026-11-05']){
+   expect(componentDataStatusView(null,null,staticNode({type:'table',note})).source).toBe(note.startsWith('数据')?'腾讯财经公开报价':'Tushare etf_share_size')
+  }
+  expect(componentDataStatusView(null,null,staticNode({note:'此处无法确认数据来源：Tushare。'})).source).toBe('来源未标注')
+ })
  it('uses current binding provenance over stale snapshot sources and restores the snapshot after unbinding',()=>{
   const node=staticNode({source:'原始导入文件'})
   expect(componentDataStatusView(row('a',1000,{sourceNames:['Tushare / index_daily']}),null,node).source).toBe('Tushare')

@@ -55,6 +55,17 @@ it('renders positional source rows with keyed column declarations and preserves 
  expect(JSON.stringify(f.draft)).toBe(before)
 })
 
+it('unwraps a single explicit table list without losing rows or refresh selection',async()=>{
+ const f=fixture();f.mapping.rows=[{...f.mapping.rows,$map:f.fields.map(path),$sortBy:'code',$order:'asc'}]
+ const before=JSON.stringify(f.draft),{task,start}=await run(f)
+ expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce()
+ const resolved=resolveBoundComponent(JSON.stringify(f.draft),f.records,new Date(captured.createdAt))
+ expect(resolved.data.rows).toEqual([...f.response.records].sort((a,b)=>a.code.localeCompare(b.code)).map(row=>f.fields.map(key=>String(row[key]))))
+ expect(resolved.recipe.mapping.rows).toMatchObject({$each:'records',$sortBy:'code',$order:'asc',$map:f.fields.map(path)})
+ expect(materializeComponentMapping(resolved.recipe.mapping,{q:f.response})).toEqual(resolved.data)
+ expect(JSON.stringify(f.draft)).toBe(before)
+})
+
 it.each(['short','long','nested','mixed'])('rejects ambiguous positional rows (%s)',kind=>{
  const data={version:1,type:'table',title:'列对齐',columns:[{key:'a',label:'甲'},{key:'b',label:'乙'}],rows:[[0,null]]}
  if(kind==='short')data.rows[0].pop()
