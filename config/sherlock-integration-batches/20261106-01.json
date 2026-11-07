@@ -9,59 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究组件底部信息收纳与来源日期",
+        "featureName": "原生表格底部说明折叠",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "7f228c65d6c897a746f8478cd40ab1025f9546a9",
-        "tipCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
+        "baseCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
+        "tipCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
         "commits": [
           {
-            "commit": "9c4a86efc1fd970aff840285620e9933c3245415",
+            "commit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
             "parents": [
-              "7f228c65d6c897a746f8478cd40ab1025f9546a9"
+              "9c4a86efc1fd970aff840285620e9933c3245415"
             ],
-            "subject": "优化研究组件底部信息层级与来源日期展示"
+            "subject": "统一原生表格底部说明的折叠布局"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+            "status": "M",
+            "path": "scripts/lib/research-market-native-table.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
+            "path": "test/research-market-native-context-browser.test.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-status.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-reading-footer-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-reading-footer.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/stored-template-refinements.test.js"
+            "path": "test/research-market-native-table.test.js"
           }
         ],
         "checks": [
@@ -70,18 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-reading-footer.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/component-data-status.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/kpi-template.test.js",
-              "test/workbench-kpi-refresh.test.js",
-              "test/research-design-policy.test.js"
+              "test/research-market-native-context-browser.test.js",
+              "test/research-market-native-interaction.test.js",
+              "test/research-market-native-table.test.js"
             ],
             "outcome": "passed",
-            "summary": "142项聚焦检查通过，含宽窄深浅色浏览器交互、保存数据及旧控件路径保持",
-            "verifiedCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
-            "completedAt": "2026-11-07T03:20:25.112667+00:00",
+            "summary": "58项原生表格聚焦检查通过；保留旧表格完整口径、来源跳转、排序、列宽与行选中，默认折叠说明",
+            "verifiedCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
+            "completedAt": "2026-11-07T03:25:06.135282+00:00",
             "timeoutMs": 180000
           },
           {
@@ -92,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "9c4a86efc1fd970aff840285620e9933c3245415",
-            "completedAt": "2026-11-07T03:20:25.112667+00:00",
+            "verifiedCommit": "72782506e69e67b7f3095bc60bfefb93c1a6eab4",
+            "completedAt": "2026-11-07T03:25:06.135282+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -109,128 +77,7 @@
         "risks": [
           "暂仅自动整理已知版本宿主模板，自定义HTML仍依照更新后的生成规范"
         ],
-        "generatedAt": "2026-11-07T03:20:25.112667+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-        "verificationCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/ensure-local-dependencies.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/ensure-local-dependencies.mjs",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 900000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/computer-candidates-host.test.ts",
-              "test/computer-use-plugin-integration.test.js",
-              "test/computer-vision.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/runtime.test.ts",
-              "test/integration-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/computer-candidates-host.test.ts test/computer-use-plugin-integration.test.js test/computer-vision.test.js test/macos-package-runtime.test.ts test/runtime.test.ts test/integration-service.test.ts",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "ci",
-              "--prefer-offline",
-              "--no-audit",
-              "--no-fund"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci --prefer-offline --no-audit --no-fund",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/prepare-memory-model.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/prepare-memory-model.mjs",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-evidence.test.js",
-              "test/memory-local-index.test.js",
-              "test/memory-semantic.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-source.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-import.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-runtime.test.js test/memory-evidence.test.js test/memory-local-index.test.js test/memory-semantic.test.ts test/memory-search.test.ts test/memory-bridge.test.ts test/memory-source.test.ts test/memory-document.test.ts test/memory-import.test.ts",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8a2fc495b1ec47b79fb7701781d89271c133bd8a",
-            "completedAt": "2026-11-07T03:21:03.975Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-07T03:21:03.975Z"
+        "generatedAt": "2026-11-07T03:25:06.135282+00:00"
       }
     },
     {
