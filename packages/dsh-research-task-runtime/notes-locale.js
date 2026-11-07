@@ -1,5 +1,6 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "正在准备本地记忆索引，期间使用关键词候选。": "Building the local index in the background. Using keyword candidates until ready.",
   "使用已保存的记忆": "Use saved memories",
   "自动保存记忆": "Save memories automatically",
   "本地语义检索": "Local semantic search",

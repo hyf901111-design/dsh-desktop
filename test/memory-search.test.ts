@@ -11,3 +11,9 @@ it('finds Chinese short words and English substrings without exposing a former i
   expect(retriever.select([row('c','其他账户项目')],'SQLite','p',2).some(value=>value.row.id==='a')).toBe(false)
   retriever.close()
 })
+it('ranks long exact global candidates before packing without dropping them under the old injection budget',()=>{
+ const retriever=new MemoryRetriever()
+ const rows=Array.from({length:40},(_,i)=>({...row('other'+i,'过去食堂菜单与打印机维护记录'+i),scope:'global' as const}))
+ const wanted={...row('wanted','目标项目预算编号为 YS-2066。'+'经财务确认，立项审批已经完成。'.repeat(8)),title:'目标项目预算编号',scope:'global' as const}
+ try{expect(retriever.candidates([...rows,wanted],'目标项目预算编号',undefined,2)[0]?.id).toBe('wanted')}finally{retriever.close()}
+})

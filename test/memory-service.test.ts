@@ -13,11 +13,12 @@ const encryption = {
 }
 async function setup(root?: string, semantic?: any) {
   root ??= await mkdtemp(join(tmpdir(),'ework-memory-test-')); if (!roots.includes(root)) roots.push(root)
+  let now=1_800_000_000_000
   let owner = 'local', shared = false, workspace:string|null='/tmp/ework-project-a'
   const { MemoryService } = await import('../src/main/memory/service')
-  const service = await MemoryService.open({root,encryption,owner:()=>owner,isShared:()=>shared,workspaceRoot:async()=>workspace,now:()=>1_800_000_000_000,semantic})
+  const service = await MemoryService.open({root,encryption,owner:()=>owner,isShared:()=>shared,workspaceRoot:async()=>workspace,now:()=>now,semantic})
   stores.push(service)
-  return { service,root,setOwner:(v:string)=>{owner=v;service.rotateIdentity()},setShared:(v:boolean)=>{shared=v},setWorkspace:(v:string|null)=>{workspace=v} }
+  return { service,root,setNow:(value:number)=>{now=value},setOwner:(v:string)=>{owner=v;service.rotateIdentity()},setShared:(v:boolean)=>{shared=v},setWorkspace:(v:string|null)=>{workspace=v} }
 }
 async function authorizedCapture(service:any,turn:any){const c=await service.recall({sessionId:turn.sessionId,query:''});return service.capture({...turn,anchor:{ownerEpoch:c.ownerEpoch,scopeEpoch:c.scopeEpoch,projectId:c.projectId}})}
 const preference = (content='默认用中文回答') => ({title:'回答语言',content,kind:'preference' as const,scope:'global' as const})
@@ -396,4 +397,14 @@ describe('长期记忆真实行为',()=>{
     expect((await resumed.pending()).items).toHaveLength(0)
     await expect(resumed.attempt({captureId:pending.captureId})).rejects.toThrow(/失效/)
   })
+})
+
+it('rejects expired entries at final validation and does not record their usage',async()=>{
+ const f=await setup(),end=1_800_000_000_001
+ const row=(await f.service.request({type:'save',input:{...preference(),expiresAt:end}})).rows[0]!
+ const recalled=await f.service.recall({sessionId:'expires',query:'报告'})
+ f.setNow(end+1)
+ expect(await f.service.validate({sessionId:'expires',ownerEpoch:recalled.ownerEpoch,scopeEpoch:recalled.scopeEpoch,revision:recalled.revision,entries:[{id:row.id,revision:row.revision}]} as any)).toEqual({valid:false})
+ await f.service.usage({sessionId:'expires',ownerEpoch:recalled.ownerEpoch,revision:recalled.revision,entries:recalled.candidates})
+ expect((await f.service.request({type:'snapshot'})).usages).toHaveLength(0)
 })

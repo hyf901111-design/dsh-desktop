@@ -25,13 +25,14 @@ export class LocalSemanticIndex{
       CREATE TABLE records(id TEXT PRIMARY KEY,revision INTEGER,scope TEXT,project TEXT,status TEXT,expires REAL,embedding BLOB);
       CREATE VIRTUAL TABLE lexical USING fts5(id UNINDEXED,title,content,tokenize='unicode61');`)
   }
-  async index(rows,cache,embed){
+  async index(rows,cache,embed,onProgress){
     const items={},indexed=[]
     for(const row of rows){
       const signature=hash(JSON.stringify([row.id,row.revision,row.title,row.content]))
       const cached=cache?.model===MODEL_ID&&cache.items?.[row.id]?.signature===signature?decoded(cache.items[row.id].vector):undefined
       const vector=cached??await embed(row.title+'\n'+row.content,'passage')
       items[row.id]={signature,vector:buffer(vector).toString('base64')};indexed.push({row,vector})
+      if(indexed.length%128===0)onProgress?.({cache:{model:MODEL_ID,items},indexed:indexed.length})
     }
     this.db.exec('BEGIN')
     try{

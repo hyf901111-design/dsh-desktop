@@ -221,7 +221,7 @@ export class MemoryService {
       const enabled=this.usable(state,owner)&&privateSession,autoEnabled=this.capturable(state,owner)&&privateSession
       const projectId=enabled||autoEnabled?await this.sessionProject(state,sessionId):state.bindings[sessionId]??undefined
       if(JSON.stringify(state.bindings)!==JSON.stringify(original.bindings))this.persist(state,owner)
-      const rows=Object.values(state.rows).filter(row=>row.status==='active'&&(!row.expiresAt||row.expiresAt>this.now())&&(row.scope==='global'||row.projectId===projectId))
+      const rows=Object.values(state.rows).filter(row=>row.status==='active'&&(!row.expiresAt||row.expiresAt>this.now()))
       return {owner,ownerEpoch:this.epoch,revision:state.revision,scopeEpoch:state.scopeEpoch,enabled,autoEnabled,projectId,rows,query:String(context.query??'').slice(0,2000),semantic:state.settings.semantic!==false}
     })
     let selected:{id:string;revision:number}[]=[]
@@ -287,7 +287,10 @@ export class MemoryService {
     state.jobs[capture.jobKey]={turn:{...capture.turn,events:[]},state:'done',attempts:state.jobs[capture.jobKey]?.attempts??0}
     this.captures.delete(input.captureId);this.persist(state,owner);return this.snapshot(state)
   })}
-  async validate(input:{sessionId:string;ownerEpoch:string;revision:number;scopeEpoch:number}){return this.serial(state=>({valid:this.usable(state)&&this.epoch===input.ownerEpoch&&state.revision===input.revision&&state.scopeEpoch===input.scopeEpoch&&!state.disabled[input.sessionId]&&!this.options.isShared(input.sessionId)}))}
+  async validate(input:{sessionId:string;ownerEpoch:string;revision:number;scopeEpoch:number;entries?:{id:string;revision:number}[]}){return this.serial(state=>({
+    valid:this.usable(state)&&this.epoch===input.ownerEpoch&&state.revision===input.revision&&state.scopeEpoch===input.scopeEpoch&&!state.disabled[input.sessionId]&&!this.options.isShared(input.sessionId)&&
+      (input.entries===undefined||Array.isArray(input.entries)&&input.entries.length<=30&&input.entries.every(entry=>{const row=state.rows[entry.id];return !!row&&row.revision===entry.revision&&row.status==='active'&&(!row.expiresAt||row.expiresAt>this.now())&&(row.scope==='global'||row.projectId===state.bindings[input.sessionId])}))
+  }))}
   async attempt(input:{captureId:string}){return this.serial((original,owner)=>{
     const capture=this.captures.get(input.captureId)
     if(!this.capturable(original,owner)||!capture||capture.owner!==owner||capture.epoch!==this.epoch||capture.scopeEpoch!==original.scopeEpoch||original.disabled[capture.turn.sessionId]||this.options.isShared(capture.turn.sessionId))throw Error('记忆整理任务已失效。')
@@ -296,8 +299,8 @@ export class MemoryService {
     job.attempts=(job.attempts??0)+1;this.persist(state,owner);return {allowed:true}
   })}
   async usage(input:{sessionId:string;ownerEpoch:string;revision:number;entries:MemoryRecall['entries'];warning?:string}){return this.serial((original,owner)=>{
-    if(!this.usable(original,owner)||input.ownerEpoch!==this.epoch||input.revision!==original.revision||this.options.isShared(input.sessionId))return {ok:false}
-    const state=structuredClone(original),entries=input.entries.flatMap(e=>{const row=state.rows[e.id];return row?.status==='active'&&row.revision===e.revision?[{id:e.id,revision:e.revision,title:row.title,reason:String(e.reason).slice(0,120)}]:[]})
+    if(!this.usable(original,owner)||input.ownerEpoch!==this.epoch||input.revision!==original.revision||original.disabled[input.sessionId]||this.options.isShared(input.sessionId))return {ok:false}
+    const state=structuredClone(original),entries=input.entries.flatMap(e=>{const row=state.rows[e.id];return row?.status==='active'&&row.revision===e.revision&&(!row.expiresAt||row.expiresAt>this.now())&&(row.scope==='global'||row.projectId===state.bindings[input.sessionId])?[{id:e.id,revision:e.revision,title:row.title,reason:String(e.reason).slice(0,120)}]:[]})
     const warnings=new Set(['记忆背景超出当前模型容量，本轮未使用。','记忆暂不可用，本轮未使用。'])
     if(input.warning&&warnings.has(input.warning)){state.warning=input.warning;this.persist(state,owner,false,false)}
     if(entries.length){delete state.warning;const now=this.now();for(const e of entries)state.rows[e.id]!.lastUsedAt=now;state.usages.unshift({id:randomUUID(),sessionId:identifier(input.sessionId),createdAt:now,entries});state.usages=state.usages.slice(0,100);this.persist(state,owner,false,false)}

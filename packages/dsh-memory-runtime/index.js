@@ -104,7 +104,7 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
   const live = agent => agent && ctx.agents.get(agent.id) === agent && ctx.sessions.get(agent.id) === agent.session && eligibleHeader(agent.session.header)
   const recall = async (agent, query, turn, signal) => validateRecall(await request('/recall', { sessionId: agent.id, query, ...(agent.session.header.cwd ? { projectPath: agent.session.header.cwd } : {}), turnId: String(turn) }, signal))
   const valid = async (agent, snapshot, signal) => {
-    const result = await request('/validate', { sessionId: agent.id, ownerEpoch: snapshot.ownerEpoch, revision: snapshot.revision, scopeEpoch: snapshot.scopeEpoch }, signal)
+    const result = await request('/validate', { sessionId: agent.id, ownerEpoch: snapshot.ownerEpoch, revision: snapshot.revision, scopeEpoch: snapshot.scopeEpoch, entries:(snapshot.candidates??snapshot.entries).map(({id,revision})=>({id,revision})) }, signal)
     if (typeof result?.valid !== 'boolean') throw Error(recallFailure)
     return result.valid
   }
@@ -207,7 +207,7 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
         if (!snapshot) snapshot = state.snapshot = await recall(agent, state.query, turn, signal)
         if (!snapshot.enabled) return original
         if (!await valid(agent, snapshot, signal)) { state.snapshot = undefined; continue }
-        const selectionKey=JSON.stringify([snapshot.ownerEpoch,snapshot.scopeEpoch,snapshot.revision,state.query,base.provider,base.model])
+        const selectionKey=JSON.stringify([snapshot.ownerEpoch,snapshot.scopeEpoch,snapshot.revision,state.query,base.provider,base.model,(snapshot.candidates??snapshot.entries).map(({id,revision})=>[id,revision])])
         if(state.selection?.key!==selectionKey)state.selection={key:selectionKey,value:await verifyEvidence(agent,snapshot,state.query,base,signal)}
         if(!await valid(agent,snapshot,signal)){state.snapshot=undefined;state.selection=undefined;continue}
         const selected=state.selection.value

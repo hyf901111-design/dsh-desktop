@@ -38,7 +38,7 @@ async function fixture(options = {}) {
     let value
     if (request.url === '/pending') value = { items: options.pending ?? [] }
     if (request.url === '/recall') value = { enabled: control.enabled && !body.sessionId.includes('shared'), autoEnabled: true, ownerEpoch: control.ownerEpoch, scopeEpoch: control.scopeEpoch, projectId: control.projectId, revision: control.revision, entries: !control.enabled || body.sessionId.includes('shared') || !control.memory ? [] : [{ id: 'memory-1', revision: control.revision, title: '回答语言', content: control.memory, reason: '相关偏好' }], block: !control.enabled || body.sessionId.includes('shared') ? '' : control.memory }
-    if (request.url === '/validate') { await control.beforeValidate?.(body); value = { valid: control.enabled && body.revision === control.revision } }
+    if (request.url === '/validate') { await control.beforeValidate?.(body); value = { valid: control.enabled && body.revision === control.revision && !(body.entries?.length && !control.memory) } }
     if (request.url === '/capture') { const enabled = control.enabled && !body.sessionId.includes('shared') && (!body.anchor || body.anchor.ownerEpoch === control.ownerEpoch && body.anchor.scopeEpoch === control.scopeEpoch && body.anchor.projectId === control.projectId); value = { captureId: enabled ? `${body.sessionId}/${body.turnId}` : '', enabled, ownerEpoch: control.ownerEpoch, revision: control.revision } }
     if (request.url === '/attempt') { const count = attempts.get(body.captureId) ?? 0; const allowed = !control.denyAttempt && count < 2; if (allowed) attempts.set(body.captureId, count + 1); value = { allowed } }
     if (request.url === '/usage' || request.url === '/commit' || request.url === '/failure') value = { ok: true }
@@ -98,14 +98,17 @@ async function fixture(options = {}) {
     }
   }
   const registration = ctx.llm.registerAdapter(['selected-provider'], new Adapter())
+  const memoryHooks={},originalOn=ctx.on.bind(ctx)
+  ctx.on=(event,...args)=>{if(['agent/pre-step','agent/request-context'].includes(event))memoryHooks[event]=args[0];return originalOn(event,...args)}
   const runtime = runtimeModule.createMemoryRuntime(ctx, { env: { EWORK_MEMORY_BRIDGE: JSON.stringify({ url: `http://127.0.0.1:${server.address().port}`, token: 'memory-test-token' }) }, requestTimeoutMs: 1000, evidenceTimeoutMs: options.evidenceTimeoutMs ?? 8000, summaryTimeoutMs: options.summaryTimeoutMs ?? 60000, summaryPollIntervalMs: options.summaryPollIntervalMs ?? 0, onWarning: message => warnings.push(message) })
+  ctx.on=originalOn
   cleanup.push(async () => { await runtime.dispose(); await ctx.fiber.dispose(); for (const socket of sockets) socket.destroy(); await new Promise(resolve => server.close(resolve)); await rm(root, { recursive: true, force: true }) })
   await runtime.ready
   await runtime.idle()
   const createAgent = async (id, meta = {}) => (await ctx.agents.create({ sessionId: id, meta: { cwd: '/tmp/memory-project', ...meta }, agentOptions: { provider: 'selected-provider', model: 'selected-model', maxTokens: 256 } })).agent
   const agent = await createAgent('memory-parent')
   const turn = async (text, target = agent) => { target.followup(createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } })); await target.whenIdle(); await runtime.idle(); expect(errors).toEqual([]) }
-  return { ctx, agent, runtime, calls, evidenceCalls, wire, control, warnings, turn, createAgent, root, registration }
+  return { ctx, agent, runtime, calls, memoryHooks, evidenceCalls, wire, control, warnings, turn, createAgent, root, registration }
 }
 
 it('treats a disabled use switch as a quiet request without memory',async()=>{
@@ -386,4 +389,19 @@ it('continues without evidence when its model misses the deadline',async()=>{
  await f.turn('请根据记忆写报告')
  expect(performance.now()-started).toBeLessThan(250)
  expect(f.calls.find(r=>!r.purpose).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false)
+})
+
+it('invalidates a same-turn evidence selection when its candidate naturally expires between steps',async()=>{
+ const f=await fixture(),signal=new AbortController().signal,messages=[createUserMessage({content:[{type:'text',text:'请按记忆写报告'}],source:{kind:'user'}})]
+ const base={provider:'selected-provider',model:'selected-model',messages,tools:[],maxTokens:256}
+ const step=async()=>{await f.memoryHooks['agent/pre-step']({agent:f.agent,turn:101,signal},async()=>({kind:'enter',messages}));return f.memoryHooks['agent/request-context']({agent:f.agent,turn:101,request:base,contextWindow:16000,signal},async()=>base)}
+ expect((await step()).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(true)
+ f.control.memory=''
+ expect((await step()).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false)
+})
+it('validates selected entry lifetimes again after evidence inference',async()=>{
+ const f=await fixture();f.control.delayEvidence=async()=>{f.control.memory=''}
+ await f.turn('请按记忆写报告')
+ expect(f.calls.find(r=>!r.purpose).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false)
+ expect(f.wire.some(c=>c.path==='/validate'&&c.body.entries?.length)).toBe(true)
 })
