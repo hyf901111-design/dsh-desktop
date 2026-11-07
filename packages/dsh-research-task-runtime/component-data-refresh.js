@@ -11,9 +11,10 @@ import {plannedNewsQueries,newsCoverageState,appendNewsCoverage} from './news-qu
 import {isCryptoTickerRequest,normalizeCryptoTickerResult} from './crypto-source-results.js'
 import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTableListMapping} from './table-projection.js'
 import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
+import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from './component-derived-values.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
-const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
+const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize','$calc','$reduce'])
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
@@ -39,7 +40,7 @@ function formattedDate(rule,now){
 function scalarMapping(value,mapping){
  if(value==null&&mapping.$optional===true)return null
  if(mapping.$as==='number'){if(!['number','string'].includes(typeof value)||typeof value==='string'&&!value.trim()||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
- if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale}
+ if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale;if(!Number.isFinite(value))throw Error('数值换算超出范围')}
  if(mapping.$digits!==undefined){if(typeof value!=='number'||!Number.isFinite(value)||!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效');value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))}
  if(mapping.$as==='string'||mapping.$prefix!==undefined||mapping.$suffix!==undefined){
   if(value!==null&&typeof value==='object'||mapping.$prefix!==undefined&&typeof mapping.$prefix!=='string'||mapping.$suffix!==undefined&&typeof mapping.$suffix!=='string')throw Error('文本字段需要单个值，不能直接使用对象或数组')
@@ -115,10 +116,12 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  }
  const unknown=Object.keys(mapping).find(k=>k.startsWith('$')&&!mappingOperators.has(k))
  if(unknown)throw Object.assign(Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。'),{code:'UNSUPPORTED_MAPPING_OPERATOR'})
+ if(Object.hasOwn(mapping,'$calc'))return scalarMapping(calculateSourceValue(mapping,value=>next(value,row,'')),mapping)
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
+ if(mapping.$reduce!==undefined&&eachPath===undefined)throw Error('$reduce 必须指定真实列表 $each 和数值字段 $map')
  if(mapping.$normalize!==undefined&&(mapping.$normalize!=='base100'||eachPath===undefined||mapping.$single===true))throw Error('归一化仅支持列表 $each 的 $normalize:"base100"，不能用于单值或表达式')
  if(eachPath!==undefined){
   let rows=path(source,eachPath)
@@ -145,8 +148,13 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   // An explicit collection plus a field path is a scalar row selector. Keep
   // conversions on the outer expression so units and precision apply once.
   const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
+  if(mapping.$reduce!==undefined)validateSourceReduction(mapping,rowMapping,rows,path)
   if(mapping.$normalize!==undefined&&rowMapping===undefined)throw Error('归一化列表缺少数值选择：请提供 $map:{"$path":"真实数值字段"}，不能直接归一化整条记录')
   let mapped=rows.map(item=>next(rowMapping,item,context==='items'?'item':context))
+  if(mapping.$reduce!==undefined){
+   if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))
+   return scalarMapping(reduceSourceValues(mapping.$reduce,mapped),mapping)
+  }
   if(mapping.$normalize!==undefined){
    if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))
    if(!mapped.length||mapped.some(value=>typeof value!=='number'||!Number.isFinite(value))||mapped[0]===0)throw Error('归一化需要完整有限数值列表及非零起点；缺失值不能填0')

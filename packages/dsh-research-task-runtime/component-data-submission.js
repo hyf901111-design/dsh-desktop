@@ -4,11 +4,13 @@ import {chartTemplateSchema} from './chart-template-contract.js'
 import {marketPanelSchema} from './market-artifact.js'
 import {TABLE_INPUT_SCHEMA} from './template-data-contract.js'
 import {KPI_GUIDANCE} from './kpi-template-contract.js'
+import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 
 const NAME='submit_component_data'
 const SCHEMA='component_presentation_schema'
 
 export const COMPONENT_SUBMISSION_MAPPING_GUIDANCE = `requests 只引用本卡已成功执行的工具名和原参数；mapping 描述呈现结构，数据用真实字段路径引用完整响应，不复制整组数值。
+${COMPONENT_DERIVED_VALUE_GUIDANCE}
 $from 指 requests.key；$path 为响应内的点分路径；$each 选择实际数组，$map 映射每行字段。表格 rows 使用 {$from:"q",$each:"实际列表",$map:[{$path:"名称字段"},{$path:"数值字段"}]}，columns 与单元格一一对应。
 列表可用 $filter:{字段:原值} 等值筛选、$sortBy:"字段"、$order:"asc|desc" 排序、$take:5 取前五或 $take:-20 取末二十；$single:true 在筛选后恰好一条时取单值。$as:"number|string" 转标量，$scale 换单位，$digits:2 控制精度，$prefix/$suffix 加文字。共同基期比较在 values 的列表选择器用 $normalize:"base100"；日期和值必须采用完全相同的筛选排序，不把缺失填成0。
 可用字段才使用相应示例：指标 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.metric)}；排名 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.ranking)}。排名保留负号。不支持 $concat/$join/$format；名称直接选原字段，代码放明细。
@@ -40,6 +42,8 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
    const candidate={version:1,type:'data-bound',requests:args.requests,mapping:args.mapping},text=JSON.stringify(candidate)
    if(Buffer.byteLength(text)>256000)throw Error('Use paths into the complete observed responses instead of copying source records into the submission.')
    const records=structuredClone(observeRecords()),now=new Date()
+   const observedTools=[...new Set(records.filter(record=>record.purpose!=='discovery').map(record=>record.tool))]
+   if(observedTools.length&&Array.isArray(args.requests)&&args.requests.some(request=>!observedTools.includes(request?.tool)))throw Error('数据引用的工具名必须逐字复用本卡成功调用，不能使用来源别名。本卡实际工具名：'+observedTools.slice(0,8).join('、')+'。保留其原参数及真实字段，无需重新取数。')
    let snapshot
    try{snapshot=resolveBoundComponent(text,records,now,options)}catch(error){
     if(!bindingRequested)snapshot=resolveComponentSnapshot(text,records,now,options)

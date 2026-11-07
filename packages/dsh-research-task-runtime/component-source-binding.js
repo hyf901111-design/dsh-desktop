@@ -5,6 +5,7 @@ import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} f
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
 import { decodeDataResponse, evaluateMapping, materializeComponentProjection } from './component-data-refresh.js'
+import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
 import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.js'
@@ -477,7 +478,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
       if((Object.hasOwn(value,'$path')||Object.hasOwn(value,'$each'))&&!['asOf','title','sources'].includes(key))paths++
       // Only the source selector can produce values; literals inside $map are
       // checked as usual, while formatting and missing-value text are metadata.
-      return Object.entries(value).every(([k,v])=>k==='$default'?pureMissingSourceText(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
+      return Object.entries(value).every(([k,v])=>k==='$calc'?sourceBacked(v?.args,key):k==='$default'?pureMissingSourceText(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
     }
     if(!sourceBacked(contract)||!paths)return null
     let mapping=financialValueSelectors(publicRecordEnvelope(singleSourceMapping(contract,responses),responses,Object.entries(sources).map(([key,source])=>({key,toolId:source.tool,args:source.args}))),sources)
@@ -506,6 +507,7 @@ export const COMPONENT_MAPPING_EXAMPLES = {
     series:[{name:'份额变动金额估算',values:{$from:'q',$each:'records',$map:{$path:'flowEstimateYi'},$digits:2}}]}
 }
 const MAPPING_SHAPE_GUIDANCE = `
+${COMPONENT_DERIVED_VALUE_GUIDANCE}
 【映射最小正确结构】最终输出严格 JSON，所有键（包括 "$digits"）加双引号。只交当前模板要求的字段；不额外创造 missing、artifact 或重复来源说明。
 仅当实际响应包含这些字段时使用以下示例，其他响应替换为已观察字段：指标 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.metric)}；缺失 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.missing)}；金额排名 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.ranking)}。
 $optional/$default 只能写在 value 等字段的选择器对象内，不与 label/value 并列、不写在整张卡或整行。确定存在的字段直接选择，不需一律加缺失包装。来源完全没有的字段可直接填“本次未取得”，不得猜路径。

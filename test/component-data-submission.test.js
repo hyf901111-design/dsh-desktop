@@ -45,6 +45,15 @@ it.each(['unobserved','wrong-args','discovery','wrong-path'])('does not accept %
  if(mode==='wrong-path')candidate.mapping.series[0].values.$map.$path='notThere'
  expect((await f.invoke(candidate)).isError).toBe(true)
 })
+it('returns the exact observed tool name when a model invents a source alias',async()=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ candidate.requests[0].tool='fixture_query'
+ const rejected=await f.invoke(candidate)
+ expect(rejected.isError).toBe(true)
+ expect(JSON.stringify(rejected)).toContain('public_data_query')
+ expect(JSON.stringify(rejected)).toContain('工具名')
+ expect((await f.invoke(input)).isError).toBe(false)
+})
 it('keeps final semantic validation correctable before acknowledging delivery',async()=>{
  let calls=0;const f=await fixture(()=>{if(++calls===1)throw Error('缺少请求范围')})
  expect((await f.invoke()).isError).toBe(true);expect((await f.invoke()).isError).toBe(false);expect(calls).toBe(2)
