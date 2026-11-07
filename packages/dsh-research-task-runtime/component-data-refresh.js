@@ -85,7 +85,7 @@ export function componentSourceMetadata(mapping,responses,records=[]){
   if(Array.isArray(value))value.forEach(child=>visit(child,depth+1))
   else if(record(value)){if(typeof value.$from==='string')keys.add(value.$from);Object.values(value).forEach(child=>visit(child,depth+1))}
  }
- for(const key of ['items','rows','labels','series','candles'])visit(mapping?.[key])
+ for(const key of ['items','rows','labels','series','candles','detailRows'])visit(mapping?.[key])
  if(overflow||!keys.size)return null
  const matched=[]
  for(const key of keys){

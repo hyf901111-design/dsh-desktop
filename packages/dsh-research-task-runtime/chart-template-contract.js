@@ -17,7 +17,17 @@ export const CHART_VARIANTS = Object.freeze(CHART_TEMPLATES.map(t => t.variant))
 // Source explanations belong in the full note, not a short chart caption.
 // Preserve every character and the native renderer; never trim business data.
 export function normalizeChartMetadata(data) {
-  if(data?.type!=='chart'||!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===data.variant)||typeof data.asOf!=='string'||data.asOf.length<=256||data.asOf.length>2000)return data;
+  if(data?.type!=='chart'||!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===data.variant))return data;
+  // Source names use the same meaning in the KPI and chart presentations.
+  // Normalize only the unambiguous spelling; keep conflicts and unsafe URLs
+  // intact so the ordinary source validation can reject them.
+  if(Array.isArray(data.sources)&&data.sources.some(source=>source&&Object.hasOwn(source,'name'))){
+    data={...data,sources:data.sources.map(source=>{
+      if(!source||typeof source!=='object'||Array.isArray(source)||Object.hasOwn(source,'label')||Object.keys(source).some(key=>!['name','url'].includes(key)))return source;
+      const {name,...rest}=source;return {...rest,label:name};
+    })};
+  }
+  if(typeof data.asOf!=='string'||data.asOf.length<=256||data.asOf.length>2000)return data;
   if(data.note!==undefined&&(typeof data.note!=='string'||!data.note.trim()))return data;
   const note=['数据时点与来源：'+data.asOf,data.note].filter(Boolean).join('\n');
   if(note.length>2000)return data;
@@ -75,7 +85,8 @@ export function chartTemplateSchema(variant) {
   return JSON.stringify({version:1,type:'chart',title:'标题',variant:variant ?? CARTESIAN_CHART_TEMPLATES.map(t=>t.variant).join('|'),
     labels:['标签1','标签2'],series:[{name:'系列',values:[12,18]}],unit:'相同数值单位',asOf:'来源及数据时点'}) +
     '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。asOf、subtitle、unit 各最多256字，完整来源和计算说明放 note（最多2000字），不要把长篇解读写进 asOf。' +
-    'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。bar/horizontal/lollipop 可设 colorBySign:true 按金融正负值配色（正绿负红，零中性）；其他图保持系列配色。可选 subtitle、note，原始单位和来源保留。'+(variant?'':'；其他已实现图表：'+specialChartSchema()+'；'+advancedChartSchema());
+    'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。bar/horizontal/lollipop 可设 colorBySign:true 按金融正负值配色（正绿负红，零中性）；其他图保持系列配色。可选 subtitle、note，原始单位和来源保留。'+
+    '可选 detailColumns:["分类","代码","规模（亿元）"] 与 detailRows:[["标签1","代码1",120],["标签2","代码2",null]] 同时提供；2–20列、最多4000格，行数和顺序与 labels 一致，每行首格必须等于对应标签，余格为文字、有限数值、布尔或 null。补充字段默认折叠在完整数据表，宿主自动加入绘图数值列，无需重复提供。'+(variant?'':'；其他已实现图表：'+specialChartSchema()+'；'+advancedChartSchema());
 }
 export function requireSimulatedChartData(panel) {
   if (panel.type !== 'chart' || panel.artifact) return;
@@ -89,12 +100,24 @@ export function chartDataIssue(spec) {
   if (spec?.type !== 'chart' || !CHART_VARIANTS.includes(spec.variant)) return '未注册的图表变体';
   const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
   if(spec.axisDecimals!==undefined&&(!Number.isInteger(spec.axisDecimals)||spec.axisDecimals<0||spec.axisDecimals>4))return 'axisDecimals 必须为0–4的整数';
-  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note','sources','axisDecimals','colorBySign'];
+  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note','sources','axisDecimals','colorBySign','detailColumns','detailRows'];
   if(spec.colorBySign!==undefined&&(typeof spec.colorBySign!=='boolean'||!['bar','horizontal','lollipop'].includes(spec.variant)))return 'colorBySign 仅支持 bar/horizontal/lollipop 的布尔值';
-  if (spec.version !== 1 || !string(spec.title,256) || Object.keys(spec).some(k => !allowed.includes(k))) return '图表版本、标题或字段无效';
+  if (spec.version !== 1 || !string(spec.title,256)) return '图表 version 必须为1，title 必须为1–256字';
+  const unknown=Object.keys(spec).filter(key=>!allowed.includes(key));
+  if(unknown.length)return '图表不支持的字段：'+unknown.join('、')+'。说明使用 note，辅助字段使用 detailColumns/detailRows；保留实际数据。';
   for (const key of ['unit','asOf','subtitle','note']) if (spec[key] !== undefined && !string(spec[key], key === 'note' ? 2000 : 256)) return `${key} 无效`;
   if (!Array.isArray(spec.labels) || !spec.labels.length || spec.labels.length > 366 || !spec.labels.every(v => string(v,128))) return 'labels 必须为1–366个标签';
   if (!Array.isArray(spec.series) || !spec.series.length || spec.series.length > 12 || spec.labels.length * spec.series.length > 600) return 'series 为1–12组且总数据点不超过600';
+  if(spec.detailColumns!==undefined||spec.detailRows!==undefined){
+    if(!Array.isArray(spec.detailColumns)||spec.detailColumns.length<2||spec.detailColumns.length>20||!spec.detailColumns.every(value=>string(value,128)))return 'detailColumns 必须为2–20个非空表头，并与 detailRows 同时提供';
+    if(!Array.isArray(spec.detailRows)||spec.detailRows.length!==spec.labels.length)return 'detailRows 必须与 labels 等长且顺序一致';
+    if(spec.detailRows.length*spec.detailColumns.length>4000)return 'detailRows 超出4000格，请将完整辅助明细单独呈现，不能截断数据';
+    for(const [i,row]of spec.detailRows.entries()){
+      if(!Array.isArray(row)||row.length!==spec.detailColumns.length)return `detailRows[${i}] 必须有 ${spec.detailColumns.length} 格，与 detailColumns 对应`;
+      if(row[0]!==spec.labels[i])return `detailRows[${i}][0] 必须等于 labels[${i}]，请使用同一批记录与相同排序`;
+      for(const [j,value]of row.entries())if(!(value===null||typeof value==='boolean'||typeof value==='string'&&value.length<=512||typeof value==='number'&&Number.isFinite(value)))return `detailRows[${i}][${j}] 必须是512字以内文字、有限数值、布尔或 null`;
+    }
+  }
   for (const [i, s] of spec.series.entries()) {
     if (!s || !string(s.name,128) || Object.keys(s).some(k => !['name','values','kind'].includes(k)) ||
       !Array.isArray(s.values) || s.values.length !== spec.labels.length ||

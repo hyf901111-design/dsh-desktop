@@ -54,3 +54,31 @@ it('folds chart methodology while leaving legend filtering and full data usable'
   await frame.getByText('口径与来源',{exact:true}).click();expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
  }finally{await page.close();}
 },20000);
+it('keeps supplemental chart data collapsed and supports compact sortable resizable detail tables',async()=>{
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'净流入前列',asOf:meta.asOf,note:meta.note,unit:'亿元',labels:['甲','乙'],series:[{name:'净流入估算',values:[20,10]}],detailColumns:['产品','代码','规模（亿元）','管理人'],detailRows:[['甲','001',120,'甲基金'],['乙','002',null,'乙基金']],sources:[{label:'Tushare',url:'https://tushare.pro'}]})));
+ for(const width of [360,880])for(const theme of ['light','dark']){
+  const page=await browser.newPage({viewport:{width,height:680},colorScheme:theme});page.setDefaultTimeout(3000);
+  try{
+   await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
+   await frame.locator('.component-reading-footer').waitFor();
+   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
+   expect(await frame.locator('table').isVisible()).toBe(false);
+   expect((await frame.locator('.component-reading-footer').boundingBox()).height).toBeLessThanOrEqual(34);
+   await frame.getByText('查看完整数据',{exact:true}).click();await frame.locator('table').waitFor({state:'visible'});
+   expect(await frame.locator('tbody tr').allTextContents()).toEqual(['甲20001120甲基金','乙10002—乙基金']);
+   const header=frame.locator('thead th').nth(1);await header.locator('button').click();
+   expect(await header.getAttribute('aria-sort')).toBe('ascending');expect(await frame.locator('tbody tr').first().textContent()).toContain('乙10');
+   expect(await header.locator('button').evaluate(el=>getComputedStyle(el,'::after').content)).toContain('↑');
+   await header.locator('button').click();expect(await header.getAttribute('aria-sort')).toBe('descending');expect(await frame.locator('tbody tr').first().textContent()).toContain('甲20');
+   const sizeHeader=frame.locator('thead th').nth(3);await sizeHeader.locator('button').click();expect(await frame.locator('tbody tr').last().textContent()).toContain('乙10');
+   await sizeHeader.locator('button').click();expect(await frame.locator('tbody tr').last().textContent()).toContain('乙10');
+   expect(await frame.locator('.chart-readout').textContent()).toContain('甲');
+   expect((await header.boundingBox()).height).toBeLessThanOrEqual(28);
+   const handle=frame.locator('[data-workbench-column-resize="0"]');const start=Number(await handle.getAttribute('aria-valuenow'));
+   const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+45,box.y+box.height/2,{steps:5});await page.mouse.up();
+   expect(Number(await handle.getAttribute('aria-valuenow'))).toBeGreaterThan(start+30);
+   expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
+   await frame.getByText('查看完整数据',{exact:true}).click();expect(await frame.locator('table').isVisible()).toBe(false);
+  }finally{await page.close();}
+ }
+},30000);
