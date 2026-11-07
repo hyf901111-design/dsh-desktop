@@ -13,6 +13,7 @@ import {normalizeKeyedTableProjection,normalizeIdentityTableMapping,normalizeTab
 import {normalizeChartDetailMapping} from './chart-detail-projection.js'
 import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
 import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from './component-derived-values.js'
+import {normalizeObservedUnitMapping} from './component-unit-projection.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize','$calc','$reduce'])
@@ -269,6 +270,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
  const metadata=componentSourceMetadata(mapping,responses,sourceRecords)
  validateEtfMetricMapping(mapping,metadata,responses,now)
+ mapping=normalizeObservedUnitMapping(mapping,metadata,value=>evaluateMapping(value,responses,now))
  const qualityAlias=mapping?.type==='kpi'&&Object.hasOwn(mapping,'missing')
  if(qualityAlias){
   const selector=mapping.missing
