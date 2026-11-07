@@ -13,7 +13,15 @@ it.each([[1600,1000],[850,700]])('keeps the random card first and changes entire
   const visual=await random.evaluate((node:HTMLElement)=>{const preview=node.querySelector('.odyssey-wallpaper-preview')!,icon=node.querySelector('.odyssey-wallpaper-random-icon')!,disc=node.querySelector('.odyssey-wallpaper-random-disc')!,p=preview.getBoundingClientRect(),i=icon.getBoundingClientRect(),d=disc.getBoundingClientRect();return {selected:node.getAttribute('aria-pressed'),center:[p.x+p.width/2,p.y+p.height/2],icon:[i.x+i.width/2,i.y+i.height/2,i.width,i.height],disc:[d.x+d.width/2,d.y+d.height/2,d.width,d.height],translate:getComputedStyle(icon).translate,tiles:[...node.querySelectorAll<HTMLImageElement>('[data-mosaic-theme]')].map(img=>({loaded:img.complete&&img.naturalWidth>0,width:img.getBoundingClientRect().width,height:img.getBoundingClientRect().height}))}})
   await writeFile(evidence+'/visual-'+width+'.json',JSON.stringify(visual,null,2));expect(visual.icon[0]).toBeCloseTo(visual.center[0],0);expect(visual.icon[1]).toBeCloseTo(visual.center[1],0);expect(visual.tiles.every((tile:{loaded:boolean})=>tile.loaded)).toBe(true)
   await f.page.screenshot({path:evidence+'/random-first-'+width+'.png'})
-  await random.hover();await f.page.mouse.wheel(0,100);await uiExpect(second).toHaveAttribute('aria-current','page')
+  await random.hover()
+  // The first selected preview lifts above the page. Its top stroke must stay
+  // painted and hit-testable rather than being cut by the paging viewport.
+  await expect.poll(()=>random.evaluate((node:HTMLElement)=>{
+   const p=node.querySelector<HTMLElement>('.odyssey-wallpaper-preview')!.getBoundingClientRect()
+   return node.contains(document.elementFromPoint(p.x+p.width/2,p.y+.75))
+  })).toBe(true)
+  await f.page.screenshot({path:evidence+'/selected-hover-'+width+'.png'})
+  await f.page.mouse.wheel(0,100);await uiExpect(second).toHaveAttribute('aria-current','page')
   await uiExpect(f.page.getByRole('button',{name:'锦鲤浮光',exact:true})).toBeVisible();await expect.poll(async()=>Math.round((await f.page.getByRole('button',{name:'锦鲤浮光',exact:true}).boundingBox()).y)).toBe(Math.round((await f.page.locator('.odyssey-wallpaper-viewport').boundingBox()).y));await uiExpect(random).not.toBeVisible()
   expect(await f.page.locator('.odyssey-explore-header').boundingBox()).toEqual(header);expect(await f.page.locator('.odyssey-explore-navigation').boundingBox()).toEqual(nav)
   await f.page.screenshot({path:evidence+'/second-'+width+'.png'})
