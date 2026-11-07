@@ -228,110 +228,61 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "全局记忆开关与Markdown文档统一管理",
+        "featureName": "记忆引用去重与无答案对话行为修复",
         "branch": "codex/feat/hindsight-local-validation-20261107",
-        "baseCommit": "a22289df36cfc25e62c700c6adfe4b68124d5f94",
-        "tipCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
+        "baseCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
+        "tipCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
         "commits": [
           {
-            "commit": "ee8817b850b70a5c864d16997923026d6ebf54ed",
+            "commit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
             "parents": [
-              "a22289df36cfc25e62c700c6adfe4b68124d5f94"
+              "9d9085815ef90d5052283433a87fb95baa6b94ec"
             ],
-            "subject": "优化记忆设置文案并说明查找方式与当前对话暂停范围"
-          },
-          {
-            "commit": "ac2b2e5895c57d2b1888bbe208d3e644bf77c596",
-            "parents": [
-              "ee8817b850b70a5c864d16997923026d6ebf54ed"
-            ],
-            "subject": "简化全局记忆开关并通过 Markdown 弹窗统一管理记忆"
-          },
-          {
-            "commit": "50c73505504f2ebdd56812e0d380931a1ad4c5a4",
-            "parents": [
-              "ac2b2e5895c57d2b1888bbe208d3e644bf77c596"
-            ],
-            "subject": "保留 Markdown 状态修改对应的记忆身份与项目归属"
-          },
-          {
-            "commit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
-            "parents": [
-              "50c73505504f2ebdd56812e0d380931a1ad4c5a4"
-            ],
-            "subject": "同步文档确认与冲突记忆替代规则"
+            "subject": "修复记忆引用重复记录与无依据时反复查找"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/context.js"
           },
           {
             "status": "M",
-            "path": "src/main/memory/document.ts"
+            "path": "packages/dsh-memory-runtime/index.js"
           },
           {
             "status": "A",
-            "path": "src/main/memory/editable-document.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/memory/ipc.ts"
+            "path": "src/main/memory/capture-policy.ts"
           },
           {
             "status": "M",
             "path": "src/main/memory/service.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/memory/document-editor.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/memory/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/memory/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/memory.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/memory-bridge.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/memory-editable-document.test.ts"
+            "path": "test/memory-runtime.test.js"
           },
           {
             "status": "M",
             "path": "test/memory-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/memory-view.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "node_modules/.bin/vitest",
+              "node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
               "run",
-              "test/memory-view.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-editable-document.test.ts",
               "test/memory-service.test.ts",
+              "test/memory-runtime.test.js",
+              "test/memory-evidence.test.js",
               "test/memory-bridge.test.ts",
-              "test/memory-runtime.test.js"
+              "test/memory-editable-document.test.ts"
             ],
             "outcome": "passed",
-            "summary": "92项记忆聚焦检查通过，包括全局开关、旧设置迁移、Markdown编辑持久化、冲突与隔离、无答案保护",
-            "verifiedCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
-            "completedAt": "2026-11-07T03:35:32.071816+00:00",
+            "summary": "94项直接相关检查通过；先复现8项失败再修复，并覆盖引用习惯但确有新增具体偏好的保留",
+            "verifiedCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
+            "completedAt": "2026-11-07T04:41:08.432012+00:00",
             "timeoutMs": 180000
           },
           {
@@ -341,28 +292,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript通过",
-            "verifiedCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
-            "completedAt": "2026-11-07T03:35:32.071816+00:00",
+            "summary": "TypeScript检查通过",
+            "verifiedCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
+            "completedAt": "2026-11-07T04:41:08.432012+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实Chromium连接实际MemoryService，验证仅一个全局开关、Markdown预览编辑、保存到文件、服务重启后重开、并发修改冲突、明暗主题及1160/720宽度；等待最终签名包复核。"
+          "outcome": "not-applicable",
+          "summary": "本次修改记忆整理和模型请求规则，无前端布局改动。源码运行时连接实际GLM-5.3-Flash/Max复测7个日常场景通过；最终签名客户端另换场景验证。"
         },
         "acceptanceCriteria": [
-          "设置页仅保留全局启用记忆与记忆.md编辑入口",
-          "编辑弹窗提供预览、修改、保存和取消，隐藏内部编号和版本元数据",
-          "全局关闭同时停止读取及自动保存，旧单对话暂停迁移后不存在隐藏例外",
-          "保存同步到已有记忆文件及检索状态，保留项目与账户隔离，冲突不覆盖草稿",
-          "构建并保留真实本地客户端供测试"
+          "引用旧偏好但无具体新增内容时不创建记忆条目",
+          "未知用户或项目事实直接说明无可用依据，不反复查内部文件",
+          "记忆自动记录、跨对话调用和用户明确指定的资料查找正常",
+          "构建本地版本并在真实客户端换场景复测"
         ],
         "risks": [
-          "物理记忆.md保留内部追踪注释，弹窗呈现可读Markdown正文；加密缓存和索引仍是内部实现",
-          "本次只做记忆相关验证，不做全功能测试，不接受晋升、不发布、不推送"
+          "真实模型验证属于固定配置的小样本，不构成任意模型保证",
+          "本地预览，不接受晋升、不发布、不推送；模型行为约束不替代操作系统文件权限隔离"
         ],
-        "generatedAt": "2026-11-07T03:35:32.071816+00:00"
+        "generatedAt": "2026-11-07T04:41:08.432012+00:00"
       }
     }
   ],
