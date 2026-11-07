@@ -27,3 +27,13 @@ it('rejects foreign renderer frames before dispatching a management mutation',as
   expect(calls).toBe(0)
   await invoke(trusted,{type:'snapshot'});expect(calls).toBe(1)
 })
+it('protects document reads and saves with trusted-frame checks and rejects removed session controls',async()=>{
+  const {registerMemoryIpc}=await import('../src/main/memory/ipc')
+  const callbacks=new Map<string,Function>(),window={isDestroyed:()=>false,webContents:{mainFrame:{processId:1,routingId:2}}},commands:any[]=[]
+  registerMemoryIpc({handle:(name:string,fn:Function)=>callbacks.set(name,fn)},()=>window,{request:async c=>{commands.push(c);return {}}})
+  const invoke=callbacks.get('memory:request')!,trusted={sender:window.webContents,senderFrame:{processId:1,routingId:2}}
+  for(const type of ['document-read','document-save'])await expect(invoke({...trusted,senderFrame:{processId:1,routingId:3}},{type})).rejects.toThrow('main EWork')
+  await expect(invoke(trusted,{type:'session',disabled:true})).rejects.toThrow(/未知/)
+  await invoke(trusted,{type:'document-read'});await invoke(trusted,{type:'document-save',content:'文档内容',expectedHash:'hash'})
+  expect(commands.map(c=>c.type)).toEqual(['document-read','document-save'])
+})

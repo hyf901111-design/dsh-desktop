@@ -16,7 +16,11 @@ export class MemoryDocument {
   preserveConflict(owner:string){const raw=this.raw(owner);if(!raw)return;const {directory}=this.check(owner),file=join(directory,`记忆冲突-${randomUUID()}.md`);writeFileSync(file,raw.value,{flag:'wx',mode:0o600});return file}
   read(owner:string){const {file}=this.check(owner);if(!existsSync(file))return undefined
     if(!lstatSync(file).isFile()||lstatSync(file).size>16*1024*1024)throw Error('记忆文件过大或不可读取，原文件已保留。')
-    const source=readFileSync(file,'utf8'),value=source.replace(/^\uFEFF/u,'').replaceAll('\r\n','\n')
+    return this.parse(owner,readFileSync(file,'utf8'))
+  }
+  parse(owner:string,source:string){
+    if(typeof source!=='string'||Buffer.byteLength(source,'utf8')>16*1024*1024)throw Error('记忆文件过大，请精简后重试。')
+    const value=source.replace(/^\uFEFF/u,'').replaceAll('\r\n','\n')
     const header=/<!-- ework-document:(.+?) -->/u.exec(value)
     if(!header)throw Error('记忆文件格式不完整，原文件已保留。')
     let meta:any;try{meta=JSON.parse(header[1]!)}catch{throw Error('记忆文件格式无效，原文件已保留。')}
@@ -30,8 +34,15 @@ export class MemoryDocument {
       ids.add(e.id);entries.push({...metadata,title:typeof multilineTitle==='string'&&titleHeading===match[2]!.trim()?multilineTitle:match[2]!.trim(),content:unprotect(match[3]!.trim())})
     }
     if(value.split('<!-- ework-memory:').length-1!==entries.length)throw Error('记忆条目尚未编辑完整，原文件已保留。')
-    const extra=value.split('\n## 手动补充\n').at(1)
-    if(extra){const groups=[...extra.matchAll(/^### ([^\n]+)\n([\s\S]*?)(?=^### |$(?![\s\S]))/gmu)];for(const g of groups)if(g[2]!.trim())entries.push({title:g[1]!.trim(),content:g[2]!.trim(),kind:'preference',scope:'global',status:'active',pinned:false})}
+    // Do not report a successful save while silently dropping text outside a memory block.
+    const remaining=value.replace(regex,'').replace(header[0],'')
+    const [preamble,...manualSections]=remaining.split('\n## 手动补充\n')
+    if(manualSections.length>1||preamble!.split('\n').some(line=>line.trim()&&!/^#{1,2} /u.test(line)&&line!=='修改条目正文可以更新记忆，删除整个条目可以移除记忆。原对话中的文字会保留。'))throw Error('请在已有记忆正文中修改，或在“手动补充”下使用“### 标题”和正文添加记忆。原文件已保留。')
+    const extra=manualSections[0]
+    if(extra){const groupPattern=/^### ([^\n]+)\n([\s\S]*?)(?=^### |$(?![\s\S]))/gmu,groups=[...extra.matchAll(groupPattern)]
+      if(extra.replace(groupPattern,'').split('\n').some(line=>line.trim()&&line!=='在这里添加三级标题（### 标题）和正文，新条目会保存为全局偏好。'))throw Error('新增记忆请使用“### 标题”和正文，原文件已保留。')
+      for(const g of groups){if(!g[2]!.trim())throw Error('记忆正文不能为空，原文件已保留。');entries.push({title:g[1]!.trim(),content:g[2]!.trim(),kind:'preference',scope:'global',status:'active',pinned:false})}
+    }
     if(entries.length>5000)throw Error('记忆条目超过上限，请拆分。')
     return {hash:digest(source),signature:meta.signature,entries}
   }

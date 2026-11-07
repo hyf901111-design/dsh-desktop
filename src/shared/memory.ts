@@ -7,17 +7,18 @@ export type MemoryProject = { id: string; name: string; path?: string; aliases: 
 export type MemorySettings = { use: boolean; auto: boolean; semantic?: boolean }
 export type MemoryRetrievalStatus = { state: 'idle' | 'loading' | 'ready' | 'fallback' | 'keyword'; message: string; indexed?: number }
 export type MemoryUsage = { id: string; sessionId: string; createdAt: number; entries: { id: string; revision: number; title: string; reason: string }[] }
-export type MemorySnapshot = { revision: number; owner: string; settings: MemorySettings; retrieval?: MemoryRetrievalStatus; projects: MemoryProject[]; rows: MemoryRecord[]; usages: MemoryUsage[]; session?: { id: string; projectId?: string; disabled: boolean }; document?: {directory:string;file:string;error?:string}; summary?: {state:'empty'|'waiting'|'pending'|'ready'|'failed';text:string;updatedAt?:number;model?:string;count:number}; extraction: { state: 'ready' | 'running' | 'failed'; message: string }; source?: MemorySource; legacy?: { id: string; title: string; content: string; createdAt: number }[] }
+export type MemorySnapshot = { revision: number; owner: string; settings: MemorySettings; retrieval?: MemoryRetrievalStatus; projects: MemoryProject[]; rows: MemoryRecord[]; usages: MemoryUsage[]; session?: { id: string; projectId?: string; disabled: boolean }; document?: {directory:string;file:string;error?:string;content?:string;hash?:string}; summary?: {state:'empty'|'waiting'|'pending'|'ready'|'failed';text:string;updatedAt?:number;model?:string;count:number}; extraction: { state: 'ready' | 'running' | 'failed'; message: string }; source?: MemorySource; legacy?: { id: string; title: string; content: string; createdAt: number }[] }
 export type MemoryInput = { title: string; content: string; kind: MemoryKind; scope: MemoryScope; projectId?: string; pinned?: boolean; expiresAt?: number; source?: MemorySource }
 export type MemoryCommand =
   | { type: 'snapshot'; sessionId?: string; query?: string }
   | { type: 'save'; id?: string; expectedRevision?: number; input: MemoryInput }
   | { type: 'action'; ids: string[]; action: 'delete' | 'disable' | 'enable' | 'accept' | 'ignore'; expectedRevisions?: Record<string, number> }
-  | { type: 'settings'; use?: boolean; auto?: boolean; semantic?: boolean }
+  | { type: 'settings'; use: boolean }
+  | { type: 'document-read' }
+  | { type: 'document-save'; content: string; expectedHash: string }
   | { type: 'rebuild-index' }
   | { type: 'project'; name: string; path?: string; sessionId?: string }
   | { type: 'bind'; sessionId: string; projectId?: string }
-  | { type: 'session'; sessionId: string; disabled: boolean }
   | { type: 'source'; id: string }
   | { type: 'legacy-preview' }
   | { type: 'import-legacy'; ids: string[]; projectId?: string }

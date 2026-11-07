@@ -72,15 +72,18 @@ describe('长期记忆真实行为',()=>{
     expect(updated.rows.find(r=>r.id===original.id)?.status).toBe('superseded')
     expect((await service.recall({sessionId:'b',query:'报告'})).candidates.map(r=>r.id)).toEqual([edited.id])
   })
-  it('preserves independent use/auto values across restart and respects each authorization',async()=>{
+  it('persists one global switch for both recall and capture across restart',async()=>{
     const {service,root}=await setup();await service.request({type:'save',input:preference()})
-    await service.request({type:'settings',auto:false});await service.close()
+    await service.request({type:'settings',use:false});await service.close()
     const resumed=(await setup(root)).service
-    expect((await resumed.request({type:'snapshot'})).settings).toMatchObject({use:true,auto:false})
-    expect((await resumed.recall({sessionId:'a',query:'报告'})).enabled).toBe(true)
-    expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后中文'}]})).enabled).toBe(false)
-    await resumed.request({type:'settings',use:false,auto:true})
-    expect((await resumed.recall({sessionId:'a',query:'报告'}))).toMatchObject({enabled:false,autoEnabled:true})
+    expect((await resumed.request({type:'snapshot'})).settings).toMatchObject({use:false,auto:false})
+    for(const sessionId of ['a','b']){
+      expect(await resumed.recall({sessionId,query:'报告'})).toMatchObject({enabled:false,autoEnabled:false,candidates:[]})
+      expect((await authorizedCapture(resumed,{sessionId,turnId:'1',events:[{seq:1,role:'user',text:'以后中文'}]})).enabled).toBe(false)
+    }
+    expect((await resumed.request({type:'snapshot'})).rows).toHaveLength(1)
+    await resumed.request({type:'settings',use:true})
+    for(const sessionId of ['a','b'])expect(await resumed.recall({sessionId,query:'报告'})).toMatchObject({enabled:true,autoEnabled:true})
     expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'2',events:[{seq:1,role:'user',text:'以后中文'}]})).enabled).toBe(true)
   })
   it('keeps raw retrieval candidates out of the old directly injectable block',async()=>{
@@ -167,7 +170,7 @@ describe('长期记忆真实行为',()=>{
     expect((await resumed.summaryCommit({...first,text:'旧进程的概括',model:'chosen'})).ok).toBe(false)
     expect((await resumed.summaryInput()).enabled).toBe(false)
     expect((await resumed.summaryCommit({...second,text:'恢复后的真实概括',model:'chosen'})).ok).toBe(true)
-    await resumed.request({type:'settings',use:false,auto:false})
+    await resumed.request({type:'settings',use:false})
     expect((await resumed.summaryInput()).enabled).toBe(false)
     expect((await resumed.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
     expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'2',events:[{seq:2,role:'user',text:'以后默认简短'}]})).enabled).toBe(false)
@@ -343,15 +346,14 @@ describe('长期记忆真实行为',()=>{
     await service.request({type:'save',input:{...preference('昨天进展'),kind:'progress',scope:'project',projectId:project.id,expiresAt:1}})
     expect((await service.recall({sessionId:'a',query:'进展'})).candidates).toHaveLength(0)
   })
-  it('supports independent use, auto and per-conversation switches',async()=>{
+  it('global disable invalidates queued extraction and no per-session switch remains',async()=>{
     const {service}=await setup();await service.request({type:'save',input:preference()})
+    const capture=await authorizedCapture(service,{sessionId:'a',turnId:'pause',events:[{seq:1,role:'user',text:'以后默认用中文回答'}]})
     await service.request({type:'settings',use:false})
-    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
-    await service.request({type:'settings',use:true,auto:false})
-    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(1)
-    expect((await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'记住我喜欢中文'}]})).enabled).toBe(false)
-    await service.request({type:'session',sessionId:'a',disabled:true})
-    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
+    await expect(service.commitExtraction({captureId:capture.captureId,candidates:[]})).rejects.toThrow(/失效/)
+    await expect(service.request({type:'session',sessionId:'a',disabled:true} as any)).rejects.toThrow(/未知/)
+    await service.request({type:'settings',use:true})
+    expect(await service.recall({sessionId:'a',query:'报告'})).toMatchObject({enabled:true,autoEnabled:true})
   })
   it('retains unbound project context as a candidate and makes duplicate capture idempotent',async()=>{
     const {service,setWorkspace}=await setup();setWorkspace(null)
@@ -407,4 +409,77 @@ it('rejects expired entries at final validation and does not record their usage'
  expect(await f.service.validate({sessionId:'expires',ownerEpoch:recalled.ownerEpoch,scopeEpoch:recalled.scopeEpoch,revision:recalled.revision,entries:[{id:row.id,revision:row.revision}]} as any)).toEqual({valid:false})
  await f.service.usage({sessionId:'expires',ownerEpoch:recalled.ownerEpoch,revision:recalled.revision,entries:recalled.candidates})
  expect((await f.service.request({type:'snapshot'})).usages).toHaveLength(0)
+})
+
+it('edits, adds and deletes through the document while preserving project isolation and restart persistence',async()=>{
+  const {service,root}=await setup()
+  const global=await service.request({type:'save',input:preference()})
+  const project=(await service.request({type:'project',name:'文档项目',path:'/tmp/document-project'})).projects[0]!
+  await service.request({type:'save',input:{title:'项目规范',content:'仅本项目使用特殊主题。',kind:'decision',scope:'project',projectId:project.id}})
+  const opened=(await service.request({type:'document-read'})).document!
+  expect(opened.content).not.toContain('ework-memory');expect(await readFile(opened.file,'utf8')).toContain('默认用中文回答')
+  const changed=opened.content!.replace('默认用中文回答','默认用中文回答，先给结论。')+'\n---\n\n## 排版偏好\n\n报告使用短段落。\n'
+  const saved=await service.request({type:'document-save',content:changed,expectedHash:opened.hash!})
+  expect(saved.rows.find(row=>row.id===global.rows[0]!.id)).toMatchObject({revision:2,content:'默认用中文回答，先给结论。',manualLocked:true})
+  expect(saved.rows.find(row=>row.title==='项目规范')).toMatchObject({scope:'project',projectId:project.id,revision:1})
+  expect(saved.rows.find(row=>row.title==='排版偏好')).toMatchObject({scope:'global',status:'active'})
+  expect(saved.document!.hash).not.toBe(opened.hash)
+  expect((await service.recall({sessionId:'unrelated',query:'主题'})).candidates.map(row=>row.title)).not.toContain('项目规范')
+  const beforeRestart=(await service.request({type:'document-read'})).document!.content
+  await service.close();const resumed=(await setup(root)).service
+  const reopened=(await resumed.request({type:'document-read'})).document!
+  expect(reopened.content).toBe(beforeRestart)
+  const removed=reopened.content!.replace(/## 回答语言\n[\s\S]*?(?=\n---|$)/u,'')
+  const result=await resumed.request({type:'document-save',content:removed,expectedHash:reopened.hash!})
+  expect(result.rows.some(row=>row.id===global.rows[0]!.id)).toBe(false)
+  expect(result.document!.content).not.toContain('先给结论')
+})
+it('rejects malformed documents and stale editor hashes without changing the latest file or records',async()=>{
+  const {service}=await setup();await service.request({type:'save',input:preference()})
+  const opened=(await service.request({type:'document-read'})).document!
+  const originalFile=await readFile(opened.file,'utf8')
+  for(const invalid of [opened.content!.replace('默认用中文回答',''),opened.content!.replace('默认用中文回答','x'.repeat(601))]){
+    await expect(service.request({type:'document-save',content:invalid,expectedHash:opened.hash!})).rejects.toThrow()
+    expect(await readFile(opened.file,'utf8')).toBe(originalFile)
+    expect((await service.request({type:'snapshot'})).rows[0]!.content).toBe('默认用中文回答')
+  }
+  await service.request({type:'save',input:{...preference('新的自动保存内容'),title:'新记忆'}})
+  const latest=await readFile(opened.file,'utf8')
+  await expect(service.request({type:'document-save',content:opened.content!.replace('中文','英文'),expectedHash:opened.hash!})).rejects.toThrow(/文档已更新/)
+  expect(await readFile(opened.file,'utf8')).toBe(latest)
+})
+it('detects external edits before an editor save and rejects a document from another account',async()=>{
+  const {service,setOwner}=await setup();await service.request({type:'save',input:preference()})
+  const opened=(await service.request({type:'document-read'})).document!
+  await writeFile(opened.file,(await readFile(opened.file,'utf8')).replace('中文','日文'))
+  await expect(service.request({type:'document-save',content:opened.content!,expectedHash:opened.hash!})).rejects.toThrow(/文档已更新/)
+  expect((await service.request({type:'snapshot'})).rows[0]!.content).toBe('默认用日文回答')
+  setOwner('another')
+  const second=(await service.request({type:'document-read'})).document!
+  await expect(service.request({type:'document-save',content:opened.content!,expectedHash:opened.hash!})).rejects.toThrow(/已更新/)
+  expect((await service.request({type:'document-read'})).document!.content).toBe(second.content)
+  expect((await service.request({type:'snapshot'})).rows).toHaveLength(0)
+})
+it('migrates old partial or per-session pauses conservatively and removes invisible session exceptions',async()=>{
+  for(const legacy of [{use:true,auto:false,disabled:{}},{use:false,auto:true,disabled:{}},{use:true,auto:true,disabled:{a:true}},{use:true,auto:true,disabled:{}}]){
+    const {service,root}=await setup();await service.request({type:'save',input:preference()});await service.close()
+    const {MemoryStore}=await import('../src/main/memory/store'),store=await MemoryStore.open(root,encryption)
+    const state=store.read<any>('local')!;delete state.settingsVersion;state.settings={use:legacy.use,auto:legacy.auto,semantic:false};state.disabled=legacy.disabled;store.write('local',state);store.close()
+    const resumed=(await setup(root)).service,expected=legacy.use&&legacy.auto&&!('a' in legacy.disabled)
+    expect((await resumed.request({type:'snapshot',sessionId:'a'}))).toMatchObject({settings:{use:expected,auto:expected,semantic:true},session:{disabled:false}})
+    await resumed.request({type:'settings',use:true})
+    for(const sessionId of ['a','b'])expect(await resumed.recall({sessionId,query:'报告'})).toMatchObject({enabled:true,autoEnabled:true})
+    expect((await resumed.request({type:'snapshot'})).rows).toHaveLength(1)
+  }
+})
+
+it('confirming a candidate in Markdown replaces its conflicting active memory',async()=>{
+  const {service}=await setup();const original=(await service.request({type:'save',input:preference()})).rows[0]!
+  const capture=await authorizedCapture(service,{sessionId:'a',turnId:'confirm-md',events:[{seq:1,role:'user',text:'以后默认用英文回答'}]})
+  await service.commitExtraction({captureId:capture.captureId,candidates:[{title:'回答语言',content:'默认用英文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用英文回答',explicit:true}]})
+  const snapshot=await service.request({type:'document-read'}),candidate=snapshot.rows.find(row=>row.status==='candidate')!
+  const confirmed=await service.request({type:'document-save',content:snapshot.document!.content!.replace('## 待确认 · 回答语言','## 回答语言（新约定）'),expectedHash:snapshot.document!.hash!})
+  expect(confirmed.rows.find(row=>row.id===candidate.id)).toMatchObject({status:'active',manualLocked:true})
+  expect(confirmed.rows.find(row=>row.id===original.id)?.status).toBe('superseded')
+  expect((await service.recall({sessionId:'b',query:'回答语言'})).candidates.map(row=>row.id)).toEqual([candidate.id])
 })
