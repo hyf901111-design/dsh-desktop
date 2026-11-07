@@ -19,11 +19,15 @@ function sourcePayload(mapping,responses,now,scope=responses,cohort=[scope],mode
  if(!object(mapping))return false
  // Numeric text defaults/prefixes cannot turn a source omission into a value.
  if(['$prefix','$suffix'].some(key=>typeof mapping[key]==='string'&&/\d/u.test(mapping[key])))return false
+ if(Object.hasOwn(mapping,'$calc')){
+  evaluateMapping(mapping,responses,now,scope)
+  return mapping.$calc.args.every(arg=>sourcePayload(arg,responses,now,scope,cohort))
+ }
  const source=mapping.$from===undefined?scope:responses[mapping.$from]
  if(source===undefined)return false
  const each=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
  if(each!==undefined){
-  const {$map,$path,$normalize,$digits,$scale,$as,$prefix,$suffix,$single,...select}=mapping
+  const {$map,$path,$normalize,$reduce,$digits,$scale,$as,$prefix,$suffix,$single,...select}=mapping
   const rows=evaluateMapping({...select,$each:each,$map:{$path:''}},responses,now,scope)
   const child=$map??(mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:undefined)
   if(!Array.isArray(rows)||!rows.length||child===undefined)return false
