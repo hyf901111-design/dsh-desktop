@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图表底部紧凑收纳与小高度适配",
+        "featureName": "组件详情固定页签与来源字段选择修复",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "170cace2f797df74f53ecd1c5c0d617427adcb33",
-        "tipCommit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
+        "baseCommit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
+        "tipCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
         "commits": [
           {
-            "commit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
+            "commit": "cf4d21a2399edbe72926fd34d5c9ae0badb87772",
             "parents": [
-              "170cace2f797df74f53ecd1c5c0d617427adcb33"
+              "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9"
             ],
-            "subject": "优化图表底部收纳布局并保证紧凑卡片展开入口可见"
+            "subject": "修复组件日期首末值选取并完善多标的统计映射指导"
+          },
+          {
+            "commit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
+            "parents": [
+              "cf4d21a2399edbe72926fd34d5c9ae0badb87772"
+            ],
+            "subject": "将组件明细与口径改为固定页签并统一线性展开箭头"
           }
         ],
         "files": [
@@ -29,19 +36,23 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-derived-values.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/cartesian-chart-axis-precision.test.js"
+            "path": "test/component-derived-values.test.js"
           },
           {
             "status": "M",
@@ -49,7 +60,7 @@
           },
           {
             "status": "M",
-            "path": "test/stored-template-refinements.test.js"
+            "path": "test/component-reading-footer.test.js"
           }
         ],
         "checks": [
@@ -66,26 +77,42 @@
               "test/cartesian-chart-axis-precision.test.js"
             ],
             "outcome": "passed",
-            "summary": "154项相关检查通过；包含真实卡片566×303视口、明细展开排序列宽、历史卡片精度与交互兼容。",
-            "verifiedCommit": "7911f7fc0dda03e562522cc0f4a0f42ff78b8ac9",
-            "completedAt": "2026-11-07T06:05:02.333Z",
+            "summary": "156项相关检查通过；固定页签、线性箭头、旧展开记录兼容、真实566×303尺寸及窄卡片深浅主题表格交互。",
+            "verifiedCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
+            "completedAt": "2026-11-07T06:36:48.658Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/component-derived-values.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-data-submission.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "183项相关检查通过；来源日期首末值选择及多标的数值统计映射。",
+            "verifiedCommit": "79910702b2f6b14bfe793baf30ae39ab19e96882",
+            "completedAt": "2026-11-07T06:36:48.659Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器复现并修复紧凑卡片折叠入口超出视口；真实客户端将在本地集成包验证。"
+          "summary": "浏览器已验证页签始终同排、单面板切换与旧记录兼容；真实客户端在本地集成包复核。"
         },
         "acceptanceCriteria": [
-          "完整数据与口径入口并排紧凑呈现",
-          "真实紧凑卡片尺寸下两入口均可见",
-          "展开保留原始字段和数值，旧卡片可获得相同布局"
+          "完整数据和口径与来源始终同排，切换只替换下方内容",
+          "展开收起使用线性箭头，保留表格排序与列宽调整",
+          "旧卡片的数据与原交互记录保留"
         ],
         "risks": [
-          "密集长图表仍允许自然滚动，不压缩到不可阅读。",
-          "真实模型对旧卡片修改的耗时和字段保留另行记录，不以布局检查替代。"
+          "只精简展示层，不改写已有来源数据。",
+          "实际模型多标的生成效果仍需另外评估，字段映射单测不能替代生成成功率。"
         ],
-        "generatedAt": "2026-11-07T06:05:02.333Z"
+        "generatedAt": "2026-11-07T06:36:48.659Z"
       }
     },
     {
