@@ -88,7 +88,7 @@ export class MemoryService {
     }catch(error){this.documentError={owner,message:error instanceof Error?error.message:'记忆文件暂不可读取，原文件已保留。'};return original}
   }
   private applyDocumentEntries(state:State,entries:DocumentEntry[]){
-      const retained=new Set<string>(),now=this.now()
+      const retained=new Set<string>(),accepted:string[]=[],now=this.now()
       for(const entry of entries){const old=entry.id?state.rows[entry.id]:undefined
         if(entry.id&&!old)throw Error('记忆文件中有未知条目，原文件已保留。')
         if(old&&entry.revision!==old.revision)throw Error('记忆条目版本已更新，请重新读取。')
@@ -96,8 +96,10 @@ export class MemoryService {
         if(old)retained.add(old.id)
         if(old&&JSON.stringify([entry.title,entry.content,entry.kind,entry.scope,entry.projectId,entry.status,entry.pinned,entry.expiresAt])===JSON.stringify([old.title,old.content,old.kind,old.scope,old.projectId,old.status,old.pinned,old.expiresAt]))continue
         const row=this.save(state,{...entry,source:{kind:'manual',title:'记忆.md中编辑',excerpt:entry.content,createdAt:now}},old,entry.status,true)
+        if(old?.status==='candidate'&&row.status==='active')accepted.push(row.id)
         retained.add(row.id);state.suppression=state.suppression.filter(s=>s.key!==this.hash(state,row.semanticKey)&&s.content!==this.hash(state,row.content))
       }
+      for(const id of accepted.reverse()){const row=state.rows[id]!;if(row.status!=='active')continue;for(const other of Object.values(state.rows))if(other.id!==id&&other.status==='active'&&other.scope===row.scope&&other.projectId===row.projectId&&other.semanticKey===row.semanticKey){other.status='superseded';other.updatedAt=now;other.revision++}}
       let purge=false
       for(const row of Object.values(state.rows))if(!retained.has(row.id)){
         state.suppression.push({key:this.hash(state,row.semanticKey),content:this.hash(state,row.content)})

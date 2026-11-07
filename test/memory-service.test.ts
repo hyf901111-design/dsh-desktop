@@ -472,3 +472,14 @@ it('migrates old partial or per-session pauses conservatively and removes invisi
     expect((await resumed.request({type:'snapshot'})).rows).toHaveLength(1)
   }
 })
+
+it('confirming a candidate in Markdown replaces its conflicting active memory',async()=>{
+  const {service}=await setup();const original=(await service.request({type:'save',input:preference()})).rows[0]!
+  const capture=await authorizedCapture(service,{sessionId:'a',turnId:'confirm-md',events:[{seq:1,role:'user',text:'以后默认用英文回答'}]})
+  await service.commitExtraction({captureId:capture.captureId,candidates:[{title:'回答语言',content:'默认用英文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用英文回答',explicit:true}]})
+  const snapshot=await service.request({type:'document-read'}),candidate=snapshot.rows.find(row=>row.status==='candidate')!
+  const confirmed=await service.request({type:'document-save',content:snapshot.document!.content!.replace('## 待确认 · 回答语言','## 回答语言（新约定）'),expectedHash:snapshot.document!.hash!})
+  expect(confirmed.rows.find(row=>row.id===candidate.id)).toMatchObject({status:'active',manualLocked:true})
+  expect(confirmed.rows.find(row=>row.id===original.id)?.status).toBe('superseded')
+  expect((await service.recall({sessionId:'b',query:'回答语言'})).candidates.map(row=>row.id)).toEqual([candidate.id])
+})
