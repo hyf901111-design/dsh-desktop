@@ -116,6 +116,32 @@ it('treats a disabled use switch as a quiet request without memory',async()=>{
  expect(f.calls[0].messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false);expect(f.warnings).toEqual([])
 })
 
+it('communicates an empty lookup without leaking rejected facts or changing normal tools',async()=>{
+ const f=await fixture();f.control.evidenceMode='unsupported'
+ const tools=[{name:'read',description:'Read a user supplied document',parameters:{type:'object',properties:{}}}]
+ const messages=[createUserMessage({content:[{type:'text',text:'青禾项目最终确定的上线日期是几月几日？'}],source:{kind:'user'}})]
+ const base={provider:'selected-provider',model:'selected-model',system:'Preserve the existing system instructions.',messages,tools,maxTokens:256},signal=new AbortController().signal
+ await f.memoryHooks['agent/pre-step']({agent:f.agent,turn:1,signal},async()=>({kind:'enter',messages}))
+ const request=await f.memoryHooks['agent/request-context']({agent:f.agent,turn:1,request:base,contextWindow:16000,signal},async()=>base)
+ expect(request.system).toContain('[ework-memory-status:empty]')
+ expect(request.system).toContain(base.system)
+ expect(request.messages).toEqual(messages)
+ expect(request.tools).toEqual(tools)
+ expect(JSON.stringify(request)).not.toContain(f.control.memory)
+ expect(f.wire.some(call=>call.path==='/usage'&&call.body.entries.length)).toBe(false)
+ expect(JSON.stringify(f.agent.session.events)).not.toContain('[ework-memory-status:')
+})
+
+it('distinguishes disabled and unavailable memory from a completed empty lookup',async()=>{
+ for(const mode of ['disabled','unavailable']){
+  const f=await fixture()
+  if(mode==='disabled')f.control.enabled=false;else f.control.evidenceMode='malformed'
+  await f.turn('我之前约定的报告格式是什么？')
+  expect(f.calls.find(call=>!call.purpose).system).toContain(`[ework-memory-status:${mode}]`)
+  expect(f.wire.some(call=>call.path==='/usage'&&call.body.entries.length)).toBe(false)
+ }
+})
+
 it('binds queued completed turns before an identity or project switch can retarget extraction', async () => {
   const f = await fixture()
   let release, started

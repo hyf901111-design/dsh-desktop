@@ -7,6 +7,7 @@ import {parseEditableMemory,renderEditableMemory} from './editable-document'
 import { MemoryStore, type MemoryEncryption } from './store'
 import { LocalMemoryEngine, type MemorySemanticProvider, type LocalMemoryConfig } from './semantic'
 import { splitMemoryImport } from './import'
+import { unresolvedMemoryReference } from './capture-policy'
 import { canonicalMemoryKey, MemoryRetriever, normalizedMemoryText, MEMORY_BACKGROUND_INTRO } from './retriever'
 
 type Summary = {signature:string;scopeEpoch:number;state:'pending'|'ready'|'failed';text?:string;updatedAt?:number;model?:string;attempts:number;ownerEpoch?:string}
@@ -291,6 +292,7 @@ export class MemoryService {
       const source=capture.turn.events.find(e=>e.seq===candidate.sourceSeq&&e.role==='user')
       if(!source||typeof candidate.evidence!=='string'||!candidate.evidence.trim()||!source.text.includes(candidate.evidence)||secretContent(candidate.evidence))continue
       const evidence=candidate.evidence.trim()
+      if(unresolvedMemoryReference(evidence))continue
       if(/^\s*>|```|引用(?:网页|文档|文章|原文)|(?:网页|文档|文章|他说|她说).{0,10}[:：]|<external_/imu.test(source.text))continue
       // Judge the complete source; an extractor cannot remove temporary qualifiers.
       if(/这次|本次|临时|这回|this time|for now|temporarily/iu.test(source.text))continue

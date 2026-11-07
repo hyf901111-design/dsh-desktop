@@ -26,6 +26,36 @@ afterEach(async()=>{for(const s of stores.splice(0))await s.close();for(const r 
 
 describe('长期记忆真实行为',()=>{
 
+  it.each([
+    '按我习惯的格式整理一份简短工作周报',
+    '以后沿用之前的模板写周报。',
+    '今后还是按原来的偏好来。',
+    '以后跟上次一样安排。',
+    'Always use my usual format for weekly reports.',
+    'Remember to keep the same preferences as before.'
+  ])('does not save an unresolved reference as a new preference: %s',async evidence=>{
+    const {service}=await setup()
+    const original=(await service.request({type:'save',input:preference('每次周报按本周进展、风险、下周计划组织。')})).rows[0]!
+    const capture=await authorizedCapture(service,{sessionId:'daily',turnId:'1',events:[{seq:7,role:'user',text:evidence}]})
+    await service.commitExtraction({captureId:capture.captureId,candidates:[{title:'周报格式',content:evidence,kind:'preference',scope:'global',sourceSeq:7,evidence,explicit:true}]})
+    expect((await service.request({type:'snapshot'})).rows).toEqual([original])
+    expect((await service.pending()).items).toEqual([])
+  })
+
+  it.each([
+    '我习惯先给结论，再解释原因。',
+    '以后周报沿用之前的模板：本周进展、风险、下周计划。',
+    '以后按我习惯的方式，先写结论，再列三条依据。',
+    '以后沿用之前的模板并附上风险清单。',
+    'Always use my usual format but include a risk checklist.',
+    'I prefer my usual format: progress, risks, and next steps.'
+  ])('preserves a stated preference even when its source also references a habit: %s',async evidence=>{
+    const {service}=await setup()
+    const capture=await authorizedCapture(service,{sessionId:'daily',turnId:'1',events:[{seq:7,role:'user',text:evidence}]})
+    await service.commitExtraction({captureId:capture.captureId,candidates:[{title:'表达习惯',content:evidence,kind:'preference',scope:'global',sourceSeq:7,evidence,explicit:true}]})
+    expect((await service.request({type:'snapshot'})).rows).toEqual([expect.objectContaining({content:evidence,status:'active'})])
+  })
+
   it('only enables disabled records and accepts candidates without reviving superseded memories',async()=>{
     const {service}=await setup()
     const original=(await service.request({type:'save',input:preference()})).rows[0]!
