@@ -306,7 +306,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
    data.asOf=dates.reduce((a,b)=>a>b?a:b)+' · 数据截至最后交易日'
   }
  }
- data=normalizeChartMetadata(applyObservedPresentation(data,metadata))
+ data=normalizeChartMetadata(applyObservedPresentation(data,metadata,candle?undefined:asOf))
  // Multiple source selections naturally produce groups of item records. The
  // template owns a flat item list; preserve every record and its source order.
  // Never flatten table rows or arrays of scalar field values.
