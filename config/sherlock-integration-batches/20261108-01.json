@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-01",
+  "branch": "codex/integration/20261108-01",
+  "baseMainCommit": "489bfa0098fa469f6b6070902d4fd2e67656728f",
+  "expectedMainCommit": "489bfa0098fa469f6b6070902d4fd2e67656728f",
+  "createdAt": "2026-11-07T21:52:43.123Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "历史消息原会话重发、组件生成可靠性及随机壁纸分页",
+        "branch": "codex/feat/history-edit-board-fill-20261107",
+        "baseCommit": "489bfa0098fa469f6b6070902d4fd2e67656728f",
+        "tipCommit": "922e205e5fd31eb58d2b7b587919de5c9936b654",
+        "commits": [
+          {
+            "commit": "d7ead557905cf45f2b65cafe618e517f89235589",
+            "parents": [
+              "489bfa0098fa469f6b6070902d4fd2e67656728f"
+            ],
+            "subject": "修复：历史消息在原对话重发并铺满工作台生成占位"
+          },
+          {
+            "commit": "a9531b78bf6a85efd8162a97ea77d79b9d30b812",
+            "parents": [
+              "d7ead557905cf45f2b65cafe618e517f89235589"
+            ],
+            "subject": "优化：按真实数据组织组件并修复行情路由和财报重复记录失败"
+          },
+          {
+            "commit": "922e205e5fd31eb58d2b7b587919de5c9936b654",
+            "parents": [
+              "a9531b78bf6a85efd8162a97ea77d79b9d30b812"
+            ],
+            "subject": "功能：探索页新增五分钟随机壁纸与整页滚动切换"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-07-component-generation-reliability.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/message-edit.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/home-theme-preferences.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-icons/wallpaper-random-disc.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-operations-icons/wallpaper-random.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-controls.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-gallery.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-generation-reliability.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/explore-random-wallpapers-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-preferences.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/message-edit-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/message-edit-host.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/message-edit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-generation-fill-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/message-edit.test.js",
+              "test/message-edit-host.test.js",
+              "test/message-edit-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-generation-fill-browser.test.js",
+              "test/component-generation-reliability.test.js",
+              "test/workbench-library.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/financial-widget-contract.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-controls.test.ts",
+              "test/home-theme-preferences.test.ts",
+              "test/home-operations-navigation.test.ts",
+              "test/explore-random-wallpapers-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  17 passed (17)\n      Tests  331 passed (331)\n   Start at  23:12:59\n   Duration  14.00s (transform 8.05s, setup 0ms, import 16.57s, tests 37.31s, environment 1ms)",
+            "verifiedCommit": "922e205e5fd31eb58d2b7b587919de5c9936b654",
+            "completedAt": "2026-11-07T15:13:14.012698+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "922e205e5fd31eb58d2b7b587919de5c9936b654",
+            "completedAt": "2026-11-07T15:13:23.805695+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "922e205e5fd31eb58d2b7b587919de5c9936b654",
+            "completedAt": "2026-11-07T15:13:23.821797+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实序列化客户端浏览器检查：双页签排队及部分完成铺满；历史编辑交互；探索页1600×1000和850×700随机首卡、双向滚轮、锚点、键盘切页，Figma4462:372628及4462:372224对照。浏览器无相关运行错误。未进行已安装原生客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "历史编辑去除提示文字并在原session发送，不创建分支",
+          "生成卡首次挂载铺满规划格位且分批完成不跳动",
+          "单标的原生行情selectedSymbol不触发模型重建，完全重复记录及等价交易日期安全处理",
+          "完整及单卡规则统一需求→数据→呈现，模板提供视觉与交互指导",
+          "随机壁纸首卡，300000ms轮换且不连续重复，手选停止并持久化模式",
+          "整页滚轮加速切换，右侧页码锚点及键盘可用，页头固定"
+        ],
+        "risks": [
+          "未调用线上模型重做工作台，不能宣称全局失败率或零失败；旧失败用户卡片未改写",
+          "未构建/替换共享客户端，未合入main，需遵守多会话集成验收流程",
+          "额外旧布局测试research-grid-additions和workbench-semantic-layout因既有补丁锚点漂移阻塞；本次布局由真实序列化客户端浏览器验证覆盖"
+        ],
+        "generatedAt": "2026-11-07T15:13:23.821842+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/message-edit.test.js",
+        "test/message-edit-host.test.js",
+        "test/message-edit-browser.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/workbench-generation-fill-browser.test.js",
+        "test/component-generation-reliability.test.js",
+        "test/workbench-library.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/financial-widget-contract.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/home-theme-controller.test.ts",
+        "test/home-theme-controls.test.ts",
+        "test/home-theme-preferences.test.ts",
+        "test/home-operations-navigation.test.ts",
+        "test/explore-random-wallpapers-browser.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
