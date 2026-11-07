@@ -11,89 +11,25 @@
         "schemaVersion": 1,
         "featureName": "组件库复用、节点联动与真实页签工作台",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "1a57c7f7856a043df46616bd32f0015f906298f1",
-        "tipCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+        "baseCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+        "tipCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
         "commits": [
           {
-            "commit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
+            "commit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
             "parents": [
-              "1a57c7f7856a043df46616bd32f0015f906298f1"
+              "55a4c049af00cce96d1712b95cafa9ae2f1848e1"
             ],
-            "subject": "完善多页签组件复用与多源财务缺项容错"
+            "subject": "保留研究组件原数据并在同一任务内校验修复呈现"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-fund-research-runtime/financial-tool.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-derived-values.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-library.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/workbench-auto-arrange.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/component-library.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-refresh.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-derived-values.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-routing.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-library.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
+            "path": "test/component-data-submission.test.js"
           }
         ],
         "checks": [
@@ -102,47 +38,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-derived-values.test.js",
-              "test/workbench-library.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/financial-routing.test.js",
-              "test/research-board-generation.test.ts"
+              "test/note-component-repair.test.js",
+              "test/component-data-submission.test.js",
+              "test/binding-repair-policy-dedup.test.js"
             ],
             "outcome": "passed",
-            "summary": "247项聚焦检查通过",
-            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
-            "completedAt": "2026-11-07T11:09:00.157Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/workbench-planning-phase.test.js",
-              "test/workbench-library.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "83项规划与组件库检查通过，与上一组重叠6项",
-            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
-            "completedAt": "2026-11-07T11:09:00.157Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-workbench.test.js",
-              "-t",
-              "accepts an explicitly requested single panel|patches the shipped canvas mount guard"
-            ],
-            "outcome": "passed",
-            "summary": "2项单卡与30卡挂载边界检查通过；合计326项不同检查",
-            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
-            "completedAt": "2026-11-07T11:09:00.157Z",
+            "summary": "85项同子会话修复和来源校验聚焦检查通过",
+            "verifiedCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
+            "completedAt": "2026-11-07T11:29:46.513Z",
             "timeoutMs": 180000
           },
           {
@@ -153,14 +56,14 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
-            "completedAt": "2026-11-07T11:09:00.157Z",
+            "verifiedCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
+            "completedAt": "2026-11-07T11:29:46.513Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一候选acdc8c83已通过真实客户端自选股联动行情、新闻和公告；本次补充多源缺项与多页签容量修复，尚待新包复验，仅previewOnly，不做accept或promote。"
+          "summary": "72cf09bb已通过真实三页签、九张原生卡和六条联动实测。本次补齐数据组件同子会话修复，需新包复验，仅previewOnly。"
         },
         "acceptanceCriteria": [
           "直接复用六类原生组件，无子模型任务",
@@ -171,7 +74,7 @@
         "risks": [
           "需在打包客户端复验模型规划与交互；不保证所有模型首次提交正确"
         ],
-        "generatedAt": "2026-11-07T11:09:00.157Z"
+        "generatedAt": "2026-11-07T11:29:46.513Z"
       }
     },
     {
