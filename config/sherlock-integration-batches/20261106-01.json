@@ -9,27 +9,78 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件库复用、节点联动与真实页签工作台",
+        "featureName": "组件库复用后的财务数据与呈现修正",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "55a4c049af00cce96d1712b95cafa9ae2f1848e1",
-        "tipCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
+        "baseCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
+        "tipCommit": "cb784d4da33d140c73a3567d365318299dcba380",
         "commits": [
           {
-            "commit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
+            "commit": "3583fe385d2ebb7425bfcd7b5f3d19ee12be3225",
             "parents": [
-              "55a4c049af00cce96d1712b95cafa9ae2f1848e1"
+              "ed550b2e41c06188c29b43670a8d55ce83a6501a"
             ],
-            "subject": "保留研究组件原数据并在同一任务内校验修复呈现"
+            "subject": "记录组件库复用、节点联动及三页签工作台实测结果"
+          },
+          {
+            "commit": "cb784d4da33d140c73a3567d365318299dcba380",
+            "parents": [
+              "3583fe385d2ebb7425bfcd7b5f3d19ee12be3225"
+            ],
+            "subject": "修正财务指标单位换算、报告期格式与窄卡排版"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "status": "A",
+            "path": "docs/verification/2026-11-07-financial-kpi-quality.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/verification/2026-11-07-workbench-library-reuse.md"
           },
           {
             "status": "M",
-            "path": "test/component-data-submission.test.js"
+            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-unit-projection.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/kpi-value-format.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/component-unit-projection.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/kpi-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
           }
         ],
         "checks": [
@@ -38,14 +89,31 @@
               "npx",
               "vitest",
               "run",
-              "test/note-component-repair.test.js",
+              "test/component-unit-projection.test.js",
               "test/component-data-submission.test.js",
-              "test/binding-repair-policy-dedup.test.js"
+              "test/component-observed-presentation.test.js",
+              "test/kpi-template.test.js",
+              "test/workbench-kpi-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "85项同子会话修复和来源校验聚焦检查通过",
-            "verifiedCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
-            "completedAt": "2026-11-07T11:29:46.513Z",
+            "summary": "75项财务单位、绑定、指标与刷新检查通过",
+            "verifiedCommit": "cb784d4da33d140c73a3567d365318299dcba380",
+            "completedAt": "2026-11-07T11:59:58.861Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/stored-template-refinements.test.js",
+              "-t",
+              "KPI"
+            ],
+            "outcome": "passed",
+            "summary": "2项保存指标与客户端序列化检查通过",
+            "verifiedCommit": "cb784d4da33d140c73a3567d365318299dcba380",
+            "completedAt": "2026-11-07T11:59:58.861Z",
             "timeoutMs": 180000
           },
           {
@@ -56,25 +124,26 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "ed550b2e41c06188c29b43670a8d55ce83a6501a",
-            "completedAt": "2026-11-07T11:29:46.513Z",
+            "verifiedCommit": "cb784d4da33d140c73a3567d365318299dcba380",
+            "completedAt": "2026-11-07T11:59:58.861Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "72cf09bb已通过真实三页签、九张原生卡和六条联动实测。本次补齐数据组件同子会话修复，需新包复验，仅previewOnly。"
+          "summary": "已完成四组浏览器深浅主题与窄卡呈现检查；新包及原工作台内容仍待复验，仅previewOnly。"
         },
         "acceptanceCriteria": [
-          "直接复用六类原生组件，无子模型任务",
-          "真实页签、独立布局和节点联动",
-          "超出原生能力保留数据生成需求",
-          "资讯缺失可选时点不丢失真实内容"
+          "明确来源单位在舍入前正确换算且刷新一致",
+          "报告期和代码不误用数值格式",
+          "窄卡两列且数值无溢出",
+          "保留原数据与交互路径"
         ],
         "risks": [
-          "需在打包客户端复验模型规划与交互；不保证所有模型首次提交正确"
+          "旧市值快照需要正常更新流程修正",
+          "既有排名轴测试与基线刻度实现不一致，本次未修改"
         ],
-        "generatedAt": "2026-11-07T11:29:46.513Z"
+        "generatedAt": "2026-11-07T11:59:58.861Z"
       }
     },
     {
