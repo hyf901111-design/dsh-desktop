@@ -9,23 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "复用已验证请求减少参数抄写重试",
+        "featureName": "关联图表真实明细并精简指标卡重复信息",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "343e23c1688afd8e1de4f525b21a6250d59ad8e0",
-        "tipCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
+        "baseCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
+        "tipCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
         "commits": [
           {
-            "commit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
+            "commit": "ccdfe55d068b10127f592e7288bb5d7b085a6f61",
             "parents": [
-              "343e23c1688afd8e1de4f525b21a6250d59ad8e0"
+              "ae0c449f8a4040c8de23de380eabcc68fb3ac80e"
             ],
-            "subject": "复用组件已验证请求并减少参数抄写重试"
+            "subject": "按真实记录关联图表明细，减少列顺序造成的生成重试"
+          },
+          {
+            "commit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
+            "parents": [
+              "ccdfe55d068b10127f592e7288bb5d7b085a6f61"
+            ],
+            "subject": "精简指标卡重复详情并使用真实统计时点"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/chart-detail-projection.js"
+          },
+          {
             "status": "M",
-            "path": "docs/verification/2026-11-07-research-workbench-quality.md"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
@@ -33,7 +44,35 @@
           },
           {
             "status": "M",
-            "path": "test/component-data-submission.test.js"
+            "path": "packages/dsh-research-task-runtime/component-provenance-display.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "test/chart-detail-projection.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-data-time.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/kpi-template.test.js"
           }
         ],
         "checks": [
@@ -42,14 +81,18 @@
               "npx",
               "vitest",
               "run",
+              "test/chart-detail-projection.test.js",
               "test/component-data-submission.test.js",
-              "test/component-source-snapshot-chart.test.js",
-              "test/component-source-binding.test.js"
+              "test/component-source-binding.test.js",
+              "test/kpi-template.test.js",
+              "test/component-data-time.test.js",
+              "test/component-source-metadata.test.js",
+              "test/component-reading-footer.test.js"
             ],
             "outcome": "passed",
-            "summary": "128项聚焦检查通过，包含唯一请求复用、歧义拒绝、配方完整持久化和实际子任务完成路径",
-            "verifiedCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
-            "completedAt": "2026-11-07T09:46:39.768Z",
+            "summary": "163项聚焦检查通过，覆盖同源明细关联、真实时点、指标详情与原有提交边界",
+            "verifiedCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
+            "completedAt": "2026-11-07T10:10:26.854Z",
             "timeoutMs": 180000
           },
           {
@@ -60,24 +103,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "ae0c449f8a4040c8de23de380eabcc68fb3ac80e",
-            "completedAt": "2026-11-07T09:46:39.768Z",
+            "verifiedCommit": "20045e5cfa159148d48a11a0c153c3a973e0a509",
+            "completedAt": "2026-11-07T10:10:26.854Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本次仅修改宿主提交协议，无直接界面样式变更；实际客户端生成效果在预览包复验，不由聚焦检查推断"
+          "outcome": "passed",
+          "summary": "Browser plugin not available；Playwright Chromium实际渲染原ETF记录，深浅色360/656px无横向溢出，同排指标对齐，鼠标和键盘展开收起通过，无页面错误；证据/tmp/kpi-reading-preview.json。真实打包生成另验。"
         },
         "acceptanceCriteria": [
-          "唯一业务请求可省略参数并保留完整来源配方",
-          "多请求必须明确选择",
-          "显式错误参数与其他组件数据仍拒绝"
+          "图表同源同筛选排序明细完整关联，不混合不同记录",
+          "指标详情不重复名称数值单位，缺失和原精度保留",
+          "统计时点不使用请求获取时间"
         ],
         "risks": [
           "需在打包客户端复验新生成，不保证所有模型首次提交正确"
         ],
-        "generatedAt": "2026-11-07T09:46:39.768Z"
+        "generatedAt": "2026-11-07T10:10:26.854Z"
       }
     },
     {
