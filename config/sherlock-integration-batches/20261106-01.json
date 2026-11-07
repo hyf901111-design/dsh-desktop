@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "指数比较日期排版与真实取数映射修正",
+        "featureName": "混合字段显示精度兼容",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
-        "tipCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
+        "baseCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
+        "tipCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
         "commits": [
           {
-            "commit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
+            "commit": "572f257602038a0e96261c607786ddb2d32d3f28",
             "parents": [
-              "81787ddad65a9d18d7c78e1a71b126dd4f81d2af"
+              "bf5fac584d8a7e5a92023a2ef713485d9446a114"
             ],
-            "subject": "优化指数比较的日期标签间距与取数提交指引"
+            "subject": "修复混合数据字段误用数字精度导致组件生成失败"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "A",
-            "path": "test/cartesian-chart-label-spacing.test.js"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
@@ -49,7 +37,7 @@
           },
           {
             "status": "M",
-            "path": "test/component-reading-footer-browser.test.js"
+            "path": "test/component-derived-values.test.js"
           }
         ],
         "checks": [
@@ -58,19 +46,15 @@
               "npx",
               "vitest",
               "run",
+              "test/component-derived-values.test.js",
               "test/component-data-submission.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-derived-values.test.js"
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
             ],
             "outcome": "passed",
-            "summary": "287项聚焦检查通过，含真实浏览器宽度与默认展开明细",
-            "verifiedCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
-            "completedAt": "2026-11-07T07:38:18.758606+00:00",
+            "summary": "192项直接相关检查通过",
+            "verifiedCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
+            "completedAt": "2026-11-07T07:57:00.592Z",
             "timeoutMs": 180000
           },
           {
@@ -81,25 +65,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
-            "completedAt": "2026-11-07T07:38:18.758606+00:00",
+            "verifiedCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
+            "completedAt": "2026-11-07T07:57:00.592Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "Chromium已验证320/566/880px横轴标签不碰撞、全部数据保留；新包真实生成待构建后核验"
+          "outcome": "not-applicable",
+          "summary": "本提交仅调整数据格式处理，原始响应及原映射回放通过；新包真实生成重试另验"
         },
         "acceptanceCriteria": [
-          "首尾日期可读且窄卡不碰撞",
-          "完整数据默认展开，全部记录与交互保留",
-          "取数映射指引精确，不替换来源或删除观测"
+          "代码、日期及前导零不受数字精度设置影响",
+          "真实数值精度与单位换算校验保持",
+          "原始取数提交可直接物化"
         ],
         "risks": [
-          "提交说明的条数校验仅涵盖明确每序列数量，不推断其他自然语言统计口径",
-          "此轮预览不代表所有模型和场景均已完成验收"
+          "不保证模型省略必要字段或选择错误数据来源等其他情形均可自动恢复"
         ],
-        "generatedAt": "2026-11-07T07:38:18.758606+00:00"
+        "generatedAt": "2026-11-07T07:57:00.592Z"
       }
     },
     {
