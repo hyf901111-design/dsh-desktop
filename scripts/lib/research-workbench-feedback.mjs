@@ -1,6 +1,7 @@
 // The canvas already owns the accepted generation state for every card,
 // including off-screen cards. Publish only identity and state, never contents,
 // prompts, tool arguments, errors or private model reasoning.
+export function isPartialWorkbenchNode(node){return node?.generationStatus==='completed'&&node.containerSpec?.type==='html'&&typeof node.containerSpec.html==='string'&&node.containerSpec.html.includes('data-observed-table-recovery')}
 export function publishResearchWorkbenchProgress(target,sessionId,artifacts,active=true,retryAvailable=true) {
  if(!target||typeof sessionId!=='string'||!sessionId)return null
  const cacheKey='__sherlockWorkbenchGenerationV1'
@@ -11,6 +12,8 @@ export function publishResearchWorkbenchProgress(target,sessionId,artifacts,acti
   if(typeof node?.id!=='string'||typeof node.workbenchId!=='string'||!node.workbenchId)continue
   let status=valid.includes(node.generationStatus)?node.generationStatus:'unknown'
   if(status==='completed'&&!(node.containerSpec&&typeof node.containerSpec==='object'&&typeof node.containerSpec.type==='string'))status='unknown'
+  // This publisher is also serialized by the independent canvas watcher.
+  if(status==='completed'&&node.containerSpec?.type==='html'&&typeof node.containerSpec.html==='string'&&node.containerSpec.html.includes('data-observed-table-recovery'))status='partial'
   current.set(node.id,{id:node.id,planId:node.workbenchId,status,...(node.containerSpec?.type==='financial-widget'?{builtin:true}:{}),...(typeof node.generationTaskId==='string'?{taskId:node.generationTaskId}:{})})
  }
  const nodes=[...current.values()].sort((a,b)=>a.id.localeCompare(b.id)),prior=cache.get(sessionId)
@@ -44,11 +47,11 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  const say=(zh,en)=>english?en:zh,ids=new Map((plans??[]).filter(p=>typeof p?.id==='string').map(p=>[p.id,p]))
  const planned=[...ids.values()].reduce((sum,p)=>sum+(Number.isSafeInteger(p.count)&&p.count>0?p.count:0),0)
  const nodes=[...new Map((snapshot?.nodes??[]).filter(n=>ids.has(n.planId)).map(n=>[n.id,n])).values()]
- const total=nodes.length,completed=nodes.filter(n=>n.status==='completed').length,pending=nodes.filter(n=>['queued','running','retrying'].includes(n.status)).length
- const failed=nodes.filter(n=>['failed','interrupted'].includes(n.status)).length,cancelled=nodes.filter(n=>n.status==='cancelled').length,unknown=total-completed-pending-failed-cancelled
- const phase=!snapshot?'waiting':!total?'empty':unknown?'unknown':pending&&snapshot.active===false?'inactive':pending?'running':failed||cancelled?'partial':'completed'
+ const total=nodes.length,completed=nodes.filter(n=>n.status==='completed').length,partial=nodes.filter(n=>n.status==='partial').length,pending=nodes.filter(n=>['queued','running','retrying'].includes(n.status)).length
+ const failed=nodes.filter(n=>['failed','interrupted'].includes(n.status)).length,cancelled=nodes.filter(n=>n.status==='cancelled').length,unknown=total-completed-partial-pending-failed-cancelled
+ const phase=!snapshot?'waiting':!total?'empty':unknown?'unknown':pending&&snapshot.active===false?'inactive':pending?'running':failed||cancelled||partial?'partial':'completed'
  const title=phase==='waiting'?say('等待组件状态','Awaiting component status'):phase==='empty'?say('当前画布没有这批组件','These components are not on the current canvas'):phase==='unknown'?say('组件状态待确认','Component status needs verification'):phase==='inactive'?say('组件状态等待更新','Awaiting updated component status'):phase==='running'?say(`组件生成中 · 已生成 ${completed}/${total}`,`Generating components · ${completed}/${total} generated`):phase==='partial'?say(`组件生成已结束 · ${completed}/${total} 已生成`,`Generation ended · ${completed}/${total} generated`):say(`组件已生成 · ${completed}/${total}`,`Components generated · ${completed}/${total}`)
- const counts=[say(`已生成 ${completed}`,`${completed} generated`),pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
+ const counts=[say(`已生成 ${completed}`,`${completed} generated`),partial?say(`来源明细 ${partial}（原功能未完成）`,`${partial} source snapshots (original features incomplete)`):'',pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
  const scope=planned&&total!==planned?say(`当前画布 ${total} 个组件，原计划 ${planned} 个。`,`Current canvas: ${total} components; original plan: ${planned}.`):''
  const detail=phase==='waiting'?say('正在读取这批组件在画布中的实际生成状态。','Reading the actual generation state of these canvas components.'):phase==='empty'?say('尚未挂载或已从画布移除。','Not mounted or removed from the canvas.'):[counts,scope,snapshot.active===false?say('以上为上次状态，打开研究看板可查看最新进度。','These are the last observed states; open the research canvas for current progress.'):''].filter(Boolean).join(' ')
  const rows=new Map((refreshSnapshot?.rows??[]).map(row=>[row.nodeId,row])),refreshGroups=new Map()
@@ -69,7 +72,7 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  const refreshHistory=allHistorical?historical:''
  const refreshLines=[...refreshGroups].map(([label,count])=>`${allHistorical?label.slice(historical.length):label} ${count}`)
  const refreshDetail=refreshHistory+refreshLines.join(' · ')
- return {phase,title,detail,total,planned,completed,pending,failed,cancelled,unknown,refreshDetail,refreshHistory,refreshLines}
+ return {phase,title,detail,total,planned,completed,partial,pending,failed,cancelled,unknown,refreshDetail,refreshHistory,refreshLines}
 }
 
 export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
@@ -122,7 +125,7 @@ export function researchWorkbenchReceiptAnchors(flow,nodeStore,readMetadata,read
 export async function requestResearchWorkbenchRetry(target,sessionId,plans,snapshot) {
  if(snapshot?.sessionId!==sessionId||snapshot.active===false||snapshot.retryAvailable===false)return false
  const planIds=[...new Set((plans??[]).map(p=>p.id).filter(id=>typeof id==='string'))]
- const nodes=(snapshot.nodes??[]).filter(n=>planIds.includes(n.planId)&&['failed','interrupted','cancelled'].includes(n.status)).map(n=>({id:n.id,taskId:n.taskId}))
+ const nodes=(snapshot.nodes??[]).filter(n=>planIds.includes(n.planId)&&['failed','interrupted','cancelled','partial'].includes(n.status)).map(n=>({id:n.id,taskId:n.taskId}))
  if(!nodes.length)return false
  const EventType=target.CustomEvent??globalThis.CustomEvent
  if(typeof EventType!=='function')return false
@@ -139,7 +142,7 @@ export function installResearchWorkbenchRetry({eventTarget,sessionId,getArtifact
   const detail=event.detail
   if(!active||detail?.sessionId!==sessionId||detail.handled||!canRetry())return
   if(!Array.isArray(detail.planIds)||!Array.isArray(detail.nodes))return
-  const matches=(node,wanted)=>node?.id===wanted.id&&node.generationTaskId===wanted.taskId&&detail.planIds.includes(node.workbenchId)&&['failed','interrupted','cancelled'].includes(node.generationStatus)
+  const matches=(node,wanted)=>node?.id===wanted.id&&node.generationTaskId===wanted.taskId&&detail.planIds.includes(node.workbenchId)&&(['failed','interrupted','cancelled'].includes(node.generationStatus)||isPartialWorkbenchNode(node))
   const jobs=[]
   for(const wanted of detail.nodes){
    if(typeof wanted?.id!=='string'||inFlight.has(wanted.id)||!getArtifacts().some(node=>matches(node,wanted)))continue
@@ -177,7 +180,7 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  if(footer&&current?.active===false&&state.phase==='empty')return null
  const generating=current?.active!==false&&state.pending>0||retrying
  const complete=state.phase==='completed'&&state.total>0&&(!state.planned||state.total===state.planned)
- const hasRetry=state.failed+state.cancelled>0
+ const hasRetry=state.failed+state.cancelled+state.partial>0
  const retryDisabled=retrying||current?.active===false||current?.retryAvailable===false
  const retryFailed=async()=>{
   if(retryDisabled)return
@@ -198,12 +201,13 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  ]})
 }
 
+export function researchWorkbenchFeedbackDefinitions(){return [isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v9 */'
+ const marker='/* ework:workbench-feedback:v10 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
- const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[12345678] \*\//)
+ const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'
+ const previous=source.search(/\/\* ework:workbench-feedback:v[123456789] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')
@@ -219,6 +223,9 @@ export function patchResearchWorkbenchFeedback(source) {
  }
  // Upgrade older patches that also rendered the same status inside execution.
  source=source.replace('workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, ','')
+ const retryPredicate="node.id === nodeId && ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus)"
+ const retryPartial="node.id === nodeId && (['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) || isPartialWorkbenchNode(node))"
+ if(!source.includes(retryPartial))exact(retryPredicate,retryPartial)
  if(!source.includes('/* ework:workbench-retry:v1 */')){
   const anchor='const startContainerGeneration = async (node, prompt) => {'
   const at=source.indexOf(anchor,source.indexOf('const retrySelectionGeneration = async (node) => {'))

@@ -77,7 +77,10 @@ export function preferredComponentSourceTools(schemas, request, sourcePolicy) {
 
 export function componentSourceInstruction(tools, request = '', now = new Date(), { planning = false } = {}) {
   if (!tools?.length) return ''
-  if (tools.some(tool=>/tushare/i.test(tool.description))) return (planning ? planningSourceInstruction(tools.map(tool=>`${tool.name}（${tool.description}）`)) : '【Tushare 取数】'+TUSHARE_SOURCE_GUIDANCE+' 当前授权工具：'+tools.map(tool=>`${tool.name}（${tool.description}）`).join('；'))
+  if (tools.some(tool=>/tushare/i.test(tool.description))) {
+    const latest=latestStatementRequest(request)?'用户要最新或最近一期已披露财务、未指定报告期时，不按日历猜 period。先用当前接口支持的不带 period 的限量查询取得真实 end_date，再按实际报告期及披露日选择最近记录。单个季度空记录不等于公司没有财报；仅补查尚缺的最近有效报告，不重查已有估值。income 的 start_date/end_date 是公告日；原始数据未证实最新覆盖时标明本次返回记录的最近报告。':''
+    return (planning ? planningSourceInstruction(tools.map(tool=>`${tool.name}（${tool.description}）`)) : '【Tushare 取数】'+TUSHARE_SOURCE_GUIDANCE+' 当前授权工具：'+tools.map(tool=>`${tool.name}（${tool.description}）`).join('；'))+latest
+  }
   if (planning) return planningSourceInstruction(tools.map(tool => `${tool.name}（${tool.description}）`))
   const statementRequest=request.replace(/(?:不要|不取|不看|无需)(?:读取|查询|使用|获取)?(?:财报|财务(?:报表|指标)?|利润表)/gu,'')
   const aShare=/A股|A[- ]?shares?|中国上市公司|\b(?:[69]\d{5}\.SH|[023]\d{5}\.SZ|[489]\d{5}\.BJ)\b/iu.test(statementRequest)

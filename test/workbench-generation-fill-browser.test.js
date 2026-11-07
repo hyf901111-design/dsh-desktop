@@ -20,6 +20,7 @@ beforeAll(async()=>{
  const grid=require('../scripts/lib/research-grid-workbench.mjs')
  source=grid.patchResearchGridWorkbench(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))
  source=require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)
+ source=require('../scripts/lib/research-workbench-feedback.mjs').patchResearchWorkbenchFeedback(source)
  expect(require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)).toBe(source)
  expect(()=>new Function(source)).not.toThrow()
  const entry=`import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
@@ -78,5 +79,17 @@ it.each([1000,560])('双页签从排队卡到部分完成立即填满可用看�
   for(const old of before.filter(n=>n.id.startsWith('panel-')))expect(after.find(n=>n.id===old.id)).toEqual(old)
   await page.screenshot({path:join(evidence,'mixed-'+width+'.png')})
   expect(await page.locator('vite-error-overlay,nextjs-portal').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
+it('allows a fresh attempt for a partial source view without discarding its usable content',async()=>{
+ const {page,errors}=await fixture(1000)
+ try{
+  const result=await page.evaluate(()=>{
+   const w=fixture.workspace,spec={version:1,type:'html',title:'来源明细',html:'<body data-observed-table-recovery><p>已取得的真实记录；原定制呈现未完成。</p></body>'}
+   w.applyGenerationInspection('panel-0',{taskId:'task-0',canvasNodeId:'panel-0',state:'completed',lastSeq:1,events:[],finalOutput:JSON.stringify(spec)})
+   const before=w.getSnapshot().artifacts.find(n=>n.id==='panel-0'),target=w.retryGeneration('panel-0'),after=w.getSnapshot().artifacts.find(n=>n.id==='panel-0')
+   return {target:target!==null,status:after.generationStatus,retained:JSON.stringify(before.containerSpec)===JSON.stringify(after.containerSpec)}
+  })
+  expect(result).toEqual({target:true,status:'queued',retained:true});expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)

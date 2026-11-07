@@ -2,7 +2,6 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import { installResearchGenerationWatch, patchResearchGenerationWatch } from '../scripts/lib/research-generation-watch.mjs'
 import { readFile } from 'node:fs/promises'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isMethodDeclaration } from 'typescript'
-import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from '../scripts/lib/research-grid-workbench.mjs'
 import { parseResearchContainerSpec } from '../packages/dsh-research-task-runtime/artifact-validator.js'
 import { generationProgressOnly } from '../scripts/lib/generation-progress-persistence.mjs'
 afterEach(() => vi.useRealTimers())
@@ -24,7 +23,7 @@ function nativeApply(source, node) {
   const visit = n => { if (!method && isMethodDeclaration(n) && n.name.getText(tree) === 'applyGenerationInspection') method = n; forEachChild(n, visit) }; visit(tree)
   const snapshot = { artifacts: [node] }
   const apply = new Function('snapshot', 'parseResearchContainerSpec', 'generationProgressOnly', `
-const RESEARCH_CANVAS_TEXT_LIMIT=20000,RESEARCH_ACTIVE_GENERATION_STATUSES=new Set(['queued','running','retrying']);
+const RESEARCH_CANVAS_TEXT_LIMIT=20000,RESEARCH_ACTIVE_GENERATION_STATUSES=new Set(['queued','running','retrying']),implicitGenerationResizes=new Map();
 const boundedResearchArtifactString=v=>typeof v==='string'?v:null,researchGenerationStatus=v=>v,researchGenerationInspectionEvents=()=>[];
 const researchContainerPlainText=s=>s.html,researchContainerFinalGeometry=()=>({}),researchGenerationSizedNode=n=>n,researchResolvedGenerationSources=()=>({}),researchCanvasReflowGrowth=(_a,b)=>b;
 const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec, generationProgressOnly)
@@ -50,27 +49,27 @@ describe('任务检查切板恢复', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(broken.snapshot.artifacts[0].generationStatus).toBe('completed');broken.dispose()
   })
-  it('patches the actual native inspection binding in production restore/patch/repatch order', async () => {
-    const source = restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  it('upgrades the actual native inspection binding and repatches idempotently', async () => {
+    const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
-    for(const version of ['V1','V2','V3','V4']){
-      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V5 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
+    for(const version of ['V1','V2','V3','V4','V5']){
+      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V6 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
       expect(patchResearchGenerationWatch(previous)).toBe(patched)
     }
-    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V5 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
-    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V5','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
+    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V6 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
+    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V6','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
     const currentV4=patched.slice(0,hookStart)+staleHook+patched.slice(hookEnd)
     expect(currentV4).toContain('STALE_V4_INLINE_PUBLISHER')
     expect(patchResearchGenerationWatch(currentV4)).toBe(patched)
-    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V5')).toHaveLength(2)
+    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V6')).toHaveLength(2)
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
     expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
     expect(patched).toContain('this.deps.generationInspectSink(request, options)')
     expect(patched).toContain("node.containerSpec?.type==='financial-widget'?{builtin:true}")
     expect(patched).toContain('postResearchTask(RESEARCH_TASK_INSPECT_PATH, request, options?.signal)')
-    expect(restoreResearchGridWorkbench(patchResearchGridWorkbench(patched))).toBe(patched)
+    expect(patched).toContain("status='partial'")
     expect(() => patchResearchGenerationWatch('unknown native lifecycle')).toThrow('无法定位')
   },15000) // Three passes over the full 13 MB production bundle exceed 5 s on a cold run.
   it('publishes actual canvas completion for a settled parent and marks the snapshot inactive on leaving',async()=>{
@@ -83,7 +82,7 @@ describe('任务检查切板恢复', () => {
     f.dispose();expect(f.events.__sherlockWorkbenchGenerationV1.get('festival').active).toBe(false)
   })
   it('applies a full same-watermark completion through the actual native transition, while rejecting older tasks and drafts', async () => {
-    const source = patchResearchGenerationWatch(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
+    const source = patchResearchGenerationWatch(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
     const node = { id: 'card', kind: 'generated-container', generationTaskId: 'task', generationStatus: 'running', generationLastSeq: 20, sizeMode: 'manual', width: 720 }
     const finalOutput = JSON.stringify({ version: 1, type: 'html', title: '完整排期', html: '<p>全部完整结果</p>' }), receipt = { ...completed, finalOutput }
     const f = nativeApply(source, { ...node })
