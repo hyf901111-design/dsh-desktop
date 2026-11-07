@@ -3,7 +3,13 @@ export const KPI_GUIDANCE='经营/项目指标卡用panel.type和artifact.type�
 export function kpiDataIssue(s){
  const record=v=>v&&typeof v==='object'&&!Array.isArray(v),text=(v,n=2000)=>typeof v==='string'&&v.trim().length>0&&v.length<=n,scalar=v=>typeof v==='string'&&v.length<=2000||typeof v==='number'&&Number.isFinite(v)||v===null;
  const safeUrl=v=>{try{const u=new URL(v);return typeof v==='string'&&v.length<=2048&&!/[\u0000-\u0020\u007f]/.test(v)&&['http:','https:'].includes(u.protocol)&&!u.username&&!u.password;}catch{return false;}};
- if(!record(s)||Object.keys(s).some(k=>!['version','type','title','subject','asOf','range','note','sources','items'].includes(k))||s.version!==1||s.type!=='kpi'||!text(s.title,256)||!Array.isArray(s.items)||s.items.length<1||s.items.length>12)return '指标卡需version:1/type:kpi/title及1–12项完整items';
+ if(!record(s))return '指标卡必须是对象';
+ if(s.version!==1)return '指标卡缺少 version:1，请在 mapping 顶层补上';
+ if(s.type!=='kpi')return '指标卡 type 必须为 kpi';
+ const unknown=Object.keys(s).find(k=>!['version','type','title','subject','asOf','range','note','sources','items'].includes(k));
+ if(unknown)return '指标卡不支持顶层字段 '+unknown+'；来源使用 sources:[{name,url?}]，口径用 note，业务指标放 items。其余顶层字段仅支持 version/type/title/subject/asOf/range';
+ if(!text(s.title,256))return '指标卡 title 必须是非空标题（最多256字）';
+ if(!Array.isArray(s.items)||s.items.length<1||s.items.length>12)return '指标卡 items 需要1–12项完整指标';
  for(const k of ['subject','asOf','range','note'])if(s[k]!==undefined&&!text(s[k]))return k+'无效';
  if(s.sources!==undefined&&(!Array.isArray(s.sources)||s.sources.length>12||s.sources.some(v=>!record(v)||Object.keys(v).some(k=>!['name','url'].includes(k))||!text(v.name)||v.url!==undefined&&!safeUrl(v.url))))return '来源需完整name和安全http/https链接';
  for(const [index,item]of s.items.entries()){

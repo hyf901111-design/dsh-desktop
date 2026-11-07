@@ -15,7 +15,7 @@ describe('remaining Figma 22A chart families',()=>{
   const output=JSON.parse(acceptArtifactOutput(JSON.stringify(s)));
   expect(readTemplateModel(output).data).toEqual(s);expect(templateFor(s).schema).toContain('chart.'+variant);
   expect(workbenchDesignTemplate(panel).id).toBe('research.chart.'+variant);
-  expect(workbenchPanelPrompt({title:'工作台'},panel)).toContain('必须输出 chart.'+variant);
+  expect(workbenchPanelPrompt({title:'工作台',dataMode:'simulated'},panel)).toContain('必须输出 chart.'+variant);
   expect(requestedChartVariant('chart.'+variant)).toBe(variant);
   const v=advancedChartView(s,280,{height:180});expect(JSON.stringify(v)).not.toMatch(/NaN|Infinity/);expect(v.rows.length).toBeGreaterThan(0);
  });

@@ -59,6 +59,7 @@ export const WORKBENCH_ENGLISH={
 "理解要展示的内容，准备呈现方式":"Understanding the requirements and preparing the presentation",
 "资料已返回，继续核对与整理":"Sources received; checking and organizing",
 "本次资料获取未完成，正在调整检索":"Source retrieval did not finish; refining the search",
+"正在调整这一步的处理，已取得的内容会保留":"Adjusting this step; retrieved content is retained",
 "建立页面内容结构":"Building the page structure",
 "编排页面布局与配色":"Arranging layout and colors",
 "生成数据表格":"Creating data tables",
