@@ -228,39 +228,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "记忆引用去重与无答案对话行为修复",
+        "featureName": "自动记忆保留项目主语与确认上下文",
         "branch": "codex/feat/hindsight-local-validation-20261107",
-        "baseCommit": "9d9085815ef90d5052283433a87fb95baa6b94ec",
-        "tipCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
+        "baseCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
+        "tipCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
         "commits": [
           {
-            "commit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
+            "commit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
             "parents": [
-              "9d9085815ef90d5052283433a87fb95baa6b94ec"
+              "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb"
             ],
-            "subject": "修复记忆引用重复记录与无依据时反复查找"
+            "subject": "保留自动记忆中的项目主语与确认上下文"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "packages/dsh-memory-runtime/context.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-memory-runtime/index.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/main/memory/capture-policy.ts"
           },
           {
             "status": "M",
             "path": "src/main/memory/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/memory-runtime.test.js"
           },
           {
             "status": "M",
@@ -280,9 +272,9 @@
               "test/memory-editable-document.test.ts"
             ],
             "outcome": "passed",
-            "summary": "94项直接相关检查通过；先复现8项失败再修复，并覆盖引用习惯但确有新增具体偏好的保留",
-            "verifiedCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
-            "completedAt": "2026-11-07T04:41:08.432012+00:00",
+            "summary": "98项直接相关检查通过；新增项目约定上下文、待确认、跨句误判用例，先复现2项失败再修复。",
+            "verifiedCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
+            "completedAt": "2026-11-07T05:01:17.213934+00:00",
             "timeoutMs": 180000
           },
           {
@@ -293,14 +285,14 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
-            "completedAt": "2026-11-07T04:41:08.432012+00:00",
+            "verifiedCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
+            "completedAt": "2026-11-07T05:01:17.213934+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "本次修改记忆整理和模型请求规则，无前端布局改动。源码运行时连接实际GLM-5.3-Flash/Max复测7个日常场景通过；最终签名客户端另换场景验证。"
+          "summary": "真实签名客户端发现会议约定提取丢失主语，已复现并修复；最终包需重跑预先冻结的10个新场景。"
         },
         "acceptanceCriteria": [
           "引用旧偏好但无具体新增内容时不创建记忆条目",
@@ -312,7 +304,7 @@
           "真实模型验证属于固定配置的小样本，不构成任意模型保证",
           "本地预览，不接受晋升、不发布、不推送；模型行为约束不替代操作系统文件权限隔离"
         ],
-        "generatedAt": "2026-11-07T04:41:08.432012+00:00"
+        "generatedAt": "2026-11-07T05:01:17.213934+00:00"
       }
     }
   ],
