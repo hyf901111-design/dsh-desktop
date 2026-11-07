@@ -1,3 +1,4 @@
+import {refineComponentReadingFooter} from '../packages/dsh-research-task-runtime/component-reading-footer.js';
 import {describe,it,expect} from 'vitest';
 import {Window} from 'happy-dom';
 import {JSDOM} from 'jsdom';
@@ -103,7 +104,7 @@ describe('saved host template display refinements',()=>{
   expect(next).toContain('data-chart-visual="v2"');expect(next).toContain('--sherlock-price-up');
   expect(readTemplateModel({...spec,html:next})).toEqual(readTemplateModel(spec));
   expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));expect(routes(next)).toEqual(routes(old));
-  expect(refineStoredTemplateHtml(next)).toBe(next);expect(compactHostDashboardHtml(old)).toBe(next);
+  expect(refineStoredTemplateHtml(next)).toBe(next);expect(compactHostDashboardHtml(old)).toBe(refineComponentReadingFooter(next));
  });
  it('refines saved task density without replacing owner records, controls or their replay routes',()=>{
   const data={version:1,type:'tasks',title:'本周任务',asOf:'2026-09-30 模拟',mode:'local',items:[{id:'a',title:'原有任务',owner:'研究组',completed:false}]};

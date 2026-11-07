@@ -12,6 +12,15 @@ import {createRoot} from 'react-dom/client'
 const row=(nodeId,lastSuccess=1000,extra={})=>({nodeId,status:'success',lastSuccess,enabled:true,intervalMinutes:1,...extra})
 describe('component refresh status',()=>{
  const staticNode=data=>({id:'static',containerSpec:{type:'html',html:'<script id="sherlock-template-data" type="application/json">'+JSON.stringify({templateId:'market.table',version:'1',data})+'</script>'}})
+ it('uses a concise provider and actual snapshot dates instead of a nonexistent refresh history',()=>{
+  const name='Tushare etf_share_size + etf_basic + trade_cal（ETF运营汇总 overview）'
+  const view=componentDataStatusView(null,null,staticNode({sources:[{name}],asOf:'20261106 · 静态快照，自动更新未绑定',range:'20261030 ~ 2026-11-06'}))
+  expect(view).toMatchObject({source:'Tushare',time:'数据 2026-10-30 至 2026-11-06',detail:'静态快照'})
+  expect(view.title).toContain(name);expect(view.title).not.toContain('尚无成功刷新记录')
+  for(const asOf of ['来源未提供','获取时间 2026-11-07','20260230'])expect(componentDataStatusView(null,null,staticNode({asOf})).time).toBe('')
+  expect(componentDataStatusView(null,null,staticNode({asOf:'腾讯财经 · 最后报价 2026-11-06 16:14:57'})).time).toBe('数据 2026-11-06')
+  expect(componentDataStatusView(row('a',null),null,staticNode({asOf:'2026-11-06'})).time).toBe('尚未刷新')
+ })
  it('shows retained generation sources even without a refresh binding, with truthful unknown fallback',()=>{
   const node=staticNode({sources:[{label:'Tushare / shibor'},{label:'中国货币网'},{label:'Tushare / shibor'}],asOf:'2026-11-06'})
   expect(componentDataStatusView(null,null,node)).toMatchObject({source:'Tushare / 中国货币网',detail:'静态快照'})
@@ -26,7 +35,7 @@ describe('component refresh status',()=>{
  })
  it('retains explicitly labelled table provenance with common Chinese source prefixes',()=>{
   for(const note of ['数据来源：腾讯财经公开报价，报价时点以接口为准','来源 Tushare etf_share_size · 数据日期2026-11-05']){
-   expect(componentDataStatusView(null,null,staticNode({type:'table',note})).source).toBe(note.startsWith('数据')?'腾讯财经公开报价':'Tushare etf_share_size')
+   expect(componentDataStatusView(null,null,staticNode({type:'table',note})).source).toBe(note.startsWith('数据')?'腾讯财经公开报价':'Tushare')
   }
   expect(componentDataStatusView(null,null,staticNode({note:'此处无法确认数据来源：Tushare。'})).source).toBe('来源未标注')
  })
@@ -113,7 +122,7 @@ describe('component refresh status',()=>{
   expect(store.read('s','a').completionSequence).toBe(0)
   store.publish('s',[row('a',5000,{status:'error'})]);expect(store.read('s','a').lastSuccess).toBe(5000)
   store.publish('s',[]);expect(store.read('s','a')).toBe(null)
-  expect(componentDataStatusView(null).time).toBe('尚未刷新')
+  expect(componentDataStatusView(null).time).toBe('')
  })
  it('acknowledges successful reads at the same timestamp using the source sequence, including unchanged data',()=>{
   const store=createComponentDataStatusStore();store.publish('s',[row('a',1000,{successSequence:1})])
