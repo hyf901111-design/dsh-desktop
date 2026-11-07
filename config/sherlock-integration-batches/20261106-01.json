@@ -9,35 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件详情默认展开兼容与页签样式修复",
+        "featureName": "指数比较日期排版与真实取数映射修正",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "69ce662e730d98a446634c0e9a26b9116bd17111",
-        "tipCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
+        "baseCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
+        "tipCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
         "commits": [
           {
-            "commit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
+            "commit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
             "parents": [
-              "69ce662e730d98a446634c0e9a26b9116bd17111"
+              "81787ddad65a9d18d7c78e1a71b126dd4f81d2af"
             ],
-            "subject": "修复旧组件详情恢复状态与页签主题样式"
+            "subject": "优化指数比较的日期标签间距与取数提交指引"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+            "path": "docs/verification/2026-11-07-research-workbench-quality.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
           },
           {
             "status": "M",
-            "path": "test/component-interaction-state.test.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "A",
+            "path": "test/cartesian-chart-label-spacing.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
           },
           {
             "status": "M",
@@ -50,47 +58,48 @@
               "npx",
               "vitest",
               "run",
-              "test/component-reading-footer.test.js",
+              "test/component-data-submission.test.js",
+              "test/cartesian-chart-label-spacing.test.js",
+              "test/cartesian-chart-axis-precision.test.js",
+              "test/cartesian-chart-template.test.js",
               "test/component-reading-footer-browser.test.js",
               "test/stored-template-refinements.test.js",
-              "test/research-grid-workbench.test.js"
+              "test/component-source-binding.test.js",
+              "test/component-derived-values.test.js"
             ],
             "outcome": "passed",
-            "summary": "76项通过：默认展开、旧日志恢复、深浅主题页签、尺寸收敛与相邻组件排布",
-            "verifiedCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
-            "completedAt": "2026-11-07T07:07:53.469754+00:00",
+            "summary": "287项聚焦检查通过，含真实浏览器宽度与默认展开明细",
+            "verifiedCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
+            "completedAt": "2026-11-07T07:38:18.758606+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
-              "npx",
-              "vitest",
+              "npm",
               "run",
-              "test/component-interaction-state.test.js",
-              "-t",
-              "^(?!patches the actual renderer)"
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "12项通过：新旧展开记录和其他交互保持；排除既有安装包补丁还原锚点夹具",
-            "verifiedCommit": "81787ddad65a9d18d7c78e1a71b126dd4f81d2af",
-            "completedAt": "2026-11-07T07:07:53.469754+00:00",
+            "summary": "Node类型检查通过",
+            "verifiedCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
+            "completedAt": "2026-11-07T07:38:18.758606+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实浏览器复现并修复旧日志覆盖展开、主题实心按钮问题；打包应用待本次预览集成后核验"
+          "summary": "Chromium已验证320/566/880px横轴标签不碰撞、全部数据保留；新包真实生成待构建后核验"
         },
         "acceptanceCriteria": [
-          "默认展开组件详情，多页签默认完整数据",
-          "展开与切换后高度自动适配，相邻卡片不重叠",
-          "保留线性箭头、排序、调整列宽和已保存数据"
+          "首尾日期可读且窄卡不碰撞",
+          "完整数据默认展开，全部记录与交互保留",
+          "取数映射指引精确，不替换来源或删除观测"
         ],
         "risks": [
-          "长明细与来源说明在展开区域内滚动，避免卡片无限增长",
-          "component-interaction-state里补丁还原夹具受既有ResearchCanvas锚点变更影响，未通过该项；实际构建补丁及最终包另行验证。"
+          "提交说明的条数校验仅涵盖明确每序列数量，不推断其他自然语言统计口径",
+          "此轮预览不代表所有模型和场景均已完成验收"
         ],
-        "generatedAt": "2026-11-07T07:07:53.469754+00:00"
+        "generatedAt": "2026-11-07T07:38:18.758606+00:00"
       }
     },
     {
