@@ -20,6 +20,17 @@ function savedTrend(){
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)));
  return spec.html.replace(' data-chart-domain="observed-v1"','').replace(/<script>\(function cartesianChartRuntime[^]*?<\/script>/,'<script>(function cartesianChartRuntime(spec, geometry){throw Error("Legacy runtime must not execute")})({},()=>{});</script>');
 }
+function savedRanking(){
+ const data={version:1,type:'chart',variant:'horizontal',title:'原排名',unit:'亿元',axisDecimals:2,labels:['甲','乙'],series:[{name:'流入',values:[321.13,234]}]};
+ return JSON.parse(acceptArtifactOutput(JSON.stringify(data))).html.replace(/<script>\(function cartesianChartRuntime[^]*?<\/script>/,'<script>(function cartesianChartRuntime(spec, geometry){throw Error("Legacy runtime must not execute")})({},()=>{});</script>');
+}
+it('upgrades saved ranking layouts without losing explicit tick precision or records',()=>{
+ const old=savedRanking(),next=compactHostDashboardHtml(old),w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.write(next);
+ expect(w.document.querySelector('.template-chart text')?.textContent).toBe('0');
+ expect([...w.document.querySelectorAll('.template-chart text')].slice(0,5).map(el=>el.textContent)).toContain('80.28');
+ expect(readTemplateModel({type:'html',html:next})).toEqual(readTemplateModel({type:'html',html:old}));
+ expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));expect(compactHostDashboardHtml(next)).toBe(next);w.close();
+});
 it('restores saved feed source notes without shifting existing interaction replay targets',()=>{
  for(const [type,layout] of [['news',{}],['news',{layoutProfile:'openterminal'}],['reports',{}]]){
  const old=savedFeed(type,layout),next=compactHostDashboardHtml(old),w=new Window();w.document.write(next);
@@ -49,7 +60,7 @@ it('ships saved feed and trend refinements through the serialized client factory
  const start=shipped.indexOf('const MARKET_PRESENTATION_CSS = '),end=shipped.indexOf('const TERMINAL_PRESENTATION_CSS = ',start);
  const serialized=vm.runInNewContext(shipped.slice(start,end)+'\nrefineStoredTemplateHtml');
  const gantt=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'gantt',title:'排程',asOf:'演练记录',items:[{label:'采样',start:'2026-10-22',end:'2026-10-23',progress:0}]}))).html.replace(/\/\* reading-layout-v1 \*\/[^]*?\/\* reading-layout-end \*\//u,'');
- for(const old of [savedFeed(),savedTrend(),gantt])expect(serialized(old)).toBe(refineStoredTemplateHtml(old));
+ for(const old of [savedFeed(),savedTrend(),savedRanking(),gantt])expect(serialized(old)).toBe(refineStoredTemplateHtml(old));
 });
 it('leaves unknown feed versions and invalid saved trend data untouched',()=>{
  const feed=savedFeed().replace('"version":"21m-20260923-v1"','"version":"future"');

@@ -21,6 +21,24 @@ it('keeps long table source notes scrollable without covering table rows',async(
  }finally{await page.close();}
 },20000);
 afterAll(async()=>{await browser?.close();});
+it('keeps chart detail entries visible together at the real compact card height',async()=>{
+ const labels=['华泰柏瑞沪深300ETF','华夏上证科创板50成份ETF','南方中证1000ETF','南方中证500ETF','易方达创业板ETF'];
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'ETF流入前五',unit:'亿元',asOf:'2026-10-30 至 2026-11-06',note:'估算金额为份额变动乘以期末净值。',labels,series:[{name:'净流入估算',values:[321.13,234,216.07,199.55,182.89]}],detailColumns:['产品','代码'],detailRows:labels.map((label,i)=>[label,String(i)]),sources:[{label:'Tushare',url:'https://tushare.pro'}]})));
+ const page=await browser.newPage({viewport:{width:566,height:303}});page.setDefaultTimeout(3000);
+ try{
+  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
+  await frame.locator('.component-reading-footer').waitFor();
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
+  await expect.poll(()=>frame.locator('body').evaluate(el=>el.scrollHeight<=innerHeight+1)).toBe(true);
+  const entries=await frame.locator('details>summary').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom}}));
+  expect(entries).toHaveLength(2);expect(Math.abs(entries[0].top-entries[1].top)).toBeLessThanOrEqual(3);
+  for(const entry of entries)expect(entry.bottom).toBeLessThanOrEqual(303);
+  expect((await frame.locator('svg').boundingBox()).height).toBeGreaterThanOrEqual(160);
+  await frame.getByText('查看完整数据',{exact:true}).click();expect(await frame.locator('tbody tr').count()).toBe(5);
+  await frame.getByText('查看完整数据',{exact:true}).click();
+  await frame.getByText('口径与来源',{exact:true}).click();expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);
+ }finally{await page.close();}
+},15000);
 const meta={asOf:'2026-11-06 · 静态快照，自动更新未绑定',range:'2026-10-30 至 2026-11-06',note:'估算金额采用期末净值，缺失记录不补零。'.repeat(25),sources:[{name:'Tushare etf_share_size + etf_basic + trade_cal（ETF运营汇总 overview）',url:'https://tushare.pro/document/2?doc_id=408'}]};
 it('keeps KPI footers compact in narrow and wide themed previews, with accessible full details and no duplicate refresh control',async()=>{
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'kpi',title:'周度规模概况',...meta,items:[{label:'期末规模',value:48632.81,unit:'亿元'},{label:'规模变化',value:3002.91,unit:'亿元'},{label:'份额变化',value:756.74,unit:'亿份'},{label:'净申购产品数',value:605,unit:'只'},{label:'净赎回产品数',value:808,unit:'只'},{label:'净流入估算',value:1623.19,unit:'亿元'}]})));

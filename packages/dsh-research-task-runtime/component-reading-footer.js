@@ -35,6 +35,12 @@ export function refineComponentReadingFooter(html){
  .component-reading-footer dt,.component-reading-footer dd{margin:0;padding:0;font:inherit;min-width:0}
  .component-reading-footer dd{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--sherlock-text,#ddd)}
  .component-reading-footer a{color:var(--sherlock-link);text-underline-offset:3px}
+ /* Keep both disclosures in one quiet row without moving saved DOM routes. */
+ body[data-chart-template]:has(svg.template-chart) .chart-readout{min-height:30px;padding:4px 6px;margin:4px 0}
+ body[data-chart-template]:has(svg.template-chart)>details,body[data-chart-template]:has(svg.template-chart)>.component-reading-footer{display:inline-block;vertical-align:top;clear:none;max-width:100%;margin:6px 16px 0 0!important;padding:0!important;border:0;font:11px/18px var(--sherlock-font-sans,system-ui)}
+ body[data-chart-template]:has(svg.template-chart)>details>summary{min-height:22px;padding:2px 0;list-style:disclosure-closed inside}
+ body[data-chart-template]:has(svg.template-chart)>details[open],body[data-chart-template]:has(svg.template-chart)>.component-reading-footer:has(details[open]){display:block;width:100%}
+ body[data-chart-template]:has(svg.template-chart)>details[open]>summary{list-style:disclosure-open inside}
  @media(max-width:360px){.component-reading-footer dl>div{grid-template-columns:1fr;gap:1px}}
  </style>`;
  // A KPI with no global notes still loses its redundant internal refresh
