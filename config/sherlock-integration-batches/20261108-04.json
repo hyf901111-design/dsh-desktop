@@ -116,6 +116,56 @@
           "当前修复待本地main构建与原生内容验证"
         ],
         "generatedAt": "2026-11-07T23:25:59.433549+00:00"
+      },
+      "merged": {
+        "mergeCommit": "fb81f209de687a199ba00b3269625df7479b52b7",
+        "verificationCommit": "fb81f209de687a199ba00b3269625df7479b52b7",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-table-unit-recovery.test.js",
+              "test/component-unit-projection.test.js",
+              "test/component-table-scalar-recovery.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-table-unit-recovery.test.js test/component-unit-projection.test.js test/component-table-scalar-recovery.test.js test/component-data-refresh.test.js test/component-source-binding.test.js test/component-data-submission.test.js test/bundled-component-skill.test.js --maxWorkers=4",
+            "verifiedCommit": "fb81f209de687a199ba00b3269625df7479b52b7",
+            "completedAt": "2026-11-07T23:26:27.270Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fb81f209de687a199ba00b3269625df7479b52b7",
+            "completedAt": "2026-11-07T23:26:27.270Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "fb81f209de687a199ba00b3269625df7479b52b7",
+            "completedAt": "2026-11-07T23:26:27.270Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-07T23:26:27.270Z"
       }
     }
   ],
