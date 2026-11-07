@@ -168,9 +168,9 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
     }
   }, [canvasSize?.width, canvasSize?.height, canvasSize?.availableWidth, canvasSize?.visibleHeight]);
   const planning = intent.state === 'planning', stopping = intent.state === 'stopping';
-  const label = intent.kind === 'workbench' ? '工作台组件规划' : intent.types[0] || '组件规划';
-  const phase = intent.state === 'failed' ? intent.inferredEnd ? '本轮执行已结束，组件暂未显示' : '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : intent.state === 'dealing' ? '正在展开组件' : stopping ? '正在停止生成…' : '正在规划组件';
-  const detail = intent.state === 'failed' ? intent.inferredEnd ? '可查看右侧对话，生成结果会继续同步' : '本次未生成组件；原因见右侧对话' : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.state === 'dealing' ? intent.panelCount + ' 张组件卡片正在排入画布' : intent.sawRunning ? '执行者正在确定面板清单；确认后会按实际数量放入画布' : '任务已发送，等待执行者开始规划';
+  const label = intent.kind === 'workbench' ? '创建工作台' : intent.types[0] || '组件规划';
+  const phase = intent.state === 'failed' ? intent.inferredEnd ? '本轮执行已结束，组件暂未显示' : '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : intent.state === 'dealing' ? '正在展开组件' : stopping ? '正在停止生成…' : '正在准备内容';
+  const detail = intent.state === 'failed' ? intent.inferredEnd ? '可查看右侧对话，生成结果会继续同步' : '本次未生成组件；原因见右侧对话' : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.state === 'dealing' ? intent.panelCount + ' 张组件卡片正在排入画布' : intent.sawRunning ? '正在整理内容与布局，组件会陆续出现在画布上' : '正在准备，请稍候';
   const node = { id: intent.id, kind: 'generated-container', title: label, generationStatus: intent.state === 'failed' ? 'failed' : intent.state === 'stopped' ? 'cancelled' : 'running', generationTaskId: intent.id, generationStartedAt: intent.startedAt, generationCompletedAt: intent.completedAt, generationError: detail, generationEvents: [] };
   return react_jsx_runtime.jsxs('section', { className: 'odyssey-creation-planning-card', 'data-research-compact-chrome': '', 'data-research-creation-planning': intent.state,
     'data-research-node-id': occupied ? intent.id : undefined, 'data-workbench-drag-handle': occupied ? intent.id : undefined,
@@ -236,7 +236,7 @@ export function patchResearchCreationProgress(source) {
   // otherwise repackaging preserves the old guessed component list.
   const stalePlanDetail = "intent.types.length ? '计划包含：' + intent.types.join(' · ') : '正在理解需求并确定面板'"
   if (source.includes(stalePlanDetail)) source = replaceOnce(source, stalePlanDetail,
-    "intent.sawRunning ? '执行者正在确定面板清单；确认后会按实际数量放入画布' : '任务已发送，等待执行者开始规划'")
+    "intent.sawRunning ? '正在整理内容与布局，组件会陆续出现在画布上' : '正在准备，请稍候'")
   const previous = ['/* ODYSSEY_CREATION_PROGRESS_V1 */', '/* ODYSSEY_CREATION_PROGRESS_V2 */'].find(marker => source.includes(marker))
   if (previous && !source.includes(BEGIN)) {
     const start = source.indexOf(previous)

@@ -53,7 +53,7 @@ try {
   })
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('odyssey:creation-progress', {detail:{sessionId:'generation',intent:{id:'fixture-planning',kind:'workbench',request:'请创建金融行情工作台，包含蜡烛图、热力图和新闻列表',description:'请创建金融行情工作台，包含蜡烛图、热力图和新闻列表',types:['蜡烛图','热力图','新闻列表'],startedAt:Date.now()-5000,state:'planning',sawRunning:true}}})))
   await page.locator('[data-research-creation-planning="planning"]').waitFor()
-  assert.match(await page.locator('[data-research-creation-planning]').innerText(),/工作台组件规划.*执行者正在确定面板清单/s)
+  assert.match(await page.locator('[data-research-creation-planning]').innerText(),/创建工作台.*正在整理内容与布局/s)
   assert.match(await page.locator('[data-research-creation-planning] time').innerText(),/^00:0[5-9]$/)
   const planningLight=await page.locator('[data-research-creation-planning]').evaluate(el=>({
     size:[el.clientWidth,el.clientHeight],surface:getComputedStyle(el.querySelector('[data-research-generation-process]')).backgroundColor,

@@ -47,6 +47,13 @@ export function restoreResearchGridWorkbench(source){
   for(const [original,replacement,count=1] of changes.reverse()){
     if(count>1){if(!Number.isSafeInteger(count)||source.split(replacement).length!==count+1)throw Error("Workbench repeated restore count changed");source=source.replaceAll(replacement,original);continue}
     if(!source.includes(replacement)){
+      // Earlier progress-copy upgrades changed this sentence after the grid
+      // restore record was written. Preserve that exact owned copy migration.
+      if(replacement.startsWith('function researchGenerationLog(node) {')){
+        const oldCopy='本次资料获取未完成，正在调整检索',newCopy='正在调整这一步的处理，已取得的内容会保留'
+        const migrated=replacement.replace(oldCopy,newCopy)
+        if(migrated!==replacement&&source.includes(migrated)){source=source.replace(migrated,original.replace(oldCopy,newCopy));continue}
+      }
       // Older restore records predate the owned Notes destination transform.
       // Match that complete transform exactly, then preserve it on both sides.
       if(replacement.startsWith('function ResearchAssistantCanvasAction({ messageId, text, workspace }) {')){
