@@ -522,12 +522,12 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     for(const [key,title,description] of [
       ['use','使用已保存的记忆','在私人对话中使用有依据的记忆；关闭后仍可管理。'],
       ['auto','自动保存记忆','从私人对话提炼长期偏好与项目事实，不确定内容待你确认。'],
-      ['semantic','本地语义检索','支持中文改写检索；关闭后只查关键词，仍会核对依据。']
+      ['semantic','按意思查找记忆','建议开启。即使用不同说法提问，也能查找相关记忆；关闭后只按关键词查找。']
     ] as const){
       const value=data.settings[key]!==false
       settings.append(settingRow(title,description,settingPending?.key===key?settingPending.value===true:value,checked=>void changeSetting({type:'settings',[key]:checked},key,checked)))
     }
-    if(data.session)settings.append(settingRow('本对话停用记忆','仅影响当前对话，不读取或自动保存记忆。',settingPending?.key==='session'?settingPending.value===true:data.session.disabled,disabled=>void changeSetting({type:'session',sessionId:data!.session!.id,disabled},'session',disabled)))
+    if(data.session)settings.append(settingRow('此对话暂停记忆','开启后，此对话不读取已有记忆，也不自动保存新记忆。已有记忆和聊天记录仍会保留，其他对话不受影响。',settingPending?.key==='session'?settingPending.value===true:data.session.disabled,disabled=>void changeSetting({type:'session',sessionId:data!.session!.id,disabled},'session',disabled)))
     const privacy=node('p',t('记忆与语义检索保存在本机。使用前由当前会话模型核对依据；若模型在云端，会发送问题和候选记忆。无依据或核对失败时不使用记忆。'),'ew-memory-privacy')
     const retrieval=node('div',undefined,'ew-memory-index')
     const retrievalText=node('span',t(data.retrieval?.message??'本地语义检索按需加载。'))

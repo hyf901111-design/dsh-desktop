@@ -745,7 +745,7 @@ it('shows retrieval state, rebuilds on demand and disables only the current sess
  const {doc,button,open}=setup({request:async c=>{commands.push(c);return snapshot({retrieval:{state:'fallback',message:'模型损坏，使用关键词'},session:{id:'s1',disabled:false}})}})
  await open();expect(doc.body.textContent).toContain('模型损坏')
  button('重建索引').click();await tick();expect(commands.at(-1)).toEqual({type:'rebuild-index'})
- doc.querySelector<HTMLInputElement>('input[aria-label="本对话停用记忆"]')!.click();await tick()
+ doc.querySelector<HTMLInputElement>('input[aria-label="此对话暂停记忆"]')!.click();await tick()
  expect(commands.at(-1)).toEqual({type:'session',sessionId:'s1',disabled:true})
  expect(doc.body.textContent).toContain('候选记忆')
  expect(doc.body.textContent).toContain('明文')
