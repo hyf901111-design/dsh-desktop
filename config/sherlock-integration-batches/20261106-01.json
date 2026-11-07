@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "混合字段显示精度兼容",
+        "featureName": "组件详情页签及文字居中",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "bf5fac584d8a7e5a92023a2ef713485d9446a114",
-        "tipCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
+        "baseCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
+        "tipCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
         "commits": [
           {
-            "commit": "572f257602038a0e96261c607786ddb2d32d3f28",
+            "commit": "19e8877e885d828bbc61aced0727805351ae7f77",
             "parents": [
-              "bf5fac584d8a7e5a92023a2ef713485d9446a114"
+              "572f257602038a0e96261c607786ddb2d32d3f28"
             ],
-            "subject": "修复混合数据字段误用数字精度导致组件生成失败"
+            "subject": "优化组件详情页签和数值提示条对齐"
           }
         ],
         "files": [
@@ -29,15 +29,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
           },
           {
             "status": "M",
-            "path": "test/component-data-submission.test.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "test/component-derived-values.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer.test.js"
           }
         ],
         "checks": [
@@ -46,15 +54,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-derived-values.test.js",
-              "test/component-data-submission.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
+              "test/component-reading-footer-browser.test.js",
+              "test/component-reading-footer.test.js",
+              "test/workbench-style.test.js"
             ],
             "outcome": "passed",
-            "summary": "192项直接相关检查通过",
-            "verifiedCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
-            "completedAt": "2026-11-07T07:57:00.592Z",
+            "summary": "25项聚焦检查通过，含真实浏览器几何及交互",
+            "verifiedCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
+            "completedAt": "2026-11-07T08:19:29.764Z",
             "timeoutMs": 180000
           },
           {
@@ -65,24 +72,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
-            "completedAt": "2026-11-07T07:57:00.592Z",
+            "verifiedCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
+            "completedAt": "2026-11-07T08:19:29.764Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本提交仅调整数据格式处理，原始响应及原映射回放通过；新包真实生成重试另验"
+          "outcome": "passed",
+          "summary": "深浅主题与320/600px真实浏览器：分段页签、独立收起、文字上下平衡、表格及自适应；打包客户端另验"
         },
         "acceptanceCriteria": [
-          "代码、日期及前导零不受数字精度设置影响",
-          "真实数值精度与单位换算校验保持",
-          "原始取数提交可直接物化"
+          "页签切换入口稳定并与收起动作分开",
+          "数值提示条单行及换行均垂直居中",
+          "保留默认展开、自适应高度及已有数据"
         ],
         "risks": [
-          "不保证模型省略必要字段或选择错误数据来源等其他情形均可自动恢复"
+          "旧主题测试4项基线失败已在28d0147f复现；不以其作为通过证据"
         ],
-        "generatedAt": "2026-11-07T07:57:00.592Z"
+        "generatedAt": "2026-11-07T08:19:29.764Z"
       }
     },
     {
