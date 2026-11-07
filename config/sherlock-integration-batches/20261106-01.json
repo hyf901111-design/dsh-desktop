@@ -81,20 +81,32 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "自动记忆保留项目主语与确认上下文",
+        "featureName": "仅保存有未来价值的记忆并清理待确认队列",
         "branch": "codex/feat/hindsight-local-validation-20261107",
-        "baseCommit": "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb",
-        "tipCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
+        "baseCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
+        "tipCommit": "c86e8f88353fd1ffde7390e15229c832deccfc87",
         "commits": [
           {
-            "commit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
+            "commit": "c86e8f88353fd1ffde7390e15229c832deccfc87",
             "parents": [
-              "58ed7b9b380f7348eef6884ece83d2ab7e86c7fb"
+              "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030"
             ],
-            "subject": "保留自动记忆中的项目主语与确认上下文"
+            "subject": "收紧记忆提取规则并整理可读的长期记忆文档"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/README.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/capture.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/context.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-memory-runtime/index.js"
@@ -105,7 +117,15 @@
           },
           {
             "status": "M",
+            "path": "src/main/memory/document.ts"
+          },
+          {
+            "status": "M",
             "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/view.ts"
           },
           {
             "status": "M",
@@ -122,12 +142,14 @@
               "test/memory-runtime.test.js",
               "test/memory-evidence.test.js",
               "test/memory-bridge.test.ts",
-              "test/memory-editable-document.test.ts"
+              "test/memory-document.test.ts",
+              "test/memory-editable-document.test.ts",
+              "test/memory-view.test.ts"
             ],
             "outcome": "passed",
-            "summary": "98项直接相关检查通过；新增项目约定上下文、待确认、跨句误判用例，先复现2项失败再修复。",
-            "verifiedCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
-            "completedAt": "2026-11-07T05:01:17.213934+00:00",
+            "summary": "130项聚焦检查通过；收紧提取、备份迁移、失败保留、自动更新与可读Markdown均有覆盖。真实模型6场景通过。",
+            "verifiedCommit": "c86e8f88353fd1ffde7390e15229c832deccfc87",
+            "completedAt": "2026-11-07T05:46:33.256403+00:00",
             "timeoutMs": 180000
           },
           {
@@ -138,26 +160,27 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "0e319e1bf3e3f3cd32a18c2f870ff986c09a0030",
-            "completedAt": "2026-11-07T05:01:17.213934+00:00",
+            "verifiedCommit": "c86e8f88353fd1ffde7390e15229c832deccfc87",
+            "completedAt": "2026-11-07T05:46:33.256403+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "真实签名客户端发现会议约定提取丢失主语，已复现并修复；最终包需重跑预先冻结的10个新场景。"
+          "summary": "本轮主要修改后台提取与迁移，设置仅调整说明文字。最终包须完成已冻结12个真实场景、升级清理与预览编辑验证。"
         },
         "acceptanceCriteria": [
-          "引用旧偏好但无具体新增内容时不创建记忆条目",
-          "未知用户或项目事实直接说明无可用依据，不反复查内部文件",
-          "记忆自动记录、跨对话调用和用户明确指定的资料查找正常",
-          "构建本地版本并在真实客户端换场景复测"
+          "只自动记录明确且对以后有用的偏好、约定及用户明确要求记住的上下文",
+          "不生成待确认队列；旧候选先备份再清理，保留有效记忆及总开关状态",
+          "记忆MD使用简短明确的标题和正文；自动偏好更新只显示当前版本",
+          "无答案不误用记忆，不自行查文件；用户指定资料仍能查询",
+          "本地构建并完成真实客户端聚焦验证，保持主应用打开"
         ],
         "risks": [
           "真实模型验证属于固定配置的小样本，不构成任意模型保证",
           "本地预览，不接受晋升、不发布、不推送；模型行为约束不替代操作系统文件权限隔离"
         ],
-        "generatedAt": "2026-11-07T05:01:17.213934+00:00"
+        "generatedAt": "2026-11-07T05:46:33.256403+00:00"
       }
     }
   ],
