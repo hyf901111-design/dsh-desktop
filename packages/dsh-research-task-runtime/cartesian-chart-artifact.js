@@ -45,10 +45,23 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
     axes.push(node('line', horizontal ? {class:'grid',x1:p,x2:p,y1:top,y2:h-bottom} : {class:'grid',x1:left,x2:w-right,y1:p,y2:p}));
     axes.push(node('text', horizontal ? {x:p,y:h-9,'text-anchor':'middle'} : {x:left-8,y:p+4,'text-anchor':'end'}, [tickText(v)]));
   }
-  const every = horizontal ? 1 : Math.max(1,Math.ceil(n / Math.max(2,Math.floor(pw/75))));
-  for (let i=0;i<n;i++) if (i%every===0 || i===n-1) {
+  // Keep endpoint dates and a stable set of passive nodes on resize. Hide only
+  // colliding labels, never observations or hit targets. Reserve the final date
+  // before placing interior ticks, so it cannot overlap a nearby penultimate one.
+  const tickCount=horizontal?n:Math.min(5,n);
+  const indices=Array.from({length:tickCount},(_,i)=>tickCount===1?0:Math.round(i*(n-1)/(tickCount-1)));
+  const textWidth=text=>[...text].reduce((sum,c)=>sum+(/[\x00-\x7f]/u.test(c)?6.8:11),0);
+  const lastLabel=spec.labels[n-1],lastShort=lastLabel.length>10?lastLabel.slice(0,9)+'…':lastLabel;
+  const lastStart=w-right-textWidth(lastShort);
+  let previousEnd=-Infinity;
+  for (const i of indices) {
     const label=spec.labels[i], short=label.length>(horizontal?12:10)?label.slice(0,horizontal?11:9)+'…':label;
-    axes.push(node('text', horizontal ? {x:left-8,y:cat(i)+4,'text-anchor':'end'} : {x:cat(i),y:h-10,'text-anchor':'middle'}, [node('title',{},[label]),short]));
+    const size=textWidth(short),x=n===1?left+pw/2:i===0?left:i===n-1?w-right:cat(i);
+    const anchor=n===1?'middle':i===0?'start':i===n-1?'end':'middle';
+    const start=x-(anchor==='start'?0:anchor==='end'?size:size/2),end=start+size;
+    const hidden=!horizontal&&i>0&&i<n-1&&(start<previousEnd+10||end>lastStart-10);
+    if(!hidden)previousEnd=end;
+    axes.push(node('text', horizontal ? {x:left-8,y:cat(i)+4,'text-anchor':'end'} : {x,y:h-10,'text-anchor':anchor,...(hidden?{visibility:'hidden','aria-hidden':'true'}:{})}, [node('title',{},[label]),short]));
   }
   const groups=[], count=spec.series.filter((s,si)=>visible[si] && (kind!=='combo'||(s.kind??(si===0?'bar':'line'))==='bar')).length || 1;
   let barIndex=0;
@@ -197,8 +210,7 @@ export function installCartesianChartDetails(spec) {
   });
 }
 
-/** Optional presentation only: preserve every original coordinate and observation.
- * Keeping the base program unchanged also preserves all existing saved artifacts. */
+/** Optional numeric formatting; base geometry owns label spacing and positions. */
 export function cartesianChartAxisPrecision(base) {
   return function preciseCartesianChart(spec,...args) {
     const result=base(spec,...args),digits=spec.axisDecimals;
@@ -207,16 +219,6 @@ export function cartesianChartAxisPrecision(base) {
       const text=element.children[0],percent=text.endsWith('%'),number=Number(text.replace(/,/g,'').replace(/%$/,''));
       if(!/^-?[\d,]+(?:\.\d+)?%?$/.test(text)||!Number.isFinite(number))continue;
       element.children[0]=number.toLocaleString('en-US',{maximumFractionDigits:digits})+(percent?'%':'');
-    }
-    // Five stable category nodes retain the same passive route topology at all
-    // widths. Coordinates still follow the original geometry; no data is sampled.
-    if(!['horizontal','lollipop','dumbbell'].includes(spec.variant)) {
-      const categories=result.elements.filter(element=>element.tag==='text'&&element.children[0]?.tag==='title');
-      const offset=result.elements.findIndex(element=>categories.includes(element));
-      result.elements=result.elements.filter(element=>!categories.includes(element));
-      const count=Math.min(5,spec.labels.length),indices=Array.from({length:count},(_,i)=>count===1?0:Math.round(i*(spec.labels.length-1)/(count-1)));
-      const ticks=indices.map(i=>({tag:'text',attributes:{x:48+(i+.5)*(result.width-64)/spec.labels.length,y:result.height-10,'text-anchor':'middle'},children:[{tag:'title',attributes:{},children:[spec.labels[i]]},spec.labels[i].length>10?spec.labels[i].slice(0,9)+'…':spec.labels[i]]}));
-      result.elements.splice(offset,0,...ticks);
     }
     // Compact saved artifacts retain one exact data model. Their SVG is drawn
     // by the existing runtime; an empty detail table is populated from it once.
