@@ -1430,6 +1430,7 @@ async function bootstrap(): Promise<void> {
       isShared: id => researchBoardsService?.isSharedSession(id) === true,
       workspaceRoot: id => new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),
       legacyRoot: join(dshHome, 'memories'),
+      semanticConfig: {node:join(app.getAppPath(),'node_modules/node/bin/node'),worker:join(app.getAppPath(),'node_modules/dsh-memory-runtime/local/worker.js'),model:app.isPackaged?join(process.resourcesPath,'memory-model'):join(app.getAppPath(),'build/memory-model')},
       changed: () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('memory:changed') }
     })
     memoryEndpoint = await startMemoryBridge(memoryService)

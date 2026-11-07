@@ -29,7 +29,7 @@ async function fixture(options = {}) {
   expect(patchModule.patchMemoryRequestContext(patched)).toBe(patched)
   await writeFile(join(root, 'loop.mjs'), patched)
   const { default: AgentLoop } = await import(pathToFileURL(join(root, 'loop.mjs')).href)
-  const calls = [], wire = [], warnings = [], attempts = new Map(), summaryReservations = new Set(), control = { enabled: options.enabled ?? true, ownerEpoch: 'owner-1', scopeEpoch: 1, projectId: undefined, revision: 1, memory: '默认使用简体中文。', failModel: false, invalidEvidence: false, reasoning: options.reasoning ?? false, fencedJson: false, outputTool: false, denyAttempt: false, contextWindow: options.contextWindow ?? 16000, beforeValidate: undefined, delayExtract: undefined, summaryEnabled: options.summaryEnabled ?? false, signature: 'summary-1', summaryRoute: options.summaryNoRoute ? undefined : { provider: 'selected-provider', model: 'selected-model' }, summaryRecords: options.summaryRecords ?? [{ title: '表达偏好', content: '默认用中文，先给结论。', kind: 'preference', scope: 'global' }], summaryText: '默认使用中文，先给结论。\n\n项目上下文以已保存的内容为准。', summaryCache: undefined, delaySummary: undefined }
+  const evidenceCalls = [], calls = [], wire = [], warnings = [], attempts = new Map(), summaryReservations = new Set(), control = { enabled: options.enabled ?? true, ownerEpoch: 'owner-1', scopeEpoch: 1, projectId: undefined, revision: 1, memory: '默认使用简体中文。', failModel: false, invalidEvidence: false, reasoning: options.reasoning ?? false, fencedJson: false, outputTool: false, denyAttempt: false, contextWindow: options.contextWindow ?? 16000, beforeValidate: undefined, delayExtract: undefined, summaryEnabled: options.summaryEnabled ?? false, signature: 'summary-1', summaryRoute: options.summaryNoRoute ? undefined : { provider: 'selected-provider', model: 'selected-model' }, summaryRecords: options.summaryRecords ?? [{ title: '表达偏好', content: '默认用中文，先给结论。', kind: 'preference', scope: 'global' }], summaryText: '默认使用中文，先给结论。\n\n项目上下文以已保存的内容为准。', summaryCache: undefined, delaySummary: undefined }
   const sockets = new Set()
   const server = createServer(async (request, response) => {
     expect(request.headers.authorization).toBe('Bearer memory-test-token')
@@ -65,11 +65,16 @@ async function fixture(options = {}) {
   class Adapter extends LlmAdapter {
     async resolveModel(provider, model) { return { provider, id: model, name: model, context: { contextWindow: control.contextWindow }, defaultMaxTokens: 256 } }
     async *stream(request) {
-      calls.push(request)
+      if(request.purpose === 'memory-evidence') evidenceCalls.push(request); else calls.push(request)
       if (request.purpose === 'memory-extraction') await control.delayExtract?.()
       if (request.purpose === 'memory-summary') await control.delaySummary?.(request)
       const input = request.messages.map(message => message.content.filter(block => block.type === 'text').map(block => block.text).join('')).join('')
       let answer = '已理解本轮请求。'
+      if(request.purpose === 'memory-evidence') {
+        await control.delayEvidence?.(request)
+        const input=JSON.parse(request.messages.at(-1).content[0].text)
+        answer=control.evidenceMode==='malformed'?'not JSON':JSON.stringify({supported:control.evidenceMode!=='unsupported',evidence:control.evidenceMode==='unsupported'?[]:input.memories.slice(0,1).map(m=>({id:m.id,quote:control.evidenceMode==='forged'?'不存在的证据':m.content}))})
+      }
       if (request.purpose === 'memory-extraction') {
         const events = JSON.parse(input).events
         const source = events.find(item => item.role === 'user')
@@ -93,14 +98,14 @@ async function fixture(options = {}) {
     }
   }
   const registration = ctx.llm.registerAdapter(['selected-provider'], new Adapter())
-  const runtime = runtimeModule.createMemoryRuntime(ctx, { env: { EWORK_MEMORY_BRIDGE: JSON.stringify({ url: `http://127.0.0.1:${server.address().port}`, token: 'memory-test-token' }) }, requestTimeoutMs: 1000, summaryTimeoutMs: options.summaryTimeoutMs ?? 60000, summaryPollIntervalMs: options.summaryPollIntervalMs ?? 0, onWarning: message => warnings.push(message) })
+  const runtime = runtimeModule.createMemoryRuntime(ctx, { env: { EWORK_MEMORY_BRIDGE: JSON.stringify({ url: `http://127.0.0.1:${server.address().port}`, token: 'memory-test-token' }) }, requestTimeoutMs: 1000, evidenceTimeoutMs: options.evidenceTimeoutMs ?? 8000, summaryTimeoutMs: options.summaryTimeoutMs ?? 60000, summaryPollIntervalMs: options.summaryPollIntervalMs ?? 0, onWarning: message => warnings.push(message) })
   cleanup.push(async () => { await runtime.dispose(); await ctx.fiber.dispose(); for (const socket of sockets) socket.destroy(); await new Promise(resolve => server.close(resolve)); await rm(root, { recursive: true, force: true }) })
   await runtime.ready
   await runtime.idle()
   const createAgent = async (id, meta = {}) => (await ctx.agents.create({ sessionId: id, meta: { cwd: '/tmp/memory-project', ...meta }, agentOptions: { provider: 'selected-provider', model: 'selected-model', maxTokens: 256 } })).agent
   const agent = await createAgent('memory-parent')
   const turn = async (text, target = agent) => { target.followup(createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } })); await target.whenIdle(); await runtime.idle(); expect(errors).toEqual([]) }
-  return { ctx, agent, runtime, calls, wire, control, warnings, turn, createAgent, root, registration }
+  return { ctx, agent, runtime, calls, evidenceCalls, wire, control, warnings, turn, createAgent, root, registration }
 }
 
 it('treats a disabled use switch as a quiet request without memory',async()=>{
@@ -358,4 +363,27 @@ it('does not reserve or generate an AI summary at startup, after capture, or on 
   expect(f.wire.filter(call => call.path === '/commit')).toHaveLength(1)
   expect(f.runtime.checkSummary).toBeUndefined()
   expect(f.warnings).toEqual([])
+})
+
+
+it('requires source-backed evidence and omits unsupported or forged selections from the real request',async()=>{
+ for(const mode of ['unsupported','forged','malformed']){
+  const f=await fixture();f.control.evidenceMode=mode;await f.turn('业务负责人的电话号码是多少？')
+  expect(f.evidenceCalls).toHaveLength(1)
+  expect(f.evidenceCalls[0]).toMatchObject({provider:'selected-provider',model:'selected-model',tools:[],purpose:'memory-evidence'})
+  expect(f.calls.find(r=>!r.purpose).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false)
+ }
+})
+it('revalidates memory after the evidence model returns and rejects an in-flight deleted source',async()=>{
+ const f=await fixture();f.control.delayEvidence=async()=>{f.control.revision++;f.control.memory=''}
+ await f.turn('请根据记忆写报告')
+ expect(f.evidenceCalls).toHaveLength(1)
+ expect(f.calls.find(r=>!r.purpose).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false)
+})
+it('continues without evidence when its model misses the deadline',async()=>{
+ const f=await fixture({evidenceTimeoutMs:5});f.control.delayEvidence=()=>new Promise(resolve=>setTimeout(resolve,350))
+ const started=performance.now()
+ await f.turn('请根据记忆写报告')
+ expect(performance.now()-started).toBeLessThan(250)
+ expect(f.calls.find(r=>!r.purpose).messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false)
 })

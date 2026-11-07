@@ -34,7 +34,7 @@ try{
    const {q,input}=requests[next++],start=performance.now()
    let result
    try{
-    const response=await fetch('https://api.z.ai/api/coding/paas/v4/chat/completions',{method:'POST',headers:{authorization:`Bearer ${credential}`,'content-type':'application/json'},body:JSON.stringify({model:'GLM-5.3-Flash',messages:[{role:'system',content:EVIDENCE_PROMPT},{role:'user',content:JSON.stringify({query:input.query,memories:input.memories})}],temperature:0,max_tokens:700,thinking:{type:'disabled'}}),signal:AbortSignal.timeout(15000)})
+    const response=await fetch('https://api.z.ai/api/coding/paas/v4/chat/completions',{method:'POST',headers:{authorization:`Bearer ${credential}`,'content-type':'application/json'},body:JSON.stringify({model:'GLM-5.3-Flash',messages:[{role:'system',content:EVIDENCE_PROMPT},{role:'user',content:JSON.stringify({query:input.query,memories:input.memories})}],temperature:0,max_tokens:2000,thinking:{type:'enabled'},reasoning_effort:'low'}),signal:AbortSignal.timeout(8000)})
     if(!response.ok)throw Error(`model HTTP ${response.status}`)
     const responseData=await response.json(),raw=responseData.choices?.[0]?.message?.content
     if(responseData.choices?.[0]?.finish_reason!=='stop')throw Error('model did not finish normally')
@@ -46,7 +46,7 @@ try{
   }
  }))
  const summary=subset=>{const selected=results.filter(r=>subset.some(q=>q.id===r.id));return {top5:score(subset,selected),budget:scoreEvidenceBudget(subset,selected)}}
- const report={model:'configured default zai/GLM-5.3-Flash',promptSha256:createHash('sha256').update(EVIDENCE_PROMPT).digest('hex'),original:summary(queries.slice(0,46)),holdout:summary(queries.slice(46)),results}
+ const report={model:'configured zai/GLM-5.3-Flash',reasoning:'low',maxTokens:2000,deadlineMs:8000,promptSha256:createHash('sha256').update(EVIDENCE_PROMPT).digest('hex'),original:summary(queries.slice(0,46)),holdout:summary(queries.slice(46)),results}
  report.pass=report.original.top5.completeHitRate>=.9&&report.original.top5.negativeFalsePositiveRate===0&&report.holdout.top5.completeHitRate>=.9&&report.holdout.top5.negativeFalsePositiveRate===0&&report.original.top5.failures===0&&report.holdout.top5.failures===0
  await writeFile(join(output,'evidence-results.json'),JSON.stringify(report,null,2))
  console.log(JSON.stringify({pass:report.pass,original:{hit:report.original.top5.completeHitRate,unknownFalseUse:report.original.top5.negativeFalsePositiveRate,failures:report.original.top5.failures},holdout:{hit:report.holdout.top5.completeHitRate,unknownFalseUse:report.holdout.top5.negativeFalsePositiveRate,failures:report.holdout.top5.failures},latency:report.holdout.top5.latencyMs}))

@@ -1,3 +1,4 @@
+import { evidenceInput, selectEvidence, packMemoryEvidence, EVIDENCE_PROMPT } from './evidence.js'
 import { BlockAssembler, createUserMessage, deepFreeze } from '@deepseek-ai/dsh-llm'
 
 export const name = 'dsh-memory-runtime'
@@ -55,6 +56,7 @@ function validateRecall(value) {
   if (!value || typeof value.enabled !== 'boolean' || typeof value.autoEnabled !== 'boolean' || !identifier(value.ownerEpoch) || !integer(value.revision) || !integer(value.scopeEpoch) || (value.projectId !== undefined && !identifier(value.projectId)) || !Array.isArray(value.entries) || value.entries.length > 8 || typeof value.block !== 'string' || bytes(value.block) > MAX_RECALL_BYTES) throw Error(recallFailure)
   if (value.entries.some(entry => !identifier(entry.id) || !integer(entry.revision) || ['title', 'content', 'reason'].some(key => typeof entry[key] !== 'string')) || new Set(value.entries.map(entry => entry.id)).size !== value.entries.length) throw Error(recallFailure)
   if ((!value.enabled || value.entries.length === 0) && value.block) throw Error(recallFailure)
+  if (value.candidates !== undefined) { if (!Array.isArray(value.candidates) || value.candidates.length > 30 || value.candidates.some(entry => !identifier(entry.id) || !integer(entry.revision) || ['title','content','reason'].some(key => typeof entry[key] !== 'string'))) throw Error(recallFailure) }
   return value
 }
 
@@ -89,7 +91,7 @@ function candidatesOf(raw, input) {
 }
 
 /** Internal only: no tools or model-visible mutation APIs are registered. */
-export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchRequest = globalThis.fetch, requestTimeoutMs = 5000, extractionTimeoutMs = 60000, onWarning } = {}) {
+export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchRequest = globalThis.fetch, requestTimeoutMs = 5000, extractionTimeoutMs = 60000, evidenceTimeoutMs = 8000, onWarning } = {}) {
   const config = bridgeConfig(env), abort = new AbortController()
   const request = createBridge(config, fetchRequest, requestTimeoutMs, abort.signal)
   const states = new WeakMap(), turnAnchors = new WeakMap(), seen = new WeakMap(), listeners = []
@@ -152,13 +154,42 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
     catch { if (!disposed) { await request('/failure', { captureId: capture.captureId, message: genericFailure }, abort.signal).catch(() => {}); warn(genericFailure) } }
   }
 
+  async function verifyEvidence(agent, snapshot, query, base, signal) {
+    if(simpleReply(query))return packMemoryEvidence([])
+    const input=evidenceInput(query,snapshot.candidates??snapshot.entries)
+    if(!input.memories.length)return packMemoryEvidence([])
+    if(!identifier(base.provider)||!identifier(base.model))throw Error(recallFailure)
+    signal?.throwIfAborted();abort.signal.throwIfAborted()
+    const deadline=new AbortController(),cancel=()=>deadline.abort(signal?.reason),stop=()=>deadline.abort(abort.signal.reason)
+    signal?.addEventListener('abort',cancel,{once:true});abort.signal.addEventListener('abort',stop,{once:true})
+    let aborted
+    const timeout=new Promise((_,reject)=>{aborted=()=>reject(Error(recallFailure));deadline.signal.addEventListener('abort',aborted,{once:true})})
+    const timer=setTimeout(()=>deadline.abort(),evidenceTimeoutMs);timer.unref?.()
+    try{
+      if(signal?.aborted)cancel();if(abort.signal.aborted)stop();deadline.signal.throwIfAborted()
+      return await Promise.race([timeout,(async()=>{
+        const metadata=await ctx.llm.resolveModelInfo(base.provider,base.model,deadline.signal)
+        const efforts=metadata.reasoning?.efforts??[]
+        const effort=efforts.find(e=>e.id==='off')??efforts.find(e=>e.id==='low')??efforts[0]
+        deadline.signal.throwIfAborted()
+        const options=deepFreeze({provider:base.provider,model:base.model,...(effort?{reasoningEffort:effort.id}:{}),temperature:0,system:EVIDENCE_PROMPT,messages:[createUserMessage({content:[{type:'text',text:JSON.stringify({query:input.query,memories:input.memories})}],source:{kind:'plugin',plugin:name}})],tools:[],maxTokens:effort&&effort.id!=='off'?2000:700,sessionId:agent.id,purpose:'memory-evidence',signal:deadline.signal})
+        const assembler=new BlockAssembler()
+        for await(const chunk of ctx.llm.stream(options)){deadline.signal.throwIfAborted();assembler.push(chunk)}
+        deadline.signal.throwIfAborted()
+        const blocks=assembler.blocks()
+        if(assembler.finish.kind!=='stop'||blocks.some(block=>!['text','reasoning'].includes(block.type)))throw Error(recallFailure)
+        return packMemoryEvidence(selectEvidence(blocks.filter(block=>block.type==='text').map(block=>block.text).join(''),input).map(entry=>({...entry,reason:'已核对当前问题的原文依据'})))
+      })()])
+    }finally{clearTimeout(timer);deadline.signal.removeEventListener('abort',aborted);signal?.removeEventListener('abort',cancel);abort.signal.removeEventListener('abort',stop)}
+  }
+
   listeners.push(ctx.on('agent/pre-step', async ({ agent, turn, signal }, next) => {
     const decision = await next()
     if (!live(agent) || signal.aborted || decision.kind !== 'enter') return decision
     const userText = decision.messages.filter(directUser).map(textOf).join('\n')
     let state = states.get(agent)
     if (!state || state.turn !== turn) { state = { turn, query: userText, snapshot: undefined }; states.set(agent, state) }
-    else if (userText) state.query = userText
+    else if (userText && userText!==state.query) {state.query = userText;state.selection=undefined;state.snapshot=undefined}
     if (!state.query) return decision
     try { state.snapshot = await recall(agent, state.query, turn, signal);if(!turnAnchors.has(agent.session)||turnAnchors.get(agent.session).turn!==turn)turnAnchors.set(agent.session,{turn,anchor:{ownerEpoch:state.snapshot.ownerEpoch,scopeEpoch:state.snapshot.scopeEpoch,...(state.snapshot.projectId?{projectId:state.snapshot.projectId}:{})}}) }
     catch { state.snapshot = undefined; if (!signal.aborted) warn(recallFailure) }
@@ -176,15 +207,19 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
         if (!snapshot) snapshot = state.snapshot = await recall(agent, state.query, turn, signal)
         if (!snapshot.enabled) return original
         if (!await valid(agent, snapshot, signal)) { state.snapshot = undefined; continue }
-        if (snapshot.entries.length === 0 || !snapshot.block) return original
+        const selectionKey=JSON.stringify([snapshot.ownerEpoch,snapshot.scopeEpoch,snapshot.revision,state.query,base.provider,base.model])
+        if(state.selection?.key!==selectionKey)state.selection={key:selectionKey,value:await verifyEvidence(agent,snapshot,state.query,base,signal)}
+        if(!await valid(agent,snapshot,signal)){state.snapshot=undefined;state.selection=undefined;continue}
+        const selected=state.selection.value
+        if(selected.entries.length===0||!selected.block)return original
         // The authoritative bridge block already includes history/priority/no-permission framing.
-        const message = createUserMessage({ content: [{ type: 'text', text: snapshot.block }], source: { kind: 'plugin', plugin: name } })
+        const message = createUserMessage({ content: [{ type: 'text', text: selected.block }], source: { kind: 'plugin', plugin: name } })
         const meter = ctx.get?.('tokenMeter')
         const baseline = meter ? meter.measure(agent.session, agent.session.requestHeader()).totalTokens : bytes(JSON.stringify({ messages: base.messages, system: base.system, tools: base.tools }))
         const additional = meter ? meter.estimateMessage(message) : bytes(message.content[0].text) + 16
         if (Number.isFinite(contextWindow) && baseline + additional + (base.maxTokens ?? 1000) >= contextWindow) { await reportWarning(agent, snapshot, '记忆背景超出当前模型容量，本轮未使用。', signal); return original }
         const composed = deepFreeze({ ...original, messages: [...original.messages, message] })
-        await request('/usage', { sessionId: agent.id, ownerEpoch: snapshot.ownerEpoch, revision: snapshot.revision, entries: snapshot.entries.map(({ id, revision, reason }) => ({ id, revision, reason })) }, signal)
+        await request('/usage', { sessionId: agent.id, ownerEpoch: snapshot.ownerEpoch, revision: snapshot.revision, entries: selected.entries.map(({ id, revision, reason }) => ({ id, revision, reason })) }, signal)
         // Last awaited boundary immediately before returning to preparedCall.stream.
         if (!await valid(agent, snapshot, signal)) { state.snapshot = undefined; continue }
         return composed

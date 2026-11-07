@@ -11,11 +11,11 @@ const encryption = {
   encryptString(value: string) { const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', key, iv); return Buffer.concat([iv,c.update(value,'utf8'),c.final(),c.getAuthTag()]) },
   decryptString(value: Buffer) { const c = createDecipheriv('aes-256-gcm',key,value.subarray(0,12)); c.setAuthTag(value.subarray(-16)); return Buffer.concat([c.update(value.subarray(12,-16)),c.final()]).toString('utf8') }
 }
-async function setup(root?: string) {
+async function setup(root?: string, semantic?: any) {
   root ??= await mkdtemp(join(tmpdir(),'ework-memory-test-')); if (!roots.includes(root)) roots.push(root)
   let owner = 'local', shared = false, workspace:string|null='/tmp/ework-project-a'
   const { MemoryService } = await import('../src/main/memory/service')
-  const service = await MemoryService.open({root,encryption,owner:()=>owner,isShared:()=>shared,workspaceRoot:async()=>workspace,now:()=>1_800_000_000_000})
+  const service = await MemoryService.open({root,encryption,owner:()=>owner,isShared:()=>shared,workspaceRoot:async()=>workspace,now:()=>1_800_000_000_000,semantic})
   stores.push(service)
   return { service,root,setOwner:(v:string)=>{owner=v;service.rotateIdentity()},setShared:(v:boolean)=>{shared=v},setWorkspace:(v:string|null)=>{workspace=v} }
 }
@@ -39,7 +39,7 @@ describe('长期记忆真实行为',()=>{
     const superseded=accepted.rows.find(row=>row.id===original.id)!
     expect(superseded.status).toBe('superseded')
     for(const action of ['enable','accept','disable'] as const)await expect(service.request({type:'action',ids:[superseded.id],action,expectedRevisions:{[superseded.id]:superseded.revision}})).rejects.toThrow(/状态/)
-    expect((await service.recall({sessionId:'b',query:'报告'})).entries.map(row=>row.id)).toEqual([candidate.id])
+    expect((await service.recall({sessionId:'b',query:'报告'})).candidates.map(row=>row.id)).toEqual([candidate.id])
   })
 
   it('preserves a disabled record and its metadata when manually editing with a matching revision',async()=>{
@@ -50,7 +50,7 @@ describe('长期记忆真实行为',()=>{
     const row=disabled.rows[0]!
     const edited=await service.request({type:'save',id:row.id,expectedRevision:row.revision,input:{...preference('用户修改的内容'),pinned:row.pinned,expiresAt:row.expiresAt}})
     expect(edited.rows[0]).toMatchObject({id:row.id,status:'disabled',revision:row.revision+1,content:'用户修改的内容',pinned:true,expiresAt:1_900_000_000_000,sources:row.sources,createdAt:row.createdAt})
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
     await expect(service.request({type:'save',id:row.id,expectedRevision:row.revision,input:preference('陈旧输入')})).rejects.toThrow(/已更新/)
     expect((await service.request({type:'snapshot'})).rows[0]!.content).toBe('用户修改的内容')
   })
@@ -69,18 +69,47 @@ describe('长期记忆真实行为',()=>{
     expect(superseded.status).toBe('superseded')
     const updated=await service.request({type:'save',id:superseded.id,expectedRevision:superseded.revision,input:preference('旧版中文偏好，保留记录。')})
     expect(updated.rows.find(r=>r.id===original.id)?.status).toBe('superseded')
-    expect((await service.recall({sessionId:'b',query:'报告'})).entries.map(r=>r.id)).toEqual([edited.id])
+    expect((await service.recall({sessionId:'b',query:'报告'})).candidates.map(r=>r.id)).toEqual([edited.id])
   })
-  it('uses a single conservative master switch for persisted mixed legacy settings',async()=>{
-    const {service,root}=await setup();await service.request({type:'save',input:preference()});await service.close()
-    const {MemoryStore}=await import('../src/main/memory/store');const store=await MemoryStore.open(root,encryption),state:any=store.read('local')
-    state.settings={use:true,auto:false};store.write('local',state);store.close()
+  it('preserves independent use/auto values across restart and respects each authorization',async()=>{
+    const {service,root}=await setup();await service.request({type:'save',input:preference()})
+    await service.request({type:'settings',auto:false});await service.close()
     const resumed=(await setup(root)).service
-    expect((await resumed.request({type:'snapshot'})).settings).toEqual({use:false,auto:false})
-    expect((await resumed.recall({sessionId:'a',query:'报告'})).enabled).toBe(false)
+    expect((await resumed.request({type:'snapshot'})).settings).toMatchObject({use:true,auto:false})
+    expect((await resumed.recall({sessionId:'a',query:'报告'})).enabled).toBe(true)
     expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后中文'}]})).enabled).toBe(false)
-    await resumed.request({type:'settings',use:true})
-    expect((await resumed.request({type:'snapshot'})).settings).toEqual({use:true,auto:true})
+    await resumed.request({type:'settings',use:false,auto:true})
+    expect((await resumed.recall({sessionId:'a',query:'报告'}))).toMatchObject({enabled:false,autoEnabled:true})
+    expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'2',events:[{seq:1,role:'user',text:'以后中文'}]})).enabled).toBe(true)
+  })
+  it('keeps raw retrieval candidates out of the old directly injectable block',async()=>{
+    const {service}=await setup();await service.request({type:'save',input:preference()})
+    const recalled=await service.recall({sessionId:'a',query:'报告'})
+    expect(recalled.entries).toEqual([]);expect(recalled.block).toBe('')
+    expect(recalled.candidates?.[0]?.content).toBe('默认用中文回答')
+  })
+  it('rejects late semantic results when a session becomes shared or the account changes',async()=>{
+    for(const action of ['shared','owner']){
+      let finish:(value:any)=>void=()=>{},started:()=>void=()=>{}
+      const ready=new Promise<void>(resolve=>{started=resolve})
+      const semantic={select:()=>{started();return new Promise(resolve=>{finish=resolve})},clear(){},close(){},status:()=>({state:'ready',message:'ready'})}
+      const f=await setup(undefined,semantic),row=(await f.service.request({type:'save',input:preference()})).rows[0]!
+      const result=f.service.recall({sessionId:'a',query:'报告'});const checked=expect(result).rejects.toThrow(/会话|账户/)
+      await ready
+      if(action==='shared')f.setShared(true);else f.setOwner('new-account')
+      finish([{id:row.id,revision:row.revision}]);await checked
+    }
+  })
+  it('does not block edits behind local inference and discards a result after deletion',async()=>{
+    let finish:(value:any)=>void=()=>{},started:()=>void=()=>{}
+    const ready=new Promise<void>(resolve=>{started=resolve})
+    const semantic={select:()=>{started();return new Promise(resolve=>{finish=resolve})},clear(){},close(){},status:()=>({state:'ready',message:'ready'})}
+    const {service}=await setup(undefined,semantic)
+    const saved=(await service.request({type:'save',input:preference()})).rows[0]!
+    const pending=service.recall({sessionId:'a',query:'报告'});await ready
+    await service.request({type:'action',action:'delete',ids:[saved.id]})
+    finish([{id:saved.id,revision:saved.revision}])
+    await expect(pending).rejects.toThrow(/变化|失效|更新/)
   })
   it('renews invalidated summary reservations across scope changes within the persisted budget',async()=>{
     const {service}=await setup();await service.request({type:'save',input:preference()})
@@ -112,7 +141,7 @@ describe('长期记忆真实行为',()=>{
     await service.close();const resumed=(await setup(root)).service
     const recovered=await resumed.request({type:'snapshot'})
     expect(recovered.document?.error).toBeUndefined();expect(recovered.rows[0]!.content).toBe('默认用英文回答')
-    expect((await resumed.recall({sessionId:'b',query:'报告'})).entries[0]!.content).toBe('默认用英文回答')
+    expect((await resumed.recall({sessionId:'b',query:'报告'})).candidates[0]!.content).toBe('默认用英文回答')
   })
   it('leaves the editable file unchanged if the encrypted commit fails',async()=>{
     const {service}=await setup();const saved=await service.request({type:'save',input:preference()}),before=await readFile(saved.document!.file,'utf8')
@@ -139,7 +168,7 @@ describe('长期记忆真实行为',()=>{
     expect((await resumed.summaryCommit({...second,text:'恢复后的真实概括',model:'chosen'})).ok).toBe(true)
     await resumed.request({type:'settings',use:false,auto:false})
     expect((await resumed.summaryInput()).enabled).toBe(false)
-    expect((await resumed.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    expect((await resumed.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
     expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'2',events:[{seq:2,role:'user',text:'以后默认简短'}]})).enabled).toBe(false)
   })
   it('accepts a manually added Markdown preference and removes memory and cached summary when its file is deleted',async()=>{
@@ -147,7 +176,7 @@ describe('长期记忆真实行为',()=>{
     await writeFile(initial.document!.file,(await readFile(initial.document!.file,'utf8'))+'\n### 回答顺序\n每次先给结论，再解释依据。\n')
     let state=await service.request({type:'snapshot'})
     expect(state.rows[0]!.content).toBe('每次先给结论，再解释依据。');expect(state.rows[0]!.manualLocked).toBe(true)
-    expect((await service.recall({sessionId:'b',query:'整理报告'})).entries).toHaveLength(1)
+    expect((await service.recall({sessionId:'b',query:'整理报告'})).candidates).toHaveLength(1)
     await rm(initial.document!.file)
     state=await service.request({type:'snapshot'})
     expect(state.rows).toHaveLength(0);expect(state.summary?.text).toBe('')
@@ -159,11 +188,11 @@ describe('长期记忆真实行为',()=>{
     expect(saved.document?.file.endsWith('/记忆.md')).toBe(true)
     const file=saved.document!.file
     await writeFile(file,(await readFile(file,'utf8')).replace('默认用中文回答','默认用英文回答'))
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries[0]!.content).toBe('默认用英文回答')
+    expect((await service.recall({sessionId:'a',query:'报告'})).candidates[0]!.content).toBe('默认用英文回答')
     const cap=await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后默认用中文回答'}]})
     const body=await readFile(file,'utf8')
     await writeFile(file,body.replace(/<!-- ework-memory:[\s\S]*?<!-- \/ework-memory -->/u,''))
-    expect((await service.recall({sessionId:'b',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'b',query:'报告'})).candidates).toHaveLength(0)
     await expect(service.commitExtraction({captureId:cap.captureId,candidates:[]})).rejects.toThrow(/失效/)
     setOwner('another-account')
     expect((await service.request({type:'snapshot'})).document!.file).not.toBe(file)
@@ -179,7 +208,7 @@ describe('长期记忆真实行为',()=>{
     expect((await readFile(file,'utf8'))).toContain('默认用英文回答')
     const backup=(await readdir(state.document!.directory)).find(name=>name.startsWith('记忆冲突-'))!
     expect(await readFile(join(state.document!.directory,backup),'utf8')).toContain('只使用古汉语回答')
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries[0]!.content).toBe('默认用英文回答')
+    expect((await service.recall({sessionId:'a',query:'报告'})).candidates[0]!.content).toBe('默认用英文回答')
   })
   it('caches actual AI summary, limits reservation, and rejects stale or switched-owner results',async()=>{
     const {service,setOwner}=await setup();await service.request({type:'save',input:preference()})
@@ -209,7 +238,7 @@ describe('长期记忆真实行为',()=>{
     await service.request({type:'action',ids:[row.id],action:'disable'})
     const cap=await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后默认用中文回答'}]})
     await service.commitExtraction({captureId:cap.captureId,candidates:[{title:'语言',content:'以后默认用中文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用中文回答',explicit:true}]})
-    expect((await service.recall({sessionId:'b',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'b',query:'报告'})).candidates).toHaveLength(0)
     expect((await service.request({type:'snapshot'})).rows.find(r=>r.id===row.id)?.status).toBe('disabled')
   })
   it('does not upgrade temporary defaults or omit their source qualifiers',async()=>{
@@ -218,7 +247,7 @@ describe('长期记忆真实行为',()=>{
       const cap=await authorizedCapture(service,{sessionId:'a',turnId:String(i),events:[{seq:i,role:'user',text:source}]})
       await service.commitExtraction({captureId:cap.captureId,candidates:[{title:'语言',content:evidence,kind:'preference',scope:'global',sourceSeq:i,evidence,explicit:true}]})
     }
-    expect((await service.recall({sessionId:'b',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'b',query:'报告'})).candidates).toHaveLength(0)
   })
   it('rejects a queued turn from its original identity and project after either changes',async()=>{
     const {service,setOwner}=await setup()
@@ -246,7 +275,7 @@ describe('长期记忆真实行为',()=>{
     await service.request({type:'save',input:preference()})
     const recall=await service.recall({sessionId:'a',query:'报告'})
     const validation={sessionId:'a',ownerEpoch:recall.ownerEpoch,revision:recall.revision,scopeEpoch:recall.scopeEpoch}
-    await service.usage({...validation,entries:recall.entries})
+    await service.usage({...validation,entries:recall.candidates})
     expect((await service.validate(validation)).valid).toBe(true)
     expect((await service.request({type:'snapshot'})).usages).toHaveLength(1)
     await service.request({type:'settings',use:false})
@@ -261,10 +290,10 @@ describe('长期记忆真实行为',()=>{
     const snapshot=await service.request({type:'save',input:preference()})
     expect(snapshot.rows[0]!.content).toBe('默认用中文回答')
     const first=await service.recall({sessionId:'a',query:'请帮我整理报告'})
-    expect(first.entries[0]!.content).toBe('默认用中文回答')
+    expect(first.candidates[0]!.content).toBe('默认用中文回答')
     await service.close()
     const reopened=await setup(root)
-    expect((await reopened.service.recall({sessionId:'b',query:'整理报告'})).entries).toHaveLength(1)
+    expect((await reopened.service.recall({sessionId:'b',query:'整理报告'})).candidates).toHaveLength(1)
     expect((await readFile(join(root,'memory.sqlite'))).includes(Buffer.from('默认用中文回答'))).toBe(false)
   })
   it('isolates projects and accounts and excludes shared sessions',async()=>{
@@ -276,9 +305,9 @@ describe('长期记忆真实行为',()=>{
     await service.request({type:'project',name:'项目 B',path:'/tmp/ework-project-b'})
     state=await service.request({type:'snapshot'})
     await service.request({type:'bind',sessionId:'b',projectId:state.projects.find(p=>p.name==='项目 B')!.id})
-    expect((await service.recall({sessionId:'a',query:'继续项目'})).entries).toHaveLength(1)
-    expect((await service.recall({sessionId:'b',query:'继续项目'})).entries).toHaveLength(0)
-    setShared(true);expect((await service.recall({sessionId:'a',query:'继续'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'a',query:'继续项目'})).candidates).toHaveLength(1)
+    expect((await service.recall({sessionId:'b',query:'继续项目'})).candidates).toHaveLength(0)
+    setShared(true);expect((await service.recall({sessionId:'a',query:'继续'})).candidates).toHaveLength(0)
     setShared(false);setOwner('another-account');expect((await service.request({type:'snapshot'})).rows).toHaveLength(0)
   })
   it('rejects stale edits and preserves manual corrections over automatic extraction',async()=>{
@@ -299,7 +328,7 @@ describe('长期记忆真实行为',()=>{
     await service.request({type:'action',ids:[row.id],action:'delete'})
     await expect(service.commitExtraction({captureId:capture.captureId,candidates:[{title:'回答语言',content:'默认用中文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用中文回答',explicit:true}]})).rejects.toThrow(/失效/)
     expect((await service.request({type:'snapshot'})).rows).toHaveLength(0)
-    expect((await service.recall({sessionId:'b',query:'中文'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'b',query:'中文'})).candidates).toHaveLength(0)
     const retry=await authorizedCapture(service,{sessionId:'a',turnId:'2',events:[{seq:1,role:'user',text:'以后默认用中文回答'}]})
     await service.commitExtraction({captureId:retry.captureId,candidates:[{title:'回答语言',content:'默认用中文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用中文回答',explicit:true}]})
     expect((await service.request({type:'snapshot'})).rows).toHaveLength(0)
@@ -311,17 +340,17 @@ describe('长期记忆真实行为',()=>{
     expect((await service.request({type:'snapshot'})).rows).toHaveLength(0)
     const project=(await service.request({type:'project',name:'项目 A'})).projects[0]!
     await service.request({type:'save',input:{...preference('昨天进展'),kind:'progress',scope:'project',projectId:project.id,expiresAt:1}})
-    expect((await service.recall({sessionId:'a',query:'进展'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'a',query:'进展'})).candidates).toHaveLength(0)
   })
-  it('supports the master and per-conversation switches',async()=>{
+  it('supports independent use, auto and per-conversation switches',async()=>{
     const {service}=await setup();await service.request({type:'save',input:preference()})
     await service.request({type:'settings',use:false})
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
     await service.request({type:'settings',use:true,auto:false})
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(1)
     expect((await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'记住我喜欢中文'}]})).enabled).toBe(false)
     await service.request({type:'session',sessionId:'a',disabled:true})
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'a',query:'报告'})).candidates).toHaveLength(0)
   })
   it('retains unbound project context as a candidate and makes duplicate capture idempotent',async()=>{
     const {service,setWorkspace}=await setup();setWorkspace(null)
@@ -332,7 +361,7 @@ describe('长期记忆真实行为',()=>{
     const state=await service.request({type:'snapshot'})
     expect(state.rows).toHaveLength(1)
     expect(state.rows[0]!.status).toBe('candidate')
-    expect((await service.recall({sessionId:'b',query:'项目'})).entries).toHaveLength(0)
+    expect((await service.recall({sessionId:'b',query:'项目'})).candidates).toHaveLength(0)
   })
   it('does not treat quoted third-party directions as a user preference',async()=>{
     const {service}=await setup()

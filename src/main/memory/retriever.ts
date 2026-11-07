@@ -48,6 +48,12 @@ export class MemoryRetriever {
   private db?: DatabaseSync
   private signature=''
   private unavailable=false
+  candidates(rows:MemoryRecord[],query:string,projectId:string|undefined,now:number){
+    if(/^(?:你好|您好|嗨|hello|hi|谢谢|thanks)[！!。.\s]*$/iu.test(query.trim()))return []
+    const preferred=this.select(rows,query,projectId,now).map(item=>item.row)
+    const ids=new Set(preferred.map(row=>row.id))
+    return [...preferred,...rows.filter(row=>!ids.has(row.id)&&row.status==='active'&&(!row.expiresAt||row.expiresAt>now)&&(row.scope==='global'||row.projectId===projectId))].slice(0,30)
+  }
   private open(){
     if(this.db||this.unavailable)return
     try{const db=new DatabaseSync(':memory:');try{db.exec("CREATE VIRTUAL TABLE memory_search USING fts5(id UNINDEXED,title,content,tokenize='trigram');");this.db=db}catch{db.close();this.unavailable=true}}
