@@ -10,6 +10,8 @@
 
 **Spec:** 当前会话用户明确要求“按统一后端部署继续推进，验证召回效果、端到端延迟、并发和用户隔离，通过后再改造记忆架构和前端设置界面”。
 
+**状态更新（2026-11-07）：** 用户回复部署环境问题后要求“换个本地存储和应用记忆的方案”。统一后端路线因此停止推进，现有代码和证据保留；不再等待部署主机，也不把未执行的后端压测判为通过或失败。后续转向 `2026-11-07-local-memory-alternative.md` 的嵌入式本地方案验证。
+
 ## Global Constraints
 
 - 不将桌面 RSS 768MiB 或 +10pp 作为统一后端通用门槛。资源只记录为容量参考。
@@ -41,10 +43,10 @@
 
 **Files:** `experiments/hindsight-backend-validation/{gateway.mjs,gateway.test.mjs,tenant_extension.py,test_tenant_extension.py}`。
 
-- [ ] 先写拒绝伪造/失效身份、跨项目操作、私有管理路径和同名 document 隔离的聚焦失败测试。
-- [ ] 实现网关身份核验、严格请求字段、短期断言和固定 bank；项目 ACL 在服务端注册表校验。
-- [ ] 实现 Hindsight 租户扩展：固定 issuer/audience/HS256、必需 exp/sub、仅已登记用户、独立 schema，无 public 回退。
-- [ ] 跑直接受影响测试并中文提交。
+- [x] 先写拒绝伪造/失效身份、跨项目操作、私有管理路径和同名 document 隔离的聚焦失败测试。
+- [x] 实现网关身份核验、严格请求字段、短期断言和固定 bank；项目 ACL 在服务端注册表校验。
+- [x] 实现 Hindsight 租户扩展：固定 issuer/audience/HS256、必需 exp/sub、仅已登记用户、独立 schema，无 public 回退。
+- [x] 跑直接受影响测试并中文提交（6 项 Node 网关、4 项 Python 扩展；`31c34ee5f`）。
 
 ## Task 2: 可部署后端与独立压测
 
