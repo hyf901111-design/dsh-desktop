@@ -1,22 +1,24 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
+import { Window } from 'happy-dom'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { ResearchBoardIntegration } from '../src/main/research-board-integration'
-import { createDocument, projectDocument, mergeDocumentUpdate } from '../packages/dsh-research-collaboration/document.js'
-import { fromBase64 } from '../packages/dsh-research-collaboration/protocol.js'
+import { createDocument, projectDocument, mergeDocumentUpdate, encodeDocument } from '../packages/dsh-research-collaboration/document.js'
+import { fromBase64, toBase64 } from '../packages/dsh-research-collaboration/protocol.js'
 
 const roots: string[] = []
 async function clientArtifacts(nodes: any[]) {
   const require = createRequire(import.meta.url)
   let descriptor: any
+  const win = new Window()
   const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  runInNewContext(source, { window: { __ModuleLoader__: { load: (d: any) => { descriptor = d } } }, document: undefined, TextEncoder, AbortController, URL, setTimeout, clearTimeout })
+  runInNewContext(source, { window: { __ModuleLoader__: { load: (d: any) => { descriptor = d } } }, document: win.document, TextEncoder, AbortController, URL, setTimeout, clearTimeout })
   const fake: any = new Proxy(function () {}, { get: () => fake, apply: () => fake, construct: () => ({}) })
   const client = descriptor.factory((id: string) => ['react', 'react/jsx-runtime'].includes(id) ? require(id) : fake)
-  return client.parseResearchCanvasArtifactNodes(JSON.stringify(nodes))
+  try { return client.parseResearchCanvasArtifactNodes(JSON.stringify(nodes)) } finally { await win.happyDOM.abort() }
 }
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }) })
 it('creates a leased workbench for an editor from the shared composer, reusing the request and preserving peer nodes', async () => {
@@ -331,4 +333,28 @@ it.each([[undefined, 0], ['interrupted', 0], ['paused', 0], [undefined, 1], ['in
   expect(runtimeRequest.mock.calls[0]?.[1]).toEqual({ taskId: attempt ? 'original:resume:1' : 'original', drain: true })
   expect(commands.find(c => c.action === 'taskYield')).toMatchObject({ executorId: 'original-executor', executorStopped: true })
   integration.stop()
+})
+
+it('installs native library cards and links atomically with shared tabs, dispatching only missing research',async()=>{
+ const {integration,service,canvas,commands}=await fixture();const doc=createDocument(canvas)
+ service.taskAuthority=()=>({localSessionId:'local',signal:new AbortController().signal,snapshot:{documentUpdate:toBase64(encodeDocument(doc)),board:{sharingEpoch:1},tasks:[],snapshot:{canvas:projectDocument(doc)}}} as any)
+ const submit=vi.spyOn(integration,'submit').mockResolvedValue({} as any)
+ const key=integration.journal.prepare('user','board','native-library',{text:'自选行情和财务'},1)
+ const native=(widget:string,options:any={})=>({title:widget,prompt:'按所选股票展示',type:'financial-widget',library:{id:'builtin-'+widget,options}})
+ const plan={requestId:'native-library',title:'芯片投研',panels:[native('watchlist',{symbols:[{market:'SH',code:'688981',name:'中芯国际'}]}),native('quote'),native('news'),{title:'财务',prompt:'对比真实财务记录',type:'table'}],links:[{sourcePanel:0,targetPanel:1},{sourcePanel:1,targetPanel:2}],tabs:[{name:'监控',panelIndexes:[0,1,2]},{name:'财务',panelIndexes:[3]}]}
+ try{
+  await (integration as any).createSharedWorkbench(key,'request',plan,{references:[]},new AbortController().signal)
+  const update=commands.find((c:any)=>c.action==='update');mergeDocumentUpdate(doc,fromBase64(update.update),new Set())
+  const after=projectDocument(doc),nodes=integration.journal.get(key).workbench.panels.map((p:any)=>p.node)
+  expect(submit).toHaveBeenCalledTimes(1);expect(submit.mock.calls[0]![0].targetId).toBe(nodes[3].id)
+  expect(after.artifacts.find((n:any)=>n.id==='node')).toEqual(canvas.artifacts[0])
+  expect(nodes[1].containerSpec.linkedWatchlistId).toBe(nodes[0].id)
+  expect(nodes[2].containerSpec.linkedSourceId).toBe(nodes[1].id)
+  expect(nodes[2].containerSpec.symbols).toEqual(nodes[0].containerSpec.symbols)
+  const nav=after.artifacts.find((n:any)=>n.containerSpec?.type==='board-tabs') as any
+  expect(nav.containerSpec.tabs.map((t:any)=>t.name)).toEqual(['原有内容','监控','财务'])
+  expect(nav.containerSpec.tabs[1].nodeIds).toEqual(nodes.slice(0,3).map((n:any)=>n.id))
+  // Replay uses the reserved update and stable IDs, without duplicate cards.
+  mergeDocumentUpdate(doc,fromBase64(update.update),new Set());expect(projectDocument(doc).artifacts).toHaveLength(6)
+ }finally{integration.stop();doc.destroy()}
 })

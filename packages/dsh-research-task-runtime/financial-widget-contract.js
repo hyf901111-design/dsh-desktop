@@ -57,7 +57,9 @@ export function synchronizeFinancialLinks(artifacts){
  const nodes=new Map(artifacts.map(n=>[n.id,n]))
  for(const widget of ['quote','news','announcements'])for(const node of artifacts){
   const spec=node.containerSpec,sourceId=financialLinkSourceId(spec);if(spec?.widget!==widget||!sourceId)continue
-  const source=nodes.get(sourceId)?.containerSpec,next={...spec}
+  const sourceNode=nodes.get(sourceId),source=sourceNode?.containerSpec,next={...spec}
+  // A source reserved by the same workbench may finish after its dependent.
+  if(!source&&['queued','running'].includes(sourceNode?.generationStatus))continue
   if(sourceId===node.id||!financialCanLink(source,spec)){
    if(widget==='news'){next.query=financialNewsQuery(spec);delete next.linkedSourceId}else if(widget==='announcements')delete next.linkedSourceId;else delete next.linkedWatchlistId
   }else{const symbol=source.widget==='watchlist'?financialSelectedSymbol(source):source.symbols[0];next.symbols=symbol?[symbol]:[]}
