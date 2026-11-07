@@ -2102,6 +2102,48 @@ describe('Research task Subagent adapter', () => {
     }finally{await a?.return();await b?.return();await queued?.return();await handle?.dispose();disposeQueue();vi.useRealTimers()}
   });
 
+  it.each(['corrected-query','no-query','second-error','permission','other-api','catalog-error','call-budget'])('bounds parameter repair after late interface discovery: %s',async scenario=>{
+    const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
+    const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers();
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
+    ctx.tools={schemas:()=>[{name:'ework__catalog',description:'读取接口参数定义；不是业务数据'},{name:'ework__query',description:'返回已授权财务数据'}]};
+    let seq=0,handle;
+    const call=(id,name,args)=>ctx.emit(child,{seq:++seq,type:'tool/call',data:{callId:id,name,arguments:JSON.stringify(args)}});
+    const response=(id,value,isError=false)=>ctx.emit(child,{seq:++seq,type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',toolCallId:id,isError,content:[{type:'text',text:typeof value==='string'?value:JSON.stringify(value)}]}]}}});
+    const end=()=>ctx.emit(child,{seq:++seq,type:'step/end',data:{}});
+    try{
+      handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：公司研究\n本面板：财务\n查询营业收入和每股收益。\n仅生成本面板，优先使用 table 类型。',prompt:'生成财务卡',signal:new AbortController().signal,onSessionEvent:()=>{}});
+      call('bad','ework__query',{api_name:'income',params:{ts_code:'688981.SH'},fields:'revenue,eps'});
+      response('bad',scenario==='permission'?'Tushare 当前接口权限不足，不重复调用。':'参数或字段无效，请按 tushare_catalog 的当前定义修正。',true);
+      if(scenario==='call-budget')for(let i=0;i<11;i++){call('extra-'+i,'ework__query',{api_name:'daily_basic'});response('extra-'+i,{records:[]})}
+      call('definition','ework__catalog',{api_name:scenario==='other-api'?'daily_basic':'income'});
+      await vi.advanceTimersByTimeAsync(113000);
+      response('definition',{kind:'catalog',interfaces:[{api:scenario==='other-api'?'daily_basic':'income',parameters:{period:{type:'str'}},fields:{revenue:'营业收入',basic_eps:'基本每股收益'}}]},scenario==='catalog-error');
+      end();
+      if(['permission','other-api','catalog-error','call-budget'].includes(scenario)){
+        expect(child.ctx.tools.restrict).toHaveBeenCalledOnce();return;
+      }
+      // A matching definition obtained during the in-flight step must permit
+      // the actual corrected query, rather than convert valid data into a gap.
+      expect(child.ctx.tools.restrict).not.toHaveBeenCalled();
+      if(scenario==='no-query'){
+        await vi.advanceTimersByTimeAsync(22001);end();
+        expect(child.ctx.tools.restrict).toHaveBeenCalledOnce();return;
+      }
+      call('corrected','ework__query',{api_name:'income',params:{ts_code:'688981.SH',period:'20260930'},fields:'revenue,basic_eps'});
+      response('corrected',scenario==='second-error'?'参数或字段无效，请按 tushare_catalog 的当前定义修正。':{source:'Tushare',api:'income',records:[{revenue:100000000,basic_eps:0.25}]},scenario==='second-error');
+      end();expect(child.ctx.tools.restrict).toHaveBeenCalledOnce();
+      // Another definition cannot restart the grace period or expand tools.
+      call('again','ework__catalog',{api_name:'income'});
+      response('again',{kind:'catalog',interfaces:[{api:'income',parameters:{period:{}},fields:{revenue:'营业收入'}}]});end();
+      expect(child.ctx.tools.restrict).toHaveBeenCalledOnce();
+      if(scenario==='corrected-query'){
+        result.resolve({stopReason:'completed',output:[{type:'text',text:'完成'}]});
+        expect((await handle.result).sourceRecords).toContainEqual(expect.objectContaining({tool:'ework__query',response:expect.objectContaining({records:[{revenue:100000000,basic_eps:0.25}]})}));
+      }
+    }finally{await handle?.dispose();vi.useRealTimers()}
+  });
+
   it.each(['calls','time'])('bounds every visible plugin retrieval at the %s boundary, including non-preferred APIs',async boundary=>{
     vi.useFakeTimers();const fixture=containerAdapterFixture(),lift=vi.fn();
     fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>lift)}};

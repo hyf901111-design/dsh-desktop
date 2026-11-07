@@ -14,6 +14,7 @@ import {articleTimelineRequired,restoreArticleTimelineScope} from './article-tim
 import {restoreWorkbenchHostContext,workbenchPublicSourceEvidenceIssue} from './workbench-source-policy.js'
 import {plannedNewsQueries,newsCoverageState,restoreNewsCoverage,completeNewsQueries,coverageNewsData,appendNewsCoverage,newsQueryArgs,coverageBindingCandidate,newsTableCoverageIssue} from './news-query-coverage.js'
 import {decodeDataResponse} from './component-data-refresh.js'
+import {researchParameterRepair} from './research-parameter-repair.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import {canRepairComponentChild,createComponentRepair} from './note-component-repair.js'
@@ -2637,6 +2638,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       // Let in-flight reads and final output finish without injecting a new turn.
       let networkCallCount = 0, discoveryCallCount = 0, knownDiscoveryUsed = false, researchClosed = false, researchLimitDue = false, liftResearchLimit
       const discoveryTools=componentDiscoveryToolNames(scopedSchemas)
+      const parameterRepair=researchParameterRepair(networkTools,discoveryTools)
       let lastOutputAt = 0, streamedText = '', completedArtifact, prototypeRecovery,prototypeDataReady
       let finishResearch, handoffTimer
       const researchPhase = new Promise(resolve => { finishResearch = resolve })
@@ -2724,6 +2726,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           seen.add(seq)
         }
         sourceCollector.accept(event)
+        if(kind==='container'&&!synthesisOnly)parameterRepair.accept(event)
         if (event?.type === 'tool/call' && networkTools.has(event.data?.name)) {
           networkCallCount++
           let args
@@ -2783,7 +2786,8 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // allow twelve business slots only after a verified discovery tool was
         // actually used. Other tasks keep their original eight-read limit.
         // Neither provider time nor permissions expand; repeated discovery
-        // still stops, and every component keeps its 90-second research window.
+        // still stops. A matching definition obtained after a parameter error
+        // earns one bounded retry, within 135s, leaving at least 45s to present.
         if(event?.type==='step/end'){
           const allowance=kind==='container'?Math.min(discoveryCallCount,4):0
           const businessLimit=kind==='container'&&knownDiscoveryUsed?12:8
@@ -2794,7 +2798,8 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           // the same authorized prototype. Let its typed submission finish the
           // source phase; the existing time/read budgets still bound retrieval.
           if((prototypeRecovery||prototypeDataReady)&&!livePrototypeSubmission)closeResearch()
-          if(researchLimitDue||discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
+          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())
+          if(timeExpired||discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
         }
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {
           // Retain only complete public artifacts accepted by the normal parser.
