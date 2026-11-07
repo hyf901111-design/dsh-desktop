@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件详情页签及文字居中",
+        "featureName": "完整历史行情与图表读数优化",
         "branch": "codex/feat/computer-use-bakeoff-20261106",
-        "baseCommit": "572f257602038a0e96261c607786ddb2d32d3f28",
-        "tipCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
+        "baseCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
+        "tipCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
         "commits": [
           {
-            "commit": "19e8877e885d828bbc61aced0727805351ae7f77",
+            "commit": "f5fb02d2e6177d4cdb4e93c117c8543e8cd4c64d",
             "parents": [
-              "572f257602038a0e96261c607786ddb2d32d3f28"
+              "19e8877e885d828bbc61aced0727805351ae7f77"
             ],
-            "subject": "优化组件详情页签和数值提示条对齐"
+            "subject": "修复历史行情区间截断并并行汇总完整日线"
+          },
+          {
+            "commit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
+            "parents": [
+              "f5fb02d2e6177d4cdb4e93c117c8543e8cd4c64d"
+            ],
+            "subject": "优化排名图刻度和单位呈现并精简生成说明"
           }
         ],
         "files": [
@@ -29,23 +36,35 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+            "path": "packages/dsh-fund-research-runtime/financial-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-fund-research-runtime/financial-history.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/financial-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "status": "A",
+            "path": "test/cartesian-chart-reading.test.js"
           },
           {
             "status": "M",
-            "path": "test/component-reading-footer-browser.test.js"
+            "path": "test/cartesian-chart-template.test.js"
           },
           {
-            "status": "M",
-            "path": "test/component-reading-footer.test.js"
+            "status": "A",
+            "path": "test/financial-history.test.js"
           }
         ],
         "checks": [
@@ -54,14 +73,19 @@
               "npx",
               "vitest",
               "run",
-              "test/component-reading-footer-browser.test.js",
-              "test/component-reading-footer.test.js",
-              "test/workbench-style.test.js"
+              "test/financial-history.test.js",
+              "test/financial-routing.test.js",
+              "test/tushare-financial-routing.test.js",
+              "test/cartesian-chart-reading.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-axis-precision.test.js",
+              "test/cartesian-chart-label-spacing.test.js",
+              "test/cartesian-chart-details.test.js"
             ],
             "outcome": "passed",
-            "summary": "25项聚焦检查通过，含真实浏览器几何及交互",
-            "verifiedCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
-            "completedAt": "2026-11-07T08:19:29.764Z",
+            "summary": "191项聚焦检查通过，含日线范围、并行边界及图表读数",
+            "verifiedCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
+            "completedAt": "2026-11-07T08:44:53.805Z",
             "timeoutMs": 180000
           },
           {
@@ -72,24 +96,24 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过",
-            "verifiedCommit": "19e8877e885d828bbc61aced0727805351ae7f77",
-            "completedAt": "2026-11-07T08:19:29.764Z",
+            "verifiedCommit": "f63fdb08aab357f2659a67b8fa9853dc18b296cb",
+            "completedAt": "2026-11-07T08:44:53.805Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "深浅主题与320/600px真实浏览器：分段页签、独立收起、文字上下平衡、表格及自适应；打包客户端另验"
+          "summary": "原始已保存图表在深浅主题Chromium复验：易读刻度、单位去重、详情切换、读数居中；打包及真实取数另验"
         },
         "acceptanceCriteria": [
-          "页签切换入口稳定并与收起动作分开",
-          "数值提示条单行及换行均垂直居中",
-          "保留默认展开、自适应高度及已有数据"
+          "季度日线完整分段汇总，原有托管协议不变",
+          "排名图刻度易读，数据与含义保持",
+          "不重复单位，说明不暴露实现细节"
         ],
         "risks": [
-          "旧主题测试4项基线失败已在28d0147f复现；不以其作为通过证据"
+          "分段取数仍受上游实际覆盖和服务可用性约束；端到端耗时需真实客户端验证"
         ],
-        "generatedAt": "2026-11-07T08:19:29.764Z"
+        "generatedAt": "2026-11-07T08:44:53.805Z"
       }
     },
     {
