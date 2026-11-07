@@ -130,7 +130,13 @@ for(const dark of [false,true])for(const width of [1000,380])it(`matches the Arr
   for(const key of ['background','color','border','borderRadius','shadow','padding','gap','font'])expect(theme[key],key).toBe(arrange[key])
   const row=await menu.locator('[aria-checked=true]').evaluate(el=>{el.blur();const s=getComputedStyle(el);return {background:s.backgroundColor,padding:s.padding,gap:s.gap,height:el.getBoundingClientRect().height}})
   expect(row).toEqual(arrangeRow)
-  const columns=await menu.getByRole('menuitemradio').evaluateAll(buttons=>buttons.map(button=>{const icon=button.querySelector('.ew-workbench-mode-icon'),label=button.lastElementChild,r=icon.getBoundingClientRect(),s=getComputedStyle(icon);return {iconX:r.x,iconWidth:r.width,labelX:label.getBoundingClientRect().x,flexGrow:s.flexGrow,flexShrink:s.flexShrink}}))
+  expect(row.background).toBe(dark?'rgba(255, 255, 255, 0.075)':'rgba(0, 0, 0, 0.055)')
+  const placement=await menu.getByRole('menuitemradio',{checked:true}).evaluate(el=>{const box=el.getBoundingClientRect(),check=el.querySelector('.ew-arrange-check').getBoundingClientRect(),label=el.querySelector('.ew-arrange-label').getBoundingClientRect();return {right:box.right-check.right,afterLabel:check.left>=label.right,opacity:getComputedStyle(el.querySelector('.ew-arrange-check')).opacity}})
+  expect(placement.right).toBe(8);expect(placement.afterLabel).toBe(true);expect(placement.opacity).toBe('1')
+  await menu.getByRole('menuitemradio').last().hover()
+  expect(await menu.getByRole('menuitemradio').last().evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(row.background)
+
+  const columns=await menu.getByRole('menuitemradio').evaluateAll(buttons=>buttons.map(button=>{const icon=button.querySelector('.ew-workbench-mode-icon'),label=button.querySelector('.ew-arrange-label'),r=icon.getBoundingClientRect(),s=getComputedStyle(icon);return {iconX:r.x,iconWidth:r.width,labelX:label.getBoundingClientRect().x,flexGrow:s.flexGrow,flexShrink:s.flexShrink}}))
   expect(new Set(columns.map(item=>item.iconX)).size).toBe(1)
   expect(new Set(columns.map(item=>item.labelX)).size).toBe(1)
   for(const item of columns){expect(item.iconWidth).toBe(16);expect(item.flexGrow).toBe('0');expect(item.flexShrink).toBe('0')}
