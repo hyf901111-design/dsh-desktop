@@ -97,6 +97,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         // A later status question and unrelated chat memory cannot replace this scope.
         const originalHumanRequest = workbenchCreationRequest(exec.agent?.session);
         const originalRequest = originalHumanRequest?.text;
+        const comparisonReferenceTime = new Date();
         const originalImageMessageId = originalHumanRequest?.messageId && workbenchRequestImages(exec.agent?.session, originalHumanRequest.messageId).length ? originalHumanRequest.messageId : undefined;
         if (originalRequest && planningDataIntent(originalRequest).sourceOnly && args?.dataMode === 'simulated')
             throw Error('用户要求真实数据，不能降级为模拟模式。保持dataMode:"source"；省略未取得的artifact及不匹配的publicData，只提交原需求的title/prompt/type/size，由独立面板真实取数，缺失如实标注。');
@@ -144,11 +145,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 try {
                     const prepared=pending.filter(p=>p.artifact),generated=pending.filter(p=>!p.artifact);
                     if(prepared.length){
-                        const receipts=await runtime.startPreparedBatch({parentSessionId,panels:prepared.map(p=>({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p),preparedRequirement:p.prompt,artifact:p.artifact}))});
+                        const receipts=await runtime.startPreparedBatch({parentSessionId,panels:prepared.map(p=>({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p,comparisonReferenceTime),preparedRequirement:p.prompt,artifact:p.artifact}))});
                         prepared.forEach((p,i)=>{p.taskId=receipts[i].taskId;p.prepared=true;delete p.error});
                     }
                     if(generated.length){
-                        const receipts = await runtime.startBatch({ parentSessionId, panels: generated.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) }, {panels:generated.map(panelContext)});
+                        const receipts = await runtime.startBatch({ parentSessionId, panels: generated.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p,comparisonReferenceTime) })) }, {panels:generated.map(panelContext)});
                         generated.forEach((p, i) => { p.taskId = receipts[i].taskId; delete p.error; });
                     }
                 } catch (error) {
@@ -203,7 +204,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                                 prompt: content.panels[index].prompt, type: content.panels[index].type,
                                 artifact: content.panels[index].artifact });
                     }
-                    const receipts = await runtime.startPreparedBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, prompt: workbenchPanelPrompt(input, p), preparedRequirement:p.prompt, artifact: p.artifact })) });
+                    const receipts = await runtime.startPreparedBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, prompt: workbenchPanelPrompt(input, p,comparisonReferenceTime), preparedRequirement:p.prompt, artifact: p.artifact })) });
                     for (let index = 0; index < plan.panels.length; index++) plan.panels[index].taskId = receipts[index].taskId;
                 } catch (error) {
                     for (const panel of plan.panels) panel.error = `模拟数据准备失败：${error.message}`;
@@ -217,18 +218,18 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 const direct = plan.panels.filter(p => p.publicData);
                 try {
                     if (direct.length) {
-                        const receipts = await runtime.startPublicDataBatch({ parentSessionId, panels: direct.map(p => ({ canvasNodeId: p.nodeId, title: p.title, type: p.type, prompt: workbenchPanelPrompt(input, p), publicDataPrompt: p.prompt, publicData: p.publicData })) });
+                        const receipts = await runtime.startPublicDataBatch({ parentSessionId, panels: direct.map(p => ({ canvasNodeId: p.nodeId, title: p.title, type: p.type, prompt: workbenchPanelPrompt(input, p,comparisonReferenceTime), publicDataPrompt: p.prompt, publicData: p.publicData })) });
                         direct.forEach((p, i) => { p.taskId = receipts[i].taskId; });
                     }
                     if (prepared.length) {
-                        const receipts = await runtime.startPreparedBatch({parentSessionId, panels:prepared.map(p => ({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p),artifact:p.artifact}))});
+                        const receipts = await runtime.startPreparedBatch({parentSessionId, panels:prepared.map(p => ({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p,comparisonReferenceTime),artifact:p.artifact}))});
                         prepared.forEach((p,i) => {p.taskId=receipts[i].taskId;p.prepared=true;});
                     }
                     if (pending.length && typeof runtime.startBatch === 'function') {
-                        const receipts = await runtime.startBatch({parentSessionId, panels:pending.map(p => ({canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)}))}, {panels:pending.map(panelContext)});
+                        const receipts = await runtime.startBatch({parentSessionId, panels:pending.map(p => ({canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p,comparisonReferenceTime)}))}, {panels:pending.map(panelContext)});
                         pending.forEach((p,i) => {p.taskId=receipts[i].taskId;});
                     } else for (const p of pending) {
-                        try { p.taskId=(await runtime.start({parentSessionId,canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)}, panelContext(p))).taskId; } catch { p.error='面板任务未能启动，请重试。'; }
+                        try { p.taskId=(await runtime.start({parentSessionId,canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p,comparisonReferenceTime)}, panelContext(p))).taskId; } catch { p.error='面板任务未能启动，请重试。'; }
                     }
                 } catch(error) {
                     for(const p of plan.panels) if(!p.taskId)p.error='面板任务未能启动，请重试。';
