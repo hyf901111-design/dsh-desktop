@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-37",
+  "branch": "codex/integration/20261108-37",
+  "baseMainCommit": "cfd460bcf8f3c5ab5622b67100871fef56dae122",
+  "expectedMainCommit": "cfd460bcf8f3c5ab5622b67100871fef56dae122",
+  "createdAt": "2026-11-08T11:21:23.931Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件生成元信息兼容",
+        "branch": "codex/feat/workbench-artifact-metadata-20261108",
+        "baseCommit": "cfd460bcf8f3c5ab5622b67100871fef56dae122",
+        "tipCommit": "1015d28eac522aeef4d88f46f08f813ced597465",
+        "commits": [
+          {
+            "commit": "1015d28eac522aeef4d88f46f08f813ced597465",
+            "parents": [
+              "cfd460bcf8f3c5ab5622b67100871fef56dae122"
+            ],
+            "subject": "兼容组件输出中的宽高提示并保留结构附注与原始来源"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/derived-template-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/derived-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/derived-preset-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-template-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-sourced-wide-table-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/derived-template-contract.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-sourced-wide-table-browser.test.js",
+              "test/artifact-string-quotes.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/workbench-sourced-table-delivery.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "63 项聚焦检查通过",
+            "verifiedCommit": "1015d28eac522aeef4d88f46f08f813ced597465",
+            "completedAt": "2026-11-08T11:21:22.288052+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "1015d28eac522aeef4d88f46f08f813ced597465",
+            "completedAt": "2026-11-08T11:21:22.288052+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "1015d28eac522aeef4d88f46f08f813ced597465",
+            "completedAt": "2026-11-08T11:21:22.288052+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际失败的导图输出已回放通过原文引用校验，层级、来源和附注逐字保留；真实 Chromium 验证导图可编辑及明细可搜索。"
+        },
+        "acceptanceCriteria": [
+          "规划宽高提示不阻断有效组件",
+          "保留原文、实际层级与独立附注",
+          "原来源校验及非法字段拒绝保留",
+          "明细搜索使用通用提示"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T11:21:22.288052+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/derived-template-contract.test.js",
+        "test/derived-mind-map-browser.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-sourced-wide-table-browser.test.js",
+        "test/artifact-string-quotes.test.js",
+        "test/workbench-table-input-contract.test.js",
+        "test/workbench-sourced-table-delivery.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
