@@ -109,6 +109,58 @@
           "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
         ],
         "generatedAt": "2026-11-08T15:16:39.467840+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3418ad48c8d279ee5ae4edf0c14612871c2c8fb1",
+        "verificationCommit": "3418ad48c8d279ee5ae4edf0c14612871c2c8fb1",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/market-table-reading-browser.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-optimal-arrange.test.js",
+              "test/research-bento-arrange-fit.test.js",
+              "test/research-grid-workbench.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/market-table-reading-browser.test.js test/research-market-native-table.test.js test/research-market-artifact.test.js test/research-optimal-arrange.test.js test/research-bento-arrange-fit.test.js test/research-grid-workbench.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "3418ad48c8d279ee5ae4edf0c14612871c2c8fb1",
+            "completedAt": "2026-11-08T15:16:43.099Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3418ad48c8d279ee5ae4edf0c14612871c2c8fb1",
+            "completedAt": "2026-11-08T15:16:43.099Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "3418ad48c8d279ee5ae4edf0c14612871c2c8fb1",
+            "completedAt": "2026-11-08T15:16:43.099Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T15:16:43.099Z"
       }
     }
   ],
