@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-52",
+  "branch": "codex/integration/20261108-52",
+  "baseMainCommit": "f7ae235ed04461b43714f9364e696cd9e0ac41e0",
+  "expectedMainCommit": "f7ae235ed04461b43714f9364e696cd9e0ac41e0",
+  "createdAt": "2026-11-08T14:47:30.259Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "来源文件整卡悬停",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "f7ae235ed04461b43714f9364e696cd9e0ac41e0",
+        "tipCommit": "ef9959d7966335f1d901c4b135dfb584c0a63e9e",
+        "commits": [
+          {
+            "commit": "ef9959d7966335f1d901c4b135dfb584c0a63e9e",
+            "parents": [
+              "f7ae235ed04461b43714f9364e696cd9e0ac41e0"
+            ],
+            "subject": "统一来源文件卡片整体悬停背景"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "5 项聚焦检查通过",
+            "verifiedCommit": "ef9959d7966335f1d901c4b135dfb584c0a63e9e",
+            "completedAt": "2026-11-08T14:47:28.787543+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ef9959d7966335f1d901c4b135dfb584c0a63e9e",
+            "completedAt": "2026-11-08T14:47:28.787543+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ef9959d7966335f1d901c4b135dfb584c0a63e9e",
+            "completedAt": "2026-11-08T14:47:28.787543+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "验证来源文件的同款文件卡片和打开方式；当前会话中用户实际引用过的附件路径优先，拒绝助手或工具编造路径，找不到真实引用才按文件名搜索当前目录；网络来源和完整说明无损保留。"
+        },
+        "acceptanceCriteria": [
+          "组件来源集中底栏，右侧来源详情在右侧屏展示",
+          "文件名弹出同款文件卡片并保留打开方式",
+          "来源与刷新设置分开，网络链接和原文不截断",
+          "展开图标按文字首行居中且状态切换不跳行"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T14:47:28.787543+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-source-info-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
