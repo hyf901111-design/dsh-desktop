@@ -145,3 +145,27 @@ it.each(['vertical-short','vertical-overflow','vertical-bottom','horizontal-shor
   }
  }finally{await page.close()}
 },15000)
+
+it.each(['horizontal','vertical'])('keeps %s tabs in the viewport and switches pages from the bottom',async orientation=>{
+ const {page,first,second,target}=await fixture()
+ try{
+  await page.evaluate(({first,second,target,orientation})=>{
+   const w=fixture.workspace
+   w.moveToBoardTab([second],target)
+   w.setBoardTabsPresentation(orientation)
+   w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:70}],true)
+  },{first,second,target,orientation})
+  const canvas=page.locator('[data-research-canvas]'),bar=page.locator('[data-board-tabs-orientation="'+orientation+'"]')
+  const tab=bar.locator('[data-board-tab="'+target+'"]'),top=async()=>Math.round((await tab.boundingBox()).y)
+  await expect.poll(()=>canvas.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeGreaterThan(700)
+  const initial=await top()
+  await canvas.evaluate(el=>{el.scrollTop=el.scrollHeight})
+  await expect.poll(()=>canvas.evaluate(el=>el.scrollTop)).toBeGreaterThan(700)
+  expect(await top()).toBe(initial)
+  const {x,y,width,height}=await tab.boundingBox()
+  await page.mouse.click(x+width/2,y+height/2)
+  await expect.poll(async()=>(await state(page)).active).toBe(target)
+  expect(await page.locator('[data-research-node-id="'+second+'"]').isVisible()).toBe(true)
+  expect(await page.locator('[data-research-node-id="'+first+'"]').isVisible()).toBe(false)
+ }finally{await page.close()}
+},15000)

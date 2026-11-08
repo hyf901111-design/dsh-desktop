@@ -22,7 +22,7 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
   const start=vertical?selected.offsetTop:selected.offsetLeft,end=start+(vertical?selected.offsetHeight:selected.offsetWidth),scroll=vertical?'scrollTop':'scrollLeft',length=vertical?element.clientHeight:element.clientWidth
   if(start<element[scroll])element[scroll]=start
   if(end>element[scroll]+length)element[scroll]=end-length
- },[active,host,nav?.id,tabNamesKey,vertical])
+ },[active,host,nav?.id,tabNamesKey,vertical,snapshot.canvasSize.visibleHeight,snapshot.canvasSize.height])
  react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
  react.useLayoutEffect(()=>{
   const element=list.current;if(!element||vertical)return
@@ -48,12 +48,18 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  const visible=vertical?boardTabsVisible(snapshot,active):null
  const bottom=visible?Math.max(0,...[...visible.files,...visible.artifacts,...(snapshot.boardTabsPlanningNodes??workspace.getWorkbenchPlanningNodes())].map(node=>node.y+node.height/2)):0
  const height=vertical?(bottom>12?bottom-12:96):undefined
- return jsxs(react.Fragment,{children:[react_dom.createPortal(jsxs('div',{'data-board-tabs-nav':'',className:'ew-board-tabs-nav','data-board-tabs-theme':theme,'data-board-tabs-orientation':vertical?'vertical':'horizontal',style:{width,height},onPointerDown:e=>e.stopPropagation(),children:[
+ const viewportHeight=snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height
+ const maxHeight=vertical&&viewportHeight?Math.max(64,viewportHeight-24):undefined
+ const bar=jsxs('div',{'data-board-tabs-nav':'',className:'ew-board-tabs-nav','data-board-tabs-theme':theme,'data-board-tabs-orientation':vertical?'vertical':'horizontal',style:{width,height,maxHeight},onPointerDown:e=>e.stopPropagation(),children:[
  vertical&&jsxs('div',{className:'ew-board-tabs-nav-header',children:[jsx('span',{className:'ew-board-tabs-nav-title',children:'导航菜单'}),actions]}),
  jsx('div',{ref:list,role:'tablist','aria-label':'看板页签','aria-orientation':vertical?'vertical':'horizontal',onKeyDown:keys,className:'ew-board-tabs-list',children:spec.tabs.map(t=>jsx('button',{type:'button',role:'tab',id:'board-tab-'+t.id,'aria-selected':t.id===active,tabIndex:t.id===active?0:-1,title:t.name,'aria-controls':'board-page-'+sessionId,'data-board-tab':t.id,onClick:()=>select(t.id),children:t.name},t.id))}),
  !vertical&&paging.overflow&&jsxs('div',{ref:pager,className:'ew-board-tabs-paging','data-board-tabs-paging':'',children:[jsx('button',{type:'button','aria-label':'向左翻页',title:'向左翻页',disabled:!paging.left,onClick:()=>page(-1),children:jsx(BoardTabsPageIcon,{direction:'left'})}),jsx('button',{type:'button','aria-label':'向右翻页',title:'向右翻页',disabled:!paging.right,onClick:()=>page(1),children:jsx(BoardTabsPageIcon,{direction:'right'})})]}),
  !vertical&&actions,
  vertical&&canEdit&&jsx(BoardTabsWidthHandle,{area,rootRef,workspace,navId:nav.id})
+ ]})
+ return jsxs(react.Fragment,{children:[react_dom.createPortal(jsxs(react.Fragment,{children:[
+  vertical&&jsx('div',{className:'ew-board-tabs-rail','data-board-tabs-theme':theme,'aria-hidden':true,style:{width,height}}),
+  bar
  ]}),host),
  menu&&react_dom.createPortal(jsxs('div',{role:'menu','aria-label':'页签更多操作','data-board-tabs-menu':'','data-board-tabs-theme':theme,className:'ew-grid-menu ew-board-tabs-menu',style:menu,onKeyDown:e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const items=[...e.currentTarget.querySelectorAll('button')],i=items.indexOf(document.activeElement);items[e.key==='End'?items.length-1:e.key==='Home'?0:(i+(e.key==='ArrowUp'?-1:1)+items.length)%items.length]?.focus()}},ref:el=>{if(el&&!el.contains(document.activeElement))el.querySelector('button')?.focus({preventScroll:true})},children:[jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setSettings(true)},children:[jsx(WorkbenchIcon,{name:'settings'}),jsx('span',{children:'页签设置'})]}),jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setRemove(true)},children:[jsx(WorkbenchIcon,{name:'remove'}),jsx('span',{children:'移除页签组件'})]})]}),document.body),
  settings&&jsx(BoardTabsSettings,{nav,workspace,readOnly,theme,onClose:close}),
