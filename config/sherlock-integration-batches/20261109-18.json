@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-18",
+  "branch": "codex/integration/20261109-18",
+  "baseMainCommit": "7a3d752cc1ba7816fc1df1746abb7135135d4219",
+  "expectedMainCommit": "7a3d752cc1ba7816fc1df1746abb7135135d4219",
+  "createdAt": "2026-11-08T23:39:08.026Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台客户端预览依赖闭包修复",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "eeb29335304700d349c8f679a5733095b7ed17ab",
+        "tipCommit": "bec178a22e07442a72cd7b3d799a14525b7b60f8",
+        "commits": [
+          {
+            "commit": "bec178a22e07442a72cd7b3d799a14525b7b60f8",
+            "parents": [
+              "eeb29335304700d349c8f679a5733095b7ed17ab"
+            ],
+            "subject": "修复工作台预览阅读保护依赖漏注入并校验客户端作用域"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-client-preview-closure.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-client-preview-closure.test.js",
+              "test/workbench-structure-reading-browser.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "15项客户端预览闭包与架构图阅读相关检查通过",
+            "verifiedCommit": "bec178a22e07442a72cd7b3d799a14525b7b60f8",
+            "completedAt": "2026-11-08T23:39:05.734480+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "bec178a22e07442a72cd7b3d799a14525b7b60f8",
+            "completedAt": "2026-11-08T23:39:05.734480+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "bec178a22e07442a72cd7b3d799a14525b7b60f8",
+            "completedAt": "2026-11-08T23:39:05.734480+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实包发现预览函数漏注入使研究画布空白；新增检查已复现错误并在修复后通过，实际客户端将重新构建验收。"
+        },
+        "acceptanceCriteria": [
+          "预览所需函数在客户端作用域可用",
+          "研究画布可以加载完整组件",
+          "图形文字保持可读",
+          "既有卡片数据原样恢复"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T23:39:05.734480+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-client-preview-closure.test.js",
+        "test/workbench-structure-reading-browser.test.js",
+        "test/component-source-info-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
