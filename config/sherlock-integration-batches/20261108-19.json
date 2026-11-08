@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-19",
+  "branch": "codex/integration/20261108-19",
+  "baseMainCommit": "d62f7bedf5892eaa1801ab730ecca05d4d0f03b4",
+  "expectedMainCommit": "d62f7bedf5892eaa1801ab730ecca05d4d0f03b4",
+  "createdAt": "2026-11-08T06:07:46.078Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "看板时间轴适配当前模式的中性色",
+        "branch": "codex/feat/workbench-timeline-theme-20261108",
+        "baseCommit": "d62f7bedf5892eaa1801ab730ecca05d4d0f03b4",
+        "tipCommit": "9cb578cda160bfac71edd94e00e20c31ed7f0f60",
+        "commits": [
+          {
+            "commit": "9cb578cda160bfac71edd94e00e20c31ed7f0f60",
+            "parents": [
+              "d62f7bedf5892eaa1801ab730ecca05d4d0f03b4"
+            ],
+            "subject": "优化：让时间轴线条和节点跟随看板模式"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/timeline-artifact.js"
+          },
+          {
+            "status": "D",
+            "path": "packages/dsh-research-task-runtime/timeline-assets.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/timeline-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/timeline-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/timeline-theme-browser.test.js",
+              "test/timeline-template.test.js",
+              "test/workbench-style.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "31 项聚焦检查通过，覆盖真实浏览器中的新旧卡和四种模式",
+            "verifiedCommit": "9cb578cda160bfac71edd94e00e20c31ed7f0f60",
+            "completedAt": "2026-11-08T06:07:30.016047+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "9cb578cda160bfac71edd94e00e20c31ed7f0f60",
+            "completedAt": "2026-11-08T06:07:30.016047+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "9cb578cda160bfac71edd94e00e20c31ed7f0f60",
+            "completedAt": "2026-11-08T06:07:30.016047+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实 Chromium 里已验证新旧卡轨道、普通节点与选中标记随浅色、深色、企业和 OpenTerminal 看板模式变化。"
+        },
+        "acceptanceCriteria": [
+          "细轴继承当前模式网格色",
+          "普通节点采用低对比中性色，选中保留模式强调",
+          "旧卡加载即覆盖硬编码亮线和暖色节点"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T06:07:30.016047+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/timeline-theme-browser.test.js",
+        "test/timeline-template.test.js",
+        "test/workbench-style.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
