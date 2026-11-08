@@ -71,25 +71,16 @@ export function ResearchDerivedPreset({node,sessionId}){
   if(!researchDerivedSinks.get(sessionId)?.(node.id,spec.content,next)){setError('结果尚未保存，请重试。');return}
   cancel()
  },save=()=>saveContent(editor.current.value)
- const focusSource=e=>{
-  e.stopPropagation()
-  if(!researchDerivedFocus.get(sessionId)?.(spec.source.nodeId)){setError('来源组件已删除或不可用，完整原文仍保留。');return}
-  setError('');host.current?.closest('dialog[open]')?.close()
-  window.requestAnimationFrame(()=>host.current?.closest('[data-research-canvas]')?.querySelector('[data-research-node-id="'+CSS.escape(spec.source.nodeId)+'"]')?.scrollIntoView({block:'nearest',inline:'nearest'}))
- }
  const outline=spec.type==='mind-map'?researchDerivedOutline(spec.content):null
  const result=outline?react_jsx_runtime.jsx(ResearchDerivedMindMap,{nodeId:node.id,outline,content:spec.content,readOnly,onCommit:saveContent}):react_jsx_runtime.jsx('div',{className:'ew-derived-result',children:react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.MarkdownText,{text:spec.content,streaming:false})})
  return react_jsx_runtime.jsxs('div',{ref:host,className:'ew-derived-preset','data-research-derived-preset':spec.type,onDoubleClick:e=>{e.stopPropagation();open()},children:[
-  spec.asOf&&react_jsx_runtime.jsx('p',{className:'ew-derived-source',children:'数据时点：'+spec.asOf}),
-  react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:[react_jsx_runtime.jsxs('span',{children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onClick:focusSource,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title]}),react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
   editing?react_jsx_runtime.jsxs('div',{className:'ew-derived-editor',onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),children:[
    react_jsx_runtime.jsx('textarea',{ref:editor,'aria-label':'编辑派生结果',defaultValue:spec.content,autoFocus:true,disabled:readOnly,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape')cancel();else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)&&!e.nativeEvent?.isComposing&&e.keyCode!==229){e.preventDefault();save()}}}),
    error&&react_jsx_runtime.jsx('div',{role:'alert',children:error}),
    react_jsx_runtime.jsxs('div',{className:'ew-derived-actions',children:[react_jsx_runtime.jsx('button',{type:'button',disabled:readOnly,onClick:save,children:'保存结果'}),react_jsx_runtime.jsx('button',{type:'button',onClick:cancel,children:'取消'})]})
   ]}):result,
   error&&!editing&&react_jsx_runtime.jsx('div',{role:'alert',children:error}),
-  spec.note&&react_jsx_runtime.jsx('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'说明'}),react_jsx_runtime.jsx('pre',{children:spec.note})]}),
-  spec.type==='summary'&&react_jsx_runtime.jsx('div',{className:'ew-derived-note',children:'仅根据来源组件内的内容生成。'}),
+  spec.note&&!/来源|出处|原文|核查|资料|时点|口径/.test(spec.note)&&react_jsx_runtime.jsx('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'说明'}),react_jsx_runtime.jsx('pre',{children:spec.note})]}),
   react_jsx_runtime.jsx('style',{children:RESEARCH_DERIVED_PRESET_CSS})
  ]})
 }

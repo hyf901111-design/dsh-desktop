@@ -247,14 +247,14 @@ it('selected HTML cards scroll the canvas outside a scrollable region and grow a
   expect(await diagram.evaluate(el=>el.scrollLeft)).toBe(0)
   await canvas.evaluate(el=>{el.scrollTop=0})
   const closed=await geometry()
-  const marker=()=>summary.evaluate(el=>{const s=getComputedStyle(el,'::before');return [s.verticalAlign,s.width,s.height,s.transform]})
+  const marker=()=>summary.evaluate(el=>{const s=getComputedStyle(el,'::before');return [s.position,s.width,s.height,s.transform]})
   const closedMarker=await marker()
   await summary.click()
   await expect.poll(async()=>(await geometry())[0]).toBeGreaterThan(closed[0]+100)
   await expect.poll(async()=>(await geometry())[1]).toBeGreaterThan(closed[1]+100)
   expect(await details.locator('p').last().evaluate(el=>el.getBoundingClientRect().bottom<=window.innerHeight)).toBe(true)
   const openMarker=await marker()
-  expect(closedMarker.slice(0,3)).toEqual(['middle','12px','12px'])
+  expect(closedMarker.slice(0,3)).toEqual(['absolute','12px','12px'])
   expect(openMarker.slice(0,3)).toEqual(closedMarker.slice(0,3))
   expect(openMarker[3]).not.toBe(closedMarker[3])
   await summary.click()
@@ -284,12 +284,12 @@ it('native architecture disclosures grow the grid, align the chevron and release
   await expect.poll(offset).toBeGreaterThan(0)
   await canvas.evaluate(el=>{el.scrollTop=0})
   const closed=await geometry()
-  const marker=()=>summary.evaluate(el=>{const s=getComputedStyle(el,'::before');return [s.verticalAlign,s.width,s.height]})
-  expect(await marker()).toEqual(['middle','12px','12px'])
+  const marker=()=>summary.evaluate(el=>{const s=getComputedStyle(el,'::before');return [s.position,s.width,s.height]})
+  expect(await marker()).toEqual(['absolute','12px','12px'])
   await summary.click()
   await expect.poll(async()=>(await geometry())[0]).toBeGreaterThan(closed[0]+150)
   await expect.poll(async()=>(await geometry())[1]).toBeGreaterThan(closed[1]+150)
-  expect(await marker()).toEqual(['middle','12px','12px'])
+  expect(await marker()).toEqual(['absolute','12px','12px'])
   expect(await summary.locator('..').locator('pre').evaluate(el=>el.getBoundingClientRect().bottom<=el.closest('[data-research-node-id]').getBoundingClientRect().bottom)).toBe(true)
   const expanded=await geometry()
   await page.locator('#host').evaluate(el=>{el.style.width='900px'})
@@ -309,7 +309,7 @@ it('selected oversized native maps scroll inside the card and return the wheel o
  try{
   await page.evaluate(({first,second})=>{
    const w=fixture.workspace,base=w.getSnapshot().artifacts.find(n=>n.id===first)
-   const spec={version:1,type:'mind-map',title:'大型导图',content:'# 组织机构\n'+Array.from({length:32},(_,i)=>'- 部门'+(i+1)+'\n  - 职责及负责人').join('\n'),source:{title:'组织文档',text:'完整组织资料'},note:'原文说明。\n'.repeat(20)}
+   const spec={version:1,type:'mind-map',title:'大型导图',content:'# 组织机构\n'+Array.from({length:32},(_,i)=>'- 部门'+(i+1)+'\n  - 职责及负责人').join('\n'),source:{title:'组织文档',text:'完整组织资料'},note:'操作说明。\n'.repeat(20)}
    w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===first?{...base,kind:'generated-container',generationStatus:'completed',containerSpec:spec}:n))
    w.setBoardTabsPresentation('vertical')
    w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:22},{id:second,x:0,y:22,w:40,h:40}],true)
@@ -337,23 +337,21 @@ it('native disclosures reserve only revealed content, keep source controls ancho
  try{
   await page.evaluate(({first,second})=>{
    const w=fixture.workspace,base=w.getSnapshot().artifacts.find(n=>n.id===first)
-   const spec={version:1,type:'mind-map',title:'完整架构',content:'# 机构\n'+Array.from({length:32},(_,i)=>'- 部门'+i+'\n  - 岗位人员').join('\n'),source:{title:'组织架构来源.docx',text:'来源正文。\n'.repeat(8)},note:'只显示两行说明。\n保留原始来源。'}
+   const spec={version:1,type:'mind-map',title:'完整架构',content:'# 机构\n'+Array.from({length:32},(_,i)=>'- 部门'+i+'\n  - 岗位人员').join('\n'),source:{title:'组织架构来源.docx',text:'来源正文。\n'.repeat(8)},note:'只显示两行说明。\n保留完整交互。'}
    w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===first?{...base,kind:'generated-container',generationStatus:'completed',containerSpec:spec}:n))
    w.setBoardTabsPresentation('vertical')
    w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:22},{id:second,x:0,y:22,w:40,h:40}],true)
    w.updateSelection([first],'replace')
   },{first,second})
   const canvas=page.locator('[data-research-canvas]'),card=page.locator(`[data-research-node-id="${first}"]`),below=page.locator(`[data-research-node-id="${second}"]`)
-  const source=card.locator('summary').filter({hasText:'查看来源原文'}),note=card.locator('summary').filter({hasText:/^说明$/})
+  const source=card.getByRole('button',{name:'查看来源信息',exact:true}),note=card.locator('summary').filter({hasText:/^说明$/})
   const height=()=>card.evaluate(el=>el.getBoundingClientRect().height)
-  const position=()=>source.evaluate(el=>{const r=el.getBoundingClientRect(),p=el.closest('[data-research-derived-preset]').getBoundingClientRect();return [r.left-p.left,r.top-p.top]})
-  const closed=await height(),anchor=await position()
+  expect(await card.locator('.ew-derived-source').count()).toBe(0)
+  const closed=await height()
+  await page.evaluate(()=>window.addEventListener('sherlock:component-source-open',e=>window.sourceRequest={mode:e.detail.mode,info:e.detail.info}))
   await source.click()
-  await expect.poll(height).toBeGreaterThan(closed+100)
-  expect(await height()).toBeLessThan(closed+250)
-  expect(await position()).toEqual(anchor)
-  await source.click()
-  await expect.poll(height).toBe(closed)
+  expect(await page.evaluate(()=>window.sourceRequest.info.records[0].text)).toBe('来源正文。\n'.repeat(8))
+  expect(await height()).toBe(closed)
   const belowClosed=await below.evaluate(el=>el.getBoundingClientRect().top)
   for(let cycle=0;cycle<3;cycle++){
    // An offscreen summary is reached through the real overflowing card owner.
