@@ -76,7 +76,13 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id][data-releas
 
 .ew-board-tabs-nav-actions{display:flex;justify-content:flex-end;align-items:center;gap:4px;flex:none}
 .ew-board-tabs-nav-actions>button:hover{background:var(--bt-selected)}
-.ew-board-tabs-nav[data-board-tabs-orientation=vertical]{align-items:stretch;flex-direction:column}
+/* Keep controls in the canvas scrollport. The separate rail paints the
+   full column through the bottom of the active page without limiting sticky. */
+.ew-board-tabs-nav{position:sticky;left:auto;margin-left:12px}
+.ew-board-tabs-nav[data-board-tabs-orientation=vertical]{align-items:stretch;flex-direction:column;max-height:calc(100vh - 24px)}
+.ew-board-tabs-rail{position:absolute;left:12px;top:12px;box-sizing:border-box;border-radius:4px;background:var(--bt-surface,#fff);pointer-events:none}
+.ew-board-tabs-rail:is([data-board-tabs-theme=enterprise],[data-board-tabs-theme=openterminal]){border-radius:0}
+.ew-board-tabs-rail[data-board-tabs-theme=openterminal]{border:1px solid var(--grid-border,#303030)}
 .ew-board-tabs-nav-header{display:flex;align-items:center;gap:4px;min-height:24px;flex:none}
 .ew-board-tabs-nav-title{flex:1;min-width:0;padding-left:8px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-list{position:relative;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;overflow:hidden auto}
