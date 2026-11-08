@@ -28,7 +28,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
-import { workbenchDocumentScope, workbenchDocumentPrompt, workbenchDocumentCitationIssue } from './workbench-document-evidence.js'
+import { workbenchDocumentScope, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists } from './workbench-document-evidence.js'
 import { extractDocxEvidence } from './docx-evidence.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
@@ -1978,6 +1978,8 @@ export class ResearchTaskRuntime {
             if (['table','mind-map'].includes(plannedFormat) && JSON.parse(output).type === 'markdown') {
               throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要交付实际明细或层级，不能用文字说明替代。复用已读取的文档，保留完整行、层级和出处，可换成原生视图或含完整数据的静态 HTML。')
             }
+            output = restoreDocumentLists(output, result.documentEvidence, panelRequest)
+            if (!output) throw new ResearchTaskError('INVALID_OUTPUT', '实际呈现未包含原文要求的完整清单。复用原文全量条目，可换成能完整显示清单的 HTML 明细。')
           }
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
