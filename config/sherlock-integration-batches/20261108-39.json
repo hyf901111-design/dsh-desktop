@@ -92,6 +92,56 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T11:48:01.563038+00:00"
+      },
+      "merged": {
+        "mergeCommit": "64604c505d4b915079484b4aa19ad33bab9b73a7",
+        "verificationCommit": "64604c505d4b915079484b4aa19ad33bab9b73a7",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/market-table-reading-browser.test.js",
+              "test/research-market-native-context-browser.test.js",
+              "test/financial-widget-client.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/market-table-reading-browser.test.js test/research-market-native-context-browser.test.js test/financial-widget-client.test.js test/home-guide-native-strip.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "64604c505d4b915079484b4aa19ad33bab9b73a7",
+            "completedAt": "2026-11-08T11:48:06.164Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "64604c505d4b915079484b4aa19ad33bab9b73a7",
+            "completedAt": "2026-11-08T11:48:06.164Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "64604c505d4b915079484b4aa19ad33bab9b73a7",
+            "completedAt": "2026-11-08T11:48:06.164Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T11:48:06.164Z"
       }
     }
   ],
