@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-31",
+  "branch": "codex/integration/20261108-31",
+  "baseMainCommit": "c4c9fe379d1e78ad6dac1b72ca4357430786208b",
+  "expectedMainCommit": "c4c9fe379d1e78ad6dac1b72ca4357430786208b",
+  "createdAt": "2026-11-08T10:00:10.593Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一工作台意图识别与受理回执恢复",
+        "branch": "codex/feat/workbench-planning-continuation-20261108",
+        "baseCommit": "c4c9fe379d1e78ad6dac1b72ca4357430786208b",
+        "tipCommit": "ebd7a01723f12d823eadbc077a7cdd06065f96f7",
+        "commits": [
+          {
+            "commit": "ebd7a01723f12d823eadbc077a7cdd06065f96f7",
+            "parents": [
+              "c4c9fe379d1e78ad6dac1b72ca4357430786208b"
+            ],
+            "subject": "统一工作台意图识别并在规划漏提时自动续提"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/workbench-creation-requests.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-creation-progress.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/workbench-resultative-request.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/bundled-component-skill.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "358 项聚焦检查通过",
+            "verifiedCommit": "ebd7a01723f12d823eadbc077a7cdd06065f96f7",
+            "completedAt": "2026-11-08T10:00:08.857476+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ebd7a01723f12d823eadbc077a7cdd06065f96f7",
+            "completedAt": "2026-11-08T10:00:08.857476+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ebd7a01723f12d823eadbc077a7cdd06065f96f7",
+            "completedAt": "2026-11-08T10:00:08.857476+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已核对已安装包失败现场；聚焦渲染器回归验证前台规划识别与运行时策略使用同一入口。集成后将用真实客户端复测。"
+        },
+        "acceptanceCriteria": [
+          "口语化请求走统一工作台规划入口",
+          "未受理的明确生成请求同轮自动续提一次",
+          "继续使用原有数据、文档和模板能力",
+          "保护已受理、权限拒绝和用户取消状态",
+          "用同一份Word实测"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T10:00:08.857476+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-creation-progress.test.js",
+        "test/research-planning-feedback.test.js",
+        "test/workbench-resultative-request.test.js",
+        "test/conversation-components-policy.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-source-policy.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/bundled-component-skill.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
