@@ -48,6 +48,7 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  const planned=[...ids.values()].reduce((sum,p)=>sum+(Number.isSafeInteger(p.count)&&p.count>0?p.count:0),0)
  const nodes=[...new Map((snapshot?.nodes??[]).filter(n=>ids.has(n.planId)).map(n=>[n.id,n])).values()]
  const total=nodes.length,completed=nodes.filter(n=>n.status==='completed').length,partial=nodes.filter(n=>n.status==='partial').length,pending=nodes.filter(n=>['queued','running','retrying'].includes(n.status)).length
+ const retrying=nodes.filter(n=>n.status==='retrying').length
  const failed=nodes.filter(n=>['failed','interrupted'].includes(n.status)).length,cancelled=nodes.filter(n=>n.status==='cancelled').length,unknown=total-completed-partial-pending-failed-cancelled
  const phase=!snapshot?'waiting':!total?'empty':unknown?'unknown':pending&&snapshot.active===false?'inactive':pending?'running':failed||cancelled||partial?'partial':'completed'
  const title=phase==='waiting'?say('等待组件状态','Awaiting component status'):phase==='empty'?say('当前画布没有这批组件','These components are not on the current canvas'):phase==='unknown'?say('组件状态待确认','Component status needs verification'):phase==='inactive'?say('组件状态等待更新','Awaiting updated component status'):phase==='running'?say(`组件生成中 · 已生成 ${completed}/${total}`,`Generating components · ${completed}/${total} generated`):phase==='partial'?say(`组件生成已结束 · ${completed}/${total} 已生成`,`Generation ended · ${completed}/${total} generated`):say(`组件已生成 · ${completed}/${total}`,`Components generated · ${completed}/${total}`)
@@ -72,7 +73,7 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  const refreshHistory=allHistorical?historical:''
  const refreshLines=[...refreshGroups].map(([label,count])=>`${allHistorical?label.slice(historical.length):label} ${count}`)
  const refreshDetail=refreshHistory+refreshLines.join(' · ')
- return {phase,title,detail,total,planned,completed,partial,pending,failed,cancelled,unknown,refreshDetail,refreshHistory,refreshLines}
+ return {phase,title,detail,total,planned,completed,partial,pending,retrying,failed,cancelled,unknown,refreshDetail,refreshHistory,refreshLines}
 }
 
 export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
@@ -180,6 +181,10 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  if(footer&&current?.active===false&&state.phase==='empty')return null
  const generating=current?.active!==false&&state.pending>0||retrying
  const complete=state.phase==='completed'&&state.total>0&&(!state.planned||state.total===state.planned)
+ const progressTotal=Math.max(state.total,state.planned)
+ const progressKnown=state.total>0
+ const motion=generating&&(retrying||state.retrying?'retrying':'running')
+ const statusTitle=motion==='retrying'?say(`正在重试组件 · 已生成 ${state.completed}/${progressTotal}`,`Retrying components · ${state.completed}/${progressTotal} generated`):state.title
  const hasRetry=state.failed+state.cancelled+state.partial>0
  const retryDisabled=retrying||current?.active===false||current?.retryAvailable===false
  const retryFailed=async()=>{
@@ -188,26 +193,33 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
   try{if(!await requestResearchWorkbenchRetry(window,sessionId,visiblePlans,current))setRetryError(true)}finally{setRetrying(false)}
  }
  return react_jsx_runtime.jsxs('div',{'data-research-workbench-progress':state.phase,...(footer?{'data-research-workbench-footer':true}:{}),style:{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto',columnGap:12,margin:footer?'8px 0 12px':'4px 0 8px 20px',padding:'8px 10px',...(footer?{border:'1px solid var(--dsw-alias-border-l2)',borderRadius:8,background:'var(--dsw-alias-bg-l2)'}:{borderLeft:'2px solid var(--dsw-alias-border-l2)'}),fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
-  react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{gridColumn:1,fontWeight:500,color:'var(--dsw-alias-label-primary)'},children:state.title}),
+  react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{gridColumn:1,fontWeight:500,color:'var(--dsw-alias-label-primary)'},children:statusTitle}),
   react_jsx_runtime.jsxs('div',{style:{gridColumn:1,minWidth:0},children:[footer&&complete?null:react_jsx_runtime.jsx('div',{children:state.detail}),state.refreshHistory?react_jsx_runtime.jsx('div',{'data-refresh-history':true,children:state.refreshHistory}):null,react_jsx_runtime.jsx('div',{'data-refresh-groups':true,style:{display:'flex',flexWrap:'wrap',columnGap:14,rowGap:2},children:state.refreshLines.map((line,index)=>react_jsx_runtime.jsx('span',{'data-refresh-group':true,style:{display:'block',maxWidth:'100%'},children:line},index))})]}),
   react_jsx_runtime.jsxs('div',{style:{gridColumn:2,gridRow:'1 / span 2',alignSelf:'center',display:'flex',alignItems:'center',gap:10,flexShrink:0,whiteSpace:'nowrap'},children:[
    generating?react_jsx_runtime.jsxs('svg',{width:18,height:18,viewBox:'0 0 20 20',role:'img','aria-label':say('正在生成组件','Generating components'),style:{display:'block',width:18,height:18,flexShrink:0},children:[
     react_jsx_runtime.jsx('circle',{cx:10,cy:10,r:7,fill:'none',stroke:'currentColor',strokeWidth:2,opacity:.2}),
-    react_jsx_runtime.jsx('circle',{cx:10,cy:10,r:7,fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeDasharray:'30 14',children:react_jsx_runtime.jsx('animateTransform',{attributeName:'transform',type:'rotate',from:'0 10 10',to:'360 10 10',dur:'.9s',repeatCount:'indefinite'})})
+    react_jsx_runtime.jsx('circle',{'data-workbench-progress-spinner':'',cx:10,cy:10,r:7,fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeDasharray:'30 14'})
    ]}):complete?react_jsx_runtime.jsx('span',{children:say('已完成','Completed')}):null,
    hasRetry?react_jsx_runtime.jsx('button',{type:'button',disabled:retryDisabled,'aria-label':say('重试未完成的组件','Retry unsuccessful components'),title:current?.active===false?say('打开研究看板后重试','Open the research canvas to retry'):undefined,onClick:retryFailed,style:{border:'1px solid var(--dsw-alias-border-l2)',borderRadius:6,padding:'3px 10px',minHeight:28,background:'var(--dsw-alias-bg-l2)',color:'var(--dsw-alias-label-primary)',font:'inherit',cursor:retryDisabled?'default':'pointer',opacity:retryDisabled ? .5 : 1},children:say('重试','Retry')}):null
   ]}),
-  retryError?react_jsx_runtime.jsx('div',{role:'alert',style:{gridColumn:'1 / -1'},children:say('未能启动重试，请在研究看板中再试。','Could not start retry. Try again in the research canvas.')}):null
+  retryError?react_jsx_runtime.jsx('div',{role:'alert',style:{gridColumn:'1 / -1'},children:say('未能启动重试，请在研究看板中再试。','Could not start retry. Try again in the research canvas.')}):null,
+  footer&&react_jsx_runtime.jsx('div',{
+   'data-workbench-progress-track':'','data-workbench-progress-motion':motion||undefined,'data-workbench-progress-zero':state.completed===0?'':undefined,
+   role:'progressbar','aria-label':say('组件生成进度','Component generation progress'),'aria-valuemin':0,'aria-valuemax':progressTotal||1,
+   'aria-valuenow':progressKnown?state.completed:undefined,
+   style:{'--workbench-progress-width':(progressTotal?state.completed/progressTotal*100:0)+'%'},
+   children:react_jsx_runtime.jsx('div',{'data-workbench-progress-fill':''})
+  })
  ]})
 }
 
 export function researchWorkbenchFeedbackDefinitions(){return [isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v11 */',ending='/* ework:workbench-feedback:end */'
+ const marker='/* ework:workbench-feedback:v12 */',ending='/* ework:workbench-feedback:end */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'+ending+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v(?:10|[1-9]) \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[01]|[1-9]) \*\//)
  if(previous>=0){
   // Several later patches append their own helpers before ExecutionStatusGroup.
   // Replace this patch's functions only; never consume those adjacent owners.
