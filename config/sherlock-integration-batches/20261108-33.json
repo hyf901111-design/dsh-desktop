@@ -135,6 +135,63 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T10:37:48.789635+00:00"
+      },
+      "merged": {
+        "mergeCommit": "cce7be1eceb4d92dd4daf3375d149a559a03125d",
+        "verificationCommit": "cce7be1eceb4d92dd4daf3375d149a559a03125d",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/component-readable-snapshot.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-source-policy.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-contract.test.js test/board-tabs-theme-browser.test.js test/board-tabs-connection-browser.test.js test/workbench-document-delivery.test.js test/workbench-prototype-component.test.js test/workbench-prototype-evidence.test.js test/component-readable-snapshot.test.js test/bundled-component-skill.test.js test/workbench-execution-policy.test.js test/workbench-source-policy.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "cce7be1eceb4d92dd4daf3375d149a559a03125d",
+            "completedAt": "2026-11-08T10:37:53.489Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "cce7be1eceb4d92dd4daf3375d149a559a03125d",
+            "completedAt": "2026-11-08T10:37:53.489Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "cce7be1eceb4d92dd4daf3375d149a559a03125d",
+            "completedAt": "2026-11-08T10:37:53.489Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T10:37:53.489Z"
       }
     }
   ],
