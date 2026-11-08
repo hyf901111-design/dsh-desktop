@@ -94,6 +94,57 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T10:16:46.004346+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a47019706dd631139f7a5e9f5165ccdc3566fda3",
+        "verificationCommit": "a47019706dd631139f7a5e9f5165ccdc3566fda3",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/workbench-resultative-request.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-prototype-evidence.test.js test/workbench-prototype-component.test.js test/workbench-execution-policy.test.js test/workbench-source-policy.test.js test/workbench-resultative-request.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "a47019706dd631139f7a5e9f5165ccdc3566fda3",
+            "completedAt": "2026-11-08T10:16:51.898Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a47019706dd631139f7a5e9f5165ccdc3566fda3",
+            "completedAt": "2026-11-08T10:16:51.898Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "a47019706dd631139f7a5e9f5165ccdc3566fda3",
+            "completedAt": "2026-11-08T10:16:51.898Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T10:16:51.898Z"
       }
     }
   ],
