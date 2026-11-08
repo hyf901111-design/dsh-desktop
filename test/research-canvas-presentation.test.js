@@ -156,7 +156,7 @@ it('首个计划沿用原始用户指定主题，重新投递计划不覆盖后�
  const f=await fixture()
  try{
  const w=f.bundle.createResearchWorkspaceSession(f.storage,'new-board')
- const plan={id:'requested-theme',originalRequest:'做研究工作台，用易方达模式。',createdAt:Date.now(),ready:false,panels:[{nodeId:'theme-panel',title:'层级',type:'mind-map',prompt:'按材料层级',x:0,y:0,width:656,height:340,size:'medium',pending:true}]}
+ const plan={id:'requested-theme',requestedStyle:'enterprise',createdAt:Date.now(),ready:false,panels:[{nodeId:'theme-panel',title:'层级',type:'mind-map',prompt:'按材料层级',x:0,y:0,width:656,height:340,size:'medium',pending:true}]}
  expect(w.applyWorkbench(plan)).toBe(true)
  expect(w.getWorkbenchStyle()).toBe('enterprise')
  w.setWorkbenchStyle('dark',{scope:'board'})

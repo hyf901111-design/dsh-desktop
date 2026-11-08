@@ -127,7 +127,7 @@ export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
-  if(spec.type==='html' && researchHtmlText(spec.html).length===0 && !/<(?:svg|canvas)\b/i.test(spec.html))continue;
+  if(spec.type==='html' && /^(?:\s|[.…⋯])*$/.test(researchHtmlText(spec.html)) && !/<(?:svg|canvas)\b/i.test(spec.html))continue;
   const retained=retainTemplateModel(spec,candidate);
   if(candidate.type==='view'&&!parseResearchContainerSpec(retained))continue;
   return JSON.stringify(retained);

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {evaluateMapping} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {hostStructuredWebRecord,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
-import {observedReleaseTimeline,readReleaseTimeline,releaseTimelineScope,releaseTimelineComplete} from '../packages/dsh-research-task-runtime/observed-dated-feed.js'
+import {observedReleaseTimeline,readReleaseTimeline,releaseTimelineScope,releaseTimelineComplete,workbenchReleaseScope} from '../packages/dsh-research-task-runtime/observed-dated-feed.js'
 import {commonPriceScope,observedCommonPriceComparison} from '../packages/dsh-research-task-runtime/observed-series-comparison.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 
@@ -88,4 +88,21 @@ it('does not mark a one-record HTML artifact complete when the requested source 
   expect(t.error).toContain('未取得要求的完整记录或正文')
   expect(t.finalOutput).toBeUndefined()
  }finally{await runtime.dispose()}
+})
+
+
+it('按用户的发布表需求无损映射完整来源行和长正文，缺行或改正文不能完成',async()=>{
+ const request='做升级研究，用可搜索总表列出 example/vue 最近4条发布记录，包含版本、发布日期、变更要点和原始链接，只用 GitHub 和官网。'
+ const scope=workbenchReleaseScope(request,'发布记录可搜索总表','table')
+ expect(scope).toEqual({repos:['example/vue'],count:4,includeBody:true,presentation:'table'})
+ expect(workbenchReleaseScope(request,'包关系图','html')).toBeUndefined()
+ expect(workbenchReleaseScope(request+'只要稳定版','发布记录','table')).toBeUndefined()
+ const records=await readReleaseTimeline(scope,async url=>page(url,rows('vue')))
+ const mapped=observedReleaseTimeline(scope,records,'最近发布')
+ const snapshot=resolveComponentSnapshot(mapped,records)
+ expect(snapshot.data.rows.map(row=>row[3])).toEqual(rows('vue').map(row=>row.body))
+ expect(snapshot.data.rows.map(row=>row[2])).toEqual(rows('vue').map(row=>row.html_url))
+ expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
+ const broken=structuredClone(snapshot.data);broken.rows[0][3]='缩略';expect(releaseTimelineComplete(scope,broken,records)).toBe(false)
+ broken.rows.pop();expect(releaseTimelineComplete(scope,broken,records)).toBe(false)
 })

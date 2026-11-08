@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
-import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 
 it('核对 Word 表格中的裸编号、组合与范围，不因格式误拦也不接受未知出处',()=>{
  const docs=[{blocks:['T8','P36','P37','P38'].map(id=>({id}))}]
@@ -178,4 +178,21 @@ it('规划为 HTML 的关系图也不能以文字回退标记完成，自动修�
  expect(attempts[1]).toContain('必须保留可视化关系')
  expect(runtime.inspect({parentSessionId:'parent',taskId:task.taskId})).not.toHaveProperty('finalOutput')
  }finally{await runtime.dispose()}
+})
+
+
+it('资料来源数量不再误拒有完整明细的表格，仍校验每条链接',()=>{
+ const sources=Array.from({length:18},(_,i)=>({label:'来源'+i,url:'https://example.com/'+i}))
+ const data={version:1,type:'table',title:'多来源明细',columns:['记录','出处'],rows:Array.from({length:60},(_,i)=>['第'+i+'条','[T1]']),sources}
+ const output=JSON.parse(documentTableOutput(JSON.stringify(data)))
+ expect(retainedTableData(output).rows).toEqual(data.rows)
+ for(const source of sources)expect(output.html).toContain(source.url)
+ expect(documentTableOutput(JSON.stringify({...data,sources:[{label:'错误',url:'javascript:alert(1)'}]}))).toBeUndefined()
+})
+
+it('不把省略号空网页当交付，也不把明确要求补充官网的请求锁成文档独占',()=>{
+ for(const html of ['<!DOCTYPE html>...','<main> … </main>','<body>⋯</body>'])expect(acceptArtifactOutput(JSON.stringify({version:1,type:'html',title:'空卡',html}))).toBeUndefined()
+ const request='根据附件做看板，再从两家官网补充职责说明。 📎 文件：`/workspace/report.docx`'
+ expect(workbenchDocumentScope(request)).toBeUndefined()
+ expect(workbenchDocumentScope('只参考附件内容。 📎 文件：`/workspace/report.docx`')).toEqual(['/workspace/report.docx'])
 })

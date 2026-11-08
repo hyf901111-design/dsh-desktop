@@ -822,7 +822,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
       if(node?.containerSpec?.type==='html'){
-        root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil(node.height-frame.clientHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})};contentMeasurements.set(id,value)
+        root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil((frame.closest('[data-research-node-id]')?.offsetHeight||node.height)-frame.offsetHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})};contentMeasurements.set(id,value)
         workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height,disclosureOpen,...(data.intrinsicTable===true&&(/<body\b[^>]*data-sherlock-market="table"/.test(value.html)||/<body\b[^>]*data-research-kind="view"/.test(value.html)||/<body\b[^>]*data-readable-snapshot/.test(value.html))?{layoutFit:true}:{})});root.__eworkContentFit?.refit()
       }
     }
