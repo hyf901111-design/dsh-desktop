@@ -5,6 +5,7 @@ import { canvasCss } from '../scripts/lib/figma-canvas-client.mjs'
 import { workbenchModeCss } from '../packages/dsh-research-task-runtime/workbench-style.js'
 import { buildResearchHtmlPreview } from '../packages/dsh-research-task-runtime/html-artifact.js'
 import { WORKBENCH_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/workbench-presentation.js'
+import { nativeMindMapDepthCss } from '../scripts/lib/research-grid-workbench.mjs'
 
 let browser
 beforeAll(async () => {
@@ -39,15 +40,17 @@ const html = `<style>
   <div id="control" style="border:1px solid var(--sherlock-border);border-radius:6px"><button>普通控制</button></div>
 </div>
 <section data-sherlock-structure="primary" id="custom-primary"><div class="custom-label">职位与出处</div></section>
+<section data-sherlock-structure="node" data-sherlock-structure-depth="2" id="custom-third"><span>三级部门</span></section>
+<section data-sherlock-structure="node" data-sherlock-structure-depth="3" id="custom-fourth">四级部门</section>
 <section data-sherlock-structure="info" id="info" style="border-left:4px solid red;box-shadow:inset 1px 0 red"><h3>资料卡片</h3><a href="https://example.com/source">原始出处</a></section>
 <svg viewBox="0 0 100 45" aria-label="关系图">
   <path id="path" data-sherlock-structure="connector" d="M 10 20 L 50 20" stroke="#777777"/>
   <g data-sherlock-structure="primary">
-    <rect id="svg-node" x="50" y="10" width="40" height="30" fill="#777777" stroke="#777777"/>
+    <rect id="svg-node" x="50" y="10" width="40" height="30" rx="6" fill="#777777" stroke="#777777"/>
     <path id="nested-connector" data-sherlock-structure="connector" d="M 50 25 L 80 25" stroke="#777777"/>
     <text id="svg-label" x="52" y="25" fill="#222222">根节点</text>
   </g>
-  <circle id="svg-peer" data-sherlock-structure="node" cx="30" cy="25" r="6" fill="#777777" stroke="#777777"/>
+  <circle id="svg-peer" data-sherlock-structure="node" data-sherlock-structure-depth="2" cx="30" cy="25" r="6" fill="#777777" stroke="#777777"/>
 </svg></main>`
 
 it('已保存的组织图和资料卡与新组件一起响应易方达模式', async () => {
@@ -65,25 +68,32 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     await switchMode('enterprise')
     expect(await read('#root', 'backgroundColor')).toBe('rgb(0, 80, 150)')
     expect(await read('#root .role', 'color')).toBe('rgb(255, 255, 255)')
-    expect(await read('#custom-primary .custom-label', 'color')).toMatch(/^color\(srgb 0\.8 /u)
-    expect(await read('#peer', 'backgroundColor')).toMatch(/^color\(srgb /u)
-    expect(await read('#rail', 'backgroundColor')).toMatch(/^color\(srgb /u)
+    expect(await read('#custom-primary .custom-label', 'color')).toMatch(/^color\(srgb 0\.88 /u)
+    expect(await read('#peer', 'backgroundColor')).toBe('rgb(0, 120, 180)')
+    expect(await read('#peer .role', 'color')).toBe('rgb(255, 255, 255)')
+    expect(await read('#rail', 'backgroundColor')).toBe('rgb(150, 150, 150)')
     expect(await read('#tree-root', 'backgroundColor')).toBe('rgb(0, 80, 150)')
     expect(await read('#tree-root .node-sub', 'color')).toBe('rgb(255, 255, 255)')
     expect(await read('#tree-peer', 'backgroundColor')).toBe(await read('#peer', 'backgroundColor'))
-    expect(await read('#tree-card', 'backgroundColor')).toBe(await read('#peer', 'backgroundColor'))
+    expect(await read('#tree-card', 'backgroundColor')).toBe('rgb(30, 185, 225)')
+    expect(await read('#custom-third', 'backgroundColor')).toBe('rgb(30, 185, 225)')
+    expect(await read('#custom-third span', 'color')).toBe('rgb(37, 37, 43)')
+    expect(await read('#custom-fourth', 'backgroundColor')).toBe('rgb(179, 235, 255)')
     expect(await read('#tree-rail', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
     expect(await read('#tree-drop', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
     for (const selector of ['#root','#peer','#tree-root','#tree-card','#department','#info','#custom-primary']) {
       expect(await read(selector, 'borderLeftWidth')).toBe('0px')
       expect(await read(selector, 'borderTopWidth')).toBe('0px')
+      expect(await read(selector, 'borderRadius')).toBe('0px')
       expect(await read(selector, 'boxShadow')).toBe('none')
     }
     expect(await read('#control', 'borderRadius')).toBe('6px')
-    expect(await read('#path', 'stroke')).toBe('rgb(0, 120, 180)')
-    expect(await read('#nested-connector', 'stroke')).toBe('rgb(0, 120, 180)')
+    expect(await read('#path', 'stroke')).toBe('rgb(150, 150, 150)')
+    expect(await read('#nested-connector', 'stroke')).toBe('rgb(150, 150, 150)')
     expect(await read('#svg-node', 'fill')).toBe('rgb(0, 80, 150)')
     expect(await read('#svg-node', 'stroke')).toBe('none')
+    expect(await read('#svg-node', 'rx')).toBe('0px')
+    expect(await read('#svg-peer', 'fill')).toBe('rgb(30, 185, 225)')
     expect(await read('#svg-peer', 'stroke')).toBe('none')
     expect(await read('#svg-label', 'fill')).toBe('rgb(255, 255, 255)')
     expect(await frame.locator('#department').textContent()).toContain('负责人待核')
@@ -96,6 +106,7 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#info', 'borderLeftWidth')).toBe('4px')
     expect(await read('#svg-node', 'fill')).toBe('rgb(119, 119, 119)')
     expect(await read('#svg-node', 'stroke')).toBe('rgb(119, 119, 119)')
+    expect(await read('#svg-node', 'rx')).toBe('6px')
   } finally {
     await page.close()
   }
@@ -110,7 +121,7 @@ it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）
       .replaceAll(':root[data-sherlock-theme="dark"]', 'body[data-ds-dark-theme] [data-ework-grid]' + content)
       .replaceAll('body .rScV5Q_mindMap', 'body [data-ework-grid]' + content + ' .rScV5Q_mindMap')
     const css = canvasCss + nativePresentation +
-      '@layer ework-workbench{' + workbenchModeCss('body [data-ework-grid]', content) + '}' +
+      '@layer ework-workbench{' + workbenchModeCss('body [data-ework-grid]', content) + nativeMindMapDepthCss + '}' +
       readFileSync('scripts/lib/workbench-style.css', 'utf8')
     await page.setContent(`<style>${css}</style><div data-ework-grid data-workbench-style="dark">
       <article data-research-node-id="mind" data-research-compact-chrome ${legacy?'data-research-generated-mind-map':'data-research-container-type="mind-map"'}>
@@ -118,6 +129,9 @@ it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）
         <div class="rScV5Q_mindMap"><svg data-research-mind-map-edges></svg>
           <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="0">根节点</span>
           <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="1">下属节点</span>
+          <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="2">三级节点</span>
+          <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="3">四级节点</span>
+          <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="9">扩展层级</span>
         </div>
         </div>
       </article>
@@ -131,13 +145,14 @@ it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）
     await board.evaluate(node => node.dataset.workbenchStyle='enterprise')
     const enterprise = await style()
     expect(enterprise[0]).toEqual({backgroundColor:'rgb(0, 80, 150)',color:'rgb(255, 255, 255)',borderRadius:'0px',borderLeftWidth:'0px'})
-    expect(enterprise[1].backgroundColor).toMatch(/^color\(srgb /u)
-    expect(enterprise[1].color).toBe('rgb(60, 60, 60)')
-    expect(enterprise[1].borderLeftWidth).toBe('0px')
-    expect(await page.locator('[data-research-mind-map-edges]').evaluate(node => getComputedStyle(node).color)).toMatch(/^color\(srgb /u)
+    expect(enterprise.slice(1).map(node=>node.backgroundColor)).toEqual(['rgb(0, 120, 180)','rgb(30, 185, 225)','rgb(179, 235, 255)','rgb(204, 204, 204)'])
+    expect(enterprise[1].color).toBe('rgb(255, 255, 255)')
+    expect(enterprise[2].color).toBe('rgb(37, 37, 43)')
+    expect(enterprise.every(node=>node.borderLeftWidth==='0px'&&node.borderRadius==='0px')).toBe(true)
+    expect(await page.locator('[data-research-mind-map-edges]').evaluate(node => getComputedStyle(node).color)).toBe('rgb(150, 150, 150)')
     await board.evaluate(node => node.dataset.workbenchStyle='dark')
     expect(await style()).toEqual(dark)
-    expect(await page.locator('.rScV5Q_mindMapNode').allTextContents()).toEqual(['根节点','下属节点'])
+    expect(await page.locator('.rScV5Q_mindMapNode').allTextContents()).toEqual(['根节点','下属节点','三级节点','四级节点','扩展层级'])
   } finally {
     await page.close()
   }

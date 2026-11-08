@@ -6,7 +6,7 @@ import {installWorkbenchChartMotion} from '../../packages/dsh-research-task-runt
 import {installWorkbenchTableColumns,createWorkbenchTableColumnState} from '../../packages/dsh-research-task-runtime/workbench-table-columns.js'
 import {WORKBENCH_ENGLISH,workbenchText,useWorkbenchLocale,localizedWorkbenchFunctions} from './workbench-localization.mjs'
 import * as workbenchStyle from './workbench-style-client.mjs'
-import {workbenchModeCss} from '../../packages/dsh-research-task-runtime/workbench-style.js'
+import {workbenchModeCss,workbenchStructureDepthCss} from '../../packages/dsh-research-task-runtime/workbench-style.js'
 import {readFileSync} from 'node:fs'
 import {createResearchGrid} from '../../packages/dsh-research-task-runtime/research-grid.js'
 import {createWorkbenchGridState,workbenchScrollExtent} from './research-grid-state.mjs'
@@ -34,7 +34,11 @@ const workbenchIcons=workbenchIconNames.map(name=>{
   return `.ew-grid-icon-${name}{mask-image:url("data:image/svg+xml;base64,${Buffer.from(normalized).toString('base64')}");mask-size:16px 16px;${name==='expand'?'transform:rotate(90deg);':''}}`
 }).join('\n')
 const modeIcons=['light','dark','openterminal','enterprise'].map(name=>'.ew-workbench-mode-'+name+'{mask-image:url("data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/mode-'+name+'.svg',import.meta.url)).toString('base64')+'")}').join('\n')
-const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
+export const nativeMindMapDepthCss=workbenchStructureDepthCss(
+  'body [data-ework-grid][data-workbench-style=enterprise]',
+  '.rScV5Q_mindMap .rScV5Q_mindMapNode','data-research-mind-map-depth'
+)
+const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
 export function restoreResearchGridWorkbench(source){
   source=stripComponentPptxMode(source)
   const start=source.indexOf(begin);if(start<0)return source

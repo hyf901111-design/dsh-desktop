@@ -15,6 +15,20 @@ export function workbenchModeCss(scope=':root',content='') {
  // controlTheme is retained in the validated bridge for older frame runtimes.
  return modes.map(m=>scope+'[data-workbench-style="'+m+'"]'+content+'{'+declarations(workbenchStylePalette(m))+'}').join('\n')
 }
+
+const structureLevels=[
+ ['chart-1','#fff'],['chart-5','#fff'],['chart-2','#25252b'],['chart-6','#25252b'],
+ ['chart-4','#fff'],['chart-3','#25252b'],['chart-7','#25252b'],['chart-8','#25252b']
+]
+export function workbenchStructureDepthCss(scope,nodes,depth,legacyLevels=[]) {
+ const declaration=([fill,ink])=>'{--sherlock-structure-fill:var(--sherlock-'+fill+');--sherlock-structure-ink:'+ink+'}'
+ const explicit=scope+' '+nodes+'['+depth+']'
+ return [
+  ...legacyLevels.map(([selector,level])=>scope+' :where('+selector+')'+declaration(structureLevels[level])),
+  explicit+declaration(structureLevels.at(-1)),
+  ...structureLevels.map((level,i)=>scope+' '+nodes+'['+depth+'="'+i+'"]'+declaration(level))
+ ].join('\n')
+}
 export function validWorkbenchStyleMessage(data) {
  return !!data&&typeof data==='object'&&!Array.isArray(data)&&Object.keys(data).length===3&&data.type==='sherlock-workbench-style'&&['light','dark','enterprise','openterminal'].includes(data.mode)&&['light','dark'].includes(data.controlTheme)
 }
@@ -34,7 +48,15 @@ export function installWorkbenchStyleMessages() {
   dispatchEvent(new CustomEvent('sherlock-presentation-change',{detail:{mode}}))
  })
 }
-export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
+const enterpriseRoot=':root[data-workbench-style="enterprise"]'
+const structureNodes=':is([data-sherlock-structure="node"],[data-sherlock-structure="primary"],:where(.chart:has(.node.root > .role)) .node:has(> .role,> .name),:where(.tree:has(> .node > .node-title)) > .node,:where(.tree:has(> .node > .node-title)) .branch > .card)'
+const legacyStructureLevels=[
+ [structureNodes,1],
+ [':where(.tree:has(> .node > .node-title)) .branch > .card',2],
+ [':is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child)',0]
+]
+const svgNodeShape=':is(rect,ellipse,circle,polygon,path)'
+export const WORKBENCH_MODE_CSS=workbenchModeCss()+workbenchStructureDepthCss(enterpriseRoot,structureNodes,'data-sherlock-structure-depth',legacyStructureLevels)+`
 :root[data-workbench-style="openterminal"] body :is(button,input,select,textarea){border-radius:0!important;font-family:var(--sherlock-font-sans)!important}
 :root[data-workbench-style="openterminal"] body th{background:#111!important;color:#808080!important}
 
@@ -50,21 +72,15 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 
 /* Structure roles opt in explicitly. The older generators used labelled
    node groups and repeated bordered grids, so cover those saved shapes too. */
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="node"],[data-sherlock-structure="primary"],:where(.chart:has(.node.root > .role)) .node:has(> .role,> .name),
- :where(.tree:has(> .node > .node-title)) > .node,
- :where(.tree:has(> .node > .node-title)) .branch > .card){
- background:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;
- border:0!important;box-shadow:none!important;
- border-radius:0!important;
-}
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child){
- --sherlock-text:var(--sherlock-control-on-primary);
- --sherlock-muted:color-mix(in srgb,var(--sherlock-control-on-primary) 80%,var(--sherlock-chart-1));
+${enterpriseRoot} body ${structureNodes}:not(svg *){
+ --sherlock-text:var(--sherlock-structure-ink);
+ --sherlock-muted:color-mix(in srgb,var(--sherlock-structure-ink) 88%,var(--sherlock-structure-fill));
  --sherlock-text-muted:var(--sherlock-muted);
- background:var(--sherlock-chart-1)!important;color:var(--sherlock-text)!important;
+ background:var(--sherlock-structure-fill)!important;color:var(--sherlock-text)!important;
+ border:0!important;box-shadow:none!important;border-radius:0!important;
 }
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child) :is(.role,.name,.node-title,.node-sub,h2,h3,h4,p,span,strong,small,a){
- color:var(--sherlock-control-on-primary)!important;
+${enterpriseRoot} body ${structureNodes} :is(.role,.name,.node-title,.node-sub,h2,h3,h4,p,span,strong,small,a){
+ color:var(--sherlock-structure-ink)!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="info"],.info-card,.department-card,[class$="-cards"] > [class$="-card"]:not(:has(table,svg,canvas,button,input,select)),
  :is([style*="display:grid" i],[style*="display: grid" i])[style*="grid-template-columns"] > :is(div,article,section)[style*="border:"][style*="--sherlock-border"][style*="border-radius"]:has(> :is(div,h3,h4,strong)):not(:has(table,svg,canvas,button,input,select))) {
@@ -74,12 +90,12 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="connector"]:not(svg *),.chart:has(.node.root > .role) :is(.vline,.stub),.tree:has(> .node > .node-title) :is(.vline,.drop)),
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::before,
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::after{
- background:color-mix(in srgb,var(--sherlock-chart-1) 32%,var(--sherlock-border))!important;
+ background:var(--sherlock-chart-3)!important;
 }
-:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="connector"]{stroke:var(--sherlock-chart-5)!important}
-:root[data-workbench-style="enterprise"] svg :is(rect,ellipse,circle,polygon,path):is([data-sherlock-structure="node"],[data-sherlock-structure="node"] > :not([data-sherlock-structure="connector"])){fill:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;stroke:none!important}
-:root[data-workbench-style="enterprise"] svg :is(rect,ellipse,circle,polygon,path):is([data-sherlock-structure="primary"],[data-sherlock-structure="primary"] > :not([data-sherlock-structure="connector"])){fill:var(--sherlock-chart-1)!important;stroke:none!important}
-:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="primary"] :is(text,tspan){fill:var(--sherlock-control-on-primary)!important}
+${enterpriseRoot} svg [data-sherlock-structure="connector"]{stroke:var(--sherlock-chart-3)!important}
+${enterpriseRoot} svg ${svgNodeShape}${structureNodes},
+${enterpriseRoot} svg ${structureNodes} > ${svgNodeShape}:not([data-sherlock-structure="connector"]){fill:var(--sherlock-structure-fill)!important;stroke:none!important;rx:0px!important;ry:0px!important}
+${enterpriseRoot} svg ${structureNodes} :is(text,tspan){fill:var(--sherlock-structure-ink)!important}
 @media(prefers-reduced-motion:no-preference){
  :root[data-workbench-transition] body,:root[data-workbench-transition] body *{transition:background-color 260ms cubic-bezier(.2,.7,.2,1),color 260ms cubic-bezier(.2,.7,.2,1),border-color 260ms cubic-bezier(.2,.7,.2,1)}
  :root[data-workbench-transition] svg :is(rect,path,line,text,circle){transition:fill 260ms cubic-bezier(.2,.7,.2,1),stroke 260ms cubic-bezier(.2,.7,.2,1)}

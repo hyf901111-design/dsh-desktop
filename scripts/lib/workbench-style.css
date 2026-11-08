@@ -19,9 +19,9 @@ body [data-ework-grid][data-workbench-style]:not([data-workbench-style=enterpris
 body [data-ework-grid][data-workbench-style] [data-research-mind-map-edges]{color:var(--grid-muted)!important}
 /* Keep these overrides in the same cascade layer as the native mind-map rules. */
 @layer ework-workbench {
-body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_mindMap .rScV5Q_mindMapNode[data-research-mind-map-depth]{background:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;color:var(--sherlock-text)!important;border:0!important;box-shadow:none!important;border-radius:0!important}
-body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_mindMap .rScV5Q_mindMapNode[data-research-mind-map-depth="0"]{background:var(--sherlock-chart-1)!important;color:var(--sherlock-control-on-primary)!important}
-body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_mindMap [data-research-mind-map-edges]{color:color-mix(in srgb,var(--sherlock-chart-1) 32%,var(--sherlock-border))!important}
+body [data-research-canvas][data-ework-grid][data-workbench-style=enterprise] [data-research-node-id]{border-radius:0!important}
+body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_mindMap .rScV5Q_mindMapNode[data-research-mind-map-depth]{background:var(--sherlock-structure-fill)!important;color:var(--sherlock-structure-ink)!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_mindMap [data-research-mind-map-edges]{color:var(--sherlock-chart-3)!important}
 }
 body [data-ework-grid] .odyssey-generation-surface[data-workbench-drag-handle]{cursor:grab;touch-action:none;user-select:none}
 body [data-ework-grid][data-grid-operation=move] [data-grid-active] .odyssey-generation-surface{cursor:grabbing}
