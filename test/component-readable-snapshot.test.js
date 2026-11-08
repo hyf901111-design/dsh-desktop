@@ -95,6 +95,46 @@ it.each(['wrong-row','literal-link','unsafe-link','wrong-source','missing-date',
  if(kind==='conflicting-id')records[0].response.records[0].id=2
  expect(resolveComponentSnapshot(JSON.stringify(draft),records,now)).toBeNull()
 })
+
+function copiedFeed(){
+ const f=datedFeed(2,'完整发布说明。'.repeat(500))
+ f.records[0].response.records[0].prerelease=true
+ const items=f.records.flatMap(record=>record.response.records).map(({body,...event})=>({
+  ...event,id:'release.v'+event.id,title:event.title+(event.prerelease?'（pre-release）':''),
+  summary:body.slice(0,2400)
+ }))
+ items.forEach(item=>delete item.prerelease)
+ f.draft.mapping.items=items
+ return f
+}
+
+it.each([false,true])('reattaches a copied oversized feed to the actual records with one worker (direct=%s)',async direct=>{
+ const f=copiedFeed()
+ if(direct)f.draft=f.draft.mapping
+ const {task,start}=await run(f)
+ expect(task.state,task.error).toBe('completed')
+ expect(start).toHaveBeenCalledOnce()
+ await dom(task.finalOutput,document=>{
+  const source=f.records.flatMap(record=>record.response.records)
+  const rows=[...document.querySelectorAll('tbody tr')]
+  expect(rows).toHaveLength(source.length)
+  for(const row of rows){
+   const match=source.find(event=>event.url===row.querySelector('a').getAttribute('href'))
+   expect(row.cells[0].textContent).toBe(match.title)
+   expect(row.cells[1].textContent).toBe(match.time)
+   expect(row.querySelector('details').textContent).toContain(match.body)
+  }
+ })
+})
+
+it.each(['wrong-title','wrong-time','ambiguous-row','ambiguous-body'])('rejects a copied oversized feed with %s',kind=>{
+ const f=copiedFeed(),first=f.draft.mapping.items[0]
+ if(kind==='wrong-title')first.title='未经核验的标题'
+ if(kind==='wrong-time')first.time='2026-10-31T10:00:00Z'
+ if(kind==='ambiguous-row')f.records[0].response.records.push({...f.records[0].response.records[0]})
+ if(kind==='ambiguous-body')f.records[0].response.records[0].description='另一个正文'
+ expect(resolveComponentSnapshot(JSON.stringify(f.draft),f.records,now)).toBeNull()
+})
 it.each(['metrics','missing','table','chart'])('completes source-materialized %s with one runtime response and a complete readable snapshot',async kind=>{
  const f=fixture(kind),{task,start,bindData}=await run(f)
  expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce();expect(bindData).not.toHaveBeenCalled()
