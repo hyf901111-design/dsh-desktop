@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-44",
+  "branch": "codex/integration/20261108-44",
+  "baseMainCommit": "b0f263aaa4a1526a20cc2ded33c0a7aad46c945c",
+  "expectedMainCommit": "b0f263aaa4a1526a20cc2ded33c0a7aad46c945c",
+  "createdAt": "2026-11-08T13:17:52.410Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台页签与组件交互修复",
+        "branch": "codex/feat/workbench-disclosure-scroll-20261108",
+        "baseCommit": "b0f263aaa4a1526a20cc2ded33c0a7aad46c945c",
+        "tipCommit": "8ab22dc8b7d3aa253f14041331a5defdb94a1300",
+        "commits": [
+          {
+            "commit": "8ab22dc8b7d3aa253f14041331a5defdb94a1300",
+            "parents": [
+              "b0f263aaa4a1526a20cc2ded33c0a7aad46c945c"
+            ],
+            "subject": "修复工作台组件滚轮与展开高度并取消横向页签吸顶"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "82 项聚焦检查通过",
+            "verifiedCommit": "8ab22dc8b7d3aa253f14041331a5defdb94a1300",
+            "completedAt": "2026-11-08T13:17:50.731710+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "8ab22dc8b7d3aa253f14041331a5defdb94a1300",
+            "completedAt": "2026-11-08T13:17:50.731710+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "8ab22dc8b7d3aa253f14041331a5defdb94a1300",
+            "completedAt": "2026-11-08T13:17:50.731710+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证横向页签随画布离开、竖向固定；真实 iframe 滚轮验证架构区与独立滚动区交接，展开可见全文、下方卡片避让、收起还原。"
+        },
+        "acceptanceCriteria": [
+          "横向页签随画布滚动，竖向导航固定",
+          "无可滚动内容的选中组件将滚轮交还画布",
+          "展开说明临时撑高，收起恢复并保持线性箭头对齐"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T13:17:50.731710+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/component-wheel-zoom.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
