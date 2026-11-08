@@ -861,6 +861,13 @@ function createWorkbenchPdfReader() {
   }
 }
 
+function workbenchPdfTaskPaths(hostContext) {
+  const request = hostContext?.workbenchRequest
+  if (request?.dataMode === 'source' && !hostContext.sourcePolicy?.pluginRequired && !hostContext.sourcePolicy?.publicSourceRequests) {
+    return workbenchPdfScope(request.originalRequest)
+  }
+}
+
 async function extractPptxText(path, signal) {
   const data = await boundedSourceBytes(path, signal)
   signal?.throwIfAborted()
@@ -1647,14 +1654,15 @@ export class ResearchTaskRuntime {
   async run(task) {
     let handle, readableFallback, statementIssue, statementRepairData, calendarIssue, calendarRepairData,coveredHtml,newsTableError,readableSnapshot,readableRepairRequired=false,prototypeIssue
     const sourceRecords=[...(task.newsCoverage?.records??[])],sourceAttempts=[]
-    const newsPlan=task.kind==='container'&&plannedNewsQueries(task.prompt)
+    const documentTask=task.kind==='container'&&workbenchPdfTaskPaths(task.hostContext)
+    const newsPlan=!documentTask&&task.kind==='container'&&plannedNewsQueries(task.prompt)
     const newsCollector=newsPlan?componentSourceCollector(['public_data_query','ework__public_data_query']):undefined
     const feedOptions={panelRequest:workbenchPanelIntent(task.prompt),workbenchRequest:task.hostContext?.workbenchRequest,explicitScope:task.hostContext?.explicitScope,panelType:workbenchPanelFormat(task.prompt)}
-    const requiredReleaseScope=task.kind==='container'&&feedOptions.workbenchRequest?.dataMode==='source'&&
+    const requiredReleaseScope=!documentTask&&task.kind==='container'&&feedOptions.workbenchRequest?.dataMode==='source'&&
       workbenchReleaseScope(feedOptions.workbenchRequest.originalRequest,feedOptions.panelRequest,feedOptions.panelType)
     const newsTableIssueFor=value=>newsPlan&&extractArtifactObjects(value).map(data=>newsTableCoverageIssue(data,task.prompt,{verified:item=>!componentFeedEvidenceIssue(JSON.stringify(item),sourceRecords,feedOptions)})).find(Boolean)
-    let articleTimeline=workbenchPanelFormat(task.prompt)==='timeline'&&articleTimelineRequired({type:'timeline'},feedOptions),originalArticleTimeline
-    const calendarIssueFor = value => extractArtifactObjects(value).map(data=>calendarEventEvidenceIssue(data,feedOptions,sourceRecords,{now:new Date(this.now()),requiredData:calendarRepairData??(workbenchPanelFormat(task.prompt)==='calendar'?{type:'calendar'}:undefined)})).find(Boolean)
+    let articleTimeline=!documentTask&&workbenchPanelFormat(task.prompt)==='timeline'&&articleTimelineRequired({type:'timeline'},feedOptions),originalArticleTimeline
+    const calendarIssueFor = value => !documentTask && extractArtifactObjects(value).map(data=>calendarEventEvidenceIssue(data,feedOptions,sourceRecords,{now:new Date(this.now()),requiredData:calendarRepairData??(workbenchPanelFormat(task.prompt)==='calendar'?{type:'calendar'}:undefined)})).find(Boolean)
     const articleIssueFor = (value,capacitySnapshot=false) => articleTimeline && componentFeedEvidenceIssue(value,sourceRecords,{...feedOptions,articleTimelineRequired:true,capacitySnapshot})
     const startingEvents = []
     try {
@@ -1805,7 +1813,7 @@ export class ResearchTaskRuntime {
         let restoredArticleScope
         if(task.kind==='container'&&!calendarRepairData)calendarRepairData=extractArtifactObjects(deliveredText).map(data=>readTemplateModel(data)?.data??data).find(data=>data?.type==='calendar')
         const articleCandidate=extractArtifactObjects(deliveredText).map(data=>readTemplateModel(data)?.data??data)
-        if(articleCandidate.length===1&&articleTimelineRequired(articleCandidate[0],feedOptions)){
+        if(!documentTask&&articleCandidate.length===1&&articleTimelineRequired(articleCandidate[0],feedOptions)){
           articleTimeline=true
           // The retained model is evidence input only. Rebuild visible HTML via the host.
           deliveredText=JSON.stringify(articleCandidate[0])
@@ -2188,6 +2196,10 @@ export class ResearchTaskRuntime {
         output=acceptArtifactOutput(appendNewsCoverage(output,task.newsCoverage,{refresh}))
         if(output===undefined)throw new ResearchTaskError('OUTPUT_TOO_LARGE','已取得的新闻与覆盖说明超过当前展示容量，来源记录已保留，请拆分组件后重试。')
       }
+      if (output !== undefined && result.documentEvidence) {
+        const issue = workbenchPdfCitationIssue(output, result.documentEvidence)
+        if (issue) throw new ResearchTaskError('GENERATION_FAILED', issue)
+      }
       if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }
 
       if (
@@ -2233,7 +2245,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!documentTask && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -2497,9 +2509,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         agentOptions = componentModelSelection(response.result.value, kind)
       }
       if (surface !== 'note' && hostContext?.sourceMessageId) imageContent = await workbenchImageEvidence(ctx, parent, hostContext.sourceMessageId, agentOptions, signal)
-      const originalRequest = hostContext?.workbenchRequest?.originalRequest
-      const pdfPaths = kind === 'container' && surface !== 'note' && hostContext?.workbenchRequest?.dataMode === 'source' && originalRequest &&
-        !hostContext.sourcePolicy?.pluginRequired && !hostContext.sourcePolicy?.publicSourceRequests && workbenchPdfScope(originalRequest)
+      const pdfPaths = kind === 'container' && surface !== 'note' && workbenchPdfTaskPaths(hostContext)
       let documentEvidence
       if (pdfPaths) {
         try { documentEvidence = await readPdfEvidence(parent.session, pdfPaths, signal) }
