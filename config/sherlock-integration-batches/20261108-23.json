@@ -108,6 +108,53 @@
           "现有行情表面断言在变更前后都失败，聚焦交接不运行该既有失败项。"
         ],
         "generatedAt": "2026-11-08T06:59:15.159581+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ddbe3ab0d8c8d2ea4d10ac7806a273cd08e0ed69",
+        "verificationCommit": "ddbe3ab0d8c8d2ea4d10ac7806a273cd08e0ed69",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/bundled-component-skill.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/workbench-prototype-evidence.test.js test/workbench-execution-policy.test.js test/workbench-structure-theme-browser.test.js test/bundled-component-skill.test.js",
+            "verifiedCommit": "ddbe3ab0d8c8d2ea4d10ac7806a273cd08e0ed69",
+            "completedAt": "2026-11-08T06:59:19.518Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ddbe3ab0d8c8d2ea4d10ac7806a273cd08e0ed69",
+            "completedAt": "2026-11-08T06:59:19.518Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ddbe3ab0d8c8d2ea4d10ac7806a273cd08e0ed69",
+            "completedAt": "2026-11-08T06:59:19.518Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T06:59:19.518Z"
       }
     }
   ],
