@@ -80,7 +80,14 @@ function authoredReferences(text){
   .replace(/<([a-z][\w:-]*)\b[^>]*>[\s\S]*?<\/\1\s*>/giu,blank)
   .replace(/^.*<\/?[a-z][\w:-]*(?:\s[^>]*|)>.*$/gimu,blank)
  const locators=[]
- const add=(value,start,end)=>{if(filePath(value)||webUrl(value))locators.push({value,start,end})}
+ const add=(value,start,end,attachment=false)=>{if(filePath(value)||!attachment&&webUrl(value))locators.push({value,start,end,attachment})}
+ // Chat attachment chips serialize at their editor position, including after
+ // the request. Recognize their exact token outside quoted source material.
+ authored=authored.replace(/“[^”\n]*”|「[^」\n]*」|『[^』\n]*』|"[^"\n]*"/gu,quote=>quote.includes('📎 文件：`')?blank(quote):quote)
+ authored=authored.replace(/(^|\s)📎 文件：`((?:\\`|[^`\r\n])+)`(?=$|[\s，。；！？,.!?])/gu,(all,space,path,index)=>{
+  add(path.replace(/\\`/gu,'`'),index+space.length,index+all.length,true)
+  return blank(all)
+ })
  // A Markdown link is a reference only when the author explicitly asks to use
  // that link. Its label (e.g. "prototype") alone cannot authorize a read.
  authored=authored.replace(/!?\[[^\]\n]*\]\(\s*(<[^>\n]+>|[^\s)]+)(?:\s+["'][^\n]*?["'])?\s*\)/gu,(all,url,index)=>{
@@ -110,7 +117,7 @@ function authoredReferences(text){
   const list=previous?.accepted&&/^[\s、和与及或,，]*(?:(?:以及|还有|and|or)\s*)?$/iu.test(sincePrevious)
   const following=context.slice(locator.end,locator.end+96)
   const suffix=/^\s*(?:(?:作为|用作)(?:本轮|这个|这份|该|此)?(?:原型|参考|附件|设计稿)|[，,]?\s*(?:(?:请|麻烦|你|去|帮我)\s*){0,4}(?:根据|参考|按照)(?:这个|这份|该|此)(?:原型|文件|附件|设计稿))/u.test(following)
-  locator.accepted=!outputIntent.test(clause)&&!deniedInput.test(clause)&&(inputIntro.test(clause)||inputLabel.test(clause)||list||suffix)
+  locator.accepted=!deniedInput.test(clause)&&(locator.attachment||!outputIntent.test(clause)&&(inputIntro.test(clause)||inputLabel.test(clause)||list||suffix))
   if(locator.accepted)accepted.push(locator.value)
   previous=locator
  }
@@ -123,6 +130,16 @@ export function planningPrototypeEvidence(session,human,request){
  const message=currentMessage(session,human.messageId,request)
  if(!message)return{files:[],urls:[],required:[]}
  return authoredPrototypeEvidence((message.content??[]).filter(part=>part.type==='text'&&typeof part.text==='string').map(part=>part.text).join('\n'))
+}
+
+// The intent classifier receives the human body without its structured file
+// envelope. Freeze any additional validated file descriptors into the original
+// request carried by the persisted plan, so each worker gets the same sources.
+export function workbenchSourceText(session,human){
+ const {files}=planningPrototypeEvidence(session,human)
+ if(!files.length)return human.text
+ const existing=new Set(authoredPrototypeEvidence(human.text).files)
+ return [human.text,...files.filter(path=>!existing.has(path)).map(path=>'📎 文件：`'+path.replaceAll('`','\\`')+'`')].join('\n')
 }
 // Call only with host-owned authored input (or the immutable workbench request),
 // never planner prose, a file body, tool result or a parent chat excerpt.
@@ -143,12 +160,6 @@ export function authoredPrototypeEvidence(authoredText){
    }
    text=text.slice(end+1)
   }catch{return{files:[],urls:[],required:[]}}
- }
- // The desktop file picker also serializes legacy inline attachments at the
- // start of the authored message, including a single attachment followed by prose.
- for(let inline; (inline=text.match(/^\s*📎 文件：`([^`\r\n]+)`/u));){
-  const path=filePath(inline[1]);if(path)files.add(path)
-  text=text.slice(inline[0].length)
  }
  for(const value of authoredReferences(text)){
   const path=filePath(value),url=!path&&webUrl(value)

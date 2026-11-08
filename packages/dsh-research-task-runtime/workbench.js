@@ -24,6 +24,7 @@ import { canvasHumanRequest } from './canvas-task-routing.js';
 import { workbenchCreationRequest, planningDataIntent } from './workbench-execution-policy.js';
 import {workbenchRequestImages} from './workbench-image-evidence.js';
 import {workbenchDocumentScope} from './workbench-document-evidence.js';
+import {workbenchSourceText} from './workbench-prototype-evidence.js';
 import { preserveWorkbenchRefreshPreference } from './component-refresh-policy.js';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -99,7 +100,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         // Snapshot the current authored creation before queueing or canvas mounting.
         // A later status question and unrelated chat memory cannot replace this scope.
         const originalHumanRequest = workbenchCreationRequest(exec.agent?.session);
-        const originalRequest = originalHumanRequest?.text;
+        const originalRequest = originalHumanRequest && workbenchSourceText(exec.agent.session, originalHumanRequest);
         const comparisonReferenceTime = new Date();
         const originalImageMessageId = originalHumanRequest?.messageId && workbenchRequestImages(exec.agent?.session, originalHumanRequest.messageId).length ? originalHumanRequest.messageId : undefined;
         if (originalRequest && planningDataIntent(originalRequest).sourceOnly && args?.dataMode === 'simulated')
