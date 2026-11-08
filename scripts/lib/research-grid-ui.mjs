@@ -539,7 +539,7 @@ export function workbenchNativeTableDimensions(tableRoot) {
   // The native renderer can sit inside an inset host content wrapper. Measure
   // that chrome too; it is additional to the table's own padding and source.
   const chrome=card?Math.max(58,Math.min(200,Math.ceil(card.getBoundingClientRect().height-bounds.height))):58
-  return {width:656,height:Math.min(840,Math.max(160,Math.ceil(height+chrome)))}
+  return {width:656,height:Math.min(tableRoot.querySelector('.terminal-table-pagination')?12000:840,Math.max(160,Math.ceil(height+chrome)))}
 }
 export function workbenchMeasuredDimensions(node,value,width=value?.width||node.width) {
   const preferred=researchOptimalDimensions({...node,width:0,height:0})
@@ -555,9 +555,9 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership|stock-ownership|company-filings|historical-price|charting)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
   const height=Math.max(floor,value?.height?value.height+chrome:preferred.height)
-  // A long provenance note must not grow a quote card into several screens.
-  // The fixed viewport retains both independently scrollable content regions.
-  return {width:preferred.width,height:metrics||table?Math.min(840,height):height}
+  // Ordinary table pages use their measured row count, including a user-selected
+  // 50/100-row page. Quote metrics retain their bounded reading viewport.
+  return {width:preferred.width,height:table&&value?.intrinsicTable===true?Math.min(12000,height):metrics||table?Math.min(840,height):height}
 }
 export function measureWorkbenchContents(root,nodes) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements
