@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-25",
+  "branch": "codex/integration/20261108-25",
+  "baseMainCommit": "ad2d6431d370af7c61af7dbcf9705be9c3cbdbdc",
+  "expectedMainCommit": "ad2d6431d370af7c61af7dbcf9705be9c3cbdbdc",
+  "createdAt": "2026-11-08T07:37:49.660Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "易方达深蓝节点文字可读性与文档清单简称匹配",
+        "branch": "codex/feat/workbench-theme-label-list-reference-20261108",
+        "baseCommit": "ad2d6431d370af7c61af7dbcf9705be9c3cbdbdc",
+        "tipCommit": "229ee8ce21d32c69706a5c4dad05cd623b491cc6",
+        "commits": [
+          {
+            "commit": "229ee8ce21d32c69706a5c4dad05cd623b491cc6",
+            "parents": [
+              "ad2d6431d370af7c61af7dbcf9705be9c3cbdbdc"
+            ],
+            "subject": "提高架构节点文字对比并兼容清单引用简称"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-structure-theme-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "17 项聚焦检查通过",
+            "verifiedCommit": "229ee8ce21d32c69706a5c4dad05cd623b491cc6",
+            "completedAt": "2026-11-08T07:37:48.071681+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "229ee8ce21d32c69706a5c4dad05cd623b491cc6",
+            "completedAt": "2026-11-08T07:37:48.071681+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 复现易方达节点实际自定义职务和出处文字；保留最终实机生成卡验证包内样式"
+        },
+        "acceptanceCriteria": [
+          "主节点的职务和出处可读",
+          "引用原文编号与实际数量的简称照样补齐清单"
+        ],
+        "risks": [
+          "简称匹配仅在单份文档与相同编号和数量明确时启用。"
+        ],
+        "generatedAt": "2026-11-08T07:37:48.071681+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-style.test.js",
+        "test/workbench-structure-theme-browser.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
