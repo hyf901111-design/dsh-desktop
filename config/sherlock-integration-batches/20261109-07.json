@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-07",
+  "branch": "codex/integration/20261109-07",
+  "baseMainCommit": "cb50239ba69651aa184cb5394c4cb3e1fd24baa0",
+  "expectedMainCommit": "cb50239ba69651aa184cb5394c4cb3e1fd24baa0",
+  "createdAt": "2026-11-08T18:57:59.925Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台格式恢复与阅读交互优化",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "cb50239ba69651aa184cb5394c4cb3e1fd24baa0",
+        "tipCommit": "83afa43d55fdcc4adc95590df61c58b33934db90",
+        "commits": [
+          {
+            "commit": "83afa43d55fdcc4adc95590df61c58b33934db90",
+            "parents": [
+              "cb50239ba69651aa184cb5394c4cb3e1fd24baa0"
+            ],
+            "subject": "修复工作台层级格式恢复和表格来源阅读交互"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-template-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-table-columns.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/derived-template-contract.test.js",
+              "test/workbench-table-columns.test.js",
+              "test/board-tabs-client.test.js",
+              "test/component-source-info-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "81 项聚焦检查通过",
+            "verifiedCommit": "83afa43d55fdcc4adc95590df61c58b33934db90",
+            "completedAt": "2026-11-08T18:57:58.149342+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "83afa43d55fdcc4adc95590df61c58b33934db90",
+            "completedAt": "2026-11-08T18:57:58.149342+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "83afa43d55fdcc4adc95590df61c58b33934db90",
+            "completedAt": "2026-11-08T18:57:58.149342+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "81项层级格式、自动恢复、异步页签、表格列宽和来源界面聚焦检查通过；另19项隔离浏览器页签检查通过。最终包真实任务验收在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "层级与来源元信息无损规范化且不放宽事实校验",
+          "样式修复允许原生关系图替换失败HTML",
+          "异步卡片遵守当前页签可见范围",
+          "长正文表格适应可用宽度且尊重用户调整",
+          "来源文件前缀不参与真实文件名匹配"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T18:57:58.149342+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/derived-template-contract.test.js",
+        "test/workbench-table-columns.test.js",
+        "test/board-tabs-client.test.js",
+        "test/component-source-info-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
