@@ -124,6 +124,62 @@
           "原生客户端同屏验收在最终构建启动后进行，不以浏览器检查替代。"
         ],
         "generatedAt": "2026-11-08T14:12:01.178681+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c062f5a6c08a55ca5598ae0a4ef67205fffb2850",
+        "verificationCommit": "c062f5a6c08a55ca5598ae0a4ef67205fffb2850",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-drop-focus-browser.test.js test/board-tabs-theme-browser.test.js test/board-tabs-connection-browser.test.js test/board-tabs-connection-client.test.js test/workbench-structure-theme-browser.test.js test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-grid-workbench.test.js test/derived-mind-map-browser.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "c062f5a6c08a55ca5598ae0a4ef67205fffb2850",
+            "completedAt": "2026-11-08T14:12:05.619Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c062f5a6c08a55ca5598ae0a4ef67205fffb2850",
+            "completedAt": "2026-11-08T14:12:05.619Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c062f5a6c08a55ca5598ae0a4ef67205fffb2850",
+            "completedAt": "2026-11-08T14:12:05.619Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T14:12:05.619Z"
       }
     }
   ],
