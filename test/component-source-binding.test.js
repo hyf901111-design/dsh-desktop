@@ -649,3 +649,39 @@ describe('observed structured web snapshots', () => {
   expect(observed(text('{"count":2}',url),{url})[0].response).toBeNull()
  })
 })
+
+it('uses complete observed fields despite an explanatory optional missing-text default, and never turns invented defaults into data',()=>{
+ const source={tool:'web_fetch',args:{url:'https://example.org/api/items'},purpose:'snapshot',response:{source:'example.org',sourceUrl:'https://example.org/api/items',records:[{title:'真实标题',body:'完整正文',url:'https://example.org/1'},{title:'缺失正文',url:'https://example.org/2'}]}}
+ const input={version:1,type:'data-bound',requests:[{key:'q',tool:source.tool,args:source.args}],mapping:{version:1,type:'table',title:'记录',columns:['标题','正文','原链接'],rows:{$from:'q',$each:'records',$map:[{$path:'title'},{$path:'body',$optional:true,$default:'该记录未提供逐条说明'},{$path:'url'}]}}}
+ const result=resolveComponentSnapshot(JSON.stringify(input),[source])
+ expect(result?.data.rows).toEqual([['真实标题','完整正文','https://example.org/1'],['缺失正文','本次未取得','https://example.org/2']])
+ input.mapping.rows.$map[1].$default='无风险且已完成'
+ expect(resolveComponentSnapshot(JSON.stringify(input),[source])).toBeNull()
+})
+
+it('repairs a narrative panel as readable sourced content without forcing a tabular data binding',async()=>{
+ const start=vi.fn(async()=>({childSessionId:'narrative-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',sourceRecords:records,output:[{type:'text',text:start.mock.calls.length===1?'组件内容稍后给出':JSON.stringify({version:1,type:'markdown',title:'使用说明',content:'依据实际资料整理的使用说明。来源：https://example.org/manual'})}]})}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData:vi.fn()},storage:{save:async()=>{}},retryDelayMs:0})
+ try{
+  const receipt=await runtime.start({parentSessionId:'parent',canvasNodeId:'narrative',kind:'container',prompt:'工作台：阅读与分析\n本面板：使用说明\n优先使用 markdown 类型；以完整可读正文说明实际资料。'})
+  await runtime.tasks.get(receipt.taskId).runPromise
+  const task=runtime.inspect({parentSessionId:'parent',taskId:receipt.taskId})
+  expect(task.state,task.error).toBe('completed')
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(start.mock.calls[1][0].prompt).not.toContain('优先提交完整 data-bound')
+  expect(JSON.parse(task.finalOutput).type).toBe('markdown')
+ }finally{await runtime.dispose()}
+})
+
+it('automatically repairs a requested diagram instead of counting a prose substitution as visual delivery',async()=>{
+ const outputs=[{version:1,type:'markdown',title:'关系说明',content:'这里只用文字描述关系。'},{version:1,type:'mind-map',title:'实际关系图',content:'# 实际对象\n- 第一分支\n  - 关联对象\n- 第二分支'}]
+ const start=vi.fn(async()=>({childSessionId:'diagram-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(outputs[Math.min(start.mock.calls.length-1,1)])}]})}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},retryDelayMs:0})
+ try{
+  const receipt=await runtime.start({parentSessionId:'parent',canvasNodeId:'diagram',kind:'container',prompt:'工作台：对象关系分析\n本面板：关系图\n优先使用 mind-map 类型；需要实际可视化关系图，不可仅说明。'})
+  await runtime.tasks.get(receipt.taskId).runPromise
+  const task=runtime.inspect({parentSessionId:'parent',taskId:receipt.taskId})
+  expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledTimes(2)
+  expect(JSON.parse(task.finalOutput).type).not.toBe('markdown')
+ }finally{await runtime.dispose()}
+})

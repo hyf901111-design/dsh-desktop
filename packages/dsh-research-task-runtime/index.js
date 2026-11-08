@@ -1789,7 +1789,7 @@ export class ResearchTaskRuntime {
       const plannedFormat = task.kind === 'container' ? workbenchPanelFormat(task.prompt) : null
       const documentTable = documentTask && plannedFormat === 'table'
       const deferredPanel = task.kind === 'container' ? deferredWorkbenchPanel(task.prompt) : null
-      const bindablePanel = Boolean(plannedFormat && plannedFormat !== 'html')
+      const bindablePanel = Boolean(['chart','market'].includes(plannedFormat)||templateFor({type:plannedFormat}))
       const panelRequest = workbenchPanelIntent(task.prompt)
       const bindingRequested = componentBindingRequested(panelRequest)
       const historyOptions=/(?:相对\s*沪深300|沪深300.{0,8}(?:基准|参考))/u.test(panelRequest)?{benchmarkSymbol:'000300.SH'}:{}
@@ -1979,6 +1979,9 @@ export class ResearchTaskRuntime {
           } else {
             output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
           }
+          if (plannedFormat === 'mind-map' && output && JSON.parse(output).type === 'markdown') {
+            throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要实际层级或关系图，不能用文字说明替代。复用已取得内容，按真实关系交付完整导图或可视化 HTML，保留来源。')
+          }
           if (result.documentEvidence && output) {
             const issue = workbenchDocumentCitationIssue(output, result.documentEvidence)
             if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
@@ -2160,7 +2163,7 @@ export class ResearchTaskRuntime {
         const recencyIssue=workbenchMarketRecencyIssue(JSON.stringify(verifiedSnapshot.data),task.prompt,new Date(this.now()))
         if(!variantIssue&&!recencyIssue&&!calendarIssueFor(verifiedSnapshot.output)&&!statementTableEvidenceIssue(verifiedSnapshot.data,panelRequest,sourceRecords,{requiredData:statementRepairData})){output=verifiedSnapshot.output;binding=undefined}
       }
-      if (structured && !deferredPanel && !documentTask && output === undefined && !prototypeIssue && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !chartGeometryError && !designPolicyError && canSynthesizeResult(result)) {
+      if (structured && !deferredPanel && !documentTask && plannedFormat !== 'mind-map' && output === undefined && !prototypeIssue && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !chartGeometryError && !designPolicyError && canSynthesizeResult(result)) {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
       if(requiredReleaseScope&&!bindingRequested){
@@ -2263,7 +2266,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!documentTask && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!documentTask && workbenchPanelFormat(task.prompt)!=='mind-map' && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -2963,7 +2966,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const off = ctx.on('session/event', (session, event) => {
         if (session?.id === child.id) deliver(event)
       })
-      const releaseSourceProjection=kind==='container'&&!synthesisOnly?registerComponentSourceProjection(ctx,{child,allowed:childTools,discoveryTools,signal}):()=>{}
+      const releaseSourceProjection=kind==='container'&&!synthesisOnly?registerComponentSourceProjection(ctx,{child,allowed:childTools,discoveryTools,signal,onWebResponse:(args,text)=>sourceCollector.acceptWebResponse(args,text)}):()=>{}
       const stopSourceProjection=()=>{sourceProjectionStops.delete(stopSourceProjection);releaseSourceProjection()}
       sourceProjectionStops.add(stopSourceProjection)
       const stopSubmission=()=>{sourceProjectionStops.delete(stopSubmission);submission?.dispose()}

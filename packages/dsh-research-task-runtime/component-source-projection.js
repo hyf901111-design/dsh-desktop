@@ -83,18 +83,25 @@ export function expandBusinessEvidence(data){
  return result
 }
 
-export function registerComponentSourceProjection(ctx,{child,allowed=[],discoveryTools=new Set(),signal}={}){
+export function registerComponentSourceProjection(ctx,{child,allowed=[],discoveryTools=new Set(),signal,onWebResponse}={}){
  if(typeof ctx.tools?.execute!=='function'||typeof ctx.on!=='function')return ()=>{}
  let disposed=false
  const off=ctx.on('tools/post-execute',async(exec,result,next)=>{
   const decision=await next()
-  if(disposed||signal?.aborted||exec.signal?.aborted||exec.agent!==child||exec.parent!==undefined||!exec.name?.startsWith('ework__')||!allowed.includes(exec.name)||discoveryTools.has(exec.name)||result.isError||decision.kind!=='accept'||Object.hasOwn(decision,'value'))return decision
+  if(disposed||signal?.aborted||exec.signal?.aborted||exec.agent!==child||exec.parent!==undefined||!(exec.name?.startsWith('ework__')||exec.name==='web_fetch')||!allowed.includes(exec.name)||discoveryTools.has(exec.name)||result.isError||decision.kind!=='accept'||Object.hasOwn(decision,'value'))return decision
   const content=decision.content??result.content
   if(!Array.isArray(content)||!content.length||!content.every(block=>block.type==='text'&&typeof block.text==='string'))return decision
   // Only reshape text the tool/policies already intended for the model; hidden
   // canonical fields, attachments, failures and replacements stay untouched.
   const text=content.map(block=>block.text).join('\n')
   if(Buffer.byteLength(text)>MAX_BYTES)return decision
+  // Capture only the policy-approved rendered response, before generic spill
+  // replaces it with a head/tail excerpt. Never read a model-supplied spill path
+  // or resurrect hidden canonical fields. The model's existing budget is intact.
+  if(exec.name==='web_fetch'){
+   onWebResponse?.(exec.arguments,text)
+   return decision
+  }
   try{
    const projected=compactBusinessEvidence(JSON.parse(text))
    if(projected)return {...decision,content:[{type:'text',text:JSON.stringify(projected)}]}
