@@ -410,12 +410,11 @@ it('页签同数量改成长标题后立即显示翻页，名称缩短后恢复'
  expect(f.document.querySelector('[data-board-tabs-paging]')).toBeNull()
 })
 
-it('页签横向滚动不驱动画布，后台组件更新不抢回滚动位置',async()=>{
+it('后台组件更新不抢回横向页签的滚动位置',async()=>{
  const f=await fixture();await f.act(()=>f.workspace.createBoardTabs());const spec=nav(f.workspace).containerSpec
  await f.act(()=>f.workspace.saveBoardTabs(spec.revision,[...spec.tabs,...Array.from({length:10},(_,i)=>({id:'overflow-'+i,name:'更多 '+i}))]))
- const list=f.document.querySelector('.ew-board-tabs-list'),before=f.canvas.scrollTop
- await f.event('wheel',list,{deltaY:120,deltaX:0,deltaMode:0})
- expect(list.scrollLeft).toBe(120);expect(f.canvas.scrollTop).toBe(before)
+ const list=f.document.querySelector('.ew-board-tabs-list')
+ list.scrollLeft=120
  await f.act(()=>f.workspace.createFinancialWidget('indices'));expect(list.scrollLeft).toBe(120)
 })
 

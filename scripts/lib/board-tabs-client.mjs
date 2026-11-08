@@ -46,6 +46,7 @@ const htmlFitStates = new Map();`)
  if(canvasStart<0)throw Error('页签补丁缺少画布组件')
  change('const snapshot = (0, react.useSyncExternalStore)(workspace.subscribe, workspace.getSnapshot, workspace.getSnapshot);','const snapshot = (0, react.useSyncExternalStore)(workspace.subscribe, workspace.getBoardTabsRenderSnapshot, workspace.getBoardTabsRenderSnapshot);',canvasStart)
  change('const canvasNodes = [...files, ...artifacts];','const boardPage=boardTabsVisible(snapshot,workspace.getActiveBoardTab());const canvasNodes = [...boardPage.files, ...boardPage.artifacts];',canvasStart)
+ // Native scroll chaining lets tab overflow use its own axis before the canvas.
  change('if(root.hasAttribute("data-ework-grid")){handleWorkbenchWheel(root,workspace,event);return;}','if(event.target?.closest?.("[data-board-tabs-nav]"))return;\nif(root.hasAttribute("data-ework-grid")){handleWorkbenchWheel(root,workspace,event);return;}')
  change('const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid"))','const onPointerDown = (event) => {\nif(event.target?.closest?.("[data-board-tabs-resize]"))return;\nif(root.hasAttribute("data-ework-grid"))')
  change("const frame = occupied || (intent.state === 'dealing' ? gridFrame.current : null);","const frame = occupied || (intent.state === 'dealing' ? gridFrame.current : null);\nconst boardTabPlanningHidden=workspace?.isBoardPlanningVisible?.(intent.id)===false;")
