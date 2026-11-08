@@ -4,6 +4,7 @@ import {readTemplateModel} from './component-template-registry.js'
 import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
+import {createHash} from 'node:crypto'
 import { decodeDataResponse, evaluateMapping, materializeComponentProjection, normalizeWebSnapshotPaths } from './component-data-refresh.js'
 import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
@@ -19,6 +20,7 @@ import {filterScopedNewsArtifact,newsSourceMatcher,controlledNewsHtml,NEWS_EMPTY
 import {newsQueryAttempt,mergeObservedNewsItems} from './news-query-coverage.js'
 import {componentReadableSnapshot,readableSnapshotUnavailable,pureMissingSourceText} from './component-readable-snapshot.js'
 import {resolvePrototypeHtmlSnapshot} from './prototype-html-snapshot.js'
+import {timelineDataIssue} from './timeline-template-contract.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -478,10 +480,54 @@ function normalizedHistoryMetadata(data,mapping,sources,now,options) {
  if(note.length>2000)throw Error('历史来源说明超过当前图表容量，不能省略来源限制')
  return {...data,...(data.type==='chart'?{unit:'基期100',subtitle:`${range} · ${count} · 各自首值=100`}:{}),asOf:`历史日线 · 数据截至 ${data.labels.at(-1)}`,note}
 }
+// A model can copy verified event values into an oversized artifact instead
+// of selecting fields. Recover the original fields only when the exact link
+// and timestamp identify one observed row and the title also matches it.
+function observedTimelineMapping(data,responses) {
+ if(data?.type!=='timeline'||!Array.isArray(data.items)||data.items.length>2000)return data
+ const checked={...data,items:data.items.map(item=>typeof item?.url==='string'&&
+  (typeof item.id!=='string'||!/^[-\w]{1,80}$/u.test(item.id))
+  ?{...item,id:'event-'+createHash('sha256').update(item.url).digest('hex').slice(0,24)}:item)}
+ if(!timelineDataIssue(checked)||timelineDataIssue(checked,{checkCapacity:false}))return data
+ const rowsByUrl=new Map()
+ for(const [key,response] of Object.entries(responses)){
+  if(!Array.isArray(response.records)||response.records.length>2000)continue
+  for(const [index,row] of response.records.entries()){
+   if(!row||typeof row!=='object'||Array.isArray(row))continue
+   const urls=new Map(Object.entries(row).filter(([field,value])=>/^(?:url|link|href|html_url|sourceUrl)$/iu.test(field)&&typeof value==='string').map(([field,url])=>[url,field]))
+   for(const [url,field] of urls)rowsByUrl.set(url,rowsByUrl.has(url)?null:{key,index,row,field})
+  }
+ }
+ const items=[]
+ for(const item of checked.items){
+  const match=rowsByUrl.get(item.url)
+  if(!match)return data
+  const {key,index,row,field}=match,keys=Object.keys(row)
+  const time=keys.find(key=>/^(?:time|date|(?:published|released|publication|release)_?(?:at|date|time))$/iu.test(key)&&row[key]===item.time)
+  const title=keys.find(key=>/^(?:title|name|headline|tag_name)$/iu.test(key)&&typeof row[key]==='string'&&
+   (row[key]===item.title||row.prerelease===true&&row[key]===item.title.replace(/\s*[（(](?:pre-release|prerelease|预发布)[）)]$/iu,'')))
+  if(!time||!title)return data
+  const textFields=keys.filter(key=>/^(?:body|summary|content|description)$/iu.test(key)&&typeof row[key]==='string')
+  const summary=textFields.find(key=>row[key]===item.summary)??(textFields.length===1?textFields[0]:undefined)
+  if(typeof item.summary==='string'&&!summary)return data
+  const select=field=>({$from:key,$path:`records.${index}.${field}`})
+  items.push({...item,title:select(title),time:select(time),url:select(field),...(typeof item.summary==='string'?{summary:select(summary)}:{})})
+ }
+ return {...data,items}
+}
+
 export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
-  const candidate=dataBoundCandidate(text)
+  let candidate=dataBoundCandidate(text)
+  if(!candidate){
+    const artifacts=extractArtifactObjects(text)
+    const timeline=artifacts.length===1?artifacts[0]:null
+    if(timeline?.type!=='timeline'||!timelineDataIssue(timeline))return null
+    const requests=records.filter(record=>Array.isArray(record.response?.records)&&componentMappableSource(record)).slice(-16)
+      .map(({tool,args},index)=>({key:'observed'+index,tool,args}))
+    candidate={version:1,type:'data-bound',requests,mapping:timeline}
+  }
   if(candidate?.mapping?.type==='html')return resolvePrototypeHtmlSnapshot(candidate,records,options)
-  const contract=mappingContract(candidate?.mapping,options,candidate?.version)
+  let contract=mappingContract(candidate?.mapping,options,candidate?.version)
   if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||!templateFor(contract))return null
   const responses={},sources={}
   try {
@@ -494,6 +540,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
       if(source){responses[request.key]=source.response;sources[request.key]=source}
     }
     if(!Object.keys(responses).length)return null
+    contract=observedTimelineMapping(contract,responses)
     let paths=0
     const measured=/^(?:value|values|price|weight|change|open|high|low|close|volume|x|y|size|current|previous|changePercent|marketValue|rate|targetPrice|compensation|totalShares|floatShares)$/u
     const sourceBacked=(value,key='')=>{

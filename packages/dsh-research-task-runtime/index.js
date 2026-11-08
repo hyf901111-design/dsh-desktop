@@ -1850,6 +1850,9 @@ export class ResearchTaskRuntime {
             }
             mapped=snapshot
           }
+          if(!mapped&&!bindingRequested&&extractArtifactObjects(deliveredText).some(data=>data.type==='timeline')){
+            mapped=resolveComponentSnapshot(deliveredText,sourceRecords,new Date(this.now()),{panelTitle,panelRequest})
+          }
           if(prototypeRepairEvidence&&!mapped?.prototypeHtmlSnapshot)throw new ResearchTaskError('GENERATION_FAILED','完整原型来源已保留，恢复必须引用这些真实记录；不能用未取得资料的说明或无数据卡片冒充原交互组件。')
           binding=bindingRequested?mapped?.recipe:undefined
           if(readableRepairRequired&&!mapped)throw new ResearchTaskError('GENERATION_FAILED','容量组件修复必须保留可核验的数据映射，不能用 HTML 或文字取消原有来源、日期和数据约束。')
