@@ -17,8 +17,15 @@ export function boardTabsIssue(tabs) {
  return null
 }
 export function boardTabsSpec(value) {
- if(!value||value.version!==1||value.type!=='board-tabs'||value.title!=='页签'||!Number.isSafeInteger(value.revision)||value.revision<0||Object.keys(value).some(k=>!['version','type','title','revision','tabs'].includes(k))||boardTabsIssue(value.tabs))return null
- return {version:1,type:'board-tabs',title:'页签',revision:value.revision,tabs:value.tabs.map(t=>({id:t.id,name:t.name.trim(),nodeIds:[...t.nodeIds]}))}
+ if(!value||value.version!==1||value.type!=='board-tabs'||value.title!=='页签'||!Number.isSafeInteger(value.revision)||value.revision<0||Object.keys(value).some(k=>!['version','type','title','revision','tabs','orientation','verticalWidth'].includes(k))||value.orientation!==undefined&&!['horizontal','vertical'].includes(value.orientation)||value.verticalWidth!==undefined&&(!Number.isInteger(value.verticalWidth)||value.verticalWidth<140||value.verticalWidth>360)||boardTabsIssue(value.tabs))return null
+ return {version:1,type:'board-tabs',title:'页签',revision:value.revision,...(value.orientation?{orientation:value.orientation}:{}),...(value.verticalWidth!==undefined?{verticalWidth:value.verticalWidth}:{}),tabs:value.tabs.map(t=>({id:t.id,name:t.name.trim(),nodeIds:[...t.nodeIds]}))}
+}
+export function boardTabsLayout(spec, fullWidth) {
+ const width=Math.max(240,Number.isFinite(fullWidth)?fullWidth:1000),maxRailWidth=Math.min(360,Math.floor(width)-300)
+ const vertical=spec?.orientation==='vertical'&&maxRailWidth>=140
+ const railWidth=vertical?Math.max(140,Math.min(maxRailWidth,spec.verticalWidth??200)):0
+ const left=vertical?railWidth+12:0
+ return {left,top:spec&&!vertical?46:0,width:width-left,vertical,railWidth,maxRailWidth}
 }
 export function boardTabsInitial(ids,makeId) {
  return {version:1,type:'board-tabs',title:'页签',revision:0,tabs:[{id:makeId(),name:'页签 1',nodeIds:[...new Set(ids)]},{id:makeId(),name:'页签 2',nodeIds:[]}]}
@@ -85,7 +92,7 @@ export function boardTabsApplyWorkbench(snapshot,plan) {
   if(same)same.nodeIds.push(...tab.nodeIds)
   else tabs.push(tab)
  }
- const spec=boardTabsSpec({version:1,type:'board-tabs',title:'页签',revision:previous?previous.containerSpec.revision+1:0,tabs})
+ const spec=boardTabsSpec({version:1,type:'board-tabs',title:'页签',...previous?.containerSpec,revision:previous?previous.containerSpec.revision+1:0,tabs})
  if(!spec)throw Error('工作台页签结构无效')
  const id=previous?.id??plan.id+'-tabs'
  const node=previous?{...previous,containerSpec:spec}:{id,messageId:id,kind:'generated-container',title:'页签',excerpt:'页签',containerPrompt:'看板页签导航',containerSpec:spec,generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,sizeMode:'manual',x:500,y:29,width:976,height:34}

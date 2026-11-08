@@ -45,13 +45,18 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    watch(nav);watch(list)
    for(const tab of nav?.querySelectorAll('[data-board-tab]')||[]){
     watch(tab);const r=tab.getBoundingClientRect();if(!clip||clip.width<=0||clip.height<=0||r.width<=0||r.height<=0)continue
+    if(nav.dataset.boardTabsOrientation==='vertical'){
+     const x=navRect.right,y=Math.max(clip.top+1,Math.min(clip.bottom-1,r.top+r.height/2))
+     tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,vertical:true,stemLeft:r.right-navRect.left-nav.clientLeft,stemTop:y-navRect.top-nav.clientTop-.75,stemWidth:Math.max(0,x-r.right)}
+     continue
+    }
     const left=Math.max(r.left,clip.left),right=Math.min(r.right,clip.right),overflow=right>left?null:r.left>=clip.right?'right':'left'
     const arrow=overflow?nav.querySelectorAll('[data-board-tabs-paging] button')[overflow==='left'?0:1]:null
     watch(arrow);const ar=arrow?.getBoundingClientRect(),usable=ar&&ar.width>0&&ar.height>0
     // A clipped title uses its visible portion; an off-list title uses the
     // existing paging control, never another tab or the hidden card's (0,0).
     const x=overflow?(usable?ar.left+ar.width/2:overflow==='left'?clip.left:clip.right):(left+right)/2,y=overflow&&usable?ar.bottom:r.bottom
-    tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,overflow,stemLeft:x-navRect.left,stemTop:y-navRect.top-.75,stemHeight:Math.max(0,navRect.bottom-y)+1.5}
+    tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,overflow,stemLeft:x-navRect.left-nav.clientLeft,stemTop:y-navRect.top-nav.clientTop-.75,stemHeight:Math.max(0,navRect.bottom-y)+1.5}
    }
    const content=root.querySelector('[data-research-content-layer]')
    const next={width:root.clientWidth,height:Math.max(root.clientHeight,content?.scrollHeight||content?.getBoundingClientRect().height||0),ports,cards,tabs:tabAnchors}
@@ -145,6 +150,14 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const last=points[points.length-1];return d+` L ${last[0]} ${last[1]}`
  }
  const path=(from,to)=>{
+  if(to.tabId&&to.vertical){
+   const exit=Math.min(geometry.width-2,from.right+12),rail=to.x+6,lane=Math.min(from.top-6,to.y)
+   return orthogonal([[from.x,from.y],[exit,from.y],[exit,lane],[rail,lane],[rail,to.y],[to.x,to.y]],6)
+  }
+  if(from.tabId&&from.vertical){
+   const rail=from.x+6
+   return orthogonal([[from.x,from.y],[rail,from.y],[rail,to.y],[to.x,to.y]],6)
+  }
   if(to.tabId){
    const exit=Math.min(geometry.width-2,from.right+12),lane=Math.min(from.top-12,to.y+24)
    return orthogonal([[from.x,from.y],[exit,from.y],[exit,lane],[to.x,lane],[to.x,to.y]])
@@ -188,7 +201,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    target.setAttribute('data-financial-connection-target','');marked.push(target)
    // The nav paints above the SVG. A non-interactive stem inside the nav
    // bridges its bottom padding without moving the hit path over page buttons.
-   const stem=document.createElement('span');stem.setAttribute('data-financial-connection-stem','');stem.setAttribute('aria-hidden','true');stem.style.left=anchor.stemLeft+'px';stem.style.top=anchor.stemTop+'px';stem.style.height=anchor.stemHeight+'px';nav.append(stem);stems.push(stem)
+   const stem=document.createElement('span');stem.setAttribute('data-financial-connection-stem','');stem.setAttribute('aria-hidden','true');stem.style.left=anchor.stemLeft+'px';stem.style.top=anchor.stemTop+'px';if(anchor.vertical){stem.dataset.side='right';stem.style.width=anchor.stemWidth+'px'}else stem.style.height=anchor.stemHeight+'px';nav.append(stem);stems.push(stem)
   }
   return()=>{for(const el of marked)el.removeAttribute('data-financial-connection-target');for(const stem of stems)stem.remove()}
  },[rootRef,geometry,snapshot.artifacts,snapshot.selection,draft,sessionId,surface])

@@ -25,6 +25,14 @@ export function createBoardTabsWorkspace(adapter) {
    if(!adapter.transact({artifacts,selection:{selectedNodeIds:[],orderedFileIds:[]}}))return null
    return boardTabsNode(read())
   },
+  setBoardTabsPresentation(orientation,verticalWidth){
+   if(!adapter.canWrite())return false
+   const snapshot=read(),nav=boardTabsNode(snapshot),current=nav?.containerSpec
+   if(!current)return false
+   const spec=boardTabsSpec({...current,orientation,...(verticalWidth===undefined?{}:{verticalWidth}),revision:current.revision+1})
+   if(!spec||spec.orientation===(current.orientation??'horizontal')&&spec.verticalWidth===current.verticalWidth)return false
+   return adapter.transact({artifacts:snapshot.artifacts.map(node=>node.id===nav.id?{...node,containerSpec:spec}:node)})
+  },
   saveBoardTabs(revision,draft){
    if(!adapter.canWrite())return false
    const snapshot=read(),nav=boardTabsNode(snapshot),saved=nav&&boardTabsSave(nav.containerSpec,revision,draft);if(!saved)return false

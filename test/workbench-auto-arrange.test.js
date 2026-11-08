@@ -75,3 +75,20 @@ it('后台 prepared 全完成批次返回后整理，历史全完成看板不会
  await f.render();await vi.waitFor(()=>expect(organize).toHaveBeenCalledTimes(1),{timeout:2500})
  await f.act(async()=>w.setArtifacts(w.getSnapshot().artifacts.map(node=>({...node,workbenchId:'old-history'}))));await f.render('another');await f.render();await new Promise(resolve=>setTimeout(resolve,150));expect(organize).toHaveBeenCalledTimes(1)
 })
+
+it('多页签按当前页完成和消费，未打开页的待整理状态跨重启保留',()=>{
+ const store=storage(),p=plan(),first=new Set(p.panels.slice(0,2).map(n=>n.nodeId)),second=new Set(p.panels.slice(2).map(n=>n.nodeId))
+ let state=createWorkbenchAutoArrangeState(store,'tabs')
+ state.register(p,new Set())
+ const snapshot=completed(p)
+ snapshot.artifacts[2].generationStatus='running'
+ expect(state.ready(snapshot,first)).toEqual([p.id])
+ expect(state.ready(snapshot,second)).toEqual([])
+ expect(state.consume([p.id],first)).toBe(true)
+ expect(state.ready(snapshot,first)).toEqual([])
+ state=createWorkbenchAutoArrangeState(store,'tabs')
+ snapshot.artifacts[2].generationStatus='completed'
+ expect(state.ready(snapshot,second)).toEqual([p.id])
+ expect(state.consume([p.id],second)).toBe(true)
+ expect(state.ready(snapshot)).toEqual([])
+})

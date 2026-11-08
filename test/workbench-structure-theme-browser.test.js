@@ -17,7 +17,7 @@ beforeAll(async () => {
 afterAll(async () => browser?.close())
 
 const html = `<style>
-.chart .node { background:var(--sherlock-surface-raised);border:1px solid var(--sherlock-border);border-radius:8px }
+.chart .node { background:var(--sherlock-surface-raised);border:1px solid var(--sherlock-border);border-radius:8px;box-shadow:inset 0 0 0 1px blue }
 .chart .role { color:var(--sherlock-text-muted) }
 .custom-label { color:var(--sherlock-muted) }
 .chart .vline { background:var(--sherlock-border);width:1px;height:20px }
@@ -38,13 +38,15 @@ const html = `<style>
   <div id="control" style="border:1px solid var(--sherlock-border);border-radius:6px"><button>普通控制</button></div>
 </div>
 <section data-sherlock-structure="primary" id="custom-primary"><div class="custom-label">职位与出处</div></section>
-<section data-sherlock-structure="info" id="info"><h3>资料卡片</h3><a href="https://example.com/source">原始出处</a></section>
+<section data-sherlock-structure="info" id="info" style="border-left:4px solid red;box-shadow:inset 1px 0 red"><h3>资料卡片</h3><a href="https://example.com/source">原始出处</a></section>
 <svg viewBox="0 0 100 45" aria-label="关系图">
   <path id="path" data-sherlock-structure="connector" d="M 10 20 L 50 20" stroke="#777777"/>
   <g data-sherlock-structure="primary">
-    <rect id="svg-node" x="50" y="10" width="40" height="30" fill="#777777"/>
+    <rect id="svg-node" x="50" y="10" width="40" height="30" fill="#777777" stroke="#777777"/>
+    <path id="nested-connector" data-sherlock-structure="connector" d="M 50 25 L 80 25" stroke="#777777"/>
     <text id="svg-label" x="52" y="25" fill="#222222">根节点</text>
   </g>
+  <circle id="svg-peer" data-sherlock-structure="node" cx="30" cy="25" r="6" fill="#777777" stroke="#777777"/>
 </svg></main>`
 
 it('已保存的组织图和资料卡与新组件一起响应易方达模式', async () => {
@@ -71,11 +73,17 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#tree-card', 'backgroundColor')).toBe(await read('#peer', 'backgroundColor'))
     expect(await read('#tree-rail', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
     expect(await read('#tree-drop', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
-    expect(await read('#department', 'borderLeftColor')).toBe('rgb(0, 120, 180)')
-    expect(await read('#info', 'borderLeftWidth')).toBe('2px')
+    for (const selector of ['#root','#peer','#tree-root','#tree-card','#department','#info','#custom-primary']) {
+      expect(await read(selector, 'borderLeftWidth')).toBe('0px')
+      expect(await read(selector, 'borderTopWidth')).toBe('0px')
+      expect(await read(selector, 'boxShadow')).toBe('none')
+    }
     expect(await read('#control', 'borderRadius')).toBe('6px')
     expect(await read('#path', 'stroke')).toBe('rgb(0, 120, 180)')
+    expect(await read('#nested-connector', 'stroke')).toBe('rgb(0, 120, 180)')
     expect(await read('#svg-node', 'fill')).toBe('rgb(0, 80, 150)')
+    expect(await read('#svg-node', 'stroke')).toBe('none')
+    expect(await read('#svg-peer', 'stroke')).toBe('none')
     expect(await read('#svg-label', 'fill')).toBe('rgb(255, 255, 255)')
     expect(await frame.locator('#department').textContent()).toContain('负责人待核')
     expect(await frame.locator('#info a').getAttribute('href')).toBe('https://example.com/source')
@@ -84,7 +92,9 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#root', 'backgroundColor')).toBe(lightRoot)
     expect(await read('#tree-root', 'backgroundColor')).toBe(lightTreeRoot)
     expect(await read('#department', 'borderRadius')).toBe('6px')
+    expect(await read('#info', 'borderLeftWidth')).toBe('4px')
     expect(await read('#svg-node', 'fill')).toBe('rgb(119, 119, 119)')
+    expect(await read('#svg-node', 'stroke')).toBe('rgb(119, 119, 119)')
   } finally {
     await page.close()
   }
@@ -106,15 +116,16 @@ it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）
     </div>`)
     const board = page.locator('[data-ework-grid]')
     const style = () => page.locator('.rScV5Q_mindMapNode').evaluateAll(nodes => nodes.map(node => {
-      const {backgroundColor,color,borderRadius} = getComputedStyle(node)
-      return {backgroundColor,color,borderRadius}
+      const {backgroundColor,color,borderRadius,borderLeftWidth} = getComputedStyle(node)
+      return {backgroundColor,color,borderRadius,borderLeftWidth}
     }))
     const dark = await style()
     await board.evaluate(node => node.dataset.workbenchStyle='enterprise')
     const enterprise = await style()
-    expect(enterprise[0]).toEqual({backgroundColor:'rgb(0, 80, 150)',color:'rgb(255, 255, 255)',borderRadius:'0px'})
+    expect(enterprise[0]).toEqual({backgroundColor:'rgb(0, 80, 150)',color:'rgb(255, 255, 255)',borderRadius:'0px',borderLeftWidth:'0px'})
     expect(enterprise[1].backgroundColor).toMatch(/^color\(srgb /u)
     expect(enterprise[1].color).toBe('rgb(60, 60, 60)')
+    expect(enterprise[1].borderLeftWidth).toBe('0px')
     expect(await page.locator('[data-research-mind-map-edges]').evaluate(node => getComputedStyle(node).color)).toMatch(/^color\(srgb /u)
     await board.evaluate(node => node.dataset.workbenchStyle='dark')
     expect(await style()).toEqual(dark)

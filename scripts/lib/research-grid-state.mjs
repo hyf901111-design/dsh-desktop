@@ -81,7 +81,7 @@ export function createWorkbenchGridState(storage,sessionId) {
       // groups for the same full-width allocation used by an empty canvas;
       // migrating their template pixels preserves narrow cards and gutters.
       const automatic=nodes.filter(n=>n.workbenchId&&n.sizeMode!=='manual'&&!n.preserveGenerationSize)
-      const planned=new Set(automatic.filter(n=>automatic.filter(p=>p.workbenchId===n.workbenchId).length>=2).map(n=>n.id))
+      const planned=new Set(automatic.filter(n=>automatic.some(p=>p.id!==n.id&&p.workbenchId===n.workbenchId)||!n.containerSpec&&['queued','running','retrying'].includes(n.generationStatus)).map(n=>n.id))
       cells=grid.migrate(nodes.filter(n=>!planned.has(n.id)),width);initialized=true
     }
     const removed=cells.some(n=>!ids.has(n.id));cells=cells.filter(n=>ids.has(n.id))
@@ -108,20 +108,24 @@ export function createWorkbenchGridState(storage,sessionId) {
       const group=groups.get(n.workbenchId)||[];group.push(n);groups.set(n.workbenchId,group)
     }
     for(const [id,group] of groups){
-      if(group.length<2||nodes.some(n=>n.workbenchId===id&&known.has(n.id)))continue
-      const lanes=width-2*m.inset>=650?2:1,span=40/lanes,bottom=Math.max(0,...cells.map(c=>c.y+c.h)),tails=Array(lanes).fill(bottom)
-      for(const n of group.sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0))){
-        if(n.workbenchSpan===true&&n.workbenchLayoutVersion===1||grid.minimum(n,m,true).w>span){
-          const y=Math.max(...tails),h=Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))
-          // Status cards can fill the reserved row while their content is
-          // still unknown. Close the shorter lane before a spanning panel,
-          // and keep those frames stable as individual results arrive.
-          for(const c of cells){const draft=group.find(p=>p.id===c.id);if(draft&&!draft.containerSpec&&['queued','running','retrying'].includes(draft.generationStatus)&&tails.some(t=>c.y+c.h===t)&&c.y+c.h<y)c.h=y-c.y}
-          cells.push(grid.bounded({id:n.id,x:0,y,w:40,h}));tails.fill(y+h);known.add(n.id);continue
-        }
-        const lane=tails.indexOf(Math.min(...tails)),h=Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))
-        cells.push(grid.bounded({id:n.id,x:lane*span,y:tails[lane],w:span,h}));tails[lane]+=h;known.add(n.id)
+      if(nodes.some(n=>n.workbenchId===id&&known.has(n.id)))continue
+      const lanes=width-2*m.inset>=650?2:1
+      let y=Math.max(0,...cells.map(c=>c.y+c.h)),row=[]
+      // Use closed rows from the moment the plan mounts. A single card fills
+      // its row, and different template heights never leave a hole in a pair.
+      const flush=()=>{
+        if(!row.length)return
+        const w=40/row.length,h=Math.max(...row.map(n=>Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))))
+        row.forEach((n,i)=>{cells.push(grid.bounded({id:n.id,x:i*w,y,w,h}));known.add(n.id)})
+        y+=h;row=[]
       }
+      for(const n of group.sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0))){
+        const wide=grid.minimum(n,m,true).w>40/lanes
+        if(wide)flush()
+        row.push(n)
+        if(wide||row.length===lanes)flush()
+      }
+      flush()
     }
     for(const n of fresh)if(!known.has(n.id)){
       const min=grid.minimum(n,m)
@@ -132,12 +136,12 @@ export function createWorkbenchGridState(storage,sessionId) {
     projected.forEach(n=>researchGridNodeIds.add(n.id))
     return {...snapshot,files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id)),...(snapshot.selection?{selection:{...snapshot.selection,selectedNodeIds:snapshot.selection.selectedNodeIds.filter(id=>ids.has(id))}}:{}),viewport:{x:0,y:Math.min(0,snapshot.viewport.y||0),scale:1}}
   }
-  function receiveCanonical(nodes){
+  function receiveCanonical(nodes,canonicalWidth=1000){
     legacyRows=false
     nodes.forEach(n=>researchGridNodeIds.add(n.id))
-    const m=grid.metrics(1000),raw=nodes.map(n=>({id:n.id,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep}))
+    const m=grid.metrics(canonicalWidth),raw=nodes.map(n=>({id:n.id,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep}))
     const canonical=raw.every(c=>['x','y','w','h'].every(k=>Math.abs(c[k]-Math.round(c[k]))<.0001)&&c.x>=0&&c.w>=4&&c.x+c.w<=40&&c.h>=3)
-    cells=canonical?raw.map(grid.bounded):grid.migrate(nodes,1000);initialized=true;forced=true;previous.clear()
+    cells=canonical?raw.map(grid.bounded):grid.migrate(nodes,canonicalWidth);initialized=true;forced=true;previous.clear()
   }
   return {
     reconcile,receiveCanonical,
@@ -152,7 +156,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     },
     releasePlanning(id){if(!planning.delete(id))return false;cells=grid.compact(cells.filter(c=>c.id!==id));previous.delete(id);researchGridNodeIds.delete(id);forced=true;return true},
     planningNodes:()=>grid.project([...planning.values()],visibleCells(),width||1000),
-    document(snapshot){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,1000),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
+    document(snapshot,canonicalWidth=1000){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,canonicalWidth),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();contentOverrides.clear();forced=true;return true},
     contentHeight(id,value){
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"|<body data-research-kind="chart" data-chart-template="(?:line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"/.test(node?.containerSpec?.html||'')

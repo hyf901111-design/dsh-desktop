@@ -26,3 +26,16 @@ it('移动仅更改唯一归属，删除设置保留最新归属并清除连接�
  expect(saved.removedIds).toEqual(['a'])
  expect(saved.spec.tabs[0].nodeIds).toEqual(['b'])
 })
+
+it('竖向页签宽度持久化，窄画布回退横排并为内容保留宽度',()=>{
+ const spec={...tabs.boardTabsInitial([],()=>crypto.randomUUID()),orientation:'vertical',verticalWidth:220}
+ expect(parseResearchContainerSpec(spec)).toEqual(spec)
+ expect(tabs.boardTabsSpec({...spec,verticalWidth:139})).toBeNull()
+ expect(tabs.boardTabsSpec({...spec,verticalWidth:361})).toBeNull()
+ expect(tabs.boardTabsLayout(spec,1000)).toMatchObject({vertical:true,left:232,top:0,width:768})
+ expect(tabs.boardTabsLayout(spec,480)).toMatchObject({vertical:true,railWidth:180,width:288})
+ expect(tabs.boardTabsLayout(spec,430)).toMatchObject({vertical:false,left:0,top:46,width:430})
+ const snapshot={files:[],artifacts:[{id:'nav',containerSpec:spec},{id:'new-panel'}]}
+ const merged=tabs.boardTabsApplyWorkbench(snapshot,{id:'plan',panels:[{nodeId:'new-panel'}],tabs:[{name:'新增页',panelIndexes:[0]}]})
+ expect(tabs.boardTabsNode(merged).containerSpec).toMatchObject({orientation:'vertical',verticalWidth:220})
+})

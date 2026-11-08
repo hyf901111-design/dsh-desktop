@@ -13,7 +13,7 @@
 .ew-board-tabs-list>[role=tab]{min-width:64px;width:max-content;height:26px;padding:3px 8px;white-space:nowrap;text-overflow:clip;overflow:visible;text-align:center;color:var(--bt-muted)}
 .ew-board-tabs-list>[role=tab][aria-selected=true]{background:var(--bt-selected);color:var(--bt-selected-text);font-weight:500}
 .ew-board-tabs-list>[role=tab]:hover{background:var(--bt-selected)}
-.ew-board-tabs-nav>[data-board-tabs-more]{display:grid;place-items:center;width:20px;height:24px;color:var(--bt-action)}
+.ew-board-tabs-nav>[data-board-tabs-more],.ew-board-tabs-nav-actions>button{display:grid;place-items:center;width:20px;height:24px;color:var(--bt-action)}
 .ew-board-tabs-paging{display:flex;align-items:center;gap:2px;flex:none}
 .ew-board-tabs-paging button{display:grid;place-items:center;width:24px;height:24px;color:var(--bt-muted)}
 .ew-board-tabs-paging button:hover:not(:disabled){background:var(--bt-selected);color:var(--bt-text)}
@@ -72,3 +72,15 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id][data-releas
    reserved 1px button border keeps widths stable; drag receivers retain priority. */
 .ew-board-tabs-nav button[data-financial-connection-target]:not([data-tab-accept]):not([data-tab-target]){border-color:var(--fw-accent)}
 .ew-board-tabs-nav>[data-financial-connection-stem]{position:absolute;width:1.5px;transform:translateX(-50%);background:var(--fw-accent);pointer-events:none;z-index:1}
+
+.ew-board-tabs-nav-actions{display:flex;justify-content:flex-end;align-items:center;gap:4px;flex:none}
+.ew-board-tabs-nav-actions>button:hover{background:var(--bt-selected)}
+.ew-board-tabs-nav[data-board-tabs-orientation=vertical]{align-items:stretch;flex-direction:column}
+.ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-nav-actions{order:-1}
+.ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-list{position:relative;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;overflow:hidden auto}
+.ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-list>[role=tab]{width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.ew-board-tabs-nav [data-board-tabs-resize]{position:absolute;top:0;bottom:0;left:100%;width:12px;cursor:col-resize;touch-action:none}
+.ew-board-tabs-nav [data-board-tabs-resize]::after{content:'';position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--bt-accent);opacity:0;transform:translateX(var(--bt-resize-delta,0px));pointer-events:none}
+.ew-board-tabs-nav [data-board-tabs-resize]:is(:hover,:focus-visible,[data-board-tabs-resizing])::after{opacity:1}
+
+.ew-board-tabs-nav>[data-financial-connection-stem][data-side=right]{height:1.5px;transform:none}
