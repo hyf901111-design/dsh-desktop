@@ -615,13 +615,14 @@ function generationResultPatch(source) {
   return canvasInteractionPatch(source + '\n/* SHERLOCK_GENERATION_RESULT_V1 */')
 }
 export function researchPreviewCanConsumeWheel(target, boundary, deltaX, deltaY) {
+  const vertical = Math.abs(deltaY) >= Math.abs(deltaX)
   for (let element = target?.nodeType === 1 ? target : target?.parentElement; element; element = element.parentElement) {
     const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element)
     if (style) {
       const scrolls = (delta, overflow, size, visible, position) =>
         delta !== 0 && /^(auto|scroll|overlay)$/u.test(overflow) && size > visible + 1 &&
         (delta > 0 ? position < size - visible - 1 : position > 1)
-      if (scrolls(deltaY, style.overflowY, element.scrollHeight, element.clientHeight, element.scrollTop) ||
+      if (vertical ? scrolls(deltaY, style.overflowY, element.scrollHeight, element.clientHeight, element.scrollTop) :
           scrolls(deltaX, style.overflowX, element.scrollWidth, element.clientWidth, element.scrollLeft)) return true
     }
     if (element === boundary) break
@@ -630,16 +631,18 @@ export function researchPreviewCanConsumeWheel(target, boundary, deltaX, deltaY)
 }
 
 export function canvasWheelPassThroughPatch(source) {
-  if (source.includes('/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */')) return source
+  const marker = '/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */'
+  const helper = `\nvar researchPreviewCanConsumeWheel = ${researchPreviewCanConsumeWheel.toString()};\n${marker}`
+  if (source.includes(marker)) return source.replace(/\nvar researchPreviewCanConsumeWheel = [\s\S]*?\n\/\* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 \*\//, helper)
   if (source.includes('/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V1 */')) return replace(source,
     'frame?.querySelector?.("[data-research-artifact-card]")',
-    'frame?.matches?.("[data-research-artifact-card]")') + '\n/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */'
+    'frame?.matches?.("[data-research-artifact-card]")').replace(/\nvar researchPreviewCanConsumeWheel = [\s\S]*?\n\/\* SHERLOCK_SELECTED_COMPONENT_WHEEL_V1 \*\//, helper)
   source = replace(source,
     'if (!event.metaKey && !event.ctrlKey && interactivePreview) return;',
     `const preview = selected && event.target?.closest?.("[data-research-preview-interactive]");
                     const passToCanvas = preview && frame?.matches?.("[data-research-artifact-card]") && !preview.querySelector("iframe") && !researchPreviewCanConsumeWheel(event.target, preview, event.deltaX, event.deltaY);
                     if (!event.metaKey && !event.ctrlKey && interactivePreview && !event.__sherlockCanvasPan && !passToCanvas) return;`)
-  return source + `\nvar researchPreviewCanConsumeWheel = ${researchPreviewCanConsumeWheel.toString()};\n/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */`
+  return source + helper
 }
 
 function canvasInteractionPatch(source) {

@@ -7,7 +7,7 @@
 [data-board-tabs-theme=dark],[data-board-tabs-theme=openterminal]{--bt-surface:#151518;--bt-text:#e8e8ed;--bt-muted:#a0a0ab;--bt-selected:#223147;--bt-action:var(--grid-text,#e8e8ed);--bt-border:#ffffff1a;--bt-dialog:#242424;--bt-field:#212121;--bt-dialog-text:#eee;--bt-dialog-muted:#999;--bt-thumb:#333}
 [data-board-tabs-theme=openterminal]{--bt-surface:#0a0a0a;--bt-text:#d9d9d9;--bt-muted:#808080;--bt-selected:#1c1912;--bt-selected-text:#f90;--bt-action:var(--bt-muted);--bt-accent:#f90}
 .ew-board-tabs-nav[data-board-tabs-theme=openterminal],.ew-board-tabs-nav[data-board-tabs-theme=openterminal] button{border-radius:0}
-.ew-board-tabs-nav[data-board-tabs-theme=openterminal]{--bt-frame:1px;border:var(--bt-frame) solid var(--grid-border,#303030)}
+.ew-board-tabs-nav[data-board-tabs-theme=openterminal]{border:1px solid var(--grid-border,#303030)}
 .ew-board-tabs-list{display:flex;gap:4px;align-items:center;flex:1;min-width:0;overflow-x:auto}
 .ew-board-tabs-nav:not([data-board-tabs-orientation=vertical]) .ew-board-tabs-list{scrollbar-width:none}
 .ew-board-tabs-nav:not([data-board-tabs-orientation=vertical]) .ew-board-tabs-list::-webkit-scrollbar{display:none}
@@ -79,13 +79,7 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id][data-releas
 .ew-board-tabs-nav-actions>button:hover{background:var(--bt-selected)}
 /* Keep controls in the canvas scrollport. The separate rail paints the
    full column through the bottom of the active page without limiting sticky. */
-.ew-board-tabs-nav{position:sticky;left:auto;margin-left:12px}
-/* Reserve visible canvas above and below the horizontal controls even while
-   cards scroll underneath. Align each strip with the live canvas grid. */
-.ew-board-tabs-nav[data-board-tabs-orientation=horizontal]::before,.ew-board-tabs-nav[data-board-tabs-orientation=horizontal]::after{content:'';position:absolute;left:calc(0px - var(--bt-frame,0px));right:calc(0px - var(--bt-frame,0px));height:12px;pointer-events:none;background-color:var(--grid-canvas);background-image:var(--grid-pattern);background-size:var(--grid-step) var(--grid-step)}
-.ew-board-tabs-nav[data-board-tabs-orientation=horizontal]::before{top:calc(-12px - var(--bt-frame,0px));background-position:0 calc(12px - var(--grid-scroll-top,0px))}
-.ew-board-tabs-nav[data-board-tabs-orientation=horizontal]::after{top:calc(100% + var(--bt-frame,0px));background-position:0 calc(-34px - var(--grid-scroll-top,0px))}
-.ew-board-tabs-nav[data-board-tabs-orientation=vertical]{height:auto;align-items:stretch;flex-direction:column;max-height:calc(100vh - 24px)}
+.ew-board-tabs-nav[data-board-tabs-orientation=vertical]{position:sticky;left:auto;margin-left:12px;height:auto;align-items:stretch;flex-direction:column;max-height:calc(100vh - 24px)}
 .ew-board-tabs-rail{position:absolute;left:12px;top:12px;box-sizing:border-box;border-radius:4px;background:var(--bt-surface,#fff);pointer-events:none;clip-path:inset(var(--grid-scroll-top,0px) 0 0)}
 .ew-board-tabs-rail:is([data-board-tabs-theme=enterprise],[data-board-tabs-theme=openterminal]){border-radius:0}
 .ew-board-tabs-rail[data-board-tabs-theme=openterminal]{border:1px solid var(--grid-border,#303030)}

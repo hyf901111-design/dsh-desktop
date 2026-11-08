@@ -27,7 +27,7 @@ export function createWorkbenchGridState(storage,sessionId) {
       // readable minimum. The sandbox measured that displayed width; comparing
       // it with the smaller saved span discards the first content height.
       const displayedWidth=Math.max(c.w,min.w)*m.step-m.gap
-      if(value&&!contentOverrides.has(c.id)&&value.html===node?.containerSpec?.html&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.ceil((value.height+m.gap)/m.rowStep))
+      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&value.html===node?.containerSpec?.html&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.min(300,Math.ceil((value.height+m.gap)/m.rowStep)))
       return min
     }
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
@@ -161,9 +161,16 @@ export function createWorkbenchGridState(storage,sessionId) {
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();contentOverrides.clear();forced=true;return true},
     contentHeight(id,value){
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"|<body data-research-kind="chart" data-chart-template="(?:line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"/.test(node?.containerSpec?.html||'')
-      if(node?.containerSpec?.type!=='html'||!trustedTemplate&&!['table','metrics','share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)||value.html!==node.containerSpec.html||contentOverrides.has(id))return false
+      if(node?.containerSpec?.type!=='html'||value.html!==node.containerSpec.html)return false
       const old=contentHeights.get(id)
-      if(old?.html===value.html&&old.width===value.width&&old.height===value.height)return false
+      const autoFit=trustedTemplate||['table','metrics','share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)
+      // An open disclosure temporarily grows even a user-sized card. Closing
+      // it restores the saved grid geometry and returns displaced cards.
+      if(!value.disclosureOpen&&(!autoFit||contentOverrides.has(id))){
+        if(!old?.disclosureOpen)return false
+        contentHeights.delete(id);forced=true;return true
+      }
+      if(old?.html===value.html&&old.width===value.width&&old.height===value.height&&Boolean(old.disclosureOpen)===Boolean(value.disclosureOpen))return false
       contentHeights.set(id,value);forced=true;return true
     },
     clearContentOverrides(){contentOverrides.clear()},

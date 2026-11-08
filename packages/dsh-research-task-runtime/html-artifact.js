@@ -642,10 +642,11 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 32 : viewportHeight))
       const key = width + ':' + height
       if (workbench && bottom > 0) {
-        const naturalHeight = Math.min(12000, Math.ceil(bottom)), intrinsicKey = viewportWidth + ':' + naturalHeight + ':' + intrinsicMetrics + ':' + intrinsicTable
+        const disclosureOpen = Array.from(document.querySelectorAll('details[open]')).some(element => visible(element) && element.getClientRects().length > 0)
+        const naturalHeight = Math.min(12000, Math.ceil(bottom)), intrinsicKey = viewportWidth + ':' + naturalHeight + ':' + intrinsicMetrics + ':' + intrinsicTable + ':' + disclosureOpen
         if (intrinsicKey !== previousIntrinsic) {
           previousIntrinsic = intrinsicKey
-          parent.postMessage({ type: 'sherlock-workbench-content-size', width: Math.min(2400, viewportWidth), height: naturalHeight, ...(intrinsicMetrics ? { intrinsicMetrics: true } : intrinsicTable ? { intrinsicTable: true } : {}) }, '*')
+          parent.postMessage({ type: 'sherlock-workbench-content-size', width: Math.min(2400, viewportWidth), height: naturalHeight, ...(intrinsicMetrics ? { intrinsicMetrics: true } : intrinsicTable ? { intrinsicTable: true } : {}), ...(disclosureOpen ? { disclosureOpen: true } : {}) }, '*')
         }
       }
       if (reports < 6 && key !== previous) {
@@ -707,10 +708,17 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     if (workbench && (event.shiftKey || event.metaKey) && !event.target?.closest?.('input,textarea,[contenteditable=true]')) { event.preventDefault(); event.stopImmediatePropagation() }
   }, true)
   const canScrollWheel = (target, deltaX, deltaY) => {
+    const vertical = Math.abs(deltaY) >= Math.abs(deltaX)
+    const axis = vertical ? 'overflowY' : 'overflowX'
+    const delta = vertical ? deltaY : deltaX
     for (let e = target?.nodeType === 1 ? target : target?.parentElement; e; e = e.parentElement) {
-      const s = getComputedStyle(e), root = e === document.scrollingElement
-      const scrolls = (d, overflow, size, view, pos) => d && (root || /^(auto|scroll|overlay)$/.test(overflow)) && size > view + 1 && (d > 0 ? pos < size - view - 1 : pos > 1)
-      if (scrolls(deltaY, s.overflowY, e.scrollHeight, e.clientHeight, e.scrollTop) || scrolls(deltaX, s.overflowX, e.scrollWidth, e.clientWidth, e.scrollLeft)) return true
+      const root = e === document.scrollingElement
+      let overflow = getComputedStyle(e)[axis]
+      // Root dimensions can report overflow even when CSS disables user scrolling.
+      if (root && overflow === 'visible' && e === document.documentElement && document.body) overflow = getComputedStyle(document.body)[axis]
+      if (!delta || !(/^(auto|scroll|overlay)$/.test(overflow) || root && overflow === 'visible')) continue
+      const [size, view, position] = vertical ? [e.scrollHeight, e.clientHeight, e.scrollTop] : [e.scrollWidth, e.clientWidth, e.scrollLeft]
+      if (size > view + 1 && (delta > 0 ? position < size - view - 1 : position > 1)) return true
     }
     return false
   }
@@ -992,14 +1000,14 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
       if (data.type === 'sherlock-source-request' && Object.keys(data).length === 2 && typeof data.url === 'string' && data.url.length <= 8192) { parent.postMessage({ type: data.type, url: data.url }, '*'); return }
     }
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
-        (Object.keys(data).length === 3 || data.type === 'sherlock-workbench-content-size' && Object.keys(data).length === 4 && (data.intrinsicMetrics === true || data.intrinsicTable === true)) && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
+        Object.keys(data).length === 3 + (data.type === 'sherlock-workbench-content-size' ? Number(data.intrinsicMetrics === true || data.intrinsicTable === true) + Number(data.disclosureOpen === true) : 0) && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
         ['sherlock-content-size', 'sherlock-workbench-content-size'].includes(data.type) && Number.isInteger(data.width) && Number.isInteger(data.height) &&
         data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 12000) {
-      const key = data.width + ':' + data.height + ':' + (data.intrinsicMetrics === true) + ':' + (data.intrinsicTable === true)
+      const key = data.width + ':' + data.height + ':' + (data.intrinsicMetrics === true) + ':' + (data.intrinsicTable === true) + ':' + (data.disclosureOpen === true)
       if (data.type === 'sherlock-workbench-content-size') {
         if (key !== previousIntrinsicSize) {
           previousIntrinsicSize = key
-          parent.postMessage({ type: data.type, width: data.width, height: data.height, ...(data.intrinsicMetrics === true ? { intrinsicMetrics: true } : data.intrinsicTable === true ? { intrinsicTable: true } : {}) }, '*')
+          parent.postMessage({ type: data.type, width: data.width, height: data.height, ...(data.intrinsicMetrics === true ? { intrinsicMetrics: true } : data.intrinsicTable === true ? { intrinsicTable: true } : {}), ...(data.disclosureOpen === true ? { disclosureOpen: true } : {}) }, '*')
         }
         return
       }
