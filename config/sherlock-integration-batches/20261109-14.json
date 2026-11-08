@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-14",
+  "branch": "codex/integration/20261109-14",
+  "baseMainCommit": "0f4077735e8a96ba1936b45f1f883bcd5176e4b5",
+  "expectedMainCommit": "0f4077735e8a96ba1936b45f1f883bcd5176e4b5",
+  "createdAt": "2026-11-08T22:15:13.212Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "通用静态交付与完整实体校验",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "4b64a19104665adff3f416e7230301cb4d7edc0b",
+        "tipCommit": "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a",
+        "commits": [
+          {
+            "commit": "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a",
+            "parents": [
+              "4b64a19104665adff3f416e7230301cb4d7edc0b"
+            ],
+            "subject": "完善静态组件交付协议并校验全量实体与视图范围"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/mind-map-layout.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-status.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-mind-map-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-dataset-view.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-submission.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/component-data-status.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "test/workbench-document-delivery.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "403项静态交付、完整实体、范围条件和自适应布局聚焦检查通过",
+            "verifiedCommit": "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a",
+            "completedAt": "2026-11-08T22:15:11.453556+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a",
+            "completedAt": "2026-11-08T22:15:11.453556+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a",
+            "completedAt": "2026-11-08T22:15:11.453556+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实包三类场景发现静态呈现提交循环、风险范围被工具协议丢弃、未知实体遗漏和多分支导图过长；相关聚焦检查通过，集成包须重新生成验证。"
+        },
+        "acceptanceCriteria": [
+          "静态交付复用完整来源校验",
+          "真实工具协议保留范围条件",
+          "未知实体不得因属性空白丢弃",
+          "多分支导图按可读宽度换行"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T22:15:11.453556+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-data-submission.test.js",
+        "test/workbench-dataset-view.test.js",
+        "test/component-data-status.test.js",
+        "test/dataset-view-contract.test.js",
+        "test/workbench-planning-phase.test.js",
+        "test/derived-mind-map-browser.test.js",
+        "test/component-source-info-browser.test.js",
+        "test/component-web-snapshot-evidence.test.js",
+        "test/research-design-policy.test.js",
+        "test/workbench-document-delivery.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
