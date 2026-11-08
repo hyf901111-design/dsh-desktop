@@ -35,7 +35,8 @@ import {compactStatementEvidence,truncatedStatementEvidence} from './statement-e
 import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
 import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from './component-feed-acquisition.js'
-import {releaseTimelineScope,observedReleaseTimeline} from './observed-dated-feed.js'
+import {workbenchReleaseScope,observedReleaseTimeline,readReleaseTimeline,releaseTimelineComplete} from './observed-dated-feed.js'
+import {commonPriceScope,observedCommonPriceComparison,readCommonPriceComparison} from './observed-series-comparison.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
@@ -1623,6 +1624,8 @@ export class ResearchTaskRuntime {
     const newsPlan=task.kind==='container'&&plannedNewsQueries(task.prompt)
     const newsCollector=newsPlan?componentSourceCollector(['public_data_query','ework__public_data_query']):undefined
     const feedOptions={panelRequest:workbenchPanelIntent(task.prompt),workbenchRequest:task.hostContext?.workbenchRequest,explicitScope:task.hostContext?.explicitScope,panelType:workbenchPanelFormat(task.prompt)}
+    const requiredReleaseScope=task.kind==='container'&&feedOptions.workbenchRequest?.dataMode==='source'&&
+      workbenchReleaseScope(feedOptions.workbenchRequest.originalRequest,feedOptions.panelRequest,feedOptions.panelType)
     const newsTableIssueFor=value=>newsPlan&&extractArtifactObjects(value).map(data=>newsTableCoverageIssue(data,task.prompt,{verified:item=>!componentFeedEvidenceIssue(JSON.stringify(item),sourceRecords,feedOptions)})).find(Boolean)
     let articleTimeline=workbenchPanelFormat(task.prompt)==='timeline'&&articleTimelineRequired({type:'timeline'},feedOptions),originalArticleTimeline
     const calendarIssueFor = value => extractArtifactObjects(value).map(data=>calendarEventEvidenceIssue(data,feedOptions,sourceRecords,{now:new Date(this.now()),requiredData:calendarRepairData??(workbenchPanelFormat(task.prompt)==='calendar'?{type:'calendar'}:undefined)})).find(Boolean)
@@ -2104,6 +2107,16 @@ export class ResearchTaskRuntime {
       if (structured && !deferredPanel && output === undefined && !prototypeIssue && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !chartGeometryError && !designPolicyError && canSynthesizeResult(result)) {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
+      if(requiredReleaseScope&&!bindingRequested){
+        // The requested count and full text come from the exact observed rows.
+        // Never trust a generated HTML caption, a subset, or a rewritten body.
+        const candidate=observedReleaseTimeline(requiredReleaseScope,sourceRecords,panelTitle)
+        const verified=candidate&&resolveComponentSnapshot(candidate,sourceRecords,new Date(this.now()))
+        if(!verified||!releaseTimelineComplete(requiredReleaseScope,verified.data,sourceRecords))throw new ResearchTaskError('GENERATION_FAILED','发布动态未取得要求的完整记录或正文，未标为完成。')
+        output=verified.output
+        binding=undefined
+        readableSnapshot=verified.capacitySnapshot?{output,data:verified.data}:undefined
+      }
       if(output!==undefined&&task.kind==='container'){
         if(newsTableError){output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',newsTableError)}
         const capacitySnapshot=readableSnapshot?.output===output
@@ -2190,7 +2203,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -2669,9 +2682,35 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const researchPhase = new Promise(resolve => { finishResearch = resolve })
       const format=workbenchPanelFormat(query??'')
       const original=hostContext?.workbenchRequest?.originalRequest
-      const releaseScope=kind==='container'&&!synthesisOnly&&!bindingRequested&&!sourcePolicy?.pluginRequired&&hostContext?.workbenchRequest?.dataMode==='source'&&
-        (format==='timeline'||format==='html'&&/(?:只放|仅放|只要)一张/u.test(original??'')&&/发布动态|GitHub Releases/iu.test(workbenchPanelIntent(query??'')))?
-        releaseTimelineScope(original):null
+      const directScope=kind==='container'&&!synthesisOnly&&!bindingRequested&&!sourcePolicy?.pluginRequired&&
+        !sourcePolicy?.publicSourceRequests&&hostContext?.workbenchRequest?.dataMode==='source'&&childTools.includes('web_fetch')
+      const releaseScope=directScope&&workbenchReleaseScope(original,workbenchPanelIntent(query??''),format)
+      const priceScope=directScope&&commonPriceScope(original,workbenchPanelIntent(query??''),format)
+      const panelTitle=query?.match(/\n本面板：([^\n]+)/u)?.[1]
+      let hostRecords=[],verifiedOutput
+      const acquireController=new AbortController()
+      const acceptVerified=(records)=>{
+        if(signal.aborted||verifiedOutput)return
+        let text
+        if(releaseScope){
+          const candidate=observedReleaseTimeline(releaseScope,records,panelTitle)
+          const verified=candidate&&resolveComponentSnapshot(candidate,records)
+          if(verified&&releaseTimelineComplete(releaseScope,verified.data,records))text=candidate
+        }else if(priceScope){
+          const data=observedCommonPriceComparison(priceScope,records,panelTitle)
+          if(data&&acceptArtifactOutput(JSON.stringify(data)))text=JSON.stringify(data)
+        }
+        if(text){
+          verifiedOutput={stopReason:'completed',output:[{type:'text',text}]}
+          finishResearch(verifiedOutput)
+        }
+      }
+      const acquisition=(releaseScope||priceScope)&&typeof ctx.web?.fetch==='function'?
+        (releaseScope?readReleaseTimeline:readCommonPriceComparison)(releaseScope||priceScope,
+          (url,readSignal)=>withParentInitiator(parent,()=>ctx.web.fetch({url},readSignal)),
+          AbortSignal.any([signal,acquireController.signal,AbortSignal.timeout(35_000)]))
+          .then(records=>{hostRecords=records;acceptVerified(records)})
+          .catch(()=>undefined):undefined
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       const discoveryEvidenceCalls = new Set(), discoveryEvidenceParts = []
       let discoveryEvidenceBytes = 0
@@ -2819,12 +2858,9 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // still stops. A matching definition obtained after a parameter error
         // earns one bounded retry, within 135s, leaving at least 45s to present.
         if(event?.type==='step/end'){
-          if(releaseScope&&!completedArtifact&&!signal.aborted){
-            const candidate=observedReleaseTimeline(releaseScope,sourceCollector.records,query?.match(/\n本面板：([^\n]+)/u)?.[1])
-            if(candidate&&resolveComponentSnapshot(candidate,sourceCollector.records)?.capacitySnapshot){
-              finishResearch({stopReason:'completed',output:[{type:'text',text:candidate}]})
-              return
-            }
+          if((releaseScope||priceScope)&&!completedArtifact){
+            acceptVerified(sourceCollector.records)
+            if(verifiedOutput){acquireController.abort();return}
           }
           const allowance=kind==='container'?Math.min(discoveryCallCount,4):0
           const businessLimit=kind==='container'&&knownDiscoveryUsed?12:8
@@ -2862,6 +2898,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       try {
         for (const event of [...child.session.events]) deliver(event)
       } catch (error) {
+        acquireController.abort()
         off()
         stopSourceProjection()
         stopSubmission()
@@ -2898,7 +2935,9 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           completionTimer = setTimeout(finish, budget)
         })
       ]) : run.result
-      const withEvidence=(result,recordOffset=0,attemptOffset=0)=>{
+      const withEvidence=async(result,recordOffset=0,attemptOffset=0)=>{
+          if(!verifiedOutput&&acquisition)await acquisition
+          if(verifiedOutput)result=verifiedOutput
           if(declaredChartContract){
             const text=(result?.output??[]).filter(block=>block?.type==='text'&&typeof block.text==='string').map(block=>block.text).join('\n')
             const restored=restoreDeclaredChartVariant(text,declaredChartContract)
@@ -2913,9 +2952,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
               return {url,content:page.body.content}
             }
           }) : undefined
-          return { ...result, sourceRecords:sourceCollector.records.slice(recordOffset), sourceAttempts:sourceCollector.attempts.slice(attemptOffset), ...(researchEvidence ? { researchEvidence } : {}), ...(acquireFeedEvidence?{acquireFeedEvidence}:{}) }
+          return { ...result, sourceRecords:[...sourceCollector.records.slice(recordOffset),...hostRecords], sourceAttempts:sourceCollector.attempts.slice(attemptOffset), ...(researchEvidence ? { researchEvidence } : {}), ...(acquireFeedEvidence?{acquireFeedEvidence}:{}) }
       }
       const resultSettled=()=>{
+        acquireController.abort()
         const rejected=submission?.rejectedCandidate?.()
         if(rejected&&!disposed)retainedPrototypeDraft=rejected
         stopSourceProjection();stopSubmission();clearTimeout(completionTimer);clearTimeout(handoffTimer)
@@ -2926,6 +2966,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         async dispose() {
           if (disposed) return
           disposed = true
+          acquireController.abort()
           retainedPrototypeDraft=undefined
           off()
           stopSourceProjection()

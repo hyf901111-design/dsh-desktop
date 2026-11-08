@@ -119,6 +119,16 @@ function structuredWebSnapshot(text, requestedUrl) {
     return {source:url.hostname, sourceUrl:address, ...contents}
   } catch { return null }
 }
+
+// Host acquisitions retain the same exact-URL evidence as an observed web
+// tool response. Reject a partial body before exposing any structured fields.
+export function hostStructuredWebRecord(page, url) {
+ if(!page||page.truncated||!Number.isInteger(page.statusCode)||page.statusCode<200||page.statusCode>=300||
+    typeof page.body?.content!=='string'||!['text','html'].includes(page.body.kind))return
+ const text=`Fetched ${page.url} (HTTP ${page.statusCode})\n\n${page.body.content}`
+ const response=structuredWebSnapshot(text,url)
+ if(response)return {tool:'web_fetch',purpose:'snapshot',args:{url},response,snapshotRows:webSnapshotRows(text,url)}
+}
 function snapshotTitle(value) {
   const title=typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase():''
   return title.length<=1000?title:''
