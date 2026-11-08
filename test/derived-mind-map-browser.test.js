@@ -4,12 +4,13 @@ import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {patchDerivedPresetClient,derivedPresetCss} from '../scripts/lib/derived-preset-client.mjs'
 import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
+import {WORKBENCH_TABLE_COLUMNS_CSS} from '../packages/dsh-research-task-runtime/workbench-table-columns.js'
 
 let browser,script,css
 beforeAll(async()=>{
  const client=patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.ResearchCanvas = ResearchCanvas;','exports.__Map=ResearchDerivedMindMap;exports.__Outline=researchDerivedOutline;exports.ResearchCanvas = ResearchCanvas;')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import React from 'react';import * as JSX from 'react/jsx-runtime';import * as DOM from 'react-dom';import {createRoot} from 'react-dom/client';
+ import {installWorkbenchTableColumns} from './packages/dsh-research-task-runtime/workbench-table-columns.js';window.installColumns=installWorkbenchTableColumns;import React from 'react';import * as JSX from 'react/jsx-runtime';import * as DOM from 'react-dom';import {createRoot} from 'react-dom/client';
  let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};new Function(${JSON.stringify(client)})();
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const lib=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?JSX:id==='react-dom'?DOM:fake);
  window.mapContent='# 市场资讯\\n- 科技\\n  - 半导体承压\\n- 宏观\\n  - 人民币中间价6.7253';
@@ -111,5 +112,21 @@ it('starts narrow deep trees at the root and keeps every node readable through l
   }
   expect(await page.locator('section').evaluate(el=>el.scrollTop)).toBe(0);
   expect((await nodes.first().boundingBox()).y).toBeLessThan(container.y+70);
+ }finally{await page.close()}
+},15000);
+
+
+it('keeps multi-column CJK table text inside its cells while preserving full prose',async()=>{
+ const page=await browser.newPage({viewport:{width:1000,height:900}});
+ try{
+  await page.setContent('<section data-research-compact-chrome style="width:816px"><div id="map"></div></section>');await page.addScriptTag({content:script});
+  await page.addStyleTag({content:WORKBENCH_TABLE_COLUMNS_CSS+'td,th{padding:5px 10px;font:14px/20px sans-serif}table{border-collapse:collapse}'});
+  await page.evaluate(()=>{
+   const host=document.querySelector('section');host.insertAdjacentHTML('beforeend','<div id="table-wrap" style="width:816px;overflow:auto"><table><thead><tr>'+['机构','部门','职务','姓名','信息时点','待核标记','出处','待核说明'].map(s=>'<th>'+s+'</th>').join('')+'</tr></thead><tbody><tr>'+['中国证监会','办公厅（党委办公室）','一级巡视员','商庆军','2026.10','—','[T3] cnstock.com','需要完整保留的资料和待核说明。'.repeat(20)].map(s=>'<td>'+s+'</td>').join('')+'</tr></tbody></table></div>');window.installColumns(host);
+  });
+  const cells=page.locator('td');await expect.poll(()=>page.locator('table').getAttribute('data-workbench-table-columns')).toBe('');
+  const measurements=await cells.evaluateAll(elements=>elements.map(el=>{const range=document.createRange();range.selectNodeContents(el);const cell=el.getBoundingClientRect();return {left:cell.left,right:cell.right,text:[...range.getClientRects()].map(r=>({left:r.left,right:r.right}))}}));
+  for(const cell of measurements)for(const rect of cell.text){expect(rect.left).toBeGreaterThanOrEqual(cell.left);expect(rect.right).toBeLessThanOrEqual(cell.right+1)}
+  expect(await cells.last().textContent()).toBe('需要完整保留的资料和待核说明。'.repeat(20));
  }finally{await page.close()}
 },15000);
