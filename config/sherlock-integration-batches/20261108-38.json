@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-38",
+  "branch": "codex/integration/20261108-38",
+  "baseMainCommit": "4f52f5c3ebbd0ddf8578b8b1cf2d025c6db16d11",
+  "expectedMainCommit": "4f52f5c3ebbd0ddf8578b8b1cf2d025c6db16d11",
+  "createdAt": "2026-11-08T11:35:02.166Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "表格紧凑整理与展开",
+        "branch": "codex/feat/workbench-table-fit-disclosure-20261108",
+        "baseCommit": "4f52f5c3ebbd0ddf8578b8b1cf2d025c6db16d11",
+        "tipCommit": "af842b576bae65d4a307aa0d47cea0c61748cfc8",
+        "commits": [
+          {
+            "commit": "af842b576bae65d4a307aa0d47cea0c61748cfc8",
+            "parents": [
+              "4f52f5c3ebbd0ddf8578b8b1cf2d025c6db16d11"
+            ],
+            "subject": "让表格整理按可见内容收缩并统一可用的线性展开控件"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-market-native-table.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-native-context-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/market-table-reading-browser.test.js",
+              "test/research-market-native-context-browser.test.js",
+              "test/workbench-sourced-wide-table-browser.test.js",
+              "test/financial-widget-client.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "81 项聚焦检查通过",
+            "verifiedCommit": "af842b576bae65d4a307aa0d47cea0c61748cfc8",
+            "completedAt": "2026-11-08T11:35:00.445309+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "内容实测标记|workbench reports intrinsic"
+            ],
+            "outcome": "passed",
+            "summary": "3 项沙盒内容高度传输检查通过",
+            "verifiedCommit": "af842b576bae65d4a307aa0d47cea0c61748cfc8",
+            "completedAt": "2026-11-08T11:35:00.445309+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "af842b576bae65d4a307aa0d47cea0c61748cfc8",
+            "completedAt": "2026-11-08T11:35:00.445309+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "af842b576bae65d4a307aa0d47cea0c61748cfc8",
+            "completedAt": "2026-11-08T11:35:00.445309+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 对四种看板样式验证按实际表格内容拟合、完整内容可达，口径与来源可展开并显示线性箭头；客户端组件菜单行为和沙盒尺寸消息已有聚焦回归。"
+        },
+        "acceptanceCriteria": [
+          "短表按照实际内容整理",
+          "展开后明细及来源可达",
+          "放大阅读菜单位于弹层内",
+          "展开箭头使用主题线性图标"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T11:35:00.445309+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/market-table-reading-browser.test.js",
+        "test/research-market-native-context-browser.test.js",
+        "test/workbench-sourced-wide-table-browser.test.js",
+        "test/financial-widget-client.test.js",
+        "test/home-guide-native-strip.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-html-theme.test.js",
+        "-t",
+        "内容实测标记|workbench reports intrinsic"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
