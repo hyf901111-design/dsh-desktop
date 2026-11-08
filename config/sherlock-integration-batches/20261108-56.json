@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-56",
+  "branch": "codex/integration/20261108-56",
+  "baseMainCommit": "d6c2e1cb121cc6f8375035dc82ad929becc96089",
+  "expectedMainCommit": "d6c2e1cb121cc6f8375035dc82ad929becc96089",
+  "createdAt": "2026-11-08T15:52:13.337Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "分页留白、完整层级与研究任务路由",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "d6c2e1cb121cc6f8375035dc82ad929becc96089",
+        "tipCommit": "a8a33b53fcf4be6fd4647e7fa25741e245c04c9a",
+        "commits": [
+          {
+            "commit": "a8a33b53fcf4be6fd4647e7fa25741e245c04c9a",
+            "parents": [
+              "d6c2e1cb121cc6f8375035dc82ad929becc96089"
+            ],
+            "subject": "完善分页留白和完整导图层级并修复研究任务路由"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/derived-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-table-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-mind-map-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-template-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/derived-template-contract.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "test/market-table-reading-browser.test.js",
+              "test/research-bento-arrange-fit.test.js",
+              "test/research-market-native-table.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/conversation-components-policy.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "278 项聚焦检查通过",
+            "verifiedCommit": "a8a33b53fcf4be6fd4647e7fa25741e245c04c9a",
+            "completedAt": "2026-11-08T15:52:11.633054+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "a8a33b53fcf4be6fd4647e7fa25741e245c04c9a",
+            "completedAt": "2026-11-08T15:52:11.633054+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "a8a33b53fcf4be6fd4647e7fa25741e245c04c9a",
+            "completedAt": "2026-11-08T15:52:11.633054+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实浏览器验证12层完整节点及连线，协议验证24层关系；表格四模式分页、每页数量和10px留白通过；带来源Markdown无损归一化及研究台等自然表达进入宿主规划的聚焦检查通过。"
+        },
+        "acceptanceCriteria": [
+          "长表分页保留全部记录正文及原始链接",
+          "搜索排序覆盖全量数据，正确重置页码",
+          "末页空结果边界正确，短表完整展示",
+          "分页组件按当前页内容适应高度"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T15:52:11.633054+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/derived-template-contract.test.js",
+        "test/derived-mind-map-browser.test.js",
+        "test/market-table-reading-browser.test.js",
+        "test/research-bento-arrange-fit.test.js",
+        "test/research-market-native-table.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/conversation-components-policy.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
