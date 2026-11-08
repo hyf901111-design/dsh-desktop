@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-54",
+  "branch": "codex/integration/20261108-54",
+  "baseMainCommit": "caa458fe12d4a135f6e048d779c7ab8ae99600e8",
+  "expectedMainCommit": "caa458fe12d4a135f6e048d779c7ab8ae99600e8",
+  "createdAt": "2026-11-08T15:11:32.969Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "长表全量数据分页阅读",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "caa458fe12d4a135f6e048d779c7ab8ae99600e8",
+        "tipCommit": "ec31259c2d6c879157ed9696bbab128171e17256",
+        "commits": [
+          {
+            "commit": "ec31259c2d6c879157ed9696bbab128171e17256",
+            "parents": [
+              "caa458fe12d4a135f6e048d779c7ab8ae99600e8"
+            ],
+            "subject": "为长明细表增加全量搜索排序与自适应分页"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-table-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-market-native-table.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-artifact.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/market-table-reading-browser.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-optimal-arrange.test.js",
+              "test/research-bento-arrange-fit.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "130 项聚焦检查通过",
+            "verifiedCommit": "ec31259c2d6c879157ed9696bbab128171e17256",
+            "completedAt": "2026-11-08T15:11:31.615126+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ec31259c2d6c879157ed9696bbab128171e17256",
+            "completedAt": "2026-11-08T15:11:31.615126+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ec31259c2d6c879157ed9696bbab128171e17256",
+            "completedAt": "2026-11-08T15:11:31.615126+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实浏览器覆盖原生表格四模式和沙箱分页，逐页核对51条完整正文、日期和原链接；跨页全量搜索排序、空结果与末页边界、末页高度适应均通过。"
+        },
+        "acceptanceCriteria": [
+          "长表分页保留全部记录正文及原始链接",
+          "搜索排序覆盖全量数据，正确重置页码",
+          "末页空结果边界正确，短表完整展示",
+          "分页组件按当前页内容适应高度"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T15:11:31.615126+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/market-table-reading-browser.test.js",
+        "test/research-market-native-table.test.js",
+        "test/research-market-artifact.test.js",
+        "test/research-optimal-arrange.test.js",
+        "test/research-bento-arrange-fit.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
