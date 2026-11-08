@@ -1,7 +1,7 @@
 /* Current-board preferences override global defaults only inside the canvas. */
-body [data-ework-grid][data-workbench-style=light]{--grid-card:#fff;--grid-text:#25252b;--grid-muted:#777781;--grid-menu:#f8f8fa;--grid-row:#f4f4f6;--grid-border:#dedee3;--grid-control:#f4f4f6;background-color:#edf0f2!important;color-scheme:light}
-body [data-ework-grid][data-workbench-style=dark]{--grid-card:#151518;--grid-text:#e8e8ed;--grid-muted:#a0a0ab;--grid-menu:#1c1b20;--grid-row:#24242b;--grid-border:#303036;--grid-control:#1d1d23;background-color:#09090b!important;color-scheme:dark}
-body [data-ework-grid][data-workbench-style=enterprise]{--grid-card:#fff;--grid-text:#3c3c3c;--grid-muted:#666;--grid-menu:#f8f8fa;--grid-row:#f3f5f7;--grid-border:#e3e7eb;--grid-control:#f4f4f6;background-color:#f3f5f7!important;color-scheme:light}
+body [data-ework-grid][data-workbench-style=light]{--grid-card:#fff;--grid-text:#25252b;--grid-muted:#777781;--grid-menu:#f8f8fa;--grid-row:#f4f4f6;--grid-border:#dedee3;--grid-control:#f4f4f6;--grid-canvas:#edf0f2;background-color:var(--grid-canvas)!important;color-scheme:light}
+body [data-ework-grid][data-workbench-style=dark]{--grid-card:#151518;--grid-text:#e8e8ed;--grid-muted:#a0a0ab;--grid-menu:#1c1b20;--grid-row:#24242b;--grid-border:#303036;--grid-control:#1d1d23;--grid-canvas:#09090b;background-color:var(--grid-canvas)!important;color-scheme:dark}
+body [data-ework-grid][data-workbench-style=enterprise]{--grid-card:#fff;--grid-text:#3c3c3c;--grid-muted:#666;--grid-menu:#f8f8fa;--grid-row:#f3f5f7;--grid-border:#e3e7eb;--grid-control:#f4f4f6;--grid-canvas:#f3f5f7;background-color:var(--grid-canvas)!important;color-scheme:light}
 /* Native and delegated iframe scrollbars belong to the board, not the app. */
 body [data-research-canvas][data-ework-grid]:is([data-workbench-style=light],[data-workbench-style=enterprise]){--ework-scroll-thumb:#0000001a;--ework-scroll-hover:#c9c9c9;--ework-scroll-active:#b5b5b5}
 body [data-research-canvas][data-ework-grid]:is([data-workbench-style=dark],[data-workbench-style=openterminal]){--ework-scroll-thumb:#333333;--ework-scroll-hover:#444444;--ework-scroll-active:#555555}
@@ -65,7 +65,7 @@ body [data-ework-grid][data-workbench-style] .rScV5Q_chartLegend button{color:va
 
 @layer ework-workbench{
 /* OpenTerminal is an opt-in board template. Existing chrome content stays owned by EWork. */
-body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal]{--grid-card:#0a0a0a!important;--grid-text:#d9d9d9!important;--grid-muted:#808080!important;--grid-menu:#111!important;--grid-row:#111!important;--grid-border:#303030!important;--grid-control:#111!important;--grid-accent:#ff9900!important;background:#050505!important;color-scheme:dark!important}
+body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal]{--grid-card:#0a0a0a!important;--grid-text:#d9d9d9!important;--grid-muted:#808080!important;--grid-menu:#111!important;--grid-row:#111!important;--grid-border:#303030!important;--grid-control:#111!important;--grid-accent:#ff9900!important;--grid-canvas:#050505!important;background:var(--grid-canvas)!important;color-scheme:dark!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id]{border:1px solid #303030!important;border-radius:0!important;outline:0!important;box-shadow:none!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id][data-selected=true]{border-color:#b36b00!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-grid-active]{border-color:#ff9900!important;box-shadow:0 4px 16px #0008!important;transition:none!important}

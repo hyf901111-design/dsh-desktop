@@ -162,6 +162,15 @@ it.each(['horizontal','vertical'])('keeps %s tabs in the viewport and switches p
   await canvas.evaluate(el=>{el.scrollTop=el.scrollHeight})
   await expect.poll(()=>canvas.evaluate(el=>el.scrollTop)).toBeGreaterThan(700)
   expect(await top()).toBe(initial)
+  if(orientation==='vertical'){
+   const viewport=await canvas.boundingBox(),nav=await bar.boundingBox()
+   const clip={x:Math.ceil(nav.x)+4,y:Math.ceil(viewport.y)+1,width:Math.floor(nav.width)-8,height:8}
+   const gutter=await page.screenshot({clip})
+   const hideRail=await page.addStyleTag({content:'.ew-board-tabs-rail{visibility:hidden}.ew-board-tabs-nav::before{visibility:hidden}'})
+   const bareGrid=await page.screenshot({clip})
+   await hideRail.evaluate(el=>el.remove())
+   expect(gutter.equals(bareGrid),'the space above the sticky navigation should paint the same grid as an empty canvas').toBe(true)
+  }
   const {x,y,width,height}=await tab.boundingBox()
   await page.mouse.click(x+width/2,y+height/2)
   await expect.poll(async()=>(await state(page)).active).toBe(target)
