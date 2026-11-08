@@ -101,6 +101,57 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T12:36:57.034969+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2215a01c3c5ecce2794dc1de0ddf1ff535d8ac3f",
+        "verificationCommit": "2215a01c3c5ecce2794dc1de0ddf1ff535d8ac3f",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-drop-focus-browser.test.js test/board-tabs-theme-browser.test.js test/board-tabs-connection-browser.test.js test/board-tabs-connection-client.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "2215a01c3c5ecce2794dc1de0ddf1ff535d8ac3f",
+            "completedAt": "2026-11-08T12:37:01.647Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2215a01c3c5ecce2794dc1de0ddf1ff535d8ac3f",
+            "completedAt": "2026-11-08T12:37:01.647Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2215a01c3c5ecce2794dc1de0ddf1ff535d8ac3f",
+            "completedAt": "2026-11-08T12:37:01.647Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T12:37:01.647Z"
       }
     }
   ],
