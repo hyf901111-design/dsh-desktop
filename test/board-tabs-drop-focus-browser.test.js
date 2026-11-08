@@ -114,3 +114,34 @@ it('releasing in the tab bar outside a receiving label leaves ownership and the 
   expect(await page.locator('[data-research-node-id="'+f.first+'"]').isVisible()).toBe(true);expect(f.errors).toEqual([])
  }finally{await page.close()}
 },15000)
+
+it.each(['vertical-short','vertical-overflow','vertical-bottom','horizontal-short','horizontal-overflow','horizontal-sideways'])('routes a wheel gesture over the tab list (%s)',async mode=>{
+ const {page,first,second}=await fixture()
+ try{
+  const vertical=mode.startsWith('vertical'),many=!mode.endsWith('short')
+  await page.evaluate(({vertical,many,first,second})=>{
+   const w=fixture.workspace,nav=w.getSnapshot().artifacts.find(n=>n.containerSpec?.type==='board-tabs')
+   if(many&&!w.saveBoardTabs(nav.containerSpec.revision,[...nav.containerSpec.tabs,...Array.from({length:90},(_,i)=>({id:'extra-'+i,name:'额外页签 '+i}))]))throw Error('fixture tabs did not save')
+   if(vertical)w.setBoardTabsPresentation('vertical')
+   w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:40},{id:second,x:0,y:40,w:40,h:10}],true)
+  },{vertical,many,first,second})
+  const canvas=page.locator('[data-research-canvas]'),list=page.locator('[data-board-tabs-nav] [role=tablist]')
+  const offset=()=>list.evaluate(el=>[el.scrollLeft,el.scrollTop])
+  await expect.poll(()=>canvas.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeGreaterThan(250)
+  if(many)await expect.poll(()=>list.locator('[role=tab]').count()).toBe(92)
+  const max=await list.evaluate((el,vertical)=>vertical?el.scrollHeight-el.clientHeight:el.scrollWidth-el.clientWidth,vertical)
+  if(many)expect(max).toBeGreaterThan(250)
+  else expect(max).toBe(0)
+  if(mode==='vertical-bottom')await list.evaluate(el=>{el.scrollTop=el.scrollHeight})
+  const before=await offset(),box=await list.boundingBox(),sideways=mode==='horizontal-sideways'
+  await page.mouse.move(box.x+40,box.y+12)
+  await page.mouse.wheel(sideways?200:0,sideways?0:200)
+  if(mode==='vertical-overflow'||sideways){
+   await expect.poll(async()=>(await offset())[vertical?1:0]).toBeGreaterThan(before[vertical?1:0])
+   expect(await canvas.evaluate(el=>el.scrollTop)).toBe(0)
+  }else{
+   await expect.poll(()=>canvas.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+   expect(await offset()).toEqual(before)
+  }
+ }finally{await page.close()}
+},15000)

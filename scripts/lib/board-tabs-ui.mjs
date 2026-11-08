@@ -24,7 +24,6 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
   if(end>element[scroll]+length)element[scroll]=end-length
  },[active,host,nav?.id,tabNamesKey,vertical])
  react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
- react.useEffect(()=>{const element=list.current;if(!element)return;const wheel=e=>{e.preventDefault();e.stopPropagation();if(vertical)element.scrollTop+=e.deltaY;else element.scrollLeft+=e.deltaX||e.deltaY};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)},[host,nav?.id,vertical])
  react.useLayoutEffect(()=>{
   const element=list.current;if(!element||vertical)return
   const measure=()=>{const reserve=pager.current?(pager.current.getBoundingClientRect().width+(parseFloat(window.getComputedStyle(element.parentElement).columnGap)||4)):0,overflow=element.scrollWidth>element.clientWidth+reserve+1,max=Math.max(0,element.scrollWidth-element.clientWidth),next={overflow,left:element.scrollLeft>1,right:element.scrollLeft<max-1};setPaging(old=>Object.keys(next).every(key=>next[key]===old[key])?old:next)}
