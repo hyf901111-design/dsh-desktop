@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto'
+import {isDeepStrictEqual} from 'node:util'
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {resolveBoundComponent,resolveComponentSnapshot,componentMappableSource,COMPONENT_MAPPING_EXAMPLES} from './component-source-binding.js'
 import {chartTemplateSchema} from './chart-template-contract.js'
@@ -61,10 +62,12 @@ function reuseObservedRequests(requests,records){
  if(!Array.isArray(requests))throw Error('requests 必须列出本卡已成功执行的数据请求。')
  return requests.map(request=>{
   if (Object.hasOwn(request,'sourceRef')) {
-   if (Object.hasOwn(request,'tool') || Object.hasOwn(request,'args')) throw Error('sourceRef 与 tool/args 二选一。')
    const matches=records.filter(record=>componentMappableSource(record)&&sourceReference(record)===request.sourceRef)
    if(matches.length!==1)throw Error('该 sourceRef 不属于当前组件的唯一成功响应。调用 component_presentation_schema({}) 查看当前来源。')
-   return {key:request.key,tool:matches[0].tool,args:structuredClone(matches[0].args)}
+   const {tool,args}=matches[0]
+   if (Object.hasOwn(request,'tool') && request.tool !== tool || Object.hasOwn(request,'args') && !isDeepStrictEqual(request.args,args))
+    throw Error('sourceRef 与提交的 tool/args 指向不同请求。请保留 sourceRef 并省略重复参数，或提交实际成功调用的原参数。')
+   return {key:request.key,tool,args:structuredClone(args)}
   }
   if(typeof request.tool!=='string')throw Error('每个请求需要 sourceRef 或实际工具名。')
   if(Object.hasOwn(request,'args'))return request

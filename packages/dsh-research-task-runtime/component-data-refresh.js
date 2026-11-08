@@ -31,6 +31,36 @@ function path(root,path){
  for(const key of path?path.split('.'):[]){if(forbidden.has(key)||!/^([\w-]+)$/.test(key))throw Error('字段路径无效');if(value==null||!Object.hasOwn(Object(value),key))return undefined;value=value[key]}
  return value
 }
+
+// A verified web snapshot keeps its provenance outside the original JSON.
+// Resolve raw paths only against the explicitly selected response. Row paths,
+// valid envelope paths and every other provider retain their original scope.
+export function normalizeWebSnapshotPaths(mapping, sources) {
+ const visit = (value, depth = 0) => {
+  if (depth > 24) throw Error('字段映射超出限制')
+  if (Array.isArray(value)) return value.map(child => visit(child, depth + 1))
+  if (!record(value)) return value
+  const source = typeof value.$from === 'string' && Object.hasOwn(sources, value.$from) ? sources[value.$from] : null
+  const response = source?.tool === 'web_fetch' ? source.response : null
+  const envelope = Array.isArray(response?.records) ? 'records' : record(response?.data) ? 'data' : null
+  // When $each is explicit, $path is relative to a row. With $map and no
+  // $each, $path selects the collection, so it still uses the source root.
+  const selector = Object.hasOwn(value, '$each') ? '$each' : '$path'
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => {
+   if (envelope && key === selector && typeof child === 'string') {
+    const rawPath = child.replace(/^\[(0|[1-9]\d*)\]/u, '$1')
+    const qualified = rawPath ? envelope + '.' + rawPath : envelope
+    const canonical = path(response, rawPath)
+    const selectsRootArray = rawPath === '' && envelope === 'records' && (selector === '$each' || Object.hasOwn(value, '$map'))
+    if ((canonical === undefined || selectsRootArray) && path(response, qualified) !== undefined)
+     return [key, qualified]
+    return [key, rawPath]
+   }
+   return [key, visit(child, depth + 1)]
+  }))
+ }
+ return Object.values(sources).some(source => source.tool === 'web_fetch') ? visit(mapping) : mapping
+}
 function filterDay(value){
  if(typeof value!=='string')throw Error('日期筛选字段必须为真实日期文本，不能缺失或使用数值')
  const match=/^(?:\d{4}-\d{2}-\d{2}|\d{8})$/u.test(value)?/^(\d{4})-?(\d{2})-?(\d{2})$/u.exec(value):null
@@ -134,7 +164,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(unknown)throw Object.assign(Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。'),{code:'UNSUPPORTED_MAPPING_OPERATOR'})
  if(Object.hasOwn(mapping,'$calc'))return scalarMapping(calculateSourceValue(mapping,value=>next(value,row,'')),mapping)
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
- if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
+ if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在。$from 必须使用 requests 中的 key；$map 内选择当前记录字段时省略 $from。')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
  if(mapping.$reduce!==undefined&&eachPath===undefined)throw Error('$reduce 必须指定真实列表 $each 和字段选择 $map:{"$path":"实际字段"}')

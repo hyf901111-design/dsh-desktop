@@ -4,7 +4,7 @@ import {readTemplateModel} from './component-template-registry.js'
 import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} from './article-timeline-provenance.js'
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
-import { decodeDataResponse, evaluateMapping, materializeComponentProjection } from './component-data-refresh.js'
+import { decodeDataResponse, evaluateMapping, materializeComponentProjection, normalizeWebSnapshotPaths } from './component-data-refresh.js'
 import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
@@ -505,6 +505,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
     }
     if(!sourceBacked(contract)||!paths)return null
     let mapping=financialValueSelectors(publicRecordEnvelope(singleSourceMapping(contract,responses),responses,Object.entries(sources).map(([key,source])=>({key,toolId:source.tool,args:source.args}))),sources)
+    mapping=normalizeWebSnapshotPaths(mapping,sources)
     const projection=materializeComponentProjection(mapping,responses,now,Object.values(sources))
     mapping=projection.mapping
     const data=projection.data

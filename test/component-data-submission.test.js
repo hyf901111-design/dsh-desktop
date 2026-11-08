@@ -9,7 +9,7 @@ import LlmRuntime,{LlmAdapter} from '@deepseek-ai/dsh-llm'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import {apply as spawn} from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import {createComponentDataSubmission} from '../packages/dsh-research-task-runtime/component-data-submission.js'
-import {resolveBoundComponent} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {createSubagentAdapter} from '../packages/dsh-research-task-runtime/index.js'
 import {workbenchPanelPrompt,DATA_FIRST_PRESENTATION} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
@@ -281,10 +281,40 @@ it('submits one of several observed calls by sourceRef and serializes the origin
  expect(sources).toHaveLength(2)
  const candidate={...input,requests:[{key:'q',sourceRef:sources[1].sourceRef}]}
  expect((await f.invoke({...candidate,requests:[{key:'q',sourceRef:'other-task'}]})).isError).toBe(true)
- expect((await f.invoke({...candidate,requests:[{...candidate.requests[0],tool:'public_data_query'}]})).isError).toBe(true)
- expect((await f.invoke(candidate)).isError).toBe(false)
+ expect((await f.invoke({...candidate,requests:[{...candidate.requests[0],tool:'web_fetch'}]})).isError).toBe(true)
+ expect((await f.invoke({...candidate,requests:[{...candidate.requests[0],args}]})).isError).toBe(true)
+ expect((await f.invoke({...candidate,requests:[{...candidate.requests[0],tool:'public_data_query',args:other.args}]})).isError).toBe(false)
  f.submission.accept(receipt());f.submission.accept({type:'step/end'})
  const text=(await f.submission.result).output[0].text
  expect(JSON.parse(text).requests).toEqual([{key:'q',tool:'public_data_query',args:other.args}])
  expect(resolveBoundComponent(text,f.records).data.series[0].values).toEqual([8])
+})
+
+it('maps original web object and array paths without changing row scope or provenance', async () => {
+ const f=await fixture()
+ const sourceUrl='https://example.com/repos/sample'
+ const listUrl=sourceUrl+'/releases'
+ f.records.splice(0,1,
+  {tool:'web_fetch',purpose:'snapshot',args:{url:sourceUrl},response:{source:'example.com',sourceUrl,data:{stargazers_count:53}}},
+  {tool:'web_fetch',purpose:'snapshot',args:{url:listUrl},response:{source:'example.com',sourceUrl:listUrl,records:[{name:'v2',downloads:4},{name:'v1',downloads:9}]}})
+ const candidate={
+  requests:f.records.map((source,i)=>({key:i===0?'repo':'releases',tool:source.tool,args:source.args})),
+  mapping:{type:'kpi',version:1,title:'Repository observations',items:[
+   {label:'Stars',value:{$from:'repo',$path:'stargazers_count'}},
+   {label:'First release',value:{$from:'releases',$path:'[0].downloads'}}]}
+ }
+ const bad=structuredClone(candidate)
+ bad.mapping.items[0].value.$path='nonexistent'
+ expect((await f.invoke(bad)).isError).toBe(true)
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ const output=(await f.submission.result).output[0].text
+ expect(resolveComponentSnapshot(output,f.records).data.items.map(item=>item.value)).toEqual(['53','4'])
+ const chart=structuredClone(input.mapping)
+ delete chart.asOf
+ chart.labels={$from:'releases',$each:'',$map:{$path:'name'}}
+ chart.series=[{name:'Downloads',values:{$from:'releases',$each:'',$path:'downloads'}}]
+ const mapped=resolveComponentSnapshot(JSON.stringify({type:'data-bound',version:1,requests:candidate.requests,mapping:chart}),f.records)
+ expect(mapped.data.labels).toEqual(['v2','v1'])
+ expect(mapped.data.series[0].values).toEqual([4,9])
 })
