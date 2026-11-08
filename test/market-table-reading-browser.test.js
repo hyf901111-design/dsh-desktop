@@ -130,6 +130,21 @@ it.each(['light','dark','enterprise','openterminal'])('fits actual host-native r
    expect(g.wrapEnd-g.rowEnd).toBeLessThanOrEqual(48)
    await page.locator('tbody tr:first-child').click()
   }
+  const opened=await page.locator('article').evaluate(el=>{
+   el.setAttribute('open','')
+   el.style.height='760px'
+   el.style.setProperty('--odyssey-text','red')
+   const menu=document.createElement('div')
+   menu.className='ew-grid-menu'
+   el.appendChild(menu)
+   const ink=getComputedStyle(menu).color
+   menu.remove()
+   const rows=el.querySelector('tbody tr:last-child').getBoundingClientRect()
+   const context=el.querySelector('footer').getBoundingClientRect()
+   return {ink,gap:context.top-rows.bottom}
+  })
+  expect(opened.ink).toBe(['dark','openterminal'].includes(mode)?'rgb(229, 229, 229)':'rgb(37, 37, 37)')
+  expect(opened.gap).toBeLessThan(40)
   expect(await page.locator('tbody tr').evaluateAll(rows=>rows.map(row=>[...row.cells].map(cell=>cell.textContent)))).toEqual(observed.rows.map(row=>row.map(String)))
   expect(await page.locator('footer').textContent()).toContain(observed.note)
  }finally{await page.close()}

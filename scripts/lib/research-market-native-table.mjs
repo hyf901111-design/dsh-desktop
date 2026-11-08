@@ -230,6 +230,7 @@ body[data-ds-dark-theme] [data-sherlock-market-native] a{color:var(--research-co
 body[data-ds-dark-theme] [data-sherlock-market-native] .terminal-native-filters input{background:#19222c;border-color:#3c4b5c}
 [data-sherlock-market-native="table"]{box-sizing:border-box;width:100%;height:100%;padding:8px 12px 6px;overflow:hidden;container-type:inline-size;background:rgba(255,255,255,.76);color:#202629;font:14px/20px "EWork Market DIN Regular",DINPro,"Noto Sans SC",sans-serif}
 [data-sherlock-market-native="table"] .terminal-native-context{flex:0 0 auto;max-height:min(240px,max(64px,40%))}
+[data-research-node-id][open] [data-sherlock-market-native="table"] .fund-native-table-wrap{flex-grow:0}
 [data-sherlock-market-native="table"] table{width:100%;border-collapse:collapse;table-layout:auto;font:inherit}
 [data-sherlock-market-native="table"] :is(th,td){box-sizing:border-box;padding:3px 3px;border:0;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 [data-sherlock-market-native="table"] :is(th:first-child,td:first-child){text-align:left}
