@@ -6,6 +6,7 @@ import {retainTemplateModel} from '../packages/dsh-research-task-runtime/compone
 import {renderMarketArtifact} from '../packages/dsh-research-task-runtime/market-artifact.js'
 import {parseResearchMarketNativeTable,ResearchMarketNativeTable,researchMarketNativeTableCss} from '../scripts/lib/research-market-native-table.mjs'
 import {installWorkbenchTableColumns,WORKBENCH_TABLE_COLUMNS_CSS} from '../packages/dsh-research-task-runtime/workbench-table-columns.js'
+import {WORKBENCH_DISCLOSURE_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 import {researchCompletedDesignCss} from '../scripts/lib/research-completed-design.mjs'
 import {installDefaultWebLinks} from '../scripts/lib/default-web-links-client.mjs'
 
@@ -17,7 +18,8 @@ const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valu
 // Recreate the persisted pre-collapsible-note envelope. New long-note artifacts
 // intentionally retain their richer iframe composition instead of projecting.
 const legacyArtifact=model=>{const artifact=renderMarketArtifact(model);return {...artifact,html:artifact.html.replace('<details class="market-methodology"><summary>完整口径与说明</summary><span>','<span>').replace('</span></details><span>','</span><span>')}}
-const persistedObserved=retainTemplateModel(legacyArtifact(observed),observed)
+const saved=legacyArtifact(observed)
+const persistedObserved=retainTemplateModel({...saved,html:saved.html.replace('aria-label="搜索表格内容" placeholder="搜索表格内容"','aria-label="搜索行情" placeholder="代码 / 名称 / 关键字"')},observed)
 const longNote=observed.note+'续注 <脚本> & "原样文本"。'.repeat(200).slice(0,2000-observed.note.length-2)+'终点'
 let browser,bundle
 beforeAll(async()=>{
@@ -40,7 +42,7 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('preserves na
  await page.route('**/*',route=>route.abort())
  try{
   await page.setContent(`<html><head><style>html,body{margin:0;width:100%;height:100%}body{background:${theme==='dark'?'#222':'#fff'}}#fixture{width:100%;height:100%}.card{width:100%;height:400px;box-sizing:border-box}</style></head><body ${theme==='dark'?'data-ds-dark-theme=""':''}><section class="card" data-research-compact-chrome data-research-generated-container data-research-artifact-card><main id="fixture" data-research-container-type="html"></main></section></body></html>`)
-  await page.addStyleTag({content:researchCompletedDesignCss+researchMarketNativeTableCss+WORKBENCH_TABLE_COLUMNS_CSS})
+  await page.addStyleTag({content:researchCompletedDesignCss+researchMarketNativeTableCss+WORKBENCH_TABLE_COLUMNS_CSS+WORKBENCH_DISCLOSURE_CSS})
   await page.addScriptTag({content:bundle})
   expect(await page.locator('[data-research-artifact-card]').evaluate(el=>getComputedStyle(el).getPropertyValue('--research-completed-surface').trim())).toBe(theme==='dark'?'#11161c':'#ffffff')
   const actual=await page.evaluate(html=>window.renderNative(html),persistedObserved.html)
@@ -62,8 +64,16 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('preserves na
   expect((await headers.first().boundingBox()).height).toBeLessThanOrEqual(28)
   expect(await context.locator('.terminal-native-context-lines').textContent()).toBe(observed.asOf+longNote+'来源 <甲> ↗ · 无链接来源')
   expect(await context.locator('.terminal-native-context-lines').isVisible()).toBe(false)
-  await context.locator('summary').click()
+  const disclosure=context.locator('summary')
+  const chevron=()=>disclosure.evaluate(el=>{
+   const style=getComputedStyle(el,'::before')
+   return {border:style.borderRightWidth,transform:style.transform,marker:getComputedStyle(el).listStyleType}
+  })
+  const closedChevron=await chevron()
+  expect(closedChevron).toMatchObject({border:'1px',marker:'none'})
+  await disclosure.click()
   expect(await context.locator('.terminal-native-context-lines').isVisible()).toBe(true)
+  expect((await chevron()).transform).not.toBe(closedChevron.transform)
   expect(await page.locator('#sherlock-template-data').count()).toBe(0)
   expect(await page.locator('script').count()).toBe(2) // Only fixture and installers, never artifact scripts.
   expect(await page.locator('tbody tr:first-child td').nth(1).evaluate(el=>getComputedStyle(el).color)).toBe(theme==='dark'?'rgb(225, 232, 240)':'rgb(27, 39, 52)')

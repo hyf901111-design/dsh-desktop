@@ -254,7 +254,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const flyout=(kind,icon,label,trigger,disabled=false)=>previewMode&&kind!=='export'?null:jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
   const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(webLink?560:target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
   return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
-    row('expand','放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
+    card()?.querySelector('[data-research-container-expand]')&&row('expand',card()?.open?'关闭放大阅读':'放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
     webLink&&row('zoom-out','缩小10%',()=>controlWorkbenchWebZoom(card(),-.1),false,{'data-workbench-web-zoom':'out'}),
     webLink&&row('zoom-in','放大10%',()=>controlWorkbenchWebZoom(card(),.1),false,{'data-workbench-web-zoom':'in'}),
     webLink&&row('zoom-reset','重置页面大小',()=>controlWorkbenchWebZoom(card(),0),false,{'data-workbench-web-zoom':'reset'}),
@@ -284,7 +284,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))
-  ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),document.body)
+  ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),card()?.open?card():document.body)
 }
 
 export function handleWorkbenchMultiSelect(root,workspace,event) {
@@ -405,11 +405,11 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     // Select the containing card before embedded controls intercept pointer events.
     if(toolRef.current==='select'&&handleWorkbenchMultiSelect(root,workspace,e))return
     if(e.target?.closest?.('[data-financial-widget],[data-calendar-tool]'))return
-    if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
+    if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,summary,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
     const handle=e.target?.closest?.('[data-workbench-drag-handle]'),resize=e.target?.closest?.('[data-workbench-resize]'),card=e.target?.closest?.('[data-research-node-id]')||(resize&&root.querySelector('[data-research-node-id="'+CSS.escape(resize.getAttribute('data-workbench-resize'))+'"]'))
     const draw=toolRef.current==='component'&&!resize
-    if(readOnly||workspace.getPreviewMode?.()||!draw&&(!handle&&!resize)||e.target?.closest?.('input,textarea,button,a,select,[contenteditable=true]')&&!resize)return
+    if(readOnly||workspace.getPreviewMode?.()||!draw&&(!handle&&!resize)||e.target?.closest?.('input,textarea,button,a,select,summary,[contenteditable=true]')&&!resize)return
     if(card?.hasAttribute('data-research-geometry-blocked')||card?.hasAttribute('open'))return
     const current=workspace.getSnapshot(),canonicalBefore=workspace.getWorkbenchCells(),before=workspace.getWorkbenchVisibleCells(),id=(resize||handle)?.getAttribute(resize?'data-workbench-resize':'data-workbench-drag-handle')
     if(!draw&&!before.some(c=>c.id===id))return
@@ -505,7 +505,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
 }
-export function workbenchNativeTableDimensions(node,tableRoot) {
+export function workbenchNativeTableDimensions(tableRoot) {
   if(tableRoot?.getAttribute('data-sherlock-market-native')!=='table'||!(tableRoot.getBoundingClientRect().width>0))return null
   const view=tableRoot.ownerDocument.defaultView,pixels=value=>Math.max(0,parseFloat(value)||0)
   const insets=element=>{const s=view.getComputedStyle(element);return pixels(s.paddingTop)+pixels(s.paddingBottom)+pixels(s.borderTopWidth)+pixels(s.borderBottomWidth)}
@@ -523,21 +523,10 @@ export function workbenchNativeTableDimensions(node,tableRoot) {
     height+=natural+margins(element)
   }
   const bounds=tableRoot.getBoundingClientRect(),card=tableRoot.closest('[data-research-node-id]')
-  if(!tableRoot.querySelector('.terminal-native-readout')){
-    const columns=Array.from(tableRoot.querySelectorAll('thead th')).map(el=>el.textContent),capacity=Math.max(24,Math.floor((bounds.width-20)/6))
-    const lines=Math.max(1,...Array.from(tableRoot.querySelectorAll('tbody tr')).map(row=>{
-      const text=Array.from(row.cells).map((cell,i)=>(columns[i]??'')+'：'+(cell.getAttribute('title')??cell.textContent)).join(' · ')
-      return Math.ceil([...text].reduce((n,c)=>n+(/[^\x00-\xff]/u.test(c)?2:1),0)/capacity)
-    }))
-    // A row selection reveals all source fields below the table. Reserve its
-    // wrapped reading area so that opening it does not hide the last data row.
-    height+=Math.min(136,lines*17)+12
-  }
   // The native renderer can sit inside an inset host content wrapper. Measure
   // that chrome too; it is additional to the table's own padding and source.
   const chrome=card?Math.max(58,Math.min(200,Math.ceil(card.getBoundingClientRect().height-bounds.height))):58
-  const floor=researchMarketDimensions(node,true,bounds.width)?.height||0
-  return {width:656,height:Math.min(840,Math.max(floor,Math.ceil(height+chrome)))}
+  return {width:656,height:Math.min(840,Math.max(160,Math.ceil(height+chrome)))}
 }
 export function workbenchMeasuredDimensions(node,value,width=value?.width||node.width) {
   const preferred=researchOptimalDimensions({...node,width:0,height:0})
@@ -549,7 +538,7 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   // The explicit metrics measurement covers complete max-content tracks and
   // provenance. Its actual height replaces the conservative starting estimate.
   // Older clipped viewport reports still need that estimate as a safety floor.
-  const floor=table?.height||(metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0)
+  const floor=table&&value?.intrinsicTable===true?160:table?.height||(metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0)
   const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership|stock-ownership|company-filings|historical-price|charting)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
   const height=Math.max(floor,value?.height?value.height+chrome:preferred.height)
@@ -591,7 +580,7 @@ export function measureWorkbenchContents(root,nodes) {
     // replace the readable template height after a manual resize.
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
     const nativeRoot=body.querySelector('[data-sherlock-market-native="table"]')
-    if(nativeRoot){const size=workbenchNativeTableDimensions(node,nativeRoot);if(size){measured.set(node.id,size);continue}}
+    if(nativeRoot){const size=workbenchNativeTableDimensions(nativeRoot);if(size){measured.set(node.id,size);continue}}
     const attachments=body.querySelector('[data-research-attachment-preset]');
     if(attachments){measured.set(node.id,{width:preferred.width,height:Math.max(180,38+Math.max(attachments.offsetHeight,attachments.scrollHeight)+(card.querySelector('.odyssey-data-stamp')?24:0))});continue}
     const audio=body.querySelector('[data-research-audio-preset]')
@@ -814,11 +803,11 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
         if(!id||!workspace.getSnapshot().selection.selectedNodeIds.includes(id))return
         root.__eworkContentFit?.finish();root.focus({preventScroll:true});workspace[data.action]();return
       }
-      if(!data||typeof data!=='object'||Array.isArray(data)||!(Object.keys(data).length===3||Object.keys(data).length===4&&data.intrinsicMetrics===true)||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
+      if(!data||typeof data!=='object'||Array.isArray(data)||!(Object.keys(data).length===3||Object.keys(data).length===4&&(data.intrinsicMetrics===true||data.intrinsicTable===true))||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
       const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
       if(node?.containerSpec?.type==='html'){
-        root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil(node.height-frame.clientHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:{})};contentMeasurements.set(id,value)
+        root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil(node.height-frame.clientHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})};contentMeasurements.set(id,value)
         workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height});root.__eworkContentFit?.refit()
       }
     }
@@ -843,9 +832,9 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     // rows and context on first completion and responsive width changes too.
     let active=true
     const tables=nodes.map(node=>({node,card:root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')})).map(item=>({...item,table:item.card?.querySelector('[data-sherlock-market-native="table"]')})).filter(item=>item.table)
-    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const size=workbenchNativeTableDimensions(node,table);if(size)workspace.setWorkbenchContentHeight(node.id,{html:node.containerSpec.html,width:node.width,height:size.height})}}
+    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const size=workbenchNativeTableDimensions(table);if(size)workspace.setWorkbenchContentHeight(node.id,{html:node.containerSpec.html,width:node.width,height:size.height})}}
     const observer=new ResizeObserver(fitTables),mutations=new MutationObserver(fitTables)
-    for(const {table} of tables){observer.observe(table);for(const child of table.querySelectorAll('table,.terminal-native-context>*'))observer.observe(child);mutations.observe(table,{subtree:true,childList:true,characterData:true})}
+    for(const {table} of tables){observer.observe(table);for(const child of table.querySelectorAll('table,.terminal-native-context>*'))observer.observe(child);mutations.observe(table,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open']})}
     fitTables();return()=>{active=false;observer.disconnect();mutations.disconnect()}
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])

@@ -150,7 +150,7 @@ export function ConversationComponentCard({sessionId,manifest}){
   const receive=event=>{
    const live=current.current,frame=host?.querySelector('iframe[data-research-html-artifact]'),data=event.data
    if(scope.current!==own||!host?.isConnected||!frame?.isConnected||event.source!==frame.contentWindow||live?.id!==componentId||live.sessionId!==sessionId||live.node?.containerSpec?.html!==html)return
-   if(!data||typeof data!=='object'||Array.isArray(data)||data.type!=='sherlock-workbench-content-size'||![3,4].includes(Object.keys(data).length)||!Object.hasOwn(data,'width')||!Object.hasOwn(data,'height')||Object.keys(data).length===4&&data.intrinsicMetrics!==true||!Number.isInteger(data.width)||data.width<1||data.width>2400||!Number.isInteger(data.height)||data.height<1||data.height>12000)return
+   if(!data||typeof data!=='object'||Array.isArray(data)||data.type!=='sherlock-workbench-content-size'||![3,4].includes(Object.keys(data).length)||!Object.hasOwn(data,'width')||!Object.hasOwn(data,'height')||Object.keys(data).length===4&&data.intrinsicMetrics!==true&&data.intrinsicTable!==true||!Number.isInteger(data.width)||data.width<1||data.width>2400||!Number.isInteger(data.height)||data.height<1||data.height>12000)return
    setHeight(previous=>previous===data.height?previous:data.height)
   }
   window.addEventListener('message',receive)

@@ -552,7 +552,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       // Metrics are a bounded scrolling grid. Its visible clipping edge is not
       // the natural height of its rows. Max-content tracks keep these tile
       // boxes intrinsic even when the user has made the card too short.
-      let intrinsicMetrics = false;
+      let intrinsicMetrics = false, intrinsicTable = false;
       if (workbench && document.body.dataset.sherlockMarket === 'metrics') {
         const grid = document.body.querySelector('.market-metrics');
         const tiles = Array.from(grid?.children ?? []).filter(visible).map(el => el.getBoundingClientRect());
@@ -596,6 +596,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
             } else height+=element.getBoundingClientRect().height+margins(element);
           }
           bottom=height;
+          intrinsicTable = true;
         }
       }
       // Quote tables and overview strips have bounded scroll viewports. Their
@@ -641,10 +642,10 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 32 : viewportHeight))
       const key = width + ':' + height
       if (workbench && bottom > 0) {
-        const naturalHeight = Math.min(12000, Math.ceil(bottom)), intrinsicKey = viewportWidth + ':' + naturalHeight + ':' + intrinsicMetrics
+        const naturalHeight = Math.min(12000, Math.ceil(bottom)), intrinsicKey = viewportWidth + ':' + naturalHeight + ':' + intrinsicMetrics + ':' + intrinsicTable
         if (intrinsicKey !== previousIntrinsic) {
           previousIntrinsic = intrinsicKey
-          parent.postMessage({ type: 'sherlock-workbench-content-size', width: Math.min(2400, viewportWidth), height: naturalHeight, ...(intrinsicMetrics ? { intrinsicMetrics: true } : {}) }, '*')
+          parent.postMessage({ type: 'sherlock-workbench-content-size', width: Math.min(2400, viewportWidth), height: naturalHeight, ...(intrinsicMetrics ? { intrinsicMetrics: true } : intrinsicTable ? { intrinsicTable: true } : {}) }, '*')
         }
       }
       if (reports < 6 && key !== previous) {
@@ -991,14 +992,14 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
       if (data.type === 'sherlock-source-request' && Object.keys(data).length === 2 && typeof data.url === 'string' && data.url.length <= 8192) { parent.postMessage({ type: data.type, url: data.url }, '*'); return }
     }
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
-        (Object.keys(data).length === 3 || data.type === 'sherlock-workbench-content-size' && Object.keys(data).length === 4 && data.intrinsicMetrics === true) && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
+        (Object.keys(data).length === 3 || data.type === 'sherlock-workbench-content-size' && Object.keys(data).length === 4 && (data.intrinsicMetrics === true || data.intrinsicTable === true)) && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
         ['sherlock-content-size', 'sherlock-workbench-content-size'].includes(data.type) && Number.isInteger(data.width) && Number.isInteger(data.height) &&
         data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 12000) {
-      const key = data.width + ':' + data.height + ':' + (data.intrinsicMetrics === true)
+      const key = data.width + ':' + data.height + ':' + (data.intrinsicMetrics === true) + ':' + (data.intrinsicTable === true)
       if (data.type === 'sherlock-workbench-content-size') {
         if (key !== previousIntrinsicSize) {
           previousIntrinsicSize = key
-          parent.postMessage({ type: data.type, width: data.width, height: data.height, ...(data.intrinsicMetrics === true ? { intrinsicMetrics: true } : {}) }, '*')
+          parent.postMessage({ type: data.type, width: data.width, height: data.height, ...(data.intrinsicMetrics === true ? { intrinsicMetrics: true } : data.intrinsicTable === true ? { intrinsicTable: true } : {}) }, '*')
         }
         return
       }

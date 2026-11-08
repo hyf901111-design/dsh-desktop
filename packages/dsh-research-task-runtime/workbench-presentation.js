@@ -5,6 +5,12 @@ import {WORKBENCH_MODE_CSS} from './workbench-style.js'
 import {CALENDAR_PRESENTATION_CSS} from './calendar-presentation.js'
 import {WORKBENCH_TABLE_COLUMNS_CSS} from './workbench-table-columns.js'
 // Presentation only: the artifact's data, DOM and event handlers stay intact.
+export const WORKBENCH_DISCLOSURE_CSS = `
+body details>summary{list-style:none!important;cursor:pointer}
+body details>summary::-webkit-details-marker{display:none}
+body details>summary::before{content:'';display:inline-block;box-sizing:border-box;width:6px;height:6px;margin:0 8px 1px 2px;border:solid currentColor;border-width:0 1px 1px 0;transform:rotate(-45deg);vertical-align:2px}
+body details[open]>summary::before{transform:rotate(45deg)}
+`
 export const WORKBENCH_PRESENTATION_CSS = `/* EWORK_OPENBB_COMPONENT_V1 */
 @layer ework-workbench {
 :root{--sherlock-price-up:#df4f57!important;--sherlock-price-down:#00a83e!important}
@@ -94,6 +100,8 @@ body .feed-meta{display:flex!important;flex-direction:column!important;align-ite
 body .feed-meta :is(time,.feed-category){max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important}
 body .feed-copy{min-width:0!important;overflow-wrap:anywhere!important}
 body a{color:var(--sherlock-link)!important}body summary{background:transparent!important;color:var(--sherlock-muted)!important;font-size:11px!important;line-height:17px!important}
+${WORKBENCH_DISCLOSURE_CSS}
+
 body :is(.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown){padding:8px 10px!important;min-height:0!important;overflow:auto!important}
 body .rScV5Q_containerKpis{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;padding:8px 10px!important;gap:6px 12px!important;overflow:auto!important}
 body .rScV5Q_containerKpis>div{padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;min-width:0!important}

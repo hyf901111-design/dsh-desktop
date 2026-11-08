@@ -69,6 +69,7 @@ it('measures complete rows and wrapped provenance independently of the clipped v
  try{
   await expect.poll(()=>page.evaluate(()=>window.tableSizes.at(-1)?.height||0)).toBeGreaterThan(170)
   const report=await page.evaluate(()=>window.tableSizes.at(-1)),height=measured(node,report,586).height
+  expect(report.intrinsicTable).toBe(true)
   await page.setViewportSize({width:586,height:Math.ceil(height-58)});await fits(frame)
   const wide=await page.evaluate(()=>window.tableSizes.at(-1)?.height||0)
   await page.setViewportSize({width:360,height:170})
@@ -115,12 +116,18 @@ it.each(['light','dark','enterprise','openterminal'])('fits actual host-native r
    const height=researchMarketDimensions({containerSpec:spec},true,width).height
    await page.locator('article').evaluate((el,{width,height})=>Object.assign(el.style,{width:width+'px',height:height+'px'}),{width,height})
    // Use the same intrinsic helper as first-completion and Arrange paths.
-   const natural=await page.evaluate(spec=>workbenchNativeTableDimensions({containerSpec:spec},document.querySelector('[data-sherlock-market-native]')),spec)
+   const natural=await page.evaluate(()=>workbenchNativeTableDimensions(document.querySelector('[data-sherlock-market-native]')))
    await page.locator('article').evaluate((el,height)=>el.style.height=height+'px',natural.height)
-   for(let repeat=0;repeat<3;repeat++)expect(await page.evaluate(spec=>workbenchNativeTableDimensions({containerSpec:spec},document.querySelector('[data-sherlock-market-native]')),spec)).toEqual(natural)
+   for(let repeat=0;repeat<3;repeat++)expect(await page.evaluate(()=>workbenchNativeTableDimensions(document.querySelector('[data-sherlock-market-native]')))).toEqual(natural)
    let g=await inspect();expect(g.rowEnd,JSON.stringify(g)).toBeLessThanOrEqual(g.wrapEnd+1);expect(g.footerTotal).toBeLessThanOrEqual(g.footerClient+1);expect(g.footerEnd).toBeLessThanOrEqual(g.rootEnd)
    await page.locator('tbody tr:first-child').click()
-   g=await inspect();const selectedSize=await page.evaluate(spec=>workbenchNativeTableDimensions({containerSpec:spec},document.querySelector('[data-sherlock-market-native]')),spec);expect(g.rowEnd,JSON.stringify({width,height,natural,selectedSize,g})).toBeLessThanOrEqual(g.wrapEnd+1);expect(g.footerTotal).toBeLessThanOrEqual(g.footerClient+1);expect(g.readoutTotal).toBeLessThanOrEqual(g.readoutClient+1)
+   const selectedSize=await page.evaluate(()=>workbenchNativeTableDimensions(document.querySelector('[data-sherlock-market-native]')))
+   await page.locator('article').evaluate((el,height)=>el.style.height=height+'px',selectedSize.height)
+   g=await inspect();expect(g.rowEnd,JSON.stringify({width,height,natural,selectedSize,g})).toBeLessThanOrEqual(g.wrapEnd+1)
+   expect(g.footerTotal).toBeLessThanOrEqual(g.footerClient+1)
+   expect(g.readoutClient).toBeGreaterThanOrEqual(20)
+   expect(natural.height).toBeLessThan(height)
+   expect(g.wrapEnd-g.rowEnd).toBeLessThanOrEqual(48)
    await page.locator('tbody tr:first-child').click()
   }
   expect(await page.locator('tbody tr').evaluateAll(rows=>rows.map(row=>[...row.cells].map(cell=>cell.textContent)))).toEqual(observed.rows.map(row=>row.map(String)))
