@@ -181,6 +181,16 @@ function normalizeTemplateAliases(value) {
   const html=/<\/body\s*>/iu.test(value.html)?value.html.replace(/<\/body\s*>/iu,metadata+'$&'):value.html+metadata;
   value={version:value.version,type:value.type,title:value.title,html};
  }
+ // A sourced text/outline snapshot uses the same host provenance contract as
+ // derived content. Keep every supplied label, URL and note; reject unfamiliar
+ // fields instead of dropping them during format recovery.
+ if(['markdown','summary','mind-map'].includes(value?.type)&&!value.source&&Array.isArray(value.sources)&&value.sources.length>0&&value.sources.length<=100&&
+  Object.keys(value).every(key=>['version','type','title','content','sources','asOf','note'].includes(key))&&
+  value.sources.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&Object.keys(row).length>0&&Object.keys(row).every(key=>['label','name','title','url','text'].includes(key))&&Object.values(row).every(text=>typeof text==='string'&&text.trim()&&text.length<=8000)&&(!row.url||(()=>{try{const u=new URL(row.url);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password}catch{return false}})()))){
+  const {sources,...data}=value;
+  const source={title:'来源与说明',text:sources.map(row=>Object.values(row).join('\n')).join('\n\n')};
+  if(source.text.length<=32000)value={...data,type:value.type==='markdown'?'summary':value.type,source};
+ }
  // Markdown with an explicit frozen source is the existing sourced-summary
  // contract. Keep its complete content and metadata instead of spending a
  // repair turn asking the model to remove provenance or retype business data.
@@ -207,6 +217,26 @@ function normalizeTemplateAliases(value) {
  if(['mind-map','summary'].includes(value?.type)&&value.source&&value.note===undefined&&typeof value.notes==='string'){
   const {notes,...data}=value;
   value={...data,note:notes};
+ }
+ // Accept equivalent Markdown heading/list trees only when every nonblank
+ // line can be represented. Never silently discard prose or infer relations.
+ if(value?.type==='mind-map'&&typeof value.content==='string'&&!derivedOutline(value.content)){
+  const lines=value.content.split(/\r?\n/),first=lines.findIndex(line=>line.trim());
+  if(first>=0&&/^[^\s#*+\-].*/u.test(lines[first]))lines[first]='# '+lines[first];
+  let headingDepth=1,listBase=null,headingLine=-1,valid=/^#\s+.+$/u.test(lines[first]||'');
+  for(let i=first+1;valid&&i<lines.length;i++){
+   if(!lines[i].trim())continue;
+   const heading=lines[i].match(/^(#{2,6})\s+(.+)$/u);
+   if(heading){headingDepth=heading[1].length;listBase=null;headingLine=i;lines[i]='  '.repeat(headingDepth-2)+'- '+heading[2];continue}
+   const item=lines[i].match(/^( *)([-*+] )(.+)$/u);
+   if(!item){if(headingLine>=0&&listBase===null&&!/^\s*[#*+\-]/u.test(lines[i])){lines[headingLine]+=' — '+lines[i].trim();lines[i]='';continue}valid=false;break}
+   if(item[1].length%2){valid=false;break}
+   const depth=item[1].length/2;
+   if(listBase===null){if(depth>1){valid=false;break}listBase=depth}
+   lines[i]='  '.repeat(Math.max(0,headingDepth-1+depth-listBase))+item[2]+item[3];
+  }
+  const content=lines.join('\n');
+  if(valid&&derivedOutline(content))value={...value,content};
  }
  if(value?.type==='financial-widget'){
   const defaults=financialWidgetDefaults(value.widget);

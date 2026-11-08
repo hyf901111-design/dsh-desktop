@@ -14,8 +14,15 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  },[workspace])
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
-  const visible=new Set([...workspace.getVisibleBoardSnapshot().files,...workspace.getVisibleBoardSnapshot().artifacts,...workspace.getWorkbenchPlanningNodes()].map(n=>n.id))
-  for(const card of root.querySelectorAll('[data-research-node-id]')){const hidden=Boolean(nav&&!visible.has(card.getAttribute('data-research-node-id')));card.toggleAttribute('data-board-tab-hidden',hidden);card.inert=hidden}
+  const sync=()=>{
+   const page=workspace.getVisibleBoardSnapshot(),visible=new Set([...page.files,...page.artifacts,...workspace.getWorkbenchPlanningNodes()].map(n=>n.id))
+   for(const card of root.querySelectorAll('[data-research-node-id]')){const hidden=Boolean(boardTabsNode(workspace.getSnapshot())&&!visible.has(card.getAttribute('data-research-node-id')));card.toggleAttribute('data-board-tab-hidden',hidden);card.inert=hidden}
+  }
+  sync()
+  // Async card hosts can mount after this parent's layout effect. Reconcile
+  // their page ownership on insertion too, before another user tab click.
+  const observer=new MutationObserver(records=>{if(records.some(record=>[...record.addedNodes].some(node=>node.nodeType===1&&(node.matches?.('[data-research-node-id]')||node.querySelector?.('[data-research-node-id]')))))sync()})
+  observer.observe(root,{childList:true,subtree:true});return()=>observer.disconnect()
  },[snapshot,active,host])
  react.useLayoutEffect(()=>{
   const element=list.current,selected=element?.querySelector('[aria-selected=true]');if(!selected)return

@@ -70,3 +70,24 @@ it('routes complete sourced markdown through the sourced summary contract withou
  expect(JSON.parse(acceptArtifactOutput(JSON.stringify(draft)))).toEqual({...draft,type:'summary'});
  for(const invalid of [{...draft,source:{...source,nodeId:'invalid id'}},{...draft,unknown:'do not discard'}])expect(acceptArtifactOutput(JSON.stringify(invalid))).toBeUndefined();
 });
+
+it('recovers a single explicit unmarked root without dropping any outline node or provenance',()=>{
+ const plain={...mindmap,content:mindmap.content.replace(/^# /u,'')};
+ expect(JSON.parse(acceptArtifactOutput(JSON.stringify(plain)))).toEqual(mindmap);
+ for(const content of ['根\n普通正文不能被丢弃','根\n- 分支\n另一个根','根\n    - 跳过第一层'])expect(acceptArtifactOutput(JSON.stringify({...mindmap,content}))).toBeUndefined();
+ expect(acceptArtifactOutput(JSON.stringify({...plain,unknown:'must validate'}))).toBeUndefined();
+});
+
+it('normalizes heading-and-list outlines losslessly into actual nested nodes instead of rejecting valid acquired content',()=>{
+ const content='# 系统\n\n## 部门 [P1]\n- 岗位甲\n  - 姓名甲\n### 下属部门\n- 岗位乙\n\n## 核查说明\n- 保留原文'
+ const spec={...mindmap,content},out=JSON.parse(acceptArtifactOutput(JSON.stringify(spec)))
+ expect(out.content).toBe('# 系统\n\n- 部门 [P1]\n  - 岗位甲\n    - 姓名甲\n  - 下属部门\n    - 岗位乙\n\n- 核查说明\n  - 保留原文')
+ expect(out.source).toEqual(spec.source)
+ expect(JSON.parse(acceptArtifactOutput(JSON.stringify({...spec,content:'# 根\n## 节\n不得丢掉的正文'}))).content).toContain('节 — 不得丢掉的正文')
+})
+
+it('显式章节下的正文归于该章节，不猜测上下级也不丢失说明',()=>{
+ const data={version:1,type:'mind-map',title:'组织',content:'# 根\n## 会员大会\n原文定义及日期。\n另一行说明。\n### 理事会\n66 人，时点待核。',source:{title:'原文',text:'完整来源'}}
+ const result=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
+ expect(result.content).toBe('# 根\n- 会员大会 — 原文定义及日期。 — 另一行说明。\n\n\n  - 理事会 — 66 人，时点待核。\n')
+})
