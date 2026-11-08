@@ -37,6 +37,18 @@ it('核对 Word 表格中的裸编号、组合与范围，不因格式误拦也�
  for(const text of ['"P35–P38"','[T9]','"P38–P36"','正文没有出处','ATP36x'])expect(workbenchDocumentCitationIssue(text,docs)).toBeTruthy()
 })
 
+it('checks citations in delivered text and source footnotes instead of HTML implementation identifiers',()=>{
+ const docs=[{blocks:[{id:'P1'},{id:'T2'}]}]
+ const card=html=>JSON.stringify({version:1,type:'html',title:'来源对照',html})
+ const markup='<style>.p99{color:red}</style><script>const p0="[P999]"</script><section id="p0"><p class="P444">正文 [P1]</p></section>'
+ expect(workbenchDocumentCitationIssue(card(markup),docs)).toBeUndefined()
+ expect(workbenchDocumentCitationIssue(card('<p>文件说明</p><aside hidden data-component-source-info>[T2]</aside>'),docs)).toBeUndefined()
+ for(const html of ['<p id="P1">没有正文出处</p>','<script>const source="[P1]"</script><p>缺少来源</p>','<template>[P1]</template><p>缺少来源</p>','<p>错误出处 [P999]</p>','<p>错误范围 [P1–P3]</p>'])expect(workbenchDocumentCitationIssue(card(html),docs)).toBeTruthy()
+ const pdf=[{pages:[{page:3}]}]
+ expect(workbenchDocumentCitationIssue(card('<p>结论 第3页</p><script>const s="第999页"</script>'),pdf)).toBeUndefined()
+ expect(workbenchDocumentCitationIssue(card('<p title="第3页">缺少出处</p>'),pdf)).toBeTruthy()
+})
+
 it('保留带空单元格的全部文档行、数值、链接和出处', () => {
   const table = {
     version: 1, type: 'table', title: '人员明细',

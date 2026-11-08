@@ -81,7 +81,15 @@ const pdfCitationIssue = '报告组件缺少可核对的 PDF 原文页码。请�
 export function workbenchDocumentCitationIssue(text, documents, { required = true } = {}) {
   const pages = new Set(documents.flatMap(document => (document.pages ?? []).map(page => page.page)))
   const blocks = new Set(documents.flatMap(document => (document.blocks ?? []).map(block => block.id)))
-  const normalized = text.normalize('NFKC')
+  // Verify delivered content and source metadata, not implementation identifiers
+  // such as HTML id="p0", CSS .p99 or script variables. Inert source footnotes
+  // remain text; script/template copies cannot satisfy the citation gate.
+  const artifacts = extractArtifactObjects(text)
+  const strings = value => typeof value === 'string' ? [value]
+    : Array.isArray(value) ? value.flatMap(strings)
+    : value && typeof value === 'object' ? Object.entries(value).flatMap(([key, item]) =>
+      key === 'html' && typeof item === 'string' ? [researchHtmlText(item)] : strings(item)) : []
+  const normalized = (artifacts.length === 1 ? strings(artifacts[0]).join('\n') : text).normalize('NFKC')
   let found = false
   for (const match of pages.size ? normalized.matchAll(pdfPageReference) : []) {
     found = true
