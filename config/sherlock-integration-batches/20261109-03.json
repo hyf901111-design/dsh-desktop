@@ -168,6 +168,76 @@
           "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
         ],
         "generatedAt": "2026-11-08T17:30:43.934933+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2e8164e79a82c1ab466de6d341163f44a7c649a2",
+        "verificationCommit": "2e8164e79a82c1ab466de6d341163f44a7c649a2",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-style.test.js",
+              "test/research-canvas-presentation.test.js",
+              "test/market-table-reading-browser.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/component-source-info-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/observed-source-completeness.test.js test/workbench-style.test.js test/research-canvas-presentation.test.js test/market-table-reading-browser.test.js test/dataset-view-browser.test.js test/research-grid-workbench.test.js test/component-source-info-browser.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "2e8164e79a82c1ab466de6d341163f44a7c649a2",
+            "completedAt": "2026-11-08T17:30:48.449Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench.test.js",
+              "-t",
+              "桥接计划只携带",
+              "--testTimeout",
+              "20000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-workbench.test.js -t 桥接计划只携带 --testTimeout 20000",
+            "verifiedCommit": "2e8164e79a82c1ab466de6d341163f44a7c649a2",
+            "completedAt": "2026-11-08T17:30:48.449Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2e8164e79a82c1ab466de6d341163f44a7c649a2",
+            "completedAt": "2026-11-08T17:30:48.449Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2e8164e79a82c1ab466de6d341163f44a7c649a2",
+            "completedAt": "2026-11-08T17:30:48.449Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T17:30:48.449Z"
       }
     }
   ],
