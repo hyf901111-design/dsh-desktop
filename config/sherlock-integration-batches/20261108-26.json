@@ -192,6 +192,62 @@
           "有效宽度不足 440px 时临时横排并保留竖向偏好。"
         ],
         "generatedAt": "2026-11-08T08:05:15.776822+00:00"
+      },
+      "merged": {
+        "mergeCommit": "f2893037ed4e3f4333c17a76fe65964a7b17875e",
+        "verificationCommit": "f2893037ed4e3f4333c17a76fe65964a7b17875e",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/workbench-auto-arrange.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/bundled-component-skill.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/board-tabs-contract.test.js test/board-tabs-client.test.js test/board-tabs-theme-browser.test.js test/board-tabs-connection-client.test.js test/board-tabs-connection-browser.test.js test/research-grid-arrange-tabs.test.js test/workbench-auto-arrange.test.js test/workbench-structure-theme-browser.test.js test/research-grid-workbench.test.js test/bundled-component-skill.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "f2893037ed4e3f4333c17a76fe65964a7b17875e",
+            "completedAt": "2026-11-08T08:05:20.377Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f2893037ed4e3f4333c17a76fe65964a7b17875e",
+            "completedAt": "2026-11-08T08:05:20.377Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "f2893037ed4e3f4333c17a76fe65964a7b17875e",
+            "completedAt": "2026-11-08T08:05:20.377Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T08:05:20.377Z"
       }
     }
   ],
