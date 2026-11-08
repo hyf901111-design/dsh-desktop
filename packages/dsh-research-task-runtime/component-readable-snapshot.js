@@ -11,6 +11,7 @@ const missingDisplay=value=>missing(value)||pureMissing(value)
 const itemMetadata=new Set(['detail','source','url'])
 const scalar=value=>missing(value)||typeof value==='string'||typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=1e15
 const esc=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+const text=value=>missingDisplay(value)?'<span data-workbench-status-text>来源未提供</span>':esc(value)
 const entryMode=mode=>({rows:'row',series:'seriesItem',items:'item',events:'event'}[mode]??mode)
 
 function sourceEventIdentity(mapping,responses,now,scope){
@@ -177,13 +178,6 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
    if(!readable)return null
   }catch{return null}
  }
- const text=value=>missingDisplay(value)?'<span data-workbench-status-text>来源未提供</span>':esc(value)
- const cell=(value,index)=>{
-  if(index===readable.linkColumn)return '<a href="'+esc(value)+'" target="_blank" rel="noopener noreferrer">'+esc(value)+'</a>'
-  if(readable.mode==='events'&&index>readable.linkColumn&&typeof value==='string'&&value.length>2000)return '<details><summary>展开完整来源说明</summary>'+esc(value)+'</details>'
-  return text(value)
- }
- const headers=readable.columns.map((value,index)=>'<th scope="col">'+(readable.fixedColumns?.[index]?'<span data-workbench-status-text>'+esc(value)+'</span>':esc(value))+'</th>').join(''),rows=readable.rows.map(row=>'<tr>'+row.map((value,index)=>'<td>'+cell(value,index)+'</td>').join('')+'</tr>').join('')
  const sources=[...new Map(records.map(record=>{
   const label=record.response?.source??record.response?.sourceId
   let url
@@ -218,6 +212,29 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
  const sourceGaps=hostMetadata?.gaps.length?'<p data-readable-source-gaps role="status"><span data-workbench-status-text>来源缺失项：</span>'+hostMetadata.gaps.map(esc).join('、')+'</p>':''
  const templated=value=>object(value)&&(Object.hasOwn(value,'$template')||Object.values(value).some(templated))||Array.isArray(value)&&value.some(templated)
  const metadata=['subject','asOf','range','unit','subtitle','note'].filter(key=>key==='asOf'||!templated(mapping[key])).filter(key=>key==='asOf'?Object.hasOwn(data,key):typeof data[key]==='string'&&data[key].trim()).map(key=>'<p data-readable-meta="'+key+'">'+text(key==='asOf'?asOf:data[key])+'</p>').join('')
+ return renderReadableSnapshot(data,readable,{provider,metadata,sourceGaps})
+}
+
+// Input is an already accepted literal data candidate, not a mapping claim or
+// executable HTML. The caller still verifies document citations.
+export function componentReadableDocumentTable(data){
+ const readable=readableData(data)
+ if(!readable||readable.mode!=='rows'||readableSnapshotUnavailable(data))return
+ const provider=(data.sources??[]).map(({label,url})=>url
+  ? '<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>'
+  : esc(label)).join(' · ')
+ const metadata=['asOf','note'].filter(key=>typeof data[key]==='string'&&data[key].trim())
+  .map(key=>'<p data-readable-meta="'+key+'">'+esc(data[key])+'</p>').join('')
+ return renderReadableSnapshot(data,readable,{provider,metadata,sourceGaps:''})
+}
+
+function renderReadableSnapshot(data,readable,{provider,metadata,sourceGaps}){
+ const cell=(value,index)=>{
+  if(index===readable.linkColumn)return '<a href="'+esc(value)+'" target="_blank" rel="noopener noreferrer">'+esc(value)+'</a>'
+  if(readable.mode==='events'&&index>readable.linkColumn&&typeof value==='string'&&value.length>2000)return '<details><summary>展开完整来源说明</summary>'+esc(value)+'</details>'
+  return text(value)
+ }
+ const headers=readable.columns.map((value,index)=>'<th scope="col">'+(readable.fixedColumns?.[index]?'<span data-workbench-status-text>'+esc(value)+'</span>':esc(value))+'</th>').join(''),rows=readable.rows.map(row=>'<tr>'+row.map((value,index)=>'<td>'+cell(value,index)+'</td>').join('')+'</tr>').join('')
  const availability=readableSnapshotUnavailable(data)?'<p data-readable-availability role="status" data-workbench-status-text>来源未提供可用数值；已保留实际字段与来源。</p>':''
  const overview=readable.mode==='series'?(readableTrendFigure(data)??''):''
  const bodyMarker=data.type==='market'?' data-sherlock-market="'+esc(data.variant)+'"':''

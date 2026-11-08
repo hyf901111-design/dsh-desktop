@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
-import { workbenchDocumentCitationIssue, restoreDocumentLists } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 
 it('保留带空单元格的全部文档行、数值、链接和出处', () => {
   const table = {
@@ -66,7 +66,7 @@ it('文档明细失败后自动尝试换一种呈现，只有说明时保持未�
     const inspect = () => runtime.inspect({parentSessionId:'parent',taskId:task.taskId})
     await expect.poll(() => inspect().state).toBe('failed')
     expect(attempts).toHaveLength(2)
-    expect(attempts[1]).toContain('本卡需要交付实际明细或层级')
+    expect(attempts[1]).toContain('明细表缺少可核验的结构化行')
     expect(inspect()).not.toHaveProperty('finalOutput')
   } finally {
     await runtime.dispose()
@@ -81,7 +81,24 @@ it.each(['markdown','html'])('根据可核验的原文补足 %s 卡中漏掉的�
   const output = JSON.stringify({version:1,type,title:'机构',...(type==='html'?{html:'<main>'+content+'</main>'}:{content})})
   expect(restoreDocumentLists(output,documents,scope)).toContain('甲分部、乙分部、丙分部。')
   expect(restoreDocumentLists(output,documents,scope)).toContain('原文完整清单 [P8]')
+  expect(restoreDocumentLists(output,documents,scope,{searchable:true})).toBeUndefined()
   expect(restoreDocumentLists(output,documents,'按 [P8] 展示3个分支机构的完整名单')).toContain('甲分部、乙分部、丙分部。')
   expect(restoreDocumentLists(output,documents,'简介3个分部')).toBe(output)
   expect(restoreDocumentLists(output.replace('甲分部、丙分部','甲分部、乙分部、丙分部'),documents,scope)).not.toContain('原文完整清单')
+})
+
+it('document tables reject script-only shells and keep every oversized row searchable', () => {
+  const title='来源明细'
+  const shell={version:1,type:'html',title,html:'<input placeholder="搜索"><table><thead><tr><th>名称</th></tr></thead><tbody></tbody></table><button>返回交互视图</button>'}
+  expect(documentTableOutput(JSON.stringify(shell))).toBeUndefined()
+  const rows=Array.from({length:107},(_,i)=>['实际记录'+i,'[T1]'])
+  const table={version:1,type:'table',title,columns:['名称','出处'],rows,asOf:'文件时点',sources:[{label:'资料.docx'}]}
+  const result=JSON.parse(documentTableOutput(JSON.stringify(table)))
+  expect(result.html).toContain('data-readable-search')
+  expect(result.html).toContain('sherlockShared.register')
+  expect(result.html).toContain('107 / 107')
+  expect(result.html.match(/<tbody>([\s\S]*?)<\/tbody>/u)[1].match(/<tr>/gu)).toHaveLength(107)
+  expect(result.html).toContain('实际记录106')
+  expect(workbenchDocumentCitationIssue(JSON.stringify(result),[{blocks:[{id:'T1'}]}])).toBeUndefined()
+  expect(documentTableOutput(JSON.stringify({...table,sources:[{label:'资料',url:'javascript:alert(1)'}]}))).toBeUndefined()
 })
