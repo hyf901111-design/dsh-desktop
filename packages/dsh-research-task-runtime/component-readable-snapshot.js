@@ -1,6 +1,7 @@
 import {evaluateMapping,materializeComponentMapping,sourceDisplaySelector,componentSourceMetadata} from './component-data-refresh.js'
 import {templateDataIssue} from './template-data-contract.js'
 import {readableTrendFigure} from './component-readable-chart.js'
+import {timelineDataIssue,timelineOrder} from './timeline-template-contract.js'
 
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)
 const missing=value=>value===null||value===undefined||value===''
@@ -10,12 +11,24 @@ const missingDisplay=value=>missing(value)||pureMissing(value)
 const itemMetadata=new Set(['detail','source','url'])
 const scalar=value=>missing(value)||typeof value==='string'||typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=1e15
 const esc=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+const entryMode=mode=>({rows:'row',series:'seriesItem',items:'item',events:'event'}[mode]??mode)
+
+function sourceEventIdentity(mapping,responses,now,scope){
+ const paths=['title','time','url'].map(key=>mapping[key])
+ if(paths.some(selector=>!object(selector)||typeof selector.$path!=='string'||!selector.$path||Object.keys(selector).some(key=>!['$path','$from'].includes(key))))return false
+ const origin=selector=>selector.$path.replace(/\[(\d+)\]/gu,'.$1').split('.').slice(0,-1).join('.')
+ return paths.every((selector,index)=>{
+  if(selector.$from!==paths[0].$from||origin(selector)!==origin(paths[0]))return false
+  const value=evaluateMapping(selector,responses,now,scope)
+  return typeof value==='string'||index===1&&value===null
+ })
+}
 
 // This is a source-selector proof, not a second mapping language. Selection,
 // ordering and conversion still run in the existing bounded evaluator. Every
 // business cell must originate in an observed response, not a model literal.
 function sourcePayload(mapping,responses,now,scope=responses,cohort=[scope],mode='value'){
- if(Array.isArray(mapping))return mapping.length>0&&mapping.every(value=>sourcePayload(value,responses,now,scope,cohort,mode==='rows'?'row':mode==='series'?'seriesItem':mode==='items'?'item':mode))
+ if(Array.isArray(mapping))return mapping.length>0&&mapping.every(value=>sourcePayload(value,responses,now,scope,cohort,entryMode(mode)))
  if(!object(mapping))return false
  // Numeric text defaults/prefixes cannot turn a source omission into a value.
  if(['$prefix','$suffix'].some(key=>typeof mapping[key]==='string'&&/\d/u.test(mapping[key])))return false
@@ -31,10 +44,12 @@ function sourcePayload(mapping,responses,now,scope=responses,cohort=[scope],mode
   const rows=evaluateMapping({...select,$each:each,$map:{$path:''}},responses,now,scope)
   const child=$map??(mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:undefined)
   if(!Array.isArray(rows)||!rows.length||child===undefined)return false
-  const childMode=mode==='rows'?'row':mode==='series'?'seriesItem':mode==='items'?'item':mode
+  const childMode=entryMode(mode)
   return rows.every(row=>sourcePayload(child,responses,now,row,rows,childMode))
  }
  if(Object.hasOwn(mapping,'$map'))return sourcePayload(mapping.$map,responses,now,source,[source],mode)
+ if(mode==='event')return sourceEventIdentity(mapping,responses,now,scope)
+ if(mode==='events')return false
  if(Object.hasOwn(mapping,'$path')){
   if(Object.hasOwn(mapping,'$default')&&!pureMissing(mapping.$default))return false
   const selector={$path:mapping.$path,...(mapping.$from!==undefined?{$from:mapping.$from}:{})}
@@ -74,6 +89,15 @@ function metricDisplayMapping(value){
 }
 
 function readableData(data){
+ if(data?.type==='timeline'){
+  if(!timelineDataIssue(data)||timelineDataIssue(data,{checkCapacity:false})||
+   !data.items.every(item=>typeof item.url==='string'))return null
+  const fields=[...new Set(data.items.flatMap(item=>Object.keys(item)))].filter(key=>!['id','title','time','url'].includes(key))
+  const labels={summary:'来源说明',actor:'参与人',object:'对象',source:'来源'}
+  const {items}=timelineOrder(data)
+  return {mode:'events',columns:['标题','原始时间','原文链接',...fields.map(key=>Object.hasOwn(labels,key)?labels[key]:key)],
+   linkColumn:2,rows:items.map(item=>[item.title,item.time,item.url,...fields.map(key=>item[key]??null)])}
+ }
  const metric=data?.type==='kpi'||data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)
  if(metric){
   if(!Array.isArray(data.items)||!data.items.length)return null
@@ -116,6 +140,7 @@ function readableData(data){
 }
 
 export function readableSnapshotUnavailable(data){
+ if(data?.type==='timeline')return false
  if(Array.isArray(data?.items))return data.items.length>0&&data.items.every(item=>missingDisplay(item?.value))
  if(Array.isArray(data?.series))return data.series.length>0&&data.series.every(series=>series.values.every(missingDisplay))
  return Array.isArray(data?.rows)&&data.rows.length>0&&data.rows.every(row=>row.every(missingDisplay))
@@ -138,7 +163,7 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
  let readable=readableData(data)
  if(!readable||!records.length||records.some(record=>record.purpose==='discovery'))return null
  try{
-  if(!sourcePayload(mapping[readable.mode],responses,now,responses,[responses],readable.mode))return null
+  if(!sourcePayload(mapping[readable.mode==='events'?'items':readable.mode],responses,now,responses,[responses],readable.mode))return null
   if(readable.mode==='series'&&!sourcePayload(mapping.labels,responses,now))return null
  }catch{return null}
  if(readable.mode==='items'){
@@ -153,7 +178,12 @@ export function componentReadableSnapshot(data,mapping,responses,records,now=new
   }catch{return null}
  }
  const text=value=>missingDisplay(value)?'<span data-workbench-status-text>来源未提供</span>':esc(value)
- const headers=readable.columns.map((value,index)=>'<th scope="col">'+(readable.fixedColumns?.[index]?'<span data-workbench-status-text>'+esc(value)+'</span>':esc(value))+'</th>').join(''),rows=readable.rows.map(row=>'<tr>'+row.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')
+ const cell=(value,index)=>{
+  if(index===readable.linkColumn)return '<a href="'+esc(value)+'" target="_blank" rel="noopener noreferrer">'+esc(value)+'</a>'
+  if(readable.mode==='events'&&index>readable.linkColumn&&typeof value==='string'&&value.length>2000)return '<details><summary>展开完整来源说明</summary>'+esc(value)+'</details>'
+  return text(value)
+ }
+ const headers=readable.columns.map((value,index)=>'<th scope="col">'+(readable.fixedColumns?.[index]?'<span data-workbench-status-text>'+esc(value)+'</span>':esc(value))+'</th>').join(''),rows=readable.rows.map(row=>'<tr>'+row.map((value,index)=>'<td>'+cell(value,index)+'</td>').join('')+'</tr>').join('')
  const sources=[...new Map(records.map(record=>{
   const label=record.response?.source??record.response?.sourceId
   let url

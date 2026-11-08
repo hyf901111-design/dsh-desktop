@@ -3,7 +3,7 @@ import {Window} from 'happy-dom'
 import {runInNewContext} from 'node:vm'
 import {readFileSync} from 'node:fs'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
-import {resolveBoundComponent,COMPONENT_STATIC_CHART_PROMPT,COMPONENT_BOUND_DATA_PROMPT} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {resolveBoundComponent,resolveComponentSnapshot,COMPONENT_STATIC_CHART_PROMPT,COMPONENT_BOUND_DATA_PROMPT} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {readableSnapshotRuntime} from '../packages/dsh-research-task-runtime/component-readable-snapshot.js'
 import {installWorkbenchLocaleMessages,validWorkbenchLocaleMessage} from '../packages/dsh-research-task-runtime/workbench-style.js'
@@ -43,6 +43,58 @@ async function run(f,hostContext){
  return {task:runtime.inspect({parentSessionId:'readable-parent',taskId:receipt.taskId}),start,bindData}
 }
 async function dom(output,check){const window=new Window();try{window.document.body.innerHTML=JSON.parse(output).html;await check(window.document)}finally{await window.happyDOM.abort()}}
+function datedFeed(count,body){
+ const records=['a','b'].map((name,group)=>{
+  const sourceUrl='https://example.com/api/releases/'+name
+  return {tool:'web_fetch',purpose:'snapshot',args:{url:sourceUrl},response:{source:'example.com',sourceUrl,records:Array.from({length:count},(_,index)=>({
+   id:group*count+index+1,title:name+' 原始版本 '+index,time:`2026-10-${String(1+index%20).padStart(2,'0')}T10:00:00Z`,url:`https://example.com/releases/${name}/${index}`,body
+  }))}}
+ })
+ const requests=records.map(({tool,args},index)=>({key:'r'+index,tool,args}))
+ const items=requests.map(({key})=>({$from:key,$each:'',$map:{id:path('id'),title:path('title'),time:path('time'),url:path('url'),summary:path('body')}}))
+ const draft={version:1,type:'data-bound',requests,mapping:{version:1,type:'timeline',title:'版本发布动态',items}}
+ return {draft,records,prompt:'工作台：版本跟踪\n本面板：版本发布动态\n使用时间线显示原始版本、发布日期和原链接。'}
+}
+
+it.each([[3,'发布说明。'.repeat(500)],[12,'发布说明。'.repeat(280)],[31,'短说明']])('delivers all observed dated rows with no second model response when the native template cannot fit them',async(count,body)=>{
+ const f=datedFeed(count,body),{task,start,bindData}=await run(f)
+ expect(task.state,task.error).toBe('completed')
+ expect(start).toHaveBeenCalledOnce()
+ expect(bindData).not.toHaveBeenCalled()
+ await dom(task.finalOutput,document=>{
+  const rows=[...document.querySelectorAll('tbody tr')]
+  expect(rows).toHaveLength(2*count)
+  const source=f.records.flatMap(record=>record.response.records)
+  for(const row of rows){
+   const link=row.querySelector('a')
+   const event=source.find(event=>event.url===link.getAttribute('href'))
+   expect(row.cells[0].textContent).toBe(event.title)
+   expect(row.cells[1].textContent).toBe(event.time)
+   expect(row.cells[3].textContent).toContain(body)
+   if(body.length>2000)expect(row.querySelector('details')).not.toBeNull()
+  }
+  expect(new Set(rows.map(row=>row.querySelector('a').href)).size).toBe(2*count)
+ })
+})
+
+it('retains native dated presentation for records that fit and normalizes source numeric IDs',()=>{
+ const {draft,records}=datedFeed(2,'短说明')
+ const result=resolveComponentSnapshot(JSON.stringify(draft),records,now)
+ expect(result.capacitySnapshot).toBeUndefined()
+ expect(readTemplateModel(JSON.parse(result.output)).data.items.map(item=>item.id)).toEqual(['1','2','3','4'])
+})
+
+it.each(['wrong-row','literal-link','unsafe-link','wrong-source','missing-date','conflicting-id'])('does not use capacity fallback to accept %s',kind=>{
+ const {draft,records}=datedFeed(3,'发布说明。'.repeat(500))
+ const first=draft.mapping.items[0].$map
+ if(kind==='wrong-row')first.url={$from:'r0',$path:'records.0.url'}
+ if(kind==='literal-link')first.url='https://example.com/releases/a/0'
+ if(kind==='unsafe-link')records[0].response.records[0].url='javascript:alert(1)'
+ if(kind==='wrong-source')draft.requests[0].args={url:'https://example.com/unobserved'}
+ if(kind==='missing-date')delete records[0].response.records[0].time
+ if(kind==='conflicting-id')records[0].response.records[0].id=2
+ expect(resolveComponentSnapshot(JSON.stringify(draft),records,now)).toBeNull()
+})
 it.each(['metrics','missing','table','chart'])('completes source-materialized %s with one runtime response and a complete readable snapshot',async kind=>{
  const f=fixture(kind),{task,start,bindData}=await run(f)
  expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce();expect(bindData).not.toHaveBeenCalled()

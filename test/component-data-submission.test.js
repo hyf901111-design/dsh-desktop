@@ -318,3 +318,21 @@ it('maps original web object and array paths without changing row scope or prove
  expect(mapped.data.labels).toEqual(['v2','v1'])
  expect(mapped.data.series[0].values).toEqual([4,9])
 })
+
+it('accepts a verified release list with a long body in the original submit call',async()=>{
+ const f=await fixture(),sourceUrl='https://example.com/api/releases',link='https://example.com/releases/v2'
+ const body='完整发布说明。'.repeat(500)
+ f.records.splice(0,1,{tool:'web_fetch',purpose:'snapshot',args:{url:sourceUrl},response:{
+  source:'example.com',sourceUrl,records:[{id:21,tag:'v2',published:'2026-11-08T01:02:03Z',link,body}]
+ }})
+ const candidate={requests:[{key:'q',tool:'web_fetch',args:{url:sourceUrl}}],mapping:{type:'timeline',version:1,title:'发布动态',
+  items:{$from:'q',$each:'',$map:{id:{$path:'id'},title:{$path:'tag'},time:{$path:'published'},url:{$path:'link'},summary:{$path:'body'}}}}}
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ const result=await f.submission.result
+ const snapshot=resolveComponentSnapshot(result.output[0].text,f.records)
+ expect(result.stopReason).toBe('completed')
+ expect(snapshot.capacitySnapshot).toBe(true)
+ expect(snapshot.data.items[0]).toEqual({id:'21',title:'v2',time:'2026-11-08T01:02:03Z',url:link,summary:body})
+ expect(JSON.parse(snapshot.output).html).toContain('href="'+link+'"')
+})
