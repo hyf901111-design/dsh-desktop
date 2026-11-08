@@ -151,6 +151,57 @@
           "签名构建与新包原生验收需在集成后执行"
         ],
         "generatedAt": "2026-11-08T00:32:45.529730+00:00"
+      },
+      "merged": {
+        "mergeCommit": "f4e415efa9d0a5fcc34ed14f0c8ff8407465ff19",
+        "verificationCommit": "f4e415efa9d0a5fcc34ed14f0c8ff8407465ff19",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-native-plan-recovery.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-source-binding.test.js",
+              "test/workbench-comparison-intent.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/workbench-public-data-profile.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-native-plan-recovery.test.js test/component-data-submission.test.js test/component-source-binding.test.js test/workbench-comparison-intent.test.js test/workbench-table-input-contract.test.js test/workbench-public-data-profile.test.js test/cartesian-chart-template.test.js test/bundled-component-skill.test.js --maxWorkers=4",
+            "verifiedCommit": "f4e415efa9d0a5fcc34ed14f0c8ff8407465ff19",
+            "completedAt": "2026-11-08T00:33:19.948Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f4e415efa9d0a5fcc34ed14f0c8ff8407465ff19",
+            "completedAt": "2026-11-08T00:33:19.948Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "f4e415efa9d0a5fcc34ed14f0c8ff8407465ff19",
+            "completedAt": "2026-11-08T00:33:19.948Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T00:33:19.948Z"
       }
     }
   ],
