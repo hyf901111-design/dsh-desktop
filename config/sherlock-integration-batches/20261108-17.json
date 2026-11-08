@@ -53,6 +53,27 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T05:40:01.271956+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b9d8edfd5b2eb08ce7174e17688cb1947cea5f2c",
+        "verificationCommit": "b9d8edfd5b2eb08ce7174e17688cb1947cea5f2c",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "plans custom HTML as an interactive page"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t plans custom HTML as an interactive page",
+            "verifiedCommit": "b9d8edfd5b2eb08ce7174e17688cb1947cea5f2c",
+            "completedAt": "2026-11-08T05:40:19.725Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T05:40:19.725Z"
       }
     }
   ],
