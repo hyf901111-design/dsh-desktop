@@ -8,8 +8,8 @@ import {WORKBENCH_TABLE_COLUMNS_CSS} from './workbench-table-columns.js'
 export const WORKBENCH_DISCLOSURE_CSS = `
 body details>summary{list-style:none!important;cursor:pointer}
 body details>summary::-webkit-details-marker{display:none}
-body details>summary::before{content:'';display:inline-block;box-sizing:border-box;width:6px;height:6px;margin:0 8px 1px 2px;border:solid currentColor;border-width:0 1px 1px 0;transform:rotate(-45deg);vertical-align:2px}
-body details[open]>summary::before{transform:rotate(45deg)}
+body details>summary::before{content:'';display:inline-block;vertical-align:middle;width:12px;height:12px;margin-inline-end:6px;flex:0 0 12px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='black' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;transform:rotate(-90deg);transform-origin:center}
+body details[open]>summary::before{transform:rotate(0deg)}
 `
 export const WORKBENCH_PRESENTATION_CSS = `/* EWORK_OPENBB_COMPONENT_V1 */
 @layer ework-workbench {

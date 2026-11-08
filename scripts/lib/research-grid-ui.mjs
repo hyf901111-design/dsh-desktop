@@ -803,12 +803,14 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
         if(!id||!workspace.getSnapshot().selection.selectedNodeIds.includes(id))return
         root.__eworkContentFit?.finish();root.focus({preventScroll:true});workspace[data.action]();return
       }
-      if(!data||typeof data!=='object'||Array.isArray(data)||!(Object.keys(data).length===3||Object.keys(data).length===4&&(data.intrinsicMetrics===true||data.intrinsicTable===true))||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
+      if(!data||typeof data!=='object'||Array.isArray(data)||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
+      const intrinsic=data.intrinsicMetrics===true||data.intrinsicTable===true,disclosureOpen=data.disclosureOpen===true
+      if(Object.keys(data).length!==3+Number(intrinsic)+Number(disclosureOpen))return
       const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
       if(node?.containerSpec?.type==='html'){
         root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil(node.height-frame.clientHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})};contentMeasurements.set(id,value)
-        workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height});root.__eworkContentFit?.refit()
+        workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height,disclosureOpen});root.__eworkContentFit?.refit()
       }
     }
     window.addEventListener('message',contentSize)

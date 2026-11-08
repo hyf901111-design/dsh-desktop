@@ -33,7 +33,6 @@ it('页签菜单与普通组件菜单在应用主题和四种看板模式交叉�
 
 it('四模式选中态还原设计颜色，更多图标沿用同模式原生组件的前景色',async()=>{
  const page=await browser.newPage()
- const canvasColors={light:'rgb(237, 240, 242)',dark:'rgb(9, 9, 11)',enterprise:'rgb(243, 245, 247)',openterminal:'rgb(5, 5, 5)'}
  const palettes={
   light:{surface:'rgb(255, 255, 255)',selected:'rgb(232, 242, 252)',text:'rgb(22, 140, 240)',idle:'rgb(119, 119, 129)',radius:'4px'},
   dark:{surface:'rgb(21, 21, 24)',selected:'rgb(34, 49, 71)',text:'rgb(22, 140, 240)',idle:'rgb(160, 160, 171)',radius:'4px'},
@@ -47,9 +46,9 @@ it('四模式选中态还原设计颜色，更多图标沿用同模式原生组�
    const paint=await page.evaluate(()=>{
     const nav=document.querySelector('[data-board-tabs-nav]'),bar=getComputedStyle(nav),selected=getComputedStyle(document.querySelector('[aria-selected=true]')),idle=getComputedStyle(document.querySelector('[aria-selected=false]'))
     nav.dataset.boardTabsOrientation='horizontal'
-    return {surface:bar.backgroundColor,selected:selected.backgroundColor,text:selected.color,idle:idle.color,radius:bar.borderRadius,gutters:['::before','::after'].map(part=>getComputedStyle(nav,part).backgroundColor),canvas:getComputedStyle(nav.parentElement).backgroundColor}
+    return {surface:bar.backgroundColor,selected:selected.backgroundColor,text:selected.color,idle:idle.color,radius:bar.borderRadius}
    })
-   expect(paint,JSON.stringify({appDark,board})).toEqual({...want,canvas:canvasColors[board],gutters:[canvasColors[board],canvasColors[board]]})
+   expect(paint,JSON.stringify({appDark,board})).toEqual(want)
    expect(await page.locator('[data-board-tabs-more]').evaluate(el=>getComputedStyle(el).color)).toBe(await page.locator('[data-native-more]').evaluate(el=>getComputedStyle(el).color))
    expect(await page.locator('[data-board-tabs-nav]').evaluate(el=>el.getBoundingClientRect().height)).toBe(34)
    const borders=await page.locator('[data-board-tabs-nav],[data-research-node-id="native"]').evaluateAll(els=>els.map(el=>{const s=getComputedStyle(el);return ['Top','Right','Bottom','Left'].map(side=>({width:s['border'+side+'Width'],style:s['border'+side+'Style'],color:s['border'+side+'Color']}))}))

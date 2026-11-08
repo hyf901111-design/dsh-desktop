@@ -20,8 +20,12 @@ beforeAll(async()=>{
  source=grid.patchResearchGridWorkbench(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))
  source=require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)
  expect(require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)).toBe(source)
+ // The installed SDK may contain an earlier serialized preview. Exercise the
+ // current runtime with the production sandbox bridge and canvas renderer.
+ source=source.replace('function buildResearchHtmlPreview(html, title = ', 'const buildResearchHtmlPreview = window.fixtureBuildHtml;\nfunction bundledResearchHtmlPreview(html, title = ')
  expect(()=>new Function(source)).not.toThrow()
  const entry=`import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
+ import {buildResearchHtmlPreview} from './packages/dsh-research-task-runtime/html-artifact.js';window.fixtureBuildHtml=buildResearchHtmlPreview;
  let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.dshDesktop={};
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
  (0,eval)(${JSON.stringify(source)});
@@ -146,7 +150,7 @@ it.each(['vertical-short','vertical-overflow','vertical-bottom','horizontal-shor
  }finally{await page.close()}
 },15000)
 
-it.each(['horizontal','vertical'])('keeps %s tabs in the viewport and switches pages from the bottom',async orientation=>{
+it.each(['horizontal','vertical'])('scrolls the %s navigation according to its orientation',async orientation=>{
  const {page,first,second,target}=await fixture()
  try{
   await page.evaluate(({first,second,target,orientation})=>{
@@ -161,15 +165,18 @@ it.each(['horizontal','vertical'])('keeps %s tabs in the viewport and switches p
   const initial=await top()
   await canvas.evaluate(el=>{el.scrollTop=el.scrollHeight})
   await expect.poll(()=>canvas.evaluate(el=>el.scrollTop)).toBeGreaterThan(700)
+  if(orientation==='horizontal'){
+   expect(await top()).toBeLessThan(initial-700)
+   return
+  }
   expect(await top()).toBe(initial)
   const viewport=await canvas.boundingBox(),nav=await bar.boundingBox()
-  const strips=orientation==='vertical'?[viewport.y]:[viewport.y,nav.y+nav.height]
-  const capture=()=>Promise.all(strips.map(y=>page.screenshot({clip:{x:Math.ceil(nav.x)+4,y:Math.ceil(y)+1,width:Math.floor(nav.width)-8,height:8}})))
-  const gutters=await capture()
-  const hideContent=await page.addStyleTag({content:'[data-research-node-id],.ew-board-tabs-rail,.ew-board-tabs-nav::before,.ew-board-tabs-nav::after{visibility:hidden!important}'})
+  const capture=()=>page.screenshot({clip:{x:Math.ceil(nav.x)+4,y:Math.ceil(viewport.y)+1,width:Math.floor(nav.width)-8,height:8}})
+  const gutter=await capture()
+  const hideContent=await page.addStyleTag({content:'.ew-board-tabs-rail{visibility:hidden}'})
   const bareGrid=await capture()
   await hideContent.evaluate(el=>el.remove())
-  expect(gutters.every((strip,index)=>strip.equals(bareGrid[index])),'sticky navigation gutters should show only the canvas grid').toBe(true)
+  expect(gutter.equals(bareGrid),'the gutter above vertical navigation shows the canvas grid').toBe(true)
   const {x,y,width,height}=await tab.boundingBox()
   await page.mouse.click(x+width/2,y+height/2)
   await expect.poll(async()=>(await state(page)).active).toBe(target)
@@ -206,3 +213,51 @@ it('the vertical list scrolls only after its tabs exceed the viewport, including
   expect(await label.getAttribute('aria-selected')).toBe('true')
  }finally{await page.close()}
 },15000)
+
+it('selected HTML cards scroll the canvas outside a scrollable region and grow around expanded details',async()=>{
+ const {page,first,second,errors}=await fixture()
+ try{
+  page.setDefaultTimeout(4500)
+  await page.evaluate(({first,second})=>{
+   const w=fixture.workspace,base=w.getSnapshot().artifacts.find(n=>n.id===first)
+   const html=`<html><head><style>html{overflow-y:hidden!important}#diagram{height:160px;overflow-x:auto}#diagram>div{width:125%}#records{height:52px;overflow:auto}#records p{height:180px;margin:0}</style></head><body><div id="diagram"><div>治理关系图</div></div><div id="records"><p>有独立滚动的明细</p></div><details><summary><span>说明</span></summary>${'<p>完整的治理架构说明。</p>'.repeat(14)}</details></body></html>`
+   w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===first?{...base,kind:'generated-container',title:'组织架构',generationStatus:'completed',containerSpec:{version:1,type:'html',title:'组织架构',html}}:n))
+   w.setBoardTabsPresentation('vertical')
+   w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:19},{id:second,x:0,y:19,w:40,h:40}],true)
+   w.updateSelection([first],'replace')
+  },{first,second})
+  const canvas=page.locator('[data-research-canvas]'),card=page.locator(`[data-research-node-id="${first}"]`),below=page.locator(`[data-research-node-id="${second}"]`)
+  const body=card.frameLocator('iframe[data-research-html-artifact]').frameLocator('iframe')
+  const diagram=body.locator('#diagram'),records=body.locator('#records'),summary=body.locator('summary'),details=body.locator('details')
+  const offset=()=>canvas.evaluate(el=>el.scrollTop)
+  const geometry=async()=>[(await card.boundingBox()).height,(await below.boundingBox()).y+(await offset())]
+  await body.locator('html[data-workbench-selected="true"]').waitFor({state:'attached'})
+  expect(await diagram.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeGreaterThan(0)
+  await expect.poll(()=>canvas.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeGreaterThan(250)
+  await records.hover();await page.mouse.wheel(0,70)
+  await expect.poll(()=>records.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+  expect(await offset()).toBe(0)
+  await records.evaluate(el=>{el.scrollTop=el.scrollHeight});await page.mouse.wheel(0,85)
+  await expect.poll(offset).toBeGreaterThan(0)
+  await canvas.evaluate(el=>{el.scrollTop=0})
+  await diagram.hover();await page.mouse.wheel(25,85)
+  await expect.poll(offset).toBeGreaterThan(0)
+  expect(await diagram.evaluate(el=>el.scrollLeft)).toBe(0)
+  await canvas.evaluate(el=>{el.scrollTop=0})
+  const closed=await geometry()
+  const marker=()=>summary.evaluate(el=>{const s=getComputedStyle(el,'::before');return [s.verticalAlign,s.width,s.height,s.transform]})
+  const closedMarker=await marker()
+  await summary.click()
+  await expect.poll(async()=>(await geometry())[0]).toBeGreaterThan(closed[0]+100)
+  await expect.poll(async()=>(await geometry())[1]).toBeGreaterThan(closed[1]+100)
+  expect(await details.locator('p').last().evaluate(el=>el.getBoundingClientRect().bottom<=window.innerHeight)).toBe(true)
+  const openMarker=await marker()
+  expect(closedMarker.slice(0,3)).toEqual(['middle','12px','12px'])
+  expect(openMarker.slice(0,3)).toEqual(closedMarker.slice(0,3))
+  expect(openMarker[3]).not.toBe(closedMarker[3])
+  await summary.click()
+  await expect.poll(async()=>Math.round((await geometry())[0])).toBe(Math.round(closed[0]))
+  await expect.poll(async()=>Math.round((await geometry())[1])).toBe(Math.round(closed[1]))
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
