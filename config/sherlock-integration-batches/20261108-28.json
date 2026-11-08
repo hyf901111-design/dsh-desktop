@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-28",
+  "branch": "codex/integration/20261108-28",
+  "baseMainCommit": "e6b703b04263b4d0c4d449ece9454c4300ff78fb",
+  "expectedMainCommit": "e6b703b04263b4d0c4d449ece9454c4300ff78fb",
+  "createdAt": "2026-11-08T08:43:03.089Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话组件生成进度卡的动态淡斜纹背景",
+        "branch": "codex/feat/enterprise-borderless-tab-fill-20261108",
+        "baseCommit": "e6b703b04263b4d0c4d449ece9454c4300ff78fb",
+        "tipCommit": "89a97bbd6919c2494739ac26527192741ff06428",
+        "commits": [
+          {
+            "commit": "89a97bbd6919c2494739ac26527192741ff06428",
+            "parents": [
+              "e6b703b04263b4d0c4d449ece9454c4300ff78fb"
+            ],
+            "subject": "为对话组件生成进度增加低对比斜纹动画"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/workbench-progress.css"
+          },
+          {
+            "status": "M",
+            "path": "test/home-workbench-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-refresh-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-feedback-upgrade-preservation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench-feedback-browser.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/research-workbench-refresh-feedback.test.js",
+              "test/home-workbench-progress.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "48 项聚焦检查通过",
+            "verifiedCommit": "89a97bbd6919c2494739ac26527192741ff06428",
+            "completedAt": "2026-11-08T08:43:01.368252+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "89a97bbd6919c2494739ac26527192741ff06428",
+            "completedAt": "2026-11-08T08:43:01.368252+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "89a97bbd6919c2494739ac26527192741ff06428",
+            "completedAt": "2026-11-08T08:43:01.368252+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证深浅色、0/4、2/4、4/4 真实宽度、失败重试后保持进度与减少动态效果。保留对话轮次、刷新状态和重试能力。"
+        },
+        "acceptanceCriteria": [
+          "已生成部分以淡斜纹按真实计数填充，生成和重试时缓慢移动",
+          "待处理或失败不计入已生成数量，完成后保持静止",
+          "标题、计数和按钮仍可读可操作"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T08:43:01.368252+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-workbench-feedback-browser.test.js",
+        "test/research-workbench-feedback.test.js",
+        "test/research-planning-feedback.test.js",
+        "test/workbench-feedback-upgrade-preservation.test.js",
+        "test/research-workbench-refresh-feedback.test.js",
+        "test/home-workbench-progress.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
