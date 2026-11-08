@@ -38,7 +38,7 @@ export function parseResearchMarketNativeTable(html, doc) {
   // Keep saved pre-pagination tables and the module-runner semicolon variant.
   // They grant no execution privilege: scripts are never evaluated. Host script
   // changes deliberately fall back until their projection is reviewed again.
-  const knownRuntimes = variant === 'table' ? [[2411,2045077824],[4501,1696460176],[4503,3289983162]] : [[979, 2127678402]];
+  const knownRuntimes = variant === 'table' ? [[2411,2045077824],[4501,1696460176],[4503,3289983162],[4886,3072760194],[4888,655082652]] : [[979, 2127678402]];
   if (runtimes.length > 1 || runtimes.some(script => {
     let hash = 2166136261;
     for (const char of script.textContent) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
@@ -154,6 +154,7 @@ export function ResearchMarketNativeTable({ data }) {
   const [query, setQuery] = react.useState('');
   const [selected, setSelected] = react.useState(null);
   const [page,setPage]=react.useState(0);
+  const [pageSize,setPageSize]=react.useState(20);
   react.useEffect(()=>{setPage(0);setSelected(null)},[data]);
   if (!data) return (0, react_jsx_runtime.jsx)('div', { children: '表格暂不可用' });
   const filtered = query.trim()
@@ -170,7 +171,7 @@ export function ResearchMarketNativeTable({ data }) {
       ? x - y : left.localeCompare(right, 'zh-CN', { numeric: true });
     return order.ascending ? comparison : -comparison;
   });
-  const paginated=data.variant==='table'&&data.rows.length>30,pageSize=20,pageCount=Math.max(1,Math.ceil(rows.length/pageSize)),currentPage=Math.min(page,pageCount-1);
+  const paginated=data.variant==='table'&&data.rows.length>30,pageCount=Math.max(1,Math.ceil(rows.length/pageSize)),currentPage=Math.min(page,pageCount-1);
   const shown=paginated?rows.slice(currentPage*pageSize,(currentPage+1)*pageSize):rows;
   const changePage=value=>{setPage(Math.max(0,Math.min(pageCount-1,value)));setSelected(null)};
   const arrow=next=>(0,react_jsx_runtime.jsx)('svg',{width:14,height:14,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.3,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:(0,react_jsx_runtime.jsx)('path',{d:next?'M6 4l4 4-4 4':'M10 4l-4 4 4 4'})});
@@ -211,6 +212,7 @@ export function ResearchMarketNativeTable({ data }) {
     ] }) }),
     paginated&&(0,react_jsx_runtime.jsxs)('nav',{className:'terminal-table-pagination','aria-label':'表格分页',children:[
       (0,react_jsx_runtime.jsx)('span',{'aria-live':'polite',children:rows.length?`${currentPage*pageSize+1}–${Math.min(rows.length,(currentPage+1)*pageSize)} / ${rows.length} 条`:'0 条'}),
+      (0,react_jsx_runtime.jsx)('select',{'aria-label':'每页显示数量',value:pageSize,onChange:e=>{setPageSize(Number(e.target.value));setPage(0);setSelected(null)},children:[10,20,50,100].map(size=>(0,react_jsx_runtime.jsx)('option',{value:size,children:`${size} 条/页`},size))}),
       (0,react_jsx_runtime.jsx)('button',{type:'button','aria-label':'上一页',disabled:currentPage===0,onClick:()=>changePage(currentPage-1),children:arrow(false)}),
       (0,react_jsx_runtime.jsx)('select',{'aria-label':'表格页码',value:currentPage,onChange:e=>changePage(Number(e.target.value)),children:Array.from({length:pageCount},(_,i)=>(0,react_jsx_runtime.jsx)('option',{value:i,children:`${i+1} / ${pageCount}`},i))}),
       (0,react_jsx_runtime.jsx)('button',{type:'button','aria-label':'下一页',disabled:currentPage>=pageCount-1,onClick:()=>changePage(currentPage+1),children:arrow(true)})

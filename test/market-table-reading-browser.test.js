@@ -84,7 +84,7 @@ it('measures complete rows and wrapped provenance independently of the clipped v
 it('pages long sandbox tables without losing records, original links or full body and searches and sorts all pages',async()=>{
  const long={...observed,columns:['记录','日期','正文'],rows:Array.from({length:51},(_,i)=>['记录'+String(i).padStart(2,'0'),'2026-11-08','完整正文'+i+'。'.repeat(50)]),rowLinks:Array.from({length:51},(_,i)=>'https://example.com/original/'+i),note:'完整口径。'}
  const preferred=researchMarketContentDimensions('table',{...long,availableWidth:1100})
- const {page,frame}=await preview(long,1100,preferred.height-58)
+ const {page,frame,spec}=await preview(long,1100,preferred.height-58)
  try{
   frame.page().setDefaultTimeout(3000)
   expect(await frame.locator('tbody tr').count()).toBe(51)
@@ -108,6 +108,16 @@ it('pages long sandbox tables without losing records, original links or full bod
   await frame.getByLabel('表格页码').selectOption('2')
   expect(await frame.locator('tbody tr:not([hidden]) td:first-child').last().textContent()).toBe('记录00')
   const wrap=frame.locator('.market-table-wrap');expect(await wrap.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
+  for(const size of [50,100,10,20]){
+   await page.evaluate(()=>window.tableSizes=[])
+   await frame.getByLabel('每页显示数量').selectOption(String(size))
+   expect(await frame.locator('tbody tr:not([hidden])').count()).toBe(Math.min(size,51))
+   await expect.poll(()=>page.evaluate(()=>window.tableSizes.at(-1)?.height||0)).toBeGreaterThan(0)
+   const natural=measured({containerSpec:spec},await page.evaluate(()=>window.tableSizes.at(-1)),1100).height
+   await page.setViewportSize({width:1100,height:Math.ceil(natural-58)})
+   await expect.poll(()=>wrap.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
+   if(size===50)expect(natural).toBeGreaterThan(840)
+  }
  }finally{await page.close()}
 },15000)
 
@@ -213,6 +223,16 @@ it.each(['light','dark','enterprise','openterminal'])('pages actual host-native 
   expect(await page.locator('tbody tr:first-child td:first-child').textContent()).toBe('记录50')
   await page.getByLabel('表格页码').selectOption('2')
   expect(await page.locator('tbody tr:last-child td:first-child').textContent()).toBe('记录00')
+  const sizes=[]
+  for(const size of [50,100,10,20]){
+   await page.getByLabel('每页显示数量').selectOption(String(size))
+   expect(await page.locator('tbody tr').count()).toBe(Math.min(size,51))
+   expect(await page.getByLabel('表格页码').inputValue()).toBe('0')
+   const h=await page.evaluate(()=>workbenchNativeTableDimensions(document.querySelector('[data-sherlock-market-native]')).height);sizes.push(h)
+   await page.locator('article').evaluate((el,h)=>el.style.height=h+'px',h)
+   expect(await page.locator('.fund-native-table-wrap').evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
+  }
+  expect(sizes[0]).toBeGreaterThan(840);expect(sizes[1]).toBeGreaterThan(sizes[0]);expect(sizes[2]).toBeLessThan(sizes[3])
   await page.screenshot({path:'/tmp/ework-live-rail/pagination-native-'+mode+'.png'})
  }finally{await page.close()}
 },20000)
