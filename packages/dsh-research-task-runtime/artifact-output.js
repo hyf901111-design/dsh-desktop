@@ -24,6 +24,7 @@ import { researchHtmlText } from './html-artifact.js';
 import { chinaMarketWindow } from './component-source-tools.js';
 import { financialWidgetDefaults } from './financial-widget-contract.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
+import {derivedOutline} from './derived-template-contract.js';
 
 // Linear scan, string/escape aware: prose around a complete JSON object is harmless.
 // Never eval model output, concatenate fragments, or guess missing values.
@@ -158,10 +159,20 @@ function normalizeTemplateAliases(value) {
   const defaults=financialWidgetDefaults(value.widget);
   return defaults?{...defaults,...value}:value;
  }
+ if(value?.type==='mind-map'&&(value.asOf!==undefined||value.note!==undefined)&&
+   Object.keys(value).every(key=>['version','type','title','content','asOf','note'].includes(key))&&
+   [value.asOf,value.note].every(text=>text===undefined||typeof text==='string'&&text.trim()&&text.length<=2000)&&derivedOutline(value.content)) {
+  const {asOf,note,...outline}=value;
+  return {...outline,source:{title:'来源与说明',text:[asOf,note].filter(Boolean).join('\n\n')}};
+ }
  const keyed=normalizeKeyedTableProjection(value).data;
- // Static artifact rendering has always displayed keyed null cells as missing.
- // Source materialization retains the real null for its original semantic gates.
  if(keyed!==value)value={...keyed,rows:keyed.rows.map(row=>row.map(cell=>cell===null?'—':cell))};
+ // Explicitly empty cells display as missing. Keep the row, including all
+ // nonempty values, and do not fill absent column keys or nested values.
+ if(value?.type==='table'&&Array.isArray(value.rows)&&value.rows.every(Array.isArray)) {
+  const blank=cell=>cell===null||typeof cell==='string'&&!cell.trim();
+  value={...value,rows:value.rows.map(row=>row.some(cell=>!blank(cell))?row.map(cell=>blank(cell)?'—':cell):row)};
+ }
  // Native tables cannot carry provenance. Route a fully valid sourced table
  // to the trusted interactive template instead of retrying or losing its notes.
  // A note-only snapshot must keep its actual dates/sources in the note/rows;
