@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 import {resolveBoundComponent,resolveComponentSnapshot,COMPONENT_STATIC_CHART_PROMPT,COMPONENT_BOUND_DATA_PROMPT} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
-import {readableSnapshotRuntime} from '../packages/dsh-research-task-runtime/component-readable-snapshot.js'
+import {componentReadableDocumentTable,readableSnapshotRuntime} from '../packages/dsh-research-task-runtime/component-readable-snapshot.js'
 import {installWorkbenchLocaleMessages,validWorkbenchLocaleMessage} from '../packages/dsh-research-task-runtime/workbench-style.js'
 import {WORKBENCH_ENGLISH} from '../packages/dsh-research-task-runtime/workbench-locale.js'
 
@@ -316,4 +316,19 @@ it('allows a failed capacity date check to repair from a newly observed correct 
  const receipt=await runtime.start({parentSessionId:'mapped-repair-parent',canvasNodeId:'mapped-repair-node',kind:'container',prompt:'工作台：最新股票行情\n本面板：最新行情\n优先使用 market 类型；variant: metrics。'});await runtime.tasks.get(receipt.taskId).runPromise
  const task=runtime.inspect({parentSessionId:'mapped-repair-parent',taskId:receipt.taskId})
  expect(task.state,task.error).toBe('completed');expect(calls).toBe(2)
+})
+
+
+it('keeps long table text readable behind real disclosures and makes original HTTP links usable',async()=>{
+ const body='完整来源正文。'.repeat(400),url='https://example.com/releases/long'
+ const output=componentReadableDocumentTable({version:1,type:'table',title:'完整长正文',columns:['版本','原链接','正文'],rows:[['v1',url,body]],sources:[{label:'原始发布',url}]})
+ expect(output).toBeDefined()
+ await dom(JSON.stringify(output),document=>{
+  const row=document.querySelector('tbody tr'),details=row.querySelector('details')
+  expect(row.cells[1].querySelector('a').getAttribute('href')).toBe(url)
+  expect(details.open).toBe(false)
+  expect(details.querySelector('summary').textContent).toBe('展开完整正文')
+  expect(details.textContent).toContain(body)
+  details.open=true;expect(details.open).toBe(true)
+ })
 })
