@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-23",
+  "branch": "codex/integration/20261108-23",
+  "baseMainCommit": "1e85ec302ad1e3a141ac31ecc972806e927778af",
+  "expectedMainCommit": "1e85ec302ad1e3a141ac31ecc972806e927778af",
+  "createdAt": "2026-11-08T06:59:16.611Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "文档明细与架构交付可靠性",
+        "branch": "codex/feat/workbench-document-delivery-20261108",
+        "baseCommit": "1e85ec302ad1e3a141ac31ecc972806e927778af",
+        "tipCommit": "f3df9e217cb1a64124b4e8d9d6e446d8fdfe5b08",
+        "commits": [
+          {
+            "commit": "f3df9e217cb1a64124b4e8d9d6e446d8fdfe5b08",
+            "parents": [
+              "1e85ec302ad1e3a141ac31ecc972806e927778af"
+            ],
+            "subject": "保留文档明细空值与架构附注并校验实际交付"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-document-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/bundled-component-skill.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "38 项聚焦检查通过",
+            "verifiedCommit": "f3df9e217cb1a64124b4e8d9d6e446d8fdfe5b08",
+            "completedAt": "2026-11-08T06:59:15.159581+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "f3df9e217cb1a64124b4e8d9d6e446d8fdfe5b08",
+            "completedAt": "2026-11-08T06:59:15.159581+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "f3df9e217cb1a64124b4e8d9d6e446d8fdfe5b08",
+            "completedAt": "2026-11-08T06:59:15.159581+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "使用原任务生成 JSON 复现，保留实际 30 行，架构节点与来源均保留；集成包用原请求再测"
+        },
+        "acceptanceCriteria": [
+          "表格空值不使整表丢失",
+          "思维导图附注保持原有层级和来源",
+          "只剩说明时不会标文档明细完成",
+          "原附件重新生成后逐组核对"
+        ],
+        "risks": [
+          "现有行情表面断言在变更前后都失败，聚焦交接不运行该既有失败项。"
+        ],
+        "generatedAt": "2026-11-08T06:59:15.159581+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/bundled-component-skill.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
