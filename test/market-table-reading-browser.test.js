@@ -81,19 +81,33 @@ it('measures complete rows and wrapped provenance independently of the clipped v
   await page.setViewportSize({width:360,height:Math.ceil(measured(node,narrow,360).height-58)});await fits(frame)
  }finally{await page.close()}
 },15000)
-it('keeps short source notes compact and bounds long tables without losing their final rows or provenance',async()=>{
- const short={...observed,note:'来源：腾讯财经公开报价。'},long={...observed,rows:Array.from({length:80},(_,i)=>[String(i),...observed.rows[i%3].slice(1)]),note:observed.note.repeat(5)}
- expect(researchMarketContentDimensions('table',short).height).toBeLessThan(researchMarketContentDimensions('table',observed).height)
- const preferred=researchMarketContentDimensions('table',{...long,availableWidth:360})
- expect(preferred.height).toBeLessThanOrEqual(840)
- const {page,frame}=await preview(long,360,preferred.height-58)
+it('pages long sandbox tables without losing records, original links or full body and searches and sorts all pages',async()=>{
+ const long={...observed,columns:['记录','日期','正文'],rows:Array.from({length:51},(_,i)=>['记录'+String(i).padStart(2,'0'),'2026-11-08','完整正文'+i+'。'.repeat(50)]),rowLinks:Array.from({length:51},(_,i)=>'https://example.com/original/'+i),note:'完整口径。'}
+ const preferred=researchMarketContentDimensions('table',{...long,availableWidth:1100})
+ const {page,frame}=await preview(long,1100,preferred.height-58)
  try{
-  const wrap=frame.locator('.market-table-wrap');expect(await wrap.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeGreaterThan(0)
-  await wrap.evaluate(el=>el.scrollTop=el.scrollHeight)
-  const g=await geometry(frame);expect(g.rows.at(-1).bottom).toBeLessThanOrEqual(g.wrap.bottom+1)
-  await frame.locator('.market-footer').evaluate(el=>el.scrollTop=el.scrollHeight)
-  expect(g.footer.bottom).toBeLessThanOrEqual(g.viewport)
-  expect(await frame.locator('.market-footer').textContent()).toContain(long.note)
+  frame.page().setDefaultTimeout(3000)
+  expect(await frame.locator('tbody tr').count()).toBe(51)
+  const delivered=[]
+  for(let i=0;i<3;i++){
+   await frame.getByLabel('表格页码').selectOption(String(i))
+   const actual=await frame.locator('tbody tr:not([hidden])').evaluateAll(rows=>rows.map(row=>({cells:[...row.cells].map(cell=>cell.textContent),url:row.querySelector('a').href})))
+   expect(actual).toHaveLength(i===2?11:20);delivered.push(...actual)
+  }
+  expect(delivered).toEqual(long.rows.map((cells,i)=>({cells,url:long.rowLinks[i]})))
+  expect(await frame.getByLabel('下一页').isDisabled()).toBe(true)
+  await frame.getByLabel('搜索表格内容').fill('完整正文50')
+  expect(await frame.locator('tbody tr:not([hidden])').count()).toBe(1)
+  expect(await frame.getByLabel('表格页码').inputValue()).toBe('0')
+  await frame.getByLabel('搜索表格内容').fill('不存在')
+  expect(await frame.locator('tbody tr:not([hidden])').count()).toBe(0)
+  expect(await frame.getByLabel('上一页').isDisabled()).toBe(true);expect(await frame.getByLabel('下一页').isDisabled()).toBe(true)
+  await frame.getByLabel('搜索表格内容').fill('')
+  await frame.getByLabel('按记录排序').click();await frame.getByLabel('按记录排序').click()
+  expect(await frame.locator('tbody tr:not([hidden]) td:first-child').first().textContent()).toBe('记录50')
+  await frame.getByLabel('表格页码').selectOption('2')
+  expect(await frame.locator('tbody tr:not([hidden]) td:first-child').last().textContent()).toBe('记录00')
+  const wrap=frame.locator('.market-table-wrap');expect(await wrap.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
  }finally{await page.close()}
 },15000)
 
@@ -168,3 +182,37 @@ it('expands all twenty ordinary source rows when they fit the reading height bud
   expect(end.y+end.height).toBeLessThanOrEqual(box.y+box.height+1)
  }finally{await page.close()}
 },15000)
+
+it.each(['light','dark','enterprise','openterminal'])('pages actual host-native complete data and refits the last page in %s',async mode=>{
+ const model={...observed,columns:['记录','日期','正文'],rows:Array.from({length:51},(_,i)=>['记录'+String(i).padStart(2,'0'),'2026-11-08','完整正文'+i+'。'.repeat(30)]),rowLinks:Array.from({length:51},(_,i)=>'https://example.com/original/'+i),note:'完整口径。'}
+ const spec=renderMarketArtifact(model),win=new Window(),data=parseResearchMarketNativeTable(spec.html,win.document);win.happyDOM.abort()
+ expect(data.rows).toHaveLength(51)
+ const page=await browser.newPage({viewport:{width:1100,height:1000},reducedMotion:'reduce'})
+ try{
+  await page.setContent('<style>html,body{margin:0}article{display:flex;flex-direction:column;position:relative}#native{height:calc(100% - 58px);flex:none!important}header{height:34px;flex:none}.odyssey-data-stamp{height:24px;flex:none}</style><main data-ework-grid data-workbench-style="'+mode+'"><article data-research-artifact-card data-research-node-id="table" data-selected="true"><header></header><div id="native" class="rScV5Q_containerContent" data-research-preview-body></div><div class="odyssey-data-stamp"><span class="ew-source-actions"></span></div></article></main>')
+  await page.addStyleTag({content:nativeCss});await page.addScriptTag({content:nativeDependencies})
+  await page.addScriptTag({content:'window.react=nativeDeps.react;window.react_jsx_runtime=nativeDeps.jsx;window.NativeTable=('+ResearchMarketNativeTable.toString()+');'+nativeMeasure})
+  await page.evaluate(({data,mode})=>{if(['dark','openterminal'].includes(mode))document.body.setAttribute('data-ds-dark-theme','');nativeDeps.flushSync(()=>nativeDeps.createRoot(document.querySelector('#native')).render(react.createElement(NativeTable,{data})))},{data,mode})
+  const delivered=[],heights=[]
+  for(let i=0;i<3;i++){
+   await page.getByLabel('表格页码').selectOption(String(i))
+   const h=await page.evaluate(()=>workbenchNativeTableDimensions(document.querySelector('[data-sherlock-market-native]')).height);heights.push(h)
+   await page.locator('article').evaluate((el,h)=>el.style.height=h+'px',h)
+   const actual=await page.locator('tbody tr').evaluateAll(rows=>rows.map(row=>({cells:[...row.cells].map(cell=>cell.textContent),url:row.querySelector('a').href})))
+   expect(actual).toHaveLength(i===2?11:20);delivered.push(...actual)
+   expect(await page.locator('.fund-native-table-wrap').evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
+  }
+  expect(heights[2]).toBeLessThan(heights[0])
+  expect(delivered).toEqual(model.rows.map((cells,i)=>({cells,url:model.rowLinks[i]})))
+  expect(await page.getByLabel('下一页').isDisabled()).toBe(true)
+  await page.getByLabel('搜索表格内容').fill('完整正文50');expect(await page.locator('tbody tr').count()).toBe(1)
+  await page.getByLabel('搜索表格内容').fill('不存在');expect(await page.locator('tbody tr').count()).toBe(0)
+  expect(await page.getByLabel('上一页').isDisabled()).toBe(true);expect(await page.getByLabel('下一页').isDisabled()).toBe(true)
+  await page.getByLabel('搜索表格内容').fill('')
+  await page.getByLabel('按记录排序').click();await page.getByLabel('按记录排序').click()
+  expect(await page.locator('tbody tr:first-child td:first-child').textContent()).toBe('记录50')
+  await page.getByLabel('表格页码').selectOption('2')
+  expect(await page.locator('tbody tr:last-child td:first-child').textContent()).toBe('记录00')
+  await page.screenshot({path:'/tmp/ework-live-rail/pagination-native-'+mode+'.png'})
+ }finally{await page.close()}
+},20000)
