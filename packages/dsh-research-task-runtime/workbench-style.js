@@ -47,6 +47,34 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi) :is(summary,p,a){color:white!important}
 :root[data-workbench-style="enterprise"] body .fund-detail-disclosure{border-top:1px solid #ffffff55!important;padding-top:4px!important;margin-top:6px!important}
 :root[data-workbench-style="enterprise"] body .fund-detail-disclosure summary::marker{color:white!important}
+
+/* Structure roles opt in explicitly. The older generators used labelled
+   node groups and repeated bordered grids, so cover those saved shapes too. */
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="node"],[data-sherlock-structure="primary"],:where(.chart:has(.node.root > .role)) .node:has(> .role,> .name)){
+ background:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;
+ border-color:color-mix(in srgb,var(--sherlock-chart-1) 28%,var(--sherlock-border))!important;
+ border-radius:0!important;
+}
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role)){
+ background:var(--sherlock-chart-1)!important;border-color:var(--sherlock-chart-1)!important;color:var(--sherlock-control-on-primary)!important;
+}
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role)) :is(.role,.name,h2,h3,h4,p,span,strong,small,a){
+ color:var(--sherlock-control-on-primary)!important;
+}
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="info"],.info-card,.department-card,[class$="-cards"] > [class$="-card"]:not(:has(table,svg,canvas,button,input,select)),
+ :is([style*="display:grid" i],[style*="display: grid" i])[style*="grid-template-columns"] > :is(div,article,section)[style*="border:"][style*="--sherlock-border"][style*="border-radius"]:has(> :is(div,h3,h4,strong)):not(:has(table,svg,canvas,button,input,select))) {
+ background:color-mix(in srgb,var(--sherlock-chart-1) 5%,var(--sherlock-surface))!important;
+ border-color:var(--sherlock-border)!important;border-inline-start:2px solid var(--sherlock-chart-5)!important;border-radius:0!important;
+}
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="connector"]:not(svg *),.chart:has(.node.root > .role) :is(.vline,.stub)),
+:root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::before,
+:root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::after{
+ background:color-mix(in srgb,var(--sherlock-chart-1) 32%,var(--sherlock-border))!important;
+}
+:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="connector"]{stroke:var(--sherlock-chart-5)!important}
+:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="node"] > :is(rect,ellipse,circle){fill:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;stroke:var(--sherlock-chart-5)!important}
+:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="primary"] > :is(rect,ellipse,circle){fill:var(--sherlock-chart-1)!important;stroke:var(--sherlock-chart-1)!important}
+:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="primary"] :is(text,tspan){fill:var(--sherlock-control-on-primary)!important}
 @media(prefers-reduced-motion:no-preference){
  :root[data-workbench-transition] body,:root[data-workbench-transition] body *{transition:background-color 260ms cubic-bezier(.2,.7,.2,1),color 260ms cubic-bezier(.2,.7,.2,1),border-color 260ms cubic-bezier(.2,.7,.2,1)}
  :root[data-workbench-transition] svg :is(rect,path,line,text,circle){transition:fill 260ms cubic-bezier(.2,.7,.2,1),stroke 260ms cubic-bezier(.2,.7,.2,1)}
