@@ -834,9 +834,11 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       if(details?.tagName!=='DETAILS'||!body?.contains(details)||body.querySelector('iframe'))return
       const node=workspace.getSnapshot().artifacts.find(n=>n.id===card.getAttribute('data-research-node-id'))
       if(!node?.containerSpec||node.containerSpec.type==='html')return
-      const disclosureOpen=!!body.querySelector('details[open]'),bounds=body.getBoundingClientRect()
-      const height=Math.ceil(node.height-bounds.height+Math.max(0,...[...body.querySelectorAll('details[open],[data-research-derived-preset]')].map(child=>child.getBoundingClientRect().bottom-bounds.top+body.scrollTop))+parseFloat(getComputedStyle(body).paddingBottom||0))
-      workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height,disclosureOpen})
+      const open=[...body.querySelectorAll('details[open]')],disclosureOpen=open.length>0
+      // Reserve only the newly revealed flow, never the full scrollable diagram
+      // or its current scroll offset. Saved card geometry remains the baseline.
+      const extraHeight=Math.ceil(open.filter(detail=>!open.some(parent=>parent!==detail&&parent.contains(detail))).reduce((sum,detail)=>sum+[...detail.children].filter(child=>child.tagName!=='SUMMARY').reduce((height,child)=>{const style=getComputedStyle(child);return height+child.getBoundingClientRect().height+(parseFloat(style.marginTop)||0)+(parseFloat(style.marginBottom)||0)},0),0))
+      workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:extraHeight,extraHeight,disclosureOpen})
     }
     root.addEventListener('toggle',nativeDisclosure,true)
     root.__eworkNativeDisclosure=nativeDisclosure

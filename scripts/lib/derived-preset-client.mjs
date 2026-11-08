@@ -11,8 +11,10 @@ ${WORKBENCH_DISCLOSURE_CSS.replaceAll('body ','.ew-derived-preset ')}
 .ew-derived-result p{margin:0 0 10px!important;}.ew-derived-result :is(h1,h2,h3){margin:0 0 10px!important;font-weight:700;}.ew-derived-result ul{margin:0 0 10px!important;padding-left:18px!important;}.ew-derived-result li{margin:0 0 4px!important;}.ew-derived-result a{color:var(--grid-accent,#168fff)!important;}
 .ew-derived-preset>.rScV5Q_mindMap{flex:none;min-height:220px;max-width:100%;}
 .ew-derived-note,.ew-derived-original{font-size:12px;color:var(--grid-muted,#666);}
-.ew-derived-source .ew-derived-original{display:inline-block;margin-left:12px;font-size:11px;}
-.ew-derived-source .ew-derived-original[open]{display:block;margin:8px 0 0;}
+.ew-derived-source:has(>.ew-derived-original){display:grid;grid-template-columns:minmax(0,1fr) max-content;column-gap:12px;align-items:start;}
+.ew-derived-source .ew-derived-original{display:contents;font-size:11px;}
+.ew-derived-source .ew-derived-original summary{grid-column:2;grid-row:1;}
+.ew-derived-source .ew-derived-original pre{grid-column:1/-1;margin:8px 0 0;}
 .ew-derived-original pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;}
 .ew-derived-editor{display:flex;flex-direction:column;gap:10px;min-width:0;}
 .ew-derived-editor textarea{box-sizing:border-box;resize:vertical;width:100%;min-height:140px;max-width:100%;font:12px/18px DINPro,'Noto Sans SC',sans-serif;border:1px solid var(--grid-border,#ced2da);border-radius:4px;color:inherit;background:var(--grid-card,#fff);padding:8px;}
@@ -77,7 +79,7 @@ export function ResearchDerivedPreset({node,sessionId}){
  const result=outline?react_jsx_runtime.jsx(ResearchDerivedMindMap,{nodeId:node.id,outline,content:spec.content,readOnly,onCommit:saveContent}):react_jsx_runtime.jsx('div',{className:'ew-derived-result',children:react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.MarkdownText,{text:spec.content,streaming:false})})
  return react_jsx_runtime.jsxs('div',{ref:host,className:'ew-derived-preset','data-research-derived-preset':spec.type,onDoubleClick:e=>{e.stopPropagation();open()},children:[
   spec.asOf&&react_jsx_runtime.jsx('p',{className:'ew-derived-source',children:'数据时点：'+spec.asOf}),
-  react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onClick:focusSource,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title,react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
+  react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:[react_jsx_runtime.jsxs('span',{children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onClick:focusSource,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title]}),react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
   editing?react_jsx_runtime.jsxs('div',{className:'ew-derived-editor',onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),children:[
    react_jsx_runtime.jsx('textarea',{ref:editor,'aria-label':'编辑派生结果',defaultValue:spec.content,autoFocus:true,disabled:readOnly,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape')cancel();else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)&&!e.nativeEvent?.isComposing&&e.keyCode!==229){e.preventDefault();save()}}}),
    error&&react_jsx_runtime.jsx('div',{role:'alert',children:error}),
