@@ -26,6 +26,21 @@ it('uses original page evidence even for a planned chart and opens no data tools
   expect(f.native.prompt.at(-1).text).toContain('按解析所得选择可视化或阅读呈现')
  }finally{await f.close()}
 })
+it('never marks a recovered document card complete when the cited page was unreadable', async()=>{
+ const request='📎 文件：\x60/Users/user/Downloads/报告.pdf\x60 帮我把这个报告做成一个内容示意看板'
+ const plan=validateWorkbench({requestId:'pdf-cites',title:'报告',dataMode:'source',originalRequest:request,panels:[{type:'markdown',title:'报告内容',prompt:'根据附件解释报告中的建议。'}]})
+ const documentEvidence=[{name:'报告.pdf',numPages:5,pages:[{page:2,text:'有据可查的来源'}]}]
+ const artifact={version:1,type:'markdown',title:'报告内容',content:'这是一个足够长、可被通用兜底保留的错误答案。来源：报告.pdf 第 5 页。'}
+ const start=vi.fn(async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(artifact)}],documentEvidence}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}}})
+ try {
+  const panel=plan.panels[0]
+  const receipt=await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:workbenchPanelPrompt(plan,panel)},{sourcePolicy:workbenchSourcePolicy(request,panel),sourceRequirement:panel.prompt,workbenchRequest:{originalRequest:request,dataMode:'source'}})
+  await vi.waitFor(()=>expect(runtime.tasks.get(receipt.taskId)?.state).toBe('failed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(runtime.tasks.get(receipt.taskId)?.error).toContain('缺少可核对')
+ }finally{await runtime.dispose()}
+})
 it('keeps the authorized prototype reader available even with a connected public-data tool',async()=>{
  const f=await start()
  try{
