@@ -57,6 +57,12 @@ describe('用户原型是首次规划的有限只读证据',()=>{
   expect(workbenchPdfScope(request+'，补充外部市场数据')).toBeUndefined()
   expect(workbenchPdfScope('创建工作台\n> '+request)).toBeUndefined()
   expect(workbenchPdfCitationIssue('来源：报告.pdf 第 2 页',documents)).toBeUndefined()
+  expect(workbenchPdfCitationIssue('出典：報告.pdf 第２ページ',documents)).toBeUndefined()
+  const multi=[{...documents[0],numPages:5,pages:[2,3,4].map(page=>({page,text:'原文'}))}]
+  expect(workbenchPdfCitationIssue('第２–４ページ，来源 pp. 2–4、原文第 2、4 頁',multi)).toBeUndefined()
+  expect(workbenchPdfCitationIssue('原文第2–4ページ',documents)).toBeTruthy()
+  expect(workbenchPdfCitationIssue('原文第4–2ページ',multi)).toBeTruthy()
+  expect(workbenchPdfCitationIssue('原文第2、5页',multi)).toBeTruthy()
   expect(workbenchPdfCitationIssue('来源：报告.pdf 第 3 页',documents)).toBeTruthy()
   expect(workbenchPdfCitationIssue('来源：报告.pdf',documents)).toBeTruthy()
   h.dispose()

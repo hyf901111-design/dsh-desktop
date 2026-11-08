@@ -23,7 +23,7 @@ it('uses original page evidence even for a planned chart and opens no data tools
   expect(readPdfEvidence.mock.calls[0][1]).toEqual(['/Users/user/Downloads/报告.pdf'])
   expect(f.native.toolFilter.allow).toEqual([])
   expect(f.native.prompt.at(-1).text).toContain('第二章 · 只有分类，没有量化序列')
-  expect(f.native.prompt.at(-1).text).toContain('按解析所得选择可视化或阅读呈现')
+  expect(f.native.prompt.at(-1).text).toContain('按实际内容选择可视化或阅读呈现')
  }finally{await f.close()}
 })
 it('never marks a recovered document card complete when the cited page was unreadable', async()=>{
