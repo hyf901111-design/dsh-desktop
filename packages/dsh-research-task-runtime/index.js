@@ -35,6 +35,7 @@ import {compactStatementEvidence,truncatedStatementEvidence} from './statement-e
 import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
 import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from './component-feed-acquisition.js'
+import {releaseTimelineScope,observedReleaseTimeline} from './observed-dated-feed.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
@@ -2666,6 +2667,11 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       let lastOutputAt = 0, streamedText = '', completedArtifact, prototypeRecovery,prototypeDataReady
       let finishResearch, handoffTimer
       const researchPhase = new Promise(resolve => { finishResearch = resolve })
+      const format=workbenchPanelFormat(query??'')
+      const original=hostContext?.workbenchRequest?.originalRequest
+      const releaseScope=kind==='container'&&!synthesisOnly&&!bindingRequested&&!sourcePolicy?.pluginRequired&&hostContext?.workbenchRequest?.dataMode==='source'&&
+        (format==='timeline'||format==='html'&&/(?:只放|仅放|只要)一张/u.test(original??'')&&/发布动态|GitHub Releases/iu.test(workbenchPanelIntent(query??'')))?
+        releaseTimelineScope(original):null
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       const discoveryEvidenceCalls = new Set(), discoveryEvidenceParts = []
       let discoveryEvidenceBytes = 0
@@ -2813,6 +2819,13 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // still stops. A matching definition obtained after a parameter error
         // earns one bounded retry, within 135s, leaving at least 45s to present.
         if(event?.type==='step/end'){
+          if(releaseScope&&!completedArtifact&&!signal.aborted){
+            const candidate=observedReleaseTimeline(releaseScope,sourceCollector.records,query?.match(/\n本面板：([^\n]+)/u)?.[1])
+            if(candidate&&resolveComponentSnapshot(candidate,sourceCollector.records)?.capacitySnapshot){
+              finishResearch({stopReason:'completed',output:[{type:'text',text:candidate}]})
+              return
+            }
+          }
           const allowance=kind==='container'?Math.min(discoveryCallCount,4):0
           const businessLimit=kind==='container'&&knownDiscoveryUsed?12:8
           if(prototypeTargets&&!bindingRequested&&!prototypeRecovery)prototypeRecovery=recoverPrototypeTable(sourceCollector.records,{panelType:workbenchPanelFormat(query??''),panelRequest:hostContext?.sourceRequirement,title:query?.match(/\n本面板：([^\n]+)/u)?.[1],workbenchRequest:hostContext?.workbenchRequest})

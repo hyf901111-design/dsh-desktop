@@ -13,6 +13,7 @@ import {resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-re
 import {createSubagentAdapter} from '../packages/dsh-research-task-runtime/index.js'
 import {workbenchPanelPrompt,DATA_FIRST_PRESENTATION} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
+import {releaseTimelineScope,observedReleaseTimeline} from '../packages/dsh-research-task-runtime/observed-dated-feed.js'
 
 const args={operation:'query',source:'fixture',parameters_json:'{}'}
 const response={source:'Fixture',asOf:'2026-11-06',records:[{name:'甲',value:2.1},{name:'乙',value:-3.2}]}
@@ -335,4 +336,55 @@ it('accepts a verified release list with a long body in the original submit call
  expect(snapshot.capacitySnapshot).toBe(true)
  expect(snapshot.data.items[0]).toEqual({id:'21',title:'v2',time:'2026-11-08T01:02:03Z',url:link,summary:body})
  expect(JSON.parse(snapshot.output).html).toContain('href="'+link+'"')
+})
+
+it('hands a complete oversized release collection from the retrieval step to the host without a model artifact',async()=>{
+ const ctx=context()
+ new SubagentRuntime(ctx)
+ spawn(ctx,{providerName:'spawn'})
+ const parent=(await ctx.agents.create({sessionId:'release-handoff',agentOptions:{provider:'fixture',model:'fixture'}})).agent
+ const originalRequest='只放一张发布动态卡。请使用公开 GitHub Releases，保留 example/a 和 example/b 最近各 2 条记录，完整保留发布说明。先按时间线呈现，超出容量时切换成可分页来源列表。'
+ const query='工作台：测试\n本面板：发布动态\n使用 GitHub Releases。\n仅生成本面板，优先使用 html 类型。'
+ const urls=['a','b'].map(repo=>`https://api.github.com/repos/example/${repo}/releases?per_page=2`)
+ const body='真实完整发布说明。'.repeat(500),scope=releaseTimelineScope(originalRequest)
+ const calls=[]
+ ctx.tools.register(defineTool({
+  name:'web_fetch',description:'Read an authorized URL.',parameters:{url:{type:'string',required:true}},
+  output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:`Fetched ${value.url} (HTTP 200)\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n${JSON.stringify(value.rows)}`}]},
+  isConcurrencySafe:()=>true,execute({url}){
+   calls.push(url)
+   const repo=url.includes('/example/a/')?'a':'b'
+   return {url,rows:[1,2].map(index=>({tag_name:'v'+index,draft:false,published_at:`2026-11-0${index}T10:00:00Z`,html_url:`https://github.com/example/${repo}/releases/tag/v${index}`,body}))}
+  }
+ }))
+ let modelSteps=0
+ ctx.llm.registerAdapter(['fixture'],new class extends LlmAdapter{
+  async resolveModel(provider,id){return{provider,id,name:id}} async listModels(){return[]}
+  async *stream(request){
+   modelSteps++
+   if(modelSteps!==1)throw Error('host should not need a model artifact')
+   expect(request.tools.map(tool=>tool.name)).toContain('web_fetch')
+   for(const [index,url] of urls.entries()){
+    yield {type:'block-start',index,blockType:'tool-call'}
+    yield {type:'block-end',index,block:{type:'tool-call',id:'release-'+index,name:'web_fetch',arguments:JSON.stringify({url})}}
+   }
+   yield {type:'finish',reason:{kind:'tool-calls'}}
+  }
+ }())
+ const adapter=createSubagentAdapter(ctx),controller=new AbortController()
+ cleanup.push(()=>adapter.dispose())
+ const handle=await adapter.start({parentSessionId:parent.id,kind:'container',query,prompt:query,hostContext:{workbenchRequest:{originalRequest,dataMode:'source'}},signal:controller.signal,onSessionEvent:()=>{}})
+ cleanup.push(()=>handle.dispose())
+ const result=await handle.result
+ expect(result.stopReason).toBe('completed')
+ expect(new Set(calls)).toEqual(new Set(urls))
+ const snapshot=resolveComponentSnapshot(result.output[0].text,result.sourceRecords)
+ expect(snapshot.capacitySnapshot).toBe(true)
+ expect(snapshot.data.items).toHaveLength(4)
+ expect(snapshot.data.items.every(item=>item.summary===body)).toBe(true)
+ expect(observedReleaseTimeline(scope,result.sourceRecords.slice(0,1),'发布动态')).toBeUndefined()
+ const short=structuredClone(result.sourceRecords)
+ short[0].response.records.pop()
+ expect(observedReleaseTimeline(scope,short,'发布动态')).toBeUndefined()
+ expect(releaseTimelineScope(originalRequest+' 仅保留稳定版。')).toBeNull()
 })
