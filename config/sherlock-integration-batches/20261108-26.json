@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-26",
+  "branch": "codex/integration/20261108-26",
+  "baseMainCommit": "7196df71822862f448354a983087e181192232d9",
+  "expectedMainCommit": "7196df71822862f448354a983087e181192232d9",
+  "createdAt": "2026-11-08T08:05:17.361Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "易方达无描边信息卡、竖向页签和分页面自动布局",
+        "branch": "codex/feat/enterprise-borderless-tab-fill-20261108",
+        "baseCommit": "7196df71822862f448354a983087e181192232d9",
+        "tipCommit": "20ca3ea2421235fa613045508b1b89dc3d13801d",
+        "commits": [
+          {
+            "commit": "8860cd6570eeb9c709ba8df55e6451e55e72bda6",
+            "parents": [
+              "7196df71822862f448354a983087e181192232d9"
+            ],
+            "subject": "取消易方达信息卡与架构节点的装饰描边和色条"
+          },
+          {
+            "commit": "20ca3ea2421235fa613045508b1b89dc3d13801d",
+            "parents": [
+              "8860cd6570eeb9c709ba8df55e6451e55e72bda6"
+            ],
+            "subject": "支持竖向页签与拖动调宽并按页签铺满生成卡片"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-grid.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-workspace.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-link.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-auto-arrange.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-connection-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-arrange-tabs.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-auto-arrange.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/workbench-auto-arrange.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/bundled-component-skill.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "共 141 项聚焦检查通过",
+            "verifiedCommit": "20ca3ea2421235fa613045508b1b89dc3d13801d",
+            "completedAt": "2026-11-08T08:05:15.776822+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "20ca3ea2421235fa613045508b1b89dc3d13801d",
+            "completedAt": "2026-11-08T08:05:15.776822+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "20ca3ea2421235fa613045508b1b89dc3d13801d",
+            "completedAt": "2026-11-08T08:05:15.776822+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证旧新版架构节点和信息卡无描边色条，保留连线。客户端挂载测试覆盖竖排栏高、拖宽、右区自适应和重开。"
+        },
+        "acceptanceCriteria": [
+          "信息卡、架构节点与原生导图在易方达模式无装饰描边和色条",
+          "竖排栏最小 140px 并跟随右侧最底部，内容右移自适应",
+          "生成卡首次占满行宽，每个页签自动整理",
+          "原 Word 原请求实机复测"
+        ],
+        "risks": [
+          "有效宽度不足 440px 时临时横排并保留竖向偏好。"
+        ],
+        "generatedAt": "2026-11-08T08:05:15.776822+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-contract.test.js",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/research-grid-arrange-tabs.test.js",
+        "test/workbench-auto-arrange.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/bundled-component-skill.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
