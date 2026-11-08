@@ -1,5 +1,6 @@
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
+import {componentReadableDocumentTable} from '../packages/dsh-research-task-runtime/component-readable-snapshot.js'
 import {deliveryCardsRuntime} from '../scripts/lib/deliverable-cards.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
@@ -127,5 +128,22 @@ it.each(['data-component-source-info="附件 P4；官网原始资料"','class="s
   await expect.poll(()=>frame.locator('#pick').isVisible()).toBe(true)
   await page.locator('#preview').evaluate(el=>el.contentWindow.postMessage({type:'sherlock-component-context',shared:false,online:true,readOnly:false,userId:'local'},'*'));await frame.locator('#pick').click();await expect.poll(()=>frame.locator('#value').textContent()).toBe('真实节点已选择')
   expect(await frame.locator('aside').isVisible()).toBe(false);expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
+it('keeps fallback table rows compact, expands the exact full body and moves provider methodology into source details',async()=>{
+ const {page,errors}=await fixture()
+ try{
+  const body='真实发布原文。'.repeat(80)+'全文末尾唯一检索词',data={version:1,type:'table',title:'全部记录',columns:['标题','日期','原文'],rows:[['发布一','2026-11-09',body],['发布二','2026-11-08','短正文']],asOf:'2026-11-09',note:'完整统计口径',sources:[{label:'原始官网',url:'https://example.org/original'}]},spec=componentReadableDocumentTable(data)
+  await page.locator('#main').evaluate((el,preview)=>{const f=document.createElement('iframe');f.id='preview';f.style.cssText='width:680px;height:760px';f.srcdoc=preview;el.append(f)},buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}))
+  const frame=page.frameLocator('#preview').frameLocator('iframe'),row=frame.locator('tbody tr').first(),height=()=>row.evaluate(el=>el.getBoundingClientRect().height)
+  await frame.locator('details').waitFor();const before=await height();expect(before).toBeLessThan(140)
+  expect(await frame.locator('[data-component-source-info]').isVisible()).toBe(false)
+  await page.locator('#preview').evaluate(el=>el.contentWindow.postMessage({type:'sherlock-component-context',shared:false,online:true,readOnly:false,userId:'local'},'*'))
+  await frame.locator('summary').click();await expect.poll(height).toBeGreaterThan(before)
+  expect(await frame.locator('[data-readable-full]').textContent()).toBe(body)
+  await frame.locator('summary').click();await expect.poll(height).toBe(before)
+  await frame.getByRole('textbox',{name:'搜索完整数据'}).fill('全文末尾唯一检索词')
+  await expect.poll(()=>frame.locator('tbody tr:visible').count()).toBe(1);expect(errors).toEqual([])
  }finally{await page.close()}
 })
