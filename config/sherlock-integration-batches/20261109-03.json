@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-03",
+  "branch": "codex/integration/20261109-03",
+  "baseMainCommit": "f79ef1d5bef1b60ca05f54570f52a6aaf0582aaa",
+  "expectedMainCommit": "f79ef1d5bef1b60ca05f54570f52a6aaf0582aaa",
+  "createdAt": "2026-11-08T17:30:45.676Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "跨来源完整交付与通用自动恢复",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "f79ef1d5bef1b60ca05f54570f52a6aaf0582aaa",
+        "tipCommit": "69f2f4c416836b902c743b9d6724d632b56d52bb",
+        "commits": [
+          {
+            "commit": "69f2f4c416836b902c743b9d6724d632b56d52bb",
+            "parents": [
+              "f79ef1d5bef1b60ca05f54570f52a6aaf0582aaa"
+            ],
+            "subject": "修复来源容量误拦截并完善集合交付与图形自动恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-provenance-display.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-request-style.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-presentation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-style.test.js",
+              "test/research-canvas-presentation.test.js",
+              "test/market-table-reading-browser.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/component-source-info-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "117 项聚焦检查通过",
+            "verifiedCommit": "69f2f4c416836b902c743b9d6724d632b56d52bb",
+            "completedAt": "2026-11-08T17:30:43.934933+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench.test.js",
+              "-t",
+              "桥接计划只携带",
+              "--testTimeout",
+              "20000"
+            ],
+            "outcome": "passed",
+            "summary": "主题桥接聚焦回归通过",
+            "verifiedCommit": "69f2f4c416836b902c743b9d6724d632b56d52bb",
+            "completedAt": "2026-11-08T17:30:43.934933+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "69f2f4c416836b902c743b9d6724d632b56d52bb",
+            "completedAt": "2026-11-08T17:30:43.934933+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "69f2f4c416836b902c743b9d6724d632b56d52bb",
+            "completedAt": "2026-11-08T17:30:43.934933+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "117项直接相关聚焦检查及1项主题桥接检查通过。真实生成失败的60行、19行、11行数据及全部来源候选可无损接受；通用发布集合支持分页完整性验收，省略号空HTML拒绝交付。四类真实任务旧包结果已保留，新包实际生成与原生UI验收在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "全部记录及来源不因附注超过12条而误拦截",
+          "已确认网络发布记录全量交付并校验正文和链接",
+          "空HTML不可完成，图形失败自动保留图形关系修复",
+          "混合文件官网任务允许实际核验官网",
+          "显式易方达主题通过后台桥接且按实际DOM高度计算内容尺寸"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T17:30:43.934933+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/workbench-style.test.js",
+        "test/research-canvas-presentation.test.js",
+        "test/market-table-reading-browser.test.js",
+        "test/dataset-view-browser.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/component-source-info-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-workbench.test.js",
+        "-t",
+        "桥接计划只携带",
+        "--testTimeout",
+        "20000"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
