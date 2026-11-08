@@ -81,6 +81,7 @@ it.each(['markdown','html'])('根据可核验的原文补足 %s 卡中漏掉的�
   const output = JSON.stringify({version:1,type,title:'机构',...(type==='html'?{html:'<main>'+content+'</main>'}:{content})})
   expect(restoreDocumentLists(output,documents,scope)).toContain('甲分部、乙分部、丙分部。')
   expect(restoreDocumentLists(output,documents,scope)).toContain('原文完整清单 [P8]')
+  expect(restoreDocumentLists(output,documents,'按 [P8] 展示3个分支机构的完整名单')).toContain('甲分部、乙分部、丙分部。')
   expect(restoreDocumentLists(output,documents,'简介3个分部')).toBe(output)
   expect(restoreDocumentLists(output.replace('甲分部、丙分部','甲分部、乙分部、丙分部'),documents,scope)).not.toContain('原文完整清单')
 })
