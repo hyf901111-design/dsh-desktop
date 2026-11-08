@@ -544,7 +544,8 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
   const left=Math.min(...cards.map(n=>n.x-n.width/2)),right=Math.max(...cards.map(n=>n.x+n.width/2))
   expect(left).toBeCloseTo(24+parseFloat(bar().style.width))
   expect(right).toBeCloseTo(988)
-  expect(parseFloat(bar().style.height)+12).toBeCloseTo(bottom)
+  expect(parseFloat(bar().style.minHeight)+12).toBeCloseTo(bottom)
+  expect(parseFloat(f.document.querySelector('.ew-board-tabs-rail').style.height)+12).toBeCloseTo(bottom)
  }
  assertFit()
  expect(first().y-first().height/2).toBeCloseTo(12)

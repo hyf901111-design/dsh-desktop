@@ -162,19 +162,47 @@ it.each(['horizontal','vertical'])('keeps %s tabs in the viewport and switches p
   await canvas.evaluate(el=>{el.scrollTop=el.scrollHeight})
   await expect.poll(()=>canvas.evaluate(el=>el.scrollTop)).toBeGreaterThan(700)
   expect(await top()).toBe(initial)
-  if(orientation==='vertical'){
-   const viewport=await canvas.boundingBox(),nav=await bar.boundingBox()
-   const clip={x:Math.ceil(nav.x)+4,y:Math.ceil(viewport.y)+1,width:Math.floor(nav.width)-8,height:8}
-   const gutter=await page.screenshot({clip})
-   const hideRail=await page.addStyleTag({content:'.ew-board-tabs-rail{visibility:hidden}.ew-board-tabs-nav::before{visibility:hidden}'})
-   const bareGrid=await page.screenshot({clip})
-   await hideRail.evaluate(el=>el.remove())
-   expect(gutter.equals(bareGrid),'the space above the sticky navigation should paint the same grid as an empty canvas').toBe(true)
-  }
+  const viewport=await canvas.boundingBox(),nav=await bar.boundingBox()
+  const strips=orientation==='vertical'?[viewport.y]:[viewport.y,nav.y+nav.height]
+  const capture=()=>Promise.all(strips.map(y=>page.screenshot({clip:{x:Math.ceil(nav.x)+4,y:Math.ceil(y)+1,width:Math.floor(nav.width)-8,height:8}})))
+  const gutters=await capture()
+  const hideContent=await page.addStyleTag({content:'[data-research-node-id],.ew-board-tabs-rail,.ew-board-tabs-nav::before,.ew-board-tabs-nav::after{visibility:hidden!important}'})
+  const bareGrid=await capture()
+  await hideContent.evaluate(el=>el.remove())
+  expect(gutters.every((strip,index)=>strip.equals(bareGrid[index])),'sticky navigation gutters should show only the canvas grid').toBe(true)
   const {x,y,width,height}=await tab.boundingBox()
   await page.mouse.click(x+width/2,y+height/2)
   await expect.poll(async()=>(await state(page)).active).toBe(target)
   expect(await page.locator('[data-research-node-id="'+second+'"]').isVisible()).toBe(true)
   expect(await page.locator('[data-research-node-id="'+first+'"]').isVisible()).toBe(false)
+ }finally{await page.close()}
+},15000)
+
+it('the vertical list scrolls only after its tabs exceed the viewport, including on an empty page',async()=>{
+ const {page,first,second,target}=await fixture()
+ try{
+  await page.evaluate(({first,second,target})=>{
+   const w=fixture.workspace
+   w.moveToBoardTab([first,second],target)
+   w.setBoardTabsPresentation('vertical')
+  },{first,second,target})
+  const nav=page.locator('[data-board-tabs-orientation="vertical"]'),list=nav.getByRole('tablist')
+  const addTabs=count=>page.evaluate(count=>{
+   const w=fixture.workspace,spec=w.getSnapshot().artifacts.find(n=>n.containerSpec?.type==='board-tabs').containerSpec
+   return w.saveBoardTabs(spec.revision,[...spec.tabs,...Array.from({length:count},(_,i)=>({id:`extra-${spec.tabs.length+i}`,name:`额外页签 ${spec.tabs.length+i}`}))])
+  },count)
+  expect(await addTabs(8)).toBe(true)
+  await expect.poll(()=>list.getByRole('tab').count()).toBe(10)
+  expect(await list.evaluate(el=>el.scrollHeight-el.clientHeight)).toBe(0)
+  expect(await addTabs(24)).toBe(true)
+  await expect.poll(()=>list.getByRole('tab').count()).toBe(34)
+  const sizes=await list.evaluate(el=>({overflow:el.scrollHeight-el.clientHeight,bar:getComputedStyle(el).scrollbarWidth,navHeight:el.parentElement.offsetHeight,canvasHeight:el.closest('[data-research-canvas]').clientHeight}))
+  expect(sizes.overflow).toBeGreaterThan(0)
+  expect(sizes.bar).toBe('thin')
+  expect(sizes.navHeight).toBe(sizes.canvasHeight-24)
+  const label=list.getByRole('tab').last()
+  await label.scrollIntoViewIfNeeded()
+  await label.click()
+  expect(await label.getAttribute('aria-selected')).toBe('true')
  }finally{await page.close()}
 },15000)
