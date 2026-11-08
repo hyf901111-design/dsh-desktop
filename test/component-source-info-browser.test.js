@@ -1,3 +1,4 @@
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {deliveryCardsRuntime} from '../scripts/lib/deliverable-cards.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
@@ -65,4 +66,21 @@ it('resolves real user-attached files outside the workspace and rejects assistan
  const snapshot={chat:{nodes:new Map([['one',node('user','/Downloads/组织资料.docx')],['two',node('assistant','/fake/组织资料.docx')],['three',node('user','/Downloads/other.docx')],['four',node('user','/tool/组织资料.docx','tool')]])}}
  expect(componentSourceReferencedFiles(snapshot,'组织资料.docx')).toEqual(['/Downloads/组织资料.docx'])
  expect(componentSourceReferencedFiles({chat:{nodes:new Map([['one',{kind:'user',data:{source:{kind:'user'},content:[{type:'text',text:'encoded'}]}}]])}},'组织资料.docx',()=>({files:[{path:'/Original/组织资料.docx'}]}))).toEqual(['/Original/组织资料.docx'])
+})
+
+
+it('moves a saved table complete methodology, date and file locators into the right source pane without changing rows',async()=>{
+ const {page,errors}=await fixture()
+ try{
+  const note='部门总数16个，原文见[T7]；†表示现职需复核，—不代表岗位空缺。'.repeat(20)
+  const data={version:1,type:'market',variant:'table',title:'部门负责人明细',asOf:'2026-11-05',note,sources:[{label:'组织资料.docx（T8、P24、P30、P36-P38）'}],columns:['部门','负责人'],rows:Array.from({length:20},(_,i)=>['部门'+i,'文档未确认'])}
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
+  await page.evaluate(spec=>show({id:'saved',title:spec.title,containerSpec:spec}),spec)
+  await page.getByRole('button',{name:'查看来源信息',exact:true}).click()
+  await expect.poll(()=>page.locator('#right pre').first().textContent()).toContain(note)
+  expect(await page.locator('#right').textContent()).toContain('T8、P24、P30、P36-P38')
+  expect(await page.locator('#right').textContent()).toContain('2026-11-05')
+  expect(getComponentSourceInfo({containerSpec:spec}).notes).toContain(note)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
 })

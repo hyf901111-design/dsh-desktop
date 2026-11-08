@@ -409,3 +409,22 @@ it('wide native diagrams fit the card to their reflowed content and pull the nex
   expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)
+
+
+it('shrinks the fixed vertical rail to the current right content bottom after layout and tab changes',async()=>{
+ const {page,first,second,target,errors}=await fixture()
+ try{
+  await page.evaluate(({second,target})=>{const w=fixture.workspace;w.moveToBoardTab([second],target);w.setBoardTabsPresentation('vertical')},{second,target})
+  const assertBottom=async id=>{
+   const geometry=()=>page.evaluate(id=>{const root=document.querySelector('[data-research-canvas]'),card=root.querySelector('[data-research-node-id="'+id+'"]'),rail=root.querySelector('.ew-board-tabs-rail');return Math.abs(card.getBoundingClientRect().bottom-rail.getBoundingClientRect().bottom)},id)
+   await expect.poll(geometry).toBeLessThan(1)
+  }
+  for(const h of [35,10,20,8]){
+   await page.evaluate(({first,h})=>fixture.workspace.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h}],true),{first,h})
+   await assertBottom(first)
+  }
+  await page.locator('[data-board-tab="'+target+'"]').click()
+  await assertBottom(second)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)

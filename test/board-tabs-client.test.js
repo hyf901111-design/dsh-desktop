@@ -548,6 +548,11 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
   expect(parseFloat(f.document.querySelector('.ew-board-tabs-rail').style.height)+12).toBeCloseTo(bottom)
  }
  assertFit()
+ // A previous taller page must not let navigation include itself as content.
+ await f.act(()=>w.applyWorkbenchCells([{id:'alpha',x:0,y:0,w:40,h:24}],true))
+ assertFit()
+ await f.act(()=>w.applyWorkbenchCells([{id:'alpha',x:0,y:0,w:40,h:10}],true))
+ assertFit()
  expect(first().y-first().height/2).toBeCloseTo(12)
  expect(first().width).toBeLessThan(horizontal.width)
  const handle=f.document.querySelector('[data-board-tabs-resize]')

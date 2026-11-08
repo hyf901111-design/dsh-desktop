@@ -46,7 +46,7 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  const actions=(toggle||more)&&jsxs('div',{className:'ew-board-tabs-nav-actions',children:[toggle,more]})
  const width=vertical?area.railWidth:Math.max(1,area.width-24)
  const visible=vertical?boardTabsVisible(snapshot,active):null
- const bottom=visible?Math.max(0,...[...visible.files,...visible.artifacts,...(snapshot.boardTabsPlanningNodes??workspace.getWorkbenchPlanningNodes())].map(node=>node.y+node.height/2)):0
+ const bottom=visible?Math.max(0,...[...visible.files,...visible.artifacts,...(snapshot.boardTabsPlanningNodes??workspace.getWorkbenchPlanningNodes())].filter(node=>node.id!==nav.id).map(node=>node.y+node.height/2)):0
  const height=vertical?(bottom>12?bottom-12:96):undefined
  const viewportHeight=snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height
  const maxHeight=vertical&&viewportHeight?Math.max(64,viewportHeight-24):undefined
