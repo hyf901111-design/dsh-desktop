@@ -2,6 +2,7 @@ import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
+import {Window} from 'happy-dom'
 import {homeWorkbenchReceiptEvent,homeWorkbenchReceiptAnchors,homeWorkbenchProgressState,patchHomeWorkbenchProgress,stripHomeWorkbenchProgress} from '../scripts/lib/home-workbench-progress.mjs'
 import {homeWorkbenchPlanReceipt} from '../packages/dsh-research-task-runtime/home-workbench-contract.js'
 import {workbenchProgressState,researchWorkbenchReceiptAnchors} from '../scripts/lib/research-workbench-feedback.mjs'
@@ -43,7 +44,7 @@ it('anchors a typed plan to its actual assistant turn and never moves it under t
 })
 it('projects and restores the typed plan through the real SessionRuntime event registry without tool calls',()=>{
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
- const window=Object.assign(new EventTarget(),{__ModuleLoader__:{load:value=>{window.descriptor=value}}}),vm={window,console,setTimeout,clearTimeout,setInterval,clearInterval,queueMicrotask,AbortController,URL,Map,Set}
+ const window=Object.assign(new Window(),{__ModuleLoader__:{load:value=>{window.descriptor=value}}}),vm={window,document:window.document,console,setTimeout,clearTimeout,setInterval,clearInterval,queueMicrotask,AbortController,URL,Map,Set}
  const ctx={get:()=>undefined,reflect:{provide(){}},effect(start){return start()??(()=>{})}},cordis={Service:class{constructor(context){this.ctx=context}}}
  runInNewContext(readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),vm)
  const rt=window.descriptor.factory(id=>id==='@deepseek-ai/cordis'?cordis:fake)
@@ -56,7 +57,7 @@ it('projects and restores the typed plan through the real SessionRuntime event r
  const runtime=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views}),session=runtime.manager.get('demo')
  const rows=[{type:'turn/start',data:{turn:1}},{type:'home-guide/workbench',data},{type:'home-guide/workbench',data:{...data,kind:'playback',playing:false}},{type:'home-guide/workbench',data:{...data,kind:'stopped'}}].map((event,seq)=>({event:{...event,seq:seq+1,time:seq+1},surface:'append'}))
  for(let repeat=0;repeat<2;repeat++){session.installWindow(rows,false);const chat=session.getSnapshot().chat,receipts=chat.nodes.values().filter(n=>n.kind==='home-workbench-plan');expect(receipts).toHaveLength(1);expect(receipts[0].data).toMatchObject({turn:1,phase:'stopped',plans:data.plans});expect(chat.nodes.values().some(n=>n.kind==='tool-call')).toBe(false);const anchors=native.__anchors(native.__flow(chat.order,chat.nodes,1),chat.nodes,()=>({plans:[]}),native.__turn);expect([...anchors.values()].flat()).toHaveLength(3)}
- window.__sherlockWorkbenchGenerationV1=new Map([['demo',snapshot(5,'cancelled')]]);vm.document={documentElement:{dataset:{odysseyLocale:'zh'}}};
+ window.__sherlockWorkbenchGenerationV1=new Map([['demo',snapshot(5,'cancelled')]]);vm.document.documentElement.dataset.odysseyLocale='zh'
  const stoppedPlans=plans().map(p=>({...p,replay:{...p.replay,phase:'stopped'}})),html=require('react-dom/server').renderToString(require('react').createElement(native.__Progress,{sessionId:'demo',plans:stoppedPlans,footer:true}));expect(html).toContain('data-research-workbench-progress="partial"');expect(html).not.toContain('<button');expect(html).not.toContain('animateTransform');expect(html).toContain('未开始 10');
  const target=new EventTarget();let retries=0;target.addEventListener('sherlock:workbench-retry',()=>retries++);return native.__retry(target,'demo',plans(),{...snapshot(15,'cancelled'),retryAvailable:true}).then(ok=>{expect(ok).toBe(false);expect(retries).toBe(0)})
 })

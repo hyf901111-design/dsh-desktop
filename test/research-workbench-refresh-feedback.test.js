@@ -7,7 +7,6 @@ import * as jsx from 'react/jsx-runtime'
 import {createRoot} from 'react-dom/client'
 import {patchComponentDataRefresh} from '../scripts/lib/component-data-refresh.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
-import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {createComponentDataStatusStore} from '../scripts/lib/component-data-status.mjs'
 import {publishResearchWorkbenchProgress,workbenchProgressState} from '../scripts/lib/research-workbench-feedback.mjs'
 import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
@@ -18,14 +17,15 @@ it('mounts the injected feedback with the native workspace, host bridge and buil
  vi.stubGlobal('window',window);vi.stubGlobal('document',document);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
  let descriptor,stopWatch,monitor,root
  try{
-  let source=patchComponentDataRefresh(patchResearchCreationProgress(restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+  const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+  let source=patchComponentDataRefresh(patchResearchCreationProgress(installed))
   // Run the real current-store block replacement, rather than a second fixture store.
   const stale=source.replace('snapshotSession:sessionId=>summaries.get(sessionId)??empty,','snapshotSession:sessionId=>null,')
   expect(patchComponentDataRefresh(stale)).toBe(source)
   source=source.replace('const componentDataStatusStore=createComponentDataStatusStore();','const componentDataStatusStore=createComponentDataStatusStore();window.__refreshTest={Component:ResearchWorkbenchProgress,store:componentDataStatusStore,createMonitor:createComponentDataStatusMonitor,publishInactive:publishInactiveResearchWorkbenchProgress,publish:publishResearchWorkbenchProgress};')
   new Script(source)
   window.__ModuleLoader__={load:value=>descriptor=value}
-  runInNewContext(source,{window,document,crypto,Event,CustomEvent:window.CustomEvent,AbortController,TextEncoder,TextDecoder,setTimeout,clearTimeout,setInterval,clearInterval})
+  runInNewContext(source,{window,document,crypto,Event,CustomEvent:window.CustomEvent,MutationObserver:window.MutationObserver,AbortController,TextEncoder,TextDecoder,setTimeout,clearTimeout,setInterval,clearInterval})
   let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback})
   const client=descriptor.factory(id=>id==='react'?react:id==='react/jsx-runtime'?jsx:fallback)
   const {Component,store,createMonitor,publishInactive,publish}=window.__refreshTest

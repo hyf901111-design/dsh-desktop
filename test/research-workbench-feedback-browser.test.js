@@ -6,13 +6,22 @@ import {patchResearchCreationProgress} from '../scripts/lib/research-creation-pr
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {patchComponentDataRefresh} from '../scripts/lib/component-data-refresh.mjs'
 import {planningResponseMetadata,researchPlanningRequest} from '../scripts/lib/research-planning-feedback.mjs'
-let browser,script
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
+import {stripConversationComponents} from '../scripts/lib/conversation-components.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
+let browser,script,progressCss
 const evidence=process.env.SHERLOCK_FEEDBACK_EVIDENCE||'/tmp/workbench-feedback-task9-20261021'
 beforeAll(async()=>{
- const source=patchComponentDataRefresh(patchResearchCreationProgress(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+ progressCss=await readFile('src/preload/workbench-progress.css','utf8')
+ const installed=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const clean=restoreResearchGridWorkbench(stripConversationComponents(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(installed)))))
+ const source=patchComponentDataRefresh(patchResearchCreationProgress(clean))
  const storeStart=source.indexOf('/* ODYSSEY_COMPONENT_DATA_START */'),storeEnd=source.indexOf('function openComponentData(',storeStart)
  if(storeStart<0||storeEnd<0)throw Error('Actual injected component store missing')
  const start=source.search(/\/\* ework:workbench-feedback:v\d+ \*\//),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const feedbackEnd=source.indexOf('/* ework:workbench-feedback:end */',start)
+ if(start<0||feedbackEnd<start||end<feedbackEnd)throw Error('Actual workbench feedback helper boundary missing')
  const chat=source.slice(source.indexOf('function ChatView('),source.indexOf('//#region lib/types/client/contract/slots.js',source.indexOf('function ChatView(')))
  const flowStart=chat.search(/renderFlow\.(?:map|flatMap)\(\(entry\) => \{/),flowEnd=chat.indexOf('\n\t\t\t\t\t\t]',flowStart)
  if(flowStart<0||flowEnd<0)throw Error('Actual ChatView render flow missing')
@@ -22,18 +31,18 @@ beforeAll(async()=>{
  if(!receiptLookup)throw Error('Actual ChatView receipt anchors missing')
  const output=await build({stdin:{resolveDir:process.cwd(),contents:`import * as react from 'react';import * as react_jsx_runtime from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
 ${source.slice(storeStart,storeEnd)}
-${source.slice(start,end)}
+${source.slice(start,feedbackEnd)}
 ${planningResponseMetadata.toString()}
 ${researchPlanningRequest.toString()}
 ${nativeFlow}
 const contentParts=()=>({text:''}),parseResearchPrompt=text=>({text});
-const ChatView_module_css_default=new Proxy({},{get:(_target,key)=>String(key)}),executionDetailGroups=()=>[],executionProgressSurface=()=>({detailGroups:[],showProgress:false,updates:[]}),executionSummaryStatus=()=> '执行结果',formatRunDuration=()=>'',ToolImageOutputs=()=>null;
+const ChatView_module_css_default=new Proxy({},{get:(_target,key)=>String(key)}),executionDetailGroups=()=>[],executionProgressSurface=()=>({detailGroups:[],showProgress:false,updates:[]}),executionSummaryStatus=()=> '执行结果',formatRunDuration=()=>'',ToolImageOutputs=()=>null,ImageGenerationOutputs=()=>null;
 const _deepseek_ai_dsh_client_ui_primitives={IconChevronRightOutline14:()=>null,IconThinkOutline14:()=>null};
 function ChatNodeSeat({nodeKey}){return react.createElement('div',{'data-message-id':nodeKey},nodeKey)}
 function PendingSteeringBubble(){return react.createElement('div',{'data-pending-steering':true},'pending steering')}
 ${execution}
 function ReceiptConversation({sessionId,flow,rows,pending=[],runningTurnNumber=null}){
- const nodeStore=new Map(rows.map(row=>[row.key,row])),order=rows.map(row=>row.key),renderFlow=flow??mergePendingSteeringFlow(compactConversationFlow(order,nodeStore,runningTurnNumber),pending,nodeStore),timeline={turns:new Map()},runningTurn=null,loadImage=undefined,seatProps={},t=key=>key;
+ const nodeStore=new Map(rows.map(row=>[row.key,row])),order=rows.map(row=>row.key),renderFlow=flow??mergePendingSteeringFlow(compactConversationFlow(order,nodeStore,runningTurnNumber),pending,nodeStore),timeline={turns:new Map()},runningTurn=null,loadImage=undefined,seatProps={},researchPlanningSurface=true,t=key=>key;
  ${receiptLookup}
  return react.createElement('section',{'data-conversation-session':sessionId},[${flowRender}]);
 }
@@ -65,9 +74,18 @@ it('renders mixed progress in narrow light/dark cards, retries only the failed n
  page.on('pageerror',error=>errors.push(error.message))
  try{
   await page.setContent('<style>:root{--dsw-alias-border-l2:#ddd;--dsw-alias-bg-l2:#f7f7f7;--dsw-alias-label-primary:#161616;--dsw-alias-label-secondary:#666}body{font:12px system-ui;margin:16px}main{width:300px}</style><main></main>')
+  await page.addStyleTag({content:progressCss})
   await page.addScriptTag({content:script})
+  expect(await page.evaluate(()=>typeof window.show),errors.join('\n')).toBe('function')
   await page.getByRole('img',{name:'正在生成组件'}).waitFor()
   const retry=page.getByRole('button',{name:'重试未完成的组件'})
+  const progress=page.getByRole('progressbar')
+  const fill=progress.locator('[data-workbench-progress-fill]')
+  const texture=()=>fill.evaluate(el=>getComputedStyle(el,'::before').animationName)
+  expect(await progress.getAttribute('aria-valuenow')).toBe('2')
+  expect(await progress.getAttribute('aria-valuemax')).toBe('4')
+  expect((await fill.boundingBox()).width).toBeCloseTo((await progress.boundingBox()).width/2)
+  expect(await texture()).toBe('ework-workbench-stripes')
   await retry.waitFor()
   const title=await page.getByRole('status').boundingBox(),button=await retry.boundingBox()
   expect(button.x).toBeGreaterThanOrEqual(title.x+title.width)
@@ -78,10 +96,19 @@ it('renders mixed progress in narrow light/dark cards, retries only the failed n
   expect(await page.getByRole('img',{name:'正在生成组件'}).count()).toBe(1)
   await page.evaluate(()=>window.complete())
   await page.getByText('已完成',{exact:true}).waitFor()
+  expect(await progress.getAttribute('aria-valuenow')).toBe('4')
+  expect(await texture()).toBe('none')
+  await page.waitForFunction(()=>document.querySelector('[data-workbench-progress-fill]').offsetWidth===document.querySelector('[data-workbench-progress-track]').clientWidth)
   expect(await page.locator('svg').count()).toBe(0)
   await page.screenshot({path:evidence+'/completed-light.png'})
   await page.evaluate(()=>{document.documentElement.style.cssText='--dsw-alias-border-l2:#444;--dsw-alias-bg-l2:#242424;--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#aaa';document.body.style.background='#151515';window.show(['completed','completed','failed','interrupted'],true)})
   await page.getByRole('button',{name:'Retry unsuccessful components'}).waitFor()
+  expect(await page.getByRole('progressbar',{name:'Component generation progress'}).getAttribute('aria-valuenow')).toBe('2')
+  expect(await texture()).toBe('none')
+  await page.waitForFunction(()=>{
+   const track=document.querySelector('[data-workbench-progress-track]')
+   return Math.abs(track.querySelector('[data-workbench-progress-fill]').offsetWidth-track.clientWidth/2)<1
+  })
   await page.screenshot({path:evidence+'/failed-dark-en.png'})
   await page.evaluate(()=>window.complete())
   await page.getByText('Completed',{exact:true}).waitFor()
@@ -89,6 +116,31 @@ it('renders mixed progress in narrow light/dark cards, retries only the failed n
   await page.getByRole('button',{name:'重试未完成的组件'}).waitFor()
   expect(await page.getByRole('button',{name:'重试未完成的组件'}).isDisabled()).toBe(true)
   expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
+
+it('keeps zero and retry progress truthful and respects reduced motion',async()=>{
+ const page=await browser.newPage({reducedMotion:'reduce'})
+ try{
+  await page.setContent('<main></main>');await page.addStyleTag({content:progressCss});await page.addScriptTag({content:script})
+  const progress=page.getByRole('progressbar')
+  const fill=progress.locator('[data-workbench-progress-fill]')
+  await page.evaluate(()=>window.show(['running','queued','queued','queued']))
+  await page.locator('[data-workbench-progress-zero]').waitFor()
+  expect(await progress.getAttribute('aria-valuenow')).toBe('0')
+  expect(await fill.evaluate(el=>el.offsetWidth)).toBe(0)
+  expect(await progress.evaluate(el=>getComputedStyle(el,'::before').animationName)).toBe('none')
+  await page.evaluate(()=>window.show(['completed','completed','retrying','failed']))
+  await page.getByRole('status').filter({hasText:'正在重试组件 · 已生成 2/4'}).waitFor()
+  expect(await progress.getAttribute('data-workbench-progress-motion')).toBe('retrying')
+  expect(await progress.getAttribute('aria-valuenow')).toBe('2')
+  expect(await fill.evaluate(el=>getComputedStyle(el,'::before').animationName)).toBe('none')
+  expect(await page.locator('[data-workbench-progress-spinner]').evaluate(el=>getComputedStyle(el).animationName)).toBe('none')
+  await page.evaluate(()=>window.show(['completed','completed']))
+  await page.getByRole('status').filter({hasText:'2/2'}).waitFor()
+  expect(await progress.getAttribute('aria-valuemax')).toBe('4')
+  expect((await fill.boundingBox()).width).toBeCloseTo((await progress.boundingBox()).width/2)
+  expect(await page.getByText('已完成',{exact:true}).count()).toBe(0)
  }finally{await page.close()}
 },15000)
 
@@ -103,7 +155,7 @@ it('keeps a cold restored 7/8 card beside its original execution when new user a
   await page.setContent('<main></main>');await page.addScriptTag({content:script})
   const original=turn(1,'original-plan',8),artifacts=Array.from({length:8},(_,i)=>artifact('original-'+i,'original-plan',i===7?'failed':'completed'))
   await page.evaluate(value=>window.showConversation(value),{sessionId:'original',...original,artifacts,active:false})
-  await page.locator('[data-research-workbench-progress="partial"]').first().waitFor()
+  await page.locator('[data-research-workbench-progress="partial"]').first().waitFor({timeout:2500}).catch(error=>{throw Error(error.message+'; page errors: '+errors.join('; '))})
   await page.evaluate(()=>window.originalProgress=document.querySelector('[data-research-workbench-progress]'))
   await page.evaluate(value=>window.showConversation(value),{sessionId:'original',rows:[...original.rows,{key:'你好',kind:'user'}],flow:[...original.flow,{kind:'node',key:'你好'}],artifacts,active:false})
   expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','你好'])
@@ -158,9 +210,10 @@ it('keeps the original card above native pending, admitted steering and later sa
   const original=[row('user-7','user',1),tool('receipt-7',2,'original-plan',8),row('original-assistant','assistant-step',3,{finalNode:{seq:3},blocks:[{kind:'text',text:'Fixture answer. '.repeat(15)}]})]
   const artifacts=Array.from({length:8},(_,i)=>artifact('original-'+i,'original-plan',i===7?'failed':'completed'))
   const show=extra=>page.evaluate(value=>window.showConversation(value),{sessionId:'steering-session',rows:original,artifacts,runningTurnNumber:7,...extra})
-  await show({});await page.locator('[data-research-workbench-progress="partial"]').waitFor()
+  await show({});await page.locator('[data-research-workbench-progress="partial"]').waitFor({timeout:2500}).catch(error=>{throw Error(error.message+'; page errors: '+errors.join('; '))})
   await page.evaluate(()=>window.originalProgress=document.querySelector('[data-research-workbench-progress]'))
   await show({pending:[{id:'pending',anchorSeq:4,placement:'steering',content:[]}]})
+  expect(errors).toEqual([])
   expect(await positions(page)).toEqual(['user-7','execution:7','original-assistant','progress','pending-steering','execution:7:1:pending:0'])
   expect(await page.evaluate(()=>window.originalProgress===document.querySelector('[data-research-workbench-progress]'))).toBe(true)
   const admitted=[...original,row('steering','steering',4)]

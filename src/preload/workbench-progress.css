@@ -1,0 +1,65 @@
+[data-research-workbench-footer] {
+  position: relative;
+  isolation: isolate;
+}
+
+[data-workbench-progress-track] {
+  --workbench-progress-ink: var(--dsw-alias-label-primary, #25252b);
+  --workbench-progress-stripe: color-mix(in srgb, var(--workbench-progress-ink) 4%, transparent);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+[data-workbench-progress-fill] {
+  position: relative;
+  width: var(--workbench-progress-width, 0%);
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0 7px 7px 0;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--workbench-progress-ink) 3%, transparent),
+    color-mix(in srgb, var(--workbench-progress-ink) 7%, transparent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--workbench-progress-ink) 7%, transparent);
+  transition: width 320ms cubic-bezier(.25, .8, .25, 1);
+}
+
+[data-workbench-progress-fill]::before,
+[data-workbench-progress-motion][data-workbench-progress-zero]::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 -24px;
+  background: repeating-linear-gradient(135deg, transparent 0 12.73px, var(--workbench-progress-stripe) 12.73px 16.97px);
+}
+
+[data-workbench-progress-motion][data-workbench-progress-zero]::before { opacity: .5; }
+[data-workbench-progress-motion] [data-workbench-progress-fill]::before,
+[data-workbench-progress-motion][data-workbench-progress-zero]::before {
+  animation: ework-workbench-stripes 1.6s linear infinite;
+}
+
+[data-research-workbench-progress=partial] [data-workbench-progress-track]:not([data-workbench-progress-motion]) {
+  background: color-mix(in srgb, #b67d39 4%, transparent);
+}
+
+[data-research-workbench-progress=completed] [data-workbench-progress-track] {
+  --workbench-progress-stripe: color-mix(in srgb, var(--workbench-progress-ink) 2%, transparent);
+}
+
+[data-workbench-progress-spinner] {
+  transform-origin: center;
+  animation: ework-workbench-spin 900ms linear infinite;
+}
+
+@keyframes ework-workbench-stripes { to { transform: translateX(24px); } }
+@keyframes ework-workbench-spin { to { transform: rotate(1turn); } }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-workbench-progress-fill] { transition: none; }
+  [data-workbench-progress-motion] [data-workbench-progress-fill]::before,
+  [data-workbench-progress-motion][data-workbench-progress-zero]::before,
+  [data-workbench-progress-spinner] { animation: none; }
+}

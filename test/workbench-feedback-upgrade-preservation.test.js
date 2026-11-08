@@ -12,6 +12,6 @@ it('preserves neighboring component and response helpers when upgrading the real
  for(const marker of ['conversation-components:v2','conversation-response-progress:v3','conversation-response-history:v2'])expect(upgraded).toContain('/* ework:'+marker+' */')
  expect(upgraded).toContain('/* ework:workbench-feedback:end */')
  expect(patchResearchWorkbenchFeedback(upgraded)).toBe(upgraded)
- expect(patchResearchWorkbenchFeedback(upgraded.replace('workbench-feedback:v11','workbench-feedback:v10'))).toBe(upgraded)
+ expect(patchResearchWorkbenchFeedback(upgraded.replace('workbench-feedback:v12','workbench-feedback:v11'))).toBe(upgraded)
  expect(()=>new Function(upgraded)).not.toThrow()
 })
