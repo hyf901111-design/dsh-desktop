@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-08",
+  "branch": "codex/integration/20261109-08",
+  "baseMainCommit": "4f36dc62b713905ed1a1a7d4ed20d87559ffcea7",
+  "expectedMainCommit": "4f36dc62b713905ed1a1a7d4ed20d87559ffcea7",
+  "createdAt": "2026-11-08T19:24:30.841Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "窄幅深层导图自适应阅读优化",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "4f36dc62b713905ed1a1a7d4ed20d87559ffcea7",
+        "tipCommit": "6c6927026b4116bc7fe326dfbd41d13bbb7d454e",
+        "commits": [
+          {
+            "commit": "83adf213eafed029042de5cc2ac32066635d169e",
+            "parents": [
+              "4f36dc62b713905ed1a1a7d4ed20d87559ffcea7"
+            ],
+            "subject": "优化窄幅深层导图首屏与自适应层级布局"
+          },
+          {
+            "commit": "6c6927026b4116bc7fe326dfbd41d13bbb7d454e",
+            "parents": [
+              "83adf213eafed029042de5cc2ac32066635d169e"
+            ],
+            "subject": "修复多列明细自动适配时中文字段重叠"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/mind-map-layout.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-mind-map-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-table-columns.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/derived-mind-map-browser.test.js",
+              "test/workbench-table-columns.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "16 项聚焦检查通过",
+            "verifiedCommit": "6c6927026b4116bc7fe326dfbd41d13bbb7d454e",
+            "completedAt": "2026-11-08T19:24:29.256541+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "6c6927026b4116bc7fe326dfbd41d13bbb7d454e",
+            "completedAt": "2026-11-08T19:24:29.256541+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "6c6927026b4116bc7fe326dfbd41d13bbb7d454e",
+            "completedAt": "2026-11-08T19:24:29.256541+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "16项导图及列宽检查通过，覆盖窄幅首屏根节点、深层完整性、连线、宽窄实时切换和编辑；最终包真实任务验收在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "窄幅导图首屏从根节点开始并保持文字可读",
+          "真实层级和全部节点连线保留",
+          "宽窄切换不丢内容且不产生初始空白"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T19:24:29.256541+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/derived-mind-map-browser.test.js",
+        "test/workbench-table-columns.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
