@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-09",
+  "branch": "codex/integration/20261109-09",
+  "baseMainCommit": "8302628d86fffa15d7c3f76ec5e56d401452f255",
+  "expectedMainCommit": "8302628d86fffa15d7c3f76ec5e56d401452f255",
+  "createdAt": "2026-11-08T19:56:38.054Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "层级关系语义恢复与统一交付约束",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "6c6927026b4116bc7fe326dfbd41d13bbb7d454e",
+        "tipCommit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+        "commits": [
+          {
+            "commit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+            "parents": [
+              "6c6927026b4116bc7fe326dfbd41d13bbb7d454e"
+            ],
+            "subject": "修复层级可视化同义需求的自动恢复并统一生成约束"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "preserves .* intent when an HTML",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "6项层级需求自动恢复检查通过",
+            "verifiedCommit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+            "completedAt": "2026-11-08T19:56:36.404286+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-planning-phase.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "92项规划检查通过",
+            "verifiedCommit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+            "completedAt": "2026-11-08T19:56:36.404286+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+            "completedAt": "2026-11-08T19:56:36.404286+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+            "completedAt": "2026-11-08T19:56:36.404286+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "6种同义层级需求均从样式失败自动恢复为保留5层及出处的原生图；92项规划检查通过。真实混合来源重跑在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "同义层级需求走关系图恢复而不降级为文字",
+          "规划样式不得替代宿主模式事实",
+          "表格与来源要求使用当前统一交付规范"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T19:56:36.404286+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "preserves .* intent when an HTML",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-planning-session.test.js",
+        "test/workbench-planning-phase.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
