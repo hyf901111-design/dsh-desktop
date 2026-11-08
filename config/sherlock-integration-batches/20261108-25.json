@@ -80,6 +80,39 @@
           "简称匹配仅在单份文档与相同编号和数量明确时启用。"
         ],
         "generatedAt": "2026-11-08T07:37:48.071681+00:00"
+      },
+      "merged": {
+        "mergeCommit": "170881f192d9fdf6e8fa103564e6f40e467f5670",
+        "verificationCommit": "170881f192d9fdf6e8fa103564e6f40e467f5670",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-structure-theme-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/workbench-style.test.js test/workbench-structure-theme-browser.test.js",
+            "verifiedCommit": "170881f192d9fdf6e8fa103564e6f40e467f5670",
+            "completedAt": "2026-11-08T07:37:52.710Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "170881f192d9fdf6e8fa103564e6f40e467f5670",
+            "completedAt": "2026-11-08T07:37:52.710Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T07:37:52.710Z"
       }
     }
   ],
