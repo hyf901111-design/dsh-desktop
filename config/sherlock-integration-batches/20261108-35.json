@@ -107,6 +107,58 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T11:05:48.447197+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b61ffd5a6143def8256c4aae5a970a8cf9a3d84d",
+        "verificationCommit": "b61ffd5a6143def8256c4aae5a970a8cf9a3d84d",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-menu.test.js",
+              "test/custom-component-library-client.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/financial-widget-client.test.js test/financial-widget-layout.test.js test/financial-widget-menu.test.js test/custom-component-library-client.test.js test/board-tabs-client.test.js test/board-tabs-theme-browser.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "b61ffd5a6143def8256c4aae5a970a8cf9a3d84d",
+            "completedAt": "2026-11-08T11:05:52.461Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b61ffd5a6143def8256c4aae5a970a8cf9a3d84d",
+            "completedAt": "2026-11-08T11:05:52.461Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b61ffd5a6143def8256c4aae5a970a8cf9a3d84d",
+            "completedAt": "2026-11-08T11:05:52.461Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T11:05:52.461Z"
       }
     }
   ],
