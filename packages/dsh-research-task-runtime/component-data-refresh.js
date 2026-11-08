@@ -26,10 +26,41 @@ const refreshNewsScopeIssue=(mapping,requests,scope,now)=>newsSourceScopeIssue(m
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
  if(typeof path!=='string'||path.length>512)throw Error('字段路径无效')
- path=path.replace(/\[(0|[1-9]\d*)\]/g,'.$1')
- let value=root
- for(const key of path?path.split('.'):[]){if(forbidden.has(key)||!/^([\w-]+)$/.test(key))throw Error('字段路径无效');if(value==null||!Object.hasOwn(Object(value),key))return undefined;value=value[key]}
- return value
+ if(!path)return root
+ const parts=[]
+ const token=/(?:^|\.)([\w-]+)|\[(0|[1-9]\d*|"(?:[^"\\\u0000-\u001f]|\\["\\/bfnrt]|\\u[0-9a-fA-F]{4})*")\]/gy
+ let offset=0
+ while(offset<path.length){
+  token.lastIndex=offset
+  const match=token.exec(path)
+  if(!match)throw Error('字段路径无效')
+  const quoted=match[2]?.startsWith('"')??false
+  const value=match[1]??(quoted?JSON.parse(match[2]):match[2])
+  if(!value||forbidden.has(value)||/[\u0000-\u001f\u007f]/u.test(value))throw Error('字段路径无效')
+  parts.push({value,bare:match[1]!==undefined,quoted})
+  offset=token.lastIndex
+ }
+ let current=root
+ for(let i=0;i<parts.length;i++){
+  if(current==null)return undefined
+  const {value,bare,quoted}=parts[i],object=Object(current)
+  if(quoted&&Array.isArray(current))throw Error('字段路径无效')
+  if(Object.hasOwn(object,value)){current=object[value];continue}
+  // Legacy unquoted paths may name a source key such as usAAPL.OQ.
+  // Prefer the existing nested interpretation, then a unique literal key.
+  if(!bare||typeof current!=='object'||Array.isArray(current))return undefined
+  let joined=value,matched
+  for(let j=i+1;j<parts.length&&parts[j].bare;j++){
+   joined+='.'+parts[j].value
+   if(!Object.hasOwn(object,joined))continue
+   if(matched!==undefined)throw Error('字段路径歧义，请用 ["原始键"] 明确引用')
+   matched=j
+  }
+  if(matched===undefined)return undefined
+  current=object[parts.slice(i,matched+1).map(part=>part.value).join('.')]
+  i=matched
+ }
+ return current
 }
 
 // A verified web snapshot keeps its provenance outside the original JSON.
@@ -49,7 +80,7 @@ export function normalizeWebSnapshotPaths(mapping, sources) {
   return Object.fromEntries(Object.entries(value).map(([key, child]) => {
    if (envelope && key === selector && typeof child === 'string') {
     const rawPath = child.replace(/^\[(0|[1-9]\d*)\]/u, '$1')
-    const qualified = rawPath ? envelope + '.' + rawPath : envelope
+    const qualified = rawPath ? envelope + (rawPath.startsWith('[')?'':'.') + rawPath : envelope
     const canonical = path(response, rawPath)
     const selectsRootArray = rawPath === '' && envelope === 'records' && (selector === '$each' || Object.hasOwn(value, '$map'))
     if ((canonical === undefined || selectsRootArray) && path(response, qualified) !== undefined)
