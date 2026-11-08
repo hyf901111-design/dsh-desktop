@@ -76,10 +76,12 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id][data-releas
 .ew-board-tabs-nav-actions{display:flex;justify-content:flex-end;align-items:center;gap:4px;flex:none}
 .ew-board-tabs-nav-actions>button:hover{background:var(--bt-selected)}
 .ew-board-tabs-nav[data-board-tabs-orientation=vertical]{align-items:stretch;flex-direction:column}
-.ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-nav-actions{order:-1}
+.ew-board-tabs-nav-header{display:flex;align-items:center;gap:4px;min-height:24px;flex:none}
+.ew-board-tabs-nav-title{flex:1;min-width:0;padding-left:8px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-list{position:relative;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;overflow:hidden auto}
 .ew-board-tabs-nav[data-board-tabs-orientation=vertical] .ew-board-tabs-list>[role=tab]{width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .ew-board-tabs-nav [data-board-tabs-resize]{position:absolute;top:0;bottom:0;left:100%;width:12px;cursor:col-resize;touch-action:none}
+.ew-board-tabs-nav [data-board-tabs-resize]::before{content:'';position:absolute;top:8px;left:3px;width:6px;height:20px;border-radius:3px;background:var(--bt-muted);pointer-events:none}
 .ew-board-tabs-nav [data-board-tabs-resize]::after{content:'';position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--bt-accent);opacity:0;transform:translateX(var(--bt-resize-delta,0px));pointer-events:none}
 .ew-board-tabs-nav [data-board-tabs-resize]:is(:hover,:focus-visible,[data-board-tabs-resizing])::after{opacity:1}
 

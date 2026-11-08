@@ -537,6 +537,7 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  const first=()=>w.getVisibleBoardSnapshot().artifacts.find(n=>n.id==='alpha')
  const horizontal=first()
  await f.event('click',f.document.querySelector('[data-board-tabs-orientation-toggle]'))
+ expect(bar().querySelector('.ew-board-tabs-nav-header').firstElementChild.textContent).toBe('导航菜单')
  const assertFit=()=>{
   expect(bar().dataset.boardTabsOrientation).toBe('vertical')
   const cards=w.getVisibleBoardSnapshot().artifacts
@@ -550,6 +551,7 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(first().y-first().height/2).toBeCloseTo(12)
  expect(first().width).toBeLessThan(horizontal.width)
  const handle=f.document.querySelector('[data-board-tabs-resize]')
+ expect(handle.title).toBe('左右拖动调整页签宽度')
  await f.event('pointerdown',handle,{button:0,pointerId:1,clientX:212})
  await f.event('pointermove',handle,{pointerId:1,clientX:100})
  await f.event('pointerup',handle,{pointerId:1,clientX:100})
@@ -563,5 +565,7 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(nav(reopened).containerSpec).toMatchObject({orientation:'vertical',verticalWidth:140})
  await f.event('click',f.document.querySelector('[data-board-tabs-orientation-toggle]'))
  expect(bar().dataset.boardTabsOrientation).toBe('horizontal')
+ expect(bar().querySelector('.ew-board-tabs-nav-header')).toBeNull()
+ expect(bar().querySelector('[data-board-tabs-resize]')).toBeNull()
  expect(w.getVisibleBoardSnapshot().artifacts[0].width).toBeCloseTo(976)
 })
