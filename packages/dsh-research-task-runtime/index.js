@@ -576,7 +576,7 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract, { cano
     if(contracts.length===1)onChartContract?.(contracts[0])
   }
   if(toolSubmission)return [
-    '为当前面板先取得满足需求的真实数据，再组织可读的呈现。直接通过 submit_component_data 提交，不输出最终 JSON 文本。',
+    '为当前面板先取得满足需求的真实数据，再组织可读的呈现。取得结构化响应后使用 submit_component_data；静态卡只有真实网页正文时，提交带可核查来源的宿主模板 JSON。',
     COMPONENT_SUBMISSION_MAPPING_GUIDANCE,
     canonicalPolicySourceGuidance?POLICY_SOURCE_GUIDANCE:'',
     `建议呈现结构（取得数据后可调整）：${type==='chart'?chartTemplateSchema(requestedChartVariant(templatePrompt)??'horizontal'):schemas[type]}`,
@@ -2951,7 +2951,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
             sourceProjectionStops.add(stopSubmission)
             submission.register(child)
             return{prompt:liveDataSubmission?[
-              '继续本卡修复。原需求和成功查询的完整响应保留在本子会话中，不重新取数、不删减有效业务内容。只开放呈现 schema 和提交工具；以实际数据选择呈现形式，修正后调用 submit_component_data，校验错误可继续修正，不能把 JSON 当作最终回复。',
+              '继续本卡修复。原需求和成功查询的完整响应保留在本子会话中，不重新取数、不删减有效业务内容。只开放来源列表、呈现 schema 和提交工具。已有结构化数据时修正后调用 submit_component_data；只有网页正文且本卡无需刷新时提交宿主模板 JSON。',
               prompt.match(/具体校验问题：[^\n]+/u)?.[0]??'修正上一轮未被接受的呈现。',
               COMPONENT_SUBMISSION_MAPPING_GUIDANCE,submission.instruction
             ].join('\n'):(prototypeSubmission?.retainedRepairPrompt??prompt)+'\n'+submission.instruction,result:submission.result}

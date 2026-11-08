@@ -14,9 +14,41 @@ export const CARTESIAN_CHART_TEMPLATES = Object.freeze([
 export const CHART_TEMPLATES=Object.freeze([...CARTESIAN_CHART_TEMPLATES,...SPECIAL_CHART_TEMPLATES,...ADVANCED_CHART_TEMPLATES]);
 export const CHART_VARIANTS = Object.freeze(CHART_TEMPLATES.map(t => t.variant));
 
+// Equivalent literal chart shapes share the native renderer and its validators.
+// Convert only complete aligned records, preserving order, values and metadata.
+function normalizeLiteralCartesianChart(data) {
+  if (data?.type !== 'chart') return data;
+  const {chartType, ...canonical} = data;
+  if (chartType !== undefined) {
+    if (!CHART_VARIANTS.includes(chartType) || data.variant !== undefined && data.variant !== chartType) return data;
+    canonical.variant = chartType;
+  }
+  if (!CARTESIAN_CHART_TEMPLATES.some(template => template.variant === canonical.variant)) return data;
+  const {categories, values, ...chart} = canonical;
+  if (categories !== undefined || values !== undefined) {
+    if (chart.labels !== undefined || chart.series !== undefined || !Array.isArray(categories) || !Array.isArray(values)) return data;
+    return {...chart, labels:categories, series:[{name:chart.title, values}]};
+  }
+  if (chart.labels !== undefined || !Array.isArray(chart.series) || !chart.series.length) return canonical;
+  const series = [];
+  let labels;
+  for (const entry of chart.series) {
+    if (!entry || !Array.isArray(entry.points) || !entry.points.length || Object.hasOwn(entry,'values')) return canonical;
+    const {points, ...seriesFields} = entry;
+    if (points.some(point => !point || Object.keys(point).length !== 2 ||
+      typeof point.x !== 'string' || typeof point.y !== 'number' || !Number.isFinite(point.y))) return canonical;
+    const current = points.map(point => point.x);
+    if (labels && (current.length !== labels.length || current.some((value,index) => value !== labels[index]))) return canonical;
+    labels = current;
+    series.push({...seriesFields, values:points.map(point => point.y)});
+  }
+  return {...chart, labels, series};
+}
+
 // Source explanations belong in the full note, not a short chart caption.
 // Preserve every character and the native renderer; never trim business data.
 export function normalizeChartMetadata(data) {
+  data = normalizeLiteralCartesianChart(data);
   if(data?.type!=='chart'||!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===data.variant))return data;
   // Source names use the same meaning in the KPI and chart presentations.
   // Normalize only the unambiguous spelling; keep conflicts and unsafe URLs

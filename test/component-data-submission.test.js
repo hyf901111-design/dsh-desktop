@@ -270,3 +270,21 @@ it('retains source-owned submission tools during bounded repair and lets the sam
  expect(ctx.tools.schemas(children[0]).map(t=>t.name)).not.toContain('submit_component_data')
  expect(()=>handle.repair({synthesisOnly:true,prompt:'again'})).toThrow('恢复已结束')
 })
+
+it('submits one of several observed calls by sourceRef and serializes the original request', async () => {
+ const f=await fixture()
+ const other={...record,args:{...args,parameters_json:'{"series":"second"}'},response:{...response,records:[{name:'乙',value:8}]}}
+ f.records.push(other)
+ const lookup=await f.ctx.tools.execute({name:'component_presentation_schema',arguments:{},callId:'sources',agent:f.child,signal:f.controller.signal})
+ expect(lookup.isError).toBe(false)
+ const {sources}=JSON.parse(lookup.content[0].text)
+ expect(sources).toHaveLength(2)
+ const candidate={...input,requests:[{key:'q',sourceRef:sources[1].sourceRef}]}
+ expect((await f.invoke({...candidate,requests:[{key:'q',sourceRef:'other-task'}]})).isError).toBe(true)
+ expect((await f.invoke({...candidate,requests:[{...candidate.requests[0],tool:'public_data_query'}]})).isError).toBe(true)
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ const text=(await f.submission.result).output[0].text
+ expect(JSON.parse(text).requests).toEqual([{key:'q',tool:'public_data_query',args:other.args}])
+ expect(resolveBoundComponent(text,f.records).data.series[0].values).toEqual([8])
+})

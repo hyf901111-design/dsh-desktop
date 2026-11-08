@@ -55,10 +55,10 @@ export function componentSourceCollector(allowed,schemas=[]) {
       if(call.tool==='web_fetch') {
         const text=(result.content??[]).filter(b=>b?.type==='text'&&typeof b.text==='string').map(b=>b.text).join('\n')
         if(!text.trim()||!snapshotUrl(call.args?.url))return
-        // Public lists can identify detail pages without fetching each article.
-        // Keep bounded record fingerprints, never a page body or refresh recipe.
+        // Text pages keep bounded fingerprints. Complete JSON can also supply
+        // a static source mapping, with no authority to fetch it again.
         snapshotRows=webSnapshotRows(text,call.args?.url)
-        response=null
+        response=structuredWebSnapshot(text,call.args?.url)
       }
       // Plain-text API definitions still establish discovery, never data.
       {
@@ -94,6 +94,28 @@ function snapshotUrl(value) {
 function snapshotDate(value) {
   const date=typeof value==='string'?value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]:null
   return date&&Number.isFinite(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date?date:null
+}
+function structuredWebSnapshot(text, requestedUrl) {
+  if (Buffer.byteLength(text) > 256000) return null
+  const page = text.match(/^Fetched ([^\r\n]{1,2048}) \(HTTP 2\d\d\)\s*\[网页读取状态：已滚动至文末，完成正文收集\]\s*([\s\S]+)$/u)
+  const address = snapshotUrl(requestedUrl)
+  if (!page || !address || snapshotUrl(page[1]) !== address) return null
+  try {
+    const url = new URL(address)
+    if ([...url.searchParams.keys()].some(key => /token|secret|signature|credential|auth|api[_-]?key|session|^key$|^sig$/iu.test(key))) return null
+    const payload = decodeDataResponse(JSON.parse(page[2]))
+    if (!payload || typeof payload !== 'object' || !Object.keys(payload).length) return null
+    if (Object.hasOwn(payload,'$schema') || payload.openapi || payload.swagger) return null
+    const bounded = (value, depth = 0) => {
+      if (depth > 16) return false
+      if (!value || typeof value !== 'object') return true
+      return Object.entries(value).every(([key,child]) =>
+        !['__proto__','constructor','prototype'].includes(key) && bounded(child,depth+1))
+    }
+    if (!bounded(payload)) return null
+    const contents = Array.isArray(payload) ? {records:payload} : {data:payload}
+    return {source:url.hostname, sourceUrl:address, ...contents}
+  } catch { return null }
 }
 function snapshotTitle(value) {
   const title=typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase():''
@@ -143,7 +165,7 @@ function webSnapshotRows(text,sourceUrl) {
         // Related records own their links; an unlabelled {article:{href}}
         // wrapper still belongs to this row. Visit independent records below.
         if(marked(entries)||level>0&&!Array.isArray(object)&&entries.some(([key,v])=>identity.test(key)&&v!==undefined&&v!==null))return
-        for(const [key,v]of entries){if(/^(?:url|link|href|sourceUrl)$/iu.test(key)&&typeof v==='string'){const url=snapshotUrl(v);if(url&&url.length<=2048&&urls.length<8)urls.push(url)}else if(v&&typeof v==='object'&&!ignored.test(key))links(v,level+1)}
+        for(const [key,v]of entries){if(/^(?:url|link|href|sourceUrl|html_url)$/iu.test(key)&&typeof v==='string'){const url=snapshotUrl(v);if(url&&url.length<=2048&&urls.length<8)urls.push(url)}else if(v&&typeof v==='object'&&!ignored.test(key))links(v,level+1)}
       }
       links(value)
       const subjects=Array.isArray(value.codes)?value.codes.slice(0,12).flatMap(code=>typeof code?.short_name==='string'&&code.short_name.trim()&&code.short_name.length<=128&&typeof code.stock_code==='string'&&/^[\w.-]{1,32}$/u.test(code.stock_code)?[`${code.short_name}（${code.stock_code}）`]:[]):[]
@@ -362,6 +384,7 @@ export function componentSnapshotData(data) {
 export function componentMappableSource(record) {
  if(record?.purpose==='discovery'||!record?.response||typeof record.response!=='object')return false
  if(record.purpose!=='snapshot')return true
+ if(record.tool==='web_fetch')return Array.isArray(record.response.records)||record.response.data&&typeof record.response.data==='object'
  return record.tool==='financial_query'&&Array.isArray(record.response.records)&&record.response.records.length>0&&(record.response.status===undefined||['complete','partial'].includes(record.response.status))
 }
 
@@ -463,7 +486,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
   try {
     const keys=new Set()
     for(const request of candidate.requests){
-      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query','read_prototype'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
+      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query','read_prototype','web_fetch'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
       keys.add(request.key)
       const args=evaluateMapping(normalizeRequestDates(request.args),{},now)
       const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&componentMappableSource(record))

@@ -1,5 +1,6 @@
+import {createHash} from 'node:crypto'
 import {defineTool} from '@deepseek-ai/dsh-tools'
-import {resolveBoundComponent,resolveComponentSnapshot,COMPONENT_MAPPING_EXAMPLES} from './component-source-binding.js'
+import {resolveBoundComponent,resolveComponentSnapshot,componentMappableSource,COMPONENT_MAPPING_EXAMPLES} from './component-source-binding.js'
 import {chartTemplateSchema} from './chart-template-contract.js'
 import {marketPanelSchema} from './market-artifact.js'
 import {TABLE_INPUT_SCHEMA} from './template-data-contract.js'
@@ -10,6 +11,7 @@ const NAME='submit_component_data'
 const SCHEMA='component_presentation_schema'
 
 export const COMPONENT_SUBMISSION_MAPPING_GUIDANCE = `requests 引用本卡已成功执行的数据请求；mapping 描述呈现结构，数据用真实字段路径引用完整响应，不复制整组数值。
+同一工具有多个响应时，可调用 component_presentation_schema({}) 查看本卡 sourceRef 与可引用的根字段，提交 {key:"q",sourceRef:"实际编号"}，由宿主恢复精确原请求。无需重新取数或手抄参数。静态卡支持本轮 web_fetch 完整 JSON；数组读 records，对象读 data.字段。网页纯文本、截断、目录或错误响应不能作为结构化引用，也不能建立刷新绑定。
 同一工具在本卡仅有一个成功业务请求时，优先写 {key:"q",tool:"实际工具名"}，省略 args，由宿主复用其完整原参数；不要补写默认值或 null。若同一工具有多个成功业务请求，才提供原 args 明确选择，不能省略；接口目录不计为业务请求。
 需要明确选择 public_data_query 的多次请求时，requests 项为 {key:"q",tool:"public_data_query",args:{operation:"query",source:"实际来源标识",parameters_json:"成功查询时的原 JSON"}}；完整复用调用的外层 args，不把 symbol、limit 等内层参数平铺出来。
 ${COMPONENT_DERIVED_VALUE_GUIDANCE}
@@ -38,11 +40,35 @@ function observedRequestChoices(records,tool){
  return text.length<=4096?` 本卡已成功请求（tool/args）：${text}`:''
 }
 
+const sourceReference = record => createHash('sha256').update(JSON.stringify([record.tool,record.args])).digest('hex').slice(0,24)
+
+function sourceReferences(records) {
+ return records.filter(componentMappableSource).slice(-16).map(record => {
+  const sample = Array.isArray(record.response.records) ? record.response.records[0] : undefined
+  return {sourceRef:sourceReference(record), tool:record.tool,
+   ...(typeof record.response.source === 'string' ? {source:record.response.source.slice(0,128)} : {}),
+   ...(record.tool === 'web_fetch' ? {url:record.response.sourceUrl} : {}),
+   ...(typeof record.response.api === 'string' ? {api:record.response.api.slice(0,64)} : {}),
+   ...(typeof sample?.ts_code === 'string' ? {symbol:sample.ts_code.slice(0,32)} : {}),
+   ...(record.purpose === 'snapshot' ? {snapshotOnly:true} : {}),
+   fields:Object.keys(record.response).slice(0,20),
+   ...(sample && typeof sample === 'object' ? {recordFields:Object.keys(sample).slice(0,24)} : {}),
+   ...(record.tool === 'web_fetch' && record.response.data ? {dataFields:Object.keys(record.response.data).slice(0,24)} : {})}
+ })
+}
+
 function reuseObservedRequests(requests,records){
  if(!Array.isArray(requests))throw Error('requests 必须列出本卡已成功执行的数据请求。')
  return requests.map(request=>{
+  if (Object.hasOwn(request,'sourceRef')) {
+   if (Object.hasOwn(request,'tool') || Object.hasOwn(request,'args')) throw Error('sourceRef 与 tool/args 二选一。')
+   const matches=records.filter(record=>componentMappableSource(record)&&sourceReference(record)===request.sourceRef)
+   if(matches.length!==1)throw Error('该 sourceRef 不属于当前组件的唯一成功响应。调用 component_presentation_schema({}) 查看当前来源。')
+   return {key:request.key,tool:matches[0].tool,args:structuredClone(matches[0].args)}
+  }
+  if(typeof request.tool!=='string')throw Error('每个请求需要 sourceRef 或实际工具名。')
   if(Object.hasOwn(request,'args'))return request
-  const matches=records.filter(record=>record.tool===request.tool&&record.purpose!=='discovery')
+  const matches=records.filter(record=>record.tool===request.tool&&componentMappableSource(record))
   if(matches.length!==1)throw Error(matches.length
    ?`同一工具有多个成功业务请求，请用原 args 明确选择；不会自动选取最近一次。${observedRequestChoices(records,request.tool)}`
    :'该工具在本卡没有成功业务请求，不能引用目录、失败调用或其他组件的数据。')
@@ -61,14 +87,14 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
   if(disposed||exec.agent!==child||pending||accepted)throw Error('This component submission is closed or belongs to another execution.')
  }
  const schema=defineTool({
-  name:SCHEMA,description:'Read a presentation schema only when changing the suggested renderer. Choose from actual data and user intent; this does not fetch data or change the component.',
-  parameters:{type:{type:'string',enum:['kpi','table','chart','market'],required:true},variant:{type:'string'}},
+  name:SCHEMA,description:'List successful responses for this component as sourceRef, or inspect a presentation schema by passing type. This does not fetch data or change the component.',
+  parameters:{type:{type:'string',enum:['kpi','table','chart','market']},variant:{type:'string'}},
   output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>true,
-  execute(args,exec){check(exec);return{schema:args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}',guidance:args.type==='kpi'?KPI_GUIDANCE:'Use real observed source paths. Template fields describe presentation, never required business metrics.'}}
+  execute(args,exec){check(exec);if(!args.type)return {sources:sourceReferences(observeRecords())};return{schema:args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}',guidance:args.type==='kpi'?KPI_GUIDANCE:'Use real observed source paths. Template fields describe presentation, never required business metrics.'}}
  })
  const definition=defineTool({
-  name:NAME,description:'Submit this component using already observed data. Prefer requests:[{key,tool}] when that tool has exactly one successful business call: the host reuses its original arguments. If multiple calls exist, include exact args to select one. Never add defaults. mapping chooses the appropriate presentation and references actual fields. Fix validation errors here using the same data. Acceptance ends this component.',
-  parameters:{requests:{type:'array',required:true,items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string',required:true},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',required:true,additionalProperties:true}},
+  name:NAME,description:'Submit this component using already observed data. Use requests:[{key,sourceRef}] from component_presentation_schema({}) to avoid copying arguments. Alternatively use requests:[{key,tool}] when that tool has exactly one successful business call: the host reuses its original arguments. If multiple calls exist, include exact args to select one. Never add defaults. mapping chooses the appropriate presentation and references actual fields. Fix validation errors here using the same data. Acceptance ends this component.',
+  parameters:{requests:{type:'array',required:true,items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string'},sourceRef:{type:'string',description:'The exact reference returned by component_presentation_schema({}); omit tool and args.'},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',required:true,additionalProperties:true}},
   output:{schema:{type:'object',properties:{accepted:{type:'boolean',required:true}},additionalProperties:false},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>false,
   execute(args,exec){
    check(exec)
@@ -76,9 +102,11 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
    if(Buffer.byteLength(JSON.stringify(args))>256000)throw Error('Use paths into the complete observed responses instead of copying source records into the submission.')
    const records=structuredClone(observeRecords()),now=new Date()
    const observedTools=[...new Set(records.filter(record=>record.purpose!=='discovery').map(record=>record.tool))]
-   if(observedTools.length&&Array.isArray(args.requests)&&args.requests.some(request=>!observedTools.includes(request?.tool)))throw Error('数据引用的工具名必须逐字复用本卡成功调用，不能使用来源别名。本卡实际工具名：'+observedTools.slice(0,8).join('、')+'。保留其原参数及真实字段，无需重新取数。')
+   if(observedTools.length&&Array.isArray(args.requests)&&args.requests.some(request=>!Object.hasOwn(request,'sourceRef')&&!observedTools.includes(request?.tool)))throw Error('数据引用的工具名必须逐字复用本卡成功调用，不能使用来源别名。本卡实际工具名：'+observedTools.slice(0,8).join('、')+'。保留其原参数及真实字段，无需重新取数。')
    const candidate={version:1,type:'data-bound',requests:reuseObservedRequests(args.requests,records),mapping:args.mapping},text=JSON.stringify(candidate)
    if(Buffer.byteLength(text)>256000)throw Error('完整数据请求与映射超过容量限制，不能截断来源参数。')
+   if (bindingRequested && candidate.requests.some(request => ['web_fetch','financial_query'].includes(request.tool)))
+    throw Error('网页或查询快照不能建立刷新绑定。需要自动更新时使用原授权范围内支持刷新的来源。')
    let snapshot
    try{snapshot=resolveBoundComponent(text,records,now,{...options,staticSnapshot:!bindingRequested})}catch(error){
     let snapshotError
@@ -87,7 +115,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
      const issue=snapshotError??error
      if(String(issue?.message).includes('未匹配本轮已成功取数的原参数')){
       const choices=[...new Set(candidate.requests.map(request=>request.tool))].map(tool=>observedRequestChoices(records,tool)).join('')
-      throw Error(issue.message+' 同一工具仅有一个成功业务请求时，可省略 args 直接复用。'+choices)
+      throw Error(issue.message+' 可用 component_presentation_schema({}) 获取 sourceRef；同一工具仅有一个成功业务请求时，可省略 args 直接复用。'+choices)
      }
      throw issue
     }
@@ -104,7 +132,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
  const dispose=()=>{if(disposed)return;disposed=true;for(const release of releases.splice(0).reverse())release();signal?.removeEventListener('abort',dispose);pending=accepted=undefined}
  signal?.addEventListener('abort',dispose,{once:true})
  return{
-  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得足够数据后调用 submit_component_data，传 requests 与 mapping 两个对象；不再把完整 JSON 写成最终回复。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
+  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得结构化数据后调用 submit_component_data，传 requests 与 mapping。若本卡不要求刷新且只有真实网页正文而无结构化记录，直接输出宿主模板 JSON 并保留原文链接和日期，由宿主继续校验；不能把正文包装成刷新配方。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
   result,
   register(agent){
    signal?.throwIfAborted()

@@ -134,9 +134,26 @@ export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
  return undefined;
 }
 
+// Preserve operational facts when the model spells state or note metadata
+// differently from the native schema. Keep all other fields for validation.
+export function normalizeOperationMetadata(value) {
+ if (value?.type === 'tasks' && Array.isArray(value.items)) {
+  const completion = new Map([['todo',false],['pending',false],['in_progress',false],['done',true],['completed',true]]);
+  value = {...value, items:value.items.map(item => item && typeof item === 'object' &&
+   item.completed === undefined && completion.has(item.status) ? {...item, completed:completion.get(item.status)} : item)};
+ }
+ if (value?.type === 'note' && typeof value.asOf === 'string' && value.asOf.trim() &&
+   typeof value.note === 'string' && value.note.trim() && value.asOf.length + value.note.length + 1 <= 2000) {
+  const {note, ...fields} = value;
+  return {...fields, asOf:fields.asOf+'\n'+note};
+ }
+ return value;
+}
+
 // Accept the two common table shapes without asking a model to retranscribe
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
+ value=normalizeOperationMetadata(value);
  if(value?.type==='financial-widget'){
   const defaults=financialWidgetDefaults(value.widget);
   return defaults?{...defaults,...value}:value;
