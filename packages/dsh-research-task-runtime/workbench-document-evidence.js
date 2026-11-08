@@ -76,10 +76,14 @@ export function restoreDocumentLists(output, documents, request) {
   const body = compact(text)
   const missing = []
   for (const doc of documents) for (const block of doc.blocks ?? []) {
-    const match = block.text?.match(/^(\d{1,3}\s*[个名项条家只所位]\s*[^：:\n。]{1,32})[：:]([^。\n]+)[。\n]?/u)
-    if (!match || !scope.includes(compact(match[1]))) continue
-    const entries = match[2].split('、').map(value => value.trim())
-    const count = Number(match[1].match(/^\d+/u)[0])
+    const match = block.text?.match(/^((\d{1,3})\s*([个名项条家只所位])\s*[^：:\n。]{1,32})[：:]([^。\n]+)[。\n]?/u)
+    if (!match) continue
+    const [,heading,amount,unit,list] = match
+    const count = Number(amount)
+    const citedCount = documents.length === 1 && scope.includes('[' + block.id + ']') &&
+      new RegExp('(?<![0-9])' + amount + unit, 'u').test(scope)
+    if (!scope.includes(compact(heading)) && !citedCount) continue
+    const entries = list.split('、').map(value => value.trim())
     if (count < 2 || entries.length !== count || new Set(entries).size !== count || entries.some(value => !value || value.length > 100)) continue
     if (entries.some(value => !body.includes(compact(value)))) missing.push({ref:block.id,line:match[0].trim()})
   }

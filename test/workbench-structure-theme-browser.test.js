@@ -19,6 +19,7 @@ afterAll(async () => browser?.close())
 const html = `<style>
 .chart .node { background:var(--sherlock-surface-raised);border:1px solid var(--sherlock-border);border-radius:8px }
 .chart .role { color:var(--sherlock-text-muted) }
+.custom-label { color:var(--sherlock-muted) }
 .chart .vline { background:var(--sherlock-border);width:1px;height:20px }
 </style><main>
 <div class="chart">
@@ -36,6 +37,7 @@ const html = `<style>
   <div id="department" style="border:1px solid var(--sherlock-border);border-radius:6px"><div>综合部门</div><div>负责人待核</div></div>
   <div id="control" style="border:1px solid var(--sherlock-border);border-radius:6px"><button>普通控制</button></div>
 </div>
+<section data-sherlock-structure="primary" id="custom-primary"><div class="custom-label">职位与出处</div></section>
 <section data-sherlock-structure="info" id="info"><h3>资料卡片</h3><a href="https://example.com/source">原始出处</a></section>
 <svg viewBox="0 0 100 45" aria-label="关系图">
   <path id="path" data-sherlock-structure="connector" d="M 10 20 L 50 20" stroke="#777777"/>
@@ -60,6 +62,7 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     await switchMode('enterprise')
     expect(await read('#root', 'backgroundColor')).toBe('rgb(0, 80, 150)')
     expect(await read('#root .role', 'color')).toBe('rgb(255, 255, 255)')
+    expect(await read('#custom-primary .custom-label', 'color')).toMatch(/^color\(srgb 0\.8 /u)
     expect(await read('#peer', 'backgroundColor')).toMatch(/^color\(srgb /u)
     expect(await read('#rail', 'backgroundColor')).toMatch(/^color\(srgb /u)
     expect(await read('#tree-root', 'backgroundColor')).toBe('rgb(0, 80, 150)')

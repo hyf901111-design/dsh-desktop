@@ -58,7 +58,10 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
  border-radius:0!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child){
- background:var(--sherlock-chart-1)!important;border-color:var(--sherlock-chart-1)!important;color:var(--sherlock-control-on-primary)!important;
+ --sherlock-text:var(--sherlock-control-on-primary);
+ --sherlock-muted:color-mix(in srgb,var(--sherlock-control-on-primary) 80%,var(--sherlock-chart-1));
+ --sherlock-text-muted:var(--sherlock-muted);
+ background:var(--sherlock-chart-1)!important;border-color:var(--sherlock-chart-1)!important;color:var(--sherlock-text)!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child) :is(.role,.name,.node-title,.node-sub,h2,h3,h4,p,span,strong,small,a){
  color:var(--sherlock-control-on-primary)!important;
