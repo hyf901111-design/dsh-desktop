@@ -40,7 +40,7 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 
 :root[data-workbench-style="enterprise"] body th{background:var(--sherlock-table-heading)!important;color:var(--sherlock-table-heading-text)!important}
 :root[data-workbench-style="enterprise"] body th button{color:inherit!important}
-:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div){background:var(--sherlock-chart-1)!important;padding:12px!important;border-radius:0!important}
+:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div){background:var(--sherlock-chart-1)!important;padding:12px!important;border:0!important;box-shadow:none!important;border-radius:0!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n+2){background:var(--sherlock-chart-5)!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n){background:var(--sherlock-chart-4)!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div) :is(.market-value,.market-label,.market-detail,.fund-value,.fund-label,.fund-detail,.research-metric-value,.research-metric-label,.research-metric-detail,.kpi-label,.kpi-value,.kpi-detail,span,strong,em){color:white!important}
@@ -54,14 +54,14 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
  :where(.tree:has(> .node > .node-title)) > .node,
  :where(.tree:has(> .node > .node-title)) .branch > .card){
  background:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;
- border-color:color-mix(in srgb,var(--sherlock-chart-1) 28%,var(--sherlock-border))!important;
+ border:0!important;box-shadow:none!important;
  border-radius:0!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child){
  --sherlock-text:var(--sherlock-control-on-primary);
  --sherlock-muted:color-mix(in srgb,var(--sherlock-control-on-primary) 80%,var(--sherlock-chart-1));
  --sherlock-text-muted:var(--sherlock-muted);
- background:var(--sherlock-chart-1)!important;border-color:var(--sherlock-chart-1)!important;color:var(--sherlock-text)!important;
+ background:var(--sherlock-chart-1)!important;color:var(--sherlock-text)!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child) :is(.role,.name,.node-title,.node-sub,h2,h3,h4,p,span,strong,small,a){
  color:var(--sherlock-control-on-primary)!important;
@@ -69,7 +69,7 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="info"],.info-card,.department-card,[class$="-cards"] > [class$="-card"]:not(:has(table,svg,canvas,button,input,select)),
  :is([style*="display:grid" i],[style*="display: grid" i])[style*="grid-template-columns"] > :is(div,article,section)[style*="border:"][style*="--sherlock-border"][style*="border-radius"]:has(> :is(div,h3,h4,strong)):not(:has(table,svg,canvas,button,input,select))) {
  background:color-mix(in srgb,var(--sherlock-chart-1) 5%,var(--sherlock-surface))!important;
- border-color:var(--sherlock-border)!important;border-inline-start:2px solid var(--sherlock-chart-5)!important;border-radius:0!important;
+ border:0!important;box-shadow:none!important;border-radius:0!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="connector"]:not(svg *),.chart:has(.node.root > .role) :is(.vline,.stub),.tree:has(> .node > .node-title) :is(.vline,.drop)),
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::before,
@@ -77,8 +77,8 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
  background:color-mix(in srgb,var(--sherlock-chart-1) 32%,var(--sherlock-border))!important;
 }
 :root[data-workbench-style="enterprise"] svg [data-sherlock-structure="connector"]{stroke:var(--sherlock-chart-5)!important}
-:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="node"] > :is(rect,ellipse,circle){fill:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;stroke:var(--sherlock-chart-5)!important}
-:root[data-workbench-style="enterprise"] svg [data-sherlock-structure="primary"] > :is(rect,ellipse,circle){fill:var(--sherlock-chart-1)!important;stroke:var(--sherlock-chart-1)!important}
+:root[data-workbench-style="enterprise"] svg :is(rect,ellipse,circle,polygon,path):is([data-sherlock-structure="node"],[data-sherlock-structure="node"] > :not([data-sherlock-structure="connector"])){fill:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;stroke:none!important}
+:root[data-workbench-style="enterprise"] svg :is(rect,ellipse,circle,polygon,path):is([data-sherlock-structure="primary"],[data-sherlock-structure="primary"] > :not([data-sherlock-structure="connector"])){fill:var(--sherlock-chart-1)!important;stroke:none!important}
 :root[data-workbench-style="enterprise"] svg [data-sherlock-structure="primary"] :is(text,tspan){fill:var(--sherlock-control-on-primary)!important}
 @media(prefers-reduced-motion:no-preference){
  :root[data-workbench-transition] body,:root[data-workbench-transition] body *{transition:background-color 260ms cubic-bezier(.2,.7,.2,1),color 260ms cubic-bezier(.2,.7,.2,1),border-color 260ms cubic-bezier(.2,.7,.2,1)}
