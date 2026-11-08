@@ -29,7 +29,7 @@ for(const width of [380,900])it(`adapts connected hierarchy at ${width}px and ke
   const map=page.locator('[data-research-mind-map]'),root=map.locator('[data-research-mind-map-depth="0"]'),branch=map.locator('[data-research-mind-map-depth="1"]').first(),leaf=map.locator('[data-research-mind-map-depth="2"]').first()
   await expect.poll(()=>map.locator('[data-research-mind-map-edges] path').getAttribute('d')).toMatch(/^M/)
   const boxes=await Promise.all([root,branch,leaf].map(node=>node.boundingBox()))
-  if(width<840){expect(boxes[1].x).toBeGreaterThanOrEqual(boxes[0].x+boxes[0].width+20);expect(boxes[2].x).toBeGreaterThanOrEqual(boxes[1].x+boxes[1].width+20)}
+  if(width<840){expect(await map.getAttribute('data-research-mind-map-layout')).toBe('stacked');expect(boxes[1].y).toBeGreaterThan(boxes[0].y+boxes[0].height);expect(boxes[2].y).toBeGreaterThan(boxes[1].y+boxes[1].height);expect(boxes[2].x+boxes[2].width).toBeLessThanOrEqual(width+10)}
   else{expect(await map.getAttribute('data-research-mind-map-layout')).toBe('wide');expect(boxes[1].y).toBeGreaterThanOrEqual(boxes[0].y+boxes[0].height+20);expect(boxes[2].y).toBeGreaterThanOrEqual(boxes[1].y+boxes[1].height+20)}
   expect(await map.evaluate(el=>el.clientWidth)).toBeLessThanOrEqual(width)
   await leaf.dblclick();const input=page.getByRole('textbox',{name:'编辑思维导图节点'});await input.fill('半导体回升');await input.press('Enter')
@@ -60,7 +60,7 @@ it('reflows full six-branch hierarchies across the available width and restores 
   expect(boxes.at(-1).right-boxes[0].x).toBeGreaterThan(600)
   await expect.poll(async()=>(await path.getAttribute('d')).match(/M/g)?.length).toBe(18)
   const widePath=await path.getAttribute('d')
-  await page.locator('section').evaluate(el=>{el.style.width='650px'})
+  await page.locator('section').evaluate(el=>{el.style.width='750px'})
   await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('compact')
   await expect.poll(()=>map.evaluate(el=>el.scrollHeight)).toBeGreaterThan(wideHeight)
   expect(await nodes.allTextContents()).toEqual(content)
@@ -87,5 +87,29 @@ it('renders all twelve levels and every connector without flattening deeper rela
   await expect.poll(async()=>(await map.locator('[data-research-mind-map-edges] path').getAttribute('d'))?.match(/M/g)?.length).toBe(12);
   await map.locator('[data-research-mind-map-depth="12"]').scrollIntoViewIfNeeded();
   expect(await map.locator('[data-research-mind-map-depth="12"]').isVisible()).toBe(true);
+ }finally{await page.close()}
+},15000);
+
+it('starts narrow deep trees at the root and keeps every node readable through live width changes',async()=>{
+ const page=await browser.newPage({viewport:{width:1800,height:900}});
+ try{
+  await page.setContent('<section data-research-compact-chrome style="width:425px;height:400px;overflow:auto"><div id="map" class="ew-derived-preset"></div></section>');
+  await page.addStyleTag({content:css});await page.addScriptTag({content:script});
+  await page.evaluate(()=>window.showMap('# 完整组织根节点\n'+Array.from({length:4},(_,i)=>'- 机构'+i+'\n  - 部门'+i+'\n    - 岗位'+i+'\n      - 人员'+i).join('\n'),true));
+  const map=page.locator('[data-research-mind-map]'),nodes=map.locator('[data-research-mind-map-node]');
+  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('stacked');
+  const original=await nodes.allTextContents(),root=await nodes.first().boundingBox(),container=await page.locator('section').boundingBox();
+  expect(root.y).toBeLessThan(container.y+70);
+  expect(root.x).toBeGreaterThanOrEqual(container.x);
+  expect(original).toHaveLength(17);
+  expect(await map.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+  for(const width of [1600,425]){
+   await page.locator('section').evaluate((el,width)=>{el.style.width=width+'px'},width);
+   await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe(width===425?'stacked':'wide');
+   expect(await nodes.allTextContents()).toEqual(original);
+   await expect.poll(async()=>(await map.locator('path').getAttribute('d')).match(/M/g)?.length).toBe(16);
+  }
+  expect(await page.locator('section').evaluate(el=>el.scrollTop)).toBe(0);
+  expect((await nodes.first().boundingBox()).y).toBeLessThan(container.y+70);
  }finally{await page.close()}
 },15000);
