@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-35",
+  "branch": "codex/integration/20261108-35",
+  "baseMainCommit": "09ea8d5c7bd0d99d9e230b21bff7edb08c15e6b3",
+  "expectedMainCommit": "09ea8d5c7bd0d99d9e230b21bff7edb08c15e6b3",
+  "createdAt": "2026-11-08T11:05:49.849Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一组件库全局菜单样式",
+        "branch": "codex/feat/workbench-library-menu-20261108",
+        "baseCommit": "09ea8d5c7bd0d99d9e230b21bff7edb08c15e6b3",
+        "tipCommit": "5fda8c4fa027bd43794d56e3991f6ed1303e5551",
+        "commits": [
+          {
+            "commit": "5fda8c4fa027bd43794d56e3991f6ed1303e5551",
+            "parents": [
+              "09ea8d5c7bd0d99d9e230b21bff7edb08c15e6b3"
+            ],
+            "subject": "统一组件库全局菜单样式并按内容展开"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/custom-component-library.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/custom-component-library.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-menu.test.js",
+              "test/custom-component-library-client.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "105 项聚焦检查通过",
+            "verifiedCommit": "5fda8c4fa027bd43794d56e3991f6ed1303e5551",
+            "completedAt": "2026-11-08T11:05:48.447197+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "5fda8c4fa027bd43794d56e3991f6ed1303e5551",
+            "completedAt": "2026-11-08T11:05:48.447197+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "5fda8c4fa027bd43794d56e3991f6ed1303e5551",
+            "completedAt": "2026-11-08T11:05:48.447197+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "聚焦 DOM 验证菜单继承全局材质、用实际内容高度展开，低窗口再约束高度，原放置、键盘与自定义动作不变。"
+        },
+        "acceptanceCriteria": [
+          "组件库复用整理菜单样式",
+          "菜单按真实内容高度展开",
+          "空间不足才滚动",
+          "组件放置和自定义菜单保持可用"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T11:05:48.447197+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/financial-widget-client.test.js",
+        "test/financial-widget-layout.test.js",
+        "test/financial-widget-menu.test.js",
+        "test/custom-component-library-client.test.js",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
