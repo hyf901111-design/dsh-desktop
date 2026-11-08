@@ -8,11 +8,13 @@ import {createResearchGrid} from '../packages/dsh-research-task-runtime/research
 import {Window} from 'happy-dom'
 import {build} from 'esbuild'
 import {parseResearchMarketNativeTable,ResearchMarketNativeTable,researchMarketNativeTableCss} from '../scripts/lib/research-market-native-table.mjs'
+import {componentSourceCss} from '../scripts/lib/component-source-info.mjs'
 import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 
 // Complete semantic model retained by the actual a0d75bfa native task. No fetch,
 // model, client connection or saved canvas mutation is needed to replay it.
-const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-three-quote-table-20261023.json',import.meta.url),'utf8'))
+const globalObserved=JSON.parse(readFileSync(new URL('./fixtures/workbench-three-quote-table-20261023.json',import.meta.url),'utf8'))
+const observed=globalObserved
 const ui=readFileSync(new URL('../scripts/lib/research-grid-ui.mjs',import.meta.url),'utf8')
 const measured=vm.runInNewContext('('+ui.slice(ui.indexOf('export function workbenchMeasuredDimensions('),ui.indexOf('export function measureWorkbenchContents(')).replace(/^export /u,'')+')',{researchOptimalDimensions,researchMarketDimensions,researchCandleTemplate:()=>false})
 let browser,nativeDependencies
@@ -96,18 +98,20 @@ it('keeps short source notes compact and bounds long tables without losing their
 },15000)
 
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__DARK__').replaceAll(':root','__ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
-const nativeCss=readFileSync(new URL('../scripts/lib/research-grid-workbench.css',import.meta.url),'utf8')+nativePresentation+researchMarketNativeTableCss+readFileSync(new URL('../scripts/lib/workbench-style.css',import.meta.url),'utf8')
+const nativeCss=componentSourceCss+readFileSync(new URL('../scripts/lib/research-grid-workbench.css',import.meta.url),'utf8')+nativePresentation+researchMarketNativeTableCss+readFileSync(new URL('../scripts/lib/workbench-style.css',import.meta.url),'utf8')
 const nativeMeasure=ui.slice(ui.indexOf('export function workbenchNativeTableDimensions('),ui.indexOf('export function workbenchMeasuredDimensions(')).replace(/^export /u,'')
-it.each(['light','dark','enterprise','openterminal'])('fits actual host-native rows, full asOf/note and selected row after default sizing and Arrange in %s',async mode=>{
+it.each([['light',3],['dark',3],['enterprise',3],['openterminal',3],['dark',20]])('fits actual host-native rows, full asOf/note and selected row after default sizing and Arrange in %s with %i rows',async(mode,count)=>{
+ const observed=count===3?globalObserved:{...globalObserved,rows:Array.from({length:count},(_,i)=>[String(i),...globalObserved.rows[i%3].slice(1)]),note:'完整来源记录。'}
  const spec=renderMarketArtifact(observed),win=new Window(),data=parseResearchMarketNativeTable(spec.html,win.document);win.happyDOM.abort()
  expect(data.footer.map(line=>line.map(part=>part.text).join(''))).toEqual([observed.asOf,observed.note])
  const page=await browser.newPage({viewport:{width:900,height:900},reducedMotion:'reduce'})
  try{
-  await page.setContent('<style>html,body{margin:0}article{display:flex;flex-direction:column;position:relative;transition:none!important}#native{width:100%;height:calc(100% - 58px);flex:none!important}header{height:34px;flex:none}.odyssey-data-stamp{height:24px;flex:none}</style><main data-ework-grid data-workbench-style="'+mode+'"><article data-research-artifact-card data-research-node-id="native-table" data-selected="true"><header></header><div id="native" class="rScV5Q_containerContent" data-research-preview-body></div><div class="odyssey-data-stamp"></div></article></main>')
+  await page.setContent('<style>html,body{margin:0}article{display:flex;flex-direction:column;position:relative;transition:none!important}#native{width:100%;height:calc(100% - 58px);flex:none!important}header{height:34px;flex:none}.odyssey-data-stamp{height:24px;flex:none}</style><main data-ework-grid data-workbench-style="'+mode+'"><article data-research-artifact-card data-research-node-id="native-table" data-selected="true"><header></header><div id="native" class="rScV5Q_containerContent" data-research-preview-body></div><div class="odyssey-data-stamp">'+(count===20?'<span class="ew-source-actions"></span>':'')+'</div></article></main>')
   await page.addStyleTag({content:nativeCss});await page.addScriptTag({content:nativeDependencies})
   await page.addScriptTag({content:'window.react=nativeDeps.react;window.react_jsx_runtime=nativeDeps.jsx;window.NativeTable=('+ResearchMarketNativeTable.toString()+');'+researchMarketContentDimensions.toString()+'\n'+researchMarketDimensions.toString()+'\n'+nativeMeasure})
   await page.evaluate(({data,mode})=>{if(['dark','openterminal'].includes(mode))document.body.setAttribute('data-ds-dark-theme','');nativeDeps.flushSync(()=>nativeDeps.createRoot(document.querySelector('#native')).render(react.createElement(NativeTable,{data})))},{data,mode})
   await page.locator('article').evaluate(el=>el.style.setProperty('transition','none','important'))
+  if(count===20)expect(await page.locator('.terminal-native-context').isVisible()).toBe(false)
   const inspect=()=>page.evaluate(()=>{
    const root=document.querySelector('[data-sherlock-market-native]'),wrap=root.querySelector('.fund-native-table-wrap'),footer=root.querySelector('footer'),readout=root.querySelector('.terminal-native-readout')
    return{rowEnd:root.querySelector('tbody tr:last-child').getBoundingClientRect().bottom,wrapEnd:wrap.getBoundingClientRect().bottom,footerEnd:footer.getBoundingClientRect().bottom,rootEnd:root.getBoundingClientRect().bottom,footerClient:footer.clientHeight,footerTotal:footer.scrollHeight,readoutClient:readout?.clientHeight,readoutTotal:readout?.scrollHeight}
@@ -149,3 +153,18 @@ it.each(['light','dark','enterprise','openterminal'])('fits actual host-native r
   expect(await page.locator('footer').textContent()).toContain(observed.note)
  }finally{await page.close()}
 },20000)
+
+it('expands all twenty ordinary source rows when they fit the reading height budget, even after a clipped viewport',async()=>{
+ const data={...observed,rows:Array.from({length:20},(_,i)=>[String(i),...observed.rows[i%3].slice(1)]),note:'完整来源记录。'}
+ const {page,frame,spec}=await preview(data,1100,260)
+ try{
+  await expect.poll(()=>page.evaluate(()=>window.tableSizes.at(-1)?.intrinsicTable)).toBe(true)
+  const report=await page.evaluate(()=>window.tableSizes.at(-1)),height=measured({containerSpec:spec},report,1100).height
+  await page.setViewportSize({width:1100,height:Math.ceil(height-58)})
+  const wrap=frame.locator('.market-table-wrap')
+  await expect.poll(()=>wrap.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
+  expect(await frame.locator('tbody tr').count()).toBe(20)
+  const end=await frame.locator('tbody tr:last-child').boundingBox(),box=await wrap.boundingBox()
+  expect(end.y+end.height).toBeLessThanOrEqual(box.y+box.height+1)
+ }finally{await page.close()}
+},15000)

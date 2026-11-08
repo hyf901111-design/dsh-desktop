@@ -528,7 +528,7 @@ export function workbenchNativeTableDimensions(tableRoot) {
   for(const element of children){
     let natural=element.getBoundingClientRect().height
     if(element.classList.contains('fund-native-table-wrap')){
-      const table=element.querySelector('table'),rows=Array.from(table?.querySelectorAll('tbody tr')||[]).slice(0,12)
+      const table=element.querySelector('table'),rows=Array.from(table?.querySelectorAll('tbody tr')||[])
       natural=(table?.querySelector('thead')?.getBoundingClientRect().height||0)+rows.reduce((n,row)=>n+row.getBoundingClientRect().height,0)+insets(element)
       if(element.scrollWidth>element.clientWidth+1)natural+=16
     }else if(element.classList.contains('terminal-native-context'))natural=Math.min(240,Math.max(natural,element.scrollHeight)+pixels(view.getComputedStyle(element).borderTopWidth))

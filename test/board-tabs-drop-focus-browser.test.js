@@ -172,6 +172,8 @@ it.each(['horizontal','vertical'])('scrolls the %s navigation according to its o
    return
   }
   expect(await top()).toBe(initial)
+  const last=await page.locator('[data-research-node-id="'+first+'"]').boundingBox()
+  expect(Math.abs((await bar.boundingBox()).y+(await bar.boundingBox()).height-last.y-last.height)).toBeLessThan(1)
   const viewport=await canvas.boundingBox(),nav=await bar.boundingBox()
   const capture=()=>page.screenshot({clip:{x:Math.ceil(nav.x)+4,y:Math.ceil(viewport.y)+1,width:Math.floor(nav.width)-8,height:8}})
   const gutter=await capture()

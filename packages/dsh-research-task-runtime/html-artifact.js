@@ -581,7 +581,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
           const pixels=value=>Math.max(0,parseFloat(value)||0);
           const insets=element=>{const s=getComputedStyle(element);return pixels(s.paddingTop)+pixels(s.paddingBottom)+pixels(s.borderTopWidth)+pixels(s.borderBottomWidth)};
           const margins=element=>{const s=getComputedStyle(element);return pixels(s.marginTop)+pixels(s.marginBottom)};
-          const rows=Array.from(table.querySelectorAll('tbody tr')).filter(visible).slice(0,12);
+          const rows=Array.from(table.querySelectorAll('tbody tr')).filter(visible);
           let height=insets(document.body)+(table.querySelector('thead')?.getBoundingClientRect().height||0)
             +rows.reduce((sum,row)=>sum+row.getBoundingClientRect().height,0)+insets(wrap)+margins(wrap)
             // Reserve a real horizontal scrollbar even on overlay-scrollbar Macs.

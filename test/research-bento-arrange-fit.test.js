@@ -1,3 +1,6 @@
+import {createRequire} from 'node:module';
+import {stripConversationLiveUi} from './fixtures/strip-conversation-live-ui.mjs';
+import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs';
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
@@ -12,14 +15,17 @@ const native = makeNodes(['large','medium','medium','large','small','large']);
 const screenBounds = result => result.nodes.map(n=>({left:result.viewport.x+n.x*result.viewport.scale,top:result.viewport.y+n.y*result.viewport.scale,right:result.viewport.x+(n.x+n.width)*result.viewport.scale,bottom:result.viewport.y+(n.y+n.height)*result.viewport.scale}));
 
 async function patchedWorkspace() {
-  const installed=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
+  const require=createRequire(import.meta.url);
+  let installed=stripConversationLiveUi(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+  for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']]){if(file==='home-guide-presentation-native')installed=stripWorkbenchReplay(installed);installed=require('../scripts/lib/'+file+'.mjs')[strip](installed)}
+
   const source=patchFigmaFinalCanvas(restoreResearchGridWorkbench(installed));
   // Simulate an installed old final-marker wrapper, not only fresh source.
   const old=source.replace('researchBentoLayout(nodes, researchCanvasVisibleArea({canvasSize}), measured, {fitColumns:true})','researchBentoLayout(nodes, canvasSize, measured)');
   const upgraded=patchFigmaFinalCanvas(old);
   expect(patchFigmaFinalCanvas(upgraded)).toBe(upgraded);
   const window=new Window();
-  let descriptor;runInNewContext(upgraded,{document:window.document,window:{__ModuleLoader__:{load:v=>descriptor=v}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
+  let descriptor;window.__ModuleLoader__={load:v=>descriptor=v};runInNewContext(upgraded,{WorkbenchIcon:()=>null,document:window.document,window,Event:window.Event,CustomEvent:window.CustomEvent,URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
   let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback});
   const client=descriptor.factory(()=>fallback);
   const values=new Map(), storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{values.set(k,v);return true}};
