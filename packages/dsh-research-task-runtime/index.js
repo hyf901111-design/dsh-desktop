@@ -443,7 +443,7 @@ const COMPONENT_STYLE_INSTRUCTION = [
   'HTML 默认随 EWork Odyssey 当前主题自动切换；宿主会更新根元素 data-sherlock-theme（light 或 dark）和 color-scheme，不能只依赖系统 matchMedia。CSS/SVG 直接引用变量即可联动。Canvas 绘图用 getComputedStyle(document.documentElement).getPropertyValue 读取角色变量，并监听 window 的 sherlock-theme-change 事件（detail.colorScheme 为 light 或 dark）重绘；只更新颜色，不得重建页面、清空输入或重置交互状态。仅当用户明确要求固定浅色或固定深色时，才加入 <meta name="sherlock-theme" content="light"> 或 <meta name="sherlock-theme" content="dark">；除此之外不加入固定主题标记。'
 ].join('\n')
 
-const WORKBENCH_PANEL_TYPES = new Set(['kpi', 'table', 'chart', 'news', 'reports', 'calendar', 'dashboard', 'market', 'html', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'gantt', 'timeline'])
+const WORKBENCH_PANEL_TYPES = new Set(['kpi', 'table', 'chart', 'news', 'reports', 'calendar', 'dashboard', 'market', 'markdown', 'html', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'gantt', 'timeline'])
 function legacyWorkbenchPanelHeader(prompt) {
   // Earlier workbench plans marked automatic layout but omitted the typed
   // panel header. Sending those cards through the full 30 KB manual-component
@@ -571,6 +571,7 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract, { cano
     news: '{"version":1,"type":"news","title":"标题","items":[{"title":"条目","summary":"摘要","date":"发布日期","category":"分类"}]}',
     reports: '{"version":1,"type":"reports","title":"标题","items":[{"title":"条目","summary":"摘要","date":"日期","category":"分类"}]}',
     calendar: '{"version":1,"type":"calendar","title":"标题","items":[{"title":"节点","summary":"详情和经办人","date":"YYYY-MM-DD","category":"类型"}]}',
+    markdown: '{"version":1,"type":"markdown","title":"标题","content":"有出处的完整 Markdown 内容"}',
     html: HTML_ARTIFACT_SCHEMA,
     market: selectedMarketVariant ? marketPanelSchema(selectedMarketVariant) : MARKET_ARTIFACT_PROMPT
   }
@@ -598,7 +599,7 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract, { cano
     '行情快照使用单次响应已有的核心字段，不为补充未提供的52周高低等可选字段额外拉取长历史。响应被截断时缩小范围；不能绑定不完整的JSON。只交付当前已有足够证据的内容。',
     `本面板需求：\n${templatePrompt.split('\n仅生成本面板，')[0]}${scope?.scope ?? ''}`
   ].join('\n')
-  const htmlRule = adaptive ? '先保留真实数据含义，再决定使用何种宿主数据图形。需要改变建议形式时可查对应 schema，不受当前建议类型限制；明确指定的 K 线、比较范围、日期、单位和交互仍须满足。' : type === 'market'
+  const htmlRule = adaptive ? '按用户问题和实际内容选择呈现。只有论述时可提交 {"version":1,"type":"markdown","title":"标题","content":"有出处的正文"}。原生能力无法表达所需布局或交互时可提交 {"version":1,"type":"html","title":"标题","html":"自包含正文与交互"}。其余原生结构按对应 schema。保留明确指定的呈现、交互、范围、日期和单位。' : type === 'market'
     ? '金融面板提交 market 数据对象；静态trend也可用上述data-bound包裹market映射，由宿主读取原响应和计算曲线。宿主按金融模板渲染深浅主题。K线必须包含真实或明确标注模拟的 OHLC 与成交量，不能改成折线，也不能因原生 chart 不支持蜡烛图而要求用户再确认。'
     : type === 'html'
     ? '内容从数据/操作开始并自然展开，不截断行列；窄框重排，手动框保持原尺寸。'
@@ -610,7 +611,7 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract, { cano
     ...(canonicalPolicySourceGuidance ? [POLICY_SOURCE_GUIDANCE] : []),
     `${adaptive?'建议呈现结构（可按实际数据调整）':'唯一交付格式'}：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；直接输出这个数据对象，items等字段放在根对象，不再包裹panel或artifact；` : ''}${schemas[type]}`,
     ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [['kpi','table','chart','market'].includes(type)?((type==='chart'||type==='market'&&selectedMarketVariant==='trend')&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:COMPONENT_STATIC_DATA_PROMPT):'本卡未要求刷新绑定；按当前模板提交已有的真实记录、来源及时点。'] : []),
-    deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
+    deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，但已取得可用原文，按原需求呈现该内容。确实缺少需求所需材料时，不交付空chart/table/kpi，也不补造数据；用 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"缺少的主要对象或字段","value":"—","detail":"缺失原因"}]} 如实说明。选定类型后按其 schema 交付，来源及时点放已有字段。',
     htmlRule,
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
       '自定义业务正文13px/20px，辅助文字至少11px/17px，标题14px/22px；不把紧凑表格字号设置为整页正文。字体继承宿主或 var(--sherlock-font-sans)，数字 tabular-nums。使用语义控件和可读名称，颜色使用完整 --sherlock-control-* / --sherlock-status-* 变量；主按钮搭配 control-primary/control-on-primary。业务色徽章放在按钮及 summary 外的独立元素。所有条数从同一记录集合及当前筛选结果计算，不能手写计数；评论按 review 记录数计，不按审查人数计。分类仅依据对应资料，不相关记录单列为未分类。'
