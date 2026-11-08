@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-10",
+  "branch": "codex/integration/20261108-10",
+  "baseMainCommit": "44ac1f5e963bf9ac9ff0d1f9a49c03cc7879f19e",
+  "expectedMainCommit": "44ac1f5e963bf9ac9ff0d1f9a49c03cc7879f19e",
+  "createdAt": "2026-11-08T02:29:49.748Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "将超限的已观察日期型动态重新关联原始记录",
+        "branch": "codex/feat/workbench-observed-capacity-20261108",
+        "baseCommit": "44ac1f5e963bf9ac9ff0d1f9a49c03cc7879f19e",
+        "tipCommit": "f3c2b5afea9c1ac9658df7ad5679c98f1e2f5679",
+        "commits": [
+          {
+            "commit": "f3c2b5afea9c1ac9658df7ad5679c98f1e2f5679",
+            "parents": [
+              "44ac1f5e963bf9ac9ff0d1f9a49c03cc7879f19e"
+            ],
+            "subject": "优化：将超限动态重新关联已取得的原始记录"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-readable-snapshot.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-readable-snapshot.test.js",
+              "test/timeline-template.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/component-article-timeline.test.js",
+              "test/workbench-article-timeline-runtime.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  8 passed (8)\n      Tests  312 passed (312)\n   Start at  10:29:32\n   Duration  6.37s (transform 3.78s, setup 0ms, import 8.66s, tests 10.59s, environment 0ms)",
+            "verifiedCommit": "f3c2b5afea9c1ac9658df7ad5679c98f1e2f5679",
+            "completedAt": "2026-11-08T02:29:38.904584+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "f3c2b5afea9c1ac9658df7ad5679c98f1e2f5679",
+            "completedAt": "2026-11-08T02:29:48.165407+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "f3c2b5afea9c1ac9658df7ad5679c98f1e2f5679",
+            "completedAt": "2026-11-08T02:29:48.181205+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "前一原生包长正文验收读取两组完整响应后提交了字面值并失败；当前补丁将该提交原封回放为20条原始记录及5段可展开长正文。直接输出及映射输出均有一轮交付测试，新包复测在集成构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "仅由宿主识别真实记录的容量限制，切换为可分页阅读视图",
+          "逐条保留同记录的标题、日期和原链接，可展开长说明",
+          "无第二次模型调用和人工重试，错误身份、未观察来源及不安全链接仍拒绝"
+        ],
+        "risks": [
+          "网页证据套件三条旧断言在基线与本分支一致，分别记录",
+          "外部数据源和模型仍可能出现独立错误"
+        ],
+        "generatedAt": "2026-11-08T02:29:48.181244+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-readable-snapshot.test.js",
+        "test/timeline-template.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/component-article-timeline.test.js",
+        "test/workbench-article-timeline-runtime.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
