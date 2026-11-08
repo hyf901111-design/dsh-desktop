@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
-import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 
 it('核对 Word 表格中的裸编号、组合与范围，不因格式误拦也不接受未知出处',()=>{
  const docs=[{blocks:['T8','P36','P37','P38'].map(id=>({id}))}]
@@ -195,4 +195,19 @@ it('不把省略号空网页当交付，也不把明确要求补充官网的请�
  const request='根据附件做看板，再从两家官网补充职责说明。 📎 文件：`/workspace/report.docx`'
  expect(workbenchDocumentScope(request)).toBeUndefined()
  expect(workbenchDocumentScope('只参考附件内容。 📎 文件：`/workspace/report.docx`')).toEqual(['/workspace/report.docx'])
+})
+
+
+it('混合来源保留附件读取且不把外部来源强制伪装成文档引用',()=>{
+ const request='使用附件整理层级，再从官网补充职责。 📎 文件：`/workspace/report.docx`'
+ expect(workbenchDocumentScope(request)).toBeUndefined()
+ expect(workbenchDocumentInputs(request)).toEqual(['/workspace/report.docx'])
+ expect(workbenchDocumentInputs('不要读取附件。 📎 文件：`/workspace/report.docx`')).toBeUndefined()
+ const docs=[{name:'report.docx',blocks:[{id:'P1',text:'真实组织'}]}]
+ const prompt=workbenchDocumentPrompt(docs,false,{exclusive:false})
+ expect(prompt).toContain('附件正文已经由宿主成功读取')
+ expect(prompt).not.toContain('只使用下面的原文作为事实')
+ expect(workbenchDocumentCitationIssue('官网职责与真实链接',docs,{required:false})).toBeUndefined()
+ expect(workbenchDocumentCitationIssue('附件 [P1]',docs,{required:false})).toBeUndefined()
+ expect(workbenchDocumentCitationIssue('伪造 [P999]',docs,{required:false})).toBeTruthy()
 })

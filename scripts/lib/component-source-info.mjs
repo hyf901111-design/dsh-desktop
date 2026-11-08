@@ -29,8 +29,8 @@ export function getComponentSourceInfo(node){
  if(typeof data.note==='string'&&data.note.trim())notes.push(data.note)
  if(typeof spec.html==='string'&&typeof DOMParser!=='undefined'){
   const doc=new DOMParser().parseFromString(spec.html,'text/html')
-  for(const el of doc.querySelectorAll('[data-component-source-info],.market-footer,.indicator-method,.trend-provenance,.chart-source,.source-info')){
-   const text=el.textContent?.trim(),modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text))notes.push(text)
+  for(const el of doc.querySelectorAll('[data-component-source-info],.market-footer,.indicator-method,.trend-provenance,.chart-source,.source-info,.src,footer')){
+   const text=el.textContent?.trim();if(el.matches('.src,footer')&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text))notes.push(text)
    for(const a of el.querySelectorAll('a[href]'))add({label:a.textContent,url:a.getAttribute('href')})
   }
  }
