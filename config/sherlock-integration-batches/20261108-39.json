@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-39",
+  "branch": "codex/integration/20261108-39",
+  "baseMainCommit": "f03717e26f26b0da7668d1e1a0e6331bcf85e241",
+  "expectedMainCommit": "f03717e26f26b0da7668d1e1a0e6331bcf85e241",
+  "createdAt": "2026-11-08T11:48:03.228Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "放大阅读的菜单对比度与短表",
+        "branch": "codex/feat/workbench-reading-menu-polish-20261108",
+        "baseCommit": "f03717e26f26b0da7668d1e1a0e6331bcf85e241",
+        "tipCommit": "02fb9d39b831c935039490a41e518705401e7d0a",
+        "commits": [
+          {
+            "commit": "02fb9d39b831c935039490a41e518705401e7d0a",
+            "parents": [
+              "f03717e26f26b0da7668d1e1a0e6331bcf85e241"
+            ],
+            "subject": "保持放大阅读菜单对比度并收紧短表与来源说明的间距"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-market-native-table.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/market-table-reading-browser.test.js",
+              "test/research-market-native-context-browser.test.js",
+              "test/financial-widget-client.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "77 项聚焦检查通过",
+            "verifiedCommit": "02fb9d39b831c935039490a41e518705401e7d0a",
+            "completedAt": "2026-11-08T11:48:01.563038+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "02fb9d39b831c935039490a41e518705401e7d0a",
+            "completedAt": "2026-11-08T11:48:01.563038+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "02fb9d39b831c935039490a41e518705401e7d0a",
+            "completedAt": "2026-11-08T11:48:01.563038+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 对四种看板样式验证放大后的短表与来源相邻，菜单使用应用主题文字色。"
+        },
+        "acceptanceCriteria": [
+          "放大阅读菜单文字沿用全局主题",
+          "短表放大后来源说明紧跟表格",
+          "完整数据和原有操作仍可达"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T11:48:01.563038+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/market-table-reading-browser.test.js",
+        "test/research-market-native-context-browser.test.js",
+        "test/financial-widget-client.test.js",
+        "test/home-guide-native-strip.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
