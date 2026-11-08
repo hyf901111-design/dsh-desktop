@@ -573,7 +573,7 @@ function workbenchPanelPrompt(prompt, boundData = false, onChartContract, { cano
     reports: '{"version":1,"type":"reports","title":"标题","items":[{"title":"条目","summary":"摘要","date":"日期","category":"分类"}]}',
     calendar: '{"version":1,"type":"calendar","title":"标题","items":[{"title":"节点","summary":"详情和经办人","date":"YYYY-MM-DD","category":"类型"}]}',
     markdown: '{"version":1,"type":"markdown","title":"标题","content":"有出处的完整 Markdown 内容"}',
-    'mind-map': '{"version":1,"type":"mind-map","title":"标题","content":"# 中心主题\\n- 一级分支\\n  - 有出处的二级节点"}',
+    'mind-map': '{"version":1,"type":"mind-map","title":"标题","content":"# 中心主题\\n- 一级分支\\n  - 有出处的二级节点","source":{"title":"来源原标题","text":"本图使用的原文和定位"},"note":"可选说明"}',
     html: HTML_ARTIFACT_SCHEMA,
     market: selectedMarketVariant ? marketPanelSchema(selectedMarketVariant) : MARKET_ARTIFACT_PROMPT
   }

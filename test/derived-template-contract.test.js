@@ -42,3 +42,15 @@ it('派生结果独立保留材料时点及冻结原文，完整批量首轮不�
   expect(parseResearchContainerSpec({...dated,asOf:''})).toBeNull();expect(parseResearchContainerSpec({...dated,asOf:20261002})).toBeNull();expect(dated.source).toEqual(spec.source);
  }
 })
+
+it.each([summary,mindmap])('宿主吸收重复宽高，保留独立附注、完整内容及冻结来源',spec=>{
+ const draft={...spec,layout:{width:980,height:280},notes:'口径说明与待核事项。'}
+ expect(JSON.parse(acceptArtifactOutput(JSON.stringify(draft)))).toEqual({...spec,note:draft.notes})
+ for(const invalid of [
+  {...draft,layout:{...draft.layout,columns:2}},
+  {...draft,layout:{width:0,height:280}},
+  {...draft,note:'已有不同说明'},
+  {...draft,notes:{text:'未知附注结构'}},
+  {...draft,source:{...source,nodeId:'invalid link'}}
+ ])expect(acceptArtifactOutput(JSON.stringify(invalid))).toBeUndefined()
+})

@@ -102,3 +102,36 @@ it('document tables reject script-only shells and keep every oversized row searc
   expect(workbenchDocumentCitationIssue(JSON.stringify(result),[{blocks:[{id:'T1'}]}])).toBeUndefined()
   expect(documentTableOutput(JSON.stringify({...table,sources:[{label:'资料',url:'javascript:alert(1)'}]}))).toBeUndefined()
 })
+
+it('文档结构卡保留原文与附注，重复画布尺寸无需再次生成', async () => {
+  const { ResearchTaskRuntime } = await import('../packages/dsh-research-task-runtime/index.js')
+  const request = '📎 文件：`/workspace/report.docx`\n根据附件整理组织层级'
+  const title = '机构治理层级'
+  const source = {title:'report.docx',text:'会员大会下设理事会、监事会 [P2]。'}
+  const content = '# 机构\n- 会员大会 [P2]\n  - 理事会 [P2]\n  - 监事会 [P2]'
+  const draft = {version:1,type:'mind-map',title,content,layout:{width:980,height:280},source,notes:'换届日期见原文 [P2]。'}
+  let attempts = 0
+  const runtime = new ResearchTaskRuntime({
+    adapter:{async start(){
+      attempts++
+      return {
+        childSessionId:'derived-child',
+        result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],documentEvidence:[{blocks:[{id:'P2',text:source.text}]}]}),
+        async dispose() {}
+      }
+    }},
+    storage:{async save() {}},createId:()=> 'derived-task'
+  })
+  try {
+    const task = await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',
+      prompt:'工作台：组织资料\n本面板：机构治理层级\n按原文呈现父子关系，优先使用 mind-map 类型。'},
+    {workbenchRequest:{originalRequest:request,dataMode:'source'},sourceRequirement:'组织层级',
+      sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'组织层级'}})
+    const inspect = () => runtime.inspect({parentSessionId:'parent',taskId:task.taskId})
+    await expect.poll(() => inspect().state).toBe('completed')
+    expect(attempts).toBe(1)
+    expect(JSON.parse(inspect().finalOutput)).toEqual({version:1,type:'mind-map',title,content,source,note:draft.notes})
+  } finally {
+    await runtime.dispose()
+  }
+})

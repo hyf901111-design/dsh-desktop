@@ -25,8 +25,9 @@ export function derivedOutline(content){
 export function parseDerivedSpec(s){
  const text=(v,max)=>typeof v==='string'&&v.trim()&&v.length<=max
  if(!s||typeof s!=='object'||Array.isArray(s)||s.version!==1||!['summary','mind-map'].includes(s.type)||!text(s.title,256)||!text(s.content,32000))return null
- if(Object.keys(s).some(k=>!['version','type','title','content','source','asOf'].includes(k)))return null
+ if(Object.keys(s).some(k=>!['version','type','title','content','source','asOf','note'].includes(k)))return null
  if(s.asOf!==undefined&&!text(s.asOf,1024))return null
+ if(s.note!==undefined&&!text(s.note,4000))return null
  const source=s.source
  if(!source||typeof source!=='object'||Array.isArray(source)||!text(source.title,256)||!text(source.text,32000)||Object.keys(source).some(k=>!['title','text','nodeId'].includes(k)))return null
  if(source.nodeId!==undefined&&(typeof source.nodeId!=='string'||!/^[-\w:]{1,128}$/.test(source.nodeId)))return null

@@ -155,6 +155,17 @@ export function normalizeOperationMetadata(value) {
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
  value=normalizeOperationMetadata(value);
+ // Panel geometry belongs to the workbench, even if an otherwise complete
+ // artifact repeats the planned size. Keep other layout shapes for validation.
+ const layout=value?.layout;
+ if(layout&&Object.keys(layout).length===2&&Number.isFinite(layout.width)&&layout.width>0&&Number.isFinite(layout.height)&&layout.height>0){
+  const {layout:_,...data}=value;
+  value=data;
+ }
+ if(['mind-map','summary'].includes(value?.type)&&value.source&&value.note===undefined&&typeof value.notes==='string'){
+  const {notes,...data}=value;
+  value={...data,note:notes};
+ }
  if(value?.type==='financial-widget'){
   const defaults=financialWidgetDefaults(value.widget);
   return defaults?{...defaults,...value}:value;
