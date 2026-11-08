@@ -1,5 +1,7 @@
 import {parseDerivedSpec,derivedOutline} from '../../packages/dsh-research-task-runtime/derived-template-contract.js'
+import {WORKBENCH_DISCLOSURE_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 export const derivedPresetCss=`
+${WORKBENCH_DISCLOSURE_CSS.replaceAll('body ','.ew-derived-preset ')}
 .ew-derived-preset{box-sizing:border-box;min-width:0;width:100%;padding:12px;display:flex;flex-direction:column;gap:10px;font:12px/18px DINPro,'Noto Sans SC',sans-serif;color:var(--grid-text,#3c3c3c);overflow-wrap:anywhere;container-type:inline-size;}
 .ew-derived-source{font-size:11px;color:var(--grid-muted,#666);min-width:0;}
 .ew-derived-source button{border:0;padding:0;font:inherit;color:inherit;background:transparent;cursor:pointer;text-align:left;}

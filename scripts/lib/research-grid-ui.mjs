@@ -814,12 +814,25 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       }
     }
     window.addEventListener('message',contentSize)
+    // Native presets share the temporary disclosure floor with sandbox cards.
+    // Only flowing inner details count; the outer card and iframes do not.
+    const nativeDisclosure=event=>{
+      const details=event.target,card=details?.closest?.('[data-research-node-id]'),body=card?.querySelector('[data-research-preview-body]')
+      if(details?.tagName!=='DETAILS'||!body?.contains(details)||body.querySelector('iframe'))return
+      const node=workspace.getSnapshot().artifacts.find(n=>n.id===card.getAttribute('data-research-node-id'))
+      if(!node?.containerSpec||node.containerSpec.type==='html')return
+      const disclosureOpen=!!body.querySelector('details[open]'),bounds=body.getBoundingClientRect()
+      const height=Math.ceil(node.height-bounds.height+Math.max(0,...[...body.querySelectorAll('details[open],[data-research-derived-preset]')].map(child=>child.getBoundingClientRect().bottom-bounds.top+body.scrollTop))+parseFloat(getComputedStyle(body).paddingBottom||0))
+      workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height,disclosureOpen})
+    }
+    root.addEventListener('toggle',nativeDisclosure,true)
+    root.__eworkNativeDisclosure=nativeDisclosure
     const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)root.__eworkContentFit?.finish();workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root)
     window.addEventListener('resize',measure)
     const scroll=()=>{root.style.setProperty('--grid-scroll-top',root.scrollTop+'px');const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
+    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);root.removeEventListener('toggle',nativeDisclosure,true);delete root.__eworkNativeDisclosure;if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -835,9 +848,14 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     let active=true
     const tables=nodes.map(node=>({node,card:root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')})).map(item=>({...item,table:item.card?.querySelector('[data-sherlock-market-native="table"]')})).filter(item=>item.table)
     const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const size=workbenchNativeTableDimensions(table);if(size)workspace.setWorkbenchContentHeight(node.id,{html:node.containerSpec.html,width:node.width,height:size.height})}}
+    const nativeDetails=[...root.querySelectorAll('[data-research-preview-body] details[open]')].filter(details=>!details.closest('[data-research-node-id]')?.querySelector('iframe'))
+    const refitNative=()=>{if(active&&!root.hasAttribute('data-grid-operation'))for(const details of nativeDetails)if(details.isConnected&&details.open)root.__eworkNativeDisclosure?.({target:details})}
+    const nativeObserver=new ResizeObserver(refitNative)
+    for(const details of nativeDetails){nativeObserver.observe(details);const preset=details.closest('[data-research-derived-preset]');if(preset)nativeObserver.observe(preset)}
+    refitNative()
     const observer=new ResizeObserver(fitTables),mutations=new MutationObserver(fitTables)
     for(const {table} of tables){observer.observe(table);for(const child of table.querySelectorAll('table,.terminal-native-context>*'))observer.observe(child);mutations.observe(table,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open']})}
-    fitTables();return()=>{active=false;observer.disconnect();mutations.disconnect()}
+    fitTables();return()=>{active=false;observer.disconnect();mutations.disconnect();nativeObserver.disconnect()}
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
 }
