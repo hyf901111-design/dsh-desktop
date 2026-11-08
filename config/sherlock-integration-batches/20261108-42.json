@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-42",
+  "branch": "codex/integration/20261108-42",
+  "baseMainCommit": "fb60c5aad669d8c31061d4c0637d3e17eb3d9a26",
+  "expectedMainCommit": "fb60c5aad669d8c31061d4c0637d3e17eb3d9a26",
+  "createdAt": "2026-11-08T12:36:58.617Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布吸顶页签视觉优化",
+        "branch": "codex/feat/workbench-sticky-tabs-polish-20261108",
+        "baseCommit": "fb60c5aad669d8c31061d4c0637d3e17eb3d9a26",
+        "tipCommit": "74d9299fb056fc12989c8f377dc46057ba59390a",
+        "commits": [
+          {
+            "commit": "74d9299fb056fc12989c8f377dc46057ba59390a",
+            "parents": [
+              "fb60c5aad669d8c31061d4c0637d3e17eb3d9a26"
+            ],
+            "subject": "优化横向页签吸顶层次与竖向导航顶部留白"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "67 项聚焦检查通过",
+            "verifiedCommit": "74d9299fb056fc12989c8f377dc46057ba59390a",
+            "completedAt": "2026-11-08T12:36:57.034969+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "74d9299fb056fc12989c8f377dc46057ba59390a",
+            "completedAt": "2026-11-08T12:36:57.034969+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "74d9299fb056fc12989c8f377dc46057ba59390a",
+            "completedAt": "2026-11-08T12:36:57.034969+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证四模式下横向栏和内容卡片使用不同背景，竖向顶部留白与空画布网格像素一致，两种布局滚到底后可切换页签。"
+        },
+        "acceptanceCriteria": [
+          "横向导航与内容卡片视觉分层，竖向顶部留白显示画布网格",
+          "画布底部可直接切换页签",
+          "保持原页签滚轮交互及联动"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T12:36:57.034969+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
