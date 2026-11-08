@@ -96,6 +96,56 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T12:02:05.467920+00:00"
+      },
+      "merged": {
+        "mergeCommit": "d4c62f092982816937c5cb05cf66a3b83f0f4df2",
+        "verificationCommit": "d4c62f092982816937c5cb05cf66a3b83f0f4df2",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-contract.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-drop-focus-browser.test.js test/board-tabs-theme-browser.test.js test/board-tabs-contract.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "d4c62f092982816937c5cb05cf66a3b83f0f4df2",
+            "completedAt": "2026-11-08T12:02:09.881Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d4c62f092982816937c5cb05cf66a3b83f0f4df2",
+            "completedAt": "2026-11-08T12:02:09.881Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "d4c62f092982816937c5cb05cf66a3b83f0f4df2",
+            "completedAt": "2026-11-08T12:02:09.881Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T12:02:09.881Z"
       }
     }
   ],
