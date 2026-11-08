@@ -6,6 +6,7 @@ import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import { workbenchPlanningContext } from './workbench-planning-context.js'
 import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
 import {MAX_PROTOTYPE_WINDOWS,planningPrototypeEvidence,prototypeEvidenceCall,prototypeEvidenceSchema,prototypeEvidenceProgress,prototypeEvidenceGuidance,prototypeEvidenceRequestCurrent,workbenchPlanningSession} from './workbench-prototype-evidence.js'
+import { PDF_WORKBENCH_PLANNING, workbenchPdfScope, workbenchPdfPrompt } from './workbench-document-evidence.js'
 
 export function workbenchCreationRequest(session) {
   const request=componentCreationRequest(workbenchPlanningSession(session))
@@ -104,13 +105,14 @@ function sourceCreationParameters(parameters) {
   }
   return { ...parameters, additionalProperties: false, properties, ...(parameters.required ? { required: parameters.required.filter(name => !omitted.has(name)) } : {}) }
 }
-function prototypeCreationParameters(parameters) {
+function prototypeCreationParameters(parameters, allowLibrary = true) {
   const source=sourceCreationParameters(parameters)
   if(!source?.properties)return source
   const {preset, ...properties}=source.properties
   const panel=properties.panels?.items
   if(panel?.properties){
-    const allowed=new Set(['title','prompt','type','size','layout','library'])
+    const allowed=new Set(['title','prompt','type','size','layout'])
+    if (allowLibrary) allowed.add('library')
     properties.panels={...properties.panels,items:{...panel,additionalProperties:false,properties:Object.fromEntries(Object.entries(panel.properties).filter(([name])=>allowed.has(name))),...(panel.required?{required:panel.required.filter(name=>allowed.has(name))}:{})}}
   }
   return {...source,properties}
@@ -143,7 +145,7 @@ function discoveryCalls(session, messageId) {
   return calls
 }
 
-export function registerWorkbenchExecutionPolicy(ctx) {
+export function registerWorkbenchExecutionPolicy(ctx, { readPdfEvidence } = {}) {
   const applied = new WeakMap()
   const planningScopes = new WeakMap(), activeScopes = new Set()
   function releasePlanning(agent) {
@@ -210,6 +212,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
       if (!accepted) {
         const { simulation, sourceOnly } = planningDataIntent(human.text)
         const evidence=planningPrototypeEvidence(agent.session,human)
+        if (!simulation && readPdfEvidence && workbenchPdfScope(human.text, evidence)) return workbenchPlanningContext() + '\n' + PDF_WORKBENCH_PLANNING
         if(evidence.required.length&&!simulation)return workbenchPlanningContext()+'\n'+PROTOTYPE_PLANNING_GUIDANCE+'\n'+prototypeEvidenceGuidance(evidence)
         const direct = !evidence.required.length && /行情|自选|指数|资讯|新闻|基金|ETF|加密|Kraken|腾讯|BTC|ETH/iu.test(human.text) &&
           !/模拟|虚构|演示|Tushare|通联|DataYes|MCP|插件|财报|研报|宏观|持仓|基金净值|规模|份额|申赎|申购|赎回|资金进出|净流入|净流出|收益|回撤|波动|对比|比较|表现|禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/iu.test(human.text) &&
@@ -284,14 +287,27 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     state.evidenceTools=new Set()
     state.evidenceReadable=new Set()
     const { simulation, sourceOnly } = planningDataIntent(human.text)
+    const pdfPaths = !simulation && readPdfEvidence && workbenchPdfScope(human.text, state.evidenceTargets)
+    let pdfGuidance
+    if (pdfPaths) {
+      try {
+        pdfGuidance = workbenchPdfPrompt(await readPdfEvidence(agent.session, pdfPaths, state.signal), true)
+      } catch {
+        state.signal?.throwIfAborted()
+        releasePlanning(agent)
+        return { ...request, tools: [], system: request.system + '\n本轮上传的 PDF 未能读取到有效文字。请说明报告正文无法读取，建议提供可复制文字的 PDF。不要生成看板，不根据文件名猜测内容或查找替代行情。' }
+      }
+      if (currentPlanning(agent) !== state) throw Error('工作台需求已更新，请按当前消息继续。')
+    }
     // Example figures already supplied in a prototype are source material,
     // not permission to invent another dataset or serialize it into the plan.
     const prototypeSource=state.evidenceTargets.required.length>0&&!simulation
     const sourcePlanning=sourceOnly||prototypeSource
     const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !simulation && !/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
     const tools = request.tools.flatMap(tool => {
-      if (tool.name === CREATE_TOOL) return [{ ...tool, description: '优先评估组件库原生能力，已覆盖的面板用library:{id,options}直接挂载，其余按实际数据生成；links关联兼容节点，tabs组织真实页签，具体能力与配置见本轮系统说明。'+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
-        ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters) : sourceCreationParameters(tool.parameters) } : {}) }]
+      if (tool.name === CREATE_TOOL) return [{ ...tool, description: pdfPaths ? PDF_WORKBENCH_PLANNING : '优先评估组件库原生能力，已覆盖的面板用library:{id,options}直接挂载，其余按实际数据生成；links关联兼容节点，tabs组织真实页签，具体能力与配置见本轮系统说明。'+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
+        ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters, !pdfPaths) : sourceCreationParameters(tool.parameters) } : {}) }]
+      if (pdfPaths) return []
       const evidence=prototypeEvidenceSchema(tool,state.evidenceTargets)
       if(evidence){
         state.evidenceTools.add(tool.name)
@@ -303,6 +319,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
       return discovery ? [discovery] : []
     })
     state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
+    if (pdfGuidance) return { ...request, system: [request.system, pdfGuidance].filter(Boolean).join('\n'), tools }
     // Model route, effort, signal and the shared registry stay unchanged. The
     // low-cost plan has no complete-data prerequisite in any user domain.
     return { ...request, system: [request.system, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets),

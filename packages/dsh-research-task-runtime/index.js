@@ -28,6 +28,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
+import { workbenchPdfScope, workbenchPdfPrompt, workbenchPdfCitationIssue } from './workbench-document-evidence.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, articleTimelineSourceProven, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
@@ -85,7 +86,7 @@ import { INTERACTIVE_ARTIFACT_PROMPT } from './interactive-artifact.js'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, extname, isAbsolute, join } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join } from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { registerResearchContextRuntime } from './context-runtime.js'
 import { abortable } from './context-abort.js'
@@ -782,7 +783,7 @@ async function boundedSourceBytes(path, signal) {
   return data
 }
 
-async function extractPdfText(path, signal) {
+async function extractPdfText(path, signal, pageEvidenceBytes) {
   const data = await boundedSourceBytes(path, signal)
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
   signal?.throwIfAborted()
@@ -817,21 +818,44 @@ async function extractPdfText(path, signal) {
           .trim()
         if (text.length === 0) continue
         const pageBytes = Buffer.byteLength(text, 'utf8')
-        if (totalBytes + pageBytes > MAX_EXTRACTED_SOURCE_BYTES) {
+        if (pageEvidenceBytes && totalBytes + pageBytes > pageEvidenceBytes) break
+        if (!pageEvidenceBytes && totalBytes + pageBytes > MAX_EXTRACTED_SOURCE_BYTES) {
           const remaining = MAX_EXTRACTED_SOURCE_BYTES - totalBytes
           if (remaining > 0) pages.push(truncateUtf8(text, remaining).trim())
           break
         }
-        pages.push(text)
+        pages.push(pageEvidenceBytes ? { page: pageNumber, text } : text)
         totalBytes += pageBytes
       } finally {
         page.cleanup?.()
       }
     }
+    if (pageEvidenceBytes && pages.length) return { name: basename(path), numPages: document.numPages, pages }
     return boundedExtractedText(pages.join('\n\n'))
   } finally {
     signal?.removeEventListener('abort', onAbort)
     await destroy()
+  }
+}
+
+function createWorkbenchPdfReader() {
+  const sessions = new WeakMap()
+  return async (session, paths, signal) => {
+    let entries = sessions.get(session)
+    if (!entries) sessions.set(session, entries = new Map())
+    return Promise.all(paths.map(async path => {
+      const info = await abortable(() => stat(path), signal)
+      const budget = Math.floor(140_000 / paths.length)
+      const key = JSON.stringify([path, info.dev, info.ino, info.size, info.mtimeMs, info.ctimeMs, budget])
+      let pending = entries.get(key)
+      if (!pending) {
+        pending = extractPdfText(path, AbortSignal.timeout(18_000), budget)
+        entries.set(key, pending)
+        if (entries.size > 4) entries.delete(entries.keys().next().value)
+        void pending.catch(() => { if (entries.get(key) === pending) entries.delete(key) })
+      }
+      return abortable(() => pending, signal)
+    }))
   }
 }
 
@@ -1934,6 +1958,10 @@ export class ResearchTaskRuntime {
             }
           }
           output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
+          if (result.documentEvidence && output) {
+            const issue = workbenchPdfCitationIssue(output, result.documentEvidence)
+            if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
+          }
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested
@@ -2299,7 +2327,7 @@ function artifactStreamStarted(text) {
   return /(?:^|\n)\s*(?:```(?:json)?\s*)?\{\s*(?:"|$)/iu.test(text.slice(0,512))
 }
 
-export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBindingProtocol = false } = {}) {
+export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBindingProtocol = false, readPdfEvidence = createWorkbenchPdfReader() } = {}) {
   let disposed = false
   const sourceProjectionStops=new Set()
 
@@ -2467,7 +2495,18 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         agentOptions = componentModelSelection(response.result.value, kind)
       }
       if (surface !== 'note' && hostContext?.sourceMessageId) imageContent = await workbenchImageEvidence(ctx, parent, hostContext.sourceMessageId, agentOptions, signal)
-      const permitsTools = !synthesisOnly && (['qa', 'board'].includes(kind) || kind === 'container' && containerAllowsWebSearch(query ?? ''))
+      const originalRequest = hostContext?.workbenchRequest?.originalRequest
+      const pdfPaths = kind === 'container' && surface !== 'note' && hostContext?.workbenchRequest?.dataMode === 'source' && originalRequest &&
+        !hostContext.sourcePolicy?.pluginRequired && !hostContext.sourcePolicy?.publicSourceRequests && workbenchPdfScope(originalRequest)
+      let documentEvidence
+      if (pdfPaths) {
+        try { documentEvidence = await readPdfEvidence(parent.session, pdfPaths, signal) }
+        catch (error) {
+          signal.throwIfAborted()
+          throw new ResearchTaskError('SOURCE_UNREADABLE', '未能从原请求中的 PDF 读取文字，请检查文件位置，或提供可复制文字的 PDF。', { cause: error })
+        }
+      }
+      const permitsTools = !documentEvidence && !synthesisOnly && (['qa', 'board'].includes(kind) || kind === 'container' && containerAllowsWebSearch(query ?? ''))
       const deferredSynthesis = kind === 'container' && !permitsTools && !!deferredWorkbenchPanel(query ?? '')
       // Inspect the parent's scoped registry before planning any host lookup.
       // A connected source should not be preceded by an unrelated web search.
@@ -2553,6 +2592,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       // only source selection there; recovery still needs its frozen contract.
       if(submission)effectivePrompt+='\n'+submission.instruction
       if (synthesisOnly&&!submission) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
+      if (documentEvidence) effectivePrompt += '\n' + workbenchPdfPrompt(documentEvidence)
       if (deferredSynthesis) effectivePrompt += '\n当前为无工具的离线组件生成。所需组件技能、交付格式、宿主交互接口、原始需求和共同事实均已附在本请求；直接生成本组件，不再读取技能、文件或应用实现。保留要求的业务交互与全部记录，不以静态说明替代。'
       if (bundledSkills.data && permitsTools && !prototypeTargets && scopedSchemas?.some(tool => tool.name === 'public_data_query')) {
         const guidance=freeDataInstruction(undefined, { includePolicySourceGuidance: !ownsPolicySourceGuidance })
@@ -2623,7 +2663,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         'research_canvas_task', ...CANVAS_TOOL_NAMES
       ])
       const childTools = (parentToolNames ?? fallbackTools).filter(name =>
-        name !== 'run_code' &&
+        !documentEvidence && name !== 'run_code' &&
         (!prototypeTargets || ['read','read_prototype','read_image'].includes(name) || networkTools.has(name)) &&
         // Context snapshots belong to the parent execution session. This
         // one-shot data child has no snapshot lease, so advertising those
@@ -2952,7 +2992,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
               return {url,content:page.body.content}
             }
           }) : undefined
-          return { ...result, sourceRecords:[...sourceCollector.records.slice(recordOffset),...hostRecords], sourceAttempts:sourceCollector.attempts.slice(attemptOffset), ...(researchEvidence ? { researchEvidence } : {}), ...(acquireFeedEvidence?{acquireFeedEvidence}:{}) }
+          return { ...result, sourceRecords:[...sourceCollector.records.slice(recordOffset),...hostRecords], sourceAttempts:sourceCollector.attempts.slice(attemptOffset), ...(researchEvidence ? { researchEvidence } : {}), ...(acquireFeedEvidence?{acquireFeedEvidence}:{}), ...(documentEvidence?{documentEvidence}:{}) }
       }
       const resultSettled=()=>{
         acquireController.abort()
@@ -3357,8 +3397,9 @@ export function createSharedBoardExecutor(ctx) {
 }
 
 export async function apply(ctx) {
+  const readPdfEvidence = createWorkbenchPdfReader()
   const runtime = new ResearchTaskRuntime({
-    adapter: createSubagentAdapter(ctx),
+    adapter: createSubagentAdapter(ctx, { readPdfEvidence }),
     authorizeParent: id=>assertPrivateResearchSession(id),
     storage: new JsonResearchTaskStorage()
   })
@@ -3374,7 +3415,7 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
-    const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx)
+    const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readPdfEvidence })
     const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx)
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)

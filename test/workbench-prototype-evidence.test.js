@@ -12,6 +12,7 @@ import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {planningPrototypeEvidence,prototypeEvidenceCall} from '../packages/dsh-research-task-runtime/workbench-prototype-evidence.js'
+import {workbenchPdfScope,workbenchPdfCitationIssue} from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 
 const human=(text,id='human')=>({id,role:'user',source:{kind:'user'},content:[{type:'text',text}]})
 const session=(text,id)=>({header:{},events:[{type:'user/message',data:human(text,id)}]})
@@ -27,9 +28,9 @@ const tools=[
  {name:'public_data_query',parameters:{type:'object',properties:{operation:{type:'string',enum:['catalog','query']}}}},
  {name:'bash',parameters:{type:'object',properties:{command:{type:'string'}}}}
 ]
-function harness(s){
+function harness(s, options){
  const hooks=new Map();let guard,prompt
- const dispose=registerWorkbenchExecutionPolicy({llm:{resolveModelInfo:async()=>({reasoning:{efforts:[{id:'low'},{id:'max'}]},defaultMaxTokens:16000})},tools:{guard:fn=>{guard=fn;return()=>{}},schemas:()=>tools},systemPrompt:{context:value=>{prompt=value;return()=>{}}},on:(name,fn)=>{hooks.set(name,fn);return()=>{}}})
+ const dispose=registerWorkbenchExecutionPolicy({llm:{resolveModelInfo:async()=>({reasoning:{efforts:[{id:'low'},{id:'max'}]},defaultMaxTokens:16000})},tools:{guard:fn=>{guard=fn;return()=>{}},schemas:()=>tools},systemPrompt:{context:value=>{prompt=value;return()=>{}}},on:(name,fn)=>{hooks.set(name,fn);return()=>{}}}, options)
  const agent={session:s},wire={system:'original',messages:[s.events[0].data],tools}
  return{agent,dispose,hooks,prompt:()=>prompt.text({agent}),context:async(signal)=>hooks.get('agent/request-context')({agent,signal},async()=>wire),guard:(name,args,callId=name)=>guard({agent,name,arguments:args,callId}),wire}
 }
@@ -37,6 +38,29 @@ function receipt(s,name,args,callId='read-call',isError=false,content='原型真
  s.events.push({type:'tool/call',data:{name,arguments:args,callId}},{type:'tool/result',data:{message:{source:{kind:'tool',callId},content:[{type:'tool-result',isError,content:[{type:'text',text:content}]}]}}})
 }
 describe('用户原型是首次规划的有限只读证据',()=>{
+ it('plans a report from the original desktop attachment and omits financial discovery', async()=>{
+  const pdf='/Users/qa/Downloads/报告.pdf'
+  const request='📎 文件：\x60'+pdf+'\x60 帮我把这个报告做成一个内容示意看板'
+  const s=session(request)
+  const documents=[{name:'报告.pdf',numPages:3,pages:[{page:2,text:'第二章 · 分类与分析'}]}]
+  const h=harness(s,{readPdfEvidence:async (actual,files)=>{
+   expect(actual).toBe(s)
+   expect(files).toEqual([pdf])
+   return documents
+  }})
+  const wire=await h.context()
+  expect(wire.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
+  expect(wire.system).toContain('第二章 · 分类与分析')
+  expect(wire.system).toContain('确有可比较、同口径')
+  expect(h.guard('public_data_query',{operation:'catalog'})).toBeTruthy()
+  expect(h.guard('research_workbench_create',{})).toBeUndefined()
+  expect(workbenchPdfScope(request+'，补充外部市场数据')).toBeUndefined()
+  expect(workbenchPdfScope('创建工作台\n> '+request)).toBeUndefined()
+  expect(workbenchPdfCitationIssue('来源：报告.pdf 第 2 页',documents)).toBeUndefined()
+  expect(workbenchPdfCitationIssue('来源：报告.pdf 第 3 页',documents)).toBeTruthy()
+  expect(workbenchPdfCitationIssue('来源：报告.pdf',documents)).toBeTruthy()
+  h.dispose()
+ })
  it.each([text,'参考 "'+path+'" 创建数字运营工作台。','根据 '+path+' 创建数字运营工作台。'])('normalizes an explicit Chinese file URL or space path: %s',request=>{
   const value=targets(session(request));expect(value.files).toEqual([path]);expect(value.required).toEqual(['file:'+path])
  })
