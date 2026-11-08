@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-04",
+  "branch": "codex/integration/20261109-04",
+  "baseMainCommit": "8966a5e1bdc0922f6d83d77ed8e749f0a8c1aeba",
+  "expectedMainCommit": "8966a5e1bdc0922f6d83d77ed8e749f0a8c1aeba",
+  "createdAt": "2026-11-08T17:37:49.994Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "截断缩页后集合完整交付",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "8966a5e1bdc0922f6d83d77ed8e749f0a8c1aeba",
+        "tipCommit": "ea34a637ded0c278cfbefb7f366cbef9e88156b3",
+        "commits": [
+          {
+            "commit": "ea34a637ded0c278cfbefb7f366cbef9e88156b3",
+            "parents": [
+              "8966a5e1bdc0922f6d83d77ed8e749f0a8c1aeba"
+            ],
+            "subject": "完善小分页集合的完整读取与来源快照校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/component-source-binding.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "88 项聚焦检查通过",
+            "verifiedCommit": "ea34a637ded0c278cfbefb7f366cbef9e88156b3",
+            "completedAt": "2026-11-08T17:37:48.606149+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ea34a637ded0c278cfbefb7f366cbef9e88156b3",
+            "completedAt": "2026-11-08T17:37:48.606149+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ea34a637ded0c278cfbefb7f366cbef9e88156b3",
+            "completedAt": "2026-11-08T17:37:48.606149+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "88项来源绑定与完整性聚焦检查通过。40条记录缩到每页一条时可读齐并验证全部原始正文；网络快照分页与持续刷新请求限制分开，刷新仍保持16请求安全边界。最终包实际生成验收在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "读取预算覆盖分页缩小到一条所需次数及重启开销",
+          "只对实际已取得网页证据扩大快照页数，刷新请求限制不变",
+          "保留原始正文与链接并核对最终条数",
+          "缺页或正文缺失不得标完成"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T17:37:48.606149+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/observed-source-completeness.test.js",
+        "test/component-source-binding.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
