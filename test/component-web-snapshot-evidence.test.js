@@ -117,7 +117,7 @@ it('synthesizes a rendered news list in one worker with a directly usable origin
  const start=vi.fn(async()=>({childSessionId:'rendered-news',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(feed)}],sourceRecords:collectRenderedNews()}),dispose:async()=>{}}))
  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'rendered-news'})
  try{
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：火电利润观察\n本面板：近期公告与煤电政策动态\n优先使用 news 类型；只用本次取得的真实原始标题、日期和原文链接，静态快照。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：火电利润观察\n本面板：华能国际公司融资公告\n优先使用 news 类型；只用本次取得的真实原始标题、日期和原文链接，静态快照。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'rendered-news'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledOnce()
   expect(readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'rendered-news'}).finalOutput)).data.items[0]).toMatchObject(renderedNews)
@@ -252,11 +252,11 @@ it('keeps a directly fetched article fingerprint separate from recommended links
 })
 
 it('quarantines a mismatched item after the bounded repair, preserving proven news and every missing scope item',async()=>{
- const feed={version:1,type:'news',title:'行业资讯',items:[renderedNews,{...renderedNews,date:'2026-10-19',title:'标题日期链接错配，不能作为另一条资讯交付'}],note:'上网电价政策未取得，不能缩小研究范围。'}
+ const feed={version:1,type:'news',title:'公司新闻',items:[renderedNews,{...renderedNews,date:'2026-10-19',title:'华能国际：标题日期链接错配，不能作为另一条资讯交付'}],note:'上网电价政策未取得，不能缩小研究范围。'}
  const start=vi.fn(async()=>({childSessionId:'mixed-news-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(feed)}],sourceRecords:collectRenderedNews()}),dispose:async()=>{}}))
  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'mixed-feed'})
  try{
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：真实行业研究\n本面板：煤电政策及行业资讯\n优先使用 news 类型；保留每条真实标题、日期和原文链接及未取得的研究范围，静态快照。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：真实行业研究\n本面板：华能国际公司融资公告\n优先使用 news 类型；保留每条真实标题、日期和原文链接及未取得的研究范围，静态快照。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledTimes(2)
   expect(start.mock.calls[1][0].prompt).toContain('上网电价政策未取得')
@@ -324,3 +324,16 @@ it.each([
  const source=collect([{url:'https://search.sina.com.cn/search?q=company&tp=news',data:{records:[{...item,url:url+separator+'from=pcsearch'}]}}]);
  expect(proof({version:1,type:'news',items:[item]},source)).toBe(false);
 });
+
+
+it('recognizes fetched narrative citations without treating mere documentation or another feed record as business evidence',()=>{
+ const url='https://example.org/guide/upgrade'
+ const records=[{tool:'public_data_query',purpose:'discovery',args:{operation:'catalog'}},{tool:'web_fetch',purpose:'snapshot',args:{url},response:null}]
+ const md={version:1,type:'markdown',title:'升级分析',content:'按实际取得的正文说明变化，[官方指南]('+url+')。'}
+ expect(proof(md,records)).toBe(true)
+ expect(proof({...md,content:'[其他指南](https://example.org/guide/other)'},records)).toBe(false)
+ expect(proof(md,records.map(r=>({...r,purpose:'discovery'})))).toBe(false)
+ expect(proof({...md,content:'未引用任何实际取得的来源'},records)).toBe(false)
+ expect(proof({version:1,type:'html',title:'说明',html:'<p>可读摘要</p><a href="'+url+'">原始指南</a>'},records)).toBe(true)
+ expect(proof({version:1,type:'news',title:'新闻',items:[{title:'未知标题',date:'2026-11-01',url}]},records)).toBe(false)
+})

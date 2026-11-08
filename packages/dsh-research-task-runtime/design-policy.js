@@ -53,6 +53,22 @@ export function normalizeGeneratedHostStyles(html) {
       .replace(/--sherlock-status-(success|warning|danger|info)(?![\w-])/g, '--sherlock-status-$1-fg')
       .replace(/var\(\s*(--sherlock-[\w-]+)\s*,\s*(?:#[\da-f]{3,8}|rgba?\([^)]*\)|white|black|gray|grey)\s*\)/gi, (match, token) => KNOWN_HOST_COLOR.test(token) ? `var(${token})` : match)
     if (value !== decl.value) { decl.value = value; changed = true }
+    // Annotated clickable graph nodes are already painted by host controls.
+    // Correct only their known role-token mismatch without regenerating the
+    // acquired graph. Never recolor ordinary status badges or shared rules.
+    if (decl.parent.type === 'rule') {
+     structure ??= load(html)
+     let matches
+     try { matches = structure(ruleSelector(decl.parent)) } catch {}
+     if (matches?.length && matches.toArray().every(element => structure(element).is('button[data-sherlock-structure="node"],button[data-sherlock-structure="primary"],[role="button"][data-sherlock-structure="node"],[role="button"][data-sherlock-structure="primary"]'))) {
+      const prop = decl.prop.toLowerCase()
+      const role = /^(?:background(?:-color)?|fill)$/.test(prop) ? 'bg' : prop==='color' ? 'text' : /^(?:border(?:-color)?|outline(?:-color)?)$/.test(prop) ? 'border' : null
+      if (role) {
+       const paint = decl.value.replace(/var\(\s*--sherlock-(?:chart-[1-6]|status-(?:success|warning|danger|info)-(?:bg|fg))\s*\)/g, 'var(--sherlock-control-'+role+')')
+       if (paint !== decl.value) { decl.value = paint; changed = true }
+      }
+     }
+    }
    }
   })
   return open + tree.toString() + close
@@ -413,7 +429,7 @@ export function designPolicyIssue(html, { title } = {}) {
    const declarationError = declarationIssue(decl.prop, decl.value, control, dataGraphic)
    // Keep the same gate; identify the exact declaration so a model can repair
    // one rule instead of rewriting its entire interface from a vague color error.
-   if (declarationError) issue = `样式块 ${styleIndex + 1}，第${decl.source.start.line}行第${decl.source.start.column}列：${declarationError}`
+   if (declarationError) issue = `样式块 ${styleIndex + 1}，第${decl.source.start.line}行第${decl.source.start.column}列，选择器 ${JSON.stringify(selector.slice(0,160))}，声明 ${JSON.stringify((decl.prop+':'+decl.value).slice(0,200))}：${declarationError}`
   })
   if (issue) return issue
  }

@@ -223,17 +223,19 @@ function normalizeTemplateAliases(value) {
  if(value?.type==='mind-map'&&typeof value.content==='string'&&!derivedOutline(value.content)){
   const lines=value.content.split(/\r?\n/),first=lines.findIndex(line=>line.trim());
   if(first>=0&&/^[^\s#*+\-].*/u.test(lines[first]))lines[first]='# '+lines[first];
-  let headingDepth=1,listBase=null,headingLine=-1,valid=/^#\s+.+$/u.test(lines[first]||'');
+  const headingDocument=/^#\s+.+$/u.test(lines[first]||'')&&lines.some(line=>/^#{2,6}\s+/u.test(line));
+  let headingDepth=1,listBase=null,headingLine=-1,sectionBreak=false,valid=/^#\s+.+$/u.test(lines[first]||'');
   for(let i=first+1;valid&&i<lines.length;i++){
    if(!lines[i].trim())continue;
+   if(headingDocument&&/^\s*(?:---+|___+|\*\*\*+)\s*$/u.test(lines[i])){lines[i]='';headingDepth=1;headingLine=-1;listBase=null;sectionBreak=true;continue}
    const heading=lines[i].match(/^(#{2,6})\s+(.+)$/u);
    if(heading){headingDepth=heading[1].length;listBase=null;headingLine=i;lines[i]='  '.repeat(headingDepth-2)+'- '+heading[2];continue}
-   const item=lines[i].match(/^( *)([-*+] )(.+)$/u);
-   if(!item){if(headingLine>=0&&listBase===null&&!/^\s*[#*+\-]/u.test(lines[i])){lines[headingLine]+=' — '+lines[i].trim();lines[i]='';continue}valid=false;break}
+   const item=lines[i].match(/^( *)([-*+] |\d+[.)]\s+)(.+)$/u);
+   if(!item){if(headingDocument&&headingLine<0&&(headingDepth===1||sectionBreak)&&!/^\s*[#*+\-]/u.test(lines[i])){lines[i]='- '+lines[i].trim();continue}if(headingLine>=0&&listBase===null&&!/^\s*[#*+\-]/u.test(lines[i])){lines[headingLine]+=' — '+lines[i].trim();lines[i]='';continue}valid=false;break}
    if(item[1].length%2){valid=false;break}
    const depth=item[1].length/2;
    if(listBase===null){if(depth>1){valid=false;break}listBase=depth}
-   lines[i]='  '.repeat(Math.max(0,headingDepth-1+depth-listBase))+item[2]+item[3];
+   lines[i]='  '.repeat(Math.max(0,headingDepth-1+depth-listBase))+'- '+item[3];
   }
   const content=lines.join('\n');
   if(valid&&derivedOutline(content))value={...value,content};

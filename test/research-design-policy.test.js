@@ -234,3 +234,20 @@ describe('generated HTML design policy', () => {
   }
  })
 })
+
+
+it('normalizes only annotated clickable graph node role paints while preserving nodes, edges and actions',()=>{
+ const html='<style>.node{background:var(--sherlock-status-info-bg);color:var(--sherlock-status-info-fg)}.legend{background:var(--sherlock-status-info-bg);color:var(--sherlock-status-info-fg)}</style><button class="node" data-sherlock-structure="node" data-id="n1" onclick="selectNode(this.dataset.id)">节点甲</button><span class="legend">业务图例</span><svg><path d="M0 0L10 10"/></svg>'
+ const out=normalizeGeneratedHostStyles(html)
+ expect(designPolicyIssue(out)).toBeNull()
+ expect(out).toContain('.node{background:var(--sherlock-control-bg);color:var(--sherlock-control-text)}')
+ expect(out).toContain('.legend{background:var(--sherlock-status-info-bg);color:var(--sherlock-status-info-fg)}')
+ expect(load(out)('button').attr('onclick')).toBe('selectNode(this.dataset.id)')
+ expect(load(out)('path').attr('d')).toBe('M0 0L10 10')
+ expect(normalizeGeneratedHostStyles(out)).toBe(out)
+ for(const content of ['<button class="node">操作</button>','<button class="node" data-sherlock-structure="info">筛选</button>','<button class="node" data-sherlock-structure="node">图</button><span class="node">业务</span>']){
+  const draft='<style>.node{background:var(--sherlock-status-info-bg)}</style>'+content
+  expect(normalizeGeneratedHostStyles(draft)).toBe(draft)
+  expect(designPolicyIssue(draft)).toContain('控件')
+ }
+})

@@ -91,3 +91,14 @@ it('显式章节下的正文归于该章节，不猜测上下级也不丢失说�
  const result=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
  expect(result.content).toBe('# 根\n- 会员大会 — 原文定义及日期。 — 另一行说明。\n\n\n  - 理事会 — 66 人，时点待核。\n')
 })
+
+
+it('retains a heading document prelude, numbered members and trailing provenance through format recovery',()=>{
+ const draft={...mindmap,content:'# 集团\n核查日期待确认\n## 董事会\n说明甲\n### 委员会\n1. 成员甲\n2. 成员乙\n---\n依据：附件原文，具体职务待核'}
+ const out=JSON.parse(acceptArtifactOutput(JSON.stringify(draft)))
+ const root=derivedOutline(out.content)
+ expect(root.children.map(node=>node.label)).toEqual(['核查日期待确认','董事会 — 说明甲','依据：附件原文，具体职务待核'])
+ expect(root.children[1].children[0].children.map(node=>node.label)).toEqual(['成员甲','成员乙'])
+ expect(out.source).toEqual(draft.source)
+ expect(acceptArtifactOutput(JSON.stringify({...draft,content:'# 根\n## 节\n    1. 跳过层级'}))).toBeUndefined()
+})
