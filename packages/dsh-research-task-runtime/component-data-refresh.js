@@ -371,6 +371,12 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  // template owns a flat item list; preserve every record and its source order.
  // Never flatten table rows or arrays of scalar field values.
  if(Array.isArray(data?.items))data.items=data.items.flatMap(item=>Array.isArray(item)&&item.every(record)?item:[item])
+ if(data?.type==='timeline'&&Array.isArray(data.items))data.items=data.items.map(item=>{
+  if(!record(item))return item
+  if(Number.isSafeInteger(item.id))return {...item,id:String(item.id)}
+  if(typeof item.id==='string'&&item.id===item.url&&/^https?:\/\//iu.test(item.id))return {...item,id:'event-'+hash(item.id).slice(0,24)}
+  return item
+ })
  const display=value=>typeof value==='number'&&Number.isFinite(value)?String(value):value
  if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi','key-metrics'].includes(data.variant)){
   if(Array.isArray(data.items))data.items=data.items.map((item,index)=>{

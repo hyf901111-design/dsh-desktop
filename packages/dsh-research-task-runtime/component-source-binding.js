@@ -291,7 +291,8 @@ export function componentFeedEvidenceIssue(text,records,options={}) {
   const articleTimeline=articleTimelineRequired(data,options)
   if(!['news','reports'].includes(data?.type)&&!articleTimeline)return null
   if(data?.type==='news'&&data.version===1&&Array.isArray(data.items)&&!data.items.length&&data.note===NEWS_EMPTY_NOTE)return null
-  if(data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>(articleTimeline?60:40))return articleTimeline?'文章时间线必须包含1–60条已取得的实际记录。':'资讯列表必须包含1–40条已取得的实际记录。'
+  const limit=articleTimeline?(options.capacitySnapshot?2000:60):40
+  if(data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>limit)return articleTimeline?`文章时间线必须包含1–${limit}条已取得的实际记录。`:'资讯列表必须包含1–40条已取得的实际记录。'
   const sources=feedSnapshotSources(records)
   if(articleTimeline){
     const issues=data.items.flatMap((item,index)=>{
@@ -740,7 +741,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   // Fixed ticker recipes already render partial outages explicitly and can
   // recover on refresh. Do not downgrade their bounded template to static HTML.
   const partialTicker=contract.type==='market'&&['metrics','table'].includes(contract.variant)&&requests.every(isCryptoTickerRequest)&&!templateDataIssue(data)
-  const readable=partialTicker?null:componentReadableSnapshot(data,mapping,responses,observed,now)
+  const readable=partialTicker||data.type==='timeline'&&options.staticSnapshot===false?null:componentReadableSnapshot(data,mapping,responses,observed,now)
   const unavailable=Boolean(readable)&&readableSnapshotUnavailable(data)
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue&&!unavailable)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})

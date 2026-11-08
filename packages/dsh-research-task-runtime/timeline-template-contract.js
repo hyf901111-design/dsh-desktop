@@ -4,18 +4,18 @@ export const TIMELINE_GUIDANCE='活动时间线用panel.type和artifact.type均�
 const text=(v,n=2000)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const dateValue=v=>{if(typeof v!=='string'||!/^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/.test(v)||v.startsWith('0000'))return null;const t=new Date(v+'T00:00:00Z');return Number.isFinite(t.getTime())&&t.toISOString().slice(0,10)===v?v:null;};
-export function timelineDataIssue(s){
+export function timelineDataIssue(s,{checkCapacity=true}={}){
  const safeUrl=v=>{try{const u=new URL(v);return typeof v==='string'&&v.length<=2048&&!/[\u0000-\u0020\u007f]/.test(v)&&['http:','https:'].includes(u.protocol)&&!u.username&&!u.password;}catch{return false;}};
- if(!record(s)||Object.keys(s).some(k=>!['version','type','title','subject','range','timeZone','date','asOf','note','items'].includes(k))||s.version!==1||s.type!=='timeline'||!text(s.title,256)||!Array.isArray(s.items)||s.items.length>60)return '时间线需version:1/type:timeline/title及0–60条完整items';
+ if(!record(s)||Object.keys(s).some(k=>!['version','type','title','subject','range','timeZone','date','asOf','note','items'].includes(k))||s.version!==1||s.type!=='timeline'||!text(s.title,256)||!Array.isArray(s.items)||s.items.length>(checkCapacity?60:2000))return '时间线需version:1/type:timeline/title及0–60条完整items';
  for(const k of ['subject','range','asOf','note'])if(s[k]!==undefined&&!text(s[k]))return k+'无效';
  if(s.date!==undefined&&!dateValue(s.date))return '同日记录date需有效YYYY-MM-DD';
  if(s.timeZone!==undefined){if(!text(s.timeZone,96))return 'timeZone无效';try{new Intl.DateTimeFormat('en',{timeZone:s.timeZone});}catch{return 'timeZone需有效IANA时区';}}
  const ids=new Set();for(const item of s.items){
-  if(!record(item)||typeof item.id!=='string'||!/^[\w-]{1,80}$/.test(item.id)||ids.has(item.id)||!text(item.title,256)||!(item.time===null||text(item.time,256)))return '事件需唯一稳定id、完整title及原time字符串或null';ids.add(item.id);
+  if(!record(item)||typeof item.id!=='string'||!/^[\w-]{1,80}$/.test(item.id)||ids.has(item.id)||!text(item.title,checkCapacity?256:8192)||!(item.time===null||text(item.time,256)))return '事件需唯一稳定id、完整title及原time字符串或null';ids.add(item.id);
   if(item.time===null&&!text(item.timeMissing))return '未知发生时间需timeMissing，不以创建时间或当前时间补齐';
-  for(const [k,v]of Object.entries(item))if(k==='url'?!safeUrl(v):!(v===null||typeof v==='string'&&v.length<=2000||typeof v==='number'&&Number.isFinite(v)||typeof v==='boolean'))return '事件附加字段需完整原标量，来源链接需安全http/https';
+  for(const [k,v]of Object.entries(item))if(k==='url'?!safeUrl(v):!(v===null||typeof v==='string'&&(!checkCapacity||v.length<=2000)||typeof v==='number'&&Number.isFinite(v)||typeof v==='boolean'))return '事件附加字段需完整原标量，来源链接需安全http/https';
  }
- return new TextEncoder().encode(JSON.stringify(s)).length<=32000?null:'完整时间线超过32KB，请拆分记录，不截断事件';
+ return !checkCapacity||new TextEncoder().encode(JSON.stringify(s)).length<=32000?null:'完整时间线超过32KB，请拆分记录，不截断事件';
 }
 function timeKey(item,spec){
  if(item.time===null)return {kind:'missing',value:null};

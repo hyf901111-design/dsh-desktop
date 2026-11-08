@@ -1625,7 +1625,7 @@ export class ResearchTaskRuntime {
     const newsTableIssueFor=value=>newsPlan&&extractArtifactObjects(value).map(data=>newsTableCoverageIssue(data,task.prompt,{verified:item=>!componentFeedEvidenceIssue(JSON.stringify(item),sourceRecords,feedOptions)})).find(Boolean)
     let articleTimeline=workbenchPanelFormat(task.prompt)==='timeline'&&articleTimelineRequired({type:'timeline'},feedOptions),originalArticleTimeline
     const calendarIssueFor = value => extractArtifactObjects(value).map(data=>calendarEventEvidenceIssue(data,feedOptions,sourceRecords,{now:new Date(this.now()),requiredData:calendarRepairData??(workbenchPanelFormat(task.prompt)==='calendar'?{type:'calendar'}:undefined)})).find(Boolean)
-    const articleIssueFor = value => articleTimeline && componentFeedEvidenceIssue(value,sourceRecords,{...feedOptions,articleTimelineRequired:true})
+    const articleIssueFor = (value,capacitySnapshot=false) => articleTimeline && componentFeedEvidenceIssue(value,sourceRecords,{...feedOptions,articleTimelineRequired:true,capacitySnapshot})
     const startingEvents = []
     try {
       // Human scope ambiguity cannot be repaired by another model generation.
@@ -1891,7 +1891,7 @@ export class ResearchTaskRuntime {
           }
           calendarIssue=task.kind==='container'&&calendarIssueFor(deliveredText)
           if(calendarIssue)throw new ResearchTaskError('GENERATION_FAILED',calendarIssue)
-          const feedIssue=!deferredPanel&&(sourceRecords.length||articleTimeline)&&componentFeedEvidenceIssue(deliveredText,sourceRecords,feedOptions)
+          const feedIssue=!deferredPanel&&(sourceRecords.length||articleTimeline)&&componentFeedEvidenceIssue(deliveredText,sourceRecords,{...feedOptions,capacitySnapshot:mapped?.capacitySnapshot===true})
           if(feedIssue)throw new ResearchTaskError('GENERATION_FAILED',feedIssue)
           if(newsPlan){
             const candidates=extractArtifactObjects(deliveredText)
@@ -2102,9 +2102,10 @@ export class ResearchTaskRuntime {
       }
       if(output!==undefined&&task.kind==='container'){
         if(newsTableError){output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',newsTableError)}
-        const articleIssue=articleIssueFor(output)
+        const capacitySnapshot=readableSnapshot?.output===output
+        const articleIssue=articleIssueFor(capacitySnapshot?JSON.stringify(readableSnapshot.data):output,capacitySnapshot)
         if(articleIssue){output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',articleIssue)}
-        else if(articleTimeline)output=acceptArtifactOutput(JSON.stringify(readTemplateModel(JSON.parse(output))?.data))
+        else if(articleTimeline&&!capacitySnapshot)output=acceptArtifactOutput(JSON.stringify(readTemplateModel(JSON.parse(output))?.data))
         const eventIssue=output&&calendarIssueFor(output)
         if(eventIssue){calendarIssue=eventIssue;output=undefined;generationError=new ResearchTaskError('GENERATION_FAILED',eventIssue)}
         const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
@@ -2497,7 +2498,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         validateSnapshot:(snapshot,records)=>{
           const text=JSON.stringify(snapshot.data),output=finalText([{type:'text',text:snapshot.capacitySnapshot?snapshot.output:text}],kind)
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
-          const issue=workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
+          const issue=workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
         }
       })
