@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-40",
+  "branch": "codex/integration/20261108-40",
+  "baseMainCommit": "986e467498886a0e496efbe0c6ff4765070fe068",
+  "expectedMainCommit": "986e467498886a0e496efbe0c6ff4765070fe068",
+  "createdAt": "2026-11-08T12:02:06.984Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "看板页签滚轮传递",
+        "branch": "codex/feat/vertical-tabs-wheel-20261108",
+        "baseCommit": "986e467498886a0e496efbe0c6ff4765070fe068",
+        "tipCommit": "aa89acb8ebf6ab19450832106830374c339f1df0",
+        "commits": [
+          {
+            "commit": "aa89acb8ebf6ab19450832106830374c339f1df0",
+            "parents": [
+              "986e467498886a0e496efbe0c6ff4765070fe068"
+            ],
+            "subject": "恢复鼠标位于横向和竖向页签时的画布滚动"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-contract.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "52 项聚焦检查通过",
+            "verifiedCommit": "aa89acb8ebf6ab19450832106830374c339f1df0",
+            "completedAt": "2026-11-08T12:02:05.467920+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "aa89acb8ebf6ab19450832106830374c339f1df0",
+            "completedAt": "2026-11-08T12:02:05.467920+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "aa89acb8ebf6ab19450832106830374c339f1df0",
+            "completedAt": "2026-11-08T12:02:05.467920+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 使用实际滚轮验证横向与竖向页签上的画布滚动、横向手势及竖向长列表滚动边界。"
+        },
+        "acceptanceCriteria": [
+          "页签上纵向滚轮可滚动画布",
+          "横向手势滚动横向溢出列表",
+          "长竖向列表滚到底后滚轮传给画布"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T12:02:05.467920+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-contract.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
