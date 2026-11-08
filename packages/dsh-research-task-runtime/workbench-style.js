@@ -50,15 +50,17 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 
 /* Structure roles opt in explicitly. The older generators used labelled
    node groups and repeated bordered grids, so cover those saved shapes too. */
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="node"],[data-sherlock-structure="primary"],:where(.chart:has(.node.root > .role)) .node:has(> .role,> .name)){
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="node"],[data-sherlock-structure="primary"],:where(.chart:has(.node.root > .role)) .node:has(> .role,> .name),
+ :where(.tree:has(> .node > .node-title)) > .node,
+ :where(.tree:has(> .node > .node-title)) .branch > .card){
  background:color-mix(in srgb,var(--sherlock-chart-1) 8%,var(--sherlock-surface))!important;
  border-color:color-mix(in srgb,var(--sherlock-chart-1) 28%,var(--sherlock-border))!important;
  border-radius:0!important;
 }
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role)){
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child){
  background:var(--sherlock-chart-1)!important;border-color:var(--sherlock-chart-1)!important;color:var(--sherlock-control-on-primary)!important;
 }
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role)) :is(.role,.name,h2,h3,h4,p,span,strong,small,a){
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child) :is(.role,.name,.node-title,.node-sub,h2,h3,h4,p,span,strong,small,a){
  color:var(--sherlock-control-on-primary)!important;
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="info"],.info-card,.department-card,[class$="-cards"] > [class$="-card"]:not(:has(table,svg,canvas,button,input,select)),
@@ -66,7 +68,7 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
  background:color-mix(in srgb,var(--sherlock-chart-1) 5%,var(--sherlock-surface))!important;
  border-color:var(--sherlock-border)!important;border-inline-start:2px solid var(--sherlock-chart-5)!important;border-radius:0!important;
 }
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="connector"]:not(svg *),.chart:has(.node.root > .role) :is(.vline,.stub)),
+:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="connector"]:not(svg *),.chart:has(.node.root > .role) :is(.vline,.stub),.tree:has(> .node > .node-title) :is(.vline,.drop)),
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::before,
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::after{
  background:color-mix(in srgb,var(--sherlock-chart-1) 32%,var(--sherlock-border))!important;
