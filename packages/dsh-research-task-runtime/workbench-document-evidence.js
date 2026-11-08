@@ -73,8 +73,13 @@ export function workbenchDocumentCitationIssue(text, documents) {
   }
   if (blocks.size) {
     const issue = '文档组件缺少可核对的 Word 出处。请用实际段落或表格编号标注来源，如 [P3] 或 [T2]。'
-    for (const match of normalized.matchAll(/[\[【]([PT]\d{1,4})[\]】]/giu)) {
-      if (!blocks.has(match[1].toUpperCase())) return issue
+    // Word block IDs are also valid in table cells such as "T8、P36–P38".
+    // Check every referenced ID, including range interiors, against the actual
+    // parsed document. Do not confuse identifiers embedded in words with IDs.
+    for (const match of normalized.matchAll(/(?<![\p{L}\p{N}_])([PT])(\d{1,4})(?:\s*[-‐‑–—~〜至]\s*([PT])?(\d{1,4}))?(?![\p{L}\p{N}_])/giu)) {
+      const prefix=match[1].toUpperCase(),first=Number(match[2]),last=Number(match[4]??match[2])
+      if (match[3]&&match[3].toUpperCase()!==prefix||first>last) return issue
+      for(let n=first;n<=last;n++)if(!blocks.has(prefix+n))return issue
       found = true
     }
     if (!found) return issue

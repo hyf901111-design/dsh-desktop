@@ -231,9 +231,11 @@ it('can page, search and browse all the actual table rows through the shared-sta
   window.document.write(JSON.parse(task.finalOutput).html)
   let state,render
   const shared={register:config=>{state=config.initialState;render=()=>config.render(state,{connected:true,readOnly:false});render();return {dispatch:action=>{state=config.reduce(state,action);render()}}}}
-  runInNewContext('('+readableSnapshotRuntime.toString()+')()',{document:window.document,window:{sherlockShared:shared}})
+  runInNewContext('('+readableSnapshotRuntime.toString()+')()',{document:window.document,Event:window.Event,window:{sherlockShared:shared,dispatchEvent:()=>{}}})
   const visible=()=>[...window.document.querySelectorAll('tbody tr')].filter(row=>!row.hidden)
-  expect(visible()).toHaveLength(25);window.document.querySelector('[data-readable-next]').click();expect(visible()[0].textContent).toContain('已取得明细25')
+  expect(visible()).toHaveLength(20);window.document.querySelector('[data-readable-next]').click();expect(visible()[0].textContent).toContain('已取得明细20')
+  const size=window.document.querySelector('[data-readable-page-size]');size.value='50';size.dispatchEvent(new window.Event('change'));expect(visible()).toHaveLength(50)
+  const page=window.document.querySelector('[data-readable-page-index]');page.value='2';page.dispatchEvent(new window.Event('change'));expect(visible()).toHaveLength(1);expect(visible()[0].textContent).toContain('已取得明细100')
   window.document.querySelector('[data-readable-all]').click();expect(visible()).toHaveLength(101)
   const search=window.document.querySelector('[data-readable-search]');search.value='已取得明细100';search.dispatchEvent(new window.Event('input'))
   expect(visible()).toHaveLength(1);expect(visible()[0].textContent).toContain('已取得明细100')

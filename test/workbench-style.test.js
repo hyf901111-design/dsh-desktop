@@ -4,7 +4,7 @@ import {runInNewContext} from 'node:vm'
 import {validWorkbenchStyleMessage,installWorkbenchStyleMessages,workbenchStylePalette,workbenchModeCss,installWorkbenchLocaleMessages} from '../packages/dsh-research-task-runtime/workbench-style.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 import {WORKBENCH_ENGLISH} from '../packages/dsh-research-task-runtime/workbench-locale.js'
-import {createWorkbenchStyleState,workbenchFramePresentation} from '../scripts/lib/workbench-style-client.mjs'
+import {createWorkbenchStyleState,workbenchFramePresentation,workbenchRequestedStyle} from '../scripts/lib/workbench-style-client.mjs'
 import {workbenchText} from '../scripts/lib/workbench-localization.mjs'
 it('展示桥只接受父页面的已知模式，任意颜色和外来消息不能改写组件',()=>{
  const w=new Window(),doc=w.document;runInNewContext('('+installWorkbenchStyleMessages.toString()+')()',{addEventListener:w.addEventListener.bind(w),dispatchEvent:w.dispatchEvent.bind(w),document:doc,parent:w.parent,CustomEvent:w.CustomEvent,validWorkbenchStyleMessage})
@@ -61,3 +61,11 @@ it.each(['note','conversation'])('组件本地四模式在全局深浅切换与�
  for(const dark of [false,true]){doc.body.toggleAttribute('data-ds-dark-theme',dark);for(const mode of ['light','dark','enterprise','openterminal']){root.dataset.workbenchStyle=mode;expect(workbenchFramePresentation(frame)).toEqual({type:'sherlock-workbench-style',mode,controlTheme:['dark','openterminal'].includes(mode)?'dark':'light'})}expect(workbenchFramePresentation(doc.querySelector('#global'))).toEqual({type:'sherlock-workbench-style',mode:dark?'dark':'light',controlTheme:dark?'dark':'light'})}
 })
 it('画布展示仍保留既有全局控件模式，不借本地组件修复改变画布语义',()=>{const w=new Window(),doc=w.document;doc.body.setAttribute('data-ds-dark-theme','');doc.body.innerHTML='<main data-ework-grid data-workbench-style="light"><iframe></iframe></main>';expect(workbenchFramePresentation(doc.querySelector('iframe'))).toEqual({type:'sherlock-workbench-style',mode:'light',controlTheme:'dark'})})
+
+
+it('仅从原始需求识别明确的主题选择，否定与单纯提到品牌不改变主题',()=>{
+ expect(workbenchRequestedStyle('给新同事做速查台，用易方达模式。')).toBe('enterprise')
+ expect(workbenchRequestedStyle('不要用深色模式，改用浅色模式')).toBe('light')
+ expect(workbenchRequestedStyle('不要用易方达模式')).toBeNull()
+ expect(workbenchRequestedStyle('研究易方达公司的组织架构')).toBeNull()
+})

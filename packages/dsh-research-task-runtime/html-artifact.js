@@ -599,6 +599,8 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
           intrinsicTable = true;
         }
       }
+      if (workbench && document.body.dataset.researchKind === 'view' && document.querySelector('[data-view-page-size]')) intrinsicTable = true;
+      if (workbench && document.body.hasAttribute('data-readable-snapshot')) intrinsicTable = true;
       // Quote tables and overview strips have bounded scroll viewports. Their
       // clipped boxes must not feed a progressively smaller height to Arrange.
       // Measure the intrinsic controls, a bounded set of rows, and provenance

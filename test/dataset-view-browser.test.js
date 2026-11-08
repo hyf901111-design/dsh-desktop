@@ -21,7 +21,7 @@ async function open(view,{dataset=bookDataset(),context,saved,width=900,mode='op
  },{saved,readOnly})
  await expect.poll(()=>frame.locator('html').evaluate(()=>window.sherlockShared.inspect()?.connected)).toBe(true)
  await frame.locator('html').evaluate((el,mode)=>el.dataset.workbenchStyle=mode,mode)
- return {page,frame,close:()=>page.close(),saved:()=>page.evaluate(()=>window.viewEvents.filter(e=>e.message?.op==='localCommit').at(-1)?.message)}
+ return {page,frame,close:()=>page.close(),saved:async()=>{const revision=await frame.locator('html').evaluate(()=>window.sherlockShared.inspect().revision);await expect.poll(()=>page.evaluate(()=>window.viewEvents.filter(e=>e.message?.op==='localCommit').at(-1)?.message?.revision)).toBe(revision);return page.evaluate(()=>window.viewEvents.filter(e=>e.message?.op==='localCommit').at(-1)?.message)}}
 }
 const order=frame=>frame.locator('tbody tr:not([hidden])').evaluateAll(rows=>rows.map(r=>r.dataset.recordId))
 it('uses Chinese field references in real host filters while preserving plain scenario notes safely',async()=>{
@@ -137,4 +137,41 @@ it('shows explicit gaps when all schedules are missing or a comparison has fewer
   expect(await comparison.frame.getByRole('combobox',{name:'对比记录2',exact:true}).isDisabled()).toBe(true)
   expect(await comparison.frame.locator('[data-view-count]').textContent()).toContain('1 / 8')
  }finally{await comparison.close()}
+},20000)
+
+
+it('searches the complete dataset and persists pagination without losing records or accumulating blank height',async()=>{
+ const dataset=bookDataset();dataset.records=Array.from({length:61},(_,i)=>({...dataset.records[i%8],id:'B'+String(i+1).padStart(3,'0'),title:'演练古籍'+(i+1)}))
+ const c=await open(priorityView(),{dataset})
+ try{
+  expect((await order(c.frame)).length).toBe(20)
+  const height=()=>c.frame.locator('.dv-shell').evaluate(el=>el.getBoundingClientRect().height)
+  const initial=await height()
+  await c.frame.getByRole('button',{name:'下一页',exact:true}).click()
+  expect((await order(c.frame))[0]).toBe('B021')
+  await c.frame.getByRole('combobox',{name:'每页显示数量',exact:true}).selectOption('10')
+  expect((await order(c.frame)).length).toBe(10)
+  expect(await height()).toBeLessThan(initial-200)
+  await c.frame.getByRole('combobox',{name:'表格页码',exact:true}).selectOption('6')
+  expect(await order(c.frame)).toEqual(['B061'])
+  const lastHeight=await height()
+  await c.frame.getByRole('combobox',{name:'每页显示数量',exact:true}).selectOption('50')
+  expect((await order(c.frame)).length).toBe(50)
+  expect(await height()).toBeGreaterThan(lastHeight+700)
+  await c.frame.getByRole('searchbox',{name:'搜索完整数据',exact:true}).fill('B061')
+  await expect.poll(()=>order(c.frame)).toEqual(['B061'])
+  expect(await c.frame.locator('[data-view-count]').textContent()).toContain('1 / 61')
+  expect(await c.frame.locator('#dataset-view-source').evaluate(el=>JSON.parse(el.textContent).dataset)).toEqual(dataset)
+  const reopened=await open(priorityView(),{dataset,saved:await c.saved()})
+  try{
+   expect(await order(reopened.frame)).toEqual(['B061'])
+   expect(await reopened.frame.getByRole('combobox',{name:'每页显示数量',exact:true}).inputValue()).toBe('50')
+   await reopened.frame.getByRole('searchbox',{name:'搜索完整数据',exact:true}).fill('')
+   await reopened.frame.getByRole('combobox',{name:'每页显示数量',exact:true}).selectOption('100')
+   expect((await order(reopened.frame)).length).toBe(61)
+  }finally{await reopened.close()}
+  const gap=await c.frame.locator('.dv-pagination').evaluate(el=>el.getBoundingClientRect().top-el.previousElementSibling.getBoundingClientRect().bottom)
+  expect(gap).toBeGreaterThanOrEqual(10)
+  expect((await c.page.evaluate(()=>window.viewEvents)).some(e=>e.type==='sherlock-content-failed')).toBe(false)
+ }finally{await c.close()}
 },20000)
