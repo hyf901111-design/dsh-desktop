@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
-import { workbenchDocumentCitationIssue } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import { workbenchDocumentCitationIssue, restoreDocumentLists } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 
 it('保留带空单元格的全部文档行、数值、链接和出处', () => {
   const table = {
@@ -71,4 +71,16 @@ it('文档明细失败后自动尝试换一种呈现，只有说明时保持未�
   } finally {
     await runtime.dispose()
   }
+})
+
+
+it.each(['markdown','html'])('根据可核验的原文补足 %s 卡中漏掉的条目', type => {
+  const documents = [{blocks:[{id:'P8',text:'3个分部：甲分部、乙分部、丙分部。另设办公室。'}]}]
+  const scope = '展示3个分部的完整名单'
+  const content = '3个分部：甲分部、丙分部 [P8]。'
+  const output = JSON.stringify({version:1,type,title:'机构',...(type==='html'?{html:'<main>'+content+'</main>'}:{content})})
+  expect(restoreDocumentLists(output,documents,scope)).toContain('甲分部、乙分部、丙分部。')
+  expect(restoreDocumentLists(output,documents,scope)).toContain('原文完整清单 [P8]')
+  expect(restoreDocumentLists(output,documents,'简介3个分部')).toBe(output)
+  expect(restoreDocumentLists(output.replace('甲分部、丙分部','甲分部、乙分部、丙分部'),documents,scope)).not.toContain('原文完整清单')
 })

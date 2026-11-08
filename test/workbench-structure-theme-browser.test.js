@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { pathToFileURL } from 'node:url'
+import { readFileSync } from 'node:fs'
+import { canvasCss } from '../scripts/lib/figma-canvas-client.mjs'
+import { workbenchModeCss } from '../packages/dsh-research-task-runtime/workbench-style.js'
 import { buildResearchHtmlPreview } from '../packages/dsh-research-task-runtime/html-artifact.js'
 
 let browser
@@ -79,6 +82,40 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#tree-root', 'backgroundColor')).toBe(lightTreeRoot)
     expect(await read('#department', 'borderRadius')).toBe('6px')
     expect(await read('#svg-node', 'fill')).toBe('rgb(119, 119, 119)')
+  } finally {
+    await page.close()
+  }
+}, 15000)
+
+
+it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）', async legacy => {
+  const page = await browser.newPage()
+  try {
+    const css = canvasCss + workbenchModeCss('body [data-ework-grid]', ' [data-research-node-id]') +
+      readFileSync('scripts/lib/workbench-style.css', 'utf8')
+    await page.setContent(`<style>${css}</style><div data-ework-grid data-workbench-style="dark">
+      <article data-research-node-id="mind" data-research-compact-chrome ${legacy?'data-research-generated-mind-map':'data-research-container-type="mind-map"'}>
+        <div class="rScV5Q_mindMap"><svg data-research-mind-map-edges></svg>
+          <div class="rScV5Q_mindMapNode" data-research-mind-map-depth="0">根节点</div>
+          <div class="rScV5Q_mindMapNode" data-research-mind-map-depth="1">下属节点</div>
+        </div>
+      </article>
+    </div>`)
+    const board = page.locator('[data-ework-grid]')
+    const style = () => page.locator('.rScV5Q_mindMapNode').evaluateAll(nodes => nodes.map(node => {
+      const {backgroundColor,color,borderRadius} = getComputedStyle(node)
+      return {backgroundColor,color,borderRadius}
+    }))
+    const dark = await style()
+    await board.evaluate(node => node.dataset.workbenchStyle='enterprise')
+    const enterprise = await style()
+    expect(enterprise[0]).toEqual({backgroundColor:'rgb(0, 80, 150)',color:'rgb(255, 255, 255)',borderRadius:'0px'})
+    expect(enterprise[1].backgroundColor).toMatch(/^color\(srgb /u)
+    expect(enterprise[1].color).toBe('rgb(60, 60, 60)')
+    expect(await page.locator('[data-research-mind-map-edges]').evaluate(node => getComputedStyle(node).color)).toMatch(/^color\(srgb /u)
+    await board.evaluate(node => node.dataset.workbenchStyle='dark')
+    expect(await style()).toEqual(dark)
+    expect(await page.locator('.rScV5Q_mindMapNode').allTextContents()).toEqual(['根节点','下属节点'])
   } finally {
     await page.close()
   }

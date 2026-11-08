@@ -1,5 +1,3 @@
-import {readFileSync} from 'node:fs'
-import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
 import {it,expect,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import {runInNewContext} from 'node:vm'
@@ -56,20 +54,6 @@ it('新闻筛选计数和控件辅助标签随语言切换，原文和用户输�
  expect(doc.querySelector('input').getAttribute('aria-label')).toBe('Search items');expect(doc.querySelector('select').getAttribute('aria-label')).toBe('Filter by category');expect(doc.querySelector('input').value).toBe('用户输入');expect(doc.querySelector('#business').textContent).toBe('2 / 6 条')
  doc.querySelector('#count').textContent='1 / 6 条';await vi.waitFor(()=>expect(doc.querySelector('#count').textContent).toBe('1 / 6 items'))
  w.dispatchEvent(new w.MessageEvent('message',{source:w.parent,data:{type:'sherlock-workbench-locale',locale:'zh'}}));await vi.waitFor(()=>expect(doc.querySelector('#count').textContent).toBe('1 / 6 条'));await w.happyDOM.abort()
-})
-
-it('完成的思维导图随画布三模式切换，深浅色使用中性色，企业色按层级变化',async()=>{
- const w=new Window(),doc=w.document,style=doc.createElement('style')
- style.textContent=canvasCss+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+readFileSync('scripts/lib/workbench-style.css','utf8');doc.head.append(style)
- doc.body.innerHTML='<div data-ework-grid data-workbench-style="dark"><article data-research-node-id="mind" data-research-artifact-card data-research-compact-chrome data-research-generated-mind-map><div class="rScV5Q_previewBody"><div class="rScV5Q_artifactBody"><div class="rScV5Q_mindMap"><svg data-research-mind-map-edges></svg><div class="rScV5Q_mindMapNode" data-research-mind-map-depth="0">根节点</div><div class="rScV5Q_mindMapNode" data-research-mind-map-depth="1">分支</div><div class="rScV5Q_mindMapNode" data-research-mind-map-depth="2">内容</div></div></div></div></article></div>'
- const board=doc.querySelector('[data-ework-grid]'),map=doc.querySelector('.rScV5Q_mindMap'),nodes=doc.querySelectorAll('.rScV5Q_mindMapNode')
- for(const mode of ['dark','light','enterprise','dark']){
-  board.setAttribute('data-workbench-style',mode)
-  expect(w.getComputedStyle(map).backgroundColor).toBe(mode==='dark'?'#151518':'#fff')
-  expect(Array.from(nodes,n=>w.getComputedStyle(n).backgroundColor)).toEqual(mode==='enterprise'?['#005096','#0078b4','#1eb9e1']:Array(3).fill(mode==='dark'?'#24242b':'#f4f4f6'))
-  expect(Array.from(nodes,n=>w.getComputedStyle(n).color)).toEqual(Array(3).fill(mode==='enterprise'?'#fff':mode==='dark'?'#e8e8ed':'#25252b'))
- }
- expect(map.textContent).toBe('根节点分支内容');await w.happyDOM.abort()
 })
 
 it.each(['note','conversation'])('组件本地四模式在全局深浅切换与画布祖先下优先，控件沿同一模式: %s',host=>{

@@ -1,5 +1,7 @@
 import { extname } from 'node:path'
 import { authoredPrototypeEvidence } from './workbench-prototype-evidence.js'
+import { parseResearchContainerSpec } from './artifact-validator.js'
+import { researchHtmlText } from './html-artifact.js'
 
 export function workbenchDocumentScope(request, targets = authoredPrototypeEvidence(request)) {
   if (!targets.files.length || targets.files.length > 4 || targets.urls.length ||
@@ -61,4 +63,36 @@ export function workbenchDocumentCitationIssue(text, documents) {
     if (!found) return issue
   }
   return found ? undefined : pdfCitationIssue
+}
+
+// Check only an explicitly complete list whose source declares its own count
+// and whose first sentence actually contains that many distinct entries.
+export function restoreDocumentLists(output, documents, request) {
+  if (!/完整|全部|逐项|逐一|逐条|逐个/u.test(request)) return output
+  const spec = JSON.parse(output)
+  const text = spec.type === 'html' ? researchHtmlText(spec.html) : spec.content ?? JSON.stringify(spec.rows ?? [])
+  const compact = value => value.normalize('NFKC').replace(/\s+/gu, '')
+  const scope = compact(request)
+  const body = compact(text)
+  const missing = []
+  for (const doc of documents) for (const block of doc.blocks ?? []) {
+    const match = block.text?.match(/^(\d{1,3}\s*[个名项条家只所位]\s*[^：:\n。]{1,32})[：:]([^。\n]+)[。\n]?/u)
+    if (!match || !scope.includes(compact(match[1]))) continue
+    const entries = match[2].split('、').map(value => value.trim())
+    const count = Number(match[1].match(/^\d+/u)[0])
+    if (count < 2 || entries.length !== count || new Set(entries).size !== count || entries.some(value => !value || value.length > 100)) continue
+    if (entries.some(value => !body.includes(compact(value)))) missing.push({ref:block.id,line:match[0].trim()})
+  }
+  if (!missing.length) return output
+  const escape = value => value.replace(/&/gu,'&amp;').replace(/</gu,'&lt;').replace(/>/gu,'&gt;')
+  let restored
+  if (spec.type === 'markdown') {
+    const lines = missing.map(({ref,line}) => '原文完整清单 [' + ref + ']\n\n' + escape(line))
+    restored = {...spec,content:[spec.content,...lines].join('\n\n')}
+  } else if (spec.type === 'html') {
+    const details = missing.map(({ref,line}) => '<details open><summary>原文完整清单 [' + ref + ']</summary><p>' + escape(line) + '</p></details>').join('')
+    restored = {...spec,html:/<\/body\s*>/iu.test(spec.html) ? spec.html.replace(/<\/body\s*>/iu, end => details+end) : spec.html+details}
+  }
+  const validated = restored && parseResearchContainerSpec(restored)
+  return validated ? JSON.stringify(validated) : undefined
 }
