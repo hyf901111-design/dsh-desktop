@@ -838,7 +838,10 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       // Reserve only the newly revealed flow, never the full scrollable diagram
       // or its current scroll offset. Saved card geometry remains the baseline.
       const extraHeight=Math.ceil(open.filter(detail=>!open.some(parent=>parent!==detail&&parent.contains(detail))).reduce((sum,detail)=>sum+[...detail.children].filter(child=>child.tagName!=='SUMMARY').reduce((height,child)=>{const style=getComputedStyle(child);return height+child.getBoundingClientRect().height+(parseFloat(style.marginTop)||0)+(parseFloat(style.marginBottom)||0)},0),0))
-      workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:extraHeight,extraHeight,disclosureOpen})
+      const preset=body.querySelector('[data-research-derived-preset]'),layoutFit=!!preset?.querySelector('[data-research-mind-map-layout="wide"]')
+      const chrome=(card.querySelector('.ew-grid-header')?.getBoundingClientRect().height||38)+(card.querySelector('.odyssey-data-stamp')?.getBoundingClientRect().height||0)
+      const height=layoutFit?Math.ceil(chrome+Math.max(preset.scrollHeight,preset.getBoundingClientRect().height)):extraHeight
+      workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height,extraHeight,disclosureOpen,layoutFit})
     }
     root.addEventListener('toggle',nativeDisclosure,true)
     root.__eworkNativeDisclosure=nativeDisclosure
@@ -863,8 +866,8 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     let active=true
     const tables=nodes.map(node=>({node,card:root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')})).map(item=>({...item,table:item.card?.querySelector('[data-sherlock-market-native="table"]')})).filter(item=>item.table)
     const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const size=workbenchNativeTableDimensions(table);if(size)workspace.setWorkbenchContentHeight(node.id,{html:node.containerSpec.html,width:node.width,height:size.height})}}
-    const nativeDetails=[...root.querySelectorAll('[data-research-preview-body] details[open]')].filter(details=>!details.closest('[data-research-node-id]')?.querySelector('iframe'))
-    const refitNative=()=>{if(active&&!root.hasAttribute('data-grid-operation'))for(const details of nativeDetails)if(details.isConnected&&details.open)root.__eworkNativeDisclosure?.({target:details})}
+    const nativeDetails=[...root.querySelectorAll('[data-research-preview-body] details')].filter(details=>!details.closest('[data-research-node-id]')?.querySelector('iframe'))
+    const refitNative=()=>{if(active&&!root.hasAttribute('data-grid-operation'))for(const details of nativeDetails)if(details.isConnected)root.__eworkNativeDisclosure?.({target:details})}
     const nativeObserver=new ResizeObserver(refitNative)
     for(const details of nativeDetails){nativeObserver.observe(details);const preset=details.closest('[data-research-derived-preset]');if(preset)nativeObserver.observe(preset)}
     refitNative()

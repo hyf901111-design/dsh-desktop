@@ -27,14 +27,16 @@ export function createWorkbenchGridState(storage,sessionId) {
       // readable minimum. The sandbox measured that displayed width; comparing
       // it with the smaller saved span discards the first content height.
       const displayedWidth=Math.max(c.w,min.w)*m.step-m.gap
-      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.min(300,value.native&&Number.isFinite(value.extraHeight)?Math.max(c.h,min.h)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep)))
+      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min.h)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep)))
       return min
     }
-    if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
+    const fitted=cells.map(c=>{const value=contentHeights.get(c.id),node=nodesById.get(c.id);return value?.native&&value.layoutFit&&!contentOverrides.has(c.id)&&value.contentKey===JSON.stringify(node?.containerSpec)&&Math.abs(value.width-(Math.max(c.w,limits(c).w)*m.step-m.gap))<=2?{...c,h:Math.max(m.minRows,Math.min(300,Math.ceil((value.height+m.gap)/m.rowStep)))}:c})
+    const hasFit=fitted.some((c,i)=>c.h!==cells[i].h)
+    if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
     // Preserve existing column intent when a narrow left column reaches the
     // shared minimum. Borrow the neighbouring column's spare span before
     // falling back to wrapping; every card on those edges moves together.
-    let horizontal=cells
+    let horizontal=fitted
     const handled=new Set()
     for(const row of [...new Set(cells.map(c=>c.y))].sort((a,b)=>a-b)){
       const peers=cells.filter(c=>c.y===row).sort((a,b)=>a.x-b.x)
@@ -61,7 +63,7 @@ export function createWorkbenchGridState(storage,sessionId) {
       while(collisions.length){next.y=Math.max(...collisions.map(c=>c.y+c.h));collisions=placed.filter(c=>grid.overlap(next,c))}
       placed.push(next)
     }
-    const byId=new Map(placed.map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
+    const byId=new Map((hasFit?grid.compact(placed):placed).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
   }
   function reconcile(snapshot) {
     if(!width)return snapshot
@@ -163,14 +165,14 @@ export function createWorkbenchGridState(storage,sessionId) {
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"|<body data-research-kind="chart" data-chart-template="(?:line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"/.test(node?.containerSpec?.html||'')
       if(value.native?(!node?.containerSpec||node.containerSpec.type==='html'||value.contentKey!==JSON.stringify(node.containerSpec)):(node?.containerSpec?.type!=='html'||value.html!==node.containerSpec.html))return false
       const old=contentHeights.get(id)
-      const autoFit=trustedTemplate||['table','metrics','share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)
+      const autoFit=value.native&&value.layoutFit||trustedTemplate||['table','metrics','share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)
       // An open disclosure temporarily grows even a user-sized card. Closing
       // it restores the saved grid geometry and returns displaced cards.
       if(!value.disclosureOpen&&(!autoFit||contentOverrides.has(id))){
-        if(!old?.disclosureOpen)return false
+        if(!old?.disclosureOpen&&!old?.layoutFit)return false
         contentHeights.delete(id);forced=true;return true
       }
-      if(old?.html===value.html&&old?.contentKey===value.contentKey&&old.width===value.width&&old.height===value.height&&Boolean(old.disclosureOpen)===Boolean(value.disclosureOpen))return false
+      if(old?.html===value.html&&old?.contentKey===value.contentKey&&old.width===value.width&&old.height===value.height&&Boolean(old.disclosureOpen)===Boolean(value.disclosureOpen)&&Boolean(old.layoutFit)===Boolean(value.layoutFit))return false
       contentHeights.set(id,value);forced=true;return true
     },
     clearContentOverrides(){contentOverrides.clear()},

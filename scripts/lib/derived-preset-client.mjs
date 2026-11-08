@@ -1,6 +1,8 @@
+import { ResearchMindMapConnections as adaptiveMapConnections, adaptiveMindMapCss } from './mind-map-layout.mjs'
 import {parseDerivedSpec,derivedOutline} from '../../packages/dsh-research-task-runtime/derived-template-contract.js'
 import {WORKBENCH_DISCLOSURE_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 export const derivedPresetCss=`
+${adaptiveMindMapCss}
 ${WORKBENCH_DISCLOSURE_CSS.replaceAll('body ','.ew-derived-preset ')}
 .ew-derived-preset{box-sizing:border-box;min-width:0;width:100%;padding:12px;display:flex;flex-direction:column;gap:10px;font:12px/18px DINPro,'Noto Sans SC',sans-serif;color:var(--grid-text,#3c3c3c);overflow-wrap:anywhere;container-type:inline-size;}
 .ew-derived-source{font-size:11px;color:var(--grid-muted,#666);min-width:0;}
@@ -92,6 +94,7 @@ export function ResearchDerivedPreset({node,sessionId}){
  ]})
 }
 export function patchDerivedPresetClient(source){
+ const connections=source.indexOf('function ResearchMindMapConnections('),connectionsEnd=source.indexOf('function researchMindMapFitTree(',connections);if(connections>=0&&connectionsEnd>connections)source=source.slice(0,connections)+adaptiveMapConnections.toString()+'\n'+source.slice(connectionsEnd);
  const start='/* ODYSSEY_DERIVED_PRESET_V1 */',end='/* ODYSSEY_DERIVED_PRESET_END */'
  const definitions=`${start}\nconst researchDerivedSinks=new Map(),researchDerivedFocus=new Map(),RESEARCH_DERIVED_PRESET_CSS=${JSON.stringify(derivedPresetCss)};\nconst researchDerivedOutline=${derivedOutline.toString()},researchDerivedSpec=${parseDerivedSpec.toString().replaceAll('derivedOutline(','researchDerivedOutline(')};\n${researchLegacyDerivedSpec.toString()}\n${researchDerivedNodeLabel.toString()}\n${replaceResearchDerivedNodeLabel.toString()}\n${ResearchDerivedMindMap.toString()}\n${ResearchDerivedPreset.toString()}\n${end}`
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('Derived preset definitions boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}
