@@ -92,6 +92,58 @@
           "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
         ],
         "generatedAt": "2026-11-08T05:38:34.388244+00:00"
+      },
+      "merged": {
+        "mergeCommit": "fae1c15f4631c2e82f6107cfddc8ec513d1f4298",
+        "verificationCommit": "fae1c15f4631c2e82f6107cfddc8ec513d1f4298",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-native-plan-recovery.test.js",
+              "test/derived-template-contract.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-prototype-evidence.test.js test/workbench-execution-policy.test.js test/workbench-prototype-component.test.js test/bundled-component-skill.test.js test/observed-source-completeness.test.js test/workbench-planning-phase.test.js test/workbench-planning-session.test.js test/workbench-native-plan-recovery.test.js test/derived-template-contract.test.js --maxWorkers=4",
+            "verifiedCommit": "fae1c15f4631c2e82f6107cfddc8ec513d1f4298",
+            "completedAt": "2026-11-08T05:38:54.034Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fae1c15f4631c2e82f6107cfddc8ec513d1f4298",
+            "completedAt": "2026-11-08T05:38:54.034Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "fae1c15f4631c2e82f6107cfddc8ec513d1f4298",
+            "completedAt": "2026-11-08T05:38:54.034Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T05:38:54.034Z"
       }
     }
   ],
