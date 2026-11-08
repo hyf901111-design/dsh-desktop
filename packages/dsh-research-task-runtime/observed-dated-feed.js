@@ -86,7 +86,10 @@ export function observedReleaseTimeline(scope,records,title) {
   for(const {record,take} of pages){
    const key='releases'+requests.length
    requests.push({key,tool:record.tool,args:record.args})
-   if(scope.presentation==='table')items.push({$from:key,$each:'records',$take:take,$map:[{$path:'tag_name'},{$path:'published_at'},{$path:'html_url'},...(scope.includeBody?[{$path:'body'}]:[])]})
+   // Each page is a source list, not a table row. Emit row-level selectors so
+   // multiple transport pages cannot become nested arrays of table rows.
+   if(scope.presentation==='table')for(let i=0;i<take;i++)items.push(
+    ['tag_name','published_at','html_url',...(scope.includeBody?['body']:[])].map(field=>({$from:key,$path:`records.${i}.${field}`})))
   else items.push({$from:key,$each:'records',$take:take,$map:{
     id:{$path:'html_url'},title:{$path:'tag_name'},time:{$path:'published_at'},url:{$path:'html_url'},object:repo,
     ...(scope.includeBody?{summary:{$path:'body'}}:{})

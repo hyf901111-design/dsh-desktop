@@ -122,6 +122,20 @@ it('allows one-record transport pages to finish a larger requested collection wi
  expect(snapshot.data.items.map(row=>row.summary)).toEqual(all.map(row=>row.body))
 })
 
+it.each([1,10,30])('flattens %i-row transport pages into one complete source-backed table',async size=>{
+ const scope={repos:['example/paged'],count:40,includeBody:true,presentation:'table'}
+ const all=Array.from({length:60},(_,i)=>({tag_name:'v'+i,published_at:'2026-11-01T10:00:00Z',html_url:'https://github.com/example/paged/releases/tag/v'+i,draft:false,body:i===31?'完整长正文'.repeat(1800):'真实说明'+i}))
+ const records=[]
+ for(let i=0;i<Math.ceil(40/size);i++){
+  const url=`https://api.github.com/repos/example/paged/releases?per_page=${size}&page=${i+1}`
+  records.push(hostStructuredWebRecord(page(url,all.slice(i*size,(i+1)*size)),url))
+ }
+ const snapshot=resolveComponentSnapshot(observedReleaseTimeline(scope,records,'分页记录'),records)
+ expect(snapshot?.data.rows).toEqual(all.slice(0,40).map(r=>[r.tag_name,r.published_at,r.html_url,r.body]))
+ expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
+ expect(snapshot.output).toContain('完整长正文')
+})
+
 it('keeps shared collection counts off adjacent graph and analysis cards citing release sources',()=>{
  const request='用关系图梳理核心包，用可搜索总表列出 example/vue 最近40条发布记录，再总结升级事项。只用 GitHub 和官网。'
  const graph='本面板：核心包与生态关系图\n绘制包关系图并标注兼容版本。数据来源仅限官方文档与 GitHub 各仓库的 package.json/releases 信息，标注来源。'

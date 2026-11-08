@@ -38,6 +38,7 @@ import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableR
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
 import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from './component-feed-acquisition.js'
 import {workbenchReleaseScope,observedReleaseTimeline,readReleaseTimeline,releaseTimelineComplete} from './observed-dated-feed.js'
+import {retainObservedComponentProvenance} from './component-observed-provenance.js'
 import {commonPriceScope,observedCommonPriceComparison,readCommonPriceComparison} from './observed-series-comparison.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
@@ -2264,6 +2265,7 @@ export class ResearchTaskRuntime {
           }
           if(task.cancelRequested||terminalState(task.state))return
         }
+        output=acceptArtifactOutput(retainObservedComponentProvenance(output,result.documentEvidence,sourceRecords))??output
         await this.finish(task, 'completed', { finalOutput: output,...(readableSnapshot?.recoveryMode==='source-snapshot'?taskDelivery(readableSnapshot):{}) })
       } else {
         const message = result?.stopReason === 'completed'
