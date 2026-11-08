@@ -250,7 +250,7 @@ it('组件库沿用工具栏菜单，按实测内容高度展开，空间不足�
  f.canvas.getBoundingClientRect=()=>({left:100,right:800,top,bottom:700,width:700,height:700-top})
  await f.event('click',trigger)
  const menu=f.document.querySelector('.ew-financial-library')
- expect(menu.classList.contains('ew-arrange-menu')).toBe(true)
+ expect(menu.classList.contains('ew-grid-menu')).toBe(true)
  expect(menu.hasAttribute('data-financial-theme')).toBe(false)
  Object.defineProperties(menu,{scrollHeight:{value:384},clientHeight:{value:280},offsetHeight:{value:282}})
  await f.event('resize',f.win)
