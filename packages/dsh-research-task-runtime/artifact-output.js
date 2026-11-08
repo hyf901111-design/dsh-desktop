@@ -162,6 +162,18 @@ export function normalizeOperationMetadata(value) {
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
  value=normalizeOperationMetadata(value);
+ // Provenance is independent of the chosen text editor. Keep a valid note's
+ // editable content and move common source aliases into the same inert footer
+ // metadata used by other HTML presentations, without another model rewrite.
+ if(value?.type==='note'&&Object.keys(value).every(key=>['version','type','title','content','asOf','source','sources'].includes(key))&&
+  ((value.source===undefined&&value.sources!==undefined)||(value.sources===undefined&&value.source!==undefined))){
+  const {source,sources,...note}=value;
+  const refs=sources??source;
+  const rows=Array.isArray(refs)?refs:[refs];
+  const rendered=renderNoteArtifact(note);
+  if(rendered&&rows.length>0&&rows.length<=100&&rows.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&Object.keys(row).length>0&&Object.keys(row).every(key=>['label','name','title','url','text'].includes(key))&&Object.values(row).every(text=>typeof text==='string'&&text.trim()&&text.length<=8000)))
+   value={...retainTemplateModel(rendered,note),sources:rows};
+ }
  // HTML's envelope is deliberately small. Preserve common source metadata in
  // inert, host-readable markup instead of rejecting an otherwise complete
  // visualization and asking the model to rewrite all of its code.
