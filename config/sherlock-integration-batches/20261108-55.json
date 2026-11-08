@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-55",
+  "branch": "codex/integration/20261108-55",
+  "baseMainCommit": "24b4e6e824cbc4c4c2f33ecca9f9332bb61ae305",
+  "expectedMainCommit": "24b4e6e824cbc4c4c2f33ecca9f9332bb61ae305",
+  "createdAt": "2026-11-08T15:16:40.674Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "分页数量选择与按行数自适应高度",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "24b4e6e824cbc4c4c2f33ecca9f9332bb61ae305",
+        "tipCommit": "15b0d78478f003012c3de731b65f1d510795ad2c",
+        "commits": [
+          {
+            "commit": "15b0d78478f003012c3de731b65f1d510795ad2c",
+            "parents": [
+              "24b4e6e824cbc4c4c2f33ecca9f9332bb61ae305"
+            ],
+            "subject": "支持选择表格每页数量并按实际行数自适应高度"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-table-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-market-native-table.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/market-table-reading-browser.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-optimal-arrange.test.js",
+              "test/research-bento-arrange-fit.test.js",
+              "test/research-grid-workbench.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "182 项聚焦检查通过",
+            "verifiedCommit": "15b0d78478f003012c3de731b65f1d510795ad2c",
+            "completedAt": "2026-11-08T15:16:39.467840+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "15b0d78478f003012c3de731b65f1d510795ad2c",
+            "completedAt": "2026-11-08T15:16:39.467840+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "15b0d78478f003012c3de731b65f1d510795ad2c",
+            "completedAt": "2026-11-08T15:16:39.467840+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实浏览器覆盖原生表格四模式和沙箱分页，逐页核对51条完整正文、日期和原链接及10、20、50、100每页数量；跨页全量搜索排序、空结果与末页边界、末页高度适应及50条以上自动增高均通过。"
+        },
+        "acceptanceCriteria": [
+          "长表分页保留全部记录正文及原始链接",
+          "搜索排序覆盖全量数据，正确重置页码",
+          "末页空结果边界正确，短表完整展示",
+          "分页组件按当前页内容适应高度"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T15:16:39.467840+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/market-table-reading-browser.test.js",
+        "test/research-market-native-table.test.js",
+        "test/research-market-artifact.test.js",
+        "test/research-optimal-arrange.test.js",
+        "test/research-bento-arrange-fit.test.js",
+        "test/research-grid-workbench.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
