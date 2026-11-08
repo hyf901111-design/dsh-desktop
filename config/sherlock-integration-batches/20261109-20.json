@@ -96,6 +96,53 @@
           "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
         ],
         "generatedAt": "2026-11-08T23:47:03.880860+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3a9242a1f87d9a14bfb584e9497796cca42bd85e",
+        "verificationCommit": "3a9242a1f87d9a14bfb584e9497796cca42bd85e",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-client-preview-closure.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/workbench-client-preview-closure.test.js test/component-source-info-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "3a9242a1f87d9a14bfb584e9497796cca42bd85e",
+            "completedAt": "2026-11-08T23:47:08.868Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3a9242a1f87d9a14bfb584e9497796cca42bd85e",
+            "completedAt": "2026-11-08T23:47:08.868Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "3a9242a1f87d9a14bfb584e9497796cca42bd85e",
+            "completedAt": "2026-11-08T23:47:08.868Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T23:47:08.868Z"
       }
     }
   ],
