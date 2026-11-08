@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-08",
+  "branch": "codex/integration/20261108-08",
+  "baseMainCommit": "b66ffb719c2d80abb5f53d1007059fd9e28a931a",
+  "expectedMainCommit": "b66ffb719c2d80abb5f53d1007059fd9e28a931a",
+  "createdAt": "2026-11-08T00:51:30.841Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一网页快照原始路径与来源选择",
+        "branch": "codex/feat/workbench-source-paths-20261108",
+        "baseCommit": "b66ffb719c2d80abb5f53d1007059fd9e28a931a",
+        "tipCommit": "266563fd9024cac59f3cb7c06a92ce4394592577",
+        "commits": [
+          {
+            "commit": "266563fd9024cac59f3cb7c06a92ce4394592577",
+            "parents": [
+              "b66ffb719c2d80abb5f53d1007059fd9e28a931a"
+            ],
+            "subject": "优化：统一网页快照字段解析与来源引用校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-native-plan-recovery.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-refresh.test.js",
+              "test/workbench-comparison-intent.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/workbench-public-data-profile.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  9 passed (9)\n      Tests  358 passed (358)\n   Start at  08:50:53\n   Duration  8.92s (transform 3.95s, setup 0ms, import 9.52s, tests 11.82s, environment 0ms)",
+            "verifiedCommit": "266563fd9024cac59f3cb7c06a92ce4394592577",
+            "completedAt": "2026-11-08T00:51:02.425858+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "266563fd9024cac59f3cb7c06a92ce4394592577",
+            "completedAt": "2026-11-08T00:51:11.843593+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "266563fd9024cac59f3cb7c06a92ce4394592577",
+            "completedAt": "2026-11-08T00:51:11.860390+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实开源工作台生成现场复现模型使用原始 JSON 根路径和同时提交可核对的来源参数；聚焦测试覆盖原始对象、数组、行作用域、错误来源和刷新隔离。新包原生复测待构建。"
+        },
+        "acceptanceCriteria": [
+          "同一网页快照兼容原始字段路径，保留原始证据与列表顺序",
+          "来源编号与重复原参数一致可接受，冲突仍拒绝",
+          "共享组件映射、规划及规则通过聚焦验证"
+        ],
+        "risks": [
+          "实际数据缺失、请求过大、网络或模型波动仍可能影响生成"
+        ],
+        "generatedAt": "2026-11-08T00:51:11.860421+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-native-plan-recovery.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-refresh.test.js",
+        "test/workbench-comparison-intent.test.js",
+        "test/workbench-table-input-contract.test.js",
+        "test/workbench-public-data-profile.test.js",
+        "test/cartesian-chart-template.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
