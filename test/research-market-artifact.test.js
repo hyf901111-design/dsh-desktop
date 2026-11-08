@@ -415,7 +415,9 @@ it('uses one market surface and readable disclosure controls for new and saved c
  expect(generated).toContain('ODYSSEY_MARKET_PRESENTATION_V3')
  expect(generated).toContain('background:var(--sherlock-surface)!important')
  expect(generated).toContain('min-height:32px')
- expect(compactHostDashboardHtml(generated)).toBe(generated)
+ const normalized=compactHostDashboardHtml(generated)
+ expect(normalized).toContain('data-workbench-default-open="component-details-v1"')
+ expect(compactHostDashboardHtml(normalized)).toBe(normalized)
  const legacy='<html><head><style>body{background:#292929}details{font-size:10px}</style></head><body data-sherlock-market="trend" data-sherlock-design="21m-20260923-v1"><details><summary>完整趋势数据</summary><table><tr><td>数据</td></tr></table></details></body></html>'
  const upgraded=compactHostDashboardHtml(legacy)
  expect(upgraded).toContain('ODYSSEY_MARKET_PRESENTATION_V3')

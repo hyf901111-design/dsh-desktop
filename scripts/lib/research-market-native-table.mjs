@@ -1,3 +1,4 @@
+import {MARKET_TABLE_PAGINATION_CSS} from '../../packages/dsh-research-task-runtime/market-table-runtime.js'
 // Only the host-rendered, source-contracted market table is eligible. Parse
 // its escaped cells into text before rendering them in the canvas DOM, so a
 // zoomed canvas does not enlarge an iframe's cached bitmap.
@@ -33,14 +34,15 @@ export function parseResearchMarketNativeTable(html, doc) {
     } catch { return null; }
   }
   const runtimes = scripts.filter(script => !retained.includes(script));
-  // Fingerprints identify the two fixed host runtimes that our controls replace.
+  // Fingerprints identify the reviewed fixed host runtimes our controls replace.
+  // Keep saved pre-pagination tables and the module-runner semicolon variant.
   // They grant no execution privilege: scripts are never evaluated. Host script
   // changes deliberately fall back until their projection is reviewed again.
-  const knownRuntime = variant === 'table' ? [2411, 2045077824] : [979, 2127678402];
+  const knownRuntimes = variant === 'table' ? [[2411,2045077824],[4501,1696460176],[4503,3289983162]] : [[979, 2127678402]];
   if (runtimes.length > 1 || runtimes.some(script => {
     let hash = 2166136261;
     for (const char of script.textContent) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
-    return script.attributes.length || script.textContent.length !== knownRuntime[0] || (hash >>> 0) !== knownRuntime[1];
+    return script.attributes.length || !knownRuntimes.some(([length, fingerprint]) => script.textContent.length === length && (hash >>> 0) === fingerprint);
   })) return null;
   const safeHref = value => {
     try {
@@ -151,6 +153,8 @@ export function ResearchMarketNativeTable({ data }) {
   const [order, setOrder] = react.useState({ column: -1, ascending: true });
   const [query, setQuery] = react.useState('');
   const [selected, setSelected] = react.useState(null);
+  const [page,setPage]=react.useState(0);
+  react.useEffect(()=>{setPage(0);setSelected(null)},[data]);
   if (!data) return (0, react_jsx_runtime.jsx)('div', { children: '表格暂不可用' });
   const filtered = query.trim()
     ? data.rows.filter(row => row.some(cell => cell.text.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())))
@@ -166,6 +170,10 @@ export function ResearchMarketNativeTable({ data }) {
       ? x - y : left.localeCompare(right, 'zh-CN', { numeric: true });
     return order.ascending ? comparison : -comparison;
   });
+  const paginated=data.variant==='table'&&data.rows.length>30,pageSize=20,pageCount=Math.max(1,Math.ceil(rows.length/pageSize)),currentPage=Math.min(page,pageCount-1);
+  const shown=paginated?rows.slice(currentPage*pageSize,(currentPage+1)*pageSize):rows;
+  const changePage=value=>{setPage(Math.max(0,Math.min(pageCount-1,value)));setSelected(null)};
+  const arrow=next=>(0,react_jsx_runtime.jsx)('svg',{width:14,height:14,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.3,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:(0,react_jsx_runtime.jsx)('path',{d:next?'M6 4l4 4-4 4':'M10 4l-4 4 4 4'})});
   // Limit display precision only. Sorting and expanded row details retain the source text.
   const display = (cell, column) => {
     if (/代码|编号|日期|交易日|时间|ticker|code|id/i.test(column)) return cell.text;
@@ -183,7 +191,7 @@ export function ResearchMarketNativeTable({ data }) {
   return (0, react_jsx_runtime.jsxs)('div', { 'data-sherlock-market-native': data.variant, children: [
     (0, react_jsx_runtime.jsxs)('div', { className: 'terminal-native-filters', children: [
       (0, react_jsx_runtime.jsx)('input', { type: 'search', value: query, placeholder: '搜索表格内容', 'aria-label': '搜索表格内容',
-        onChange: event => setQuery(event.target.value) })
+        onChange: event => {setQuery(event.target.value);setPage(0);setSelected(null)} })
       ,(0, react_jsx_runtime.jsx)('span', { children: `${rows.length} / ${data.rows.length} 行${data.simulated ? ' · 模拟数据' : ''}` })
     ] }),
     (0, react_jsx_runtime.jsx)('div', { className: 'fund-native-table-wrap', children: (0, react_jsx_runtime.jsxs)('table', { children: [
@@ -191,22 +199,28 @@ export function ResearchMarketNativeTable({ data }) {
         data.columns.map((column, index) => (0, react_jsx_runtime.jsx)('th', {
           'aria-sort': order.column === index ? order.ascending ? 'ascending' : 'descending' : undefined,
           children: (0, react_jsx_runtime.jsx)('button', { type: 'button', 'aria-label': `按${column}排序`,
-            onClick: () => setOrder(previous => ({ column: index, ascending: previous.column !== index || !previous.ascending })),
+            onClick: () => {setOrder(previous => ({ column: index, ascending: previous.column !== index || !previous.ascending }));setPage(0);setSelected(null)},
             children: column })
         }, index)) }) }),
-      (0, react_jsx_runtime.jsx)('tbody', { children: rows.map((row, rowIndex) =>
+      (0, react_jsx_runtime.jsx)('tbody', { children: shown.map((row, rowIndex) =>
         (0, react_jsx_runtime.jsx)('tr', { tabIndex:0, 'aria-selected':selected===row[0]?.text,
           onClick:event=>{if(!isLink(event))setSelected(previous=>previous===row[0]?.text?null:row[0]?.text)},
           onKeyDown:event=>{if(isLink(event))return;if(event.key==='Enter'||event.key===' '){event.preventDefault();setSelected(previous=>previous===row[0]?.text?null:row[0]?.text)}},
           children: row.map((cell, index) =>
           (0, react_jsx_runtime.jsx)('td', { 'data-tone': cell.tone, title:cell.text, children: cell.parts ? renderParts(cell.parts) : display(cell,data.columns[index]) }, index)) }, rowIndex)) })
     ] }) }),
+    paginated&&(0,react_jsx_runtime.jsxs)('nav',{className:'terminal-table-pagination','aria-label':'表格分页',children:[
+      (0,react_jsx_runtime.jsx)('span',{'aria-live':'polite',children:rows.length?`${currentPage*pageSize+1}–${Math.min(rows.length,(currentPage+1)*pageSize)} / ${rows.length} 条`:'0 条'}),
+      (0,react_jsx_runtime.jsx)('button',{type:'button','aria-label':'上一页',disabled:currentPage===0,onClick:()=>changePage(currentPage-1),children:arrow(false)}),
+      (0,react_jsx_runtime.jsx)('select',{'aria-label':'表格页码',value:currentPage,onChange:e=>changePage(Number(e.target.value)),children:Array.from({length:pageCount},(_,i)=>(0,react_jsx_runtime.jsx)('option',{value:i,children:`${i+1} / ${pageCount}`},i))}),
+      (0,react_jsx_runtime.jsx)('button',{type:'button','aria-label':'下一页',disabled:currentPage>=pageCount-1,onClick:()=>changePage(currentPage+1),children:arrow(true)})
+    ]}),
     selectedRow && (0,react_jsx_runtime.jsx)('div',{className:'terminal-native-readout',role:'status',children:selectedRow.map((cell,i)=>(0,react_jsx_runtime.jsxs)('span',{children:[i ? ' · ' : '', `${data.columns[i]}：`,cell.parts ? renderParts(cell.parts) : cell.text]},i))})
     ,data.footer?.length > 0 && (0,react_jsx_runtime.jsx)('footer',{className:'terminal-native-context','aria-label':'组件数据说明',children:(0,react_jsx_runtime.jsxs)('details',{children:[(0,react_jsx_runtime.jsx)('summary',{children:'口径与来源'}),(0,react_jsx_runtime.jsx)('div',{className:'terminal-native-context-lines',children:data.footer.map((line,i)=>(0,react_jsx_runtime.jsx)('div',{children:renderParts(line)},i))})]})})
   ] });
 }
 
-export const researchMarketNativeTableCss = `
+export const researchMarketNativeTableCss = MARKET_TABLE_PAGINATION_CSS+`
 [data-sherlock-market-native]{display:flex;flex-direction:column;min-width:0;min-height:0;gap:6px}
 [data-sherlock-market-native] table{color:inherit}
 [data-sherlock-market-native] .terminal-native-filters{flex:0 0 auto;min-width:0}
