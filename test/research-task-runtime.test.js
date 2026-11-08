@@ -1606,7 +1606,7 @@ describe('Research task Subagent adapter', () => {
     expect(prompt).toContain('自包含 HTML')
     const native = workbenchPanelPrompt({ title: '工作管理' }, { title: '任务', type: 'tasks', prompt: '任务清单' })
     expect(native).toContain('宿主负责模板样式')
-    expect(native).toContain('仅提交数据')
+    expect(native).toContain('仅提交内容与真实数据')
   })
 
   it.each([
