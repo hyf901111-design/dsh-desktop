@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-18",
+  "branch": "codex/integration/20261108-18",
+  "baseMainCommit": "09cc198e18739b24f355b1e51fec80202388f82d",
+  "expectedMainCommit": "09cc198e18739b24f355b1e51fec80202388f82d",
+  "createdAt": "2026-11-08T05:51:55.254Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "多语言报告来源引用与原文标题核对",
+        "branch": "codex/feat/workbench-multilingual-document-20261108",
+        "baseCommit": "09cc198e18739b24f355b1e51fec80202388f82d",
+        "tipCommit": "a63e2f33a1209daa0d86348e17e963d278ad41b4",
+        "commits": [
+          {
+            "commit": "a63e2f33a1209daa0d86348e17e963d278ad41b4",
+            "parents": [
+              "09cc198e18739b24f355b1e51fec80202388f82d"
+            ],
+            "subject": "修复：校验多语言报告页码并以原文核对标题"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-component.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-native-plan-recovery.test.js",
+              "test/derived-template-contract.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "149 项聚焦检查通过",
+            "verifiedCommit": "a63e2f33a1209daa0d86348e17e963d278ad41b4",
+            "completedAt": "2026-11-08T05:51:37.897950+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "a63e2f33a1209daa0d86348e17e963d278ad41b4",
+            "completedAt": "2026-11-08T05:51:37.897950+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "a63e2f33a1209daa0d86348e17e963d278ad41b4",
+            "completedAt": "2026-11-08T05:51:37.897950+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "变更位于后端规划、来源与校验链路，未改界面；原 PDF 原请求在本地集成包进行端到端验收。"
+        },
+        "acceptanceCriteria": [
+          "中文、日文和英文实际 PDF 页码与范围通过校验",
+          "引用未读取或反向页码范围仍拒绝",
+          "标题语言及数量遵循原请求和真实内容",
+          "原 PDF 本地真机复测"
+        ],
+        "risks": [
+          "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
+        ],
+        "generatedAt": "2026-11-08T05:51:37.897950+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/workbench-planning-phase.test.js",
+        "test/workbench-planning-session.test.js",
+        "test/workbench-native-plan-recovery.test.js",
+        "test/derived-template-contract.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
