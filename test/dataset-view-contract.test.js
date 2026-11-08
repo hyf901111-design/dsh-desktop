@@ -77,3 +77,9 @@ it('adds only id presentation metadata when records already carry explicit stabl
  const missing=clone(raw);delete missing.records[0].id;expect(()=>validateWorkbenchDatasets([missing])).toThrow();
  const duplicate=clone(raw);duplicate.records[1].id=duplicate.records[0].id;expect(()=>validateWorkbenchDatasets([duplicate])).toThrow();
 })
+
+it('identifies the failing dataset and every conflicting aggregate field without discarding business values',()=>{
+ const a=aggregate();a.fields=[{key:'responsibility',label:'职责'}];a.records=[{id:'a',responsibility:'完整职责'}];const before=clone(a)
+ expect(()=>validateWorkbenchDatasets([aggregateSource(),a])).toThrow(/totals.*fields、records/);expect(a).toEqual(before)
+ const source=aggregateSource();delete source.asOf;expect(()=>validateWorkbenchDatasets([source])).toThrow(/facts.*缺少：asOf/)
+})

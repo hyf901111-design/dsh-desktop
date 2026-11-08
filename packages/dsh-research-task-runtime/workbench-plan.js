@@ -25,7 +25,7 @@ import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
 import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataNewsTaskType, publicDataHistoryTaskRequirement, publicDataQuoteTaskRequirement, publicDataPanelVariant, publicDataQuoteSpec, publicDataNativeAlternative } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
-import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
+import {validateWorkbenchDatasets,simulatedDatasetMetadata,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import {generalNewsScope,newsScopeInstruction,NEWS_CAPACITY_MARKER} from './news-source-scope.js';
 import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
 import {authoredPrototypeEvidence} from './workbench-prototype-evidence.js';
@@ -440,7 +440,7 @@ export function validateWorkbench(value) {
     const deferred = value.generationMode === 'deferred';
     if ((value.sharedDatasets !== undefined || value.panels.some(p=>p?.type==='view')) && (!isSimulated || parallel))
         throw Error('共同数据组合视图仅支持明确模拟数据，不能用于真实来源或parallel模式。');
-    const datasets = value.sharedDatasets === undefined ? undefined : validateWorkbenchDatasets(value.sharedDatasets);
+    const datasets = value.sharedDatasets === undefined ? undefined : validateWorkbenchDatasets(simulatedDatasetMetadata(value.sharedDatasets));
     if (isSimulated && value.panels.some(p=>p?.type==='audio')) throw Error('音频需要本人实际音频网址或 url:null；请使用 source 模式，不生成模拟音频。');
     if (isSimulated && value.panels.some(p=>p?.type==='youtube')) throw Error('YouTube需要用户实际提供的视频网址或 url:null；请使用 source 模式提交，不猜测视频。');
     if (isSimulated && value.panels.some(p=>p?.type==='iframe')) throw Error('嵌入网页需要用户实际提供的网址或 url:null；请使用 source 模式提交，不生成模拟网址。');

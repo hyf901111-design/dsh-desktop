@@ -138,3 +138,14 @@ it('keeps prepared and accepted receipts idempotent while explicitly deferring r
   expect(retry).toEqual(accepted)
  }finally{await f.close()}
 })
+
+it('fills only absent simulated dataset descriptions without resending records or inventing a timestamp',async()=>{
+ const f=await setup(),plan=input();delete plan.sharedDatasets[0].asOf;delete plan.sharedDatasets[0].note;const before=structuredClone(plan)
+ try{
+  expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared');expect(f.adapter.start).not.toHaveBeenCalled()
+  const saved=JSON.parse(await readFile(f.filePath,'utf8'))[0].input.sharedDatasets[0]
+  expect(saved.records).toEqual(plan.sharedDatasets[0].records);expect(saved.asOf).toBe('模拟数据，时点未指定');expect(saved.note).toBe('用户请求的模拟数据');expect(plan).toEqual(before)
+  expect(()=>validateWorkbench({...plan,dataMode:'source'})).toThrow(/仅支持明确模拟数据/)
+  const empty=structuredClone(plan);empty.sharedDatasets[0].asOf='';expect(()=>validateWorkbench(empty)).toThrow(/不能为空/)
+ }finally{await f.close()}
+})
