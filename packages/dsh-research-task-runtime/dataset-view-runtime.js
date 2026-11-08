@@ -24,18 +24,19 @@ export function datasetViewRuntime(valueText){
  if(!source||!root||!window.sherlockShared)return
  const spec=JSON.parse(source.textContent),data=spec.dataset,view=spec.view,records=new Map(data.records.map(r=>[r.id,r])),ids=[...records.keys()],fields=new Map(data.fields.map(f=>[f.key,f]))
  const token=value=>JSON.stringify(value)
+ const inScope=record=>(view.where??[]).every(rule=>rule.op==='notNull'?record[rule.field]!==null:rule.values.some(value=>value===record[rule.field]))
  const filterOptions=new Map(view.filters.map(key=>[key,[...new Map(data.records.map(r=>[token(r[key]),valueText(r[key],fields.get(key))])).entries()]]))
  const searchText=new Map(data.records.map(r=>[r.id,data.fields.map(f=>valueText(r[f.key],f)).join(' ').toLocaleLowerCase()]))
  function normalize(raw){
   const order=[...new Set((Array.isArray(raw?.order)?raw.order:[]).filter(id=>records.has(id)))];for(const id of ids)if(!order.includes(id))order.push(id)
   const filters={};for(const key of view.filters){const value=raw?.filters?.[key];filters[key]=filterOptions.get(key).some(([v])=>v===value)?value:''}
   const query=typeof raw?.query==='string'?raw.query.slice(0,256):'',pageSize=[10,20,50,100].includes(raw?.pageSize)?raw.pageSize:20
-  const visible=order.filter(id=>searchText.get(id).includes(query.toLocaleLowerCase())&&view.filters.every(key=>!filters[key]||token(records.get(id)[key])===filters[key]))
+  const visible=order.filter(id=>inScope(records.get(id))&&searchText.get(id).includes(query.toLocaleLowerCase())&&view.filters.every(key=>!filters[key]||token(records.get(id)[key])===filters[key]))
   const pages=Object.fromEntries(view.sections.map((_,i)=>[i,Math.max(0,Math.min(Number.isInteger(raw?.pages?.[i])?raw.pages[i]:0,Math.ceil(visible.length/pageSize)-1))]))
   const pair=[];for(const id of [...(Array.isArray(raw?.pair)?raw.pair:[]),...visible])if(visible.includes(id)&&!pair.includes(id)&&pair.length<2)pair.push(id)
   return {order,filters,pair,query,pageSize,pages,selected:visible.includes(raw?.selected)?raw.selected:null,tab:Number.isInteger(raw?.tab)&&raw.tab>=0&&raw.tab<view.sections.length?raw.tab:0}
  }
- const visibleIds=s=>s.order.filter(id=>searchText.get(id).includes(s.query.toLocaleLowerCase())&&view.filters.every(key=>!s.filters[key]||token(records.get(id)[key])===s.filters[key]))
+ const visibleIds=s=>s.order.filter(id=>inScope(records.get(id))&&searchText.get(id).includes(s.query.toLocaleLowerCase())&&view.filters.every(key=>!s.filters[key]||token(records.get(id)[key])===s.filters[key]))
  function reduce(raw,a){
   const s=normalize(raw)
   if(a?.type==='filter'&&view.filters.includes(a.key)){s.filters[a.key]=a.value;s.pages={};return normalize(s)}

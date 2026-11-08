@@ -175,3 +175,17 @@ it('searches the complete dataset and persists pagination without losing records
   expect((await c.page.evaluate(()=>window.viewEvents)).some(e=>e.type==='sherlock-content-failed')).toBe(false)
  }finally{await c.close()}
 },20000)
+
+it('applies a declared subset before search and paging without deleting canonical source rows',async()=>{
+ const dataset=bookDataset(),selected=dataset.records[0],key=dataset.fields.find(f=>f.key!=='id').key
+ const c=await open({dataset:dataset.id,where:[{field:key,op:'in',values:[selected[key]]}],filters:[],sections:[{kind:'records',fields:[key]}]},{dataset})
+ try{
+  const expected=dataset.records.filter(r=>r[key]===selected[key]).map(r=>r.id)
+  expect(await order(c.frame)).toEqual(expected)
+  expect(await c.frame.locator('#dataset-view-source').evaluate(el=>JSON.parse(el.textContent).dataset.records.length)).toBe(dataset.records.length)
+  await c.frame.getByRole('searchbox',{name:'搜索完整数据'}).fill('unmatched')
+  expect(await order(c.frame)).toEqual([])
+  await c.frame.getByRole('searchbox',{name:'搜索完整数据'}).fill('')
+  expect(await order(c.frame)).toEqual(expected)
+ }finally{await c.close()}
+})

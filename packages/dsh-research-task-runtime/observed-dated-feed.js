@@ -15,20 +15,27 @@ export function releaseTimelineScope(request) {
  return {repos,count,includeBody:/发布说明|Release Notes/iu.test(text)}
 }
 
+// Source paths and citations do not assign a collection to this card. Shared
+// board counts apply only when its own content contract asks for that collection.
+function releaseCollectionIntent(panel){
+ const clauses=String(panel??'').split(/[。；;\n]/u).filter(clause=>!/^\s*(?:数据来源|来源|参考|依据|sources?\b|data sources?\b)/iu.test(clause))
+ return clauses.some(clause=>/发布记录|发布动态|版本记录|(?<![\w/@.-])release(?:s| records| notes| list| history)?(?![\w/.-])/iu.test(clause))
+}
+
 export function workbenchReleaseScope(original,panel,format){
  const prior=(format==='timeline'||format==='html'&&/(?:只放|仅放|只要)一张/u.test(original??'')&&/发布动态|GitHub Releases/iu.test(panel??''))&&releaseTimelineScope(original)
  if(prior)return prior
  // A supported source adapter owns pagination and completeness, regardless of
  // whether the user calls it a timeline, release list or searchable table.
  // It does not route graphs/analysis, infer a repo, or ignore requested filters.
- if(!['timeline','html','table'].includes(format)||!/发布记录|发布动态|版本记录|release(?:s| records| notes)?/iu.test(panel??''))return
+ if(!['timeline','html','table'].includes(format)||!releaseCollectionIntent(panel))return
  const text=String(original??'')
  if(!/GitHub/iu.test(text)||/\d{4}-\d{2}-\d{2}|仅(?:保留|显示|看)?(?:稳定版|预发布)|(?:排除|不含|只要|只看|不要).{0,8}(?:稳定版|预发布)/u.test(text))return
  const counts=[...text.matchAll(/(?:最近|最新)\s*(各自?)?\s*(\d{1,3})\s*条/gu)]
  const repos=[...new Set([...text.matchAll(/(?<![\w./])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?![\w./])/gu)].map(match=>match[1].toLowerCase()))]
  if(counts.length!==1||!repos.length||repos.length>8||repos.length>1&&!counts[0][1])return
  const count=Number(counts[0][2]);if(count<1||count>100)return
- return {repos,count,includeBody:/发布说明|Release Notes|正文|变更|更新要点/iu.test(text),...(/表格|总表|明细表|可搜索/u.test(panel??'')?{presentation:'table'}:{})}
+ return {repos,count,includeBody:/发布说明|Release Notes|正文|变更|更新要点/iu.test(text+'\n'+String(panel??'')),...(/表格|总表|明细表|可搜索/u.test(panel??'')?{presentation:'table'}:{})}
 }
 
 const utcTimestamp=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(value)&&
