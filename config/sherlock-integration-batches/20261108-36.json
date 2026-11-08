@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-36",
+  "branch": "codex/integration/20261108-36",
+  "baseMainCommit": "fb43450dcab8cc35aeeff5cb5feb0614c2aabe1d",
+  "expectedMainCommit": "fb43450dcab8cc35aeeff5cb5feb0614c2aabe1d",
+  "createdAt": "2026-11-08T11:14:49.611Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件库与首页引导兼容修复",
+        "branch": "codex/feat/library-menu-build-20261108",
+        "baseCommit": "fb43450dcab8cc35aeeff5cb5feb0614c2aabe1d",
+        "tipCommit": "941b6974e8df61b94b86ee81a214e36983813c8e",
+        "commits": [
+          {
+            "commit": "941b6974e8df61b94b86ee81a214e36983813c8e",
+            "parents": [
+              "fb43450dcab8cc35aeeff5cb5feb0614c2aabe1d"
+            ],
+            "subject": "修复组件库样式与首页引导打包接入的兼容性"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "test/custom-component-library-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-menu.test.js",
+              "test/custom-component-library-client.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/home-guide-native-strip.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "119 项聚焦检查通过",
+            "verifiedCommit": "941b6974e8df61b94b86ee81a214e36983813c8e",
+            "completedAt": "2026-11-08T11:14:47.897503+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "941b6974e8df61b94b86ee81a214e36983813c8e",
+            "completedAt": "2026-11-08T11:14:47.897503+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "941b6974e8df61b94b86ee81a214e36983813c8e",
+            "completedAt": "2026-11-08T11:14:47.897503+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "聚焦 DOM 验证菜单继承全局材质、用实际内容高度展开，低窗口再约束高度，原放置、键盘与自定义动作不变，首页引导生产补丁可反复应用。"
+        },
+        "acceptanceCriteria": [
+          "组件库复用整理菜单样式",
+          "菜单按真实内容高度展开",
+          "空间不足才滚动",
+          "组件放置和自定义菜单保持可用"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T11:14:47.897503+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/financial-widget-client.test.js",
+        "test/financial-widget-layout.test.js",
+        "test/financial-widget-menu.test.js",
+        "test/custom-component-library-client.test.js",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/home-guide-native-strip.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
