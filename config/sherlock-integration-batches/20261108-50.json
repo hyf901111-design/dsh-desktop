@@ -89,6 +89,54 @@
           "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
         ],
         "generatedAt": "2026-11-08T14:36:22.004550+00:00"
+      },
+      "merged": {
+        "mergeCommit": "09d533b5d4b8321328247f5d17aa6ce644ddea76",
+        "verificationCommit": "09d533b5d4b8321328247f5d17aa6ce644ddea76",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/component-data-status.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-source-info-browser.test.js test/component-data-status.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "09d533b5d4b8321328247f5d17aa6ce644ddea76",
+            "completedAt": "2026-11-08T14:36:26.182Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "09d533b5d4b8321328247f5d17aa6ce644ddea76",
+            "completedAt": "2026-11-08T14:36:26.182Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "09d533b5d4b8321328247f5d17aa6ce644ddea76",
+            "completedAt": "2026-11-08T14:36:26.182Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T14:36:26.182Z"
       }
     }
   ],
