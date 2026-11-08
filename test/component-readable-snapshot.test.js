@@ -205,7 +205,7 @@ it.each(['columns','plain-columns','long-cell','periods','kpi','kpi-unit','trend
  await dom(task.finalOutput,document=>{
   if(kind==='columns'){expect(document.querySelectorAll('thead th')).toHaveLength(33);expect(document.body.textContent).toContain('行1列32')}
   if(kind==='plain-columns'){expect(document.querySelectorAll('thead th')).toHaveLength(13);expect(document.body.textContent).toContain('行1列12')}
-  if(kind==='long-cell')expect(document.querySelector('tbody td').textContent).toBe(f.response.rows[0].name)
+  if(kind==='long-cell')expect(document.querySelector('tbody td [data-readable-full]').textContent).toBe(f.response.rows[0].name)
   if(kind==='periods'){expect(document.querySelectorAll('tbody tr')).toHaveLength(367);expect(document.body.textContent).toContain('第366期')}
   if(kind==='kpi'||kind==='kpi-unit'){expect(document.querySelectorAll('tbody tr')).toHaveLength(18);expect([...document.querySelectorAll('thead th')].map(cell=>cell.textContent)).toContain('单位');expect([...document.querySelectorAll('tbody tr')].every(row=>row.lastElementChild.textContent==='件')).toBe(true)}
   if(kind==='trend')expect(document.querySelectorAll('tbody tr')).toHaveLength(367)
@@ -267,8 +267,8 @@ it('uses observed provider names and URLs instead of promoting model-declared so
  f.draft.mapping.sources=[{label:'模型误写DataYes',url:'https://unobserved.example.com/fake'}]
  const {task}=await run(f);expect(task.state,task.error).toBe('completed')
  await dom(task.finalOutput,document=>{
-  expect(document.querySelector('aside').textContent).toContain('实际业务来源')
-  expect(document.querySelector('aside a').href).toBe(f.response.sourceUrl)
+  expect(document.querySelector('[data-component-source-info]').textContent).toContain('实际业务来源')
+  expect(document.querySelector('[data-component-source-info] a').href).toBe(f.response.sourceUrl)
   expect(document.body.textContent).not.toContain('模型误写DataYes')
   expect(document.querySelector('a[href="https://unobserved.example.com/fake"]')).toBeNull()
  })
@@ -327,7 +327,8 @@ it('keeps long table text readable behind real disclosures and makes original HT
   const row=document.querySelector('tbody tr'),details=row.querySelector('details')
   expect(row.cells[1].querySelector('a').getAttribute('href')).toBe(url)
   expect(details.open).toBe(false)
-  expect(details.querySelector('summary').textContent).toBe('展开完整正文')
+  expect(details.querySelector('summary').textContent).toContain('展开完整正文')
+  expect(details.querySelector('[data-readable-full]').textContent).toBe(body)
   expect(details.textContent).toContain(body)
   details.open=true;expect(details.open).toBe(true)
  })
