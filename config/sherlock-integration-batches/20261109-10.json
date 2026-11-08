@@ -160,6 +160,86 @@
           "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
         ],
         "generatedAt": "2026-11-08T20:27:05.368364+00:00"
+      },
+      "merged": {
+        "mergeCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+        "verificationCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-dataset-view.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-source-info-browser.test.js test/workbench-component-presentation.test.js test/dataset-view-contract.test.js test/workbench-dataset-view.test.js --maxWorkers 2",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "switches a .* tabular sandbox failure",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t switches a .* tabular sandbox failure --maxWorkers 2",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-planning-session.test.js test/workbench-planning-phase.test.js test/research-design-policy.test.js --maxWorkers 2",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T20:27:10.600Z"
       }
     }
   ],
