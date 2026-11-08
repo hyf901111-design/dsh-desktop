@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-49",
+  "branch": "codex/integration/20261108-49",
+  "baseMainCommit": "ec3cc63971bb0163c100020f1bfbe34c8640c56b",
+  "expectedMainCommit": "ec3cc63971bb0163c100020f1bfbe34c8640c56b",
+  "createdAt": "2026-11-08T14:32:33.404Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件底栏统一来源与可用文件入口",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "ec3cc63971bb0163c100020f1bfbe34c8640c56b",
+        "tipCommit": "23724e1823da1631bcdfc7216220da128c9075e1",
+        "commits": [
+          {
+            "commit": "23724e1823da1631bcdfc7216220da128c9075e1",
+            "parents": [
+              "ec3cc63971bb0163c100020f1bfbe34c8640c56b"
+            ],
+            "subject": "统一组件底栏来源入口与文件卡片并校正展开箭头"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-refresh.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/derived-preset-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-status.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-source-info-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/component-data-status.test.js",
+              "test/component-reading-footer.test.js",
+              "test/deliverable-cards.test.js",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-menu.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "245 项聚焦检查通过",
+            "verifiedCommit": "23724e1823da1631bcdfc7216220da128c9075e1",
+            "completedAt": "2026-11-08T14:32:31.675475+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "23724e1823da1631bcdfc7216220da128c9075e1",
+            "completedAt": "2026-11-08T14:32:31.675475+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "23724e1823da1631bcdfc7216220da128c9075e1",
+            "completedAt": "2026-11-08T14:32:31.675475+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 聚焦验证：来源文件复用真实对话文件卡片，多个同名文件不猜路径，默认应用及客户端预览可用；35 条网络引用和完整长说明保留，点击原链接传给客户端浏览器；来源页打开不改变画布组件高度。原生客户端和多场景生成在构建后另行核验。"
+        },
+        "acceptanceCriteria": [
+          "组件来源集中底栏，右侧来源详情在右侧屏展示",
+          "文件名弹出同款文件卡片并保留打开方式",
+          "来源与刷新设置分开，网络链接和原文不截断",
+          "展开图标按文字首行居中且状态切换不跳行"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T14:32:31.675475+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/component-wheel-zoom.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/derived-mind-map-browser.test.js",
+        "test/component-source-info-browser.test.js",
+        "test/component-data-status.test.js",
+        "test/component-reading-footer.test.js",
+        "test/deliverable-cards.test.js",
+        "test/financial-widget-client.test.js",
+        "test/financial-widget-menu.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
