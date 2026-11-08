@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-22",
+  "branch": "codex/integration/20261108-22",
+  "baseMainCommit": "fd0fe6f816ccdd48e4b68ba4e77c5032f6d977ef",
+  "expectedMainCommit": "fd0fe6f816ccdd48e4b68ba4e77c5032f6d977ef",
+  "createdAt": "2026-11-08T06:53:29.356Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "易方达模式兼容旧版树状架构",
+        "branch": "codex/feat/workbench-legacy-tree-20261108",
+        "baseCommit": "fd0fe6f816ccdd48e4b68ba4e77c5032f6d977ef",
+        "tipCommit": "638ad1e23d9b5cf773919c0f7a2720aef8a9c7f8",
+        "commits": [
+          {
+            "commit": "638ad1e23d9b5cf773919c0f7a2720aef8a9c7f8",
+            "parents": [
+              "fd0fe6f816ccdd48e4b68ba4e77c5032f6d977ef"
+            ],
+            "subject": "兼容易方达模式下旧版树状架构卡"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "test/bundled-component-skill.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "23 项聚焦检查通过",
+            "verifiedCommit": "638ad1e23d9b5cf773919c0f7a2720aef8a9c7f8",
+            "completedAt": "2026-11-08T06:53:27.683764+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "638ad1e23d9b5cf773919c0f7a2720aef8a9c7f8",
+            "completedAt": "2026-11-08T06:53:27.683764+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 复现协会旧卡的树状结构并验证模式切换"
+        },
+        "acceptanceCriteria": [
+          "旧树根节点使用品牌蓝",
+          "树分支卡和连接线使用与旧组织图相同的主题样式",
+          "切回浅色模式恢复原样"
+        ],
+        "risks": [
+          "兼容规则仅限带明确节点标题的树形结构。"
+        ],
+        "generatedAt": "2026-11-08T06:53:27.683764+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/workbench-style.test.js",
+        "test/bundled-component-skill.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
