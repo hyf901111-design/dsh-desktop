@@ -1,6 +1,23 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
 import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt,documentTableEntityCoverageIssue } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
+
+it('accepts complete editable notes with source aliases without retranscribing or dropping the content or references',()=>{
+ const content='# 使用建议\n\n'+('完整业务原文和必须保留的使用条件。\n'.repeat(240))
+ const note={version:1,type:'note',title:'有依据的使用建议',asOf:'2026-11-09',content}
+ const reference={label:'实际原始来源',url:'https://example.com/original',text:'第4节，完整参考说明'}
+ for(const extra of [{sources:[reference]},{source:[reference]},{source:reference}]){
+  const result=JSON.parse(acceptArtifactOutput(JSON.stringify({...note,...extra})))
+  expect(readTemplateModel(result)?.data).toEqual(note)
+  expect(result.html).toContain('data-note-view="edit"')
+  expect(result.html).toContain('hidden data-component-source-info')
+  for(const text of Object.values(reference))expect(result.html).toContain(text)
+ }
+ expect(acceptArtifactOutput(JSON.stringify({...note,source:[{...reference,unrecognized:'not discarded'}]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...note,source:[reference],sources:[reference]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...note,content:'长'.repeat(17000),sources:[reference]}))).toBeUndefined()
+})
 
 it('checks unknown entities in a complete cited card-grid projection without imposing unrelated document scope',()=>{
  const documents=[{blocks:[{id:'T2',rows:[['模块甲\n负责人甲','','模块乙\n—'],['模块丙\n负责人丙','','模块丁\n—']]}]}]
