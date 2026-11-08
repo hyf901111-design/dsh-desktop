@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-21",
+  "branch": "codex/integration/20261108-21",
+  "baseMainCommit": "1af6b39cb6ec446b8e1b751034c87ee081fde7dc",
+  "expectedMainCommit": "1af6b39cb6ec446b8e1b751034c87ee081fde7dc",
+  "createdAt": "2026-11-08T06:36:57.102Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "易方达模式适配架构图和信息卡",
+        "branch": "codex/feat/workbench-enterprise-structure-20261108",
+        "baseCommit": "1af6b39cb6ec446b8e1b751034c87ee081fde7dc",
+        "tipCommit": "0ce54284a80e96d7af2627c2f573d0cb06158da0",
+        "commits": [
+          {
+            "commit": "0ce54284a80e96d7af2627c2f573d0cb06158da0",
+            "parents": [
+              "1af6b39cb6ec446b8e1b751034c87ee081fde7dc"
+            ],
+            "subject": "统一易方达模式的架构节点与信息卡样式"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/timeline-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "test/bundled-component-skill.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "25 项聚焦测试通过",
+            "verifiedCommit": "0ce54284a80e96d7af2627c2f573d0cb06158da0",
+            "completedAt": "2026-11-08T06:36:55.577223+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "0ce54284a80e96d7af2627c2f573d0cb06158da0",
+            "completedAt": "2026-11-08T06:36:55.577223+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证旧版组织图和信息卡与新版语义标注组件的真实样式切换"
+        },
+        "acceptanceCriteria": [
+          "旧版和新版信息卡与架构图随看板模式切换",
+          "易方达主节点、信息卡和连线使用品牌调色板",
+          "切回浅色恢复原样且保留内容与链接"
+        ],
+        "risks": [
+          "兼容覆盖旧生成器的结构模式，未来生成卡片使用语义标注。"
+        ],
+        "generatedAt": "2026-11-08T06:36:55.577223+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/timeline-theme-browser.test.js",
+        "test/workbench-style.test.js",
+        "test/bundled-component-skill.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
