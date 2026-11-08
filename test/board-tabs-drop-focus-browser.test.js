@@ -16,8 +16,10 @@ beforeAll(async()=>{
  // Match production unwind order, including the parallel composer layer in integration.
  source=stripConversationLiveUi(source)
  for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']]){if(file==='home-guide-presentation-native')source=stripWorkbenchReplay(source);source=require('../scripts/lib/'+file+'.mjs')[strip](source)}
+ source=(await import('../scripts/lib/patch-research-board-client.mjs')).canvasWheelPassThroughPatch(source)
  const grid=require('../scripts/lib/research-grid-workbench.mjs')
  source=grid.patchResearchGridWorkbench(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))
+ source=require('../scripts/lib/derived-preset-client.mjs').patchDerivedPresetClient(source)
  source=require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)
  expect(require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source)).toBe(source)
  // The installed SDK may contain an earlier serialized preview. Exercise the
@@ -255,6 +257,46 @@ it('selected HTML cards scroll the canvas outside a scrollable region and grow a
   expect(closedMarker.slice(0,3)).toEqual(['middle','12px','12px'])
   expect(openMarker.slice(0,3)).toEqual(closedMarker.slice(0,3))
   expect(openMarker[3]).not.toBe(closedMarker[3])
+  await summary.click()
+  await expect.poll(async()=>Math.round((await geometry())[0])).toBe(Math.round(closed[0]))
+  await expect.poll(async()=>Math.round((await geometry())[1])).toBe(Math.round(closed[1]))
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
+
+
+it('native architecture disclosures grow the grid, align the chevron and release non-scrolling wheel gestures',async()=>{
+ const {page,first,second,errors}=await fixture()
+ try{
+  page.setDefaultTimeout(4500)
+  await page.evaluate(({first,second})=>{
+   const w=fixture.workspace,base=w.getSnapshot().artifacts.find(n=>n.id===first)
+   const spec={version:1,type:'mind-map',title:'治理架构',content:'# 治理架构\n- 会员大会\n  - 会员代表大会\n- 理事会',source:{title:'组织架构文档',text:'原始资料'},note:'说明正文完整保留。\n'.repeat(24)}
+   w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===first?{...base,kind:'generated-container',generationStatus:'completed',containerSpec:spec}:n))
+   w.setBoardTabsPresentation('vertical')
+   w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:30},{id:second,x:0,y:30,w:40,h:40}],true)
+   w.updateSelection([first],'replace')
+  },{first,second})
+  const canvas=page.locator('[data-research-canvas]'),card=page.locator(`[data-research-node-id="${first}"]`),below=page.locator(`[data-research-node-id="${second}"]`)
+  const diagram=card.locator('[data-research-mind-map]'),summary=card.locator('summary').filter({hasText:/^说明$/})
+  const offset=()=>canvas.evaluate(el=>el.scrollTop),geometry=async()=>[(await card.boundingBox()).height,(await below.boundingBox()).y+await offset()]
+  await diagram.hover();await page.mouse.wheel(0,80)
+  await expect.poll(offset).toBeGreaterThan(0)
+  await canvas.evaluate(el=>{el.scrollTop=0})
+  const closed=await geometry()
+  const marker=()=>summary.evaluate(el=>{const s=getComputedStyle(el,'::before');return [s.verticalAlign,s.width,s.height]})
+  expect(await marker()).toEqual(['middle','12px','12px'])
+  await summary.click()
+  await expect.poll(async()=>(await geometry())[0]).toBeGreaterThan(closed[0]+150)
+  await expect.poll(async()=>(await geometry())[1]).toBeGreaterThan(closed[1]+150)
+  expect(await marker()).toEqual(['middle','12px','12px'])
+  expect(await summary.locator('..').locator('pre').evaluate(el=>el.getBoundingClientRect().bottom<=el.closest('[data-research-node-id]').getBoundingClientRect().bottom)).toBe(true)
+  const expanded=await geometry()
+  await page.locator('#host').evaluate(el=>{el.style.width='900px'})
+  await expect.poll(()=>card.evaluate(el=>el.getBoundingClientRect().width)).toBeLessThan(700)
+  await expect.poll(()=>summary.locator('..').locator('pre').evaluate(el=>el.getBoundingClientRect().bottom<=el.closest('[data-research-node-id]').getBoundingClientRect().bottom)).toBe(true)
+  await page.locator('#host').evaluate(el=>{el.style.width='1000px'})
+  await expect.poll(async()=>Math.round((await geometry())[0])).toBe(Math.round(expanded[0]))
   await summary.click()
   await expect.poll(async()=>Math.round((await geometry())[0])).toBe(Math.round(closed[0]))
   await expect.poll(async()=>Math.round((await geometry())[1])).toBe(Math.round(closed[1]))
