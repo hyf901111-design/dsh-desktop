@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-24",
+  "branch": "codex/integration/20261108-24",
+  "baseMainCommit": "a0b5ffb13556a3f4a7a22860dcb7bd5a5c9f110d",
+  "expectedMainCommit": "a0b5ffb13556a3f4a7a22860dcb7bd5a5c9f110d",
+  "createdAt": "2026-11-08T07:19:44.484Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "原生思维导图易方达模式与文档清单完整性",
+        "branch": "codex/feat/workbench-document-list-native-theme-20261108",
+        "baseCommit": "a0b5ffb13556a3f4a7a22860dcb7bd5a5c9f110d",
+        "tipCommit": "ad035ce3455f1db003f71d64e8fead77225ce745",
+        "commits": [
+          {
+            "commit": "ad035ce3455f1db003f71d64e8fead77225ce745",
+            "parents": [
+              "a0b5ffb13556a3f4a7a22860dcb7bd5a5c9f110d"
+            ],
+            "subject": "让原生架构图响应易方达模式并补齐文档清单"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-style.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "51 项聚焦检查通过",
+            "verifiedCommit": "ad035ce3455f1db003f71d64e8fead77225ce745",
+            "completedAt": "2026-11-08T07:19:42.981249+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ad035ce3455f1db003f71d64e8fead77225ce745",
+            "completedAt": "2026-11-08T07:19:42.981249+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ad035ce3455f1db003f71d64e8fead77225ce745",
+            "completedAt": "2026-11-08T07:19:42.981249+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 核验两种原生卡外壳实际模式颜色；原实测卡片确定性回放补齐36项"
+        },
+        "acceptanceCriteria": [
+          "原生带出处导图也应用易方达模式",
+          "已有原文的完整清单以实际条目验收",
+          "漏项自动补原文保留定位"
+        ],
+        "risks": [
+          "清单自动核对限有明确数量、可逐条解析且面板需要完整呈现的 Word 段落。"
+        ],
+        "generatedAt": "2026-11-08T07:19:42.981249+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-style.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
