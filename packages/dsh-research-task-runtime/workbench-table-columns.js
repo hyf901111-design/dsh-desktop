@@ -59,7 +59,12 @@ export function installWorkbenchTableColumns(root, options = {}) {
           const minimum=base.map((width,i)=>prose[i]?160:80),total=base.reduce((a,b)=>a+b,0),floor=minimum.reduce((a,b)=>a+b,0)
           const budget=Math.max(floor,available)
           const widths=base.map((width,i)=>total>budget?minimum[i]+(width-minimum[i])*(budget-floor)/(total-floor||1):width+(budget-total)*(prose[i]?2:1)/(headers.length+prose.filter(Boolean).length))
-          automatic={widths,manual:prose}
+          // Fixed column geometry must never leave non-prose cells overflowing
+          // into neighbouring columns. Short names can still be wider than a
+          // narrow allocated column, especially in CJK tables with many fields.
+          const fits=(value,width)=>Array.from(value).reduce((sum,char)=>sum+(/[\u0000-\u007f]/.test(char)?7:14),0)+24<=width
+          const wrap=headers.map((_,i)=>prose[i]||!fits(labels[i],widths[i])||rows.some(row=>row.parentElement!==table.tHead&&!fits((row.cells[i]?.textContent||'').trim(),widths[i])))
+          automatic={widths,manual:wrap}
         }
         const layout=state||automatic
         if (layout) {

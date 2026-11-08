@@ -170,3 +170,16 @@ it('fits long prose to the available component width and wraps without truncatin
   expect(f.table.rows[1].cells[2].textContent).toBe(original)
  }finally{stop();await f.win.happyDOM.close()}
 })
+
+
+it('wraps compact CJK columns as well as prose when a multi-column table would otherwise overlap',async()=>{
+ const f=fixture();f.table.innerHTML='<thead><tr>'+['机构','部门','职务','姓名','信息时点','待核标记','出处','待核说明'].map(s=>'<th>'+s+'</th>').join('')+'</tr></thead><tbody><tr>'+['中国证监会','办公厅（党委办公室）','一级巡视员','商庆军','2026.10','—','[T3] cnstock.com','需要完整保留的资料和待核说明。'.repeat(20)].map(s=>'<td>'+s+'</td>').join('')+'</tr></tbody>';
+ Object.defineProperty(f.table.parentElement,'clientWidth',{value:816});
+ const original=[...f.table.rows[1].cells].map(c=>c.textContent),stop=installWorkbenchTableColumns(f.doc.body);
+ try{
+  expect(parseFloat(f.table.style.width)).toBeCloseTo(816);
+  expect(f.table.rows[1].cells[1].dataset.columnWrap).toBe('true');
+  expect(f.table.rows[1].cells[2].dataset.columnWrap).toBe('true');
+  expect([...f.table.rows[1].cells].map(c=>c.textContent)).toEqual(original);
+ }finally{stop();await f.win.happyDOM.close()}
+})
