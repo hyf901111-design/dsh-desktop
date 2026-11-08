@@ -1,6 +1,18 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
-import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt,documentTableEntityCoverageIssue } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+
+it('checks unknown entities in a complete cited card-grid projection without imposing unrelated document scope',()=>{
+ const documents=[{blocks:[{id:'T2',rows:[['模块甲\n负责人甲','','模块乙\n—'],['模块丙\n负责人丙','','模块丁\n—']]}]}]
+ const rows=[['模块甲','负责人甲','[T2]'],['模块乙','—','[T2]'],['模块丙','负责人丙','[T2]']]
+ const output=rows=>documentTableOutput(JSON.stringify({version:1,type:'table',title:'模块明细',columns:['模块','负责人','出处'],rows}))
+ expect(documentTableEntityCoverageIssue(output(rows),documents,'完整模块明细')).toContain('模块丁')
+ expect(documentTableEntityCoverageIssue(output(rows),documents,'指定三个模块的明细')).toBeUndefined()
+ expect(documentTableEntityCoverageIssue(output(rows.map(row=>[row[0],row[1],'[T4]'])),documents,'完整模块明细')).toBeUndefined()
+ expect(documentTableEntityCoverageIssue(output([...rows,['模块丁','—','[T2]']]),documents,'完整模块明细')).toBeUndefined()
+ expect(documentTableEntityCoverageIssue(output([['其他实体','未知','[T2]']]),documents,'完整明细')).toBeUndefined()
+ expect(documentTableEntityCoverageIssue(output(rows),[{blocks:[{id:'T2',rows:[['模块甲','负责人甲','说明\n两行'],['模块丁','—','说明\n两行']]}]}],'完整模块明细')).toBeUndefined()
+})
 
 it('核对 Word 表格中的裸编号、组合与范围，不因格式误拦也不接受未知出处',()=>{
  const docs=[{blocks:['T8','P36','P37','P38'].map(id=>({id}))}]

@@ -28,7 +28,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
-import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, DOCUMENT_TABLE_GUIDANCE, documentTableOutput, documentTableOutputIssue } from './workbench-document-evidence.js'
+import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, documentTableEntityCoverageIssue, DOCUMENT_TABLE_GUIDANCE, documentTableOutput, documentTableOutputIssue } from './workbench-document-evidence.js'
 import { extractDocxEvidence } from './docx-evidence.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
@@ -1987,7 +1987,7 @@ export class ResearchTaskRuntime {
             throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要实际层级或关系图，不能用文字说明替代。复用已取得内容，按真实关系交付完整导图或可视化 HTML，保留来源。')
           }
           if (result.documentEvidence && output) {
-            const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false })
+            const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
             if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
             if (['table','mind-map'].includes(plannedFormat) && JSON.parse(output).type === 'markdown') {
               throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要交付实际明细或层级，不能用文字说明替代。复用已读取的文档，保留完整行、层级和出处，可换成原生视图或含完整数据的静态 HTML。')
@@ -2238,7 +2238,7 @@ export class ResearchTaskRuntime {
         if(output===undefined)throw new ResearchTaskError('OUTPUT_TOO_LARGE','已取得的新闻与覆盖说明超过当前展示容量，来源记录已保留，请拆分组件后重试。')
       }
       if (output !== undefined && result.documentEvidence) {
-        const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false })
+        const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
         if (issue) throw new ResearchTaskError('GENERATION_FAILED', issue)
       }
       if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }
@@ -2602,15 +2602,22 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const pluginProhibited = sourcePolicy?.pluginProhibited ?? componentPluginSourceProhibited(sourceRequest ?? '')
       const bindingRequested = componentBindingRequested(sourceRequest)
       const liveDataSubmission = !synthesisOnly && surface !== 'note' && boundTemplate && !deferredWorkbenchPanel(query??'') && typeof ctx.tools?.register==='function' && typeof ctx.tools?.guard==='function'
-      const createDataSubmission=()=>createComponentDataSubmission({
-        observeRecords:()=>sourceCollector?.records??[],signal,bindingRequested,
-        options:{panelRequest:workbenchPanelIntent(query),newsScope:query,intervalMinutes:requestedComponentRefreshInterval(sourceRequest)},
-        validateSnapshot:(snapshot,records)=>{
+      const validateDataSubmission=(snapshot,records)=>{
           const text=JSON.stringify(snapshot.data),output=finalText([{type:'text',text:snapshot.capacitySnapshot?snapshot.output:text}],kind)
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
           const issue=workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
-        }
+          const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query)))
+          if(documentIssue)throw new ResearchTaskError('INVALID_OUTPUT',documentIssue)
+          return output
+      }
+      const createDataSubmission=()=>createComponentDataSubmission({
+        observeRecords:()=>sourceCollector?.records??[],signal,bindingRequested,
+        options:{panelRequest:workbenchPanelIntent(query),newsScope:query,intervalMinutes:requestedComponentRefreshInterval(sourceRequest)},
+        validateSnapshot:validateDataSubmission,
+        // The same source, presentation and whole-record gates apply. The
+        // runtime repeats its delivery checks before publishing either path.
+        validateArtifact:(artifact,records)=>validateDataSubmission({data:artifact},records)
       })
       if(liveDataSubmission)submission=createDataSubmission()
       // Compact the initial typed task, but retain a recovery's concrete error,
@@ -3106,7 +3113,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
             sourceProjectionStops.add(stopSubmission)
             submission.register(child)
             return{prompt:liveDataSubmission?[
-              '继续本卡修复。原需求和成功查询的完整响应保留在本子会话中，不重新取数、不删减有效业务内容。只开放来源列表、呈现 schema 和提交工具。已有结构化数据时修正后调用 submit_component_data；只有网页正文且本卡无需刷新时提交宿主模板 JSON。',
+              '继续本卡修复。原需求和成功查询的完整响应保留在本子会话中，不重新取数、不删减有效业务内容。只开放来源列表、呈现 schema 和提交工具。已有结构化数据时修正 requests/mapping 后调用 submit_component_data；已解析文档、网页正文或关系图使用同一工具的 artifact 参数交付完整宿主组件JSON。',
               prompt.match(/具体校验问题：[^\n]+/u)?.[0]??'修正上一轮未被接受的呈现。',
               COMPONENT_SUBMISSION_MAPPING_GUIDANCE,submission.instruction
             ].join('\n'):(prototypeSubmission?.retainedRepairPrompt??prompt)+'\n'+submission.instruction,result:submission.result}

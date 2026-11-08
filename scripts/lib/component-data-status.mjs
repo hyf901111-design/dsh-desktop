@@ -27,6 +27,13 @@ export function componentSavedProvenance(node){
    else{try{const url=new URL(item.url);if(['http:','https:'].includes(url.protocol))names.push(url.hostname)}catch{}}
   }
  }
+ // Recovery HTML may have no template model. Its host-recorded sources still
+ // identify the actual provenance; a missing refresh job is not missing data.
+ if(!names.length)for(const row of Array.isArray(node?.generationSources)?node.generationSources:[]){
+  let name=label(row)
+  if(!name){try{const url=new URL(row?.url);if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password)name=url.hostname}catch{}}
+  if(name)names.push(name)
+ }
  return {names:[...new Set(names)],asOf:typeof data.asOf==='string'?data.asOf:'',range:typeof data.range==='string'?data.range:''}
 }
 export function componentSourceLabel(name){

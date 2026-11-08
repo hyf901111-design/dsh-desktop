@@ -8,6 +8,8 @@ import {TABLE_INPUT_SCHEMA} from './template-data-contract.js'
 import {KPI_GUIDANCE} from './kpi-template-contract.js'
 import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 import {TIMELINE_DATA_GUIDANCE} from './timeline-template-contract.js'
+import {COMPONENT_TEMPLATES} from './component-template-registry.js'
+import {DERIVED_GUIDANCE} from './derived-template-contract.js'
 
 const NAME='submit_component_data'
 const SCHEMA='component_presentation_schema'
@@ -85,7 +87,7 @@ function reuseObservedRequests(requests,records){
 // Acquisition and presentation are separate. The child chooses a renderer
 // after seeing its own complete responses, and receives correctable validation
 // feedback before ending. No source values are supplied by this tool's caller.
-export function createComponentDataSubmission({observeRecords,signal,options={},bindingRequested=false,validateSnapshot}){
+export function createComponentDataSubmission({observeRecords,signal,options={},bindingRequested=false,validateSnapshot,validateArtifact}){
  let child,disposed=false,pending,accepted,finish
  const releases=[],result=new Promise(resolve=>{finish=resolve})
  const check=exec=>{
@@ -94,18 +96,32 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
  }
  const schema=defineTool({
   name:SCHEMA,description:'List successful responses for this component as sourceRef, or inspect a presentation schema by passing type. This does not fetch data or change the component.',
-  parameters:{type:{type:'string',enum:['kpi','table','chart','market','timeline']},variant:{type:'string'}},
+  parameters:{type:{type:'string'},variant:{type:'string'}},
   output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>true,
-  execute(args,exec){check(exec);if(!args.type)return {sources:sourceReferences(observeRecords())};return{schema:args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:args.type==='timeline'?TIMELINE_DATA_GUIDANCE:'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}',guidance:args.type==='kpi'?KPI_GUIDANCE:'Use real observed source paths. Template fields describe presentation, never required business metrics.'}}
+  execute(args,exec){
+   check(exec);if(!args.type)return {sources:sourceReferences(observeRecords()),staticDelivery:'文档解析、网页正文及关系图可用 submit_component_data({artifact:完整宿主组件JSON})；不需要伪造 requests 或 mapping。原始取数、来源和完整性校验仍执行。'}
+   const schema=args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:args.type==='timeline'?TIMELINE_DATA_GUIDANCE:args.type==='kpi'?'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}':['mind-map','summary'].includes(args.type)?DERIVED_GUIDANCE:args.type==='markdown'?'{"version":1,"type":"markdown","title":"标题","content":"完整正文与原始出处链接"}':args.type==='html'?'{"version":1,"type":"html","title":"标题","html":"完整自包含离线HTML"}':COMPONENT_TEMPLATES.find(template=>template.type===args.type&&template.schema)?.schema
+   if(!schema)throw Error('该呈现形式没有独立映射协议。可沿已提供的宿主组件协议提交 artifact；不为通过提交而改变业务内容。')
+   return{schema,guidance:args.type==='kpi'?KPI_GUIDANCE:'结构化数据用 requests/mapping；文档或网页正文用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
+  }
  })
  const definition=defineTool({
-  name:NAME,description:'Submit this component using already observed data. Use requests:[{key,sourceRef}] from component_presentation_schema({}) to avoid copying arguments. Alternatively use requests:[{key,tool}] when that tool has exactly one successful business call: the host reuses its original arguments. If multiple calls exist, include exact args to select one. Never add defaults. mapping chooses the appropriate presentation and references actual fields. Fix validation errors here using the same data. Acceptance ends this component.',
-  parameters:{requests:{type:'array',required:true,items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string'},sourceRef:{type:'string',description:'The exact reference returned by component_presentation_schema({}); omit tool and args.'},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',required:true,additionalProperties:true}},
+  name:NAME,description:'Deliver this component after acquisition and processing. For structured observed responses use requests:[{key,sourceRef}] and mapping; sourceRef comes from component_presentation_schema({}). Alternatively requests:[{key,tool}] reuses a sole successful call; multiple calls require exact original args. For parsed documents, webpage prose or custom relationships, use artifact with the complete host component JSON instead, without requests/mapping. This static path still checks sources, content and completeness, and cannot provide automatic refresh. Correct errors in the same child using acquired material. Acceptance ends this component.',
+  parameters:{requests:{type:'array',items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string'},sourceRef:{type:'string',description:'The exact reference returned by component_presentation_schema({}); omit tool and args.'},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',additionalProperties:true},artifact:{type:'object',description:'Static delivery of the complete existing host component JSON after reading actual documents or webpages. Mutually exclusive with requests/mapping. No invented data, no refresh recipe.',additionalProperties:true}},
   output:{schema:{type:'object',properties:{accepted:{type:'boolean',required:true}},additionalProperties:false},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>false,
   execute(args,exec){
    check(exec)
-   if(!args||Object.keys(args).some(key=>!['requests','mapping'].includes(key)))throw Error('Submit only requests and mapping; do not include source response values.')
+   if(!args||Object.keys(args).some(key=>!['requests','mapping','artifact'].includes(key)))throw Error('只提交 requests/mapping，或单独提交完整静态 artifact。')
    if(Buffer.byteLength(JSON.stringify(args))>256000)throw Error('Use paths into the complete observed responses instead of copying source records into the submission.')
+   if(Object.hasOwn(args,'artifact')){
+    if(Object.hasOwn(args,'requests')||Object.hasOwn(args,'mapping'))throw Error('artifact 与 requests/mapping 互斥；静态材料不需要伪造数据请求。')
+    if(bindingRequested)throw Error('本卡要求自动刷新，静态 artifact 不能替代已验证的刷新配方。')
+    if(typeof validateArtifact!=='function')throw Error('静态组件校验边界不可用。')
+    const text=validateArtifact(structuredClone(args.artifact),structuredClone(observeRecords()))
+    if(typeof text!=='string'||!text.trim())throw Error('静态组件正文或来源尚未通过校验，请保留完整内容修正后提交。')
+    check(exec);pending={callId:exec.callId,text};return{accepted:true}
+   }
+   if(!Object.hasOwn(args,'requests')||!Object.hasOwn(args,'mapping'))throw Error('结构化引用需要 requests 与 mapping；文档或网页正文使用 artifact。')
    const records=structuredClone(observeRecords()),now=new Date()
    const observedTools=[...new Set(records.filter(record=>record.purpose!=='discovery').map(record=>record.tool))]
    if(observedTools.length&&Array.isArray(args.requests)&&args.requests.some(request=>!Object.hasOwn(request,'sourceRef')&&!observedTools.includes(request?.tool)))throw Error('数据引用的工具名必须逐字复用本卡成功调用，不能使用来源别名。本卡实际工具名：'+observedTools.slice(0,8).join('、')+'。保留其原参数及真实字段，无需重新取数。')
@@ -138,7 +154,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
  const dispose=()=>{if(disposed)return;disposed=true;for(const release of releases.splice(0).reverse())release();signal?.removeEventListener('abort',dispose);pending=accepted=undefined}
  signal?.addEventListener('abort',dispose,{once:true})
  return{
-  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得结构化数据后调用 submit_component_data，传 requests 与 mapping。若本卡不要求刷新且只有真实网页正文而无结构化记录，直接输出宿主模板 JSON 并保留原文链接和日期，由宿主继续校验；不能把正文包装成刷新配方。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
+  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得结构化数据后调用 submit_component_data，传 requests 与 mapping。已解析的文档、网页正文、关系图或自定义静态呈现，调用同一工具传 artifact:完整宿主组件JSON，不传 requests/mapping；不用为文字内容伪造业务请求，不将正文包装成刷新配方。两条路径均保留本卡真实来源并继续校验完整性；静态交付不能替代明确要求的刷新。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
   result,
   register(agent){
    signal?.throwIfAborted()
