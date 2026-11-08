@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-48",
+  "branch": "codex/integration/20261108-48",
+  "baseMainCommit": "859534c5119e250918bcf6fa96d25355c8ecab4d",
+  "expectedMainCommit": "859534c5119e250918bcf6fa96d25355c8ecab4d",
+  "createdAt": "2026-11-08T14:12:02.851Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "导图响应式布局与内容高度联动",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "859534c5119e250918bcf6fa96d25355c8ecab4d",
+        "tipCommit": "ef26f79b824cd1fafcc658e50730532c9ac046c7",
+        "commits": [
+          {
+            "commit": "ef26f79b824cd1fafcc658e50730532c9ac046c7",
+            "parents": [
+              "859534c5119e250918bcf6fa96d25355c8ecab4d"
+            ],
+            "subject": "增加导图响应式横向布局与内容高度联动"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/derived-preset-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/mind-map-layout.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-mind-map-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "141 项聚焦检查通过",
+            "verifiedCommit": "ef26f79b824cd1fafcc658e50730532c9ac046c7",
+            "completedAt": "2026-11-08T14:12:01.178681+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ef26f79b824cd1fafcc658e50730532c9ac046c7",
+            "completedAt": "2026-11-08T14:12:01.178681+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ef26f79b824cd1fafcc658e50730532c9ac046c7",
+            "completedAt": "2026-11-08T14:12:01.178681+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 聚焦验证：超长原生导图内部滚动和边界归还画布；展开只增加新增正文高度，来源按钮位置保持；连续展开收起三次及内部滚动偏移不累加高度。旧实现同一用例由约410px错误增长到2279px，新实现通过。补充六分支宽窄切换、19 个节点与 18 条连线完整保留、无重叠和裁切、宽屏卡片收缩并紧接下张卡片、手动尺寸不被覆盖。原会话原生客户端另行现场核验。"
+        },
+        "acceptanceCriteria": [
+          "横向页签随画布滚动，竖向导航固定",
+          "无可滚动内容的选中组件将滚轮交还画布",
+          "展开说明临时撑高，收起恢复并保持线性箭头对齐"
+        ],
+        "risks": [
+          "原生客户端同屏验收在最终构建启动后进行，不以浏览器检查替代。"
+        ],
+        "generatedAt": "2026-11-08T14:12:01.178681+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/component-wheel-zoom.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/derived-mind-map-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
