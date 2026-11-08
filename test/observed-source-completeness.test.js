@@ -121,3 +121,13 @@ it('allows one-record transport pages to finish a larger requested collection wi
  expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
  expect(snapshot.data.items.map(row=>row.summary)).toEqual(all.map(row=>row.body))
 })
+
+it('keeps shared collection counts off adjacent graph and analysis cards citing release sources',()=>{
+ const request='用关系图梳理核心包，用可搜索总表列出 example/vue 最近40条发布记录，再总结升级事项。只用 GitHub 和官网。'
+ const graph='本面板：核心包与生态关系图\n绘制包关系图并标注兼容版本。数据来源仅限官方文档与 GitHub 各仓库的 package.json/releases 信息，标注来源。'
+ const citations='本面板：升级注意事项\n总结升级风险。Sources: GitHub Releases and official guides.'
+ expect(workbenchReleaseScope(request,graph,'html')).toBeUndefined()
+ expect(workbenchReleaseScope(request,citations,'html')).toBeUndefined()
+ expect(workbenchReleaseScope(request,'本面板：发布记录总表\n保留每条版本和完整变更要点。来源：GitHub Releases','table')).toMatchObject({count:40,includeBody:true,presentation:'table'})
+ expect(workbenchReleaseScope(request,'Release records\nList every release and its original notes','html')).toMatchObject({count:40})
+})

@@ -83,3 +83,8 @@ it('identifies the failing dataset and every conflicting aggregate field without
  expect(()=>validateWorkbenchDatasets([aggregateSource(),a])).toThrow(/totals.*fields、records/);expect(a).toEqual(before)
  const source=aggregateSource();delete source.asOf;expect(()=>validateWorkbenchDatasets([source])).toThrow(/facts.*缺少：asOf/)
 })
+it('validates declared view subsets against original fields without changing master records',()=>{
+ const source=aggregateSource(),base={dataset:'facts',sections:[{kind:'records',fields:['owner','state']}]},where=[{field:'state',op:'in',values:['待办']},{field:'amount',op:'notNull'}]
+ const result=validateDatasetView({...base,where},[source]);expect(result.view.where).toEqual(where);expect(result.dataset.records).toEqual(source.records)
+ for(const rule of [{field:'absent',op:'notNull'},{field:'state',op:'in',values:[]},{field:'state',op:'eval',values:['x']},{field:'state',op:'notNull',values:['x']}])expect(()=>validateDatasetView({...base,where:[rule]},[source])).toThrow('视图范围条件无效')
+})

@@ -40,7 +40,8 @@ export function installWorkbenchTableColumns(root, options = {}) {
       const key = 'table-columns-' + index + '-' + (labelHash >>> 0).toString(36)
       const apply = () => {
         table.setAttribute('data-workbench-table-columns', '')
-        const rows = [...table.rows]
+        // Detail rows span the record; their text must not resize column zero.
+        const rows = [...table.rows].filter(row=>row.cells.length===headers.length&&[...row.cells].every(cell=>cell.colSpan===1&&cell.rowSpan===1))
         const alignments = headers.map((header, i) => {
           const cells = rows.filter(row => row.parentElement !== table.tHead).map(row => row.cells[i]).filter(Boolean)
           const align = alignment(header, labels[i], cells.slice(0, 100))
@@ -81,7 +82,7 @@ export function installWorkbenchTableColumns(root, options = {}) {
           if (usedGroup) { for (const group of originalGroups) table.prepend(group.cloneNode(true)); usedGroup = false }
           for (const name of ['width', 'min-width', 'table-layout']) table.style.removeProperty(name)
         }
-        for (const row of table.rows) [...row.cells].forEach((cell, i) => {
+        for (const row of rows) [...row.cells].forEach((cell, i) => {
           cell.setAttribute('data-column-wrap', state?.manual[i] || automatic?.manual[i] ? 'true' : 'false')
           cell.setAttribute('data-column-align', alignments[i])
         })
