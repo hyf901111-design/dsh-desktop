@@ -151,6 +151,68 @@
           "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
         ],
         "generatedAt": "2026-11-08T14:32:31.675475+00:00"
+      },
+      "merged": {
+        "mergeCommit": "16ff676cfa569e1a27ebcd3f8ebbf9f5cf9dcf09",
+        "verificationCommit": "16ff676cfa569e1a27ebcd3f8ebbf9f5cf9dcf09",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/component-data-status.test.js",
+              "test/component-reading-footer.test.js",
+              "test/deliverable-cards.test.js",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-menu.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/board-tabs-client.test.js test/board-tabs-drop-focus-browser.test.js test/board-tabs-theme-browser.test.js test/board-tabs-connection-browser.test.js test/board-tabs-connection-client.test.js test/workbench-structure-theme-browser.test.js test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-grid-workbench.test.js test/derived-mind-map-browser.test.js test/component-source-info-browser.test.js test/component-data-status.test.js test/component-reading-footer.test.js test/deliverable-cards.test.js test/financial-widget-client.test.js test/financial-widget-menu.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "16ff676cfa569e1a27ebcd3f8ebbf9f5cf9dcf09",
+            "completedAt": "2026-11-08T14:32:36.173Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "16ff676cfa569e1a27ebcd3f8ebbf9f5cf9dcf09",
+            "completedAt": "2026-11-08T14:32:36.173Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "16ff676cfa569e1a27ebcd3f8ebbf9f5cf9dcf09",
+            "completedAt": "2026-11-08T14:32:36.173Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T14:32:36.173Z"
       }
     }
   ],
