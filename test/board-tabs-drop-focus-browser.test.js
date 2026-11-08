@@ -41,7 +41,7 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 async function fixture(){
  const page=await browser.newPage({viewport:{width:1100,height:800},reducedMotion:'reduce'}),errors=[]
- page.on('pageerror',error=>errors.push(error.message))
+ page.on('pageerror',error=>{errors.push(error.message);console.error(error.stack)})
  await page.route('https://tab-drop-focus.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{height:740px;width:1000px}[data-research-canvas]{height:700px!important}</style><div id="host"></div>`}))
  await page.goto('https://tab-drop-focus.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-grid]')
  const data=await page.evaluate(()=>{
@@ -370,6 +370,44 @@ it('native disclosures reserve only revealed content, keep source controls ancho
    await expect.poll(height).toBe(closed)
   }
   await canvas.evaluate(el=>{el.scrollTop=0})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)
+
+it('wide native diagrams fit the card to their reflowed content and pull the next card up without losing text',async()=>{
+ const {page,first,second,errors}=await fixture()
+ try{
+  page.setDefaultTimeout(4500)
+  await page.setViewportSize({width:1800,height:1000})
+  await page.locator('#host').evaluate(el=>{el.style.width='1660px'})
+  await page.evaluate(({first,second})=>{
+   const w=fixture.workspace,base=w.getSnapshot().artifacts.find(n=>n.id===first)
+   const spec={version:1,type:'mind-map',title:'响应式架构',content:'# 完整机构\n'+Array.from({length:6},(_,i)=>'- 机构'+i+'\n  - 完整职责'+i+'\n  - 原文依据'+i).join('\n'),source:{title:'机构资料',text:'全部来源。\n'.repeat(8)},note:'完整说明。\n'.repeat(5)}
+   w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===first?{...base,x:812,y:912,width:1600,height:1800,kind:'generated-container',generationStatus:'completed',containerSpec:spec}:n))
+   w.updateSelection([first],'replace')
+  },{first,second})
+  const card=page.locator(`[data-research-node-id="${first}"]`),map=card.locator('[data-research-mind-map]')
+  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('wide')
+  await expect.poll(()=>card.evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(800)
+  expect(await map.locator('[data-research-mind-map-node]').count()).toBe(19)
+  const note=card.locator('summary').filter({hasText:/^说明$/}),height=()=>card.evaluate(el=>el.getBoundingClientRect().height)
+  const closed=await height()
+  const gap=await page.locator(`[data-research-node-id="${second}"]`).evaluate((el,id)=>el.getBoundingClientRect().top-document.querySelector('[data-research-node-id="'+id+'"]').getBoundingClientRect().bottom,first)
+  expect(gap).toBeGreaterThanOrEqual(0);expect(gap).toBeLessThan(25)
+  await note.click();await expect.poll(height).toBeGreaterThan(closed+40)
+  expect(await height()).toBeLessThan(closed+180)
+  await note.click();await expect.poll(height).toBe(closed)
+  await page.locator('#host').evaluate(el=>{el.style.width='800px'})
+  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('compact')
+  expect(await map.locator('[data-research-mind-map-node]').count()).toBe(19)
+  await page.locator('#host').evaluate(el=>{el.style.width='1660px'})
+  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('wide')
+  await expect.poll(height).toBe(closed)
+  await page.evaluate(first=>{const w=fixture.workspace;w.applyWorkbenchCells(w.getWorkbenchVisibleCells().map(c=>c.id===first?{...c,h:c.h+8}:c),true)},first)
+  await expect.poll(height).toBeGreaterThan(closed+200)
+  const manual=await height()
+  await page.evaluate(()=>window.dispatchEvent(new Event('resize')))
+  await expect.poll(height).toBe(manual)
   expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)

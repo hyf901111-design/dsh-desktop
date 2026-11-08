@@ -1,3 +1,4 @@
+import { ResearchMindMapConnections as adaptiveMapConnections, adaptiveMindMapCss } from './mind-map-layout.mjs'
 import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
 import { patchResearchCanvasViewportPersistence } from './research-canvas-viewport-persistence.mjs'
 import { generationSource, generationCss, patchGenerationLifecycle, componentPromptSource } from './figma-generation-client.mjs'
@@ -712,12 +713,6 @@ function ResearchDerivedSources({node,embedded=false,readOnly=false}) {
 }
 
 
-function ResearchMindMapConnections({rootRef,revision}) {
-  const [geometry,setGeometry]=(0,react.useState)({width:1,height:1,path:''});
-  (0,react.useEffect)(()=>{const root=rootRef.current;if(!root)return;let active=true;const measure=()=>{if(!active)return;const bounds=root.getBoundingClientRect();if(!(bounds.width>0&&bounds.height>0))return;const sx=root.clientWidth/bounds.width,sy=root.clientHeight/bounds.height;const box=element=>{const rect=element.getBoundingClientRect();return {left:(rect.left-bounds.left)*sx+root.scrollLeft,top:(rect.top-bounds.top)*sy+root.scrollTop,width:rect.width*sx,height:rect.height*sy};};const origin=root.querySelector(':scope > [data-research-mind-map-node]');if(!origin)return;const paths=[];for(const branch of root.querySelectorAll('[data-research-mind-map-branch]')){const child=branch.querySelector(':scope > [data-research-mind-map-node]'),parentBranch=branch.parentElement.closest('[data-research-mind-map-branch]'),parent=parentBranch?.querySelector(':scope > [data-research-mind-map-node]')??origin;if(!child||!parent)continue;const a=box(parent),b=box(child);const x=a.left+a.width,y=a.top+a.height/2,endY=b.top+b.height/2,middle=(x+b.left)/2;paths.push('M'+x+' '+y+'H'+middle+'V'+endY+'H'+b.left);}const content=Array.from(root.querySelectorAll('[data-research-mind-map-node],.odyssey-component-summary-note')).map(box);const next={width:Math.max(root.clientWidth,...content.map(item=>item.left+item.width)),height:Math.max(root.clientHeight,...content.map(item=>item.top+item.height)),path:paths.join(' ')};setGeometry(before=>JSON.stringify(before)===JSON.stringify(next)?before:next);};const View=root.ownerDocument.defaultView,observer=View?.ResizeObserver?new View.ResizeObserver(measure):null;observer?.observe(root);for(const node of root.querySelectorAll('[data-research-mind-map-node]'))observer?.observe(node);measure();root.ownerDocument.fonts?.ready.then(measure);return()=>{active=false;observer?.disconnect();};},[rootRef,revision]);
-  return (0,react_jsx_runtime.jsx)('svg',{'data-research-mind-map-edges':'','aria-hidden':true,width:geometry.width,height:geometry.height,viewBox:'0 0 '+geometry.width+' '+geometry.height,children:(0,react_jsx_runtime.jsx)('path',{d:geometry.path,fill:'none',stroke:'currentColor',strokeWidth:1})});
-}
-
 
 function researchIsDerivedNode(node) {
   return node?.kind==='generated-summary'||node?.kind==='generated-mind-map'||node?.kind==='generated-container'&&node.creationMode==='selection';
@@ -744,7 +739,7 @@ ${researchIsDerivedNode.toString()}
 ${researchDerivedTitle.toString()}
 ${ResearchDerivedHeading.toString()}
 ${ResearchDerivedSources.toString()}
-${ResearchMindMapConnections.toString()}
+${adaptiveMapConnections.toString()}
 function researchMindMapFitTree(tree,budget,labelLimit,rootLimit=labelLimit) {
   let remaining=Math.max(1,budget)-1,shortened=false;
   const copy=node=>{const label=String(node.label),limit=node===tree?rootLimit:labelLimit;const displayLabel=label.length>limit?label.slice(0,Math.max(1,limit-1))+'…':label;if(displayLabel!==label)shortened=true;return {...node,sourceLineIndex:node.sourceLineIndex,displayLabel,children:[]};};
@@ -792,6 +787,7 @@ function researchMarketTableForSpec(spec) {
 ${ResearchMarketNativeTable.toString()}`
 
 export const canvasCss = `
+${adaptiveMindMapCss}
 body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}
 body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) ::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
 .rScV5Q_root[data-space-pressed=true]:after{content:none;border:0}
