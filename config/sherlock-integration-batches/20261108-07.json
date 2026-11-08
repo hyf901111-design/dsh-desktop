@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-07",
+  "branch": "codex/integration/20261108-07",
+  "baseMainCommit": "540f1877e69b5404124bcbc0114d31725845f9f3",
+  "expectedMainCommit": "540f1877e69b5404124bcbc0114d31725845f9f3",
+  "createdAt": "2026-11-08T00:33:16.806Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "多场景工作台规划与来源复用策略",
+        "branch": "codex/feat/workbench-strategy-validation-20261108",
+        "baseCommit": "540f1877e69b5404124bcbc0114d31725845f9f3",
+        "tipCommit": "53a5796663ab614b4b1893d8b56252ad61d9dafb",
+        "commits": [
+          {
+            "commit": "53a5796663ab614b4b1893d8b56252ad61d9dafb",
+            "parents": [
+              "540f1877e69b5404124bcbc0114d31725845f9f3"
+            ],
+            "subject": "优化：统一工作台规划编译与来源响应复用策略"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-native-first-plans-20261108.json"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-native-plan-recovery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-native-plan-recovery.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-source-binding.test.js",
+              "test/workbench-comparison-intent.test.js",
+              "test/workbench-table-input-contract.test.js",
+              "test/workbench-public-data-profile.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  8 passed (8)\n      Tests  307 passed (307)\n   Start at  08:32:26\n   Duration  9.06s (transform 4.18s, setup 0ms, import 9.60s, tests 11.19s, environment 0ms)",
+            "verifiedCommit": "53a5796663ab614b4b1893d8b56252ad61d9dafb",
+            "completedAt": "2026-11-08T00:32:35.622563+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "53a5796663ab614b4b1893d8b56252ad61d9dafb",
+            "completedAt": "2026-11-08T00:32:45.501811+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "53a5796663ab614b4b1893d8b56252ad61d9dafb",
+            "completedAt": "2026-11-08T00:32:45.529694+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端三组首份计划留档并复现；规划回放修复后均接受。真实工具传输回归验证来源引用、网页结构化快照、刷新边界。新包原生复测待本地集成构建。"
+        },
+        "acceptanceCriteria": [
+          "等价图表、任务状态、笔记说明在宿主统一编译",
+          "直通来源不覆盖时使用原请求允许的原生能力，保留范围",
+          "多个规划错误一次反馈",
+          "来源引用保存精确原请求，网页完整JSON仅用于静态",
+          "307项聚焦检查和类型检查通过"
+        ],
+        "risks": [
+          "公开服务或模型不稳定仍可能导致部分组件超时",
+          "另三组旧测试有六项已在本次变更前的540f1877e复现的断言差异",
+          "签名构建与新包原生验收需在集成后执行"
+        ],
+        "generatedAt": "2026-11-08T00:32:45.529730+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-native-plan-recovery.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-source-binding.test.js",
+        "test/workbench-comparison-intent.test.js",
+        "test/workbench-table-input-contract.test.js",
+        "test/workbench-public-data-profile.test.js",
+        "test/cartesian-chart-template.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
