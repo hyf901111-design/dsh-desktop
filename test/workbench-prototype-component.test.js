@@ -6,15 +6,26 @@ import {workbenchSourcePolicy} from '../packages/dsh-research-task-runtime/workb
 const file='/Users/user/Downloads/原型.html'
 const original='根据 '+file+' 创建运营工作台。'
 const schemas=['read','read_prototype','read_image','public_data_query','web_search','web_fetch','bash','write','research_canvas_apply'].map(name=>({name,parameters:{type:'object',properties:{}}}))
-async function start({owned=true,request=original,events=[],panelType='table',panelPrompt='按所给原型生成产品明细表，保留记录、日期和单位。'}={}){
+async function start({owned=true,request=original,events=[],readPdfEvidence,panelType='table',panelPrompt='按所给原型生成产品明细表，保留记录、日期和单位。'}={}){
  const hooks=new Map(),guards=[],child={id:'child',session:{events},ctx:{on:()=>()=>{},tools:{restrict:vi.fn(()=>()=>{}),guard:fn=>{guards.push(fn);return()=>{}}}}},pending=Promise.withResolvers()
  const parent={id:'parent',session:{header:{},events:[]},options:{provider:'qa',model:'qa',reasoningEffort:'max'}}
  const ctx={agents:{get:id=>id==='parent'?parent:undefined},tools:{schemas:()=>schemas},on:(name,fn)=>{hooks.set(name,fn);return()=>hooks.delete(name)},apiProxy:{sessions:{models:async()=>({result:{ok:true,value:{current:parent.options,routable:true}}})}},subagents:{start:vi.fn(async()=>{hooks.get('agent/created')?.({agent:child});return{id:'child',localAgent:child,result:pending.promise,dispose:async()=>{}}})}}
  const plan=validateWorkbench({requestId:'source',title:'运营工作台',dataMode:'source',originalRequest:request,panels:[{title:'产品明细',prompt:panelPrompt,type:panelType,size:'medium'}]})
- const query=workbenchPanelPrompt(plan,plan.panels[0]),adapter=createSubagentAdapter(ctx)
+ const query=workbenchPanelPrompt(plan,plan.panels[0]),adapter=createSubagentAdapter(ctx,{readPdfEvidence})
  const handle=await adapter.start({parentSessionId:'parent',kind:'container',query,prompt:query,hostContext:owned?{sourceRequirement:panelPrompt,workbenchRequest:{originalRequest:request,dataMode:'source'}}:undefined,signal:new AbortController().signal,onSessionEvent(){}})
  return{ctx,guards,child,handle,native:ctx.subagents.start.mock.calls[0][1],close:async()=>{await handle.dispose();await adapter.dispose()}}
 }
+it('uses original page evidence even for a planned chart and opens no data tools', async()=>{
+ const request='📎 文件：\x60/Users/user/Downloads/报告.pdf\x60 帮我把这个报告做成一个内容示意看板'
+ const readPdfEvidence=vi.fn(async()=>[{name:'报告.pdf',numPages:3,pages:[{page:2,text:'第二章 · 只有分类，没有量化序列'}]}])
+ const f=await start({request,readPdfEvidence,panelType:'chart',panelPrompt:'关键图表数据，尝试整理关键内容'})
+ try {
+  expect(readPdfEvidence.mock.calls[0][1]).toEqual(['/Users/user/Downloads/报告.pdf'])
+  expect(f.native.toolFilter.allow).toEqual([])
+  expect(f.native.prompt.at(-1).text).toContain('第二章 · 只有分类，没有量化序列')
+  expect(f.native.prompt.at(-1).text).toContain('改用对照表或 Markdown 要点')
+ }finally{await f.close()}
+})
 it('keeps the authorized prototype reader available even with a connected public-data tool',async()=>{
  const f=await start()
  try{

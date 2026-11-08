@@ -144,6 +144,12 @@ export function authoredPrototypeEvidence(authoredText){
    text=text.slice(end+1)
   }catch{return{files:[],urls:[],required:[]}}
  }
+ // The desktop file picker also serializes legacy inline attachments at the
+ // start of the authored message, including a single attachment followed by prose.
+ for(let inline; (inline=text.match(/^\s*📎 文件：`([^`\r\n]+)`/u));){
+  const path=filePath(inline[1]);if(path)files.add(path)
+  text=text.slice(inline[0].length)
+ }
  for(const value of authoredReferences(text)){
   const path=filePath(value),url=!path&&webUrl(value)
   if(path)files.add(path)
