@@ -19,6 +19,7 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.selection.v1:',
   'sherlock.research.canvas.viewport.v1:',
   'ework.research.grid.v1:',
+  'sherlock.workbench.auto-arrange.v1:',
   'ework.research.tabs.view.v1:',
   'ework.research.presentation.v1:',
   'ework.research.preview.v1:',
@@ -43,6 +44,30 @@ function validResearchCanvasStorageKey(value: unknown): value is string {
 function validResearchCanvasStorageValue(value: unknown): value is string {
   return typeof value === 'string' &&
     value.length <= RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH
+}
+
+function validWorkbenchPresentation(value: string): boolean {
+  try {
+    if (value.length > 128) return false
+    const preference = JSON.parse(value)
+    return Boolean(preference && !Array.isArray(preference) && preference.version === 1 &&
+      ['light', 'dark', 'enterprise', 'openterminal'].includes(preference.mode) &&
+      (Object.keys(preference).sort().join(',') === 'mode,version' ||
+       Object.keys(preference).sort().join(',') === 'mode,scope,version' && preference.scope === 'board'))
+  } catch { return false }
+}
+
+function validWorkbenchArrange(value: string): boolean {
+  try {
+    if (value.length > 128 * 1024) return false
+    const state = JSON.parse(value)
+    const id = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9:_-]{1,256}$/.test(v)
+    return Boolean(state && !Array.isArray(state) && Object.keys(state).sort().join(',') === 'done,pending' &&
+      Array.isArray(state.done) && state.done.length <= 1000 && state.done.every(id) &&
+      Array.isArray(state.pending) && state.pending.length <= 100 && state.pending.every((item: any) =>
+        item && !Array.isArray(item) && Object.keys(item).sort().join(',') === 'id,ids' && id(item.id) &&
+        Array.isArray(item.ids) && item.ids.length > 0 && item.ids.length <= 30 && item.ids.every(id)))
+  } catch { return false }
 }
 
 function validTableColumnPreference(value: string): boolean {
@@ -100,14 +125,8 @@ export class ResearchCanvasStorage {
     if (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(value)) return false
     if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
-    if (key.startsWith('ework.research.presentation.v1:')) {
-      try {
-        const preference = JSON.parse(value)
-        if (value.length > 128 || !preference || Array.isArray(preference) ||
-            Object.keys(preference).length !== 2 || preference.version !== 1 ||
-            !['light', 'dark', 'enterprise'].includes(preference.mode)) return false
-      } catch { return false }
-    }
+    if (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(value)) return false
+    if (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(value)) return false
     if (this.getItem(key) === value) return true
 
     const filePath = researchCanvasStoragePath(this.userDataPath, key)
@@ -144,7 +163,9 @@ export class ResearchCanvasStorage {
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(record.value)) ||
           (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(record.value)) ||
-          (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value))) return null
+          (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value)) ||
+          (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(record.value)) ||
+          (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(record.value))) return null
       return record.value
     } catch {
       return null

@@ -91,3 +91,16 @@ it('moves a saved table complete methodology, date and file locators into the ri
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+it('collects explicitly labeled legacy HTML source footers without treating unrelated footer content as provenance',async()=>{
+ const {page,errors}=await fixture()
+ try{
+  const html='<main>真实图形内容</main><div class="src">来源：npm registry；获取时间不等于发布日期。<a href="https://registry.npmjs.org/vue/latest">原始元数据</a></div><footer>业务合计99条</footer>'
+  await page.evaluate(html=>show({id:'legacy',title:'网络关系图',containerSpec:{type:'html',html}}),html)
+  await page.getByRole('button',{name:'查看来源信息',exact:true}).click()
+  await expect.poll(()=>page.locator('#right').textContent()).toContain('获取时间不等于发布日期')
+  expect(await page.locator('#right').textContent()).not.toContain('业务合计99条')
+  expect(await page.locator('#right a').getAttribute('href')).toBe('https://registry.npmjs.org/vue/latest')
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})

@@ -90,6 +90,30 @@ describe('desktop Research canvas storage', () => {
     expect(new ResearchCanvasStorage(userData).getItem(key)).toBe('1')
   })
 
+  it('accepts the real board-scoped theme and arrange contracts across native storage restart', async () => {
+    const { createWorkbenchStyleState } = await import(new URL('../scripts/lib/workbench-style-client.mjs', import.meta.url).href)
+    const { createWorkbenchAutoArrangeState } = await import(new URL('../scripts/lib/workbench-auto-arrange.mjs', import.meta.url).href)
+    const userData = temporaryUserData(), storage = new ResearchCanvasStorage(userData)
+    for (const mode of ['enterprise', 'light', 'dark', 'openterminal']) {
+      expect(createWorkbenchStyleState(storage, mode).set(mode, { scope: 'board' })).toBe(true)
+      expect(createWorkbenchStyleState(new ResearchCanvasStorage(userData), mode).get()).toBe(mode)
+    }
+    const plan = { id: 'plan-1', panels: [{ nodeId: 'node-1' }] }
+    const arrange = createWorkbenchAutoArrangeState(storage, 'board')
+    expect(arrange.register(plan, new Set())).toBe(true)
+    const snapshot = { artifacts: [{ id: 'node-1', workbenchId: 'plan-1', generationStatus: 'completed', containerSpec: {} }] }
+    const restarted = createWorkbenchAutoArrangeState(new ResearchCanvasStorage(userData), 'board')
+    expect(restarted.ready(snapshot)).toEqual(['plan-1'])
+    restarted.consume(['plan-1'])
+    expect(createWorkbenchAutoArrangeState(new ResearchCanvasStorage(userData), 'board').ready(snapshot)).toEqual([])
+    const key = 'ework.research.presentation.v1:enterprise'
+    for (const invalid of [{ version: 1, mode: 'enterprise', scope: 'global' }, { version: 1, mode: 'enterprise', scope: 'board', extra: true }]) {
+      expect(storage.setItem(key, JSON.stringify(invalid))).toBe(false)
+    }
+    writeFileSync(researchCanvasStoragePath(userData, key), JSON.stringify({ key, value: '{"version":1,"mode":"invalid"}' }))
+    expect(new ResearchCanvasStorage(userData).getItem(key)).toBeNull()
+  })
+
   it('persists independent board styles across a desktop restart', () => {
     const userData = temporaryUserData()
     const first = new ResearchCanvasStorage(userData)

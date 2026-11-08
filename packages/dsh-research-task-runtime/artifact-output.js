@@ -138,6 +138,13 @@ export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
 // Preserve operational facts when the model spells state or note metadata
 // differently from the native schema. Keep all other fields for validation.
 export function normalizeOperationMetadata(value) {
+ // A grouped checklist is the same authored task collection. Retain group
+ // labels in visible titles and namespace IDs; never invent records or state.
+ if (value?.type === 'tasks' && value.items === undefined && Array.isArray(value.groups) && value.groups.length > 0 && value.groups.length <= 100 &&
+     value.groups.every(group => group && typeof group === 'object' && !Array.isArray(group) && Object.keys(group).every(key => ['id','title','items'].includes(key)) && typeof group.title === 'string' && group.title.trim() && Array.isArray(group.items) && group.items.length && group.items.every(item => item && typeof item === 'object' && typeof item.id === 'string' && typeof item.title === 'string'))) {
+  const {groups,...rest}=value
+  value={...rest,items:groups.flatMap((group,index)=>group.items.map(item=>({...item,id:index+':'+item.id,title:group.title+' · '+item.title})))}
+ }
  if (value?.type === 'tasks' && Array.isArray(value.items)) {
   const completion = new Map([['todo',false],['pending',false],['in_progress',false],['done',true],['completed',true]]);
   value = {...value, items:value.items.map(item => item && typeof item === 'object' &&
