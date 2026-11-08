@@ -51,7 +51,7 @@ describe('用户原型是首次规划的有限只读证据',()=>{
   const wire=await h.context()
   expect(wire.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
   expect(wire.system).toContain('第二章 · 分类与分析')
-  expect(wire.system).toContain('确有可比较、同口径')
+  expect(wire.system).toContain('量化图表须有同口径数据')
   expect(h.guard('public_data_query',{operation:'catalog'})).toBeTruthy()
   expect(h.guard('research_workbench_create',{})).toBeUndefined()
   expect(workbenchPdfScope(request+'，补充外部市场数据')).toBeUndefined()
