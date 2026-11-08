@@ -1,4 +1,5 @@
-import {componentSourceDefinitions as sourceDefinitions,componentSourceCss as sourceCss} from './component-source-info.mjs'
+import * as sourceInfo from './component-source-info.mjs'
+const {componentSourceDefinitions:sourceDefinitions,componentSourceCss:sourceCss,componentRecordedProvenance}=sourceInfo
 import * as workbenchRefresh from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 const {createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,workbenchRefreshCss}=workbenchRefresh
 export function componentDataSourceNames(binding){
@@ -29,7 +30,7 @@ export function componentSavedProvenance(node){
  }
  // Recovery HTML may have no template model. Its host-recorded sources still
  // identify the actual provenance; a missing refresh job is not missing data.
- if(!names.length)for(const row of Array.isArray(node?.generationSources)?node.generationSources:[]){
+ if(!names.length)for(const row of [...(Array.isArray(node?.generationSources)?node.generationSources:[]),...componentRecordedProvenance(node)]){
   let name=label(row)
   if(!name){try{const url=new URL(row?.url);if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password)name=url.hostname}catch{}}
   if(name)names.push(name)

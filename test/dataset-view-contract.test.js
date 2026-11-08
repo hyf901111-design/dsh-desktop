@@ -88,3 +88,11 @@ it('validates declared view subsets against original fields without changing mas
  const result=validateDatasetView({...base,where},[source]);expect(result.view.where).toEqual(where);expect(result.dataset.records).toEqual(source.records)
  for(const rule of [{field:'absent',op:'notNull'},{field:'state',op:'in',values:[]},{field:'state',op:'eval',values:['x']},{field:'state',op:'notNull',values:['x']}])expect(()=>validateDatasetView({...base,where:[rule]},[source])).toThrow('视图范围条件无效')
 })
+
+it('keeps aggregate grouping dimensions visible even when a view selects only measures',()=>{
+ const datasets=validateWorkbenchDatasets([aggregateSource(),aggregate()]);
+ const result=validateDatasetView({dataset:'totals',sections:[{kind:'records',fields:['count','done']}]},datasets);
+ expect(result.dataset.groupBy).toEqual(['owner']);expect(result.view.sections[0].fields).toEqual(['owner','count','done']);
+ expect(validateDatasetView(result.view,[result.dataset])).toEqual(result);
+ expect(result.dataset.records[0]).toMatchObject({owner:'甲',count:2,done:1});
+});

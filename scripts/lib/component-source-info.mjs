@@ -1,5 +1,11 @@
 // Source details are inert saved content. Never execute a generated document to
 // discover provenance, and never guess a file path or a network provider.
+export function componentRecordedProvenance(node){
+ const html=node?.containerSpec?.html
+ const raw=typeof html==='string'&&html.match(/<script id="sherlock-observed-provenance" type="application\/json">([^<]*)<\/script>/)?.[1]
+ if(!raw||raw.length>256000)return []
+ try{const rows=JSON.parse(raw);return Array.isArray(rows)&&rows.length<=128?rows.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)):[]}catch{return []}
+}
 export function getComponentSourceInfo(node){
  const spec=node?.containerSpec||{},records=[],notes=[],seen=new Set();let data=spec
  if(typeof spec.html==='string'){
@@ -23,6 +29,7 @@ export function getComponentSourceInfo(node){
  for(const row of Array.isArray(data.sources)?data.sources:[])add(row)
  add(data.source)
  for(const row of node?.generationSources||[])add(row)
+ for(const row of componentRecordedProvenance(node))add(row)
  // Feeds and articles retain every recorded original URL, not just a hostname.
  for(const row of [...(Array.isArray(data.feeds)?data.feeds:[]),...(Array.isArray(data.items)?data.items:[])]){
   if(row.url)add({label:row.title||row.source?.name||row.source||row.url,url:row.url})
@@ -129,7 +136,7 @@ export const componentSourceCss=`
 .ew-component-source-files .ew-delivery-card:hover{background:var(--dsw-alias-interactive-bg-hover,#f2f3f5)}.ew-component-source-files .ew-delivery-card .ew-delivery-open:hover{background:transparent}.ew-component-source-files .ew-delivery-card:hover .ew-delivery-options{background:transparent}
 .ew-component-source-files{overflow:visible;max-width:600px}.ew-component-source-files .ew-delivery{max-height:60vh;overflow:auto}.ew-component-source-files{background:var(--dsw-alias-bg-base,#242424);color:var(--dsw-alias-label-primary,#eee)}
 `
-export function componentSourceDefinitions(){return [getComponentSourceInfo,openComponentSource,ComponentSourceDetailsTab,componentSourceReferencedFiles,ComponentSourceFilesPopup,ComponentSourceHost].map(fn=>fn.toString()).join('\n')}
+export function componentSourceDefinitions(){return [componentRecordedProvenance,getComponentSourceInfo,openComponentSource,ComponentSourceDetailsTab,componentSourceReferencedFiles,ComponentSourceFilesPopup,ComponentSourceHost].map(fn=>fn.toString()).join('\n')}
 export function patchComponentSourceHost(source){
  const marker='/* EWORK_COMPONENT_SOURCE_HOST */'
  if(source.includes(marker))return source.replace('children:[react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar})','children:[!subagentPanel&&react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar})')

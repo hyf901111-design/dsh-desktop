@@ -44,7 +44,7 @@ export function validateWorkbenchDatasets(value){
  }
  const ids=new Set(),result=[]
  for(const d of value){
-  check(exact(d,['id','label','asOf','note','fields','records'],['recordScope']),`共同数据集 ${d?.id??'未命名'} 字段无效，必须提供id、label、asOf、note、fields和records；缺少：${['id','label','asOf','note','fields','records'].filter(k=>!object(d)||!Object.hasOwn(d,k)).join('、')||'无'}；多余：${object(d)?Object.keys(d).filter(k=>!['id','label','asOf','note','fields','records','recordScope'].includes(k)).join('、')||'无':'无'}。`)
+  check(exact(d,['id','label','asOf','note','fields','records'],['recordScope','groupBy']),`共同数据集 ${d?.id??'未命名'} 字段无效，必须提供id、label、asOf、note、fields和records；缺少：${['id','label','asOf','note','fields','records'].filter(k=>!object(d)||!Object.hasOwn(d,k)).join('、')||'无'}；多余：${object(d)?Object.keys(d).filter(k=>!['id','label','asOf','note','fields','records','recordScope','groupBy'].includes(k)).join('、')||'无':'无'}。`)
   check(id(d.id)&&!ids.has(d.id),'共同数据集编号无效或重复。');ids.add(d.id)
   check(d.recordScope===undefined||id(d.recordScope),'共同记录对象范围recordScope无效。')
   check(text(d.label,200)&&text(d.asOf,500)&&text(d.note,8000),'共同数据名称、时点和来源/演练说明不能为空或超过上限。')
@@ -67,7 +67,8 @@ export function validateWorkbenchDatasets(value){
    const entry={};for(const {key} of fields){check(cell(r[key]),'共同记录只支持有限数值、布尔、null、文本和文本数组。');entry[key]=Array.isArray(r[key])?[...r[key]]:r[key]}
    return entry
   })
-  const copy={id:d.id,...(d.recordScope===undefined?{}:{recordScope:d.recordScope}),label:d.label,asOf:d.asOf,note:d.note,fields,records}
+  check(d.groupBy===undefined||Array.isArray(d.groupBy)&&d.groupBy.length>=1&&d.groupBy.length<=4&&new Set(d.groupBy).size===d.groupBy.length&&d.groupBy.every(key=>key!=='id'&&keys.has(key)),'汇总分组标识必须引用实际字段。')
+  const copy={id:d.id,...(d.groupBy===undefined?{}:{groupBy:[...d.groupBy]}),...(d.recordScope===undefined?{}:{recordScope:d.recordScope}),label:d.label,asOf:d.asOf,note:d.note,fields,records}
   check(bytes(copy)<=DATASET_VIEW_LIMITS.datasetBytes,'单份共同数据超过48000字节；请按业务拆分，不能丢弃记录。');result.push(copy)
  }
  check(bytes(result)<=DATASET_VIEW_LIMITS.totalBytes,'共同数据总量超过192000字节。')
@@ -128,7 +129,7 @@ export function validateDatasetView(config,datasets){
   check(s.title===undefined||text(s.title,100),'内容区标题无效。')
   if(s.kind==='records'||s.kind==='compare'){
    check(exact(s,['kind','fields'],['title'])&&refs(s.fields,1),'记录/对比字段无效、重复或为空。')
-   return {kind:s.kind,...(s.title===undefined?{}:{title:s.title}),fields:[...s.fields]}
+   return {kind:s.kind,...(s.title===undefined?{}:{title:s.title}),fields:[...new Set([...(dataset.groupBy??[]),...s.fields])]}
   }
   check(exact(s,['kind','label','start','end'],['title','owner','resource'])&&[s.label,s.start,s.end].every(ref)&&(s.owner===undefined||ref(s.owner))&&(s.resource===undefined||ref(s.resource)),'排程字段引用无效。')
   for(const r of dataset.records){

@@ -28,5 +28,5 @@ export function materializeDatasetAggregate(dataset,source){
    out[m.key]=(out[m.key]??0)+value
   }
  }
- return {id:dataset.id,label:dataset.label,asOf:source.asOf,note:dataset.note,fields:[{key:'id',label:'记录编号'},...groups,...a.measures.map(({key,label,unit})=>({key,label,...(unit===undefined?{}:{unit})}))],records:[...grouped.values()]}
+ return {id:dataset.id,groupBy:[...a.groupBy],label:dataset.label,asOf:source.asOf,note:dataset.note,fields:[{key:'id',label:'记录编号'},...groups,...a.measures.map(({key,label,unit})=>({key,label,...(unit===undefined?{}:{unit})}))],records:[...grouped.values()]}
 }
