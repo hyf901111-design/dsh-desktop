@@ -73,6 +73,39 @@
           "兼容规则仅限带明确节点标题的树形结构。"
         ],
         "generatedAt": "2026-11-08T06:53:27.683764+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5ae5e396d32ad1b8c8e03bad25ce54a3aae65391",
+        "verificationCommit": "5ae5e396d32ad1b8c8e03bad25ce54a3aae65391",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "test/bundled-component-skill.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-structure-theme-browser.test.js test/workbench-style.test.js test/bundled-component-skill.test.js",
+            "verifiedCommit": "5ae5e396d32ad1b8c8e03bad25ce54a3aae65391",
+            "completedAt": "2026-11-08T06:53:32.562Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "5ae5e396d32ad1b8c8e03bad25ce54a3aae65391",
+            "completedAt": "2026-11-08T06:53:32.562Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T06:53:32.562Z"
       }
     }
   ],
