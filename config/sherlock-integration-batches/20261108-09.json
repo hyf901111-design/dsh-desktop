@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-09",
+  "branch": "codex/integration/20261108-09",
+  "baseMainCommit": "bd94b9075bd362e26b884b5b317fcc535b824b78",
+  "expectedMainCommit": "bd94b9075bd362e26b884b5b317fcc535b824b78",
+  "createdAt": "2026-11-08T02:09:04.607Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件超出容量自动交付完整来源列表",
+        "branch": "codex/feat/workbench-capacity-fallback-20261108",
+        "baseCommit": "bd94b9075bd362e26b884b5b317fcc535b824b78",
+        "tipCommit": "cf50a70bffa16f946859eaa83c48aaac3cf66a18",
+        "commits": [
+          {
+            "commit": "cf50a70bffa16f946859eaa83c48aaac3cf66a18",
+            "parents": [
+              "bd94b9075bd362e26b884b5b317fcc535b824b78"
+            ],
+            "subject": "优化：组件超出模板容量时自动交付完整来源列表"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/timeline-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-readable-snapshot.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-readable-snapshot.test.js",
+              "test/timeline-template.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/component-article-timeline.test.js",
+              "test/workbench-article-timeline-runtime.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  8 passed (8)\n      Tests  306 passed (306)\n   Start at  10:08:25\n   Duration  6.53s (transform 3.63s, setup 0ms, import 8.79s, tests 10.86s, environment 0ms)",
+            "verifiedCommit": "cf50a70bffa16f946859eaa83c48aaac3cf66a18",
+            "completedAt": "2026-11-08T02:08:32.396834+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "cf50a70bffa16f946859eaa83c48aaac3cf66a18",
+            "completedAt": "2026-11-08T02:08:41.667119+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "cf50a70bffa16f946859eaa83c48aaac3cf66a18",
+            "completedAt": "2026-11-08T02:08:41.684198+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "旧版原生界面复现动态卡失败，新运行时回放三份失败提交均直接交付20条；运行时和提交工具测试验证单次完成及原链接可点击。新包原生复测在本地集成构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "仅由宿主识别真实记录的容量限制，切换为可分页阅读视图",
+          "逐条保留同记录的标题、日期和原链接，可展开长说明",
+          "无第二次模型调用和人工重试，错误身份、未观察来源及不安全链接仍拒绝"
+        ],
+        "risks": [
+          "网页证据套件三条旧断言在基线与本分支一致，分别记录",
+          "外部数据源和模型仍可能出现独立错误"
+        ],
+        "generatedAt": "2026-11-08T02:08:41.684231+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-readable-snapshot.test.js",
+        "test/timeline-template.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/component-article-timeline.test.js",
+        "test/workbench-article-timeline-runtime.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
