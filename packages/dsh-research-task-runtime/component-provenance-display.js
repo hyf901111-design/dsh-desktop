@@ -7,7 +7,7 @@ export function chartSourcesIssue(sources) {
   if(s.url===undefined)return true
   try{const u=new URL(s.url);return typeof s.url==='string'&&s.url.length<=2048&&!/[\u0000-\u0020\u007f]/.test(s.url)&&['http:','https:'].includes(u.protocol)&&!u.username&&!u.password}catch{return false}
  }
- return Array.isArray(sources)&&sources.length<=12&&sources.every(valid)?null:'图表来源使用 sources:[{label,url?}]，链接必须为安全http/https'
+ return Array.isArray(sources)&&sources.length<=128&&sources.every(valid)?null:'图表来源使用 sources:[{label,url?}]，链接必须为安全http/https'
 }
 export function sourcePeriod(response) {
  const date=value=>{

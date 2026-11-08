@@ -1,3 +1,4 @@
+import {workbenchRequestedStyle} from './workbench-request-style.js';
 import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLinks} from './workbench-library.js';
 import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js';
 import {workbenchExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js';
@@ -316,7 +317,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     chain = pending.catch(() => { });
                     await pending;
                 }
-                send(200, { plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, ...(p.tabs?{tabs:p.tabs}:{}), panels: p.panels.map(({ artifact, ...panel }) => ({
+                send(200, { plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, ...(workbenchRequestedStyle(p.originalRequest)?{requestedStyle:workbenchRequestedStyle(p.originalRequest)}:{}), ...(p.tabs?{tabs:p.tabs}:{}), panels: p.panels.map(({ artifact, ...panel }) => ({
                     ...panel,
                     ...(!p.ready && !panel.taskId && !panel.error ? { pending: true } : {}),
                     // A completed prepared plan can also be mounted after the

@@ -4,9 +4,17 @@ import { parseResearchContainerSpec } from './artifact-validator.js'
 import { researchHtmlText } from './html-artifact.js'
 import { acceptArtifactOutput, extractArtifactObjects, retainedTableData } from './artifact-output.js'
 import { componentReadableDocumentTable } from './component-readable-snapshot.js'
+import {templateDataIssue} from './template-data-contract.js'
 import { normalizeKeyedTableProjection } from './table-projection.js'
 
 export const DOCUMENT_TABLE_GUIDANCE = '【文档明细表】直接提交 {version:1,type:"table",title,columns,rows,asOf,note,sources}。每条真实记录必须写在 rows 内，按相同列序保留日期、归属、缺失状态与原文定位；不要把行或搜索功能写进 HTML、脚本或隐藏详情。宿主负责搜索、常规表格交互与主题；超出原生容量时由宿主分页显示全部行。不要为避免超限删减数据。'
+
+export function documentTableOutputIssue(text) {
+ const candidates=extractArtifactObjects(text)
+ if(candidates.length!==1)return
+ const data=normalizeKeyedTableProjection(retainedTableData(candidates[0])??candidates[0]).data
+ if(data.type==='table'&&Array.isArray(data.rows)&&data.rows.length)return templateDataIssue(data)
+}
 
 export function documentTableOutput(text) {
   const candidates = extractArtifactObjects(text)
@@ -28,6 +36,7 @@ export function workbenchDocumentScope(request, targets = authoredPrototypeEvide
   // A report combined with an explicitly requested outside source keeps its
   // existing mixed-source route. A planner's suggestions cannot expand scope.
   if (/(?:联网|上网|搜索|检索|查找|补充|结合|对照|查询|对比|核验)[^。；;\n]{0,18}(?:外部|网络|网页|公开|最新|实时|行情|接口|数据源|市场数据)|(?:使用|调用|通过|接入)[^。；;\n]{0,20}(?:插件|API|MCP|DataYes|Tushare|公开来源|行情接口)|\b(?:web search|external data|live quotes)\b/iu.test(intent)) return
+  if (/(?:从|通过|使用|访问)[^。；;\n]{0,16}(?:官网|官方网站|网站)[^。；;\n]{0,16}(?:补充|核验|查询|查找|检索|获取|读取)|(?:补充|核验|查询|检索|获取)[^。；;\n]{0,18}(?:官网|官方网站)/u.test(intent)) return
   if (/(?:不要|禁止|不必|无需|不用)(?:再|去)?\s*(?:参考|阅读|读取|使用|分析)(?:这个|这份|该|此|所附|本地|用户提供的|上传的)?\s*(?:PDF|DOCX|Word|报告|文件|附件|文档)/iu.test(intent)) return
   return targets.files
 }

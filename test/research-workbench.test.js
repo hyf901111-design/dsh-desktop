@@ -728,3 +728,17 @@ it('keeps a complete event strip above the floating canvas toolbar', () => {
   expect(compact.scale).toBeGreaterThan(.70);
   expect((nodes[5].y+nodes[5].height/2)*compact.scale+compact.y).toBeLessThanOrEqual(642);
 });
+
+
+it('桥接计划只携带用户明确选择的主题，不遗漏也不泄漏原始文件路径',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'sherlock-workbench-theme-'));let tool,handler
+ const ctx={agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:r=>{handler=r.handler;return()=>{}}}}
+ const dispose=await registerWorkbench(ctx,{start:async request=>({taskId:request.canvasNodeId})},{filePath:join(dir,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({parentSessionId:'parent'})})
+ try{
+ const session={id:'parent',events:[{type:'user/message',data:{id:'human-style',source:{kind:'user'},content:[{type:'text',text:'做一个部门结构工作台，用易方达模式。'}]}}]}
+ await tool.execute({title:'主题测试',panels:[toolPanel(0),toolPanel(1)],requestedStyle:'dark'},{agent:{session}})
+ let result;await handler({method:'POST'},{writeHead:()=>{},end:body=>result=JSON.parse(body)})
+ expect(result.plans[0].requestedStyle).toBe('enterprise')
+ expect(result.plans[0]).not.toHaveProperty('originalRequest')
+ }finally{await dispose();await rm(dir,{recursive:true,force:true})}
+},10000)
