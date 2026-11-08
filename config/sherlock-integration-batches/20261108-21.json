@@ -90,6 +90,40 @@
           "兼容覆盖旧生成器的结构模式，未来生成卡片使用语义标注。"
         ],
         "generatedAt": "2026-11-08T06:36:55.577223+00:00"
+      },
+      "merged": {
+        "mergeCommit": "0ee84c2f3ba29849c73f0586b97692ecef9f5178",
+        "verificationCommit": "0ee84c2f3ba29849c73f0586b97692ecef9f5178",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/timeline-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "test/bundled-component-skill.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-structure-theme-browser.test.js test/timeline-theme-browser.test.js test/workbench-style.test.js test/bundled-component-skill.test.js",
+            "verifiedCommit": "0ee84c2f3ba29849c73f0586b97692ecef9f5178",
+            "completedAt": "2026-11-08T06:37:00.223Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "0ee84c2f3ba29849c73f0586b97692ecef9f5178",
+            "completedAt": "2026-11-08T06:37:00.223Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T06:37:00.223Z"
       }
     }
   ],
