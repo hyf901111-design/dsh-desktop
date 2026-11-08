@@ -204,9 +204,9 @@ body [data-ework-toolbar]>.ew-arrange-tool:has([aria-expanded=true])>button::aft
 .ew-arrange-menu .ew-arrange-layout-icon{width:16px;height:16px}
 /* Reuse the shell menu materials and selection treatment. */
 body .ew-arrange-menu{display:flex;flex-direction:column;gap:2px;width:max-content;min-width:154px;padding:6px;border-radius:12px;font:13px/18px var(--odyssey-font-ui,system-ui)}
-body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-menu>button[role=menuitemradio]:is([data-arrange-mode],[data-workbench-style-option]){gap:8px;min-height:34px;padding:8px;border-radius:6px;white-space:nowrap;background:transparent!important;color:inherit!important}
-body :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-menu>button[role=menuitemradio]:is(:hover,:focus-visible,[aria-checked=true]){background:var(--odyssey-menu-row,rgba(0,0,0,.055))!important;color:inherit!important;outline:0}
-body[data-ds-dark-theme] :is([data-workbench-arrange-menu],[data-workbench-theme-menu]).ew-arrange-menu>button[role=menuitemradio]:is(:hover,:focus-visible,[aria-checked=true]){background:var(--odyssey-menu-row,rgba(255,255,255,.075))!important}
+body .ew-arrange-menu>button:is([data-arrange-mode],[data-workbench-style-option],[data-financial-place]){gap:8px;min-height:34px;padding:8px;border-radius:6px;white-space:nowrap;background:transparent!important;color:inherit!important}
+body .ew-arrange-menu>button:is([data-arrange-mode],[data-workbench-style-option],[data-financial-place]):is(:hover,:focus-visible,[aria-checked=true]){background:var(--odyssey-menu-row,rgba(0,0,0,.055))!important;color:inherit!important;outline:0}
+body[data-ds-dark-theme] .ew-arrange-menu>button:is([data-arrange-mode],[data-workbench-style-option],[data-financial-place]):is(:hover,:focus-visible,[aria-checked=true]){background:var(--odyssey-menu-row,rgba(255,255,255,.075))!important}
 body .ew-arrange-menu .ew-arrange-label{flex:1;min-width:0}
 body .ew-arrange-menu .ew-arrange-check{display:block;flex:0 0 16px;width:16px;height:16px;margin-left:12px;opacity:0}
 body .ew-arrange-menu [aria-checked=true] .ew-arrange-check{opacity:1}

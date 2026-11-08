@@ -243,6 +243,24 @@ it('组件库使用真实DOMRect定位，菜单不会出现NaN坐标',async()=>{
  const f=await fixture(),trigger=f.document.querySelector('[data-financial-library]'),rect={left:450,top:640,bottom:676,width:36,height:36};trigger.getBoundingClientRect=()=>Object.create(rect)
  await f.event('click',trigger);const menu=f.document.querySelector('.ew-financial-library');expect(Number.isFinite(parseFloat(menu.style.top))).toBe(true);expect(Number.isFinite(parseFloat(menu.style.left))).toBe(true)
 })
+it('组件库沿用工具栏菜单，按实测内容高度展开，空间不足才滚动',async()=>{
+ const f=await fixture(),trigger=f.document.querySelector('[data-financial-library]')
+ trigger.getBoundingClientRect=()=>({left:450,top:640,bottom:676,width:36,height:36})
+ let top=60
+ f.canvas.getBoundingClientRect=()=>({left:100,right:800,top,bottom:700,width:700,height:700-top})
+ await f.event('click',trigger)
+ const menu=f.document.querySelector('.ew-financial-library')
+ expect(menu.classList.contains('ew-arrange-menu')).toBe(true)
+ expect(menu.hasAttribute('data-financial-theme')).toBe(false)
+ Object.defineProperties(menu,{scrollHeight:{value:384},clientHeight:{value:280},offsetHeight:{value:282}})
+ await f.event('resize',f.win)
+ expect(menu.style.getPropertyValue('--fw-popover-max-height')).toBe('386px')
+ expect(parseFloat(menu.style.top)).toBe(246)
+ top=380
+ await f.event('resize',f.win)
+ expect(menu.style.getPropertyValue('--fw-popover-max-height')).toBe('244px')
+ expect(parseFloat(menu.style.top)).toBe(388)
+})
 it('固定组件排数和侧栏收窄遵守通用尺寸，仍可缩小并恢复阅读尺寸',async()=>{
  const f=await fixture(),w=f.workspace;await f.act(async()=>{const n=w.createFinancialWidget('watchlist');w.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s,other,{code:'000002',name:'万科A',market:'SZ'}]}}]);w.createFinancialWidget('quote');w.createFinancialWidget('indices');w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000);w.organizeCanvas()});const before=w.getWorkbenchCells()
  await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'));await f.event('click',f.document.querySelector('[data-arrange-mode=three][role=menuitemradio]'));expect(w.getWorkbenchCells()).not.toEqual(before);expect(w.getWorkbenchCells().every(c=>c.arrangeColumns===3)).toBe(true)
@@ -267,7 +285,7 @@ it('悬浮工具栏按完整画布定位，近底部组件有可滚动的工具�
 it('自选股错误不显示服务商或计费原因，保留缺失值和重试',async()=>{
  const bridge=service();bridge.request.mockResolvedValue({quotes:[],errors:[{code:s.code,error:'通联数据额度已用完，请联系管理员补充额度'}],source:'通联 DataYes'});const f=await fixture({financialWidget:bridge});await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('.ew-financial-footer').textContent).toContain('1 个标的未取得行情'));expect(f.host.textContent).not.toMatch(/通联|额度|管理员/);expect(f.host.querySelector('.ew-financial-footer [role=status]').title).not.toMatch(/通联|额度|管理员/);expect(f.host.querySelector('.ew-watch-price').textContent).toBe('—');expect(f.host.querySelector('.ew-financial-footer button[aria-label="重试获取数据"]').textContent).toBe('重试');
 })
-it('易方达模式复用品牌表头和控件，切换不丢失数据及搜索状态，浮层同步主题',async()=>{
+it('易方达模式保留表头、数据和搜索状态，组件库沿用全局菜单主题',async()=>{
  const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00'));
  const grid=f.host.querySelector('[data-ework-grid]');
  await f.act(async()=>{f.workspace.setWorkbenchStyle('enterprise')});
@@ -275,7 +293,7 @@ it('易方达模式复用品牌表头和控件，切换不丢失数据及搜索�
  await f.event('click',f.host.querySelector('[aria-label="添加自选股"]'));const input=f.host.querySelector('input[role=combobox]');await f.input(input,'茅台');await f.act(async()=>{await new Promise(r=>setTimeout(r,250))});expect(f.document.querySelector('.ew-financial-suggestions [role=option]')).not.toBeNull();
  expect(f.document.querySelector('.ew-financial-suggestions').dataset.financialTheme).toBe('enterprise');
  await f.act(async()=>{f.workspace.setWorkbenchStyle('dark');await new Promise(r=>setTimeout(r,20))});expect(f.document.querySelector('.ew-financial-suggestions').dataset.financialTheme).toBe('dark');expect(input.value).toBe('茅台');expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00');
- await f.event('keydown',input,{key:'Escape'});await f.event('click',f.document.querySelector('[data-financial-library]'));await f.act(async()=>{f.workspace.setWorkbenchStyle('enterprise');await new Promise(r=>setTimeout(r,20))});expect(f.document.querySelector('.ew-financial-library').dataset.financialTheme).toBe('enterprise');
+ await f.event('keydown',input,{key:'Escape'});await f.event('click',f.document.querySelector('[data-financial-library]'));await f.act(async()=>{f.workspace.setWorkbenchStyle('enterprise');await new Promise(r=>setTimeout(r,20))});expect(f.document.querySelector('.ew-financial-library').hasAttribute('data-financial-theme')).toBe(false);
 })
 
 it('个股始终使用同一个搜索输入框，取消恢复当前标的，选择结果后保持输入框',async()=>{
