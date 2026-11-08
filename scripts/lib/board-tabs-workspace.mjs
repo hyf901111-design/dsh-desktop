@@ -1,6 +1,6 @@
 export function createBoardTabsWorkspace(adapter) {
  const read=adapter.read,grid=adapter.grid,retained=new Map()
- let duplicateNotice=null,duplicateToken=0
+ let duplicateNotice=null,duplicateToken=0,widthPreview=null,previewSource=null,previewSnapshot=null
  return {
   captureBoardTabTarget(){grid.sync(read());return {navId:boardTabsNode(read())?.id??null,tabId:grid.active()}},
   withBoardTabTarget(target,run){const nav=boardTabsNode(read());if(target?.navId&&(!nav||nav.id!==target.navId||!nav.containerSpec.tabs.some(t=>t.id===target.tabId)))throw Error('目标页签已删除，请重新放置生成结果。');return grid.withTarget(target,run)},
@@ -13,6 +13,24 @@ export function createBoardTabsWorkspace(adapter) {
   getBoardTabsDuplicateNotice:()=>duplicateNotice,
   dismissBoardTabsDuplicateNotice(token){if(duplicateNotice?.token===token)duplicateNotice=null},
   getVisibleBoardSnapshot(){const snapshot=read();grid.sync(snapshot);return boardTabsVisible(snapshot,grid.active())},
+  getBoardTabsRenderSnapshot(){
+   const snapshot=read()
+   if(!widthPreview||boardTabsNode(snapshot)?.id!==widthPreview.id)return snapshot
+   if(previewSource!==snapshot){previewSnapshot=grid.previewWidth(snapshot,widthPreview.width);previewSource=snapshot}
+   return previewSnapshot
+  },
+  previewBoardTabsWidth(id,width){
+   const nav=boardTabsNode(read())
+   if(!adapter.canWrite()||nav?.id!==id||nav.containerSpec.orientation!=='vertical'||widthPreview?.id===id&&widthPreview.width===width)return
+   widthPreview={id,width};previewSource=null;adapter.notify()
+  },
+  finishBoardTabsWidth(id,width){
+   const hadPreview=widthPreview?.id===id
+   if(hadPreview){widthPreview=null;previewSource=null;previewSnapshot=null}
+   const nav=boardTabsNode(read())
+   const saved=width!==undefined&&nav?.id===id&&nav.containerSpec.orientation==='vertical'&&this.setBoardTabsPresentation('vertical',width)
+   if(hadPreview&&!saved)adapter.notify()
+  },
   isBoardNodeVisible(id){const s=this.getVisibleBoardSnapshot();return [...s.files,...s.artifacts].some(n=>n.id===id)},
   selectBoardTab(id){const snapshot=read(),viewport=grid.switch(id,snapshot);if(!viewport)return false;adapter.publish({viewport,selection:{selectedNodeIds:[],orderedFileIds:[]}});return true},
   createBoardTabs(){

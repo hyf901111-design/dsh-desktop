@@ -18,8 +18,8 @@ export function createWorkbenchGridState(storage,sessionId) {
   try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&(!n.workbenchId||n.preserveGenerationSize)&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
-  function visibleCells(){
-    const m=grid.metrics(width||1000),limits=c=>{
+  function visibleCells(projectWidth=width||1000){
+    const m=grid.metrics(projectWidth),limits=c=>{
       const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id)),value=contentHeights.get(c.id)
       // Explicit columns keep their saved spans consistently for all components.
       if([1,2,3].includes(c.arrangeColumns))min.w=Math.min(min.w,c.w)
@@ -155,7 +155,8 @@ export function createWorkbenchGridState(storage,sessionId) {
       cells=grid.place([...cells,cell],cell);forced=true;return true
     },
     releasePlanning(id){if(!planning.delete(id))return false;cells=grid.compact(cells.filter(c=>c.id!==id));previous.delete(id);researchGridNodeIds.delete(id);forced=true;return true},
-    planningNodes:()=>grid.project([...planning.values()],visibleCells(),width||1000),
+    planningNodes:(projectWidth=width||1000)=>grid.project([...planning.values()],visibleCells(projectWidth),projectWidth),
+    projectPreview:(nodes,projectWidth)=>grid.project(nodes,visibleCells(projectWidth),projectWidth),
     document(snapshot,canonicalWidth=1000){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,canonicalWidth),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();contentOverrides.clear();forced=true;return true},
     contentHeight(id,value){

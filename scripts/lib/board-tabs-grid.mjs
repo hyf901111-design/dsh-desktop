@@ -40,6 +40,17 @@ export function createBoardTabsGridState(storage,sessionId) {
  }
  return {
   reconcile,
+  previewWidth(snapshot,railWidth){
+   sync(snapshot)
+   if(!nav)return snapshot
+   const size=width||snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000
+   const area=boardTabsLayout({...nav.containerSpec,verticalWidth:railWidth},size)
+   if(!area.vertical)return snapshot
+   const active=boardTabsVisible(snapshot,activeId),state=current()
+   const projected=new Map(state.projectPreview([...active.files,...active.artifacts],area.width).map(node=>[node.id,shift(node,area)]))
+   return {...snapshot,boardTabsPreviewWidth:area.railWidth,boardTabsPlanningNodes:state.planningNodes(area.width).map(node=>shift(node,area)),
+    files:snapshot.files.map(node=>projected.get(node.id)??node),artifacts:snapshot.artifacts.map(node=>projected.get(node.id)??node)}
+  },
   active:()=>activeId,
   sync,
   offset:()=>layout().top,
