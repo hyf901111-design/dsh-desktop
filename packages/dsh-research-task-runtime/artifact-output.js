@@ -155,12 +155,39 @@ export function normalizeOperationMetadata(value) {
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
  value=normalizeOperationMetadata(value);
+ // HTML's envelope is deliberately small. Preserve common source metadata in
+ // inert, host-readable markup instead of rejecting an otherwise complete
+ // visualization and asking the model to rewrite all of its code.
+ if(value?.type==='html'&&typeof value.html==='string'&&
+  Object.keys(value).every(key=>['version','type','title','html','asOf','note','sources'].includes(key))&&
+  [value.asOf,value.note].every(text=>text===undefined||typeof text==='string'&&text.trim()&&text.length<=8000)&&
+  (value.sources===undefined||Array.isArray(value.sources)&&value.sources.length<=100&&value.sources.every(row=>row&&typeof row==='object'&&Object.keys(row).every(key=>['label','name','title','url','text'].includes(key))&&Object.values(row).every(text=>typeof text==='string'&&text.length<=8000)))&&
+  ['asOf','note','sources'].some(key=>value[key]!==undefined)){
+  const esc=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const rows=[value.asOf,value.note].filter(Boolean).map(text=>'<p>'+esc(text)+'</p>');
+  for(const row of value.sources??[]){
+   const label=row.label||row.name||row.title||row.url||'来源';let link=false;
+   try{const u=new URL(row.url);link=['http:','https:'].includes(u.protocol)&&!u.username&&!u.password}catch{}
+   rows.push('<p>'+(link?'<a href="'+esc(row.url)+'">'+esc(label)+'</a>':esc([label,row.url].filter(Boolean).join('\n')))+(row.text?'\n'+esc(row.text):'')+'</p>');
+  }
+  const metadata='<aside hidden data-component-source-info>'+rows.join('')+'</aside>';
+  const html=/<\/body\s*>/iu.test(value.html)?value.html.replace(/<\/body\s*>/iu,metadata+'$&'):value.html+metadata;
+  value={version:value.version,type:value.type,title:value.title,html};
+ }
  // Markdown with an explicit frozen source is the existing sourced-summary
  // contract. Keep its complete content and metadata instead of spending a
  // repair turn asking the model to remove provenance or retype business data.
  if(value?.type==='markdown'&&value.source){
   const sourced={...value,type:'summary'};
   if(parseResearchContainerSpec(sourced))value=sourced;
+ }
+ if(value?.type==='summary'&&typeof value.content==='string'&&value.source&&typeof value.source.text==='string'){
+  const moved=[];
+  const content=value.content.replace(/^#{1,6}\s+(?:(?:[一二三四五六七八九十百]+|[0-9]+)[、.．]\s*)?(?:主要资料来源|资料来源|参考来源|数据来源|口径与来源)\s*\n[\s\S]*?(?=^#{1,6}\s|$(?![\s\S]))/gmu,section=>{moved.push(section);return ''}).trim();
+  if(moved.length&&content){
+   const sourced={...value,content,source:{...value.source,text:[value.source.text,...moved].join('\n\n')}};
+   if(parseResearchContainerSpec(sourced))value=sourced;
+  }
  }
 
  // Panel geometry belongs to the workbench, even if an otherwise complete

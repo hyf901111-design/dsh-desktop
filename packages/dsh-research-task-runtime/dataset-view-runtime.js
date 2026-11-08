@@ -25,17 +25,23 @@ export function datasetViewRuntime(valueText){
  const spec=JSON.parse(source.textContent),data=spec.dataset,view=spec.view,records=new Map(data.records.map(r=>[r.id,r])),ids=[...records.keys()],fields=new Map(data.fields.map(f=>[f.key,f]))
  const token=value=>JSON.stringify(value)
  const filterOptions=new Map(view.filters.map(key=>[key,[...new Map(data.records.map(r=>[token(r[key]),valueText(r[key],fields.get(key))])).entries()]]))
+ const searchText=new Map(data.records.map(r=>[r.id,data.fields.map(f=>valueText(r[f.key],f)).join(' ').toLocaleLowerCase()]))
  function normalize(raw){
   const order=[...new Set((Array.isArray(raw?.order)?raw.order:[]).filter(id=>records.has(id)))];for(const id of ids)if(!order.includes(id))order.push(id)
   const filters={};for(const key of view.filters){const value=raw?.filters?.[key];filters[key]=filterOptions.get(key).some(([v])=>v===value)?value:''}
-  const visible=order.filter(id=>view.filters.every(key=>!filters[key]||token(records.get(id)[key])===filters[key]))
+  const query=typeof raw?.query==='string'?raw.query.slice(0,256):'',pageSize=[10,20,50,100].includes(raw?.pageSize)?raw.pageSize:20
+  const visible=order.filter(id=>searchText.get(id).includes(query.toLocaleLowerCase())&&view.filters.every(key=>!filters[key]||token(records.get(id)[key])===filters[key]))
+  const pages=Object.fromEntries(view.sections.map((_,i)=>[i,Math.max(0,Math.min(Number.isInteger(raw?.pages?.[i])?raw.pages[i]:0,Math.ceil(visible.length/pageSize)-1))]))
   const pair=[];for(const id of [...(Array.isArray(raw?.pair)?raw.pair:[]),...visible])if(visible.includes(id)&&!pair.includes(id)&&pair.length<2)pair.push(id)
-  return {order,filters,pair,selected:visible.includes(raw?.selected)?raw.selected:null,tab:Number.isInteger(raw?.tab)&&raw.tab>=0&&raw.tab<view.sections.length?raw.tab:0}
+  return {order,filters,pair,query,pageSize,pages,selected:visible.includes(raw?.selected)?raw.selected:null,tab:Number.isInteger(raw?.tab)&&raw.tab>=0&&raw.tab<view.sections.length?raw.tab:0}
  }
- const visibleIds=s=>s.order.filter(id=>view.filters.every(key=>!s.filters[key]||token(records.get(id)[key])===s.filters[key]))
+ const visibleIds=s=>s.order.filter(id=>searchText.get(id).includes(s.query.toLocaleLowerCase())&&view.filters.every(key=>!s.filters[key]||token(records.get(id)[key])===s.filters[key]))
  function reduce(raw,a){
   const s=normalize(raw)
-  if(a?.type==='filter'&&view.filters.includes(a.key)){s.filters[a.key]=a.value;return normalize(s)}
+  if(a?.type==='filter'&&view.filters.includes(a.key)){s.filters[a.key]=a.value;s.pages={};return normalize(s)}
+  if(a?.type==='search'){s.query=String(a.query??'');s.pages={};return normalize(s)}
+  if(a?.type==='pageSize'&&[10,20,50,100].includes(a.value)){s.pageSize=a.value;s.pages={};return normalize(s)}
+  if(a?.type==='page'&&Number.isInteger(a.index)&&view.sections[a.index]?.kind==='records'&&(Number.isInteger(a.value)||[-1,1].includes(a.delta)))s.pages[a.index]=Number.isInteger(a.value)?a.value:s.pages[a.index]+a.delta
   if(a?.type==='select'&&visibleIds(s).includes(a.id))s.selected=s.selected===a.id?null:a.id
   if(a?.type==='tab'&&Number.isInteger(a.index)&&view.sections[a.index])s.tab=a.index
   if(a?.type==='compare'&&[0,1].includes(a.side)&&visibleIds(s).includes(a.id)){
@@ -53,18 +59,27 @@ export function datasetViewRuntime(valueText){
  function render(raw,ctx){
   const s=normalize(raw),visible=visibleIds(s),selected=records.get(s.selected),disabled=ctx.readOnly||!ctx.connected
   root.querySelector('[data-view-count]').textContent=`显示 ${visible.length} / ${ids.length} 条记录`
+  const search=root.querySelector('[data-view-search]');search.value=s.query;search.disabled=disabled
   for(const input of root.querySelectorAll('[data-view-filter]')){input.value=s.filters[input.dataset.viewFilter];input.disabled=disabled}
   root.querySelectorAll('[data-view-tab]').forEach(button=>{const active=Number(button.dataset.viewTab)===s.tab;button.setAttribute('aria-selected',String(active));button.disabled=disabled})
   view.sections.forEach((section,i)=>{
    const el=sectionNodes[i];el.hidden=view.navigation==='tabs'&&s.tab!==i
    if(section.kind==='records'||section.kind==='schedule'){
     const target=el.querySelector(section.kind==='records'?'tbody':'.dv-schedule-rows'),map=rowMaps[i]
-    for(const id of s.order){const row=map.get(id);row.hidden=!visible.includes(id);row.setAttribute('aria-selected',String(id===s.selected));target.appendChild(row)
+    const pager=el.querySelector('.dv-pagination'),start=s.pages[i]*s.pageSize,shown=pager?visible.slice(start,start+s.pageSize):visible
+    for(const id of s.order){const row=map.get(id);row.hidden=!shown.includes(id);row.setAttribute('aria-selected',String(id===s.selected));target.appendChild(row)
      const seq=row.querySelector('[data-view-rank]');if(seq)seq.textContent=String(s.order.indexOf(id)+1)
      row.querySelectorAll('[data-view-move]').forEach(button=>{const index=visible.indexOf(id);button.disabled=disabled||index<0||(button.dataset.viewMove==='up'?index===0:index===visible.length-1)})
      row.querySelectorAll('[data-view-select]').forEach(button=>{button.disabled=disabled;button.setAttribute('aria-pressed',String(id===s.selected))})
     }
     el.querySelector('[data-view-empty]').hidden=visible.length!==0
+    if(pager){
+     const total=Math.max(1,Math.ceil(visible.length/s.pageSize)),index=pager.querySelector('[data-view-page-index]'),size=pager.querySelector('[data-view-page-size]')
+     pager.querySelector('[data-view-range]').textContent=(visible.length?start+1:0)+'–'+Math.min(start+s.pageSize,visible.length)+' / '+visible.length+' 条'
+     size.value=String(s.pageSize);size.disabled=disabled
+     index.replaceChildren(...Array.from({length:total},(_,page)=>{const option=make('option',(page+1)+' / '+total);option.value=String(page);return option}));index.value=String(s.pages[i]);index.disabled=disabled
+     for(const button of pager.querySelectorAll('[data-view-page]'))button.disabled=disabled||(Number(button.dataset.pageDelta)<0?s.pages[i]===0:s.pages[i]>=total-1)
+    }
    }else{
     const selects=el.querySelectorAll('[data-view-compare]')
     selects.forEach((select,side)=>{select.replaceChildren(...visible.map(id=>{const option=make('option',valueText(records.get(id).id));option.value=id;return option}));select.value=s.pair[side]??'';select.disabled=disabled||visible.length<2})
@@ -82,14 +97,19 @@ export function datasetViewRuntime(valueText){
   detail.replaceChildren(make('h3',selected?`记录 ${selected.id}`:'点选记录查看详情'))
   if(selected){const dl=make('dl');for(const key of view.details){dl.appendChild(make('dt',fields.get(key).label));dl.appendChild(make('dd',valueText(selected[key],fields.get(key))))}detail.appendChild(dl)}
   else detail.appendChild(make('p','选择记录后显示完整字段和备注。','dv-muted'))
+  window.dispatchEvent(new Event('sherlock-presentation-change'))
  }
  const shared=window.sherlockShared.register({initialState:normalize({}),reduce,render})
  root.addEventListener('change',e=>{
   const el=e.target
   if(el.matches('[data-view-filter]'))shared.dispatch({type:'filter',key:el.dataset.viewFilter,value:el.value})
   if(el.matches('[data-view-compare]'))shared.dispatch({type:'compare',side:Number(el.dataset.viewCompare),id:el.value})
+  if(el.matches('[data-view-page-size]'))shared.dispatch({type:'pageSize',value:Number(el.value)})
+  if(el.matches('[data-view-page-index]'))shared.dispatch({type:'page',index:Number(el.dataset.viewPageIndex),value:Number(el.value)})
  })
+ root.addEventListener('input',e=>{if(e.target.matches('[data-view-search]'))shared.dispatch({type:'search',query:e.target.value})})
  root.addEventListener('click',e=>{
+  const page=e.target.closest('[data-view-page]');if(page){const index=Number(page.dataset.viewPage);shared.dispatch({type:'page',index,delta:Number(page.dataset.pageDelta)});return}
   const move=e.target.closest('[data-view-move]');if(move){shared.dispatch({type:'move',id:move.dataset.id,dir:move.dataset.viewMove});return}
   const tab=e.target.closest('[data-view-tab]');if(tab){shared.dispatch({type:'tab',index:Number(tab.dataset.viewTab)});return}
   const row=e.target.closest('[data-record-id]');if(row)shared.dispatch({type:'select',id:row.dataset.recordId})

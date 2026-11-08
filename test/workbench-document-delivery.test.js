@@ -2,6 +2,12 @@ import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
 import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 
+it('核对 Word 表格中的裸编号、组合与范围，不因格式误拦也不接受未知出处',()=>{
+ const docs=[{blocks:['T8','P36','P37','P38'].map(id=>({id}))}]
+ for(const text of ['"T8"','"T8、P36"','"P36–P38"','[T8]、【P36】'])expect(workbenchDocumentCitationIssue(text,docs)).toBeUndefined()
+ for(const text of ['"P35–P38"','[T9]','"P38–P36"','正文没有出处','ATP36x'])expect(workbenchDocumentCitationIssue(text,docs)).toBeTruthy()
+})
+
 it('保留带空单元格的全部文档行、数值、链接和出处', () => {
   const table = {
     version: 1, type: 'table', title: '人员明细',
@@ -134,4 +140,42 @@ it('文档结构卡保留原文与附注，重复画布尺寸无需再次生成'
   } finally {
     await runtime.dispose()
   }
+})
+
+
+it('HTML 来源元信息无损收到底栏数据，不重写关系图和交互代码',()=>{
+ const html='<main><svg aria-label="关系"><text>根节点</text><path d="M0 0L10 10"/></svg><button>筛选</button></main><script>const same="untouched";</script>'
+ const draft={version:1,type:'html',title:'关系图',html,asOf:'核查日期 2026-11-09',note:'材料只包含公开信息',sources:[{label:'原始记录',url:'https://example.com/source?a=1&b=2',text:'精确出处 <P3>'}]}
+ const result=JSON.parse(acceptArtifactOutput(JSON.stringify(draft)))
+ expect(result.html.startsWith(html)).toBe(true)
+ expect(result.html).toContain('hidden data-component-source-info')
+ expect(result.html).toContain('核查日期 2026-11-09')
+ expect(result.html).toContain('href="https://example.com/source?a=1&amp;b=2"')
+ expect(result.html).toContain('&lt;P3&gt;')
+ expect(acceptArtifactOutput(JSON.stringify({...draft,unknown:'不可静默丢失的字段'}))).toBeUndefined()
+})
+
+it('阅读指引把明确的来源章节移到来源信息，业务说明与所有原文保留',()=>{
+ const draft={version:1,type:'summary',title:'指引',content:'# 阅读指引\n先搜索部门，再核对日期。\n\n## 六、主要资料来源\n报告.docx [T8]\nhttps://example.com/a\n\n## 使用说明\n不要将历史任职当成现任。',source:{title:'报告.docx',text:'原始材料 [P1]'}}
+ const result=JSON.parse(acceptArtifactOutput(JSON.stringify(draft)))
+ expect(result.content).not.toContain('主要资料来源')
+ expect(result.content).toContain('不要将历史任职当成现任')
+ expect(result.source.text).toContain('报告.docx [T8]')
+ expect(result.source.text).toContain('https://example.com/a')
+ expect(result.source.text).toContain('原始材料 [P1]')
+})
+
+it('规划为 HTML 的关系图也不能以文字回退标记完成，自动修复保留图形约束',async()=>{
+ const {ResearchTaskRuntime}=await import('../packages/dsh-research-task-runtime/index.js')
+ const {workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+ const prompt=workbenchPanelPrompt({title:'关系研究',originalRequest:'梳理组件之间的关系图',dataMode:'source'},{title:'组件关系图',type:'html',size:'medium',prompt:'用关系图梳理实际依赖，保留来源。'})
+ const attempts=[]
+ const runtime=new ResearchTaskRuntime({adapter:{async start({prompt}){attempts.push(prompt);return {childSessionId:'graph-'+attempts.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'组件关系图',content:'甲依赖乙，乙依赖丙。这些是实际取得的关系说明，但并未交付要求的关系图，不能把本说明标记完成。'})}]}),async dispose(){}}}},storage:{async save(){}},createId:()=> 'graph-required'})
+ try{
+ const task=await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt})
+ await expect.poll(()=>runtime.inspect({parentSessionId:'parent',taskId:task.taskId}).state).toBe('failed')
+ expect(attempts).toHaveLength(2)
+ expect(attempts[1]).toContain('必须保留可视化关系')
+ expect(runtime.inspect({parentSessionId:'parent',taskId:task.taskId})).not.toHaveProperty('finalOutput')
+ }finally{await runtime.dispose()}
 })

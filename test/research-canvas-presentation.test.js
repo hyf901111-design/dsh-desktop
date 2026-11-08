@@ -11,13 +11,32 @@ const require=createRequire(import.meta.url)
 // These patchers serialize their imported functions into the production bundle.
 // Load them natively so Vitest's SSR import aliases do not enter that bundle.
 const {patchCanvasActionsClient}=require('../scripts/lib/canvas-actions-client.mjs')
+const {stripHomeGuideNative}=require('../scripts/lib/home-guide-native.mjs')
+const {stripHomeGuidePresentationNative}=require('../scripts/lib/home-guide-presentation-native.mjs')
+const {stripHomeWorkbenchClient}=require('../scripts/lib/home-workbench-client.mjs')
+const {stripHomeGuideWorkbenchNative}=require('../scripts/lib/home-guide-workbench-native.mjs')
+const {stripMessageEditClient}=require('../scripts/lib/message-edit.mjs')
+const {stripBoardTabsClient}=require('../scripts/lib/board-tabs-client.mjs')
+const {stripSidebarNewNoteConversation}=require('../scripts/lib/sidebar-new-note.mjs')
+const {stripConversationLiveActivity}=require('../scripts/lib/conversation-live-activity.mjs')
+const {stripPptxAnnotationInput}=require('../scripts/lib/pptx-annotation-native.mjs')
+const {stripPptxAnnotationMessages}=require('../scripts/lib/pptx-annotation-message.mjs')
+const {stripPlainSlashInput}=require('../scripts/lib/plain-slash-input.mjs')
+const {stripComposerVoice}=require('../scripts/lib/composer-voice.mjs')
+const {stripConversationSubmission}=require('../scripts/lib/conversation-submission.mjs')
+const {stripConversationResponseProgress}=require('../scripts/lib/conversation-response-progress.mjs')
+const {stripConversationHistoryClient}=require('../scripts/lib/conversation-history-page.mjs')
 const {patchResearchGridWorkbench,restoreResearchGridWorkbench}=require('../scripts/lib/research-grid-workbench.mjs')
 // Transform and compile the immutable 15 MB bundle once; VM globals and storage
 // remain isolated per test. Concurrent integration checks need a setup budget.
 let compiled
 beforeAll(()=>{
  const original=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- const source=patchResearchGridWorkbench(patchCanvasActionsClient(restoreResearchGridWorkbench(original)))
+ const unTabbed=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(original))))
+ const submitted=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbed)))
+ const outer=stripSidebarNewNoteConversation(stripPlainSlashInput(submitted))
+ const restored=restoreResearchGridWorkbench([stripPptxAnnotationMessages,stripPptxAnnotationInput,stripHomeGuideWorkbenchNative,stripHomeWorkbenchClient,stripHomeGuidePresentationNative,stripHomeGuideNative].reduce((text,strip)=>strip(text),outer))
+ const source=patchResearchGridWorkbench(patchCanvasActionsClient(restored))
  expect(patchResearchGridWorkbench(source)).toBe(source)
  compiled=new Script(source)
 },20000)
@@ -130,4 +149,18 @@ it('runs declared presentation tools through authenticated HTTP and the session 
   await apply.execute({...args,requestId:'http-fresh',revision:fresh.revision,operations:[{op:'presentation',fields:{workbenchStyle:'light'}}]},exec)
   expect(f.a.getWorkbenchStyle()).toBe('light');expect(f.b.getWorkbenchStyle()).toBe('enterprise')
  }finally{dispose();bridge.dispose();await http.stop();await f.dispose()}
+})
+
+
+it('首个计划沿用原始用户指定主题，重新投递计划不覆盖后续手选主题',async()=>{
+ const f=await fixture()
+ try{
+ const w=f.bundle.createResearchWorkspaceSession(f.storage,'new-board')
+ const plan={id:'requested-theme',originalRequest:'做研究工作台，用易方达模式。',createdAt:Date.now(),ready:false,panels:[{nodeId:'theme-panel',title:'层级',type:'mind-map',prompt:'按材料层级',x:0,y:0,width:656,height:340,size:'medium',pending:true}]}
+ expect(w.applyWorkbench(plan)).toBe(true)
+ expect(w.getWorkbenchStyle()).toBe('enterprise')
+ w.setWorkbenchStyle('dark',{scope:'board'})
+ expect(w.applyWorkbench(plan)).toBe(true)
+ expect(w.getWorkbenchStyle()).toBe('dark')
+ }finally{await f.dispose()}
 })

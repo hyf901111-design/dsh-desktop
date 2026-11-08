@@ -3,6 +3,18 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('真实表格分页测量可增高与缩短，末页收紧且不覆盖用户手动高度或共享文档',()=>{
+ const state=createWorkbenchGridState(null,'page-fit'),grid=createResearchGrid(),html='<body data-sherlock-market="table"></body>'
+ state.enable(900)
+ let snap=state.reconcile({files:[],artifacts:[{id:'table',kind:'generated-container',width:876,height:850,containerSpec:{type:'html',html}},{id:'next',kind:'pasted-text',width:876,height:240}],viewport:{y:0}})
+ const canonical=state.document(snap),width=snap.artifacts[0].width
+ const fit=height=>{expect(state.contentHeight('table',{html,width,height,layoutFit:true})).toBe(true);snap=state.reconcile(snap);expect(snap.artifacts[0].height).toBeGreaterThanOrEqual(height);expect(snap.artifacts[0].height).toBeLessThan(height+grid.metrics(900).rowStep+1);expect(grid.overlap(...state.visible())).toBe(false);expect(state.document(snap)).toEqual(canonical)}
+ for(const height of [720,420,1620,300])fit(height)
+ state.set(state.get().map(c=>c.id==='table'?{...c,h:30}:c));snap=state.reconcile(snap)
+ const manual=snap.artifacts[0].height
+ state.contentHeight('table',{html,width,height:400,layoutFit:true});snap=state.reconcile(snap)
+ expect(snap.artifacts[0].height).toBe(manual)
+})
 it('图表默认展开明细后按内容自动补高并让后续卡片避让，保留共享布局与手动尺寸',()=>{
  const state=createWorkbenchGridState(null,'expanded-chart'),g=createResearchGrid(),html='<body data-research-kind="chart" data-chart-template="horizontal"></body>';
  state.enable(600);
