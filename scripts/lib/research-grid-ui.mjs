@@ -320,7 +320,20 @@ export function handleWorkbenchWheel(root,workspace,event) {
   const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive],[data-calendar-tool]')
   const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
   if(!event.__sherlockCanvasPan&&selected&&event.target?.closest?.('[data-financial-chart]'))return
-  if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey&&researchPreviewCanConsumeWheel(event.target,preview,event.deltaX||0,event.deltaY||0))return
+  if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey){
+    // A non-overflowing inner diagram can still have overscroll containment.
+    // Route directly to the actual scroll owner instead of relying on browser
+    // chaining through that diagram to its overflowing parent.
+    for(let owner=event.target?.nodeType===1?event.target:event.target?.parentElement;owner;owner=owner.parentElement){
+      if(researchPreviewCanConsumeWheel(owner,owner,event.deltaX||0,event.deltaY||0)){
+        const vertical=Math.abs(event.deltaY||0)>=Math.abs(event.deltaX||0),unit=event.deltaMode===1?16:event.deltaMode===2?(vertical?owner.clientHeight:owner.clientWidth):1
+        event.preventDefault();event.stopPropagation()
+        if(vertical)owner.scrollTop+=event.deltaY*unit;else owner.scrollLeft+=event.deltaX*unit
+        return
+      }
+      if(owner===preview)break
+    }
+  }
   event.preventDefault();event.stopPropagation()
   const unit=event.deltaMode===1?16:event.deltaMode===2?root.clientHeight:1
   root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),root.scrollTop+(Number.isFinite(event.deltaY)?event.deltaY*unit:0)))
