@@ -106,6 +106,56 @@
           "看板可由模型规划为无页签的平铺布局；切换和拖宽只出现在已有页签的看板。"
         ],
         "generatedAt": "2026-11-08T08:26:52.829006+00:00"
+      },
+      "merged": {
+        "mergeCommit": "64c2e2289b5b45283a70cba8e06caf3f135facc4",
+        "verificationCommit": "64c2e2289b5b45283a70cba8e06caf3f135facc4",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-structure-theme-browser.test.js test/board-tabs-client.test.js test/board-tabs-theme-browser.test.js test/board-tabs-connection-browser.test.js --testTimeout 20000 --maxWorkers 3",
+            "verifiedCommit": "64c2e2289b5b45283a70cba8e06caf3f135facc4",
+            "completedAt": "2026-11-08T08:26:57.733Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "64c2e2289b5b45283a70cba8e06caf3f135facc4",
+            "completedAt": "2026-11-08T08:26:57.733Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "64c2e2289b5b45283a70cba8e06caf3f135facc4",
+            "completedAt": "2026-11-08T08:26:57.733Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T08:26:57.733Z"
       }
     }
   ],
