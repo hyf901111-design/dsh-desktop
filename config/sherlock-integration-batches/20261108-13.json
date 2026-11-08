@@ -117,6 +117,54 @@
           "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
         ],
         "generatedAt": "2026-11-08T05:21:04.744950+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e12e584cff3674cfdd14cf75b9f380e593d6c71a",
+        "verificationCommit": "e12e584cff3674cfdd14cf75b9f380e593d6c71a",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-prototype-evidence.test.js test/workbench-execution-policy.test.js test/workbench-prototype-component.test.js test/bundled-component-skill.test.js test/observed-source-completeness.test.js --maxWorkers=4",
+            "verifiedCommit": "e12e584cff3674cfdd14cf75b9f380e593d6c71a",
+            "completedAt": "2026-11-08T05:21:44.929Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e12e584cff3674cfdd14cf75b9f380e593d6c71a",
+            "completedAt": "2026-11-08T05:21:44.929Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e12e584cff3674cfdd14cf75b9f380e593d6c71a",
+            "completedAt": "2026-11-08T05:21:44.929Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T05:21:44.929Z"
       }
     }
   ],
