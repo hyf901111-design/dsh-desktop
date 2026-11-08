@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-13",
+  "branch": "codex/integration/20261108-13",
+  "baseMainCommit": "674c30d5af8debe68ca7030b3d92bac2249e856a",
+  "expectedMainCommit": "674c30d5af8debe68ca7030b3d92bac2249e856a",
+  "createdAt": "2026-11-08T05:21:20.851Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "报告看板附件正文规划和证据复用",
+        "branch": "codex/feat/workbench-document-evidence-20261108",
+        "baseCommit": "674c30d5af8debe68ca7030b3d92bac2249e856a",
+        "tipCommit": "4940ff686a107517493bc2537936578cdc477176",
+        "commits": [
+          {
+            "commit": "4940ff686a107517493bc2537936578cdc477176",
+            "parents": [
+              "674c30d5af8debe68ca7030b3d92bac2249e856a"
+            ],
+            "subject": "修复：让报告看板基于附件正文规划和生成"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-component.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "52 项聚焦检查通过",
+            "verifiedCommit": "4940ff686a107517493bc2537936578cdc477176",
+            "completedAt": "2026-11-08T05:21:04.744950+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "4940ff686a107517493bc2537936578cdc477176",
+            "completedAt": "2026-11-08T05:21:04.744950+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "4940ff686a107517493bc2537936578cdc477176",
+            "completedAt": "2026-11-08T05:21:04.744950+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "变更位于后端规划、来源与校验链路，未改界面；原 PDF 原请求在本地集成包进行端到端验收。"
+        },
+        "acceptanceCriteria": [
+          "报告看板先取得本轮 PDF 真实原文再规划",
+          "只用附件时不查接口目录、行情和网页",
+          "各卡复用可读页并校验交付引用页码",
+          "同一附件原请求首轮真实客户端验收"
+        ],
+        "risks": [
+          "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
+        ],
+        "generatedAt": "2026-11-08T05:21:04.744950+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/observed-source-completeness.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
