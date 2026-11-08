@@ -155,6 +155,55 @@
           "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
         ],
         "generatedAt": "2026-11-08T21:15:31.296355+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+        "verificationCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/derived-template-contract.test.js",
+              "test/research-design-policy.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/market-table-reading-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-web-snapshot-evidence.test.js test/derived-template-contract.test.js test/research-design-policy.test.js test/research-grid-workbench.test.js test/market-table-reading-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+            "completedAt": "2026-11-08T21:15:36.724Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+            "completedAt": "2026-11-08T21:15:36.724Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+            "completedAt": "2026-11-08T21:15:36.724Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T21:15:36.724Z"
       }
     }
   ],
