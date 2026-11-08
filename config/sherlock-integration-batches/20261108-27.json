@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-27",
+  "branch": "codex/integration/20261108-27",
+  "baseMainCommit": "8273aeb20d55de80c27bb313e20c665c2a43ff1c",
+  "expectedMainCommit": "8273aeb20d55de80c27bb313e20c665c2a43ff1c",
+  "createdAt": "2026-11-08T08:26:54.358Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "竖向导航菜单与可见拖宽手柄、原生导图无描边",
+        "branch": "codex/feat/enterprise-borderless-tab-fill-20261108",
+        "baseCommit": "8273aeb20d55de80c27bb313e20c665c2a43ff1c",
+        "tipCommit": "515988da94509d71d697ef4e36bd70cf367203cd",
+        "commits": [
+          {
+            "commit": "515988da94509d71d697ef4e36bd70cf367203cd",
+            "parents": [
+              "8273aeb20d55de80c27bb313e20c665c2a43ff1c"
+            ],
+            "subject": "为竖向页签增加导航标题与调宽手柄并修正易方达导图描边"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "44 项聚焦检查通过",
+            "verifiedCommit": "515988da94509d71d697ef4e36bd70cf367203cd",
+            "completedAt": "2026-11-08T08:26:52.829006+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "515988da94509d71d697ef4e36bd70cf367203cd",
+            "completedAt": "2026-11-08T08:26:52.829006+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "515988da94509d71d697ef4e36bd70cf367203cd",
+            "completedAt": "2026-11-08T08:26:52.829006+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际原 Word 首轮复测 8/8 组件，原生导图复现描边；Chromium 复用生产 CSS 层级，确认导图根和分支无描边。真实挂载覆盖标题、手柄及右区尺寸。"
+        },
+        "acceptanceCriteria": [
+          "竖向页签顶栏左侧显示导航菜单，右侧显示拖宽手柄",
+          "易方达模式原生导图节点无描边且关系连线保留",
+          "原有页签高度与右侧卡片底边一致"
+        ],
+        "risks": [
+          "看板可由模型规划为无页签的平铺布局；切换和拖宽只出现在已有页签的看板。"
+        ],
+        "generatedAt": "2026-11-08T08:26:52.829006+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
