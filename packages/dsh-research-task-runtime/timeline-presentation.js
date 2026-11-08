@@ -6,8 +6,10 @@ body[data-sherlock-template="timeline"] .activity-heading strong{font-size:16px!
 body[data-sherlock-template="timeline"] .activity-range{margin-left:auto;border-radius:4px;background:var(--sherlock-control-bg);color:var(--sherlock-control-muted,var(--sherlock-muted));font-size:11px!important;line-height:17px!important;padding:2px 8px;max-width:100%;overflow-wrap:anywhere;}
 body[data-sherlock-template="timeline"] .activity-list{display:flex;flex-direction:column;gap:12px;max-height:480px;overflow:auto;min-width:0;margin:0;padding:0;}
 body[data-sherlock-template="timeline"] .activity-row{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:24px;align-items:start;min-width:0;padding:0;border:0;background:transparent;}
-body[data-sherlock-template="timeline"] .activity-row:not(:last-child)::before{content:"";position:absolute;left:56.25px;top:6px;bottom:-18px;width:1.5px;background:#c1c6c8;}
-body[data-sherlock-template="timeline"] .activity-dot{position:absolute;left:54px;top:6px;width:6px;height:6px;}
+body[data-sherlock-template="timeline"] .activity-row:not(:last-child)::before{content:"";position:absolute;left:56.5px!important;top:6px;bottom:-18px;width:1px!important;background:var(--sherlock-chart-grid,var(--sherlock-border))!important;}
+body[data-sherlock-template="timeline"] .activity-row::after{content:"";position:absolute;left:54px;top:6px;width:6px;height:6px;border-radius:50%;background:color-mix(in srgb,var(--sherlock-muted) 64%,var(--sherlock-bg));pointer-events:none;}
+body[data-sherlock-template="timeline"] .activity-row[data-selected="true"]::after{background:var(--sherlock-control-primary);}
+body[data-sherlock-template="timeline"] .activity-dot{display:none!important;}
 body[data-sherlock-template="timeline"] .activity-time{display:block;text-align:right;color:var(--sherlock-muted);font-size:11px!important;line-height:18px!important;overflow-wrap:anywhere;}
 body[data-sherlock-template="timeline"] .activity-date,body[data-sherlock-template="timeline"] .activity-offset{display:block;font-size:10px!important;line-height:15px!important;}
 body[data-sherlock-template="timeline"] .activity-details{min-width:0;border:0;margin:0;padding:0;}
