@@ -19,3 +19,8 @@ it('does not attach unread, uncited, credentialed or discovery-only sources',()=
  const records=[{tool:'web_fetch',args:{url:'https://example.org/?token=secret'}},{tool:'web_fetch',purpose:'discovery',args:{url:'https://catalog.example.org'}}]
  expect(retainObservedComponentProvenance(raw,[{name:'未引用.pdf',pages:[{page:1}]}],records)).toBe(raw)
 })
+it('retains a successful component retrieval even when authored HTML cites only its host or repository name',()=>{
+ const raw=JSON.stringify({version:1,type:'html',title:'生态关系',html:'<p>example/core，来自官网公开数据</p>'})
+ const output=retainObservedComponentProvenance(raw,[],[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://api.example.org/repos/example/core'},response:{source:'api.example.org',sourceUrl:'https://api.example.org/repos/example/core',description:'公开项目'}}])
+ expect(getComponentSourceInfo({containerSpec:JSON.parse(output)}).records).toMatchObject([{label:'api.example.org',url:'https://api.example.org/repos/example/core'}])
+})
