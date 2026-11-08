@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-33",
+  "branch": "codex/integration/20261108-33",
+  "baseMainCommit": "0582f5ee588ef3ef79b95c63287f025b979e1adf",
+  "expectedMainCommit": "0582f5ee588ef3ef79b95c63287f025b979e1adf",
+  "createdAt": "2026-11-08T10:37:50.361Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复导航拖拽手柄错位和文档明细空壳",
+        "branch": "codex/feat/workbench-table-resize-20261108",
+        "baseCommit": "0582f5ee588ef3ef79b95c63287f025b979e1adf",
+        "tipCommit": "6d1f2a15afe3340bb4413501727b8ce31c8913fb",
+        "commits": [
+          {
+            "commit": "9806c47088835a77dcc14879d0f78d2e9517de02",
+            "parents": [
+              "0582f5ee588ef3ef79b95c63287f025b979e1adf"
+            ],
+            "subject": "让组件缩放手柄随竖向页签实时重排"
+          },
+          {
+            "commit": "6d1f2a15afe3340bb4413501727b8ce31c8913fb",
+            "parents": [
+              "9806c47088835a77dcc14879d0f78d2e9517de02"
+            ],
+            "subject": "用宿主表格交付可搜索的文档明细并阻止空壳通过"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/component-readable-snapshot.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-source-policy.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "222 项聚焦检查通过",
+            "verifiedCommit": "6d1f2a15afe3340bb4413501727b8ce31c8913fb",
+            "completedAt": "2026-11-08T10:37:48.789635+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "6d1f2a15afe3340bb4413501727b8ce31c8913fb",
+            "completedAt": "2026-11-08T10:37:48.789635+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "6d1f2a15afe3340bb4413501727b8ce31c8913fb",
+            "completedAt": "2026-11-08T10:37:48.789635+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端复现选中手柄和卡片位置不一致及空明细；聚焦验证拖动、取消和松手时位置一致，以及脚本空壳被拒、超限保留全部可搜索数据。"
+        },
+        "acceptanceCriteria": [
+          "选中组件手柄与拖动期间的卡片实时对齐",
+          "纯文档表格有首屏行和实际搜索",
+          "超限时分页承载全量",
+          "用同一份Word实测"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T10:37:48.789635+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-contract.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/component-readable-snapshot.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-source-policy.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
