@@ -12,12 +12,12 @@ it('keeps long table source notes scrollable without covering table rows',async(
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'table',title:'规模明细',asOf:meta.asOf,note:meta.note,sources:[{label:'Tushare',url:'https://tushare.pro'}],columns:['名称','规模'],rows:[['甲',20],['乙',10]]})));
  const page=await browser.newPage({viewport:{width:380,height:420},colorScheme:'dark'});
  try{
-  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.locator('.component-reading-footer').waitFor();
+  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.locator('.component-reading-footer').waitFor({state:'attached'});
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
   expect(await frame.locator('body>footer.market-footer').isVisible()).toBe(false);
-  expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);expect((await frame.locator('.component-reading-footer').boundingBox()).height).toBeLessThanOrEqual(241);
+  expect(await frame.locator('.component-reading-footer').isVisible()).toBe(false);expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
   expect(await frame.locator('tbody tr').count()).toBe(2);expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
-  const t=await frame.locator('.market-table-wrap').boundingBox(),f=await frame.locator('.component-reading-footer').boundingBox();expect(t.y+t.height).toBeLessThanOrEqual(f.y+1);
+  expect(await frame.locator('.market-table-wrap').isVisible()).toBe(true);
  }finally{await page.close();}
 },20000);
 afterAll(async()=>{await browser?.close();});
@@ -60,10 +60,10 @@ it('ignores relative legacy disclosure clicks while preserving explicit new open
   await expect.poll(()=>frame.locator('table').isVisible()).toBe(false);
   events.source={id:'source',clock:4,targetRoute:routes[1],tag:'SUMMARY',type:'click',checked:true};
   await page.evaluate(events=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events},readOnly:false},'*'),events);
-  await expect.poll(()=>frame.getByRole('tab',{name:'口径与来源'}).getAttribute('aria-selected')).toBe('true');
-  expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(true);
+  expect(await frame.getByRole('tab',{name:'口径与来源'}).count()).toBe(0);
+  expect(await frame.locator('.component-reading-footer dd').isVisible()).toBe(false);
   expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').content)).toBe('""');
-  expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').borderRightStyle)).toBe('solid');
+  expect(await frame.locator('.component-reading-toggle').evaluate(el=>getComputedStyle(el,'::before').maskImage)).toContain('data:image/svg+xml');
  }finally{await page.close();}
 },15000);
 it('keeps chart detail entries visible together at the real compact card height',async()=>{
@@ -72,7 +72,7 @@ it('keeps chart detail entries visible together at the real compact card height'
  const page=await browser.newPage({viewport:{width:566,height:303}});page.setDefaultTimeout(3000);
  try{
   await page.setContent('<script>window.detailSizes=[];addEventListener("message",event=>{if(event.data?.type==="sherlock-workbench-content-size")window.detailSizes.push(event.data)})</script>'+buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
-  await frame.locator('.component-reading-footer').waitFor();
+  await frame.locator('.component-reading-footer').waitFor({state:'attached'});
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
   expect(await frame.locator('table').isVisible()).toBe(true);
   await expect.poll(()=>page.evaluate(()=>window.detailSizes.at(-1)?.height||0)).toBeGreaterThan(303);
@@ -84,17 +84,15 @@ it('keeps chart detail entries visible together at the real compact card height'
   await page.waitForTimeout(550);
   expect(await page.evaluate(()=>window.detailSizes.at(-1).height)).toBe(fittedHeight);
   const entries=await frame.getByRole('tab').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom}}));
-  expect(entries).toHaveLength(2);expect(Math.abs(entries[0].top-entries[1].top)).toBeLessThanOrEqual(3);
+  expect(entries).toHaveLength(1);
   for(const entry of entries)expect(entry.bottom).toBeLessThanOrEqual(fittedHeight);
   expect((await frame.locator('svg').boundingBox()).height).toBeGreaterThanOrEqual(160);
-  const dataTab=frame.getByRole('tab',{name:'完整数据'}),sourceTab=frame.getByRole('tab',{name:'口径与来源'});
+  const dataTab=frame.getByRole('tab',{name:'完整数据'});
   expect(await frame.locator('tbody tr').count()).toBe(5);
   expect(await frame.locator('.data-scroll').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
-  const expanded=await sourceTab.boundingBox();expect(Math.abs(expanded.y-entries[1].top)).toBeLessThanOrEqual(1);
-  await sourceTab.click();expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(true);
-  expect(await frame.locator('table').isVisible()).toBe(false);expect(await sourceTab.getAttribute('aria-selected')).toBe('true');
-  await sourceTab.focus();await page.keyboard.press('ArrowLeft');expect(await dataTab.getAttribute('aria-selected')).toBe('true');
-  expect(await frame.locator('table').isVisible()).toBe(true);expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(false);
+  expect(await frame.getByRole('tab',{name:'口径与来源'}).count()).toBe(0);
+  expect(await frame.locator('.component-reading-footer dd').first().isVisible()).toBe(false);
+  expect(await dataTab.getAttribute('aria-selected')).toBe('true');
   await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('table').isVisible()).toBe(false);
   expect(await frame.getByRole('button',{name:'展开组件详情'}).getAttribute('aria-expanded')).toBe('false');
   await expect.poll(()=>frame.locator('body').evaluate(el=>el.scrollHeight<=innerHeight+1)).toBe(true);
@@ -107,18 +105,18 @@ it('keeps KPI footers compact in narrow and wide themed previews, with accessibl
   const page=await browser.newPage({viewport:{width,height:640},colorScheme:theme});
   try{
    await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench:true,notoFont:'runtime'}));
-   const frame=page.frameLocator('iframe'),footer=frame.locator('.component-reading-footer');await footer.waitFor();
-   expect((await footer.boundingBox()).height).toBeLessThanOrEqual(241);
+   const frame=page.frameLocator('iframe'),footer=frame.locator('.component-reading-footer');await footer.waitFor({state:'attached'});
+   expect(await footer.isVisible()).toBe(false);
    expect(await frame.locator('#indicator-refresh').isVisible()).toBe(false);expect(await frame.locator('.indicator-asof').isVisible()).toBe(false);
-   expect(await footer.locator('dd').first().isVisible()).toBe(true);
+   expect(await footer.locator('dd').first().isVisible()).toBe(false);
    expect(await frame.locator('details.indicator-tile').evaluateAll(nodes=>nodes.every(el=>el.open))).toBe(true);
    expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
    const tiles=await frame.locator('.indicator-tile').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}}));
    for(let i=1;i<tiles.length;i++)if(tiles[i].top===tiles[i-1].top)expect(tiles[i].left).toBeGreaterThanOrEqual(tiles[i-1].right);
    if(width===880&&theme==='dark'){mkdirSync('output/research-quality/footer',{recursive:true});await page.screenshot({path:'output/research-quality/footer/kpi-compact.png'});}
-   expect(await footer.locator('dd').first().isVisible()).toBe(true);expect(await footer.textContent()).toContain(meta.note);
+   expect(await footer.locator('dd').first().isVisible()).toBe(false);expect(await footer.textContent()).toContain(meta.note);
    expect(await frame.locator('body').evaluate(el=>el.scrollWidth<=innerWidth+1)).toBe(true);
-   await footer.locator('summary').focus();await page.keyboard.press('Enter');expect(await footer.locator('dd').first().isVisible()).toBe(false);
+   expect(await footer.textContent()).toContain(meta.sources[0].url===undefined?'':meta.sources[0].name);
   }finally{await page.close();}
  }
 },30000);
@@ -126,12 +124,13 @@ it('folds chart methodology while leaving legend filtering and full data usable'
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'bar',title:'净流入前列',asOf:meta.asOf,note:meta.note,unit:'亿元',labels:['甲','乙'],series:[{name:'净流入估算',values:[20,10]},{name:'对比期',values:[15,8]}]})));
  const page=await browser.newPage({viewport:{width:620,height:580}});
  try{
-  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.locator('.component-reading-footer').waitFor();
+  await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,'dark',{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');await frame.locator('.component-reading-footer').waitFor({state:'attached'});
   await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
   expect(await frame.locator('figcaption').isVisible()).toBe(false);
   await frame.getByRole('tab',{name:'完整数据'}).click();await frame.locator('table').waitFor({state:'visible',timeout:2000});
   await frame.locator('[data-chart-series="0"]').click();expect(await frame.locator('[data-chart-series="0"]').getAttribute('aria-pressed')).toBe('false');
-  await frame.getByRole('tab',{name:'口径与来源'}).click();expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
+  expect(await frame.getByRole('tab',{name:'口径与来源'}).count()).toBe(0);expect(await frame.locator('.component-reading-footer').textContent()).toContain(meta.note);
+  expect(await frame.locator('.component-reading-footer>details').isVisible()).toBe(false);
  }finally{await page.close();}
 },20000);
 it('opens supplemental chart data by default and supports compact sortable resizable detail tables',async()=>{
@@ -140,7 +139,7 @@ it('opens supplemental chart data by default and supports compact sortable resiz
   const page=await browser.newPage({viewport:{width,height:680},colorScheme:theme});page.setDefaultTimeout(3000);
   try{
    await page.setContent(buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench:true,notoFont:'runtime'}));const frame=page.frameLocator('iframe');
-   await frame.locator('.component-reading-footer').waitFor();
+   await frame.locator('.component-reading-footer').waitFor({state:'attached'});
    await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'));
    expect(await frame.locator('table').isVisible()).toBe(true);
    expect((await frame.locator('.component-reading-tabs').boundingBox()).height).toBeLessThanOrEqual(40);
@@ -181,10 +180,10 @@ it('centers single and wrapped readouts and keeps the detail switch separate fro
     expect(Math.abs(balance.above-balance.below)).toBeLessThanOrEqual(2);expect(balance.height).toBeGreaterThanOrEqual(32);expect(balance.scroll).toBeLessThanOrEqual(balance.client+1);
    }
    const beforeSwitch=await frame.getByRole('tablist').boundingBox();
-   await frame.getByRole('tab',{name:'口径与来源'}).click();expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(true);
+   expect(await frame.getByRole('tab',{name:'口径与来源'}).count()).toBe(0);expect(await frame.locator('table').isVisible()).toBe(true);
    const after=await frame.getByRole('tablist').boundingBox();expect(Math.abs(after.y-beforeSwitch.y)).toBeLessThan(1);
-   await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(false);
-   await frame.getByRole('button',{name:'展开组件详情'}).focus();await page.keyboard.press('Enter');expect(await frame.locator('dl[role=tabpanel]').isVisible()).toBe(true);
+   await frame.getByRole('button',{name:'收起组件详情'}).click();expect(await frame.locator('table').isVisible()).toBe(false);
+   await frame.getByRole('button',{name:'展开组件详情'}).focus();await page.keyboard.press('Enter');expect(await frame.locator('table').isVisible()).toBe(true);
   }finally{await page.close();}
  }
 },20000);

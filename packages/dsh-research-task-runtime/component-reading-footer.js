@@ -2,7 +2,7 @@
 // controls so saved interaction paths and the inert source model stay intact.
 // Kept self-contained because the preview client serializes this function.
 export function refineComponentReadingFooter(html){
- if(typeof html!=='string'||html.includes('data-component-reading-footer="v7"'))return html;
+ if(typeof html!=='string'||html.includes('data-component-reading-footer="v8"'))return html;
  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
@@ -13,7 +13,7 @@ export function refineComponentReadingFooter(html){
  if(!kpi&&!chart&&!market)return html;
  // Replace only our previous display layer. The original model and every
  // existing control remain in their original DOM positions for saved replay.
- html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[123456]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
+ html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[1234567]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
  // Only real disclosure markup in verified host templates receives the new
  // default. Source JSON and executable strings must remain byte-for-byte intact.
  html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>{
@@ -35,10 +35,9 @@ export function refineComponentReadingFooter(html){
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.
  const hidden=[...(kpi?['.indicator-asof','.indicator-footer']:[]),...(chart?['figure>figcaption']:[]),...(market?['body>footer.market-footer']:[])];
- const style=`<style data-component-reading-footer="v7">${hidden.map(selector=>selector+'{display:none!important}').join('')}
+ const style=`<style data-component-reading-footer="v8">${hidden.map(selector=>selector+'{display:none!important}').join('')}
  body>.component-reading-footer:not(:has(.component-reading-tabs)){display:none!important}
  body>.component-reading-footer>details{display:none!important}
- body[data-component-reading-tabs]>.component-reading-footer>details{display:none!important}
  body>.component-reading-footer{box-sizing:border-box;display:block;clear:both;flex:none;margin:8px 0 0!important;padding:6px 0 2px!important;border:0;border-top:1px solid var(--sherlock-border,#8883);color:var(--sherlock-muted,#888);font:11px/18px var(--sherlock-font-sans,system-ui);text-align:left}
  .component-reading-footer details{margin:0!important;padding:0!important;border:0;background:transparent;font:inherit}
  .component-reading-footer summary{display:flex;align-items:center;gap:6px;min-height:26px;padding:2px 0!important;cursor:pointer;color:inherit;font:inherit}
@@ -57,6 +56,7 @@ export function refineComponentReadingFooter(html){
  body[data-component-reading-tabs]{display:grid;grid-template-columns:minmax(0,1fr);align-content:start}
  body[data-component-reading-tabs]>figure{grid-row:1;grid-column:1}
  body[data-component-reading-tabs]>details,body[data-component-reading-tabs]>.component-reading-footer,body[data-component-reading-tabs]>.component-reading-footer>details{display:contents!important}
+ body[data-component-reading-tabs]>.component-reading-footer>details{display:none!important}
  body[data-component-reading-tabs]>details>summary,body[data-component-reading-tabs]>.component-reading-footer>details>summary{display:none!important}
  .component-reading-tabs{grid-row:2;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:3;margin-top:8px;height:34px;background:var(--sherlock-surface);color:var(--sherlock-muted);font:11px/18px var(--sherlock-font-sans,system-ui)}
  .component-reading-tabs[hidden]{display:none}
