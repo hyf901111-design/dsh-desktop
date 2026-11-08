@@ -105,6 +105,53 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-08T06:07:30.016047+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2fbc21097f78911051d354432fcad5ec8ae1fc48",
+        "verificationCommit": "2fbc21097f78911051d354432fcad5ec8ae1fc48",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/timeline-theme-browser.test.js",
+              "test/timeline-template.test.js",
+              "test/workbench-style.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/timeline-theme-browser.test.js test/timeline-template.test.js test/workbench-style.test.js test/bundled-component-skill.test.js --maxWorkers=4",
+            "verifiedCommit": "2fbc21097f78911051d354432fcad5ec8ae1fc48",
+            "completedAt": "2026-11-08T06:07:49.251Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2fbc21097f78911051d354432fcad5ec8ae1fc48",
+            "completedAt": "2026-11-08T06:07:49.251Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2fbc21097f78911051d354432fcad5ec8ae1fc48",
+            "completedAt": "2026-11-08T06:07:49.251Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T06:07:49.251Z"
       }
     }
   ],
