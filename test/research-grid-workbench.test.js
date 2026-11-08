@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import {readFileSync} from 'node:fs'
+import vm from 'node:vm'
 import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
@@ -13,6 +15,26 @@ it('真实表格分页测量可增高与缩短，末页收紧且不覆盖用户�
  state.set(state.get().map(c=>c.id==='table'?{...c,h:30}:c));snap=state.reconcile(snap)
  const manual=snap.artifacts[0].height
  state.contentHeight('table',{html,width,height:400,layoutFit:true});snap=state.reconcile(snap)
+ expect(snap.artifacts[0].height).toBe(manual)
+})
+it.each(['html','market'])('原生 %s 表格实际测量协议随分页增高缩短并拒绝过期内容',type=>{
+ const ui=readFileSync(new URL('../scripts/lib/research-grid-ui.mjs',import.meta.url),'utf8')
+ const fit=vm.runInNewContext('('+ui.slice(ui.indexOf('export function workbenchNativeTableFit('),ui.indexOf('export function workbenchNativeTableDimensions(')).replace(/^export /u,'')+')',{workbenchNativeTableDimensions:table=>({height:table.height})})
+ const state=createWorkbenchGridState(null,'native-page-'+type);state.enable(900)
+ const spec=type==='html'?{type,html:'<body data-sherlock-market="table"></body>'}:{type,variant:'table',rows:[['完整数据']]}
+ let snap=state.reconcile({files:[],artifacts:[{id:'table',kind:'generated-container',width:876,height:400,containerSpec:spec},{id:'next',kind:'pasted-text',width:876,height:240}],viewport:{y:0}})
+ const canonical=state.document(snap),grid=createResearchGrid()
+ for(const height of [720,1520,300,1620]){
+  const message=fit(snap.artifacts[0],{height})
+  expect(state.contentHeight('table',message)).toBe(true);snap=state.reconcile(snap)
+  expect(snap.artifacts[0].height).toBeGreaterThanOrEqual(height)
+  expect(snap.artifacts[0].height).toBeLessThan(height+grid.metrics(900).rowStep+1)
+  expect(grid.overlap(...state.visible())).toBe(false);expect(state.document(snap)).toEqual(canonical)
+ }
+ const stale=fit({...snap.artifacts[0],containerSpec:type==='html'?{...spec,html:'stale'}:{...spec,rows:[['stale']]}},{height:2000})
+ expect(state.contentHeight('table',stale)).toBe(false)
+ state.set(state.get().map(cell=>cell.id==='table'?{...cell,h:20}:cell));snap=state.reconcile(snap)
+ const manual=snap.artifacts[0].height;state.contentHeight('table',fit(snap.artifacts[0],{height:300}));snap=state.reconcile(snap)
  expect(snap.artifacts[0].height).toBe(manual)
 })
 it('图表默认展开明细后按内容自动补高并让后续卡片避让，保留共享布局与手动尺寸',()=>{
