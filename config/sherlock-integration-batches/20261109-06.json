@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-06",
+  "branch": "codex/integration/20261109-06",
+  "baseMainCommit": "995009adb49b551eceb50675847c17b4827dc298",
+  "expectedMainCommit": "995009adb49b551eceb50675847c17b4827dc298",
+  "createdAt": "2026-11-08T18:20:49.904Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "真实工作台挂载与混合来源恢复",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "995009adb49b551eceb50675847c17b4827dc298",
+        "tipCommit": "68f10012691084ac2e542162c313dc8a24b3866b",
+        "commits": [
+          {
+            "commit": "68f10012691084ac2e542162c313dc8a24b3866b",
+            "parents": [
+              "995009adb49b551eceb50675847c17b4827dc298"
+            ],
+            "subject": "修复工作台挂载存储与混合来源生成恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-grouped-tasks.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-mixed-document-adapter.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-canvas-storage.test.ts",
+              "test/workbench-style.test.js",
+              "test/workbench-auto-arrange.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/component-grouped-tasks.test.js",
+              "test/workbench-mixed-document-adapter.test.js",
+              "test/component-source-info-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "58 项聚焦检查通过",
+            "verifiedCommit": "68f10012691084ac2e542162c313dc8a24b3866b",
+            "completedAt": "2026-11-08T18:20:47.988915+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "68f10012691084ac2e542162c313dc8a24b3866b",
+            "completedAt": "2026-11-08T18:20:47.988915+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "68f10012691084ac2e542162c313dc8a24b3866b",
+            "completedAt": "2026-11-08T18:20:47.988915+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "58项原生存储重启、附件与网络权限、任务格式恢复和来源界面聚焦检查通过。最终包真实任务验收在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "四模式画板范围样式持久化与自动整理可恢复",
+          "混合来源传递附件正文同时保留授权联网",
+          "分组任务无损归一化且不伪造状态",
+          "来源标注在详情中完整保留"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T18:20:47.988915+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-canvas-storage.test.ts",
+        "test/workbench-style.test.js",
+        "test/workbench-auto-arrange.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/component-grouped-tasks.test.js",
+        "test/workbench-mixed-document-adapter.test.js",
+        "test/component-source-info-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
