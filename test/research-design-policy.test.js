@@ -65,6 +65,20 @@ describe('explicit generated source profile contract', () => {
 })
 
 describe('generated HTML design policy', () => {
+ it('normalizes literal theme colors only on annotated structure elements', () => {
+  const html='<style>.node[data-sherlock-structure-depth="0"]{background:#005096}.node[data-sherlock-structure-depth="1"]{background:#0078B4}.badge{background:#1EB9E1;color:var(--sherlock-control-on-primary)}</style><div class="node" data-sherlock-structure="primary" data-sherlock-structure-depth="0">组织</div><div class="badge" data-sherlock-structure="info">日期与出处</div>'
+  expect(designPolicyIssue(html)).toContain('background')
+  const repaired=normalizeGeneratedHostStyles(html)
+  expect(designPolicyIssue(repaired)).toBeNull()
+  expect(repaired).toContain('background:var(--sherlock-chart-1)')
+  expect(repaired).toContain('background:var(--sherlock-chart-3)')
+  expect(repaired).toContain('background:var(--sherlock-surface-muted);color:var(--sherlock-text)')
+  expect(repaired).toContain('日期与出处')
+  expect(normalizeGeneratedHostStyles(repaired)).toBe(repaired)
+  const control='<style>.badge{background:#1EB9E1}</style><button class="badge" data-sherlock-structure="info">筛选</button>'
+  expect(normalizeGeneratedHostStyles(control)).toBe(control)
+  expect(designPolicyIssue(control)).toContain('控件')
+ })
  it('repairs known host role aliases and fixed fallbacks while preserving content and shared script', () => {
   const script='<script>const shared=window.sherlockShared.register({initialState:{selected:0},reduce:(s,a)=>({...s,selected:a.id}),render:s=>{}});</script>'
   const html='<style>body{color:var(--sherlock-text-primary,#1a1a1a)}a{color:var(--sherlock-text-link,#0969da)}button{background:var(--sherlock-control-bg,#fff);color:var(--sherlock-control-text,#333)}</style><p>真实证据 0 / 3</p><a href="https://example.org/source">原文</a><button>筛选</button>'+script
