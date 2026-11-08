@@ -23,6 +23,12 @@ const html = `<style>
   <div class="vline" id="rail"></div>
   <div class="node" id="peer"><span class="role">部门</span><strong class="name">原有部门</strong></div>
 </div>
+<div class="tree">
+  <div class="node" id="tree-root"><div class="node-title">会员大会</div><div class="node-sub">权力机构</div></div>
+  <div class="vline" id="tree-rail"></div>
+  <div class="node" id="tree-peer"><div class="node-title">会员代表大会</div><div class="node-sub">选举</div></div>
+  <div class="branches"><div class="branch"><div class="drop" id="tree-drop"></div><div class="card" id="tree-card"><h3>理事会</h3></div></div></div>
+</div>
 <div style="display:grid;grid-template-columns:repeat(2,1fr)">
   <div id="department" style="border:1px solid var(--sherlock-border);border-radius:6px"><div>综合部门</div><div>负责人待核</div></div>
   <div id="control" style="border:1px solid var(--sherlock-border);border-radius:6px"><button>普通控制</button></div>
@@ -47,11 +53,18 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(lightRoot).not.toBe('rgb(0, 80, 150)')
     expect(await read('#department', 'borderRadius')).toBe('6px')
 
+    const lightTreeRoot = await read('#tree-root', 'backgroundColor')
     await switchMode('enterprise')
     expect(await read('#root', 'backgroundColor')).toBe('rgb(0, 80, 150)')
     expect(await read('#root .role', 'color')).toBe('rgb(255, 255, 255)')
     expect(await read('#peer', 'backgroundColor')).toMatch(/^color\(srgb /u)
     expect(await read('#rail', 'backgroundColor')).toMatch(/^color\(srgb /u)
+    expect(await read('#tree-root', 'backgroundColor')).toBe('rgb(0, 80, 150)')
+    expect(await read('#tree-root .node-sub', 'color')).toBe('rgb(255, 255, 255)')
+    expect(await read('#tree-peer', 'backgroundColor')).toBe(await read('#peer', 'backgroundColor'))
+    expect(await read('#tree-card', 'backgroundColor')).toBe(await read('#peer', 'backgroundColor'))
+    expect(await read('#tree-rail', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
+    expect(await read('#tree-drop', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
     expect(await read('#department', 'borderLeftColor')).toBe('rgb(0, 120, 180)')
     expect(await read('#info', 'borderLeftWidth')).toBe('2px')
     expect(await read('#control', 'borderRadius')).toBe('6px')
@@ -63,6 +76,7 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
 
     await switchMode('light')
     expect(await read('#root', 'backgroundColor')).toBe(lightRoot)
+    expect(await read('#tree-root', 'backgroundColor')).toBe(lightTreeRoot)
     expect(await read('#department', 'borderRadius')).toBe('6px')
     expect(await read('#svg-node', 'fill')).toBe('rgb(119, 119, 119)')
   } finally {
