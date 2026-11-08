@@ -79,7 +79,7 @@ it('右键重命名和删除仅影响库条目；点击外部和Escape关闭', a
     // A nested context menu both clips and expands its scrollable overflow.
     const library=f.document.querySelector('.ew-financial-library');library.style.backdropFilter='blur(24px)';
     expect(library.contains(f.document.querySelector('[data-custom-library-menu]'))).toBe(false);
-    expect(f.document.querySelector('[data-custom-library-menu]').dataset.financialTheme).toBe('light');
+    expect(f.document.querySelector('[data-custom-library-menu]')).toHaveProperty('className', 'ew-grid-menu ew-custom-library-menu');
     await f.event('pointerdown',f.document.querySelector('[data-custom-rename]'));
     expect(f.document.querySelector('.ew-financial-library')).toBe(library);
     await f.event('pointerdown', f.document.body);
