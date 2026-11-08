@@ -234,7 +234,8 @@ export function componentReadableDocumentTable(data){
 function renderReadableSnapshot(data,readable,{provider,metadata,sourceGaps}){
  const cell=(value,index)=>{
   if(index===readable.linkColumn)return '<a href="'+esc(value)+'" target="_blank" rel="noopener noreferrer">'+esc(value)+'</a>'
-  if(readable.mode==='events'&&index>readable.linkColumn&&typeof value==='string'&&value.length>2000)return '<details><summary>展开完整来源说明</summary>'+esc(value)+'</details>'
+  if(typeof value==='string'&&/^https?:\/\/[^\s]+$/u.test(value)){try{const url=new URL(value);if(!url.username&&!url.password)return '<a href="'+esc(value)+'" target="_blank" rel="noopener noreferrer">'+esc(value)+'</a>'}catch{}}
+  if(typeof value==='string'&&value.length>2000)return '<details><summary>展开完整'+esc(readable.mode==='events'?'来源说明':readable.columns[index])+'</summary>'+esc(value)+'</details>'
   return text(value)
  }
  const headers=readable.columns.map((value,index)=>'<th scope="col">'+(readable.fixedColumns?.[index]?'<span data-workbench-status-text>'+esc(value)+'</span>':esc(value))+'</th>').join(''),rows=readable.rows.map(row=>'<tr>'+row.map((value,index)=>'<td>'+cell(value,index)+'</td>').join('')+'</tr>').join('')
