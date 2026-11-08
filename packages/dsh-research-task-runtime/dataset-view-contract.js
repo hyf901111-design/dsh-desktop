@@ -17,6 +17,11 @@ function cell(value){
  if(typeof value==='string')return text(value,DATASET_VIEW_LIMITS.cellCharacters,true)
  return Array.isArray(value)&&value.length<=50&&value.every(v=>text(v,DATASET_VIEW_LIMITS.cellCharacters,true))
 }
+// Only the simulated planning entry point may fill absent descriptive metadata.
+// Never infer a date, change business records, or relax saved/source artifacts.
+export function simulatedDatasetMetadata(value){
+ return Array.isArray(value)?value.map(d=>object(d)?{...d,...(!Object.hasOwn(d,'note')?{note:'用户请求的模拟数据'}:{}),...(d.aggregate===undefined&&!Object.hasOwn(d,'asOf')?{asOf:'模拟数据，时点未指定'}:{})}:d):value
+}
 export function validateWorkbenchDatasets(value){
  check(Array.isArray(value)&&value.length>=1&&value.length<=DATASET_VIEW_LIMITS.datasets,'共同数据需要1–5份完整记录集。')
  if(value.some(d=>object(d)&&d.aggregate!==undefined)){
@@ -27,7 +32,7 @@ export function validateWorkbenchDatasets(value){
    for(let i=0;i<pending.length;){
     const d=pending[i]
     if(object(d)&&d.aggregate!==undefined){
-     check(exact(d,['id','label','note','aggregate'])&&id(d.id)&&text(d.label,200)&&text(d.note,8000),'汇总数据只声明id、label、note、aggregate，不独立提供records或估算值。')
+     check(exact(d,['id','label','note','aggregate'])&&id(d.id)&&text(d.label,200)&&text(d.note,8000),`共同数据集 ${d.id??'未命名'}：汇总数据只声明id、label、note、aggregate，不独立提供records或估算值；当前多余字段：${Object.keys(d).filter(k=>!['id','label','note','aggregate'].includes(k)).join('、')||'无'}。需要负责人职责等非派生信息时另保留原记录集，不能删掉业务信息去凑汇总。`)
      const source=complete.get(d.aggregate?.dataset);if(!source){i++;continue}
      complete.set(d.id,validateWorkbenchDatasets([materializeDatasetAggregate(d,source)])[0])
     }else complete.set(d?.id,validateWorkbenchDatasets([d])[0])
@@ -39,7 +44,7 @@ export function validateWorkbenchDatasets(value){
  }
  const ids=new Set(),result=[]
  for(const d of value){
-  check(exact(d,['id','label','asOf','note','fields','records'],['recordScope']),'共同数据字段无效，必须提供id、label、asOf、note、fields和records。')
+  check(exact(d,['id','label','asOf','note','fields','records'],['recordScope']),`共同数据集 ${d?.id??'未命名'} 字段无效，必须提供id、label、asOf、note、fields和records；缺少：${['id','label','asOf','note','fields','records'].filter(k=>!object(d)||!Object.hasOwn(d,k)).join('、')||'无'}；多余：${object(d)?Object.keys(d).filter(k=>!['id','label','asOf','note','fields','records','recordScope'].includes(k)).join('、')||'无':'无'}。`)
   check(id(d.id)&&!ids.has(d.id),'共同数据集编号无效或重复。');ids.add(d.id)
   check(d.recordScope===undefined||id(d.recordScope),'共同记录对象范围recordScope无效。')
   check(text(d.label,200)&&text(d.asOf,500)&&text(d.note,8000),'共同数据名称、时点和来源/演练说明不能为空或超过上限。')
@@ -151,7 +156,7 @@ export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,prope
  sections:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
 }};
 export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'仅明确模拟场景，同一批对象只写一个主记录集，排程/对比/列表均引用它；每份数据必须有组件引用，同批对象跨表时显式声明相同recordScope，该范围内同id同名事实及单位不得矛盾。不同实体的编号独立；每条记录有稳定id并完整填写所有声明字段，缺失null。记录必须含id，id显示字段省略时由宿主补标签。最多5组，每组200条/24字段/48KB，总192KB；不截取记录，不猜共同值。',items:{type:'object',additionalProperties:false,properties:{
- id:{type:'string',required:true},recordScope:{type:'string',description:'可选。跨数据集确为同一批对象时提供相同范围如book；该范围内同id的同名事实/单位必须一致。省略时编号仅限本数据集，员工001与设备001不视为同一对象。'},label:{type:'string',required:true},asOf:{type:'string'},note:{type:'string',required:true},
+ id:{type:'string',required:true},recordScope:{type:'string',description:'可选。跨数据集确为同一批对象时提供相同范围如book；该范围内同id的同名事实/单位必须一致。省略时编号仅限本数据集，员工001与设备001不视为同一对象。'},label:{type:'string',required:true},asOf:{type:'string',description:'模拟数据时点；省略时如实标注时点未指定，不猜日期。'},note:{type:'string',description:'模拟数据说明；省略时标注用户请求的模拟数据。'},
  aggregate:{type:'object',additionalProperties:false,description:DATASET_AGGREGATE_GUIDANCE,properties:{dataset:{type:'string',required:true},groupBy:{type:'array',required:true,items:{type:'string'}},measures:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},op:{type:'string',required:true,enum:['count','sum']},field:{type:'string'},unit:{type:'string'},where:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},equals:{type:'json',description:'与来源标量严格相等的原值',required:true}}}}}}}},
  fields:{type:'array',items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}},
  records:{type:'array',items:{type:'object',additionalProperties:true,properties:{id:{type:'string',required:true,description:'直接使用稳定业务编号，如B01；每条必填且唯一。其他字段必须与fields声明一致。'}}}}

@@ -518,6 +518,13 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
 }
+export function workbenchNativeTableFit(node,tableRoot) {
+  const size=workbenchNativeTableDimensions(tableRoot)
+  if(!size||!node?.containerSpec)return null
+  // Native views have no HTML identity. Use the same content-key protocol as
+  // other native layouts, and allow both growing pages and shorter last pages.
+  return {...(node.containerSpec.type==='html'?{html:node.containerSpec.html}:{native:true,contentKey:JSON.stringify(node.containerSpec)}),width:node.width,height:size.height,layoutFit:true}
+}
 export function workbenchNativeTableDimensions(tableRoot) {
   if(tableRoot?.getAttribute('data-sherlock-market-native')!=='table'||!(tableRoot.getBoundingClientRect().width>0))return null
   const view=tableRoot.ownerDocument.defaultView,pixels=value=>Math.max(0,parseFloat(value)||0)
@@ -865,7 +872,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     // rows and context on first completion and responsive width changes too.
     let active=true
     const tables=nodes.map(node=>({node,card:root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')})).map(item=>({...item,table:item.card?.querySelector('[data-sherlock-market-native="table"]')})).filter(item=>item.table)
-    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const size=workbenchNativeTableDimensions(table);if(size)workspace.setWorkbenchContentHeight(node.id,{html:node.containerSpec.html,width:node.width,height:size.height})}}
+    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const fit=workbenchNativeTableFit(node,table);if(fit)workspace.setWorkbenchContentHeight(node.id,fit)}}
     const nativeDetails=[...root.querySelectorAll('[data-research-preview-body] details')].filter(details=>!details.closest('[data-research-node-id]')?.querySelector('iframe'))
     const refitNative=()=>{if(active&&!root.hasAttribute('data-grid-operation'))for(const details of nativeDetails)if(details.isConnected)root.__eworkNativeDisclosure?.({target:details})}
     const nativeObserver=new ResizeObserver(refitNative)

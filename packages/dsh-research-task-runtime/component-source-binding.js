@@ -1,3 +1,4 @@
+import {load} from 'cheerio'
 import {isCryptoTickerRequest} from './crypto-source-results.js'
 import {evidenceWindows,usesHumanSourceScope,applicableExplicitScope} from './workbench-explicit-scope.js'
 import {readTemplateModel} from './component-template-registry.js'
@@ -387,7 +388,15 @@ export function componentSnapshotEvidence(text,records,options={}) {
     if(!value||typeof value!=='object')return false
     return records.some(record=>record.tool==='web_fetch'&&record.purpose==='snapshot'&&snapshotRecordMatches(value,record))||Object.entries(value).some(([key,v])=>['url','link','sourceUrl'].includes(key)&&typeof v==='string'&&urls.has(snapshotUrl(v))||v&&typeof v==='object'&&(Array.isArray(v)?v.some(referenced):referenced(v)))
   }
-  return candidates.some(referenced)
+  // A sourced narrative cites fetched pages in Markdown links or real HTML
+  // anchors, not necessarily in a structured `url` property. This establishes
+  // observed retrieval only; feed/article identity gates above stay per-record.
+  const narrativeReference=data=>{
+    if(!['markdown','summary','mind-map','html'].includes(data?.type)||!acceptArtifactOutput(JSON.stringify(data)))return false
+    if(data.type==='html')return load(data.html)('a[href]').toArray().some(element=>urls.has(snapshotUrl(element.attribs.href)))
+    return [data.content,data.source?.text].filter(value=>typeof value==='string').some(value=>[...value.matchAll(/\[[^\]\n]+\]\(<?(https?:\/\/[^\s<>]+?)>?(?:\s+"[^"\n]*")?\)/gu)].some(match=>urls.has(snapshotUrl(match[1]))))
+  }
+  return candidates.some(data=>referenced(data)||narrativeReference(data))
 }
 // A request for real observations does not imply a recurring refresh recipe.
 // Ignore quoted examples and negative status/prohibitions in the task contract.

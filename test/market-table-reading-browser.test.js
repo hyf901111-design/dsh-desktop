@@ -123,7 +123,7 @@ it('pages long sandbox tables without losing records, original links or full bod
 
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__DARK__').replaceAll(':root','__ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
 const nativeCss=componentSourceCss+readFileSync(new URL('../scripts/lib/research-grid-workbench.css',import.meta.url),'utf8')+nativePresentation+researchMarketNativeTableCss+readFileSync(new URL('../scripts/lib/workbench-style.css',import.meta.url),'utf8')
-const nativeMeasure=ui.slice(ui.indexOf('export function workbenchNativeTableDimensions('),ui.indexOf('export function workbenchMeasuredDimensions(')).replace(/^export /u,'')
+const nativeMeasure=ui.slice(ui.indexOf('export function workbenchNativeTableFit('),ui.indexOf('export function workbenchMeasuredDimensions(')).replace(/^export /gmu,'')
 it.each([['light',3],['dark',3],['enterprise',3],['openterminal',3],['dark',20]])('fits actual host-native rows, full asOf/note and selected row after default sizing and Arrange in %s with %i rows',async(mode,count)=>{
  const observed=count===3?globalObserved:{...globalObserved,rows:Array.from({length:count},(_,i)=>[String(i),...globalObserved.rows[i%3].slice(1)]),note:'完整来源记录。'}
  const spec=renderMarketArtifact(observed),win=new Window(),data=parseResearchMarketNativeTable(spec.html,win.document);win.happyDOM.abort()
