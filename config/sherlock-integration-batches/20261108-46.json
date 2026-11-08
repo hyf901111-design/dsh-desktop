@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-46",
+  "branch": "codex/integration/20261108-46",
+  "baseMainCommit": "93d910dd9cec9c408daf18536634417760b5b13c",
+  "expectedMainCommit": "93d910dd9cec9c408daf18536634417760b5b13c",
+  "createdAt": "2026-11-08T13:44:17.815Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "嵌套组件实际滚动容器修复",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "93d910dd9cec9c408daf18536634417760b5b13c",
+        "tipCommit": "39db13d6fb38c5bc8370f741690369274ad6fc38",
+        "commits": [
+          {
+            "commit": "39db13d6fb38c5bc8370f741690369274ad6fc38",
+            "parents": [
+              "93d910dd9cec9c408daf18536634417760b5b13c"
+            ],
+            "subject": "修复嵌套导图阻断内部滚动并补充滚动边界回归"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-grid-workbench.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "136 项聚焦检查通过",
+            "verifiedCommit": "39db13d6fb38c5bc8370f741690369274ad6fc38",
+            "completedAt": "2026-11-08T13:44:16.141169+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "39db13d6fb38c5bc8370f741690369274ad6fc38",
+            "completedAt": "2026-11-08T13:44:16.141169+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "39db13d6fb38c5bc8370f741690369274ad6fc38",
+            "completedAt": "2026-11-08T13:44:16.141169+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证原生架构图及 iframe 架构区滚轮透传；原生说明和沙箱说明展开全文可见、下方卡片避让、收起还原，并验证窗口宽度变化。"
+        },
+        "acceptanceCriteria": [
+          "横向页签随画布滚动，竖向导航固定",
+          "无可滚动内容的选中组件将滚轮交还画布",
+          "展开说明临时撑高，收起恢复并保持线性箭头对齐"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T13:44:16.141169+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/component-wheel-zoom.test.js",
+        "test/research-grid-workbench.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
