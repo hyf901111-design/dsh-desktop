@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-14",
+  "branch": "codex/integration/20261108-14",
+  "baseMainCommit": "a377b89ff4c49cc512c99f8c26550e9fb0c9a7d9",
+  "expectedMainCommit": "a377b89ff4c49cc512c99f8c26550e9fb0c9a7d9",
+  "createdAt": "2026-11-08T05:31:28.018Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台按需求和所得内容选择呈现",
+        "branch": "codex/feat/workbench-presentation-after-evidence-20261108",
+        "baseCommit": "a377b89ff4c49cc512c99f8c26550e9fb0c9a7d9",
+        "tipCommit": "7f18a45bdbbe04270438c2d79c46c27b62a089c7",
+        "commits": [
+          {
+            "commit": "7f18a45bdbbe04270438c2d79c46c27b62a089c7",
+            "parents": [
+              "a377b89ff4c49cc512c99f8c26550e9fb0c9a7d9"
+            ],
+            "subject": "优化：按需求和实际内容确定工作台组件呈现"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-component.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-planning-session.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "135 项聚焦检查通过",
+            "verifiedCommit": "7f18a45bdbbe04270438c2d79c46c27b62a089c7",
+            "completedAt": "2026-11-08T05:31:12.509749+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "7f18a45bdbbe04270438c2d79c46c27b62a089c7",
+            "completedAt": "2026-11-08T05:31:12.509749+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "7f18a45bdbbe04270438c2d79c46c27b62a089c7",
+            "completedAt": "2026-11-08T05:31:12.509749+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "变更位于后端规划、来源与校验链路，未改界面；原 PDF 原请求在本地集成包进行端到端验收。"
+        },
+        "acceptanceCriteria": [
+          "规划类型只影响初始布局",
+          "数据或内容解析后按真实材料选原生或自定义呈现",
+          "保留用户明确要求的图形、范围、尺寸和交互",
+          "同一原 PDF 原请求本地包复测"
+        ],
+        "risks": [
+          "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
+        ],
+        "generatedAt": "2026-11-08T05:31:12.509749+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/workbench-planning-phase.test.js",
+        "test/workbench-planning-session.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
