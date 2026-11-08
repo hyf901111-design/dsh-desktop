@@ -107,6 +107,33 @@ export function workbenchDocumentCitationIssue(text, documents, { required = tru
   return found || !required ? undefined : pdfCitationIssue
 }
 
+// A Word card grid often contains entities with unknown properties. Dropping
+// those cells creates a plausible-looking but incomplete detail table. Only
+// compare an explicitly complete projection of a cited grid with strong exact
+// overlap; do not infer scope from an unrelated table or a prose summary.
+export function documentTableEntityCoverageIssue(output,documents,request){
+ if(!/完整|全部|逐项|逐一|逐条|逐个/u.test(request??''))return
+ let spec;try{spec=JSON.parse(output)}catch{return}
+ const data=retainedTableData(spec)??spec
+ if(!['table','market'].includes(data?.type)||data.type==='market'&&data.variant!=='table'||!Array.isArray(data.rows))return
+ const compact=value=>String(value??'').normalize('NFKC').replace(/\s+/gu,'')
+ const body=data.rows.map(row=>row.map(compact).join('\n')).join('\n')
+ const refs=JSON.stringify(data)
+ for(const document of documents??[])for(const block of document.blocks??[]){
+  if(!Array.isArray(block.rows)||!new RegExp('(?<![\\p{L}\\p{N}_])'+block.id+'(?!\\d)','u').test(refs))continue
+  const cells=block.rows.flat().filter(cell=>typeof cell==='string'&&cell.trim())
+  if(cells.length<3||cells.filter(cell=>cell.includes('\n')).length<cells.length*.8)continue
+  // This protocol targets card grids, not ordinary multi-column tables whose
+  // other columns are properties of the first. Empty spacer columns are an
+  // objective structural distinction, independent of document/business type.
+  if(!block.rows.every(row=>row.length>=3&&row.some(cell=>!String(cell??'').trim())))continue
+  const entities=[...new Set(cells.map(cell=>cell.trim().split('\n')[0].trim()))]
+  if(entities.some(entity=>entity.length<2||entity.length>100||!/[\p{L}]/u.test(entity)))continue
+  const missing=entities.filter(entity=>!body.includes(compact(entity)))
+  if(missing.length&&entities.length-missing.length>=Math.ceil(entities.length*.6))return `文档 [${block.id}] 的完整明细有 ${entities.length} 个实体，当前表格缺少：${missing.slice(0,12).join('、')}。未知属性的实体也须保留一行及原文缺失状态；复用已解析原文补齐 rows，不重新取数、不把遗漏只写进附注。`
+ }
+}
+
 // Check only an explicitly complete list whose source declares its own count
 // and whose first sentence actually contains that many distinct entries.
 export function restoreDocumentLists(output, documents, request, { searchable = false } = {}) {

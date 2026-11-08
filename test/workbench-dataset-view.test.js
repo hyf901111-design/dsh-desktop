@@ -8,6 +8,7 @@ import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.j
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
 import {readTemplateModel,templateSummary} from '../packages/dsh-research-task-runtime/component-template-registry.js';
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js';
+import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools';
 const input=()=>({requestId:'book-shared',title:'古籍工坊交接演练',dataMode:'simulated',sharedDatasets:[bookDataset()],panels:[archiveView(),scheduleView(),priorityView()].map((view,i)=>({title:['逐册档案与比较','三日设备排程','复检优先级'][i],prompt:['按负责人和阶段筛选逐册档案，选择任意两册比较完整病害与交接。','查看每册入柜出柜、等待原因与复检；不能有同柜重叠。','按负责人筛选并修改复检优先级，保留实际原含水率和验收结果。'][i],type:'view',size:'large',view}))});
 async function setup(initialPlans){
  const dir=await mkdtemp(join(tmpdir(),'dataset-workbench-'));let data={version:1,tasks:[]},tool;
@@ -19,6 +20,18 @@ async function setup(initialPlans){
  return {tool,exec,runtime,storage,adapter,filePath,close:async()=>{await runtime.dispose();await dispose();await rm(dir,{recursive:true,force:true})}};
 }
 describe('workbench common records at the real tool boundary',()=>{
+ it('accepts declared default subsets through the advertised tool schema and preserves them in delivery',async()=>{
+  const f=await setup(),plan=input();plan.panels=[plan.panels[0]];
+  plan.panels[0].view.where=[{field:'owner',op:'in',values:[plan.sharedDatasets[0].records[0].owner]},{field:'moisture',op:'notNull'}];
+  try{
+   expect(validateJsonSchemaValue(f.tool.parameters,plan)).toEqual([]);
+   expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared');
+   const delivered=readTemplateModel(JSON.parse([...f.runtime.tasks.values()][0].finalOutput)).data;
+   expect(delivered.view.where).toEqual(plan.panels[0].view.where);expect(delivered.dataset.records).toEqual(plan.sharedDatasets[0].records);
+   expect(f.adapter.start).not.toHaveBeenCalled();
+   const invalid=structuredClone(plan);invalid.panels[0].view.where[0].op='eval';expect(validateJsonSchemaValue(f.tool.parameters,invalid).length).toBeGreaterThan(0);
+  }finally{await f.close()}
+ });
  it('resolves three views losslessly and idempotently without mutating the plan',()=>{
   const plan=input(),before=structuredClone(plan),value=validateWorkbench(plan);
   expect(value.sharedDatasets).toEqual(plan.sharedDatasets);

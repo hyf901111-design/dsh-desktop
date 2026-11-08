@@ -40,6 +40,12 @@ describe('component refresh status',()=>{
   expect(componentDataStatusView(null,null,staticNode({type:'news',note:'来源：东方财富关键词新闻搜索（eastmoney-news），query=加密货币。'})).source).toBe('东方财富关键词新闻搜索（eastmoney-news）')
   expect(componentDataStatusView(null,null,staticNode({type:'news',items:[{url:'https://finance.example.com/news/1'},{url:'https://finance.example.com/news/2'}]})).source).toBe('finance.example.com')
  })
+ it('keeps host-recorded recovery sources in the footer without a template model or refresh binding',()=>{
+  const node={containerSpec:{type:'html',html:'<table><tr><td>完整正文</td></tr></table>'},generationSources:[{label:'GitHub Releases',url:'https://api.github.com/repos/example/core/releases'},{label:'GitHub Releases'},{url:'https://official.example.org/docs'}]}
+  expect(componentDataStatusView(null,null,node)).toMatchObject({source:'GitHub Releases / official.example.org',detail:'静态快照'});
+  expect(componentDataStatusView(null,null,{...node,generationSources:[{url:'javascript:alert(1)'},{url:'https://name:secret@example.org/'}]}).source).toBe('来源未标注');
+  expect(componentDataStatusView(null,null,{...staticNode({sources:[{label:'明确文档依据'}]}),generationSources:node.generationSources}).source).toBe('明确文档依据');
+ })
  it('retains explicitly labelled table provenance with common Chinese source prefixes',()=>{
   for(const note of ['数据来源：腾讯财经公开报价，报价时点以接口为准','来源 Tushare etf_share_size · 数据日期2026-11-05']){
    expect(componentDataStatusView(null,null,staticNode({type:'table',note})).source).toBe(note.startsWith('数据')?'腾讯财经公开报价':'Tushare')

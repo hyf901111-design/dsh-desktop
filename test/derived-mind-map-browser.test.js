@@ -62,7 +62,7 @@ it('reflows full six-branch hierarchies across the available width and restores 
   await expect.poll(async()=>(await path.getAttribute('d')).match(/M/g)?.length).toBe(18)
   const widePath=await path.getAttribute('d')
   await page.locator('section').evaluate(el=>{el.style.width='750px'})
-  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('compact')
+  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('wide')
   await expect.poll(()=>map.evaluate(el=>el.scrollHeight)).toBeGreaterThan(wideHeight)
   expect(await nodes.allTextContents()).toEqual(content)
   await expect.poll(()=>path.getAttribute('d')).not.toBe(widePath)
@@ -74,6 +74,24 @@ it('reflows full six-branch hierarchies across the available width and restores 
   expect(errors).toEqual([])
  }finally{await context.close()}
 },20000)
+
+it('wraps many branches into readable columns at ordinary workbench widths without losing hierarchy',async()=>{
+ const page=await browser.newPage({viewport:{width:1000,height:900}})
+ try{
+  await page.setContent('<section data-research-compact-chrome style="width:780px"><div id="map" class="ew-derived-preset"></div></section>')
+  await page.addStyleTag({content:css});await page.addScriptTag({content:script})
+  await page.evaluate(()=>window.showMap('# 交付体系\n'+Array.from({length:7},(_,i)=>'- 业务领域'+i+'\n  - 负责团队'+i+'\n    - 完整职责'+i).join('\n'),true))
+  const map=page.locator('[data-research-mind-map]'),nodes=map.locator('[data-research-mind-map-node]')
+  await expect.poll(()=>map.getAttribute('data-research-mind-map-layout')).toBe('wide')
+  expect(await nodes.count()).toBe(22)
+  const branches=await map.locator('[data-research-mind-map-depth="1"]').evaluateAll(elements=>elements.map(el=>el.getBoundingClientRect().toJSON()))
+  expect(new Set(branches.map(b=>Math.round(b.x))).size).toBeGreaterThan(1)
+  expect(new Set(branches.map(b=>Math.round(b.y))).size).toBeGreaterThan(1)
+  expect(await map.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true)
+  await expect.poll(async()=>(await map.locator('path').getAttribute('d')).match(/M/g)?.length).toBe(21)
+  for(const node of await nodes.all())expect(await node.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true)
+ }finally{await page.close()}
+},15000)
 
 
 it('renders all twelve levels and every connector without flattening deeper relationships',async()=>{

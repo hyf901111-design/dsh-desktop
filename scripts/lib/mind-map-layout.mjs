@@ -9,12 +9,16 @@ export function ResearchMindMapConnections({rootRef,revision}) {
       const origin=root.querySelector(':scope > [data-research-mind-map-node]');if(!origin)return;
       const children=root.querySelector(':scope > .rScV5Q_mindMapChildren'),count=children?.children.length||0;
       const depth=Math.max(1,...Array.from(root.querySelectorAll('[data-research-mind-map-depth]'),node=>Number(node.getAttribute('data-research-mind-map-depth'))||0));
-      const minimum=180+Math.max(0,depth-2)*24;
-      const wide=count>=2&&root.clientWidth>=840&&root.clientWidth-48>=count*minimum+(count-1)*24;
+      const minimum=Math.max(220,180+Math.max(0,depth-2)*24);
+      // A large first level need not fit in one row. Wrap complete branches
+      // into readable columns rather than turning every node into a full-width
+      // strip and forcing a long vertical journey through unrelated groups.
+      const columns=Math.max(1,Math.min(count,Math.floor((root.clientWidth-24)/(minimum+24))));
+      const wide=count>=2&&root.clientWidth>=600&&columns>=2;
       const horizontalMinimum=48+(depth+1)*160+depth*40;
       const mode=wide?'wide':root.clientWidth>=horizontalMinimum?'compact':'stacked';
       if(root.getAttribute('data-research-mind-map-layout')!==mode){root.setAttribute('data-research-mind-map-layout',mode);root.scrollLeft=0;root.scrollTop=0;}
-      root.style.setProperty('--ew-map-branches',String(Math.max(1,count)));
+      root.style.setProperty('--ew-map-branches',String(wide?columns:Math.max(1,count)));
       const bounds=root.getBoundingClientRect();if(!(bounds.width>0&&bounds.height>0))return;
       const sx=root.clientWidth/bounds.width,sy=root.clientHeight/bounds.height;
       const box=element=>{const rect=element.getBoundingClientRect();return {left:(rect.left-bounds.left)*sx+root.scrollLeft,top:(rect.top-bounds.top)*sy+root.scrollTop,width:rect.width*sx,height:rect.height*sy};};
@@ -25,7 +29,8 @@ export function ResearchMindMapConnections({rootRef,revision}) {
         const a=box(parent),b=box(child);
         if(wide){
           const x=a.left+a.width/2,y=a.top+a.height;
-          if(!parentBranch||branch.parentElement.children.length===1){const endX=b.left+b.width/2,middle=(y+b.top)/2;paths.push('M'+x+' '+y+'V'+middle+'H'+endX+'V'+b.top);}
+          if(!parentBranch&&count>columns){const rail=b.left-10;paths.push('M'+x+' '+y+'V'+(y+12)+'H'+rail+'V'+(b.top+b.height/2)+'H'+b.left);}
+          else if(!parentBranch||branch.parentElement.children.length===1){const endX=b.left+b.width/2,middle=(y+b.top)/2;paths.push('M'+x+' '+y+'V'+middle+'H'+endX+'V'+b.top);}
           else{const rail=b.left-10;paths.push('M'+x+' '+y+'V'+(y+10)+'H'+rail+'V'+(b.top+b.height/2)+'H'+b.left);}
         }else if(mode==='stacked'){const rail=a.left+9;paths.push('M'+rail+' '+(a.top+a.height)+'V'+(b.top+b.height/2)+'H'+b.left);}
         else{const x=a.left+a.width,y=a.top+a.height/2,endY=b.top+b.height/2,middle=(x+b.left)/2;paths.push('M'+x+' '+y+'H'+middle+'V'+endY+'H'+b.left);}

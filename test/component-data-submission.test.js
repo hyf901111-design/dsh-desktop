@@ -21,12 +21,42 @@ const record={tool:'public_data_query',args,response}
 const input={requests:[{key:'q',tool:'public_data_query',args}],mapping:{version:1,type:'chart',variant:'horizontal',title:'变动排名',unit:'亿元',asOf:{$from:'q',$path:'asOf'},labels:{$from:'q',$each:'records',$map:{$path:'name'}},series:[{name:'变动',values:{$from:'q',$each:'records',$map:{$path:'value'}}}]}}
 const cleanup=[];afterEach(async()=>{for(const fn of cleanup.splice(0).reverse())await fn()})
 function context(){const ctx=new Context();new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{});new ToolRuntime(ctx);new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1});cleanup.push(()=>ctx.fiber.dispose());return ctx}
-async function fixture(validateSnapshot){
+async function fixture(validateSnapshot,options={}){
  const ctx=context(),child=(await ctx.agents.create({sessionId:'data-child',agentOptions:{}})).agent,parent=(await ctx.agents.create({sessionId:'data-parent',agentOptions:{}})).agent
- const controller=new AbortController(),records=[structuredClone(record)],submission=createComponentDataSubmission({observeRecords:()=>records,signal:controller.signal,validateSnapshot});cleanup.push(submission.dispose);child.ctx.tools.restrict({allow:[]});submission.register(child)
+ const controller=new AbortController(),records=[structuredClone(record)],submission=createComponentDataSubmission({observeRecords:()=>records,signal:controller.signal,validateSnapshot,...options});cleanup.push(submission.dispose);child.ctx.tools.restrict({allow:[]});submission.register(child)
  return{ctx,child,parent,records,submission,controller,invoke:(value=input,agent=child,id='data-submit')=>ctx.tools.execute({name:'submit_component_data',arguments:value,callId:id,agent,signal:controller.signal})}
 }
 const receipt=(callId='data-submit',isError=false)=>({type:'tool/result',data:{message:{source:{callId},content:[{type:'tool-result',toolCallId:callId,isError,content:[{type:'text',text:'{"accepted":true}'}]}]}}})
+it('delivers parsed material without fabricated structured requests and waits for its own successful receipt',async()=>{
+ const validateArtifact=(artifact,records)=>{
+  expect(records).toHaveLength(1)
+  if(!artifact.source?.text)throw Error('保留实际材料出处')
+  return JSON.stringify(artifact)
+ }
+ const f=await fixture(undefined,{validateArtifact}),artifact={version:1,type:'mind-map',title:'关系',content:'# 主体\n- 部门\n  - 岗位\n    - 职责\n      - 依据',source:{title:'附件',text:'原始文档 P4–P6'}}
+ let done=false;f.submission.result.then(()=>{done=true})
+ expect((await f.invoke({artifact:{...artifact,source:undefined}})).isError).toBe(true)
+ expect((await f.invoke({artifact},f.parent)).isError).toBe(true)
+ expect((await f.invoke({artifact,requests:[]})).isError).toBe(true)
+ expect((await f.invoke({artifact})).isError).toBe(false)
+ f.submission.accept(receipt('other-call'));f.submission.accept({type:'step/end'});await Promise.resolve();expect(done).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ expect(JSON.parse((await f.submission.result).output[0].text)).toEqual(artifact)
+ expect((await f.invoke({artifact})).isError).toBe(true)
+})
+it.each(['refresh','unvalidated'])('rejects static delivery for %s instead of bypassing its contract',async mode=>{
+ const f=await fixture(undefined,mode==='refresh'?{bindingRequested:true,validateArtifact:JSON.stringify}:{})
+ const result=await f.invoke({artifact:{version:1,type:'markdown',title:'说明',content:'来源内容'}})
+ expect(result.isError).toBe(true);expect(JSON.stringify(result)).toContain(mode==='refresh'?'自动刷新':'校验边界不可用')
+})
+it('offers document and custom presentation schemas without pretending that every type is a KPI',async()=>{
+ const f=await fixture()
+ const lookup=async type=>f.ctx.tools.execute({name:'component_presentation_schema',arguments:{type},callId:'schema-'+type,agent:f.child,signal:f.controller.signal})
+ for(const type of ['mind-map','summary','markdown','html']){
+  const result=await lookup(type);expect(result.isError).toBe(false);expect(JSON.stringify(result)).toContain(type)
+ }
+ expect((await lookup('unsupported')).isError).toBe(true)
+})
 it('accepts source-backed chart labels with redundant numeric precision without losing leading zeroes',async()=>{
  const f=await fixture(),candidate=structuredClone(input)
  f.records[0].response.records=[{name:'000300.SH',value:-13.644},{name:'000905.SH',value:-17.334}]
@@ -235,6 +265,30 @@ it('uses one real child through acquisition, rejected mapping and adaptive corre
  expect(prompt).not.toContain('唯一交付格式');expect(prompt).toContain('规划类型只是建议')
  expect(prompt).not.toContain('最终输出严格 JSON');expect(prompt).not.toContain('仅输出完整JSON');expect(prompt.length).toBeLessThan(12000)
  expect(ctx.tools.schemas(children[0]).map(t=>t.name)).not.toContain('submit_component_data')
+})
+
+it.each(['mind-map','markdown'])('finishes a real child with %s from webpage prose through the static submission path',async type=>{
+ const ctx=context();new SubagentRuntime(ctx);spawn(ctx,{providerName:'spawn'})
+ const parent=(await ctx.agents.create({sessionId:'prose-'+type,agentOptions:{provider:'fixture',model:'fixture'}})).agent,requests=[]
+ let fetches=0,queries=0
+ ctx.tools.register(defineTool({name:'public_data_query',description:'Structured data',parameters:{},output:{schema:{type:'object',additionalProperties:true},render:(_a,v)=>[{type:'text',text:JSON.stringify(v)}]},isConcurrencySafe:()=>true,execute(){queries++;return response}}))
+ const url='https://vuejs.org/guide/introduction.html',body='Vue is a framework for building user interfaces. Vue builds on standard HTML, CSS and JavaScript, and provides a declarative, component-based programming model.'
+ ctx.tools.register(defineTool({name:'web_fetch',description:'Read official guide',parameters:{url:{type:'string',required:true}},output:{schema:{type:'string'},render:(_a,v)=>[{type:'text',text:v}]},isConcurrencySafe:()=>true,execute(){fetches++;return 'Fetched '+url+' (HTTP 200)\n\n'+body}}))
+ ctx.llm.registerAdapter(['fixture'],new class extends LlmAdapter{
+  async resolveModel(provider,id){return{provider,id,name:id}}async listModels(){return[]}
+  async *stream(request){
+   requests.push(request);const n=requests.length;if(n>2)throw Error('Prose submission restarted acquisition')
+   const artifact=type==='mind-map'?{version:1,type,title:'Vue 关系',content:'# Vue\n- 用户界面\n  - 声明式组件\n- Web 标准\n  - HTML\n  - CSS\n  - JavaScript',source:{title:'Vue 官方指南',text:body+'\n'+url}}:{version:1,type,title:'Vue 简介',content:body+'\n\n[官方指南]('+url+')'}
+   yield{type:'block-start',index:0,blockType:'tool-call'};yield{type:'block-end',index:0,block:{type:'tool-call',id:'prose-'+n,name:n===1?'web_fetch':'submit_component_data',arguments:JSON.stringify(n===1?{url}:{artifact})}};yield{type:'finish',reason:{kind:'tool-calls'}}
+  }
+ }())
+ const adapter=createSubagentAdapter(ctx),controller=new AbortController();cleanup.push(()=>adapter.dispose())
+ const query=workbenchPanelPrompt({title:'开发说明',dataMode:'source',originalRequest:'读取官方指南，梳理关系与说明'},{title:'Vue 简介',prompt:'仅使用 Vue 官方指南的真实正文，保留原始出处',type})
+ const handle=await adapter.start({parentSessionId:parent.id,kind:'container',query,prompt:query,signal:controller.signal,onSessionEvent:()=>{}});cleanup.push(()=>handle.dispose())
+ const result=await handle.result
+ expect(result.stopReason).toBe('completed');expect(requests).toHaveLength(2);expect(fetches).toBe(1);expect(queries).toBe(0)
+ expect(result.sourceRecords).toHaveLength(1);expect(result.output[0].text).toContain(type==='mind-map'?'Vue 关系':body)
+ expect(result.sourceRecords[0].tool).toBe('web_fetch')
 })
 
 it('retains source-owned submission tools during bounded repair and lets the same child correct again',async()=>{
