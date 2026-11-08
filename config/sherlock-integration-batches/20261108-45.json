@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-45",
+  "branch": "codex/integration/20261108-45",
+  "baseMainCommit": "0ecf3a66ff7c45f8cb04461ffb5050abda485381",
+  "expectedMainCommit": "0ecf3a66ff7c45f8cb04461ffb5050abda485381",
+  "createdAt": "2026-11-08T13:33:27.841Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "原生组件说明展开与滚轮交互补修",
+        "branch": "codex/feat/workbench-native-disclosure-20261108",
+        "baseCommit": "0ecf3a66ff7c45f8cb04461ffb5050abda485381",
+        "tipCommit": "9c1cd17a8ef160845b44f6079e1e4417f6bc0a24",
+        "commits": [
+          {
+            "commit": "9c1cd17a8ef160845b44f6079e1e4417f6bc0a24",
+            "parents": [
+              "0ecf3a66ff7c45f8cb04461ffb5050abda485381"
+            ],
+            "subject": "补齐原生架构卡说明展开高度与线性箭头"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/derived-preset-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-drop-focus-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/board-tabs-connection-client.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-grid-workbench.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "135 项聚焦检查通过",
+            "verifiedCommit": "9c1cd17a8ef160845b44f6079e1e4417f6bc0a24",
+            "completedAt": "2026-11-08T13:33:26.176890+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "9c1cd17a8ef160845b44f6079e1e4417f6bc0a24",
+            "completedAt": "2026-11-08T13:33:26.176890+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "9c1cd17a8ef160845b44f6079e1e4417f6bc0a24",
+            "completedAt": "2026-11-08T13:33:26.176890+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证原生架构图及 iframe 架构区滚轮透传；原生说明和沙箱说明展开全文可见、下方卡片避让、收起还原，并验证窗口宽度变化。"
+        },
+        "acceptanceCriteria": [
+          "横向页签随画布滚动，竖向导航固定",
+          "无可滚动内容的选中组件将滚轮交还画布",
+          "展开说明临时撑高，收起恢复并保持线性箭头对齐"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T13:33:26.176890+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-drop-focus-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/board-tabs-connection-client.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/component-wheel-zoom.test.js",
+        "test/research-grid-workbench.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
