@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-12",
+  "branch": "codex/integration/20261108-12",
+  "baseMainCommit": "fc6f73f69f1cc1abc3eb60d0d53e4ace8d66216d",
+  "expectedMainCommit": "fc6f73f69f1cc1abc3eb60d0d53e4ace8d66216d",
+  "createdAt": "2026-11-08T04:48:33.002Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "带点字段映射和截断分页的交付完整性",
+        "branch": "codex/feat/workbench-source-completeness-20261108",
+        "baseCommit": "fc6f73f69f1cc1abc3eb60d0d53e4ace8d66216d",
+        "tipCommit": "95396219364644a4046b2c76cad9c5862057d0a2",
+        "commits": [
+          {
+            "commit": "95396219364644a4046b2c76cad9c5862057d0a2",
+            "parents": [
+              "fc6f73f69f1cc1abc3eb60d0d53e4ace8d66216d"
+            ],
+            "subject": "修复：保留带点来源键并校验分页与完整交付"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/observed-series-comparison.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/observed-source-completeness.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/component-readable-snapshot.test.js",
+              "test/timeline-template.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/component-article-timeline.test.js",
+              "test/workbench-article-timeline-runtime.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "RUN  v4.1.10 /Users/heyafeng/.codex/worktrees/history-edit-board-fill/sherlock-desktop\n\n\n Test Files  9 passed (9)\n      Tests  318 passed (318)\n   Start at  12:47:58\n   Duration  6.50s (transform 4.08s, setup 0ms, import 9.91s, tests 10.74s, environment 0ms)",
+            "verifiedCommit": "95396219364644a4046b2c76cad9c5862057d0a2",
+            "completedAt": "2026-11-08T04:48:04.573145+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "> sherlock@1.5.0 typecheck\n> tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "95396219364644a4046b2c76cad9c5862057d0a2",
+            "completedAt": "2026-11-08T04:48:13.963227+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "95396219364644a4046b2c76cad9c5862057d0a2",
+            "completedAt": "2026-11-08T04:48:13.979776+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "上轮原生美股取数与长正文现场回放已通过，分页缩小和重新对齐及一条假完成有聚焦测试。新包原生复测在本地集成构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "含点键按原始字段可读，路径歧义仍拒绝",
+          "截断缩页从第一页重取并核对连续范围和原始正文",
+          "计数和全文齐全才完成，真实原请求无需手动重试"
+        ],
+        "risks": [
+          "完整数据仍受宿主安全容量和外部来源可用性约束"
+        ],
+        "generatedAt": "2026-11-08T04:48:13.979812+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/observed-source-completeness.test.js",
+        "test/component-readable-snapshot.test.js",
+        "test/timeline-template.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/component-article-timeline.test.js",
+        "test/workbench-article-timeline-runtime.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
