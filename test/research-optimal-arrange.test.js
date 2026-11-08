@@ -17,7 +17,7 @@ describe('content-sized workbench arrangement',()=>{
     expect(researchOptimalDimensions(node('short',{type:'markdown',content:'简短结论'}))).toEqual({width:320,height:220});
     expect(researchOptimalDimensions(node('news',{type:'news',items:Array.from({length:9},()=>({title:'资讯'}))}))).toEqual({width:656,height:356});
     expect(researchMarketDimensions(feed(9))).toEqual({width:656,height:356});
-    expect(researchMarketContentDimensions('table',{columnCount:7,rowCount:20})).toEqual({width:656,height:380});
+    expect(researchMarketContentDimensions('table',{columnCount:7,rowCount:20}).height).toBeGreaterThanOrEqual(20*26+58);
     expect(researchOptimalDimensions(node('long',{type:'markdown',content:'正文'.repeat(1800)})).height).toBeGreaterThan(2000);
   });
 

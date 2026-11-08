@@ -84,6 +84,7 @@ it('moves a saved table complete methodology, date and file locators into the ri
   await page.evaluate(spec=>show({id:'saved',title:spec.title,containerSpec:spec}),spec)
   await page.getByRole('button',{name:'查看来源信息',exact:true}).click()
   await expect.poll(()=>page.locator('#right pre').first().textContent()).toContain(note)
+  expect(await page.locator('#right pre').count()).toBe(1)
   expect(await page.locator('#right').textContent()).toContain('T8、P24、P30、P36-P38')
   expect(await page.locator('#right').textContent()).toContain('2026-11-05')
   expect(getComponentSourceInfo({containerSpec:spec}).notes).toContain(note)

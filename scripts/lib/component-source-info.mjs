@@ -30,7 +30,7 @@ export function getComponentSourceInfo(node){
  if(typeof spec.html==='string'&&typeof DOMParser!=='undefined'){
   const doc=new DOMParser().parseFromString(spec.html,'text/html')
   for(const el of doc.querySelectorAll('[data-component-source-info],.market-footer,.indicator-method,.trend-provenance,.chart-source,.source-info')){
-   const text=el.textContent?.trim();if(text&&!notes.includes(text))notes.push(text)
+   const text=el.textContent?.trim(),modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text))notes.push(text)
    for(const a of el.querySelectorAll('a[href]'))add({label:a.textContent,url:a.getAttribute('href')})
   }
  }
@@ -111,6 +111,7 @@ export function ComponentSourceHost({coordinator}){
  return target?react_jsx_runtime.jsx(ComponentSourceFilesPopup,{target,coordinator,onClose:()=>setTarget(null)}):null
 }
 export const componentSourceCss=`
+[data-research-node-id]:has(.odyssey-data-stamp .ew-source-actions) [data-sherlock-market-native="table"]>.terminal-native-context{display:none!important}
 .odyssey-data-stamp .ew-source-actions{display:flex;align-items:center;gap:8px;flex:none}
 .odyssey-data-stamp button{border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer;line-height:16px;text-align:left}
 .odyssey-data-stamp .ew-source-file{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}

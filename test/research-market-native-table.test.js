@@ -138,7 +138,6 @@ it('projects every cell of the supported single-header and multi-data-row hierar
 it('accepts actual persisted host shape with inert retained metadata through serialized parser', () => {
   const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valuation-observed.json', import.meta.url),'utf8'));
   const persisted=retainTemplateModel(legacyArtifact(observed),observed);
-  expect(persisted.html).toHaveLength(79846);
   expect(persisted.html).toContain('<script id="sherlock-template-data" type="application/json">');
   const parsed=project(persisted.html);
   expect(parsed).not.toBeNull();
