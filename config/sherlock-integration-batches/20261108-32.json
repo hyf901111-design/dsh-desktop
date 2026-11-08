@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-32",
+  "branch": "codex/integration/20261108-32",
+  "baseMainCommit": "6d9b5c9e587e1989cfc765b71697dc11785f35da",
+  "expectedMainCommit": "6d9b5c9e587e1989cfc765b71697dc11785f35da",
+  "createdAt": "2026-11-08T10:16:48.095Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "保持工作台附件证据一致",
+        "branch": "codex/feat/workbench-attachment-evidence-20261108",
+        "baseCommit": "6d9b5c9e587e1989cfc765b71697dc11785f35da",
+        "tipCommit": "e9291128bcbaa616c1c577fd71a471093cf78328",
+        "commits": [
+          {
+            "commit": "e9291128bcbaa616c1c577fd71a471093cf78328",
+            "parents": [
+              "6d9b5c9e587e1989cfc765b71697dc11785f35da"
+            ],
+            "subject": "保持工作台规划与组件生成的附件证据一致"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/workbench-resultative-request.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "108 项聚焦检查通过",
+            "verifiedCommit": "e9291128bcbaa616c1c577fd71a471093cf78328",
+            "completedAt": "2026-11-08T10:16:46.004346+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "e9291128bcbaa616c1c577fd71a471093cf78328",
+            "completedAt": "2026-11-08T10:16:46.004346+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "e9291128bcbaa616c1c577fd71a471093cf78328",
+            "completedAt": "2026-11-08T10:16:46.004346+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已核对客户端中附件排在文字末尾时子卡误走外部检索，聚焦验证头部、中部、末尾与结构化附件都进入文档路线。"
+        },
+        "acceptanceCriteria": [
+          "文件标记任意位置传递给规划和组件",
+          "结构化附件在落盘后仍保留来源",
+          "引用内容不建立新读取权限",
+          "用同一份Word实测"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T10:16:46.004346+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-source-policy.test.js",
+        "test/workbench-resultative-request.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
