@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-34",
+  "branch": "codex/integration/20261108-34",
+  "baseMainCommit": "513dd38c97b32aee98971c00c4db6d57e6f49a93",
+  "expectedMainCommit": "513dd38c97b32aee98971c00c4db6d57e6f49a93",
+  "createdAt": "2026-11-08T10:58:15.172Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按宿主语义归一架构图主题颜色",
+        "branch": "codex/feat/workbench-structure-style-20261108",
+        "baseCommit": "513dd38c97b32aee98971c00c4db6d57e6f49a93",
+        "tipCommit": "922cfd76791f6dce90157bbf151ccb99659f973c",
+        "commits": [
+          {
+            "commit": "922cfd76791f6dce90157bbf151ccb99659f973c",
+            "parents": [
+              "513dd38c97b32aee98971c00c4db6d57e6f49a93"
+            ],
+            "subject": "自动归一架构图的主题颜色并保留原始内容"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-design-policy.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-design-policy.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/board-tabs-client.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "161 项聚焦检查通过",
+            "verifiedCommit": "922cfd76791f6dce90157bbf151ccb99659f973c",
+            "completedAt": "2026-11-08T10:58:13.552445+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "922cfd76791f6dce90157bbf151ccb99659f973c",
+            "completedAt": "2026-11-08T10:58:13.552445+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "922cfd76791f6dce90157bbf151ccb99659f973c",
+            "completedAt": "2026-11-08T10:58:13.552445+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端测试中架构卡被主题色硬编码拦截；直接复验相同失败草稿，归一后通过全部样式规则，并保持文字、层级及交互。"
+        },
+        "acceptanceCriteria": [
+          "架构图主题色由宿主提供",
+          "结构色修复不影响交互控件",
+          "文档结构可选择原生图或有必要的自定义呈现",
+          "复测已有真实草稿"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T10:58:13.552445+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-design-policy.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/board-tabs-client.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
