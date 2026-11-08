@@ -9,22 +9,22 @@
  body [data-financial-library][data-library-saved]>svg{animation:ew-library-save-wiggle 460ms ease-in-out;transform-origin:center}
  @keyframes ew-library-save-wiggle{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-2px) rotate(-5deg)}40%{transform:translateX(2px) rotate(5deg)}60%{transform:translateX(-1px) rotate(-3deg)}80%{transform:translateX(1px) rotate(2deg)}}
  @media(prefers-reduced-motion:reduce){body [data-financial-library][data-library-saved]>svg{animation:none!important}}
- body .ew-custom-library{flex:none;display:flex;flex-direction:column;gap:4px;padding-top:6px;margin-top:4px;border-top:1px solid #8883;min-width:0}
- body .ew-custom-library-label{padding:2px 6px;color:var(--fw-muted);font:400 11px/18px Inter,'Noto Sans SC',system-ui}
- body .ew-custom-library-row{display:flex;flex:none;align-items:center;min-width:0;height:31px;gap:2px;padding:0 2px;border-radius:6px;color:var(--fw-text)}
- body .ew-custom-library-row:is(:hover,:focus-within){background:var(--fw-accent);color:#fff}
+ body .ew-custom-library{flex:none;display:flex;flex-direction:column;gap:4px;padding-top:6px;margin-top:4px;border-top:1px solid var(--odyssey-menu-border,rgba(127,127,127,.2));min-width:0}
+ body .ew-custom-library-label{padding:2px 6px;color:inherit;opacity:.72;font-size:11px}
+ body .ew-custom-library-row{display:flex;flex:none;align-items:center;min-width:0;min-height:34px;gap:2px;padding:0 2px;border-radius:6px;color:inherit}
+ body .ew-custom-library-row:is(:hover,:focus-within){background:var(--odyssey-menu-row,rgba(127,127,127,.12));color:inherit}
  body .ew-custom-library-row>button{display:grid!important;place-items:center!important;flex:none!important;width:24px!important;min-width:24px!important;height:27px!important;min-height:27px!important;padding:0!important;border-radius:4px!important;color:inherit!important;background:transparent!important;gap:0!important;outline:0!important}
- body .ew-custom-library-row>button:is(:hover,:focus-visible){background:#ffffff24!important}
- body .ew-custom-library-row>button.ew-custom-library-name{display:flex!important;align-items:center!important;flex:1!important;min-width:0!important;width:0!important;gap:8px!important;padding:0 4px!important;font:400 12px/18px Inter,'Noto Sans SC',system-ui!important}
+ body .ew-custom-library-row>button:is(:hover,:focus-visible){background:var(--odyssey-menu-row,rgba(127,127,127,.12))!important}
+ body .ew-custom-library-row>button.ew-custom-library-name{display:flex!important;align-items:center!important;flex:1!important;min-width:0!important;width:0!important;gap:8px!important;padding:0 4px!important;font:inherit!important}
  body .ew-custom-library-name>span:last-child{flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .ew-custom-library-row>button.ew-custom-library-name:is(:hover,:focus-visible){background:transparent!important}
- body .ew-custom-library-menu{position:fixed!important;z-index:10002!important;box-sizing:border-box!important;padding:6px!important;border-radius:8px!important;background:var(--fw-menu)!important;color:var(--fw-text)!important;border:1px solid #8883!important;box-shadow:0 5px 18px #0005!important}
- body .ew-custom-library-menu>button{display:flex!important;align-items:center!important;gap:8px!important;padding:0 8px!important;height:31px!important;min-height:31px!important;width:100%!important;font:400 12px/18px Inter,'Noto Sans SC',system-ui!important;border-radius:5px!important;color:inherit!important}
+ body .ew-custom-library-menu{position:fixed!important;z-index:10002!important;box-sizing:border-box!important;padding:6px!important;border-radius:12px!important}
+ body .ew-custom-library-menu>button{display:flex!important;align-items:center!important;gap:8px!important;padding:0 8px!important;height:31px!important;min-height:31px!important;width:100%!important;font:inherit!important;border-radius:5px!important;color:inherit!important}
  body .ew-custom-library-menu>button:hover{background:#8882!important}
- body .ew-custom-library-rename{display:flex;align-items:center;gap:2px;height:31px;margin:0 2px;min-width:0;border:1px solid var(--fw-accent);border-radius:5px;background:var(--fw-card);box-sizing:border-box}
- body .ew-custom-library-rename input{flex:1!important;min-width:0!important;width:0!important;height:27px!important;border:0!important;outline:0!important;box-shadow:none!important;padding:0 6px!important;background:transparent!important;color:var(--fw-text)!important;font:400 12px/18px Inter,'Noto Sans SC',system-ui!important}
- body .ew-custom-library-rename>button{display:grid!important;place-items:center!important;flex:none!important;width:24px!important;min-width:24px!important;height:24px!important;min-height:24px!important;gap:0!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:var(--fw-muted)!important}
+ body .ew-custom-library-rename{display:flex;align-items:center;gap:2px;height:31px;margin:0 2px;min-width:0;border:1px solid var(--odyssey-menu-border,rgba(127,127,127,.2));border-radius:5px;background:var(--odyssey-menu-row,rgba(127,127,127,.12));box-sizing:border-box}
+ body .ew-custom-library-rename input{flex:1!important;min-width:0!important;width:0!important;height:27px!important;border:0!important;outline:0!important;box-shadow:none!important;padding:0 6px!important;background:transparent!important;color:inherit!important;font:inherit!important}
+ body .ew-custom-library-rename>button{display:grid!important;place-items:center!important;flex:none!important;width:24px!important;min-width:24px!important;height:24px!important;min-height:24px!important;gap:0!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:inherit!important}
  body .ew-custom-library-rename>button:hover{background:#8882!important}
- body .ew-custom-library-error{margin:2px 6px!important;color:var(--fw-text);font:400 11px/16px Inter,'Noto Sans SC',system-ui;overflow-wrap:anywhere}
+ body .ew-custom-library-error{margin:2px 6px!important;color:inherit;font:400 11px/16px Inter,'Noto Sans SC',system-ui;overflow-wrap:anywhere}
  body .ew-grid-menu [data-library-save-error]{display:block;padding:4px 10px;color:inherit;font:400 11px/16px Inter,'Noto Sans SC',system-ui;max-width:194px;overflow-wrap:anywhere}
 }
