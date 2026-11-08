@@ -552,7 +552,16 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(first().width).toBeLessThan(horizontal.width)
  const handle=f.document.querySelector('[data-board-tabs-resize]')
  expect(handle.title).toBe('左右拖动调整页签宽度')
+ await f.act(()=>w.updateSelection(['alpha'],'replace'))
+ const assertHandles=node=>{
+  const control=axis=>f.document.querySelector('[data-workbench-resize="alpha"][data-workbench-resize-axis="'+axis+'"]')
+  expect(parseFloat(control('x').style.left)).toBeCloseTo(node.x+node.width/2)
+  expect(parseFloat(control('x').style.top)).toBeCloseTo(node.y-18)
+  expect(parseFloat(control('y').style.left)).toBeCloseTo(node.x-18)
+  expect(parseFloat(control('y').style.top)).toBeCloseTo(node.y+node.height/2)
+ }
  const initial=first(),stored=nav(w).containerSpec
+ assertHandles(initial)
  const nextFrame=()=>f.act(async()=>{await new Promise(resolve=>f.win.requestAnimationFrame(resolve))})
  await f.event('pointerdown',handle,{button:0,pointerId:2,clientX:212})
  await f.event('pointermove',handle,{pointerId:2,clientX:264})
@@ -563,10 +572,12 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(first().width).toBe(initial.width)
  expect(nav(w).containerSpec).toEqual(stored)
  assertFit(w.getBoardTabsRenderSnapshot())
+ assertHandles(w.getBoardTabsRenderSnapshot().artifacts.find(n=>n.id==='alpha'))
  await f.event('pointercancel',handle,{pointerId:2})
  expect(bar().style.width).toBe('200px')
  expect(w.getBoardTabsRenderSnapshot()).toBe(w.getSnapshot())
  expect(nav(w).containerSpec).toEqual(stored)
+ assertHandles(first())
  await f.event('pointerdown',handle,{button:0,pointerId:1,clientX:212})
  await f.event('pointermove',handle,{pointerId:1,clientX:100})
  await nextFrame()
@@ -577,6 +588,7 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(nav(w).containerSpec.revision).toBe(stored.revision+1)
  expect(first().width).toBeGreaterThan(horizontal.width-212)
  assertFit()
+ assertHandles(first())
  const tabs=nav(w).containerSpec.tabs
  await f.act(()=>{w.selectBoardTab(tabs[1].id);w.setArtifacts([...w.getSnapshot().artifacts,item('beta',560)]);w.applyWorkbenchCells([{id:'beta',x:0,y:0,w:40,h:25}],true)})
  assertFit()
