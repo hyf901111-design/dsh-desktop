@@ -551,3 +551,15 @@ it('新页签首次接收已规划组件即铺满看板，跨列行上方的生�
  snap=state.reconcile({...snap,artifacts:snap.artifacts.map((n,i)=>i===0?{...n,generationStatus:'completed',containerSpec:{type:'table'}}:{...n,generationStatus:'running'})})
  expect(state.get().map(({freePosition,...c})=>c)).toEqual(before)
 })
+
+it('混合高度和尾部单张卡首次占满行宽，单卡页签直接满宽',()=>{
+ const panels=[220,456,300].map((height,i)=>({id:'node-'+i,kind:'generated-container',workbenchId:'batch',workbenchIndex:i,sizeMode:'auto',generationStatus:'queued',width:420,height,x:250,y:300}))
+ const snapshot={files:[],artifacts:panels,viewport:{y:0}}
+ const group=createWorkbenchGridState(null,'closed-rows');group.enable(1000);group.reconcile(snapshot)
+ const [left,right,last]=group.get()
+ expect(left).toMatchObject({x:0,y:0,w:20})
+ expect(right).toMatchObject({x:20,y:0,w:20,h:left.h})
+ expect(last).toMatchObject({x:0,y:left.h,w:40})
+ const single=createWorkbenchGridState(null,'single');single.enable(1000);single.reconcile({...snapshot,artifacts:[panels[0]]})
+ expect(single.get()[0]).toMatchObject({x:0,y:0,w:40})
+})

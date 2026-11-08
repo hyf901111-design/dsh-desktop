@@ -663,7 +663,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   measured.__homeGuideBoardLayout=authoredBoard
   measured.__workbenchDeferred=true
   if(!workspace.organizeCanvas(measured,mode,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken))return false
-  const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
+  const grid=createResearchGrid(),availableWidth=before.canvasSize.availableWidth||before.canvasSize.width||800,width=workspace.getWorkbenchContentWidth?.(availableWidth)??availableWidth,m=grid.metrics(width)
   const arranged=currentGridNodes()
   const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!researchCandleTemplate(n)&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
     const old=oldNodes.find(o=>o.id===n.id),cache=oldCache.get(n.id),frame=root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] iframe[data-research-html-artifact]')
@@ -743,7 +743,7 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
     if(disabled||!rootRef.current)return
     const requested={three:3,two:2,one:1}[next],lanes=Math.min(requested||1,nodes.length)
     if(requested>1&&lanes>1){
-      const size=workspace.getSnapshot().canvasSize,width=Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity))
+      const size=workspace.getSnapshot().canvasSize,availableWidth=Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)),width=workspace.getWorkbenchContentWidth?.(availableWidth)??availableWidth
       const grid=createResearchGrid(),metrics=grid.metrics(width),minimum=Math.max(metrics.minColumns,...nodes.map(node=>grid.minimum(node,metrics).w))
       if(Math.floor(40/lanes)<minimum){
         setOpen(false)

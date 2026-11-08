@@ -1,6 +1,7 @@
 export function BoardTabsIcon({name}) {return react_jsx_runtime.jsx('span',{className:'ew-board-tabs-icon','data-tabs-icon':name,'aria-hidden':true})}
 export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) {
  const {jsx,jsxs}=react_jsx_runtime,nav=boardTabsNode(snapshot),[host,setHost]=react.useState(null),[menu,setMenu]=react.useState(null),[settings,setSettings]=react.useState(false),[remove,setRemove]=react.useState(false),[notice,setNotice]=react.useState(null),[theme,setTheme]=react.useState('light'),[paging,setPaging]=react.useState({overflow:false,left:false,right:false}),trigger=react.useRef(null),list=react.useRef(null),pager=react.useRef(null)
+ const area=boardTabsLayout(nav?.containerSpec,snapshot.canvasSize.availableWidth||snapshot.canvasSize.width),vertical=area.vertical,verticalRequested=nav?.containerSpec.orientation==='vertical'
  const active=workspace.getActiveBoardTab(),tabNamesKey=JSON.stringify(nav?.containerSpec.tabs.map(t=>[t.id,t.name])||[]),close=()=>{setSettings(false);setRemove(false);trigger.current?.focus({preventScroll:true})}
  const duplicateNotice=workspace.getBoardTabsDuplicateNotice?.()
  react.useEffect(()=>{if(duplicateNotice){workspace.dismissBoardTabsDuplicateNotice(duplicateNotice.token);setNotice({...duplicateNotice,duration:2000})}},[duplicateNotice,workspace])
@@ -15,14 +16,19 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
   const visible=new Set([...workspace.getVisibleBoardSnapshot().files,...workspace.getVisibleBoardSnapshot().artifacts,...workspace.getWorkbenchPlanningNodes()].map(n=>n.id))
   for(const card of root.querySelectorAll('[data-research-node-id]')){const hidden=Boolean(nav&&!visible.has(card.getAttribute('data-research-node-id')));card.toggleAttribute('data-board-tab-hidden',hidden);card.inert=hidden}
  },[snapshot,active,host])
- react.useLayoutEffect(()=>{const selected=list.current?.querySelector('[aria-selected=true]');if(selected){const left=selected.offsetLeft,right=left+selected.offsetWidth;if(left<list.current.scrollLeft)list.current.scrollLeft=left;if(right>list.current.scrollLeft+list.current.clientWidth)list.current.scrollLeft=right-list.current.clientWidth}},[active,host,nav?.id,tabNamesKey])
- react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
- react.useEffect(()=>{const element=list.current;if(!element)return;const wheel=e=>{e.preventDefault();e.stopPropagation();element.scrollLeft+=e.deltaX||e.deltaY};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)},[host,nav?.id])
  react.useLayoutEffect(()=>{
-  const element=list.current;if(!element)return
+  const element=list.current,selected=element?.querySelector('[aria-selected=true]');if(!selected)return
+  const start=vertical?selected.offsetTop:selected.offsetLeft,end=start+(vertical?selected.offsetHeight:selected.offsetWidth),scroll=vertical?'scrollTop':'scrollLeft',length=vertical?element.clientHeight:element.clientWidth
+  if(start<element[scroll])element[scroll]=start
+  if(end>element[scroll]+length)element[scroll]=end-length
+ },[active,host,nav?.id,tabNamesKey,vertical])
+ react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installBoardTabsDrag(root,workspace,readOnly,detail=>setNotice({...detail,token:Date.now()}))},[workspace,readOnly])
+ react.useEffect(()=>{const element=list.current;if(!element)return;const wheel=e=>{e.preventDefault();e.stopPropagation();if(vertical)element.scrollTop+=e.deltaY;else element.scrollLeft+=e.deltaX||e.deltaY};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)},[host,nav?.id,vertical])
+ react.useLayoutEffect(()=>{
+  const element=list.current;if(!element||vertical)return
   const measure=()=>{const reserve=pager.current?(pager.current.getBoundingClientRect().width+(parseFloat(window.getComputedStyle(element.parentElement).columnGap)||4)):0,overflow=element.scrollWidth>element.clientWidth+reserve+1,max=Math.max(0,element.scrollWidth-element.clientWidth),next={overflow,left:element.scrollLeft>1,right:element.scrollLeft<max-1};setPaging(old=>Object.keys(next).every(key=>next[key]===old[key])?old:next)}
   measure();const observer=new ResizeObserver(measure);observer.observe(element);for(const tab of element.children)observer.observe(tab);element.addEventListener('scroll',measure);window.addEventListener('resize',measure);return()=>{observer.disconnect();element.removeEventListener('scroll',measure);window.removeEventListener('resize',measure)}
- },[host,nav?.id,tabNamesKey,active,snapshot.canvasSize.availableWidth,paging.overflow])
+ },[host,nav?.id,tabNamesKey,active,snapshot.canvasSize.availableWidth,paging.overflow,vertical])
  react.useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),notice.duration??5000);return()=>window.clearTimeout(timer)},[notice])
  react.useEffect(()=>{if(!menu)return;const dismiss=e=>{if(!e.target.closest?.('[data-board-tabs-menu]')&&!trigger.current?.contains(e.target))setMenu(null)},key=e=>{if(e.key==='Escape'){e.preventDefault();setMenu(null);trigger.current?.focus()}};document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',key,true);return()=>{document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',key,true)}},[menu])
  react.useEffect(()=>{if(workspace.getPreviewMode?.()){setMenu(null);setSettings(false);setRemove(false)}},[readOnly,workspace])
@@ -32,9 +38,21 @@ export function BoardTabsLayer({rootRef,workspace,sessionId,snapshot,readOnly}) 
  const spec=nav.containerSpec
  const page=direction=>{const element=list.current;if(!element)return;const left=direction*Math.max(64,element.clientWidth*.75);element.scrollBy({left,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
  const select=id=>{setMenu(null);workspace.selectBoardTab(id)}
- const keys=e=>{const buttons=[...list.current.querySelectorAll('[role=tab]')],index=buttons.indexOf(document.activeElement);let to;if(e.key==='ArrowRight')to=(index+1)%buttons.length;if(e.key==='ArrowLeft')to=(index-1+buttons.length)%buttons.length;if(e.key==='Home')to=0;if(e.key==='End')to=buttons.length-1;if(to!==undefined){e.preventDefault();e.stopPropagation();buttons[to].focus();buttons[to].scrollIntoView?.({block:'nearest',inline:'nearest'})}}
+ const keys=e=>{const buttons=[...list.current.querySelectorAll('[role=tab]')],index=buttons.indexOf(document.activeElement);let to;if(e.key===(vertical?'ArrowDown':'ArrowRight'))to=(index+1)%buttons.length;if(e.key===(vertical?'ArrowUp':'ArrowLeft'))to=(index-1+buttons.length)%buttons.length;if(e.key==='Home')to=0;if(e.key==='End')to=buttons.length-1;if(to!==undefined){e.preventDefault();e.stopPropagation();buttons[to].focus();buttons[to].scrollIntoView?.({block:'nearest',inline:'nearest'})}}
  const confirm=jsxs('div',{className:'ew-board-tabs-confirm',children:[jsx('p',{children:'移除页签组件后，所有页签中的组件将合回当前看板，内容和连接保留。'}),jsxs('footer',{children:[jsx('button',{type:'button',onClick:close,children:'取消'}),jsx('button',{type:'button',disabled:readOnly,onClick:()=>{if(workspace.removeBoardTabs())close()},children:'移除页签组件'})]})]})
- return jsxs(react.Fragment,{children:[react_dom.createPortal(jsxs('div',{'data-board-tabs-nav':'',className:'ew-board-tabs-nav','data-board-tabs-theme':theme,style:{width:Math.max(1,(snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000)-24)},onPointerDown:e=>e.stopPropagation(),children:[jsx('div',{ref:list,role:'tablist','aria-label':'看板页签',onKeyDown:keys,className:'ew-board-tabs-list',children:spec.tabs.map(t=>jsx('button',{type:'button',role:'tab',id:'board-tab-'+t.id,'aria-selected':t.id===active,tabIndex:t.id===active?0:-1,title:t.name,'aria-controls':'board-page-'+sessionId,'data-board-tab':t.id,onClick:()=>select(t.id),children:t.name},t.id))}),paging.overflow&&jsxs('div',{ref:pager,className:'ew-board-tabs-paging','data-board-tabs-paging':'',children:[jsx('button',{type:'button','aria-label':'向左翻页',title:'向左翻页',disabled:!paging.left,onClick:()=>page(-1),children:jsx(BoardTabsPageIcon,{direction:'left'})}),jsx('button',{type:'button','aria-label':'向右翻页',title:'向右翻页',disabled:!paging.right,onClick:()=>page(1),children:jsx(BoardTabsPageIcon,{direction:'right'})})]}),!workspace.getPreviewMode?.()&&jsx('button',{ref:trigger,type:'button','data-board-tabs-more':'','aria-label':'页签更多操作','aria-haspopup':'menu','aria-expanded':Boolean(menu),onClick:e=>{const r=e.currentTarget.getBoundingClientRect();setMenu(menu?null:{left:Math.max(8,Math.min(window.innerWidth-214,r.right-206)),top:r.bottom+5})},children:jsx(BoardTabsIcon,{name:'tabs-more'})})]}),host),
+ const canEdit=!readOnly&&!workspace.getPreviewMode?.()
+ const more=!workspace.getPreviewMode?.()&&jsx('button',{ref:trigger,type:'button','data-board-tabs-more':'','aria-label':'页签更多操作','aria-haspopup':'menu','aria-expanded':Boolean(menu),onClick:e=>{const r=e.currentTarget.getBoundingClientRect();setMenu(menu?null:{left:Math.max(8,Math.min(window.innerWidth-214,r.right-206)),top:r.bottom+5})},children:jsx(BoardTabsIcon,{name:'tabs-more'})})
+ const toggle=canEdit&&jsx('button',{type:'button','data-board-tabs-orientation-toggle':'','aria-label':verticalRequested?'切换为横向页签':'切换为竖向页签',title:verticalRequested?'切换为横向页签':'切换为竖向页签',onClick:()=>{rootRef.current?.__eworkContentFit?.finish();setMenu(null);workspace.setBoardTabsPresentation(verticalRequested?'horizontal':'vertical')},children:jsx(BoardTabsOrientationIcon,{vertical:!verticalRequested})})
+ const width=vertical?area.railWidth:Math.max(1,area.width-24)
+ const visible=vertical?workspace.getVisibleBoardSnapshot():null
+ const bottom=visible?Math.max(0,...[...visible.files,...visible.artifacts,...workspace.getWorkbenchPlanningNodes()].map(node=>node.y+node.height/2)):0
+ const height=vertical?(bottom>12?bottom-12:96):undefined
+ return jsxs(react.Fragment,{children:[react_dom.createPortal(jsxs('div',{'data-board-tabs-nav':'',className:'ew-board-tabs-nav','data-board-tabs-theme':theme,'data-board-tabs-orientation':vertical?'vertical':'horizontal',style:{width,height},onPointerDown:e=>e.stopPropagation(),children:[
+ jsx('div',{ref:list,role:'tablist','aria-label':'看板页签','aria-orientation':vertical?'vertical':'horizontal',onKeyDown:keys,className:'ew-board-tabs-list',children:spec.tabs.map(t=>jsx('button',{type:'button',role:'tab',id:'board-tab-'+t.id,'aria-selected':t.id===active,tabIndex:t.id===active?0:-1,title:t.name,'aria-controls':'board-page-'+sessionId,'data-board-tab':t.id,onClick:()=>select(t.id),children:t.name},t.id))}),
+ !vertical&&paging.overflow&&jsxs('div',{ref:pager,className:'ew-board-tabs-paging','data-board-tabs-paging':'',children:[jsx('button',{type:'button','aria-label':'向左翻页',title:'向左翻页',disabled:!paging.left,onClick:()=>page(-1),children:jsx(BoardTabsPageIcon,{direction:'left'})}),jsx('button',{type:'button','aria-label':'向右翻页',title:'向右翻页',disabled:!paging.right,onClick:()=>page(1),children:jsx(BoardTabsPageIcon,{direction:'right'})})]}),
+ (toggle||more)&&jsxs('div',{className:'ew-board-tabs-nav-actions',children:[toggle,more]}),
+ vertical&&canEdit&&jsx(BoardTabsWidthHandle,{area,rootRef,workspace})
+ ]}),host),
  menu&&react_dom.createPortal(jsxs('div',{role:'menu','aria-label':'页签更多操作','data-board-tabs-menu':'','data-board-tabs-theme':theme,className:'ew-grid-menu ew-board-tabs-menu',style:menu,onKeyDown:e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const items=[...e.currentTarget.querySelectorAll('button')],i=items.indexOf(document.activeElement);items[e.key==='End'?items.length-1:e.key==='Home'?0:(i+(e.key==='ArrowUp'?-1:1)+items.length)%items.length]?.focus()}},ref:el=>{if(el&&!el.contains(document.activeElement))el.querySelector('button')?.focus({preventScroll:true})},children:[jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setSettings(true)},children:[jsx(WorkbenchIcon,{name:'settings'}),jsx('span',{children:'页签设置'})]}),jsxs('button',{type:'button',role:'menuitem',disabled:readOnly,onClick:()=>{setMenu(null);setRemove(true)},children:[jsx(WorkbenchIcon,{name:'remove'}),jsx('span',{children:'移除页签组件'})]})]}),document.body),
  settings&&jsx(BoardTabsSettings,{nav,workspace,readOnly,theme,onClose:close}),
  remove&&jsx(BoardTabsModal,{title:'移除页签组件',theme,onClose:close,children:confirm}),
@@ -95,6 +113,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   if(!nav||nav.id!==op?.navId||workspace.getActiveBoardTab()!==op.source||!br||!lr||nav.containerSpec.tabs.length<2)return {distance:Infinity,target:null,receivers,bottom:0}
   const barLeft=Math.max(br.left,rr.left),barRight=Math.min(br.right,rr.right),barTop=Math.max(br.top,rr.top),barBottom=Math.min(br.bottom,rr.bottom),distance=Math.max(barLeft-e.clientX,e.clientX-barRight,barTop-e.clientY,e.clientY-barBottom,0)
   if(barRight<=barLeft||barBottom<=barTop||distance>exitDistance)return {distance:Infinity,target:null,receivers,bottom:br.bottom}
+  const vertical=bar.dataset.boardTabsOrientation==='vertical'
   let target=null
   for(const element of list.querySelectorAll('[data-board-tab]')){
    const tab=nav.containerSpec.tabs.find(t=>t.id===element.dataset.boardTab);if(!tab||tab.id===op.source)continue
@@ -104,7 +123,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
    const stack=doc.elementsFromPoint?.(e.clientX,e.clientY)||[]
    if(e.clientX>=left&&e.clientX<=right&&e.clientY>=top&&e.clientY<=bottom&&(!stack.length||stack[0].closest?.('[data-board-tab]')===element))target=tab
   }
-  return {distance:inside(e)?distance:Infinity,target,receivers,bottom:br.bottom}
+  return {distance:inside(e)?distance:Infinity,target,receivers,bottom:vertical?br.top:br.bottom,right:vertical?br.right:0}
  }
  const resetPreview=(current,keep=false)=>{
   current.from=current.card.getBoundingClientRect();current.card.removeAttribute('data-board-tabs-live-preview');for(const key of ['--board-tabs-pointer-x','--board-tabs-pointer-y','--board-tabs-offset-x','--board-tabs-offset-y','--board-tabs-scale'])current.card.style.removeProperty(key)
@@ -122,7 +141,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   if(!op?.preview)return
   const bounds=root.getBoundingClientRect(),parent=op.card.offsetParent?.getBoundingClientRect()||bounds,availableHeight=Math.max(1,bounds.bottom-Math.max(bounds.top+8,hit.bottom+12)-8),scale=op.small?Math.min(1,240/op.rect.width,Math.max(1,bounds.width-16)/op.rect.width,availableHeight/op.rect.height):1,w=op.rect.width*scale,h=op.rect.height*scale
   let left,top,cx,cy
-  if(op.small){left=Math.max(bounds.left+8,Math.min(bounds.right-w-8,e.clientX+16));top=Math.max(bounds.top+8,Math.min(bounds.bottom-h-8,Math.max(hit.bottom+12,e.clientY+16)));cx=left+w/2-parent.left;cy=top+h/2-parent.top}
+  if(op.small){left=Math.max(bounds.left+8,Math.min(bounds.right-w-8,Math.max((hit.right||0)+8,e.clientX+16)));top=Math.max(bounds.top+8,Math.min(bounds.bottom-h-8,Math.max(hit.bottom+12,e.clientY+16)));cx=left+w/2-parent.left;cy=top+h/2-parent.top}
   else{cx=parseFloat(op.card.style.getPropertyValue('--grid-float-left'))||0;cy=parseFloat(op.card.style.getPropertyValue('--grid-float-top'))||0;left=parent.left+cx-w/2;top=parent.top+cy-h/2}
   op.card.style.setProperty('--board-tabs-pointer-x',e.clientX-parent.left+'px');op.card.style.setProperty('--board-tabs-pointer-y',e.clientY-parent.top+'px');op.card.style.setProperty('--board-tabs-offset-x',cx-(e.clientX-parent.left)+'px');op.card.style.setProperty('--board-tabs-offset-y',cy-(e.clientY-parent.top)+'px');op.card.style.setProperty('--board-tabs-scale',String(scale));op.card.toggleAttribute('data-thumbnail',op.small);root.toggleAttribute('data-board-tabs-transfer',op.small)
   op.position.style.transform='translate3d('+e.clientX+'px,'+e.clientY+'px,0)';Object.assign(op.caption.style,{transform:'translate3d('+(left-e.clientX+8)+'px,'+(top-e.clientY+4)+'px,0)',opacity:op.small?'1':'0',width:Math.max(0,w-16)+'px'})
@@ -199,3 +218,26 @@ export function animateBoardTabsDrop(current,root,workspace,duration,onDone) {
 }
 
 export function BoardTabsPageIcon({direction}){return react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:react_jsx_runtime.jsx('path',{d:direction==='left'?'M10 4 6 8l4 4':'M6 4l4 4-4 4'})})}
+
+export function BoardTabsOrientationIcon({vertical}){
+ return react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinejoin:'round','aria-hidden':true,children:react_jsx_runtime.jsx('path',{d:'M2.5 3.5h11v9h-11z '+(vertical?'M6.25 3.5v9':'M2.5 6.75h11')})})
+}
+
+export function BoardTabsWidthHandle({area,rootRef,workspace}){
+ const gesture=react.useRef(null)
+ const clamp=value=>Math.round(Math.max(140,Math.min(area.maxRailWidth,value)))
+ const clear=element=>{gesture.current=null;element.removeAttribute('data-board-tabs-resizing');element.style.removeProperty('--bt-resize-delta')}
+ const commit=width=>{if(width!==area.railWidth){rootRef.current?.__eworkContentFit?.finish();workspace.setBoardTabsPresentation('vertical',width)}}
+ return react_jsx_runtime.jsx('div',{role:'separator',tabIndex:0,'aria-label':'调整竖向页签宽度','aria-orientation':'vertical','aria-valuemin':140,'aria-valuemax':area.maxRailWidth,'aria-valuenow':area.railWidth,'data-board-tabs-resize':'',
+  onPointerDown:e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();gesture.current={id:e.pointerId,x:e.clientX,width:area.railWidth};e.currentTarget.setAttribute('data-board-tabs-resizing','');e.currentTarget.setPointerCapture?.(e.pointerId)},
+  onPointerMove:e=>{const g=gesture.current;if(g?.id!==e.pointerId)return;e.currentTarget.style.setProperty('--bt-resize-delta',clamp(g.width+e.clientX-g.x)-g.width+'px')},
+  onPointerUp:e=>{const g=gesture.current;if(g?.id!==e.pointerId)return;clear(e.currentTarget);commit(clamp(g.width+e.clientX-g.x))},
+  onPointerCancel:e=>clear(e.currentTarget),
+  onLostPointerCapture:e=>clear(e.currentTarget),
+  onKeyDown:e=>{
+   if(e.key==='Escape'&&gesture.current){e.preventDefault();e.stopPropagation();clear(e.currentTarget);return}
+   const widths={ArrowLeft:area.railWidth-8,ArrowRight:area.railWidth+8,Home:140,End:area.maxRailWidth}
+   if(widths[e.key]===undefined)return
+   e.preventDefault();e.stopPropagation();commit(clamp(widths[e.key]))
+  }})
+}
