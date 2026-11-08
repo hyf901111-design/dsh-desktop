@@ -23,6 +23,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { canvasHumanRequest } from './canvas-task-routing.js';
 import { workbenchCreationRequest, planningDataIntent } from './workbench-execution-policy.js';
 import {workbenchRequestImages} from './workbench-image-evidence.js';
+import {workbenchPdfScope} from './workbench-document-evidence.js';
 import { preserveWorkbenchRefreshPreference } from './component-refresh-policy.js';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -107,6 +108,15 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         else if (args?.generationMode !== 'deferred' && args?.originalRequest !== undefined) {
             const { originalRequest, ...plan } = args;
             args = plan;
+        }
+        if (originalRequest && args?.dataMode !== 'simulated' && workbenchPdfScope(originalRequest) && Array.isArray(args.panels)) {
+            // A planner sees excerpts on larger reports. Always let the
+            // document worker use full page evidence and validate its result.
+            args = {...args, panels: args.panels.map(panel => {
+                if (!panel || typeof panel !== 'object') return panel;
+                const {artifact, publicData, profile, requests, intervalMinutes, library, ...pending} = panel;
+                return pending;
+            })};
         }
         args = preserveWorkbenchRefreshPreference(args, canvasHumanRequest(exec.agent?.session)?.text);
         if (args?.requestId === undefined) {

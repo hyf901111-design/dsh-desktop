@@ -589,12 +589,15 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
         if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
             throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
-        if (p.type === 'summary' && p.artifact === undefined && !isSimulated &&
-            value.originalRequest && /摘要|概述|简报|总结|overview|summary/iu.test(p.title+' '+p.prompt) &&
-            !/总结提炼|冻结|所选|选中|现有(?:组件|卡片)|基于.{0,10}(?:组件|材料)|derived|snapshot/iu.test(value.originalRequest+' '+p.prompt)) {
+        const derivedType = ['summary','mind-map'].includes(p.type);
+        const openSourcePresentation = derivedType && p.artifact === undefined && !isSimulated && value.originalRequest &&
+            !/冻结.{0,5}(?:来源|材料|快照)|(?:所选|选中|现有|已有).{0,6}(?:来源|组件|卡片)|derived snapshot/iu.test(value.originalRequest+' '+p.prompt);
+        if (openSourcePresentation && p.type === 'summary') {
+            // A source summary can be synthesized after evidence acquisition.
+            // The fixed derived template is for a supplied frozen snapshot.
             p = {...p,type:'markdown'};
         }
-        if(['summary','mind-map'].includes(p.type)&&p.artifact===undefined)throw Error('派生组件必须同时提供完整artifact和一个来源快照。'+DERIVED_GUIDANCE);
+        if(derivedType && p.artifact === undefined && !openSourcePresentation)throw Error('派生组件必须同时提供完整artifact和一个来源快照。'+DERIVED_GUIDANCE);
         if(['files','gallery'].includes(p.type) && p.artifact===undefined)throw Error('附件必须提供完整 artifact 和原文件来源，或显式空 items。'+ATTACHMENT_GUIDANCE);
         if(p.type==='audio' && p.artifact===undefined)throw Error('音频必须提供 artifact 及音频原网址或显式 url:null。'+AUDIO_GUIDANCE);
         if(p.type==='youtube' && p.artifact===undefined)throw Error('YouTube必须同时提供 artifact 及视频原网址或显式 url:null。'+YOUTUBE_GUIDANCE);
