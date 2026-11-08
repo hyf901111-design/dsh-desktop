@@ -1,4 +1,4 @@
-// Persist only observed, actually cited provenance. This survives custom HTML
+// Persist observed component retrievals and cited document provenance. This survives custom HTML
 // without asking the model to copy paths or invent a source label.
 export function retainObservedComponentProvenance(output,documents=[],records=[]){
  let spec;try{spec=JSON.parse(output)}catch{return output}
@@ -11,8 +11,9 @@ export function retainObservedComponentProvenance(output,documents=[],records=[]
  }
  for(const record of records){
   if(record.purpose==='discovery')continue
+  if(!(record.response&&typeof record.response==='object'&&!record.response.error||record.snapshotRows?.length))continue
   const raw=record.response?.sourceUrl??(record.tool==='web_fetch'?record.args?.url:undefined)
-  if(typeof raw!=='string'||!text.includes(raw))continue
+  if(typeof raw!=='string')continue
   try{const url=new URL(raw);if(!['http:','https:'].includes(url.protocol)||url.username||url.password||[...url.searchParams.keys()].some(key=>/token|secret|credential|auth|signature|api[_-]?key/iu.test(key)))continue;add({label:url.hostname,url:url.href})}catch{}
  }
  if(!sources.length)return output

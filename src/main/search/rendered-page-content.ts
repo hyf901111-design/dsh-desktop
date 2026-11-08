@@ -4,6 +4,15 @@ export function renderedPageContentScript(maxMilliseconds = 60_000): string {
 }
 
 async function collectRenderedPage(maxMilliseconds: number) {
+  // A structured response is one complete transport document. Scrolling its
+  // pretty-printed viewer adds latency and can lose the original JSON layout.
+  // Never extract an embedded example from an HTML page through this path.
+  if (/^(?:application\/(?:[\w.+-]+\+)?json|text\/plain)(?:;|$)/i.test(document.contentType)) {
+    const raw = document.body?.innerText ?? ''
+    let complete = false
+    try { const value = JSON.parse(raw); complete = Boolean(value && typeof value === 'object') && raw.length < 120_000 } catch {}
+    return { title: document.title, sourceText: raw.slice(0, 120_000), complete, missingHeadings: 0, images: 0, blockCount: 0, links: [] }
+  }
   const deadline = Date.now() + maxMilliseconds
   const pause = () => new Promise(resolve => setTimeout(resolve, 350))
   const blocks = new Map<string, { order: number; text: string }>()

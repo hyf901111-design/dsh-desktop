@@ -111,7 +111,7 @@ function snapshotDate(value) {
 }
 function structuredWebSnapshot(text, requestedUrl) {
   if (Buffer.byteLength(text) > 256000) return null
-  const page = text.match(/^Fetched ([^\r\n]{1,2048}) \(HTTP 2\d\d\)\s*\[网页读取状态：已滚动至文末，完成正文收集\]\s*([\s\S]+)$/u)
+  const page = text.match(/^Fetched ([^\r\n]{1,2048}) \(HTTP 2\d\d\)\s*(?:[^\r\n]{1,512}\r?\n\s*)?\[网页读取状态：已滚动至文末，完成正文收集\]\s*([\s\S]+)$/u)
   const address = snapshotUrl(requestedUrl)
   if (!page || !address || snapshotUrl(page[1]) !== address) return null
   try {

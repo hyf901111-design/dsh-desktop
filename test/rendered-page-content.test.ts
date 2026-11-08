@@ -240,3 +240,24 @@ it.each(['body-paragraph','related-heading','hidden-metadata','conflicting-capti
  const result=await window.eval(renderedPageContentScript(400))
  expect(result.article).toBeUndefined()
 })
+
+
+it.each(['application/json','application/problem+json','text/plain'])('reads a complete %s transport body without scrolling or rewriting strings',async contentType=>{
+ window=new Window({url:'https://example.org/api/data'})
+ Object.defineProperty(window.document,'contentType',{value:contentType})
+ const data=[{title:'原始记录',body:'完整正文\n保留空格  与换行'}]
+ window.document.title='API response'
+ window.document.body.innerText=JSON.stringify(data,null,2)
+ const result=await window.eval(renderedPageContentScript(1))
+ expect(result.complete).toBe(true)
+ expect(JSON.parse(result.sourceText)).toEqual(data)
+ expect(result.title).toBe('API response')
+})
+it('does not certify clipped JSON or an oversized structured response as complete',async()=>{
+ window=new Window();Object.defineProperty(window.document,'contentType',{value:'application/json'})
+ for(const raw of ['[{"body":"clipped',JSON.stringify([{body:'x'.repeat(120001)}])]){
+  window.document.body.innerText=raw
+  const result=await window.eval(renderedPageContentScript(1))
+  expect(result.complete).toBe(false);expect(result.sourceText.length).toBeLessThanOrEqual(120000)
+ }
+})

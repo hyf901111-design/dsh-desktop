@@ -145,3 +145,20 @@ it('keeps shared collection counts off adjacent graph and analysis cards citing 
  expect(workbenchReleaseScope(request,'本面板：发布记录总表\n保留每条版本和完整变更要点。来源：GitHub Releases','table')).toMatchObject({count:40,includeBody:true,presentation:'table'})
  expect(workbenchReleaseScope(request,'Release records\nList every release and its original notes','html')).toMatchObject({count:40})
 })
+
+
+it('retains a titled browser JSON response through adaptive pagination and complete delivery',async()=>{
+ const scope={repos:['example/titled'],count:40,includeBody:true,presentation:'table'},calls=[]
+ const all=Array.from({length:40},(_,i)=>({tag_name:'v'+i,published_at:'2026-11-01T10:00:00Z',html_url:'https://github.com/example/titled/releases/tag/v'+i,draft:false,body:'正文保留换行\n'+i}))
+ const records=await readReleaseTimeline(scope,async url=>{
+  const u=new URL(url),size=Number(u.searchParams.get('per_page')),index=Number(u.searchParams.get('page')??1)
+  calls.push([size,index])
+  const response=page(url,all.slice((index-1)*size,index*size),size>20)
+  response.body.content=url+'\n\n'+response.body.content
+  return response
+ })
+ const snapshot=resolveComponentSnapshot(observedReleaseTimeline(scope,records,'完整记录'),records)
+ expect(calls).toEqual([[40,1],[20,1],[20,2]])
+ expect(snapshot.data.rows).toEqual(all.map(row=>[row.tag_name,row.published_at,row.html_url,row.body]))
+ expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
+})
