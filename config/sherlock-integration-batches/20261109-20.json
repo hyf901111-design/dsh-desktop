@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-20",
+  "branch": "codex/integration/20261109-20",
+  "baseMainCommit": "e095425bccb03b467291cf52ca116cd21fefce42",
+  "expectedMainCommit": "e095425bccb03b467291cf52ca116cd21fefce42",
+  "createdAt": "2026-11-08T23:47:05.212Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "文档引用语义校验",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "46f877c502773bfa76ad7f4f5583ac44b09bf935",
+        "tipCommit": "d813f4922121232a39c8a625c78c41b9f00c5d86",
+        "commits": [
+          {
+            "commit": "d813f4922121232a39c8a625c78c41b9f00c5d86",
+            "parents": [
+              "46f877c502773bfa76ad7f4f5583ac44b09bf935"
+            ],
+            "subject": "按交付正文校验文档出处避免误判网页内部编号"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-client-preview-closure.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "34项正文来源及客户端预览相关检查通过",
+            "verifiedCommit": "d813f4922121232a39c8a625c78c41b9f00c5d86",
+            "completedAt": "2026-11-08T23:47:03.880860+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "d813f4922121232a39c8a625c78c41b9f00c5d86",
+            "completedAt": "2026-11-08T23:47:03.880860+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "d813f4922121232a39c8a625c78c41b9f00c5d86",
+            "completedAt": "2026-11-08T23:47:03.880860+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实混合来源卡因内部页签编号p0误报，原失败卡回放引用校验通过；34项聚焦检查通过，等待重建真实包验收。"
+        },
+        "acceptanceCriteria": [
+          "内部HTML编号不冒充引用",
+          "正文错误引用仍被拦截",
+          "保留完整内容和真实来源",
+          "客户端预览可构造"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T23:47:03.880860+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-client-preview-closure.test.js",
+        "test/component-source-info-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
