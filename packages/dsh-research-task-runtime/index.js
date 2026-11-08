@@ -28,7 +28,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
-import { workbenchDocumentScope, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists } from './workbench-document-evidence.js'
+import { workbenchDocumentScope, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, DOCUMENT_TABLE_GUIDANCE, documentTableOutput } from './workbench-document-evidence.js'
 import { extractDocxEvidence } from './docx-evidence.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
@@ -1786,6 +1786,7 @@ export class ResearchTaskRuntime {
       }
       const structured = task.kind === 'container' || task.kind === 'create'
       const plannedFormat = task.kind === 'container' ? workbenchPanelFormat(task.prompt) : null
+      const documentTable = documentTask && plannedFormat === 'table'
       const deferredPanel = task.kind === 'container' ? deferredWorkbenchPanel(task.prompt) : null
       const bindablePanel = Boolean(plannedFormat && plannedFormat !== 'html')
       const panelRequest = workbenchPanelIntent(task.prompt)
@@ -1971,15 +1972,22 @@ export class ResearchTaskRuntime {
                 '该组件指定专业数据来源，必须实际取得业务响应；需要刷新时提交可刷新映射，不能用其他网站的静态行情或接口目录代替。')
             }
           }
-          output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
+          if (documentTable && result.documentEvidence) {
+            output = documentTableOutput(deliveredText)
+            if (!output) throw new ResearchTaskError('INVALID_OUTPUT', '明细表缺少可核验的结构化行。' + DOCUMENT_TABLE_GUIDANCE)
+          } else {
+            output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
+          }
           if (result.documentEvidence && output) {
             const issue = workbenchDocumentCitationIssue(output, result.documentEvidence)
             if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
             if (['table','mind-map'].includes(plannedFormat) && JSON.parse(output).type === 'markdown') {
               throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要交付实际明细或层级，不能用文字说明替代。复用已读取的文档，保留完整行、层级和出处，可换成原生视图或含完整数据的静态 HTML。')
             }
-            output = restoreDocumentLists(output, result.documentEvidence, panelRequest)
-            if (!output) throw new ResearchTaskError('INVALID_OUTPUT', '实际呈现未包含原文要求的完整清单。复用原文全量条目，可换成能完整显示清单的 HTML 明细。')
+            output = restoreDocumentLists(output, result.documentEvidence, panelRequest, { searchable: documentTable })
+            if (!output) throw new ResearchTaskError('INVALID_OUTPUT', documentTable
+              ? '可搜索行未包含原文要求的完整清单。请把所有条目放进 rows，保留出处。'
+              : '实际呈现未包含原文要求的完整清单。复用原文全量条目，可换成能完整显示清单的 HTML 明细。')
           }
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
@@ -2613,7 +2621,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       // only source selection there; recovery still needs its frozen contract.
       if(submission)effectivePrompt+='\n'+submission.instruction
       if (synthesisOnly&&!submission) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
-      if (documentEvidence) effectivePrompt += '\n' + workbenchDocumentPrompt(documentEvidence)
+      if (documentEvidence) {
+        effectivePrompt += '\n' + workbenchDocumentPrompt(documentEvidence)
+        if (workbenchPanelFormat(query ?? '') === 'table') effectivePrompt += '\n' + DOCUMENT_TABLE_GUIDANCE
+      }
       if (deferredSynthesis) effectivePrompt += '\n当前为无工具的离线组件生成。所需组件技能、交付格式、宿主交互接口、原始需求和共同事实均已附在本请求；直接生成本组件，不再读取技能、文件或应用实现。保留要求的业务交互与全部记录，不以静态说明替代。'
       if (bundledSkills.data && permitsTools && !prototypeTargets && scopedSchemas?.some(tool => tool.name === 'public_data_query')) {
         const guidance=freeDataInstruction(undefined, { includePolicySourceGuidance: !ownsPolicySourceGuidance })

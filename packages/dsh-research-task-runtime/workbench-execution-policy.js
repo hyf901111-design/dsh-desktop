@@ -110,6 +110,7 @@ function prototypeCreationParameters(parameters, allowLibrary = true) {
   const source=sourceCreationParameters(parameters)
   if(!source?.properties)return source
   const {preset, ...properties}=source.properties
+  if (!allowLibrary) delete properties.links
   const panel=properties.panels?.items
   if(panel?.properties){
     const allowed=new Set(['title','prompt','type','size','layout'])
