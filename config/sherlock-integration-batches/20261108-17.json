@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-17",
+  "branch": "codex/integration/20261108-17",
+  "baseMainCommit": "95d3d1042ed346846c0f06fa1a716b6f8330eb17",
+  "expectedMainCommit": "95d3d1042ed346846c0f06fa1a716b6f8330eb17",
+  "createdAt": "2026-11-08T05:40:16.604Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "校验原生呈现契约包含内容与真实数据",
+        "branch": "codex/feat/workbench-content-contract-test-20261108",
+        "baseCommit": "95d3d1042ed346846c0f06fa1a716b6f8330eb17",
+        "tipCommit": "675e417955919ffd62be30ca99fb0a5ea11d3015",
+        "commits": [
+          {
+            "commit": "675e417955919ffd62be30ca99fb0a5ea11d3015",
+            "parents": [
+              "95d3d1042ed346846c0f06fa1a716b6f8330eb17"
+            ],
+            "subject": "测试：验证原生组件可同时交付内容和数据"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "plans custom HTML as an interactive page"
+            ],
+            "outcome": "passed",
+            "summary": "相关原生与自定义 HTML 契约检查通过",
+            "verifiedCommit": "675e417955919ffd62be30ca99fb0a5ea11d3015",
+            "completedAt": "2026-11-08T05:40:01.271956+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅更新对应测试断言，运行时代码不变。"
+        },
+        "acceptanceCriteria": [
+          "保留宿主渲染能力校验并断言文字材料和真实数据都可交付"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T05:40:01.271956+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "plans custom HTML as an interactive page"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
