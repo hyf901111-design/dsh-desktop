@@ -139,6 +139,60 @@
           "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
         ],
         "generatedAt": "2026-11-08T22:15:11.453556+00:00"
+      },
+      "merged": {
+        "mergeCommit": "d7dd4c1326d9d5d8566028b3261ac7f1202729b4",
+        "verificationCommit": "d7dd4c1326d9d5d8566028b3261ac7f1202729b4",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-submission.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/component-data-status.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "test/workbench-document-delivery.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-submission.test.js test/workbench-dataset-view.test.js test/component-data-status.test.js test/dataset-view-contract.test.js test/workbench-planning-phase.test.js test/derived-mind-map-browser.test.js test/component-source-info-browser.test.js test/component-web-snapshot-evidence.test.js test/research-design-policy.test.js test/workbench-document-delivery.test.js --maxWorkers 2",
+            "verifiedCommit": "d7dd4c1326d9d5d8566028b3261ac7f1202729b4",
+            "completedAt": "2026-11-08T22:15:16.554Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d7dd4c1326d9d5d8566028b3261ac7f1202729b4",
+            "completedAt": "2026-11-08T22:15:16.554Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "d7dd4c1326d9d5d8566028b3261ac7f1202729b4",
+            "completedAt": "2026-11-08T22:15:16.554Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T22:15:16.554Z"
       }
     }
   ],
