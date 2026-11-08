@@ -3,7 +3,7 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
-import {componentSourceDefinitions,componentSourceCss,getComponentSourceInfo} from '../scripts/lib/component-source-info.mjs'
+import {componentSourceDefinitions,componentSourceCss,getComponentSourceInfo,componentSourceReferencedFiles} from '../scripts/lib/component-source-info.mjs'
 import {componentDataStatusDefinitions,componentDataStatusCss} from '../scripts/lib/component-data-status.mjs'
 import {componentDataSettingsCss} from '../scripts/lib/component-data-settings-panel.mjs'
 let browser,script
@@ -58,4 +58,11 @@ it('retains every web citation and long source body in the right panel and opens
 it('does not turn unsafe URLs or an unresolved file name into fabricated provenance',()=>{
  const info=getComponentSourceInfo({containerSpec:{source:{title:'unknown.docx',url:'javascript:alert(1)',text:'真实原文'},sources:[{name:'登录源',url:'https://user:secret@example.com'}]}})
  expect(info.records.map(row=>row.url)).toEqual(['','']);expect(info.records[1]).toMatchObject({filename:'unknown.docx',path:'',text:'真实原文'})
+})
+
+it('resolves real user-attached files outside the workspace and rejects assistant-invented paths or other file names',()=>{
+ const node=(kind,path,source='user')=>({kind,data:{source:{kind:source},content:[{type:'text',text:'📎 文件：`'+path+'`'}]}})
+ const snapshot={chat:{nodes:new Map([['one',node('user','/Downloads/组织资料.docx')],['two',node('assistant','/fake/组织资料.docx')],['three',node('user','/Downloads/other.docx')],['four',node('user','/tool/组织资料.docx','tool')]])}}
+ expect(componentSourceReferencedFiles(snapshot,'组织资料.docx')).toEqual(['/Downloads/组织资料.docx'])
+ expect(componentSourceReferencedFiles({chat:{nodes:new Map([['one',{kind:'user',data:{source:{kind:'user'},content:[{type:'text',text:'encoded'}]}}]])}},'组织资料.docx',()=>({files:[{path:'/Original/组织资料.docx'}]}))).toEqual(['/Original/组织资料.docx'])
 })

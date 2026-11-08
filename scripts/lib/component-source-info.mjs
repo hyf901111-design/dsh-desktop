@@ -52,6 +52,20 @@ export function ComponentSourceDetailsTab({tab,scope,coordinator}){
   info.notes.map((text,i)=>jsx('pre',{children:text},'note:'+i))
  ]})
 }
+export function componentSourceReferencedFiles(snapshot,filename,parsePrompt){
+ const paths=new Set(),nodes=snapshot?.chat?.nodes
+ if(!nodes?.values)return []
+ const add=path=>{if(typeof path==='string'&&!path.includes('\0')&&path.split(/[\\/]/).pop()===filename)paths.add(path)}
+ for(const node of nodes.values()){
+  if(!['user','steering'].includes(node?.kind)||node.data?.source?.kind!=='user')continue
+  for(const part of Array.isArray(node.data.content)?node.data.content:[]){
+   if(part.type!=='text'||typeof part.text!=='string')continue
+   if(parsePrompt){for(const file of parsePrompt(part.text)?.files||[])add(file.path)}
+   for(const match of part.text.matchAll(/📎\s*文件：`((?:\\`|[^`])+)`/g))add(match[1].replace(/\\`/g,'`'))
+  }
+ }
+ return [...paths]
+}
 export function ComponentSourceFilesPopup({target,coordinator,onClose}){
  const {jsx,jsxs}=react_jsx_runtime,[state,setState]=react.useState({loading:true,paths:[],missing:[],error:''}),close=react.useRef(null)
  const sessionId=target.sessionId,cwd=coordinator.sessions.list.getSnapshot().byId[sessionId]?.cwd
@@ -62,6 +76,8 @@ export function ComponentSourceFilesPopup({target,coordinator,onClose}){
    for(const row of target.info.records){
     if(!row.filename&&!row.path)continue
     if(row.path){paths.add(row.path);continue}
+    const references=componentSourceReferencedFiles(coordinator.sessions.binding?.(sessionId)?.session.getSnapshot(),row.filename,typeof parseResearchPrompt==='function'?parseResearchPrompt:null)
+    if(references.length){for(const path of references)paths.add(path);continue}
     const response=await fetch('/sidebar/api/fs.search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId,cwd,query:row.filename}),signal:request.signal}),payload=await response.json()
     if(!response.ok||!payload.ok)throw Error(payload.error?.message||'无法查找来源文件')
     const matches=payload.value.matches.filter(path=>path.split(/[\\/]/).pop()===row.filename)
@@ -104,7 +120,7 @@ export const componentSourceCss=`
 .ew-component-source-files .ew-delivery-open{background:transparent;border:0;padding:0;font:inherit;color:inherit}.ew-component-source-files .ew-delivery-options{padding:3px 7px;font:400 11px/20px var(--odyssey-font-ui,system-ui);background:var(--dsw-alias-bg-base,#fff)}.ew-component-source-files .ew-delivery-menu button{display:block;width:100%;padding:7px 10px;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;font:400 13px/20px var(--odyssey-font-ui,system-ui)}
 .ew-component-source-files{overflow:visible;max-width:600px}.ew-component-source-files .ew-delivery{max-height:60vh;overflow:auto}.ew-component-source-files{background:var(--dsw-alias-bg-base,#242424);color:var(--dsw-alias-label-primary,#eee)}
 `
-export function componentSourceDefinitions(){return [getComponentSourceInfo,openComponentSource,ComponentSourceDetailsTab,ComponentSourceFilesPopup,ComponentSourceHost].map(fn=>fn.toString()).join('\n')}
+export function componentSourceDefinitions(){return [getComponentSourceInfo,openComponentSource,ComponentSourceDetailsTab,componentSourceReferencedFiles,ComponentSourceFilesPopup,ComponentSourceHost].map(fn=>fn.toString()).join('\n')}
 export function patchComponentSourceHost(source){
  const marker='/* EWORK_COMPONENT_SOURCE_HOST */'
  if(source.includes(marker))return source.replace('children:[react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar})','children:[!subagentPanel&&react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar})')
