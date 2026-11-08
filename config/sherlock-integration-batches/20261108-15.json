@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-15",
+  "branch": "codex/integration/20261108-15",
+  "baseMainCommit": "adab20ac345e88a6af28d07830542a23d66d98d5",
+  "expectedMainCommit": "adab20ac345e88a6af28d07830542a23d66d98d5",
+  "createdAt": "2026-11-08T05:34:59.477Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "报告原文证据与待生成视图的规划容错",
+        "branch": "codex/feat/workbench-source-plan-contract-20261108",
+        "baseCommit": "adab20ac345e88a6af28d07830542a23d66d98d5",
+        "tipCommit": "1af78234b892ad67babadf0949d33f98edf99480",
+        "commits": [
+          {
+            "commit": "1af78234b892ad67babadf0949d33f98edf99480",
+            "parents": [
+              "adab20ac345e88a6af28d07830542a23d66d98d5"
+            ],
+            "subject": "修复：按原文证据承接待生成的摘要和导图"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-native-plan-recovery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-native-plan-recovery.test.js",
+              "test/derived-template-contract.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "148 项聚焦检查通过",
+            "verifiedCommit": "1af78234b892ad67babadf0949d33f98edf99480",
+            "completedAt": "2026-11-08T05:34:40.244311+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "1af78234b892ad67babadf0949d33f98edf99480",
+            "completedAt": "2026-11-08T05:34:40.244311+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式检查通过",
+            "verifiedCommit": "1af78234b892ad67babadf0949d33f98edf99480",
+            "completedAt": "2026-11-08T05:34:40.244311+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "变更位于后端规划、来源与校验链路，未改界面；原 PDF 原请求在本地集成包进行端到端验收。"
+        },
+        "acceptanceCriteria": [
+          "PDF 规划证据量可控时传入全文",
+          "待生成摘要或导图不要求模型预造冻结材料",
+          "附件内容通过单卡原文证据和页码校验后交付",
+          "同一原 PDF 原请求本地包复测"
+        ],
+        "risks": [
+          "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
+        ],
+        "generatedAt": "2026-11-08T05:34:40.244311+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/workbench-planning-phase.test.js",
+        "test/workbench-planning-session.test.js",
+        "test/workbench-native-plan-recovery.test.js",
+        "test/derived-template-contract.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
