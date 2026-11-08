@@ -2,7 +2,7 @@ import {afterEach,it,expect,vi} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 let f
 afterEach(async()=>{await f?.dispose();f=null})
-const fixture=async()=>f=await financialClientFixture({}, {boardTabs:true,sourceTransform:source=>source.replace('exports.ResearchCanvas = ResearchCanvas;',"exports.__setBoardTabsPlanningIntent=value=>odysseyCreationIntents.set('financial-test',value);exports.ResearchCanvas = ResearchCanvas;")})
+const fixture=async(options={})=>f=await financialClientFixture({}, {boardTabs:true,sourceTransform:source=>source.replace('exports.ResearchCanvas = ResearchCanvas;',"exports.__setBoardTabsPlanningIntent=value=>odysseyCreationIntents.set('financial-test',value);exports.ResearchCanvas = ResearchCanvas;"),...options})
 const nav=w=>w.getSnapshot().artifacts.find(n=>n.containerSpec?.type==='board-tabs')
 async function settings(f){await f.event('click',f.document.querySelector('[data-board-tabs-more]'));await f.event('click',[...f.document.querySelectorAll('[role=menuitem]')].find(n=>n.textContent==='页签设置'))}
 it('库中放置页签只作用于当前看板，重复放置复用；切页空白且新建归入当前页',async()=>{
@@ -531,16 +531,16 @@ it('工作台创建真实三个页签，异步完成和重复挂载保留归属�
 })
 
 it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重开后保留宽度',async()=>{
- const f=await fixture(),w=f.workspace,bar=()=>f.document.querySelector('[data-board-tabs-nav]')
+ const f=await fixture({refreshState:true}),w=f.workspace,bar=()=>f.document.querySelector('[data-board-tabs-nav]')
  const item=(id,height)=>({id,kind:'pasted-text',messageId:id,title:id,excerpt:'研究内容',x:500,y:160,width:976,height,sizeMode:'manual'})
  await f.act(()=>{w.setArtifacts([item('alpha',310)]);w.createBoardTabs();w.applyWorkbenchCells([{id:'alpha',x:0,y:0,w:40,h:16}],true)})
  const first=()=>w.getVisibleBoardSnapshot().artifacts.find(n=>n.id==='alpha')
  const horizontal=first()
  await f.event('click',f.document.querySelector('[data-board-tabs-orientation-toggle]'))
  expect(bar().querySelector('.ew-board-tabs-nav-header').firstElementChild.textContent).toBe('导航菜单')
- const assertFit=()=>{
+ const assertFit=(snapshot=w.getSnapshot())=>{
   expect(bar().dataset.boardTabsOrientation).toBe('vertical')
-  const cards=w.getVisibleBoardSnapshot().artifacts
+  const cards=snapshot.artifacts.filter(n=>n.id!==nav(w).id&&nav(w).containerSpec.tabs.find(t=>t.id===w.getActiveBoardTab()).nodeIds.includes(n.id))
   const bottom=Math.max(...cards.map(n=>n.y+n.height/2))
   const left=Math.min(...cards.map(n=>n.x-n.width/2)),right=Math.max(...cards.map(n=>n.x+n.width/2))
   expect(left).toBeCloseTo(24+parseFloat(bar().style.width))
@@ -552,10 +552,29 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(first().width).toBeLessThan(horizontal.width)
  const handle=f.document.querySelector('[data-board-tabs-resize]')
  expect(handle.title).toBe('左右拖动调整页签宽度')
+ const initial=first(),stored=nav(w).containerSpec
+ const nextFrame=()=>f.act(async()=>{await new Promise(resolve=>f.win.requestAnimationFrame(resolve))})
+ await f.event('pointerdown',handle,{button:0,pointerId:2,clientX:212})
+ await f.event('pointermove',handle,{pointerId:2,clientX:264})
+ await nextFrame()
+ expect(bar().style.width).toBe('252px')
+ expect(w.getBoardTabsRenderSnapshot().artifacts.find(n=>n.id==='alpha').width).toBeCloseTo(initial.width-52)
+ expect(w.getBoardTabsRenderSnapshot()).toBe(w.getBoardTabsRenderSnapshot())
+ expect(first().width).toBe(initial.width)
+ expect(nav(w).containerSpec).toEqual(stored)
+ assertFit(w.getBoardTabsRenderSnapshot())
+ await f.event('pointercancel',handle,{pointerId:2})
+ expect(bar().style.width).toBe('200px')
+ expect(w.getBoardTabsRenderSnapshot()).toBe(w.getSnapshot())
+ expect(nav(w).containerSpec).toEqual(stored)
  await f.event('pointerdown',handle,{button:0,pointerId:1,clientX:212})
  await f.event('pointermove',handle,{pointerId:1,clientX:100})
+ await nextFrame()
+ expect(bar().style.width).toBe('140px')
+ expect(nav(w).containerSpec).toEqual(stored)
  await f.event('pointerup',handle,{pointerId:1,clientX:100})
  expect(nav(w).containerSpec).toMatchObject({orientation:'vertical',verticalWidth:140})
+ expect(nav(w).containerSpec.revision).toBe(stored.revision+1)
  expect(first().width).toBeGreaterThan(horizontal.width-212)
  assertFit()
  const tabs=nav(w).containerSpec.tabs
