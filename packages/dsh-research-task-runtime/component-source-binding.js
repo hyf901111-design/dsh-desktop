@@ -557,7 +557,10 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
   }
   if(candidate?.mapping?.type==='html')return resolvePrototypeHtmlSnapshot(candidate,records,options)
   let contract=mappingContract(candidate?.mapping,options,candidate?.version)
-  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||!templateFor(contract))return null
+  // Already observed web pages are snapshot evidence, not a refresh recipe.
+  // Small transport pages can exceed the 16-request refresh contract.
+  const snapshotRequestLimit=candidate?.requests?.every(request=>request?.tool==='web_fetch')?128:16
+  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>snapshotRequestLimit||!templateFor(contract))return null
   const responses={},sources={}
   try {
     const keys=new Set()
