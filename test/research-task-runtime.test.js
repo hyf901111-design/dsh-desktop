@@ -594,6 +594,22 @@ describe('Research task contract and prompt', () => {
     } finally {await runtime.dispose()}
   })
 
+  it.each(['html','table'])('switches a %s tabular sandbox failure to a complete native table without manual retry',async format=>{
+    const {ResearchTaskRuntime}=await runtimeModule(),calls=[]
+    const rows=Array.from({length:35},(_,i)=>['编号'+i,'完整记录'+i,'2026-11-09'])
+    const draft={version:1,type:'html',title:'原始明细',html:'<!doctype html><html><head></head><body><table><tbody id="rows"><tr><td>原始完整明细记录</td></tr></tbody></table><script>const rows='+JSON.stringify(rows)+';window.sherlockShared.register({initialState:{selected:null},reduce:(s,a)=>s,render:(s,ctx)=>{document.getElementById("rows").innerHTML="<tr><td>错误写入</td></tr>"}})</script></body></html>'}
+    const table={version:1,type:'market',variant:'table',title:'原始明细',asOf:'2026-11-09',columns:['编号','正文','日期'],rows,sources:[{label:'原始依据',url:'https://example.org/records'}]}
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{calls.push(request);return {childSessionId:'repair-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(calls.length===1?draft:table)}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try{
+      await runtime.start({...containerRequest('table-repair'),prompt:'工作台：研究\n本面板：原始明细\n展示完整记录明细，支持搜索与分页。优先使用 '+format+' 类型。'})
+      await eventually(()=>{const state=runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'});expect(state.state,state.error).toBe('completed')})
+      expect(calls).toHaveLength(2);expect(calls[1].synthesisOnly).toBe(true)
+      expect(calls[1].prompt).toContain('本轮切换交付实现');expect(calls[1].prompt).toContain('完整记录34')
+      const artifact=JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)
+      expect(readTemplateModel(artifact).data.rows).toEqual(rows)
+    }finally{await runtime.dispose()}
+  })
+
   it.each([true,false])('accepts an interactive HTML snapshot only after retrieving the named business source (retrieved=%s)', async retrieved => {
     const {ResearchTaskRuntime}=await runtimeModule()
     const calls=[],bindData=vi.fn(async()=>{})
