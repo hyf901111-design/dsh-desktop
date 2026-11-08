@@ -331,3 +331,45 @@ it('selected oversized native maps scroll inside the card and return the wheel o
   expect(errors).toEqual([])
  }finally{await page.close()}
 },20000)
+
+it('native disclosures reserve only revealed content, keep source controls anchored and stay stable after internal scrolling',async()=>{
+ const {page,first,second,errors}=await fixture()
+ try{
+  await page.evaluate(({first,second})=>{
+   const w=fixture.workspace,base=w.getSnapshot().artifacts.find(n=>n.id===first)
+   const spec={version:1,type:'mind-map',title:'完整架构',content:'# 机构\n'+Array.from({length:32},(_,i)=>'- 部门'+i+'\n  - 岗位人员').join('\n'),source:{title:'组织架构来源.docx',text:'来源正文。\n'.repeat(8)},note:'只显示两行说明。\n保留原始来源。'}
+   w.setArtifacts(w.getSnapshot().artifacts.map(n=>n.id===first?{...base,kind:'generated-container',generationStatus:'completed',containerSpec:spec}:n))
+   w.setBoardTabsPresentation('vertical')
+   w.applyWorkbenchCells([{id:first,x:0,y:0,w:40,h:22},{id:second,x:0,y:22,w:40,h:40}],true)
+   w.updateSelection([first],'replace')
+  },{first,second})
+  const canvas=page.locator('[data-research-canvas]'),card=page.locator(`[data-research-node-id="${first}"]`),below=page.locator(`[data-research-node-id="${second}"]`)
+  const source=card.locator('summary').filter({hasText:'查看来源原文'}),note=card.locator('summary').filter({hasText:/^说明$/})
+  const height=()=>card.evaluate(el=>el.getBoundingClientRect().height)
+  const position=()=>source.evaluate(el=>{const r=el.getBoundingClientRect(),p=el.closest('[data-research-derived-preset]').getBoundingClientRect();return [r.left-p.left,r.top-p.top]})
+  const closed=await height(),anchor=await position()
+  await source.click()
+  await expect.poll(height).toBeGreaterThan(closed+100)
+  expect(await height()).toBeLessThan(closed+250)
+  expect(await position()).toEqual(anchor)
+  await source.click()
+  await expect.poll(height).toBe(closed)
+  const belowClosed=await below.evaluate(el=>el.getBoundingClientRect().top)
+  for(let cycle=0;cycle<3;cycle++){
+   // An offscreen summary is reached through the real overflowing card owner.
+   await card.evaluate(el=>{for(const x of el.querySelectorAll('*'))if(x.scrollHeight>x.clientHeight)x.scrollTop=x.scrollHeight})
+   await note.click()
+   await expect.poll(height).toBeGreaterThan(closed+20)
+   expect(await height()).toBeLessThan(closed+110)
+   await expect.poll(()=>below.evaluate(el=>el.getBoundingClientRect().top)).toBeGreaterThan(belowClosed)
+   const opened=await height()
+   // Scroll offset and resize observations must not inflate a second time.
+   await card.evaluate(el=>{for(const x of el.querySelectorAll('*'))x.scrollTop=0;window.dispatchEvent(new Event('resize'))})
+   await expect.poll(height).toBe(opened)
+   await note.click()
+   await expect.poll(height).toBe(closed)
+  }
+  await canvas.evaluate(el=>{el.scrollTop=0})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},20000)

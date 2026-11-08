@@ -27,7 +27,7 @@ export function createWorkbenchGridState(storage,sessionId) {
       // readable minimum. The sandbox measured that displayed width; comparing
       // it with the smaller saved span discards the first content height.
       const displayedWidth=Math.max(c.w,min.w)*m.step-m.gap
-      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.min(300,Math.ceil((value.height+m.gap)/m.rowStep)))
+      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.min(300,value.native&&Number.isFinite(value.extraHeight)?Math.max(c.h,min.h)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep)))
       return min
     }
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
