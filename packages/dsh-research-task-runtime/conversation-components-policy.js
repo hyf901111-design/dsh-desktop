@@ -37,7 +37,7 @@ function deliveryObjectText(tail){
  return /^(?:展示|显示|使用|利用|根据|基于|以|包含|带有|附有|含|比较|呈现|反映|分析|用于|用来).{0,160}的(.+)$/u.exec(phrase)?.[1]??phrase
 }
 function creationDenied(clause){
- if(/(?:暂不|先不|不要|不用|无需|不需要|别|禁止|不再)(?:再)?(?:把|将).{0,180}(?:做出来|搭出来|实现出来|还原出来|做成|转成|转换成|还原成)/u.test(clause))return true
+ if(/(?:暂不|先不|不要|不用|无需|不需要|别|禁止|不再)(?:再)?(?:把|将).{0,180}(?:做出来|搭出来|实现出来|还原出来|做成|转成|转换成|还原成|(?:梳理|整理)(?:成|为))/u.test(clause))return true
  return /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|直接|让我|让你|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|规划|展示|显示|呈现|绘制|提供|编写|撰写|修改|编辑|完成|导出|保存|交付|做(?:一个|一套|一张|个|套|张)|建)/u.test(clause.replace(conversationScope,''))
 }
 function documentDeliveryClause(clause){
@@ -71,7 +71,7 @@ function explicitComponentCreation(action){
  // Users often put the deliverable before the verb (把原型里的看板做出来).
  // Do not infer a fresh task from a past-tense report or a how-to question.
  if(!/(?:已经?|刚才|刚刚|之前|曾经).{0,8}(?:把|将)/u.test(action)){
-  const conversion=/(?:把|将).{1,140}?(?:做成|转成|转换成|还原成)(.{1,60})$/u.exec(action)
+  const conversion=/(?:把|将).{1,140}?(?:做成|转成|转换成|还原成|(?:梳理|整理)(?:成|为))(.{1,60})$/u.exec(action)
   const object=conversion?.[1].match(componentObject)
   if(object)return{index:conversion.index,target:boardObject.test(object[0])?'workbench':'component'}
   const materialized=/(?:把|将)(.{1,160})(?:做出来|搭出来|实现出来|还原出来)(?:一下|吧|即可)?$/u.exec(action.trim())

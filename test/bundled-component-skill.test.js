@@ -19,7 +19,7 @@ describe('EWork bundled component skill', () => {
     expect(prompt).toContain('RecapWidget')
     expect(prompt).toContain('不采用 ChartWidget 和 WatchlistWidget')
   })
-  it('is an always available bundled skill with current version 1.39.18', async () => {
+  it('is an always available bundled skill with current version 1.39.19', async () => {
     const provider = new FileSystemSkillProvider(
       { get: () => undefined, logger: { warn: vi.fn() } },
       { signal: new AbortController().signal, invalidate: vi.fn() },
@@ -38,7 +38,7 @@ describe('EWork bundled component skill', () => {
       const loaded = candidate && await provider.get(candidate, {})
       expect(loaded?.content).toContain('320×220')
       const metadata = JSON.parse(readFileSync(path.join(bundledSkillRoot, slug, '_meta.json'), 'utf8'))
-      expect(metadata).toEqual({ slug, cnName: '工作台组件生成', version: 'v1.39.18', source: 'eSkill' })
+      expect(metadata).toEqual({ slug, cnName: '工作台组件生成', version: 'v1.39.19', source: 'eSkill' })
     } finally {
       await provider.dispose()
     }
@@ -50,7 +50,7 @@ describe('EWork bundled component skill', () => {
       ? { ...base, sources: [{ id: 'data', type: 'artifact', title: '台账', text: '两份合同在30天内到期。' }] }
       : base
     const prompt = buildResearchTaskPrompt(request)
-    expect(prompt).toContain('内置技能 ework-workbench-components v1.39.18')
+    expect(prompt).toContain('内置技能 ework-workbench-components v1.39.19')
     if(kind==='create'){
       expect(prompt).toContain('【references/selection-runtime.md】')
       expect(prompt).toContain('不提供额外搜索权限')
@@ -89,9 +89,9 @@ describe('EWork bundled component skill', () => {
       parentSessionId: 'session', canvasNodeId: 'panel', kind: 'container', prompt: panelPrompt
     })
     expect(prompt).toContain(requirement)
-    expect(prompt).toContain('内置技能 ework-workbench-components v1.39.18')
+    expect(prompt).toContain('内置技能 ework-workbench-components v1.39.19')
     expect(prompt).toContain('建议呈现结构（可按实际数据调整）')
-    expect(prompt.match(/内置技能 ework-workbench-components v1\.39\.18/g)).toHaveLength(1)
+    expect(prompt.match(/内置技能 ework-workbench-components v1\.39\.19/g)).toHaveLength(1)
     expect(prompt).not.toContain('market.candlestick')
     expect(prompt).toContain('S 320×220、M 656×220、L 656×456')
     expect(prompt.length).toBeLessThan(9000)

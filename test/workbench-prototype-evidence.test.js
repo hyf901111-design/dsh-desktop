@@ -12,7 +12,9 @@ import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {planningPrototypeEvidence,prototypeEvidenceCall} from '../packages/dsh-research-task-runtime/workbench-prototype-evidence.js'
-import {workbenchPdfScope,workbenchPdfCitationIssue} from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import {workbenchDocumentScope,workbenchDocumentCitationIssue} from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import {extractDocxEvidence} from '../packages/dsh-research-task-runtime/docx-evidence.js'
+import {strToU8,zipSync} from 'fflate'
 
 const human=(text,id='human')=>({id,role:'user',source:{kind:'user'},content:[{type:'text',text}]})
 const session=(text,id)=>({header:{},events:[{type:'user/message',data:human(text,id)}]})
@@ -38,12 +40,34 @@ function receipt(s,name,args,callId='read-call',isError=false,content='原型真
  s.events.push({type:'tool/call',data:{name,arguments:args,callId}},{type:'tool/result',data:{message:{source:{kind:'tool',callId},content:[{type:'tool-result',isError,content:[{type:'text',text:content}]}]}}})
 }
 describe('用户原型是首次规划的有限只读证据',()=>{
+ it('uses Word paragraphs and complete tables when the user asks to organize an attachment into a board', async()=>{
+  const file='/tmp/org.docx'
+  const request='📎 文件：\x60'+file+'\x60 帮我把这个组织架构梳理成可视化看板，能让我清楚地看清部门和人员结构'
+  const packageXml='<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>组织总览</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>部门甲</w:t></w:r></w:p><w:p><w:r><w:t>负责人待核</w:t></w:r></w:p></w:tc><w:tc><w:p/></w:tc><w:tc><w:p><w:r><w:t>部门乙</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:del><w:r><w:delText>旧稿</w:delText></w:r></w:del><w:r><w:t>核查说明</w:t></w:r></w:p></w:body></w:document>'
+  const archive=zipSync({'word/document.xml':strToU8(packageXml)})
+  const evidence=extractDocxEvidence(archive,16000)
+  expect(evidence).toEqual({blocks:[{id:'P1',text:'组织总览'},{id:'T1',rows:[['部门甲\n负责人待核','','部门乙']]},{id:'P2',text:'核查说明'}],truncated:false})
+  expect(extractDocxEvidence(archive,40)).toEqual({blocks:[{id:'P1',text:'组织总览'}],truncated:true})
+  expect(()=>extractDocxEvidence(zipSync({'word/document.xml':strToU8('<!DOCTYPE xml><document/>')}),16000)).toThrow('不支持')
+  const documents=[{name:'org.docx',...evidence}]
+  const h=harness(session(request),{readDocumentEvidence:async (_,paths)=>{
+   expect(paths).toEqual([file])
+   return documents
+  }})
+  const wire=await h.context()
+  expect(wire.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
+  expect(wire.system).toContain('负责人待核')
+  expect(wire.system).toContain('rows 保留原始行列')
+  expect(workbenchDocumentCitationIssue('org.docx [T1] [P2]',documents)).toBeUndefined()
+  expect(workbenchDocumentCitationIssue('org.docx [T2]',documents)).toContain('Word 出处')
+  h.dispose()
+ })
  it('plans a report from the original desktop attachment and omits financial discovery', async()=>{
   const pdf='/Users/qa/Downloads/报告.pdf'
   const request='📎 文件：\x60'+pdf+'\x60 帮我把这个报告做成一个内容示意看板'
   const s=session(request)
   const documents=[{name:'报告.pdf',numPages:3,pages:[{page:2,text:'第二章 · 分类与分析'}]}]
-  const h=harness(s,{readPdfEvidence:async (actual,files)=>{
+  const h=harness(s,{readDocumentEvidence:async (actual,files)=>{
    expect(actual).toBe(s)
    expect(files).toEqual([pdf])
    return documents
@@ -54,17 +78,17 @@ describe('用户原型是首次规划的有限只读证据',()=>{
   expect(wire.system).toContain('量化图表须有同口径数据')
   expect(h.guard('public_data_query',{operation:'catalog'})).toBeTruthy()
   expect(h.guard('research_workbench_create',{})).toBeUndefined()
-  expect(workbenchPdfScope(request+'，补充外部市场数据')).toBeUndefined()
-  expect(workbenchPdfScope('创建工作台\n> '+request)).toBeUndefined()
-  expect(workbenchPdfCitationIssue('来源：报告.pdf 第 2 页',documents)).toBeUndefined()
-  expect(workbenchPdfCitationIssue('出典：報告.pdf 第２ページ',documents)).toBeUndefined()
+  expect(workbenchDocumentScope(request+'，补充外部市场数据')).toBeUndefined()
+  expect(workbenchDocumentScope('创建工作台\n> '+request)).toBeUndefined()
+  expect(workbenchDocumentCitationIssue('来源：报告.pdf 第 2 页',documents)).toBeUndefined()
+  expect(workbenchDocumentCitationIssue('出典：報告.pdf 第２ページ',documents)).toBeUndefined()
   const multi=[{...documents[0],numPages:5,pages:[2,3,4].map(page=>({page,text:'原文'}))}]
-  expect(workbenchPdfCitationIssue('第２–４ページ，来源 pp. 2–4、原文第 2、4 頁',multi)).toBeUndefined()
-  expect(workbenchPdfCitationIssue('原文第2–4ページ',documents)).toBeTruthy()
-  expect(workbenchPdfCitationIssue('原文第4–2ページ',multi)).toBeTruthy()
-  expect(workbenchPdfCitationIssue('原文第2、5页',multi)).toBeTruthy()
-  expect(workbenchPdfCitationIssue('来源：报告.pdf 第 3 页',documents)).toBeTruthy()
-  expect(workbenchPdfCitationIssue('来源：报告.pdf',documents)).toBeTruthy()
+  expect(workbenchDocumentCitationIssue('第２–４ページ，来源 pp. 2–4、原文第 2、4 頁',multi)).toBeUndefined()
+  expect(workbenchDocumentCitationIssue('原文第2–4ページ',documents)).toBeTruthy()
+  expect(workbenchDocumentCitationIssue('原文第4–2ページ',multi)).toBeTruthy()
+  expect(workbenchDocumentCitationIssue('原文第2、5页',multi)).toBeTruthy()
+  expect(workbenchDocumentCitationIssue('来源：报告.pdf 第 3 页',documents)).toBeTruthy()
+  expect(workbenchDocumentCitationIssue('来源：报告.pdf',documents)).toBeTruthy()
   h.dispose()
  })
  it.each([text,'参考 "'+path+'" 创建数字运营工作台。','根据 '+path+' 创建数字运营工作台。'])('normalizes an explicit Chinese file URL or space path: %s',request=>{
