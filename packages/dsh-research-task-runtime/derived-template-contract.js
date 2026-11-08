@@ -1,4 +1,4 @@
-export const DERIVED_GUIDANCE='总结提炼使用type=summary，思维导图使用type=mind-map。首次同时提交完整artifact:{version:1,type,title,asOf?（材料数据时点）,content,source:{title,text,nodeId?}}。content为完整结果，source为一个所选组件的冻结原标题和完整原文；仅当已有画布组件ID明确时提供nodeId，不猜ID。不扩展到整个工作台，不补充来源未提供的事实；摘要区分事实、推断和待验证。思维导图content仅用一个#根标题和完整项目列表；第一层项目可无缩进或两空格缩进，之后每层增加两空格，不能把普通正文静默丢掉。结果可编辑、原文独立保留。用户直接提供的材料也可作为source，明确来源为本人提供材料，不编造画布链接。不生成HTML，不启动逐卡模型。'
+export const DERIVED_GUIDANCE='总结提炼使用type=summary，思维导图使用type=mind-map。首次同时提交完整artifact:{version:1,type,title,asOf?（材料数据时点）,content,source:{title,text,nodeId?}}。content为完整结果，source为一个所选组件的冻结原标题和完整原文；仅当已有画布组件ID明确时提供nodeId，不猜ID。不扩展到整个工作台，不补充来源未提供的事实；摘要区分事实、推断和待验证。思维导图content仅用一个#根标题和完整项目列表；第一层项目可无缩进或两空格缩进，之后每层增加两空格，按真实关系保留全部必要层级，不固定三层、不合并不同上下级、不虚构层级；示例层数不构成限制。同级实体使用兄弟节点，不将整份清单塞进一个长节点；节点表达一个有意义的机构、部门、岗位或事项。不能把普通正文静默丢掉。结果可编辑、原文独立保留。用户直接提供的材料也可作为source，明确来源为本人提供材料，不编造画布链接。不生成HTML，不启动逐卡模型。'
 export const DERIVED_TEMPLATES=Object.freeze([
  {id:'summary',type:'summary',title:'总结提炼',figma:'1918:343676'},
  {id:'mind-map',type:'mind-map',title:'思维导图',figma:'1917:357536'}
@@ -15,7 +15,7 @@ export function derivedOutline(content){
   const m=lines[i].match(/^( *)(?:[-*+] )(.+)$/)
   if(!m||m[1].length%2||++count>500)return null
   const rawDepth=m[1].length/2;if(baseDepth===null){if(rawDepth>1)return null;baseDepth=rawDepth}
-  const depth=rawDepth-baseDepth;if(depth<0||depth>8)return null
+  const depth=rawDepth-baseDepth;if(depth<0)return null
   if(depth>stack.at(-1).depth+1)return null
   while(stack.length>1&&stack.at(-1).depth>=depth)stack.pop()
   const node={label:m[2],line:i,children:[]};stack.at(-1).node.children.push(node);stack.push({depth,node})

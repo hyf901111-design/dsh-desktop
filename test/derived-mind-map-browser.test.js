@@ -73,3 +73,19 @@ it('reflows full six-branch hierarchies across the available width and restores 
   expect(errors).toEqual([])
  }finally{await context.close()}
 },20000)
+
+
+it('renders all twelve levels and every connector without flattening deeper relationships',async()=>{
+ const page=await browser.newPage({viewport:{width:1200,height:900}});
+ try{
+  await page.setContent('<section data-research-compact-chrome style="width:1100px"><div id="map" class="ew-derived-preset"></div></section>');
+  await page.addStyleTag({content:css});await page.addScriptTag({content:script});
+  await page.evaluate(()=>window.showMap('# 完整体系\n'+Array.from({length:12},(_,i)=>'  '.repeat(i)+'- 第'+(i+1)+'层的完整节点').join('\n'),true));
+  const map=page.locator('[data-research-mind-map]');
+  await expect.poll(()=>map.locator('[data-research-mind-map-node]').count()).toBe(13);
+  expect(await map.locator('[data-research-mind-map-depth="12"]').textContent()).toContain('第12层的完整节点');
+  await expect.poll(async()=>(await map.locator('[data-research-mind-map-edges] path').getAttribute('d'))?.match(/M/g)?.length).toBe(12);
+  await map.locator('[data-research-mind-map-depth="12"]').scrollIntoViewIfNeeded();
+  expect(await map.locator('[data-research-mind-map-depth="12"]').isVisible()).toBe(true);
+ }finally{await page.close()}
+},15000);

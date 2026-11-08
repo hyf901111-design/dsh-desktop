@@ -54,3 +54,19 @@ it.each([summary,mindmap])('宿主吸收重复宽高，保留独立附注、完�
   {...draft,source:{...source,nodeId:'invalid link'}}
  ])expect(acceptArtifactOutput(JSON.stringify(invalid))).toBeUndefined()
 })
+
+
+it('preserves deep real hierarchies without a fixed depth cap, including complete labels and source',()=>{
+ const content='# 实际体系\n'+Array.from({length:24},(_,i)=>'  '.repeat(i)+'- 层级'+(i+1)).join('\n');
+ const spec={...mindmap,content};
+ expect(parseResearchContainerSpec(spec)).toEqual(spec);
+ expect(JSON.parse(acceptArtifactOutput(JSON.stringify(spec)))).toEqual(spec);
+ let node=derivedOutline(content);for(let i=0;i<24;i++){expect(node.children).toHaveLength(1);node=node.children[0];expect(node.label).toBe('层级'+(i+1));}
+ expect(node.children).toEqual([]);
+});
+
+it('routes complete sourced markdown through the sourced summary contract without dropping metadata or rewriting content',()=>{
+ const draft={...summary,type:'markdown',note:'† 表示历史时点，负责人现职待核。'};
+ expect(JSON.parse(acceptArtifactOutput(JSON.stringify(draft)))).toEqual({...draft,type:'summary'});
+ for(const invalid of [{...draft,source:{...source,nodeId:'invalid id'}},{...draft,unknown:'do not discard'}])expect(acceptArtifactOutput(JSON.stringify(invalid))).toBeUndefined();
+});

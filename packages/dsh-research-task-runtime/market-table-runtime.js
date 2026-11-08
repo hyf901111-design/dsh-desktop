@@ -36,7 +36,7 @@ export function marketTableRuntime() {
 }
 
 export const MARKET_TABLE_PAGINATION_CSS=`
-.terminal-table-pagination{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:none;min-height:28px;font:11px/18px var(--sherlock-font-sans,inherit);color:inherit}
+.terminal-table-pagination{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:none;margin-top:10px;min-height:28px;font:11px/18px var(--sherlock-font-sans,inherit);color:inherit}
 .terminal-table-pagination>span{margin-right:auto;white-space:nowrap}
 .terminal-table-pagination :is(button,select){box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;height:24px;min-height:24px;padding:2px 5px;border:1px solid var(--sherlock-control-border,#8885);border-radius:2px;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .terminal-table-pagination button{width:26px}.terminal-table-pagination button:disabled{opacity:.35;cursor:default}.terminal-table-pagination :is(button,select):focus-visible{outline:1px solid currentColor;outline-offset:2px}

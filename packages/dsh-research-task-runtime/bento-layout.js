@@ -72,7 +72,7 @@ export function researchMarketContentDimensions(variant, data = {}) {
       : Math.max(1,...(Array.isArray(data.rows)?data.rows:[]).filter(Array.isArray).map(row=>Math.ceil(units(row.map((cell,i)=>(data.columns?.[i]??'')+' '+cell).join(' · '))/capacity)));
     // Include canvas title/stamp, search, header, row readout, body insets and
     // wrapped source text. The table and unusually long notes scroll separately.
-    return {width:656,height:Math.min(840,144 + ((rows>30?20:rows) + 1) * 26 + (rows>30?34:0) + Math.min(12,footerLines) * 17 + Math.min(8,Math.max(0,readoutLines-1))*17)};
+    return {width:656,height:Math.min(840,144 + ((rows>30?20:rows) + 1) * 26 + (rows>30?44:0) + Math.min(12,footerLines) * 17 + Math.min(8,Math.max(0,readoutLines-1))*17)};
   }
   if (variant === 'fund-holdings')
     return {width:656,height:80 + Math.min(12, Math.max(3, rows || 10)) * 25};
