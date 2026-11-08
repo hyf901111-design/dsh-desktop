@@ -1975,6 +1975,9 @@ export class ResearchTaskRuntime {
           if (result.documentEvidence && output) {
             const issue = workbenchDocumentCitationIssue(output, result.documentEvidence)
             if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
+            if (['table','mind-map'].includes(plannedFormat) && JSON.parse(output).type === 'markdown') {
+              throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要交付实际明细或层级，不能用文字说明替代。复用已读取的文档，保留完整行、层级和出处，可换成原生视图或含完整数据的静态 HTML。')
+            }
           }
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
@@ -2146,7 +2149,7 @@ export class ResearchTaskRuntime {
         const recencyIssue=workbenchMarketRecencyIssue(JSON.stringify(verifiedSnapshot.data),task.prompt,new Date(this.now()))
         if(!variantIssue&&!recencyIssue&&!calendarIssueFor(verifiedSnapshot.output)&&!statementTableEvidenceIssue(verifiedSnapshot.data,panelRequest,sourceRecords,{requiredData:statementRepairData})){output=verifiedSnapshot.output;binding=undefined}
       }
-      if (structured && !deferredPanel && output === undefined && !prototypeIssue && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !chartGeometryError && !designPolicyError && canSynthesizeResult(result)) {
+      if (structured && !deferredPanel && !documentTask && output === undefined && !prototypeIssue && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !chartGeometryError && !designPolicyError && canSynthesizeResult(result)) {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
       if(requiredReleaseScope&&!bindingRequested){
