@@ -17,7 +17,7 @@ export function workbenchModeCss(scope=':root',content='') {
 }
 
 const structureLevels=[
- ['chart-1','#fff'],['chart-5','#fff'],['chart-2','#25252b'],['chart-6','#25252b'],
+ ['chart-1','#fff'],['chart-5','#fff'],['chart-2','#fff'],['chart-6','#25252b'],
  ['chart-4','#fff'],['chart-3','#25252b'],['chart-7','#25252b'],['chart-8','#25252b']
 ]
 export function workbenchStructureDepthCss(scope,nodes,depth,legacyLevels=[]) {
@@ -53,6 +53,7 @@ const structureNodes=':is([data-sherlock-structure="node"],[data-sherlock-struct
 const legacyStructureLevels=[
  [structureNodes,1],
  [':where(.tree:has(> .node > .node-title)) .branch > .card',2],
+ ['.tree > .split[data-sherlock-structure="connector"] [data-sherlock-structure="node"]',2],
  [':is([data-sherlock-structure="primary"],.chart .node.root:has(> .role),:where(.tree:has(> .node > .node-title)) > .node:first-child)',0]
 ]
 const svgNodeShape=':is(rect,ellipse,circle,polygon,path)'
@@ -87,12 +88,20 @@ ${enterpriseRoot} body ${structureNodes} :is(.role,.name,.node-title,.node-sub,h
  background:color-mix(in srgb,var(--sherlock-chart-1) 5%,var(--sherlock-surface))!important;
  border:0!important;box-shadow:none!important;border-radius:0!important;
 }
-:root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="connector"]:not(svg *),.chart:has(.node.root > .role) :is(.vline,.stub),.tree:has(> .node > .node-title) :is(.vline,.drop)),
+/* Older artifacts also annotated layout containers around the actual paths. */
+${enterpriseRoot} body [data-sherlock-structure="connector"]:not(svg,svg *){
+ color:var(--sherlock-chart-3)!important;border-color:var(--sherlock-chart-3)!important;
+}
+${enterpriseRoot} body [data-sherlock-structure="connector"]:not(svg,svg *):has(svg,[data-sherlock-structure="node"]){
+ background:transparent!important;
+}
+:root[data-workbench-style="enterprise"] body :is(.chart:has(.node.root > .role) :is(.vline,.stub),.tree:has(> .node > .node-title) :is(.vline,.drop)),
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::before,
 :root[data-workbench-style="enterprise"] body .chart:has(.node.root > .role) .stub-caps::after{
  background:var(--sherlock-chart-3)!important;
 }
 ${enterpriseRoot} svg [data-sherlock-structure="connector"]{stroke:var(--sherlock-chart-3)!important}
+${enterpriseRoot} [data-sherlock-structure="connector"] > svg :is(path,line,polyline)[stroke]:not([stroke="none"],[data-sherlock-structure="node"],[data-sherlock-structure="primary"]){stroke:var(--sherlock-chart-3)!important}
 ${enterpriseRoot} svg ${svgNodeShape}${structureNodes},
 ${enterpriseRoot} svg ${structureNodes} > ${svgNodeShape}:not([data-sherlock-structure="connector"]){fill:var(--sherlock-structure-fill)!important;stroke:none!important;rx:0px!important;ry:0px!important}
 ${enterpriseRoot} svg ${structureNodes} :is(text,tspan){fill:var(--sherlock-structure-ink)!important}

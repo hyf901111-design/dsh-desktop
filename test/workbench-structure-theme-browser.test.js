@@ -42,6 +42,15 @@ const html = `<style>
 <section data-sherlock-structure="primary" id="custom-primary"><div class="custom-label">职位与出处</div></section>
 <section data-sherlock-structure="node" data-sherlock-structure-depth="2" id="custom-third"><span>三级部门</span></section>
 <section data-sherlock-structure="node" data-sherlock-structure-depth="3" id="custom-fourth">四级部门</section>
+<div class="tree" data-sherlock-structure>
+  <div class="level"><div class="node" data-sherlock-structure="primary">会员大会</div></div>
+  <div class="connector" data-sherlock-structure="connector" id="legacy-svg-wrap" style="width:100%;background:#ddd">
+    <svg width="16" height="18"><line id="legacy-line" x1="8" y1="0" x2="8" y2="13" stroke="currentColor" stroke-width="1"/></svg>
+  </div>
+  <div class="split" data-sherlock-structure="connector" id="legacy-split"><div class="col">
+    <div class="node" data-sherlock-structure="node" id="legacy-council"><b>理事会</b></div>
+  </div></div>
+</div>
 <section data-sherlock-structure="info" id="info" style="border-left:4px solid red;box-shadow:inset 1px 0 red"><h3>资料卡片</h3><a href="https://example.com/source">原始出处</a></section>
 <svg viewBox="0 0 100 45" aria-label="关系图">
   <path id="path" data-sherlock-structure="connector" d="M 10 20 L 50 20" stroke="#777777"/>
@@ -77,7 +86,7 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#tree-peer', 'backgroundColor')).toBe(await read('#peer', 'backgroundColor'))
     expect(await read('#tree-card', 'backgroundColor')).toBe('rgb(30, 185, 225)')
     expect(await read('#custom-third', 'backgroundColor')).toBe('rgb(30, 185, 225)')
-    expect(await read('#custom-third span', 'color')).toBe('rgb(37, 37, 43)')
+    expect(await read('#custom-third span', 'color')).toBe('rgb(255, 255, 255)')
     expect(await read('#custom-fourth', 'backgroundColor')).toBe('rgb(179, 235, 255)')
     expect(await read('#tree-rail', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
     expect(await read('#tree-drop', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
@@ -90,6 +99,12 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#control', 'borderRadius')).toBe('6px')
     expect(await read('#path', 'stroke')).toBe('rgb(150, 150, 150)')
     expect(await read('#nested-connector', 'stroke')).toBe('rgb(150, 150, 150)')
+    expect(await read('#legacy-svg-wrap', 'backgroundColor')).toBe('rgba(0, 0, 0, 0)')
+    expect(await read('#legacy-split', 'backgroundColor')).toBe('rgba(0, 0, 0, 0)')
+    expect(await read('#legacy-line', 'stroke')).toBe('rgb(150, 150, 150)')
+    expect(await read('#legacy-line', 'strokeWidth')).toBe('1px')
+    expect(await read('#legacy-council', 'backgroundColor')).toBe('rgb(30, 185, 225)')
+    expect(await read('#legacy-council b', 'color')).toBe('rgb(255, 255, 255)')
     expect(await read('#svg-node', 'fill')).toBe('rgb(0, 80, 150)')
     expect(await read('#svg-node', 'stroke')).toBe('none')
     expect(await read('#svg-node', 'rx')).toBe('0px')
@@ -147,7 +162,7 @@ it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）
     expect(enterprise[0]).toEqual({backgroundColor:'rgb(0, 80, 150)',color:'rgb(255, 255, 255)',borderRadius:'0px',borderLeftWidth:'0px'})
     expect(enterprise.slice(1).map(node=>node.backgroundColor)).toEqual(['rgb(0, 120, 180)','rgb(30, 185, 225)','rgb(179, 235, 255)','rgb(204, 204, 204)'])
     expect(enterprise[1].color).toBe('rgb(255, 255, 255)')
-    expect(enterprise[2].color).toBe('rgb(37, 37, 43)')
+    expect(enterprise[2].color).toBe('rgb(255, 255, 255)')
     expect(enterprise.every(node=>node.borderLeftWidth==='0px'&&node.borderRadius==='0px')).toBe(true)
     expect(await page.locator('[data-research-mind-map-edges]').evaluate(node => getComputedStyle(node).color)).toBe('rgb(150, 150, 150)')
     await board.evaluate(node => node.dataset.workbenchStyle='dark')
