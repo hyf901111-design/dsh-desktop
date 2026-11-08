@@ -24,3 +24,10 @@ it('retains a successful component retrieval even when authored HTML cites only 
  const output=retainObservedComponentProvenance(raw,[],[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://api.example.org/repos/example/core'},response:{source:'api.example.org',sourceUrl:'https://api.example.org/repos/example/core',description:'公开项目'}}])
  expect(getComponentSourceInfo({containerSpec:JSON.parse(output)}).records).toMatchObject([{label:'api.example.org',url:'https://api.example.org/repos/example/core'}])
 })
+
+it('makes frozen original URLs actionable without guessing paths or exposing credentials',()=>{
+ const source={title:'来源与说明',text:'原文：[资料](https://official.example.org/info?a=1)。\n第二条 https://other.example.org/doc；\nhttps://private.example.org/?token=secret'}
+ const info=getComponentSourceInfo({containerSpec:{version:1,type:'summary',title:'研究',content:'业务内容',source}})
+ expect(info.records.filter(row=>row.url).map(row=>row.url)).toEqual(['https://official.example.org/info?a=1','https://other.example.org/doc'])
+ expect(info.records[0].text).toBe(source.text)
+})

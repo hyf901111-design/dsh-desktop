@@ -198,11 +198,14 @@ function normalizeTemplateAliases(value) {
   const sourced={...value,type:'summary'};
   if(parseResearchContainerSpec(sourced))value=sourced;
  }
- if(value?.type==='summary'&&typeof value.content==='string'&&value.source&&typeof value.source.text==='string'){
+ // Move only explicitly labelled provenance sections. Business comparisons
+ // such as "官网依据 vs 文件依据" remain visible and are never classified by a
+ // keyword appearing somewhere in their body. Preserve all moved text verbatim.
+ if(['summary','markdown'].includes(value?.type)&&typeof value.content==='string'){
   const moved=[];
-  const content=value.content.replace(/^#{1,6}\s+(?:(?:[一二三四五六七八九十百]+|[0-9]+)[、.．]\s*)?(?:主要资料来源|资料来源|参考来源|数据来源|口径与来源)\s*\n[\s\S]*?(?=^#{1,6}\s|$(?![\s\S]))/gmu,section=>{moved.push(section);return ''}).trim();
-  if(moved.length&&content){
-   const sourced={...value,content,source:{...value.source,text:[value.source.text,...moved].join('\n\n')}};
+  const content=value.content.replace(/^#{1,6}\s+(?:(?:[一二三四五六七八九十百]+|[0-9]+)[、.．]\s*)?(?:主要资料来源|资料来源|参考来源|数据来源|口径与来源|原始出处|参考文献)(?:[（(](?:每条)?可点击[）)])?\s*\n[\s\S]*?(?=^#{1,6}\s|$(?![\s\S]))/gmu,section=>{moved.push(section);return ''}).trim();
+  if(moved.length&&content&&(!value.source||typeof value.source.text==='string')){
+   const sourced={...value,type:'summary',content,source:{...value.source,title:value.source?.title||'来源与说明',text:[value.source?.text,...moved].filter(Boolean).join('\n\n')}};
    if(parseResearchContainerSpec(sourced))value=sourced;
   }
  }

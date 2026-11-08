@@ -28,6 +28,15 @@ export function getComponentSourceInfo(node){
  }
  for(const row of Array.isArray(data.sources)?data.sources:[])add(row)
  add(data.source)
+ // Frozen prose sources keep their exact text, plus actionable original URLs.
+ // Do not reinterpret business paragraphs or guess an endpoint from a domain.
+ for(const source of [data.source,...(Array.isArray(data.sources)?data.sources:[])]){
+  const text=typeof source?.text==='string'?source.text:''
+  for(const match of text.matchAll(/https?:\/\/[^\s<>"'\x60\[\]（）]+/gu)){
+   const raw=match[0].replace(/[),.;，。；、]+$/gu,'')
+   try{const url=new URL(raw);if(url.username||url.password||[...url.searchParams.keys()].some(key=>/token|secret|credential|auth|signature|api[_-]?key/iu.test(key)))continue;add({label:url.hostname,url:url.href})}catch{}
+  }
+ }
  for(const row of node?.generationSources||[])add(row)
  for(const row of componentRecordedProvenance(node))add(row)
  // Feeds and articles retain every recorded original URL, not just a hostname.

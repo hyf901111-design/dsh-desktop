@@ -255,3 +255,17 @@ it('文本来源列表无损转入底栏来源契约，未知字段与危险链�
  expect(acceptArtifactOutput(JSON.stringify({...data,sources:[{name:'来源',unknown:'不可丢失'}]}))).toBeUndefined()
  expect(acceptArtifactOutput(JSON.stringify({...data,sources:[{name:'来源',url:'javascript:alert(1)'}]}))).toBeUndefined()
 })
+
+
+it.each(['markdown','summary'])('moves explicit original-source sections into the footer for %s without requiring pre-existing metadata',type=>{
+ const content='# 职责对照\n## 官网依据 vs 文件依据\n这段是需要阅读的业务对照。\n## 四、原始出处（每条可点击）\n- 官网：https://example.org/source\n- 附件：原始文件.docx [T8]\n## 使用说明\n保留待核状态。'
+ const result=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type,title:'职责对照',content})))
+ expect(result.type).toBe('summary');expect(result.content).toContain('官网依据 vs 文件依据');expect(result.content).toContain('保留待核状态');expect(result.content).not.toContain('原始出处')
+ expect(result.source.text).toContain('https://example.org/source');expect(result.source.text).toContain('原始文件.docx [T8]')
+})
+it('keeps a provenance-only document visible and does not hide a business section containing source keywords',()=>{
+ for(const content of ['## 原始出处\nhttps://example.org/source','## 官网职责与来源对照\n完整业务内容https://example.org/source']){
+  const result=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'markdown',title:'资料',content})))
+  expect(result.content).toBe(content)
+ }
+})
