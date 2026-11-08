@@ -82,6 +82,7 @@ export function ResearchDerivedPreset({node,sessionId}){
    react_jsx_runtime.jsxs('div',{className:'ew-derived-actions',children:[react_jsx_runtime.jsx('button',{type:'button',disabled:readOnly,onClick:save,children:'保存结果'}),react_jsx_runtime.jsx('button',{type:'button',onClick:cancel,children:'取消'})]})
   ]}):result,
   error&&!editing&&react_jsx_runtime.jsx('div',{role:'alert',children:error}),
+  spec.note&&react_jsx_runtime.jsx('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'说明'}),react_jsx_runtime.jsx('pre',{children:spec.note})]}),
   spec.type==='summary'&&react_jsx_runtime.jsx('div',{className:'ew-derived-note',children:'仅根据来源组件内的内容生成。'}),
   react_jsx_runtime.jsx('style',{children:RESEARCH_DERIVED_PRESET_CSS})
  ]})

@@ -42,7 +42,7 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('shows every 
   }
   expect(await page.locator('.market-footer').textContent()).toContain(observed.note)
   await page.screenshot({path:`/tmp/workbench-quote-wide-table-${width}-${theme}.png`,fullPage:true})
-  const search=page.getByRole('searchbox',{name:'搜索行情'})
+  const search=page.getByRole('searchbox',{name:'搜索表格内容'})
   await search.fill('新易盛')
   expect(await page.locator('tbody tr:visible').count()).toBe(1)
   expect(await page.locator('tbody tr:visible td').allTextContents()).toEqual(observed.rows[1])
