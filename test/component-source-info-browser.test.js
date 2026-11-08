@@ -104,3 +104,10 @@ it('collects explicitly labeled legacy HTML source footers without treating unre
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+it('recognizes labeled real attachment names while retaining source labels and exact filename matching',()=>{
+ for(const prefix of ['整理文档：','来源文件：','来源文件：来源文件：','附件: ']){
+  const label=prefix+'组织资料.docx（T8、P24）',info=getComponentSourceInfo({containerSpec:{source:{title:label,text:'真实原文'}}})
+  expect(info.records[0]).toMatchObject({label,filename:'组织资料.docx',path:''})
+ }
+})

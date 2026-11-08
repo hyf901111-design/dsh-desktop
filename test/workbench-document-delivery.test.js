@@ -211,3 +211,35 @@ it('混合来源保留附件读取且不把外部来源强制伪装成文档引�
  expect(workbenchDocumentCitationIssue('附件 [P1]',docs,{required:false})).toBeUndefined()
  expect(workbenchDocumentCitationIssue('伪造 [P999]',docs,{required:false})).toBeTruthy()
 })
+
+
+it('样式修复可自动换为保留全部层级和来源的原生图，不被原 HTML 格式锁死',async()=>{
+ const {ResearchTaskRuntime}=await import('../packages/dsh-research-task-runtime/index.js')
+ const {workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+ const prompt=workbenchPanelPrompt({title:'机构研究',originalRequest:'梳理组织架构图',dataMode:'source'},{title:'机构关系图',type:'html',size:'medium',prompt:'用组织架构图展示真实层级并保留来源。'})
+ const attempts=[]
+ const drafts=[{version:1,type:'html',title:'机构关系图',html:'<div class="leaders" style="color:rgba(255,255,255,.75)">总会 → 分会 → 部门 → 岗位</div>'},{version:1,type:'mind-map',title:'机构关系图',content:'# 总会\n## 分会\n### 部门\n#### 岗位',source:{title:'公开材料',text:'真实层级依据 https://example.com/structure'}}]
+ const runtime=new ResearchTaskRuntime({adapter:{async start({prompt}){attempts.push(prompt);return {childSessionId:'style-graph-'+attempts.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(drafts[attempts.length-1])}]}),async dispose(){}}}},storage:{async save(){}},createId:()=> 'style-graph'})
+ try{
+ const task=await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt})
+ const inspect=()=>runtime.inspect({parentSessionId:'parent',taskId:task.taskId})
+ await expect.poll(()=>inspect().state).toBe('completed')
+ expect(attempts).toHaveLength(2)
+ const output=JSON.parse(inspect().finalOutput)
+ expect(output.type).toBe('mind-map')
+ expect(output.content).toBe('# 总会\n- 分会\n  - 部门\n    - 岗位')
+ expect(output.source).toEqual(drafts[1].source)
+ }finally{await runtime.dispose()}
+})
+
+it('文本来源列表无损转入底栏来源契约，未知字段与危险链接仍不能通过',()=>{
+ const data={version:1,type:'markdown',title:'依据来源说明',content:'文件依据与网络依据分开，未复核部分明确标注。',sources:[{name:'附件.docx',text:'定位 [T8]'}, {label:'官方网站',url:'https://example.com/source'}],asOf:'2026-11-09',note:'静态快照'}
+ const output=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
+ expect(output.type).toBe('summary')
+ expect(output.content).toBe(data.content)
+ for(const row of data.sources)for(const text of Object.values(row))expect(output.source.text).toContain(text)
+ expect(output.asOf).toBe(data.asOf)
+ expect(output.note).toBe(data.note)
+ expect(acceptArtifactOutput(JSON.stringify({...data,sources:[{name:'来源',unknown:'不可丢失'}]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...data,sources:[{name:'来源',url:'javascript:alert(1)'}]}))).toBeUndefined()
+})

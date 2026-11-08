@@ -1981,7 +1981,7 @@ export class ResearchTaskRuntime {
             output = documentTableOutput(deliveredText)
             if (!output) throw new ResearchTaskError('INVALID_OUTPUT', (documentTableOutputIssue(deliveredText)||'明细表缺少可核验的结构化行。') + DOCUMENT_TABLE_GUIDANCE)
           } else {
-            output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
+            output = finalText(mapped?.capacitySnapshot?[{type:'text',text:mapped.output}]:mapped || deferredPanel || restoredSnapshot || restoredType || restoredQuotes || retainedFeed || restoredArticleScope || articleTimeline || scopedNews ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError)&&!(attempt>0&&needsGraphPresentation(task.prompt)&&!sharedStateError&&!chartGeometryError), designPolicyError?.titleRepairSnapshot, (chartGeometryError??sharedStateError??designPolicyError)?.chartGeometrySnapshot)
           }
           if (needsGraphPresentation(task.prompt) && output && ['markdown','summary','note'].includes(JSON.parse(output).type)) {
             throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要实际层级或关系图，不能用文字说明替代。复用已取得内容，按真实关系交付完整导图或可视化 HTML，保留来源。')

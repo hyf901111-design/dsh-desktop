@@ -604,3 +604,18 @@ it('竖排导航跟随当前页末卡，拖动缩窄时卡片填满右区，重�
  expect(bar().querySelector('[data-board-tabs-resize]')).toBeNull()
  expect(w.getVisibleBoardSnapshot().artifacts[0].width).toBeCloseTo(976)
 })
+
+it('异步挂载的非当前页卡片在无需手动切页时也隐藏且不可交互',async()=>{
+ const f=await fixture();let second
+ await f.act(()=>f.workspace.createBoardTabs())
+ await f.event('click',f.document.querySelectorAll('[data-board-tab]')[1])
+ await f.act(()=>{second=f.workspace.createFinancialWidget('indices')})
+ await f.event('click',f.document.querySelectorAll('[data-board-tab]')[0])
+ const late=f.document.createElement('div');late.setAttribute('data-research-node-id',second.id)
+ f.document.querySelector('[data-ework-grid]').append(late)
+ await vi.waitFor(()=>expect(late.hasAttribute('data-board-tab-hidden')).toBe(true))
+ expect(late.inert).toBe(true)
+ await f.event('click',f.document.querySelectorAll('[data-board-tab]')[1])
+ expect(late.hasAttribute('data-board-tab-hidden')).toBe(false)
+ expect(late.inert).toBe(false)
+})

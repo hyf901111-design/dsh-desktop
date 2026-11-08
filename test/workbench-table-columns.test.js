@@ -149,3 +149,24 @@ it('refreshes separator indices when existing headers move and reads changed pla
   await vi.waitFor(()=>expect(row.cells[2].querySelector('[role=separator]').getAttribute('aria-label')).toBe('调整“经营披露与来源”列宽'))
  }finally{stop();await f.win.happyDOM.close()}
 })
+
+it('fits long prose to the available component width and wraps without truncating text or overriding manual widths',async()=>{
+ const f=fixture(),original='完整正文与来源 https://example.com/a?long=value '+ '需要完整保留的说明。'.repeat(60)
+ f.table.rows[1].cells[2].textContent=original
+ let available=760;Object.defineProperty(f.table.parentElement,'clientWidth',{get:()=>available})
+ const stop=installWorkbenchTableColumns(f.doc.body)
+ try{
+  expect(parseFloat(f.table.style.width)).toBeCloseTo(760)
+  expect(f.table.rows[1].cells[2].dataset.columnWrap).toBe('true')
+  expect(f.table.rows[1].cells[0].dataset.columnWrap).toBe('false')
+  expect(f.table.rows[1].cells[2].textContent).toBe(original)
+  const handle=f.table.querySelector('[data-workbench-column-resize="2"]'),before=parseFloat(f.table.style.width)
+  handle.dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowLeft'}))
+  expect(parseFloat(f.table.style.width)).toBeCloseTo(before-10,0)
+  available=1000;f.table.tBodies[0].append(f.doc.createElement('tr'))
+  await vi.waitFor(()=>expect(parseFloat(f.table.style.width)).toBeCloseTo(before-10,0))
+  handle.dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'Home'}))
+  expect(parseFloat(f.table.style.width)).toBeCloseTo(1000)
+  expect(f.table.rows[1].cells[2].textContent).toBe(original)
+ }finally{stop();await f.win.happyDOM.close()}
+})

@@ -32,7 +32,7 @@ export function installWorkbenchTableColumns(root, options = {}) {
     if (!control) {
       const owner = table.closest('[data-research-node-id]') || root
       const index = [...owner.querySelectorAll('table')].indexOf(table)
-      let state = previousState, dragging = null, usedGroup = false, published = ''
+      let state = previousState, automatic = null, dragging = null, usedGroup = false, published = ''
       const currentGroups = [...table.querySelectorAll(':scope>colgroup')].filter(group => !group.hasAttribute('data-workbench-columns')).map(group => group.cloneNode(true))
       const originalGroups = currentGroups.length ? currentGroups : previousGroups
       let labelHash = 2166136261
@@ -50,13 +50,25 @@ export function installWorkbenchTableColumns(root, options = {}) {
           header.style.setProperty('--workbench-column-justify', align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start')
           return align
         })
-        if (state) {
+        const available=table.parentElement?.clientWidth||root.clientWidth||0
+        const lengths=headers.map((_,i)=>Math.max(0,...rows.filter(row=>row.parentElement!==table.tHead).map(row=>(row.cells[i]?.textContent||'').trim().length)))
+        const prose=lengths.map(length=>length>80)
+        automatic=null
+        if(available>=headers.length*80&&prose.some(Boolean)){
+          const base=headers.map((_,i)=>prose[i]?280:Math.max(80,Math.min(240,Math.max(labels[i].length,lengths[i])*8+24)))
+          const minimum=base.map((width,i)=>prose[i]?160:80),total=base.reduce((a,b)=>a+b,0),floor=minimum.reduce((a,b)=>a+b,0)
+          const budget=Math.max(floor,available)
+          const widths=base.map((width,i)=>total>budget?minimum[i]+(width-minimum[i])*(budget-floor)/(total-floor||1):width+(budget-total)*(prose[i]?2:1)/(headers.length+prose.filter(Boolean).length))
+          automatic={widths,manual:prose}
+        }
+        const layout=state||automatic
+        if (layout) {
           let group = table.querySelector('colgroup[data-workbench-columns]')
           if (!group) { table.querySelectorAll(':scope>colgroup').forEach(el => el.remove()); group = doc.createElement('colgroup'); group.setAttribute('data-workbench-columns', ''); table.prepend(group) }
           usedGroup = true
           while (group.children.length < headers.length) group.append(doc.createElement('col'))
-          ;[...group.children].forEach((col, i) => col.style.setProperty('width', state.widths[i] + 'px', 'important'))
-          table.style.setProperty('width', state.widths.reduce((a, b) => a + b, 0) + 'px', 'important')
+          ;[...group.children].forEach((col, i) => col.style.setProperty('width', layout.widths[i] + 'px', 'important'))
+          table.style.setProperty('width', layout.widths.reduce((a, b) => a + b, 0) + 'px', 'important')
           table.style.setProperty('min-width', '0', 'important')
           table.style.setProperty('table-layout', 'fixed', 'important')
         } else {
@@ -65,7 +77,7 @@ export function installWorkbenchTableColumns(root, options = {}) {
           for (const name of ['width', 'min-width', 'table-layout']) table.style.removeProperty(name)
         }
         for (const row of table.rows) [...row.cells].forEach((cell, i) => {
-          cell.setAttribute('data-column-wrap', state?.manual[i] ? 'true' : 'false')
+          cell.setAttribute('data-column-wrap', state?.manual[i] || automatic?.manual[i] ? 'true' : 'false')
           cell.setAttribute('data-column-align', alignments[i])
         })
         table.setAttribute('data-workbench-view-key', key)
@@ -81,15 +93,15 @@ export function installWorkbenchTableColumns(root, options = {}) {
           handle.setAttribute('data-workbench-column-resize', String(i))
           handle.setAttribute('aria-label', '调整“' + labels[i] + '”列宽'); handle.title = '拖动调整列宽 · 双击恢复默认'
           handle.setAttribute('aria-valuemin', '48'); handle.setAttribute('aria-valuemax', '1600')
-          handle.setAttribute('aria-valuenow', String(Math.round(state?.widths[i] || header.getBoundingClientRect().width || 80)))
+          handle.setAttribute('aria-valuenow', String(Math.round(layout?.widths[i] || header.getBoundingClientRect().width || 80)))
         })
         const encoded = JSON.stringify(state)
         if (published !== encoded) { published = encoded; win.dispatchEvent(new win.Event('sherlock-presentation-change')) }
       }
       const save = () => { options.save?.(owner, index, labels, state); table.dispatchEvent(new win.Event('input', { bubbles: true })) }
-      const widths = () => state?.widths.slice() || headers.map(el => Math.max(48, Math.min(1600, Math.round(el.getBoundingClientRect().width) || 80)))
+      const widths = () => state?.widths.slice() || automatic?.widths.slice() || headers.map(el => Math.max(48, Math.min(1600, Math.round(el.getBoundingClientRect().width) || 80)))
       const resize = (i, width, current = widths()) => {
-        state = { widths: current.slice(), manual: state?.manual.slice() || headers.map(() => false) }
+        state = { widths: current.slice(), manual: state?.manual.slice() || automatic?.manual.slice() || headers.map(() => false) }
         state.widths[i] = Math.max(48, Math.min(1600, Math.round(width))); state.manual[i] = true; apply()
       }
       const handleFor = event => event.target.closest?.('[data-workbench-column-resize]')
@@ -118,8 +130,10 @@ export function installWorkbenchTableColumns(root, options = {}) {
     const changed = records.some(record => record.type === 'childList' || record.type === 'characterData' && record.target.parentElement?.closest('th') || record.type === 'attributes' && record.target.tagName === 'BUTTON' && record.target.closest('th'))
     if (changed && !queued && !disposed) { queued = true; win.queueMicrotask(scan) }
   })
+  const resizeObserver=typeof win.ResizeObserver==='function'?new win.ResizeObserver(()=>{for(const control of tables.values())control.apply()}):null
+  resizeObserver?.observe(root)
   observer.observe(root, { childList: true, characterData: true, attributes:true, attributeFilter:['aria-label'], subtree: true }); scan()
-  return () => { disposed = true; observer.disconnect(); for (const control of tables.values()) control.dispose(); tables.clear() }
+  return () => { disposed = true; observer.disconnect(); resizeObserver?.disconnect(); for (const control of tables.values()) control.dispose(); tables.clear() }
 }
 
 export function createWorkbenchTableColumnState(storage, sessionId) {
