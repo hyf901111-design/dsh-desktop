@@ -137,3 +137,55 @@ describe('workbench execution policy', () => {
     } finally { unlinkSync(filename) }
   })
 })
+
+describe('workbench planning continuation', () => {
+  async function planningRun(text, {turn = 1, abort = new AbortController()} = {}) {
+    const s = session(text)
+    s.events.unshift({type:'turn/start',data:{turn}})
+    const hooks = new Map()
+    const agent = {session:s,steer:vi.fn()}
+    const dispose = registerWorkbenchExecutionPolicy({
+      tools:{guard:() => () => {}}, systemPrompt:{context:() => () => {}},
+      on:(name,fn) => {hooks.set(name,fn);return () => {}}
+    })
+    const payload = {agent,turn,signal:abort.signal}
+    const wire = await hooks.get('agent/request-context')(payload,async () => ({
+      system:'base',messages:[s.events[1].data],
+      tools:[{name:'research_workbench_create',parameters:{}},{name:'research_canvas_use',parameters:{}}]
+    }))
+    s.events.push({type:'assistant/chunk',data:{turn,chunk:{type:'finish',reason:{kind:'stop'}}}})
+    return {s,agent,wire,abort,dispose,stop:() => hooks.get('agent/turn-stopping')(payload)}
+  }
+
+  it.each([
+    '我想给同事做一份组织架构速查看板，按附件保留出处和待核标记。',
+    '给投研组做一组美股财报观察看板。',
+    '给运营组做两套不同用途的发布动态看板。',
+    '我要做一版模拟义诊排班工作台。',
+  ])('uses the bounded planning surface for a production request: %s', async text => {
+    const run = await planningRun(text)
+    try {
+      expect(run.wire.tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
+      expect(run.wire.system).toContain('准备卡只显示宿主进度')
+      run.stop()
+      run.stop()
+      expect(run.agent.steer).toHaveBeenCalledTimes(1)
+      expect(run.agent.steer.mock.calls[0][0].source).toMatchObject({kind:'plugin',plugin:'sherlock-workbench-planning'})
+    } finally { run.dispose() }
+  })
+
+  it.each(['accepted','user-cancelled','superseded','permission-denied','read-only'])('leaves %s at its own boundary',async scenario => {
+    const run = await planningRun(scenario === 'read-only' ? '我想看当前工作台的来源。' : '帮我做一份活动复盘看板。')
+    try {
+      if (scenario === 'user-cancelled') run.abort.abort()
+      if (scenario === 'superseded') run.s.events.push({type:'agent/inbox/spliced',data:{inserted:[{id:'next',source:{kind:'user'},content:[{type:'text',text:'请只检查附件。'}]}]}})
+      if (scenario === 'permission-denied') run.s.events.push({type:'tool/result',data:{error:{code:'PERMISSION_DENIED'}}})
+      if (scenario === 'accepted') run.s.events.push(
+        {type:'tool/call',data:{name:'research_workbench_create',callId:'create',arguments:'{}'}},
+        {type:'tool/result',data:{message:{source:{kind:'tool',callId:'create'},content:[{type:'tool-result',content:[{type:'text',text:'{"planId":"p","status":"accepted"}'}]}]}}}
+      )
+      run.stop()
+      expect(run.agent.steer).not.toHaveBeenCalled()
+    } finally { run.dispose() }
+  })
+})
