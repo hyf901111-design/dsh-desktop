@@ -210,10 +210,9 @@ export const researchMarketNativeTableCss = `
 [data-sherlock-market-native]{display:flex;flex-direction:column;min-width:0;min-height:0;gap:6px}
 [data-sherlock-market-native] table{color:inherit}
 [data-sherlock-market-native] .terminal-native-filters{flex:0 0 auto;min-width:0}
-[data-sherlock-market-native] .terminal-native-context{flex:0 1 auto;min-height:0;max-height:32%;overflow:auto;padding-top:6px;border-top:1px solid var(--research-completed-divider,#a3aeb955);font-size:11px;line-height:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+[data-sherlock-market-native] .terminal-native-context{flex:0 1 auto;min-height:0;max-height:min(240px,max(64px,32%));overflow:auto;padding-top:6px;border-top:1px solid var(--research-completed-divider,#a3aeb955);font-size:11px;line-height:16px;white-space:pre-wrap;overflow-wrap:anywhere}
 [data-sherlock-market-native] .terminal-native-context details{margin:0;padding:0;border:0;background:transparent}
-[data-sherlock-market-native] .terminal-native-context summary{min-height:22px;padding:2px 0;cursor:pointer;list-style:disclosure-closed inside;font-family:inherit;font-size:11px;line-height:18px;color:var(--research-completed-muted,inherit)}
-[data-sherlock-market-native] .terminal-native-context details[open]>summary{list-style:disclosure-open inside}
+[data-sherlock-market-native] .terminal-native-context summary{min-height:22px;padding:2px 0;cursor:pointer;font-family:inherit;font-size:11px;line-height:18px;color:var(--research-completed-muted,inherit)}
 [data-sherlock-market-native] .terminal-native-context-lines{display:grid;gap:6px;padding-top:6px}
 [data-sherlock-market-native] a{color:var(--research-completed-link,#1568ac);text-decoration:underline;text-underline-offset:2px}
 body[data-ds-dark-theme] [data-sherlock-market-native] a{color:var(--research-completed-link,#8ac6ff)}
@@ -230,7 +229,7 @@ body[data-ds-dark-theme] [data-sherlock-market-native] a{color:var(--research-co
 [data-sherlock-market-native] tbody tr[aria-selected=true]{box-shadow:inset 2px 0 #0d99ff}
 body[data-ds-dark-theme] [data-sherlock-market-native] .terminal-native-filters input{background:#19222c;border-color:#3c4b5c}
 [data-sherlock-market-native="table"]{box-sizing:border-box;width:100%;height:100%;padding:8px 12px 6px;overflow:hidden;container-type:inline-size;background:rgba(255,255,255,.76);color:#202629;font:14px/20px "EWork Market DIN Regular",DINPro,"Noto Sans SC",sans-serif}
-[data-sherlock-market-native="table"] .terminal-native-context{flex:0 0 auto;max-height:40%}
+[data-sherlock-market-native="table"] .terminal-native-context{flex:0 0 auto;max-height:min(240px,max(64px,40%))}
 [data-sherlock-market-native="table"] table{width:100%;border-collapse:collapse;table-layout:auto;font:inherit}
 [data-sherlock-market-native="table"] :is(th,td){box-sizing:border-box;padding:3px 3px;border:0;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 [data-sherlock-market-native="table"] :is(th:first-child,td:first-child){text-align:left}

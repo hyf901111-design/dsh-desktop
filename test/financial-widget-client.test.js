@@ -305,3 +305,21 @@ it('个股始终使用同一个搜索输入框，取消恢复当前标的，选�
  await f.event('focusin',input);await f.input(input,'平安');await vi.waitFor(()=>expect(f.document.querySelectorAll('.ew-financial-suggestions [role=option]')).toHaveLength(2));await f.event('keydown',input,{key:'ArrowDown'});await f.event('keydown',input,{key:'Enter'});
  expect(f.host.querySelector('.ew-financial-header-selector input')).toBe(input);expect(input.value).toBe('000001 · 平安银行');expect(f.workspace.getSnapshot().artifacts[0].containerSpec.symbols).toEqual([other]);
 })
+
+it('放大阅读菜单跟随组件进入对话框顶层并可正常关闭',async()=>{
+ const f=await fixture();await f.act(async()=>f.workspace.createFinancialWidget('watchlist'))
+ const openMenu=async()=>f.event('click',f.host.querySelector('[data-workbench-more]'))
+ const menu=()=>f.document.querySelector('[role="menu"][aria-label="组件更多操作"]')
+ const action=()=>Array.from(menu().children).find(item=>item.querySelector('.ew-grid-icon-expand'))
+ const card=f.host.querySelector('[data-research-node-id]')
+ await openMenu()
+ expect(menu().parentElement).toBe(f.document.body)
+ expect(action().textContent).toBe('放大阅读')
+ await f.event('click',action())
+ expect(card.open).toBe(true)
+ await openMenu()
+ expect(menu().parentElement).toBe(card)
+ expect(action().textContent).toBe('关闭放大阅读')
+ await f.event('click',action())
+ expect(card.open).toBe(false)
+})
