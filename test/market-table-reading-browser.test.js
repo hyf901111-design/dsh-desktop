@@ -233,6 +233,7 @@ it.each(['light','dark','enterprise','openterminal'])('pages actual host-native 
    expect(await page.locator('.fund-native-table-wrap').evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1)
   }
   expect(sizes[0]).toBeGreaterThan(840);expect(sizes[1]).toBeGreaterThan(sizes[0]);expect(sizes[2]).toBeLessThan(sizes[3])
+  expect(await page.locator('.terminal-table-pagination').evaluate(el=>el.getBoundingClientRect().top-el.previousElementSibling.getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(10)
   await page.screenshot({path:'/tmp/ework-live-rail/pagination-native-'+mode+'.png'})
  }finally{await page.close()}
 },20000)

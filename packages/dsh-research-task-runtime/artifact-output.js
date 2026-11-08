@@ -155,6 +155,14 @@ export function normalizeOperationMetadata(value) {
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
  value=normalizeOperationMetadata(value);
+ // Markdown with an explicit frozen source is the existing sourced-summary
+ // contract. Keep its complete content and metadata instead of spending a
+ // repair turn asking the model to remove provenance or retype business data.
+ if(value?.type==='markdown'&&value.source){
+  const sourced={...value,type:'summary'};
+  if(parseResearchContainerSpec(sourced))value=sourced;
+ }
+
  // Panel geometry belongs to the workbench, even if an otherwise complete
  // artifact repeats the planned size. Keep other layout shapes for validation.
  const layout=value?.layout;
