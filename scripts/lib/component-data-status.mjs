@@ -1,3 +1,4 @@
+import {componentSourceDefinitions as sourceDefinitions,componentSourceCss as sourceCss} from './component-source-info.mjs'
 import * as workbenchRefresh from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 const {createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,workbenchRefreshCss}=workbenchRefresh
 export function componentDataSourceNames(binding){
@@ -243,11 +244,20 @@ export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  react.useLayoutEffect(()=>{feedback.current?.update(binding,content,identity)},[binding,content,identity])
  const rss=componentRssStatusView(node),view=rss||componentDataStatusView(binding,notice?.key===key?notice.status:null,node),shared=sherlockShared(sessionId),plain=Boolean(rss),lastSuccess=rss?rss.lastSuccess:binding?.lastSuccess
  const label=(view.source||'来源未标注')+' · '+(shared?'静态组件':view.detail)
+ const savedInfo=react.useMemo(()=>getComponentSourceInfo(node),[node.containerSpec,node.generationSources]);
  if(['iframe','youtube'].includes(node.containerSpec?.type))return null;
- return react_jsx_runtime.jsxs(plain?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':label+(view.time?'，'+view.time:'')+(plain||shared?'':'，设置数据源与刷新频率'),...(!plain?{type:'button',title:shared?view.title+'\n共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node,'settings',e.currentTarget)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:label})]}),view.time?react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time}):null]})
+ const sourceInfo={...savedInfo,records:[...savedInfo.records]};if(!sourceInfo.records.length)sourceInfo.records=(binding?.sourceNames||[]).map(label=>({label,url:'',path:'',filename:'',text:''}));if(!sourceInfo.asOf)sourceInfo.asOf=binding?.dataAsOf||'';const files=sourceInfo.records.filter(row=>row.filename||row.path),sourceLabel=files.length?files.map(row=>row.filename||row.label).join(' / '):label
+ return react_jsx_runtime.jsxs('div',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),children:[
+  files.length?react_jsx_runtime.jsx('button',{type:'button',className:'ew-source-file',title:sourceLabel,'aria-label':'查看来源文件：'+sourceLabel,onClick:e=>{e.stopPropagation();openComponentSource(sessionId,node,'files',e.currentTarget,sourceInfo)},children:sourceLabel}):react_jsx_runtime.jsx('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite',children:label}),
+  react_jsx_runtime.jsxs('span',{className:'ew-source-actions',children:[
+   view.time&&react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time}),
+   !plain&&!shared&&binding&&react_jsx_runtime.jsx('button',{type:'button','aria-label':'设置数据源与刷新频率',onClick:e=>{e.stopPropagation();openComponentData(sessionId,node,'settings',e.currentTarget)},children:'更新设置'}),
+   react_jsx_runtime.jsx('button',{type:'button',onClick:e=>{e.stopPropagation();openComponentSource(sessionId,node,'details',e.currentTarget,sourceInfo)},children:'查看来源信息'})
+  ]})
+ ]})
 }
 
-export const componentDataStatusCss=workbenchRefreshCss+`
+export const componentDataStatusCss=workbenchRefreshCss+sourceCss+`
 [data-research-generated-container]:has(>.odyssey-data-stamp)>[data-research-preview-body]{position:relative;height:calc(100% - 56px);min-height:0}
 [data-research-generated-container]>.odyssey-data-stamp{box-sizing:border-box;flex:0 0 24px;height:24px;min-height:24px;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0;padding:0 8px;border:0;border-top:1px solid var(--research-completed-divider,#8883);border-radius:0 0 2px 2px;background:var(--research-completed-surface,var(--odyssey-card));color:var(--research-completed-muted,var(--odyssey-card-muted));font:10px/20px "EWork DIN Pro","Noto Sans SC",system-ui;cursor:pointer;text-align:left}
 .odyssey-data-stamp .odyssey-data-frequency{display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;min-width:0}
@@ -270,7 +280,7 @@ export const componentDataStatusCss=workbenchRefreshCss+`
 
 `
 
-export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,componentDataSourceNames,componentSavedProvenance,componentSourceLabel,componentSnapshotDate,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
+export function componentDataStatusDefinitions(){return sourceDefinitions()+"\n"+[createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,componentDataSourceNames,componentSavedProvenance,componentSourceLabel,componentSnapshotDate,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
 
 export function patchComponentDataStatus(source){
  const replace=(a,b)=>{if(source.split(a).length!==2)throw Error('Component status anchor drifted: '+a.slice(0,80));source=source.replace(a,b)}

@@ -158,9 +158,15 @@ function patchPresentationCodeDelivery(source){
  return exact(exact(source,match,matchCode),update,updateCode)
 }
 
-export function patchDeliverableCards(source){
+export function deliveryCardsRuntime(){
  const marker='/* ework:delivery-cards:v1 */'
  const runtime=marker+'\nlet _deliveryIcons=require("@deepseek-ai/dsh-client-ui-primitives");\n'+deliveryModelSource+'\n'+deliveryIconSource+'\n'+PPTX_ANNOTATION_DELIVERY_SOURCE+'\n'+[deliveryFileType,DeliveryFileCard,ProducedFiles].map(fn=>fn.toString()).join('\n')+'\n'+`if(typeof document!=='undefined'&&!document.getElementById('ework-delivery-cards')){const tag=document.createElement('style');tag.id='ework-delivery-cards';tag.textContent=${JSON.stringify(DELIVERY_CARDS_CSS)};document.head.appendChild(tag);}\n`
+ return runtime
+}
+
+export function patchDeliverableCards(source){
+ const marker='/* ework:delivery-cards:v1 */'
+ const runtime=deliveryCardsRuntime()
  if(source.includes(marker)){
   const start=source.indexOf(marker),end=source.indexOf('\n\t\t//#endregion',start)
   if(end<0||source.indexOf(marker,start+marker.length)!==-1)throw Error('Delivery cards runtime anchor drifted')

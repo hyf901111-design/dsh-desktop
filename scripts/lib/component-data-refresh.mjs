@@ -1,3 +1,5 @@
+import {deliveryCardsRuntime} from './deliverable-cards.mjs';
+import {patchComponentSourceHost} from './component-source-info.mjs';
 import {ComponentDataSettingsPanel,componentDataSettingsCss} from './component-data-settings-panel.mjs';
 import {componentDataStatusDefinitions,componentDataStatusCss,patchComponentDataStatus} from './component-data-status.mjs';
 const begin='/* ODYSSEY_COMPONENT_DATA_START */',end='/* ODYSSEY_COMPONENT_DATA_END */';
@@ -38,12 +40,12 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
  return react_jsx_runtime.jsx(ComponentDataSettingsPanel,{title:target.title,binding,error,busy,loading,onChange:change,onRefresh:()=>update('refresh'),onClose:close,trigger:target.trigger,theme:target.theme},target.nodeId);
 }
 export function patchComponentDataRefresh(source){
- source=patchComponentDataStatus(source);
+ source=patchComponentSourceHost(patchComponentDataStatus(source));
  source=source.replace('(ComponentDataSettings,{})','(ComponentDataSettings,{sessionId,canvasRoot:rootRef})');
  const settingsButton=`(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-component-data-settings':'',onClick:()=>choose(()=>openComponentData(sessionId,node)),children:'数据源与自动更新'})`;
  const settingsWithLegacyStop=`sherlockShared(sessionId)?(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-stop-legacy-refresh':'',disabled:editingPrompt||!node.refreshMinutes,onClick:()=>choose(()=>onSetRefresh?.(node,0)),children:node.refreshMinutes?'关闭旧自动刷新':'共享组件暂不支持数据自动更新'}):${settingsButton}`;
  const refreshButton=`onClick: () => choose(() => sherlockShared(sessionId)?onRefresh?.(node,node.containerPrompt):openComponentData(sessionId,node,'refresh')), children: sherlockShared(sessionId)?"重新生成":"刷新数据"`;
- const definitions=begin+'\n'+componentDataStatusDefinitions()+openComponentData.toString()+'\n'+ComponentDataSettingsPanel.toString()+'\n'+ComponentDataSettings.toString()+`\nif(typeof document!=='undefined'){let s=document.getElementById('odyssey-data-settings-style');if(!s){s=document.createElement('style');s.id='odyssey-data-settings-style';document.head.appendChild(s);}s.textContent=${JSON.stringify(componentDataSettingsCss+componentDataStatusCss)}}\n`+end;
+ const definitions=begin+'\n'+deliveryCardsRuntime()+componentDataStatusDefinitions()+openComponentData.toString()+'\n'+ComponentDataSettingsPanel.toString()+'\n'+ComponentDataSettings.toString()+`\nif(typeof document!=='undefined'){let s=document.getElementById('odyssey-data-settings-style');if(!s){s=document.createElement('style');s.id='odyssey-data-settings-style';document.head.appendChild(s);}s.textContent=${JSON.stringify(componentDataSettingsCss+componentDataStatusCss)}}\n`+end;
  if(source.includes(begin)){
   if(!source.includes('data-stop-legacy-refresh'))source=source.replace(settingsButton,settingsWithLegacyStop).replace(`onClick: () => choose(() => openComponentData(sessionId,node,'refresh')), children: "刷新数据"`,refreshButton);
   const a=source.indexOf(begin),b=source.indexOf(end,a);return source.slice(0,a)+definitions+source.slice(b+end.length)

@@ -65,7 +65,7 @@ describe('component refresh status',()=>{
    shared=true
    await react.act(async()=>root.render(react.createElement(ComponentDataStatusBar,{sessionId:'s',node:{...node}})))
    expect(document.querySelector('.odyssey-data-frequency').textContent).toBe('Tushare · 静态组件')
-   expect(document.querySelector('button').disabled).toBe(true)
+   expect(document.querySelector('button').textContent).toBe('查看来源信息');expect(document.querySelector('[aria-label="设置数据源与刷新频率"]')).toBeNull()
   }finally{await react.act(async()=>root.unmount());vi.unstubAllGlobals();await window.happyDOM.close()}
  })
 
