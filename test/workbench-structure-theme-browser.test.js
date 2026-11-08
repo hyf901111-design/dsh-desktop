@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { canvasCss } from '../scripts/lib/figma-canvas-client.mjs'
 import { workbenchModeCss } from '../packages/dsh-research-task-runtime/workbench-style.js'
 import { buildResearchHtmlPreview } from '../packages/dsh-research-task-runtime/html-artifact.js'
+import { WORKBENCH_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 
 let browser
 beforeAll(async () => {
@@ -104,13 +105,20 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
 it.each([true, false])('原生导图有无旧外层标记均切换配色（%s）', async legacy => {
   const page = await browser.newPage()
   try {
-    const css = canvasCss + workbenchModeCss('body [data-ework-grid]', ' [data-research-node-id]') +
+    const content = ' .rScV5Q_containerContent'
+    const nativePresentation = WORKBENCH_PRESENTATION_CSS
+      .replaceAll(':root[data-sherlock-theme="dark"]', 'body[data-ds-dark-theme] [data-ework-grid]' + content)
+      .replaceAll('body .rScV5Q_mindMap', 'body [data-ework-grid]' + content + ' .rScV5Q_mindMap')
+    const css = canvasCss + nativePresentation +
+      '@layer ework-workbench{' + workbenchModeCss('body [data-ework-grid]', content) + '}' +
       readFileSync('scripts/lib/workbench-style.css', 'utf8')
     await page.setContent(`<style>${css}</style><div data-ework-grid data-workbench-style="dark">
       <article data-research-node-id="mind" data-research-compact-chrome ${legacy?'data-research-generated-mind-map':'data-research-container-type="mind-map"'}>
+        <div class="rScV5Q_containerContent">
         <div class="rScV5Q_mindMap"><svg data-research-mind-map-edges></svg>
-          <div class="rScV5Q_mindMapNode" data-research-mind-map-depth="0">根节点</div>
-          <div class="rScV5Q_mindMapNode" data-research-mind-map-depth="1">下属节点</div>
+          <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="0">根节点</span>
+          <span class="rScV5Q_mindMapNode" data-research-mind-map-node data-research-mind-map-depth="1">下属节点</span>
+        </div>
         </div>
       </article>
     </div>`)
