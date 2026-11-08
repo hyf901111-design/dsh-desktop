@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-02",
+  "branch": "codex/integration/20261109-02",
+  "baseMainCommit": "fc3d175f21aeec0a6c12281d502e3257c82c9ca8",
+  "expectedMainCommit": "fc3d175f21aeec0a6c12281d502e3257c82c9ca8",
+  "createdAt": "2026-11-08T16:56:16.745Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "可视化交付校验与通用分页体验",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "fc3d175f21aeec0a6c12281d502e3257c82c9ca8",
+        "tipCommit": "7e9d1441ac12e6b7fe543a793354d68e77a01a87",
+        "commits": [
+          {
+            "commit": "7e9d1441ac12e6b7fe543a793354d68e77a01a87",
+            "parents": [
+              "fc3d175f21aeec0a6c12281d502e3257c82c9ca8"
+            ],
+            "subject": "修复可视化交付误判并统一数据视图分页与高度"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-readable-snapshot.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-presentation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-style.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-readable-snapshot.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/dataset-view-artifact.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-style.test.js",
+              "test/research-canvas-presentation.test.js",
+              "test/derived-template-contract.test.js",
+              "test/market-table-reading-browser.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "190 项聚焦检查通过",
+            "verifiedCommit": "7e9d1441ac12e6b7fe543a793354d68e77a01a87",
+            "completedAt": "2026-11-08T16:56:15.047805+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "7e9d1441ac12e6b7fe543a793354d68e77a01a87",
+            "completedAt": "2026-11-08T16:56:15.047805+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "7e9d1441ac12e6b7fe543a793354d68e77a01a87",
+            "completedAt": "2026-11-08T16:56:15.047805+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "190项聚焦检查通过，含真实失败HTML候选元信息无损接受、Word块引用核验、图形不可退成文字、分页搜索持久化与完整61行数据保留、末页高度收缩、显式主题初始应用。首轮真实四场景发现的问题与耗时已保留；新包原请求复测在集成构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "保留图形实际可视化交付与合法来源引用",
+          "元信息无损收入来源信息",
+          "数据视图和容量绕过视图都支持全量搜索及10/20/50/100分页",
+          "分页切换按可见内容调整高度并保留手动尺寸",
+          "按用户明确请求设置初始主题并保留后续用户选择"
+        ],
+        "risks": [
+          "原生客户端和真实模型生成验收在最终构建启动后执行，浏览器检查不替代生产任务验收。"
+        ],
+        "generatedAt": "2026-11-08T16:56:15.047805+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-readable-snapshot.test.js",
+        "test/component-source-info-browser.test.js",
+        "test/dataset-view-browser.test.js",
+        "test/dataset-view-artifact.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/workbench-style.test.js",
+        "test/research-canvas-presentation.test.js",
+        "test/derived-template-contract.test.js",
+        "test/market-table-reading-browser.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
