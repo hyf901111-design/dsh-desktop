@@ -119,6 +119,56 @@
           "当前按页文本路线覆盖有文本层的 PDF，图片型扫描件明确反馈无法提取。"
         ],
         "generatedAt": "2026-11-08T05:31:12.509749+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ed1f31df968b4584717553a9d6c57c5d00eb82fc",
+        "verificationCommit": "ed1f31df968b4584717553a9d6c57c5d00eb82fc",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-planning-session.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-prototype-evidence.test.js test/workbench-execution-policy.test.js test/workbench-prototype-component.test.js test/bundled-component-skill.test.js test/observed-source-completeness.test.js test/workbench-planning-phase.test.js test/workbench-planning-session.test.js --maxWorkers=4",
+            "verifiedCommit": "ed1f31df968b4584717553a9d6c57c5d00eb82fc",
+            "completedAt": "2026-11-08T05:31:31.219Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ed1f31df968b4584717553a9d6c57c5d00eb82fc",
+            "completedAt": "2026-11-08T05:31:31.219Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ed1f31df968b4584717553a9d6c57c5d00eb82fc",
+            "completedAt": "2026-11-08T05:31:31.219Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T05:31:31.219Z"
       }
     }
   ],
