@@ -1077,7 +1077,7 @@ function taskDocument(task) {
 }
 
 function needsGraphPresentation(prompt) {
-  return workbenchPanelFormat(prompt)==='mind-map'||/(?:关系图|组织架构图|组织层级图|思维导图|架构图|流程图|拓扑图|关系网络|relationship\s+(?:graph|diagram)|mind[ -]?map)/iu.test(workbenchPanelIntent(prompt)??'')
+  return workbenchPanelFormat(prompt)==='mind-map'||/(?:关系图|组织架构(?:图|树)?|组织层级(?:图|树)?|层级图|架构树|思维导图|架构图|流程图|拓扑图|关系网络|relationship\s+(?:graph|diagram)|org(?:ani[sz]ation(?:al)?)?\s*(?:chart|tree)|hierarchy\s+(?:chart|tree|diagram)|mind[ -]?map)/iu.test(workbenchPanelIntent(prompt)??'')
 }
 
 function finalText(output, kind, requireSharedState = false, validateSharedState = true, requireDesignHtml = false, titleRepairSnapshot, chartRepairSnapshot) {

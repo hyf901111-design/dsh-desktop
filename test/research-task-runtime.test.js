@@ -556,6 +556,26 @@ describe('Research task contract and prompt', () => {
     } finally { await runtime.dispose() }
   })
 
+  it.each(['组织架构', '组织层级', '架构树', '层级图', 'organizational chart', 'hierarchy tree'])('preserves %s intent when an HTML presentation needs automatic recovery', async phrase => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const calls = []
+    const graph = {version:1,type:'mind-map',title:'真实层级',content:'# 机构\n- 部门\n  - 团队\n    - 岗位\n      - 人员',source:{title:'原始依据',text:'附件定位 P2'}}
+    const draft = {version:1,type:'html',title:'真实层级',html:'<style>p{color:#fff}</style><p>机构→部门→团队→岗位→人员；附件定位 P2</p>'}
+    const runtime = new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request)
+      return {childSessionId:'child-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(calls.length===1?draft:graph)}]})}
+    },dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try {
+      await runtime.start({...containerRequest('hierarchy'),prompt:'按照真实材料生成'+phrase+'，保留每个岗位及人员和出处。'})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('completed'))
+      expect(calls).toHaveLength(2)
+      expect(calls[1].synthesisOnly).toBe(true)
+      expect(calls[1].prompt).toContain('本卡必须保留可视化关系')
+      expect(calls[1].prompt).toContain('不限制层数')
+      expect(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)).toEqual(graph)
+    } finally { await runtime.dispose() }
+  })
+
   it('recovers an unsearched data failure with a tool-enabled attempt in the same task', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const calls = []
