@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-20",
+  "branch": "codex/integration/20261108-20",
+  "baseMainCommit": "25a9c781c510690aef43cad5c611bcc816e14541",
+  "expectedMainCommit": "25a9c781c510690aef43cad5c611bcc816e14541",
+  "createdAt": "2026-11-08T06:28:18.248Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Word 文档证据复用和自然语言看板创建",
+        "branch": "codex/feat/workbench-docx-evidence-20261108",
+        "baseCommit": "25a9c781c510690aef43cad5c611bcc816e14541",
+        "tipCommit": "21acd9ce32e8f050d0567b4896bfd2e7afcf82a5",
+        "commits": [
+          {
+            "commit": "21acd9ce32e8f050d0567b4896bfd2e7afcf82a5",
+            "parents": [
+              "25a9c781c510690aef43cad5c611bcc816e14541"
+            ],
+            "subject": "修复：识别文档转看板并复用 Word 段落和表格证据"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/docx-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/workbench-creation-requests.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-component.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-component.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/research-creation-progress.test.js",
+              "test/bundled-component-skill.test.js",
+              "--maxWorkers=4"
+            ],
+            "outcome": "passed",
+            "summary": "199 项聚焦检查通过",
+            "verifiedCommit": "21acd9ce32e8f050d0567b4896bfd2e7afcf82a5",
+            "completedAt": "2026-11-08T06:28:03.184703+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "21acd9ce32e8f050d0567b4896bfd2e7afcf82a5",
+            "completedAt": "2026-11-08T06:28:03.184703+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "21acd9ce32e8f050d0567b4896bfd2e7afcf82a5",
+            "completedAt": "2026-11-08T06:28:03.184703+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "源码改动在规划、附件提取和生成入口，原 Word 与原请求在集成包实测。"
+        },
+        "acceptanceCriteria": [
+          "梳理或整理成看板的请求直接识别为工作台生成",
+          "Word 内容按段落和表格完整保留并标注实际定位",
+          "规划与各组件共享原文，无需逐个用脚本重读",
+          "原附件原请求实际验证部门、人员与层级"
+        ],
+        "risks": [
+          "首批支持 Word 主文档文字和表格，受安全读取容量约束。"
+        ],
+        "generatedAt": "2026-11-08T06:28:03.184703+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-prototype-component.test.js",
+        "test/workbench-planning-phase.test.js",
+        "test/research-creation-progress.test.js",
+        "test/bundled-component-skill.test.js",
+        "--maxWorkers=4"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
