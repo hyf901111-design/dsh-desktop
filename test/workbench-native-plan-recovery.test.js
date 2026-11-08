@@ -64,3 +64,17 @@ it('retains strict capability boundaries for unknown symbols, fixed snapshots an
  derived.originalRequest+=' 使用所选组件的材料进行总结提炼。'
  expect(()=>validateWorkbench(derived)).toThrow('派生组件必须')
 })
+
+it('admits unresolved report summaries and relationship maps without requiring fabricated snapshots', () => {
+ const plan=validateWorkbench({
+  requestId:'report-views',title:'报告内容示意看板',dataMode:'source',
+  originalRequest:'📎 文件：\x60/Users/qa/Downloads/report.pdf\x60 帮我把这个报告做成一个内容示意看板',
+  panels:[
+   {title:'课程一：活用非文本前沿 AI',type:'summary',prompt:'提炼趋势、技术和适用时点，标注报告页码。'},
+   {title:'主题关系',type:'mind-map',prompt:'组织主题与子趋势的关系，标注报告页码。'}
+  ]
+ })
+ expect(plan.panels.map(panel=>panel.type)).toEqual(['markdown','mind-map'])
+ expect(plan.panels.every(panel=>!panel.artifact)).toBe(true)
+ expect(plan.panels[0].prompt).toBe('提炼趋势、技术和适用时点，标注报告页码。')
+})
