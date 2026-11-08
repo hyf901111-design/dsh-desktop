@@ -34,8 +34,25 @@ export function componentDiscoveryToolNames(schemas=[]) {
 export function componentSourceCollector(allowed,schemas=[]) {
   const discovery=componentDiscoveryToolNames(schemas)
   const calls=new Map(), records=[], attempts=[]
+  const retain=record=>{
+    const previous=records.findIndex(r=>r.tool===record.tool&&isDeepStrictEqual(r.args,record.args))
+    // A later spilled excerpt is not evidence that the original response was
+    // incomplete. Keep the same call's already verified complete JSON.
+    if(previous>=0&&record.tool==='web_fetch'&&!record.response&&records[previous].response)return
+    if(previous>=0)records.splice(previous,1)
+    records.push(record)
+    while(records.length>32||Buffer.byteLength(JSON.stringify(records))>8_000_000){
+      const directory=records.findIndex(r=>r.purpose==='discovery')
+      records.splice(directory<0?0:directory,1)
+    }
+  }
   return {
     records, attempts,
+    acceptWebResponse(args,text){
+      if(!allowed.includes('web_fetch')||!args||typeof args!=='object')return
+      const response=structuredWebSnapshot(text,args.url)
+      if(response)retain({tool:'web_fetch',args,response,purpose:'snapshot',snapshotRows:webSnapshotRows(text,args.url)})
+    },
     accept(event) {
       if(event?.type==='tool/call'&&typeof event.data?.callId==='string'&&event.data.callId&&allowed.includes(event.data?.name)) {
         try { const args=typeof event.data.arguments==='string'?JSON.parse(event.data.arguments):event.data.arguments;calls.set(event.data.callId,{tool:event.data.name,args}) } catch {}
@@ -64,15 +81,9 @@ export function componentSourceCollector(allowed,schemas=[]) {
       }
       // Plain-text API definitions still establish discovery, never data.
       {
-        const previous=records.findIndex(r=>r.tool===call.tool&&isDeepStrictEqual(r.args,call.args))
-        if(previous>=0)records.splice(previous,1)
-        records.push({...call,response,...(purpose?{purpose}:{}),...(snapshotRows?.length?{snapshotRows}:{})})
+        retain({...call,response,...(purpose?{purpose}:{}),...(snapshotRows?.length?{snapshotRows}:{})})
         // A late business response must never be lost because discovery filled
         // the first slots. Evict directory responses first, then oldest data.
-        while(records.length>32||Buffer.byteLength(JSON.stringify(records))>8_000_000){
-          const directory=records.findIndex(r=>r.purpose==='discovery')
-          records.splice(directory<0?0:directory,1)
-        }
       }
     }
   }
@@ -415,6 +426,14 @@ function mappingContract(mapping,options,envelopeVersion) {
  // The outer v1 envelope fixes the protocol version. Omitting its identical
  // nested copy carries no missing data; explicit conflicting versions fail.
  if(envelopeVersion===1&&mapping&&typeof mapping==='object'&&!Array.isArray(mapping)&&mapping.version===undefined&&templateFor({...mapping,version:1}))mapping={...mapping,version:1}
+ const normalize=value=>{
+  if(Array.isArray(value))return value.map(normalize)
+  if(!value||typeof value!=='object')return value
+  // Explanatory missing-text defaults are not source facts. Use the same
+  // neutral absence label the renderer already uses; never accept fake values.
+  return Object.fromEntries(Object.entries(value).map(([key,child])=>[key,key==='$default'&&value.$optional===true&&typeof child==='string'&&!pureMissingSourceText(child)&&/未提供|未取得|暂无/u.test(child)&&!/[0-9]/u.test(child)?'本次未取得':normalize(child)]))
+ }
+ mapping=normalize(mapping)
  return mapping?.type==='chart'&&mapping.variant===undefined&&CHART_VARIANTS.includes(options.chartVariant)?{...mapping,variant:options.chartVariant}:mapping
 }
 function dataBoundCandidate(text) {

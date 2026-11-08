@@ -136,13 +136,13 @@ it('does not promote JSON examples embedded in fetched API documentation into bu
  expect(proof(observed.artifact,collect(observed.calls,{prefix:'API documentation. Example response:\n'}))).toBe(false)
 })
 
-it('retains only bounded public record fingerprints, including the real fetch transport preamble',()=>{
+it('retains complete structured web records and bounded fingerprints with the actual transport preamble',()=>{
  const calls=structuredClone(observed.calls)
  calls[0].data.data.list[0].body='Do not retain this full public page body'
  const records=collect(calls,{prefix:'[网页读取状态：已滚动至文末，完成正文收集]\n\n'})
  const restored=JSON.parse(restoreSnapshotFeedHeadlines(JSON.stringify(observed.artifact),records))
  expect(proof(restored,records)).toBe(true)
- expect(JSON.stringify(records)).not.toContain('Do not retain this full public page body')
+ expect(records.find(r=>r.tool==='web_fetch').response.data.data.list[0].body).toBe('Do not retain this full public page body')
 })
 
 it('completes the actual public announcement output without a discovery-only repair or refresh binding',async()=>{

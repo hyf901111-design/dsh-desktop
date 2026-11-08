@@ -132,3 +132,36 @@ it('does not project a blocked result into a successful business response',async
  expect(result.content[0].text).toContain('denied')
  expect(f.saveText).not.toHaveBeenCalled()
 })
+
+it('retains complete approved web JSON before spill without changing the model or sibling pipeline',async()=>{
+ const f=await fixture(),url='https://example.org/api/records?limit=40'
+ const data=Array.from({length:40},(_,i)=>({title:'记录'+i,date:'2026-11-08',url:'https://example.org/items/'+i,body:('第'+i+'条完整正文。').repeat(180)}))
+ const text=`Fetched ${url} (HTTP 200)\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n${JSON.stringify(data)}`
+ const collector=componentSourceCollector(['web_fetch'])
+ f.ctx.tools.register({name:'web_fetch',description:'读取网页',parameters:{type:'object',properties:{url:{type:'string'}}},output:{schema:{},render:(_args,value)=>value.content},execute:async()=>({content:[{type:'text',text}]})})
+ const stop=registerComponentSourceProjection(f.ctx,{child:f.child,allowed:['web_fetch'],onWebResponse:(args,body)=>collector.acceptWebResponse(args,body)});cleanups.push(stop)
+ const invoke=agent=>f.ctx.tools.execute({name:'web_fetch',arguments:{url},callId:'web-json',agent,signal:new AbortController().signal})
+ const result=await invoke(f.child)
+ expect(result.content[0].text).toContain('Omitted ')
+ expect(collector.records[0]?.response.records).toEqual(data)
+ collector.accept({type:'tool/call',data:{name:'web_fetch',callId:'web-json',arguments:{url}}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'web-json'},content:[{type:'tool-result',content:result.content}]}}})
+ expect(collector.records).toHaveLength(1)
+ expect(collector.records[0].response.records).toEqual(data)
+ const draft={version:1,type:'data-bound',requests:[{key:'q',tool:'web_fetch',args:{url}}],mapping:{version:1,type:'table',title:'完整记录',columns:['标题','日期','正文','原链接'],rows:{$from:'q',$each:'',$map:[{$path:'title'},{$path:'date'},{$path:'body'},{$path:'url'}]}}}
+ const snapshot=resolveComponentSnapshot(JSON.stringify(draft),collector.records)
+ expect(snapshot?.data.rows).toHaveLength(40)
+ expect(snapshot.data.rows[39]).toEqual([data[39].title,data[39].date,data[39].body,data[39].url])
+ const observed=collector.records[0]
+ await invoke(f.sibling);expect(collector.records).toEqual([observed])
+})
+
+it.each(['blocked','replaced','partial'])('does not establish complete web evidence from a %s response',async mode=>{
+ const f=await fixture(),url='https://example.org/data',collector=componentSourceCollector(['web_fetch'])
+ f.ctx.tools.register({name:'web_fetch',description:'读取网页',parameters:{type:'object',properties:{}},output:{schema:{},render:(_args,value)=>value.content},execute:async()=>({content:[{type:'text',text:`Fetched ${url} (HTTP 200)\n\n[网页读取状态：${mode==='partial'?'正文尚未完整收集':'已滚动至文末，完成正文收集'}]\n\n[{"value":1}]`}]})})
+ const stop=registerComponentSourceProjection(f.ctx,{child:f.child,allowed:['web_fetch'],onWebResponse:(args,text)=>collector.acceptWebResponse(args,text)});cleanups.push(stop)
+ if(mode==='blocked')f.ctx.on('tools/post-execute',async()=>({kind:'block',feedback:[{type:'text',text:'denied'}]}))
+ if(mode==='replaced')f.ctx.on('tools/post-execute',async()=>({kind:'accept',value:{content:[{type:'text',text:'redacted'}]}}))
+ await f.ctx.tools.execute({name:'web_fetch',arguments:{url},callId:'web-'+mode,agent:f.child,signal:new AbortController().signal})
+ expect(collector.records).toEqual([])
+})
