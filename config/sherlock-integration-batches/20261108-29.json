@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-29",
+  "branch": "codex/integration/20261108-29",
+  "baseMainCommit": "a643d43d56936431381debfaf03899ffc852a5cf",
+  "expectedMainCommit": "a643d43d56936431381debfaf03899ffc852a5cf",
+  "createdAt": "2026-11-08T08:51:59.183Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "易方达架构图层级配色与竖向页签隐形拖区",
+        "branch": "codex/feat/enterprise-borderless-tab-fill-20261108",
+        "baseCommit": "a643d43d56936431381debfaf03899ffc852a5cf",
+        "tipCommit": "2b1e0ecb59da577219d04bd719030fd80b1f27ed",
+        "commits": [
+          {
+            "commit": "2b1e0ecb59da577219d04bd719030fd80b1f27ed",
+            "parents": [
+              "a643d43d56936431381debfaf03899ffc852a5cf"
+            ],
+            "subject": "统一易方达架构图层级配色与直角样式并隐藏页签拖柄"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-theme-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/board-tabs-client.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "53 项聚焦检查通过",
+            "verifiedCommit": "2b1e0ecb59da577219d04bd719030fd80b1f27ed",
+            "completedAt": "2026-11-08T08:51:57.649895+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "2b1e0ecb59da577219d04bd719030fd80b1f27ed",
+            "completedAt": "2026-11-08T08:51:57.649895+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "2b1e0ecb59da577219d04bd719030fd80b1f27ed",
+            "completedAt": "2026-11-08T08:51:57.649895+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证原生导图、旧版 HTML 结构和 SVG 的层级颜色、直角、去描边与中性连线。布局回归覆盖页签拖动宽度和内容区对齐。"
+        },
+        "acceptanceCriteria": [
+          "前三层用深蓝、中蓝、青色，扩展层级使用浅青及灰色",
+          "易方达卡片直角与无装饰描边",
+          "竖向页签移除可见拖柄并保留边缘拖动"
+        ],
+        "risks": [
+          "青色节点使用深色文字保证缩小至客户端字号后的可读性。"
+        ],
+        "generatedAt": "2026-11-08T08:51:57.649895+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/board-tabs-client.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
