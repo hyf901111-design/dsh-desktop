@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261108-30",
+  "branch": "codex/integration/20261108-30",
+  "baseMainCommit": "cc64f96f1a075b24201259643ad3c212bed02e0a",
+  "expectedMainCommit": "cc64f96f1a075b24201259643ad3c212bed02e0a",
+  "createdAt": "2026-11-08T09:32:46.852Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复架构图灰底、蓝色节点反白和页签实时调宽",
+        "branch": "codex/feat/enterprise-borderless-tab-fill-20261108",
+        "baseCommit": "cc64f96f1a075b24201259643ad3c212bed02e0a",
+        "tipCommit": "0c23bb0e3281a51cd879858b15005ba9a970d1a0",
+        "commits": [
+          {
+            "commit": "f6a90cd9fe2566352649bb24a4d6bce70f0ba51f",
+            "parents": [
+              "cc64f96f1a075b24201259643ad3c212bed02e0a"
+            ],
+            "subject": "修正易方达架构图连线容器背景并统一蓝底白字"
+          },
+          {
+            "commit": "0c23bb0e3281a51cd879858b15005ba9a970d1a0",
+            "parents": [
+              "f6a90cd9fe2566352649bb24a4d6bce70f0ba51f"
+            ],
+            "subject": "支持竖向页签拖动时实时重排组件"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-grid.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-workspace.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/board-tabs-client.test.js",
+              "test/board-tabs-contract.test.js",
+              "test/board-tabs-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "--testTimeout",
+              "20000",
+              "--maxWorkers",
+              "3"
+            ],
+            "outcome": "passed",
+            "summary": "67 项聚焦检查通过",
+            "verifiedCommit": "0c23bb0e3281a51cd879858b15005ba9a970d1a0",
+            "completedAt": "2026-11-08T09:32:45.364956+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "0c23bb0e3281a51cd879858b15005ba9a970d1a0",
+            "completedAt": "2026-11-08T09:32:45.364956+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "0c23bb0e3281a51cd879858b15005ba9a970d1a0",
+            "completedAt": "2026-11-08T09:32:45.364956+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "聚焦浏览器验证历史连线容器透明、细线灰色和三级白字；实际画布挂载验证 pointermove 期间预览，取消恢复和松手单次保存。"
+        },
+        "acceptanceCriteria": [
+          "旧治理图保留细线且无整行灰色背景",
+          "前三层蓝色节点反白并记录生成规则",
+          "拖动时导航与右侧卡片实时重排，取消还原，松手持久化",
+          "同一 Word 换新用户提示词复测"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-08T09:32:45.364956+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/board-tabs-client.test.js",
+        "test/board-tabs-contract.test.js",
+        "test/board-tabs-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/research-grid-arrange-tabs.test.js",
+        "--testTimeout",
+        "20000",
+        "--maxWorkers",
+        "3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
