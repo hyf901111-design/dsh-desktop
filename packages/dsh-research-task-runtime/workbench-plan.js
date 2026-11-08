@@ -14,16 +14,16 @@ import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
 import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
 import { researchBentoSize } from './bento-layout.js';
 import { resolveWorkbenchSamples } from './workbench-shared-samples.js';
-import {chartDataIssue,chartTemplateSchema,requestedChartVariant,requireSimulatedChartData,positiveChartIntent} from './chart-template-contract.js';
+import {chartDataIssue,chartTemplateSchema,normalizeChartMetadata,requestedChartVariant,requireSimulatedChartData,positiveChartIntent} from './chart-template-contract.js';
 import { templateFor } from './component-template-registry.js';
 import {operationsDataIssue,operationsTemplateSchema} from './operations-template-contract.js';
 import {FINANCIAL_PROFILE_VARIANTS,FINANCIAL_PROFILE_FIELDS,financialProfileDataIssue} from './financial-profile.js';
-import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
+import { acceptArtifactOutput, normalizeOperationMetadata, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
-import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataNewsTaskType, publicDataHistoryTaskRequirement, publicDataQuoteTaskRequirement, publicDataPanelVariant, publicDataQuoteSpec } from './workbench-public-data.js';
+import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataNewsTaskType, publicDataHistoryTaskRequirement, publicDataQuoteTaskRequirement, publicDataPanelVariant, publicDataQuoteSpec, publicDataNativeAlternative } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import {generalNewsScope,newsScopeInstruction,NEWS_CAPACITY_MARKER} from './news-source-scope.js';
@@ -303,9 +303,10 @@ export function prepareSimulatedArtifact(panel) {
         const markup=typeof source.html==='string'?source.html.replace(/xmlns(?::[\w-]+)?\s*=\s*["']https?:\/\/www\.w3\.org\/[^"']+["']/giu,''):'';
         if(/https?:\/\/|(?:href|src|action|formaction)\s*=\s*(?:["'](?!#|data:image\/)|[^\s"'=<>`#])/iu.test(markup))throw Error(`面板「${panel.title}」的离线模拟HTML不能包含外部链接或资源。`);
     }
-    const artifact = structuredClone(source);
+    let artifact = structuredClone(source);
     artifact.version = 1;
     artifact.type = panel.type;
+    artifact = normalizeChartMetadata(normalizeOperationMetadata(artifact));
     if (artifact.type === 'market' && !artifact.variant) {
         // The input schema permits an omitted variant. The data shape and panel
         // intent identify a single host template without another model retry.
@@ -450,8 +451,11 @@ export function validateWorkbench(value) {
     if (deferred && !value.sharedContext && !value.originalRequest) throw Error('延后模拟生成需要原始需求或共同场景约束。');
     const tabs = validateWorkbenchTabs(value.tabs, value.panels.length, value.originalRequest);
     const seen = new Set();
-    const panels = resolveWorkbenchSamples(value.panels).map(candidate => {
+    const issues = [];
+    const compilePanel = candidate => {
         let p=resolveWorkbenchLibraryPanel(candidate);
+        if (p?.size === 'wide') p = {...p,size:'large',layout:p.layout ?? 'wide'};
+        if (p?.type === 'chart' && p.artifact) p = {...p,artifact:normalizeChartMetadata(p.artifact)};
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || ((p.size !== undefined || p.height !== undefined) && !Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         // A flat table cannot implement per-row detail panels. Keep the actual
@@ -535,24 +539,30 @@ export function validateWorkbench(value) {
                 throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
             const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
             const sourceType=p.type==='table'&&candidate?.profile==='quotes-table'?'market':p.type;
-            const quoteTask=publicDataQuoteTaskRequirement(candidate,sourceType,p.title+'\n'+p.prompt,{explicitTableLayout});
-            const historyTask=publicDataHistoryTaskRequirement(candidate,p.type);
-            const newsScope=p.title+'\n'+p.prompt+(value.originalRequest?'\n【原始工作台需求】\n'+value.originalRequest:'\n工作台研究范围：'+value.title);
-            const newsTask=publicDataNewsTaskRequirement(candidate,p.type,newsScope);
-            const newsTaskType=newsTask?publicDataNewsTaskType(candidate,p.type):undefined;
-            const sourceTaskRequirement=quoteTask?.requirement??newsTask??historyTask;
-            if(sourceTaskRequirement){
-                const {publicData:source,intervalMinutes,...planned}=p;
-                const prompt=(quoteTask?.promptPrefix??(newsTaskType==='market'?'market.table；variant: table；\n':historyTask&&p.type==='market'?'chart.line；':''))+p.prompt+'\n'+sourceTaskRequirement+(candidate?.profile==='news'?'\n宿主保留的工作台研究范围：'+value.title+'；父需求的完整主题、实体与来源约束沿用【原始工作台需求】。':'');
-                if(prompt.length>5000)throw Error('面板需求与来源约束超过内容上限，请精简需求文字。');
-                p={...planned,...(quoteTask?{type:quoteTask.type}:newsTask?{type:newsTaskType}:historyTask?{type:'chart'}:{}),prompt};
-            }else{
-                const publicData = validatePublicDataPanel(candidate, sourceType,{strictParameters:true});
-                const variant = publicDataPanelVariant(publicData);
-                const prefix = variant ? `variant: ${variant}；` : '';
-                p = { ...p, type:sourceType, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
-                const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
-                if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
+            const nativeAlternative = publicDataNativeAlternative(p, candidate, value.originalRequest);
+            if (nativeAlternative) {
+                const {publicData,intervalMinutes,...planned}=p;
+                p={...planned,type:'financial-widget',artifact:nativeAlternative};
+            } else {
+                const quoteTask=publicDataQuoteTaskRequirement(candidate,sourceType,p.title+'\n'+p.prompt,{explicitTableLayout});
+                const historyTask=publicDataHistoryTaskRequirement(candidate,p.type);
+                const newsScope=p.title+'\n'+p.prompt+(value.originalRequest?'\n【原始工作台需求】\n'+value.originalRequest:'\n工作台研究范围：'+value.title);
+                const newsTask=publicDataNewsTaskRequirement(candidate,p.type,newsScope);
+                const newsTaskType=newsTask?publicDataNewsTaskType(candidate,p.type):undefined;
+                const sourceTaskRequirement=quoteTask?.requirement??newsTask??historyTask;
+                if(sourceTaskRequirement){
+                    const {publicData:source,intervalMinutes,...planned}=p;
+                    const prompt=(quoteTask?.promptPrefix??(newsTaskType==='market'?'market.table；variant: table；\n':historyTask&&p.type==='market'?'chart.line；':''))+p.prompt+'\n'+sourceTaskRequirement+(candidate?.profile==='news'?'\n宿主保留的工作台研究范围：'+value.title+'；父需求的完整主题、实体与来源约束沿用【原始工作台需求】。':'');
+                    if(prompt.length>5000)throw Error('面板需求与来源约束超过内容上限，请精简需求文字。');
+                    p={...planned,...(quoteTask?{type:quoteTask.type}:newsTask?{type:newsTaskType}:historyTask?{type:'chart'}:{}),prompt};
+                }else{
+                    const publicData = validatePublicDataPanel(candidate, sourceType,{strictParameters:true});
+                    const variant = publicDataPanelVariant(publicData);
+                    const prefix = variant ? `variant: ${variant}；` : '';
+                    p = { ...p, type:sourceType, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
+                    const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
+                    if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
+                }
             }
         }
         // Correct a metadata-only planner mismatch before launching a child.
@@ -579,6 +589,11 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
         if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
             throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
+        if (p.type === 'summary' && p.artifact === undefined && !isSimulated &&
+            value.originalRequest && /摘要|概述|简报|总结|overview|summary/iu.test(p.title+' '+p.prompt) &&
+            !/总结提炼|冻结|所选|选中|现有(?:组件|卡片)|基于.{0,10}(?:组件|材料)|derived|snapshot/iu.test(value.originalRequest+' '+p.prompt)) {
+            p = {...p,type:'markdown'};
+        }
         if(['summary','mind-map'].includes(p.type)&&p.artifact===undefined)throw Error('派生组件必须同时提供完整artifact和一个来源快照。'+DERIVED_GUIDANCE);
         if(['files','gallery'].includes(p.type) && p.artifact===undefined)throw Error('附件必须提供完整 artifact 和原文件来源，或显式空 items。'+ATTACHMENT_GUIDANCE);
         if(p.type==='audio' && p.artifact===undefined)throw Error('音频必须提供 artifact 及音频原网址或显式 url:null。'+AUDIO_GUIDANCE);
@@ -603,7 +618,18 @@ export function validateWorkbench(value) {
         const panel = { ...(selected.layout ? {layout:selected.layout} : {}), title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}), ...(selected.view ? {view:selected.view} : {}), ...(selected.publicData ? { publicData: selected.publicData } : {}) };
         workbenchDesignTemplate(panel);
         return panel;
+    };
+    const panels = resolveWorkbenchSamples(value.panels).flatMap((candidate,index) => {
+        try { return [compilePanel(candidate)]; }
+        catch (error) {
+            const title = str(candidate?.title,80) ? candidate.title.trim() : `面板 ${index+1}`;
+            issues.push({title, message:error.message});
+            return [];
+        }
     });
+    if (issues.length === 1) throw Error(issues[0].message);
+    if (issues.length) throw Error('工作台有多个面板需要修正。保留其余面板与原需求，并在同一次提交修正以下问题：\n'+
+        issues.map(({title,message}) => `「${title}」${message.slice(0,350)}`).join('\n'));
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');

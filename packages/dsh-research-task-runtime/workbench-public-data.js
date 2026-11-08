@@ -195,6 +195,33 @@ export function publicDataQuoteSpec(title,value,prompt=''){
  return financialWidgetSpec({...financialWidgetDefaults('quote'),title,symbols:[{code:match[2],market:match[1].toUpperCase(),name}],visibleBars})
 }
 
+// A valid security can be outside an adapter's market coverage. Route to a
+// native capability only when the original request permits its provider and
+// the native component can retain the exact period, scope and refresh setting.
+export function publicDataNativeAlternative(panel, recipe, originalRequest) {
+  if (panel.type !== 'market' || recipe?.profile !== 'candlestick' || recipe.requests?.length !== 1 ||
+    recipe.requests[0]?.source !== 'tencent-history' || typeof originalRequest !== 'string') return null;
+  if (/腾讯|tencent|新浪|sina|雅虎|yahoo|tushare|通联|datayes|插件|接口|数据源|来源.{0,8}(?:限定|指定)|(?:仅|只).{0,12}(?:使用|来自|查询|来源)|禁止联网|不要联网|无需联网|\b(?:only|exclusively|offline)\b/iu.test(originalRequest)) return null;
+  const intent = panel.title + '\n' + panel.prompt;
+  if (/快照|snapshot|回测|复盘|固定(?:历史|日期|区间)|(?:19|20)\d{2}[-/年]\d{1,2}[-/月]\d{1,2}|周K|月K|年K|复权|分时/iu.test(intent)) return null;
+  const request = recipe.requests[0];
+  if (typeof request.parameters_json !== 'string' || request.parameters_json.length > 5000 ||
+    Object.keys(request).some(key => !['source','parameters_json'].includes(key))) return null;
+  let parameters;
+  try { parameters = JSON.parse(request.parameters_json); } catch { return null; }
+  if (!object(parameters) || Object.keys(parameters).some(key => !['symbol','limit'].includes(key))) return null;
+  const code = typeof parameters.symbol === 'string' && /^us([A-Z][A-Z0-9.-]{0,9})$/u.exec(parameters.symbol)?.[1];
+  if (!code || !originalRequest.split(/[^A-Z0-9.-]+/iu).includes(code)) return null;
+  const supported = validatePublicDataPanel(recipe, panel.type);
+  const visibleBars = parameters.limit ?? 20;
+  if (!Number.isInteger(visibleBars) || visibleBars < 1 || visibleBars > 100) return null;
+  const refreshMinutes = supported.intervalMinutes;
+  return financialWidgetSpec({
+    ...financialWidgetDefaults('quote'), title:panel.title, symbols:[{market:'US',code,name:code}],
+    visibleBars, refreshMinutes, refreshEnabled:refreshMinutes > 0
+  });
+}
+
 const path = (key, field, extra = {}) => ({ $from: key, $path: field, ...extra })
 const array = (key, map, extra = {}) => ({ $from: key, $each: 'records', $map: map, ...extra })
 const number = (field, digits = 2, suffix = '') => ({ $path: field, $as: 'string', $digits: digits, $suffix: suffix, $optional: true })

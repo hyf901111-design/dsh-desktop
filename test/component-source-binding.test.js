@@ -1,4 +1,4 @@
-import {it,expect,vi} from 'vitest'
+import {describe,it,expect,vi} from 'vitest'
 import {componentSourceCollector,componentBindingEvidence,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot,COMPONENT_MAPPING_EXAMPLES} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import officialSchemas from './fixtures/official-mcp-source-schemas.json'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
@@ -607,4 +607,45 @@ it('normalizes only verified public record envelopes for static snapshots too',(
  expect(resolveComponentSnapshot(JSON.stringify(d),oilRecords,now).data.items[0].value).toBe('2.059')
  const ambiguous=[{...oilRecords[0],response:{...oilRecords[0].response,data:{}}}]
  expect(resolveComponentSnapshot(JSON.stringify(d),ambiguous,now)).toBeNull()
+})
+
+describe('observed structured web snapshots', () => {
+ const args={url:'https://example.com/releases'}
+ const text=(payload,address=args.url,status='已滚动至文末，完成正文收集')=>`Fetched ${address} (HTTP 200)\n\n\n[网页读取状态：${status}]\n\n${payload}`
+ function observed(raw,request=args) {
+  const collector=componentSourceCollector(['web_fetch'])
+  collector.accept({type:'tool/call',data:{callId:'web',name:'web_fetch',arguments:request}})
+  collector.accept({type:'tool/result',data:{message:{source:{callId:'web'},content:[{type:'tool-result',content:[{type:'text',text:raw}]}]}}})
+  return collector.records
+ }
+ it('projects complete JSON records without copying values or granting refresh access', () => {
+  const records=observed(text(JSON.stringify([{name:'Version A',count:0},{name:'Version B',count:2}])))
+  expect(records[0]).toMatchObject({purpose:'snapshot',response:{source:'example.com',sourceUrl:args.url}})
+  const draft={version:1,type:'data-bound',requests:[{key:'r',tool:'web_fetch',args}],mapping:{
+   version:1,type:'table',title:'版本记录',columns:['版本','数量'],
+   rows:{$from:'r',$each:'records',$map:[{$path:'name'},{$path:'count'}]}
+  }}
+  const encoded=JSON.stringify(draft),snapshot=resolveComponentSnapshot(encoded,records)
+  expect(snapshot.data.rows).toEqual([['Version A','0'],['Version B','2']])
+  expect(snapshot.data.sources).toEqual([{label:'example.com',url:args.url}])
+  expect(snapshot.data.asOf).toContain('静态快照')
+  expect(snapshot.recipe).toBeUndefined()
+  expect(()=>resolveBoundComponent(encoded,records)).toThrow('自动更新的数据引用无效')
+  expect(resolveComponentSnapshot(JSON.stringify({...draft,requests:[{...draft.requests[0],args:{url:'https://example.com/elsewhere'}}]}),records)).toBeNull()
+ })
+ it('keeps an object snapshot in data and rejects incomplete, redirected, error and credential-bearing pages', () => {
+  expect(observed(text('{"count":2}'))[0].response.data).toEqual({count:2})
+  const invalid=[
+   text('{"count":2','https://example.com/releases'),
+   text('{"count":2}','https://example.com/redirect'),
+   text('{"count":2}',args.url,'正文收集不完整，请勿当作全文'),
+   text('{"error":{"code":403}}'),
+   text('{"count":2}')+'\n[结果截断]',
+   text('说明文字\n{"count":2}'),
+   text('{"$schema":"schema","count":2}')
+  ]
+  for(const raw of invalid)expect(observed(raw)[0].response).toBeNull()
+  const url=args.url+'?access_token=private'
+  expect(observed(text('{"count":2}',url),{url})[0].response).toBeNull()
+ })
 })

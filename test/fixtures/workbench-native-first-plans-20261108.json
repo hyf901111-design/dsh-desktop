@@ -1,0 +1,374 @@
+{
+  "finance": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "layout": "wide",
+        "prompt": "行情页：AAPL（纳斯达克，苹果）与 MSFT（纳斯达克，微软）两只美股的实时报价总览，字段含最新价、涨跌幅、成交量、日期/时间戳。数据来源：腾讯行情直通（tencent-quotes，代码 usAAPL、usMSFT），标明取数时点；未取到的字段注明缺失。",
+        "publicData": {
+          "intervalMinutes": 1,
+          "profile": "quotes-table",
+          "requests": [
+            {
+              "parameters_json": "{\"symbols\":[\"usAAPL\",\"usMSFT\"]}",
+              "source": "tencent-quotes"
+            }
+          ]
+        },
+        "title": "报价总览 · AAPL / MSFT",
+        "type": "table"
+      },
+      {
+        "prompt": "行情页：苹果公司（AAPL）日 K 线，近约20个交易日，展示开高低收与成交量。数据来源：腾讯历史行情直通（tencent-history，usAAPL 日线），逐日标注交易日；如某交易日无数据请注明。",
+        "publicData": {
+          "intervalMinutes": 5,
+          "profile": "candlestick",
+          "requests": [
+            {
+              "parameters_json": "{\"symbol\":\"usAAPL\",\"limit\":20}",
+              "source": "tencent-history"
+            }
+          ]
+        },
+        "title": "苹果 AAPL 日K线（近20个交易日）",
+        "type": "market"
+      },
+      {
+        "layout": "wide",
+        "prompt": "行情页：分别获取 AAPL（usAAPL）与 MSFT（usMSFT）近20个共同交易日（约一个月，含取数日往前推）的日线收盘价（腾讯历史行情 tencent-history），取两市场重合的交易日，以第一日收盘价为基期100归一化，绘制两条多序列折线对比，并给出区间累计涨跌幅对照。必须使用真实逐日收盘价，不用两点伪造；各序列标注交易日与来源，缺失交易日注明。",
+        "title": "AAPL vs MSFT 基期100走势对比（近20个共同交易日）",
+        "type": "chart"
+      },
+      {
+        "layout": "wide",
+        "prompt": "研究页：苹果（AAPL）与微软（MSFT）基本面关键指标对比表，指标包括最新市值、市盈率（TTM）、每股收益（EPS）、最近财季营收与净利润、毛利率、营收同比增速等。数据来源：公开财报与公开行情数据（如 macrotrends/stockanalysis 或官方财报摘要），逐项标注披露日/报告期/取数日期与单位；无法取到的指标注明缺失及原因。",
+        "title": "AAPL vs MSFT 基本面关键指标对比",
+        "type": "table"
+      },
+      {
+        "prompt": "研究页：苹果公司（AAPL）近期新闻列表，展示标题、日期与摘要，标明新闻来源与发布日期。可使用内置新闻组件按主题检索苹果相关财经新闻；无法确认日期的条目注明。",
+        "title": "苹果 AAPL 近期新闻",
+        "type": "news"
+      },
+      {
+        "prompt": "研究页：微软公司（MSFT）近期新闻列表，展示标题、日期与摘要，标明新闻来源与发布日期。可使用内置新闻组件按主题检索微软相关财经新闻；无法确认日期的条目注明。",
+        "title": "微软 MSFT 近期新闻",
+        "type": "news"
+      }
+    ],
+    "requestId": "acceptance-a-tech-research",
+    "tabs": [
+      {
+        "name": "行情",
+        "panelIndexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "name": "研究",
+        "panelIndexes": [
+          3,
+          4,
+          5
+        ]
+      }
+    ],
+    "title": "验收A · 科技股研究",
+    "originalRequest": "请创建一个两页签工作台，使用公开真实数据。行情页放苹果 AAPL 和微软 MSFT 的报价总览、苹果日 K 线、两只股票近 20 个共同交易日基期 100 走势对比。研究页放两家公司的基本面关键指标对比表，以及各公司近期新闻列表各一张。两页各三张卡，保留来源、交易日或披露日，缺失的数据请注明。"
+  },
+  "operations": {
+    "dataMode": "simulated",
+    "panels": [
+      {
+        "title": "交付状态 KPI",
+        "prompt": "基于模拟工单记录展示交付状态汇总：工单总数4、已完成2（A01登录页、A04权限）、进行中1（A02导出）、待开始1（A03报警）。明确标注模拟数据。",
+        "type": "kpi",
+        "size": "medium",
+        "artifact": {
+          "version": 1,
+          "type": "kpi",
+          "title": "交付状态 KPI（模拟数据）",
+          "asOf": "2026-11-08",
+          "note": "模拟数据，仅用于验收B演示，非真实项目记录",
+          "items": [
+            {
+              "label": "工单总数",
+              "value": 4,
+              "unit": "单"
+            },
+            {
+              "label": "已完成",
+              "value": 2,
+              "unit": "单"
+            },
+            {
+              "label": "进行中",
+              "value": 1,
+              "unit": "单"
+            },
+            {
+              "label": "待开始",
+              "value": 1,
+              "unit": "单"
+            }
+          ]
+        },
+        "layout": "standard"
+      },
+      {
+        "title": "工单明细表",
+        "prompt": "以表格展示四条模拟工单记录（编号、名称、状态、负责人），支持按状态筛选、按负责人查看详情。全部标注为模拟数据。",
+        "type": "view",
+        "size": "medium",
+        "view": {
+          "dataset": "tickets",
+          "subject": "模拟工单记录",
+          "filters": [
+            "状态",
+            "负责人"
+          ],
+          "details": [
+            "工单编号",
+            "名称",
+            "状态",
+            "负责人"
+          ],
+          "reorder": false,
+          "navigation": "flow",
+          "layout": "stack",
+          "sections": [
+            {
+              "kind": "records",
+              "fields": [
+                "工单编号",
+                "名称",
+                "状态",
+                "负责人"
+              ],
+              "title": "工单明细（模拟）"
+            }
+          ]
+        }
+      },
+      {
+        "title": "各状态工单数量",
+        "prompt": "柱状图展示模拟工单各状态数量：已完成2、进行中1、待开始1，标注模拟数据。",
+        "type": "chart",
+        "size": "medium",
+        "artifact": {
+          "version": 1,
+          "type": "chart",
+          "chartType": "bar",
+          "title": "各状态工单数量（模拟数据）",
+          "asOf": "2026-11-08",
+          "note": "模拟数据，来自给定工单记录",
+          "unit": "单",
+          "categories": [
+            "已完成",
+            "进行中",
+            "待开始"
+          ],
+          "values": [
+            2,
+            1,
+            1
+          ]
+        },
+        "layout": "standard"
+      },
+      {
+        "title": "近四周处理量趋势",
+        "prompt": "折线图展示近四周模拟处理量：第1周8、第2周12、第3周10、第4周15，标注模拟数据。",
+        "type": "chart",
+        "size": "wide",
+        "artifact": {
+          "version": 1,
+          "type": "chart",
+          "chartType": "line",
+          "title": "近四周处理量趋势（模拟数据）",
+          "asOf": "2026-11-08",
+          "note": "模拟数据，四周处理量依次为8、12、10、15",
+          "unit": "单",
+          "series": [
+            {
+              "name": "处理量",
+              "points": [
+                {
+                  "x": "第1周",
+                  "y": 8
+                },
+                {
+                  "x": "第2周",
+                  "y": 12
+                },
+                {
+                  "x": "第3周",
+                  "y": 10
+                },
+                {
+                  "x": "第4周",
+                  "y": 15
+                }
+              ]
+            }
+          ]
+        },
+        "layout": "standard"
+      },
+      {
+        "title": "下周工作清单",
+        "prompt": "展示下周三项模拟任务清单：发布登录页、完成导出、启动报警，标注模拟数据，支持勾选状态。",
+        "type": "tasks",
+        "size": "medium",
+        "artifact": {
+          "version": 1,
+          "type": "tasks",
+          "title": "下周工作清单（模拟数据）",
+          "asOf": "2026-11-08",
+          "note": "模拟数据，仅用于演示",
+          "items": [
+            {
+              "id": "T01",
+              "title": "发布登录页",
+              "status": "todo",
+              "owner": "李明"
+            },
+            {
+              "id": "T02",
+              "title": "完成导出",
+              "status": "todo",
+              "owner": "王芳"
+            },
+            {
+              "id": "T03",
+              "title": "启动报警",
+              "status": "todo",
+              "owner": "周宁"
+            }
+          ]
+        }
+      },
+      {
+        "title": "复盘摘要",
+        "prompt": "复盘摘要卡，仅使用给定模拟数据：本周4条工单中2条已完成（A01登录页、A04权限）、A02导出进行中、A03报警待开始；近四周处理量8→12→10→15，第4周达到15为最高。全部标注为模拟数据，不补充任何给定之外的信息。",
+        "type": "note",
+        "size": "medium",
+        "artifact": {
+          "version": 1,
+          "type": "note",
+          "title": "复盘摘要（模拟数据）",
+          "asOf": "2026-11-08",
+          "note": "以下内容仅基于给定的模拟数据整理，非真实项目记录。",
+          "content": "**交付状态**：4条工单中2条已完成（A01 登录页、A04 权限），A02 导出进行中，A03 报警待开始。\n\n**处理量趋势**：近四周处理量依次为 8、12、10、15，第4周 15 为区间最高。\n\n**下周安排**：发布登录页、完成导出、启动报警。\n\n（本页为模拟数据复盘，仅使用给定记录。）"
+        }
+      }
+    ],
+    "sharedContext": "模拟数据工作台：全部为给定模拟记录，所有卡面须标注「模拟数据」。工单A01登录页已完成李明、A02导出进行中王芳、A03报警待开始周宁、A04权限已完成王芳；近四周处理量8/12/10/15；下周任务：发布登录页、完成导出、启动报警；复盘只用给定数据。当前日期2026-11-08。",
+    "sharedDatasets": [
+      {
+        "asOf": "2026-11-08",
+        "fields": [
+          {
+            "key": "工单编号",
+            "label": "工单编号"
+          },
+          {
+            "key": "名称",
+            "label": "名称"
+          },
+          {
+            "key": "状态",
+            "label": "状态"
+          },
+          {
+            "key": "负责人",
+            "label": "负责人"
+          }
+        ],
+        "id": "tickets",
+        "label": "工单记录（模拟）",
+        "note": "用户给定的模拟工单记录，仅用于验收B演示",
+        "records": [
+          {
+            "id": "A01",
+            "名称": "登录页",
+            "工单编号": "A01",
+            "状态": "已完成",
+            "负责人": "李明"
+          },
+          {
+            "id": "A02",
+            "名称": "导出",
+            "工单编号": "A02",
+            "状态": "进行中",
+            "负责人": "王芳"
+          },
+          {
+            "id": "A03",
+            "名称": "报警",
+            "工单编号": "A03",
+            "状态": "待开始",
+            "负责人": "周宁"
+          },
+          {
+            "id": "A04",
+            "名称": "权限",
+            "工单编号": "A04",
+            "状态": "已完成",
+            "负责人": "王芳"
+          }
+        ]
+      }
+    ],
+    "tabs": [
+      {
+        "name": "交付页",
+        "panelIndexes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "name": "趋势页",
+        "panelIndexes": [
+          3,
+          4,
+          5
+        ]
+      }
+    ],
+    "title": "验收B · 项目运营",
+    "requestId": "native-operations"
+  },
+  "web": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "prompt": "展示 vitejs/vite 与 vuejs/core 两个 GitHub 仓库的核心指标对比总览（如 Stars、Forks、Open Issues、最近一次 Release 版本号与发布日期）。数据来源：GitHub 公开仓库 API/页面 https://github.com/vitejs/vite 与 https://github.com/vuejs/core。保留原仓库链接与数据时点；某项指标查不到时标注\"未取得\"。建议 variant: metrics 或 table 对比布局。",
+        "title": "指标总览 · vitejs/vite vs vuejs/core",
+        "type": "market"
+      },
+      {
+        "prompt": "对比 vitejs/vite 与 vuejs/core 的最近若干个正式版本发布：版本号、发布日期、是否 pre-release、Release 页面链接。数据来源：GitHub Releases（https://github.com/vitejs/vite/releases 与 https://github.com/vuejs/core/releases）。保留原始链接与发布日期，查不到的字段标为\"未取得\"。",
+        "title": "版本发布对比",
+        "type": "table"
+      },
+      {
+        "prompt": "按时间倒序列出两个项目最近的 Release 动态（版本号、发布日期、仓库归属、原 Release 链接、一句话要点）。数据来源：GitHub Releases 页面；保留原链接与发布日期，无法获取的项标注\"未取得\"。",
+        "title": "最近发布动态",
+        "type": "timeline"
+      },
+      {
+        "prompt": "总结 vitejs/vite 与 vuejs/core 在维护与升级方面的注意事项（如升级破坏性变更提示、LTS/支持策略、Issue 与 PR 活跃度观察）。依据 GitHub 公开仓库与 Release Notes 原文，注明信息来源链接与日期；无法核实的内容标注\"未取得\"，不补造。",
+        "title": "维护与升级注意事项",
+        "type": "summary"
+      }
+    ],
+    "requestId": "acceptance-c-open-source-tracking",
+    "title": "验收C · 开源项目跟踪",
+    "originalRequest": "创建单页工作台，研究 GitHub 上的 vitejs/vite 和 vuejs/core。需要四张卡：指标总览、版本发布对比表、最近的发布动态列表、维护和升级注意事项摘要。使用公开 GitHub 仓库与 Release 页面，保留原链接与发布日期。"
+  }
+}
