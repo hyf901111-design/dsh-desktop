@@ -41,10 +41,10 @@ function releasePage(record,repo,includeBody) {
  if(url.origin!=='https://api.github.com'||url.pathname.toLowerCase()!==`/repos/${repo}/releases`||
   !/^\d{1,3}$/u.test(url.searchParams.get('per_page')??'')||url.searchParams.getAll('per_page').length!==1||
   url.searchParams.getAll('page').length>1||
-  [...url.searchParams].some(([key,value])=>key!=='per_page'&&(key!=='page'||!/^\d{1,2}$/u.test(value))))return false
+  [...url.searchParams].some(([key,value])=>key!=='per_page'&&(key!=='page'||!/^\d{1,3}$/u.test(value))))return false
  const size=Number(url.searchParams.get('per_page')),page=Number(url.searchParams.get('page')??1)
  const rows=record.response.records
- if(size<1||size>100||page<1||!Array.isArray(rows)||!rows.length||rows.length>size||
+ if(size<1||size>100||page<1||page>100||!Array.isArray(rows)||!rows.length||rows.length>size||
   new Set(rows.map(row=>row?.html_url)).size!==rows.length||!rows.every(row=>
   row?.draft===false&&typeof row.tag_name==='string'&&row.tag_name.trim()&&
   utcTimestamp(row.published_at)&&
@@ -75,7 +75,7 @@ export function observedReleaseTimeline(scope,records,title) {
  const requests=[],items=[]
  for(const repo of scope.repos){
   const pages=releasePages(records,repo,scope.count,scope.includeBody)
-  if(!pages||requests.length+pages.length>16)return
+  if(!pages||requests.length+pages.length>128)return
   for(const {record,take} of pages){
    const key='releases'+requests.length
    requests.push({key,tool:record.tool,args:record.args})
@@ -120,7 +120,7 @@ export function releaseTimelineComplete(scope,data,records){
 export async function readReleaseTimeline(scope,fetchPage,signal){
  const groups=await Promise.all(scope.repos.map(async repo=>{
   let size=scope.count,remaining=scope.count,records=[],reads=0
-  while(remaining>0&&reads++<20){
+  while(remaining>0&&reads++<Math.min(116,Math.max(20,scope.count+8))){
    signal?.throwIfAborted()
    const url=new URL(`https://api.github.com/repos/${repo}/releases`)
    url.searchParams.set('per_page',String(size))

@@ -106,3 +106,18 @@ it('按用户的发布表需求无损映射完整来源行和长正文，缺行�
  const broken=structuredClone(snapshot.data);broken.rows[0][3]='缩略';expect(releaseTimelineComplete(scope,broken,records)).toBe(false)
  broken.rows.pop();expect(releaseTimelineComplete(scope,broken,records)).toBe(false)
 })
+
+
+it('allows one-record transport pages to finish a larger requested collection without a fixed twenty-read cutoff',async()=>{
+ const scope={repos:['example/long'],count:40,includeBody:true},calls=[]
+ const all=Array.from({length:40},(_,i)=>({tag_name:'v'+i,published_at:'2026-11-01T10:00:00Z',html_url:'https://github.com/example/long/releases/tag/v'+i,draft:false,body:'来源原始正文'.repeat(200)+i}))
+ const records=await readReleaseTimeline(scope,async url=>{
+  const u=new URL(url),size=Number(u.searchParams.get('per_page')),index=Number(u.searchParams.get('page')??1)
+  calls.push([size,index]);return page(url,all.slice((index-1)*size,index*size),size>1)
+ })
+ expect(records).toHaveLength(40)
+ expect(calls.length).toBeLessThanOrEqual(48)
+ const snapshot=resolveComponentSnapshot(observedReleaseTimeline(scope,records,'长正文集合'),records)
+ expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
+ expect(snapshot.data.items.map(row=>row.summary)).toEqual(all.map(row=>row.body))
+})
