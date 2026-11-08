@@ -2,6 +2,21 @@ import {expect,it} from 'vitest'
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js'
 import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue} from '../packages/dsh-research-task-runtime/dataset-view-contract.js'
 const clone=x=>structuredClone(x)
+const aggregateSource=()=>({id:'facts',label:'明细',asOf:'2026-11-09',note:'模拟记录',fields:[{key:'owner',label:'负责人'},{key:'state',label:'状态'},{key:'amount',label:'金额',unit:'元'}],records:[{id:'a',owner:'甲',state:'完成',amount:10},{id:'b',owner:'甲',state:'待办',amount:-2},{id:'c',owner:'乙',state:'完成',amount:null}]})
+const aggregate=()=>({id:'totals',label:'派生汇总',note:'按明细计算',aggregate:{dataset:'facts',groupBy:['owner'],measures:[{key:'count',label:'数量',op:'count'},{key:'done',label:'完成数',op:'count',where:{field:'state',equals:'完成'}},{key:'total',label:'合计',op:'sum',field:'amount',unit:'元'}]}})
+it('computes grouped counts, filtered counts and sums from the same complete records in any declaration order',()=>{
+ const source=aggregateSource(),raw=[aggregate(),source],before=clone(raw),result=validateWorkbenchDatasets(raw)
+ expect(result[0].records).toEqual([{id:'group-1',owner:'甲',count:2,done:1,total:8},{id:'group-2',owner:'乙',count:1,done:1,total:null}])
+ expect(result[0].asOf).toBe(source.asOf);expect(result[1].records).toEqual(source.records);expect(raw).toEqual(before)
+ const view=validateDatasetView({dataset:'totals',sections:[{kind:'records',fields:['owner','count','done','total']}]},result)
+ expect(parseDatasetViewArtifact({version:1,type:'view',title:'汇总',...view}).dataset.records).toEqual(result[0].records)
+ source.records.push({id:'d',owner:'乙',state:'完成',amount:20});expect(validateWorkbenchDatasets([source,aggregate()])[1].records[1]).toMatchObject({count:2,done:2,total:20})
+})
+it.each([
+ ['unknown source',a=>a.aggregate.dataset='missing'],['cycle',a=>a.aggregate.dataset='totals'],['unknown field',a=>a.aggregate.groupBy=['unknown']],
+ ['duplicate field',a=>a.aggregate.measures[0].key='owner'],['invented rows',a=>a.records=[]],['executable formula',a=>a.aggregate.measures[0].op='eval'],
+ ['invalid predicate',a=>a.aggregate.measures[0].where={field:'state',equals:{value:1}}],['sum text',a=>a.aggregate.measures[2].field='state']
+])('rejects unsupported or contradictory derived aggregates: %s',(_,mutate)=>{const a=aggregate();mutate(a);expect(()=>validateWorkbenchDatasets([aggregateSource(),a])).toThrow()})
 it('keeps one complete immutable canonical snapshot for different view compositions',()=>{
  const raw=bookDataset(),before=clone(raw),datasets=validateWorkbenchDatasets([raw])
  for(const config of [archiveView(),scheduleView(),priorityView()]){

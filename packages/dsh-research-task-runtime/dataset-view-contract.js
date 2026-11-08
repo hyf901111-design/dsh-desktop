@@ -1,5 +1,6 @@
 // A canonical snapshot plus declarative field references. No model-authored
 // executable code or independently restated record values are part of a view.
+import {materializeDatasetAggregate} from './dataset-aggregate.js'
 export const DATASET_VIEW_LIMITS=Object.freeze({datasets:5,records:200,fields:24,cellCharacters:8000,datasetBytes:48000,totalBytes:192000,sections:4,viewBytes:8000})
 const forbidden=new Set(['__proto__','prototype','constructor'])
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&[null,Object.prototype].includes(Object.getPrototypeOf(value))
@@ -18,6 +19,24 @@ function cell(value){
 }
 export function validateWorkbenchDatasets(value){
  check(Array.isArray(value)&&value.length>=1&&value.length<=DATASET_VIEW_LIMITS.datasets,'共同数据需要1–5份完整记录集。')
+ if(value.some(d=>object(d)&&d.aggregate!==undefined)){
+  const complete=new Map(),pending=[...value]
+  check(new Set(value.map(d=>d?.id)).size===value.length,'共同数据集编号无效或重复。')
+  while(pending.length){
+   let progress=false
+   for(let i=0;i<pending.length;){
+    const d=pending[i]
+    if(object(d)&&d.aggregate!==undefined){
+     check(exact(d,['id','label','note','aggregate'])&&id(d.id)&&text(d.label,200)&&text(d.note,8000),'汇总数据只声明id、label、note、aggregate，不独立提供records或估算值。')
+     const source=complete.get(d.aggregate?.dataset);if(!source){i++;continue}
+     complete.set(d.id,validateWorkbenchDatasets([materializeDatasetAggregate(d,source)])[0])
+    }else complete.set(d?.id,validateWorkbenchDatasets([d])[0])
+    pending.splice(i,1);progress=true
+   }
+   check(progress,'共同数据汇总引用了不存在的来源或形成循环；不能改用独立估算。')
+  }
+  return validateWorkbenchDatasets(value.map(d=>complete.get(d.id)))
+ }
  const ids=new Set(),result=[]
  for(const d of value){
   check(exact(d,['id','label','asOf','note','fields','records'],['recordScope']),'共同数据字段无效，必须提供id、label、asOf、note、fields和records。')
@@ -123,7 +142,8 @@ export function parseDatasetViewArtifact(value){
  return freeze({version:1,type:'view',title:value.title,dataset,view,...(value.context===undefined?{}:{context:value.context})})
 }
 export function datasetViewDataIssue(value){try{parseDatasetViewArtifact(value)}catch(error){return error.message}}
-export const DATASET_VIEW_GUIDANCE='字段键可直接用中英文名称，引用保持一致，无需翻译键名。完整sharedDatasets可直接生成，同时允许sharedContext作为备注；不必为它切到deferred。用户明确结束日期后不可延长窗口；容量不足保留未排期与等待原因。同一批对象用一个完整主数据集，各卡view.dataset均引用该主数据集，不复制为排程/验收的另一份相同编号记录。每份数据必须有实际组件引用；跨数据集确为同批对象时显式给dataset相同recordScope，该范围内同一id的同名字段值与单位须一致，null也必须一致；不同实体保留各自业务编号，不推断跨表身份。panels完整清单与sharedDatasets必须一次调用同时提供：先列清单及各卡view，再填写共同记录，不先单独提交sharedDatasets。records每条必须有稳定id，直接用业务编号如B01，不另造r-B01或重复编号字段；宿主可补id的显示标签，不能推断记录编号。reorder由上移/下移按钮调整本卡顺序，不支持拖动，不另造会过时的priority数值列。同一批对象的负责人、作业起止时间、等待原因、验收等共同事实放在同一个主数据集，各卡view引用它；确有独立事件才另建数据集，不能重复独立填写相同事实。未排期应同时在列表与排程保留null，不得一处已排另一处缺项。同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
+export const DATASET_AGGREGATE_GUIDANCE='数量、状态计数、金额合计等派生汇总必须声明aggregate让宿主从完整主记录计算，禁止另抄汇总records。汇总集只含{id,label,note,aggregate:{dataset:来源集id,groupBy:[来源字段键],measures:[{key:结果字段键,label,op:"count|sum",field?:求和来源字段,where?:{field:来源字段,equals:原值},unit?}]}}，不填写asOf/fields/records；其余普通集仍提供完整原记录。groupBy支持1–4字段，count计条数，sum按数值原值合计；where仅支持明确原值相等筛选。多层汇总可引用已定义汇总集，不得循环。视图引用汇总集生成的字段，来源时点继承主记录。数据或交互超出此声明能力时保持实际用户需求，采用完整数据的适合表达，不能伪造汇总或硬套。';
+export const DATASET_VIEW_GUIDANCE='数量和金额汇总必须用aggregate声明来源集、分组和count/sum计算，不独立填写汇总records；详见aggregate字段协议。字段键可直接用中英文名称，引用保持一致，无需翻译键名。完整sharedDatasets可直接生成，同时允许sharedContext作为备注；不必为它切到deferred。用户明确结束日期后不可延长窗口；容量不足保留未排期与等待原因。同一批对象用一个完整主数据集，各卡view.dataset均引用该主数据集，不复制为排程/验收的另一份相同编号记录。每份数据必须有实际组件引用；跨数据集确为同批对象时显式给dataset相同recordScope，该范围内同一id的同名字段值与单位须一致，null也必须一致；不同实体保留各自业务编号，不推断跨表身份。panels完整清单与sharedDatasets必须一次调用同时提供：先列清单及各卡view，再填写共同记录，不先单独提交sharedDatasets。records每条必须有稳定id，直接用业务编号如B01，不另造r-B01或重复编号字段；宿主可补id的显示标签，不能推断记录编号。reorder由上移/下移按钮调整本卡顺序，不支持拖动，不另造会过时的priority数值列。同一批对象的负责人、作业起止时间、等待原因、验收等共同事实放在同一个主数据集，各卡view引用它；确有独立事件才另建数据集，不能重复独立填写相同事实。未排期应同时在列表与排程保留null，不得一处已排另一处缺项。同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
 
 const fieldKeysSchema={type:'array',items:{type:'string'}};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
@@ -131,7 +151,8 @@ export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,prope
  sections:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
 }};
 export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'仅明确模拟场景，同一批对象只写一个主记录集，排程/对比/列表均引用它；每份数据必须有组件引用，同批对象跨表时显式声明相同recordScope，该范围内同id同名事实及单位不得矛盾。不同实体的编号独立；每条记录有稳定id并完整填写所有声明字段，缺失null。记录必须含id，id显示字段省略时由宿主补标签。最多5组，每组200条/24字段/48KB，总192KB；不截取记录，不猜共同值。',items:{type:'object',additionalProperties:false,properties:{
- id:{type:'string',required:true},recordScope:{type:'string',description:'可选。跨数据集确为同一批对象时提供相同范围如book；该范围内同id的同名事实/单位必须一致。省略时编号仅限本数据集，员工001与设备001不视为同一对象。'},label:{type:'string',required:true},asOf:{type:'string',required:true},note:{type:'string',required:true},
- fields:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}},
- records:{type:'array',required:true,items:{type:'object',additionalProperties:true,properties:{id:{type:'string',required:true,description:'直接使用稳定业务编号，如B01；每条必填且唯一。其他字段必须与fields声明一致。'}}}}
+ id:{type:'string',required:true},recordScope:{type:'string',description:'可选。跨数据集确为同一批对象时提供相同范围如book；该范围内同id的同名事实/单位必须一致。省略时编号仅限本数据集，员工001与设备001不视为同一对象。'},label:{type:'string',required:true},asOf:{type:'string'},note:{type:'string',required:true},
+ aggregate:{type:'object',additionalProperties:false,description:DATASET_AGGREGATE_GUIDANCE,properties:{dataset:{type:'string',required:true},groupBy:{type:'array',required:true,items:{type:'string'}},measures:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},op:{type:'string',required:true,enum:['count','sum']},field:{type:'string'},unit:{type:'string'},where:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},equals:{type:'json',description:'与来源标量严格相等的原值',required:true}}}}}}}},
+ fields:{type:'array',items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}},
+ records:{type:'array',items:{type:'object',additionalProperties:true,properties:{id:{type:'string',required:true,description:'直接使用稳定业务编号，如B01；每条必填且唯一。其他字段必须与fields声明一致。'}}}}
 }}};

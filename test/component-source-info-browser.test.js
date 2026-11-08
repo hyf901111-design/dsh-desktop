@@ -1,4 +1,5 @@
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
+import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {deliveryCardsRuntime} from '../scripts/lib/deliverable-cards.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
@@ -110,4 +111,21 @@ it('recognizes labeled real attachment names while retaining source labels and e
   const label=prefix+'组织资料.docx（T8、P24）',info=getComponentSourceInfo({containerSpec:{source:{title:label,text:'真实原文'}}})
   expect(info.records[0]).toMatchObject({label,filename:'组织资料.docx',path:''})
  }
+})
+
+it.each(['data-component-source-info="附件 P4；官网原始资料"','class="source-info"','data-component-source-info'])('preserves business DOM and working controls when source metadata annotates its owner: %s',async attribute=>{
+ const {page,errors}=await fixture()
+ try{
+  const html=`<main ${attribute}><svg width="100" height="50"><text y="25">真实关系节点</text></svg><button id="pick">选择节点</button><p id="value">尚未选择</p><aside hidden data-component-source-info>完整口径 P8</aside></main><script>const shared=window.sherlockShared.register({initialState:{selected:false},reduce:(s,a)=>({selected:true}),render:(s,ctx)=>{document.getElementById('value').textContent=s.selected?'真实节点已选择':'尚未选择'}});document.getElementById('pick').onclick=()=>shared.dispatch({type:'pick'})</script>`
+  await page.evaluate(html=>show({id:'annotated',title:'来源标注图',containerSpec:{type:'html',html}}),html)
+  await page.getByRole('button',{name:'查看来源信息',exact:true}).click()
+  await expect.poll(()=>page.locator('#right').textContent()).toContain('完整口径 P8')
+  const text=await page.locator('#right').textContent();expect(text).not.toContain('真实关系节点');expect(text).not.toContain('选择节点')
+  if(attribute.includes('附件'))expect(text).toContain('附件 P4；官网原始资料')
+  await page.locator('#main').evaluate((el,preview)=>{const f=document.createElement('iframe');f.id='preview';f.srcdoc=preview;el.append(f)},buildResearchHtmlPreview(html,'来源标注图','light',{workbench:true,notoFont:'runtime'}))
+  const frame=page.frameLocator('#preview').frameLocator('iframe')
+  await expect.poll(()=>frame.locator('#pick').isVisible()).toBe(true)
+  await page.locator('#preview').evaluate(el=>el.contentWindow.postMessage({type:'sherlock-component-context',shared:false,online:true,readOnly:false,userId:'local'},'*'));await frame.locator('#pick').click();await expect.poll(()=>frame.locator('#value').textContent()).toBe('真实节点已选择')
+  expect(await frame.locator('aside').isVisible()).toBe(false);expect(errors).toEqual([])
+ }finally{await page.close()}
 })

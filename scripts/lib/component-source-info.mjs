@@ -31,7 +31,13 @@ export function getComponentSourceInfo(node){
  if(typeof spec.html==='string'&&typeof DOMParser!=='undefined'){
   const doc=new DOMParser().parseFromString(spec.html,'text/html')
   for(const el of doc.querySelectorAll('[data-component-source-info],.market-footer,.indicator-method,.trend-provenance,.chart-source,.source-info,.src,footer')){
-   const text=el.textContent?.trim();if(el.matches('.src,footer')&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text))notes.push(text)
+   // An attribute value is metadata, not a request to collect/hide its owner.
+   // The owner can be the entire graph, table, or interactive application.
+   const annotation=el.getAttribute('data-component-source-info')?.trim()
+   const business=el.querySelector('table,svg,canvas,button,input,select,textarea,[data-sherlock-structure],[data-node-id]')
+   if(!annotation&&business&&el.matches('[data-component-source-info],.source-info,.chart-source'))continue
+   const text=annotation||el.textContent?.trim();if(el.matches('.src,footer')&&!annotation&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text))notes.push(text)
+   if(annotation)continue
    for(const a of el.querySelectorAll('a[href]'))add({label:a.textContent,url:a.getAttribute('href')})
   }
  }
