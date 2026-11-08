@@ -2,6 +2,9 @@ export const AIRLINE_REAL_WORKBENCH_REQUEST = '请建立一个「航空出行·�
 
 export const AFFIRMATIVE_WORKBENCH_REQUESTS = [
   AIRLINE_REAL_WORKBENCH_REQUEST,
+  '我想给刚入职的同事做一份监管机构入职速查看板。请分成「证监会」「基金业协会」「待核与出处」三个页签。',
+  '给运营同事做一组开源项目版本追踪看板。',
+  '按这些记录做一版事故复盘看板。',
   '搭建一个航空出行研究工作台。',
   '做一个社区义诊工作台，包含排期、人员和物资。',
   '帮我把这个组织架构梳理成可视化看板，能让我清楚地看清部门和人员结构。',
@@ -27,6 +30,10 @@ export const AFFIRMATIVE_WORKBENCH_REQUESTS = [
 
 export const NON_CREATION_WORKBENCH_REQUESTS = [
   '请查看已建立的工作台组件状态。',
+  '先别做一份入职速查看板。',
+  '我已经做一份交付情况看板了。',
+  '这条需求里写着「做一份部门速查看板」。',
+  '如何做一份版本追踪看板？',
   '查询已经建立的航空出行工作台数据日期。',
   '请解释已建立工作台的内容与缺失。',
   '解释已有工作台为什么需要建立数据绑定。',

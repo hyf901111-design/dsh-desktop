@@ -73,6 +73,7 @@ function savePlanningBudget(session, state, phase) {
 
 const CREATE_TOOL = 'research_workbench_create'
 const MAX_PLANNING_DISCOVERIES = 6
+const PLANNING_PROGRESS_GUIDANCE = '画布上的准备卡只显示宿主进度。提交规划成功后宿主才会展开各张卡，不观察准备卡等待它变成草稿，不用画布操作逐卡创建。'
 const SOURCE_MODE_GUIDANCE = '真实数据模式使用 dataMode:"source"（也可省略），必须省略 generationMode、sharedContext、originalRequest，这三项仅适用于模拟。已有真实记录直接保留完整 artifact 及来源、日期、单位；未取到的面板省略 artifact，把待取字段、来源和缺失处理写入 panel.prompt，由独立面板取数，不补模拟值。'
 const SOURCE_PLANNING_TOOL_GUIDANCE = '新增1–30个独立面板，保留用户指定的数量、领域、来源和范围；先理解需求、拆解每卡要回答的问题，立即调用 research_workbench_create，一次提交 title 与完整 panels，不先取整套数据、写报告或读取 skill/源码。'+SOURCE_MODE_GUIDANCE+'panel.type 只表示取数前的呈现建议；各卡取得真实数据后再选择可视化和交互，不让数据迁就预设字段。按问题选择 table/chart/news/reports/calendar/timeline/gantt/tasks/alerts/note 等形式，复杂交互保留 html，不能套固定金融样例。publicData 可交给宿主取真实来源；preset 仅在用户需求匹配真实预设时使用。requestId 重试保持一致。accepted 表示已受理并生成中，prepared 才表示已准备好，随后简短交付并结束本轮。'
 const PROTOTYPE_PLANNING_GUIDANCE = '【原型工作台规划】先读取用户本轮提供的原型，理解指定业务区域、页面分组和交互，再一次调用 research_workbench_create。首次只提交 title、dataMode:"source"、panels:[{title,prompt,type,size,layout?,library?}] 及可选 requestId/tabs/links；可复用的原生组件直接提供library配置，不生成逐卡 artifact、不抄写全量记录或编写代码。每卡 prompt 保留原型路径、业务范围、筛选/排序/展开详情等交互和原有来源口径；独立组件会读取原型完成内容。按内容选择注册模板，模板不能表达的交互使用 html。不复制参考应用的外层侧栏、聊天或设置。原型内示例数据作为原型快照保留，不标为新取得的真实行情，也不另造模拟记录。尚未读到的完整记录交由组件读取，不把截断资料当作完整数据。accepted 仅表示已启动生成；prepared 才表示已准备好。受理后简短回报，不重复建卡或等待整套数据。'
@@ -204,6 +205,27 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
   })
   const disposeError = ctx.on('agent/error', ({ agent }) => releasePlanning(agent))
   const disposeAgent = ctx.on('agent/disposed', ({ agent }) => releasePlanning(agent))
+  const disposeStopping = ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => {
+    const state = currentPlanning(agent)
+    if (!state || signal?.aborted || state.turn !== turn || state.recovered) return
+    const events = agent.session.events
+    const turnStart = events.findLastIndex(event => event.type === 'turn/start' && event.data?.turn === turn)
+    if (turnStart < 0) return
+    const activeEvents = events.slice(turnStart + 1)
+    const finish = activeEvents.findLast(event => event.type === 'assistant/chunk' && event.data?.chunk?.type === 'finish')
+    if (finish?.data.chunk.reason?.kind !== 'stop') return
+    // A final paragraph is not a receipt. Resume the same authorized turn once,
+    // without impersonating the user, changing the model, or reviving a stop.
+    if (activeEvents.some(event => event.type === 'tool/result' &&
+      /DENIED|ABORTED|APPROVAL|CANCELLED/u.test(event.data?.error?.code ?? ''))) return
+    state.recovered = true
+    agent.steer({
+      id: globalThis.crypto.randomUUID(),
+      role: 'user',
+      source: { kind: 'plugin', plugin: 'sherlock-workbench-planning', form: 'notice', summary: '继续提交组件规划' },
+      content: [{ type: 'text', text: '本轮还没有工作台受理回执。保留原需求、来源、数量、页签和交互；依据已取得的资料和具体工具错误，用简洁的面板清单续提。兼容性无法确认的可选联动先省略，未取得的正文和数据留给组件任务，省略未验证的 artifact。只有受理回执才表示启动；确有不可恢复的资料或权限阻碍时明确说明。' }]
+    })
+  })
   const disposePrompt = ctx.systemPrompt.context({ name: 'sherlock:workbench-execution', order: 150,
     text: ({ agent }) => {
       const human = workbenchCreationRequest(agent?.session)
@@ -260,7 +282,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     applied.set(agent, state)
     return limited
   })
-  const disposeContext = ctx.on('agent/request-context', async ({ agent, signal }, next) => {
+  const disposeContext = ctx.on('agent/request-context', async ({ agent, turn, signal }, next) => {
     let request
     try { signal?.throwIfAborted(); request = await next(); signal?.throwIfAborted() }
     catch (error) { releasePlanning(agent); throw error }
@@ -282,6 +304,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       releasePlanning(agent); return request
     }
     const state = enterPlanning(agent, human, signal ?? request.signal)
+    state.turn = turn
     state.evidenceTargets=planningPrototypeEvidence(agent.session,human,request)
     state.evidenceUsed=prototypeEvidenceProgress(agent.session,human.messageId,state.evidenceTargets).used
     state.evidenceTools=new Set()
@@ -319,14 +342,14 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       return discovery ? [discovery] : []
     })
     state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
-    if (documentGuidance) return { ...request, system: [request.system, documentGuidance].filter(Boolean).join('\n'), tools }
+    if (documentGuidance) return { ...request, system: [request.system, documentGuidance, PLANNING_PROGRESS_GUIDANCE].filter(Boolean).join('\n'), tools }
     // Model route, effort, signal and the shared registry stay unchanged. The
     // low-cost plan has no complete-data prerequisite in any user domain.
-    return { ...request, system: [request.system, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets),
+    return { ...request, system: [request.system, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : PLAN_FIRST_GUIDANCE, sourcePlanning && !prototypeSource ? SOURCE_MODE_GUIDANCE : '',prototypeEvidenceGuidance(state.evidenceTargets), PLANNING_PROGRESS_GUIDANCE,
       '【本轮呈现与回报】历史表现比较把共同基期走势图放首屏第一张，配区间收益对照；未要求实时监控或技术分析时，不用最新报价和各标的独立K线替代比较。同组汇总和变化合为一张wide总览，排名只画排名指标，代码、规模、管理人等同批辅助信息写入该图的detailColumns/detailRows，默认展开；不再单建重复的明细卡，独立分析或用户明确要求时除外。只用一句话说明将交付的内容，不要公开接口目录、来源选择原则、当前模式判断、模板映射或面板任务分工。数据限制仅说明对结果的影响。'].filter(Boolean).join('\n'), tools }
   })
   return () => {
     for (const state of activeScopes) releasePlanning(state.agent)
-    disposePrompt(); disposeRequest(); disposeContext(); disposeGuard?.(); disposeEvents(); disposeError(); disposeAgent()
+    disposePrompt(); disposeRequest(); disposeContext(); disposeGuard?.(); disposeEvents(); disposeError(); disposeAgent(); disposeStopping()
   }
 }
