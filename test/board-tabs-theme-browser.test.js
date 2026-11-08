@@ -36,7 +36,7 @@ it('四模式选中态还原设计颜色，更多图标沿用同模式原生组�
  const palettes={
   light:{surface:'rgb(255, 255, 255)',selected:'rgb(232, 242, 252)',text:'rgb(22, 140, 240)',idle:'rgb(119, 119, 129)',radius:'4px'},
   dark:{surface:'rgb(21, 21, 24)',selected:'rgb(34, 49, 71)',text:'rgb(22, 140, 240)',idle:'rgb(160, 160, 171)',radius:'4px'},
-  enterprise:{surface:'rgb(255, 255, 255)',selected:'rgb(236, 239, 241)',text:'rgb(48, 54, 61)',idle:'rgb(107, 114, 128)',radius:'4px'},
+  enterprise:{surface:'rgb(255, 255, 255)',selected:'rgb(236, 239, 241)',text:'rgb(48, 54, 61)',idle:'rgb(107, 114, 128)',radius:'0px'},
   openterminal:{surface:'rgb(10, 10, 10)',selected:'rgb(28, 25, 18)',text:'rgb(255, 153, 0)',idle:'rgb(128, 128, 128)',radius:'0px'}
  }
  try{
