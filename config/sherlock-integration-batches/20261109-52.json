@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-52",
+  "branch": "codex/integration/20261109-52",
+  "baseMainCommit": "c73e8ee8ad7c88ee02f0fe37bd478df995cb8581",
+  "expectedMainCommit": "c73e8ee8ad7c88ee02f0fe37bd478df995cb8581",
+  "createdAt": "2026-11-09T14:36:11.378Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "跨卡对象范围、指标键关联与来源分析交付",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "c73e8ee8ad7c88ee02f0fe37bd478df995cb8581",
+        "tipCommit": "85b159917b5e006678419872981dca5d1f1ce5b1",
+        "commits": [
+          {
+            "commit": "3506d771d570a863ecea82a77c91b41d4d6ae5f7",
+            "parents": [
+              "5be7625a2ffd4dc1ca13b63c18a116d9bc33e7d6"
+            ],
+            "subject": "优化：保留跨卡比较范围并支持来源键关联与完整分析"
+          },
+          {
+            "commit": "85b159917b5e006678419872981dca5d1f1ce5b1",
+            "parents": [
+              "3506d771d570a863ecea82a77c91b41d4d6ae5f7",
+              "c73e8ee8ad7c88ee02f0fe37bd478df995cb8581"
+            ],
+            "subject": "Merge branch 'main' into codex/feat/board-folder-icons-20261109"
+          }
+        ],
+        "boundaryParents": [
+          "5be7625a2ffd4dc1ca13b63c18a116d9bc33e7d6"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-delivery-scope.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-delivery-scope.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-source-row-join.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "215项聚焦检查和类型检查通过；v81真实复测发现的假完成已建立回归，新包仍需实际测试。"
+        },
+        "acceptanceCriteria": [
+          "比较卡继承原始明确对象数量与类别约束，不影响来源说明卡",
+          "实际长表指标按真实对象键关联，歧义不任取首条",
+          "发布分析不由原始列表快捷结束，继续沿实际链接读取正文"
+        ],
+        "risks": [
+          "真实来源和供应商排队仍可能导致未完成",
+          "跨卡对象资格和指标完整性需真实复测"
+        ],
+        "generatedAt": "2026-11-09T14:06:29.095769+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-provenance-compatibility.test.js",
+        "test/component-acquisition-budget.test.js",
+        "test/component-discovery-progress.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/research-artifact-resilience.test.js",
+        "test/timeline-template.test.js",
+        "test/component-delivery-scope.test.js",
+        "test/component-source-row-join.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
