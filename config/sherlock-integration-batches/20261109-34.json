@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-34",
+  "branch": "codex/integration/20261109-34",
+  "baseMainCommit": "99ad9a93407c2b3df61ec34aa76b119507de24e2",
+  "expectedMainCommit": "99ad9a93407c2b3df61ec34aa76b119507de24e2",
+  "createdAt": "2026-11-09T05:26:17.537Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复新建工作区文件夹加号并限定图标替换范围",
+        "branch": "codex/feat/component-generation-fit-icons-20261109",
+        "baseCommit": "99ad9a93407c2b3df61ec34aa76b119507de24e2",
+        "tipCommit": "da8b11587aa36d892c98c72ed2211cb2fa7c25c8",
+        "commits": [
+          {
+            "commit": "da8b11587aa36d892c98c72ed2211cb2fa7c25c8",
+            "parents": [
+              "99ad9a93407c2b3df61ec34aa76b119507de24e2"
+            ],
+            "subject": "修正：保留新建工作区原始文件夹加号图标"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-b-icons-browser.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "用户在真实新包发现工作区误用普通加号；已移除该选择器覆盖，隔离Chromium验证展开18px和收起20px均使用Figma文件夹加号，仅新建看板使用普通加号。"
+        },
+        "acceptanceCriteria": [
+          "工作区恢复原始文件夹加号",
+          "普通加号仅用于新建看板",
+          "保留紧凑间距和矩形悬停"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-09T05:26:16.226191+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-b-icons-browser.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
