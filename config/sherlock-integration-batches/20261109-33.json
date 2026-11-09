@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-33",
+  "branch": "codex/integration/20261109-33",
+  "baseMainCommit": "71ce83ccc398ca0b0a42fc54994e77b2325e1d42",
+  "expectedMainCommit": "71ce83ccc398ca0b0a42fc54994e77b2325e1d42",
+  "createdAt": "2026-11-09T05:15:27.483Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一侧栏图标交互并校验原生行情来源能力",
+        "branch": "codex/feat/component-generation-fit-icons-20261109",
+        "baseCommit": "71ce83ccc398ca0b0a42fc54994e77b2325e1d42",
+        "tipCommit": "790c1d88c3a0a02226b073eac998fe4afdba6a10",
+        "commits": [
+          {
+            "commit": "46a1bc86b9d8263d2c5499ebe76fd285b0afeadf",
+            "parents": [
+              "71ce83ccc398ca0b0a42fc54994e77b2325e1d42"
+            ],
+            "subject": "界面：核对原始图标并收紧侧栏间距及协作标识"
+          },
+          {
+            "commit": "b1ec0c07133d59bed3dad32656d5f81bf057aa68",
+            "parents": [
+              "46a1bc86b9d8263d2c5499ebe76fd285b0afeadf"
+            ],
+            "subject": "界面：统一侧栏按钮悬停形状与新增加号"
+          },
+          {
+            "commit": "790c1d88c3a0a02226b073eac998fe4afdba6a10",
+            "parents": [
+              "b1ec0c07133d59bed3dad32656d5f81bf057aa68"
+            ],
+            "subject": "修复：生成前协商行情来源能力并约束无效复权选项"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "build/brand/odyssey-b-icons.json"
+          },
+          {
+            "status": "M",
+            "path": "build/brand/odyssey-b-search-20.svg"
+          },
+          {
+            "status": "M",
+            "path": "build/brand/odyssey-b-sidebar-18.svg"
+          },
+          {
+            "status": "M",
+            "path": "build/brand/odyssey-b-sidebar-20.svg"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-sidebar-overflow.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-b-icons-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-source-capability.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实旧包可切换自选并联动周K；隔离Chromium验证44px紧凑间距、圆角矩形悬停和统一加号。聚焦挂载验证备用源禁用复权及默认源允许。新共享包集成后再实机复核。"
+        },
+        "acceptanceCriteria": [
+          "协作条目仅等待加入显示虚线圆环",
+          "Figma原始SVG、紧凑44px中心距及32px圆角矩形悬停",
+          "自动规划不生成备用源与复权的无效组合，明确用户复权要求不得篡改"
+        ],
+        "risks": [
+          "原请求11张状态完成9张、失败2张；关键数据缺失仍不能算整体通过。",
+          "已有的4个来源类型合同测试及1个侧栏排序预期与当前main不一致，不修改已有行为来迁就旧断言。"
+        ],
+        "generatedAt": "2026-11-09T05:15:26.156020+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-b-icons-browser.test.js",
+        "test/research-board-sidebar-overflow.test.ts",
+        "-t",
+        "compact 44px|仅在等待加入"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-source-capability.test.js",
+        "-t",
+        "negotiates unsupported"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/financial-widget-client.test.js",
+        "test/financial-widget-link.test.js",
+        "-t",
+        "备用行情在选择器|Shift|底部节点连接后|未连接的行情左侧",
+        "--testTimeout",
+        "30000",
+        "--maxWorkers",
+        "1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
