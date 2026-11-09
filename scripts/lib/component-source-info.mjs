@@ -20,7 +20,7 @@ export function getComponentSourceInfo(node){
   let url='';try{const u=new URL(row.url||row.sourceUrl||(/^https?:\/\//i.test(label)?label:''));if(['http:','https:'].includes(u.protocol)&&!u.username&&!u.password)url=u.href}catch{}
   const explicit=typeof row.path==='string'?row.path:typeof row.filePath==='string'?row.filePath:''
   const fileLabel=label.replace(/^(?:(?:来源文件|参考文件|整理文档|来源文档|文档|文件|附件)\s*[:：]\s*)+/u,'')
-  const filename=fileLabel.match(/(?:^|[：:\s])([^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))(?=$|[\s·（(])/i)?.[1]?.trim()||(/^[^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?)$/i.test(fileLabel)?fileLabel:'')
+  const filename=fileLabel.match(/(?:^|[：:\s])([^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))(?=$|[\s·（(])/i)?.[1]?.trim()||fileLabel.match(/[（(]([^/\\\n（()）]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))[）)]/i)?.[1]?.trim()||(/^[^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?)$/i.test(fileLabel)?fileLabel:'')
   const path=explicit&&!explicit.includes('\0')?explicit:''
   const text=typeof row.text==='string'?row.text:''
   const key=JSON.stringify([label,url,path,text]);if(seen.has(key)||!label&&!url&&!path&&!text)return;seen.add(key)

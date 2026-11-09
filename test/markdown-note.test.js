@@ -1,3 +1,4 @@
+import {designPolicyIssue,normalizeGeneratedHostStyles} from '../packages/dsh-research-task-runtime/design-policy.js'
 import {requestedOperationsType} from '../packages/dsh-research-task-runtime/operations-template-contract.js'
 import {buildResearchTaskPrompt} from '../packages/dsh-research-task-runtime/index.js'
 import {workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js'
@@ -56,7 +57,7 @@ it('counts JSON escaping in bounded draft transport without truncating control c
 it('ordinary Chinese editable-note intent selects the compact note contract',()=>{
  expect(requestedOperationsType('创建一张可编辑Markdown笔记')).toBe('note');expect(requestedOperationsType('请总结这份研究报告')).toBeUndefined();
  const prompt=buildResearchTaskPrompt({parentSessionId:'synthetic',canvasNodeId:'note',kind:'container',prompt:workbenchPanelPrompt({title:'笔记工作台'},{title:'研究笔记',type:'note',size:'large',prompt:'保留提供的本地材料，可编辑Markdown笔记'})});
- expect(prompt).toContain('type:"note"');expect(prompt).toContain('完整Markdown原文');expect(prompt).toContain('v1.22.0');
+ expect(prompt).toContain('type:"note"');expect(prompt).toContain('完整Markdown原文');expect(prompt).toMatch(/ework-workbench-components v\d+\.\d+\.\d+/);
 })
 
 it('模型看到的工具支持note，完整原材料同次准备且不启动逐卡模型',async()=>{
@@ -69,4 +70,12 @@ it('模型看到的工具支持note，完整原材料同次准备且不启动逐
   const result=await tool.execute({requestId:'note-source-once',title:'研究笔记',panels:[{type:'note',size:'large',title:note.title,prompt:'可编辑Markdown笔记，完整保留用户原文',artifact:note}]},{agent:{session:{id:'synthetic-note'}}});
   expect(result.status).toBe('prepared');expect(result.templateIds).toEqual(['note']);expect(prepared[0].artifact).toEqual(note);expect(childCalls).toBe(0);
  }finally{await dispose();await rm(dir,{recursive:true,force:true})}
+})
+
+it('host note controls pass the same generation design policy without removing editable content',()=>{
+ const artifact=JSON.parse(acceptArtifactOutput(JSON.stringify(note)));
+ expect(designPolicyIssue(normalizeGeneratedHostStyles(artifact.html))).toBeNull();
+ expect(readTemplateModel(artifact).data).toEqual(note);
+ expect(artifact.html).toContain('data-note-color="#005096"');
+ expect(artifact.html).toContain('aria-label="深蓝">深蓝</button>');
 })

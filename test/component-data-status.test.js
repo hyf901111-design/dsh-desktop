@@ -1,3 +1,4 @@
+import {getComponentSourceInfo} from '../scripts/lib/component-source-info.mjs'
 import {describe,it,expect,vi} from 'vitest'
 import {createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentDataStatusDefinitions,createPersonalChartViewSink,readPersonalChartView,patchComponentDataStatus} from '../scripts/lib/component-data-status.mjs'
 import {workbenchContentRevision} from '../packages/dsh-research-task-runtime/workbench-refresh.js'
@@ -12,6 +13,13 @@ import {createRoot} from 'react-dom/client'
 const row=(nodeId,lastSuccess=1000,extra={})=>({nodeId,status:'success',lastSuccess,enabled:true,intervalMinutes:1,...extra})
 describe('component refresh status',()=>{
  const staticNode=data=>({id:'static',containerSpec:{type:'html',html:'<script id="sherlock-template-data" type="application/json">'+JSON.stringify({templateId:'market.table',version:'1',data})+'</script>'}})
+ it('recognizes explicit parenthesized source filenames without treating commentary as a path',()=>{
+  for(const label of ['附件T3（组织架构及负责人.docx） / 官网组织机构 / P25补充线索','附件 T3 (组织架构及负责人.docx) · 核查日期2026-11-05']){
+   const info=getComponentSourceInfo(staticNode({sources:[{label}]}));
+   expect(info.records[0]).toMatchObject({label,filename:'组织架构及负责人.docx',path:''});
+  }
+  expect(getComponentSourceInfo(staticNode({source:'官网机构概况（本轮未取得附件）'})).records[0].filename).toBe('');
+ })
  it('uses a concise provider and actual snapshot dates instead of a nonexistent refresh history',()=>{
   const name='Tushare etf_share_size + etf_basic + trade_cal（ETF运营汇总 overview）'
   const view=componentDataStatusView(null,null,staticNode({sources:[{name}],asOf:'20261106 · 静态快照，自动更新未绑定',range:'20261030 ~ 2026-11-06'}))

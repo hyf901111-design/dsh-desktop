@@ -9,8 +9,10 @@ it('真实表格分页测量可增高与缩短，末页收紧且不覆盖用户�
  const state=createWorkbenchGridState(null,'page-fit'),grid=createResearchGrid(),html='<body data-sherlock-market="table"></body>'
  state.enable(900)
  let snap=state.reconcile({files:[],artifacts:[{id:'table',kind:'generated-container',width:876,height:850,containerSpec:{type:'html',html}},{id:'next',kind:'pasted-text',width:876,height:240}],viewport:{y:0}})
- const canonical=state.document(snap),width=snap.artifacts[0].width
+ let canonical=state.document(snap);const width=snap.artifacts[0].width
  const fit=height=>{expect(state.contentHeight('table',{html,width,height,layoutFit:true})).toBe(true);snap=state.reconcile(snap);expect(snap.artifacts[0].height).toBeGreaterThanOrEqual(height);expect(snap.artifacts[0].height).toBeLessThan(height+grid.metrics(900).rowStep+1);expect(grid.overlap(...state.visible())).toBe(false);expect(state.document(snap)).toEqual(canonical)}
+ // Automatic layout changes must not be mistaken for a deliberate user resize.
+ state.set(state.get().map(c=>c.id==='table'?{...c,h:40}:c),{automatic:true});snap=state.reconcile(snap);canonical=state.document(snap)
  for(const height of [720,420,1620,300])fit(height)
  state.set(state.get().map(c=>c.id==='table'?{...c,h:30}:c));snap=state.reconcile(snap)
  const manual=snap.artifacts[0].height
@@ -23,7 +25,9 @@ it.each(['html','market'])('原生 %s 表格实际测量协议随分页增高缩
  const state=createWorkbenchGridState(null,'native-page-'+type);state.enable(900)
  const spec=type==='html'?{type,html:'<body data-sherlock-market="table"></body>'}:{type,variant:'table',rows:[['完整数据']]}
  let snap=state.reconcile({files:[],artifacts:[{id:'table',kind:'generated-container',width:876,height:400,containerSpec:spec},{id:'next',kind:'pasted-text',width:876,height:240}],viewport:{y:0}})
- const canonical=state.document(snap),grid=createResearchGrid()
+ const grid=createResearchGrid()
+ state.set(state.get().map(c=>c.id==='table'?{...c,h:40}:c),{automatic:true});snap=state.reconcile(snap)
+ const canonical=state.document(snap)
  for(const height of [720,1520,300,1620]){
   const message=fit(snap.artifacts[0],{height})
   expect(state.contentHeight('table',message)).toBe(true);snap=state.reconcile(snap)

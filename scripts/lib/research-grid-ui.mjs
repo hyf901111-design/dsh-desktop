@@ -719,7 +719,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
       const target=expected.get(c.id),previous=cells.find(old=>old.id===c.id)
       if(target&&previous&&c.w!==previous.w){target.width=Math.round(target.width+(c.w-previous.w)*m.step);complete=false}
     }
-    if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
+    if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken,true)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
   const task={refit,finish,ids:arranged.map(n=>n.id)};root.__eworkContentFit=task
