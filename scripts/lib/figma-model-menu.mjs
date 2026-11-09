@@ -36,5 +36,8 @@ export function patchFigmaModelMenu(source) {
     .replaceAll('triggerRef.current?.focus();', 'triggerRef.current?.focus({preventScroll:true});')
   if (!source.includes('let odysseyReactDOM = require("react-dom");')) source = source.replace('let react = require("react");', 'let react = require("react");\nlet odysseyReactDOM = require("react-dom");')
   const freshStart = source.indexOf('function ModelSelect('), freshEnd = source.indexOf('\n\t\t//#endregion',freshStart)
-  return source.slice(0,freshStart)+restored+source.slice(freshEnd)
+  source=source.slice(0,freshStart)+restored+source.slice(freshEnd)
+  const anchor='const directory = models.directoryFor(sessionId);',patched=`if(sessionId===undefined){const model=window[Symbol.for('sherlock:pending-conversation')]?.preferences.model;if(!model)throw Error('新对话模型尚未就绪');return {available:true,directory:model.store,load:()=>model.load().catch(()=>{}),select:selection=>model.select(selection).then(()=>true,()=>false)}}\n                        `+anchor;
+  if(!source.includes("新对话模型尚未就绪")){const start=source.indexOf('name: "conversation.input.model"'),at=source.indexOf(anchor,start);if(start<0||at<0)throw Error('Pending model injection anchor drift');source=source.slice(0,at)+patched+source.slice(at+anchor.length)}
+  return source
 }

@@ -134,3 +134,10 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-root[data-page-edited=true] .eb-menu[data-browser-panel=menu]{height:652px}
 
 .eb-popover[data-browser-panel=tabs] .eb-menu-item{line-height:19px}
+
+.eb-status [data-action=zoom]{min-width:48px;height:22px;padding:0 6px;font-variant-numeric:tabular-nums}
+.eb-status [data-action=zoom][aria-expanded=true]{background:var(--eb-field);color:var(--eb-ink)}
+.eb-popover[data-browser-panel=zoom]{top:auto;bottom:32px;right:12px;width:240px;max-width:calc(100% - 24px);padding:12px;gap:8px}
+.eb-popover[data-browser-panel=zoom] h2{font-size:13px;line-height:20px}
+.eb-popover[data-browser-panel=zoom] .eb-zoom{padding:0;height:36px}
+.eb-popover[data-browser-panel=zoom] small{font-size:11px;line-height:17px;color:var(--eb-muted)}

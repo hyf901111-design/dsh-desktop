@@ -1,4 +1,5 @@
-import {createPendingConversation,EWorkPendingInputBar,EWorkPendingConversation,EWorkBrowserReference,browserPromptReference} from './pending-conversation.mjs'
+import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
+import {createPendingConversation,EWorkPendingInputBar,EWorkBrowserReference,browserPromptReference} from './pending-conversation.mjs'
 /** Browser is an application; conversation context is optional and never created by entry. */
 export function installBrowserNative({sessions,getInput}) {
  let live=true
@@ -48,20 +49,45 @@ export function stripBrowserAppNative(source){const at=source.indexOf(START);if(
 export function patchBrowserAppNative(input){
  let source=stripBrowserAppNative(input);const pairs=[],replace=(a,b)=>{source=exact(source,a,b);pairs.push([a,b])}
  const root='function HomeGuideNativeOriginalConversationRoot('
- replace(root,`let eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkBrowserReference.toString()}\n${EWorkPendingConversation.toString()}\n`+root)
+ replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkBrowserReference.toString()}\n`+root)
  const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n`)
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
-ctx.effect(()=>{const pending=(${createPendingConversation.toString()})({makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),sessions,workspaces,getInput:id=>inputHub.shell(id),onCreated:(id,context)=>{chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},prepareContext:async()=>document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined,releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}});eworkPendingConversation=pending;return()=>{if(eworkPendingConversation===pending)eworkPendingConversation=null;pending.dispose()}},'Pending first-message conversation');
+ctx.effect(()=>{const preferences=(${createPendingComposerPreferences.toString()})({api:ctx.get('connection').api,applyModel:(id,selection)=>{const models=ctx.get('modelDirectories');if(!models)throw Error('模型目录尚未就绪，请重新选择模型。');return models.directoryFor(id).select(selection)},permissionOptions:view=>{const forms=require('@deepseek-ai/dsh-client-schema-form'),node=forms.nodeAtPath(forms.rehydrateSchema(view.schema),['defaultPreset']);return (node?.type==='union'?node.list:[node]).flatMap(choice=>choice?.type==='const'&&typeof choice.value==='string'?[{value:choice.value,name:choice.meta?.description||choice.value}]:[])},applyPermission:async(id,preset)=>{const result=await ctx.get('remote').commands.execute(id,'/permission '+preset);if(!result.ok||result.value?.result?.kind!=='success')throw Error(result.error?.message||result.value?.result?.message||'权限设置未能应用，输入已保留。')}});const pending=(${createPendingConversation.toString()})({makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),sessions,workspaces,getInput:id=>inputHub.shell(id),onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id)},prepareContext:async()=>document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined,releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}});preferences.model.load().catch(()=>{});pending.preferences=preferences;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;return()=>{if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}},'Pending first-message conversation');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
  const mode="const sidebarMode=(research || activeView==='notes')&&(!homeGuideResident||homeGuideSidebar);"
  replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);const off=eworkPendingConversation?.subscribe(callback);return()=>{document.removeEventListener('sherlock:workspace-surface-change',callback);off?.()}},()=>!subagentPanel&&(document.body.dataset.workspaceSurface==='browser'||!!sessionId&&eworkPendingConversation?.getSnapshot().rightSession===sessionId),()=>false);
-const sidebarMode=(research || activeView==='notes' || browserAppActive)&&(!homeGuideResident||homeGuideSidebar||browserAppActive);`)
+const pendingRight=sessionId===undefined&&!subagentPanel;
+const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);`)
  replace('if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar) return;', 'if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar&&!browserAppActive) return;')
  replace('[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]', '[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, homeGuideSidebar, browserAppActive, researchSidebar, sessionId]')
  replace('}, EWorkSharedInputBar);','}, EWorkPendingInputBar);')
- replace('composerPortal, researchConversationPortal,',`composerPortal, researchConversationPortal, !subagentPanel&&react_jsx_runtime.jsx(EWorkPendingConversation,{sessionId,useWorkspaces,renderSlot,t}),`)
+
+ // Feed the native global ConversationRoot/Panel/ComposerSurface with a draft,
+ // rather than constructing another conversation layout for the Browser.
+ replace('const inputState = useInput((s) => s);\n/* ework:notes-composer-slots:v1 */',`const nativeInputState = useInput((s) => s);
+ const pendingDraft=react.useSyncExternalStore(eworkPendingConversation?.shell.state.subscribe||(()=>()=>{}),eworkPendingConversation?.shell.state.getSnapshot||(()=>undefined));
+ const pendingChatState=react.useSyncExternalStore(eworkPendingConversation?.subscribe||(()=>()=>{}),eworkPendingConversation?.getSnapshot||(()=>undefined));
+ const inputState=sessionId===undefined&&!subagentPanel?pendingDraft:nativeInputState;\n/* ework:notes-composer-slots:v1 */`)
+ replace('sessionId === void 0 ? ABSENT_RESEARCH_SIDEBAR_STORE : researchSidebar.storeFor(sessionId)', 'researchSidebar.storeFor(sessionId)')
+ replace('if (sessionId === void 0) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {','if (subagentPanel) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {')
+ replace('if (sessionId !== void 0) researchSidebar.publish(sessionId, null);','researchSidebar.publish(sessionId, null);')
+ replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingRight?pendingChatState?.workspaceId:pendingWorkspaceId));')
+ replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && (activeView == null || activeView === "chat")')
+ replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || research && sessionId !== void 0 && conversationVacant;')
+ replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation:pendingRight,')
+ replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingRight && session === void 0 || inputState === void 0 ? void 0 : {')
+ replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(sessionId===undefined&&eworkPendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
+ replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined){eworkPendingConversation?.selectWorkspace(workspaceId);return;}')
+ {const start=source.indexOf('function ResearchConversationPanel('),end=source.indexOf('\n\t\t//#endregion',start),before=source.slice(start,end);replace(before,exact(before,'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);','const workspace = (0, react.useMemo)(() => sessionId===undefined?{...ABSENT_RESEARCH_WORKSPACE,getSnapshot:()=>ABSENT_PENDING_RESEARCH_SNAPSHOT,setAssistantActionsActive:()=>{},clearPendingMessageJump:()=>{}}:researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'))}
+ for(const name of ['conversation.input.left']){
+  const pattern='"'+name+'": {',start=source.indexOf(pattern),end=source.indexOf('}',start),before=source.slice(start,end);if(start<0||!before.includes('scope: "session"'))throw Error('Pending native slot scope missing '+name);replace(before,before.replace('scope: "session"','scope: "session-maybe"'))
+ }
+ // The model adapter keeps selection local before first send, using the same ModelSelect.
+ const modelScope='"conversation.input.model": {\n\t\t\t\t\t\tkind: "single",\n\t\t\t\t\t\tscope: "session"';
+ replace(modelScope,modelScope.replace('scope: "session"','scope: "session-maybe"'))
+
  const browserSendAnchor='/* ODYSSEY_WEB_REFERENCE_REFRESH */'
  replace(browserSendAnchor,`if((document.body.dataset.workspaceSurface==='browser'||eworkPreparedBrowserContexts.has(session.sessionId)) && !session.getSnapshot?.()?.subagent && this.rootCtx.get('sessions')?.list.getSnapshot().current===session.sessionId){
  const prepared=eworkPreparedBrowserContexts.has(session.sessionId),browserShell=this.shells.get(session.sessionId),revision=browserShell?.snapshot.draftRev;
@@ -72,6 +98,8 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive)&&(!home
  }catch(error){browserShell?.notify('error',error.message||'当前网页正文暂不可用，输入已保留。');return}finally{browserShell?.setResearchContextPreparing?.(false)}
  }
  `+browserSendAnchor)
+ replace('const researchActive = this.researchActiveSessions.has(session.sessionId);',"const researchActive = this.researchActiveSessions.has(session.sessionId) && document.body.dataset.workspaceSurface!=='browser';")
+ replace("activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation", "pendingRight ? researchConversationView : activeView === 'notes' && document.body.dataset.workspaceSurface!=='browser' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation")
  const project='function projectUserText(text, openFile) {'
  replace(project,project+`\nconst browserParts=(${browserUserTextSegments.toString()})(text);if(browserParts)return react_jsx_runtime.jsx(react.Fragment,{children:browserParts.map((part,index)=>part.url?react_jsx_runtime.jsx('a',{href:part.url,title:part.url,className:MessageItem_module_css_default.refChip,'data-ref-chip':'browser-source',children:part.title||new URL(part.url).hostname},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});`)
  return source+START+JSON.stringify(pairs)+END
