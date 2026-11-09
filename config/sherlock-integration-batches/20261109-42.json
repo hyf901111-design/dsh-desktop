@@ -62,6 +62,52 @@
           "网页回退仅保证视区内完整可达，跨窗口呈现需Electron系统菜单"
         ],
         "generatedAt": "2026-11-09T08:30:35.347126+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7f36eb5d791f55b03bc39095531283f54a04f094",
+        "verificationCommit": "7f36eb5d791f55b03bc39095531283f54a04f094",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-native-menu.test.js",
+              "test/native-component-menu.test.ts",
+              "test/native-file-menu.test.ts",
+              "test/component-pptx-mode.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-native-menu.test.js test/native-component-menu.test.ts test/native-file-menu.test.ts test/component-pptx-mode.test.ts",
+            "verifiedCommit": "7f36eb5d791f55b03bc39095531283f54a04f094",
+            "completedAt": "2026-11-09T08:30:40.432Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7f36eb5d791f55b03bc39095531283f54a04f094",
+            "completedAt": "2026-11-09T08:30:40.432Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "7f36eb5d791f55b03bc39095531283f54a04f094",
+            "completedAt": "2026-11-09T08:30:40.432Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T08:30:40.432Z"
       }
     }
   ],
