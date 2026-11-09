@@ -237,9 +237,11 @@ export async function workbenchNativeMenuIcon(button){
     image.onerror=()=>{view.clearTimeout(timer);resolve(undefined)};image.src=source
   })
 }
-export function mountWorkbenchNativeMenu(root,submenus,onClose){
+export function mountWorkbenchNativeMenu(root,submenus,onClose,anchor){
   const bridge=window.dshDesktop?.showComponentContextMenu;if(typeof bridge!=='function'||!root)return()=>{}
   let active=true,pending=false;const menuId=window.crypto.randomUUID(),handlers=new Map(),previous=root.style.visibility
+  const key=event=>{if(!active||event.isComposing||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopImmediatePropagation();void window.dshDesktop?.componentContextMenuKey?.(menuId,event.key)}
+  root.ownerDocument.addEventListener('keydown',key,true)
   root.style.visibility='hidden';root.setAttribute('aria-hidden','true')
   const run=async()=>{
     const items=await Promise.all([...root.children].flatMap((row,index)=>{
@@ -256,14 +258,14 @@ export function mountWorkbenchNativeMenu(root,submenus,onClose){
     if(!active||!root.isConnected)return
     pending=true
     try{
-      const id=await bridge({menuId,items});pending=false
+      const box=anchor||root.getBoundingClientRect();const id=await bridge({menuId,items,dark:root.ownerDocument.body.hasAttribute('data-ds-dark-theme'),anchor:{x:box.x,y:box.y,width:box.width,height:box.height}});pending=false
       if(!active||!root.isConnected)return
       root.style.visibility=previous;root.removeAttribute('aria-hidden')
       const action=handlers.get(id);if(action)await action();else onClose()
     }catch{if(active&&root.isConnected){root.style.visibility=previous;root.removeAttribute('aria-hidden')}}
   }
   void run()
-  return()=>{active=false;if(pending)void window.dshDesktop?.closeComponentContextMenu?.(menuId);root.style.visibility=previous;root.removeAttribute('aria-hidden')}
+  return()=>{active=false;root.ownerDocument.removeEventListener('keydown',key,true);if(pending)void window.dshDesktop?.closeComponentContextMenu?.(menuId);root.style.visibility=previous;root.removeAttribute('aria-hidden')}
 }
 export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy,onEditSelected,onConfigureIndices}) {
   const [detail,setDetail]=react.useState(null),[exporting,setExporting]=react.useState(false),[exportError,setExportError]=react.useState(''),[saving,setSaving]=react.useState(false),[saveError,setSaveError]=react.useState(''),ref=react.useRef(null),subRef=react.useRef(null),mindRef=react.useRef(null),settingsRef=react.useRef(null),exportRef=react.useRef(null),leaveTimer=react.useRef(null)
@@ -294,7 +296,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     export:['svg','png','jpg'].map(format=>({label:format.toUpperCase(),run:()=>exportAs(format)})),
     mind:RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>({label:option.label,disabled:readOnly,run:()=>choose(()=>onDerived('mind-map',option.value))})),
     settings:(settings||[]).map(action=>({label:action.label,disabled:readOnly&&action.writes||action.disabled,run:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()})}))
-  },onClose),[target.node.id,target.sessionId,readOnly,previewMode])
+  },onClose,(()=>{const box=card()?.querySelector('[data-workbench-more]')?.getBoundingClientRect();return box?{x:box.right-206,y:box.top,width:206,height:box.height}:undefined})()),[target.node.id,target.sessionId,readOnly,previewMode])
   const [menuPlacement,setMenuPlacement]=react.useState(null)
   react.useLayoutEffect(()=>{
     const menu=ref.current;if(!menu)return

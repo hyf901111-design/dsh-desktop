@@ -1,6 +1,6 @@
 import { BrowserWindow, screen } from 'electron'
 import { randomUUID } from 'node:crypto'
-import type { NoteMenuState, NotesNativeMenu } from '../../shared/notes-menu'
+import type { NoteMenuState, NoteMenuEvent, NoteMenuItem, NotesNativeMenu } from '../../shared/notes-menu'
 import {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../../shared/note-menu-presentation'
 export {validateNoteMenu,noteMenuPresentation,noteMenuDocumentHtml} from '../../shared/note-menu-presentation'
 import {noteMenuBounds,noteSubmenuBounds,noteMenuWorkArea} from '../../shared/note-menu-geometry'
@@ -17,9 +17,12 @@ export class NoteNativeMenu implements NotesNativeMenu {
   private readonly shadowInset = this.nativeMaterial ? 0 : MENU_SHADOW_INSET
   private current?: OpenMenu
   private retired = new Set<string>()
-  constructor(private options: { getWindow(): BrowserWindow | undefined; owner(): string; canRead(sessionId: string): boolean }) {}
+  constructor(private options: { getWindow(): BrowserWindow | undefined; owner(): string; canRead(sessionId: string): boolean;
+    title?:string;displayBounds?:boolean;documentHtml?:string;presentation?:typeof noteMenuPresentation;
+    emit?:(event:NoteMenuEvent)=>void;selectable?:(item:NoteMenuItem)=>boolean
+  }) {}
   private createPopup(parent: BrowserWindow): BrowserWindow {
-    return new BrowserWindow({ parent, title:'笔记斜杠菜单', width:312, height:98, show:false, frame:false, transparent:true,
+    return new BrowserWindow({ parent, title:this.options.title??'笔记斜杠菜单', width:312, height:98, show:false, frame:false, transparent:true,
       ...(this.nativeMaterial ? {type:'panel' as const,vibrancy:'menu' as const,visualEffectState:'active' as const,backgroundColor:'#00000000',roundedCorners:true} : {}),
       focusable:false, acceptFirstMouse:true, resizable:false, movable:false, minimizable:false, maximizable:false, fullscreenable:false,
       skipTaskbar:true, hasShadow:this.nativeMaterial, webPreferences:{partition:'notes-menu',nodeIntegration:false,contextIsolation:true,sandbox:true,devTools:false} })
@@ -41,7 +44,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
       if (this.current !== state) return
       this.navigate(state,url)
     })
-    return popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(noteMenuDocumentHtml))
+    return popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(this.options.documentHtml??noteMenuDocumentHtml))
   }
   private navigate(state:OpenMenu,url:string):void {
       try {
@@ -49,11 +52,15 @@ export class NoteNativeMenu implements NotesNativeMenu {
         if (link.protocol !== 'ework-note-menu:' || link.hostname !== state.ticket || revision !== state.input.revision) return
         if (this.options.owner() !== state.owner || !this.options.canRead(state.input.sessionId)) { this.close(); return }
         const parentItem=state.input.items.find(item=>item.id===parentId),item=parentId?parentItem?.children?.find(item=>item.id===id):state.input.items.find(item=>item.id===id)
-        if(!item||parentId&&state.input.submenu?.parentId!==parentId||!['open','back','select'].includes(action!))return
+        if(!item||this.options.selectable?.(item)===false||parentId&&state.input.submenu?.parentId!==parentId||!['open','back','select'].includes(action!))return
         if(action==='open'||action==='back'){if(!item.children?.length||parentId)return}else{if(item.children)return;this.close()}
         state.parent.focus()
-        state.parent.webContents.send('notes:menu-event',{sessionId:state.input.sessionId,owner:state.owner,menuId:state.input.menuId,revision,action,itemId:id,...(parentId?{parentId}:{})})
+        this.emit(state,{revision,action:action as NoteMenuEvent['action'],itemId:id,...(parentId?{parentId}:{})})
       } catch { /* Invalid navigation never leaves the isolated menu. */ }
+  }
+  private emit(state:OpenMenu,event:Omit<NoteMenuEvent,'sessionId'|'owner'|'menuId'>):void {
+    const value={sessionId:state.input.sessionId,owner:state.owner,menuId:state.input.menuId,...event}
+    if(this.options.emit)this.options.emit(value);else state.parent.webContents.send('notes:menu-event',value)
   }
   private trackPointer(state:OpenMenu):void {
     state.pointerSignature=undefined;state.pointerScroll=new Map();state.pointerScrollable=false
@@ -129,12 +136,13 @@ export class NoteNativeMenu implements NotesNativeMenu {
         const input = state.input, previous=state.painted, sameRows=(a:NoteMenuState['items']|undefined,b:NoteMenuState['items'])=>!!a&&a.map(item=>item.id).join(',')===b.map(item=>item.id).join(','), content = state.parent.getContentBounds(), zoom = state.parent.webContents.getZoomFactor()
         const anchor = { x:content.x + input.anchor.x * zoom, y:content.y + input.anchor.y * zoom, width:input.anchor.width * zoom, height:input.anchor.height * zoom }
         const display = screen.getDisplayNearestPoint({x:Math.round(anchor.x),y:Math.round(anchor.y)}).workArea
-        const work = noteMenuWorkArea(display,content)
+        const work = this.options.displayBounds?display:noteMenuWorkArea(display,content)
         if(work.width<=16||work.height<=16)throw Error('No visible notes menu viewport')
         const limits={height:(work.height-16)/zoom-this.shadowInset*2,width:(work.width-16)/zoom-this.shadowInset*2,shadowInset:this.shadowInset}
-        const desired=noteMenuPresentation(input,state.ticket,limits)
+        const present=this.options.presentation??noteMenuPresentation
+        const desired=present(input,state.ticket,limits)
         const bounds=noteMenuBounds(anchor,work,desired.root.height,zoom,desired.root.width,this.shadowInset)
-        const presentation=noteMenuPresentation(input,state.ticket,{...limits,rootHeight:bounds.height/zoom-this.shadowInset*2})
+        const presentation=present(input,state.ticket,{...limits,rootHeight:bounds.height/zoom-this.shadowInset*2})
         state.popup.setBounds(bounds)
         state.popup.webContents.setZoomFactor(zoom)
         const parentIndex=input.items.findIndex(item=>item.id===input.submenu?.parentId)
@@ -161,7 +169,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
   }
   private dismiss(state: OpenMenu): void {
     this.close()
-    if (!state.parent.isDestroyed() && this.options.owner() === state.owner) state.parent.webContents.send('notes:menu-event',{sessionId:state.input.sessionId,owner:state.owner,menuId:state.input.menuId,revision:state.input.revision,action:'cancel'})
+    if (!state.parent.isDestroyed() && this.options.owner() === state.owner) this.emit(state,{revision:state.input.revision,action:'cancel'})
   }
   close(menuId?: string): void {
     const state = this.current
