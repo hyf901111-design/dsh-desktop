@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-43",
+  "branch": "codex/integration/20261109-43",
+  "baseMainCommit": "55906bbc1b689f5e6c718240161a4f78d1611e5f",
+  "expectedMainCommit": "55906bbc1b689f5e6c718240161a4f78d1611e5f",
+  "createdAt": "2026-11-09T08:54:14.727Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复样式并锚定组件独立菜单浮层",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "55906bbc1b689f5e6c718240161a4f78d1611e5f",
+        "tipCommit": "5914a1387ecdf6a8afaea745b279ee82eadc68d2",
+        "commits": [
+          {
+            "commit": "5914a1387ecdf6a8afaea745b279ee82eadc68d2",
+            "parents": [
+              "55906bbc1b689f5e6c718240161a4f78d1611e5f"
+            ],
+            "subject": "修复：恢复组件菜单样式并使用按钮锚定的独立浮层"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/component-popup-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/context-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/component-menu-presentation.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-menu-presentation.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/component-popup-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "上一包用户实机拒绝系统Menu样式与鼠标默认位置。改用既有独立非激活面板传输，纯呈现/窗口边界/键盘及已有笔记菜单69项聚焦验证通过，类型检查通过；必须再做新包原生视觉验收。"
+        },
+        "acceptanceCriteria": [
+          "保留206宽度、16像素图标和33像素行高的原菜单样式",
+          "使用按钮矩形与宿主窗口坐标定位独立浮层，允许跨出窗口但不超出屏幕",
+          "保持默认笔记菜单边界及组件二级菜单、键盘、禁用项与取消行为"
+        ],
+        "risks": [
+          "旧系统菜单包已确认存在样式和位置回归；新包未验证前不得宣称该回归已验收"
+        ],
+        "generatedAt": "2026-11-09T08:54:11.466801+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-menu-presentation.test.ts",
+        "test/component-popup-menu.test.ts",
+        "test/notes-native-menu.test.ts",
+        "test/native-component-menu.test.ts",
+        "test/workbench-native-menu.test.js",
+        "test/component-pptx-mode.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
