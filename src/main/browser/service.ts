@@ -3,12 +3,13 @@ import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,copyFileSync}
 import {join,basename} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {load} from 'cheerio'
+import {createBrowserFindOverlay} from './find-overlay'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
 import {BrowserModel,browserAddress,browserDownloadAddress,availableDownloadPath} from './model'
 import type {BrowserSnapshot,BrowserDownload,BrowserTab} from '../../shared/browser-app'
 
 const channel='browser-app:request',eventChannel='browser-app:state'
-type Options={ipcMain:IpcMain;getMainWindow():BrowserWindow|undefined;root:string;materialDirectory(sessionId:string):Promise<string>}
+type Options={ipcMain:IpcMain;getMainWindow():BrowserWindow|undefined;root:string;materialDirectory(sessionId:string):Promise<string>;findPreload?:string}
 type Live={view:WebContentsView;epoch:number;findRequestId?:number;timeout?:ReturnType<typeof setTimeout>}
 export function registerBrowserApp(options:Options){
  const path=join(options.root,'browser-state.bin')
@@ -20,11 +21,13 @@ export function registerBrowserApp(options:Options){
  const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedWindow=win;win.once('closed',detachWindow)}return win}
  const permissionKey=(tab:BrowserTab,origin:string)=>(tab.private?'private:':'normal:')+origin
  const activePermissions=()=>{try{const tab=model.tab(model.activeId);return permissions.get(permissionKey(tab,new URL(tab.url).origin))??{}}catch{return {}}}
- const snapshot=():BrowserSnapshot=>({sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
+ const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
+ const finder=nativeFind?createBrowserFindOverlay(findPreload,window,value=>{const tab=current();if(value.kind==='close'){finder?.hide();live.get(tab.id)?.view.webContents.focus();window().webContents.send('browser-app:shortcut',{key:'Escape'});void request('find',{id:tab.id,text:''}).catch(()=>{})}else if(value.kind==='shortcut'){window().webContents.send('browser-app:shortcut',value)}else void request('find',{id:tab.id,text:value.text,next:value.kind==='next',forward:value.forward}).catch(()=>{})}):undefined
+ const snapshot=():BrowserSnapshot=>({nativeFind,sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
  const persist=()=>{
   try{if(!safeStorage.isEncryptionAvailable()){storageWarning='系统加密不可用，本次浏览记录仅保留在内存。';return}mkdirSync(options.root,{recursive:true});const temp=path+'.tmp';writeFileSync(temp,safeStorage.encryptString(JSON.stringify({...model.serialize(),downloads:downloads.filter(d=>!d.private).map(d=>({...d,state:['progressing','paused'].includes(d.state)?'interrupted':d.state}))})),{mode:0o600});renameSync(temp,path)}catch{storageWarning='浏览状态暂时无法保存，请检查磁盘空间。'}
  }
- const publish=()=>{if(disposed)return;const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
+ const publish=()=>{if(disposed)return;finder?.update(current());const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
  const sync=()=>{for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error;if(show&&rect)e.view.setBounds(rect);e.view.setVisible(show&&!!rect)}}
@@ -84,7 +87,7 @@ export function registerBrowserApp(options:Options){
   if(method==='layout'){
    visible=false;const r=input.bounds,win=window(),z=win.webContents.getZoomFactor(),[w,h]=win.getContentSize()
    if(input.visible===true&&r&&['x','y','width','height'].every(k=>Number.isFinite(r[k]))){const b={x:Math.round(r.x*z),y:Math.round(r.y*z),width:Math.round(r.width*z),height:Math.round(r.height*z)};if(b.x>=0&&b.y>=0&&b.width>0&&b.height>0&&b.x+b.width<=(w??0)&&b.y+b.height<=(h??0)){rect=b;visible=true}}
-   sync();return true
+   sync();const f=input.find;let findBounds:typeof rect;if(visible&&rect&&f?.bounds&&['x','y','width','height'].every(k=>Number.isFinite(f.bounds[k]))){const b={x:Math.round(f.bounds.x*z),y:Math.round(f.bounds.y*z),width:Math.round(f.bounds.width*z),height:Math.round(f.bounds.height*z)};if(b.x>=rect.x&&b.y>=0&&b.width>0&&b.height>0&&b.width<=468*z+2&&b.height<=60*z+2&&b.x+b.width<=rect.x+rect.width&&b.y+b.height<=rect.y+rect.height)findBounds=b}finder?.layout(findBounds,{...f,zoom:z},current());return true
   }
   if(method==='new'){const tab=model.newTab(input.private===true);if(input.url)void navigate(tab,browserAddress(input.url,model.settings.engine));sync();publish();return snapshot()}
   if(method==='select'){model.activeId=model.tab(input.id).id;const tab=current();if(tab.url&&!live.has(tab.id))void navigate(tab,tab.url);sync();publish();return snapshot()}
@@ -176,9 +179,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{visible=false;rect=undefined;for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{finder?.hide();visible=false;rect=undefined;for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();finder?.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  return {request,snapshot,dispose}
 }

@@ -35,3 +35,13 @@ it('keeps actual permission grants selected when a background native update rere
  receive({...state,tabs:[{...state.tabs[0],title:'New title'}]});expect(view.root.querySelector<HTMLSelectElement>('[data-permission=geolocation]')!.value).toBe('allow')
  view.dispose();await w.happyDOM.abort()
 })
+it('keeps native webpage interaction enabled and updates finder ownership and repeated focus requests',async()=>{
+ const w=new Window(),state={...initial(),nativeFind:true};state.tabs[0]!.url='https://example.com/';state.tabs.push({...state.tabs[0]!,id:'two'})
+ const center=w.document.createElement('main');center.className='pI_x6G_centerCol';center.getBoundingClientRect=()=>new w.DOMRect(306,10,1194,990);w.document.body.append(center)
+ let receive:any;const request=vi.fn(async()=>structuredClone(state)),view=new BrowserAppView(w.document as any,{request,subscribe:f=>{receive=f;return()=>{}},source:vi.fn()},{register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})} as any)
+ w.document.body.append(view.root as any);await view.open('A');await (view as any).action('find');(view as any).layout()
+ const layouts=()=>request.mock.calls.filter((call:any)=>call[0]==='layout').map((call:any)=>call[1]);expect(layouts().at(-1)).toMatchObject({visible:true,find:{tabId:'one',focusToken:1}});expect(view.root.querySelector('[aria-label="页内查找"]')).toBeNull()
+ receive({...state,activeId:'two'});(view as any).layout();expect(layouts().at(-1)).toMatchObject({find:{tabId:'two',focusToken:1}})
+ await (view as any).action('find');(view as any).layout();expect(layouts().at(-1)).toMatchObject({find:{tabId:'two',focusToken:2}})
+ view.dispose();await w.happyDOM.abort()
+})
