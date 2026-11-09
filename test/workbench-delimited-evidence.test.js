@@ -44,3 +44,11 @@ it('repairs a source-corrupted full table inside the automatic generation flow',
   expect(attempts[1]).toContain('原文件不一致')
  }finally{await runtime.dispose()}
 })
+it('accepts an explicitly filtered subset while still checking every delivered field against its source row',()=>{
+ const docs=[extractDelimitedEvidence('编号,负责人,风险说明\nA01,甲,按计划推进\nA02,乙,等待依赖\nA03,丙,长说明\n','tasks.csv',10000)]
+ const table=rows=>acceptArtifactOutput(JSON.stringify({version:1,type:'table',title:'风险关注',columns:['编号','负责人','风险说明'],rows}))
+ const request='从原表中筛选风险说明不是按计划推进的任务，逐条列出编号和完整风险说明；支持按负责人筛选。'
+ expect(delimitedTableIntegrityIssue(table([['A02','乙','等待依赖'],['A03','丙','长说明']]),docs,request)).toBeUndefined()
+ expect(delimitedTableIntegrityIssue(table([['A02','甲','等待依赖']]),docs,request)).toContain('不一致')
+ expect(delimitedTableIntegrityIssue(table([['A02','乙','等待依赖']]),docs,'展示全部3条原始记录')).toContain('来源 3 条')
+})

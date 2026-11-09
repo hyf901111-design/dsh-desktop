@@ -189,6 +189,15 @@ function normalizeTemplateAliases(value) {
   if(rendered&&rows.length>0&&rows.length<=100&&rows.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&Object.keys(row).length>0&&Object.keys(row).every(key=>['label','name','title','url','text'].includes(key))&&Object.values(row).every(text=>typeof text==='string'&&text.trim()&&text.length<=8000)))
    value={...retainTemplateModel(rendered,note),sources:rows};
  }
+ // A single source and a source collection share the same inert provenance
+ // contract. Normalize only this explicit alias; unknown fields still fail.
+ if(value?.type==='html'&&value.source!==undefined&&value.sources===undefined&&
+  value.source&&typeof value.source==='object'&&!Array.isArray(value.source)&&
+  Object.keys(value).every(key=>['version','type','title','html','asOf','note','source'].includes(key))&&
+  Object.keys(value.source).length>0&&Object.keys(value.source).every(key=>['label','name','title','url','text'].includes(key))&&
+  Object.values(value.source).every(text=>typeof text==='string'&&text.trim()&&text.length<=8000)){
+  const {source,...rest}=value;value={...rest,sources:[source]};
+ }
  // HTML's envelope is deliberately small. Preserve common source metadata in
  // inert, host-readable markup instead of rejecting an otherwise complete
  // visualization and asking the model to rewrite all of its code.
