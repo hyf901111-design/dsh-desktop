@@ -1,3 +1,4 @@
+import {NOTE_TOOLBAR_GEOMETRY_CSS} from './note-toolbar-style.js'
 import {installWorkbenchStructureReading} from './workbench-structure-reading.js'
 import { installWorkbenchChartMotion } from './workbench-chart-motion.js'
 import { installWorkbenchTableColumns } from './workbench-table-columns.js'
@@ -209,7 +210,7 @@ body[data-research-kind="rss"] .rss-search input{height:34px!important;min-heigh
 body[data-research-kind="rss"] .rss-actions button{height:30px!important;min-height:30px!important;padding:5px 10px!important;border-radius:4px!important;font-size:12px!important;line-height:18px!important}
 :root:is([data-workbench-style="dark"],[data-workbench-style="openterminal"],[data-sherlock-theme="dark"]:not([data-workbench-style])) body[data-research-kind="rss"] img{filter:brightness(0) invert(1)!important}
 /* Fixed note controls keep source geometry and also apply to retained artifacts. */
-body[data-research-kind="note"] .note-toolbar button{height:24px!important;min-height:24px!important;padding:3px!important;border-radius:3px!important;background-color:transparent!important}
+${NOTE_TOOLBAR_GEOMETRY_CSS}
 body[data-research-kind="note"] .note-toolbar button:is(:hover,[aria-pressed="true"]){background-color:var(--sherlock-row-selected)!important}
 body[data-research-kind="note"] .note-surface textarea{border:0!important;padding:4px!important;font-size:12px!important;line-height:20px!important;background-color:var(--sherlock-bg)!important;color:var(--sherlock-text)!important}
 /* Note assets retain their source paths; adapt contrast in the host layer for saved notes too. */

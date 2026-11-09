@@ -62,9 +62,9 @@ window.startRefresh=(sessionId,rows)=>{refreshMonitor?.dispose();refreshMonitor=
 window.refreshRows=(sessionId,rows)=>refreshPush?.({sessionId,rows});
 window.nativeRefresh=(sessionId,nodeId,row)=>row?componentDataStatusStore.publishNative(sessionId,nodeId,row):componentDataStatusStore.clearNative(sessionId,nodeId);
 window.leaveRefresh=()=>{refreshMonitor?.dispose();refreshMonitor=null};
-window.show(['completed','completed','running','failed']);`},bundle:true,platform:'browser',format:'iife',write:false})
+window.show(['completed','completed','running','failed']);`},bundle:true,platform:'browser',format:'iife',write:false,loader:{'.css':'empty'}})
  script=output.outputFiles[0].text
- const {chromium}=await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
+ const pw=await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);const {chromium}=pw.default??pw
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
  await mkdir(evidence,{recursive:true})
 },30000)
@@ -86,6 +86,7 @@ it('renders mixed progress in narrow light/dark cards, retries only the failed n
   expect(await progress.getAttribute('aria-valuemax')).toBe('4')
   expect((await fill.boundingBox()).width).toBeCloseTo((await progress.boundingBox()).width/2)
   expect(await texture()).toBe('ework-workbench-stripes')
+  const runningTrackPaint=await progress.evaluate(el=>getComputedStyle(el).backgroundColor)
   await retry.waitFor()
   const title=await page.getByRole('status').boundingBox(),button=await retry.boundingBox()
   expect(button.x).toBeGreaterThanOrEqual(title.x+title.width)
@@ -102,6 +103,8 @@ it('renders mixed progress in narrow light/dark cards, retries only the failed n
   expect(await page.locator('svg').count()).toBe(0)
   await page.screenshot({path:evidence+'/completed-light.png'})
   await page.evaluate(()=>{document.documentElement.style.cssText='--dsw-alias-border-l2:#444;--dsw-alias-bg-l2:#242424;--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#aaa';document.body.style.background='#151515';window.show(['completed','completed','failed','interrupted'],true)})
+  await page.locator('[data-research-workbench-progress=partial]').waitFor()
+  expect(await page.getByRole('progressbar').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(runningTrackPaint)
   await page.getByRole('button',{name:'Retry unsuccessful components'}).waitFor()
   expect(await page.getByRole('progressbar',{name:'Component generation progress'}).getAttribute('aria-valuenow')).toBe('2')
   expect(await texture()).toBe('none')
