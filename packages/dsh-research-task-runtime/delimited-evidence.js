@@ -32,7 +32,6 @@ export function extractDelimitedEvidence(input,name,budget=140_000) {
 // Only complete record projections are compared with full file rows. Aggregate
 // views and explicitly selected subsets have different, narrower obligations.
 export function delimitedTableIntegrityIssue(output,documents,request='') {
- if(!/完整|全部|逐条|每条|不漏|都保留/u.test(request))return
  const candidates=extractArtifactObjects(output)
  if(candidates.length!==1)return
  const data=retainedTableData(candidates[0])??readTemplateModel(candidates[0])?.data??candidates[0]
@@ -59,6 +58,10 @@ export function delimitedTableIntegrityIssue(output,documents,request='') {
     if(actual!==expected&&!(expected===''&&['','—'].includes(actual)))return `CSV 原记录 ${id} 的“${header[mapping[i]]}”与原文件不一致。保留该行原始字段及完整长正文，不错配负责人、重算编号或压缩为摘要。`
    }
   }
-  if(seen.size!==original.length)return `CSV 交付记录不齐：来源 ${original.length} 条，实际 ${seen.size} 条。使用全部原始记录，不能只按标题或声明条数标记完成。`
+  // Complete belongs to the selected scope: a complete risk subset is not
+  // the full source file. Only explicit whole-record obligations demand all
+  // source keys; field identity/correspondence above applies to every subset.
+  const whole=/(?:全部|所有|全量)(?:的)?(?:原始)?(?:记录|数据行|明细)|完整记录明细|每条(?:原始)?记录.{0,16}(?:保留|字段)/u.test(request)||new RegExp('(?:全部|所有|全量)\\s*'+original.length+'\\s*条','u').test(request)
+  if(whole&&seen.size!==original.length)return `CSV 交付记录不齐：来源 ${original.length} 条，实际 ${seen.size} 条。使用全部原始记录，不能只按标题或声明条数标记完成。`
  }
 }

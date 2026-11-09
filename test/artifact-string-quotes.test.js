@@ -49,3 +49,16 @@ it('recovers a single fenced artifact with quoted missing-value punctuation with
  expect(JSON.parse(restore('```json\n'+broken(graph)+'\n```'))).toEqual(graph)
  expect(restore('```json\n'+broken(graph)+'\n```\n另外一个对象')).toBeUndefined()
 })
+
+it('preserves a singular HTML source object without rejecting complete content or admitting extra envelope fields',()=>{
+ const html='<section><h2>交付概览</h2><p>任务 72，预算 2382 万元。</p></section>'
+ const input={version:1,type:'html',title:'交付概览',html,source:{title:'任务清单.csv [T1]',text:'由原始记录计算；未掌握不代表空缺。',url:'https://example.org/original'}}
+ const accepted=output.acceptArtifactOutput(JSON.stringify(input))
+ expect(accepted).toBeDefined()
+ const rendered=JSON.parse(accepted)
+ expect(rendered.html).toContain(html)
+ expect(rendered.html).toContain('data-component-source-info')
+ expect(rendered.html).toContain(input.source.text)
+ expect(rendered.html).toContain(input.source.url)
+ for(const patch of [{unexpected:true},{source:{title:'来源',execute:'alert(1)'}},{source:input.source,sources:[input.source]}])expect(output.acceptArtifactOutput(JSON.stringify({...input,...patch}))).toBeUndefined()
+})
