@@ -2070,6 +2070,35 @@ describe('Research task Subagent adapter', () => {
     }finally{await handle.dispose()}
   });
 
+  it('exhausts only directory discovery at eight metadata calls while preserving bounded business reads',async()=>{
+    const fixture=containerAdapterFixture(),guards=[];
+    fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>()=>{}),guard:vi.fn(fn=>{guards.push(fn);return()=>{}})}};
+    fixture.ctx.tools={schemas:()=>[{name:'ework__definition',description:'读取接口目录与参数定义，不是业务数据'},{name:'ework__business',description:'实际业务记录'},{name:'public_data_query'},{name:'financial_query'}]};
+    const handle=await fixture.start('工作台：真实研究\n本面板：完整记录\n查询业务数据。\n仅生成本面板，优先使用 table 类型。');let seq=0;
+    const call=(name,id,text)=>{
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'tool/call',data:{name,callId:id,arguments:'{}'}});
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',content:[{type:'text',text}]}]}}});
+    };
+    try{
+      for(let i=0;i<8;i++)call('ework__definition','definition-'+i,'接口参数与字段定义');
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
+      const issue=(name,args)=>guards.map(guard=>guard({agent:fixture.ctx.child,name,arguments:args})).find(Boolean);
+      expect(issue('ework__definition',{})).toContain('目录发现预算');
+      expect(issue('public_data_query',{operation:'catalog'})).toContain('目录发现预算');
+      expect(issue('financial_query',{intent:'resolve'})).toContain('目录发现预算');
+      expect(issue('ework__business',{})).toBeUndefined();
+      expect(issue('public_data_query',{operation:'query'})).toBeUndefined();
+      expect(issue('financial_query',{intent:'quotes'})).toBeUndefined();
+      for(let i=0;i<7;i++)call('ework__business','business-'+i,'{"records":[{"value":1}]}');
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
+      call('ework__business','last-business','{"records":[{"value":2}]}');
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledOnce();
+    }finally{await handle.dispose()}
+  });
+
   it.each(['business','deadline'])('allows a bounded first business read after a valid definition arrives at the retrieval deadline: %s',async boundary=>{
     const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
     const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers();
