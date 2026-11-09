@@ -60,6 +60,53 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-09T09:16:58.165831+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+        "verificationCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-menu-presentation.test.ts",
+              "test/component-popup-menu.test.ts",
+              "test/notes-native-menu.test.ts",
+              "test/native-component-menu.test.ts",
+              "test/workbench-native-menu.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-menu-presentation.test.ts test/component-popup-menu.test.ts test/notes-native-menu.test.ts test/native-component-menu.test.ts test/workbench-native-menu.test.js",
+            "verifiedCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+            "completedAt": "2026-11-09T09:17:01.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+            "completedAt": "2026-11-09T09:17:01.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+            "completedAt": "2026-11-09T09:17:01.332Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T09:17:01.332Z"
       }
     }
   ],
