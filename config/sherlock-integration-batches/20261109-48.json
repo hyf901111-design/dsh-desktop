@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-48",
+  "branch": "codex/integration/20261109-48",
+  "baseMainCommit": "03267cde8b31a3409821bba36d5814a366488433",
+  "expectedMainCommit": "03267cde8b31a3409821bba36d5814a366488433",
+  "createdAt": "2026-11-09T11:48:15.451Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "本地规范化可机械修复的渲染错误以减少生成阻断",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "03267cde8b31a3409821bba36d5814a366488433",
+        "tipCommit": "d538efc8e77af2084ae590eb22ab2d5f4c27e21c",
+        "commits": [
+          {
+            "commit": "948fe9ca2160fa9f3f2594e6c28809563d47566b",
+            "parents": [
+              "23d208ba33efb602259d4f552da98fc230d69ba9"
+            ],
+            "subject": "优化：本地规范化宿主行内样式和安全清空操作以减少生成误拦"
+          },
+          {
+            "commit": "d538efc8e77af2084ae590eb22ab2d5f4c27e21c",
+            "parents": [
+              "948fe9ca2160fa9f3f2594e6c28809563d47566b",
+              "03267cde8b31a3409821bba36d5814a366488433"
+            ],
+            "subject": "合并：同步本地 main 的筛选与来源修复记录"
+          }
+        ],
+        "boundaryParents": [
+          "23d208ba33efb602259d4f552da98fc230d69ba9"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-trusted-types-validation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/html-trusted-types-validation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-design-policy.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "宿主HTML兼容逻辑；164项直接相关检查与类型检查通过，含一次模型调用即可完成的运行时回归。新包需真实复测。"
+        },
+        "acceptanceCriteria": [
+          "行内与样式块共用宿主样式规范化",
+          "仅转换已确认DOM节点上的独立空清空操作",
+          "不改变业务数据或放宽安全及内容验收"
+        ],
+        "risks": [
+          "未知对象或非空HTML写入仍须模型修复",
+          "生成成功率须新包真实任务独立统计"
+        ],
+        "generatedAt": "2026-11-09T11:47:57.150125+00:00"
+      },
+      "merged": {
+        "mergeCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+        "verificationCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-design-policy.test.js",
+              "test/html-trusted-types-validation.test.js",
+              "test/shared-component-validation.test.js",
+              "test/artifact-string-quotes.test.js",
+              "test/workbench-delimited-evidence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-design-policy.test.js test/html-trusted-types-validation.test.js test/shared-component-validation.test.js test/artifact-string-quotes.test.js test/workbench-delimited-evidence.test.js",
+            "verifiedCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+            "completedAt": "2026-11-09T11:48:39.807Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+            "completedAt": "2026-11-09T11:48:39.807Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+            "completedAt": "2026-11-09T11:48:39.807Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T11:48:39.807Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-design-policy.test.js",
+        "test/html-trusted-types-validation.test.js",
+        "test/shared-component-validation.test.js",
+        "test/artifact-string-quotes.test.js",
+        "test/workbench-delimited-evidence.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
