@@ -40,3 +40,16 @@ it('allows one bounded alternative-source window after conclusive empty discover
  expect(p.allowAlternativeRead({elapsed:95000,hasBusinessData:true})).toBe(false)
  expect(componentDiscoveryProgress(new Set([tool])).allowAlternativeRead({elapsed:95000,hasBusinessData:false})).toBe(false)
 })
+
+it('reserves at most two unseen-source discoveries after empty directories without reopening exhausted sources',()=>{
+ const p=componentDiscoveryProgress(new Set([tool]));const window={elapsed:100000,hasBusinessData:false,observedTools:new Set([tool])};
+ reply(p,'missing',{kind:'catalog',interfaces:[]},{args:{api_name:'unavailable'}});
+ expect(p.reserveAlternativeDiscovery(tool,window)).toBe(false);
+ expect(p.reserveAlternativeDiscovery('public_data_query',window)).toBe(true);
+ expect(p.reserveAlternativeDiscovery('public_data_query',window)).toBe(false);
+ expect(p.reserveAlternativeDiscovery('financial_query',window)).toBe(true);
+ expect(p.reserveAlternativeDiscovery('third',window)).toBe(false);
+ const fresh=componentDiscoveryProgress(new Set([tool]));reply(fresh,'missing',{kind:'catalog',interfaces:[]},{args:{api_name:'unavailable'}});
+ expect(fresh.reserveAlternativeDiscovery('other',{...window,elapsed:135000})).toBe(false);
+ expect(fresh.reserveAlternativeDiscovery('other',{...window,hasBusinessData:true})).toBe(false);
+});

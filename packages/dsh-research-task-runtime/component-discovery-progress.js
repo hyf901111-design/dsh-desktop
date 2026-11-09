@@ -1,7 +1,7 @@
 // Attempt-local source progress, never a capability or authorization cache.
 // Repeating empty interface directories cannot produce business records.
 export function componentDiscoveryProgress(discoveryTools = new Set()) {
- const calls = new Map(), empty = new Map(), exactEmpty = new Set();
+ const calls = new Map(), empty = new Map(), exactEmpty = new Set(), alternativeDiscoveries = new Set();
  const exactKey=(tool,args)=>typeof args?.api_name==='string'&&args.api_name.trim()?JSON.stringify([tool,args.api_name]):undefined;
  return {
   accept(event) {
@@ -29,6 +29,10 @@ export function componentDiscoveryProgress(discoveryTools = new Set()) {
   // is evidence to switch acquisition method, not to close all source tools.
   allowAlternativeRead({elapsed,hasBusinessData}) {
    return elapsed<135000&&!hasBusinessData&&(exactEmpty.size>0||[...empty.values()].some(count=>count>=2));
+  },
+  reserveAlternativeDiscovery(tool,options) {
+   if(!this.allowAlternativeRead(options)||options.observedTools?.has(tool)||alternativeDiscoveries.has(tool)||alternativeDiscoveries.size>=2)return false;
+   alternativeDiscoveries.add(tool);return true;
   },
   issue(tool,args) {
    const key=exactKey(tool,args);

@@ -1,3 +1,4 @@
+import {componentDeliveryScopeIssue} from './component-delivery-scope.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
 import { SOURCE_SELECTION_GUIDANCE } from './data-source-policy.js'
@@ -1813,7 +1814,7 @@ export class ResearchTaskRuntime {
       const panelTitle=panelTitles.length===1?panelTitles[0][1]:undefined
       const acquireFeedEvidence = result.acquireFeedEvidence
       let feedAcquired = false
-      let output, binding, verifiedSnapshot, bindingRepairEvidence = '', recoveryText = '', recoveryEvidence = '', prototypeRepairEvidence, prototypeRepairCandidate, generationError, sharedStateError, chartGeometryError, designPolicyError, operatingIssue
+      let output, binding, verifiedSnapshot, bindingRepairEvidence = '', recoveryText = '', recoveryEvidence = '', prototypeRepairEvidence, prototypeRepairCandidate, generationError, deliveryScopeIssue, sharedStateError, chartGeometryError, designPolicyError, operatingIssue
       // One recovery remains the default. If that recovery was still acquiring
       // data, a successful source handoff earns one tool-free presentation pass.
       // Empty discovery and repeated invalid outputs never extend this bound.
@@ -1967,6 +1968,8 @@ export class ResearchTaskRuntime {
             if(issue){newsTableError=issue;throw new ResearchTaskError('INVALID_OUTPUT',issue)}
             if(candidates.some(data=>data.type==='news'||data.type==='table'||data.type==='market'&&data.variant==='table'))newsTableError=undefined
           }
+          deliveryScopeIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>componentDeliveryScopeIssue(data,panelRequest)).find(Boolean)
+          if(deliveryScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',deliveryScopeIssue)
           const newsScopeIssue=!deferredPanel&&extractArtifactObjects(deliveredText).map(data=>newsSourceScopeIssue(data,sourceRecords,task.prompt)).find(Boolean)
           if(newsScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',newsScopeIssue)
           const sourceIssue=!(mapped?.capacitySnapshot&&mapped.dataUnavailable)&&extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
@@ -2069,7 +2072,7 @@ export class ResearchTaskRuntime {
           }
         }
         const emptyWorkbenchDeadline = task.kind === 'container' && result.localDeadlineExceeded && !recoveryText && !recoveryEvidence && workbenchPanelFormat(task.prompt)
-        const acquisitionFollowup=task.kind==='container'?componentAcquisitionFollowup(sourceRecords,{unreadSourceUrls:result.unreadSourceUrls}):''
+        const acquisitionFollowup=task.kind==='container'?[componentAcquisitionFollowup(sourceRecords,{unreadSourceUrls:result.unreadSourceUrls}),deliveryScopeIssue].filter(Boolean).join('\n'):''
         // Pagination is a retrieval hint, not a presentation phase lock. An earlier
         // exploratory query can remain open after an alternative source succeeds.
         // Final semantic/coverage gates still decide whether delivery is valid.
@@ -2307,6 +2310,8 @@ export class ResearchTaskRuntime {
           }
           if(task.cancelRequested||terminalState(task.state))return
         }
+        const unmetScope=extractArtifactObjects(output).map(data=>componentDeliveryScopeIssue(data,panelRequest)).find(Boolean)
+        if(unmetScope)throw new ResearchTaskError('GENERATION_FAILED',unmetScope)
         output=acceptArtifactOutput(retainObservedComponentProvenance(output,result.documentEvidence,sourceRecords))??output
         await this.finish(task, 'completed', { finalOutput: output,...(readableSnapshot?.recoveryMode==='source-snapshot'?taskDelivery(readableSnapshot):{}) })
       } else {
@@ -2330,7 +2335,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!documentTask && !needsGraphPresentation(task.prompt) && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!documentTask && !needsGraphPresentation(task.prompt) && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>componentDeliveryScopeIssue(data,workbenchPanelIntent(task.prompt))) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -2649,7 +2654,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const validateDataSubmission=(snapshot,records)=>{
           const text=JSON.stringify(snapshot.data),output=finalText([{type:'text',text:snapshot.capacitySnapshot?snapshot.output:text}],kind)
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
-          const issue=workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
+          const issue=componentDeliveryScopeIssue(snapshot.data,workbenchPanelIntent(query))||workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
           const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentUncertaintyIssue(output,documentEvidence)||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query)))
           if(documentIssue)throw new ResearchTaskError('INVALID_OUTPUT',documentIssue)
@@ -3065,7 +3070,13 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // calls may still use definitions already obtained and current grants;
         // the unchanged total-call and wall-clock limits remain authoritative.
         let args=exec.arguments;try{if(typeof args==='string')args=JSON.parse(args)}catch{}
-        if(discoveryCallCount>=8&&isDiscoveryRequest(exec.name,args))return '本组件目录发现预算已用完；不再查询目录、搜索接口名或重复解析实体。请使用本轮已取得的有效接口定义执行实际业务查询，或按当前授权读取其他已知原始来源。业务读取预算仍可用；没有可用定义时明确数据缺失，不猜接口、字段或样例数据。'
+        const beyondDiscoveryBudget=discoveryCallCount>=8&&isDiscoveryRequest(exec.name,args)
+        const fallbackDiscovery=beyondDiscoveryBudget&&discoveryProgress.reserveAlternativeDiscovery(exec.name,{
+          elapsed:executionElapsed(),
+          hasBusinessData:Boolean(componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)),
+          observedTools:new Set(sourceCollector.records.filter(record=>record.purpose==='discovery').map(record=>record.tool))
+        })
+        if(beyondDiscoveryBudget&&!fallbackDiscovery)return '本组件目录发现预算已用完；不再查询目录、搜索接口名或重复解析实体。请使用本轮已取得的有效接口定义执行实际业务查询，或按当前授权读取其他已知原始来源。业务读取预算仍可用；没有可用定义时明确数据缺失，不猜接口、字段或样例数据。'
         return discoveryProgress.issue(exec.name,args)
       }):undefined
       const stopSourceProjection=()=>{sourceProjectionStops.delete(stopSourceProjection);releaseSourceProjection();releaseDiscoveryGuard?.()}
@@ -3472,7 +3483,7 @@ export function createSharedBoardExecutor(ctx) {
         }
       })
       let handle = await start(prompt)
-      let recoveryText = '', recoveryEvidence = '', readableFallback, generationError, sharedStateError, chartGeometryError, designPolicyError
+      let recoveryText = '', recoveryEvidence = '', readableFallback, generationError, deliveryScopeIssue, sharedStateError, chartGeometryError, designPolicyError
       try {
         for (let attempt = 0; attempt < 2; attempt++) {
           const result = await handle.result
