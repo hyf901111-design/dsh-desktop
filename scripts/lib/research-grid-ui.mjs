@@ -569,6 +569,9 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
 export function measureWorkbenchContents(root,nodes) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements
   for(const node of nodes){
+    // A loading frame contains a viewport-sized SVG/grid, not generated
+    // content. Measuring it feeds its own height back into every Arrange.
+    if(node.kind==='planning-card'||node.kind==='generated-container'&&!node.containerSpec){measured.set(node.id,{width:656,height:node.kind==='planning-card'?220:320});continue}
     const value=cache?.get(node.id)
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
     // Fixed presets keep their approved reading area even when offscreen or paused.
@@ -830,7 +833,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
       if(node?.containerSpec?.type==='html'){
         root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil((frame.closest('[data-research-node-id]')?.offsetHeight||node.height)-frame.offsetHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})};contentMeasurements.set(id,value)
-        workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height,disclosureOpen,...(data.intrinsicTable===true&&(/<body\b[^>]*data-sherlock-market="table"/.test(value.html)||/<body\b[^>]*data-research-kind="view"/.test(value.html)||/<body\b[^>]*data-readable-snapshot/.test(value.html))?{layoutFit:true}:{})});root.__eworkContentFit?.refit()
+        workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height,disclosureOpen,...((data.intrinsicTable===true||data.intrinsicMetrics===true||data.intrinsic===true)&&!node.preserveGenerationSize?{layoutFit:true}:{})});root.__eworkContentFit?.refit()
       }
     }
     window.addEventListener('message',contentSize)
@@ -857,7 +860,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     window.addEventListener('resize',measure)
     const scroll=()=>{root.style.setProperty('--grid-scroll-top',root.scrollTop+'px');const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);root.removeEventListener('toggle',nativeDisclosure,true);delete root.__eworkNativeDisclosure;if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
+    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);root.removeEventListener('toggle',nativeDisclosure,true);delete root.__eworkNativeDisclosure;delete root.__eworkNativeInitialFits;if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -872,6 +875,15 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     // rows and context on first completion and responsive width changes too.
     let active=true
     const tables=nodes.map(node=>({node,card:root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')})).map(item=>({...item,table:item.card?.querySelector('[data-sherlock-market-native="table"]')})).filter(item=>item.table)
+    const nativeFitted=root.__eworkNativeInitialFits??=new Map()
+    for(const id of nativeFitted.keys())if(!nodes.some(node=>node.id===id))nativeFitted.delete(id)
+    const fitNativeContents=()=>{
+      if(!active||root.hasAttribute('data-grid-operation'))return
+      const candidates=nodes.filter(node=>node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='html'&&!['financial-widget','iframe','youtube','calendar-tool'].includes(node.containerSpec.type)&&!node.preserveGenerationSize)
+      const sizes=measureWorkbenchContents(root,candidates)
+      for(const node of candidates){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card||Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const key=JSON.stringify([node.width,node.containerSpec]);if(nativeFitted.get(node.id)===key)continue;const size=['code','form'].includes(node.containerSpec.type)?researchOptimalDimensions({...node,width:0,height:0}):sizes.get(node.id);if(size){nativeFitted.set(node.id,key);workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:size.height,layoutFit:true})}}
+    }
+    fitNativeContents()
     const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const fit=workbenchNativeTableFit(node,table);if(fit)workspace.setWorkbenchContentHeight(node.id,fit)}}
     const nativeDetails=[...root.querySelectorAll('[data-research-preview-body] details')].filter(details=>!details.closest('[data-research-node-id]')?.querySelector('iframe'))
     const refitNative=()=>{if(active&&!root.hasAttribute('data-grid-operation'))for(const details of nativeDetails)if(details.isConnected)root.__eworkNativeDisclosure?.({target:details})}

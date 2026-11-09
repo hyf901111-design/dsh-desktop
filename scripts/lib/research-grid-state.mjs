@@ -168,6 +168,12 @@ export function createWorkbenchGridState(storage,sessionId) {
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"|<body data-research-kind="chart" data-chart-template="(?:line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"/.test(node?.containerSpec?.html||'')
       if(value.native?(!node?.containerSpec||node.containerSpec.type==='html'||value.contentKey!==JSON.stringify(node.containerSpec)):(node?.containerSpec?.type!=='html'||value.html!==node.containerSpec.html))return false
       const old=contentHeights.get(id)
+      // A native disclosure adds flow to the already-fitted content baseline,
+      // never to the obsolete generation frame. Closing restores that baseline.
+      if(value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)&&old?.layoutFit&&!contentOverrides.has(id)){
+        const baseHeight=old.baseHeight??old.height
+        value={...value,height:baseHeight+(value.disclosureOpen?value.extraHeight:0),baseHeight,layoutFit:true}
+      }
       const autoFit=value.layoutFit||trustedTemplate||['table','metrics','share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'].includes(kind)
       // An open disclosure temporarily grows even a user-sized card. Closing
       // it restores the saved grid geometry and returns displaced cards.

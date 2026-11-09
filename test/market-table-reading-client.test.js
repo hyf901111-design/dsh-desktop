@@ -17,6 +17,11 @@ const sourceTransform=source=>{
  replace('function ResearchMarketNativeTable(', 'function ResearchContainerBody(',native.ResearchMarketNativeTable.toString())
  replace('function researchMarketContentDimensions(', 'function researchDashboardContentDimensions(',layout.researchMarketContentDimensions.toString())
  replace('function researchMarketDimensions(', 'function researchCandleTemplate(',layout.researchMarketDimensions.toString())
+ for(const name of ['measureWorkbenchContents','workbenchMeasuredDimensions','workbenchNativeTableFit','workbenchNativeTableDimensions','useWorkbenchGrid']){
+  const a=source.indexOf('function '+name+'('),b=source.indexOf('\nfunction ',a+10)
+  if(a<0||b<0)throw Error('Missing grid hook serializer '+name)
+  source=source.slice(0,a)+require('../scripts/lib/research-grid-ui.mjs')[name].toString()+'\n'+source.slice(b)
+ }
  return source
 }
 afterEach(async()=>{await fixture?.dispose();fixture=null})
@@ -47,7 +52,10 @@ it('fits the production native table on first completion and reopen without Arra
   // below independently check this same native DOM/CSS against real text layout.
   const width=w.getSnapshot().artifacts[0].width,rect=height=>({x:0,y:0,left:0,top:0,right:width,bottom:height,width,height})
   card.getBoundingClientRect=()=>rect(before.height);table.getBoundingClientRect=()=>rect(before.height-58)
-  table.querySelectorAll('thead,tbody tr,.terminal-native-filters').forEach(el=>el.getBoundingClientRect=()=>rect(26))
+  table.querySelectorAll('thead,.terminal-native-filters').forEach(el=>el.getBoundingClientRect=()=>rect(26))
+  // Simulate wrapped reading rows. Legacy source footers are now correctly
+  // hidden by the unified bottom-bar source UI and must not add fake height.
+  table.querySelectorAll('tbody tr').forEach(el=>el.getBoundingClientRect=()=>rect(100))
   const footer=table.querySelector('footer');Object.defineProperty(footer,'scrollHeight',{configurable:true,value:180});footer.getBoundingClientRect=()=>rect(60)
  }
  measure();await f.act(async()=>w.setCanvasSize({...w.getSnapshot().canvasSize,height:701}))
@@ -66,4 +74,22 @@ it('keeps table content floors local, verifies the HTML identity, and honors exp
  state.set(state.get().map(c=>({...c,h:12})))
  expect(state.contentHeight(node.id,{html:spec.html,width,height:600})).toBe(false)
  expect(state.reconcile(grown).artifacts[0].height).toBeLessThan(500)
+})
+
+it('shrinks a tall generation frame when its native table completes, preserving manual resize overrides',async()=>{
+ const f=fixture=await financialClientFixture({}, {refreshState:true,sourceTransform}),w=f.workspace,spec=renderMarketArtifact(observed)
+ await f.act(async()=>w.setArtifacts([{id:'compact-complete',title:observed.title,excerpt:'完整来源行情表格',containerPrompt:'三家公司行情表格',generationLastSeq:1,kind:'generated-container',messageId:'compact-complete',generationStatus:'completed',containerSpec:spec,refreshMinutes:0,x:250,y:150,width:482,height:1300,sizeMode:'auto',sourceNodeIds:[]}]))
+
+ const before=w.getSnapshot().artifacts[0],saved=w.getWorkbenchDocument()
+ const card=f.host.querySelector('[data-research-node-id="compact-complete"]'),table=card.querySelector('[data-sherlock-market-native="table"]')
+ const width=before.width,rect=height=>({x:0,y:0,left:0,top:0,right:width,bottom:height,width,height})
+ card.getBoundingClientRect=()=>rect(before.height);table.getBoundingClientRect=()=>rect(before.height-58)
+ table.querySelectorAll('thead,tbody tr,.terminal-native-filters').forEach(el=>el.getBoundingClientRect=()=>rect(26))
+ const footer=table.querySelector('footer');footer.getBoundingClientRect=()=>rect(48)
+ await f.act(async()=>w.setCanvasSize({...w.getSnapshot().canvasSize,height:703}))
+ expect(w.getSnapshot().artifacts[0].height).toBeLessThan(600)
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThan(160)
+ expect(w.getWorkbenchDocument()).toEqual(saved)
+ expect(w.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ expect(f.generation.generate).not.toHaveBeenCalled()
 })

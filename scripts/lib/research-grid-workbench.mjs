@@ -163,7 +163,7 @@ export function patchResearchGridWorkbench(source){
     if(workbenchGrid.enabled()){
       workbenchGrid.clearContentOverrides();
       if(!collaborationCanWrite())return false;
-      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts,...workbenchGrid.planningNodes()].map(n=>({...n,preferred:n.kind==='planning-card'?n:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
+      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts,...workbenchGrid.planningNodes()].map(n=>({...n,preferred:n.kind==='planning-card'?{width:320,height:220}:n.kind==='generated-container'&&!n.containerSpec?{width:656,height:320}:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
       if(!nodes.length)return false;
       return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.visible(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0,arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred,undefined,true);
     }`)
