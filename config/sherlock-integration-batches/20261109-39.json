@@ -54,6 +54,52 @@
           "原卡仍未通过，最终呈现与数据完整性必须在新包复测"
         ],
         "generatedAt": "2026-11-09T07:01:09.334629+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4ed7d3e3d7cc25b5840e358273a524e37fd1cbe1",
+        "verificationCommit": "4ed7d3e3d7cc25b5840e358273a524e37fd1cbe1",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-acquisition-followup.test.js",
+              "test/component-discovery-progress.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-acquisition-followup.test.js test/component-discovery-progress.test.js",
+            "verifiedCommit": "4ed7d3e3d7cc25b5840e358273a524e37fd1cbe1",
+            "completedAt": "2026-11-09T07:01:47.716Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled",
+            "verifiedCommit": "4ed7d3e3d7cc25b5840e358273a524e37fd1cbe1",
+            "completedAt": "2026-11-09T07:01:47.716Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4ed7d3e3d7cc25b5840e358273a524e37fd1cbe1",
+            "completedAt": "2026-11-09T07:01:47.716Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T07:01:47.716Z"
       }
     }
   ],
