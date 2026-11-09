@@ -70,6 +70,55 @@
           "业务验收仍为0/2，不得称完整成功；任意HTML及未明确数量需求仍需语义验收"
         ],
         "generatedAt": "2026-11-09T08:04:38.966038+00:00"
+      },
+      "merged": {
+        "mergeCommit": "554f72e4283246368bc516b415f878171f708cad",
+        "verificationCommit": "554f72e4283246368bc516b415f878171f708cad",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-binding.test.js",
+              "test/component-source-snapshot-chart.test.js",
+              "test/component-acquisition-followup.test.js",
+              "test/component-discovery-progress.test.js",
+              "test/component-delivery-scope.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-source-binding.test.js test/component-source-snapshot-chart.test.js test/component-acquisition-followup.test.js test/component-discovery-progress.test.js test/component-delivery-scope.test.js",
+            "verifiedCommit": "554f72e4283246368bc516b415f878171f708cad",
+            "completedAt": "2026-11-09T08:04:43.558Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled|undersized comparison|exhausts only directory"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled|undersized comparison|exhausts only directory",
+            "verifiedCommit": "554f72e4283246368bc516b415f878171f708cad",
+            "completedAt": "2026-11-09T08:04:43.558Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "554f72e4283246368bc516b415f878171f708cad",
+            "completedAt": "2026-11-09T08:04:43.558Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T08:04:43.558Z"
       }
     }
   ],
