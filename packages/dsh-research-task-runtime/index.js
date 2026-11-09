@@ -2806,6 +2806,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       // would start another step after its final artifact and discard that result.
       // Let in-flight reads and final output finish without injecting a new turn.
       let networkCallCount = 0, discoveryCallCount = 0, knownDiscoveryUsed = false, researchClosed = false, researchLimitDue = false, liftResearchLimit
+      const isDiscoveryRequest=(name,args)=>discoveryTools.has(name)||name==='public_data_query'&&args?.operation==='catalog'||name==='financial_query'&&['resolve','search','catalog'].includes(args?.intent)
       const discoveryTools=componentDiscoveryToolNames(scopedSchemas)
       const parameterRepair=researchParameterRepair(networkTools,discoveryTools)
       const discoveryProgress=componentDiscoveryProgress(discoveryTools)
@@ -2942,7 +2943,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           let args
           try{args=typeof event.data.arguments==='string'?JSON.parse(event.data.arguments):event.data.arguments}catch{}
           const knownDiscovery=discoveryTools.has(event.data.name)
-          const discovery=knownDiscovery||event.data.name==='public_data_query'&&args?.operation==='catalog'||event.data.name==='financial_query'&&['resolve','search','catalog'].includes(args?.intent)
+          const discovery=isDiscoveryRequest(event.data.name,args)
           if(knownDiscovery)knownDiscoveryUsed=true
           if(discovery)discoveryCallCount++
           if (typeof event.data.callId === 'string') {
@@ -3022,7 +3023,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
             !componentBindingEvidence(sourceCollector.records)&&!sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)
           const alternativeRead=discoveryProgress.allowAlternativeRead({elapsed:executionElapsed(),hasBusinessData:componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)})
           const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())&&!firstBusinessRead&&!alternativeRead
-          if(timeExpired||discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
+          if(timeExpired||kind!=='container'&&discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
         }
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {
           // Retain only complete public artifacts accepted by the normal parser.
@@ -3041,7 +3042,15 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         if (session?.id === child.id) deliver(event)
       })
       const releaseSourceProjection=kind==='container'&&!synthesisOnly?registerComponentSourceProjection(ctx,{child,allowed:childTools,discoveryTools,signal,onWebResponse:(args,text)=>sourceCollector.acceptWebResponse(args,text)}):()=>{}
-      const releaseDiscoveryGuard=kind==='container'&&!synthesisOnly?child.ctx?.tools?.guard?.(exec=>exec.agent===child?discoveryProgress.issue(exec.name,exec.arguments):undefined):undefined
+      const releaseDiscoveryGuard=kind==='container'&&!synthesisOnly?child.ctx?.tools?.guard?.(exec=>{
+        if(exec.agent!==child)return
+        // Reaching the directory quota closes only directory requests. Business
+        // calls may still use definitions already obtained and current grants;
+        // the unchanged total-call and wall-clock limits remain authoritative.
+        let args=exec.arguments;try{if(typeof args==='string')args=JSON.parse(args)}catch{}
+        if(discoveryCallCount>=8&&isDiscoveryRequest(exec.name,args))return '本组件目录发现预算已用完；不再查询目录、搜索接口名或重复解析实体。请使用本轮已取得的有效接口定义执行实际业务查询，或按当前授权读取其他已知原始来源。业务读取预算仍可用；没有可用定义时明确数据缺失，不猜接口、字段或样例数据。'
+        return discoveryProgress.issue(exec.name,args)
+      }):undefined
       const stopSourceProjection=()=>{sourceProjectionStops.delete(stopSourceProjection);releaseSourceProjection();releaseDiscoveryGuard?.()}
       sourceProjectionStops.add(stopSourceProjection)
       const stopSubmission=()=>{sourceProjectionStops.delete(stopSubmission);submission?.dispose()}
