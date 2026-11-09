@@ -80,6 +80,10 @@ describe('generated HTML design policy', () => {
   expect(designPolicyIssue(control)).toContain('控件')
  })
  it('repairs known host role aliases and fixed fallbacks while preserving content and shared script', () => {
+  const primary=normalizeGeneratedHostStyles('<style>.rootbadge{background:var(--sherlock-primary,#00336E);color:var(--sherlock-on-primary,#fff)}</style><div class="rootbadge" data-sherlock-structure="primary">完整组织</div>')
+  expect(designPolicyIssue(primary)).toBeNull()
+  expect(primary).toContain('background:var(--sherlock-control-primary)')
+  expect(primary).toContain('完整组织')
   const script='<script>const shared=window.sherlockShared.register({initialState:{selected:0},reduce:(s,a)=>({...s,selected:a.id}),render:s=>{}});</script>'
   const html='<style>body{color:var(--sherlock-text-primary,#1a1a1a)}a{color:var(--sherlock-text-link,#0969da)}button{background:var(--sherlock-control-bg,#fff);color:var(--sherlock-control-text,#333)}</style><p>真实证据 0 / 3</p><a href="https://example.org/source">原文</a><button>筛选</button>'+script
   const repaired=normalizeGeneratedHostStyles(html)
