@@ -120,7 +120,7 @@ export function registerBrowserApp(options:Options){
    const since=input.range==='all'?0:Date.now()-({hour:3600000,day:86400000,week:604800000}[input.range as 'hour']??0)
    const origins=[...new Set(model.history.filter(h=>h.at>=since).map(h=>new URL(h.url).origin))]
    const s=session.fromPartition('persist:odyssey-browser-app')
-   if(input.cookies)await s.clearData({dataTypes:['cookies','localStorage','indexedDB','serviceWorkers'],...(since?{origins}:{})})
+   if(input.cookies){const storages:('cookies'|'localstorage'|'indexdb'|'serviceworkers'|'cachestorage')[]=['cookies','localstorage','indexdb','serviceworkers','cachestorage'];if(since){for(const origin of origins)await s.clearStorageData({origin,storages})}else await s.clearStorageData({storages})}
    if(input.cache)await s.clearCache()
    if(input.history)model.clearHistory(since)
    publish();return snapshot()
