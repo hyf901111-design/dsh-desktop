@@ -232,3 +232,12 @@ it('refreshes hover after scrolling below a stationary native pointer without cl
  await new Promise(resolve=>setTimeout(resolve,90));menu.sync(input({revision:2,items,submenu:{parentId:'library',selectedIndex:0,keyboardActive:true}}),'alice');await vi.waitFor(()=>expect(instances().at(-1).showInactive).toHaveBeenCalled());await new Promise(resolve=>setTimeout(resolve,90));expect(parent.webContents.send).not.toHaveBeenCalled();scroll=64
  await vi.waitFor(()=>expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'back',itemId:'library'})))
 })
+
+
+it('uses display bounds for an explicitly opted-in component popup while leaving notes constrained',async()=>{
+ const parent=new BrowserWindow({}),menu=new NoteNativeMenu({getWindow:()=>parent,owner:()=> 'component',canRead:()=>true,title:'组件操作菜单',displayBounds:true})
+ menu.sync(input({anchor:{x:500,y:220,width:206,height:24}}),'component')
+ await vi.waitFor(()=>expect(instances().at(-1).showInactive).toHaveBeenCalled())
+ const popup=instances().at(-1),bounds=popup.getBounds();expect(bounds.y+bounds.height).toBeGreaterThan(350);expect(bounds.x).toBeGreaterThanOrEqual(50);expect(bounds.y+bounds.height).toBeLessThanOrEqual(1025)
+ menu.close()
+})
