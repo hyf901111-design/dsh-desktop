@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-46",
+  "branch": "codex/integration/20261109-46",
+  "baseMainCommit": "c81b578ec20cbe26cd17977aeb7fe57b7660062d",
+  "expectedMainCommit": "c81b578ec20cbe26cd17977aeb7fe57b7660062d",
+  "createdAt": "2026-11-09T11:09:44.778Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按四类真实任务修复资料传递和实际交付校验",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "c81b578ec20cbe26cd17977aeb7fe57b7660062d",
+        "tipCommit": "53d8f090b585c69d500ec1b37d6a7665b9708597",
+        "commits": [
+          {
+            "commit": "9018dddafd5a8e6637604655926a7a98602a7ca9",
+            "parents": [
+              "7d3daa19810a618aca3e86e6a4857392005aab62"
+            ],
+            "subject": "优化：保留结构化附件原始记录并校验实际交付范围与接口参数"
+          },
+          {
+            "commit": "53d8f090b585c69d500ec1b37d6a7665b9708597",
+            "parents": [
+              "9018dddafd5a8e6637604655926a7a98602a7ca9",
+              "c81b578ec20cbe26cd17977aeb7fe57b7660062d"
+            ],
+            "subject": "合并：同步本地 main 已完成的菜单集成记录"
+          }
+        ],
+        "boundaryParents": [
+          "7d3daa19810a618aca3e86e6a4857392005aab62"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-delivery-scope.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-scalar-entity-arguments.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/delimited-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/artifact-string-quotes.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-delivery-scope.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-scalar-entity-arguments.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-delimited-evidence.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "本补丁为资料解析、参数和交付校验逻辑，不修改控件外观；当前真实包已跑完四类19卡，发现编号错配、缺失数据假完成和格式阻断。新增聚焦113项通过，类型检查通过；新包必须继续真实任务复测。"
+        },
+        "acceptanceCriteria": [
+          "CSV/TSV保留完整行和长字段且不误走外部接口",
+          "完整明细按原始记录键逐字段核验，恢复发生在自动生成流程内",
+          "数量约束跨呈现类型生效，不用全缺失候选或空导图冒充完成",
+          "按已知接口参数预先拦截未声明批量能力的多值代码",
+          "仅修复完整JSON中的无歧义字符串转义，保留原来源校验"
+        ],
+        "risks": [
+          "四个首轮工作台均未整体达标，本次不宣称全场景成功",
+          "较大研究运行时测试在原main和本补丁均有同样14项历史失败，新增及直接相关113项通过",
+          "网络发布场景仍存在取数/版本范围与长正文呈现问题，须保留测试失败记录"
+        ],
+        "generatedAt": "2026-11-09T11:09:28.579823+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-delivery-scope.test.js",
+        "test/component-scalar-entity-arguments.test.js",
+        "test/workbench-delimited-evidence.test.js",
+        "test/artifact-string-quotes.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-mixed-document-adapter.test.js",
+        "test/component-data-submission.test.js",
+        "test/derived-template-contract.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
