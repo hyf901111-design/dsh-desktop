@@ -6,6 +6,8 @@ it('keeps unfinished pagination executable instead of treating any returned row 
  const result=componentAcquisitionFollowup(records)
  expect(result).toContain('nextOffset');expect(result).toContain('"offset":20');expect(result).toContain('A.OF,B.OF');expect(result).toContain('覆盖');
  expect(componentAcquisitionFollowup([{...records[1],response:{records:[{nav:1}],pagination:{possiblyMore:false}}}])).toBe('')
+ const fetched={...records[1],args:{...records[1].args,offset:20,limit:1000},response:{records:[{nav:2}],pagination:{offset:20,possiblyMore:false}}};
+ expect(componentAcquisitionFollowup([...records,fetched])).toBe('')
 })
 it('requires reading original pages after discovery or search and never promotes snippets to source data',()=>{
  const result=componentAcquisitionFollowup([],{unreadSourceUrls:['https://example.org/report','https://example.org/report','file:///private/data','https://example.org/?token=secret']})

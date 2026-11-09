@@ -726,17 +726,19 @@ describe('Research task contract and prompt', () => {
     } finally {await runtime.dispose()}
   })
 
-  it('keeps acquisition tools during repair when a phase handoff still has unfinished pages or unread search sources',async()=>{
+  it.each([false,true])('keeps acquisition tools during repair when a phase handoff still has unfinished pages or unread search sources (declared=%s)',async declared=>{
     const {ResearchTaskRuntime}=await runtimeModule();const calls=[];
     const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
       calls.push(request);
       return {childSessionId:'coverage-'+calls.length,dispose:async()=>{},result:Promise.resolve(calls.length===1?{stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[],researchEvidence:'已取得2只目标的10天记录，需继续分页',sourceRecords:[{tool:'ework__query',args:{limit:20},response:{records:[{value:1}],pagination:{possiblyMore:true,nextOffset:20}}}]}:{stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'来源记录',content:'已取得的记录值为1。'})}]})};
     }},storage:memoryTaskStorage(),createId:sequentialTaskIds()});
     try{
-      await runtime.start(containerRequest('unfinished-coverage'));
+      await runtime.start({...containerRequest('unfinished-coverage'),...(declared?{prompt:'工作台：数据比较\n本面板：年度记录比较\n保留完整日期窗口。\n仅生成本面板，优先使用 chart 类型。'}:{})});
       await eventually(()=>expect(calls).toHaveLength(2));
       expect(calls[1].synthesisOnly).toBe(false);
       expect(calls[1].prompt).toContain('nextOffset');
+      expect(calls[1].prompt).not.toContain('本轮是无工具的内容修复阶段');
+      expect(calls[1].prompt).not.toContain('本轮不建立自动更新绑定、不重新检索。');
     }finally{await runtime.dispose()}
   });
 
