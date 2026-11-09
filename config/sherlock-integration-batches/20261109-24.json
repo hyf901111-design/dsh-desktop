@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-24",
+  "branch": "codex/integration/20261109-24",
+  "baseMainCommit": "6bf22c96b706146c4369b63d41d62c199f587660",
+  "expectedMainCommit": "6bf22c96b706146c4369b63d41d62c199f587660",
+  "createdAt": "2026-11-09T00:46:18.785Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "原生笔记校验与分页内容自适应",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+        "tipCommit": "c29d9fc8baab07b338064f5b07908c5e3e3867a6",
+        "commits": [
+          {
+            "commit": "4eed0046a8eabb7954d8dd88712e3ed12f34b438",
+            "parents": [
+              "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa"
+            ],
+            "subject": "修复原生笔记模板被宿主样式校验误拒绝"
+          },
+          {
+            "commit": "e3233c3dc139bb14105d425298d052acf9e51aa7",
+            "parents": [
+              "4eed0046a8eabb7954d8dd88712e3ed12f34b438"
+            ],
+            "subject": "识别混合来源说明中的附件文件名以打开来源卡片"
+          },
+          {
+            "commit": "c29d9fc8baab07b338064f5b07908c5e3e3867a6",
+            "parents": [
+              "e3233c3dc139bb14105d425298d052acf9e51aa7"
+            ],
+            "subject": "修复自动整理后表格分页无法随行数收缩"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/note-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-preview-mode.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-status.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/markdown-note.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端发现笔记模板误拒绝、混合来源文件名未识别及分页末页空白；相关修复等待最新包复测。"
+        },
+        "acceptanceCriteria": [
+          "原生笔记可直接通过宿主校验",
+          "自动整理不关闭表格分页的内容自适应",
+          "真实附件文件名可打开来源卡片"
+        ],
+        "risks": [
+          "未将后端完成状态等同于真实客户端视觉验收"
+        ],
+        "generatedAt": "2026-11-09T00:46:10.604786+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/markdown-note.test.js",
+        "test/component-data-status.test.js",
+        "test/research-grid-workbench.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "host-rendered editable",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-preview-patch-compat.test.js",
+        "test/market-table-reading-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-preview-mode-browser.test.js",
+        "-t",
+        "disables all four|forged Arrange|cancels a real pointer",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
