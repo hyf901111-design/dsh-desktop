@@ -23,10 +23,20 @@ function deliveryModel(candidate){
  return candidate
 }
 
+// A renderer-specific panel may refer to the same cohort without repeating its
+// original count/category. Inherit only explicit entity comparisons, never the
+// board's card count, record limit or a methodology/aggregate-only obligation.
+export function componentCohortRequest(panel='',original='') {
+ if(typeof panel!=='string'||typeof original!=='string')return panel
+ const count=/(?:不少于|至少|最少|不低于)\s*(?:比较|对比|选取)?\s*(\d+|[一二两三四五六七八九十]+)\s*(只|家|款|个(?:机构|企业|项目|产品|对象|实体))/u.exec(original)
+ if(!count||!/(?:同批|同一批|同组|对照|比较|对比|排名|逐(?:只|家|项)|分布|明细)/u.test(panel)||/^(?:本面板：[^\n]+\n)?[^。\n]*(?:来源与口径|方法说明|口径说明|整体.{0,12}摘要)/u.test(panel))return panel
+ return panel+'\n【同批对象约束】至少'+count[1]+count[2]+'实际对象；原始对象选择、类别、区间及字段要求：'+original
+}
+
 export function componentDeliveryScopeIssue(candidate,request='') {
  const data=deliveryModel(candidate)
  if(data?.type==='mind-map'&&/完整|全部|原表|原文件|附件|真实/u.test(request)&&/待填入[^\n]{0,30}(?:原表|数据)|无法列出具体[^\n]{0,60}节点|取得[^\n]{0,25}(?:数据|原表)[^\n]{0,15}后[^\n]{0,15}填充/u.test(data.content??''))return '层级图仍是占位骨架，尚未呈现来源中的实际实体和关系。保留并使用已读取的原始记录生成真实节点，不能把待填字段画成导图后标记完成。'
- const minimums=[...request.matchAll(/(?:不少于|至少|最少|不低于)\s*(\d+|[一二两三四五六七八九十]+)\s*(?:只|家|个|项|条|篇|款|组|位)/gu)].map(m=>number(m[1])).filter(n=>Number.isSafeInteger(n)&&n>1&&n<=2000)
+ const minimums=[...request.matchAll(/(?:不少于|至少|最少|不低于)\s*(?:比较|对比|选取)?\s*(\d+|[一二两三四五六七八九十]+)\s*(?:只|家|个|项|条|篇|款|组|位)/gu)].map(m=>number(m[1])).filter(n=>Number.isSafeInteger(n)&&n>1&&n<=2000)
  if(!minimums.length)return
  const minimum=Math.max(...minimums)
  let identities

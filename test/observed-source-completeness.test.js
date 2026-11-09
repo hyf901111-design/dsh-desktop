@@ -94,7 +94,7 @@ it('does not mark a one-record HTML artifact complete when the requested source 
 it('按用户的发布表需求无损映射完整来源行和长正文，缺行或改正文不能完成',async()=>{
  const request='做升级研究，用可搜索总表列出 example/vue 最近4条发布记录，包含版本、发布日期、变更要点和原始链接，只用 GitHub 和官网。'
  const scope=workbenchReleaseScope(request,'发布记录可搜索总表','table')
- expect(scope).toEqual({repos:['example/vue'],count:4,includeBody:true,presentation:'table'})
+ expect(scope).toEqual({repos:['example/vue'],count:4,includeBody:true,presentation:'table',processingRequired:true})
  expect(workbenchReleaseScope(request,'包关系图','html')).toBeUndefined()
  expect(workbenchReleaseScope(request+'只要稳定版','发布记录','table')).toMatchObject({stableOnly:true})
  const records=await readReleaseTimeline(scope,async url=>page(url,rows('vue')))
@@ -213,4 +213,18 @@ it('uses one actually observed official repository without guessing a repository
  const another=hostStructuredWebRecord(page('https://api.github.com/repos/other/product/releases?per_page=4',all),'https://api.github.com/repos/other/product/releases?per_page=4')
  expect(observedWorkbenchReleaseScope(original,'版本日期','timeline',[record,another])).toBeUndefined()
  expect(releaseCohortIssue(good,[record],'只看旧版v1的迁移办法','升级注意事项')).toBeUndefined()
+})
+
+it('does not replace requested interpretation with a raw release list or count a changelog pointer as the requested changes',async()=>{
+ const {releaseCohortIssue,releaseLinkedSourceFollowup}=await import('../packages/dsh-research-task-runtime/observed-dated-feed.js')
+ const request='查看 example/product 最近3个正式版本的日期与主要变化，以及对应升级注意事项。'
+ expect(workbenchReleaseScope(request,'升级注意事项，依据GitHub Releases','table')).toMatchObject({processingRequired:true})
+ const url='https://api.github.com/repos/example/product/releases?per_page=3'
+ const pointer='For stable releases, please refer to [CHANGELOG.md](https://github.com/example/product/blob/main/CHANGELOG.md) for details.'
+ const list=rows('product').slice(0,3).map(row=>({...row,prerelease:false,body:pointer}))
+ const record=hostStructuredWebRecord(page(url,list),url)
+ const raw={version:1,type:'timeline',title:'变化',items:list.map(row=>({id:row.html_url,title:row.tag_name,time:row.published_at,summary:row.body,url:row.html_url}))}
+ expect(releaseCohortIssue(raw,[record],request,'版本主要变化')).toContain('尚未取得')
+ expect(releaseLinkedSourceFollowup([record],request)).toContain('https://github.com/example/product/blob/main/CHANGELOG.md')
+ expect(releaseLinkedSourceFollowup([record],'仅列出版本号与原链接')).toBeUndefined()
 })
