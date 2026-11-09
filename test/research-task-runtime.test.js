@@ -10,6 +10,16 @@ import { registerWorkbenchModelQueue } from '../packages/dsh-research-task-runti
 
 const runtimeModule = () => import('../packages/dsh-research-task-runtime/index.js')
 
+it('recovers the newest task of an owned canvas node without resurrecting an older attempt',async()=>{
+  const {ResearchTaskRuntime}=await runtimeModule();
+  const runtime=new ResearchTaskRuntime({adapter:{start:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}}});
+  runtime.tasks.set('old',{taskId:'old',parentSessionId:'parent',canvasNodeId:'card',state:'failed',createdAt:10,lastSeq:1,events:[]});
+  runtime.tasks.set('new',{taskId:'new',parentSessionId:'parent',canvasNodeId:'card',state:'cancelled',createdAt:20,lastSeq:3,events:[],error:'任务已取消'});
+  expect(runtime.inspect({parentSessionId:'parent',canvasNodeId:'card'})).toMatchObject({taskId:'new',state:'cancelled'});
+  expect(()=>runtime.inspect({parentSessionId:'other',canvasNodeId:'card'})).toThrow();
+  expect(()=>runtime.inspect({parentSessionId:'parent',canvasNodeId:'card',createdAfter:21})).toThrow();
+});
+
 function briefMindMapRequest(overrides = {}) {
   return {
     parentSessionId: 'parent-1',
@@ -715,6 +725,20 @@ describe('Research task contract and prompt', () => {
       expect(calls[1].prompt).toContain('尚无业务数据')
     } finally {await runtime.dispose()}
   })
+
+  it('keeps acquisition tools during repair when a phase handoff still has unfinished pages or unread search sources',async()=>{
+    const {ResearchTaskRuntime}=await runtimeModule();const calls=[];
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request);
+      return {childSessionId:'coverage-'+calls.length,dispose:async()=>{},result:Promise.resolve(calls.length===1?{stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[],researchEvidence:'已取得2只目标的10天记录，需继续分页',sourceRecords:[{tool:'ework__query',args:{limit:20},response:{records:[{value:1}],pagination:{possiblyMore:true,nextOffset:20}}}]}:{stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'来源记录',content:'已取得的记录值为1。'})}]})};
+    }},storage:memoryTaskStorage(),createId:sequentialTaskIds()});
+    try{
+      await runtime.start(containerRequest('unfinished-coverage'));
+      await eventually(()=>expect(calls).toHaveLength(2));
+      expect(calls[1].synthesisOnly).toBe(false);
+      expect(calls[1].prompt).toContain('nextOffset');
+    }finally{await runtime.dispose()}
+  });
 
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
