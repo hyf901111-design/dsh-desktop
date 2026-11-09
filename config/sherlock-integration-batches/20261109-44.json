@@ -39,6 +39,39 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-09T09:12:43.921558+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1ffc8a949ca4c1ff2873efddae1a8d36a29df7ce",
+        "verificationCommit": "1ffc8a949ca4c1ff2873efddae1a8d36a29df7ce",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-native-menu.test.js",
+              "test/component-popup-menu.test.ts",
+              "test/component-menu-presentation.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-native-menu.test.js test/component-popup-menu.test.ts test/component-menu-presentation.test.ts",
+            "verifiedCommit": "1ffc8a949ca4c1ff2873efddae1a8d36a29df7ce",
+            "completedAt": "2026-11-09T09:12:48.357Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "1ffc8a949ca4c1ff2873efddae1a8d36a29df7ce",
+            "completedAt": "2026-11-09T09:12:48.357Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T09:12:48.357Z"
       }
     }
   ],
