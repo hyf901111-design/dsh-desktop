@@ -203,6 +203,54 @@
           "额外旧standard-agent-preset首项对build roster的断言在canonical main同样失败，未修改历史策略；新预设交接有独立回归。"
         ],
         "generatedAt": "2026-11-09T23:54:16.097563+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
+        "verificationCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
+            "completedAt": "2026-11-09T23:56:12.716Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
+            "completedAt": "2026-11-09T23:56:12.716Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
+            "completedAt": "2026-11-09T23:56:12.716Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T23:56:12.716Z"
       }
     }
   ],
