@@ -25,6 +25,11 @@ export function componentDiscoveryProgress(discoveryTools = new Set()) {
     else empty.set(tool,(empty.get(tool)??0)+1);
    }catch{}
   },
+  // Reuse only the child's existing grants and call budget. An empty catalog
+  // is evidence to switch acquisition method, not to close all source tools.
+  allowAlternativeRead({elapsed,hasBusinessData}) {
+   return elapsed<135000&&!hasBusinessData&&(exactEmpty.size>0||[...empty.values()].some(count=>count>=2));
+  },
   issue(tool,args) {
    const key=exactKey(tool,args);
    if(key)return exactEmpty.has(key)?'该接口名已返回空定义，本轮不重复查询同一接口；按实际可用定义或当前授权的其他来源取数。':undefined;

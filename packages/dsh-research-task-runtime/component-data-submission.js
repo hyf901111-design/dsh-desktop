@@ -48,6 +48,25 @@ function observedRequestChoices(records,tool){
 
 const sourceReference = record => createHash('sha256').update(JSON.stringify([record.tool,record.args])).digest('hex').slice(0,24)
 
+// Describe paths, not source values. A schema lookup must not spend another
+// model round trip rediscovering a nested business array or retranscribing it.
+function sourceCollections(response) {
+ const collections=[],seen=new Set();let visited=0
+ const segment=key=>/^[A-Za-z_$][\w$]*$/.test(key)?'.'+key:'['+JSON.stringify(key)+']'
+ const walk=(value,path,depth)=>{
+  if(!value||typeof value!=='object'||path.length>512||depth>7||visited++>=160||seen.has(value)||collections.length>=12)return
+  seen.add(value)
+  if(Array.isArray(value)){
+   const sample=value.find(item=>item!==null&&item!==undefined)
+   const fields=sample&&typeof sample==='object'&&!Array.isArray(sample)?Object.keys(sample).filter(name=>name.length<=128).slice(0,32).map(name=>({name,type:sample[name]===null?'null':Array.isArray(sample[name])?'array':typeof sample[name]})):[]
+   collections.push({path,count:value.length,fields})
+   return
+  }
+  for(const key of Object.keys(value).filter(key=>key.length<=128).slice(0,32))walk(value[key],path?path+segment(key):/^[A-Za-z_$][\w$]*$/.test(key)?key:'['+JSON.stringify(key)+']',depth+1)
+ }
+ walk(response,'',0);return collections
+}
+
 function sourceReferences(records) {
  return records.filter(componentMappableSource).slice(-16).map(record => {
   const sample = Array.isArray(record.response.records) ? record.response.records[0] : undefined
@@ -57,9 +76,9 @@ function sourceReferences(records) {
    ...(typeof record.response.api === 'string' ? {api:record.response.api.slice(0,64)} : {}),
    ...(typeof sample?.ts_code === 'string' ? {symbol:sample.ts_code.slice(0,32)} : {}),
    ...(record.purpose === 'snapshot' ? {snapshotOnly:true} : {}),
-   fields:Object.keys(record.response).slice(0,20),
-   ...(sample && typeof sample === 'object' ? {recordFields:Object.keys(sample).slice(0,24)} : {}),
-   ...(record.tool === 'web_fetch' && record.response.data ? {dataFields:Object.keys(record.response.data).slice(0,24)} : {})}
+   fields:Object.keys(record.response).filter(key=>key.length<=128).slice(0,20),collections:sourceCollections(record.response),
+   ...(sample && typeof sample === 'object' ? {recordFields:Object.keys(sample).filter(key=>key.length<=128).slice(0,24)} : {}),
+   ...(record.tool === 'web_fetch' && record.response.data ? {dataFields:Object.keys(record.response.data).filter(key=>key.length<=128).slice(0,24)} : {})}
  })
 }
 
@@ -102,7 +121,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
    check(exec);if(!args.type)return {sources:sourceReferences(observeRecords()),staticDelivery:'文档解析、网页正文及关系图可用 submit_component_data({artifact:完整宿主组件JSON})；不需要伪造 requests 或 mapping。原始取数、来源和完整性校验仍执行。'}
    const schema=args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:args.type==='timeline'?TIMELINE_DATA_GUIDANCE:args.type==='kpi'?'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}':['mind-map','summary'].includes(args.type)?DERIVED_GUIDANCE:args.type==='markdown'?'{"version":1,"type":"markdown","title":"标题","content":"完整正文与原始出处链接"}':args.type==='html'?'{"version":1,"type":"html","title":"标题","html":"完整自包含离线HTML"}':COMPONENT_TEMPLATES.find(template=>template.type===args.type&&template.schema)?.schema
    if(!schema)throw Error('该呈现形式没有独立映射协议。可沿已提供的宿主组件协议提交 artifact；不为通过提交而改变业务内容。')
-   return{schema,guidance:args.type==='kpi'?KPI_GUIDANCE:'结构化数据用 requests/mapping；文档或网页正文用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
+   return{schema,sources:sourceReferences(observeRecords()),guidance:args.type==='kpi'?KPI_GUIDANCE:'结构化数据用 requests/mapping；文档或网页正文用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
   }
  })
  const definition=defineTool({
@@ -154,7 +173,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
  const dispose=()=>{if(disposed)return;disposed=true;for(const release of releases.splice(0).reverse())release();signal?.removeEventListener('abort',dispose);pending=accepted=undefined}
  signal?.addEventListener('abort',dispose,{once:true})
  return{
-  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时才调用 component_presentation_schema。取得结构化数据后调用 submit_component_data，传 requests 与 mapping。已解析的文档、网页正文、关系图或自定义静态呈现，调用同一工具传 artifact:完整宿主组件JSON，不传 requests/mapping；不用为文字内容伪造业务请求，不将正文包装成刷新配方。两条路径均保留本卡真实来源并继续校验完整性；静态交付不能替代明确要求的刷新。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
+  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时只调用一次 component_presentation_schema({type,variant})，同一响应会给出呈现协议、当前 sourceRef、实际嵌套数组路径及条数；直接映射完整数组，不再单独查询空参数目录，不手抄长序列。取得结构化数据后调用 submit_component_data，传 requests 与 mapping。已解析的文档、网页正文、关系图或自定义静态呈现，调用同一工具传 artifact:完整宿主组件JSON，不传 requests/mapping；不用为文字内容伪造业务请求，不将正文包装成刷新配方。两条路径均保留本卡真实来源并继续校验完整性；静态交付不能替代明确要求的刷新。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
   result,
   register(agent){
    signal?.throwIfAborted()

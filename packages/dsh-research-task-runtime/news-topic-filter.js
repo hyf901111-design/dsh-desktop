@@ -119,7 +119,12 @@ const textOf=item=>[item?.title,item?.summary,item?.content,...(Array.isArray(it
 const esc=value=>String(value??'').replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const safeUrl=value=>{try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:null}catch{return null}}
 const sourceRows=records=>records.filter(record=>record.purpose!=='discovery').flatMap(record=>Array.isArray(record.snapshotRows)?record.snapshotRows.map(row=>({...row,title:row.sourceTitle??row.title,url:row.urls?.find(safeUrl)})):Array.isArray(record.response?.records)?record.response.records:Array.isArray(record.response?.sources)?record.response.sources:[]).filter(row=>typeof row?.title==='string')
-const note=prior=>typeof prior==='string'?prior.slice(0,2000):''
+const note=(prior,removed=0,items=[])=>{
+ const original=typeof prior==='string'?prior.slice(0,1800):''
+ if(!removed)return original
+ const dates=items.map(item=>item.date??item.time).filter(value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}/u.test(value)).sort()
+ return `当前实际交付 ${items.length} 条，主题筛选排除 ${removed} 条。${dates.length?'实际发布日期范围 '+dates[0]+' 至 '+dates.at(-1)+'。':''}${original?'筛选前说明（其中数量与覆盖声明不代表当前交付）：'+original:''}`
+}
 const isScopedNews=(data,requirement)=>data?.type==='news'||String(requirement).includes(capacity)&&(['html','table'].includes(data?.type)||data?.type==='market'&&data.variant==='table')
 
 export function controlledNewsHtml(title,items,empty=NEWS_EMPTY_NOTE){
@@ -160,7 +165,7 @@ export function filterScopedNewsArtifact(data,records=[],requirement='',{general
    // summaries cannot add a requested company to an unrelated source article.
    return observed.length?observed.some(sourceMatches):matches(textOf(item))
   }),removed=data.items.length-items.length
-  return {...data,items,note:items.length?note(data.note,removed)||undefined:NEWS_EMPTY_NOTE}
+  return {...data,items,note:items.length?note(data.note,removed,items)||undefined:NEWS_EMPTY_NOTE}
  }
  if(Array.isArray(data.rows)){
   const selected=data.rows.flatMap((row,i)=>matches(row.map(cell=>String(cell??'')).join(' '))?[i]:[]),rows=selected.map(i=>data.rows[i])
