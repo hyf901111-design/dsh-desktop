@@ -160,6 +160,16 @@ export function setDeveloperConversationTabsVisibility(
   }
 }
 
+/** Only native conversation modes belong to this policy. Board navigation and
+ * generated component tabs can legitimately be called Todos, Skills or Memory. */
+export function syncDeveloperConversationTabsVisibility(document: Document, enabled: boolean): void {
+  setDeveloperConversationTabsVisibility(
+    document.querySelectorAll<HTMLElement>(
+      '[data-conversation-view-id], [data-srb-tabs] > [role="tab"]'
+    ), enabled
+  )
+}
+
 export function developerModeNoticeText(locale: 'zh' | 'en', enabled: boolean): string {
   if (enabled) return locale === 'zh' ? '已进入开发者模式' : 'Developer mode enabled'
   return locale === 'zh' ? '已退出开发者模式' : 'Developer mode disabled'

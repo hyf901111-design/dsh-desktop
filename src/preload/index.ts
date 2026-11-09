@@ -29,7 +29,7 @@ import {
   DEVELOPER_SETTINGS_SECTION_IDS,
   DeveloperModeController,
   developerModeNoticeText,
-  setDeveloperConversationTabsVisibility,
+  syncDeveloperConversationTabsVisibility,
   setDeveloperSettingsVisibility
 } from './developer-mode'
 import { isPluginLoadError } from './plugin-error-view'
@@ -471,12 +471,7 @@ function mountDeveloperModeUi(): void {
 function syncDeveloperModeVisibility(): void {
   const settingsRows = document.querySelectorAll<HTMLElement>('[data-settings-section-id]')
   setDeveloperSettingsVisibility(settingsRows, developerMode.isEnabled())
-  setDeveloperConversationTabsVisibility(
-    document.querySelectorAll<HTMLElement>(
-      '[data-conversation-view-id], [role="tablist"] > [role="tab"]'
-    ),
-    developerMode.isEnabled()
-  )
+  syncDeveloperConversationTabsVisibility(document, developerMode.isEnabled())
 }
 
 function showDeveloperModeNotice(enabled: boolean): void {
