@@ -71,6 +71,66 @@
           "真实模型成功率仍须打包后复测"
         ],
         "generatedAt": "2026-11-09T03:37:53.455522+00:00"
+      },
+      "merged": {
+        "mergeCommit": "05a7c9d77acb0e1e31ae750ac87f3967e7c62996",
+        "verificationCommit": "05a7c9d77acb0e1e31ae750ac87f3967e7c62996",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/host-template-delivery.test.js",
+              "test/component-discovery-progress.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/host-template-delivery.test.js test/component-discovery-progress.test.js test/component-data-submission.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "05a7c9d77acb0e1e31ae750ac87f3967e7c62996",
+            "completedAt": "2026-11-09T03:38:03.145Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "bounded first business read|native-template data to synthesis|respects .* evidence or output|bounded separate allowance|late business records"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t bounded first business read|native-template data to synthesis|respects .* evidence or output|bounded separate allowance|late business records",
+            "verifiedCommit": "05a7c9d77acb0e1e31ae750ac87f3967e7c62996",
+            "completedAt": "2026-11-09T03:38:03.145Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "05a7c9d77acb0e1e31ae750ac87f3967e7c62996",
+            "completedAt": "2026-11-09T03:38:03.145Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "05a7c9d77acb0e1e31ae750ac87f3967e7c62996",
+            "completedAt": "2026-11-09T03:38:03.145Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T03:38:03.145Z"
       }
     }
   ],
