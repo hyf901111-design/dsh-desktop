@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-45",
+  "branch": "codex/integration/20261109-45",
+  "baseMainCommit": "249c4b865228026f29a0e4c9d7eb751bcb1860bb",
+  "expectedMainCommit": "249c4b865228026f29a0e4c9d7eb751bcb1860bb",
+  "createdAt": "2026-11-09T09:16:59.058Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复组件二级菜单悬停高亮残留",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "249c4b865228026f29a0e4c9d7eb751bcb1860bb",
+        "tipCommit": "7d3daa19810a618aca3e86e6a4857392005aab62",
+        "commits": [
+          {
+            "commit": "7d3daa19810a618aca3e86e6a4857392005aab62",
+            "parents": [
+              "249c4b865228026f29a0e4c9d7eb751bcb1860bb"
+            ],
+            "subject": "修复：组件二级菜单父项悬停高亮残留和分支切换"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/component-popup-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/component-menu-presentation.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-menu-presentation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-popup-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "复现状态残留与相邻分支未切换的两项回归测试先失败；修复后42项聚焦检查和类型检查通过。新包实机验证待集成后执行。"
+        },
+        "acceptanceCriteria": [
+          "移动至相邻菜单项后取消原二级父项高亮",
+          "相邻二级菜单父项可直接切换",
+          "键盘导航和笔记浮层无回归"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-09T09:16:58.165831+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+        "verificationCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-menu-presentation.test.ts",
+              "test/component-popup-menu.test.ts",
+              "test/notes-native-menu.test.ts",
+              "test/native-component-menu.test.ts",
+              "test/workbench-native-menu.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-menu-presentation.test.ts test/component-popup-menu.test.ts test/notes-native-menu.test.ts test/native-component-menu.test.ts test/workbench-native-menu.test.js",
+            "verifiedCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+            "completedAt": "2026-11-09T09:17:01.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+            "completedAt": "2026-11-09T09:17:01.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2d94bbf5df3612f6d5348cf473718a0cbf0f95a2",
+            "completedAt": "2026-11-09T09:17:01.332Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T09:17:01.332Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-menu-presentation.test.ts",
+        "test/component-popup-menu.test.ts",
+        "test/notes-native-menu.test.ts",
+        "test/native-component-menu.test.ts",
+        "test/workbench-native-menu.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
