@@ -74,6 +74,54 @@
           "旧系统菜单包已确认存在样式和位置回归；新包未验证前不得宣称该回归已验收"
         ],
         "generatedAt": "2026-11-09T08:54:11.466801+00:00"
+      },
+      "merged": {
+        "mergeCommit": "27e490eff46bcec326f2f5bab062cee76b59cbac",
+        "verificationCommit": "27e490eff46bcec326f2f5bab062cee76b59cbac",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-menu-presentation.test.ts",
+              "test/component-popup-menu.test.ts",
+              "test/notes-native-menu.test.ts",
+              "test/native-component-menu.test.ts",
+              "test/workbench-native-menu.test.js",
+              "test/component-pptx-mode.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-menu-presentation.test.ts test/component-popup-menu.test.ts test/notes-native-menu.test.ts test/native-component-menu.test.ts test/workbench-native-menu.test.js test/component-pptx-mode.test.ts",
+            "verifiedCommit": "27e490eff46bcec326f2f5bab062cee76b59cbac",
+            "completedAt": "2026-11-09T08:54:17.678Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "27e490eff46bcec326f2f5bab062cee76b59cbac",
+            "completedAt": "2026-11-09T08:54:17.678Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "27e490eff46bcec326f2f5bab062cee76b59cbac",
+            "completedAt": "2026-11-09T08:54:17.678Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T08:54:17.678Z"
       }
     }
   ],
