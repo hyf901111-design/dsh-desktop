@@ -45,19 +45,21 @@ function releasePage(record,repo,includeBody) {
  if(record.tool!=='web_fetch'||record.purpose!=='snapshot'||record.response?.sourceUrl!==record.args?.url)return false
  let url
  try{url=new URL(record.args.url)}catch{return false}
- if(url.origin!=='https://api.github.com'||url.pathname.toLowerCase()!==`/repos/${repo}/releases`||
-  !/^\d{1,3}$/u.test(url.searchParams.get('per_page')??'')||url.searchParams.getAll('per_page').length!==1||
+ const web=url.origin==='https://github.com'&&url.pathname.toLowerCase()===`/${repo}/releases`
+ if(!web&&(url.origin!=='https://api.github.com'||url.pathname.toLowerCase()!==`/repos/${repo}/releases`)||
+  !web&&(!/^\d{1,3}$/u.test(url.searchParams.get('per_page')??'')||url.searchParams.getAll('per_page').length!==1)||
   url.searchParams.getAll('page').length>1||
-  [...url.searchParams].some(([key,value])=>key!=='per_page'&&(key!=='page'||!/^\d{1,3}$/u.test(value))))return false
- const size=Number(url.searchParams.get('per_page')),page=Number(url.searchParams.get('page')??1)
+  [...url.searchParams].some(([key,value])=>key!=='per_page'&&(key!=='page'||!/^\d{1,3}$/u.test(value))||web&&key==='per_page'))return false
+ const size=web?10:Number(url.searchParams.get('per_page')),page=Number(url.searchParams.get('page')??1)
  const rows=record.response.records
  if(size<1||size>100||page<1||page>100||!Array.isArray(rows)||!rows.length||rows.length>size||
   new Set(rows.map(row=>row?.html_url)).size!==rows.length||!rows.every(row=>
   row?.draft===false&&typeof row.tag_name==='string'&&row.tag_name.trim()&&
   utcTimestamp(row.published_at)&&
   typeof row.html_url==='string'&&row.html_url.toLowerCase().startsWith(`https://github.com/${repo}/releases/tag/`)&&
-  (!includeBody||typeof row.body==='string')))return false
- return {size,page,rows,record}
+  (!includeBody||typeof row.body==='string'&&row.body_complete!==false)&&
+  (!web||row.body_format==='official-webpage-transcription')))return false
+ return {size,page,rows,record,web}
 }
 
 function releasePages(records,repo,count,includeBody){
@@ -66,7 +68,7 @@ function releasePages(records,repo,count,includeBody){
   const selected=[],seen=new Set()
   let remaining=count
   for(let index=1;remaining>0;index++){
-   const page=index===1?first:pages.findLast(page=>page.size===first.size&&page.page===index)
+   const page=index===1?first:pages.findLast(page=>page.size===first.size&&page.web===first.web&&page.page===index)
    if(!page||page.rows.some(row=>seen.has(row.html_url)))break
    const take=Math.min(remaining,page.rows.length)
    selected.push({record:page.record,take})
@@ -97,7 +99,7 @@ export function observedReleaseTimeline(scope,records,title) {
   }
  }
  return JSON.stringify({version:1,type:'data-bound',requests,mapping:{
-  ...(scope.presentation==='table'?{version:1,type:'table',title:title?.trim().slice(0,256)||'发布记录',columns:['版本','发布日期','原始链接',...(scope.includeBody?['发布说明（原文）']:[])],rows:items,note:'保留来源的全部记录与原文；发布说明为空表示该条来源未提供正文。',sources:scope.repos.map(repo=>({label:repo+' GitHub Releases',url:'https://github.com/'+repo+'/releases'}))}:{version:1,type:'timeline',title:title?.trim().slice(0,256)||'发布动态',timeZone:'UTC',items})
+  ...(scope.presentation==='table'?{version:1,type:'table',title:title?.trim().slice(0,256)||'发布记录',columns:['版本','发布日期','原始链接',...(scope.includeBody?['发布说明（全文）']:[])],rows:items,note:'保留来源全部记录和完整正文；官方网页备选路径保留全文转写与链接，不宣称与 API 原始 Markdown 字节相同。发布说明为空表示来源未提供正文。',sources:scope.repos.map(repo=>({label:repo+' GitHub Releases',url:'https://github.com/'+repo+'/releases'}))}:{version:1,type:'timeline',title:title?.trim().slice(0,256)||'发布动态',timeZone:'UTC',items})
  }})
 }
 
@@ -127,7 +129,7 @@ export function releaseTimelineComplete(scope,data,records){
 // Each known source owns its pagination semantics. Retry a smaller page only
 // on transport truncation or a clipped JSON array; start over at page one when
 // the page size changes so offsets cannot skip or duplicate records.
-export async function readReleaseTimeline(scope,fetchPage,signal){
+async function readApiReleaseTimeline(scope,fetchPage,signal){
  const groups=await Promise.all(scope.repos.map(async repo=>{
   let size=scope.count,remaining=scope.count,records=[],reads=0
   while(remaining>0&&reads++<Math.min(116,Math.max(20,scope.count+8))){
@@ -149,6 +151,29 @@ export async function readReleaseTimeline(scope,fetchPage,signal){
    if(!result||result.rows.length<Math.min(size,remaining))return
    records.push(response)
    remaining-=result.rows.length
+  }
+  if(remaining<=0&&releasePages(records,repo,scope.count,scope.includeBody))return records
+ }))
+ return groups.every(Boolean)?groups.flat():[]
+}
+
+export async function readReleaseTimeline(scope,fetchPage,signal){
+ // Retry a representation, not unrelated providers or guessed interfaces.
+ // Exceptions, rate-limit JSON returned as HTTP 200 and invalid payloads all
+ // lead to the same official public website. Never mix transport cohorts.
+ let api=[]
+ try{api=await readApiReleaseTimeline(scope,fetchPage,signal)}catch(error){signal?.throwIfAborted()}
+ if(api.length)return api
+ const groups=await Promise.all(scope.repos.map(async repo=>{
+  const records=[];let remaining=scope.count
+  for(let page=1;remaining>0&&page<=Math.ceil(scope.count/10);page++){
+   signal?.throwIfAborted()
+   const url=`https://github.com/${repo}/releases?page=${page}`
+   let response
+   try{response=hostStructuredWebRecord(await fetchPage(url,signal),url)}catch(error){signal?.throwIfAborted();return}
+   const result=response&&releasePage(response,repo,scope.includeBody)
+   if(!result||result.rows.length<Math.min(10,remaining))return
+   records.push(response);remaining-=result.rows.length
   }
   if(remaining<=0&&releasePages(records,repo,scope.count,scope.includeBody))return records
  }))

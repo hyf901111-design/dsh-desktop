@@ -13,6 +13,42 @@ async function collectRenderedPage(maxMilliseconds: number) {
     try { const value = JSON.parse(raw); complete = Boolean(value && typeof value === 'object') && raw.length < 120_000 } catch {}
     return { title: document.title, sourceText: raw.slice(0, 120_000), complete, missingHeadings: 0, images: 0, blockCount: 0, links: [] }
   }
+  // A public release page is an alternate representation of the same official
+  // collection when its API is unavailable. Keep each card's own timestamp,
+  // body and links together; never infer them from page-level prose.
+  if (location.origin === 'https://github.com' && /^\/[\w.-]+\/[\w.-]+\/releases\/?$/.test(location.pathname)) {
+    const repo = location.pathname.split('/').slice(1, 3).join('/')
+    const cards = [...document.querySelectorAll<HTMLElement>('.Box-body')].filter(card => [...card.querySelectorAll<HTMLAnchorElement>('a[href]')].some(a => new URL(a.href).pathname.startsWith('/' + repo + '/releases/tag/')))
+    const records = cards.map(card => {
+      const body = card.querySelector<HTMLElement>(':scope > [data-test-selector="body-content"]')
+      const anchors = [...card.querySelectorAll<HTMLAnchorElement>('a[href]')].filter(a => new URL(a.href).pathname.startsWith('/' + repo + '/releases/tag/'))
+      const times = [...card.querySelectorAll('relative-time[datetime]')]
+      if (anchors.length !== 1 || times.length !== 1) return null
+      const link = anchors[0]!, published = times[0]!.getAttribute('datetime')!
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(published) || !Number.isFinite(Date.parse(published))) return null
+      // Preserve complete text including collapsed explanations, code and all
+      // link destinations. This is a labelled webpage transcription, not the
+      // API's original Markdown bytes. Media is explicit and cannot pass a
+      // text-only completeness check silently.
+      const transcribe = (node: Node): string => {
+        if (node.nodeType === 3) return node.textContent ?? ''
+        if (node.nodeType !== 1) return ''
+        const el = node as HTMLElement
+        if (el.matches('script,style,template,.anchor')) return ''
+        const text = [...el.childNodes].map(transcribe).join('')
+        if (el.tagName === 'A') return text ? '[' + text + '](' + (el as HTMLAnchorElement).href + ')' : ''
+        if (el.tagName === 'BR') return '\n'
+        if (el.tagName === 'TD' || el.tagName === 'TH') return text + '\t'
+        return /^(P|DIV|H[1-6]|LI|UL|OL|PRE|TABLE|TR|BLOCKQUOTE|DETAILS|SUMMARY)$/.test(el.tagName) ? '\n' + text + '\n' : text
+      }
+      return { tag_name: decodeURIComponent(new URL(link.href).pathname.slice(('/' + repo + '/releases/tag/').length)), published_at: published,
+        html_url: link.href, draft: false, body: body ? transcribe(body).trim() : '', body_format: 'official-webpage-transcription', body_complete: !body?.querySelector('img,video,iframe,include-fragment') }
+    })
+    if (records.length && records.length <= 10 && records.every(Boolean)) {
+      const raw = JSON.stringify(records)
+      return { title: document.title, sourceText: raw.slice(0, 120_000), complete: raw.length < 120_000, missingHeadings: 0, images: 0, blockCount: records.length, links: [] }
+    }
+  }
   const deadline = Date.now() + maxMilliseconds
   const pause = () => new Promise(resolve => setTimeout(resolve, 350))
   const blocks = new Map<string, { order: number; text: string }>()

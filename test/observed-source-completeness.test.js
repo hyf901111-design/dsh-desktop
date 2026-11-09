@@ -162,3 +162,26 @@ it('retains a titled browser JSON response through adaptive pagination and compl
  expect(snapshot.data.rows).toEqual(all.map(row=>[row.tag_name,row.published_at,row.html_url,row.body]))
  expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
 })
+
+it.each(['rate-limit-json','http-error','transport-error'])('switches %s to the same official website and retains all forty records and full bodies',async failure=>{
+ const scope={repos:['example/paged'],count:40,includeBody:true,presentation:'table'},calls=[]
+ const all=Array.from({length:40},(_,i)=>({tag_name:'v'+i,published_at:'2026-11-01T10:00:00Z',html_url:'https://github.com/example/paged/releases/tag/v'+i,draft:false,body:'网页全文与原始链接'.repeat(i===31?800:2)+i,body_format:'official-webpage-transcription',body_complete:true}))
+ const records=await readReleaseTimeline(scope,async url=>{
+  calls.push(url)
+  const u=new URL(url)
+  if(u.hostname==='api.github.com'){
+   if(failure==='transport-error')throw Error('temporary failure')
+   return failure==='http-error'?{url,statusCode:403,body:{kind:'text',content:'rate limited'}}:page(url,{message:'API rate limit exceeded'})
+  }
+  const n=Number(u.searchParams.get('page'));return page(url,all.slice((n-1)*10,n*10))
+ })
+ expect(calls).toHaveLength(5)
+ expect(calls.slice(1)).toEqual([1,2,3,4].map(n=>'https://github.com/example/paged/releases?page='+n))
+ const snapshot=resolveComponentSnapshot(observedReleaseTimeline(scope,records,'完整发布总表'),records)
+ expect(releaseTimelineComplete(scope,snapshot.data,records)).toBe(true)
+ expect(snapshot.data.rows).toEqual(all.map(r=>[r.tag_name,r.published_at,r.html_url,r.body]))
+ const broken=structuredClone(records);broken[1].response.records[0].body_complete=false
+ expect(observedReleaseTimeline(scope,broken,'不得静默丢失图片')).toBeUndefined()
+ broken[1].response.records[0]=structuredClone(records[0].response.records[0])
+ expect(observedReleaseTimeline(scope,broken,'不得重复前页')).toBeUndefined()
+})

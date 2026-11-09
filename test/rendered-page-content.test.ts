@@ -3,6 +3,26 @@ import { Window } from 'happy-dom'
 import { renderedPageContentScript } from '../src/main/search/rendered-page-content'
 let window: Window
 
+it('extracts official release cards with their own dates and full linked body instead of a date-less text dump',async()=>{
+ window=new Window({url:'https://github.com/example/project/releases?page=2'})
+ window.document.body.innerHTML='<main>'+[1,2].map(i=>`<div class="Box-body"><h2><a href="/example/project/releases/tag/v${i}">v${i}</a></h2><relative-time datetime="2026-11-0${i}T12:20:30Z"></relative-time><div data-test-selector="body-content"><h3>修复</h3><p>完整说明${i}<a href="/example/project/commit/${i}">原始提交</a></p><details><summary>更多</summary><pre>完整代码\n第二行</pre></details></div></div>`).join('')+'</main>'
+ const result=await window.eval(renderedPageContentScript(1))
+ expect(result.complete).toBe(true)
+ const records=JSON.parse(result.sourceText)
+ expect(records).toHaveLength(2)
+ expect(records[0]).toMatchObject({tag_name:'v1',published_at:'2026-11-01T12:20:30Z',html_url:'https://github.com/example/project/releases/tag/v1',body_complete:true})
+ expect(records[0].body).toContain('[原始提交](https://github.com/example/project/commit/1)')
+ expect(records[0].body).toContain('完整代码\n第二行')
+ expect(records[0].body).not.toContain('完整说明2')
+ window.document.querySelector('[data-test-selector="body-content"]')!.appendChild(window.document.createElement('img'))
+ const media=await window.eval(renderedPageContentScript(1))
+ expect(JSON.parse(media.sourceText)[0].body_complete).toBe(false)
+ window.document.querySelectorAll('[data-test-selector="body-content"]')[1]!.remove()
+ const empty=JSON.parse((await window.eval(renderedPageContentScript(1))).sourceText)
+ expect(empty).toHaveLength(2)
+ expect(empty[1]).toMatchObject({tag_name:'v2',body:'',body_complete:true})
+})
+
 afterEach(async () => { await window?.happyDOM.abort(); vi.useRealTimers() })
 it('retains unmounted chapters in order while traversing a nested virtual document', async () => {
   window = new Window()
