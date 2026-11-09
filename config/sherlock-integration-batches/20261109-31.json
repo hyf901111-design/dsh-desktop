@@ -45,6 +45,37 @@
           "真实外部数据缺失仍须如实报告，不声称所有场景百分之百成功"
         ],
         "generatedAt": "2026-11-09T04:39:26.608688+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1cfd5dd785de7129fe8f23cd7ed8e8beb9e63b66",
+        "verificationCommit": "1cfd5dd785de7129fe8f23cd7ed8e8beb9e63b66",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-b-icons-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-b-icons-browser.test.js",
+            "verifiedCommit": "1cfd5dd785de7129fe8f23cd7ed8e8beb9e63b66",
+            "completedAt": "2026-11-09T04:39:31.726Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "1cfd5dd785de7129fe8f23cd7ed8e8beb9e63b66",
+            "completedAt": "2026-11-09T04:39:31.726Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T04:39:31.726Z"
       }
     }
   ],
