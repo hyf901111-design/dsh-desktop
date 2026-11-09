@@ -6,6 +6,18 @@ const s={code:'600519',name:'贵州茅台',market:'SH'},other={code:'000001',nam
 const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:i%2?0:1000}))
 const service=()=>({request:vi.fn(async q=>q.action==='search'?{symbols:[s,other]}:q.action==='history'?{bars,volumeUnit:'股',source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'}:q.action==='news'?{news:[{id:'n',title:'本人原始新闻',source:'本人新闻来源',url:'https://example.org/news',time:'2026-10-09 10:00'}],source:'测试通联'}:{quotes:q.symbols.map(x=>({...x,price:100,changePercent:x.market==='SH'?0:-2,asOf:'2026-10-08'})),source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'})})
 async function fixture(desktop={}){const f=await financialClientFixture({financialWidget:service(),...desktop},{refreshState:true});close.push(f.dispose);return f}
+it('备用行情在选择器中禁用不支持的复权选项，保留不复权和其他周期操作',async()=>{
+ const f=await fixture();let quote
+ await f.act(async()=>{quote=f.workspace.createFinancialWidget('quote')})
+ const select=()=>f.host.querySelector('select[aria-label="复权方式"]')
+ expect(select().querySelector('option[value="none"]').disabled).toBe(false)
+ expect(select().querySelector('option[value="forward"]').disabled).toBe(true)
+ expect(select().querySelector('option[value="backward"]').disabled).toBe(true)
+ expect(f.host.querySelectorAll('.ew-quote-periods button')).toHaveLength(5)
+ expect([...f.host.querySelectorAll('.ew-quote-periods button')].some(b=>b.disabled)).toBe(false)
+ await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>n.id===quote.id?{...n,containerSpec:{...n.containerSpec,dataSource:'default'}}:n)))
+ expect(select().querySelector('option[value="forward"]').disabled).toBe(false)
+},30000)
 it('Shift 点击组件正文、图表和标题可追加或取消多选，不触发内部选股；搜索仍可编辑',async()=>{
  const f=await fixture();let watch,quote
  await f.act(async()=>{watch=f.workspace.createFinancialWidget('watchlist');quote=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>({...n,containerSpec:{...n.containerSpec,symbols:n.id===watch.id?[s,other]:[s]}})));f.workspace.updateSelection([quote.id],'replace')})

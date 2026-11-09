@@ -2,3 +2,5 @@ export type FinancialWidgetSpec = {version:1;type:'financial-widget';widget:'wat
 export function financialWidgetDefaults(widget:string):FinancialWidgetSpec|null
 export function financialWidgetSpec(value:unknown):FinancialWidgetSpec|null
 export function financialWidgetDimensions(spec:unknown,initial?:boolean):{width:number;height:number}|undefined
+
+export function financialWidgetPlanSpec(value: unknown,request?:string): FinancialWidgetSpec|null

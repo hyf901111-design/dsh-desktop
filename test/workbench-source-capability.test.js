@@ -195,3 +195,15 @@ it('does not turn unknown quote profiles, sources, extra request fields or incom
     expect(() => validatePanel(panel)).toThrow()
   }
 })
+
+it('negotiates unsupported source options before mounting a generated financial component without changing user requirements',()=>{
+ const artifact={version:1,type:'financial-widget',widget:'quote',title:'行情',symbols:[{code:'511010',market:'SH',name:'国债ETF'}],dataSource:'backup',adjustment:'forward'}
+ const input={requestId:'source-option',title:'研究',dataMode:'source',originalRequest:'生成一个固收研究工作台',panels:[{type:'financial-widget',title:'行情',prompt:'观察行情与走势',size:'large',artifact}]}
+ const original=structuredClone(input),plan=validateWorkbench(input)
+ expect(plan.panels[0].artifact).toMatchObject({widget:'quote',dataSource:'backup',adjustment:'none'})
+ expect(input).toEqual(original);expect(validateWorkbench(plan)).toEqual(plan)
+ expect(()=>validateWorkbench({...input,originalRequest:'用前复权展示国债ETF的K线'})).toThrow(/备用.*不支持.*复权/)
+ expect(()=>validateWorkbench({...input,originalRequest:'use forward adjusted prices'})).toThrow(/备用.*不支持.*复权/)
+ const explicit=validateWorkbench({...input,originalRequest:'用前复权展示K线',panels:[{...input.panels[0],artifact:{...artifact,dataSource:'default'}}]})
+ expect(explicit.panels[0].artifact).toMatchObject({adjustment:'forward',dataSource:'default'})
+})

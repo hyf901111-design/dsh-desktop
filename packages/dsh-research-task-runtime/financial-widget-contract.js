@@ -1,7 +1,7 @@
 // Shared with the trusted, serialized React canvas. No data-provider secrets or
 // synthetic prices are stored in this spec. Data is fetched for this configuration.
 import {financialIndexCatalog} from './financial-index-catalog.js'
-export const FINANCIAL_WIDGET_GUIDANCE="明确创建组件库同款“行情面板”且未指定标的时，用financial-widget.quote和symbols:[]保留原生证券搜索、周期、指标及未选标的空态；不猜证券、不改成indices。indices用于明确指数需求，symbols:[]是合法未配置状态；空响应显示缺失与配置/重试，不记录虚假的获取成功。创建组件不等于行情获取成功，来源、行情时点、获取时间与保存时间分别据实显示。" + '真实证券行情和K线优先复用组件库的内置行情面板（financial-widget.quote），保留分时/日K/周K/月K/年K、MA/VOL/MACD、拖拽浏览、选中后滚轮缩放和每60秒自动刷新。工作台panel.type="financial-widget"，首次附artifact:{version:1,type:"financial-widget",widget:"quote",title:"标的行情",symbols:[{code:"已确认的证券代码",market:"SH|SZ|BJ|HK|US",name:"原证券名"}]}；其余配置由宿主补默认值。也可指定period:"1m|1d|1w|1mo|1y"、adjustment:"none|forward|backward"及indicators:["MA","VOL","MACD"]。只配置来源标的，不填价格、OHLC数组或HTML，不启动逐卡模型。仅用户或实际来源确认代码/市场后填symbols；已指定证券但代码或市场尚未确认时先查当前数据工具，不猜股票代码，不用贵州茅台等样例代替。模拟记录、指定历史快照、组合对比或当前内置组件未覆盖的加密资产等继续使用对应market/chart专业模板及实际来源数据；禁止把不支持的资产伪装成支持的证券。标准图表一律交结构化数据，由宿主动态绘图，不手写SVG、canvas布局或拉伸图中的文字。';
+export const FINANCIAL_WIDGET_GUIDANCE="明确创建组件库同款“行情面板”且未指定标的时，用financial-widget.quote和symbols:[]保留原生证券搜索、周期、指标及未选标的空态；不猜证券、不改成indices。indices用于明确指数需求，symbols:[]是合法未配置状态；空响应显示缺失与配置/重试，不记录虚假的获取成功。创建组件不等于行情获取成功，来源、行情时点、获取时间与保存时间分别据实显示。" + '真实证券行情和K线优先复用组件库的内置行情面板（financial-widget.quote），保留分时/日K/周K/月K/年K、MA/VOL/MACD、拖拽浏览、选中后滚轮缩放和每60秒自动刷新。工作台panel.type="financial-widget"，首次附artifact:{version:1,type:"financial-widget",widget:"quote",title:"标的行情",symbols:[{code:"已确认的证券代码",market:"SH|SZ|BJ|HK|US",name:"原证券名"}]}；其余配置由宿主补默认值。也可指定period:"1m|1d|1w|1mo|1y"、adjustment:"none|forward|backward"及indicators:["MA","VOL","MACD"]。备用行情只支持 adjustment:none；用户明确要求前/后复权时必须选有该能力且已获准的数据源，否则在创建前说明能力冲突，不挂载空图表。只配置来源标的，不填价格、OHLC数组或HTML，不启动逐卡模型。仅用户或实际来源确认代码/市场后填symbols；已指定证券但代码或市场尚未确认时先查当前数据工具，不猜股票代码，不用贵州茅台等样例代替。模拟记录、指定历史快照、组合对比或当前内置组件未覆盖的加密资产等继续使用对应market/chart专业模板及实际来源数据；禁止把不支持的资产伪装成支持的证券。标准图表一律交结构化数据，由宿主动态绘图，不手写SVG、canvas布局或拉伸图中的文字。';
 export function financialWidgetDefaults(widget){
  const titles={watchlist:'自选',quote:'行情面板',indices:'市场指数',news:'新闻列表',announcements:'公告列表'}
  if(!titles[widget])return null
@@ -10,6 +10,22 @@ export function financialWidgetDefaults(widget){
   {code:'399001',market:'SZ',name:'深证成指'},{code:'399006',market:'SZ',name:'创业板指'},
   {code:'000688',market:'SH',name:'科创50'},{code:'000016',market:'SH',name:'上证50'}]:[],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:'',...['quote','indices'].includes(widget)?{dataSource:'backup'}:{}}
 }
+// Adapter capability is a host fact. Planner-selected display options cannot
+// turn a successfully mounted shell into an unsupported data request.
+export function financialWidgetPlanSpec(value,request=''){
+ let spec=financialWidgetSpec({...financialWidgetDefaults(value?.widget),...value})
+ if(!spec)return null
+ const historyCapabilities={default:['none','forward','backward'],backup:['none']}
+ if(spec.widget==='quote'&&!historyCapabilities[spec.dataSource??'default']?.includes(spec.adjustment)){
+  // Only the captured user request can make a planner option mandatory. Never
+  // silently change explicitly requested adjusted prices or widen permissions.
+  const human=String(request).replace(/(?:不要|不需要|不使用|不得使用)\s*(?:前|后)复权/gu,'')
+  if(/前复权|后复权|\b(?:forward|backward|qfq|hfq)\b/iu.test(human))throw Error('备用行情不支持所要求的复权方式。请保留用户复权要求，选择有该能力且当前获准的数据源；不能把无法获取K线的配置挂载为已完成。')
+  spec=financialWidgetSpec({...spec,adjustment:historyCapabilities[spec.dataSource??'default'][0]})
+ }
+ return spec
+}
+
 export function financialWidgetSpec(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId','visibleBars','dataSource','refreshMinutes','refreshEnabled'].includes(k)))return null
  if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
