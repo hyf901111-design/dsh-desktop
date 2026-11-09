@@ -1,3 +1,4 @@
+import {patchPendingPresetClient} from './lib/pending-composer-preferences.mjs'
 import {patchBrowserAppNative,stripBrowserAppNative} from './lib/browser-app-native.mjs'
 import {patchImageGenerationClient} from './lib/image-generation-client.mjs'
 import {stripMessageEditClient,patchMessageEditClient,patchMessageEditRuntime,patchMessageEditHost} from './lib/message-edit.mjs'
@@ -231,7 +232,7 @@ for (const [name, patch] of [
   ['dsh-client-ui-settings-general', (source) => patchFigmaAboutUpdates(patchFigmaSettingsGeneral(source))],
   ['dsh-client-ui-settings-models', source => patchFigmaProviderMenu(patchFigmaSettingsModels(source))],
   ['dsh-client-ui-theme', source => patchHomeThemeAppearance(patchFigmaSettingsAppearance(source))],
-  ['dsh-client-ui-agent-preset', source => patchFigmaSettingsModeDescription(patchFigmaRefinementPreset(patchFigmaSettingsPreset(source)))],
+  ['dsh-client-ui-agent-preset', source => patchPendingPresetClient(patchFigmaSettingsModeDescription(patchFigmaRefinementPreset(patchFigmaSettingsPreset(source))))],
   ['dsh-client-ui-subagent', patchFigmaRefinementSubagent],
   ['dsh-client-ui-input-trigger', patchFigmaRefinementInputTrigger]
 ]) {
