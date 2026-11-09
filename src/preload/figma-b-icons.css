@@ -43,3 +43,8 @@ body [data-odyssey-panel-toggle="bottom"]>*{visibility:hidden}
 body [data-odyssey-panel-toggle="right"]{width:18px!important;height:18px!important;flex:none;background:currentColor;mask:url(/odyssey-b-right-panel-18.svg) center/contain no-repeat}
 body [data-odyssey-panel-toggle="right"]>*{visibility:hidden}
 body .t8lSSG_panel :is(.t8lSSG_tabBarPlus,.t8lSSG_toggleButton){box-sizing:border-box;border:0;width:32px!important;height:32px!important;padding:7px!important;display:flex;align-items:center;justify-content:center;flex:none}
+/* The collapsed workspace keeps its React list container, but has no rows.
+   Neither that empty track nor the expanded header margin is a rail item. */
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] [data-srb-workspace-list]{display:none!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .qDHVXG_sectionHeader{height:36px!important;min-height:36px!important;margin:0!important;padding:0!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-workspaces] .YDXeBa_projectRow[aria-expanded=false] .YDXeBa_folder>svg{mask-image:url(/odyssey-b-folder-closed-18.svg)}
