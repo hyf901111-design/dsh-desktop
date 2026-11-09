@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-40",
+  "branch": "codex/integration/20261109-40",
+  "baseMainCommit": "1bbc0a4de8417053db7edb89faef4de7bdc61163",
+  "expectedMainCommit": "1bbc0a4de8417053db7edb89faef4de7bdc61163",
+  "createdAt": "2026-11-09T07:37:51.540Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "取数阶段交接与底栏来源校验修复",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "1bbc0a4de8417053db7edb89faef4de7bdc61163",
+        "tipCommit": "e4027bf65e6264851a7f339f2e865b135ceded7e",
+        "commits": [
+          {
+            "commit": "e4027bf65e6264851a7f339f2e865b135ceded7e",
+            "parents": [
+              "1bbc0a4de8417053db7edb89faef4de7bdc61163"
+            ],
+            "subject": "修复：解耦取数分页提示与最终呈现并识别底栏来源依据"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端复测确认两卡仍失败，已用公开工具轨迹复现旧分页锁死呈现与底栏来源误拒绝；19项阶段回归及109项来源相关聚焦测试通过。新构建实际效果待复测。"
+        },
+        "acceptanceCriteria": [
+          "来源恢复后最终呈现不被探索分页锁死",
+          "底栏来源仅认可实际读取URL，逐条新闻校验保留",
+          "有界恢复且不伪报完整交付"
+        ],
+        "risks": [
+          "当前业务复测仍为0/2；新包不得在实测前宣称完成"
+        ],
+        "generatedAt": "2026-11-09T07:37:49.787217+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-source-binding.test.js",
+        "test/component-source-snapshot-chart.test.js",
+        "test/component-acquisition-followup.test.js",
+        "test/component-discovery-progress.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
