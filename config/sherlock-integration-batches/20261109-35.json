@@ -70,6 +70,53 @@
           "原任务真实取数与最终覆盖仍需新包复测；runtime文件14项旧断言在未修改main同样失败，聚焦28项通过。"
         ],
         "generatedAt": "2026-11-09T05:59:42.028401+00:00"
+      },
+      "merged": {
+        "mergeCommit": "bd1125b2fbf983fe21a7d9f96c04894fed7187cd",
+        "verificationCommit": "bd1125b2fbf983fe21a7d9f96c04894fed7187cd",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-acquisition-followup.test.js",
+              "test/research-generation-watch.test.js",
+              "test/generation-progress-persistence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-acquisition-followup.test.js test/research-generation-watch.test.js test/generation-progress-persistence.test.js",
+            "verifiedCommit": "bd1125b2fbf983fe21a7d9f96c04894fed7187cd",
+            "completedAt": "2026-11-09T05:59:46.810Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance",
+            "verifiedCommit": "bd1125b2fbf983fe21a7d9f96c04894fed7187cd",
+            "completedAt": "2026-11-09T05:59:46.810Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "bd1125b2fbf983fe21a7d9f96c04894fed7187cd",
+            "completedAt": "2026-11-09T05:59:46.810Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T05:59:46.810Z"
       }
     }
   ],
