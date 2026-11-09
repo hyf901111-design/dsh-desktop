@@ -1,0 +1,45 @@
+/* Exact Figma B vectors, page 76. Geometry and provenance: build/brand/odyssey-b-icons.json. */
+body [data-dsh-sidebar-root] .hHd-Xa_toggle>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-sidebar-18.svg) center/contain no-repeat}
+body [data-dsh-sidebar-root] .hHd-Xa_toggle>svg>*{visibility:hidden}
+body [data-dsh-sidebar-root] .hHd-Xa_logoRow .hHd-Xa_iconButton:not(.hHd-Xa_toggle)>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-search-18.svg) center/contain no-repeat}
+body [data-dsh-sidebar-root] .hHd-Xa_logoRow .hHd-Xa_iconButton:not(.hHd-Xa_toggle)>svg>*{visibility:hidden}
+body [data-dsh-sidebar-root] [aria-label="添加工作区"]>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-workspace-add-18.svg) center/contain no-repeat}
+body [data-dsh-sidebar-root] [aria-label="添加工作区"]>svg>*{visibility:hidden}
+body [data-dsh-sidebar-root] .YDXeBa_folder>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-folder-open-18.svg) center/contain no-repeat}
+body [data-dsh-sidebar-root] .YDXeBa_folder>svg>*{visibility:hidden}
+body [data-dsh-sidebar-root] [data-srb-board-group="private"]>.YDXeBa_projectRow .YDXeBa_folder>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-personal-category-18.svg) center/contain no-repeat}
+body [data-dsh-sidebar-root] [data-srb-board-group="private"]>.YDXeBa_projectRow .YDXeBa_folder>svg>*{visibility:hidden}
+body [data-dsh-sidebar-root] [data-srb-board-group="shared"]>.YDXeBa_projectRow .YDXeBa_folder>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-shared-category-18.svg) center/contain no-repeat}
+body [data-dsh-sidebar-root] [data-srb-board-group="shared"]>.YDXeBa_projectRow .YDXeBa_folder>svg>*{visibility:hidden}
+body [data-dsh-sidebar-root] .hHd-Xa_newSession:not([data-sidebar-new-note]):first-child::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-new-chat-18.svg)!important}
+body [data-dsh-sidebar-root] .hHd-Xa_newSession:nth-child(2)::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-research-18.svg)!important}
+body [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-note-add-18.svg)!important}
+body [data-dsh-sidebar-root] .st-more .st-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-more-18.svg)!important}
+body [data-dsh-sidebar-root] .srb-bell-icon{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-notifications-20.svg)}
+body [data-dsh-sidebar-root] .srb-row-status .srb-people-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-shared-session-18.svg)}
+.st-menu[data-sidebar-more] [data-odyssey-icon="plugin"]{mask-image:url(/odyssey-b-plugin-18.svg)!important}
+.st-menu[data-sidebar-more] [data-odyssey-icon="clock"]{mask-image:url(/odyssey-b-scheduled-18.svg)!important}
+.st-menu[data-sidebar-more] :is([data-odyssey-icon="note"],[data-odyssey-icon="noteDark"]){mask-image:url(/odyssey-b-note-add-18.svg)!important}
+/* Keep the existing 80px layout reservation. The 36px hit areas sit on one
+   center line, with the design's 20px clear gap / 56px center step. */
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false]{align-items:center!important;gap:20px!important;padding-inline:12px!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_logoRow{display:flex!important;flex-direction:column-reverse!important;align-items:center!important;gap:20px!important;padding:0!important;margin:0!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is(.hHd-Xa_newSessionGroup,.qDHVXG_rail){display:flex!important;flex-direction:column!important;align-items:center!important;gap:20px!important;padding:0!important;margin:0!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is([data-srb-navigation-scroll],.hHd-Xa_regionArea){padding:0!important;margin:0!important;flex:none!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] button:not([role=menuitem]):not(:where(.VOzbGW_overlay *)){width:36px!important;height:36px!important;min-height:36px!important;padding:8px!important;display:flex;align-items:center;justify-content:center;border-radius:8px!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .st-more-zone{margin:0!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto!important;gap:20px!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_toggle>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-sidebar-20.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_logoRow .hHd-Xa_iconButton:not(.hHd-Xa_toggle)>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-search-20.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] [aria-label="添加工作区"]>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-workspace-add-20.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession:first-child::before{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-new-chat-20.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession:nth-child(2)::before{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-research-20.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession[data-sidebar-new-note]::before{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-note-add-20.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .st-more .st-icon{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-more-20.svg)!important}
+body .t8lSSG_tabBarPlus>svg{width:18px!important;height:18px!important;flex:none;background:currentColor;mask:url(/odyssey-b-new-tab-18.svg) center/contain no-repeat}
+body .t8lSSG_tabBarPlus>svg>*{visibility:hidden}
+body [data-odyssey-panel-toggle="bottom"]{width:18px!important;height:18px!important;flex:none;background:currentColor;mask:url(/odyssey-b-bottom-panel-18.svg) center/contain no-repeat}
+body [data-odyssey-panel-toggle="bottom"]>*{visibility:hidden}
+body [data-odyssey-panel-toggle="right"]{width:18px!important;height:18px!important;flex:none;background:currentColor;mask:url(/odyssey-b-right-panel-18.svg) center/contain no-repeat}
+body [data-odyssey-panel-toggle="right"]>*{visibility:hidden}
+body .t8lSSG_panel :is(.t8lSSG_tabBarPlus,.t8lSSG_toggleButton){box-sizing:border-box;border:0;width:32px!important;height:32px!important;padding:7px!important;display:flex;align-items:center;justify-content:center;flex:none}

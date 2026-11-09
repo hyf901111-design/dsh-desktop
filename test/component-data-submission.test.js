@@ -442,3 +442,16 @@ it('hands a complete oversized release collection from the retrieval step to the
  expect(observedReleaseTimeline(scope,short,'发布动态')).toBeUndefined()
  expect(releaseTimelineScope(originalRequest+' 仅保留稳定版。')).toBeNull()
 })
+
+it('returns nested response paths with the requested schema in one bounded call without copying the dataset',async()=>{
+ const f=await fixture()
+ f.records.splice(0,1,{tool:'web_fetch',args:{url:'https://example.test/series'},purpose:'snapshot',response:{data:{result:{data:Array.from({length:100},(_,i)=>({SOLAR_DATE:'2026-11-'+String(i+1),RATE:1.2+i,SECRET:'do-not-copy-records'}))}},sourceUrl:'https://example.test/series'}})
+ const lookup=await f.ctx.tools.execute({name:'component_presentation_schema',arguments:{type:'chart',variant:'line'},callId:'schema-source',agent:f.child,signal:f.controller.signal})
+ expect(lookup.isError).toBe(false)
+ const value=JSON.parse(lookup.content[0].text)
+ expect(value.schema).toBeTruthy();expect(value.sources).toHaveLength(1)
+ expect(value.sources[0].collections).toContainEqual({path:'data.result.data',count:100,fields:[{name:'SOLAR_DATE',type:'string'},{name:'RATE',type:'number'},{name:'SECRET',type:'string'}]})
+ expect(value.sources[0].sourceRef).toMatch(/^[a-f0-9]{24}$/)
+ expect(JSON.stringify(value.sources)).not.toContain('do-not-copy-records')
+ expect(JSON.stringify(value.sources).length).toBeLessThan(3500)
+})

@@ -3015,11 +3015,13 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           // A late, nonempty catalog is progress toward acquisition, not a
           // finished data phase. Allow the first business read within the same
           // 135s bound used for parameter repair. Existing call limits remain;
-          // empty directories and failed reads do not earn more time.
+          // failed reads do not earn unlimited time. Conclusive empty discovery
+          // may use that same bound to try an already-authorized alternative.
           const firstBusinessRead=executionElapsed()<135000&&
             sourceCollector.records.some(record=>record.purpose==='discovery'&&record.response?.kind==='catalog'&&record.response.interfaces?.length)&&
             !componentBindingEvidence(sourceCollector.records)&&!sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)
-          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())&&!firstBusinessRead
+          const alternativeRead=discoveryProgress.allowAlternativeRead({elapsed:executionElapsed(),hasBusinessData:componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)})
+          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())&&!firstBusinessRead&&!alternativeRead
           if(timeExpired||discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
         }
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {

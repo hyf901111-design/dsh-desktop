@@ -302,3 +302,12 @@ it('counts missing-link records before the display budget and reports an obtaine
  const data=filterScopedNewsArtifact({version:1,type:'html',title:'新闻',html:'<p>模型页面</p>'},records,scope+'\n【新闻容量适配】'),window=new Window();window.document.body.innerHTML=data.html
  try{expect(window.document.querySelectorAll('article')).toHaveLength(2000);expect(window.document.body.textContent).toContain('已取得 2001 条相关记录，当前展示 2000 条');expect(window.document.body.textContent).toContain('另 1 条超过组件展示容量');expect(window.document.body.textContent).not.toContain('未取得');expect(acceptArtifactOutput(JSON.stringify(data))).toBeTypeOf('string')}finally{window.happyDOM.abort()}
 })
+
+it('labels post-filter delivery counts and dates instead of repeating a stale coverage claim',()=>{
+ const r=request(),data={version:1,type:'news',title:'新闻',items:[{...bank,date:'2026-11-06'},{...btc,date:'2026-10-22'}],note:'已覆盖全部来源，最新时间2026-11-06，共20条。'}
+ const result=filterScopedNewsArtifact(data,[observed(r,[bank,btc])],scope)
+ expect(result.items).toHaveLength(1)
+ expect(result.note).toContain('当前实际交付 1 条')
+ expect(result.note).toContain('2026-10-22')
+ expect(result.note).toContain('筛选前说明')
+})

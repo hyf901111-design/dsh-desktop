@@ -24,7 +24,7 @@ const escape = (s: unknown) =>
       ]!,
   )
 const icon = (name: keyof typeof icons) =>
-  `<i class="st-icon" aria-hidden="true" style="--icon:url('${escape(icons[name].replaceAll("'",'%27'))}')"></i>`
+  `<i class="st-icon" data-odyssey-icon="${name}" aria-hidden="true" style="--icon:url('${escape(icons[name].replaceAll("'",'%27'))}')"></i>`
 const resizeIcon = () =>
   `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 15 5M10 15l5-5"/></svg>`
 const stateLabel = (t: ScheduledTask) =>

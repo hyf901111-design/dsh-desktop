@@ -29,3 +29,14 @@ it.each([{records:[]},{kind:'catalog',interfaces:[]},'not JSON'])('does not trea
  reply(p,'c',value,{name:'unknown'});reply(p,'d',value,{name:'unknown'});expect(p.issue('unknown')).toBeUndefined();
  if(value?.kind!=='catalog'){reply(p,'e',value);reply(p,'f',value);expect(p.issue(tool)).toBeUndefined()}
 });
+
+it('allows one bounded alternative-source window after conclusive empty discovery, never after data or the hard deadline',()=>{
+ const p=componentDiscoveryProgress(new Set([tool]));
+ expect(p.allowAlternativeRead({elapsed:95000,hasBusinessData:false})).toBe(false)
+ reply(p,'one',{kind:'catalog',interfaces:[]},{args:{api_name:'missing'}})
+ expect(p.allowAlternativeRead({elapsed:95000,hasBusinessData:false})).toBe(true)
+ expect(p.allowAlternativeRead({elapsed:134999,hasBusinessData:false})).toBe(true)
+ expect(p.allowAlternativeRead({elapsed:135000,hasBusinessData:false})).toBe(false)
+ expect(p.allowAlternativeRead({elapsed:95000,hasBusinessData:true})).toBe(false)
+ expect(componentDiscoveryProgress(new Set([tool])).allowAlternativeRead({elapsed:95000,hasBusinessData:false})).toBe(false)
+})

@@ -1,0 +1,187 @@
+{
+  "fileKey": "Jkyr5rMvgM8GNH6E68xnqd",
+  "design": "B / Remix Icon Fill",
+  "collapsedRail": {
+    "hitSize": 36,
+    "glyphSize": 20,
+    "gap": 20,
+    "centerStep": 56
+  },
+  "assets": [
+    {
+      "file": "odyssey-b-sidebar-18.svg",
+      "role": "sidebar",
+      "size": 18,
+      "nodeId": "4542:368390",
+      "sha256": "4fb68d9f7aefe5efb7e88dbb8f200172c97a87cbcff13eceeb95c77dad7cee44"
+    },
+    {
+      "file": "odyssey-b-sidebar-20.svg",
+      "role": "sidebar",
+      "size": 20,
+      "nodeId": "4542:368304",
+      "sha256": "d50766de2bdba854ac51b6c74cdcbcf7d826b23b0b0bc358c271e7d4866b633c"
+    },
+    {
+      "file": "odyssey-b-search-18.svg",
+      "role": "search",
+      "size": 18,
+      "nodeId": "4542:368516",
+      "sha256": "4b070f32c10ef887419c0da6ba1d553ab9ab037735a68cdb60cc7abac5649235"
+    },
+    {
+      "file": "odyssey-b-search-20.svg",
+      "role": "search",
+      "size": 20,
+      "nodeId": "4542:368306",
+      "sha256": "0de955cd3d764a9174efe8898e6ef7ba27213f9526c35c9f444c58485f30c70b"
+    },
+    {
+      "file": "odyssey-b-new-chat-18.svg",
+      "role": "new-chat",
+      "size": 18,
+      "nodeId": "4542:368519",
+      "sha256": "272a41a1608097541549c8a087cff72fe1863e362e2f9a5fc91cc1ffcdef27c8"
+    },
+    {
+      "file": "odyssey-b-new-chat-20.svg",
+      "role": "new-chat",
+      "size": 20,
+      "nodeId": "4542:368310",
+      "sha256": "cd8ca66cba3dc1f7b71e936e292920b141657509d92e879febf02cae98366c29"
+    },
+    {
+      "file": "odyssey-b-research-18.svg",
+      "role": "research",
+      "size": 18,
+      "nodeId": "4542:368523",
+      "sha256": "d2d9c1369f960b9dd1e89eb5219d9a33b5af87668c0b9478834a7ce5c8714db4"
+    },
+    {
+      "file": "odyssey-b-research-20.svg",
+      "role": "research",
+      "size": 20,
+      "nodeId": "4542:368312",
+      "sha256": "9a2ff95f8130409cbcb655bd86bb7fa613097de1028289f6abfeaee3cb4fd2f8"
+    },
+    {
+      "file": "odyssey-b-note-add-18.svg",
+      "role": "note-add",
+      "size": 18,
+      "nodeId": "I4550:368174;4550:367897",
+      "sha256": "4baae61b4b92e2f8479e9f8d1af32f328c2eb16241ad2d9a26cd3c0e8cb34e81"
+    },
+    {
+      "file": "odyssey-b-note-add-20.svg",
+      "role": "note-add",
+      "size": 20,
+      "nodeId": "4542:368314",
+      "sha256": "df9719b0e12428a52965e5eeffccada9b61ca7c97e76d62b1fd9cba77368d538"
+    },
+    {
+      "file": "odyssey-b-workspace-add-18.svg",
+      "role": "workspace-add",
+      "size": 18,
+      "nodeId": "4542:368458",
+      "sha256": "e0b4e4aa557469fbaca52d321693f92163e3d867b6aa31bad63f0665c01c9a95"
+    },
+    {
+      "file": "odyssey-b-workspace-add-20.svg",
+      "role": "workspace-add",
+      "size": 20,
+      "nodeId": "4542:368308",
+      "sha256": "0b2f25f8afcddae83d3a08eca8fd9bb3d5d1c2b40c75e7e01b74be7da9d0e381"
+    },
+    {
+      "file": "odyssey-b-folder-open-18.svg",
+      "role": "folder-open",
+      "size": 18,
+      "nodeId": "4542:368460",
+      "sha256": "d46358addb8776cdfd58f821329d81500da7615a6e54ba3f1602a71e88c00d99"
+    },
+    {
+      "file": "odyssey-b-folder-closed-18.svg",
+      "role": "folder-closed",
+      "size": 18,
+      "nodeId": "4542:368495",
+      "sha256": "901f01007ee0744bf816b451f6fc549670d28db0ce4300c674aca07af8bf156f"
+    },
+    {
+      "file": "odyssey-b-notifications-20.svg",
+      "role": "notifications",
+      "size": 20,
+      "nodeId": "4542:368319",
+      "sha256": "ffbdb0c61e22f0824b79e1fd322791ac8cc2d395eb059c9b62da6fa56dc775f3"
+    },
+    {
+      "file": "odyssey-b-more-18.svg",
+      "role": "more",
+      "size": 18,
+      "nodeId": "4542:368529",
+      "sha256": "931298b966e6a5eadad4d9505573b935a001346f854afaaa51fc814f44d59b70"
+    },
+    {
+      "file": "odyssey-b-more-20.svg",
+      "role": "more",
+      "size": 20,
+      "nodeId": "4542:368316",
+      "sha256": "4624dfe7d185a43b2b1349abcf88d5cf624d564ae6d87384cdd072e7e526241b"
+    },
+    {
+      "file": "odyssey-b-personal-category-18.svg",
+      "role": "personal-category",
+      "size": 18,
+      "nodeId": "4542:368408",
+      "sha256": "5e82e7676e1dc0a6a01144b09616e6fc8d0ce1e3df058a73d549a9be85903431"
+    },
+    {
+      "file": "odyssey-b-shared-category-18.svg",
+      "role": "shared-category",
+      "size": 18,
+      "nodeId": "4542:368433",
+      "sha256": "6568394a5e71cf3c8e907b7cab0afc3d3d7e2492da35cc8087093813dc31a1eb"
+    },
+    {
+      "file": "odyssey-b-shared-session-18.svg",
+      "role": "shared-session",
+      "size": 18,
+      "nodeId": "4550:368030",
+      "sha256": "7c65d5bc9dc3d4164917a11cc0bf5aefa34d5aa374504d79d3c83764a3a6eaee"
+    },
+    {
+      "file": "odyssey-b-plugin-18.svg",
+      "role": "plugin",
+      "size": 18,
+      "nodeId": "I4550:368174;4550:367902",
+      "sha256": "0370dd8557320ec965e6f47dde32f03aecd85d8d322b70563c8216bdbe740c6f"
+    },
+    {
+      "file": "odyssey-b-scheduled-18.svg",
+      "role": "scheduled",
+      "size": 18,
+      "nodeId": "I4550:368174;4550:367907",
+      "sha256": "a68b823a977ab42b9b5e8b1b9ad460fef79d689208553b4300cce00a2231c46c"
+    },
+    {
+      "file": "odyssey-b-new-tab-18.svg",
+      "role": "new-tab",
+      "size": 18,
+      "nodeId": "4556:368320",
+      "sha256": "9a09976f0cf9d0ff10d15d93819e01f641534d11227b38335daf2d4f9b5ade8e"
+    },
+    {
+      "file": "odyssey-b-bottom-panel-18.svg",
+      "role": "bottom-panel",
+      "size": 18,
+      "nodeId": "4556:368324",
+      "sha256": "b26fd1305a63105f786be66c2b8fcc32712161d840d351898b1daa15590eea02"
+    },
+    {
+      "file": "odyssey-b-right-panel-18.svg",
+      "role": "right-panel",
+      "size": 18,
+      "nodeId": "4556:368328",
+      "sha256": "04dda0266b93d97f2842b44bf99ba7e209fadb8ee430a6c1d7ef5983c2f7fdd9"
+    }
+  ]
+}

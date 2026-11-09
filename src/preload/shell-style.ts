@@ -1,3 +1,4 @@
+import figmaBIcons from './figma-b-icons.css?raw'
 import figmaReadingStyles from './figma-reading.css?raw'
 import figmaFinalStyles from './figma-final-shell.css?raw'
 import figmaHomeStyles from './figma-home.css?raw'
@@ -41,7 +42,7 @@ export function mountDesktopShellStyles(document: Document): void {
 
   const style = document.createElement('style')
   style.id = DESKTOP_SHELL_STYLE_ID
-  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles + figmaWelcomeStyles + focusStyles + userMessageThemeCss(themePalette,syntaxPalette,figmaFinalStyles) + clientTypography + workbenchProgressStyles
+  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles + figmaWelcomeStyles + focusStyles + userMessageThemeCss(themePalette,syntaxPalette,figmaFinalStyles) + clientTypography + workbenchProgressStyles + figmaBIcons
   document.documentElement.appendChild(style)
   document.getElementById('odyssey-figma-final-shell')?.remove()
   // Native draggable regions need a real element. Keep it inside the current
