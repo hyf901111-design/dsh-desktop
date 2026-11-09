@@ -21,3 +21,7 @@
 .eb-find{width:468px;top:126px;min-height:58px}
 .eb-suggestions{left:156px;right:120px;top:96px}
 @container(max-width:700px){.eb-popover[data-browser-panel=site]{left:12px}.eb-suggestions{left:12px;right:12px}}
+
+.eb-root .eb-app-label{height:32px;padding:0 6px;font-weight:500}
+
+.eb-root[data-settings-open=true]{visibility:hidden!important;pointer-events:none!important}

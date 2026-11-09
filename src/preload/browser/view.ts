@@ -3,7 +3,7 @@ import type {WorkspaceSurfaceHost} from '../workspace-surface-host'
 import {browserIcons} from './icons'
 import css from './style.css?inline'
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
-const icon=(name:keyof typeof browserIcons)=>`<i class="eb-icon" aria-hidden="true" style="--eb-icon:url('${browserIcons[name]}')"></i>`
+const icon=(name:keyof typeof browserIcons)=>`<i class="eb-icon" aria-hidden="true" style="--eb-icon:url('${browserIcons[name].replaceAll("'",'%27').replaceAll('\"','%22')}')"></i>`
 const button=(action:string,label:string,name?:keyof typeof browserIcons,disabled=false)=>`<button type="button" class="eb-icon-button" data-action="${action}" aria-label="${esc(label)}" title="${esc(label)}" ${disabled?'disabled':''}>${name?icon(name):esc(label)}</button>`
 const menuItem=(action:string,label:string,name:keyof typeof browserIcons,key='',disabled=false)=>`<button type="button" role="menuitem" class="eb-menu-item" data-action="${action}" ${disabled?'disabled':''}>${icon(name)}<span>${label}</span><kbd>${key}</kbd></button>`
 const hostname=(url:string)=>{try{return new URL(url).hostname}catch{return url}}
