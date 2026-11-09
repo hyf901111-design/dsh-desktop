@@ -239,6 +239,54 @@
           "实机模型发送能力还需随最终签名包验证，原生夹具与模型选择不能替代真实客户端问答"
         ],
         "generatedAt": "2026-11-09T23:19:20.188165+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
+        "verificationCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
+            "completedAt": "2026-11-09T23:19:36.872Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
+            "completedAt": "2026-11-09T23:19:36.872Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
+            "completedAt": "2026-11-09T23:19:36.872Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T23:19:36.872Z"
       }
     }
   ],
