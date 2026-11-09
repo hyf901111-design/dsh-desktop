@@ -110,11 +110,11 @@ if(["save","delete","complete"].includes(action)&&researchPreviewWorkspaces.get(
  }
  change('title:query===null?displayValue:undefined,disabled:readOnly',"title:arguments[0].contextHint||(query===null?displayValue:undefined),'aria-description':arguments[0].contextHint,disabled:readOnly")
  // Layout authorization is a bundle-private identity, never a caller-controlled boolean.
- change('applyWorkbenchCells(cells,persist=false){if(!collaborationCanWrite())return false;','applyWorkbenchCells(cells,persist=false,previewToken){if(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;')
+ change('applyWorkbenchCells(cells,persist=false,layoutToken,automatic=false){if(!collaborationCanWrite())return false;','applyWorkbenchCells(cells,persist=false,previewToken,automatic=false){if(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;')
  change('this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},','this.applyPointerGeometry(nodes,previewToken);if(persist)this.persist();return true;},')
  change('applyPointerGeometry(nodes) {','applyPointerGeometry(nodes,previewToken) {if(workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;')
  change('organizeCanvas(measured = new Map(), arrangeMode="standard") {','organizeCanvas(measured = new Map(), arrangeMode="standard",previewToken) {if(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;')
- change('arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred);','arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred,previewToken);')
+ change('arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred,undefined,true);','arrangeMode,{authoredBoard:measured.__homeGuideBoardLayout===true}),!measured.__workbenchDeferred,previewToken,true);')
  // The ordinary controller rejects structural AI edits. A separate controller is
  // reachable only by the existing trusted host refresh subscription and may only
  // replace one existing component's containerSpec, as the refresh service does.

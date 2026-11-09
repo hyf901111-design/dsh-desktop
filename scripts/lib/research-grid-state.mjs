@@ -181,7 +181,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     clearContentOverrides(){contentOverrides.clear()},
     get:()=>freeCells(cells),
     visible:()=>freeCells(visibleCells()),
-    set(next){for(const c of next){const old=cells.find(n=>n.id===c.id);if(old&&(old.w!==c.w||old.h!==c.h))contentOverrides.add(c.id)}cells=next.map(grid.bounded);forced=true},
+    set(next,{automatic=false}={}){for(const c of automatic?[]:next){const old=cells.find(n=>n.id===c.id);if(old&&(old.w!==c.w||old.h!==c.h))contentOverrides.add(c.id)}cells=next.map(grid.bounded);forced=true},
     append:id=>grid.append(cells,id),
     save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells:durableCells()}))!==false}catch{return false}return true},
     enabled:()=>width>0
