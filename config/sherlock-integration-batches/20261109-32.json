@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-32",
+  "branch": "codex/integration/20261109-32",
+  "baseMainCommit": "f2f517635122ddc719765485bb235b569c29385c",
+  "expectedMainCommit": "f2f517635122ddc719765485bb235b569c29385c",
+  "createdAt": "2026-11-09T04:43:18.939Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "分离目录发现和真实业务读取的预算门禁",
+        "branch": "codex/feat/component-generation-fit-icons-20261109",
+        "baseCommit": "f2f517635122ddc719765485bb235b569c29385c",
+        "tipCommit": "98fd13c26879d2ccf665d9ac8859c23fde1b16c2",
+        "commits": [
+          {
+            "commit": "98fd13c26879d2ccf665d9ac8859c23fde1b16c2",
+            "parents": [
+              "f2f517635122ddc719765485bb235b569c29385c"
+            ],
+            "subject": "修复：目录预算耗尽后保留实际业务取数通道"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原固收请求真实运行复现SHIBOR已取得有效定义但第8次目录读取后所有取数通道被关；聚焦事件回放确认目录截止后业务仍可读，并在总16次调用边界关闭。业务输出与新包真实结果待复测。"
+        },
+        "acceptanceCriteria": [
+          "目录8次上限只停止目录读取",
+          "已获授权的业务取数通道保留且不增加权限",
+          "总调用16次、来源135秒及问答原策略不变"
+        ],
+        "risks": [
+          "真实外部数据缺失仍须如实报告，不声称所有场景百分之百成功"
+        ],
+        "generatedAt": "2026-11-09T04:43:17.369811+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "exhausts only directory|bounded separate allowance|bounded first business read|authorized alternatives|original metadata-call limit|typed component to explicit synthesis|native-template data to synthesis"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
