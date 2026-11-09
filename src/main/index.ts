@@ -1,3 +1,4 @@
+import {routeBrowserUse} from './browser/route'
 import {registerBrowserApp} from './browser/service'
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
 import {ConversationComponentStore} from './state/conversation-components'
@@ -1409,12 +1410,12 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   desktopComputer = createComputerCandidates()
-  registerBrowserApp({ipcMain,getMainWindow:()=>mainWindow,root:join(app.getPath('userData'),'browser-app'),materialDirectory:async sessionId=>{const root=await new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId);if(!root)throw Error('会话工作区不可用。');return join(root,'浏览器工作材料')}})
+  const browserApp = registerBrowserApp({ipcMain,getMainWindow:()=>mainWindow,root:join(app.getPath('userData'),'browser-app'),materialDirectory:async sessionId=>{const root=await new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId);if(!root)throw Error('会话工作区不可用。');return join(root,'浏览器工作材料')}})
   const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
     readPage: readBrowserPage,
-    browserUse: (input,signal)=>conversationBrowser.run(input,signal),
+    browserUse: (input,signal)=>routeBrowserUse(input,signal,browserApp,(value,abort)=>conversationBrowser.run(value,abort)),
     computerUse: (input, signal) => {
       if (!integrationService) throw Error('Computer Use 插件服务不可用');
       integrationService.assertComputerUseAccess(input);

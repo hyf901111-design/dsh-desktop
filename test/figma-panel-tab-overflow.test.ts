@@ -1,9 +1,11 @@
 import { readFile } from 'node:fs/promises'
+import {execFileSync} from 'node:child_process'
 import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 
-import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
+// Replay the production Node transform; Vitest formatting changes function.toString().
+const patchBetterSidebarClient=(source:string)=>execFileSync(process.execPath,['--input-type=module','-e',"import fs from 'node:fs';import{patchBetterSidebarClient}from'./scripts/lib/patch-sherlock-better-sidebar.mjs';process.stdout.write(patchBetterSidebarClient(fs.readFileSync(0,'utf8')))"],{input:source,encoding:'utf8',maxBuffer:24*1024*1024})
 
 const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
 const patched = patchBetterSidebarClient(source)

@@ -346,6 +346,7 @@ contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
     browserApp: Object.freeze({
+      context: ()=>ipcRenderer.invoke('browser-app:request','context'),
       openSource: (value:{sessionId?:string;url:string})=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-request-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve(d):reject(Error(d.message||'浏览器未能打开。'))};const timer=setTimeout(()=>{cleanup();reject(Error('浏览器入口尚未就绪。'))},8000);window.addEventListener('sherlock:browser-request-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-request',{detail:{...value,requestId}}))})
     }),
     conversationBrowser: Object.freeze({

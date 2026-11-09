@@ -128,3 +128,9 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-download-card[data-state=completed]>.eb-popup-actions,.eb-download-card[data-state=interrupted]>.eb-popup-actions,.eb-download-card[data-state=cancelled]>.eb-popup-actions{padding-bottom:0}
 
 .eb-zoom-controls{width:124px;border:0;box-shadow:inset 0 0 0 1px var(--eb-line)}
+
+/* Figma strokes sit inside the frame without consuming its content width. */
+.eb-popover,body .eb-root .eb-popover[role=menu]{border:0;box-shadow:inset 0 0 0 1px var(--eb-line),0 6px 20px #0004}
+.eb-root[data-page-edited=true] .eb-menu[data-browser-panel=menu]{height:652px}
+
+.eb-popover[data-browser-panel=tabs] .eb-menu-item{line-height:19px}

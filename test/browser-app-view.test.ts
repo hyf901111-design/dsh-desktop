@@ -54,3 +54,5 @@ it('keeps native webpage interaction enabled and updates finder ownership and re
  await (view as any).action('find');(view as any).layout();expect(layouts().at(-1)).toMatchObject({find:{tabId:'two',focusToken:2}})
  view.dispose();await w.happyDOM.abort()
 })
+
+it('rejects search text when adding a bookmark URL instead of silently saving a search page',async()=>{const w=new Window(),request=vi.fn(async(_method:string)=>initial()),view=new BrowserAppView(w.document as any,{request,subscribe:()=>()=>{},source:vi.fn()},{register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})} as any);w.document.body.append(view.root as any);await view.open();await (view as any).show('add-link');view.root.querySelector<HTMLInputElement>('[data-field=link-url]')!.value='example.com 研究';await (view as any).action('add-link-save');expect(request.mock.calls.some(([method])=>method==='bookmark')).toBe(false);expect(view.root.textContent).toContain('请输入有效的网址');view.dispose();await w.happyDOM.abort()})

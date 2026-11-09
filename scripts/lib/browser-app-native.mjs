@@ -1,3 +1,4 @@
+import {createPendingConversation,EWorkPendingInputBar,EWorkPendingConversation,EWorkBrowserReference,browserPromptReference} from './pending-conversation.mjs'
 /** Browser is an application; conversation context is optional and never created by entry. */
 export function installBrowserNative({sessions,getInput}) {
  let live=true
@@ -46,13 +47,31 @@ const exact=(s,a,b)=>{if(s.split(a).length!==2)throw Error('Browser app native a
 export function stripBrowserAppNative(source){const at=source.indexOf(START);if(at<0)return source;const end=source.indexOf(END,at);if(end<0)throw Error('Browser native restore journal missing');const pairs=JSON.parse(source.slice(at+START.length,end));source=source.slice(0,at)+source.slice(end+END.length);for(const [a,b]of pairs.reverse())source=exact(source,b,a);return source}
 export function patchBrowserAppNative(input){
  let source=stripBrowserAppNative(input);const pairs=[],replace=(a,b)=>{source=exact(source,a,b);pairs.push([a,b])}
+ const root='function HomeGuideNativeOriginalConversationRoot('
+ replace(root,`let eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkBrowserReference.toString()}\n${EWorkPendingConversation.toString()}\n`+root)
+ const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
+ replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n`)
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
- replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');\nctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
+ replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
+ctx.effect(()=>{const pending=(${createPendingConversation.toString()})({makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),sessions,workspaces,getInput:id=>inputHub.shell(id),onCreated:(id,context)=>{chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},prepareContext:async()=>document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined,releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}});eworkPendingConversation=pending;return()=>{if(eworkPendingConversation===pending)eworkPendingConversation=null;pending.dispose()}},'Pending first-message conversation');
+ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
  const mode="const sidebarMode=(research || activeView==='notes')&&(!homeGuideResident||homeGuideSidebar);"
- replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>!subagentPanel&&document.body.dataset.workspaceSurface==='browser',()=>false);
+ replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);const off=eworkPendingConversation?.subscribe(callback);return()=>{document.removeEventListener('sherlock:workspace-surface-change',callback);off?.()}},()=>!subagentPanel&&(document.body.dataset.workspaceSurface==='browser'||!!sessionId&&eworkPendingConversation?.getSnapshot().rightSession===sessionId),()=>false);
 const sidebarMode=(research || activeView==='notes' || browserAppActive)&&(!homeGuideResident||homeGuideSidebar||browserAppActive);`)
  replace('if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar) return;', 'if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar&&!browserAppActive) return;')
  replace('[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]', '[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, homeGuideSidebar, browserAppActive, researchSidebar, sessionId]')
+ replace('}, EWorkSharedInputBar);','}, EWorkPendingInputBar);')
+ replace('composerPortal, researchConversationPortal,',`composerPortal, researchConversationPortal, !subagentPanel&&react_jsx_runtime.jsx(EWorkPendingConversation,{sessionId,useWorkspaces,renderSlot,t}),`)
+ const browserSendAnchor='/* ODYSSEY_WEB_REFERENCE_REFRESH */'
+ replace(browserSendAnchor,`if((document.body.dataset.workspaceSurface==='browser'||eworkPreparedBrowserContexts.has(session.sessionId)) && !session.getSnapshot?.()?.subagent && this.rootCtx.get('sessions')?.list.getSnapshot().current===session.sessionId){
+ const prepared=eworkPreparedBrowserContexts.has(session.sessionId),browserShell=this.shells.get(session.sessionId),revision=browserShell?.snapshot.draftRev;
+ browserShell?.setResearchContextPreparing?.(true);
+ try{const source=eworkPreparedBrowserContexts.has(session.sessionId)?eworkPreparedBrowserContexts.get(session.sessionId):await window.dshDesktop?.browserApp?.context();eworkPreparedBrowserContexts.delete(session.sessionId);
+ if(!prepared&&document.body.dataset.workspaceSurface!=='browser'||this.rootCtx.get('sessions')?.list.getSnapshot().current!==session.sessionId||this.shells.get(session.sessionId)!==browserShell||browserShell?.snapshot.draftRev!==revision)return;
+ text+=browserPromptReference(source);
+ }catch(error){browserShell?.notify('error',error.message||'当前网页正文暂不可用，输入已保留。');return}finally{browserShell?.setResearchContextPreparing?.(false)}
+ }
+ `+browserSendAnchor)
  const project='function projectUserText(text, openFile) {'
  replace(project,project+`\nconst browserParts=(${browserUserTextSegments.toString()})(text);if(browserParts)return react_jsx_runtime.jsx(react.Fragment,{children:browserParts.map((part,index)=>part.url?react_jsx_runtime.jsx('a',{href:part.url,title:part.url,className:MessageItem_module_css_default.refChip,'data-ref-chip':'browser-source',children:part.title||new URL(part.url).hostname},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});`)
  return source+START+JSON.stringify(pairs)+END
