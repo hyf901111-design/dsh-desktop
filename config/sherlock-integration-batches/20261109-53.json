@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器实包图标、设置往返与菜单还原修复",
+        "featureName": "浏览器站点数据清理边界修复",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "d6c7e96a894935c5eea5607738c8bb398619b87b",
-        "tipCommit": "95f28f0966f4627600bc51a787a1e2cd0466dc88",
+        "baseCommit": "95f28f0966f4627600bc51a787a1e2cd0466dc88",
+        "tipCommit": "d04f787edfc6684f234f53303d171ee5b5c65c06",
         "commits": [
           {
-            "commit": "bec4857774a90be258bf407d8694db4e4cea2172",
+            "commit": "d04f787edfc6684f234f53303d171ee5b5c65c06",
             "parents": [
-              "d6c7e96a894935c5eea5607738c8bb398619b87b"
+              "95f28f0966f4627600bc51a787a1e2cd0466dc88"
             ],
-            "subject": "修复：还原实包浏览器图标并保留设置往返页面"
-          },
-          {
-            "commit": "95f28f0966f4627600bc51a787a1e2cd0466dc88",
-            "parents": [
-              "bec4857774a90be258bf407d8694db4e4cea2172"
-            ],
-            "subject": "界面：对齐浏览器菜单行高与分隔留白"
+            "subject": "修复：稳定清理浏览器站点数据并验证时间范围边界"
           }
         ],
         "files": [
@@ -36,23 +29,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/browser/style.css"
+            "path": "scripts/verify-browser-app-native.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workspace-surface-host.test.ts"
+            "path": "src/main/browser/service.ts"
           }
         ],
         "checks": [
@@ -69,8 +50,8 @@
             ],
             "outcome": "passed",
             "summary": "浏览器应用直接相关聚焦验证通过",
-            "verifiedCommit": "95f28f0966f4627600bc51a787a1e2cd0466dc88",
-            "completedAt": "2026-11-09T15:50:56.146086+00:00",
+            "verifiedCommit": "d04f787edfc6684f234f53303d171ee5b5c65c06",
+            "completedAt": "2026-11-09T16:06:28.516738+00:00",
             "timeoutMs": 120000
           },
           {
@@ -82,8 +63,8 @@
             ],
             "outcome": "passed",
             "summary": "浏览器应用直接相关聚焦验证通过",
-            "verifiedCommit": "95f28f0966f4627600bc51a787a1e2cd0466dc88",
-            "completedAt": "2026-11-09T15:50:56.146086+00:00",
+            "verifiedCommit": "d04f787edfc6684f234f53303d171ee5b5c65c06",
+            "completedAt": "2026-11-09T16:06:28.516738+00:00",
             "timeoutMs": 120000
           },
           {
@@ -93,14 +74,14 @@
             ],
             "outcome": "passed",
             "summary": "浏览器应用直接相关聚焦验证通过",
-            "verifiedCommit": "95f28f0966f4627600bc51a787a1e2cd0466dc88",
-            "completedAt": "2026-11-09T15:50:56.146086+00:00",
+            "verifiedCommit": "d04f787edfc6684f234f53303d171ee5b5c65c06",
+            "completedAt": "2026-11-09T16:06:28.516738+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实包已验证网页、收藏、查找、隐私标签与来源附加。发现图标遮罩失效和设置返回空白，修复后35项聚焦检查及生产格式图标/快速逐字输入渲染回归通过；更新签名包待复核。"
+          "summary": "签名集成包已验证图标显示、设置隐藏及返回恢复网页与草稿；新增清理空范围、已访问站点及全部时间的原生Chromium验证通过。最终修复包待重构建复核。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -113,55 +94,7 @@
           "Chrome账号同步与扩展商店不在本次设计范围",
           "缓存清理按所有时间执行，界面已明确说明"
         ],
-        "generatedAt": "2026-11-09T15:50:56.146086+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f9c67d79d34f9131f03996c77338e53bc17f0da8",
-        "verificationCommit": "f9c67d79d34f9131f03996c77338e53bc17f0da8",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "f9c67d79d34f9131f03996c77338e53bc17f0da8",
-            "completedAt": "2026-11-09T15:52:03.867Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "f9c67d79d34f9131f03996c77338e53bc17f0da8",
-            "completedAt": "2026-11-09T15:52:03.867Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "f9c67d79d34f9131f03996c77338e53bc17f0da8",
-            "completedAt": "2026-11-09T15:52:03.867Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-09T15:52:03.867Z"
+        "generatedAt": "2026-11-09T16:06:28.516738+00:00"
       }
     }
   ],
