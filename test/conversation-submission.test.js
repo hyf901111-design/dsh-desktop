@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {execFileSync} from 'node:child_process'
-import {createNativeConversationSubmissions} from '../scripts/lib/conversation-submission.mjs'
+import {createNativeConversationSubmissions,projectNativeConversationSubmissions} from '../scripts/lib/conversation-submission.mjs'
 
 function fixture(){
  const observers=new Set(),owners=new Set(),states=new Set(),shell={disposed:false,snapshot:{draft:'用户原稿📌'}}
@@ -42,7 +42,7 @@ it('releases old lifecycle listeners and cannot let an old disposer clear the ne
  expect(f.store.read('a').rpcId).toBe('rpc-2');expect(f.observers.size).toBe(1);stop();expect(f.store.read('a')).toBeNull();expect(f.observers.size).toBe(0);expect(f.owners.size).toBe(0);expect(f.states.size).toBe(0)
 })
 it('installs the actual native module twice with exact inverse and refuses drift/duplicates/orphan hooks',()=>{
- const script=`import{readFileSync}from'node:fs';import{stripConversationLiveUi}from'./test/fixtures/strip-conversation-live-ui.mjs';import{Script}from'node:vm';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const raw=strip(stripConversationLiveUi(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),one=patch(raw);assert.equal(patch(one),one);assert.equal(strip(one),raw);new Script(one);assert.throws(()=>strip(one+'\\nNativeConversationSubmissions;'));assert.throws(()=>strip(one.replace('function useNativeConversationSubmission','function invalidNativeHook')));assert.throws(()=>patch(raw+'\\nNativeConversationSubmittedUser;'));assert.throws(()=>strip(one.replace('/* sherlock:conversation-submission:v4 */','/* sherlock:conversation-submission:v4 */ /* sherlock:conversation-submission:v4 */')));console.log('strict two-pass/inverse/parse passed')`
+ const script=`import{readFileSync}from'node:fs';import{stripConversationLiveUi}from'./test/fixtures/strip-conversation-live-ui.mjs';import{Script}from'node:vm';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const raw=strip(stripConversationLiveUi(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),one=patch(raw);assert.equal(patch(one),one);assert.equal(strip(one),raw);new Script(one);assert.throws(()=>strip(one+'\\nNativeConversationSubmissions;'));assert.throws(()=>strip(one.replace('function useNativeConversationSubmission','function invalidNativeHook')));assert.throws(()=>patch(raw+'\\nNativeConversationSubmittedUser;'));assert.throws(()=>strip(one.replace('/* sherlock:conversation-submission:v5 */','/* sherlock:conversation-submission:v5 */ /* sherlock:conversation-submission:v5 */')));console.log('strict two-pass/inverse/parse passed')`
  expect(execFileSync(process.execPath,['--input-type=module','-e',script],{encoding:'utf8',maxBuffer:8*1024*1024})).toContain('strict two-pass/inverse/parse passed')
 })
 it('invalidates quietly when an actual session binding disappears during lifecycle teardown',()=>{
@@ -116,4 +116,12 @@ it('filters a late queued mirror by exact durable RPC without suppressing anothe
 it('strictly migrates the exact released v3 definition to v4 and restores its QueueDock hook without weakening drift guards',()=>{
  const script=`import{readFileSync}from'node:fs';import{stripConversationLiveUi}from'./test/fixtures/strip-conversation-live-ui.mjs';import{execFileSync}from'node:child_process';import{createHash}from'node:crypto';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const previous=await import('data:text/javascript;base64,'+execFileSync('git',['show','55e46e2433df898bcf28a6b3a503b6d84901ca26:scripts/lib/conversation-submission.mjs']).toString('base64')),raw=strip(stripConversationLiveUi(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),old=previous.patchConversationSubmission(raw),legacy=readFileSync('test/fixtures/conversation-submission-v3.txt','utf8');assert.equal(createHash('sha256').update(legacy).digest('hex'),'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045');assert.ok(old.includes(legacy));const one=patch(old);assert.equal(strip(one),raw);assert.equal(patch(one),one);assert.equal(one,patch(raw));assert.throws(()=>strip(old.replace('accepted:false','accepted:true')));assert.throws(()=>strip(one.replace('useNativeSubmittedQueue(arguments[0].sessionId','useNativeSubmittedQueue("wrong"')));console.log('released v3 strict migration and queue inverse passed')`
  expect(execFileSync(process.execPath,['--input-type=module','-e',script],{encoding:'utf8',maxBuffer:8*1024*1024})).toContain('v3 strict migration')
+})
+
+it('places a receipt after the newest steering bubble and pauses prior activity without changing durable nodes',()=>{
+ const nodes=new Map(),flow=[{kind:'execution',key:'old',turn:1,running:true,nodeKeys:['tool']}],entry={rpcId:'new',mode:'steer',wasRunning:true,barrierTurn:1,accepted:true},second={...entry,rpcId:'newer'}
+ const projected=projectNativeConversationSubmissions(flow,{entries:[entry,second],snapshot:{running:true}},nodes)
+ expect(projected.map(row=>row.kind)).toEqual(['execution','native-submitted-user','native-submitted-user','native-steering-status'])
+ expect(projected[0]).toMatchObject({running:false,pausedForSteering:true,nodeKeys:['tool']});expect(projected.at(-1).submission.rpcId).toBe('newer')
+ expect(flow[0].running).toBe(true);expect(nodes.size).toBe(0)
 })

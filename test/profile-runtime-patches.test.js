@@ -9,7 +9,7 @@ const {patchOpenAIResponsesToolOptionals}=createRequire(import.meta.url)('../scr
 it('ships patched runtime into the independent plugin profile and verifies parity',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'profile-patches-'))
  try{
-  for(const name of ['dsh-llm','dsh-tool-fs','dsh-subagent','dsh-skill','dsh-message-feedback','dsh-tool-bash','dsh-tool-todo','dsh-plan-mode','dsh-tool-goal']){
+  for(const name of ['dsh-agent-loop','dsh-llm','dsh-tool-fs','dsh-subagent','dsh-skill','dsh-message-feedback','dsh-tool-bash','dsh-tool-todo','dsh-plan-mode','dsh-tool-goal']){
    const source=JSON.parse(await readFile(`node_modules/@deepseek-ai/${name}/package.json`,'utf8'))
    const dir=path.join(root,'node_modules/@deepseek-ai',name)
    await mkdir(path.join(dir,'lib'),{recursive:true})
@@ -58,6 +58,7 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   const goal=await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-tool-goal/lib/index.js'),'utf8')
   expect(goal).toContain('sherlock:goal-tool-stage-guidance:rc7:v1')
   expect(await readFile(path.join(nestedGoal,'lib/index.js'),'utf8')).toBe(goal)
+  expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js'),'utf8')).toContain('sherlock:human-steering-yield:rc7:v1')
   expect(digest).toMatch(/^[a-f0-9]{64}$/)
   expect(await syncProfileRuntimePatches(process.cwd(),root)).toBe(digest)
   expect(await readFile(path.join(nestedPlan,'lib/index.js'),'utf8')).toBe(plan)
