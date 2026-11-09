@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {componentDeliveryScopeIssue} from '../packages/dsh-research-task-runtime/component-delivery-scope.js'
+import {componentCohortRequest,componentDeliveryScopeIssue} from '../packages/dsh-research-task-runtime/component-delivery-scope.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 it('rejects one observed subject when the current panel requires at least eight',()=>{
  const data={version:1,type:'chart',variant:'horizontal',title:'比较',labels:['实际对象A'],series:[{name:'收益',values:[.23]}]}
@@ -35,4 +35,16 @@ it('does not accept a hierarchy-shaped missing-data skeleton as a real source-ba
  const graph={version:1,type:'mind-map',title:'组织关系',content:'# 关系\n- 区域（待填入原表）\n  - 部门（待填入原表）'}
  expect(componentDeliveryScopeIssue(graph,'基于原表完整保留组织层级')).toContain('占位')
  expect(componentDeliveryScopeIssue({...graph,content:'# 机构\n- 已知部门\n  - 负责人未掌握，不代表空缺'},'按附件完整保留组织层级')).toBeUndefined()
+})
+
+it('inherits an explicit original cohort for same-batch comparison cards without leaking it into methodology',()=>{
+ const original='给投委会做比较工作台。至少比较8只中长期纯债基金的收益、回撤、波动率、净值和规模。'
+ const panel='近一年收益排名。基于对照表同批基金数据绘图，并保留各项明细。'
+ const request=componentCohortRequest(panel,original)
+ expect(request).toContain('至少比较8只中长期纯债基金')
+ const chart={type:'chart',labels:['a','b','c','d','e','f'],series:[{name:'收益',values:[1,2,3,4,5,6]}]}
+ expect(componentDeliveryScopeIssue(chart,request)).toContain('至少8')
+ expect(componentCohortRequest('来源与口径说明',original)).toBe('来源与口径说明')
+ expect(componentCohortRequest('整体规模与对象数量摘要',original)).toBe('整体规模与对象数量摘要')
+ expect(componentCohortRequest('收益排名','需要8张卡，最近20天数据')).toBe('收益排名')
 })

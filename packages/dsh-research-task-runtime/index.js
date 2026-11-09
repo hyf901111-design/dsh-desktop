@@ -1,6 +1,6 @@
 import {scalarEntityArgumentIssue} from './component-scalar-entity-arguments.js'
 import {extractDelimitedEvidence,delimitedTableIntegrityIssue} from './delimited-evidence.js'
-import {componentDeliveryScopeIssue} from './component-delivery-scope.js'
+import {componentCohortRequest,componentDeliveryScopeIssue} from './component-delivery-scope.js'
 import {componentAcquisitionBudget} from './component-acquisition-budget.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
@@ -43,7 +43,7 @@ import {compactStatementEvidence,truncatedStatementEvidence} from './statement-e
 import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
 import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from './component-feed-acquisition.js'
-import {workbenchReleaseScope,observedWorkbenchReleaseScope,releaseCohortIssue,observedReleaseTimeline,readReleaseTimeline,releaseTimelineComplete} from './observed-dated-feed.js'
+import {workbenchReleaseScope,observedWorkbenchReleaseScope,releaseCohortIssue,releaseLinkedSourceFollowup,observedReleaseTimeline,readReleaseTimeline,releaseTimelineComplete} from './observed-dated-feed.js'
 import {retainObservedComponentProvenance} from './component-observed-provenance.js'
 import {commonPriceScope,observedCommonPriceComparison,readCommonPriceComparison} from './observed-series-comparison.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
@@ -1812,6 +1812,7 @@ export class ResearchTaskRuntime {
       const deferredPanel = task.kind === 'container' ? deferredWorkbenchPanel(task.prompt) : null
       const bindablePanel = Boolean(['chart','market'].includes(plannedFormat)||templateFor({type:plannedFormat}))
       const panelRequest = workbenchPanelIntent(task.prompt)
+      const cohortRequest=componentCohortRequest(panelRequest,task.hostContext?.workbenchRequest?.originalRequest)
       const bindingRequested = componentBindingRequested(panelRequest)
       const historyOptions=/(?:相对\s*沪深300|沪深300.{0,8}(?:基准|参考))/u.test(panelRequest)?{benchmarkSymbol:'000300.SH'}:{}
       const panelContract=task.kind==='container'?workbenchPanelScope(task.prompt)?.contract:undefined
@@ -1973,7 +1974,7 @@ export class ResearchTaskRuntime {
             if(issue){newsTableError=issue;throw new ResearchTaskError('INVALID_OUTPUT',issue)}
             if(candidates.some(data=>data.type==='news'||data.type==='table'||data.type==='market'&&data.variant==='table'))newsTableError=undefined
           }
-          deliveryScopeIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>componentDeliveryScopeIssue(data,panelRequest)||releaseCohortIssue(data,sourceRecords,task.hostContext?.workbenchRequest?.originalRequest,panelRequest)).find(Boolean)
+          deliveryScopeIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>componentDeliveryScopeIssue(data,cohortRequest)||releaseCohortIssue(data,sourceRecords,task.hostContext?.workbenchRequest?.originalRequest,panelRequest)).find(Boolean)
           if(deliveryScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',deliveryScopeIssue)
           const newsScopeIssue=!deferredPanel&&extractArtifactObjects(deliveredText).map(data=>newsSourceScopeIssue(data,sourceRecords,task.prompt)).find(Boolean)
           if(newsScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',newsScopeIssue)
@@ -2079,7 +2080,7 @@ export class ResearchTaskRuntime {
           }
         }
         const emptyWorkbenchDeadline = task.kind === 'container' && result.localDeadlineExceeded && !recoveryText && !recoveryEvidence && workbenchPanelFormat(task.prompt)
-        const acquisitionFollowup=task.kind==='container'?[componentAcquisitionFollowup(sourceRecords,{unreadSourceUrls:result.unreadSourceUrls}),deliveryScopeIssue].filter(Boolean).join('\n'):''
+        const acquisitionFollowup=task.kind==='container'?[componentAcquisitionFollowup(sourceRecords,{unreadSourceUrls:result.unreadSourceUrls}),releaseLinkedSourceFollowup(sourceRecords,panelRequest),deliveryScopeIssue].filter(Boolean).join('\n'):''
         // Pagination is a retrieval hint, not a presentation phase lock. An earlier
         // exploratory query can remain open after an alternative source succeeds.
         // Final semantic/coverage gates still decide whether delivery is valid.
@@ -2239,7 +2240,7 @@ export class ResearchTaskRuntime {
       if (structured && !deferredPanel && !documentTask && !needsGraphPresentation(task.prompt) && output === undefined && !prototypeIssue && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !chartGeometryError && !designPolicyError && canSynthesizeResult(result)) {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
-      if(requiredReleaseScope&&!bindingRequested){
+      if(requiredReleaseScope&&!requiredReleaseScope.processingRequired&&!bindingRequested){
         // The requested count and full text come from the exact observed rows.
         // Never trust a generated HTML caption, a subset, or a rewritten body.
         const candidate=observedReleaseTimeline(requiredReleaseScope,sourceRecords,panelTitle)
@@ -2317,7 +2318,7 @@ export class ResearchTaskRuntime {
           }
           if(task.cancelRequested||terminalState(task.state))return
         }
-        const unmetScope=extractArtifactObjects(output).map(data=>componentDeliveryScopeIssue(data,panelRequest)||releaseCohortIssue(data,sourceRecords,task.hostContext?.workbenchRequest?.originalRequest,panelRequest)).find(Boolean)
+        const unmetScope=extractArtifactObjects(output).map(data=>componentDeliveryScopeIssue(data,cohortRequest)||releaseCohortIssue(data,sourceRecords,task.hostContext?.workbenchRequest?.originalRequest,panelRequest)).find(Boolean)
         if(unmetScope)throw new ResearchTaskError('GENERATION_FAILED',unmetScope)
         output=acceptArtifactOutput(retainObservedComponentProvenance(output,result.documentEvidence,sourceRecords))??output
         await this.finish(task, 'completed', { finalOutput: output,...(readableSnapshot?.recoveryMode==='source-snapshot'?taskDelivery(readableSnapshot):{}) })
@@ -2342,7 +2343,7 @@ export class ResearchTaskRuntime {
     } catch (error) {
       console.warn('[research-task] execution failed', task.taskId, error instanceof Error ? error.message : String(error))
       const policyIssue = workbenchSourceEvidenceIssue(task.hostContext?.sourcePolicy,sourceRecords)
-      if (!documentTask && !needsGraphPresentation(task.prompt) && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>componentDeliveryScopeIssue(data,workbenchPanelIntent(task.prompt))) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
+      if (!documentTask && !needsGraphPresentation(task.prompt) && !requiredReleaseScope && !prototypeIssue && !readableRepairRequired && !policyIssue && !terminalState(task.state) && !task.cancelRequested && !statementIssue && !calendarIssue && readableFallback && !articleIssueFor(readableFallback) && !calendarIssueFor(readableFallback) && !containsContainerPlaceholder(readableFallback) && !extractArtifactObjects(readableFallback).some(data=>componentDeliveryScopeIssue(data,componentCohortRequest(workbenchPanelIntent(task.prompt),task.hostContext?.workbenchRequest?.originalRequest))) && !extractArtifactObjects(readableFallback).some(data=>statementTableEvidenceIssue(data,workbenchPanelIntent(task.prompt),sourceRecords,{requiredData:statementRepairData}))) {
         await this.finish(task, 'completed', { finalOutput: readableFallback })
       } else if (!terminalState(task.state)) {
         await this.finish(
@@ -2635,6 +2636,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         : visibleSchemas
       const sourcePolicy = kind === 'container' ? hostContext?.sourcePolicy : undefined
       const sourceRequest = sourcePolicy?.preferenceRequest ?? workbenchPanelIntent(query)
+      const cohortInstruction=componentCohortRequest(workbenchPanelIntent(query),hostContext?.workbenchRequest?.originalRequest)
       const authoredReferences=kind==='container'&&surface!=='note'&&hostContext?.workbenchRequest?.originalRequest?authoredPrototypeEvidence(hostContext.workbenchRequest.originalRequest):undefined
       const prototypeTargets=authoredReferences?.files.some(path=>/\.html?$/iu.test(path))?authoredReferences:undefined
       let sourceCollector,retainedPrototypeDraft
@@ -2661,7 +2663,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const validateDataSubmission=(snapshot,records)=>{
           const text=JSON.stringify(snapshot.data),output=finalText([{type:'text',text:snapshot.capacitySnapshot?snapshot.output:text}],kind)
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
-          const issue=componentDeliveryScopeIssue(snapshot.data,workbenchPanelIntent(query))||releaseCohortIssue(snapshot.data,records,hostContext?.workbenchRequest?.originalRequest,workbenchPanelIntent(query))||workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
+          const issue=componentDeliveryScopeIssue(snapshot.data,componentCohortRequest(workbenchPanelIntent(query),hostContext?.workbenchRequest?.originalRequest))||releaseCohortIssue(snapshot.data,records,hostContext?.workbenchRequest?.originalRequest,workbenchPanelIntent(query))||workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
           const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentUncertaintyIssue(output,documentEvidence)||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query))||delimitedTableIntegrityIssue(output,documentEvidence,workbenchPanelIntent(query)))
           if(documentIssue)throw new ResearchTaskError('INVALID_OUTPUT',documentIssue)
@@ -2813,7 +2815,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // The Notes producer supplies this host contract separately from frozen
         // evidence. Only a known typed builder can own the canonical copy;
         // never search or rewrite user text to decide which rules to retain.
-        prompt: [...imageContent, { type: 'text', text: effectivePrompt + (surface === 'note' ? executionContext+(noteBindingProtocol&&!canonicalBindingProtocol?COMPONENT_BOUND_DATA_PROMPT:'')+noteGuidance : '') }],
+        prompt: [...imageContent, { type: 'text', text: effectivePrompt + (cohortInstruction!==workbenchPanelIntent(query)?'\n'+cohortInstruction:'') + (surface === 'note' ? executionContext+(noteBindingProtocol&&!canonicalBindingProtocol?COMPONENT_BOUND_DATA_PROMPT:'')+noteGuidance : '') }],
         maxDepth: 1,
         toolFilter: {
           // Tool availability must not depend on a freshness keyword match.
@@ -2839,7 +2841,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const discoveryTools=componentDiscoveryToolNames(scopedSchemas)
       const parameterRepair=researchParameterRepair(networkTools,discoveryTools)
       const discoveryProgress=componentDiscoveryProgress(discoveryTools)
-      const acquisitionBudget=componentAcquisitionBudget(sourceRequest)
+      const acquisitionBudget=componentAcquisitionBudget(cohortInstruction)
       let lastOutputAt = 0, streamedText = '', completedArtifact, prototypeRecovery,prototypeDataReady
       let finishResearch, handoffTimer
       const researchPhase = new Promise(resolve => { finishResearch = resolve })
@@ -2855,7 +2857,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const acceptVerified=(records)=>{
         if(signal.aborted||verifiedOutput)return
         let text
-        if(releaseScope){
+        if(releaseScope&&!releaseScope.processingRequired){
           const candidate=observedReleaseTimeline(releaseScope,records,panelTitle)
           const verified=candidate&&resolveComponentSnapshot(candidate,records)
           if(verified&&releaseTimelineComplete(releaseScope,verified.data,records))text=candidate

@@ -213,6 +213,13 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
     path({},key)
     if(!key)throw Error('筛选字段路径不能为空')
     if(record(value)){
+     // Equality to the actual outer row is a bounded identity join. It never
+     // evaluates an expression, guesses keys or pairs arrays by row position.
+     if(Object.keys(value).length===1&&typeof value.$row==='string'){
+      const keyValue=path(row,value.$row)
+      if(keyValue===null||keyValue===undefined||!['string','number','boolean'].includes(typeof keyValue)||typeof keyValue==='number'&&!Number.isFinite(keyValue))throw Error('关联键必须是当前真实记录中的非空标量')
+      return item=>path(item,key)===keyValue
+     }
      if(!Object.keys(value).length||Object.keys(value).some(k=>!['$gte','$lte'].includes(k)))throw Error('日期筛选范围只支持 $gte/$lte 边界')
      const start=value.$gte===undefined?undefined:filterDay(value.$gte),end=value.$lte===undefined?undefined:filterDay(value.$lte)
      if(start&&end&&start>end)throw Error('日期筛选起点不能晚于终点')

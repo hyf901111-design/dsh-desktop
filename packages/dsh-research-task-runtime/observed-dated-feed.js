@@ -1,5 +1,22 @@
 import {hostStructuredWebRecord} from './component-source-binding.js'
 import {readTemplateModel} from './component-template-registry.js'
+const processingRequired=text=>/主要变化|变更要点|变更摘要|变化摘要|升级注意|升级风险|迁移|破坏性|影响分析|建议/u.test(text??'')
+const linkedBodyOnly=value=>typeof value==='string'&&value.length<=2000&&/\[[^\]]+\]\(https?:\/\/[^)]+\)/u.test(value)&&value.split(/\n/u).filter(line=>line.trim()).every(line=>/^(?:For (?:stable releases?|pre-releases?),? please (?:refer|see)|(?:详情|内容)?(?:请)?(?:详见|参见)|\*?\*?Full Changelog)/iu.test(line.trim()))
+
+export function releaseLinkedSourceFollowup(records,request){
+ if(!processingRequired(request))return
+ const urls=new Set()
+ for(const record of records??[]){
+  if(record.tool!=='web_fetch'||!Array.isArray(record.response?.records))continue
+  for(const row of record.response.records){
+   if(!linkedBodyOnly(row.body))continue
+   for(const match of row.body.matchAll(/\[[^\]]+\]\((https?:\/\/[^)]+)\)/gu)){
+    try{const url=new URL(match[1]);if(url.protocol==='https:'&&url.hostname==='github.com'&&!url.username&&!url.password&&/^\/[\w.-]+\/[\w.-]+\/blob\//u.test(url.pathname))urls.add(url.href)}catch{}
+   }
+  }
+ }
+ if(urls.size)return '已取得发布身份与日期，但正文仅指向其他原文，尚未取得用户要求的实际变更。继续用本卡已授权 web_fetch 读取下列来源原文，按目标版本标题定位对应章节，保留变化与升级注意事项的证据；不把目录指引当正文，不重查已核实版本：\n'+JSON.stringify([...urls].slice(0,5))
+}
 
 // Product names are not repository identifiers. Only an actually observed
 // official collection URL can supply a missing repository, and ambiguity is
@@ -22,6 +39,10 @@ export function releaseCohortIssue(candidate,records,original,panel){
  const expected=[]
  for(const repo of scope.repos){const pages=releasePages(records,repo,scope.count,false,true);if(!pages)return;for(const {record,indices} of pages)for(const i of indices)expected.push(record.response.records[i].tag_name)}
  const data=readTemplateModel(candidate)?.data??candidate
+ if(processingRequired(String(original??'')+'\n'+String(panel??''))){
+  const texts=data?.type==='timeline'?data.items?.map(item=>item.summary):Array.isArray(data?.rows)?data.rows.flat().filter(value=>typeof value==='string'):[]
+  if(texts?.some(linkedBodyOnly))return '当前仅取得发布日期和指向CHANGELOG的说明，尚未取得要求的实际变更或升级分析。沿已读取原文中的真实链接读取目标版本章节，不能用重复的来源指引或发布列表替代处理结果。'
+ }
  let versions
  if(['table','market'].includes(data?.type)&&Array.isArray(data.rows)){
   const column=data.columns?.findIndex(column=>/版本|\bversion\b/iu.test(typeof column==='string'?column:column?.label??''))
@@ -68,7 +89,7 @@ export function workbenchReleaseScope(original,panel,format){
  const repos=[...new Set([...text.matchAll(/(?<![\w./])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?![\w./])/gu)].map(match=>match[1].toLowerCase()))]
  if(counts.length!==1||!repos.length||repos.length>8||repos.length>1&&!counts[0][1])return
  const count=Number(counts[0][2]);if(count<1||count>100)return
- return {repos,count,includeBody:/发布说明|Release Notes|正文|变更|更新要点|主要变化/iu.test(text+'\n'+String(panel??'')),...(/正式|稳定|排除预发布|不含预发布/u.test(text)?{stableOnly:true}:{}),...(/表格|总表|明细表|可搜索/u.test(panel??'')?{presentation:'table'}:{})}
+ return {repos,count,includeBody:/发布说明|Release Notes|正文|变更|更新要点|主要变化/iu.test(text+'\n'+String(panel??'')),...(processingRequired(text+'\n'+String(panel??''))?{processingRequired:true}:{}),...(/正式|稳定|排除预发布|不含预发布/u.test(text)?{stableOnly:true}:{}),...(/表格|总表|明细表|可搜索/u.test(panel??'')?{presentation:'table'}:{})}
 }
 
 const utcTimestamp=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(value)&&
