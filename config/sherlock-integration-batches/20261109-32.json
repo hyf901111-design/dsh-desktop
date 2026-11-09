@@ -58,6 +58,51 @@
           "真实外部数据缺失仍须如实报告，不声称所有场景百分之百成功"
         ],
         "generatedAt": "2026-11-09T04:43:17.369811+00:00"
+      },
+      "merged": {
+        "mergeCommit": "af144f4ed4792b323026e171c439774543983feb",
+        "verificationCommit": "af144f4ed4792b323026e171c439774543983feb",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "exhausts only directory|bounded separate allowance|bounded first business read|authorized alternatives|original metadata-call limit|typed component to explicit synthesis|native-template data to synthesis"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t exhausts only directory|bounded separate allowance|bounded first business read|authorized alternatives|original metadata-call limit|typed component to explicit synthesis|native-template data to synthesis",
+            "verifiedCommit": "af144f4ed4792b323026e171c439774543983feb",
+            "completedAt": "2026-11-09T04:43:21.783Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "af144f4ed4792b323026e171c439774543983feb",
+            "completedAt": "2026-11-09T04:43:21.783Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "af144f4ed4792b323026e171c439774543983feb",
+            "completedAt": "2026-11-09T04:43:21.783Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T04:43:21.783Z"
       }
     }
   ],
