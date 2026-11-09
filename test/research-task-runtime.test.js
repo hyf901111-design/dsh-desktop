@@ -757,6 +757,21 @@ describe('Research task contract and prompt', () => {
     }finally{await runtime.dispose()}
   });
 
+  it.each([true,false,'web'])('separates recovered acquisition from one final presentation only when business data was actually acquired (%s)',async acquired=>{
+    const {ResearchTaskRuntime}=await runtimeModule();const calls=[];
+    const directory={tool:'catalog',purpose:'discovery',args:{api_name:'available'},response:{kind:'catalog',interfaces:[{api:'available',parameters:{symbol:{required:true}},fields:{value:'值'}}]}};
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request);const i=calls.length;
+      return {childSessionId:'stages-'+i,dispose:async()=>{},result:Promise.resolve(i<3?{stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[],researchEvidence:i===2&&acquired?'实际取得业务值1':'只有目录定义',sourceRecords:i===2&&acquired?(acquired==='web'?[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://example.org/source'},snapshotRows:[{text:'原文业务值为1'}]}]:[{tool:'query',args:{symbol:'actual'},response:{records:[{value:1}]}}]):[directory]}:{stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'业务数据',content:'实际业务值为1。'})}]})};
+    }},storage:memoryTaskStorage(),createId:sequentialTaskIds()});
+    try{
+      await runtime.start(containerRequest('acquisition-and-presentation'));
+      await eventually(()=>expect(['completed','failed']).toContain(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state));
+      expect(calls).toHaveLength(acquired?3:2);expect(calls[1].synthesisOnly).toBe(false);
+      if(acquired){expect(calls[2].synthesisOnly).toBe(true);expect(calls[2].prompt).toContain('实际取得业务值1');expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('completed')}
+    }finally{await runtime.dispose()}
+  });
+
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
 
