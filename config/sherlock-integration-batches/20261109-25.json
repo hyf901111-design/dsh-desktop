@@ -140,6 +140,102 @@
           "真实在线生成受模型与官方数据源影响，聚焦回归不等于全部场景验收"
         ],
         "generatedAt": "2026-11-09T01:28:00+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+        "verificationCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/human-steering-yield-sdk.test.js",
+              "test/conversation-submission.test.js",
+              "test/conversation-response-progress.test.js",
+              "test/profile-runtime-patches.test.js",
+              "test/packaged-runtime-patches.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/human-steering-yield-sdk.test.js test/conversation-submission.test.js test/conversation-response-progress.test.js test/profile-runtime-patches.test.js test/packaged-runtime-patches.test.js --maxWorkers 2",
+            "verifiedCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+            "completedAt": "2026-11-09T01:27:45.572Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/conversation-components-policy.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/conversation-components-policy.test.js test/workbench-execution-policy.test.js test/workbench-prototype-evidence.test.js --maxWorkers 2",
+            "verifiedCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+            "completedAt": "2026-11-09T01:27:45.572Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/rendered-page-content.test.ts",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/observed-source-completeness.test.js test/rendered-page-content.test.ts --maxWorkers 2",
+            "verifiedCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+            "completedAt": "2026-11-09T01:27:45.572Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/conversation-submission-browser.test.js",
+              "-t",
+              "keeps two real|edits, removes and promotes",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/conversation-submission-browser.test.js -t keeps two real|edits, removes and promotes --maxWorkers 2",
+            "verifiedCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+            "completedAt": "2026-11-09T01:27:45.572Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+            "completedAt": "2026-11-09T01:27:45.572Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "6806687096715d11284e54b1e2fe3624dee00b01",
+            "completedAt": "2026-11-09T01:27:45.572Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T01:27:45.572Z"
       }
     }
   ],
