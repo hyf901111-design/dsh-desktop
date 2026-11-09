@@ -255,3 +255,20 @@ it('normalizes only annotated clickable graph node role paints while preserving 
   expect(designPolicyIssue(draft)).toContain('控件')
  }
 })
+
+it('normalizes inline host fonts and role aliases without rewriting business content, scripts or geometry',()=>{
+ const script='<script>const records=[{title:"原样保留",amount:1.2345}];</script>'
+ const html='<section data-evidence="A&amp;B" style="font-family:\'Noto Sans SC\',sans-serif;color:var(--sherlock-text-secondary,#666);padding:13px;width:80%"><p>001 &amp; 完整原文</p></section>'+script
+ const fixed=normalizeGeneratedHostStyles(html)
+ expect(fixed).toContain('font-family:var(--sherlock-font-sans)')
+ expect(fixed).toContain('color:var(--sherlock-muted)')
+ expect(fixed).toContain('padding:13px;width:80%')
+ expect(fixed).toContain('data-evidence="A&amp;B"')
+ expect(fixed).toContain('<p>001 &amp; 完整原文</p>')
+ expect(fixed).toContain(script)
+ expect(normalizeGeneratedHostStyles(fixed)).toBe(fixed)
+ expect(designPolicyIssue(fixed)).toBeNull()
+ const unsupported='<button style="background:var(--custom-brand,#ff0000)">操作</button>'
+ expect(normalizeGeneratedHostStyles(unsupported)).toBe(unsupported)
+ expect(designPolicyIssue(unsupported)).toBeTruthy()
+})

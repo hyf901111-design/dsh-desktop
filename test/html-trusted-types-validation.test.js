@@ -47,3 +47,33 @@ it('rejects a fresh incompatible artifact without saving a component or altering
   expect(await readFile(file,'utf8')).toBe(before)
  }finally{await rm(directory,{recursive:true,force:true})}
 })
+
+it('repairs only empty clears of proven DOM nodes, retaining data, lexical scope and all other sinks',async()=>{
+ const {normalizeGeneratedEmptyDomClears}=await import('../packages/dsh-research-task-runtime/shared-component-validation.js')
+ const source='const out=document.getElementById("out");out.innerHTML="";out["innerHTML"]="";const data={innerHTML:"saved"};data.innerHTML="";function f(out){out.innerHTML=""}out.innerHTML="<b>original</b>";'
+ const fixed=normalizeGeneratedEmptyDomClears(wrap(source))
+ expect(fixed).toContain('out.textContent="";out["textContent"]=""')
+ expect(fixed).toContain('data.innerHTML="";function f(out){out.innerHTML=""}')
+ expect(fixed).toContain('out.innerHTML="<b>original</b>"')
+ expect(sharedComponentIssue(fixed)).toMatch(/TrustedHTML/)
+ expect(normalizeGeneratedEmptyDomClears(fixed)).toBe(fixed)
+ for(const code of ['let out=document.body;out={};out.innerHTML=""','document.body.outerHTML=""','document.body.innerHTML += ""','function f(document){document.body.innerHTML=""}','document.body.innerHTML=maybeTrusted','const out=document.body;const value=(out.innerHTML="")'])expect(normalizeGeneratedEmptyDomClears(wrap(code))).toBe(wrap(code))
+ const safe=normalizeGeneratedEmptyDomClears(wrap('document.body.innerHTML="";'))
+ expect(sharedComponentIssue(safe)).toBeUndefined()
+})
+
+it('finishes a mechanically repairable research artifact without another model attempt',async()=>{
+ const {ResearchTaskRuntime}=await import('../packages/dsh-research-task-runtime/index.js')
+ let attempts=0
+ const html='<p style="font-family:Arial;color:var(--sherlock-text-secondary,#666)">附件中的资料仍完整保留。</p>'+wrap('const out=document.getElementById("out");out.innerHTML="";out.textContent="就绪";')
+ const runtime=new ResearchTaskRuntime({adapter:{async start(){attempts++;return{childSessionId:'mechanical',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:'资料呈现',html})}]}),async dispose(){}}}},storage:{async save(){}},createId:()=> 'mechanical'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'呈现提供的资料说明，使用HTML，不添加业务操作。'})
+  await expect.poll(()=>runtime.inspect({parentSessionId:'parent',taskId:'mechanical'}).state).toBe('completed')
+  const result=runtime.inspect({parentSessionId:'parent',taskId:'mechanical'})
+  expect(attempts).toBe(1)
+  expect(result.finalOutput).toContain('textContent')
+  expect(result.finalOutput).toContain('var(--sherlock-font-sans)')
+  expect(result.finalOutput).toContain('附件中的资料仍完整保留')
+ }finally{await runtime.dispose()}
+})

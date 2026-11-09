@@ -4,7 +4,7 @@ export const TRUSTED_TYPES_COMPONENT_INSTRUCTION = `交互HTML内层沙箱启用
 
 const member = node => ['MemberExpression','OptionalMemberExpression'].includes(node?.type)
 const property = node => member(node) ? node.computed ? node.property.type === 'StringLiteral' ? node.property.value : undefined : node.property.name : undefined
-export function trustedTypesScriptIssue(nodes, resolve) {
+function trustedTypesInspection(nodes, resolve) {
  const initial = new Map(), changed = new Set(), stringWrites = new Map()
  const remember=(binding,value)=>{if(!binding)return;if(!stringWrites.has(binding))stringWrites.set(binding,[]);stringWrites.get(binding).push(value)}
  for (const node of nodes) {
@@ -49,6 +49,21 @@ export function trustedTypesScriptIssue(nodes, resolve) {
   if(node?.type==='SequenceExpression')return stringValue(node.expressions.at(-1),seen)
   return node?.type==='CallExpression'&&global(node.callee,'String')
  }
+ return {domNode,stringValue,documentNode}
+}
+
+// Empty standalone DOM clears have a semantics-preserving, non-HTML sink.
+// Unknown objects, shadowed names, reassigned handles and value expressions
+// are deliberately left untouched for the regular compatibility validator.
+export function trustedTypesEmptyClearEdits(nodes,resolve,parents){
+ const {domNode}=trustedTypesInspection(nodes,resolve)
+ return nodes.filter(node=>node.type==='AssignmentExpression'&&node.operator==='='&&
+  member(node.left)&&property(node.left)==='innerHTML'&&domNode(node.left.object)&&
+  node.right?.type==='StringLiteral'&&node.right.value===''&&parents.get(node)?.type==='ExpressionStatement')
+  .map(node=>({start:node.left.property.start,end:node.left.property.end,text:node.left.computed?'"textContent"':'textContent'}))
+}
+export function trustedTypesScriptIssue(nodes,resolve){
+ const {domNode,stringValue,documentNode}=trustedTypesInspection(nodes,resolve)
  for(const node of nodes){
   let sink
   if(node.type==='AssignmentExpression'&&member(node.left)&&['innerHTML','outerHTML'].includes(property(node.left))&&domNode(node.left.object)&&(node.operator==='='&&stringValue(node.right)||node.operator==='+='))sink=property(node.left)

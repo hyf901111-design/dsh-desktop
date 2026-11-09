@@ -56,7 +56,7 @@ import { registerNotesChallenge } from './notes-challenge-runtime.js'
 import { registerNoteSessions } from './notes-session.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import {generatedChartGeometry,chartGeometryRepairIssue} from './generated-chart-geometry.js'
-import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
+import { sharedComponentIssue, normalizeGeneratedEmptyDomClears, SHARED_STATE_REPAIR } from './shared-component-validation.js'
 import { designPolicyIssue, normalizeGeneratedHostStyles, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue, DESIGN_POLICY_ERROR, DESIGN_POLICY_REPAIR, PANEL_COLOR_INSTRUCTION } from './design-policy.js'
 import { SHARED_COMPONENT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, SHARED_PANEL_USAGE } from './shared-component-contract.js'
 import { startComponentAgent } from './component-agent-scope.js'
@@ -1107,7 +1107,7 @@ function finalText(output, kind, requireSharedState = false, validateSharedState
   if (accepted !== undefined) {
     let spec = JSON.parse(accepted)
     if (spec.type === 'html' && candidates.some(candidate => candidate.type === 'html' && !retainedTableData(candidate)) && !titleRepairSnapshot) {
-      const normalized = normalizeGeneratedHostStyles(spec.html)
+      const normalized = normalizeGeneratedHostStyles(normalizeGeneratedEmptyDomClears(spec.html))
       if (normalized !== spec.html) {
         const normalizedSpec = parseResearchContainerSpec({ ...spec, html: normalized })
         if (normalizedSpec) spec = normalizedSpec

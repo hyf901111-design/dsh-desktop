@@ -1,4 +1,5 @@
 import { load } from 'cheerio'
+import { parse as parseHtml } from 'parse5'
 import postcss from 'postcss'
 import { parse as parseScript } from '@babel/parser'
 
@@ -23,10 +24,8 @@ export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留�
 export function normalizeGeneratedHostStyles(html) {
  let changed = false
  let structure
- const result = html.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (match, open, source, close) => {
-  let tree
-  try { tree = postcss.parse(source) } catch { return match }
-  tree.walkDecls(decl => {
+ const normalize=tree=>{
+tree.walkDecls(decl => {
    if (decl.prop.toLowerCase().startsWith('--sherlock-')) { decl.remove(); changed = true }
    else if (decl.prop.toLowerCase() === 'font-family' && declarationIssue(decl.prop, decl.value, false)) {
     decl.value = 'var(--sherlock-font-sans)'; changed = true
@@ -72,8 +71,37 @@ export function normalizeGeneratedHostStyles(html) {
     }
    }
   })
+ }
+ let result = html.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (match, open, source, close) => {
+  let tree
+  try { tree = postcss.parse(source) } catch { return match }
+  normalize(tree)
   return open + tree.toString() + close
  })
+ // Apply the same host declaration rules to inline CSS. Edit only the
+ // located style attribute, never serialize the document or touch script/data.
+ const edits=[]
+ const collect=node=>{
+  const attr=node.attrs?.find(item=>item.name==='style'),loc=node.sourceCodeLocation?.attrs?.style
+  if(attr&&loc){
+   let tree
+   try{tree=postcss.parse(attr.value)}catch{return}
+   normalize(tree)
+   const css=tree.toString()
+   if(css!==attr.value){
+    const escaped=css.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')
+    edits.push({start:loc.startOffset,end:loc.endOffset,text:'style="'+escaped+'"'})
+   }
+  }
+  for(const child of node.childNodes??[])collect(child)
+  if(node.content)collect(node.content)
+ }
+ // Parse attribute values as CSS declarations, never as HTML.
+ if(/\sstyle\s*=/iu.test(result)){
+  collect(parseHtml(result,{sourceCodeLocationInfo:true}))
+  for(const edit of edits.sort((a,b)=>b.start-a.start))result=result.slice(0,edit.start)+edit.text+result.slice(edit.end)
+  if(edits.length)changed=true
+ }
  return changed ? result : html
 }
 
