@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {componentDiscoveryProgress} from '../packages/dsh-research-task-runtime/component-discovery-progress.js'
 const tool='ework__catalog';
-function reply(progress,id,value,{name=tool,isError=false}={}){
- progress.accept({type:'tool/call',data:{callId:id,name}});
+function reply(progress,id,value,{name=tool,isError=false,args={}}={}){
+ progress.accept({type:'tool/call',data:{callId:id,name,arguments:JSON.stringify(args)}});
  progress.accept({type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',isError,content:[{type:'text',text:typeof value==='string'?value:JSON.stringify(value)}]}]}}});
 }
 it('bounds a repeatedly empty directory while leaving alternate sources and other children independent',()=>{
@@ -12,6 +12,16 @@ it('bounds a repeatedly empty directory while leaving alternate sources and othe
  expect(p.issue('other')).toBeUndefined();expect(componentDiscoveryProgress(new Set([tool])).issue(tool)).toBeUndefined();
  // A real later definition reopens that source, never a stale generic flag.
  reply(p,'c',{kind:'catalog',interfaces:[{api:'real'}]});expect(p.issue(tool)).toBeUndefined();
+});
+it('does not infer an unavailable catalog from two empty fuzzy searches and still permits a new exact definition',()=>{
+ const p=componentDiscoveryProgress(new Set([tool]));
+ reply(p,'a',{kind:'catalog',interfaces:[]},{args:{query:'自然语言需求一'}});
+ reply(p,'b',{kind:'catalog',interfaces:[]},{args:{query:'自然语言需求二'}});
+ expect(p.issue(tool,{query:'反复改关键词'})).toBeTruthy();
+ expect(p.issue(tool,{api_name:'actual_api'})).toBeUndefined();
+ reply(p,'c',{kind:'catalog',interfaces:[]},{args:{api_name:'actual_api'}});
+ expect(p.issue(tool,{api_name:'actual_api'})).toBeTruthy();
+ expect(p.issue(tool,{api_name:'another_api'})).toBeUndefined();
 });
 it.each([{records:[]},{kind:'catalog',interfaces:[]},'not JSON'])('does not treat failed transport, business emptiness or unknown tools as conclusive discovery',value=>{
  const p=componentDiscoveryProgress(new Set([tool]));

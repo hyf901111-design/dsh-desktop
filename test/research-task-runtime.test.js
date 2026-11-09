@@ -2070,6 +2070,31 @@ describe('Research task Subagent adapter', () => {
     }finally{await handle.dispose()}
   });
 
+  it.each(['business','deadline'])('allows a bounded first business read after a valid definition arrives at the retrieval deadline: %s',async boundary=>{
+    const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
+    const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers();
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
+    ctx.tools={schemas:()=>[{name:'ework__definition',description:'读取接口目录与参数定义，不是业务数据'},{name:'ework__business',description:'实际业务记录'}]};
+    let handle;
+    try{
+      handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：观测\n本面板：真实数据\n读取真实业务记录。\n仅生成本面板，优先使用 table 类型。',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}});
+      await vi.advanceTimersByTimeAsync(90001);
+      ctx.emit(child,{type:'tool/call',seq:1,data:{name:'ework__definition',callId:'definition',arguments:'{"api_name":"actual_api"}'}});
+      ctx.emit(child,{type:'tool/result',seq:2,data:{message:{source:{callId:'definition'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({kind:'catalog',interfaces:[{api:'actual_api',fields:['date','value']}]})}]}]}}});
+      ctx.emit(child,{type:'step/end',seq:3,data:{}});
+      expect(child.ctx.tools.restrict).not.toHaveBeenCalled();
+      if(boundary==='deadline'){
+        await vi.advanceTimersByTimeAsync(45000);
+        ctx.emit(child,{type:'step/end',seq:4,data:{}});
+        expect(child.ctx.tools.restrict).toHaveBeenCalledOnce();return;
+      }
+      ctx.emit(child,{type:'tool/call',seq:4,data:{name:'ework__business',callId:'data',arguments:'{}'}});
+      ctx.emit(child,{type:'tool/result',seq:5,data:{message:{source:{callId:'data'},content:[{type:'tool-result',content:[{type:'text',text:'{"records":[{"date":"2026-11-06","value":1.2}]}'}]}]}}});
+      ctx.emit(child,{type:'step/end',seq:6,data:{}});
+      expect(child.ctx.tools.restrict).toHaveBeenCalledOnce();
+    }finally{await handle?.dispose();vi.useRealTimers()}
+  });
+
   it('keeps late business records ahead of large interface definitions in the bounded synthesis context',async()=>{
     const {createSubagentAdapter}=await runtimeModule(),parent={id:'parent'},child={id:'child',session:{events:[]}},result=Promise.withResolvers();
     const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);

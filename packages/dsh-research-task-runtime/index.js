@@ -1819,6 +1819,10 @@ export class ResearchTaskRuntime {
         }
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
         let deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
+        // Submission may already have rendered a native model. Recover its
+        // exact host-verified data before source and scope gates inspect it;
+        // waiting until finalText loses structured source URLs at those gates.
+        if(task.kind==='container')deliveredText=restoreHostTemplateArtifact(deliveredText)??deliveredText
         const restoredQuotes=task.kind==='container'?restoreArtifactStringQuotes(deliveredText):undefined
         if(restoredQuotes)deliveredText=restoredQuotes
         const restoredType=/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(task.prompt??'')?restoreDeclaredArtifactType(deliveredText,plannedFormat):undefined
@@ -3008,7 +3012,14 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           // the same authorized prototype. Let its typed submission finish the
           // source phase; the existing time/read budgets still bound retrieval.
           if((prototypeRecovery||prototypeDataReady)&&!livePrototypeSubmission)closeResearch()
-          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())
+          // A late, nonempty catalog is progress toward acquisition, not a
+          // finished data phase. Allow the first business read within the same
+          // 135s bound used for parameter repair. Existing call limits remain;
+          // empty directories and failed reads do not earn more time.
+          const firstBusinessRead=executionElapsed()<135000&&
+            sourceCollector.records.some(record=>record.purpose==='discovery'&&record.response?.kind==='catalog'&&record.response.interfaces?.length)&&
+            !componentBindingEvidence(sourceCollector.records)&&!sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)
+          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())&&!firstBusinessRead
           if(timeExpired||discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
         }
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {
@@ -3028,7 +3039,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         if (session?.id === child.id) deliver(event)
       })
       const releaseSourceProjection=kind==='container'&&!synthesisOnly?registerComponentSourceProjection(ctx,{child,allowed:childTools,discoveryTools,signal,onWebResponse:(args,text)=>sourceCollector.acceptWebResponse(args,text)}):()=>{}
-      const releaseDiscoveryGuard=kind==='container'&&!synthesisOnly?child.ctx?.tools?.guard?.(exec=>exec.agent===child?discoveryProgress.issue(exec.name):undefined):undefined
+      const releaseDiscoveryGuard=kind==='container'&&!synthesisOnly?child.ctx?.tools?.guard?.(exec=>exec.agent===child?discoveryProgress.issue(exec.name,exec.arguments):undefined):undefined
       const stopSourceProjection=()=>{sourceProjectionStops.delete(stopSourceProjection);releaseSourceProjection();releaseDiscoveryGuard?.()}
       sourceProjectionStops.add(stopSourceProjection)
       const stopSubmission=()=>{sourceProjectionStops.delete(stopSubmission);submission?.dispose()}
