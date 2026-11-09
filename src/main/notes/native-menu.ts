@@ -86,7 +86,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
           // keyboard repaint resets this baseline and must not close its child.
           if(scrolled&&pane===state.popup&&input.submenu)this.navigate(state,`ework-note-menu://${state.ticket}/back/${input.submenu.parentId}?revision=${input.revision}`)
           else if((moved||scrolled)&&pane===state.popup&&typeof hit?.href==='string'){
-            if(hit.submenu&&!input.submenu)this.navigate(state,hit.href)
+            if(hit.submenu&&new URL(hit.href).pathname.split('/')[2]!==input.submenu?.parentId)this.navigate(state,hit.href)
             else if(!hit.submenu&&input.submenu)this.navigate(state,`ework-note-menu://${state.ticket}/back/${input.submenu.parentId}?revision=${input.revision}`)
           }
         }

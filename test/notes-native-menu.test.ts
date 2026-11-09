@@ -179,6 +179,16 @@ it('opens the second level without closing the native menu and validates child s
  childPopup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=2&parent=library`)
  expect(parent.webContents.send).toHaveBeenLastCalledWith('notes:menu-event',expect.objectContaining({action:'select',parentId:'library',itemId:'library-one',revision:2}));expect(popup.destroyed).toBe(true);expect(childPopup.destroyed).toBe(true)
 })
+it('switches directly between adjacent submenu parents when the pointer moves',async()=>{
+ const {parent,menu}=fixture(),items=['export','mind'].map(id=>({id,title:id,icon:'',subtext:'',badge:'',group:'',children:[{id:id+'-one',title:'子项',icon:'',subtext:'',badge:'',group:''}]}))
+ menu.sync(input({items,submenu:{parentId:'export',selectedIndex:0,keyboardActive:false}}),'alice')
+ const popup=instances()[1];await vi.waitFor(()=>expect(instances()).toHaveLength(3))
+ const ticket=popup.webContents.executeJavaScript.mock.calls.find((call:any[])=>call[0].includes('innerHTML'))[0].match(/ework-note-menu:\/\/([\w-]+)\//)[1]
+ popup.webContents.executeJavaScript.mockImplementation(async(script:string)=>script.includes('elementFromPoint')?{href:`ework-note-menu://${ticket}/open/mind?revision=1`,submenu:true}:({pane:{x:24,y:24,width:264,height:46},item:{x:31,y:31,width:252,height:32}}))
+ ;(screen.getCursorScreenPoint as any).mockReturnValue({x:popup.bounds.x+42,y:popup.bounds.y+80})
+ await vi.waitFor(()=>expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'open',itemId:'mind'})))
+ menu.close()
+})
 for(const change of ['blur','move','resize','hide','minimize','closed'])it(`closes and notifies the editor on parent ${change}`,async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1);await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled());if(change==='blur')parent.focused=false;parent.emit(change);await vi.waitFor(()=>expect(popup.destroyed).toBe(true));expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'cancel'}));expect(parent.listenerCount('blur')).toBe(0);parent.focus();expect(()=>menu.sync(input({revision:2}),'alice')).toThrow('已关闭')
 })

@@ -17,3 +17,12 @@ it('keyboard selection skips disabled options and cancellation returns no action
  popup.key('b','ArrowDown');expect(transport.sync.mock.calls.at(-1)?.[0].selectedIndex).toBe(1)
  popup.key('b','Escape');await expect(result).resolves.toBeNull()
 })
+it('clears the old parent highlight when pointer returns from a child to an adjacent root action',async()=>{
+ const popup=new ComponentPopupMenu({webContents:{id:9},isDestroyed:()=>false} as any)
+ const result=popup.show({menuId:'hover',anchor:{x:100,y:200,width:206,height:22},items:[{id:'export',label:'导出',children:[{id:'svg',label:'SVG'}]},{id:'copy',label:'复制组件'}]})
+ transport.options.emit({menuId:'hover',revision:0,action:'open',itemId:'export'})
+ transport.options.emit({menuId:'hover',revision:1,action:'back',itemId:'export'})
+ const state=transport.sync.mock.calls.at(-1)?.[0]
+ expect(state.submenu).toBeUndefined();expect(state.selectedIndex).toBeUndefined()
+ popup.close();await expect(result).resolves.toBeNull()
+})
