@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-38",
+  "branch": "codex/integration/20261109-38",
+  "baseMainCommit": "a32ed97711a71b367827f3c9320fb5d6df405005",
+  "expectedMainCommit": "a32ed97711a71b367827f3c9320fb5d6df405005",
+  "createdAt": "2026-11-09T06:40:03.932Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复看板分类悬停箭头并修复目录阶段自动取数恢复",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "a32ed97711a71b367827f3c9320fb5d6df405005",
+        "tipCommit": "13c1552d8a1c9041a6cbd1a09c4d255dbc3a50cf",
+        "commits": [
+          {
+            "commit": "6de1aabcd773383f9bb2237667667576f1e63658",
+            "parents": [
+              "0b4661fd7d92c9d4d7b33c965288d2e4d8c19fb8"
+            ],
+            "subject": "修复：恢复看板分类悬停折叠箭头并保留标签夹图标"
+          },
+          {
+            "commit": "0c9b115a3acb55035690f32c1261515b8f21b057",
+            "parents": [
+              "6de1aabcd773383f9bb2237667667576f1e63658"
+            ],
+            "subject": "修复：仅有接口目录时自动恢复仍保留取数能力并约束空定义来源"
+          },
+          {
+            "commit": "13c1552d8a1c9041a6cbd1a09c4d255dbc3a50cf",
+            "parents": [
+              "0c9b115a3acb55035690f32c1261515b8f21b057",
+              "a32ed97711a71b367827f3c9320fb5d6df405005"
+            ],
+            "subject": "同步：纳入已验证的看板图标集成基线"
+          }
+        ],
+        "boundaryParents": [
+          "0b4661fd7d92c9d4d7b33c965288d2e4d8c19fb8"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-acquisition-followup.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "test/component-acquisition-followup.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-b-icons-browser.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实展开侧栏样式浏览器检查2项通过；目录阶段超时丢失工具先复现失败，修复后相关16项通过。客户端复测安排在集成新包。"
+        },
+        "acceptanceCriteria": [
+          "看板分类hover恢复折叠箭头，保留原始标签夹图标",
+          "仅目录发现结束不得关闭恢复阶段取数工具",
+          "明确空接口定义要求切换原授权来源，保留真实缺失和完整性校验"
+        ],
+        "risks": [
+          "原工作台两卡此前复测仍失败，新策略必须继续实际复测，不能宣称成功"
+        ],
+        "generatedAt": "2026-11-09T06:39:55.952864+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-b-icons-browser.test.js",
+        "test/component-acquisition-followup.test.js",
+        "test/component-discovery-progress.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "discovery-only|unfinished pages"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
