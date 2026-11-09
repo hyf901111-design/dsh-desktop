@@ -43,7 +43,8 @@ export function extractArtifactObjects(text) {
 // closing quotes still fail JSON.parse and follow the normal recovery path.
 export function restoreArtifactStringQuotes(text) {
  if(typeof text!=='string'||text.length>262144)return;
- const input=text.trim();if(!input.startsWith('{')||!input.endsWith('}'))return;
+ const trimmed=text.trim(),fenced=/^```(?:json)?\s*\n([\s\S]*?)\n```$/iu.exec(trimmed);
+ const input=fenced?fenced[1].trim():trimmed;if(!input.startsWith('{')||!input.endsWith('}'))return;
  try{JSON.parse(input);return}catch{}
  let quoted=false,key=false,escaped=false,previous='',changed=false,result='';const stack=[];
  for(let i=0;i<input.length;i++){
@@ -53,7 +54,7 @@ export function restoreArtifactStringQuotes(text) {
    else if(c==='\\')escaped=true;
    else if(c==='"'){
     let next=i+1;while(next<input.length&&/\s/u.test(input[next]))next++;
-    if(!key&&/[\p{L}\p{N}]/u.test(input[next]??'')){result+='\\';changed=true}
+    if(!key&&/[\p{L}\p{N}—–†]/u.test(input[next]??'')){result+='\\';changed=true}
     else{quoted=false;previous='"'}
    }
   }else{

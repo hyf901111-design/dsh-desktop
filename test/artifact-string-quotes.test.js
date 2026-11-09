@@ -43,3 +43,9 @@ it.each([true,false])('still applies source validation after local quote recover
   else{expect(result.state).toBe('failed');expect(result.finalOutput).toBeUndefined();expect(result.error).toMatch(/原文链接未能对应|尚未与同一条来源记录对应/)}
  }finally{await runtime.dispose()}
 })
+
+it('recovers a single fenced artifact with quoted missing-value punctuation without rewriting any data',()=>{
+ const graph={version:1,type:'mind-map',title:'组织关系',content:'# 机构\n- 部门甲\n  - 负责人甲',source:{title:'附件',text:'"—"表示资料未确认，不代表岗位空缺。'}}
+ expect(JSON.parse(restore('```json\n'+broken(graph)+'\n```'))).toEqual(graph)
+ expect(restore('```json\n'+broken(graph)+'\n```\n另外一个对象')).toBeUndefined()
+})
