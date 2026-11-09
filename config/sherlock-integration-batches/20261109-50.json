@@ -66,6 +66,52 @@
           "网络正式版本集合身份问题仍未处理"
         ],
         "generatedAt": "2026-11-09T12:25:21.131548+00:00"
+      },
+      "merged": {
+        "mergeCommit": "f28bc6b63edfc88a64fd76a34e6c945519577f3e",
+        "verificationCommit": "f28bc6b63edfc88a64fd76a34e6c945519577f3e",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-delimited-evidence.test.js",
+              "test/delimited-statistics.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-mixed-document-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-delimited-evidence.test.js test/delimited-statistics.test.js test/workbench-document-delivery.test.js test/workbench-mixed-document-adapter.test.js",
+            "verifiedCommit": "f28bc6b63edfc88a64fd76a34e6c945519577f3e",
+            "completedAt": "2026-11-09T12:25:53.055Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f28bc6b63edfc88a64fd76a34e6c945519577f3e",
+            "completedAt": "2026-11-09T12:25:53.055Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "f28bc6b63edfc88a64fd76a34e6c945519577f3e",
+            "completedAt": "2026-11-09T12:25:53.055Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T12:25:53.055Z"
       }
     }
   ],
