@@ -11,7 +11,7 @@ export function timelineDataIssue(s,{checkCapacity=true}={}){
  if(s.date!==undefined&&!dateValue(s.date))return '同日记录date需有效YYYY-MM-DD';
  if(s.timeZone!==undefined){if(!text(s.timeZone,96))return 'timeZone无效';try{new Intl.DateTimeFormat('en',{timeZone:s.timeZone});}catch{return 'timeZone需有效IANA时区';}}
  const ids=new Set();for(const item of s.items){
-  if(!record(item)||typeof item.id!=='string'||!/^[\w-]{1,80}$/.test(item.id)||ids.has(item.id)||!text(item.title,checkCapacity?256:8192)||!(item.time===null||text(item.time,256)))return '事件需唯一稳定id、完整title及原time字符串或null';ids.add(item.id);
+  if(!record(item)||!text(item.id,512)||/[\u0000-\u001f\u007f]/u.test(item.id)||ids.has(item.id)||!text(item.title,checkCapacity?256:8192)||!(item.time===null||text(item.time,256)))return '事件需唯一稳定id、完整title及原time字符串或null';ids.add(item.id);
   if(item.time===null&&!text(item.timeMissing))return '未知发生时间需timeMissing，不以创建时间或当前时间补齐';
   for(const [k,v]of Object.entries(item))if(k==='url'?!safeUrl(v):!(v===null||typeof v==='string'&&(!checkCapacity||v.length<=2000)||typeof v==='number'&&Number.isFinite(v)||typeof v==='boolean'))return '事件附加字段需完整原标量，来源链接需安全http/https';
  }

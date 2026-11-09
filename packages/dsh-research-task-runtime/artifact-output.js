@@ -25,6 +25,7 @@ import { chinaMarketWindow } from './component-source-tools.js';
 import { financialWidgetDefaults } from './financial-widget-contract.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
 import {derivedOutline} from './derived-template-contract.js';
+import {nativeProvenance,appendProvenance} from './component-provenance.js';
 
 // Linear scan, string/escape aware: prose around a complete JSON object is harmless.
 // Never eval model output, concatenate fragments, or guess missing values.
@@ -128,14 +129,16 @@ export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
   // Retained JSON is data, not proof that model-supplied HTML displays it.
   // Rebuild tables with the same trusted renderer used for structured output.
   const tableData=retainedTableData(original)??original;
-  let candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(tableData)));
+  const provenance=nativeProvenance(tableData);
+  if(provenance.invalid)continue;
+  let candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(provenance.data)));
   if(normalizeChartGeometry&&candidate?.type==='html'&&typeof candidate.html==='string'){const projected=generatedChartGeometry(candidate.html);if(projected.html!==candidate.html)candidate={...candidate,html:projected.html};}
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=renderAdvancedChart(candidate) ?? renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
   if(chartWithNotes){
    const parsed=parseResearchContainerSpec(chartWithNotes);
-   if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
+   if(parsed)return JSON.stringify(retainTemplateModel(appendProvenance(parsed,provenance.html),{...candidate,...provenance.metadata}));
    continue;
   }
   const spec=parseResearchContainerSpec(renderDatasetViewArtifact(candidate) ?? renderTimelineArtifact(candidate) ?? renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
@@ -143,7 +146,7 @@ export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
   if(spec.type==='html' && /^(?:\s|[.…⋯])*$/.test(researchHtmlText(spec.html)) && !/<(?:svg|canvas)\b/i.test(spec.html))continue;
-  const retained=retainTemplateModel(spec,candidate);
+  const retained=retainTemplateModel(appendProvenance(spec,provenance.html),{...candidate,...provenance.metadata});
   if(candidate.type==='view'&&!parseResearchContainerSpec(retained))continue;
   return JSON.stringify(retained);
  }

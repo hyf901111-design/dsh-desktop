@@ -3,7 +3,8 @@ import {TIMELINE_PRESENTATION_CSS} from './timeline-presentation.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function activityRuntime(){
  const rows=[...document.querySelectorAll('.activity-row')],ids=rows.map(r=>r.dataset.eventId),button=document.getElementById('activity-latest'),status=document.getElementById('activity-status');let context={readOnly:true,connected:false},current={version:1,open:[],selected:null};
- const valid=s=>s?.version===1&&Array.isArray(s.open)&&s.open.length<=60&&s.open.every(id=>typeof id==='string'&&/^[\w-]{1,80}$/.test(id))&&new Set(s.open).size===s.open.length&&(s.selected===null||typeof s.selected==='string'&&/^[\w-]{1,80}$/.test(s.selected));
+ const safeId=id=>typeof id==='string'&&id.trim().length>0&&id.length<=512&&!/[\u0000-\u001f\u007f]/.test(id);
+ const valid=s=>s?.version===1&&Array.isArray(s.open)&&s.open.length<=60&&s.open.every(safeId)&&new Set(s.open).size===s.open.length&&(s.selected===null||safeId(s.selected));
  const normalize=s=>valid(s)?{version:1,open:s.open.filter(id=>ids.includes(id)),selected:ids.includes(s.selected)?s.selected:null}:{version:1,open:[],selected:null};
  const reduce=(s,a)=>{const clean=normalize(s);if(a?.kind==='details'&&ids.includes(a.id)&&typeof a.open==='boolean')return {...clean,open:a.open?[...new Set([...clean.open,a.id])]:clean.open.filter(id=>id!==a.id)};if(a?.kind==='latest'&&!button.disabled)return {...clean,selected:ids[0]};return s;};
  const render=(s,c)=>{context=c;current=normalize(s);rows.forEach(row=>{row.querySelector('details').open=current.open.includes(row.dataset.eventId);row.dataset.selected=String(current.selected===row.dataset.eventId);});};
