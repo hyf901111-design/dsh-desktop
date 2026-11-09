@@ -183,6 +183,20 @@
       "size": 18,
       "nodeId": "4556:368328",
       "sha256": "04dda0266b93d97f2842b44bf99ba7e209fadb8ee430a6c1d7ef5983c2f7fdd9"
+    },
+    {
+      "file": "odyssey-board-folder-closed-18.svg",
+      "role": "board-folder-closed",
+      "size": 18,
+      "nodeId": "4572:368608",
+      "sha256": "6367f49969117f12239d4e6e42a80d14925b365f7a9af9f09c4919dca5268d5c"
+    },
+    {
+      "file": "odyssey-board-folder-open-18.svg",
+      "role": "board-folder-open",
+      "size": 18,
+      "nodeId": "4572:368630",
+      "sha256": "3f71957ee95de618feeadd5d703bd1d8e35a7e2b88706ea648e4a567ae55c3ef"
     }
   ]
 }
