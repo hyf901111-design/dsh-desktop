@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-47",
+  "branch": "codex/integration/20261109-47",
+  "baseMainCommit": "207547c2aa67a58e682b9dfb42bef8c0051114fa",
+  "expectedMainCommit": "207547c2aa67a58e682b9dfb42bef8c0051114fa",
+  "createdAt": "2026-11-09T11:37:22.254Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复真实复测中的筛选明细与来源别名误拦",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "207547c2aa67a58e682b9dfb42bef8c0051114fa",
+        "tipCommit": "23d208ba33efb602259d4f552da98fc230d69ba9",
+        "commits": [
+          {
+            "commit": "220e2b345b13e9b506dd99f3efd18de33e827688",
+            "parents": [
+              "53d8f090b585c69d500ec1b37d6a7665b9708597"
+            ],
+            "subject": "修复：区分筛选明细的交付范围并兼容单来源元数据"
+          },
+          {
+            "commit": "23d208ba33efb602259d4f552da98fc230d69ba9",
+            "parents": [
+              "220e2b345b13e9b506dd99f3efd18de33e827688",
+              "207547c2aa67a58e682b9dfb42bef8c0051114fa"
+            ],
+            "subject": "合并：同步本地 main 的组件策略集成记录"
+          }
+        ],
+        "boundaryParents": [
+          "53d8f090b585c69d500ec1b37d6a7665b9708597"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/delimited-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/artifact-string-quotes.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-delimited-evidence.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "后端接收与交付范围修复，115项聚焦测试和类型检查通过；真实v76复测CSV 4/6、组织架构5/5，v77需重测受影响卡片。"
+        },
+        "acceptanceCriteria": [
+          "筛选子集逐字段对齐原始记录，不强制交付全文件",
+          "全量明细仍要求全部原始键",
+          "单来源元数据规范化后仍执行所有呈现和来源校验"
+        ],
+        "risks": [
+          "首轮四个工作台未整体验收通过",
+          "未修复网络取数和全部业务语义校验",
+          "新包实际生成效果需独立复测"
+        ],
+        "generatedAt": "2026-11-09T11:36:58.844267+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b51d6ad8dcaa7e65a1bf8796b1cc821baf41d396",
+        "verificationCommit": "b51d6ad8dcaa7e65a1bf8796b1cc821baf41d396",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-delivery-scope.test.js",
+              "test/component-scalar-entity-arguments.test.js",
+              "test/workbench-delimited-evidence.test.js",
+              "test/artifact-string-quotes.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-mixed-document-adapter.test.js",
+              "test/component-data-submission.test.js",
+              "test/derived-template-contract.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-delivery-scope.test.js test/component-scalar-entity-arguments.test.js test/workbench-delimited-evidence.test.js test/artifact-string-quotes.test.js test/workbench-document-delivery.test.js test/workbench-mixed-document-adapter.test.js test/component-data-submission.test.js test/derived-template-contract.test.js",
+            "verifiedCommit": "b51d6ad8dcaa7e65a1bf8796b1cc821baf41d396",
+            "completedAt": "2026-11-09T11:38:23.290Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b51d6ad8dcaa7e65a1bf8796b1cc821baf41d396",
+            "completedAt": "2026-11-09T11:38:23.290Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b51d6ad8dcaa7e65a1bf8796b1cc821baf41d396",
+            "completedAt": "2026-11-09T11:38:23.290Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T11:38:23.290Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-delivery-scope.test.js",
+        "test/component-scalar-entity-arguments.test.js",
+        "test/workbench-delimited-evidence.test.js",
+        "test/artifact-string-quotes.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-mixed-document-adapter.test.js",
+        "test/component-data-submission.test.js",
+        "test/derived-template-contract.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
