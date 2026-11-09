@@ -8,12 +8,18 @@ afterAll(()=>browser?.close())
 it('uses the same original Figma tab-folder assets for both board groups in their real open and closed states',async()=>{
  const page=await browser.newPage();
  await page.route('http://fixture.test/**',route=>route.fulfill({body:read('build/brand/'+new URL(route.request().url()).pathname.slice(1)),contentType:'image/svg+xml'}));
- const group=name=>`<div data-srb-board-group="${name}"><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_folder"><svg width="18" height="18"><path/></svg></span></div></div>`;
- await page.setContent(`<base href="http://fixture.test/"><style>${read('src/preload/figma-b-icons.css')}</style><aside data-dsh-sidebar-root data-dsh-sidebar-wide="true">${group('private')}${group('shared')}<div data-srb-workspaces><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_folder"><svg width="18" height="18"><path/></svg></span></div></div></aside>`);
+ const nativeCss=[...read('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js').matchAll(/const css(?:\$\d+)? = ("[^\n]*");/gu)].map(match=>JSON.parse(match[1])).join('\n');
+ const group=name=>`<div data-srb-board-group="${name}"><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_slot YDXeBa_folder"><svg width="18" height="18"><path/></svg></span><span class="YDXeBa_slot YDXeBa_chevron"><svg width="14" height="14"><path/></svg></span><span>${name}</span></div></div>`;
+ await page.setContent(`<base href="http://fixture.test/"><style>${nativeCss}${read('src/preload/figma-b-icons.css')}</style><aside data-dsh-sidebar-root data-dsh-sidebar-wide="true">${group('private')}${group('shared')}<div data-srb-workspaces><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_folder"><svg width="18" height="18"><path/></svg></span></div></div></aside>`);
  for(const state of [false,true]){
+  await page.mouse.move(900,700);
   await page.locator('[data-srb-board-group]>.YDXeBa_projectRow').evaluateAll((rows,state)=>rows.forEach(row=>row.setAttribute('aria-expanded',String(state))),state);
-  const masks=await page.locator('[data-srb-board-group] svg').evaluateAll(els=>els.map(el=>({mask:getComputedStyle(el).maskImage,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})));
+  const masks=await page.locator('[data-srb-board-group] .YDXeBa_folder svg').evaluateAll(els=>els.map(el=>({mask:getComputedStyle(el).maskImage,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})));
   for(const item of masks){expect(item.mask).toContain(`odyssey-board-folder-${state?'open':'closed'}-18.svg`);expect(item.width).toBe(18);expect(item.height).toBe(18)}
+  for(const name of ['private','shared']){
+   const row=page.locator(`[data-srb-board-group="${name}"]>.YDXeBa_projectRow`);
+   await row.hover();expect(await row.locator('.YDXeBa_chevron').isVisible()).toBe(true);
+  }
  }
  expect(await page.locator('[data-srb-workspaces] svg').evaluate(el=>getComputedStyle(el).maskImage)).toContain('odyssey-b-folder-closed-18.svg');
  await page.close();

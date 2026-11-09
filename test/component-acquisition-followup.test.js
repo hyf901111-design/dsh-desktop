@@ -14,3 +14,11 @@ it('requires reading original pages after discovery or search and never promotes
  expect(result).toContain('https://example.org/report');expect(result).toContain('web_fetch');expect(result).not.toContain('secret');expect(result).not.toContain('file:');
  expect(componentAcquisitionFollowup([{tool:'business',response:{records:[{value:1}]}}],{unreadSourceUrls:['https://example.org/report']})).toBe('')
 })
+
+it('keeps discovery-only handoffs in acquisition and carries exact positive and negative definitions',()=>{
+ const records=[{tool:'catalog',purpose:'discovery',args:{api_name:'available'},response:{kind:'catalog',interfaces:[{api:'available',parameters:{symbol:{required:true}},fields:{date:'日期',value:'值'}}]}},{tool:'catalog',purpose:'discovery',args:{api_name:'absent'},response:{kind:'catalog',interfaces:[]}}];
+ const followup=componentAcquisitionFollowup(records);
+ expect(followup).toContain('业务数据尚未取得');expect(followup).toContain('available');expect(followup).toContain('symbol');expect(followup).toContain('absent');expect(followup).toContain('其他已授权来源');
+ expect(componentAcquisitionFollowup([])).toBe('');
+ expect(componentAcquisitionFollowup([...records,{tool:'query',response:{records:[{value:1}]}}])).toBe('');
+});
