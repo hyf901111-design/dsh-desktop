@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "原生查找与网页持续交互体验修复",
+        "featureName": "浏览器更多菜单和收起侧栏入口修复",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "d04f787edfc6684f234f53303d171ee5b5c65c06",
-        "tipCommit": "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab",
+        "baseCommit": "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab",
+        "tipCommit": "c07d16615e56a47ad8c2d41514d568ea8b4722b4",
         "commits": [
           {
-            "commit": "395f692fa0d51353052fc2a418dd4b65e97182ba",
+            "commit": "c07d16615e56a47ad8c2d41514d568ea8b4722b4",
             "parents": [
-              "d04f787edfc6684f234f53303d171ee5b5c65c06"
+              "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab"
             ],
-            "subject": "体验：原生查找浮层保持网页滚动并修复焦点与页签归属"
-          },
-          {
-            "commit": "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab",
-            "parents": [
-              "395f692fa0d51353052fc2a418dd4b65e97182ba"
-            ],
-            "subject": "测试：使用标准矩形类型校验浏览器浮层布局"
+            "subject": "修复：补齐折叠侧栏浏览器入口并校准更多菜单顺序"
           }
         ],
         "files": [
@@ -35,44 +28,40 @@
             "path": "docs/superpowers/plans/2026-11-09-browser-app-figma.md"
           },
           {
-            "status": "M",
-            "path": "electron.vite.config.ts"
+            "status": "A",
+            "path": "src/preload/scheduled/assets/browser-rail.svg"
           },
           {
             "status": "M",
-            "path": "scripts/verify-browser-app-native.mjs"
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
           },
           {
             "status": "A",
-            "path": "src/main/browser/find-overlay.ts"
+            "path": "test/browser-sidebar-entry.test.ts"
           },
           {
             "status": "M",
-            "path": "src/main/browser/service.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/browser/find-preload.cjs"
+            "path": "test/scheduled-task-view.test.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/style.css"
+            "path": "test/sidebar-new-note-browser.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/browser-app.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-view.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-find-preload.test.js"
+            "path": "test/sidebar-new-note-install.test.js"
           }
         ],
         "checks": [
@@ -86,12 +75,16 @@
               "test/default-web-links-client.test.js",
               "test/conversation-browser.test.ts",
               "test/workspace-surface-host.test.ts",
-              "test/browser-find-preload.test.js"
+              "test/browser-find-preload.test.js",
+              "test/browser-sidebar-entry.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/sidebar-new-note-install.test.js"
             ],
             "outcome": "passed",
             "summary": "浏览器应用直接相关聚焦验证通过",
-            "verifiedCommit": "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab",
-            "completedAt": "2026-11-09T16:28:37.259947+00:00",
+            "verifiedCommit": "c07d16615e56a47ad8c2d41514d568ea8b4722b4",
+            "completedAt": "2026-11-09T21:49:01.663522+00:00",
             "timeoutMs": 120000
           },
           {
@@ -103,8 +96,8 @@
             ],
             "outcome": "passed",
             "summary": "浏览器应用直接相关聚焦验证通过",
-            "verifiedCommit": "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab",
-            "completedAt": "2026-11-09T16:28:37.259947+00:00",
+            "verifiedCommit": "c07d16615e56a47ad8c2d41514d568ea8b4722b4",
+            "completedAt": "2026-11-09T21:49:01.663522+00:00",
             "timeoutMs": 120000
           },
           {
@@ -114,14 +107,14 @@
             ],
             "outcome": "passed",
             "summary": "浏览器应用直接相关聚焦验证通过",
-            "verifiedCommit": "f37b6c4db253b8e2a4f0335dab9a0f90ada6dcab",
-            "completedAt": "2026-11-09T16:28:37.259947+00:00",
+            "verifiedCommit": "c07d16615e56a47ad8c2d41514d568ea8b4722b4",
+            "completedAt": "2026-11-09T21:49:01.663522+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "37项直接相关检查、2项渲染流程和原生查找/滚轮/跨页计数/重复聚焦/Esc返回焦点通过，独立复审通过；新原生查找签名包待真实窗口复核。"
+          "summary": "107项直接相关检查、8组实际渲染流程和原生浏览器及扩展功能验证通过；两入口路由/选中/语言/36px按钮20px图标经真实侧栏组件核对。新版签名包待复核。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -134,55 +127,7 @@
           "Chrome账号同步与扩展商店不在本次设计范围",
           "缓存清理按所有时间执行，界面已明确说明"
         ],
-        "generatedAt": "2026-11-09T16:28:37.259947+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0d2f29194b8520b12f4b463345b0e734efe1f7b2",
-        "verificationCommit": "0d2f29194b8520b12f4b463345b0e734efe1f7b2",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "0d2f29194b8520b12f4b463345b0e734efe1f7b2",
-            "completedAt": "2026-11-09T16:28:54.723Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "0d2f29194b8520b12f4b463345b0e734efe1f7b2",
-            "completedAt": "2026-11-09T16:28:54.723Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "0d2f29194b8520b12f4b463345b0e734efe1f7b2",
-            "completedAt": "2026-11-09T16:28:54.723Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-09T16:28:54.723Z"
+        "generatedAt": "2026-11-09T21:49:01.663522+00:00"
       }
     }
   ],
