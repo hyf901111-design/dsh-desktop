@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-50",
+  "branch": "codex/integration/20261109-50",
+  "baseMainCommit": "fc9358968fad6d6e9b2a6d4ee8ee9edc1c2a89ae",
+  "expectedMainCommit": "fc9358968fad6d6e9b2a6d4ee8ee9edc1c2a89ae",
+  "createdAt": "2026-11-09T12:25:21.984Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "区分完整来源与明确筛选后的交付集合",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "fc9358968fad6d6e9b2a6d4ee8ee9edc1c2a89ae",
+        "tipCommit": "5c83512741b93f56183c83a8238cd9747d171d17",
+        "commits": [
+          {
+            "commit": "43e1adf08670538d388bc5e58d6b6d239d2891f8",
+            "parents": [
+              "cc70b76f0283df756a4d7d2bb2c5dcfb30135f5d"
+            ],
+            "subject": "修复：按明确筛选条件核验交付集合并区分来源总量"
+          },
+          {
+            "commit": "5c83512741b93f56183c83a8238cd9747d171d17",
+            "parents": [
+              "43e1adf08670538d388bc5e58d6b6d239d2891f8",
+              "fc9358968fad6d6e9b2a6d4ee8ee9edc1c2a89ae"
+            ],
+            "subject": "合并：同步本地 main 的宿主统计策略记录"
+          }
+        ],
+        "boundaryParents": [
+          "cc70b76f0283df756a4d7d2bb2c5dcfb30135f5d"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/delimited-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-delimited-evidence.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "37项直接相关检查及类型检查通过；新包v79总览18秒完成但21条子集被来源72误拦，实际原请求离线回放修复后通过。需新包真实复测。"
+        },
+        "acceptanceCriteria": [
+          "从全部N条中筛选不要求交付N条",
+          "明确单字段字面比较校验符合条件的完整原始键集合",
+          "全量明细仅提供筛选UI时仍核验全量"
+        ],
+        "risks": [
+          "不猜测复杂或不明确的复合条件",
+          "网络正式版本集合身份问题仍未处理"
+        ],
+        "generatedAt": "2026-11-09T12:25:21.131548+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-delimited-evidence.test.js",
+        "test/delimited-statistics.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-mixed-document-adapter.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
