@@ -242,6 +242,71 @@
           "真实外部数据缺失仍须如实报告，不声称所有场景百分之百成功"
         ],
         "generatedAt": "2026-11-09T04:27:03.022458+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c9998eb9c3512b3b988d9ef6c91ec219c54d0e76",
+        "verificationCommit": "c9998eb9c3512b3b988d9ef6c91ec219c54d0e76",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-b-icons-browser.test.js",
+              "test/research-grid-generation-fit.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/market-table-reading-client.test.js",
+              "test/market-table-reading-browser.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-discovery-progress.test.js",
+              "test/news-topic-delivery.test.js",
+              "--testTimeout=20000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-b-icons-browser.test.js test/research-grid-generation-fit.test.js test/research-grid-workbench.test.js test/market-table-reading-client.test.js test/market-table-reading-browser.test.js test/component-data-submission.test.js test/component-discovery-progress.test.js test/news-topic-delivery.test.js --testTimeout=20000",
+            "verifiedCommit": "c9998eb9c3512b3b988d9ef6c91ec219c54d0e76",
+            "completedAt": "2026-11-09T04:27:13.926Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "authorized alternatives|bounded first business read|native-template data to synthesis|late business records"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t authorized alternatives|bounded first business read|native-template data to synthesis|late business records",
+            "verifiedCommit": "c9998eb9c3512b3b988d9ef6c91ec219c54d0e76",
+            "completedAt": "2026-11-09T04:27:13.926Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c9998eb9c3512b3b988d9ef6c91ec219c54d0e76",
+            "completedAt": "2026-11-09T04:27:13.926Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c9998eb9c3512b3b988d9ef6c91ec219c54d0e76",
+            "completedAt": "2026-11-09T04:27:13.926Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T04:27:13.926Z"
       }
     }
   ],
