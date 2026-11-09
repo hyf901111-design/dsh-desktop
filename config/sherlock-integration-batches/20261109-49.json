@@ -75,6 +75,55 @@
           "不承诺模型服务超时已消除"
         ],
         "generatedAt": "2026-11-09T12:07:28.582895+00:00"
+      },
+      "merged": {
+        "mergeCommit": "f717b421797cd102401fd31dd9f88b83904ed91b",
+        "verificationCommit": "f717b421797cd102401fd31dd9f88b83904ed91b",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/delimited-statistics.test.js",
+              "test/workbench-delimited-evidence.test.js",
+              "test/workbench-mixed-document-adapter.test.js",
+              "test/workbench-document-delivery.test.js",
+              "test/research-design-policy.test.js",
+              "test/html-trusted-types-validation.test.js",
+              "test/shared-component-validation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/delimited-statistics.test.js test/workbench-delimited-evidence.test.js test/workbench-mixed-document-adapter.test.js test/workbench-document-delivery.test.js test/research-design-policy.test.js test/html-trusted-types-validation.test.js test/shared-component-validation.test.js",
+            "verifiedCommit": "f717b421797cd102401fd31dd9f88b83904ed91b",
+            "completedAt": "2026-11-09T12:08:00.266Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f717b421797cd102401fd31dd9f88b83904ed91b",
+            "completedAt": "2026-11-09T12:08:00.266Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "f717b421797cd102401fd31dd9f88b83904ed91b",
+            "completedAt": "2026-11-09T12:08:00.266Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T12:08:00.266Z"
       }
     }
   ],
