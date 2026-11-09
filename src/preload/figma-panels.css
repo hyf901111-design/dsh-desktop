@@ -414,3 +414,6 @@ body .sRp_pendingConversation .wSkVaW_heroWorkspaceRow .pXSMma_workspace{display
 .sRp_pendingConversation .uV2eYG_root{width:100%;min-width:0}
 
 .eb-current-reference{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary,#888);font:400 11px/17px var(--odyssey-font-ui);padding:4px 0}
+
+.sRp_pendingFrame{flex:1;min-width:0;width:100%}
+.sRp_pendingHost{min-width:0;width:100%}

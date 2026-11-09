@@ -72,6 +72,8 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive)&&(!home
  }catch(error){browserShell?.notify('error',error.message||'当前网页正文暂不可用，输入已保留。');return}finally{browserShell?.setResearchContextPreparing?.(false)}
  }
  `+browserSendAnchor)
+ replace('const researchActive = this.researchActiveSessions.has(session.sessionId);',"const researchActive = this.researchActiveSessions.has(session.sessionId) && document.body.dataset.workspaceSurface!=='browser';")
+ replace("activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation", "activeView === 'notes' && document.body.dataset.workspaceSurface!=='browser' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation")
  const project='function projectUserText(text, openFile) {'
  replace(project,project+`\nconst browserParts=(${browserUserTextSegments.toString()})(text);if(browserParts)return react_jsx_runtime.jsx(react.Fragment,{children:browserParts.map((part,index)=>part.url?react_jsx_runtime.jsx('a',{href:part.url,title:part.url,className:MessageItem_module_css_default.refChip,'data-ref-chip':'browser-source',children:part.title||new URL(part.url).hostname},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});`)
  return source+START+JSON.stringify(pairs)+END
