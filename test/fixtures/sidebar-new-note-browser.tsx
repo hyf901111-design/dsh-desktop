@@ -1,4 +1,5 @@
 import React from 'react'
+import {mountDesktopShellStyles} from '../../src/preload/shell-style'
 import * as jsx from 'react/jsx-runtime'
 import {createRoot} from 'react-dom/client'
 import {createPortal} from 'react-dom'
@@ -11,6 +12,7 @@ import {BlockNoteEditor} from '@blocknote/core'
 import {blocksToYDoc} from '@blocknote/core/yjs'
 import * as Y from 'yjs'
 declare global{interface Window{newNoteInput:any;newNoteFixture:any;__ModuleLoader__:any;noteEditors:any}}
+mountDesktopShellStyles(document)
 const input=window.newNoteInput,events:any[]=[],saved:any={},drafts:any={};window.noteEditors={}
 {
  const blocks=[{id:'old-paragraph',type:'paragraph' as const,content:'保留旧笔记正文😀'}],editor=BlockNoteEditor.create(),doc=blocksToYDoc(editor,blocks,'note')

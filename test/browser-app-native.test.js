@@ -19,13 +19,16 @@ it('attaches the source to the current native shell without sending or replacing
  off();vi.unstubAllGlobals();await w.happyDOM.abort()
 })
 
-it('opens a link once in a mounted browser and never leaves it queued for the next view mount',async()=>{
+it('opens the standalone app with or without a conversation without creating or changing a session',async()=>{
  const w=new Window();vi.stubGlobal('window',w);vi.stubGlobal('document',w.document);vi.stubGlobal('CustomEvent',w.CustomEvent)
- w.document.body.innerHTML='<div data-ework-browser-view="A"></div>';const setUrl=vi.fn(),setView=vi.fn(),opens=[]
+ const state={current:undefined},create=vi.fn(),open=vi.fn(),setView=vi.fn(),opens=[];let closes=0
  w.document.addEventListener('sherlock:browser-open',e=>opens.push(e.detail))
- const off=installBrowserNative({sessions:{list:{getSnapshot:()=>({current:'A'})},subagentAddress:()=>null,open:vi.fn()},chatStore:{create:()=>({actions:{setView}})},setUrl})
+ w.document.addEventListener('sherlock:browser-close',()=>closes++)
+ const off=installBrowserNative({sessions:{list:{getSnapshot:()=>state},create,subagentAddress:()=>null,open},chatStore:{create:()=>({actions:{setView}})}})
  w.dispatchEvent(new w.CustomEvent('sherlock:browser-request',{detail:{url:'https://example.com/'}}));await Promise.resolve()
- expect(setUrl).toHaveBeenCalledWith('A',undefined);expect(opens).toEqual([{sessionId:'A',url:'https://example.com/'}]);expect(setView).toHaveBeenCalledWith('browser')
+ expect(opens).toEqual([{sessionId:undefined,url:'https://example.com/'}]);expect(create).not.toHaveBeenCalled();expect(open).not.toHaveBeenCalled();expect(setView).not.toHaveBeenCalled()
+ state.current='A';w.dispatchEvent(new w.CustomEvent('sherlock:browser-request',{detail:{}}));await Promise.resolve();expect(opens.at(-1)).toEqual({sessionId:'A',url:undefined})
+ w.dispatchEvent(new w.CustomEvent('sherlock:browser-request',{detail:{close:true}}));expect(closes).toBe(1);expect(open).not.toHaveBeenCalled();expect(setView).not.toHaveBeenCalled()
  const raw=await browserSourceCodec().codec.serialize(JSON.stringify({title:'文章',url:'https://example.com/',at:1}));expect(browserUserTextSegments('问题'+raw)).toEqual([{text:'问题'},{title:'文章',url:'https://example.com/'}])
  off();vi.unstubAllGlobals();await w.happyDOM.abort()
 })

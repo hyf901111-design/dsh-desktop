@@ -15,7 +15,7 @@ export function registerBrowserApp(options:Options){
  const path=join(options.root,'browser-state.bin')
  let saved:any,storageWarning:string|undefined
  try{if(existsSync(path))saved=JSON.parse(safeStorage.decryptString(readFileSync(path)))}catch{storageWarning='上次浏览状态未能读取，原文件已保留。'}
- const model=new BrowserModel(saved),live=new Map<string,Live>(),downloads:BrowserDownload[]=Array.isArray(saved?.downloads)?saved.downloads.filter((d:any)=>d&&typeof d.id==='string'&&typeof d.path==='string'&&typeof d.url==='string'&&typeof d.name==='string'&&d.private!==true&&['completed','interrupted','cancelled'].includes(d.state)).slice(0,100):[],items=new Map<string,DownloadItem>(),sessions=new Set<Session>(),permissions=new Map<string,Record<string,string>>()
+ const model=new BrowserModel(saved),live=new Map<string,Live>(),downloads:BrowserDownload[]=Array.isArray(saved?.downloads)?saved.downloads.filter((d:any)=>d&&typeof d.id==='string'&&typeof d.path==='string'&&typeof d.url==='string'&&typeof d.name==='string'&&d.private!==true&&['completed','interrupted','cancelled'].includes(d.state)).slice(0,100):[],items=new Map<string,DownloadItem>(),sessions=new Set<Session>(),permissions=new Map<string,Record<string,string>>((Array.isArray(saved?.permissions)?saved.permissions:[]).filter((row:any)=>Array.isArray(row)&&typeof row[0]==='string'&&/^normal:https?:\/\//.test(row[0])&&row[1]&&typeof row[1]==='object'))
  let privateSession:Session|undefined,visible=false,disposed=false,persistTimer:ReturnType<typeof setTimeout>|undefined,downloadPublishTimer:ReturnType<typeof setTimeout>|undefined,rect:{x:number;y:number;width:number;height:number}|undefined
  let attachedWindow:BrowserWindow|undefined
  const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedWindow=win;win.once('closed',detachWindow)}return win}
@@ -25,7 +25,7 @@ export function registerBrowserApp(options:Options){
  const finder=nativeFind?createBrowserFindOverlay(findPreload,window,value=>{const tab=current();if(value.kind==='close'){finder?.hide();live.get(tab.id)?.view.webContents.focus();window().webContents.send('browser-app:shortcut',{key:'Escape'});void request('find',{id:tab.id,text:''}).catch(()=>{})}else if(value.kind==='shortcut'){window().webContents.send('browser-app:shortcut',value)}else void request('find',{id:tab.id,text:value.text,next:value.kind==='next',forward:value.forward}).catch(()=>{})}):undefined
  const snapshot=():BrowserSnapshot=>({nativeFind,sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
  const persist=()=>{
-  try{if(!safeStorage.isEncryptionAvailable()){storageWarning='系统加密不可用，本次浏览记录仅保留在内存。';return}mkdirSync(options.root,{recursive:true});const temp=path+'.tmp';writeFileSync(temp,safeStorage.encryptString(JSON.stringify({...model.serialize(),downloads:downloads.filter(d=>!d.private).map(d=>({...d,state:['progressing','paused'].includes(d.state)?'interrupted':d.state}))})),{mode:0o600});renameSync(temp,path)}catch{storageWarning='浏览状态暂时无法保存，请检查磁盘空间。'}
+  try{if(!safeStorage.isEncryptionAvailable()){storageWarning='系统加密不可用，本次浏览记录仅保留在内存。';return}mkdirSync(options.root,{recursive:true});const temp=path+'.tmp';writeFileSync(temp,safeStorage.encryptString(JSON.stringify({...model.serialize(),permissions:[...permissions].filter(([key])=>key.startsWith('normal:')),downloads:downloads.filter(d=>!d.private).map(d=>({...d,state:['progressing','paused'].includes(d.state)?'interrupted':d.state}))})),{mode:0o600});renameSync(temp,path)}catch{storageWarning='浏览状态暂时无法保存，请检查磁盘空间。'}
  }
  const publish=()=>{if(disposed)return;finder?.update(current());const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
@@ -34,12 +34,23 @@ export function registerBrowserApp(options:Options){
  const sessionFor=(tab:BrowserTab)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
-  s.setPermissionCheckHandler((wc,permission,origin)=>!!wc&&permissions.get((tab.private?'private:':'normal:')+origin)?.[permission]==='allow')
-  s.setPermissionRequestHandler((wc,permission,callback,details)=>{try{const origin=new URL(details.requestingUrl||wc.getURL()).origin;callback(permissions.get((tab.private?'private:':'normal:')+origin)?.[permission]==='allow')}catch{callback(false)}})
+  const keys=(permission:string,types:string[]=[])=>permission==='media'?(types.length?types:['video','audio']).map(type=>type==='video'?'camera':'microphone'):[permission]
+  const policy=(origin:string,key:string)=>{const row=permissions.get(permissionKey(tab,origin));return row?.[key]??(['camera','microphone'].includes(key)?row?.media:undefined)??(['geolocation','camera','microphone'].includes(key)?'ask':key==='downloads'?'allow':'block')}
+  s.setPermissionCheckHandler((wc,permission,origin,details)=>{try{return !!wc&&[...live.values()].some(e=>e.view.webContents===wc)&&keys(permission,details.mediaType&&details.mediaType!=='unknown'?[details.mediaType]:[]).every(key=>policy(new URL(origin).origin,key)==='allow')}catch{return false}})
+  s.setPermissionRequestHandler((wc,permission,callback,details)=>{
+   try{
+    if(![...live.values()].some(e=>e.view.webContents===wc)){callback(false);return}
+    const origin=new URL(details.requestingUrl||wc.getURL()).origin,requested=keys(permission,'mediaTypes'in details?details.mediaTypes:[]),values=requested.map(key=>policy(origin,key))
+    if(values.includes('block')){callback(false);return}if(values.every(value=>value==='allow')){callback(true);return}
+    if(!visible||live.get(model.activeId)?.view.webContents!==wc){callback(false);return}
+    const labels:Record<string,string>={geolocation:'位置',camera:'摄像头',microphone:'麦克风'},before=wc.getURL()
+    void dialog.showMessageBox(window(),{type:'question',message:'网站请求访问'+requested.map(key=>labels[key]||key).join('、'),detail:origin,buttons:['允许本次','阻止'],defaultId:1,cancelId:1,noLink:true}).then(result=>callback(!wc.isDestroyed()&&wc.getURL()===before&&result.response===0)).catch(()=>callback(false))
+   }catch{callback(false)}
+  })
   s.on('will-download',(event,item,wc)=>{
    const tabId=[...live].find(([,e])=>e.view.webContents===wc)?.[0]
    if(!tabId){event.preventDefault();return}
-   try{browserDownloadAddress(item.getURL(),wc.getURL())}catch{event.preventDefault();return}
+   try{if(policy(new URL(wc.getURL()).origin,'downloads')==='block')throw Error('站点下载已阻止');browserDownloadAddress(item.getURL(),wc.getURL())}catch{event.preventDefault();return}
    // Native save dialogs remain the authority for overwrite confirmation.
    let target='';if(!model.settings.askDownload){const directory=model.settings.downloadPath||app.getPath('downloads');target=availableDownloadPath(directory,item.getFilename(),new Set(downloads.filter(d=>['progressing','paused'].includes(d.state)).map(d=>d.path)),existsSync);item.setSavePath(target)}
    const row:BrowserDownload={id:randomUUID(),tabId,private:model.tab(tabId).private,url:item.getURL(),name:item.getFilename(),path:target,received:0,total:item.getTotalBytes(),state:'progressing'}
@@ -56,7 +67,10 @@ export function registerBrowserApp(options:Options){
   const wc=view.webContents;wc.setAudioMuted(tab.muted);wc.setZoomFactor(tab.zoom)
   const valid=(event:{preventDefault():void},url:string)=>{try{browserAddress(url)}catch{event.preventDefault()}}
   wc.on('will-navigate',valid);wc.on('will-redirect',valid)
-  wc.setWindowOpenHandler(({url})=>{try{const target=browserAddress(url);const next=model.newTab(tab.private);void navigate(next,target);publish()}catch{}return {action:'deny'}})
+  let popupGestureAt=0
+  wc.on('before-mouse-event',(_event,input)=>{if(input.type==='mouseDown')popupGestureAt=Date.now()})
+  wc.on('before-input-event',(_event,input)=>{if(input.type==='keyDown')popupGestureAt=Date.now()})
+  wc.setWindowOpenHandler(({url})=>{try{const origin=new URL(wc.getURL()).origin,gesture=Date.now()-popupGestureAt<1000;popupGestureAt=0;if(!gesture&&permissions.get(permissionKey(tab,origin))?.popups!=='allow')return {action:'deny'};const target=browserAddress(url);const next=model.newTab(tab.private);void navigate(next,target);publish()}catch{}return {action:'deny'}})
   wc.on('did-start-loading',()=>{tab.loading=true;tab.error=undefined;publish()})
   const refresh=()=>{if(wc.isDestroyed())return;tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward();const url=wc.getURL();if(/^https?:/.test(url)){tab.url=url;tab.title=wc.getTitle()||new URL(url).hostname}publish()}
   wc.on('did-navigate',refresh);wc.on('did-navigate-in-page',refresh);wc.on('page-title-updated',refresh)
@@ -163,9 +177,11 @@ export function registerBrowserApp(options:Options){
   else if(method==='stop'){e.epoch++;clearTimeout(e.timeout);wc.stop();tab.loading=false}
   else if(method==='zoom'){if(!Number.isFinite(input.value))throw Error('缩放比例无效。');tab.zoom=Math.max(.25,Math.min(3,input.value));wc.setZoomFactor(tab.zoom)}
   else if(method==='find'){const text=inputString(input.text,500);if(text)e.findRequestId=wc.findInPage(text,{forward:input.forward!==false,findNext:input.next!==true});else{e.findRequestId=undefined;wc.stopFindInPage('clearSelection');tab.find=undefined}}
+  else if(method==='site-data')return {cookies:(await sessionFor(tab).cookies.get({url:new URL(tab.url).origin})).length}
+  else if(method==='site-clear'){await sessionFor(tab).clearStorageData({origin:new URL(tab.url).origin});publish();return true}
   else if(method==='site')return {origin:new URL(tab.url).origin,secure:tab.url.startsWith('https:'),permissions:permissions.get(permissionKey(tab,new URL(tab.url).origin))||{}}
   else if(method==='permission'){
-   if(!['geolocation','media','notifications','fullscreen'].includes(input.permission)||!['block','allow'].includes(input.value))throw Error('权限设置无效。')
+   if(!['geolocation','camera','microphone','downloads','popups','media','notifications','fullscreen'].includes(input.permission)||!['block','allow','ask'].includes(input.value)||(['downloads','popups'].includes(input.permission)&&input.value==='ask'))throw Error('权限设置无效。')
    const origin=new URL(tab.url).origin;const key=permissionKey(tab,origin);permissions.set(key,{...permissions.get(key),[input.permission]:input.value});publish();return true
   }
   else if(method==='save'){
