@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-44",
+  "branch": "codex/integration/20261109-44",
+  "baseMainCommit": "cdb81291bf83d1dd64bc8d2aea47d47dd938edb9",
+  "expectedMainCommit": "cdb81291bf83d1dd64bc8d2aea47d47dd938edb9",
+  "createdAt": "2026-11-09T09:12:45.317Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "移除组件一级菜单重复的数据源入口",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "cdb81291bf83d1dd64bc8d2aea47d47dd938edb9",
+        "tipCommit": "8d04d41fa68868223662a30e9d379939dd70ca02",
+        "commits": [
+          {
+            "commit": "8d04d41fa68868223662a30e9d379939dd70ca02",
+            "parents": [
+              "cdb81291bf83d1dd64bc8d2aea47d47dd938edb9"
+            ],
+            "subject": "优化：移除组件一级菜单重复的数据源设置入口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "单行删除，相关6项菜单聚焦检查通过；不更改子菜单。包内验证待本地新包启动后进行。"
+        },
+        "acceptanceCriteria": [
+          "一级组件菜单不再重复显示数据源与自动更新",
+          "保留组件设置子菜单原数据源操作"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-09T09:12:43.921558+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-native-menu.test.js",
+        "test/component-popup-menu.test.ts",
+        "test/component-menu-presentation.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
