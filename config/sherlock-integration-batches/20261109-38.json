@@ -84,6 +84,53 @@
           "原工作台两卡此前复测仍失败，新策略必须继续实际复测，不能宣称成功"
         ],
         "generatedAt": "2026-11-09T06:39:55.952864+00:00"
+      },
+      "merged": {
+        "mergeCommit": "806d2404c47c0a50bdcb80e174db7760bfb4d947",
+        "verificationCommit": "806d2404c47c0a50bdcb80e174db7760bfb4d947",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-b-icons-browser.test.js",
+              "test/component-acquisition-followup.test.js",
+              "test/component-discovery-progress.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-b-icons-browser.test.js test/component-acquisition-followup.test.js test/component-discovery-progress.test.js",
+            "verifiedCommit": "806d2404c47c0a50bdcb80e174db7760bfb4d947",
+            "completedAt": "2026-11-09T06:40:06.832Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "discovery-only|unfinished pages"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t discovery-only|unfinished pages",
+            "verifiedCommit": "806d2404c47c0a50bdcb80e174db7760bfb4d947",
+            "completedAt": "2026-11-09T06:40:06.832Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "806d2404c47c0a50bdcb80e174db7760bfb4d947",
+            "completedAt": "2026-11-09T06:40:06.832Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T06:40:06.832Z"
       }
     }
   ],
