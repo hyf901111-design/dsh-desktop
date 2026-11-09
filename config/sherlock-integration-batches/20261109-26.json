@@ -61,6 +61,52 @@
           "真实新包验证待构建后执行"
         ],
         "generatedAt": "2026-11-09T01:40:12.053011+00:00"
+      },
+      "merged": {
+        "mergeCommit": "cf43a22337c509f42fd4c7ba10b1cffa4f4044d6",
+        "verificationCommit": "cf43a22337c509f42fd4c7ba10b1cffa4f4044d6",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/developer-mode.test.ts",
+              "test/developer-mode-navigation.test.ts",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/developer-mode.test.ts test/developer-mode-navigation.test.ts --maxWorkers 2",
+            "verifiedCommit": "cf43a22337c509f42fd4c7ba10b1cffa4f4044d6",
+            "completedAt": "2026-11-09T01:40:17.071Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "cf43a22337c509f42fd4c7ba10b1cffa4f4044d6",
+            "completedAt": "2026-11-09T01:40:17.071Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "cf43a22337c509f42fd4c7ba10b1cffa4f4044d6",
+            "completedAt": "2026-11-09T01:40:17.071Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T01:40:17.071Z"
       }
     }
   ],
