@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-12",
+  "branch": "codex/integration/20261109-12",
+  "baseMainCommit": "ed3d7386183f781f59e30fda5e245c35a7100c68",
+  "expectedMainCommit": "ed3d7386183f781f59e30fda5e245c35a7100c68",
+  "createdAt": "2026-11-08T21:15:33.120Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "多场景生成容错与原生分页高度同步",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "42f09caae29ac6726e94e65f0d023a5614dc7800",
+        "tipCommit": "107ea8cba7e8844949969ef0b317022a80420a5d",
+        "commits": [
+          {
+            "commit": "7a0732c5d5280f71ea6cbd75a9ab825d2fac4bf5",
+            "parents": [
+              "42f09caae29ac6726e94e65f0d023a5614dc7800"
+            ],
+            "subject": "优化模拟工作台元信息补齐与数据协议纠错提示"
+          },
+          {
+            "commit": "47088e174df5f8a71d2b5c0f86cd5cb3deecf1a2",
+            "parents": [
+              "7a0732c5d5280f71ea6cbd75a9ab825d2fac4bf5"
+            ],
+            "subject": "兼容真实图形文档格式与网页正文引用以减少无效重生成"
+          },
+          {
+            "commit": "107ea8cba7e8844949969ef0b317022a80420a5d",
+            "parents": [
+              "47088e174df5f8a71d2b5c0f86cd5cb3deecf1a2"
+            ],
+            "subject": "修复原生表格分页后卡片高度未随可见行数同步"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-web-snapshot-evidence.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/derived-template-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-design-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-dataset-view.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/derived-template-contract.test.js",
+              "test/research-design-policy.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/market-table-reading-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "231项生成格式、来源和分页高度聚焦检查通过",
+            "verifiedCommit": "107ea8cba7e8844949969ef0b317022a80420a5d",
+            "completedAt": "2026-11-08T21:15:31.296355+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "107ea8cba7e8844949969ef0b317022a80420a5d",
+            "completedAt": "2026-11-08T21:15:31.296355+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "107ea8cba7e8844949969ef0b317022a80420a5d",
+            "completedAt": "2026-11-08T21:15:31.296355+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实四场景发现格式拒收、引用误判与原生分页高度未同步；修复经231项聚焦检查通过，集成包仍须实际重新生成验收。"
+        },
+        "acceptanceCriteria": [
+          "保留图形完整内容并减少格式重试",
+          "真实网页正文引用可追溯",
+          "原生分页切换按当前行数伸缩"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T21:15:31.296355+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+        "verificationCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/derived-template-contract.test.js",
+              "test/research-design-policy.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/market-table-reading-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-web-snapshot-evidence.test.js test/derived-template-contract.test.js test/research-design-policy.test.js test/research-grid-workbench.test.js test/market-table-reading-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+            "completedAt": "2026-11-08T21:15:36.724Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+            "completedAt": "2026-11-08T21:15:36.724Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "6142d0a7885564c2659ff7cf133397bee51bbf43",
+            "completedAt": "2026-11-08T21:15:36.724Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T21:15:36.724Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-web-snapshot-evidence.test.js",
+        "test/derived-template-contract.test.js",
+        "test/research-design-policy.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/market-table-reading-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

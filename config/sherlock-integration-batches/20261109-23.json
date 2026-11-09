@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-23",
+  "branch": "codex/integration/20261109-23",
+  "baseMainCommit": "c662bf6e947967737fc59b409ec2e12d300ceb2b",
+  "expectedMainCommit": "c662bf6e947967737fc59b409ec2e12d300ceb2b",
+  "createdAt": "2026-11-09T00:20:25.769Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "静态分析与完整记录恢复策略",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+        "tipCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+        "commits": [
+          {
+            "commit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+            "parents": [
+              "45d1a7e10278e52893f7447a7be680744845de72"
+            ],
+            "subject": "按静态分析与完整记录需求选择组件恢复路径"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "文档、共同数据与来源聚焦检查通过",
+            "verifiedCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+            "completedAt": "2026-11-09T00:19:50.945709+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "repairs static narrative|recovers model-added graph|preserves .* intent when an HTML",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "静态分析及关系图恢复的10项聚焦检查通过",
+            "verifiedCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+            "completedAt": "2026-11-09T00:19:50.945709+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "嵌套主题的13项浏览器与样式检查通过",
+            "verifiedCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+            "completedAt": "2026-11-09T00:19:50.945709+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+            "completedAt": "2026-11-09T00:19:50.945709+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "ef125ea2f1bcb7dcb47c9c223c87847cdd9759fa",
+            "completedAt": "2026-11-09T00:19:50.945709+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "静态分析恢复与完整集合保持不同策略，10项运行时聚焦检查通过；等待重建真实包验收。"
+        },
+        "acceptanceCriteria": [
+          "模型额外添加的复杂图应用可以保留事实切换原生实现",
+          "明确要求交互仍须有效",
+          "模拟数据缺失字段记为未知且错误定位到记录",
+          "嵌套资料和被动标签文字可读"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-09T00:19:50.945709+00:00"
+      },
+      "merged": {
+        "mergeCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+        "verificationCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/workbench-dataset-view.test.js test/workbench-prototype-evidence.test.js test/research-design-policy.test.js --maxWorkers 2",
+            "verifiedCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+            "completedAt": "2026-11-09T00:20:29.604Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "repairs static narrative|recovers model-added graph|preserves .* intent when an HTML",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t repairs static narrative|recovers model-added graph|preserves .* intent when an HTML --maxWorkers 2",
+            "verifiedCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+            "completedAt": "2026-11-09T00:20:29.604Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-structure-theme-browser.test.js test/workbench-style.test.js --maxWorkers 2",
+            "verifiedCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+            "completedAt": "2026-11-09T00:20:29.604Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+            "completedAt": "2026-11-09T00:20:29.604Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "903ebf836f0d6e4433f3ca24c4843b59a72a508d",
+            "completedAt": "2026-11-09T00:20:29.604Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-09T00:20:29.604Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-dataset-view.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/research-design-policy.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "repairs static narrative|recovers model-added graph|preserves .* intent when an HTML",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/workbench-style.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

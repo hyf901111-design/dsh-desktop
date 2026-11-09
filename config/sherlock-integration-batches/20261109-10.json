@@ -1,0 +1,302 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-10",
+  "branch": "codex/integration/20261109-10",
+  "baseMainCommit": "1ce42bad5419e5550cd61d3eb4430d5ea9753416",
+  "expectedMainCommit": "1ce42bad5419e5550cd61d3eb4430d5ea9753416",
+  "createdAt": "2026-11-08T20:27:07.189Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "来源容器保护与共同记录计算和沙箱恢复",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "9e86781144f1d929c45e9ed9c313816490abbc33",
+        "tipCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+        "commits": [
+          {
+            "commit": "a5409035a72684da73e96b08d768c70dfda14472",
+            "parents": [
+              "9e86781144f1d929c45e9ed9c313816490abbc33"
+            ],
+            "subject": "修复来源标注误隐藏正文并增加安全呈现恢复和共同数据汇总"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/dataset-aggregate.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-dataset-view.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "80项来源容器与共同记录检查通过",
+            "verifiedCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+            "completedAt": "2026-11-08T20:27:05.368364+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "switches a .* tabular sandbox failure",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "2项沙箱失败自动更换实现检查通过",
+            "verifiedCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+            "completedAt": "2026-11-08T20:27:05.368364+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "178项规划与设计策略检查通过",
+            "verifiedCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+            "completedAt": "2026-11-08T20:27:05.368364+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+            "completedAt": "2026-11-08T20:27:05.368364+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+            "completedAt": "2026-11-08T20:27:05.368364+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实多类生成发现来源容器误隐藏、表格沙箱恢复及汇总不一致问题；260项相关聚焦检查通过。包内实际重跑在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "来源注释不隐藏业务图形和控件",
+          "表格沙箱失败更换实现且保留全部记录",
+          "汇总由完整明细声明式计算，不独立估算"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T20:27:05.368364+00:00"
+      },
+      "merged": {
+        "mergeCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+        "verificationCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-dataset-view.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-source-info-browser.test.js test/workbench-component-presentation.test.js test/dataset-view-contract.test.js test/workbench-dataset-view.test.js --maxWorkers 2",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "switches a .* tabular sandbox failure",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t switches a .* tabular sandbox failure --maxWorkers 2",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-planning-session.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-planning-session.test.js test/workbench-planning-phase.test.js test/research-design-policy.test.js --maxWorkers 2",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "218e44f88495223fe7f3f600efffc310beffcff7",
+            "completedAt": "2026-11-08T20:27:10.600Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T20:27:10.600Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-source-info-browser.test.js",
+        "test/workbench-component-presentation.test.js",
+        "test/dataset-view-contract.test.js",
+        "test/workbench-dataset-view.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "switches a .* tabular sandbox failure",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-planning-session.test.js",
+        "test/workbench-planning-phase.test.js",
+        "test/research-design-policy.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

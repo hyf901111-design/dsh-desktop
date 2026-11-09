@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-21",
+  "branch": "codex/integration/20261109-21",
+  "baseMainCommit": "63f8c1c320cfd5d8b99d0e40416e4567c998ad7f",
+  "expectedMainCommit": "63f8c1c320cfd5d8b99d0e40416e4567c998ad7f",
+  "createdAt": "2026-11-09T00:06:05.621Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "混合来源文档规划与未知含义校验",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "d813f4922121232a39c8a625c78c41b9f00c5d86",
+        "tipCommit": "37b48662ee456b9af6bce3264bc685c49b9aae96",
+        "commits": [
+          {
+            "commit": "37b48662ee456b9af6bce3264bc685c49b9aae96",
+            "parents": [
+              "d813f4922121232a39c8a625c78c41b9f00c5d86"
+            ],
+            "subject": "先读取混合来源附件并校验未知信息含义及样式变量"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-design-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-client-preview-closure.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "131项混合来源、文档内容、样式及预览聚焦检查通过",
+            "verifiedCommit": "37b48662ee456b9af6bce3264bc685c49b9aae96",
+            "completedAt": "2026-11-09T00:06:03.689208+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "37b48662ee456b9af6bce3264bc685c49b9aae96",
+            "completedAt": "2026-11-09T00:06:03.689208+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "37b48662ee456b9af6bce3264bc685c49b9aae96",
+            "completedAt": "2026-11-09T00:06:03.689208+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实附件表将未知解释为空缺，回放已被校验阻止；混合来源规划已先读取原文且保留来源发现；131项聚焦检查通过，等待重建真实包验收。"
+        },
+        "acceptanceCriteria": [
+          "混合来源规划先读取原文",
+          "未知负责人不能解释为空缺",
+          "样式别名机械纠正保留内容",
+          "客户端预览可构造"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-09T00:06:03.689208+00:00"
+      },
+      "merged": {
+        "mergeCommit": "54d7e9bd271381cd2c0198722ceb87bafae18f43",
+        "verificationCommit": "54d7e9bd271381cd2c0198722ceb87bafae18f43",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-client-preview-closure.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/workbench-client-preview-closure.test.js test/workbench-prototype-evidence.test.js test/research-design-policy.test.js --maxWorkers 2",
+            "verifiedCommit": "54d7e9bd271381cd2c0198722ceb87bafae18f43",
+            "completedAt": "2026-11-09T00:06:09.729Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "54d7e9bd271381cd2c0198722ceb87bafae18f43",
+            "completedAt": "2026-11-09T00:06:09.729Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "54d7e9bd271381cd2c0198722ceb87bafae18f43",
+            "completedAt": "2026-11-09T00:06:09.729Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-09T00:06:09.729Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-client-preview-closure.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/research-design-policy.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

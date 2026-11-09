@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-15",
+  "branch": "codex/integration/20261109-15",
+  "baseMainCommit": "e99d8505b69f07efa1656a6abe2997c1c064d3d1",
+  "expectedMainCommit": "e99d8505b69f07efa1656a6abe2997c1c064d3d1",
+  "createdAt": "2026-11-08T22:45:21.249Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "多页完整交付与汇总身份及真实来源",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a",
+        "tipCommit": "aa3210e446204131c3171d486f1bc7bd70f90327",
+        "commits": [
+          {
+            "commit": "aa3210e446204131c3171d486f1bc7bd70f90327",
+            "parents": [
+              "e125a9c796c1688cc34a9ddd935cc2ef43c5e70a"
+            ],
+            "subject": "修复多页数据逐行交付并保留汇总身份及真实来源"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-observed-provenance.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-aggregate.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "test/component-observed-provenance.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-dataset-view.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/component-observed-provenance.test.js",
+              "test/component-data-status.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "199项多页长正文、汇总身份及真实来源聚焦检查通过",
+            "verifiedCommit": "aa3210e446204131c3171d486f1bc7bd70f90327",
+            "completedAt": "2026-11-08T22:45:19.375915+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "aa3210e446204131c3171d486f1bc7bd70f90327",
+            "completedAt": "2026-11-08T22:45:19.375915+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "aa3210e446204131c3171d486f1bc7bd70f90327",
+            "completedAt": "2026-11-08T22:45:19.375915+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实包三类任务12/13完成；发现多页映射嵌套、汇总缺身份及自定义组件来源未入底栏，已修复并聚焦验证，集成后须重新生成验收。"
+        },
+        "acceptanceCriteria": [
+          "多页完整记录逐行交付",
+          "汇总分组身份必须可见",
+          "真实引用来源在底栏保留",
+          "规划备注不能遮盖实际事实"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T22:45:19.375915+00:00"
+      },
+      "merged": {
+        "mergeCommit": "0ac826f4cbca442886688d1df0751d05d68f4d45",
+        "verificationCommit": "0ac826f4cbca442886688d1df0751d05d68f4d45",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/component-observed-provenance.test.js",
+              "test/component-data-status.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/observed-source-completeness.test.js test/dataset-view-contract.test.js test/workbench-dataset-view.test.js test/component-observed-provenance.test.js test/component-data-status.test.js test/component-source-info-browser.test.js test/research-design-policy.test.js --maxWorkers 2",
+            "verifiedCommit": "0ac826f4cbca442886688d1df0751d05d68f4d45",
+            "completedAt": "2026-11-08T22:45:24.886Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0ac826f4cbca442886688d1df0751d05d68f4d45",
+            "completedAt": "2026-11-08T22:45:24.886Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "0ac826f4cbca442886688d1df0751d05d68f4d45",
+            "completedAt": "2026-11-08T22:45:24.886Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T22:45:24.886Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/observed-source-completeness.test.js",
+        "test/dataset-view-contract.test.js",
+        "test/workbench-dataset-view.test.js",
+        "test/component-observed-provenance.test.js",
+        "test/component-data-status.test.js",
+        "test/component-source-info-browser.test.js",
+        "test/research-design-policy.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

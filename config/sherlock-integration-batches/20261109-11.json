@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-11",
+  "branch": "codex/integration/20261109-11",
+  "baseMainCommit": "0d5eabd02c34edefca7b3fca7f30d95a3036acd2",
+  "expectedMainCommit": "0d5eabd02c34edefca7b3fca7f30d95a3036acd2",
+  "createdAt": "2026-11-08T20:33:21.413Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "长正文紧凑阅读与完整来源收纳",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "a5409035a72684da73e96b08d768c70dfda14472",
+        "tipCommit": "42f09caae29ac6726e94e65f0d023a5614dc7800",
+        "commits": [
+          {
+            "commit": "42f09caae29ac6726e94e65f0d023a5614dc7800",
+            "parents": [
+              "a5409035a72684da73e96b08d768c70dfda14472"
+            ],
+            "subject": "优化长正文表格紧凑阅读并保留全文检索和来源详情"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-readable-snapshot.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-readable-snapshot.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "77项完整数据和浏览器阅读交互检查通过",
+            "verifiedCommit": "42f09caae29ac6726e94e65f0d023a5614dc7800",
+            "completedAt": "2026-11-08T20:33:19.828543+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "42f09caae29ac6726e94e65f0d023a5614dc7800",
+            "completedAt": "2026-11-08T20:33:19.828543+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "42f09caae29ac6726e94e65f0d023a5614dc7800",
+            "completedAt": "2026-11-08T20:33:19.828543+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实发布表格发现中等长度正文过度撑高；77项聚焦检查验证折叠摘要、精确全文、全文检索及来源收纳，包内实际重跑在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "长正文折叠阅读保留精确全文并可检索尾部",
+          "来源和口径供底栏详情收纳"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T20:33:19.828543+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e7d8ada83cca125f6bc9d03c625d36c13ba3ea3f",
+        "verificationCommit": "e7d8ada83cca125f6bc9d03c625d36c13ba3ea3f",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-readable-snapshot.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-readable-snapshot.test.js test/component-source-info-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "e7d8ada83cca125f6bc9d03c625d36c13ba3ea3f",
+            "completedAt": "2026-11-08T20:33:24.595Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e7d8ada83cca125f6bc9d03c625d36c13ba3ea3f",
+            "completedAt": "2026-11-08T20:33:24.595Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "e7d8ada83cca125f6bc9d03c625d36c13ba3ea3f",
+            "completedAt": "2026-11-08T20:33:24.595Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T20:33:24.595Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-readable-snapshot.test.js",
+        "test/component-source-info-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

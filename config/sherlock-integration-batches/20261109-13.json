@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-13",
+  "branch": "codex/integration/20261109-13",
+  "baseMainCommit": "e3ac77160a0f87598b11054c06a41e13c0633573",
+  "expectedMainCommit": "e3ac77160a0f87598b11054c06a41e13c0633573",
+  "createdAt": "2026-11-08T21:40:53.155Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "跨组件范围隔离与完整正文阅读",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "107ea8cba7e8844949969ef0b317022a80420a5d",
+        "tipCommit": "4b64a19104665adff3f416e7230301cb4d7edc0b",
+        "commits": [
+          {
+            "commit": "4b64a19104665adff3f416e7230301cb4d7edc0b",
+            "parents": [
+              "107ea8cba7e8844949969ef0b317022a80420a5d"
+            ],
+            "subject": "优化多场景组件范围校验与长正文展开阅读"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-readable-snapshot.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/market-table-reading-browser.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/derived-template-contract.test.js",
+              "test/research-design-policy.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/dataset-view-artifact.test.js",
+              "test/workbench-dataset-view.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "279项来源范围、正文展开和共同数据聚焦检查通过",
+            "verifiedCommit": "4b64a19104665adff3f416e7230301cb4d7edc0b",
+            "completedAt": "2026-11-08T21:40:51.356365+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "4b64a19104665adff3f416e7230301cb4d7edc0b",
+            "completedAt": "2026-11-08T21:40:51.356365+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "4b64a19104665adff3f416e7230301cb4d7edc0b",
+            "completedAt": "2026-11-08T21:40:51.356365+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实网络场景发现来源路径误触发布集合校验，长正文列宽跳动；项目风险清单缺少默认范围；修复通过279项聚焦检查，集成包仍须实际重新生成验收。"
+        },
+        "acceptanceCriteria": [
+          "每个组件按自身内容校验",
+          "完整正文整行展开并保留原始数据",
+          "共用主数据可声明范围子集"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T21:40:51.356365+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1a2d402a414479ff506c156aac0b3bc70e470779",
+        "verificationCommit": "1a2d402a414479ff506c156aac0b3bc70e470779",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/market-table-reading-browser.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/derived-template-contract.test.js",
+              "test/research-design-policy.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/dataset-view-artifact.test.js",
+              "test/workbench-dataset-view.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-source-info-browser.test.js test/observed-source-completeness.test.js test/market-table-reading-browser.test.js test/component-web-snapshot-evidence.test.js test/derived-template-contract.test.js test/research-design-policy.test.js test/dataset-view-contract.test.js test/dataset-view-browser.test.js test/dataset-view-artifact.test.js test/workbench-dataset-view.test.js --maxWorkers 2",
+            "verifiedCommit": "1a2d402a414479ff506c156aac0b3bc70e470779",
+            "completedAt": "2026-11-08T21:40:56.631Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "1a2d402a414479ff506c156aac0b3bc70e470779",
+            "completedAt": "2026-11-08T21:40:56.631Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "1a2d402a414479ff506c156aac0b3bc70e470779",
+            "completedAt": "2026-11-08T21:40:56.631Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T21:40:56.631Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-source-info-browser.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/market-table-reading-browser.test.js",
+        "test/component-web-snapshot-evidence.test.js",
+        "test/derived-template-contract.test.js",
+        "test/research-design-policy.test.js",
+        "test/dataset-view-contract.test.js",
+        "test/dataset-view-browser.test.js",
+        "test/dataset-view-artifact.test.js",
+        "test/workbench-dataset-view.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

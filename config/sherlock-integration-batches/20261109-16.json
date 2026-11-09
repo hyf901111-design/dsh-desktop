@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-16",
+  "branch": "codex/integration/20261109-16",
+  "baseMainCommit": "2ce1105b62893927a6c87d940cdac1a1bbe1ec5a",
+  "expectedMainCommit": "2ce1105b62893927a6c87d940cdac1a1bbe1ec5a",
+  "createdAt": "2026-11-08T23:13:26.702Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "真实网页格式与结构图阅读及来源留存",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "aa3210e446204131c3171d486f1bc7bd70f90327",
+        "tipCommit": "bd97568687a7fea36cb90215ca4ed4afe22b3188",
+        "commits": [
+          {
+            "commit": "bd97568687a7fea36cb90215ca4ed4afe22b3188",
+            "parents": [
+              "aa3210e446204131c3171d486f1bc7bd70f90327"
+            ],
+            "subject": "修复带标题网络数据丢失并保障结构图可读与来源留存"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-observed-provenance.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-structure-reading.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/rendered-page-content.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-observed-provenance.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/rendered-page-content.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-structure-reading-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/component-source-binding.test.js",
+              "test/rendered-page-content.test.ts",
+              "test/workbench-structure-reading-browser.test.js",
+              "test/component-observed-provenance.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "264项真实读取格式、完整交付、结构图阅读及来源聚焦检查通过",
+            "verifiedCommit": "bd97568687a7fea36cb90215ca4ed4afe22b3188",
+            "completedAt": "2026-11-08T23:13:24.893694+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "bd97568687a7fea36cb90215ca4ed4afe22b3188",
+            "completedAt": "2026-11-08T23:13:24.893694+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "bd97568687a7fea36cb90215ca4ed4afe22b3188",
+            "completedAt": "2026-11-08T23:13:24.893694+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实包三类任务12/13完成；分页器10条及第6页操作通过；发现带标题JSON未解码和SVG小字，已通用修复并聚焦验证，集成后重新生成验收。"
+        },
+        "acceptanceCriteria": [
+          "带标题JSON可核验完整交付",
+          "结构图文字保持可读尺寸和原交互",
+          "实际成功来源在底栏留存",
+          "截断和错来源仍不得标为完成"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T23:13:24.893694+00:00"
+      },
+      "merged": {
+        "mergeCommit": "66c5a75929c1cf849e45e3d180cc61e84f840424",
+        "verificationCommit": "66c5a75929c1cf849e45e3d180cc61e84f840424",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/observed-source-completeness.test.js",
+              "test/component-source-binding.test.js",
+              "test/rendered-page-content.test.ts",
+              "test/workbench-structure-reading-browser.test.js",
+              "test/component-observed-provenance.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/observed-source-completeness.test.js test/component-source-binding.test.js test/rendered-page-content.test.ts test/workbench-structure-reading-browser.test.js test/component-observed-provenance.test.js test/component-source-info-browser.test.js test/research-design-policy.test.js --maxWorkers 2",
+            "verifiedCommit": "66c5a75929c1cf849e45e3d180cc61e84f840424",
+            "completedAt": "2026-11-08T23:13:30.446Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "66c5a75929c1cf849e45e3d180cc61e84f840424",
+            "completedAt": "2026-11-08T23:13:30.446Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "66c5a75929c1cf849e45e3d180cc61e84f840424",
+            "completedAt": "2026-11-08T23:13:30.446Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T23:13:30.446Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/observed-source-completeness.test.js",
+        "test/component-source-binding.test.js",
+        "test/rendered-page-content.test.ts",
+        "test/workbench-structure-reading-browser.test.js",
+        "test/component-observed-provenance.test.js",
+        "test/component-source-info-browser.test.js",
+        "test/research-design-policy.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}

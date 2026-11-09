@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-19",
+  "branch": "codex/integration/20261109-19",
+  "baseMainCommit": "b744f7aaddb915e97052b79c79f8b00f8f794a51",
+  "expectedMainCommit": "b744f7aaddb915e97052b79c79f8b00f8f794a51",
+  "createdAt": "2026-11-08T23:41:49.481Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "可编辑正文与来源独立交付",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "bec178a22e07442a72cd7b3d799a14525b7b60f8",
+        "tipCommit": "46f877c502773bfa76ad7f4f5583ac44b09bf935",
+        "commits": [
+          {
+            "commit": "46f877c502773bfa76ad7f4f5583ac44b09bf935",
+            "parents": [
+              "bec178a22e07442a72cd7b3d799a14525b7b60f8"
+            ],
+            "subject": "保留带来源元信息的完整可编辑笔记并减少格式修复重写"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-document-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-client-preview-closure.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "33项正文来源及客户端预览相关检查通过",
+            "verifiedCommit": "46f877c502773bfa76ad7f4f5583ac44b09bf935",
+            "completedAt": "2026-11-08T23:41:47.735967+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "46f877c502773bfa76ad7f4f5583ac44b09bf935",
+            "completedAt": "2026-11-08T23:41:47.735967+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "46f877c502773bfa76ad7f4f5583ac44b09bf935",
+            "completedAt": "2026-11-08T23:41:47.735967+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实包网络摘要反复因来源别名格式失败，实际5790字符正文回放原样交付且编辑能力保留；33项聚焦检查通过，等待重建客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "来源别名不触发整卡重写",
+          "完整正文与编辑能力保持",
+          "未知字段仍需校验",
+          "客户端预览可构造"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-08T23:41:47.735967+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4fbd10b7162826c95e7c0068576b16af6f222c82",
+        "verificationCommit": "4fbd10b7162826c95e7c0068576b16af6f222c82",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-client-preview-closure.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-document-delivery.test.js test/workbench-client-preview-closure.test.js test/component-source-info-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "4fbd10b7162826c95e7c0068576b16af6f222c82",
+            "completedAt": "2026-11-08T23:41:53.740Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4fbd10b7162826c95e7c0068576b16af6f222c82",
+            "completedAt": "2026-11-08T23:41:53.740Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4fbd10b7162826c95e7c0068576b16af6f222c82",
+            "completedAt": "2026-11-08T23:41:53.740Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-08T23:41:53.740Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-client-preview-closure.test.js",
+        "test/component-source-info-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
