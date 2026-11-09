@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-53",
+  "branch": "codex/integration/20261109-53",
+  "baseMainCommit": "b46dc4dc58593f67c0e500f318cbc68ce5f0357f",
+  "expectedMainCommit": "b46dc4dc58593f67c0e500f318cbc68ce5f0357f",
+  "createdAt": "2026-11-09T15:22:48.608Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Figma 浏览器中间工作区与原生 Chromium 浏览能力",
+        "branch": "codex/feat/browser-app-figma-20261109",
+        "baseCommit": "b46dc4dc58593f67c0e500f318cbc68ce5f0357f",
+        "tipCommit": "d6c7e96a894935c5eea5607738c8bb398619b87b",
+        "commits": [
+          {
+            "commit": "51cf8ec00e1732935c73b27ade51db144ec66d32",
+            "parents": [
+              "b46dc4dc58593f67c0e500f318cbc68ce5f0357f"
+            ],
+            "subject": "功能：按设计稿实现原生 Chromium 浏览器工作区与聚焦验收"
+          },
+          {
+            "commit": "d6c7e96a894935c5eea5607738c8bb398619b87b",
+            "parents": [
+              "51cf8ec00e1732935c73b27ade51db144ec66d32"
+            ],
+            "subject": "界面：校准浏览器浮层尺寸与页签菜单锚点"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-09-browser-app-figma.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/default-web-links-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-browser-app-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/model.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/back.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/book.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/chat.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/check.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/chevron.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/close.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/copy.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/download.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/external.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/file.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/folder.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/forward.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/globe.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/history.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/home.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/lock.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/moon.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/more.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/pause.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/pin.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/play.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/print.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/refresh.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/ring.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/search.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/settings.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/shield.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/star.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/trash.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/assets/up.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/icons.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/style.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/browser-app.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-app-model.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-app-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-app-view.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "浏览器应用直接相关聚焦验证通过",
+            "verifiedCommit": "d6c7e96a894935c5eea5607738c8bb398619b87b",
+            "completedAt": "2026-11-09T15:22:23.550709+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "浏览器应用直接相关聚焦验证通过",
+            "verifiedCommit": "d6c7e96a894935c5eea5607738c8bb398619b87b",
+            "completedAt": "2026-11-09T15:22:23.550709+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "浏览器应用直接相关聚焦验证通过",
+            "verifiedCommit": "d6c7e96a894935c5eea5607738c8bb398619b87b",
+            "completedAt": "2026-11-09T15:22:23.550709+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "1920×1080 深色与1440×900浅色生产界面聚焦渲染检查通过；工具栏44/48/32/24px；真实独立Electron验证网页输入、导航、查找、隐私分区、下载暂停继续/Blob/并行同名、PDF、工作材料和窗口重开。共享客户端待本批次构建后验收。"
+        },
+        "acceptanceCriteria": [
+          "浏览器在中间工作区运行并保留原生右侧对话与草稿",
+          "普通标签、收藏、历史和设置本地持久化；隐私历史及下载记录不落盘",
+          "实际Chromium导航、输入、查找、下载和PDF正常；原生网页不可调用客户端IPC",
+          "Figma布局、统一图标、弹层与宽窄主题通过聚焦核对"
+        ],
+        "risks": [
+          "受控HTTPS夹具不证明任意远端网站均兼容",
+          "Chrome账号同步与扩展商店不在本次设计范围",
+          "缓存清理按所有时间执行，界面已明确说明"
+        ],
+        "generatedAt": "2026-11-09T15:22:23.550709+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/browser-app-model.test.ts",
+        "test/browser-app-view.test.ts",
+        "test/browser-app-native.test.js",
+        "test/default-web-links-client.test.js",
+        "test/conversation-browser.test.ts",
+        "test/workspace-surface-host.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/verify-browser-app-native.mjs"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
