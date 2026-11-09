@@ -45,6 +45,52 @@
           "真实模型生成仍受来源覆盖、权限与数据完整性影响；不把缺失说明计为完整业务交付"
         ],
         "generatedAt": "2026-11-09T03:18:50.169777+00:00"
+      },
+      "merged": {
+        "mergeCommit": "01114f02ad25a82fdec8aaa8f89b970e904684d6",
+        "verificationCommit": "01114f02ad25a82fdec8aaa8f89b970e904684d6",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/note-toolbar-client-bootstrap.test.js",
+              "test/note-toolbar-geometry-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/note-toolbar-client-bootstrap.test.js test/note-toolbar-geometry-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "01114f02ad25a82fdec8aaa8f89b970e904684d6",
+            "completedAt": "2026-11-09T03:18:54.529Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "01114f02ad25a82fdec8aaa8f89b970e904684d6",
+            "completedAt": "2026-11-09T03:18:54.529Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "01114f02ad25a82fdec8aaa8f89b970e904684d6",
+            "completedAt": "2026-11-09T03:18:54.529Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T03:18:54.529Z"
       }
     }
   ],
