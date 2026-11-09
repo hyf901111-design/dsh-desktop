@@ -18,6 +18,7 @@ export const englishUiCopy: Record<string, string> = {
   "随 EWork 提供，默认启用，可随时停用；使用前请登录 EWork。": "Included with EWork and enabled by default. You can disable it at any time. Sign in before use.",
   "收起": "Collapse",
   "更多": "More",
+  "浏览器": "Browser",
   "插件": "Plugins",
   "展开右侧屏": "Expand right panel",
   "折叠右侧屏": "Collapse right panel",

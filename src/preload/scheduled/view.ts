@@ -107,9 +107,10 @@ export class ScheduledTaskView {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right'],
+      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right', 'data-workspace-surface'],
     })
     this.document.addEventListener('sherlock:workspace-surface-change', () => {
+      this.mountMore()
       if (this.root || this.componentMode) this.syncPanel()
     })
     this.document.addEventListener('pointerdown', this.outside)
@@ -203,6 +204,7 @@ export class ScheduledTaskView {
   private mountMore() {
     const group = this.document.querySelector('.hHd-Xa_newSessionGroup')
     if (!group) return
+    this.mountBrowserEntry(group)
     const current = this.more?.closest<HTMLElement>('.st-more-zone')
     if (current?.isConnected) {
       if(this.menuAnchor===this.more&&this.menu?.dataset.sidebarWide!==String(group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'))this.closeMenu()
@@ -222,8 +224,8 @@ export class ScheduledTaskView {
       if(this.menu){this.closeMenu();return}
       const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
       this.showMenu(more, [
-            {label:'浏览器',icon:'browser' as const,run:()=>this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:browser-request'))},
             ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newNoteBusy,run:()=>void this.createNewNote()}]:[]),
+            ...(wide&&this.surfaceHost?[{label:'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
@@ -235,6 +237,20 @@ export class ScheduledTaskView {
     zone.append(more)
     this.placeMore(group, zone)
     this.more = more
+  }
+  private openBrowser(){
+    this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:browser-request'))
+  }
+  private mountBrowserEntry(group:Element){
+    let button=group.querySelector<HTMLButtonElement>('[data-sidebar-browser]')
+    const collapsed=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')==='false'
+    if(!collapsed||!this.surfaceHost){button?.remove();return}
+    if(!button){
+      button=this.document.createElement('button');button.type='button';button.className='hHd-Xa_newSession';button.dataset.sidebarBrowser=''
+      button.setAttribute('aria-label','浏览器');button.title='浏览器';button.onclick=()=>this.openBrowser()
+      const more=group.querySelector('.st-more-zone');group.insertBefore(button,more)
+    }
+    button.setAttribute('aria-pressed',String(this.document.body.dataset.workspaceSurface==='browser'))
   }
   private placeMore(group: Element, zone: HTMLElement) {
     if(zone.parentElement!==group||group.lastElementChild!==zone)group.append(zone)

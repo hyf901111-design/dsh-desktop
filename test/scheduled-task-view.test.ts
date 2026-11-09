@@ -385,8 +385,8 @@ it('shares one More menu and preserves the scheduled draft through the integrati
   const plugin=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]')).find(button=>button.textContent?.includes('插件'))
   expect(plugin).toBeDefined();
   const menuRows=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]'));
-  expect(menuRows.map(row=>row.querySelectorAll('.st-icon').length)).toEqual([1,1]);
-  expect(menuRows.map(row=>row.firstElementChild?.className)).toEqual(['st-icon','st-icon']);
+  expect(menuRows.map(row=>row.querySelectorAll('.st-icon').length)).toEqual([1,1,1]);
+  expect(menuRows.map(row=>row.firstElementChild?.className)).toEqual(['st-icon','st-icon','st-icon']);
   expect(w.getComputedStyle(menuRows[0] as any).gap).toBe(w.getComputedStyle(menuRows[1] as any).gap);
   plugin!.click();await Promise.resolve();await Promise.resolve()
   expect(doc.querySelector<HTMLElement>('.st-root')!.hidden).toBe(true)
@@ -396,8 +396,10 @@ it('shares one More menu and preserves the scheduled draft through the integrati
   expect(pluginBack.innerHTML).toBe(taskBack.innerHTML)
   expect(pluginBack.getAttribute('aria-label')).toBe(taskBack.getAttribute('aria-label'))
   expect(doc.querySelectorAll('#sherlock-workspace-topbar-style')).toHaveLength(1)
-  for (const property of ['top','left','width','height','padding','borderRadius'] as const)
+  for (const property of ['left','width','height','padding','borderRadius'] as const)
     expect(doc.defaultView!.getComputedStyle(pluginBack)[property]).toBe(doc.defaultView!.getComputedStyle(taskBack)[property])
+  expect(doc.defaultView!.getComputedStyle(pluginBack).top).toBe('8px')
+  expect(doc.defaultView!.getComputedStyle(taskBack).top).toBe('17px')
   pluginBack.click()
   expect(doc.querySelector<HTMLElement>('.st-root')!.hidden).toBe(false)
   expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe('定时任务未提交草稿')
