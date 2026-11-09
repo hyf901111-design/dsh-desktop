@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-31",
+  "branch": "codex/integration/20261109-31",
+  "baseMainCommit": "4c90c1e9fafe2c0350abd45ebcf437b892dae337",
+  "expectedMainCommit": "4c90c1e9fafe2c0350abd45ebcf437b892dae337",
+  "createdAt": "2026-11-09T04:39:28.378Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "去除真实收起侧栏空列表占位",
+        "branch": "codex/feat/component-generation-fit-icons-20261109",
+        "baseCommit": "4c90c1e9fafe2c0350abd45ebcf437b892dae337",
+        "tipCommit": "9f7b2042b791cdf3d1cbc6054c71a92c2a049ac5",
+        "commits": [
+          {
+            "commit": "9f7b2042b791cdf3d1cbc6054c71a92c2a049ac5",
+            "parents": [
+              "4c90c1e9fafe2c0350abd45ebcf437b892dae337"
+            ],
+            "subject": "修复：移除收起侧栏空列表造成的额外图标间距"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-b-icons-browser.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际客户端发现工作区空列表与展开顶栏外边距多占32px；用生产工作区CSS和真实嵌套结构复现88px中心间隔，修复后统一56px，七个入口36px且图标居中。最终本地包仍需重启核验。"
+        },
+        "acceptanceCriteria": [
+          "工作区添加入口与新对话之间不保留空列表轨道",
+          "七个收起入口中心步进统一56px"
+        ],
+        "risks": [
+          "真实外部数据缺失仍须如实报告，不声称所有场景百分之百成功"
+        ],
+        "generatedAt": "2026-11-09T04:39:26.608688+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-b-icons-browser.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
