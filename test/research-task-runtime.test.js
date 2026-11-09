@@ -772,6 +772,20 @@ describe('Research task contract and prompt', () => {
     }finally{await runtime.dispose()}
   });
 
+  it.each([true,false])('does not count an undersized comparison as completed and requests bounded acquisition (%s)',async repaired=>{
+    const {ResearchTaskRuntime}=await runtimeModule();const calls=[];
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request);const n=repaired&&calls.length>1?8:1;
+      return {childSessionId:'scope-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'chart',variant:'horizontal',title:'对象比较',labels:Array.from({length:n},(_,i)=>'对象'+i),series:[{name:'指标',values:Array(n).fill(1)}]})}]})};
+    }},storage:memoryTaskStorage(),createId:sequentialTaskIds()});
+    try{
+      await runtime.start({...containerRequest('quantitative-scope'),prompt:'工作台：对象比较\n本面板：对象指标比较\n不少于8个对象，缺失字段如实标示。\n仅生成本面板，优先使用 chart 类型。'});
+      await eventually(()=>expect(['completed','failed']).toContain(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state));
+      expect(calls).toHaveLength(2);expect(calls[1].synthesisOnly).toBe(false);
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe(repaired?'completed':'failed');
+    }finally{await runtime.dispose()}
+  });
+
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
 
@@ -2126,7 +2140,7 @@ describe('Research task Subagent adapter', () => {
     }finally{await handle.dispose()}
   });
 
-  it('exhausts only directory discovery at eight metadata calls while preserving bounded business reads',async()=>{
+  it.each([false,true])('exhausts only directory discovery while reserving bounded empty-source alternatives (%s)',async empty=>{
     const fixture=containerAdapterFixture(),guards=[];
     fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>()=>{}),guard:vi.fn(fn=>{guards.push(fn);return()=>{}})}};
     fixture.ctx.tools={schemas:()=>[{name:'ework__definition',description:'读取接口目录与参数定义，不是业务数据'},{name:'ework__business',description:'实际业务记录'},{name:'public_data_query'},{name:'financial_query'}]};
@@ -2136,13 +2150,19 @@ describe('Research task Subagent adapter', () => {
       fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',content:[{type:'text',text}]}]}}});
     };
     try{
-      for(let i=0;i<8;i++)call('ework__definition','definition-'+i,'接口参数与字段定义');
+      for(let i=0;i<8;i++)call('ework__definition','definition-'+i,empty?JSON.stringify({kind:'catalog',interfaces:[]}):'接口参数与字段定义');
       fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'step/end',data:{}});
       expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
       const issue=(name,args)=>guards.map(guard=>guard({agent:fixture.ctx.child,name,arguments:args})).find(Boolean);
       expect(issue('ework__definition',{})).toContain('目录发现预算');
-      expect(issue('public_data_query',{operation:'catalog'})).toContain('目录发现预算');
-      expect(issue('financial_query',{intent:'resolve'})).toContain('目录发现预算');
+      if(empty){
+        expect(issue('public_data_query',{operation:'catalog'})).toBeUndefined();
+        expect(issue('public_data_query',{operation:'catalog'})).toContain('目录发现预算');
+        expect(issue('financial_query',{intent:'catalog'})).toBeUndefined();
+      }else{
+        expect(issue('public_data_query',{operation:'catalog'})).toContain('目录发现预算');
+        expect(issue('financial_query',{intent:'resolve'})).toContain('目录发现预算');
+      }
       expect(issue('ework__business',{})).toBeUndefined();
       expect(issue('public_data_query',{operation:'query'})).toBeUndefined();
       expect(issue('financial_query',{intent:'quotes'})).toBeUndefined();
