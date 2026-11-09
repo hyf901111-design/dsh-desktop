@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-36",
+  "branch": "codex/integration/20261109-36",
+  "baseMainCommit": "7cab2fdab384c05061edba91cc28c4548b79c873",
+  "expectedMainCommit": "6b6598216302c730af4c3677709a57ee68a1ddf2",
+  "createdAt": "2026-11-09T06:08:32.939Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "完善已覆盖分页识别与模板修复补取指令",
+        "branch": "codex/feat/component-generation-fit-icons-20261109",
+        "baseCommit": "e56322ac7572bffd9c23f9ce069988323bca6408",
+        "tipCommit": "414637cfe507c3e19d77eb7c57dad8c8ec1b0a8f",
+        "commits": [
+          {
+            "commit": "414637cfe507c3e19d77eb7c57dad8c8ec1b0a8f",
+            "parents": [
+              "e56322ac7572bffd9c23f9ce069988323bca6408"
+            ],
+            "subject": "优化：消除重复分页并让所有修复路径接续缺失取数"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-acquisition-followup.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-acquisition-followup.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "后续页已取齐时不再重复生成相同请求，声明模板与未声明模板均保留补取能力，相关断言通过；真实新包在集成后复测。"
+        },
+        "acceptanceCriteria": [
+          "无后台任务时不得持续显示生成中",
+          "重试接收终态回执且不被旧计划覆盖",
+          "分页和原文未取齐时保留授权读取能力"
+        ],
+        "risks": [
+          "原任务真实取数与最终覆盖仍需新包复测；runtime文件14项旧断言在未修改main同样失败，聚焦28项通过。"
+        ],
+        "generatedAt": "2026-11-09T06:05:10.553223+00:00"
+      },
+      "merged": {
+        "mergeCommit": "43c08dcb5a489a337b8a42c86f2ad32dd00dbea5",
+        "verificationCommit": "43c08dcb5a489a337b8a42c86f2ad32dd00dbea5",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-acquisition-followup.test.js",
+              "test/research-generation-watch.test.js",
+              "test/generation-progress-persistence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-acquisition-followup.test.js test/research-generation-watch.test.js test/generation-progress-persistence.test.js",
+            "verifiedCommit": "43c08dcb5a489a337b8a42c86f2ad32dd00dbea5",
+            "completedAt": "2026-11-09T06:08:35.640Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance",
+            "verifiedCommit": "43c08dcb5a489a337b8a42c86f2ad32dd00dbea5",
+            "completedAt": "2026-11-09T06:08:35.640Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "43c08dcb5a489a337b8a42c86f2ad32dd00dbea5",
+            "completedAt": "2026-11-09T06:08:35.640Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T06:08:35.640Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-acquisition-followup.test.js",
+        "test/research-generation-watch.test.js",
+        "test/generation-progress-persistence.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": [
+    {
+      "previousMainCommit": "7cab2fdab384c05061edba91cc28c4548b79c873",
+      "mainCommit": "6b6598216302c730af4c3677709a57ee68a1ddf2",
+      "mergeCommit": "2af6a3cb3f5e3cf0c144f74b8e69ff3856ac6d33",
+      "verificationCommit": "2af6a3cb3f5e3cf0c144f74b8e69ff3856ac6d33",
+      "checks": [
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/component-acquisition-followup.test.js",
+            "test/research-generation-watch.test.js",
+            "test/generation-progress-persistence.test.js"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-acquisition-followup.test.js test/research-generation-watch.test.js test/generation-progress-persistence.test.js",
+          "verifiedCommit": "2af6a3cb3f5e3cf0c144f74b8e69ff3856ac6d33",
+          "completedAt": "2026-11-09T06:19:15.062Z",
+          "timeoutMs": 180000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/research-task-runtime.test.js",
+            "-t",
+            "newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t newest task of an owned|keeps acquisition tools|provider retry|recovers once from provider|requires the named connected source|preserves.*intent|keeps late business records|excludes actual provider|handoff|retains.*business|separate allowance",
+          "verifiedCommit": "2af6a3cb3f5e3cf0c144f74b8e69ff3856ac6d33",
+          "completedAt": "2026-11-09T06:19:15.062Z",
+          "timeoutMs": 180000
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：git diff --check",
+          "verifiedCommit": "2af6a3cb3f5e3cf0c144f74b8e69ff3856ac6d33",
+          "completedAt": "2026-11-09T06:19:15.062Z",
+          "timeoutMs": 120000
+        }
+      ],
+      "recordedAt": "2026-11-09T06:19:15.062Z"
+    }
+  ]
+}
