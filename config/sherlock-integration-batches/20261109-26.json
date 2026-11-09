@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-26",
+  "branch": "codex/integration/20261109-26",
+  "baseMainCommit": "91292fcda1cd459b675f97c8ccbe7cd0759dffa7",
+  "expectedMainCommit": "91292fcda1cd459b675f97c8ccbe7cd0759dffa7",
+  "createdAt": "2026-11-09T01:40:13.815Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复研究看板待办页签触发自动退出",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "91292fcda1cd459b675f97c8ccbe7cd0759dffa7",
+        "tipCommit": "3dd3cd664119a181a20f90ba2c52fdc59b4c4a26",
+        "commits": [
+          {
+            "commit": "db50aa95694d57d1b7f8cad9db25018fd48d8d42",
+            "parents": [
+              "6d01e083a4db41ec8b5157ddef113277945cb7ae"
+            ],
+            "subject": "修复看板待办页签被误判导致研究模式自动退出"
+          },
+          {
+            "commit": "3dd3cd664119a181a20f90ba2c52fdc59b4c4a26",
+            "parents": [
+              "db50aa95694d57d1b7f8cad9db25018fd48d8d42",
+              "91292fcda1cd459b675f97c8ccbe7cd0759dffa7"
+            ],
+            "subject": "Merge branch 'main' into codex/feat/workbench-native-wheel-owner-20261108"
+          }
+        ],
+        "boundaryParents": [
+          "6d01e083a4db41ec8b5157ddef113277945cb7ae"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/developer-mode.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/developer-mode-navigation.test.ts"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "happy-dom 覆盖看板和组件内部六类同名页签及旧顶层入口；14 项聚焦回归通过，真实包验收在构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "开发者入口过滤只作用于顶层模式页签",
+          "研究看板待办页签不触发自动切回对话",
+          "保留旧顶层开发者入口的隐藏规则"
+        ],
+        "risks": [
+          "真实新包验证待构建后执行"
+        ],
+        "generatedAt": "2026-11-09T01:40:12.053011+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/developer-mode.test.ts",
+        "test/developer-mode-navigation.test.ts",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
