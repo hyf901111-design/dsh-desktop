@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-22",
+  "branch": "codex/integration/20261109-22",
+  "baseMainCommit": "40525d122390f677c55131e6c302dbbb534cdbfa",
+  "expectedMainCommit": "40525d122390f677c55131e6c302dbbb534cdbfa",
+  "createdAt": "2026-11-09T00:18:17.334Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "关系图恢复与嵌套主题可读性",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "37b48662ee456b9af6bce3264bc685c49b9aae96",
+        "tipCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+        "commits": [
+          {
+            "commit": "45d1a7e10278e52893f7447a7be680744845de72",
+            "parents": [
+              "37b48662ee456b9af6bce3264bc685c49b9aae96"
+            ],
+            "subject": "修复关系图生成恢复及易方达嵌套标签可读性"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-dataset-view.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-structure-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-document-delivery.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/research-design-policy.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "文档、共同数据与来源聚焦检查通过",
+            "verifiedCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+            "completedAt": "2026-11-09T00:18:15.672468+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "recovers model-added graph|preserves .* intent when an HTML",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "关系图恢复的8项聚焦检查通过",
+            "verifiedCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+            "completedAt": "2026-11-09T00:18:15.672468+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-structure-theme-browser.test.js",
+              "test/workbench-style.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "嵌套主题的13项浏览器与样式检查通过",
+            "verifiedCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+            "completedAt": "2026-11-09T00:18:15.672468+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+            "completedAt": "2026-11-09T00:18:15.672468+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异格式通过",
+            "verifiedCommit": "45d1a7e10278e52893f7447a7be680744845de72",
+            "completedAt": "2026-11-09T00:18:15.672468+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实失败草稿已回放验证；样式隔离浏览器验证嵌套白底白字修复；等待重建真实包验收。"
+        },
+        "acceptanceCriteria": [
+          "模型额外添加的复杂图应用可以保留事实切换原生实现",
+          "明确要求交互仍须有效",
+          "模拟数据缺失字段记为未知且错误定位到记录",
+          "嵌套资料和被动标签文字可读"
+        ],
+        "risks": [
+          "最终包真实界面验证在构建启动后执行，浏览器检查不替代客户端验收。"
+        ],
+        "generatedAt": "2026-11-09T00:18:15.672468+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-document-delivery.test.js",
+        "test/workbench-dataset-view.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/research-design-policy.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "recovers model-added graph|preserves .* intent when an HTML",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-structure-theme-browser.test.js",
+        "test/workbench-style.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
