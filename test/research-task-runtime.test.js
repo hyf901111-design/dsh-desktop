@@ -627,6 +627,19 @@ describe('Research task contract and prompt', () => {
     }finally{await runtime.dispose()}
   })
 
+  it.each([false,true])('repairs static narrative without inventing mappings while retaining complete collections (collection=%s)',async collection=>{
+    const {ResearchTaskRuntime}=await runtimeModule(),calls=[]
+    const result={version:1,type:'markdown',title:'使用建议',content:'根据官网已取得的功能说明，升级前应核对兼容性。来源：https://example.org/guide'}
+    const runtime=new ResearchTaskRuntime({adapter:{bindData:vi.fn(),start:async request=>{calls.push(request);return {childSessionId:'narrative-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:calls.length===1?[]:[{type:'text',text:JSON.stringify(result)}],sourceRecords:[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://example.org/guide'},response:{sourceUrl:'https://example.org/guide',records:[{title:'功能说明',body:'升级前核对兼容性'}]}}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try{
+      await runtime.start({...containerRequest('narrative'),prompt:'工作台：研究\n本面板：使用建议\n总结升级需要注意什么。'+(collection?'列出最近40条完整记录明细。':'')+'\n仅生成本面板，优先使用 reports 类型。'})
+      await eventually(()=>expect(['completed','failed']).toContain(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state))
+      expect(calls).toHaveLength(2)
+      expect(calls[1].prompt.includes('本卡是基于已读资料的静态分析')).toBe(!collection)
+      if(!collection)expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'})).toMatchObject({state:'completed',finalOutput:JSON.stringify(result)})
+    }finally{await runtime.dispose()}
+  })
+
   it.each([true,false])('accepts an interactive HTML snapshot only after retrieving the named business source (retrieved=%s)', async retrieved => {
     const {ResearchTaskRuntime}=await runtimeModule()
     const calls=[],bindData=vi.fn(async()=>{})
