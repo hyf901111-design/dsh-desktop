@@ -107,6 +107,77 @@
           "真实模型生成仍受来源覆盖、权限与数据完整性影响；不把缺失说明计为完整业务交付"
         ],
         "generatedAt": "2026-11-09T03:00:54.073934+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5de81d25b78aafd7771e88d200d9c2df429e3c8e",
+        "verificationCommit": "5de81d25b78aafd7771e88d200d9c2df429e3c8e",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/host-template-delivery.test.js",
+              "test/component-discovery-progress.test.js",
+              "test/component-data-submission.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-source-intent.test.js",
+              "test/component-surface-style.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/markdown-note.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/note-toolbar-geometry-browser.test.js",
+              "test/research-workbench-feedback-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/host-template-delivery.test.js test/component-discovery-progress.test.js test/component-data-submission.test.js test/component-source-binding.test.js test/component-source-intent.test.js test/component-surface-style.test.js test/cartesian-chart-template.test.js test/markdown-note.test.js test/research-workbench-feedback.test.js test/note-toolbar-geometry-browser.test.js test/research-workbench-feedback-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "5de81d25b78aafd7771e88d200d9c2df429e3c8e",
+            "completedAt": "2026-11-09T03:08:50.397Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "hands a typed component|hands verified native-template|makes the component synthesis-only",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t hands a typed component|hands verified native-template|makes the component synthesis-only --maxWorkers 2",
+            "verifiedCommit": "5de81d25b78aafd7771e88d200d9c2df429e3c8e",
+            "completedAt": "2026-11-09T03:08:50.397Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5de81d25b78aafd7771e88d200d9c2df429e3c8e",
+            "completedAt": "2026-11-09T03:08:50.397Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "5de81d25b78aafd7771e88d200d9c2df429e3c8e",
+            "completedAt": "2026-11-09T03:08:50.397Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T03:08:50.397Z"
       }
     }
   ],
