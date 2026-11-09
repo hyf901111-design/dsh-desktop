@@ -9,31 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "右侧屏延迟创建会话及当前网页问答和AI原地修改",
+        "featureName": "浏览器复用全局右栏及底栏缩放与首次发送交接",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "0b8b1440465fed8bd4614e58bafd5c623d5f6c9f",
-        "tipCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
+        "baseCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
+        "tipCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
         "commits": [
           {
-            "commit": "d6f531ec9976bcc5936793dab31242f53a429f09",
+            "commit": "c2b4fc487e138a166ceb4c2ae9929e2f62eb28b1",
             "parents": [
-              "0b8b1440465fed8bd4614e58bafd5c623d5f6c9f"
+              "cea68518f88a22e236c74c49e67db4696c5edf7f"
             ],
-            "subject": "支持浏览器当前网页原地文字修改与整页撤销"
+            "subject": "修复浏览器问答上下文隔离及空态输入区域宽度"
           },
           {
-            "commit": "1638efa4e529abb3d122520df05dc865159031e7",
+            "commit": "c969a66394a6e4d9d1fa66cfbed52f4c606d4c4a",
             "parents": [
-              "d6f531ec9976bcc5936793dab31242f53a429f09"
+              "c2b4fc487e138a166ceb4c2ae9929e2f62eb28b1"
             ],
-            "subject": "修复浏览器排队请求跨会话授权与长文预算边界"
+            "subject": "修复浏览器底栏缩放入口并同步当前页缩放控制"
           },
           {
-            "commit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
+            "commit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
             "parents": [
-              "1638efa4e529abb3d122520df05dc865159031e7"
+              "c969a66394a6e4d9d1fa66cfbed52f4c606d4c4a"
             ],
-            "subject": "修复右侧屏空态展开并接通项目首发与当前网页问答修改"
+            "subject": "统一浏览器与全局右侧栏组件并保留首发创建会话规则"
           }
         ],
         "files": [
@@ -43,51 +43,27 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/browser-use-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-web-search-session-model/index.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/browser-app-native.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+            "path": "scripts/lib/figma-model-menu.mjs"
           },
           {
             "status": "A",
+            "path": "scripts/lib/pending-composer-preferences.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/pending-conversation-panel.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/pending-conversation.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/verify-browser-app-native.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/verify-browser-page-agent-native.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/main/browser/page-agent.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/browser/route.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "M",
@@ -103,50 +79,30 @@
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-status-zoom.test.ts"
           },
           {
             "status": "M",
-            "path": "src/shared/browser-app.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-view.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-page-agent.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-use-route.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-use-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-panel-tab-overflow.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/browser-page-agent.html"
-          },
-          {
-            "status": "A",
             "path": "test/fixtures/pending-conversation-browser.tsx"
           },
           {
             "status": "A",
+            "path": "test/pending-composer-preferences.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/pending-conversation-panel.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/pending-conversation-rendered.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/pending-conversation.test.js"
           }
         ],
@@ -165,18 +121,22 @@
               "test/browser-sidebar-entry.test.ts",
               "test/pending-conversation.test.js",
               "test/pending-conversation-panel.test.js",
+              "test/pending-composer-preferences.test.js",
               "test/browser-use-route.test.ts",
               "test/browser-page-agent.test.ts",
               "test/browser-use-tools.test.js",
               "test/figma-panel-tab-overflow.test.ts",
               "test/scheduled-task-view.test.ts",
               "test/sidebar-new-session-actions.test.ts",
-              "test/sidebar-new-note-install.test.js"
+              "test/sidebar-new-note-install.test.js",
+              "test/browser-status-zoom.test.ts",
+              "test/figma-model-menu.test.ts",
+              "test/dsh-file-drop-compat.test.ts"
             ],
             "outcome": "passed",
-            "summary": "本次浏览器/右侧屏/网页AI直接相关验证通过",
-            "verifiedCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
-            "completedAt": "2026-11-09T23:19:20.188165+00:00",
+            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
+            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+            "completedAt": "2026-11-09T23:54:16.097563+00:00",
             "timeoutMs": 120000
           },
           {
@@ -187,9 +147,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "本次浏览器/右侧屏/网页AI直接相关验证通过",
-            "verifiedCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
-            "completedAt": "2026-11-09T23:19:20.188165+00:00",
+            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
+            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+            "completedAt": "2026-11-09T23:54:16.097563+00:00",
             "timeoutMs": 120000
           },
           {
@@ -198,9 +158,9 @@
               "scripts/verify-browser-app-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "本次浏览器/右侧屏/网页AI直接相关验证通过",
-            "verifiedCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
-            "completedAt": "2026-11-09T23:19:20.188165+00:00",
+            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
+            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+            "completedAt": "2026-11-09T23:54:16.097563+00:00",
             "timeoutMs": 120000
           },
           {
@@ -209,15 +169,15 @@
               "scripts/verify-browser-page-agent-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "本次浏览器/右侧屏/网页AI直接相关验证通过",
-            "verifiedCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
-            "completedAt": "2026-11-09T23:19:20.188165+00:00",
+            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
+            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+            "completedAt": "2026-11-09T23:54:16.097563+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "132项聚焦检查、14组完整样式实际渲染流程及两组真实Chromium原生夹具通过，包含原生InputBar/WorkspacePicker首发与失败重试、排队授权、正文预算、实际DOM翻译/撤销和点击导航。新版签名包最终UI复核待执行。"
+          "summary": "16组完整样式渲染流程通过，空态直接使用全局Workbench/TabBar/ResearchConversationPanel/ComposerSurface；模型、权限为原生组件数据适配，第一次发送原始引用与配置等待加锁通过。最终签名包UI复核待执行。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -229,64 +189,20 @@
           "菜单文字快捷键分别按设计设定，右侧展开按钮按原生边界避让",
           "空会话展开右屏、选择项目不创建session；首次发送才在所选项目创建，失败可重试且草稿保留",
           "浏览器当前网页正文在发送时作为不可信参考附加，AI可以修改当前主文档文字并整页撤销",
-          "切换owner或页签后拒绝排队旧请求，原有其他会话智能体浏览器保持独立"
+          "切换owner或页签后拒绝排队旧请求，原有其他会话智能体浏览器保持独立",
+          "无会话及浏览器右栏直接复用同一全局右栏和对话组件；不再手写页签或输入区界面",
+          "底栏百分比展开实际页面缩放控制，支持边界、恢复100%与键盘关闭",
+          "首发配置准备锁定真实输入，预设/模型/权限失败保留真实草稿"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
           "Chrome账号同步与扩展商店不在本次设计范围",
           "缓存清理按所有时间执行，界面已明确说明",
           "网页修改仅在本地主文档文字展示层；不编辑iframe、canvas、表单或超长单文字节点，也不保存远程站点",
-          "实机模型发送能力还需随最终签名包验证，原生夹具与模型选择不能替代真实客户端问答"
+          "实机模型发送能力还需随最终签名包验证，原生夹具与模型选择不能替代真实客户端问答",
+          "额外旧standard-agent-preset首项对build roster的断言在canonical main同样失败，未修改历史策略；新预设交接有独立回归。"
         ],
-        "generatedAt": "2026-11-09T23:19:20.188165+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
-        "verificationCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
-            "completedAt": "2026-11-09T23:19:36.872Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
-            "completedAt": "2026-11-09T23:19:36.872Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "4aad9699d5a1d0aab78188bf92e685a00c02fed1",
-            "completedAt": "2026-11-09T23:19:36.872Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-09T23:19:36.872Z"
+        "generatedAt": "2026-11-09T23:54:16.097563+00:00"
       }
     }
   ],
