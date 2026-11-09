@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-42",
+  "branch": "codex/integration/20261109-42",
+  "baseMainCommit": "ded95d7ed4dab5ee0c7cfc6318eb6f479376ab90",
+  "expectedMainCommit": "ded95d7ed4dab5ee0c7cfc6318eb6f479376ab90",
+  "createdAt": "2026-11-09T08:30:37.235Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件系统弹出菜单",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "ded95d7ed4dab5ee0c7cfc6318eb6f479376ab90",
+        "tipCommit": "9768d7eaf81caa3c856da44327532609ff541df1",
+        "commits": [
+          {
+            "commit": "9768d7eaf81caa3c856da44327532609ff541df1",
+            "parents": [
+              "ded95d7ed4dab5ee0c7cfc6318eb6f479376ab90"
+            ],
+            "subject": "修复：组件操作菜单使用系统弹出层避免窗口边缘裁切"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/context-menu.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/native-component-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/native-component-menu.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-native-menu.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "用户原生截图确认组件菜单在客户端底边截断。系统菜单模板与真实渲染回调等37项聚焦测试通过，TypeScript检查通过；构建后窗口边缘实测待执行。"
+        },
+        "acceptanceCriteria": [
+          "组件操作菜单由系统层显示不受客户端窗口裁切",
+          "保留二级菜单、禁用项和原组件回调",
+          "组件切换后关闭旧菜单并忽略过期结果"
+        ],
+        "risks": [
+          "网页回退仅保证视区内完整可达，跨窗口呈现需Electron系统菜单"
+        ],
+        "generatedAt": "2026-11-09T08:30:35.347126+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-native-menu.test.js",
+        "test/native-component-menu.test.ts",
+        "test/native-file-menu.test.ts",
+        "test/component-pptx-mode.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
