@@ -742,6 +742,21 @@ describe('Research task contract and prompt', () => {
     }finally{await runtime.dispose()}
   });
 
+  it('does not revoke acquisition tools after a discovery-only phase deadline',async()=>{
+    const {ResearchTaskRuntime}=await runtimeModule();const calls=[];
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request);
+      return {childSessionId:'discovery-'+calls.length,dispose:async()=>{},result:Promise.resolve(calls.length===1?{stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[],researchEvidence:'当前仅有接口目录定义，未取数',sourceRecords:[{tool:'catalog',purpose:'discovery',args:{api_name:'available'},response:{kind:'catalog',interfaces:[{api:'available',parameters:{symbol:{required:true}},fields:{value:'值'}}]}}]}:{stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'记录',content:'真实业务响应。'})}]})};
+    }},storage:memoryTaskStorage(),createId:sequentialTaskIds()});
+    try{
+      await runtime.start(containerRequest('discovery-only'));
+      await eventually(()=>expect(calls).toHaveLength(2));
+      expect(calls[1].synthesisOnly).toBe(false);
+      expect(calls[1].prompt).toContain('业务数据尚未取得');
+      expect(calls[1].prompt).not.toContain('本轮是无工具的内容修复阶段');
+    }finally{await runtime.dispose()}
+  });
+
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
 
