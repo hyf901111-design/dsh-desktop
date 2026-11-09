@@ -627,6 +627,18 @@ describe('Research task contract and prompt', () => {
     }finally{await runtime.dispose()}
   })
 
+  it('accepts a host-rendered editable analysis note without a model repair loop',async()=>{
+    const {ResearchTaskRuntime}=await runtimeModule(),calls=[];
+    const artifact={version:1,type:'note',title:'升级注意事项',asOf:'2026-11-09 · 官网资料',content:'## 兼容性核对\n根据已读资料核对生态兼容性。\n[原始依据](https://example.org/guide)'};
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{calls.push(request);return {childSessionId:'native-note',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(artifact)}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()});
+    try{
+      await runtime.start({...containerRequest('native-note'),prompt:'工作台：研究\n本面板：升级注意事项\n总结已提供资料中的兼容性建议。优先使用 note 类型。'});
+      await eventually(()=>{const task=runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'});expect(task.state,task.error).toBe('completed')});
+      expect(calls).toHaveLength(1);
+      expect(readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)).data).toEqual(artifact);
+    }finally{await runtime.dispose()}
+  })
+
   it.each([false,true])('repairs static narrative without inventing mappings while retaining complete collections (collection=%s)',async collection=>{
     const {ResearchTaskRuntime}=await runtimeModule(),calls=[]
     const result={version:1,type:'markdown',title:'使用建议',content:'根据官网已取得的功能说明，升级前应核对兼容性。来源：https://example.org/guide'}
