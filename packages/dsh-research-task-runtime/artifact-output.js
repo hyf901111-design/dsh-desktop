@@ -107,6 +107,20 @@ export function retainedTableData(spec) {
  const data=spec?.type==='html'?readTemplateModel(spec)?.data:undefined;
  return data?.type==='table'||data?.type==='market'&&data.variant==='table'?data:undefined;
 }
+// An embedded model alone is untrusted. Only byte-identical output from the
+// current host renderer may re-enter the native-data path on a second pass.
+export function restoreHostTemplateArtifact(text) {
+ const candidates=extractArtifactObjects(text);
+ if(candidates.length!==1)return;
+ const spec=candidates[0];
+ if(spec?.type!=='html'||Object.keys(spec).some(key=>!['version','type','title','html'].includes(key)))return;
+ const data=readTemplateModel(spec)?.data;
+ if(!data||data.type==='html')return;
+ const rendered=acceptArtifactOutput(JSON.stringify(data),{normalizeChartGeometry:false});
+ if(!rendered)return;
+ const current=JSON.parse(rendered);
+ if(current.version===spec.version&&current.type===spec.type&&current.title===spec.title&&current.html===spec.html)return JSON.stringify(data);
+}
 export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {

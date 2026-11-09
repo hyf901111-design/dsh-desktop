@@ -2257,6 +2257,25 @@ describe('Research task Subagent adapter', () => {
       expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledOnce();
     }finally{await handle.dispose()}
   });
+
+it('hands a typed component to explicit synthesis when acquisition tools close at a safe step boundary',async()=>{
+ vi.useFakeTimers();const fixture=containerAdapterFixture();
+ const listen=fixture.ctx.on.bind(fixture.ctx);fixture.ctx.on=(name,listener)=>name==='session/event'?listen(name,listener):()=>{};
+ fixture.ctx.subagents.start.mockResolvedValue({id:fixture.ctx.child.id,localAgent:fixture.ctx.child,result:new Promise(()=>{}),dispose:vi.fn(async()=>{})});
+ fixture.ctx.tools={schemas:()=>[{name:'public_data_query',description:'Read structured data'}],register:vi.fn(()=>()=>{}),guard:vi.fn(()=>()=>{})};
+ fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>()=>{}),register:vi.fn(()=>()=>{}),guard:vi.fn(()=>()=>{})}};
+ let handle;
+ try{
+  handle=await fixture.start('工作台：研究\n本面板：观测比较\n读取真实数据与来源。\n仅生成本面板，优先使用 chart 类型。');
+  let done=false;handle.result.then(()=>{done=true});
+  await vi.advanceTimersByTimeAsync(90001);expect(done).toBe(false);
+  fixture.ctx.emit(fixture.ctx.child.session,{seq:100,type:'step/end',data:{}});
+  await vi.advanceTimersByTimeAsync(1);
+  expect(await handle.result).toMatchObject({researchPhaseComplete:true,localDeadlineExceeded:true,output:[]});
+  expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledOnce();
+ }finally{await handle?.dispose();vi.useRealTimers()}
+});
+
   it.each(['calls','time'])('makes the component synthesis-only at the %s boundary instead of leaving a read-image escape path',async boundary=>{
     vi.useFakeTimers();const fixture=containerAdapterFixture(),lift=vi.fn();fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>lift)}};
     const names=['web_search','web_fetch','financial_query','read_image'];fixture.ctx.tools={schemas:()=>names.map(name=>({name}))};let handle;

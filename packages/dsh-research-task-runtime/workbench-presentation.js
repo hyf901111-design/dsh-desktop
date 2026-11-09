@@ -1,3 +1,4 @@
+import {NOTE_TOOLBAR_GEOMETRY_CSS} from './note-toolbar-style.js'
 import {OPEN_TERMINAL_LAYOUT_CSS} from './openterminal-layout.js'
 import {TIMELINE_PRESENTATION_CSS} from './timeline-presentation.js';
 import {KPI_PRESENTATION_CSS} from './kpi-presentation.js';
@@ -25,6 +26,7 @@ html,body{background:var(--sherlock-bg)!important;color:var(--sherlock-text)!imp
 body{margin:0!important;padding:8px 10px!important;box-sizing:border-box!important;min-width:0!important;min-height:0!important;overflow:auto!important;backdrop-filter:none!important}
 body :is(p,span,label,div,button,input,select,textarea,th,td,summary,small,strong,h1,h2,h3,h4){font-family:var(--sherlock-font-sans)!important}
 body :is(button,input,select,textarea){font-size:12px!important;line-height:18px!important;border-radius:3px!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)}
+${NOTE_TOOLBAR_GEOMETRY_CSS}
 /* Record selectors and evidence headers can contain several lines. Keep the
    toolbar minimum, while allowing their content to determine the height. */
 body :is(button:not(.market-tile),[role="button"]:not(rect):not(circle)){height:auto!important;min-height:26px!important;padding:4px 8px!important}

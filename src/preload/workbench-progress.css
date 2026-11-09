@@ -41,14 +41,6 @@
   animation: ework-workbench-stripes 1.6s linear infinite;
 }
 
-[data-research-workbench-progress=partial] [data-workbench-progress-track]:not([data-workbench-progress-motion]) {
-  background: color-mix(in srgb, #b67d39 4%, transparent);
-}
-
-[data-research-workbench-progress=completed] [data-workbench-progress-track] {
-  --workbench-progress-stripe: color-mix(in srgb, var(--workbench-progress-ink) 2%, transparent);
-}
-
 [data-workbench-progress-spinner] {
   transform-origin: center;
   animation: ework-workbench-spin 900ms linear infinite;
