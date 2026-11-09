@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-49",
+  "branch": "codex/integration/20261109-49",
+  "baseMainCommit": "31f523fb4c789a041e05bff8de50a88105182940",
+  "expectedMainCommit": "31f523fb4c789a041e05bff8de50a88105182940",
+  "createdAt": "2026-11-09T12:07:29.552Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "宿主计算结构化附件统计避免模型逐行口算",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "31f523fb4c789a041e05bff8de50a88105182940",
+        "tipCommit": "cc70b76f0283df756a4d7d2bb2c5dcfb30135f5d",
+        "commits": [
+          {
+            "commit": "1afa0e9195623253cd9e5ca19947a978fd59d9cf",
+            "parents": [
+              "d538efc8e77af2084ae590eb22ab2d5f4c27e21c"
+            ],
+            "subject": "优化：由宿主精确计算结构化附件统计以减少口算超时与汇总错误"
+          },
+          {
+            "commit": "cc70b76f0283df756a4d7d2bb2c5dcfb30135f5d",
+            "parents": [
+              "1afa0e9195623253cd9e5ca19947a978fd59d9cf",
+              "31f523fb4c789a041e05bff8de50a88105182940"
+            ],
+            "subject": "合并：同步本地 main 的渲染兼容策略记录"
+          }
+        ],
+        "boundaryParents": [
+          "d538efc8e77af2084ae590eb22ab2d5f4c27e21c"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/delimited-evidence.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/delimited-statistics.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "test/delimited-statistics.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "数据解析与生成上下文策略，178项直接相关检查与类型检查通过；实际72条附件统计为2382，空值和十进制精度已校验，需新包复测。"
+        },
+        "acceptanceCriteria": [
+          "原始行不改写，附加可核对的计数与精确十进制统计",
+          "数值缺失与标识列不冒充业务指标",
+          "分组统计有界且不截断来源数据"
+        ],
+        "risks": [
+          "统计不代替业务语义确认",
+          "外部网络资料不适用此本地附件统计能力",
+          "不承诺模型服务超时已消除"
+        ],
+        "generatedAt": "2026-11-09T12:07:28.582895+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/delimited-statistics.test.js",
+        "test/workbench-delimited-evidence.test.js",
+        "test/workbench-mixed-document-adapter.test.js",
+        "test/workbench-document-delivery.test.js",
+        "test/research-design-policy.test.js",
+        "test/html-trusted-types-validation.test.js",
+        "test/shared-component-validation.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
