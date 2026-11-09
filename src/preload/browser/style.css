@@ -25,3 +25,5 @@
 .eb-root .eb-app-label{height:32px;padding:0 6px;font-weight:500}
 
 .eb-root[data-settings-open=true]{visibility:hidden!important;pointer-events:none!important}
+.eb-menu hr{margin:0}
+.eb-popover[data-browser-panel=tabs] .eb-menu-item{height:42px;gap:10px;padding:0 6px!important;font-size:13px!important}

@@ -25,7 +25,8 @@ it('matches the Figma chrome dimensions and handles actual URL, multi-tab, colle
   await page.getByRole('button',{name:'添加收藏',exact:true}).click();await page.getByRole('textbox',{name:'名称',exact:true}).fill('自己的研究收藏');await page.getByRole('button',{name:'完成',exact:true}).click();expect(await page.evaluate(()=>window.snapshot().bookmarks[0].title)).toBe('自己的研究收藏')
   await page.getByRole('button',{name:'收藏夹',exact:true}).click();expect(await page.getByRole('dialog',{name:'收藏夹'}).innerText()).toContain('自己的研究收藏');await page.screenshot({path:evidence+'/bookmarks-dark.png'});await page.keyboard.press('Escape')
   await page.getByRole('button',{name:'新标签页',exact:true}).click();expect(await page.getByRole('tab').count()).toBe(2);expect(await page.getByRole('tab',{selected:true}).innerText()).toContain('新标签页')
-  await page.getByRole('button',{name:'更多浏览器操作',exact:true}).click();await page.screenshot({path:evidence+'/menu-dark.png'});await page.getByRole('menuitem',{name:/浏览器设置/}).click();await page.getByRole('combobox',{name:'默认搜索引擎'}).selectOption('Bing');expect(await page.evaluate(()=>window.snapshot().settings.engine)).toBe('Bing')
+  await page.getByRole('button',{name:'标签页菜单',exact:true}).click();expect(Math.abs((await page.locator('[data-browser-panel=tabs]').boundingBox()).height-374)).toBeLessThanOrEqual(2);await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'更多浏览器操作',exact:true}).click();expect(Math.abs((await page.locator('[data-browser-panel=menu]').boundingBox()).height-616)).toBeLessThanOrEqual(2);await page.screenshot({path:evidence+'/menu-dark.png'});await page.getByRole('menuitem',{name:/浏览器设置/}).click();await page.getByRole('combobox',{name:'默认搜索引擎'}).selectOption('Bing');expect(await page.evaluate(()=>window.snapshot().settings.engine)).toBe('Bing')
   expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)
