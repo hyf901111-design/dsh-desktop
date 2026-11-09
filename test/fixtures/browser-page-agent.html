@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Page agent acceptance</title>
+<style>
+ body {margin:40px auto;max-width:760px;font:18px/1.65 system-ui;color:#26302d;background:#fafbf8}
+ h1 {font:700 38px/1.2 Georgia,serif;color:#244f41} a {color:#267b66} main {padding:28px 36px;background:white;border:1px solid #dbe4dc;border-radius:12px}
+ input,select,button {font:16px system-ui;padding:7px;margin:8px 6px 0 0} .below {margin-top:950px}
+</style>
+<main>
+ <h1>Research in context</h1>
+ <p>Read <a id="report" href="/next"><strong>the original report</strong></a> before making a decision.</p>
+ <p id="body-copy">Knowledge grows when sources, reasoning and decisions stay connected.</p>
+ <button id="counter" onclick="this.textContent='Clicked once'">Inspect interaction</button>
+ <label>Search <input aria-label="Search" placeholder="Type keywords"></label>
+ <select aria-label="Period"><option value="day">Daily</option><option value="week">Weekly</option></select>
+ <p class="below">The end of the article remains part of the original page.</p>
+</main>
+<div hidden>hidden-secret</div><div style="display:none">style-secret</div>
+<input type="password" value="password-secret" aria-label="Password">
+<textarea aria-label="Draft">draft-secret</textarea><div contenteditable="true">editor-secret</div>
+<script>window.pageFixtureSecret='script-secret';</script>
