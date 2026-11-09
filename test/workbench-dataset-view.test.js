@@ -162,3 +162,16 @@ it('fills only absent simulated dataset descriptions without resending records o
   const empty=structuredClone(plan);empty.sharedDatasets[0].asOf='';expect(()=>validateWorkbench(empty)).toThrow(/不能为空/)
  }finally{await f.close()}
 })
+
+
+it('marks omitted simulated cells unknown without changing records, dates or undeclared fields',async()=>{
+ const f=await setup(),plan=input();plan.sharedDatasets[0].fields.push({key:'unknown',label:'未掌握'});const before=structuredClone(plan)
+ try{
+  expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared')
+  const saved=JSON.parse(await readFile(f.filePath,'utf8'))[0].input.sharedDatasets[0]
+  expect(saved.records).toEqual(plan.sharedDatasets[0].records.map(r=>({...r,unknown:null})))
+  expect(plan).toEqual(before)
+  const extra=structuredClone(plan);extra.requestId='extra';extra.sharedDatasets[0].records[0].extra='不能丢弃'
+  await expect(f.tool.execute(extra,f.exec)).rejects.toThrow('未声明：extra')
+ }finally{await f.close()}
+})

@@ -85,7 +85,18 @@ ${enterpriseRoot} body ${structureNodes} :is(.role,.name,.node-title,.node-sub,h
 }
 :root[data-workbench-style="enterprise"] body :is([data-sherlock-structure="info"],.info-card,.department-card,[class$="-cards"] > [class$="-card"]:not(:has(table,svg,canvas,button,input,select)),
  :is([style*="display:grid" i],[style*="display: grid" i])[style*="grid-template-columns"] > :is(div,article,section)[style*="border:"][style*="--sherlock-border"][style*="border-radius"]:has(> :is(div,h3,h4,strong)):not(:has(table,svg,canvas,button,input,select))) {
+ --sherlock-structure-ink:var(--sherlock-control-text);
+ --sherlock-text:var(--sherlock-control-text);
+ --sherlock-muted:var(--sherlock-control-muted);
+ --sherlock-text-muted:var(--sherlock-control-muted);
  background:color-mix(in srgb,var(--sherlock-chart-1) 5%,var(--sherlock-surface))!important;
+ color:var(--sherlock-text)!important;
+ border:0!important;box-shadow:none!important;border-radius:0!important;
+}
+/* Passive labels inside a coloured node inherit its nearest presentation role.
+   Keeping a surface-coloured chip while forcing white ink hides real names. */
+${enterpriseRoot} body ${structureNodes} :is(.chip,.badge,.tag):not(button,a,[role="button"],[role="status"],[data-sherlock-status]){
+ background:transparent!important;color:var(--sherlock-structure-ink)!important;
  border:0!important;box-shadow:none!important;border-radius:0!important;
 }
 /* Older artifacts also annotated layout containers around the actual paths. */
