@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from 'vitest'
-import {componentSourceCollector,componentBindingEvidence,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot,COMPONENT_MAPPING_EXAMPLES} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {componentSourceCollector,componentSnapshotEvidence,componentBindingEvidence,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot,COMPONENT_MAPPING_EXAMPLES} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import officialSchemas from './fixtures/official-mcp-source-schemas.json'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {ComponentDataRefresh} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
@@ -685,3 +685,14 @@ it('automatically repairs a requested diagram instead of counting a prose substi
   expect(JSON.parse(task.finalOutput).type).not.toBe('markdown')
  }finally{await runtime.dispose()}
 })
+
+// Host-owned source metadata is the canonical citation surface, including prose URLs.
+it('recognizes fetched URLs in source metadata without granting identity to feeds or unfetched pages',()=>{
+ const url='https://example.org/statistics/2026-10';
+ const sources=[{tool:'web_fetch',purpose:'snapshot',args:{url},snapshotRows:[{title:'原始统计',date:'2026-10-20',dates:['2026-10-20'],urls:[url],ids:[]}]}];
+ const artifact=html=>JSON.stringify({version:1,type:'html',title:'指标分析',html});
+ expect(componentSnapshotEvidence(artifact('<main>实际指标</main><aside hidden data-component-source-info>统计依据（2026-10-20）：'+url+'</aside>'),sources)).toBe(true);
+ expect(componentSnapshotEvidence(artifact('<main>实际指标</main><aside hidden data-component-source-info>https://example.org/other</aside>'),sources)).toBe(false);
+ expect(componentSnapshotEvidence(artifact('<main>无来源</main><!-- '+url+' -->'),sources)).toBe(false);
+ expect(componentSnapshotEvidence(JSON.stringify({version:1,type:'news',title:'新闻',items:[{title:'改写且未验证的标题',date:'2026-10-20',url}]}),sources)).toBe(false);
+});

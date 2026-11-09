@@ -393,7 +393,15 @@ export function componentSnapshotEvidence(text,records,options={}) {
   // observed retrieval only; feed/article identity gates above stay per-record.
   const narrativeReference=data=>{
     if(!['markdown','summary','mind-map','html'].includes(data?.type)||!acceptArtifactOutput(JSON.stringify(data)))return false
-    if(data.type==='html')return load(data.html)('a[href]').toArray().some(element=>urls.has(snapshotUrl(element.attribs.href)))
+    if(data.type==='html'){
+      const $=load(data.html)
+      if($('a[href]').toArray().some(element=>urls.has(snapshotUrl(element.attribs.href))))return true
+      // Citation metadata is collected by the host footer, so a cited fetched
+      // URL there has the same retrieval meaning as a visible anchor. Never
+      // scan arbitrary markup/comments, and never bypass per-record feed gates.
+      return $('[data-component-source-info]').toArray().some(element=>
+        [...$(element).text().matchAll(/https?:\/\/[^\s<>"'，。；、（）【】]+/gu)].some(match=>urls.has(snapshotUrl(match[0]))))
+    }
     return [data.content,data.source?.text].filter(value=>typeof value==='string').some(value=>[...value.matchAll(/\[[^\]\n]+\]\(<?(https?:\/\/[^\s<>]+?)>?(?:\s+"[^"\n]*")?\)/gu)].some(match=>urls.has(snapshotUrl(match[1]))))
   }
   return candidates.some(data=>referenced(data)||narrativeReference(data))
