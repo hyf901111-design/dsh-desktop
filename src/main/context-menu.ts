@@ -1,8 +1,9 @@
 import { contextMenuCaptureScript, contextMenuTargetScript } from './context-menu-target'
 import { generatedFileFinderPath } from './generated-file-finder'
+import {buildNativeComponentMenu} from './native-component-menu'
 import { buildNativeFileMenu } from './native-file-menu'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
-import { clipboard, ipcMain, Menu, shell, type BrowserWindow, type WebContents } from 'electron'
+import { clipboard, ipcMain, Menu, nativeImage, shell, type BrowserWindow, type WebContents } from 'electron'
 import {openClientLink} from './search/open-client-link'
 import { existsSync } from 'node:fs'
 import { buildContextMenuTemplate, resolveFinderPath } from './context-menu-template'
@@ -45,6 +46,27 @@ export function installContextMenu(
       if (template.length === 0 || window.isDestroyed()) { resolve(null); return }
       Menu.buildFromTemplate(template).popup({ window, callback: () => resolve(null) })
     }))
+  let componentMenu:{id:string;menu:Menu}|undefined
+  ipcMain.removeHandler('ui:component-context-menu')
+  ipcMain.removeHandler('ui:component-context-menu-close')
+  registerTrustedMainWindowHandler(ipcMain,'ui:component-context-menu-close',()=>window,(_event,id:unknown)=>{
+    if(typeof id==='string'&&componentMenu?.id===id)componentMenu.menu.closePopup(window)
+    return null
+  })
+  registerTrustedMainWindowHandler(ipcMain,'ui:component-context-menu',()=>window,(_event,input:unknown)=>new Promise<string|null>(resolve=>{
+    if(!input||typeof input!=='object'||window.isDestroyed()){resolve(null);return}
+    const {menuId,items}=input as Record<string,unknown>
+    if(typeof menuId!=='string'||!/^[-\w]{1,80}$/u.test(menuId)){resolve(null);return}
+    const template=buildNativeComponentMenu(items,resolve,value=>{
+      const image=nativeImage.createFromDataURL(value)
+      if(image.isEmpty()||image.getSize().width>64||image.getSize().height>64)return undefined
+      image.setTemplateImage(true);return image
+    })
+    if(!template.length){resolve(null);return}
+    componentMenu?.menu.closePopup(window)
+    const menu=Menu.buildFromTemplate(template);componentMenu={id:menuId,menu}
+    menu.popup({window,callback:()=>{if(componentMenu?.menu===menu)componentMenu=undefined;resolve(null)}})
+  }))
   window.webContents.on('context-menu', async (_event, params) => {
     const elementCandidates = await clickedElementPathCandidates(window, params.x, params.y)
     if (window.isDestroyed() || elementCandidates.suppressMenu && !params.isEditable) return
