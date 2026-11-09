@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-39",
+  "branch": "codex/integration/20261109-39",
+  "baseMainCommit": "2c4c361c28c06b39add1c07b641847263154d25a",
+  "expectedMainCommit": "2c4c361c28c06b39add1c07b641847263154d25a",
+  "createdAt": "2026-11-09T07:01:44.546Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "取数恢复成功后独立呈现组件",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "2c4c361c28c06b39add1c07b641847263154d25a",
+        "tipCommit": "45686e2c1877de49ccd115f7ef3bd19d2d1e3ac2",
+        "commits": [
+          {
+            "commit": "45686e2c1877de49ccd115f7ef3bd19d2d1e3ac2",
+            "parents": [
+              "2c4c361c28c06b39add1c07b641847263154d25a"
+            ],
+            "subject": "修复：补齐来源后独立执行一次有界呈现而不耗尽取数恢复机会"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "基于原客户端两张卡的公开工具轨迹复现：恢复阶段取得业务记录和原文却直接超时结束。回归覆盖真实记录、网页正文、仍只有目录、取消和无工具呈现边界15项通过；新包实际复测待执行。"
+        },
+        "acceptanceCriteria": [
+          "已完成取数的恢复得到一次独立无工具呈现",
+          "仅目录或无数据不能延长任务",
+          "保留原来源与完整性校验、无额外取数循环"
+        ],
+        "risks": [
+          "原卡仍未通过，最终呈现与数据完整性必须在新包复测"
+        ],
+        "generatedAt": "2026-11-09T07:01:09.334629+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-acquisition-followup.test.js",
+        "test/component-discovery-progress.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
