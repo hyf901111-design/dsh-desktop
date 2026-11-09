@@ -92,6 +92,100 @@
           "未将后端完成状态等同于真实客户端视觉验收"
         ],
         "generatedAt": "2026-11-09T00:46:10.604786+00:00"
+      },
+      "merged": {
+        "mergeCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+        "verificationCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/markdown-note.test.js",
+              "test/component-data-status.test.js",
+              "test/research-grid-workbench.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/markdown-note.test.js test/component-data-status.test.js test/research-grid-workbench.test.js --maxWorkers 2",
+            "verifiedCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+            "completedAt": "2026-11-09T00:46:22.989Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "host-rendered editable",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t host-rendered editable --maxWorkers 2",
+            "verifiedCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+            "completedAt": "2026-11-09T00:46:22.989Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-preview-patch-compat.test.js",
+              "test/market-table-reading-browser.test.js",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-preview-patch-compat.test.js test/market-table-reading-browser.test.js --maxWorkers 2",
+            "verifiedCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+            "completedAt": "2026-11-09T00:46:22.989Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "disables all four|forged Arrange|cancels a real pointer",
+              "--maxWorkers",
+              "2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-preview-mode-browser.test.js -t disables all four|forged Arrange|cancels a real pointer --maxWorkers 2",
+            "verifiedCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+            "completedAt": "2026-11-09T00:46:22.989Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+            "completedAt": "2026-11-09T00:46:22.989Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "d040b8842d1615f2fde932122503c9ab2e7b7030",
+            "completedAt": "2026-11-09T00:46:22.989Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-09T00:46:22.989Z"
       }
     }
   ],
