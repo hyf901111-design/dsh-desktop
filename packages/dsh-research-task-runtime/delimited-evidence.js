@@ -1,3 +1,4 @@
+import {delimitedStatistics} from './delimited-statistics.js'
 import {extractArtifactObjects,retainedTableData} from './artifact-output.js'
 import {readTemplateModel} from './component-template-registry.js'
 
@@ -26,6 +27,8 @@ export function extractDelimitedEvidence(input,name,budget=140_000) {
  if(rows.length<2)throw Error('CSV 没有可读取的记录')
  const document={name,format:/\.tsv$/iu.test(name)?'tsv':'csv',blocks:[{id:'T1',rows}]}
  if(Buffer.byteLength(JSON.stringify(document),'utf8')>budget)throw Error('CSV 完整证据超出容量，请使用分块数据读取，不能截断或按样本交付')
+ const statistics=delimitedStatistics(rows)
+ if(Buffer.byteLength(JSON.stringify({...document,statistics}),'utf8')<=budget)document.statistics=statistics
  return document
 }
 
