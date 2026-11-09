@@ -9,3 +9,15 @@
 @media(max-width:1500px){.eb-tab{width:150px}.eb-tab[aria-selected=true]{width:180px}.eb-start{padding-top:70px}.eb-suggestions{left:160px;right:90px}}@container(max-width:700px){.eb-start{padding:48px 32px}.eb-start h1{font-size:24px}.eb-shortcuts{gap:4px}.eb-app-label{width:32px}.eb-app-label span:last-child{display:none}.eb-toolbar{padding:0 8px}.eb-popover{right:8px}.eb-suggestions{left:12px;right:12px}.eb-error,.eb-private{padding:80px 32px}.eb-print-body{flex-wrap:wrap}.eb-print-preview{display:none}}
 .eb-root{container-type:inline-size}
 @media(prefers-reduced-motion:reduce){.eb-root *{animation:none!important;transition:none!important}}
+/* Exact anchors from Figma page 76; content and list lengths remain live. */
+.eb-popover{top:96px;max-height:calc(100% - 112px)}
+.eb-popover[data-browser-panel=bookmarks],.eb-popover[data-browser-panel=history]{top:128px;max-height:calc(100% - 144px)}
+.eb-popover[data-browser-panel=downloads]{width:440px}
+.eb-popover[data-browser-panel=site]{left:156px;right:auto}
+.eb-popover[data-browser-panel=tabs]{left:var(--eb-tab-menu-x,132px);right:auto;top:48px;width:300px;padding:16px;gap:8px}
+.eb-popover[data-browser-panel=save]{width:460px}
+.eb-popover[data-browser-panel=clear]{width:540px}
+.eb-dialog{top:calc(50% + 50px);max-height:calc(100% - 132px)}
+.eb-find{width:468px;top:126px;min-height:58px}
+.eb-suggestions{left:156px;right:120px;top:96px}
+@container(max-width:700px){.eb-popover[data-browser-panel=site]{left:12px}.eb-suggestions{left:12px;right:12px}}
