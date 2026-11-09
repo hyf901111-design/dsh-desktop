@@ -1,3 +1,5 @@
+import {scalarEntityArgumentIssue} from './component-scalar-entity-arguments.js'
+import {extractDelimitedEvidence,delimitedTableIntegrityIssue} from './delimited-evidence.js'
 import {componentDeliveryScopeIssue} from './component-delivery-scope.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
@@ -860,7 +862,9 @@ function createWorkbenchDocumentReader() {
         const extractionSignal = AbortSignal.timeout(18_000)
         pending = extname(path).toLowerCase() === '.docx'
           ? boundedSourceBytes(path, extractionSignal).then(data => ({name:basename(path),...extractDocxEvidence(data,budget)}))
-          : extractPdfText(path, extractionSignal, budget)
+          : ['.csv','.tsv'].includes(extname(path).toLowerCase())
+            ? boundedSourceBytes(path,extractionSignal).then(data=>extractDelimitedEvidence(new TextDecoder('utf-8',{fatal:true}).decode(data),basename(path),budget))
+            : extractPdfText(path, extractionSignal, budget)
         entries.set(key, pending)
         if (entries.size > 4) entries.delete(entries.keys().next().value)
         void pending.catch(() => { if (entries.get(key) === pending) entries.delete(key) })
@@ -2011,6 +2015,8 @@ export class ResearchTaskRuntime {
             throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要实际层级或关系图，不能用文字说明替代。复用已取得内容，按真实关系交付完整导图或可视化 HTML，保留来源。')
           }
           if (result.documentEvidence && output) {
+            const integrityIssue=delimitedTableIntegrityIssue(output,result.documentEvidence,panelRequest)
+            if(integrityIssue)throw new ResearchTaskError('INVALID_OUTPUT',integrityIssue)
             const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentUncertaintyIssue(output,result.documentEvidence) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
             if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
             if (['table','mind-map'].includes(plannedFormat) && JSON.parse(output).type === 'markdown') {
@@ -2284,7 +2290,7 @@ export class ResearchTaskRuntime {
         if(output===undefined)throw new ResearchTaskError('OUTPUT_TOO_LARGE','已取得的新闻与覆盖说明超过当前展示容量，来源记录已保留，请拆分组件后重试。')
       }
       if (output !== undefined && result.documentEvidence) {
-        const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentUncertaintyIssue(output,result.documentEvidence) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
+        const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentUncertaintyIssue(output,result.documentEvidence) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt)) || delimitedTableIntegrityIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
         if (issue) throw new ResearchTaskError('GENERATION_FAILED', issue)
       }
       if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }
@@ -2656,7 +2662,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
           const issue=componentDeliveryScopeIssue(snapshot.data,workbenchPanelIntent(query))||workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
-          const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentUncertaintyIssue(output,documentEvidence)||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query)))
+          const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentUncertaintyIssue(output,documentEvidence)||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query))||delimitedTableIntegrityIssue(output,documentEvidence,workbenchPanelIntent(query)))
           if(documentIssue)throw new ResearchTaskError('INVALID_OUTPUT',documentIssue)
           return output
       }
@@ -3070,6 +3076,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // calls may still use definitions already obtained and current grants;
         // the unchanged total-call and wall-clock limits remain authoritative.
         let args=exec.arguments;try{if(typeof args==='string')args=JSON.parse(args)}catch{}
+        if(childTools.includes(exec.name)&&!isDiscoveryRequest(exec.name,args)){
+          const scalarIssue=scalarEntityArgumentIssue(args,sourceCollector.records)
+          if(scalarIssue)return scalarIssue
+        }
         const beyondDiscoveryBudget=discoveryCallCount>=8&&isDiscoveryRequest(exec.name,args)
         const fallbackDiscovery=beyondDiscoveryBudget&&discoveryProgress.reserveAlternativeDiscovery(exec.name,{
           elapsed:executionElapsed(),
