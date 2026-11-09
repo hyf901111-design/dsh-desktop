@@ -82,6 +82,53 @@
           "生成成功率须新包真实任务独立统计"
         ],
         "generatedAt": "2026-11-09T11:47:57.150125+00:00"
+      },
+      "merged": {
+        "mergeCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+        "verificationCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-design-policy.test.js",
+              "test/html-trusted-types-validation.test.js",
+              "test/shared-component-validation.test.js",
+              "test/artifact-string-quotes.test.js",
+              "test/workbench-delimited-evidence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-design-policy.test.js test/html-trusted-types-validation.test.js test/shared-component-validation.test.js test/artifact-string-quotes.test.js test/workbench-delimited-evidence.test.js",
+            "verifiedCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+            "completedAt": "2026-11-09T11:48:39.807Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+            "completedAt": "2026-11-09T11:48:39.807Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "594a50efbcb351acc949f2285bf71148efb8c705",
+            "completedAt": "2026-11-09T11:48:39.807Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T11:48:39.807Z"
       }
     }
   ],
