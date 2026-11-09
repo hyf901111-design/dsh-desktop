@@ -21,6 +21,7 @@ async function fixture(privateCount = 8, sharedCount = 7,options:{current?:strin
   const w = new Window({ url: 'https://ework.local/' })
   vi.stubGlobal('window', w); vi.stubGlobal('document', w.document)
   vi.stubGlobal('localStorage', w.localStorage); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('Event', w.Event)
+  vi.stubGlobal('CustomEvent', w.CustomEvent)
   Object.assign(w, { __sherlockWorkspaceSidebarSkin: {
     header: { sessionOverflowButton: 'native-session-overflow' }, rows: {},
     collapsedSessionLimit: 5, useNativeDragAcceptance: () => {}, WorkspaceFolderIcon: () => null
@@ -52,6 +53,15 @@ async function fixture(privateCount = 8, sharedCount = 7,options:{current?:strin
   const open = async (id: string) => { await act(async () => { current = id; selectBoardSession(id) }) }
   return { w, host, root, page, state, click, group, titles, emit, open }
 }
+it('协作看板条目仅在等待加入时显示虚线状态，已有成员时不保留图标或占位', async () => {
+  const f = await fixture(1, 2)
+  Object.assign(f.state.boards[0]!, { memberCount: 2 })
+  Object.assign(f.state.boards[1]!, { memberCount: 1 })
+  await f.emit()
+  const rows = f.group('shared').querySelectorAll('.srb-board-title')
+  expect(rows[0]!.querySelector('.srb-row-status,.srb-pending-ring')).toBeNull()
+  expect(rows[1]!.querySelector('.srb-pending-ring')).not.toBeNull()
+})
 it('个人与协作看板各默认显示五条，复用工作区按钮，分别展开与收起', async () => {
   const f = await fixture()
   expect(f.titles('private')).toHaveLength(5); expect(f.titles('shared')).toHaveLength(5)

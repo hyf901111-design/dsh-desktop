@@ -5,7 +5,7 @@ let browser
 const read=file=>readFileSync(new URL('../'+file,import.meta.url),'utf8')
 beforeAll(async()=>{const pw=await import(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js');browser=await(pw.default||pw).chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})},20000)
 afterAll(()=>browser?.close())
-it('uses the Figma collapsed 36px hit areas with 56px center steps across nested groups, and centered panel glyphs',async()=>{
+it('keeps 36px hit areas with compact 44px center steps across nested groups, and centered panel glyphs',async()=>{
  const page=await browser.newPage({viewport:{width:1000,height:800}})
  await page.route('http://fixture.test/**',route=>{const file=new URL(route.request().url()).pathname.slice(1);return route.fulfill({body:read('build/brand/'+file),contentType:'image/svg+xml'})})
  const scheduled=vm.runInNewContext(read('src/preload/scheduled/style.ts').replace(/^import[^\n]*\n/u,'').replace('export const scheduledStyles','const scheduledStyles')+';scheduledStyles',{icons:{chat:'',research:'',note:''}})
@@ -17,7 +17,7 @@ it('uses the Figma collapsed 36px hit areas with 56px center steps across nested
  const labels=['打开侧边栏','搜索会话','添加工作区','新建对话','新建研究','新建笔记','更多']
  const boxes=[]
  for(const label of labels)boxes.push(await page.getByLabel(label,{exact:true}).boundingBox())
- boxes.forEach((box,i)=>{expect(box.width).toBe(36);expect(box.height).toBe(36);if(i){expect(box.y-boxes[i-1].y).toBe(56);expect(box.x).toBe(boxes[0].x)}})
+ boxes.forEach((box,i)=>{expect(box.width).toBe(36);expect(box.height).toBe(36);if(i){expect(box.y-boxes[i-1].y).toBe(44);expect(box.x).toBe(boxes[0].x)}})
  const glyphs=await page.locator('.hHd-Xa_logoRow>button>svg').evaluateAll(elements=>elements.map(el=>({width:el.getBoundingClientRect().width,mask:getComputedStyle(el).maskImage,hidden:getComputedStyle(el.firstElementChild).visibility})))
  expect(glyphs.every(glyph=>glyph.width===20&&glyph.mask.includes('odyssey-b-')&&glyph.hidden==='hidden')).toBe(true)
  const panel=await page.locator('.t8lSSG_toggleButton').boundingBox(),glyph=await page.locator('[data-odyssey-panel-toggle]').boundingBox()

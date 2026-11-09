@@ -4,8 +4,9 @@
   "collapsedRail": {
     "hitSize": 36,
     "glyphSize": 20,
-    "gap": 20,
-    "centerStep": 56
+    "gap": 8,
+    "centerStep": 44,
+    "note": "用户于2026-11-09要求收紧，Figma原设计20px间距改为8px；点击区域保持36px。"
   },
   "assets": [
     {
@@ -13,14 +14,14 @@
       "role": "sidebar",
       "size": 18,
       "nodeId": "4542:368390",
-      "sha256": "4fb68d9f7aefe5efb7e88dbb8f200172c97a87cbcff13eceeb95c77dad7cee44"
+      "sha256": "a6a7969e3257dd7bdfcf9f4e2519d3c9e663b055e05f57027e79ac5670e7fa47"
     },
     {
       "file": "odyssey-b-sidebar-20.svg",
       "role": "sidebar",
       "size": 20,
       "nodeId": "4542:368304",
-      "sha256": "d50766de2bdba854ac51b6c74cdcbcf7d826b23b0b0bc358c271e7d4866b633c"
+      "sha256": "550240a6dc3734de2d7551fcc707ef872b7b685fa1053ab1e3ea013ebfeee38d"
     },
     {
       "file": "odyssey-b-search-18.svg",
@@ -34,7 +35,7 @@
       "role": "search",
       "size": 20,
       "nodeId": "4542:368306",
-      "sha256": "0de955cd3d764a9174efe8898e6ef7ba27213f9526c35c9f444c58485f30c70b"
+      "sha256": "9df8e2bc47cdd3d30eff73431f034aa04526af1c179f9109b1b4096f0ead4888"
     },
     {
       "file": "odyssey-b-new-chat-18.svg",
