@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto'
 
-const START='/* ework:conversation-response-progress:v3 */',PREVIOUS='/* ework:conversation-response-progress:v2 */',LEGACY='/* ework:conversation-response-progress:v1 */',END='/* ework:conversation-response-progress:end */'
+const START='/* ework:conversation-response-progress:v4 */',PRIOR='/* ework:conversation-response-progress:v3 */',PREVIOUS='/* ework:conversation-response-progress:v2 */',LEGACY='/* ework:conversation-response-progress:v1 */',END='/* ework:conversation-response-progress:end */'
 const OWNED=['eworkResponseProgressByTurn','eworkSharedResponseProgress','responseClockRunning','data-response-total-time','conversationResponseElapsed']
 const CSS='[data-response-progress="total"]>.Md3f7G_executionTrigger .Md3f7G_executionChevron{opacity:1}'+
  'body [data-response-progress="stage"].Md3f7G_executionGroup>.Md3f7G_executionTrigger{width:100%;display:flex;gap:8px;margin-inline:0;padding-inline:0;text-align:start}'+
@@ -18,7 +18,7 @@ export function conversationResponseProgress(flow,runningTurn) {
     const identified=typeof entry.turn==='number'&&Number.isFinite(entry.turn)
     const visible=!identified||!first.has(entry.turn)
     if(identified)first.add(entry.turn)
-    result.set(entry.key,{visible,running:identified?entry.turn===runningTurn:entry.running})
+    result.set(entry.key,{visible,running:entry.pausedForSteering?false:identified?entry.turn===runningTurn:entry.running})
   }
   return result
 }
@@ -98,10 +98,10 @@ function transform(source,inverse,legacy=false,previous=false){
 export function stripConversationResponseProgress(source){
  const at=source.indexOf('/* ework:conversation-response-progress:')
  if(at<0){if(OWNED.some(value=>source.includes(value)))throw Error('Orphan conversation response progress hook');return source}
- const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),marker=legacy?LEGACY:previous?PREVIOUS:START
- if(source.split(marker).length!==2||[START,PREVIOUS,LEGACY].some(value=>value!==marker&&source.includes(value))||source.split('/* ework:conversation-response-progress:').length!==3||source.split(END).length!==2)throw Error('Unknown/duplicate conversation response progress layer')
+ const prior=source.includes(PRIOR),legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),marker=legacy?LEGACY:previous?PREVIOUS:prior?PRIOR:START
+ if(source.split(marker).length!==2||[START,PRIOR,PREVIOUS,LEGACY].some(value=>value!==marker&&source.includes(value))||source.split('/* ework:conversation-response-progress:').length!==3||source.split(END).length!==2)throw Error('Unknown/duplicate conversation response progress layer')
  const end=source.indexOf(END,at),block=source.slice(at,end+END.length+1)
- const historicalHash=legacy?'d7b8132fea7771f61b108a284eec34106af7b33191f1b847adb61eeb6aa25c43':previous?'6ce52c8638b57f82f1d3d15b2500018cea0a6ff06072763c1f5124c3e841223a':null
+ const historicalHash=prior?'9661ad4688fda3e77548d2bbee760d0e1c86a93f581bbf961c6fe700530d493a':legacy?'d7b8132fea7771f61b108a284eec34106af7b33191f1b847adb61eeb6aa25c43':previous?'6ce52c8638b57f82f1d3d15b2500018cea0a6ff06072763c1f5124c3e841223a':null
  if(historicalHash?createHash('sha256').update(block).digest('hex')!==historicalHash:block!==definition())throw Error('Conversation response progress definition drifted')
  const restored=transform(source.slice(0,at)+source.slice(at+block.length),true,legacy,previous)
  if(OWNED.some(value=>restored.includes(value)))throw Error('Orphan conversation response progress hook')

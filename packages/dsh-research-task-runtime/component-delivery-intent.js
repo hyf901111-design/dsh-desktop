@@ -62,6 +62,9 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
       const materialized=/(?:把|将)(.{1,160})(?:做出来|搭出来|实现出来|还原出来)(?:一下|吧|即可)?$/u.exec(action.trim())
       const target=materialized?.[1].match(componentObject)
       if(target)return{index:materialized.index,target:boardObject.test(target[0])?'workbench':'component'}
+      // A provided prototype may describe ordinary domain pages without saying
+      // 'component'. Resolve the real client mode before choosing its surface.
+      if(materialized&&/(?:页签|页面|视图|pages?|tabs?|views?)/iu.test(materialized[1])&&/(?:原型|prototype|📎 文件：`[^`]+\.html?`)/iu.test(authoredDeliveryText(raw))&&!/(?:源码|源代码|仓库|项目代码|修改文件|编辑文件|写回|覆盖|保存到|导出|\b(?:source code|repository|write back|overwrite|export)\b)/iu.test(authoredDeliveryText(raw)))return{index:materialized.index,target:'component'}
     }
     const predicate=action.match(/创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|建(?:一个|一套|一张|个|套|张)|\b(?:create|build|generate)\b/iu)
     if(!predicate)return null
@@ -112,12 +115,12 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     if(accepted){const object=action.match(componentObject);targets.push(explicit?.target??(object&&boardObject.test(object[0])?'workbench':'component'))}
     return accepted
   }).join('；')
-  if (!text || /(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|规划|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
+  if (!text || /(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|规划|实现出来|还原出来|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
   if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘))/u.test(text)) return null
   const board = targets.includes('workbench')
-  const component = /组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|思维导图|组织架构图|关系图|流程图|\b(?:component|card|table|chart)\b/iu.test(text)
+  const component = targets.includes('component') || /组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|思维导图|组织架构图|关系图|流程图|\b(?:component|card|table|chart)\b/iu.test(text)
   // New canvas cards use the same host planning tool. Coding requests and
   // existing-board edits retain their original model controls and workflow.
   const framework = /\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b/iu.test(request)

@@ -48,7 +48,7 @@ if(win.annotationEnabled){
  win.sherlockPptAnnotations=Object.fromEntries(['open','mutate','prepare','bindSubmission','complete','lookupOutput','messagePresentation','resolveReference','cancel'].map(method=>[method,(input:any)=>win.annotationBackend(method,input)]))
  annotationRuntime=native.__startAnnotation({sessions,inputHub,api});cleanups.push(()=>annotationRuntime.dispose())
 }
-const sidebarState={composerHost:null,conversationHost:null},sidebar={storeFor:()=>({getSnapshot:()=>sidebarState,subscribe:()=>()=>{}}),publish(){},enter(){},leave(){},service:{openFile:async()=>{}}}
+const sidebarState={composerHost:null,conversationHost:null},sidebar={sessions,storeFor:()=>({getSnapshot:()=>sidebarState,subscribe:()=>()=>{}}),publish(){},enter(){},leave(){},service:{openFile:async()=>{}}}
 native.__bind({sessions,inputHub,researchSidebar:sidebar,getHomeGuideSession:(id:string)=>id==='demo'&&win.registered!==false?{kind:win.actorKind,sessionId:id,cwd:win.cwd}:undefined})
 const skill=win.actorKind==='report'?{id:'builtin:ework-equity-research',revision:1,label:'ework-equity-research',name:'研报写作',invocationName:'ework-skill-778d85796a6c426b'}:{id:'builtin:efund-ppt-maker',revision:1,label:'efund-ppt-maker',name:'PPT制作助手',invocationName:'ework-skill-180a6a3f86f8942e'}
 const skillRequest=(event:Event)=>{

@@ -110,7 +110,7 @@ export function createNativeConversationSubmissions(){
       if(update&&entries.get(update.entry.rpcId)===update.entry&&envelope.result?.ok===true&&envelope.result.value?.accepted===true){const {entry,action}=update;if(action.kind==='remove'){retire(entry);clear(entry)}else{if(action.kind==='steer'){entry.mode='steer';retire(entry)}else{entry.content=structuredClone(action.content);entry.annotation=null}notify()}}
       const entry=entries.get(envelope.rpcId)
       if(envelope.result?.ok!==true||envelope.result.value?.accepted!==true){if(envelope.result?.error&&typeof envelope.result.error==='object')knownRejections.add(envelope.result.error);if(entry)clear(entry)}
-      else if(entry)entry.accepted=true
+      else if(entry){entry.accepted=true;notify()}
      }else if(envelope.type==='client-request'&&envelope.method==='session.cancel'){
       for(const entry of [...entries.values()])if(entry.sessionId===envelope.payload?.sessionId&&(entry.initialImmediate||entry.admitted||entry.mode==='steer'))clear(entry)
      }else if(envelope.type==='server-request'){
@@ -159,6 +159,9 @@ export function projectNativeConversationSubmissions(flow,pending,nodeStore){
    if(reusable)result=result.filter(entry=>entry!==reusable)
    result=result.map(entry=>entry.kind==='execution'&&entry.running&&turnOf(entry)!==null&&turnOf(entry)<=barrier?{...entry,running:false}:entry)
    result.push(user,reusable?{...reusable,pendingSubmission:true,observedAt:submission.observedAt}:{kind:'execution',key:'submitted-execution:'+submission.rpcId,turn:null,nodeKeys:[],running:true,pendingSubmission:true,observedAt:submission.observedAt});activePending=true
+  }else if(submission.mode==='steer'&&submission.wasRunning){
+   result=result.filter(entry=>entry.kind!=='native-steering-status').map(entry=>entry.kind==='execution'&&entry.running?{...entry,running:false,pausedForSteering:true}:entry)
+   result.push(user,{kind:'native-steering-status',key:'steering-status:'+submission.rpcId,submission})
   }else result.push(user)
  }
  return result
@@ -199,7 +202,7 @@ function NativeConversationSubmittedUser({entry,loadImage,openFile,t}){
  const imageLoader=react.useCallback(attachment=>projected.urls.has(attachment)?Promise.resolve(projected.urls.get(attachment)):loadImage(attachment),[projected,loadImage])
  return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-anchor-key':'submitted:'+entry.rpcId,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-native-submitted-user':entry.rpcId},react.createElement(UserStyleBubble,{content:projected.content,imageLoader,openFile,t,nativeSubmittedAnnotation:entry.annotation}))
 }
-const START='/* sherlock:conversation-submission:v4 */',END='/* sherlock:conversation-submission:end */'
+const START='/* sherlock:conversation-submission:v5 */',END='/* sherlock:conversation-submission:end */'
 const definition=START+'\n'+[createNativeConversationSubmissions,useNativeConversationSubmission,useNativeSubmittedQueue,projectNativeConversationSubmissions,useNativeSubmittedAnnotation,NativeConversationSubmittedUser].map(fn=>fn.toString()).join('\n')+'\nconst NativeConversationSubmissions=createNativeConversationSubmissions();\n'+END+'\n'
 const queueTail='\n\t\t\tconst queue = (0, react.useMemo)(() => userQueuedMessages(inbox).map',queueBefore='const inbox = useSession((s) => s.queue);'+queueTail,queueAfter='const nativeSubmittedInbox = useSession((s) => s.queue);\nconst inbox = useNativeSubmittedQueue(arguments[0].sessionId,nativeSubmittedInbox,useSession);'+queueTail
 const bind='\nctx.effect(()=>NativeConversationSubmissions.watch({api:ctx.get("connection").api,sessions,inputHub}),"Native first submitted user");'
@@ -208,7 +211,8 @@ const hook='\nconst nativeConversationSubmission=useNativeConversationSubmission
 const oldRender='nativeConversationSubmission&&react.createElement(NativeConversationSubmittedUser,{entry:nativeConversationSubmission,loadImage,openFile,t}),\n'
 const flowNames=['conversationComponentFlow','renderFlow']
 const flowLine=name=>'const nativeSubmittedFlow=projectNativeConversationSubmissions('+name+',nativeConversationSubmission,nodeStore);\n'
-const render='nativeSubmittedFlow.flatMap((entry) => {if(entry.kind==="native-submitted-user")return react.createElement(NativeConversationSubmittedUser,{key:entry.key,entry:entry.submission,loadImage,openFile,t});'
+const previousRender='nativeSubmittedFlow.flatMap((entry) => {if(entry.kind==="native-submitted-user")return react.createElement(NativeConversationSubmittedUser,{key:entry.key,entry:entry.submission,loadImage,openFile,t});'
+const render=previousRender+'if(entry.kind==="native-steering-status")return react.createElement("div",{key:entry.key,role:"status","aria-live":"polite","data-steering-receipt":entry.submission.rpcId,className:ChatView_module_css_default.flowItem,style:{fontSize:12,color:"var(--sherlock-text-secondary)",paddingBlock:8}},entry.submission.accepted?"补充已收到，正在切换到这条消息…":"正在发送补充消息…");'
 const annotationHooks=[
  ['const annotationPresentation=pptxAnnotationMessageRuntime.usePresentation(text,arguments[0].annotationIdentity,eventSeq);','const annotationPresentation=pptxAnnotationMessageRuntime.usePresentation(text,arguments[0].annotationIdentity,eventSeq);\nconst nativeSubmittedAnnotationParts=useNativeSubmittedAnnotation(text,arguments[0].annotationIdentity,annotationPresentation,arguments[0].nativeSubmittedAnnotation);'],
  ['pptxAnnotationMessageRuntime.render(annotationPresentation,text,originalResearch,research,openFile)','pptxAnnotationMessageRuntime.render(nativeSubmittedAnnotationParts,text,originalResearch,research,openFile)']
@@ -226,13 +230,13 @@ export function stripConversationSubmission(source){
  const markers=[...source.matchAll(/\/\* sherlock:conversation-submission:v(\d+) \*\//g)]
  if(!markers.length){if(source.includes(END)||traces.some(value=>source.includes(value)))throw Error('Native submitted user orphan drifted');return source}
  if(markers.length!==1||count(source,END)!==1)throw Error('Native submitted user installation drifted')
- const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2',3:'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045'}
- if(version===4?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
+ const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2',3:'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045',4:'b0f4430a7ec60047379e1c16a0dfd872e58540afc1c1ffc465452514bbb287be'}
+ if(version===5?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
  let restored=one(source,installed,'');restored=one(restored,bind,'');restored=one(restored,version>=3?hook:oldHook,'')
- if(version===4)restored=one(restored,queueAfter,queueBefore)
+ if(version>=4)restored=one(restored,queueAfter,queueBefore)
  if(version>=3){
   const names=flowNames.filter(name=>restored.includes(flowLine(name)));if(names.length!==1)throw Error('Native submitted user flow inverse drifted')
-  const name=names[0];restored=one(restored,flowLine(name),'');restored=one(restored,render,name+'.flatMap((entry) => {')
+  const name=names[0];restored=one(restored,flowLine(name),'');restored=one(restored,version>=5?render:previousRender,name+'.flatMap((entry) => {')
   const progress='useConversationResponseProgress(nativeSubmittedFlow,';if(count(restored,progress)>1)throw Error('Native submitted progress inverse drifted');if(restored.includes(progress))restored=one(restored,progress,'useConversationResponseProgress('+name+',')
  }else restored=one(restored,oldRender,'')
  if(version!==1&&restored.includes('\nconst pptxAnnotationMessageRuntime='))for(const [before,after]of annotationHooks)restored=annotationSwap(restored,after,before)
