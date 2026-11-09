@@ -108,3 +108,46 @@ it('keeps character-limited text pages contiguous and enforces the 16 KiB bridge
  const node=first.textNodes[0]!
  await expect(agent.run({op:'edit',...scope(first),patches:[{ref:node.ref,expectedText:node.text,replacementText:'中'.repeat(3000)}]})).rejects.toThrow(/批次|字节/)
 })
+
+function deferred<T=void>(){let resolve!:(value:T|PromiseLike<T>)=>void;const promise=new Promise<T>(done=>{resolve=done});return {promise,resolve}}
+
+it('rechecks the requesting owner when queued observe/context requests actually start',async()=>{
+ const a=page('<h1>Owner A page</h1>'),b=page('<h1>Owner B private page</h1>');b.target.tabId='tab-B'
+ let owner='A';const authorize=()=>{if(owner!=='A')throw Error('Request owner changed')}
+ const blocked=deferred(),entered=deferred(),execute=a.wc.executeJavaScriptInIsolatedWorld;let first=true
+ a.wc.executeJavaScriptInIsolatedWorld=async(world,scripts)=>{if(first){first=false;entered.resolve();await blocked.promise}return execute(world,scripts)}
+ const firstResult=a.agent.run({op:'observe'},undefined,authorize).catch(error=>error)
+ await entered.promise
+ const queuedObserve=a.agent.run({op:'observe'},undefined,authorize),queuedContext=a.agent.context(authorize)
+ const observeDenied=expect(queuedObserve).rejects.toThrow(/owner changed/),contextDenied=expect(queuedContext).rejects.toThrow(/owner changed/)
+ owner='B';a.setActive(b.target);a.agent.invalidate();blocked.resolve()
+ await firstResult;await Promise.all([observeDenied,contextDenied])
+ expect(b.w.document.body.textContent).toBe('Owner B private page')
+})
+
+it('does not dispatch a queued click after the same tab is reassigned to another owner',async()=>{
+ const {w,wc,agent}=page('<button>Change page</button>');w.document.querySelector('button')!.addEventListener('click',()=>{w.document.body.dataset.clicked='yes'})
+ let owner='A';const authorize=()=>{if(owner!=='A')throw Error('Request owner changed')}
+ const ob=(await agent.run({op:'observe'},undefined,authorize)).observation
+ const blocked=deferred(),entered=deferred(),execute=wc.executeJavaScriptInIsolatedWorld;let first=true
+ wc.executeJavaScriptInIsolatedWorld=async(world,scripts)=>{if(first){first=false;entered.resolve();await blocked.promise}return execute(world,scripts)}
+ const firstResult=agent.run({op:'observe'},undefined,authorize).catch(error=>error);await entered.promise
+ const queued=agent.run({op:'click',revision:ob.revision,ref:ob.elements[0]!.ref},undefined,authorize),denied=expect(queued).rejects.toThrow(/owner changed/)
+ owner='B';blocked.resolve();await firstResult;await denied
+ expect(w.document.body.dataset.clicked).toBeUndefined()
+})
+
+it('rejects an in-flight observation if authorization changes across a renderer await',async()=>{
+ const {wc,agent}=page('<h1>Private current content</h1>');let owner='A'
+ const authorize=()=>{if(owner!=='A')throw Error('Request owner changed')},execute=wc.executeJavaScriptInIsolatedWorld
+ wc.executeJavaScriptInIsolatedWorld=async(world,scripts)=>{const result=await execute(world,scripts);owner='B';return result}
+ await expect(agent.run({op:'observe'},undefined,authorize)).rejects.toThrow(/owner changed/)
+})
+
+it('counts separators in the context budget and exposes the remaining text page',async()=>{
+ const {agent}=page(Array.from({length:1000},()=>'<p>'+('a'.repeat(60))+'</p>').join(''))
+ const first=await agent.context()
+ expect(first!.text.length).toBeLessThanOrEqual(60000);expect(first!.hasMoreText).toBe(true);expect(first!.truncated).toBe(true);expect(first!.nextTextOffset).toBe(983)
+ const second=(await agent.run({op:'observe',textOffset:first!.nextTextOffset})).observation
+ expect(second.textNodes).toHaveLength(17);expect(second.hasMoreText).toBe(false);expect(second.text.length).toBeLessThanOrEqual(60000)
+})

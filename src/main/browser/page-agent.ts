@@ -37,8 +37,9 @@ function createPageSurface(createSurface:any,token:string){
    fullHash=hashInto(fullHash,ref+'\u0000'+text.data+'\u0000')
    if(text.data.length>8000){unsupportedTextNodes++;continue}
    if(totalTextNodes++<textOffset)continue
-   if(pageFull||textNodes.length>=1000||length+text.data.length>60000){pageFull=true;continue}
-   refs.set(ref,text);textNodes.push({ref,text:text.data,tag:text.parentElement!.tagName.toLowerCase()});length+=text.data.length
+   const addedLength=text.data.length+(textNodes.length?1:0)
+   if(pageFull||textNodes.length>=1000||length+addedLength>60000){pageFull=true;continue}
+   refs.set(ref,text);textNodes.push({ref,text:text.data,tag:text.parentElement!.tagName.toLowerCase()});length+=addedLength
   }
   // Form values and editable drafts are deliberately excluded from page context.
   const candidates=[...document.body.querySelectorAll('button,a,input,textarea,select,[role],[tabindex],canvas,svg,[contenteditable=true]')].filter(el=>{
@@ -126,6 +127,8 @@ function validate(input:any){
 /** getActive is the service's authority for visible application/session ownership.
  * Call invalidate on selection/ownership changes, even when switching away and
  * back without a tool call, so previous grants and undo records cannot survive.
+ * Per-request authorize callbacks must capture the requesting session/grant;
+ * they are checked inside the queue and around every asynchronous host step.
  */
 export function createBrowserPageAgent(getActive:()=>BrowserPageTarget|undefined){
  type State={epoch:number;onNavigate:(...args:any[])=>void;onDestroyed:()=>void}
@@ -143,8 +146,11 @@ export function createBrowserPageAgent(getActive:()=>BrowserPageTarget|undefined
   wc.on('did-start-navigation',state.onNavigate);wc.once('destroyed',state.onDestroyed);states.set(wc,state);return state
  }
  const serial=<T>(run:()=>Promise<T>)=>{const pending=tail.then(run,run);tail=pending.catch(()=>{});return pending}
- const perform=async(input:any,signal?:AbortSignal,withScreenshot=true):Promise<BrowserPageResult|undefined>=>{
-  signal?.throwIfAborted()
+ const perform=async(input:any,signal?:AbortSignal,withScreenshot=true,authorize?:()=>void):Promise<BrowserPageResult|undefined>=>{
+  const checkAuthority=()=>{signal?.throwIfAborted();authorize?.()}
+  // The authority belongs to the caller captured when its request was made,
+  // never to whichever session happens to own getActive when the queue drains.
+  checkAuthority()
   const target=current();if(!target){if(!input)return undefined;throw Error('请先打开当前会话的浏览器网页。')}
   const wc=target.webContents,url=wc.getURL(),parsed=new URL(url)
   if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password||target.url!==url)throw Error('当前网页尚未就绪，请重新观察。')
@@ -152,7 +158,7 @@ export function createBrowserPageAgent(getActive:()=>BrowserPageTarget|undefined
   const args=validate(input??{op:'observe'}),state=stateFor(wc),epoch=state.epoch,grant=version
   if(args.tabId!==undefined&&args.tabId!==target.tabId||args.url!==undefined&&args.url!==url)throw Error('当前页签或网址已变化，请重新观察。')
   const guard=()=>{
-   signal?.throwIfAborted();const now=current()
+   checkAuthority();const now=current()
    if(!now||now.tabId!==target.tabId||now.webContents!==wc||now.url!==url||wc.isDestroyed()||wc.getURL()!==url||state.epoch!==epoch||grant!==version)throw Error('当前页签、会话或网页已变化，旧操作已拒绝。')
   }
   const bounded=<T>(promise:Promise<T>)=>new Promise<T>((resolve,reject)=>{
@@ -168,12 +174,13 @@ export function createBrowserPageAgent(getActive:()=>BrowserPageTarget|undefined
    guard();return result
   }
   const waitForNavigation=async(trigger?:()=>void)=>{
+   checkAuthority()
    if(!trigger&&!wc.isLoadingMainFrame())return
    let done:(()=>void)|undefined
-   const stopped=new Promise<void>(resolve=>{done=resolve;wc.once('did-stop-loading',resolve);if(trigger)trigger();else if(!wc.isLoadingMainFrame())resolve()})
-   try{await bounded(stopped)}finally{if(done)wc.removeListener('did-stop-loading',done)}
+   const stopped=new Promise<void>(resolve=>{done=resolve;wc.once('did-stop-loading',resolve);if(trigger){guard();trigger()}else if(!wc.isLoadingMainFrame())resolve()})
+   try{await bounded(stopped);checkAuthority()}finally{if(done)wc.removeListener('did-stop-loading',done)}
   }
-  const sameOwner=()=>{signal?.throwIfAborted();const now=current();return !!now&&now.tabId===target.tabId&&now.webContents===wc&&version===grant&&!wc.isDestroyed()}
+  const sameOwner=()=>{checkAuthority();const now=current();return !!now&&now.tabId===target.tabId&&now.webContents===wc&&version===grant&&!wc.isDestroyed()}
   try{
   let result:any
   if(args.op==='back'){
@@ -182,11 +189,11 @@ export function createBrowserPageAgent(getActive:()=>BrowserPageTarget|undefined
    if(wc.navigationHistory.canGoBack()){
     await waitForNavigation(()=>wc.navigationHistory.goBack())
     if(!sameOwner())throw Error('当前页签或会话已变化，旧操作已拒绝。')
-    return perform({op:'observe'},signal,withScreenshot)
+    const followed=await perform({op:'observe'},signal,withScreenshot,authorize);checkAuthority();return followed
    }
   }else{
-   result=await execute(args)
-   if(args.op==='key'){guard();wc.sendInputEvent({type:'keyDown',keyCode:args.key});wc.sendInputEvent({type:'keyUp',keyCode:args.key});result=await execute({op:'observe'})}
+   result=await execute(args);guard()
+   if(args.op==='key'){guard();wc.sendInputEvent({type:'keyDown',keyCode:args.key});guard();wc.sendInputEvent({type:'keyUp',keyCode:args.key});result=await execute({op:'observe'});guard()}
   }
   const observation:BrowserPageContext={...result.observation,tabId:target.tabId,url,title:wc.getTitle()||target.title}
   let screenshot:string|undefined
@@ -199,19 +206,20 @@ export function createBrowserPageAgent(getActive:()=>BrowserPageTarget|undefined
   }
   guard();return {...result,observation,...(screenshot?{screenshot}:{})}
   }catch(error){
+   checkAuthority()
    // Clicking links and pressing Enter can legitimately replace the document.
    // Follow that result only inside the very same active ownership grant; the
    // old refs still become unusable, and an edit never follows a navigation.
    if(['click','input','key','select','scroll','back'].includes(args.op)&&sameOwner()&&(state.epoch!==epoch||wc.getURL()!==url)){
     await waitForNavigation();if(!sameOwner())throw Error('当前页签或会话已变化，旧操作已拒绝。')
-    return perform({op:'observe'},signal,withScreenshot)
+    const followed=await perform({op:'observe'},signal,withScreenshot,authorize);checkAuthority();return followed
    }
    throw error
   }
  }
  return {
-  context:()=>serial(async()=> (await perform(undefined,undefined,false))?.observation),
-  run:(input:any,signal?:AbortSignal)=>serial(async()=> (await perform(validate(input),signal))!),
+  context:(authorize?:()=>void)=>serial(async()=>{authorize?.();const result=await perform(undefined,undefined,false,authorize);authorize?.();return result?.observation}),
+  run:(input:any,signal?:AbortSignal,authorize?:()=>void)=>serial(async()=>{authorize?.();const result=await perform(validate(input),signal,true,authorize);authorize?.();return result!}),
   invalidate,
   dispose:()=>{invalidate();for(const [wc,state]of states){wc.removeListener('did-start-navigation',state.onNavigate);wc.removeListener('destroyed',state.onDestroyed)}states.clear()}
  }
