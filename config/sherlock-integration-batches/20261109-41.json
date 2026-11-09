@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-41",
+  "branch": "codex/integration/20261109-41",
+  "baseMainCommit": "26e6976f6daa15c3bc913244b22a7c5e5f9c9944",
+  "expectedMainCommit": "26e6976f6daa15c3bc913244b22a7c5e5f9c9944",
+  "createdAt": "2026-11-09T08:04:40.669Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件范围验收与替代来源预算",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "26e6976f6daa15c3bc913244b22a7c5e5f9c9944",
+        "tipCommit": "6333c406ec24293ce08cd14302d0563fdd8606a5",
+        "commits": [
+          {
+            "commit": "6333c406ec24293ce08cd14302d0563fdd8606a5",
+            "parents": [
+              "26e6976f6daa15c3bc913244b22a7c5e5f9c9944"
+            ],
+            "subject": "修复：校验组件交付数量并为替代来源保留有界发现预算"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-delivery-scope.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-discovery-progress.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "test/component-delivery-scope.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-discovery-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "v1.39.74实机两卡复测：基金141.167秒技术完成但只有1/8对象，宏观252.772秒超时。新门禁对真实基金输出复现拒绝，134项相关聚焦检查通过，新包复测待执行。"
+        },
+        "acceptanceCriteria": [
+          "明确数量要求不能用少量样本标完成",
+          "空来源耗尽后为两种未尝试授权来源各保留一次发现",
+          "保持总调用、权限及取数时间上限"
+        ],
+        "risks": [
+          "业务验收仍为0/2，不得称完整成功；任意HTML及未明确数量需求仍需语义验收"
+        ],
+        "generatedAt": "2026-11-09T08:04:38.966038+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-source-binding.test.js",
+        "test/component-source-snapshot-chart.test.js",
+        "test/component-acquisition-followup.test.js",
+        "test/component-discovery-progress.test.js",
+        "test/component-delivery-scope.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled|undersized comparison|exhausts only directory"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
