@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-25",
+  "branch": "codex/integration/20261109-25",
+  "baseMainCommit": "7b7d42d5a1a02490ca229ff95656fc05283794ff",
+  "expectedMainCommit": "7b7d42d5a1a02490ca229ff95656fc05283794ff",
+  "createdAt": "2026-11-09T01:27:42.001Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "插队即时反馈与原型工作台交付策略",
+        "branch": "codex/feat/workbench-native-wheel-owner-20261108",
+        "baseCommit": "7b7d42d5a1a02490ca229ff95656fc05283794ff",
+        "tipCommit": "6d01e083a4db41ec8b5157ddef113277945cb7ae",
+        "commits": [
+          {
+            "commit": "33916564e0a6254496aa343dd1325fd0128a5a25",
+            "parents": [
+              "c29d9fc8baab07b338064f5b07908c5e3e3867a6"
+            ],
+            "subject": "修复：官方接口受限时自动切换同源完整分页取数"
+          },
+          {
+            "commit": "01c05bcec4f6c1c5eabbfc1ffe67462c6fcdeeee",
+            "parents": [
+              "33916564e0a6254496aa343dd1325fd0128a5a25"
+            ],
+            "subject": "修复插队消息即时反馈并安全让出模型生成"
+          },
+          {
+            "commit": "8ee795eb83e9937ba22c408c0b03f27cdf763e1f",
+            "parents": [
+              "01c05bcec4f6c1c5eabbfc1ffe67462c6fcdeeee"
+            ],
+            "subject": "优化原型页面交付路由并保留插队前的工作台目标"
+          },
+          {
+            "commit": "6d01e083a4db41ec8b5157ddef113277945cb7ae",
+            "parents": [
+              "8ee795eb83e9937ba22c408c0b03f27cdf763e1f",
+              "7b7d42d5a1a02490ca229ff95656fc05283794ff"
+            ],
+            "subject": "同步本地 main 已验收的组件布局修复"
+          }
+        ],
+        "boundaryParents": [
+          "c29d9fc8baab07b338064f5b07908c5e3e3867a6"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-response-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-submission.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/human-steering-yield.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/rendered-page-content.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-components-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-submission-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/human-steering-yield-sdk.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/profile-runtime-patches.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/rendered-page-content.test.ts"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离真实 SDK 浏览器回归通过队列、插队、升级插话；真实用户旧版任务23分44秒交付文件但画布为空，最新包生成验收待后续执行。"
+        },
+        "acceptanceCriteria": [
+          "插队状态位于最新消息下方且旧活动暂停",
+          "模型生成可安全让出给用户补充，已派发工具不强制中止",
+          "原型页面请求先确认真实客户端模式，补充来源保留本轮目标",
+          "官方接口受限可同源分页且完整性校验继续生效"
+        ],
+        "risks": [
+          "真实在线生成受模型与官方数据源影响，聚焦回归不等于全部场景验收"
+        ],
+        "generatedAt": "2026-11-09T01:28:00+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/human-steering-yield-sdk.test.js",
+        "test/conversation-submission.test.js",
+        "test/conversation-response-progress.test.js",
+        "test/profile-runtime-patches.test.js",
+        "test/packaged-runtime-patches.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/conversation-components-policy.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/observed-source-completeness.test.js",
+        "test/rendered-page-content.test.ts",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/conversation-submission-browser.test.js",
+        "-t",
+        "keeps two real|edits, removes and promotes",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
