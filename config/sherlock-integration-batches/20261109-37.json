@@ -74,6 +74,37 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-09T06:20:11.321269+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+        "verificationCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-b-icons-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-b-icons-browser.test.js",
+            "verifiedCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+            "completedAt": "2026-11-09T06:20:22.004Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+            "completedAt": "2026-11-09T06:20:22.004Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T06:20:22.004Z"
       }
     }
   ],
