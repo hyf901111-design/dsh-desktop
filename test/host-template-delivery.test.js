@@ -21,3 +21,17 @@ it('delivers an already rendered native chart in one attempt without model HTML 
   expect(readTemplateModel(out).data).toEqual(chart);expect(start).toHaveBeenCalledOnce();
  }finally{await runtime.dispose()}
 });
+it('keeps observed webpage sources through native rendering before the outer discovery-only evidence gate',async()=>{
+ const url='https://example.org/observations';
+ const data={...chart,sources:[{label:'原始观测页面',url}]};
+ const rendered=acceptArtifactOutput(JSON.stringify(data));
+ const sourceRecords=[{tool:'catalog',purpose:'discovery',args:{},response:{kind:'catalog',interfaces:[]}},{tool:'web_fetch',purpose:'snapshot',args:{url},snapshotRows:[{title:'原始观测页面',url}]}];
+ const start=vi.fn(async()=>({childSessionId:'sourced-chart',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:rendered}],sourceRecords})}));
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'sourced-task'});
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：真实观测\n本面板：观测曲线\n保留已取得网页的观测和缺失说明。\n仅生成本面板，优先使用 chart 类型。'});
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'sourced-task'}).state).toBe('completed'));
+  const out=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'sourced-task'}).finalOutput)).data;
+  expect(out.series).toEqual(data.series);expect(out.detailRows).toEqual(data.detailRows);expect(out.sources).toEqual(data.sources);expect(start).toHaveBeenCalledOnce();
+ }finally{await runtime.dispose()}
+});
