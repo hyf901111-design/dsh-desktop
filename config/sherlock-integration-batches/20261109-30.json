@@ -1,0 +1,293 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-30",
+  "branch": "codex/integration/20261109-30",
+  "baseMainCommit": "f2749585c64df2c96e6ad688aa2d74b3bdc0fc20",
+  "expectedMainCommit": "f2749585c64df2c96e6ad688aa2d74b3bdc0fc20",
+  "createdAt": "2026-11-09T04:27:10.792Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件内容高度回收、稳定占位整理、来源映射交付及Figma实心图标",
+        "branch": "codex/feat/component-generation-fit-icons-20261109",
+        "baseCommit": "f2749585c64df2c96e6ad688aa2d74b3bdc0fc20",
+        "tipCommit": "e60865f7fd2bfecda6561994a3163e4a08e571ef",
+        "commits": [
+          {
+            "commit": "fd9b608d262141a591047f0c90075fca0df47952",
+            "parents": [
+              "f2749585c64df2c96e6ad688aa2d74b3bdc0fc20"
+            ],
+            "subject": "界面：按设计稿统一实心侧栏图标及收起间距"
+          },
+          {
+            "commit": "23d71fa7d5641926c8a5097d995d0d9e1fd0e9be",
+            "parents": [
+              "fd9b608d262141a591047f0c90075fca0df47952"
+            ],
+            "subject": "修复：组件完成后适配内容高度并阻止占位卡整理膨胀"
+          },
+          {
+            "commit": "e60865f7fd2bfecda6561994a3163e4a08e571ef",
+            "parents": [
+              "23d71fa7d5641926c8a5097d995d0d9e1fd0e9be"
+            ],
+            "subject": "优化：合并来源映射协议并增加有界替代取数与真实交付统计"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-bottom-panel-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-folder-closed-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-folder-open-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-icons.json"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-more-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-more-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-new-chat-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-new-chat-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-new-tab-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-note-add-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-note-add-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-notifications-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-personal-category-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-plugin-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-research-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-research-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-right-panel-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-scheduled-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-search-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-search-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-shared-category-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-shared-session-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-sidebar-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-sidebar-20.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-workspace-add-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-b-workspace-add-20.svg"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-discovery-progress.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/news-topic-filter.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-submission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-discovery-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/market-table-reading-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/news-topic-delivery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-grid-generation-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-b-icons-browser.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 侧栏七个入口实际尺寸为36px、中心间距56px；右侧布局按钮32px与18px图标居中；生产表格渲染回归确认长框自动收缩，原固收请求真实模型结果待集成包复测。"
+        },
+        "acceptanceCriteria": [
+          "设计稿B原始SVG资产及收起间距",
+          "生成占位不参与正文测量，重复整理幂等",
+          "完成内容自动适配且保留用户手动尺寸",
+          "一次协议调用同时返回来源和实际嵌套数组路径",
+          "空目录后在原授权和135秒边界内尝试替代来源，交付计数日期按筛选后实值展示"
+        ],
+        "risks": [
+          "真实外部数据缺失仍须如实报告，不声称所有场景百分之百成功"
+        ],
+        "generatedAt": "2026-11-09T04:27:03.022458+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-b-icons-browser.test.js",
+        "test/research-grid-generation-fit.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/market-table-reading-client.test.js",
+        "test/market-table-reading-browser.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-discovery-progress.test.js",
+        "test/news-topic-delivery.test.js",
+        "--testTimeout=20000"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "authorized alternatives|bounded first business read|native-template data to synthesis|late business records"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
