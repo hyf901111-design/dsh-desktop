@@ -1,3 +1,4 @@
+import {patchBrowserAppNative,stripBrowserAppNative} from './lib/browser-app-native.mjs'
 import {patchImageGenerationClient} from './lib/image-generation-client.mjs'
 import {stripMessageEditClient,patchMessageEditClient,patchMessageEditRuntime,patchMessageEditHost} from './lib/message-edit.mjs'
 import {patchConversationImageIntake} from './lib/conversation-image-intake.mjs'
@@ -199,6 +200,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
+writeFileSync(gridConversationPath,stripBrowserAppNative(readFileSync(gridConversationPath,'utf8')))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
@@ -380,3 +382,5 @@ writeFileSync(conversationPath,patchConversationResponseHistory(patchConversatio
 writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationPath,'utf8')))
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
+
+writeFileSync(conversationPath,patchBrowserAppNative(readFileSync(conversationPath,'utf8')))

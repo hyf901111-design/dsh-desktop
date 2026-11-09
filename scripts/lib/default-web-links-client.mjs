@@ -22,7 +22,7 @@ export function installDefaultWebLinks({bridge,sessions,documentTarget}) {
       }
       if(typeof sessionId!=='string'||!sessionId)throw Error('Session unavailable');
       doc.dispatchEvent(new doc.defaultView.Event('sherlock:open-client-browser'));
-      await bridge.openSource({sessionId,url});
+      await (doc.defaultView?.dshDesktop?.browserApp?.openSource??bridge.openSource)({sessionId,url});
     }catch{failed()}
   };
   const click=event=>{

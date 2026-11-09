@@ -222,6 +222,7 @@ export class ScheduledTaskView {
       if(this.menu){this.closeMenu();return}
       const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
       this.showMenu(more, [
+            {label:'浏览器',icon:'browser' as const,run:()=>this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:browser-request'))},
             ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newNoteBusy,run:()=>void this.createNewNote()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))

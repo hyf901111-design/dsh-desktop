@@ -1,4 +1,4 @@
-export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes';
+export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes' | 'browser';
 type SurfaceLocation = {
     surface: WorkspaceSurface;
     route?: string;
@@ -37,7 +37,7 @@ export class WorkspaceSurfaceHost {
         element.dataset.workspaceSurface = surface;
         // Notes use viewport coordinates from the shared header and pane.
         // The blurred frame creates a fixed-position containing block.
-        (surface === 'notes' ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
+        (['notes','browser'].includes(surface) ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
         if (this.current()?.surface === surface) this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
@@ -77,7 +77,7 @@ export class WorkspaceSurfaceHost {
             }
             // Notes share the resident native header; hidden conversation
             // content cannot receive focus, while the header stays interactive.
-            if (this.background) this.background.inert = current.surface === 'notes' ? this.backgroundWasInert : true;
+            if (this.background) this.background.inert = ['notes','browser'].includes(current.surface) ? this.backgroundWasInert : true;
             this.document.body.dataset.workspaceSurface = current.surface;
         }
         else {
@@ -156,7 +156,7 @@ export class WorkspaceSurfaceHost {
     private closeAll = () => { this.history = []; this.sync(); };
     // The native notes view owns its lifecycle. Opening the same session does
     // not unmount it and must not hide its content behind a selected tab.
-    private onSessionOpened = () => { if (this.current()?.surface !== 'notes') this.closeAll(); };
+    private onSessionOpened = () => { if (!['notes','browser'].includes(this.current()?.surface ?? '')) this.closeAll(); };
     private onNavigate = (event: Event) => {
         if (!this.current())
             return;
@@ -164,7 +164,7 @@ export class WorkspaceSurfaceHost {
         if (this.current()?.surface === 'notes' && target?.closest?.('[data-srb-tabs] [data-conversation-view-id]:not([data-conversation-view-id="notes"])')) { this.closeAll(); return; }
         // Account/settings entries ultimately click this existing native trigger.
         // Release inert and cancel the active surface before React mounts settings.
-        if (target?.closest?.('.VOzbGW_trigger')) { if (this.current()?.surface !== 'notes') this.closeAll(); return; }
+        if (target?.closest?.('.VOzbGW_trigger')) { if (!['notes','browser'].includes(this.current()?.surface ?? '')) this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
         if (this.current()?.surface !== 'notes' && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))

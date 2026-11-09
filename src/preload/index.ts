@@ -1,3 +1,4 @@
+import {BrowserAppView} from './browser/view'
 import {createComponentDataBridge} from './component-data-bridge'
 import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
@@ -239,6 +240,13 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  const browserApp=new BrowserAppView(document,{
+    request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),
+    subscribe:listener=>{const handle=(_event:unknown,value:import('../shared/browser-app').BrowserSnapshot)=>listener(value);ipcRenderer.on('browser-app:state',handle);return()=>ipcRenderer.removeListener('browser-app:state',handle)},
+    source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
+  },workspaceSurfaceHost)
+  ipcRenderer.on('browser-app:shortcut',(_event,value)=>window.dispatchEvent(new CustomEvent('sherlock:browser-shortcut',{detail:value})))
+  window.addEventListener('unload',()=>browserApp.dispose(),{once:true})
   const noteOwners = new Map<string, string>()
   let noteIdentityEpoch=0
   const noteHistory=createNoteHistoryLoader({currentEpoch:()=>noteIdentityEpoch,load:sessionId=>ipcRenderer.invoke('notes:request','conversation-load',{sessionId}),accept:(sessionId,value)=>{noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))},onError:error=>console.warn('[notes-history]',noteUiError(error instanceof Error?error.message:String(error)))})
@@ -337,6 +345,9 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    browserApp: Object.freeze({
+      openSource: (value:{sessionId:string;url:string})=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-request-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve(d):reject(Error(d.message||'浏览器未能打开。'))};const timer=setTimeout(()=>{cleanup();reject(Error('浏览器入口尚未就绪。'))},8000);window.addEventListener('sherlock:browser-request-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-request',{detail:{...value,requestId}}))})
+    }),
     conversationBrowser: Object.freeze({
       openSource: (value: unknown) => ipcRenderer.invoke('conversation:browser:open-source',value),
       activity: (value: unknown) => ipcRenderer.invoke('conversation:browser:activity',value),
