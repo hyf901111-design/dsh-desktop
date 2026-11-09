@@ -9,7 +9,7 @@ it('uses the same original Figma tab-folder assets for both board groups in thei
  const page=await browser.newPage();
  await page.route('http://fixture.test/**',route=>route.fulfill({body:read('build/brand/'+new URL(route.request().url()).pathname.slice(1)),contentType:'image/svg+xml'}));
  const group=name=>`<div data-srb-board-group="${name}"><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_folder"><svg width="18" height="18"><path/></svg></span></div></div>`;
- await page.setContent(`<base href="http://fixture.test/"><style>${read('src/preload/figma-b-icons.css')}</style><aside data-dsh-sidebar-root>${group('private')}${group('shared')}<div data-srb-workspaces><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_folder"><svg width="18" height="18"><path/></svg></span></div></div></aside>`);
+ await page.setContent(`<base href="http://fixture.test/"><style>${read('src/preload/figma-b-icons.css')}</style><aside data-dsh-sidebar-root data-dsh-sidebar-wide="true">${group('private')}${group('shared')}<div data-srb-workspaces><div class="YDXeBa_projectRow" aria-expanded="false"><span class="YDXeBa_folder"><svg width="18" height="18"><path/></svg></span></div></div></aside>`);
  for(const state of [false,true]){
   await page.locator('[data-srb-board-group]>.YDXeBa_projectRow').evaluateAll((rows,state)=>rows.forEach(row=>row.setAttribute('aria-expanded',String(state))),state);
   const masks=await page.locator('[data-srb-board-group] svg').evaluateAll(els=>els.map(el=>({mask:getComputedStyle(el).maskImage,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})));
