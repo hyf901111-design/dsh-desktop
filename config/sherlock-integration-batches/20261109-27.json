@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-27",
+  "branch": "codex/integration/20261109-27",
+  "baseMainCommit": "eb20ebcf8fcf82f038594aa6b2669cb968aae214",
+  "expectedMainCommit": "eb20ebcf8fcf82f038594aa6b2669cb968aae214",
+  "createdAt": "2026-11-09T03:08:46.927Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件工具栏居中与生成阻断恢复",
+        "branch": "codex/feat/component-delivery-recovery-20261109",
+        "baseCommit": "eb20ebcf8fcf82f038594aa6b2669cb968aae214",
+        "tipCommit": "69c205975de2306cd3cf24e58b5b5d708f967438",
+        "commits": [
+          {
+            "commit": "69c205975de2306cd3cf24e58b5b5d708f967438",
+            "parents": [
+              "eb20ebcf8fcf82f038594aa6b2669cb968aae214"
+            ],
+            "subject": "修复组件工具栏居中并优化取数阶段交接与原生交付校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-discovery-progress.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/note-toolbar-style.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workbench-progress.css"
+          },
+          {
+            "status": "A",
+            "path": "test/component-discovery-progress.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/host-template-delivery.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/note-toolbar-geometry-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback-browser.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "浏览器验证4模式×2宽度全部11个图标同心，中心偏移0；失败与运行进度背景一致。真实新包将在集成后核验。"
+        },
+        "acceptanceCriteria": [
+          "原生模板重复进入交付路径不被误判为自定义HTML",
+          "重复空目录停止同源发现并保留替代来源路径",
+          "取数预算在安全步骤结束后明确转入有界交付",
+          "工具栏图标与背景居中，进度卡各状态中性色一致"
+        ],
+        "risks": [
+          "真实模型生成仍受来源覆盖、权限与数据完整性影响；不把缺失说明计为完整业务交付"
+        ],
+        "generatedAt": "2026-11-09T03:00:54.073934+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/host-template-delivery.test.js",
+        "test/component-discovery-progress.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-source-intent.test.js",
+        "test/component-surface-style.test.js",
+        "test/cartesian-chart-template.test.js",
+        "test/markdown-note.test.js",
+        "test/research-workbench-feedback.test.js",
+        "test/note-toolbar-geometry-browser.test.js",
+        "test/research-workbench-feedback-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "hands a typed component|hands verified native-template|makes the component synthesis-only",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
