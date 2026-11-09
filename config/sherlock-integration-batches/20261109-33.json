@@ -117,6 +117,85 @@
           "已有的4个来源类型合同测试及1个侧栏排序预期与当前main不一致，不修改已有行为来迁就旧断言。"
         ],
         "generatedAt": "2026-11-09T05:15:26.156020+00:00"
+      },
+      "merged": {
+        "mergeCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+        "verificationCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-b-icons-browser.test.js",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "compact 44px|仅在等待加入"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-b-icons-browser.test.js test/research-board-sidebar-overflow.test.ts -t compact 44px|仅在等待加入",
+            "verifiedCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+            "completedAt": "2026-11-09T05:15:30.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-source-capability.test.js",
+              "-t",
+              "negotiates unsupported"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-source-capability.test.js -t negotiates unsupported",
+            "verifiedCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+            "completedAt": "2026-11-09T05:15:30.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-link.test.js",
+              "-t",
+              "备用行情在选择器|Shift|底部节点连接后|未连接的行情左侧",
+              "--testTimeout",
+              "30000",
+              "--maxWorkers",
+              "1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/financial-widget-client.test.js test/financial-widget-link.test.js -t 备用行情在选择器|Shift|底部节点连接后|未连接的行情左侧 --testTimeout 30000 --maxWorkers 1",
+            "verifiedCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+            "completedAt": "2026-11-09T05:15:30.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+            "completedAt": "2026-11-09T05:15:30.332Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "bec9c518c8e4cec108031bee6d83dcedc2349746",
+            "completedAt": "2026-11-09T05:15:30.332Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T05:15:30.332Z"
       }
     }
   ],
