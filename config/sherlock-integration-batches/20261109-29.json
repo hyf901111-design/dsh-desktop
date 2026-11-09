@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-29",
+  "branch": "codex/integration/20261109-29",
+  "baseMainCommit": "4cfb277b5fcd9f1c3adca359ed3b3961b6e0f5cb",
+  "expectedMainCommit": "4cfb277b5fcd9f1c3adca359ed3b3961b6e0f5cb",
+  "createdAt": "2026-11-09T03:38:00.624Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复固收实测暴露的原生来源误拦截和首次业务读取截断",
+        "branch": "codex/feat/component-delivery-recovery-20261109",
+        "baseCommit": "4cfb277b5fcd9f1c3adca359ed3b3961b6e0f5cb",
+        "tipCommit": "5a774999cd3b66ee265528473ad11c7c94868195",
+        "commits": [
+          {
+            "commit": "5a774999cd3b66ee265528473ad11c7c94868195",
+            "parents": [
+              "4cfb277b5fcd9f1c3adca359ed3b3961b6e0f5cb"
+            ],
+            "subject": "修复原生组件来源误拦截并保留精确接口取数机会"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-discovery-progress.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "test/component-discovery-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/host-template-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已在真实客户端复现并核验原轮2/7交付、7分17秒，不算验收通过；本补丁的同源原数据重放、精确目录与限时边界聚焦回归通过，新包实际模型结果待复测。"
+        },
+        "acceptanceCriteria": [
+          "原生渲染模型在来源门禁前恢复且保留全部数值和来源",
+          "空关键词搜索不封死未尝试过的精确接口定义",
+          "有效定义后的首次业务读取在135秒与原调用次数上限内进行，实际响应后立即合成"
+        ],
+        "risks": [
+          "数据源缺失和搜索覆盖不能以假数据或空图标记完整交付",
+          "真实模型成功率仍须打包后复测"
+        ],
+        "generatedAt": "2026-11-09T03:37:53.455522+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/host-template-delivery.test.js",
+        "test/component-discovery-progress.test.js",
+        "test/component-data-submission.test.js",
+        "test/component-source-binding.test.js"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-task-runtime.test.js",
+        "-t",
+        "bounded first business read|native-template data to synthesis|respects .* evidence or output|bounded separate allowance|late business records"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
