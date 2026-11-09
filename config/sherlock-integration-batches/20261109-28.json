@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-28",
+  "branch": "codex/integration/20261109-28",
+  "baseMainCommit": "806450e593b08bbf2b97d30634c105c18186205c",
+  "expectedMainCommit": "806450e593b08bbf2b97d30634c105c18186205c",
+  "createdAt": "2026-11-09T03:18:51.783Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复图标工具栏常量注入与客户端启动",
+        "branch": "codex/feat/component-delivery-recovery-20261109",
+        "baseCommit": "806450e593b08bbf2b97d30634c105c18186205c",
+        "tipCommit": "4e1286969e118f3727f2c3c69d4cc7df1ed288ee",
+        "commits": [
+          {
+            "commit": "4e1286969e118f3727f2c3c69d4cc7df1ed288ee",
+            "parents": [
+              "806450e593b08bbf2b97d30634c105c18186205c"
+            ],
+            "subject": "修复工具栏样式常量未进入客户端注入代码导致启动失败"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/note-toolbar-client-bootstrap.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "客户端实际序列化主题初始化和二次补丁回归通过，四种主题工具栏浏览器回归通过；新包继续核验。"
+        },
+        "acceptanceCriteria": [
+          "序列化主题代码初始化不缺少导入常量",
+          "重复postinstall后定义唯一且可初始化"
+        ],
+        "risks": [
+          "真实模型生成仍受来源覆盖、权限与数据完整性影响；不把缺失说明计为完整业务交付"
+        ],
+        "generatedAt": "2026-11-09T03:18:50.169777+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/note-toolbar-client-bootstrap.test.js",
+        "test/note-toolbar-geometry-browser.test.js",
+        "--maxWorkers",
+        "2"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
