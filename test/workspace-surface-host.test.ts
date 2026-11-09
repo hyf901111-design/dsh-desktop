@@ -5,6 +5,14 @@ import { IntegrationView } from '../src/preload/integrations/view';
 import type { IntegrationReply } from '../src/preload/integrations/bridge';
 const windows: Window[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.happyDOM.abort()); });
+it('keeps the browser resident when opening settings and selecting its current session', async () => {
+    const w=new Window();windows.push(w);const doc=w.document as unknown as Document;
+    doc.body.innerHTML='<main class="pI_x6G_centerCol"></main><button class="VOzbGW_trigger">设置</button><aside data-dsh-sidebar-root><button role="row">当前会话</button></aside>';
+    const host=new WorkspaceSurfaceHost(doc),browser=doc.createElement('section');browser.innerHTML='<input value="尚未提交的网址">';host.register('browser',browser);host.open('browser');
+    doc.querySelector<HTMLButtonElement>('.VOzbGW_trigger')!.click();expect(host.current()?.surface).toBe('browser');
+    const overlay=doc.createElement('div');overlay.className='VOzbGW_overlay';doc.body.append(overlay);await new Promise(resolve=>setTimeout(resolve,20));expect(host.current()?.surface).toBe('browser');
+    overlay.remove();doc.querySelector<HTMLButtonElement>('[role=row]')!.click();expect(browser.hidden).toBe(false);expect(browser.querySelector('input')!.value).toBe('尚未提交的网址');host.dispose();
+});
 it('returns to the previous surface without replacing its draft DOM', () => {
     const w = new Window();
     windows.push(w);

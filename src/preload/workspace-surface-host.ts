@@ -41,7 +41,7 @@ export class WorkspaceSurfaceHost {
         if (this.current()?.surface === surface) this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
-        if (this.settingsOpen() && surface !== 'notes') { this.closeAll(); return; }
+        if (this.settingsOpen() && !['notes','browser'].includes(surface)) { this.closeAll(); return; }
         const current = this.history.at(-1);
         if (current?.surface !== surface || current.route !== route)
             this.history.push({ surface, route });
@@ -97,7 +97,7 @@ export class WorkspaceSurfaceHost {
         if (!this.current()) return;
         // Native settings can also mount through keyboard or programmatic navigation.
         // End the surface session instead of concealing it behind another layer.
-        if (this.current() && this.current()?.surface !== 'notes' && this.settingsOpen()) { this.closeAll(); return; }
+        if (this.current() && !['notes','browser'].includes(this.current()?.surface ?? '') && this.settingsOpen()) { this.closeAll(); return; }
         this.schedulePosition();
     };
     private schedulePosition = () => {
@@ -167,7 +167,7 @@ export class WorkspaceSurfaceHost {
         if (target?.closest?.('.VOzbGW_trigger')) { if (!['notes','browser'].includes(this.current()?.surface ?? '')) this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
-        if (this.current()?.surface !== 'notes' && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
+        if (!['notes','browser'].includes(this.current()?.surface ?? '') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
             this.closeAll();
     };
     dispose() {
