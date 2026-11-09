@@ -243,3 +243,23 @@ it('retains the C1 color fallback gate while its documented text and primary rol
  expect(designPolicyIssue('<style>.cw-num{color:var(--sherlock-accent,#3562e3)}</style><div class="cw-num">0</div>')).toContain('不能硬编码界面颜色')
  expect(designPolicyIssue('<style>.cw-num{color:var(--sherlock-text)}.cw-primary{color:var(--sherlock-control-on-primary)}</style><div class="cw-num">0</div><button class="cw-primary">+1</button>')).toBeNull()
 })
+
+it('recognizes domain prototype pages without forcing a component type or editing a source file',()=>{
+ const s=session('📎 文件：`/fixture/prototype.html` 这是数据治理系统的原型，请把我的待办和治理统计两个页签页面实现出来。')
+ expect(policy.componentCreationRequest(s)?.target).toBe('component')
+ expect(workbenchCreationRequest(s)).toBeNull();catalog(s,'research');expect(workbenchCreationRequest(s)?.target).toBe('component')
+ for(const text of ['请修改文件源码，把原型里的我的待办页面实现出来。','原型里有两个页面。','如何把原型里的页面实现出来？','不要把原型里的页面实现出来。','资料说明：“把原型里的页面实现出来”。'])expect(policy.componentCreationRequest(session(text))).toBeNull()
+})
+
+it('retains an active creation goal across reference steering without reviving completed or cancelled work',()=>{
+ const original=session('📎 文件：`/fixture/first.html` 这是系统原型，请把待办和统计两个页面实现出来。')
+ original.events.unshift({type:'turn/start',data:{turn:1}})
+ original.events.push({type:'user/message',data:{id:'steer-2',source:{kind:'user'},content:[{type:'text',text:'📎 文件：`/fixture/new.html` 以这个为准吧'}]}})
+ expect(policy.componentCreationRequest(original)).toMatchObject({messageId:'steer-2',target:'component'})
+ expect(policy.componentCreationRequest(original).text).toContain('/fixture/new.html')
+ expect(workbenchCreationRequest(original)).toBeNull();catalog(original,'research');expect(workbenchCreationRequest(original)).not.toBeNull()
+ for(const text of ['停止，换个任务，以这个为准。','请修改文件源码，以这个为准。','不用生成看板，以这个为准。']){
+  const copy=structuredClone(original);copy.events.push({type:'user/message',data:{id:'stop',source:{kind:'user'},content:[{type:'text',text}]}});expect(policy.componentCreationRequest(copy)).toBeNull()
+ }
+ original.events.push({type:'turn/end',data:{turn:1}});expect(policy.componentCreationRequest(original)).toBeNull()
+})
