@@ -21,14 +21,14 @@ body [data-dsh-sidebar-root] .srb-row-status .srb-people-icon{width:18px!importa
 .st-menu[data-sidebar-more] [data-odyssey-icon="clock"]{mask-image:url(/odyssey-b-scheduled-18.svg)!important}
 .st-menu[data-sidebar-more] :is([data-odyssey-icon="note"],[data-odyssey-icon="noteDark"]){mask-image:url(/odyssey-b-note-add-18.svg)!important}
 /* Keep the existing 80px layout reservation. The 36px hit areas sit on one
-   center line, with the design's 20px clear gap / 56px center step. */
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false]{align-items:center!important;gap:20px!important;padding-inline:12px!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_logoRow{display:flex!important;flex-direction:column-reverse!important;align-items:center!important;gap:20px!important;padding:0!important;margin:0!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is(.hHd-Xa_newSessionGroup,.qDHVXG_rail){display:flex!important;flex-direction:column!important;align-items:center!important;gap:20px!important;padding:0!important;margin:0!important}
+   center line. The requested compact rail uses an 8px gap / 44px center step. */
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false]{align-items:center!important;gap:8px!important;padding-inline:12px!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_logoRow{display:flex!important;flex-direction:column-reverse!important;align-items:center!important;gap:8px!important;padding:0!important;margin:0!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is(.hHd-Xa_newSessionGroup,.qDHVXG_rail){display:flex!important;flex-direction:column!important;align-items:center!important;gap:8px!important;padding:0!important;margin:0!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is([data-srb-navigation-scroll],.hHd-Xa_regionArea){padding:0!important;margin:0!important;flex:none!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] button:not([role=menuitem]):not(:where(.VOzbGW_overlay *)){width:36px!important;height:36px!important;min-height:36px!important;padding:8px!important;display:flex;align-items:center;justify-content:center;border-radius:8px!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .st-more-zone{margin:0!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto!important;gap:20px!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto!important;gap:8px!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_toggle>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-sidebar-20.svg)!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_logoRow .hHd-Xa_iconButton:not(.hHd-Xa_toggle)>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-search-20.svg)!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] [aria-label="添加工作区"]>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-workspace-add-20.svg)!important}
@@ -48,3 +48,12 @@ body .t8lSSG_panel :is(.t8lSSG_tabBarPlus,.t8lSSG_toggleButton){box-sizing:borde
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] [data-srb-workspace-list]{display:none!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .qDHVXG_sectionHeader{height:36px!important;min-height:36px!important;margin:0!important;padding:0!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-workspaces] .YDXeBa_projectRow[aria-expanded=false] .YDXeBa_folder>svg{mask-image:url(/odyssey-b-folder-closed-18.svg)}
+
+/* Figma B uses #AAA at rest in dark mode. Preserve light-mode contrast. */
+body[data-ds-dark-theme] [data-dsh-sidebar-root]{--odyssey-sidebar-glyph:#aaa;--odyssey-sidebar-action-glyph:#aaa}
+body[data-ds-dark-theme] .t8lSSG_panel :is(.t8lSSG_tabBarPlus,.t8lSSG_toggleButton){color:#aaa}
+/* All sidebar action hit areas use the same rounded rectangle as panel actions. */
+body [data-dsh-sidebar-root] :is(.hHd-Xa_iconButton,.qDHVXG_iconButton,.st-more,[aria-label="新建研究看板"]){box-sizing:border-box;width:32px!important;height:32px!important;min-height:32px!important;padding:7px!important;border-radius:8px!important;display:flex;align-items:center;justify-content:center}
+body [data-dsh-sidebar-root] :is(.hHd-Xa_iconButton,.qDHVXG_iconButton,.st-more,[aria-label="新建研究看板"]):is(:hover,:focus-visible,[aria-expanded=true]){border-radius:8px!important;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12))!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide] :is([aria-label="添加工作区"],[aria-label="新建研究看板"])>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-new-tab-18.svg) center/contain no-repeat!important}
+body [data-dsh-sidebar-root] [aria-label="新建研究看板"]>svg>*{visibility:hidden}

@@ -24,7 +24,7 @@ import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js
 import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
 import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataNewsTaskType, publicDataHistoryTaskRequirement, publicDataQuoteTaskRequirement, publicDataPanelVariant, publicDataQuoteSpec, publicDataNativeAlternative } from './workbench-public-data.js';
-import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
+import {financialWidgetSpec,financialWidgetPlanSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 import {validateWorkbenchDatasets,simulatedDatasetMetadata,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import {generalNewsScope,newsScopeInstruction,NEWS_CAPACITY_MARKER} from './news-source-scope.js';
 import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
@@ -527,7 +527,7 @@ export function validateWorkbench(value) {
                 p={...p,type:'table',prompt};
             }else{
                 if(!p.artifact||p.artifact.type!=='financial-widget')throw Error('内置金融组件必须同时提供artifact标的配置。'+FINANCIAL_WIDGET_GUIDANCE);
-                const spec=financialWidgetSpec({...financialWidgetDefaults(p.artifact.widget),...p.artifact});
+                const spec=financialWidgetPlanSpec(p.artifact,value.originalRequest??'');
                 if(!spec)throw Error('内置金融组件的标的配置无效。'+FINANCIAL_WIDGET_GUIDANCE);
                 p={...p,artifact:spec};
             }

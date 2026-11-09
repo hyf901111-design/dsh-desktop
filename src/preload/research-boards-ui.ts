@@ -2328,9 +2328,8 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
       else await page.openPersonal(entry.sessionId)
       selectBoardSession(page.current() ?? '')
     }) },
-      collaboration && ((entry.memberCount ?? page.getView(sessionId)?.members.length ?? 1) > 1
-        ? h('span', { className: 'srb-row-status', title: '多人协作', 'aria-label': '多人协作' }, boardIcon('people'))
-        : h('span', { className: 'srb-pending-ring', title: '等待成员接受邀请', 'aria-label': '等待接受邀请' })),
+      collaboration && (entry.memberCount ?? page.getView(sessionId)?.members.length ?? 1) <= 1 &&
+        h('span', { className: 'srb-pending-ring', title: '等待成员接受邀请', 'aria-label': '等待接受邀请' }),
       h('span', { className: 'odyssey-nav-title' }, h('span', { className: 'odyssey-nav-title-text' }, entry.title))),
     h('span', { className: R.time + ' srb-row-time' }, h(BoardEditTime, { value: time || undefined, editor: shared ? entry.updatedBy?.username : undefined })),
     h('span', { className: R.rowActions + ' srb-row-actions' }, h(Menu, { className: 'srb-navigation-menu', open, onClose: () => setOpen(false), items, portal: true, closeOnPointerLeave: true,
