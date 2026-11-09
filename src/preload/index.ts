@@ -349,6 +349,8 @@ contextBridge.exposeInMainWorld(
     }),
     researchBoards: createResearchBoardsBridge(ipcRenderer),
     homeGuideAssets: Object.freeze({ request: (input: unknown) => ipcRenderer.invoke('home-guide:assets', input) }),
+    showComponentContextMenu: (input: unknown): Promise<string | null> => ipcRenderer.invoke('ui:component-context-menu',input),
+    closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
     imageAction: (input: unknown) => ipcRenderer.invoke('conversation:image-action', input),

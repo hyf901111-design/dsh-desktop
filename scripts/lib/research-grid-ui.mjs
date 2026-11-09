@@ -227,6 +227,44 @@ export async function exportWorkbenchContent(card,node,format,adapters={}) {
   const result=await save(request);if(result?.status==='error')throw Error(result.message||'保存失败，请重试')
   return result
 }
+export async function workbenchNativeMenuIcon(button){
+  const glyph=button?.querySelector('[data-workbench-icon]');if(!glyph)return
+  const view=button.ownerDocument.defaultView,mask=view.getComputedStyle(glyph).maskImage,source=mask?.match(/^url\(["']?(data:image\/svg\+xml[^"']+)["']?\)$/u)?.[1]
+  if(!source)return
+  return new Promise(resolve=>{
+    const image=new view.Image(),timer=view.setTimeout(()=>resolve(undefined),350)
+    image.onload=()=>{view.clearTimeout(timer);try{const canvas=button.ownerDocument.createElement('canvas');canvas.width=32;canvas.height=32;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,32,32);ctx.globalCompositeOperation='source-in';ctx.fillStyle='#000';ctx.fillRect(0,0,32,32);resolve(canvas.toDataURL('image/png'))}catch{resolve(undefined)}}
+    image.onerror=()=>{view.clearTimeout(timer);resolve(undefined)};image.src=source
+  })
+}
+export function mountWorkbenchNativeMenu(root,submenus,onClose){
+  const bridge=window.dshDesktop?.showComponentContextMenu;if(typeof bridge!=='function'||!root)return()=>{}
+  let active=true,pending=false;const menuId=window.crypto.randomUUID(),handlers=new Map(),previous=root.style.visibility
+  root.style.visibility='hidden';root.setAttribute('aria-hidden','true')
+  const run=async()=>{
+    const items=await Promise.all([...root.children].flatMap((row,index)=>{
+      if(row.getAttribute('role')==='separator')return[{separator:true}]
+      if(row.tagName!=='BUTTON')return[]
+      const id='row-'+index,label=row.querySelector('span:nth-child(2)')?.textContent?.trim()||row.textContent.trim(),children=submenus[row.dataset.workbenchNativeFlyout]
+      if(!label)return[]
+      if(!children)handlers.set(id,()=>{if(row.isConnected&&!row.disabled)row.click()})
+      return[(async()=>({id,label,disabled:row.disabled,icon:await workbenchNativeMenuIcon(row),...(children?{children:children.map((child,i)=>{
+        const childId=id+'-'+i;if(!child.disabled)handlers.set(childId,child.run)
+        return{id:childId,label:child.label,disabled:!!child.disabled,...(typeof child.checked==='boolean'?{checked:child.checked}:{})}
+      })}:{})}))()]
+    }))
+    if(!active||!root.isConnected)return
+    pending=true
+    try{
+      const id=await bridge({menuId,items});pending=false
+      if(!active||!root.isConnected)return
+      root.style.visibility=previous;root.removeAttribute('aria-hidden')
+      const action=handlers.get(id);if(action)await action();else onClose()
+    }catch{if(active&&root.isConnected){root.style.visibility=previous;root.removeAttribute('aria-hidden')}}
+  }
+  void run()
+  return()=>{active=false;if(pending)void window.dshDesktop?.closeComponentContextMenu?.(menuId);root.style.visibility=previous;root.removeAttribute('aria-hidden')}
+}
 export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy,onEditSelected,onConfigureIndices}) {
   const [detail,setDetail]=react.useState(null),[exporting,setExporting]=react.useState(false),[exportError,setExportError]=react.useState(''),[saving,setSaving]=react.useState(false),[saveError,setSaveError]=react.useState(''),ref=react.useRef(null),subRef=react.useRef(null),mindRef=react.useRef(null),settingsRef=react.useRef(null),exportRef=react.useRef(null),leaveTimer=react.useRef(null)
   const trigger=kind=>kind==='mind'?mindRef:kind==='export'?exportRef:settingsRef
@@ -251,8 +289,23 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
   const row=(icon,label,action,disabled=readOnly,attributes={})=>previewMode&&!['expand','duplicate','data'].includes(icon)&&label!=='刷新行情与资讯'?null:jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
   const separator=key=>previewMode?null:jsx('div',{className:'ew-grid-divider',role:'separator'},key)
-  const flyout=(kind,icon,label,trigger,disabled=false)=>previewMode&&kind!=='export'?null:jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
-  const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(webLink?560:target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
+  const flyout=(kind,icon,label,trigger,disabled=false)=>previewMode&&kind!=='export'?null:jsxs('button',{ref:trigger,'data-workbench-native-flyout':kind,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
+  react.useEffect(()=>mountWorkbenchNativeMenu(ref.current,{
+    export:['svg','png','jpg'].map(format=>({label:format.toUpperCase(),run:()=>exportAs(format)})),
+    mind:RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>({label:option.label,disabled:readOnly,run:()=>choose(()=>onDerived('mind-map',option.value))})),
+    settings:(settings||[]).map(action=>({label:action.label,disabled:readOnly&&action.writes||action.disabled,run:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()})}))
+  },onClose),[target.node.id,target.sessionId,readOnly,previewMode])
+  const [menuPlacement,setMenuPlacement]=react.useState(null)
+  react.useLayoutEffect(()=>{
+    const menu=ref.current;if(!menu)return
+    const measure=()=>{
+      const height=Math.min(menu.scrollHeight,window.innerHeight-16),width=menu.offsetWidth
+      const next={left:Math.max(8,Math.min(window.innerWidth-width-8,target.left)),top:Math.max(8,Math.min(window.innerHeight-height-8,target.top))}
+      setMenuPlacement(old=>old?.left===next.left&&old?.top===next.top?old:next)
+    }
+    measure();const observer=window.ResizeObserver?new window.ResizeObserver(measure):null;observer?.observe(menu);return()=>observer?.disconnect()
+  },[target.left,target.top])
+  const style={...(menuPlacement||{left:8,top:8}),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
   return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
     card()?.querySelector('[data-research-container-expand]')&&row('expand',card()?.open?'关闭放大阅读':'放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
     webLink&&row('zoom-out','缩小10%',()=>controlWorkbenchWebZoom(card(),-.1),false,{'data-workbench-web-zoom':'out'}),
