@@ -17,10 +17,11 @@ function cell(value){
  if(typeof value==='string')return text(value,DATASET_VIEW_LIMITS.cellCharacters,true)
  return Array.isArray(value)&&value.length<=50&&value.every(v=>text(v,DATASET_VIEW_LIMITS.cellCharacters,true))
 }
-// Only the simulated planning entry point may fill absent descriptive metadata.
-// Never infer a date, change business records, or relax saved/source artifacts.
+// Only the simulated planning entry point may fill absent metadata and mark
+// omitted declared cells unknown. Never infer values, IDs or dates, remove extra
+// fields, or relax saved/source artifacts.
 export function simulatedDatasetMetadata(value){
- return Array.isArray(value)?value.map(d=>object(d)?{...d,...(!Object.hasOwn(d,'note')?{note:'用户请求的模拟数据'}:{}),...(d.aggregate===undefined&&!Object.hasOwn(d,'asOf')?{asOf:'模拟数据，时点未指定'}:{})}:d):value
+ return Array.isArray(value)?value.map(d=>object(d)?{...d,...(!Object.hasOwn(d,'note')?{note:'用户请求的模拟数据'}:{}),...(d.aggregate===undefined&&!Object.hasOwn(d,'asOf')?{asOf:'模拟数据，时点未指定'}:{}),...(d.aggregate===undefined&&Array.isArray(d.fields)&&Array.isArray(d.records)?{records:d.records.map(r=>object(r)?{...Object.fromEntries(d.fields.filter(f=>object(f)&&fieldKey(f.key)&&f.key!=='id').map(f=>[f.key,null])),...r}:r)}:{})}:d):value
 }
 export function validateWorkbenchDatasets(value){
  check(Array.isArray(value)&&value.length>=1&&value.length<=DATASET_VIEW_LIMITS.datasets,'共同数据需要1–5份完整记录集。')
@@ -62,7 +63,7 @@ export function validateWorkbenchDatasets(value){
   }
   check(Array.isArray(d.records)&&d.records.length>=1&&d.records.length<=DATASET_VIEW_LIMITS.records,'共同数据需要1–200条完整记录；不能截取用户范围。')
   const recordIds=new Set(),records=d.records.map(r=>{
-   check(exact(r,[...keys]),'共同记录必须保留所有声明字段；缺失值显式填写null，不得新增未声明字段。')
+   check(exact(r,[...keys]),`共同数据集 ${d.id} 记录 ${r?.id??'未编号'} 字段不匹配；缺少：${[...keys].filter(k=>!Object.hasOwn(r??{},k)).join('、')||'无'}；未声明：${Object.keys(r??{}).filter(k=>!keys.has(k)).join('、')||'无'}。保留原记录，缺失值填写null，不得删除业务字段。`)
    check(id(r.id)&&!recordIds.has(r.id),'共同记录编号无效或重复。');recordIds.add(r.id)
    const entry={};for(const {key} of fields){check(cell(r[key]),'共同记录只支持有限数值、布尔、null、文本和文本数组。');entry[key]=Array.isArray(r[key])?[...r[key]]:r[key]}
    return entry
@@ -134,8 +135,8 @@ export function validateDatasetView(config,datasets){
   check(exact(s,['kind','label','start','end'],['title','owner','resource'])&&[s.label,s.start,s.end].every(ref)&&(s.owner===undefined||ref(s.owner))&&(s.resource===undefined||ref(s.resource)),'排程字段引用无效。')
   for(const r of dataset.records){
    const a=r[s.start],b=r[s.end],at=datasetScheduleTime(a),bt=datasetScheduleTime(b)
-   check((a===null||at!==null)&&(b===null||bt!==null),'排程日期无效；日内时间必须包含明确时区，缺失填null。')
-   check(at===null||bt===null||bt>=at,'排程结束时间早于开始时间。')
+   check((a===null||at!==null)&&(b===null||bt!==null),`数据集 ${dataset.id} 记录 ${r.id} 排程日期无效：${s.start}=${a}、${s.end}=${b}；日内时间必须包含明确时区，缺失填null。`)
+   check(at===null||bt===null||bt>=at,`数据集 ${dataset.id} 记录 ${r.id} 排程结束时间早于开始时间：${s.start}=${a}、${s.end}=${b}。仅修正该记录日期，保留其他记录。`)
   }
   return {...s}
  })

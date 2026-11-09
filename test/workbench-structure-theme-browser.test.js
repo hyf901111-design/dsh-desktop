@@ -22,6 +22,7 @@ const html = `<style>
 .chart .node { background:var(--sherlock-surface-raised);border:1px solid var(--sherlock-border);border-radius:8px;box-shadow:inset 0 0 0 1px blue }
 .chart .role { color:var(--sherlock-text-muted) }
 .custom-label { color:var(--sherlock-muted) }
+.chip {background:var(--sherlock-surface);color:var(--sherlock-text);border-radius:4px}
 .chart .vline { background:var(--sherlock-border);width:1px;height:20px }
 </style><main>
 <div class="chart">
@@ -41,6 +42,11 @@ const html = `<style>
 </div>
 <section data-sherlock-structure="primary" id="custom-primary"><div class="custom-label">职位与出处</div></section>
 <section data-sherlock-structure="node" data-sherlock-structure-depth="2" id="custom-third"><span>三级部门</span></section>
+<section data-sherlock-structure="node" data-sherlock-structure-depth="2" id="nested-node">
+ <div><span class="chip" id="node-chip">原有负责人</span></div>
+ <div data-sherlock-structure="info" id="nested-info"><span class="chip" id="info-chip">原有部门</span><strong>待核</strong></div>
+ <button class="chip" id="interactive-chip">选择人员</button>
+</section>
 <section data-sherlock-structure="node" data-sherlock-structure-depth="3" id="custom-fourth">四级部门</section>
 <div class="tree" data-sherlock-structure>
   <div class="level"><div class="node" data-sherlock-structure="primary">会员大会</div></div>
@@ -87,6 +93,13 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#tree-card', 'backgroundColor')).toBe('rgb(30, 185, 225)')
     expect(await read('#custom-third', 'backgroundColor')).toBe('rgb(30, 185, 225)')
     expect(await read('#custom-third span', 'color')).toBe('rgb(255, 255, 255)')
+    expect(await read('#node-chip', 'color')).toBe('rgb(255, 255, 255)')
+    expect(await read('#node-chip', 'backgroundColor')).toBe('rgba(0, 0, 0, 0)')
+    expect(await read('#info-chip', 'color')).toBe('rgb(37, 37, 43)')
+    expect(await read('#nested-info strong', 'color')).toBe('rgb(37, 37, 43)')
+    expect(await read('#info-chip', 'backgroundColor')).toBe('rgba(0, 0, 0, 0)')
+    expect(await read('#node-chip', 'borderRadius')).toBe('0px')
+    expect(await read('#interactive-chip', 'backgroundColor')).not.toBe('rgba(0, 0, 0, 0)')
     expect(await read('#custom-fourth', 'backgroundColor')).toBe('rgb(179, 235, 255)')
     expect(await read('#tree-rail', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
     expect(await read('#tree-drop', 'backgroundColor')).toBe(await read('#rail', 'backgroundColor'))
@@ -122,6 +135,8 @@ it('已保存的组织图和资料卡与新组件一起响应易方达模式', a
     expect(await read('#svg-node', 'fill')).toBe('rgb(119, 119, 119)')
     expect(await read('#svg-node', 'stroke')).toBe('rgb(119, 119, 119)')
     expect(await read('#svg-node', 'rx')).toBe('6px')
+    expect(await read('#node-chip', 'backgroundColor')).toBe('rgb(255, 255, 255)')
+    expect(await read('#node-chip', 'borderRadius')).toBe('4px')
   } finally {
     await page.close()
   }

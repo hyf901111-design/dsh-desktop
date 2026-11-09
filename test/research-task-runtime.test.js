@@ -576,6 +576,23 @@ describe('Research task contract and prompt', () => {
     } finally { await runtime.dispose() }
   })
 
+  it.each([false,true])('recovers model-added graph scripting while preserving explicit user interaction=%s', async interactive => {
+    const {ResearchTaskRuntime}=await runtimeModule(), calls=[]
+    const graph={version:1,type:'mind-map',title:'机构关系',content:'# 机构\n- 部门\n  - 团队\n    - 岗位\n      - 人员',source:{title:'原始依据',text:'材料 P2'}}
+    const draft={version:1,type:'html',title:'机构关系',html:'<div id="graph">机构→部门→团队→岗位→人员</div><script>document.getElementById("graph").onclick=()=>{document.body.dataset.clicked="true"}</script>'}
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{calls.push(request);return {childSessionId:'graph-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(calls.length===1?draft:graph)}]})}},dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try{
+      await runtime.start({...containerRequest('graph-state'),prompt:'按原始材料生成组织架构图，保留全部关系和出处。'+(interactive?'必须能点击节点编辑。':'')})
+      await eventually(()=>expect(['failed','completed']).toContain(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state))
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'})).toMatchObject({state:interactive?'failed':'completed'})
+      expect(calls).toHaveLength(2)
+      expect(calls[1].prompt).toContain('仅层级树用')
+      expect(calls[1].prompt).toContain('不写复杂应用脚本')
+      expect(calls[1].synthesisOnly).toBe(true)
+      if(!interactive)expect(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput)).toEqual(graph)
+    }finally{await runtime.dispose()}
+  })
+
   it('recovers an unsearched data failure with a tool-enabled attempt in the same task', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const calls = []
