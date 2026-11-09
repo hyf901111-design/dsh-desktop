@@ -96,7 +96,7 @@ it('按用户的发布表需求无损映射完整来源行和长正文，缺行�
  const scope=workbenchReleaseScope(request,'发布记录可搜索总表','table')
  expect(scope).toEqual({repos:['example/vue'],count:4,includeBody:true,presentation:'table'})
  expect(workbenchReleaseScope(request,'包关系图','html')).toBeUndefined()
- expect(workbenchReleaseScope(request+'只要稳定版','发布记录','table')).toBeUndefined()
+ expect(workbenchReleaseScope(request+'只要稳定版','发布记录','table')).toMatchObject({stableOnly:true})
  const records=await readReleaseTimeline(scope,async url=>page(url,rows('vue')))
  const mapped=observedReleaseTimeline(scope,records,'最近发布')
  const snapshot=resolveComponentSnapshot(mapped,records)
@@ -184,4 +184,33 @@ it.each(['rate-limit-json','http-error','transport-error'])('switches %s to the 
  expect(observedReleaseTimeline(scope,broken,'不得静默丢失图片')).toBeUndefined()
  broken[1].response.records[0]=structuredClone(records[0].response.records[0])
  expect(observedReleaseTimeline(scope,broken,'不得重复前页')).toBeUndefined()
+})
+
+it('selects the latest stable release records across pages instead of treating a minor-version boundary as a release',async()=>{
+ const request='给团队看 example/project 最近3个正式版本的日期和完整发布说明。'
+ const selected=workbenchReleaseScope(request,'发布记录与版本日期','timeline')
+ expect(selected).toMatchObject({repos:['example/project'],count:3,stableOnly:true,includeBody:true})
+ const list=[
+  ['v2.4.0-rc.1',true],['v2.3.9',false],['v2.3.8',false],['v2.3.8-beta.1',true],['v2.3.7',false]
+ ].map(([tag_name,prerelease],i)=>({tag_name,prerelease,draft:false,published_at:`2026-11-0${8-i}T10:00:00Z`,html_url:'https://github.com/example/project/releases/tag/'+tag_name,body:'完整原始正文 '+tag_name}))
+ const records=await readReleaseTimeline(selected,async url=>{const u=new URL(url),size=Number(u.searchParams.get('per_page')),pageIndex=Number(u.searchParams.get('page')??1);return page(url,list.slice((pageIndex-1)*size,pageIndex*size))})
+ const snapshot=resolveComponentSnapshot(observedReleaseTimeline(selected,records,'正式版本'),records)
+ expect(snapshot.data.items.map(item=>item.title)).toEqual(['v2.3.9','v2.3.8','v2.3.7'])
+ expect(snapshot.data.items.map(item=>item.summary)).toEqual(['完整原始正文 v2.3.9','完整原始正文 v2.3.8','完整原始正文 v2.3.7'])
+ expect(releaseTimelineComplete(selected,snapshot.data,records)).toBe(true)
+})
+
+it('uses one actually observed official repository without guessing a repository from a product name',async()=>{
+ const {observedWorkbenchReleaseScope,releaseCohortIssue}=await import('../packages/dsh-research-task-runtime/observed-dated-feed.js')
+ const url='https://api.github.com/repos/example/product/releases?per_page=4'
+ const all=rows('product').map((row,i)=>({...row,prerelease:i===0}))
+ const record=hostStructuredWebRecord(page(url,all),url)
+ const original='给同事看 Product 最近3个正式版本的日期与主要变化，以及对应升级注意事项。'
+ expect(observedWorkbenchReleaseScope(original,'版本日期与主要变化','timeline',[record])).toMatchObject({repos:['example/product'],count:3,stableOnly:true})
+ const good={version:1,type:'table',title:'升级注意事项',columns:['版本','注意事项'],rows:[['v3','原注意事项'],['v2','原注意事项'],['v1','原注意事项']]}
+ expect(releaseCohortIssue(good,[record],original,'升级注意事项')).toBeUndefined()
+ expect(releaseCohortIssue({...good,rows:[['v4','预发布'],['v3','原注意事项'],['v2','原注意事项']]},[record],original,'升级注意事项')).toContain('正式发布集合')
+ const another=hostStructuredWebRecord(page('https://api.github.com/repos/other/product/releases?per_page=4',all),'https://api.github.com/repos/other/product/releases?per_page=4')
+ expect(observedWorkbenchReleaseScope(original,'版本日期','timeline',[record,another])).toBeUndefined()
+ expect(releaseCohortIssue(good,[record],'只看旧版v1的迁移办法','升级注意事项')).toBeUndefined()
 })

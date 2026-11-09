@@ -1,4 +1,37 @@
 import {hostStructuredWebRecord} from './component-source-binding.js'
+import {readTemplateModel} from './component-template-registry.js'
+
+// Product names are not repository identifiers. Only an actually observed
+// official collection URL can supply a missing repository, and ambiguity is
+// left to acquisition rather than guessed from a product-name allowlist.
+export function observedWorkbenchReleaseScope(original,panel,format,records=[]){
+ const repos=[...new Set(records.flatMap(record=>{
+  if(record.tool!=='web_fetch')return []
+  try{const url=new URL(record.args?.url),match=url.origin==='https://api.github.com'&&url.pathname.match(/^\/repos\/([\w.-]+\/[\w.-]+)\/releases$/u);return match?[match[1]]:[]}catch{return []}
+ }))]
+ const named=repos.filter(repo=>String(panel).toLowerCase().includes(repo.toLowerCase()))
+ const chosen=named.length===1?named:repos
+ if(chosen.length!==1)return
+ return workbenchReleaseScope(String(original??'')+'\nGitHub '+chosen[0],panel,format)
+}
+
+export function releaseCohortIssue(candidate,records,original,panel){
+ if(!/版本|升级|发布|变更/u.test(panel??''))return
+ const scope=observedWorkbenchReleaseScope(original,'发布记录','table',records)
+ if(!scope?.stableOnly)return
+ const expected=[]
+ for(const repo of scope.repos){const pages=releasePages(records,repo,scope.count,false,true);if(!pages)return;for(const {record,indices} of pages)for(const i of indices)expected.push(record.response.records[i].tag_name)}
+ const data=readTemplateModel(candidate)?.data??candidate
+ let versions
+ if(['table','market'].includes(data?.type)&&Array.isArray(data.rows)){
+  const column=data.columns?.findIndex(column=>/版本|\bversion\b/iu.test(typeof column==='string'?column:column?.label??''))
+  if(column>=0)versions=data.rows.map(row=>String(row[column]).trim())
+ }else if(data?.type==='timeline'&&Array.isArray(data.items))versions=data.items.map(item=>item.title)
+ if(!versions)return
+ const key=value=>value.trim().replace(/^v(?=\d)/u,'')
+ if(new Set(versions.map(key)).size!==expected.length||versions.some(version=>!expected.some(item=>key(item)===key(version))))
+  return '交付版本与本卡已读取的最近正式发布集合不一致。按官方列表顺序排除 prerelease=true，保留最近'+scope.count+'条实际发布：'+expected.join('、')+'。不能替换成最近几个次版本或混入预发布；复用已取得记录，不重新取数。'
+}
 
 // The host can finish a dated collection without a model artifact when the
 // human supplied exact sources and counts, and all source lists are complete.
@@ -19,7 +52,7 @@ export function releaseTimelineScope(request) {
 // board counts apply only when its own content contract asks for that collection.
 function releaseCollectionIntent(panel){
  const clauses=String(panel??'').split(/[。；;\n]/u).filter(clause=>!/^\s*(?:数据来源|来源|参考|依据|sources?\b|data sources?\b)/iu.test(clause))
- return clauses.some(clause=>/发布记录|发布动态|版本记录|(?<![\w/@.-])release(?:s| records| notes| list| history)?(?![\w/.-])/iu.test(clause))
+ return clauses.some(clause=>/发布记录|发布动态|版本记录|版本.{0,12}(?:日期|发布说明|主要变化)|(?<![\w/@.-])release(?:s| records| notes| list| history)?(?![\w/.-])/iu.test(clause))
 }
 
 export function workbenchReleaseScope(original,panel,format){
@@ -30,12 +63,12 @@ export function workbenchReleaseScope(original,panel,format){
  // It does not route graphs/analysis, infer a repo, or ignore requested filters.
  if(!['timeline','html','table'].includes(format)||!releaseCollectionIntent(panel))return
  const text=String(original??'')
- if(!/GitHub/iu.test(text)||/\d{4}-\d{2}-\d{2}|仅(?:保留|显示|看)?(?:稳定版|预发布)|(?:排除|不含|只要|只看|不要).{0,8}(?:稳定版|预发布)/u.test(text))return
- const counts=[...text.matchAll(/(?:最近|最新)\s*(各自?)?\s*(\d{1,3})\s*条/gu)]
+ if(/\d{4}-\d{2}-\d{2}|(?:只要|只看|仅看).{0,8}预发布|(?:排除|不含|不要).{0,8}(?:稳定版|正式版)/u.test(text))return
+ const counts=[...text.matchAll(/(?:最近|最新)\s*(各自?)?\s*(\d{1,3})\s*(?:条|个(?:正式|稳定)?版本)/gu)]
  const repos=[...new Set([...text.matchAll(/(?<![\w./])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?![\w./])/gu)].map(match=>match[1].toLowerCase()))]
  if(counts.length!==1||!repos.length||repos.length>8||repos.length>1&&!counts[0][1])return
  const count=Number(counts[0][2]);if(count<1||count>100)return
- return {repos,count,includeBody:/发布说明|Release Notes|正文|变更|更新要点/iu.test(text+'\n'+String(panel??'')),...(/表格|总表|明细表|可搜索/u.test(panel??'')?{presentation:'table'}:{})}
+ return {repos,count,includeBody:/发布说明|Release Notes|正文|变更|更新要点|主要变化/iu.test(text+'\n'+String(panel??'')),...(/正式|稳定|排除预发布|不含预发布/u.test(text)?{stableOnly:true}:{}),...(/表格|总表|明细表|可搜索/u.test(panel??'')?{presentation:'table'}:{})}
 }
 
 const utcTimestamp=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(value)&&
@@ -62,7 +95,7 @@ function releasePage(record,repo,includeBody) {
  return {size,page,rows,record,web}
 }
 
-function releasePages(records,repo,count,includeBody){
+function releasePages(records,repo,count,includeBody,stableOnly=false){
  const pages=records.map(record=>releasePage(record,repo,includeBody)).filter(Boolean)
  for(const first of pages.filter(page=>page.page===1).reverse()){
   const selected=[],seen=new Set()
@@ -70,9 +103,10 @@ function releasePages(records,repo,count,includeBody){
   for(let index=1;remaining>0;index++){
    const page=index===1?first:pages.findLast(page=>page.size===first.size&&page.web===first.web&&page.page===index)
    if(!page||page.rows.some(row=>seen.has(row.html_url)))break
-   const take=Math.min(remaining,page.rows.length)
-   selected.push({record:page.record,take})
-   remaining-=take
+   if(stableOnly&&page.rows.some(row=>typeof row.prerelease!=='boolean'))break
+   const indices=page.rows.map((row,i)=>!stableOnly||row.prerelease===false?i:-1).filter(i=>i>=0).slice(0,remaining)
+   selected.push({record:page.record,indices})
+   remaining-=indices.length
    for(const row of page.rows)seen.add(row.html_url)
    if(page.rows.length<page.size)break
   }
@@ -83,19 +117,19 @@ function releasePages(records,repo,count,includeBody){
 export function observedReleaseTimeline(scope,records,title) {
  const requests=[],items=[]
  for(const repo of scope.repos){
-  const pages=releasePages(records,repo,scope.count,scope.includeBody)
+  const pages=releasePages(records,repo,scope.count,scope.includeBody,scope.stableOnly)
   if(!pages||requests.length+pages.length>128)return
-  for(const {record,take} of pages){
+  for(const {record,indices} of pages){
    const key='releases'+requests.length
    requests.push({key,tool:record.tool,args:record.args})
    // Each page is a source list, not a table row. Emit row-level selectors so
    // multiple transport pages cannot become nested arrays of table rows.
-   if(scope.presentation==='table')for(let i=0;i<take;i++)items.push(
+   if(scope.presentation==='table')for(const i of indices)items.push(
     ['tag_name','published_at','html_url',...(scope.includeBody?['body']:[])].map(field=>({$from:key,$path:`records.${i}.${field}`})))
-  else items.push({$from:key,$each:'records',$take:take,$map:{
-    id:{$path:'html_url'},title:{$path:'tag_name'},time:{$path:'published_at'},url:{$path:'html_url'},object:repo,
-    ...(scope.includeBody?{summary:{$path:'body'}}:{})
-   }})
+  else for(const i of indices)items.push({
+    id:{$from:key,$path:`records.${i}.html_url`},title:{$from:key,$path:`records.${i}.tag_name`},time:{$from:key,$path:`records.${i}.published_at`},url:{$from:key,$path:`records.${i}.html_url`},object:repo,
+    ...(scope.includeBody?{summary:{$from:key,$path:`records.${i}.body`}}:{})
+   })
   }
  }
  return JSON.stringify({version:1,type:'data-bound',requests,mapping:{
@@ -107,15 +141,15 @@ export function releaseTimelineComplete(scope,data,records){
  if(scope.presentation==='table'){
   if(data?.type!=='table'||!Array.isArray(data.rows)||data.rows.length!==scope.count*scope.repos.length)return false
   const expected=[]
-  for(const repo of scope.repos){const pages=releasePages(records,repo,scope.count,scope.includeBody);if(!pages)return false;for(const {record,take}of pages)for(const row of record.response.records.slice(0,take))expected.push([row.tag_name,row.published_at,row.html_url,...(scope.includeBody?[row.body]:[])])}
+  for(const repo of scope.repos){const pages=releasePages(records,repo,scope.count,scope.includeBody,scope.stableOnly);if(!pages)return false;for(const {record,indices}of pages)for(const i of indices){const row=record.response.records[i];expected.push([row.tag_name,row.published_at,row.html_url,...(scope.includeBody?[row.body]:[])])}}
   return JSON.stringify(data.rows)===JSON.stringify(expected)
  }
  if(data?.type!=='timeline'||!Array.isArray(data.items)||data.items.length!==scope.count*scope.repos.length)return false
  const expected=new Map()
  for(const repo of scope.repos){
-  const pages=releasePages(records,repo,scope.count,scope.includeBody)
+  const pages=releasePages(records,repo,scope.count,scope.includeBody,scope.stableOnly)
   if(!pages)return false
-  for(const {record,take} of pages)for(const row of record.response.records.slice(0,take))expected.set(row.html_url,{row,repo})
+  for(const {record,indices} of pages)for(const i of indices){const row=record.response.records[i];expected.set(row.html_url,{row,repo})}
  }
  for(const item of data.items){
   const entry=expected.get(item.url)
@@ -148,11 +182,12 @@ async function readApiReleaseTimeline(scope,fetchPage,signal){
     continue
    }
    const result=response&&releasePage(response,repo,scope.includeBody)
-   if(!result||result.rows.length<Math.min(size,remaining))return
+   if(!result||scope.stableOnly&&result.rows.some(row=>typeof row.prerelease!=='boolean'))return
    records.push(response)
-   remaining-=result.rows.length
+   remaining-=result.rows.filter(row=>!scope.stableOnly||row.prerelease===false).length
+   if(result.rows.length<size&&remaining>0)return
   }
-  if(remaining<=0&&releasePages(records,repo,scope.count,scope.includeBody))return records
+  if(remaining<=0&&releasePages(records,repo,scope.count,scope.includeBody,scope.stableOnly))return records
  }))
  return groups.every(Boolean)?groups.flat():[]
 }
@@ -166,16 +201,17 @@ export async function readReleaseTimeline(scope,fetchPage,signal){
  if(api.length)return api
  const groups=await Promise.all(scope.repos.map(async repo=>{
   const records=[];let remaining=scope.count
-  for(let page=1;remaining>0&&page<=Math.ceil(scope.count/10);page++){
+  for(let page=1;remaining>0&&page<=Math.min(100,Math.max(20,Math.ceil(scope.count/10)));page++){
    signal?.throwIfAborted()
    const url=`https://github.com/${repo}/releases?page=${page}`
    let response
    try{response=hostStructuredWebRecord(await fetchPage(url,signal),url)}catch(error){signal?.throwIfAborted();return}
    const result=response&&releasePage(response,repo,scope.includeBody)
-   if(!result||result.rows.length<Math.min(10,remaining))return
-   records.push(response);remaining-=result.rows.length
+   if(!result||scope.stableOnly&&result.rows.some(row=>typeof row.prerelease!=='boolean'))return
+   records.push(response);remaining-=result.rows.filter(row=>!scope.stableOnly||row.prerelease===false).length
+   if(result.rows.length<10&&remaining>0)return
   }
-  if(remaining<=0&&releasePages(records,repo,scope.count,scope.includeBody))return records
+  if(remaining<=0&&releasePages(records,repo,scope.count,scope.includeBody,scope.stableOnly))return records
  }))
  return groups.every(Boolean)?groups.flat():[]
 }

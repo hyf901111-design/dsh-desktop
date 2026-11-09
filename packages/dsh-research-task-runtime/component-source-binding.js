@@ -42,7 +42,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
     if(previous>=0&&record.tool==='web_fetch'&&!record.response&&records[previous].response)return
     if(previous>=0)records.splice(previous,1)
     records.push(record)
-    while(records.length>32||Buffer.byteLength(JSON.stringify(records))>8_000_000){
+    while(records.length>128||Buffer.byteLength(JSON.stringify(records))>8_000_000){
       const directory=records.findIndex(r=>r.purpose==='discovery')
       records.splice(directory<0?0:directory,1)
     }
@@ -576,7 +576,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
   let contract=mappingContract(candidate?.mapping,options,candidate?.version)
   // Already observed web pages are snapshot evidence, not a refresh recipe.
   // Small transport pages can exceed the 16-request refresh contract.
-  const snapshotRequestLimit=candidate?.requests?.every(request=>request?.tool==='web_fetch')?128:16
+  const snapshotRequestLimit=candidate?.requests?.every(request=>request?.tool==='web_fetch')?128:64
   if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>snapshotRequestLimit||!templateFor(contract))return null
   const responses={},sources={}
   try {

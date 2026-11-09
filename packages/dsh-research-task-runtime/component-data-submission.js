@@ -68,7 +68,7 @@ function sourceCollections(response) {
 }
 
 function sourceReferences(records) {
- return records.filter(componentMappableSource).slice(-16).map(record => {
+ return records.filter(componentMappableSource).slice(-64).map(record => {
   const sample = Array.isArray(record.response.records) ? record.response.records[0] : undefined
   return {sourceRef:sourceReference(record), tool:record.tool,
    ...(typeof record.response.source === 'string' ? {source:record.response.source.slice(0,128)} : {}),

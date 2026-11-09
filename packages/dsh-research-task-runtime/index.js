@@ -1,6 +1,7 @@
 import {scalarEntityArgumentIssue} from './component-scalar-entity-arguments.js'
 import {extractDelimitedEvidence,delimitedTableIntegrityIssue} from './delimited-evidence.js'
 import {componentDeliveryScopeIssue} from './component-delivery-scope.js'
+import {componentAcquisitionBudget} from './component-acquisition-budget.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
 import { SOURCE_SELECTION_GUIDANCE } from './data-source-policy.js'
@@ -42,7 +43,7 @@ import {compactStatementEvidence,truncatedStatementEvidence} from './statement-e
 import {statementTableEvidenceIssue,statementTableRepairEvidence,statementTableRequiredData} from './statement-table-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
 import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from './component-feed-acquisition.js'
-import {workbenchReleaseScope,observedReleaseTimeline,readReleaseTimeline,releaseTimelineComplete} from './observed-dated-feed.js'
+import {workbenchReleaseScope,observedWorkbenchReleaseScope,releaseCohortIssue,observedReleaseTimeline,readReleaseTimeline,releaseTimelineComplete} from './observed-dated-feed.js'
 import {retainObservedComponentProvenance} from './component-observed-provenance.js'
 import {commonPriceScope,observedCommonPriceComparison,readCommonPriceComparison} from './observed-series-comparison.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
@@ -1972,7 +1973,7 @@ export class ResearchTaskRuntime {
             if(issue){newsTableError=issue;throw new ResearchTaskError('INVALID_OUTPUT',issue)}
             if(candidates.some(data=>data.type==='news'||data.type==='table'||data.type==='market'&&data.variant==='table'))newsTableError=undefined
           }
-          deliveryScopeIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>componentDeliveryScopeIssue(data,panelRequest)).find(Boolean)
+          deliveryScopeIssue=task.kind==='container'&&extractArtifactObjects(deliveredText).map(data=>componentDeliveryScopeIssue(data,panelRequest)||releaseCohortIssue(data,sourceRecords,task.hostContext?.workbenchRequest?.originalRequest,panelRequest)).find(Boolean)
           if(deliveryScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',deliveryScopeIssue)
           const newsScopeIssue=!deferredPanel&&extractArtifactObjects(deliveredText).map(data=>newsSourceScopeIssue(data,sourceRecords,task.prompt)).find(Boolean)
           if(newsScopeIssue)throw new ResearchTaskError('GENERATION_FAILED',newsScopeIssue)
@@ -2316,7 +2317,7 @@ export class ResearchTaskRuntime {
           }
           if(task.cancelRequested||terminalState(task.state))return
         }
-        const unmetScope=extractArtifactObjects(output).map(data=>componentDeliveryScopeIssue(data,panelRequest)).find(Boolean)
+        const unmetScope=extractArtifactObjects(output).map(data=>componentDeliveryScopeIssue(data,panelRequest)||releaseCohortIssue(data,sourceRecords,task.hostContext?.workbenchRequest?.originalRequest,panelRequest)).find(Boolean)
         if(unmetScope)throw new ResearchTaskError('GENERATION_FAILED',unmetScope)
         output=acceptArtifactOutput(retainObservedComponentProvenance(output,result.documentEvidence,sourceRecords))??output
         await this.finish(task, 'completed', { finalOutput: output,...(readableSnapshot?.recoveryMode==='source-snapshot'?taskDelivery(readableSnapshot):{}) })
@@ -2660,7 +2661,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const validateDataSubmission=(snapshot,records)=>{
           const text=JSON.stringify(snapshot.data),output=finalText([{type:'text',text:snapshot.capacitySnapshot?snapshot.output:text}],kind)
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
-          const issue=componentDeliveryScopeIssue(snapshot.data,workbenchPanelIntent(query))||workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
+          const issue=componentDeliveryScopeIssue(snapshot.data,workbenchPanelIntent(query))||releaseCohortIssue(snapshot.data,records,hostContext?.workbenchRequest?.originalRequest,workbenchPanelIntent(query))||workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
           const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentUncertaintyIssue(output,documentEvidence)||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query))||delimitedTableIntegrityIssue(output,documentEvidence,workbenchPanelIntent(query)))
           if(documentIssue)throw new ResearchTaskError('INVALID_OUTPUT',documentIssue)
@@ -2838,6 +2839,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const discoveryTools=componentDiscoveryToolNames(scopedSchemas)
       const parameterRepair=researchParameterRepair(networkTools,discoveryTools)
       const discoveryProgress=componentDiscoveryProgress(discoveryTools)
+      const acquisitionBudget=componentAcquisitionBudget(sourceRequest)
       let lastOutputAt = 0, streamedText = '', completedArtifact, prototypeRecovery,prototypeDataReady
       let finishResearch, handoffTimer
       const researchPhase = new Promise(resolve => { finishResearch = resolve })
@@ -2845,7 +2847,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const original=hostContext?.workbenchRequest?.originalRequest
       const directScope=kind==='container'&&!synthesisOnly&&!bindingRequested&&!sourcePolicy?.pluginRequired&&
         !sourcePolicy?.publicSourceRequests&&hostContext?.workbenchRequest?.dataMode==='source'&&childTools.includes('web_fetch')
-      const releaseScope=directScope&&workbenchReleaseScope(original,workbenchPanelIntent(query??''),format)
+      let releaseScope=directScope&&workbenchReleaseScope(original,workbenchPanelIntent(query??''),format)
       const priceScope=directScope&&commonPriceScope(original,workbenchPanelIntent(query??''),format)
       const panelTitle=query?.match(/\n本面板：([^\n]+)/u)?.[1]
       let hostRecords=[],verifiedOutput
@@ -2866,12 +2868,13 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           finishResearch(verifiedOutput)
         }
       }
-      const acquisition=(releaseScope||priceScope)&&typeof ctx.web?.fetch==='function'?
+      const startAcquisition=()=>(releaseScope||priceScope)&&typeof ctx.web?.fetch==='function'?
         (releaseScope?readReleaseTimeline:readCommonPriceComparison)(releaseScope||priceScope,
           (url,readSignal)=>withParentInitiator(parent,()=>ctx.web.fetch({url},readSignal)),
           AbortSignal.any([signal,acquireController.signal,AbortSignal.timeout(35_000)]))
           .then(records=>{hostRecords=records;acceptVerified(records)})
           .catch(()=>undefined):undefined
+      let acquisition=startAcquisition()
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       const discoveryEvidenceCalls = new Set(), discoveryEvidenceParts = []
       let discoveryEvidenceBytes = 0
@@ -3028,12 +3031,17 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         // still stops. A matching definition obtained after a parameter error
         // earns one bounded retry, within 135s, leaving at least 45s to present.
         if(event?.type==='step/end'){
+          if(directScope&&!releaseScope&&!acquisition){
+            releaseScope=observedWorkbenchReleaseScope(original,workbenchPanelIntent(query??''),format,sourceCollector.records)
+            if(releaseScope)acquisition=startAcquisition()
+          }
           if((releaseScope||priceScope)&&!completedArtifact){
             acceptVerified(sourceCollector.records)
             if(verifiedOutput){acquireController.abort();return}
           }
           const allowance=kind==='container'?Math.min(discoveryCallCount,4):0
-          const businessLimit=kind==='container'&&knownDiscoveryUsed?12:8
+          const budget=acquisitionBudget.inspect(sourceCollector.records,{elapsed:executionElapsed(),knownDiscoveryUsed:kind==='container'&&knownDiscoveryUsed})
+          const businessLimit=budget.businessLimit
           if(prototypeTargets&&!bindingRequested&&!prototypeRecovery)prototypeRecovery=recoverPrototypeTable(sourceCollector.records,{panelType:workbenchPanelFormat(query??''),panelRequest:hostContext?.sourceRequirement,title:query?.match(/\n本面板：([^\n]+)/u)?.[1],workbenchRequest:hostContext?.workbenchRequest})
           if(prototypeTargets&&workbenchPanelFormat(query??'')==='html')prototypeDataReady=prototypeHtmlEvidence(sourceCollector.records,hostContext?.sourceRequirement,prototypeTargets)
           // A planner's named dataset is not an exhaustive dependency list.
@@ -3050,7 +3058,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
             sourceCollector.records.some(record=>record.purpose==='discovery'&&record.response?.kind==='catalog'&&record.response.interfaces?.length)&&
             !componentBindingEvidence(sourceCollector.records)&&!sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)
           const alternativeRead=discoveryProgress.allowAlternativeRead({elapsed:executionElapsed(),hasBusinessData:componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)})
-          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())&&!firstBusinessRead&&!alternativeRead
+          const timeExpired=researchLimitDue&&!parameterRepair.allowAfterDeadline(executionElapsed())&&!firstBusinessRead&&!alternativeRead&&!budget.allowAfterDeadline
           if(timeExpired||kind!=='container'&&discoveryCallCount>=8||networkCallCount>=businessLimit+(kind==='container'?4:0)||networkCallCount-allowance>=businessLimit)closeResearch()
         }
         if (event?.type === 'assistant/message' && ['container', 'create'].includes(kind)) {
