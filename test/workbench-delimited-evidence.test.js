@@ -52,3 +52,17 @@ it('accepts an explicitly filtered subset while still checking every delivered f
  expect(delimitedTableIntegrityIssue(table([['A02','甲','等待依赖']]),docs,request)).toContain('不一致')
  expect(delimitedTableIntegrityIssue(table([['A02','乙','等待依赖']]),docs,'展示全部3条原始记录')).toContain('来源 3 条')
 })
+it('distinguishes a source count before an explicit filter from the requested delivery scope',()=>{
+ const docs=[extractDelimitedEvidence('编号,风险说明,数量\nA01,正常,1\nA02,待确认,2\nA03,待确认,3\n','x.csv')]
+ const table=rows=>acceptArtifactOutput(JSON.stringify({version:1,type:'table',title:'关注清单',columns:['编号','风险说明','数量'],rows}))
+ const request='从原表全部3条记录中筛选“风险说明”字段不是“正常”的任务，逐条保留完整字段。'
+ expect(delimitedTableIntegrityIssue(table([['A02','待确认',2],['A03','待确认',3]]),docs,request)).toBeUndefined()
+ expect(delimitedTableIntegrityIssue(table([['A02','待确认',2]]),docs,request)).toMatch(/筛选.*2.*1/)
+ expect(delimitedTableIntegrityIssue(table([['A01','正常',1],['A02','待确认',2]]),docs,request)).toMatch(/筛选条件/)
+ expect(delimitedTableIntegrityIssue(table([['A02','待确认',2],['A03','待确认',3]]),docs,'展示全部3条记录，支持按风险说明筛选')).toMatch(/来源 3 条/)
+})
+it('keeps whole-record obligations when only the visible columns are restricted',()=>{
+ const docs=[extractDelimitedEvidence('编号,状态\nA1,完成\nA2,待办\n','x.csv')]
+ const output=acceptArtifactOutput(JSON.stringify({version:1,type:'table',title:'明细',columns:['编号','状态'],rows:[['A1','完成']]}))
+ expect(delimitedTableIntegrityIssue(output,docs,'仅保留编号和状态，展示全部2条记录，支持按状态筛选')).toContain('来源 2 条')
+})

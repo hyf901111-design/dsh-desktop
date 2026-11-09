@@ -51,10 +51,21 @@ export function delimitedTableIntegrityIssue(output,documents,request='') {
   const key=unique===undefined?-1:mapping.indexOf(unique)
   if(key<0||mapping.filter(i=>i>=0).length<2)return
   const byKey=new Map(original.map(row=>[compact(row[unique]),row]))
+  // A full source count preceding an explicit filter describes acquisition,
+  // not delivery. Resolve one unambiguous quoted field/literal predicate only;
+  // never guess compound or arbitrary natural-language conditions.
+  const filters=[...request.matchAll(/["“‘]([^"”’]+)["”’]\s*(?:字段|列)?\s*(不等于|不是|不为|!=|等于|为|是|=)\s*["“‘]([^"”’]*)["”’]/gu)]
+  const subset=/(?:中|里)\s*筛选|筛(?:选出|出)/u.test(request)||filters.length>0&&/(?:仅|只)(?:保留|展示|列出?)/u.test(request)
+  let selected
+  if(subset&&filters.length===1&&!/且|并且|同时|或者|或是|\b(?:and|or)\b|&&|\|\|/iu.test(request)){
+   const [,name,operator,value]=filters[0],field=header.findIndex(label=>compact(label)===compact(name))
+   if(field>=0){const negative=['不等于','不是','不为','!='].includes(operator);selected=new Set(original.filter(row=>(compact(row[field])===compact(value))!==negative).map(row=>compact(row[unique])))}
+  }
   const seen=new Set()
   for(const row of data.rows){
    const id=compact(row[key]),source=byKey.get(id)
    if(!source||seen.has(id))return `CSV 记录对应不完整：存在来源中没有或重复的编号 ${id}。直接保留原记录键，不重新编号、拼接或按规律重建。`
+   if(selected&&!selected.has(id))return `CSV 记录 ${id} 不符合明确的筛选条件，不能把其他来源记录混入筛选交付。`
    seen.add(id)
    for(let i=0;i<mapping.length;i++)if(mapping[i]>=0){
     const expected=compact(source[mapping[i]]),actual=compact(row[i])
@@ -65,6 +76,7 @@ export function delimitedTableIntegrityIssue(output,documents,request='') {
   // the full source file. Only explicit whole-record obligations demand all
   // source keys; field identity/correspondence above applies to every subset.
   const whole=/(?:全部|所有|全量)(?:的)?(?:原始)?(?:记录|数据行|明细)|完整记录明细|每条(?:原始)?记录.{0,16}(?:保留|字段)/u.test(request)||new RegExp('(?:全部|所有|全量)\\s*'+original.length+'\\s*条','u').test(request)
-  if(whole&&seen.size!==original.length)return `CSV 交付记录不齐：来源 ${original.length} 条，实际 ${seen.size} 条。使用全部原始记录，不能只按标题或声明条数标记完成。`
+  if(selected&&seen.size!==selected.size)return `CSV 筛选交付不齐：筛选来源 ${selected.size} 条，实际 ${seen.size} 条。保留全部符合条件的原记录及完整字段。`
+  if(!subset&&whole&&seen.size!==original.length)return `CSV 交付记录不齐：来源 ${original.length} 条，实际 ${seen.size} 条。使用全部原始记录，不能只按标题或声明条数标记完成。`
  }
 }
