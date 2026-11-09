@@ -1,3 +1,4 @@
+import {isDeepStrictEqual} from 'node:util'
 // Observed continuations only: no guessed API, entity, credential or date.
 // A nonempty first page is evidence, not a certificate of requested coverage.
 export function componentAcquisitionFollowup(records=[],{unreadSourceUrls=[]}={}) {
@@ -5,6 +6,8 @@ export function componentAcquisitionFollowup(records=[],{unreadSourceUrls=[]}={}
  for(const record of records){
   const page=record.response?.pagination;
   if(record.purpose==='discovery'||!page?.possiblyMore||!Number.isSafeInteger(page.nextOffset)||page.nextOffset<0||!record.args||typeof record.tool!=='string')continue;
+  const scope=args=>Object.fromEntries(Object.entries(args??{}).filter(([key])=>!['offset','limit'].includes(key)));
+  if(records.some(next=>next!==record&&next.tool===record.tool&&next.purpose!=='discovery'&&Array.isArray(next.response?.records)&&!next.response?.truncated&&(next.args?.offset??next.response?.pagination?.offset)===page.nextOffset&&isDeepStrictEqual(scope(next.args),scope(record.args))))continue;
   pending.push({tool:record.tool,args:{...record.args,offset:page.nextOffset},returned:record.response?.records?.length??page.returned});
  }
  const notes=[];
