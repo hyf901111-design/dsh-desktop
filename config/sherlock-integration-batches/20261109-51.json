@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-51",
+  "branch": "codex/integration/20261109-51",
+  "baseMainCommit": "46daebcee6134389880ae279fc5f31fb1d5f7e0a",
+  "expectedMainCommit": "46daebcee6134389880ae279fc5f31fb1d5f7e0a",
+  "createdAt": "2026-11-09T14:06:42.369Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件生成契约兼容、多对象取数进展与正式版本集合",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "46daebcee6134389880ae279fc5f31fb1d5f7e0a",
+        "tipCommit": "5be7625a2ffd4dc1ca13b63c18a116d9bc33e7d6",
+        "commits": [
+          {
+            "commit": "329b1852d8b821c3472948f64c58d30c15932cf2",
+            "parents": [
+              "5c83512741b93f56183c83a8238cd9747d171d17"
+            ],
+            "subject": "修复：统一原生组件来源兼容并保留真实事件标识"
+          },
+          {
+            "commit": "d5663532348763f55369ebc8c9e8b4a23b8b8430",
+            "parents": [
+              "329b1852d8b821c3472948f64c58d30c15932cf2"
+            ],
+            "subject": "优化：按实际进展保留多对象取数并核验正式发布集合"
+          },
+          {
+            "commit": "5be7625a2ffd4dc1ca13b63c18a116d9bc33e7d6",
+            "parents": [
+              "d5663532348763f55369ebc8c9e8b4a23b8b8430",
+              "46daebcee6134389880ae279fc5f31fb1d5f7e0a"
+            ],
+            "subject": "Merge branch 'main' into codex/feat/board-folder-icons-20261109"
+          }
+        ],
+        "boundaryParents": [
+          "5c83512741b93f56183c83a8238cd9747d171d17"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-acquisition-budget.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-provenance.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/observed-dated-feed.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/timeline-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/timeline-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "test/component-acquisition-budget.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-provenance-compatibility.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-source-completeness.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "205项直接相关检查和类型检查通过；旧失败公开交付及工具返回建立回归，需集成包真实复测。"
+        },
+        "acceptanceCriteria": [
+          "真实版本标识不因点号或Unicode被拒绝，展开状态安全保留",
+          "来源别名与取得时间集中收纳，不改变业务记录或数据时点",
+          "明确多对象范围且持续取得真实数据时保留有界取数机会",
+          "静态快照保留64次成功响应而不扩大刷新配方",
+          "最近N正式发布按实际官方列表过滤，保留原日期链接正文"
+        ],
+        "risks": [
+          "真实网络权限与来源数据缺失仍可能导致业务未完成",
+          "发布正文仅有链接时仍需继续读取原文"
+        ],
+        "generatedAt": "2026-11-09T14:06:29.095769+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b46a87e2bcfaa9bd15ad0586a794b96d8b6b2b51",
+        "verificationCommit": "b46a87e2bcfaa9bd15ad0586a794b96d8b6b2b51",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-provenance-compatibility.test.js",
+              "test/component-acquisition-budget.test.js",
+              "test/component-discovery-progress.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-data-submission.test.js",
+              "test/observed-source-completeness.test.js",
+              "test/research-artifact-resilience.test.js",
+              "test/timeline-template.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-provenance-compatibility.test.js test/component-acquisition-budget.test.js test/component-discovery-progress.test.js test/component-source-binding.test.js test/component-data-submission.test.js test/observed-source-completeness.test.js test/research-artifact-resilience.test.js test/timeline-template.test.js",
+            "verifiedCommit": "b46a87e2bcfaa9bd15ad0586a794b96d8b6b2b51",
+            "completedAt": "2026-11-09T14:07:08.030Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b46a87e2bcfaa9bd15ad0586a794b96d8b6b2b51",
+            "completedAt": "2026-11-09T14:07:08.030Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "b46a87e2bcfaa9bd15ad0586a794b96d8b6b2b51",
+            "completedAt": "2026-11-09T14:07:08.030Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T14:07:08.030Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-provenance-compatibility.test.js",
+        "test/component-acquisition-budget.test.js",
+        "test/component-discovery-progress.test.js",
+        "test/component-source-binding.test.js",
+        "test/component-data-submission.test.js",
+        "test/observed-source-completeness.test.js",
+        "test/research-artifact-resilience.test.js",
+        "test/timeline-template.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
