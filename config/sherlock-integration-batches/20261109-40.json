@@ -62,6 +62,54 @@
           "当前业务复测仍为0/2；新包不得在实测前宣称完成"
         ],
         "generatedAt": "2026-11-09T07:37:49.787217+00:00"
+      },
+      "merged": {
+        "mergeCommit": "70365d107e72197941fbe0d02191650e1e76fe02",
+        "verificationCommit": "70365d107e72197941fbe0d02191650e1e76fe02",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-source-binding.test.js",
+              "test/component-source-snapshot-chart.test.js",
+              "test/component-acquisition-followup.test.js",
+              "test/component-discovery-progress.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-source-binding.test.js test/component-source-snapshot-chart.test.js test/component-acquisition-followup.test.js test/component-discovery-progress.test.js",
+            "verifiedCommit": "70365d107e72197941fbe0d02191650e1e76fe02",
+            "completedAt": "2026-11-09T07:37:54.856Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-task-runtime.test.js -t separates recovered acquisition|discovery-only|unfinished pages|cancellation|cancelled",
+            "verifiedCommit": "70365d107e72197941fbe0d02191650e1e76fe02",
+            "completedAt": "2026-11-09T07:37:54.856Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "70365d107e72197941fbe0d02191650e1e76fe02",
+            "completedAt": "2026-11-09T07:37:54.856Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T07:37:54.856Z"
       }
     }
   ],
