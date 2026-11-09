@@ -1,6 +1,6 @@
 import { parse as parseHtml } from 'parse5'
 import { parse as parseScript } from '@babel/parser'
-import {trustedTypesScriptIssue} from './html-trusted-types-validation.js'
+import {trustedTypesScriptIssue,trustedTypesEmptyClearEdits} from './html-trusted-types-validation.js'
 
 export const SHARED_STATE_REPAIR = '共享状态验收未通过。若具体问题是脚本语法，先按行列修复语法，再检查共享接入；单/双引号字符串不得直接跨行。长来源正文保留在初始 HTML 文本节点，以 textContent 读取，脚本只保存筛选与展开状态，不重复内嵌长正文字符串。保留用户要求的交互和界面，把业务状态集中到 window.sherlockShared.register 的 initialState 中，提供 reduce 和 render；事件通过返回句柄 dispatch 提交操作，持续推进使用 tick/tickMs（至少100ms）。不能只加入接口名称或空注册，不得用各端独立 setInterval 推进，不得降级成静态说明、同屏双人或声称平台没有同步通道。'
 
@@ -45,6 +45,30 @@ function bindingResolver(nodes, parents) {
     if (node.type === 'CatchClause') for (const name of bindingNames(node.param)) bind(node, name)
   }
   return (name, node) => { for (let p = node; p; p = parents.get(p)) { const token = slots.get(p.type === 'Program' ? global : p)?.get(name); if (token) return token } }
+}
+
+// Normalize only source-located empty DOM clears. No generated code is run,
+// and every remaining script still goes through the normal acceptance gate.
+export function normalizeGeneratedEmptyDomClears(html){
+ const edits=[]
+ const collect=node=>{
+  if(node.tagName==='script'&&!node.attrs?.some(a=>a.name==='src')){
+   const type=node.attrs?.find(a=>a.name==='type')?.value?.toLowerCase()??''
+   const start=node.sourceCodeLocation?.startTag?.endOffset,end=node.sourceCodeLocation?.endTag?.startOffset
+   if((!type||/^(?:module|(?:text|application)\/(?:javascript|ecmascript))$/.test(type))&&start!==undefined&&end!==undefined){
+    const source=html.slice(start,end);let program
+    try{program=parseScript(source,{sourceType:'unambiguous'})}catch{return}
+    const nodes=[],parents=new WeakMap()
+    walk(program,(item,parent)=>{nodes.push(item);if(parent)parents.set(item,parent)})
+    for(const edit of trustedTypesEmptyClearEdits(nodes,bindingResolver(nodes,parents),parents))edits.push({...edit,start:start+edit.start,end:start+edit.end})
+   }
+  }
+  for(const child of node.childNodes??[])collect(child)
+ }
+ collect(parseHtml(html,{sourceCodeLocationInfo:true}))
+ let result=html
+ for(const edit of edits.sort((a,b)=>b.start-a.start))result=result.slice(0,edit.start)+edit.text+result.slice(edit.end)
+ return result
 }
 
 // A generation acceptance gate, not a security boundary or proof of arbitrary
