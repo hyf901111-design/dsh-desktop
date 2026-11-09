@@ -40,7 +40,7 @@ export class ComponentPopupMenu{
   if(event.action==='open'){
    const index=current.state.items.findIndex(item=>item.id===event.itemId),parent=current.state.items[index]
    if(parent?.children?.length&&!this.disabled(parent))this.update({selectedIndex:index,submenu:{parentId:parent.id,selectedIndex:0,keyboardActive:false}})
-  }else if(event.action==='back')this.update({submenu:undefined})
+  }else if(event.action==='back')this.update({submenu:undefined,selectedIndex:undefined})
   else if(event.action==='select'){
    const items=event.parentId?current.state.items.find(item=>item.id===event.parentId)?.children:current.state.items,item=items?.find(item=>item.id===event.itemId)
    if(!item||item.children||this.disabled(item))return
