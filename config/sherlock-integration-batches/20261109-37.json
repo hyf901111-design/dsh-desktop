@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261109-37",
+  "branch": "codex/integration/20261109-37",
+  "baseMainCommit": "fb72301959e747fdba1ae53b576ce08047e15288",
+  "expectedMainCommit": "fb72301959e747fdba1ae53b576ce08047e15288",
+  "createdAt": "2026-11-09T06:20:18.963Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "采用Figma看板分组标签夹原始图标",
+        "branch": "codex/feat/board-folder-icons-20261109",
+        "baseCommit": "fb72301959e747fdba1ae53b576ce08047e15288",
+        "tipCommit": "0b4661fd7d92c9d4d7b33c965288d2e4d8c19fb8",
+        "commits": [
+          {
+            "commit": "3307c929d684757b9f8ae865088ab19f02388197",
+            "parents": [
+              "414637cfe507c3e19d77eb7c57dad8c8ec1b0a8f"
+            ],
+            "subject": "界面：采用Figma原始标签夹图标区分看板分组开合状态"
+          },
+          {
+            "commit": "5d74cee4c582f02e08d54cc8aab32d0a69c15a42",
+            "parents": [
+              "3307c929d684757b9f8ae865088ab19f02388197"
+            ],
+            "subject": "测试：在真实展开侧栏条件下验证看板与工作区图标隔离"
+          },
+          {
+            "commit": "0b4661fd7d92c9d4d7b33c965288d2e4d8c19fb8",
+            "parents": [
+              "5d74cee4c582f02e08d54cc8aab32d0a69c15a42",
+              "fb72301959e747fdba1ae53b576ce08047e15288"
+            ],
+            "subject": "同步：纳入已集成的任务恢复与升级协议验证修正"
+          }
+        ],
+        "boundaryParents": [
+          "414637cfe507c3e19d77eb7c57dad8c8ec1b0a8f"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "build/brand/odyssey-b-icons.json"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-board-folder-closed-18.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-board-folder-open-18.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-b-icons-browser.test.js"
+          }
+        ],
+        "checks": [],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Figma页面76节点4554:368226的A标签夹，18px原始SVG两态；Chromium验证个人/协作共同开合状态、尺寸18px及工作区图标保持原样，2项通过。真实新包集成后查看。"
+        },
+        "acceptanceCriteria": [
+          "个人和协作共用Figma A标签夹",
+          "按展开收起状态显示原始18px SVG",
+          "不改变工作区、新建工作区、协作条目图标策略"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-09T06:20:11.321269+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+        "verificationCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/sidebar-b-icons-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/sidebar-b-icons-browser.test.js",
+            "verifiedCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+            "completedAt": "2026-11-09T06:20:22.004Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "4d45aef4bbcdc6a791e67ecf71e3cf5b487bc730",
+            "completedAt": "2026-11-09T06:20:22.004Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-09T06:20:22.004Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/sidebar-b-icons-browser.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
