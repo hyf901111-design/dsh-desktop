@@ -11,6 +11,11 @@ function setup(current='session-1'){
  return {openSource,sessions,receive:value=>receive(value)}
 }
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve()}
+it('opens app links on the initial home without creating or switching a conversation',async()=>{
+ const f=setup(),appOpen=vi.fn(async()=>{});f.sessions.list.getSnapshot().current=undefined;win.dshDesktop={browserApp:{openSource:appOpen}}
+ f.receive({request:'open-link',url:'https://example.com/a'});await flush()
+ expect(appOpen).toHaveBeenCalledExactlyOnceWith({url:'https://example.com/a'});expect(f.sessions.create).not.toHaveBeenCalled();expect(f.sessions.open).not.toHaveBeenCalled();expect(f.openSource).not.toHaveBeenCalled()
+})
 it('opens ordinary, keyboard-equivalent and blank-target links in the current right browser',async()=>{
  const f=setup();win.document.body.innerHTML='<a href="https://example.com/a" target="_blank"><span>网页</span></a>'
  const event=new win.MouseEvent('click',{bubbles:true,cancelable:true,button:0});win.document.querySelector('span').dispatchEvent(event);await flush()

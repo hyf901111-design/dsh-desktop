@@ -2,6 +2,15 @@ import {Window} from 'happy-dom'
 import {expect,it,vi} from 'vitest'
 import {BrowserAppView} from '../src/preload/browser/view'
 const initial=()=>({tabs:[{id:'one',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'one',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}})
+it('opens the app without a session and keeps context-only actions explicit',async()=>{
+ const w=new Window(),state=initial();state.tabs[0]!.url='https://example.com/'
+ const bridge={request:vi.fn(async()=>structuredClone(state)),subscribe:()=>()=>{},source:vi.fn()};const host={register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})}
+ const view=new BrowserAppView(w.document as any,bridge,host as any);w.document.body.append(view.root as any)
+ w.document.dispatchEvent(new w.CustomEvent('sherlock:browser-open',{detail:{}}));await Promise.resolve();await Promise.resolve()
+ expect(host.open).toHaveBeenCalledWith('browser');expect(view.root.hidden).toBe(false)
+ await (view as any).action('send');expect(bridge.source).not.toHaveBeenCalled();expect(view.root.textContent).toContain('请先选择一个对话')
+ view.dispose();await w.happyDOM.abort()
+})
 it('renders a real empty start page and submits a URL with the owning tab identity',async()=>{
  const w=new Window(),state=initial(),request=vi.fn(async()=>structuredClone(state));const host={register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})}
  const view=new BrowserAppView(w.document as any,{request,subscribe:()=>()=>{},source:vi.fn()},host as any)

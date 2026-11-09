@@ -15,6 +15,8 @@ export function installDefaultWebLinks({bridge,sessions,documentTarget}) {
   const open=async raw=>{
     const url=normalize(raw);if(!active||!url)return;
     try{
+      const appOpen=doc.defaultView?.dshDesktop?.browserApp?.openSource;
+      if(appOpen){await appOpen({url});return}
       let sessionId=sessions.list.getSnapshot().current;
       if(!sessionId){
         creating??=Promise.resolve().then(()=>sessions.create({})).finally(()=>{creating=undefined});
@@ -22,7 +24,7 @@ export function installDefaultWebLinks({bridge,sessions,documentTarget}) {
       }
       if(typeof sessionId!=='string'||!sessionId)throw Error('Session unavailable');
       doc.dispatchEvent(new doc.defaultView.Event('sherlock:open-client-browser'));
-      await (doc.defaultView?.dshDesktop?.browserApp?.openSource??bridge.openSource)({sessionId,url});
+      await bridge.openSource({sessionId,url});
     }catch{failed()}
   };
   const click=event=>{

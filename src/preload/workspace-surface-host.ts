@@ -156,7 +156,7 @@ export class WorkspaceSurfaceHost {
     private closeAll = () => { this.history = []; this.sync(); };
     // The native notes view owns its lifecycle. Opening the same session does
     // not unmount it and must not hide its content behind a selected tab.
-    private onSessionOpened = () => { if (!['notes','browser'].includes(this.current()?.surface ?? '')) this.closeAll(); };
+    private onSessionOpened = () => { if (this.current()?.surface !== 'notes') this.closeAll(); };
     private onNavigate = (event: Event) => {
         if (!this.current())
             return;
@@ -167,7 +167,7 @@ export class WorkspaceSurfaceHost {
         if (target?.closest?.('.VOzbGW_trigger')) { if (!['notes','browser'].includes(this.current()?.surface ?? '')) this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
-        if (!['notes','browser'].includes(this.current()?.surface ?? '') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
+        if (this.current()?.surface !== 'notes' && !target?.closest?.('[data-sidebar-browser],.st-more-zone') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
             this.closeAll();
     };
     dispose() {
