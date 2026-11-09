@@ -28,7 +28,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
-import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, documentTableEntityCoverageIssue, DOCUMENT_TABLE_GUIDANCE, documentTableOutput, documentTableOutputIssue } from './workbench-document-evidence.js'
+import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, documentUncertaintyIssue, documentTableEntityCoverageIssue, DOCUMENT_TABLE_GUIDANCE, documentTableOutput, documentTableOutputIssue } from './workbench-document-evidence.js'
 import { extractDocxEvidence } from './docx-evidence.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
@@ -1988,7 +1988,7 @@ export class ResearchTaskRuntime {
             throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要实际层级或关系图，不能用文字说明替代。复用已取得内容，按真实关系交付完整导图或可视化 HTML，保留来源。')
           }
           if (result.documentEvidence && output) {
-            const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
+            const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentUncertaintyIssue(output,result.documentEvidence) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
             if (issue) throw new ResearchTaskError('INVALID_OUTPUT', issue)
             if (['table','mind-map'].includes(plannedFormat) && JSON.parse(output).type === 'markdown') {
               throw new ResearchTaskError('INVALID_OUTPUT', '本卡需要交付实际明细或层级，不能用文字说明替代。复用已读取的文档，保留完整行、层级和出处，可换成原生视图或含完整数据的静态 HTML。')
@@ -2239,7 +2239,7 @@ export class ResearchTaskRuntime {
         if(output===undefined)throw new ResearchTaskError('OUTPUT_TOO_LARGE','已取得的新闻与覆盖说明超过当前展示容量，来源记录已保留，请拆分组件后重试。')
       }
       if (output !== undefined && result.documentEvidence) {
-        const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
+        const issue = workbenchDocumentCitationIssue(output, result.documentEvidence, { required: result.documentExclusive !== false }) || documentUncertaintyIssue(output,result.documentEvidence) || documentTableEntityCoverageIssue(output,result.documentEvidence,workbenchPanelIntent(task.prompt))
         if (issue) throw new ResearchTaskError('GENERATION_FAILED', issue)
       }
       if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }
@@ -2609,7 +2609,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
           if(!output)throw new ResearchTaskError('INVALID_OUTPUT','组件呈现尚未通过校验，请保留已取得数据并修正。')
           const issue=workbenchSourceEvidenceIssue(sourcePolicy,records)||workbenchMarketVariantIssue(output,workbenchPanelScope(query)?.contract??query)||workbenchMarketRecencyIssue(text,query,new Date())||componentFeedEvidenceIssue(text,records,{panelRequest:workbenchPanelIntent(query),workbenchRequest:hostContext?.workbenchRequest,capacitySnapshot:snapshot.capacitySnapshot===true})||statementTableEvidenceIssue(snapshot.data,workbenchPanelIntent(query),records)||statementOperatingCoverageIssue(snapshot.data,workbenchPanelIntent(query),records,sourceCollector?.attempts??[])
           if(issue)throw new ResearchTaskError('INVALID_OUTPUT',issue)
-          const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query)))
+          const documentIssue=documentEvidence&&(workbenchDocumentCitationIssue(output,documentEvidence,{required:documentExclusive})||documentUncertaintyIssue(output,documentEvidence)||documentTableEntityCoverageIssue(output,documentEvidence,workbenchPanelIntent(query)))
           if(documentIssue)throw new ResearchTaskError('INVALID_OUTPUT',documentIssue)
           return output
       }

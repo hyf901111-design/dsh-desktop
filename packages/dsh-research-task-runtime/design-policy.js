@@ -94,6 +94,7 @@ function structurePaletteRole($, selector) {
 }
 
 const HOST_ROLE_ALIASES = {
+ '--sherlock-primary':'--sherlock-control-primary', '--sherlock-on-primary':'--sherlock-control-on-primary',
  '--sherlock-text-primary':'--sherlock-text', '--sherlock-text-secondary':'--sherlock-muted', '--sherlock-text-tertiary':'--sherlock-muted',
  '--sherlock-text-link':'--sherlock-link', '--sherlock-border-subtle':'--sherlock-border', '--sherlock-border-primary':'--sherlock-border', '--sherlock-border-secondary':'--sherlock-border',
  '--sherlock-bg-surface':'--sherlock-surface', '--sherlock-bg-primary':'--sherlock-bg', '--sherlock-bg-secondary':'--sherlock-surface-muted', '--sherlock-surface-primary':'--sherlock-surface', '--sherlock-surface-secondary':'--sherlock-surface-muted',

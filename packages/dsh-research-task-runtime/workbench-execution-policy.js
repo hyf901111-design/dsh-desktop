@@ -6,7 +6,7 @@ import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import { workbenchPlanningContext } from './workbench-planning-context.js'
 import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
 import {MAX_PROTOTYPE_WINDOWS,planningPrototypeEvidence,prototypeEvidenceCall,prototypeEvidenceSchema,prototypeEvidenceProgress,prototypeEvidenceGuidance,prototypeEvidenceRequestCurrent,workbenchPlanningSession} from './workbench-prototype-evidence.js'
-import { DOCUMENT_WORKBENCH_PLANNING, workbenchDocumentScope, workbenchDocumentPrompt } from './workbench-document-evidence.js'
+import { DOCUMENT_WORKBENCH_PLANNING, workbenchDocumentInputs, workbenchDocumentScope, workbenchDocumentPrompt } from './workbench-document-evidence.js'
 
 export function workbenchCreationRequest(session) {
   const request=componentCreationRequest(workbenchPlanningSession(session))
@@ -311,11 +311,13 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     state.evidenceTools=new Set()
     state.evidenceReadable=new Set()
     const { simulation, sourceOnly } = planningDataIntent(human.text)
-    const documentPaths = !simulation && readDocumentEvidence && workbenchDocumentScope(human.text, state.evidenceTargets)
+    const documentPaths = !simulation && readDocumentEvidence && workbenchDocumentInputs(human.text, state.evidenceTargets)
+    const documentExclusive = Boolean(documentPaths && workbenchDocumentScope(human.text, state.evidenceTargets))
     let documentGuidance
     if (documentPaths) {
       try {
-        documentGuidance = workbenchDocumentPrompt(await readDocumentEvidence(agent.session, documentPaths, state.signal), true)
+        const documents = await readDocumentEvidence(agent.session, documentPaths, state.signal)
+        documentGuidance = [documentExclusive ? DOCUMENT_WORKBENCH_PLANNING : DOCUMENT_WORKBENCH_PLANNING.replace('提交静态 source 面板，省略 artifact、publicData、library 和外部取数要求；宿主向各卡提供同一份原文和定位。','提交 source 面板，省略尚未取得的 artifact；各卡分别取得用户指定的外部资料，宿主同时提供原文与定位。'), workbenchDocumentPrompt(documents, true, {exclusive:documentExclusive})].join('\n')
       } catch {
         state.signal?.throwIfAborted()
         releasePlanning(agent)
@@ -331,7 +333,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     const tools = request.tools.flatMap(tool => {
       if (tool.name === CREATE_TOOL) return [{ ...tool, description: documentPaths ? DOCUMENT_WORKBENCH_PLANNING : '优先评估组件库原生能力，已覆盖的面板用library:{id,options}直接挂载，其余按实际数据生成；links关联兼容节点，tabs组织真实页签，具体能力与配置见本轮系统说明。'+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
         ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters, !documentPaths) : sourceCreationParameters(tool.parameters) } : {}) }]
-      if (documentPaths) return []
+      if (documentExclusive) return []
       const evidence=prototypeEvidenceSchema(tool,state.evidenceTargets)
       if(evidence){
         state.evidenceTools.add(tool.name)

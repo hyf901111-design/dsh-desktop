@@ -62,6 +62,21 @@ describe('用户原型是首次规划的有限只读证据',()=>{
   expect(workbenchDocumentCitationIssue('org.docx [T2]',documents)).toContain('Word 出处')
   h.dispose()
  })
+ it('parses mixed-source attachments before planning while preserving authorized web discovery',async()=>{
+  const file='/tmp/mixed.docx',request='根据附件创建研究工作台，再从官网补充职责。 📎 文件：`'+file+'`'
+  const h=harness(session(request),{readDocumentEvidence:async(_,files)=>{
+   expect(files).toEqual([file]);return [{name:'mixed.docx',blocks:[{id:'P1',text:'真实关系与未知负责人'}]}]
+  }})
+  try{
+   const wire=await h.context()
+   expect(wire.system).toContain('真实关系与未知负责人')
+   expect(wire.system).toContain('【混合来源文档证据】')
+   expect(wire.system).toContain('普通搜索、排序和分页用 table')
+   expect(wire.system).not.toContain('只使用下面的原文作为事实')
+   expect(wire.tools.some(tool=>tool.name==='public_data_query')).toBe(true)
+   expect(wire.tools.some(tool=>tool.name==='bash')).toBe(false)
+  }finally{h.dispose()}
+ })
  it('plans a report from the original desktop attachment and omits financial discovery', async()=>{
   const pdf='/Users/qa/Downloads/报告.pdf'
   const request='📎 文件：\x60'+pdf+'\x60 帮我把这个报告做成一个内容示意看板'

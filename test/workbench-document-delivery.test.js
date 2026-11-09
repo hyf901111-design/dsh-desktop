@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
-import { workbenchDocumentCitationIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt,documentTableEntityCoverageIssue } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import { workbenchDocumentCitationIssue, documentUncertaintyIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt,documentTableEntityCoverageIssue } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 
 it('accepts complete editable notes with source aliases without retranscribing or dropping the content or references',()=>{
@@ -297,4 +297,13 @@ it('keeps a provenance-only document visible and does not hide a business sectio
   const result=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'markdown',title:'资料',content})))
   expect(result.content).toBe(content)
  }
+})
+
+it('preserves explicitly unknown source values instead of inferring a vacant position',()=>{
+ const docs=[{blocks:[{id:'P1',text:'“—”表示未掌握负责人信息，不代表岗位空缺；资料日期并非任职起止时间。'}]}]
+ const output=content=>JSON.stringify({version:1,type:'markdown',title:'部门明细',content})
+ expect(documentUncertaintyIssue(output('正职空缺 3 个，部门甲、乙、丙 [P1]'),docs)).toContain('保留未知')
+ for(const content of ['未掌握负责人信息，不代表岗位空缺 [P1]','负责人未知，需复核 [P1]','不要把未知写成岗位空缺 [P1]'])expect(documentUncertaintyIssue(output(content),docs)).toBeUndefined()
+ expect(documentUncertaintyIssue(output('岗位空缺1个 [P1]'),[{blocks:[{id:'P1',text:'已确认岗位空缺1个；其余未掌握的信息不代表岗位空缺。'}]}])).toBeUndefined()
+ expect(documentUncertaintyIssue(output('正职空缺3个'),[])).toBeUndefined()
 })

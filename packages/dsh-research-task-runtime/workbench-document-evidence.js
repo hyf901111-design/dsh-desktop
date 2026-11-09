@@ -78,9 +78,7 @@ const pageList = String.raw`${pageRange}(?:\s*[,、/]\s*${pageRange})*`
 const pdfPageReference = new RegExp(String.raw`(?:第\s*(${pageList})\s*(?:页|頁|ページ)|\b(?:pp?\.|pages?\s+)\s*(${pageList})(?!\d))`, 'giu')
 const pdfCitationIssue = '报告组件缺少可核对的 PDF 原文页码。请在正文、表格来源列或注释标注实际物理页码或页码范围，只引用成功读取的页面。'
 
-export function workbenchDocumentCitationIssue(text, documents, { required = true } = {}) {
-  const pages = new Set(documents.flatMap(document => (document.pages ?? []).map(page => page.page)))
-  const blocks = new Set(documents.flatMap(document => (document.blocks ?? []).map(block => block.id)))
+function deliveredDocumentText(text) {
   // Verify delivered content and source metadata, not implementation identifiers
   // such as HTML id="p0", CSS .p99 or script variables. Inert source footnotes
   // remain text; script/template copies cannot satisfy the citation gate.
@@ -89,7 +87,23 @@ export function workbenchDocumentCitationIssue(text, documents, { required = tru
     : Array.isArray(value) ? value.flatMap(strings)
     : value && typeof value === 'object' ? Object.entries(value).flatMap(([key, item]) =>
       key === 'html' && typeof item === 'string' ? [researchHtmlText(item)] : strings(item)) : []
-  const normalized = (artifacts.length === 1 ? strings(artifacts[0]).join('\n') : text).normalize('NFKC')
+  return (artifacts.length === 1 ? strings(artifacts[0]).join('\n') : text).normalize('NFKC')
+}
+
+export function documentUncertaintyIssue(text, documents) {
+  const source = documents.flatMap(document => [...(document.pages ?? []).map(page => page.text ?? ''),
+    ...(document.blocks ?? []).flatMap(block => block.rows?.flat() ?? [block.text ?? ''])]).join('\n')
+  const disclaimer = /(?:不|并不)(?:代表|意味(?:着)?|等于)[^。；;\n]{0,12}(?:空缺|空岗)/gu
+  const affirmative = value => value.replace(disclaimer, '').replace(/(?:不能|不要|不可|不得)[^。；;\n]{0,25}(?:空缺|空岗)/gu, '')
+  const vacancy = /(?:岗位|职位|正职|人员|负责人)[^。；;\n]{0,6}(?:空缺|空岗)|(?:空缺|空岗)\s*\d+\s*(?:个|人|项)/u
+  if (disclaimer.test(source) && !vacancy.test(affirmative(source)) && vacancy.test(affirmative(deliveredDocumentText(text))))
+    return '原文明确说明信息未掌握不代表岗位空缺。请保留未知、待核和历史时点；不能把缺失值写成岗位空缺或空缺人数。修正这一含义，保留其余完整记录与出处。'
+}
+
+export function workbenchDocumentCitationIssue(text, documents, { required = true } = {}) {
+  const pages = new Set(documents.flatMap(document => (document.pages ?? []).map(page => page.page)))
+  const blocks = new Set(documents.flatMap(document => (document.blocks ?? []).map(block => block.id)))
+  const normalized = deliveredDocumentText(text)
   let found = false
   for (const match of pages.size ? normalized.matchAll(pdfPageReference) : []) {
     found = true
