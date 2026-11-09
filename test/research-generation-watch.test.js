@@ -29,7 +29,34 @@ const researchContainerPlainText=s=>s.html,researchContainerFinalGeometry=()=>({
 const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec, generationProgressOnly)
   return { apply, snapshot }
 }
+function nativeAttach(source,node){
+ const tree=createSourceFile('client.js',source,ScriptTarget.Latest,false,ScriptKind.JS);let method;
+ const visit=n=>{if(!method&&isMethodDeclaration(n)&&n.name.getText(tree)==='attachGenerationTask')method=n;forEachChild(n,visit)};visit(tree);
+ const snapshot={artifacts:[node]},apply=vi.fn(()=>true);
+ const attach=new Function('snapshot','apply',`const RESEARCH_CANVAS_TEXT_LIMIT=20000,RESEARCH_GENERATION_MAX_PARTIAL_TEXT=20000,RESEARCH_ACTIVE_GENERATION_STATUSES=new Set(['queued','running','retrying']);
+ const boundedResearchArtifactString=v=>typeof v==='string'?v:null,researchGenerationStatus=v=>v,researchGenerationInspectionEvents=()=>[],retainedResearchGenerationEvents=v=>v,researchResolvedGenerationSources=()=>({}),researchGenerationAutoGeometry=()=>({}),researchGenerationSizedNode=n=>n,update=p=>Object.assign(snapshot,p);
+ return ({applyGenerationInspection:apply,${method.getText(tree)}}).attachGenerationTask;`)(snapshot,apply);
+ return {snapshot,apply,attach,applyGenerationInspection:apply};
+}
 describe('任务检查切板恢复', () => {
+  it.each(['cancelled','failed','completed'])('accepts an already %s start receipt through the normal terminal validator',async state=>{
+    const source=patchResearchGenerationWatch(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+    const f=nativeAttach(source,{id:'card',generationStatus:'queued'}),receipt={...completed,state};
+    expect(f.attach.call(f,'card',receipt)).toBe(true);
+    expect(f.apply).toHaveBeenCalledWith('card',receipt);
+    expect(f.snapshot.artifacts[0]).toMatchObject({generationTaskId:'task',generationStatus:'queued'});
+    expect(f.attach.call(f,'card',{...receipt,taskId:'other'})).toBe(false);
+  },15000);
+  it('reconciles an unbound restored queue with the latest owned canvas task, including cancellation',async()=>{
+    vi.useFakeTimers(); const inspect=vi.fn(async()=>({...completed,state:'cancelled',error:'任务已取消，可重试。'}));
+    const snapshot={artifacts:[{id:'card',generationStatus:'queued'}]},listeners=new Set();
+    const workspace={getSnapshot:()=>snapshot,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},attachGenerationTask:vi.fn((id,result)=>{Object.assign(snapshot.artifacts[0],{generationTaskId:result.taskId,generationStatus:result.state});return true}),failGeneration:vi.fn()};
+    const dispose=installResearchGenerationWatch({workspace,sessionId:'parent',inspect});
+    await vi.advanceTimersByTimeAsync(0);
+    expect(inspect).toHaveBeenCalledWith(expect.objectContaining({parentSessionId:'parent',canvasNodeId:'card'}),expect.any(AbortSignal));
+    expect(snapshot.artifacts[0]).toMatchObject({generationTaskId:'task',generationStatus:'cancelled'});
+    dispose();
+  });
   it('records slow application of an otherwise fast nonterminal response',async()=>{
     vi.useFakeTimers();const trace=vi.fn(),f=setup(async()=>({...completed,state:'running'}),{trace,apply(){vi.setSystemTime(Date.now()+5000);return true}})
     await vi.advanceTimersByTimeAsync(0)
@@ -54,16 +81,16 @@ describe('任务检查切板恢复', () => {
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
-    for(const version of ['V1','V2','V3','V4','V5']){
-      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V6 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
+    for(const version of ['V1','V2','V3','V4','V5','V6']){
+      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V7 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
       expect(patchResearchGenerationWatch(previous)).toBe(patched)
     }
-    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V6 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
-    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V6','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
+    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V7 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
+    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V7','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
     const currentV4=patched.slice(0,hookStart)+staleHook+patched.slice(hookEnd)
     expect(currentV4).toContain('STALE_V4_INLINE_PUBLISHER')
     expect(patchResearchGenerationWatch(currentV4)).toBe(patched)
-    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V6')).toHaveLength(2)
+    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V7')).toHaveLength(2)
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
     expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
     expect(patched).toContain('this.deps.generationInspectSink(request, options)')
