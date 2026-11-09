@@ -696,3 +696,20 @@ it('recognizes fetched URLs in source metadata without granting identity to feed
  expect(componentSnapshotEvidence(artifact('<main>无来源</main><!-- '+url+' -->'),sources)).toBe(false);
  expect(componentSnapshotEvidence(JSON.stringify({version:1,type:'news',title:'新闻',items:[{title:'改写且未验证的标题',date:'2026-10-20',url}]}),sources)).toBe(false);
 });
+
+it('retains and materializes a complete multi-object snapshot beyond sixteen reads without expanding refresh recipes',()=>{
+ const collector=componentSourceCollector([tool])
+ for(let i=0;i<40;i++){
+  const id='read-'+i
+  collector.accept({type:'tool/call',data:{callId:id,name:tool,arguments:JSON.stringify({api_name:'observed',params:{id:i}})}})
+  collector.accept({type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({retCode:1,data:[{id:i,value:i+10}]})}]}]}}})
+ }
+ expect(collector.records).toHaveLength(40)
+ const inputs=collector.records.slice(0,24)
+ const candidate={version:1,type:'data-bound',requests:inputs.map((r,i)=>({key:'q'+i,tool:r.tool,args:r.args})),mapping:{version:1,type:'table',title:'8个对象的3组字段',columns:['原编号','值'],rows:inputs.map((_,i)=>[{$from:'q'+i,$path:'data.0.id'},{$from:'q'+i,$path:'data.0.value'}])}}
+ const snapshot=resolveComponentSnapshot(JSON.stringify(candidate),collector.records)
+ expect(snapshot.data.rows).toHaveLength(24)
+ expect(snapshot.data.rows[0]).toEqual(['0','10'])
+ expect(snapshot.data.rows[23]).toEqual(['23','33'])
+ expect(()=>resolveBoundComponent(JSON.stringify(candidate),collector.records)).toThrow()
+})
