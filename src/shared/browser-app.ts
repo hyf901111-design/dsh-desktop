@@ -1,4 +1,4 @@
-export type BrowserTab = {id:string;url:string;title:string;private:boolean;pinned:boolean;muted:boolean;zoom:number;loading:boolean;canBack:boolean;canForward:boolean;error?:string;find?:{activeMatchOrdinal:number;matches:number}}
+export type BrowserTab = {id:string;url:string;title:string;private:boolean;pinned:boolean;muted:boolean;zoom:number;loading:boolean;canBack:boolean;canForward:boolean;favicon?:string;error?:string;find?:{activeMatchOrdinal:number;matches:number}}
 export type BrowserLink = {id:string;url:string;title:string;at:number;folder?:string}
 export type BrowserDownload = {id:string;tabId:string;private:boolean;url:string;name:string;path:string;received:number;total:number;state:'progressing'|'paused'|'completed'|'interrupted'|'cancelled'}
 export type BrowserSettings = {engine:'Google'|'Bing'|'百度';startup:'restore'|'new';bookmarksBar:boolean;askDownload:boolean;downloadPath:string}
