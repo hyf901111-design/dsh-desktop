@@ -39,6 +39,7 @@ import { isPluginLoadError } from './plugin-error-view'
 import { mountDesktopShellStyles } from './shell-style'
 import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
+import { mountHomeAppShortcuts } from './home-app-shortcuts'
 import { mountImageGenerationFlow } from './image-generation-flow'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
 import {toggleHomeAppearance} from './home-theme-controls'
@@ -296,6 +297,18 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create})
   scheduledView.mount()
+  const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, async (app, signal) => {
+    if (app === 'research' || app === 'note') {
+      await homeActions.run(app === 'research' ? 'board' : 'note', { signal, revealComposer: async () => {} })
+      return
+    }
+    await notes.flushCurrent()
+    if (signal.aborted) return
+    if (app === 'browser') window.dispatchEvent(new CustomEvent('sherlock:browser-request'))
+    else if (app === 'plugin') window.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
+    else await scheduledView.open()
+  })
+  window.addEventListener('unload', disposeHomeAppShortcuts, { once: true })
   const resetIntegrationIdentity = () => { window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })

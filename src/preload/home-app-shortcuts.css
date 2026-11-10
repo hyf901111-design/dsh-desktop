@@ -1,0 +1,79 @@
+/* Figma 4649:19773 + 4685:369184: keep the input's native center unchanged. */
+.wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero:has(> [data-home-app-shortcuts]) { position:relative; }
+[data-home-app-shortcuts] {
+  position:absolute;
+  inset:calc(100% + 4px - var(--odyssey-home-composer-bottom-padding, 0px)) 0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  height:95px;
+  color:#15181b;
+  pointer-events:none;
+}
+[data-ds-dark-theme] [data-home-app-shortcuts] { color:#fff; }
+[data-home-app-shortcuts] > button {
+  appearance:none;
+  position:relative;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 1 56px;
+  min-width:40px;
+  height:48px;
+  padding:0;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  pointer-events:auto;
+}
+[data-home-app-shortcuts] > button:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+.home-app-shortcut-icon {
+  display:block;
+  flex:none;
+  width:28px;
+  height:28px;
+  background:currentColor;
+  mask:var(--home-app-icon) center/contain no-repeat;
+  opacity:.6;
+  transition:transform 160ms ease,opacity 160ms ease;
+}
+[data-home-app="browser"] { --home-app-icon:url('/odyssey-home-browser-28.svg'); --home-app-hover-icon:url('/odyssey-home-browser-32.svg'); }
+[data-home-app="plugin"] { --home-app-icon:url('/odyssey-home-plugin-28.svg'); --home-app-hover-icon:url('/odyssey-home-plugin-32.svg'); }
+[data-home-app="scheduled"] { --home-app-icon:url('/odyssey-home-scheduled-28.svg'); --home-app-hover-icon:url('/odyssey-home-scheduled-32.svg'); }
+[data-home-app="research"] { --home-app-icon:url('/odyssey-home-research-28.svg'); --home-app-hover-icon:url('/odyssey-home-research-32.svg'); }
+[data-home-app="note"] { --home-app-icon:url('/odyssey-home-note-28.svg'); --home-app-hover-icon:url('/odyssey-home-note-32.svg'); }
+[data-home-app-shortcuts] > button:is(:hover,:focus-visible) .home-app-shortcut-icon {
+  mask-image:var(--home-app-hover-icon);
+  transform:scale(1.1428571429);
+  opacity:1;
+}
+.home-app-shortcut-tooltip {
+  position:absolute;
+  top:52px;
+  left:50%;
+  transform:translateX(-50%);
+  box-sizing:border-box;
+  padding:4px 8px;
+  border-radius:6px;
+  background:rgb(24 26 34 / .96);
+  color:#ebeef6;
+  font:400 12px/18px 'Noto Sans SC',sans-serif;
+  white-space:nowrap;
+  box-shadow:0 2px 8px rgb(0 0 0 / .2);
+  visibility:hidden;
+  pointer-events:none;
+  z-index:2;
+}
+[data-home-app-shortcuts] > button:is(:hover,:focus-visible) .home-app-shortcut-tooltip { visibility:visible; }
+.home-app-shortcuts-status {
+  position:absolute;
+  top:100%;
+  left:0;
+  margin:0;
+  font:400 12px/18px 'Noto Sans SC',sans-serif;
+}
+.home-app-shortcuts-status:empty { display:none; }
+@media (prefers-reduced-motion:reduce) { .home-app-shortcut-icon { transition:none; } }

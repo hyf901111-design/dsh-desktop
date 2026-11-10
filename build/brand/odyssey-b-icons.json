@@ -197,6 +197,78 @@
       "size": 18,
       "nodeId": "4572:368630",
       "sha256": "3f71957ee95de618feeadd5d703bd1d8e35a7e2b88706ea648e4a567ae55c3ef"
+    },
+    {
+      "file": "odyssey-home-browser-28.svg",
+      "role": "home-browser",
+      "size": 28,
+      "nodeId": "4677:370298",
+      "sha256": "feecd8b3b25f29ad01d8e117390ffc46f6925381be4d71e364995abb5a54c0a2"
+    },
+    {
+      "file": "odyssey-home-browser-32.svg",
+      "role": "home-browser",
+      "size": 32,
+      "nodeId": "4685:368873",
+      "sha256": "9e9de41aa5a1ffce225f5919d71eabfa427ef3c70c9b054c687ba09525c9a4b2"
+    },
+    {
+      "file": "odyssey-home-plugin-28.svg",
+      "role": "home-plugin",
+      "size": 28,
+      "nodeId": "4768:396702",
+      "sha256": "a1112756bd484418490b6f7a50fa186fbe84488ef1609a2f101a6299fd6bb2b8",
+      "source": "Phosphor Icons plug-fill (MIT)"
+    },
+    {
+      "file": "odyssey-home-plugin-32.svg",
+      "role": "home-plugin",
+      "size": 32,
+      "nodeId": "4768:396704",
+      "sha256": "9a16594e457e58e4505d49bc3156cd79df0659c3631d61dc868efc89486f7607",
+      "source": "Phosphor Icons plug-fill (MIT)"
+    },
+    {
+      "file": "odyssey-home-scheduled-28.svg",
+      "role": "home-scheduled",
+      "size": 28,
+      "nodeId": "4677:370304",
+      "sha256": "d386d5e77be9cae7a7b5ad6b8354401b91cdcb140e2f8bbacc53d586ef3d2bc5"
+    },
+    {
+      "file": "odyssey-home-scheduled-32.svg",
+      "role": "home-scheduled",
+      "size": 32,
+      "nodeId": "4685:368876",
+      "sha256": "0dda0ffae827b36a9dd3ee62c5a0f83debe4b9754eeb07567f573c2235055589"
+    },
+    {
+      "file": "odyssey-home-research-28.svg",
+      "role": "home-research",
+      "size": 28,
+      "nodeId": "4768:396706",
+      "sha256": "dceae92b1e73dd889b4cfff31d095136661b6e6485b903d6a852550bd1b324d4"
+    },
+    {
+      "file": "odyssey-home-research-32.svg",
+      "role": "home-research",
+      "size": 32,
+      "nodeId": "4768:396709",
+      "sha256": "cab5a8d3b9bdd65ded032b35b0658cbf6f4c082d47563dc0cce5581af0a744d2"
+    },
+    {
+      "file": "odyssey-home-note-28.svg",
+      "role": "home-note",
+      "size": 28,
+      "nodeId": "4760:396466",
+      "sha256": "375bd09b0ab80557de23cfd9ef33aaeda126de69a1caeb924658efbad12353f3"
+    },
+    {
+      "file": "odyssey-home-note-32.svg",
+      "role": "home-note",
+      "size": 32,
+      "nodeId": "4760:396469",
+      "sha256": "dfa1afd29a1281dd9f8ca521e35592287bf44ccb2ecf28310ad74264a1de48af"
     }
   ]
 }

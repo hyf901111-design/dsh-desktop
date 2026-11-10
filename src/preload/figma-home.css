@@ -72,12 +72,13 @@ body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_header[dat
   --dsh-composer-side-clearance:0px;
   --dsh-composer-dock-inset:0px;
   --dsh-composer-card-max-width:780px;
+  --odyssey-home-composer-bottom-padding:32px;
   box-sizing:border-box;
   width:calc(100% - 48px);
   max-width:780px;
   margin-inline:auto;
   gap:4px;
-  padding-bottom:32px;
+  padding-bottom:var(--odyssey-home-composer-bottom-padding);
 }
 body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero { max-width:640px; }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_root {

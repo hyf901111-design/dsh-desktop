@@ -17,7 +17,6 @@ body [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{w
 body [data-dsh-sidebar-root] .st-more .st-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-more-18.svg)!important}
 body [data-dsh-sidebar-root] .srb-bell-icon{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-notifications-20.svg)}
 body [data-dsh-sidebar-root] .srb-row-status .srb-people-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-shared-session-18.svg)}
-.st-menu[data-sidebar-more] [data-odyssey-icon="plugin"]{mask-image:url(/odyssey-b-plugin-18.svg)!important}
 .st-menu[data-sidebar-more] [data-odyssey-icon="clock"]{mask-image:url(/odyssey-b-scheduled-18.svg)!important}
 .st-menu[data-sidebar-more] :is([data-odyssey-icon="note"],[data-odyssey-icon="noteDark"]){mask-image:url(/odyssey-b-note-add-18.svg)!important}
 /* Keep the existing 80px layout reservation. The 36px hit areas sit on one
