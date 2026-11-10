@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补偿非聚焦菜单悬停并清理部分翻译还原状态和按钮间距",
+        "featureName": "修正翻译状态按钮真实悬停颜色",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
-        "tipCommit": "027a1f719b37fe82323533fda5892e3d9d0f9492",
+        "baseCommit": "027a1f719b37fe82323533fda5892e3d9d0f9492",
+        "tipCommit": "7523ce3a1d4d70c1051a24dbc347748178badf6f",
         "commits": [
           {
-            "commit": "027a1f719b37fe82323533fda5892e3d9d0f9492",
+            "commit": "7523ce3a1d4d70c1051a24dbc347748178badf6f",
             "parents": [
-              "cd2c0d53e35375eee962eb9c0180c09b29f5906c"
+              "027a1f719b37fe82323533fda5892e3d9d0f9492"
             ],
-            "subject": "补偿非聚焦菜单悬停并清理部分翻译还原状态和按钮间距"
+            "subject": "修正翻译状态按钮悬停背景优先级并补充实际颜色回归"
           }
         ],
         "files": [
@@ -29,35 +29,11 @@
           },
           {
             "status": "M",
-            "path": "src/main/browser/menu-overlay.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/translation.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/browser/style.css"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-menu-overlay-focus.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-page-context-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-status-zoom.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-translation.test.ts"
           }
         ],
         "checks": [
@@ -79,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "78项直接相关检查通过，包含无mouse事件光标反馈、还原状态与宿主reset间距。",
-            "verifiedCommit": "027a1f719b37fe82323533fda5892e3d9d0f9492",
-            "completedAt": "2026-11-10T14:33:35.320904+00:00",
+            "verifiedCommit": "7523ce3a1d4d70c1051a24dbc347748178badf6f",
+            "completedAt": "2026-11-10T14:48:30.296736+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,14 +68,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "027a1f719b37fe82323533fda5892e3d9d0f9492",
-            "completedAt": "2026-11-10T14:33:35.320904+00:00",
+            "verifiedCommit": "7523ce3a1d4d70c1051a24dbc347748178badf6f",
+            "completedAt": "2026-11-10T14:48:30.296736+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "headless实际样式和状态检查通过；原生hover明确待安装后观察，上一版无hover不算通过。"
+          "summary": "computed hover颜色、内边距和还原回归通过；31cc原客户端菜单逐行高亮与真实模型一键还原已观察，本CSS增量待最终包观察。"
         },
         "acceptanceCriteria": [
           "网页右键提供另存、打印、刷新、翻译或还原以及询问EWork，旧菜单操作不能作用到另一页签或会话。",
@@ -127,7 +103,7 @@
           "本轮仅previewOnly本地集成供用户测试，不执行完整批次接受或晋升main，不对外发布。",
           "重复前台原生夹具曾被用户正在输入的文字干扰，该次结果不记通过；本轮集成只重跑后台聚焦检查，最后在原客户端观察。"
         ],
-        "generatedAt": "2026-11-10T14:33:35.320904+00:00"
+        "generatedAt": "2026-11-10T14:48:30.296736+00:00"
       }
     }
   ],
