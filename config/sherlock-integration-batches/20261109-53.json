@@ -104,6 +104,54 @@
           "重复前台原生夹具曾被用户正在输入的文字干扰，该次结果不记通过；本轮集成只重跑后台聚焦检查，最后在原客户端观察。"
         ],
         "generatedAt": "2026-11-10T14:48:30.296736+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7224741d8eef11db10d17518ebc94b40ceeb3186",
+        "verificationCommit": "7224741d8eef11db10d17518ebc94b40ceeb3186",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "7224741d8eef11db10d17518ebc94b40ceeb3186",
+            "completedAt": "2026-11-10T14:57:06.225Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "7224741d8eef11db10d17518ebc94b40ceeb3186",
+            "completedAt": "2026-11-10T14:57:06.225Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "7224741d8eef11db10d17518ebc94b40ceeb3186",
+            "completedAt": "2026-11-10T14:57:06.225Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-10T14:57:06.225Z"
       }
     }
   ],
