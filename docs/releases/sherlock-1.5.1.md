@@ -1,6 +1,6 @@
 # EWork Odyssey 1.5.1
 
-发布日期：2026-11-10。平台：macOS Apple Silicon。按用户要求签名发布，跳过 Apple 公证。
+发布日期：2026-11-11（更新日志编制于 2026-11-10）。平台：macOS Apple Silicon。按用户要求签名发布，跳过 Apple 公证。
 
 ## 更新内容
 
@@ -36,4 +36,23 @@
 
 - 已验收浏览器集成：`d3ac5e2bfeb2efc5a9094e8aac43a26c346e85c0`；独立分支按[范围记录](../superpowers/parked/2026-11-10-release-1.5.1-scope.md)保留。
 - 保留双通道签名、包完整性、公开更新源、Range 与差分合成验证；不运行全功能测试或旧客户端全量升级测试。
-- 最终发布与校验证据将在完成后补充。
+- 正式构建提交：`d4c600cc0a052e197e877e107d6e0a5c00bebdd6`，来源为干净的本地 `main`；用户已验收浏览器，原客户端实际主界面、关于页 1.5.1 版本和更新日志已核验，原有会话、模型与浏览器页签保留，应用保持打开。
+- 发布聚焦验证覆盖 11 个文件、101 项测试；一个过期的内置技能版本期望修正后，相关 2 项重跑通过。类型检查、正式源码门禁、构建、包内 Node 与原生运行时检查通过；没有运行全功能单元测试。
+- 标准 App/DMG 使用 Developer ID 签名并通过完整性检查；兼容桥使用原旧证书，外层标识 `io.dsh.desktop`、内嵌 App 标识 `com.evanarts.sherlock`，保留可执行 ShipIt 与 Squirrel/Mantle/ReactiveObjC。两个 ZIP 均通过压缩数据完整性检查。
+- Apple 公证按用户要求跳过，未执行 notarization、staple 或将 Gatekeeper 公证票据检查记为通过。
+- Cloudflare 五个不可变版本资源、固定下载入口和两个更新源已提升，26 项公开校验通过，覆盖版本、文件大小、SHA-512、缓存、单段 Range/206、公开 blockmap，以及与关于页一致的中英文各 12 条更新说明；临时上传 Worker 已删除。
+- 从已核对公开哈希的 1.5.0 缓存 ZIP，配合真实公开 blockmap 和单段 Range 请求合成 1.5.1，两个通道的最终 SHA-512 均与正式安装包一致；未执行全量下载回退或旧客户端全量升级安装测试。
+
+| 差分通道 | 新包大小（字节） | 实际传输（字节） | 复用（字节） | Range 请求数 |
+| --- | ---: | ---: | ---: | ---: |
+| 标准 | 838,459,253 | 76,548,041 | 761,911,212 | 165 |
+| 旧签名兼容 | 896,647,162 | 112,306,829 | 784,340,333 | 253 |
+
+- Homebrew Cask 已更新并推送至 `awake-ai-lab/homebrew-tap`，提交 `4f50104a93041df898eb144d5b0794c52da9698a`；Ruby 语法、style、audit、公开 Cask 字节及 `brew info` 的版本、固定 URL 和 SHA-256 一致性检查通过。
+- DMG SHA-256：`c6cbd82b763867a17779018890757b1753b4b23e91b6cdb2d12bfd1e634bfa29`。
+- 版本保留策略已执行：只移除 1.4.0 的 5 个文件，保留 1.4.1、1.4.2、1.4.3、1.5.0、1.5.1 的 25 个资源；32 项删除、保留和更新源检查通过。
+- 发布源码已推送 GitHub 的 `hyf` 与 `main`；未推送版本标签。发布记录提交不改变已签名安装包。
+
+下载：[EWork Odyssey 1.5.1（macOS Apple Silicon）](https://updates.evanarts.com/releases/v1.5.1/sherlock-mac-arm64.dmg)。
+
+证据目录：`release-cloudflare/1.5.1/`。
