@@ -13,6 +13,19 @@
 .eb-popover{top:96px;max-height:calc(100% - 112px)}
 .eb-popover[data-browser-panel=history]{top:128px;max-height:calc(100% - 144px)}
 .eb-popover[data-browser-panel=bookmarks]{top:var(--eb-bookmarks-top,92px);right:var(--eb-bookmarks-right,16px);max-height:calc(100% - var(--eb-bookmarks-top,92px) - 16px);animation:eb-bookmarks-in 140ms ease-out both}
+/* Bookmark rows share their available width with a separate edit action. */
+.eb-popover[data-browser-panel=bookmarks]{min-width:0;overflow-x:hidden;overflow-y:auto}
+.eb-popover[data-browser-panel=bookmarks]>*{min-width:0;max-width:100%;flex-shrink:0}
+.eb-popover[data-browser-panel=bookmarks] .eb-panel-search{width:100%;min-width:0}
+.eb-popover[data-browser-panel=bookmarks] .eb-panel-search input{flex:1 1 0;width:0;min-width:0}
+.eb-popover[data-browser-panel=bookmarks] .eb-folder-heading{min-width:0;max-width:100%;flex:none}
+.eb-popover[data-browser-panel=bookmarks] .eb-folder-heading>.eb-list-row{width:auto;min-width:0;flex:1 1 0}
+.eb-popover[data-browser-panel=bookmarks] .eb-folder-heading>[data-action=edit-bookmark]{display:grid;place-items:center;flex:none;width:32px;height:32px;padding:7px}
+.eb-popover[data-browser-panel=bookmarks] .eb-list-row{min-width:0;max-width:100%}
+.eb-popover[data-browser-panel=bookmarks] .eb-row-text{min-width:0;overflow:hidden}
+.eb-popover[data-browser-panel=bookmarks] .eb-row-text>*,.eb-popover[data-browser-panel=bookmarks]>small{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eb-popover[data-browser-panel=bookmarks] footer{width:100%;flex-wrap:wrap;row-gap:8px}
+.eb-popover[data-browser-panel=bookmarks] footer>button{padding:6px 8px;white-space:nowrap}
 @keyframes eb-bookmarks-in{from{opacity:0}to{opacity:1}}
 .eb-folder-create{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px!important;line-height:20px}
 .eb-folder-create>.eb-icon{width:16px;height:16px}
