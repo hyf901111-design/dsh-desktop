@@ -26,7 +26,7 @@
 .eb-suggestions{left:156px;right:120px;top:96px}
 @container(max-width:700px){.eb-popover[data-browser-panel=site]{left:12px}.eb-suggestions{left:12px;right:12px}}
 
-.eb-root .eb-app-label{height:32px;padding:0 6px;font-weight:500}
+.eb-root .eb-app-label{width:auto;height:32px;padding:0 2px;font-weight:500}
 
 .eb-root[data-settings-open=true]{visibility:hidden!important;pointer-events:none!important}
 .eb-menu hr{margin:0;border:0;height:1px;background:var(--eb-menu-line)}
@@ -46,9 +46,9 @@
 .eb-tab .eb-tab-close{padding:0;flex:none;color:var(--eb-muted)}
 .eb-tab[data-clipped=true] .eb-tab-close{visibility:hidden;pointer-events:none}
 .eb-tab[data-compact=true] .eb-tab-close{display:none}
-.eb-tab-switcher{width:32px;height:32px;flex:none}
+.eb-root .eb-tab-switcher{width:32px;height:32px;flex:none;border-radius:8px;background:var(--eb-field)}
 .eb-popover[data-browser-panel=tabs] kbd{font-size:12px;line-height:16px}
-.eb-popover[data-browser-panel=tab-list]{top:48px;right:var(--eb-tabs-right,12px);width:300px;padding:8px 6px;gap:6px}
+.eb-popover[data-browser-panel=tab-list]{top:48px;left:var(--eb-tab-list-x,132px);right:auto;width:300px;padding:8px 6px;gap:6px}
 .eb-tab-heading{display:flex;justify-content:space-between;padding:2px 10px;color:var(--eb-muted);font-size:12px}
 .eb-tab-options{overflow:auto;min-height:0}
 .eb-tab-option{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px!important;font-size:14px!important;font-weight:500;line-height:21px;text-align:left;border-radius:7px}
@@ -181,9 +181,12 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-tab{user-select:none;touch-action:none;-webkit-user-drag:none}
 
 /* Workspace shortcuts share the browser title row and reserve real tab space. */
+.eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
 .eb-workspace-toggle{-webkit-app-region:no-drag;flex:none}
+.eb-workspace-toggle[aria-expanded=true]{background:var(--eb-field)}
 .eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(188px,23cqw,232px);width:clamp(188px,23cqw,232px);min-width:0;overflow:hidden;-webkit-app-region:no-drag}
 .eb-root .eb-workspace-tabs button{flex:1 1 0;min-width:0;height:32px;padding:0 6px;font-size:14px;line-height:22px;white-space:nowrap}
+@container(max-width:700px){.eb-root .eb-app-label{width:32px}}
 @container(max-width:480px){
  .eb-root .eb-tabs{gap:4px;padding-left:8px}
  .eb-root .eb-app-label{width:28px;padding:0 4px}
@@ -192,3 +195,5 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
  .eb-root .eb-workspace-tabs button{padding:0 2px;font-size:13px}
  .eb-tabs[data-crowded=true] .eb-tab[aria-selected=true]:not([data-pinned=true]){min-width:32px}
 }
+
+.eb-workspace-tabs[aria-hidden=true]{width:0;flex-basis:0;opacity:0;pointer-events:none}

@@ -13,9 +13,9 @@ export const scheduledStyles = `
 .st-new-note-error{padding:12px;font-size:13px;line-height:1.5}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup{flex-direction:column!important}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:none!important;width:32px!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]{width:36px!important;height:36px!important;padding:8px!important;border-radius:6px!important;color:var(--dsw-alias-label-secondary,#76787d)!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]::before{background:currentColor!important;opacity:1;width:20px;height:20px;mask-image:url('${icons.browserRail.replaceAll("'",'%27')}')}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser][aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important;color:var(--dsw-alias-label-primary,#292b2e)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]{width:36px!important;height:36px!important;padding:8px!important;border-radius:6px!important;color:var(--odyssey-sidebar-glyph,inherit)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]::before{background:var(--odyssey-sidebar-glyph,currentColor)!important;opacity:1;width:20px;height:20px;mask-image:url('${icons.browserRail.replaceAll("'",'%27')}')}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser][aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important}
 [data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{flex:0 0 auto!important;overflow:visible!important;min-height:0}
 [data-dsh-sidebar-wide=false] :is(.hHd-Xa_regionArea,.qDHVXG_rail){flex:none!important;height:auto!important;min-height:0}
 [data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto}

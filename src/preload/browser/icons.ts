@@ -31,4 +31,5 @@ import star from './assets/star.svg?inline'
 import starOutline from './assets/star-outline.svg?inline'
 import trash from './assets/trash.svg?inline'
 import up from './assets/up.svg?inline'
-export const browserIcons={back,book,chat,check,chevron,close,copy,download,external,file,folder,folderPlus,forward,globe,history,home,lock,moon,more,pause,pin,play,plus,print,refresh,ring,search,settings,shield,star,starOutline,trash,up}
+import workspace from './assets/workspace.svg?inline'
+export const browserIcons={back,book,chat,check,chevron,close,copy,download,external,file,folder,folderPlus,forward,globe,history,home,lock,moon,more,pause,pin,play,plus,print,refresh,ring,search,settings,shield,star,starOutline,trash,up,workspace}
