@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "恢复全局更多菜单磨砂并自适应浏览器菜单，移除横纵滚动条",
+        "featureName": "完善网页右键、真实模型整页翻译及框选旁同草稿询问",
         "branch": "codex/feat/browser-app-figma-20261109",
         "baseCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
-        "tipCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
+        "tipCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
         "commits": [
           {
             "commit": "371f2183723fbf502f294939fe28836a1379e259",
@@ -41,9 +41,78 @@
               "0d63ed6920c3571dd3d911cdb1ee713d8186da5b"
             ],
             "subject": "自适应更多菜单高度并去除滚动条，保留原生菜单滚动样式"
+          },
+          {
+            "commit": "36662b43ec9d763b22b22e13d8c1871efedfa221",
+            "parents": [
+              "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc"
+            ],
+            "subject": "规划网页右键翻译与选区询问同草稿交互"
+          },
+          {
+            "commit": "1472c7615adffcb5ff34d3296aec393f138776b5",
+            "parents": [
+              "36662b43ec9d763b22b22e13d8c1871efedfa221"
+            ],
+            "subject": "修复浏览器菜单焦点归属与地址联想接管"
+          },
+          {
+            "commit": "166e90f629e3e465f6b713a362ef487008208fbd",
+            "parents": [
+              "1472c7615adffcb5ff34d3296aec393f138776b5"
+            ],
+            "subject": "新增网页整页模型翻译与安全原文恢复"
+          },
+          {
+            "commit": "b448a0d4b16bd5a939cff177f2303f2d1344033b",
+            "parents": [
+              "166e90f629e3e465f6b713a362ef487008208fbd"
+            ],
+            "subject": "修正页面还原中止状态并验证右键生命周期"
+          },
+          {
+            "commit": "37c398a492b06bf3418bb63b5d1edc0dd8cc35b8",
+            "parents": [
+              "b448a0d4b16bd5a939cff177f2303f2d1344033b"
+            ],
+            "subject": "补充浏览器右键提问生命周期和选区服务定向验证"
+          },
+          {
+            "commit": "3dd99de40371fb8617f0833b3bd29d7a45a31403",
+            "parents": [
+              "37c398a492b06bf3418bb63b5d1edc0dd8cc35b8"
+            ],
+            "subject": "新增网页选区询问浮窗并复用全局草稿发送"
+          },
+          {
+            "commit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "parents": [
+              "3dd99de40371fb8617f0833b3bd29d7a45a31403"
+            ],
+            "subject": "接入网页右键翻译和框选同草稿询问，隔离旧页面异步操作"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-10-browser-page-context-actions.md"
+          },
+          {
+            "status": "M",
+            "path": "electron.vite.config.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/browser-translation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/verify-browser-live-menus.mjs"
@@ -53,8 +122,40 @@
             "path": "scripts/verify-browser-menu-overlay-native.mjs"
           },
           {
+            "status": "A",
+            "path": "scripts/verify-browser-region-overlay.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-browser-translation.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/context-menu.ts"
+          },
+          {
             "status": "M",
             "path": "src/main/browser/menu-overlay.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/region-overlay.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/browser/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/translation-surface.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/translation.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
@@ -65,11 +166,99 @@
             "path": "src/preload/browser/native-menus.ts"
           },
           {
+            "status": "A",
+            "path": "src/preload/browser/region-bridge.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/region-preload.cjs"
+          },
+          {
             "status": "M",
             "path": "src/preload/browser/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/browser-app.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/browser-region.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-context-lifecycle-review.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-page-actions-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-page-actions-view.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-page-context-menu.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-region-bridge.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-region-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-region-overlay.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-region-preload.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-translation-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-translation.test.ts"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-page-context-menu.test.ts",
+              "test/browser-page-actions-view.test.ts",
+              "test/browser-page-actions-service.test.ts",
+              "test/browser-context-lifecycle-review.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-status-zoom.test.ts",
+              "test/browser-region-native.test.js",
+              "test/browser-region-overlay.test.ts",
+              "test/browser-region-preload.test.js",
+              "test/browser-region-bridge.test.js",
+              "test/browser-translation.test.ts",
+              "test/browser-translation-runtime.test.js",
+              "test/scheduled-title.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "72项本次网页右键、选区同草稿、生命周期、模型翻译和相关原有输入检查通过。",
+            "verifiedCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "completedAt": "2026-11-10T11:24:13.225786+00:00",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "env",
@@ -81,9 +270,9 @@
               "test/browser-bookmark-popover-overflow.test.js"
             ],
             "outcome": "passed",
-            "summary": "59项父视图与收藏弹层直接相关检查通过，菜单布局改动未影响其他浏览器交互。",
-            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
-            "completedAt": "2026-11-10T10:17:24.542542+00:00",
+            "summary": "59项浏览器父视图与收藏弹层渲染检查通过。",
+            "verifiedCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "completedAt": "2026-11-10T11:24:13.225786+00:00",
             "timeoutMs": 120000
           },
           {
@@ -94,9 +283,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "最终磨砂层、菜单样式与投射控制器类型检查通过。",
-            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
-            "completedAt": "2026-11-10T10:17:24.542542+00:00",
+            "summary": "完整Node与preload类型检查通过。",
+            "verifiedCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "completedAt": "2026-11-10T11:24:13.225786+00:00",
             "timeoutMs": 120000
           },
           {
@@ -105,111 +294,56 @@
               "scripts/verify-browser-live-menus.mjs"
             ],
             "outcome": "passed",
-            "summary": "22项真实Electron原生检查通过：原21项合同保持，新增More正常窗口零横纵溢出且无滚动条、低窗无可见条仍可wheel至末项，全局More使用独立交互磨砂窗口；截图调用0。",
-            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
-            "completedAt": "2026-11-10T10:17:24.542542+00:00",
+            "summary": "23项隔离原生菜单检查通过，菜单捕获网页截图调用为0；全局More磨砂、浏览器More不透明且无可见滚动条。",
+            "verifiedCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "completedAt": "2026-11-10T11:24:13.225786+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "scripts/verify-browser-menu-overlay-native.mjs"
+              "scripts/verify-browser-region-overlay.mjs"
             ],
             "outcome": "passed",
-            "summary": "原生菜单框架定向检查通过：真实menu vibrancy、独立父子窗口、隐藏先绘制、输入法/键盘/取消/旧状态隔离、低窗焦点滚入及提示穿透。",
-            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
-            "completedAt": "2026-11-10T10:17:24.542542+00:00",
+            "summary": "7项隔离真实Electron选区检查通过：原网页实时/原图选区/无编号/右栏失焦保留/外侧点击不穿透/窄窗适配。",
+            "verifiedCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "completedAt": "2026-11-10T11:24:13.225786+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-translation.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "真实隐藏Electron的4项翻译合同和首请求时序检查通过，使用受控翻译响应，不创建session或网页快照。",
+            "verifiedCommit": "c8468b42f022c05e662f0da06d5b0cd766308a08",
+            "completedAt": "2026-11-10T11:24:13.225786+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "59项相关渲染检查、类型、22项原生全合同及原生框架检查通过。合成页真实compositor已观察NS磨砂与外部锐利条纹；待本轮原客户端签名安装最后核验。"
+          "summary": "72项聚焦、59项渲染、23项原生菜单、7项原生选区与翻译原生合同通过；原日常签名客户端真实模型与全链路验收在本地预览构建后执行。"
         },
         "acceptanceCriteria": [
-          "浏览器在中间工作区运行并保留原生右侧对话与草稿",
-          "普通标签、收藏、历史和设置本地持久化；隐私历史及下载记录不落盘",
-          "实际Chromium导航、输入、查找、下载和PDF正常；原生网页不可调用客户端IPC",
-          "Figma布局、统一图标、弹层与宽窄主题通过聚焦核对",
-          "打开浏览器及普通网页链接不创建或切换对话；空上下文来源动作明确提示",
-          "首页四入口分别展示实际常用网站、下载记录、全部收藏和历史；多页签压缩、完整名称切换和焦点符合右侧屏逻辑",
-          "菜单文字快捷键分别按设计设定，右侧展开按钮按原生边界避让",
-          "空会话展开右屏、选择项目不创建session；首次发送才在所选项目创建，失败可重试且草稿保留",
-          "浏览器当前网页正文在发送时作为不可信参考附加，AI可以修改当前主文档文字并整页撤销",
-          "切换owner或页签后拒绝排队旧请求，原有其他会话智能体浏览器保持独立",
-          "无会话及浏览器右栏直接复用同一全局右栏和对话组件；不再手写页签或输入区界面",
-          "更多菜单提供页面缩放控制，支持边界和恢复100%，底栏按用户决定移除",
-          "首发配置准备锁定真实输入，预设/模型/权限失败保留真实草稿",
-          "选中与普通页签共同按数量及空间自适应宽度；超多页签仍可切换并避让全局右栏按钮",
-          "页签显示当前网站真实favicon，读取属于各自Chromium会话，导航及空图标更新清除旧图标，主UI只接收安全PNG",
-          "窄窗右栏按实际compact展开状态驱动原生composer；普通主页收起右栏恢复中央原生输入",
-          "主页以外隐藏收藏栏并移除底栏，缩放保留更多菜单；浏览器标题不可点，收起侧栏入口高对比",
-          "点击地址首次全选且无蓝框；空心/实心星标直接按当前URL增删收藏",
-          "菜单不透明，分隔线弱化，收藏按钮hover有内边距，收藏弹层贴近触发按钮并淡入",
-          "关闭页签淡出收拢，后方前移；鼠标在栏内保持槽宽，移出后平滑适配，尊重减少动态效果",
-          "界面菜单使用独立原生覆盖层，网页始终实时可见；不捕获、压缩、隐藏或替换网页。",
-          "导航、切换会话、关闭或菜单替换取消旧投射请求，不复活旧弹层。",
-          "设置浅色背景可辨，标题备注左对齐，字号加大；下载目录使用原生文件夹选择",
-          "浏览器模式回复不显示添加到画布，其他模式保留",
-          "移除底栏后原生网页仅底部保留16px内圆角，顶部直角；应用标题可拖动整个客户端。",
-          "空心星标及前进后退箭头线宽加粗",
-          "网站记住登录的持久Cookie/站点存储跨正常完整退出重启保持，隐私/临时/过期/撤销边界尊重网站",
-          "最终正式身份本地包使用日常数据目录与真实模型配置，不迁移或覆盖数据和凭据",
-          "联想框单行40px且无键盘说明，键盘选择/打开/Escape保留",
-          "浏览器未选中时图标灰色，仅进入浏览器后高亮",
-          "普通页签最大240px，继续按空间收缩且拥挤时活动项适当加宽",
-          "页签支持拖拽插入排序，活动文档不变，普通顺序持久化，外部拖入不改变顺序",
-          "模型菜单宽度/位置限制在全局右栏，嵌套全局菜单动态移位/变宽仍完整显示",
-          "菜单未关闭时缩放及时绘制新画面",
-          "完整收藏管理支持搜索、文件夹、收藏增改、移动、单删/批删，草稿/光标跨后台更新保留",
-          "设置页与管理收藏使用实色内部页面，原生网页不覆盖或透出。",
-          "网页观察限制节点/公开文字/总时长，脚本样式不计入公开文字预算；修改最多100项并在取消、导航或失效后回滚自有未被站点更改的文字",
-          "原生刷新和关闭恢复要求匹配活动页签及网址，不等待卡住的DOM通道，返回请求状态后重观测",
-          "主页作为原生about:blank历史项参与前进后退，空主页无历史请求安全无操作，不出现请先打开网页错误",
-          "首页四入口仅图标40px背景随hover变色，文字提亮，不生成整块横向卡片背景",
-          "页签使用6px阈值指针捕获排序，活动页不改变；释放提交、拖出栏/Escape/取消/失焦清理，不依赖系统HTML5拖放结束事件",
-          "40页签在边缘持续滚动，取消后不改变顺序，不残留捕获、RAF或落点标记",
-          "历史和下载以独立浏览器内部页打开，重复入口复用原页签，原网页保留；支持搜索、历史单删、下载状态和操作",
-          "主页研究资料入口替换为下载记录及下载图标，工具栏删除下载入口；更多菜单和快捷键保留",
-          "新建页签按钮紧跟最后一枚页签，填满可用区域后保持右端；展开四入口和窄320px中心仍保留可选网页项及按钮",
-          "下载重试不依赖原网页仍打开，使用匹配普通/隐私分区的隐藏下载载体，不增加可见页签或改变当前页",
-          "网页页签列表固定于第一枚网页页签左侧，包括单页签；默认圆角底色、弹层贴近触发按钮，新建按钮仍紧跟最后网页项",
-          "原有菜单在主UI中隐藏/inert并投射真实控件；独立原生层完成绘制后淡入，复用前清空旧画面，保持键盘、输入法、草稿与选择范围。",
-          "收藏夹无横向滚动；标题/搜索/列表/更多/底部按钮完整位于padding内，长标题及网址真实省略，30条仍纵向滚动，长folder导航可用且不误关闭",
-          "浏览器标题旁纯折线箭头靠近标题；悬停展开四个原全局视图，200ms动效及160ms离开收起保留。",
-          "页签列表默认背景减淡；更多和收藏夹使用相同不透明背景、边框、圆角和阴影。",
-          "折叠侧栏按快捷创建→分割线→浏览器→更多排列；浏览器仅选中高对比，非选中匹配共享icon色。",
-          "折叠消息通知按钮及其hover容器40×40、radius10，图标四边10px；探索圆角矩形保留。",
-          "界面菜单截图请求明确拒绝；仅显式打印预览和AI观察保留图片用途。",
-          "原生网页先更新bounds/visible再解除节流，弹出菜单期间动画、计时和视频保持实时。",
-          "全局More与相交提示气泡使用原生投射层；纯提示不抢焦点且鼠标穿透，菜单与气泡均在网页上方。",
-          "未选中网页页签使用淡色hover背景和120ms过渡，选中背景与宽度不变。",
-          "loading圆环持续800ms线性旋转且优先于旧favicon，完成后恢复真实favicon；减少动态效果设置保留。",
-          "遮罩取色基于实际Browser root的底角而非未clamp的中心列边界，按命中背景层合成，明暗、普通/超高中心和resize都与gutter一致；原生网页内容不裁掉。",
-          "首次网页唤醒仅在真实可见非零bounds后解除节流；已经唤醒的页面在弹层下仍保持awake。",
-          "浏览器中全局底部面板可展开、调整高度和关闭；网页bounds随全局面板实时变化，不覆盖面板。",
-          "菜单仅读取客户端自身origin的本地字体和图标资源；网页分区和网络策略不改变。",
-          "原生日常客户端保留原有工作区、会话、模型与站点登录数据，签名包构建后实机核验并保持打开。",
-          "左侧全局More以系统原生磨砂材质覆盖实时网页；浏览器自身More保持不透明。",
-          "浏览器More按内容自然高度展开，正常窗口无横纵溢出及可见滚动条；低窗保留滚轮和键盘到达末项。",
-          "原生投射保留source滚动容器的伪元素样式、color-scheme与字体合成设置，避免白色轨道挤窄内容。"
+          "网页右键提供另存、打印、刷新、翻译或还原以及询问EWork，旧菜单操作不能作用到另一页签或会话。",
+          "当前配置模型分批翻译页面公开文字并保留布局与交互，不建立聊天会话；支持取消、部分结果提示与安全还原。",
+          "网页内容作为不可信数据，模型不执行工具；不读取表单值，旧文档和迟到结果不能覆盖新内容。",
+          "询问EWork框选后显示蓝色区域和邻近询问浮窗，无编号；实际选区原图通过既有File图片入口加入全局草稿。",
+          "浮窗和原生右栏使用同一草稿/引用/图片及发送流程；支持双向更新、IME、原生撤销重做，成功ACK后收起，失败保留。",
+          "关闭浮窗保留草稿与图片；删除选区只移除自身图片，切页、导航、缩放和外来owner取消旧UI。",
+          "pending仅首次实际发送创建会话，受控rightSession迁移保留浮窗，绝不跟随其他owner。",
+          "全局More使用系统磨砂，浏览器More保持不透明无横纵可见滚动条；界面菜单覆盖实时网页，无捕获或替换。",
+          "最终从干净集成预览提交本地签名构建，更新原日常客户端，保留用户历史、模型和站点存储，不公开发布。"
         ],
         "risks": [
-          "受控HTTPS夹具不证明任意远端网站均兼容",
-          "Chrome账号同步与扩展商店不在本次设计范围",
-          "缓存清理按所有时间执行，界面已明确说明",
-          "网页修改仅在本地主文档文字展示层；不编辑iframe、canvas、表单或超长单文字节点，也不保存远程站点",
-          "额外旧standard-agent-preset首项对build roster的断言在canonical main同样失败，未修改历史策略；新预设交接有独立回归。",
-          "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
-          "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。",
-          "真实旧邮箱的超时现象未用私人邮箱重放；合成夹具证明预算和恢复行为，不代表任意远端站点的全量翻译兼容。",
-          "新增内部页采用focused原生夹具验证；旧full夹具的真实滚轮查找断言曾超时，未放宽断言，也未将旧全夹具当作本提交全部通过证据。",
-          "原日常客户端CUA拖拽尝试没有被计为通过；隔离真实Electron原生held mouse输入可成功排序并保持activeId，buttons=0输入则按设计取消，未据此放宽鼠标按键守卫。",
-          "性能数字来自独立受控网页，不能推断任意远端邮箱的冷启动时延；完整旧原生夹具不在本轮局部改动复验范围。",
-          "本轮以previewOnly聚焦集成供原日常客户端本地测试，尚未记录完整批次接受或晋升main；不公开发布。",
-          "合成材质窗的物理跨窗外部首点未获CUA证明：工具在事件发送前拒绝越出所绑定子窗口；受控native事件已验证，不将工具拒绝计为产品失败或通过。"
+          "隔离夹具使用合成页面和受控模型，真实当前模型与原日常客户端验收须在最终构建中补充。",
+          "翻译覆盖可读DOM文字和显示属性；canvas、关闭shadow DOM、不可访问frame及超预算内容明确为部分覆盖。",
+          "网站撤销登录、会话过期或服务端策略不能由客户端永久绕过。",
+          "本轮仅previewOnly本地集成供用户测试，不执行完整批次接受或晋升main，不对外发布。"
         ],
-        "generatedAt": "2026-11-10T10:17:24.542542+00:00"
+        "generatedAt": "2026-11-10T11:24:13.225786+00:00"
       }
     }
   ],
