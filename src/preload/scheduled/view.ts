@@ -15,6 +15,7 @@ import {
 } from '../../shared/scheduled-tasks'
 import { icons } from './icons'
 import { scheduledStyles } from './style'
+import { prepareBrowserOverlay } from '../browser/overlay-preflight'
 const escape = (s: unknown) =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -243,13 +244,17 @@ export class ScheduledTaskView {
   }
   private mountBrowserEntry(group:Element){
     let button=group.querySelector<HTMLButtonElement>('[data-sidebar-browser]')
+    let separator=group.querySelector<HTMLElement>('[data-sidebar-browser-separator]')
     const collapsed=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')==='false'
-    if(!collapsed||!this.surfaceHost){button?.remove();return}
+    if(!collapsed||!this.surfaceHost){button?.remove();separator?.remove();return}
     if(!button){
       button=this.document.createElement('button');button.type='button';button.className='hHd-Xa_newSession';button.dataset.sidebarBrowser=''
       button.setAttribute('aria-label','浏览器');button.title='浏览器';button.onclick=()=>this.openBrowser()
       const more=group.querySelector('.st-more-zone');group.insertBefore(button,more)
     }
+    const more=group.querySelector('.st-more-zone');if(more&&button.nextElementSibling!==more)group.insertBefore(button,more)
+    if(!separator){separator=this.document.createElement('span');separator.dataset.sidebarBrowserSeparator='';separator.setAttribute('aria-hidden','true')}
+    if(separator.nextElementSibling!==button)group.insertBefore(separator,button)
     button.setAttribute('aria-pressed',String(this.document.body.dataset.workspaceSurface==='browser'))
   }
   private placeMore(group: Element, zone: HTMLElement) {
@@ -898,6 +903,9 @@ export class ScheduledTaskView {
     anchor.closest<HTMLElement>('.st-row')?.setAttribute('data-menu-open', 'true')
     const menu = this.document.createElement('div')
     menu.className = 'st-menu'
+    menu.inert = true
+    menu.setAttribute('aria-hidden', 'true')
+    menu.style.visibility = 'hidden'
     menu.dataset.dark = String(this.dark())
     menu.role = 'menu'
     menu.innerHTML = items
@@ -930,7 +938,20 @@ export class ScheduledTaskView {
           items[i]!.run()
         }),
     )
-    menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    const present = () => {
+      if (this.menu !== menu || !menu.isConnected) return
+      menu.inert = false
+      menu.removeAttribute('aria-hidden')
+      menu.style.removeProperty('visibility')
+      menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    }
+    const prepared = prepareBrowserOverlay(this.document, menu)
+    if (prepared) void prepared.then(ready => {
+      if (this.menu !== menu || !menu.isConnected) return
+      if (ready) present()
+      else { this.closeMenu(); anchor.focus() }
+    })
+    else present()
   }
   private closeMenu() {
     this.menu?.remove()

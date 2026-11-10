@@ -41,7 +41,17 @@ export function registerBrowserApp(options:Options){
  const current=()=>model.tab(model.activeId)
  const closeDownloadOwners=(isPrivate?:boolean)=>{for(const [key,owner]of downloadOwners)if(isPrivate===undefined||key===isPrivate){downloadOwners.delete(key);if(!owner.view.webContents.isDestroyed())owner.view.webContents.close()}}
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
- const sync=()=>{let shown=false;for(const [id,e]of live){const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error,awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
+ const sync=()=>{
+  let shown=false
+  for(const [id,e]of live){
+   const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error
+   if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)
+   // First activation needs an attached surface; a prepared page stays awake behind overlays.
+   const awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error&&(e.awake===true||show&&!!rect)
+   if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}
+  }
+  corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()
+ }
  const sessionFor=(tab:Pick<BrowserTab,'private'>)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
@@ -190,7 +200,7 @@ export function registerBrowserApp(options:Options){
    publish();return snapshot()
   }
   const tab=model.tab(input.id??model.activeId)
-  if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();return bitmap.isEmpty()?'':bitmap.resize({width:Math.min(1600,bitmap.getSize().width)}).toDataURL()}
+  if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();if(bitmap.isEmpty())return '';const image=bitmap.resize({width:Math.min(1600,bitmap.getSize().width)});return input.purpose==='overlay'?'data:image/jpeg;base64,'+image.toJPEG(95).toString('base64'):image.toDataURL()}
   if(method==='navigate'){void navigate(tab,browserAddress(input.url,model.settings.engine));return snapshot()}
   if(method==='home'){
    if(!tab.page&&!tab.url&&!tab.loading&&!tab.error)return snapshot()
