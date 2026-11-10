@@ -9,84 +9,93 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器菜单性能、页签反馈和底部圆角细节修正",
+        "featureName": "实时网页上的原生菜单提示层与全局底部面板修复",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
-        "tipCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+        "baseCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+        "tipCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
         "commits": [
           {
-            "commit": "49f7c171a3e9cb364de753a7bf10e4cae0aa6cc4",
+            "commit": "cfcf05aa7fd98ea2411f4b71378a5ceadff9b2ac",
             "parents": [
-              "577fb8bf8911e20faf4b69051861e95b999f54b6"
+              "900013c72f2c63f4de9ceda8d86c598e98874f05"
             ],
-            "subject": "调整浏览器折线展开图标并统一弹层背景样式"
+            "subject": "让浏览器随全局底栏展开和拖拽实时避让"
           },
           {
-            "commit": "3ce19b5a9d3745f9a0ab3a41e006916c54c25b86",
+            "commit": "65428452e689b6824d94a8e89159984b7e95cf1d",
             "parents": [
-              "49f7c171a3e9cb364de753a7bf10e4cae0aa6cc4"
+              "cfcf05aa7fd98ea2411f4b71378a5ceadff9b2ac"
             ],
-            "subject": "为折叠侧栏浏览器入口增加分隔线和选中强调色"
+            "subject": "新增保持网页实时的原生菜单覆盖层框架"
           },
           {
-            "commit": "1e40047578080702f1323e13f87f63197d13416f",
+            "commit": "77ef9d8d79fc02dfdf1e834e6303ee577ada572c",
             "parents": [
-              "3ce19b5a9d3745f9a0ab3a41e006916c54c25b86"
+              "65428452e689b6824d94a8e89159984b7e95cf1d"
             ],
-            "subject": "减少浏览器弹层截图编码耗时并避免状态更新重复捕获"
+            "subject": "补齐提示气泡原生穿透层并清除旧菜单画面"
           },
           {
-            "commit": "8bc239713d49396c4d690ff19a76eab34ddee251",
+            "commit": "43042d02d0139ebc594870882b7b96f0596fd183",
             "parents": [
-              "1e40047578080702f1323e13f87f63197d13416f"
+              "77ef9d8d79fc02dfdf1e834e6303ee577ada572c"
             ],
-            "subject": "修复原生折叠侧栏消息按钮悬停背景比例和居中间距"
+            "subject": "将浏览器父视图测试切换为实时网页菜单验收合同"
           },
           {
-            "commit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "commit": "d0499edd8bb025e7e0e7463a0d5804c82038fcd6",
             "parents": [
-              "8bc239713d49396c4d690ff19a76eab34ddee251"
+              "43042d02d0139ebc594870882b7b96f0596fd183"
             ],
-            "subject": "修复全局菜单开显前交接和原生网页激活时序"
+            "subject": "增加实时网页原生菜单与提示层的隔离验收"
           },
           {
-            "commit": "f7b25769fdb396b600afd68ec60e46091e0ceb84",
+            "commit": "444e67cefe3604b7d24495f06d27136dd5bc1ca6",
             "parents": [
-              "61430a9645ce81912a0e85bb53001ffa7519897d"
+              "d0499edd8bb025e7e0e7463a0d5804c82038fcd6"
             ],
-            "subject": "延后原生网页首次唤醒直到可见布局完成"
+            "subject": "补验原生菜单地址焦点与本地字体图标绘制"
           },
           {
-            "commit": "83775d3e501e01d1b0bb6e5bd316f32dc81a634e",
+            "commit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
             "parents": [
-              "f7b25769fdb396b600afd68ec60e46091e0ceb84"
+              "444e67cefe3604b7d24495f06d27136dd5bc1ca6"
             ],
-            "subject": "增加页签轻量悬停反馈并让加载圆环持续旋转"
-          },
-          {
-            "commit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
-            "parents": [
-              "83775d3e501e01d1b0bb6e5bd316f32dc81a634e"
-            ],
-            "subject": "按实际圆角边界采样浏览器遮罩背景色"
+            "subject": "改为实时网页上的原生菜单和穿透提示层，移除界面截图替代"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "electron.vite.config.ts"
+          },
+          {
             "status": "A",
+            "path": "scripts/verify-browser-live-menus.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-browser-menu-overlay-native.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-browser-overlay-handoff.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/menu-overlay.ts"
           },
           {
             "status": "M",
             "path": "src/main/browser/service.ts"
           },
           {
-            "status": "M",
-            "path": "src/preload/browser/assets/workspace.svg"
+            "status": "A",
+            "path": "src/preload/browser/menu-preload.cjs"
           },
           {
             "status": "A",
-            "path": "src/preload/browser/overlay-preflight.ts"
+            "path": "src/preload/browser/native-menus.ts"
           },
           {
             "status": "M",
@@ -98,15 +107,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/explore-menu.css"
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
+            "path": "src/shared/browser-app.ts"
           },
           {
             "status": "M",
@@ -114,19 +119,7 @@
           },
           {
             "status": "M",
-            "path": "test/browser-bookmark-popover-overflow.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-sidebar-entry-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/explore-menu-browser.test.ts"
+            "path": "test/workspace-bottom-panel-layout.test.js"
           }
         ],
         "checks": [
@@ -144,9 +137,9 @@
               "test/browser-bookmark-popover-overflow.test.js"
             ],
             "outcome": "passed",
-            "summary": "83项相关检查通过，含46项父视图、scheduled菜单、侧栏布局和13项收藏弹层；覆盖加载旋转/完成favicon、明暗hover、真实圆角边界normal/clamp/resize。",
-            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
-            "completedAt": "2026-11-10T08:18:01.329766+00:00",
+            "summary": "83项直接相关检查通过：父视图实时菜单合同、底部面板高度、页签加载/hover、圆角边界、侧栏和收藏弹层。",
+            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
+            "completedAt": "2026-11-10T09:27:22.429310+00:00",
             "timeoutMs": 120000
           },
           {
@@ -161,9 +154,9 @@
               "gives footer controls safe hover padding"
             ],
             "outcome": "passed",
-            "summary": "4项明暗×展开折叠真实原生样式渲染通过，通知按钮40×40且四边10px；76项无关检查跳过。",
-            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
-            "completedAt": "2026-11-10T08:18:01.329766+00:00",
+            "summary": "通知hover四种主题/折叠组合4项通过，76项无关项跳过。",
+            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
+            "completedAt": "2026-11-10T09:27:22.429310+00:00",
             "timeoutMs": 120000
           },
           {
@@ -174,26 +167,26 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过，含修正通知夹具回调参数标注。",
-            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
-            "completedAt": "2026-11-10T08:18:01.329766+00:00",
+            "summary": "最终实时菜单投射控制器及主进程类型检查通过。",
+            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
+            "completedAt": "2026-11-10T09:27:22.429310+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "scripts/verify-browser-overlay-handoff.mjs"
+              "scripts/verify-browser-live-menus.mjs"
             ],
             "outcome": "passed",
-            "summary": "最终源码真实Electron严格原生验证通过：首次可见布局后解除节流，3轮激活与返回、9次菜单交接、默认PNG及overlayJPEG、隐藏overlay页面保持awake，取消不残留。",
-            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
-            "completedAt": "2026-11-10T08:18:01.329766+00:00",
+            "summary": "21项真实Electron原生检查通过：4K网页实时、截图0次、菜单/全局More/提示层级、AX唯一、键盘/中文输入、地址焦点、隔离菜单分区、本地字体和CSS图标、关闭取消、单次穿透点击及125%坐标。",
+            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
+            "completedAt": "2026-11-10T09:27:22.429310+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "最终源码87项定向检查、类型及9次真实Electron菜单交接通过。另独立native8组角像素检查（宿主明暗×页面明暗×zoom/resize）通过。待签名原客户端最后实机核对；未将87项当作全应用全功能验收。"
+          "summary": "87项聚焦渲染检查、类型及21项真实Electron验收通过；尚待本轮签名原客户端最后核验，不视作全功能或真实模型验收。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -216,11 +209,11 @@
           "点击地址首次全选且无蓝框；空心/实心星标直接按当前URL增删收藏",
           "菜单不透明，分隔线弱化，收藏按钮hover有内边距，收藏弹层贴近触发按钮并淡入",
           "关闭页签淡出收拢，后方前移；鼠标在栏内保持槽宽，移出后平滑适配，尊重减少动态效果",
-          "菜单截图解码并绘制后再切原生视图，关闭后反向交接；侧栏非相交更多菜单不隐藏网页",
-          "截图失败、重定向、关闭动画期间开菜单自动重试或取消并明确提示",
+          "界面菜单使用独立原生覆盖层，网页始终实时可见；不捕获、压缩、隐藏或替换网页。",
+          "导航、切换会话、关闭或菜单替换取消旧投射请求，不复活旧弹层。",
           "设置浅色背景可辨，标题备注左对齐，字号加大；下载目录使用原生文件夹选择",
           "浏览器模式回复不显示添加到画布，其他模式保留",
-          "移除底栏后原生网页与快照仅底部保留16px内圆角，顶部直角；应用标题可拖动整个客户端",
+          "移除底栏后原生网页仅底部保留16px内圆角，顶部直角；应用标题可拖动整个客户端。",
           "空心星标及前进后退箭头线宽加粗",
           "网站记住登录的持久Cookie/站点存储跨正常完整退出重启保持，隐私/临时/过期/撤销边界尊重网站",
           "最终正式身份本地包使用日常数据目录与真实模型配置，不迁移或覆盖数据和凭据",
@@ -231,7 +224,7 @@
           "模型菜单宽度/位置限制在全局右栏，嵌套全局菜单动态移位/变宽仍完整显示",
           "菜单未关闭时缩放及时绘制新画面",
           "完整收藏管理支持搜索、文件夹、收藏增改、移动、单删/批删，草稿/光标跨后台更新保留",
-          "设置页与管理收藏不保留网页快照，设置实色背景不透出原生网页",
+          "设置页与管理收藏使用实色内部页面，原生网页不覆盖或透出。",
           "网页观察限制节点/公开文字/总时长，脚本样式不计入公开文字预算；修改最多100项并在取消、导航或失效后回滚自有未被站点更改的文字",
           "原生刷新和关闭恢复要求匹配活动页签及网址，不等待卡住的DOM通道，返回请求状态后重观测",
           "主页作为原生about:blank历史项参与前进后退，空主页无历史请求安全无操作，不出现请先打开网页错误",
@@ -243,19 +236,22 @@
           "新建页签按钮紧跟最后一枚页签，填满可用区域后保持右端；展开四入口和窄320px中心仍保留可选网页项及按钮",
           "下载重试不依赖原网页仍打开，使用匹配普通/隐私分区的隐藏下载载体，不增加可见页签或改变当前页",
           "网页页签列表固定于第一枚网页页签左侧，包括单页签；默认圆角底色、弹层贴近触发按钮，新建按钮仍紧跟最后网页项",
-          "自有菜单准备期间隐藏/inert，截图decode和paint后等待原生隐藏ack及双RAF再原地淡入，不重建已绘制cover；旧结果、取消、失败和外部菜单关闭交接均安全",
+          "原有菜单在主UI中隐藏/inert并投射真实控件；独立原生层完成绘制后淡入，复用前清空旧画面，保持键盘、输入法、草稿与选择范围。",
           "收藏夹无横向滚动；标题/搜索/列表/更多/底部按钮完整位于padding内，长标题及网址真实省略，30条仍纵向滚动，长folder导航可用且不误关闭",
           "浏览器标题旁纯折线箭头靠近标题；悬停展开四个原全局视图，200ms动效及160ms离开收起保留。",
           "页签列表默认背景减淡；更多和收藏夹使用相同不透明背景、边框、圆角和阴影。",
           "折叠侧栏按快捷创建→分割线→浏览器→更多排列；浏览器仅选中高对比，非选中匹配共享icon色。",
           "折叠消息通知按钮及其hover容器40×40、radius10，图标四边10px；探索圆角矩形保留。",
-          "仅overlay快照JPEG95，默认PNG不变；后台状态更新保留同一解码cover，避免重复捕获。",
-          "原生网页先更新bounds/visible再解除节流，首次显示及返回均可capture。",
-          "全局More测量后先隐藏/inert，等capture/paint/native hide ack再出现；键盘接管收旧菜单不抢焦点，取消不复活或残图。",
+          "界面菜单截图请求明确拒绝；仅显式打印预览和AI观察保留图片用途。",
+          "原生网页先更新bounds/visible再解除节流，弹出菜单期间动画、计时和视频保持实时。",
+          "全局More与相交提示气泡使用原生投射层；纯提示不抢焦点且鼠标穿透，菜单与气泡均在网页上方。",
           "未选中网页页签使用淡色hover背景和120ms过渡，选中背景与宽度不变。",
           "loading圆环持续800ms线性旋转且优先于旧favicon，完成后恢复真实favicon；减少动态效果设置保留。",
           "遮罩取色基于实际Browser root的底角而非未clamp的中心列边界，按命中背景层合成，明暗、普通/超高中心和resize都与gutter一致；原生网页内容不裁掉。",
-          "首次网页唤醒仅在真实可见非零bounds后解除节流；已经唤醒的页面在弹层下仍保持awake。"
+          "首次网页唤醒仅在真实可见非零bounds后解除节流；已经唤醒的页面在弹层下仍保持awake。",
+          "浏览器中全局底部面板可展开、调整高度和关闭；网页bounds随全局面板实时变化，不覆盖面板。",
+          "菜单仅读取客户端自身origin的本地字体和图标资源；网页分区和网络策略不改变。",
+          "原生日常客户端保留原有工作区、会话、模型与站点登录数据，签名包构建后实机核验并保持打开。"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -271,7 +267,7 @@
           "性能数字来自独立受控网页，不能推断任意远端邮箱的冷启动时延；完整旧原生夹具不在本轮局部改动复验范围。",
           "本轮以previewOnly聚焦集成供原日常客户端本地测试，尚未记录完整批次接受或晋升main；不公开发布。"
         ],
-        "generatedAt": "2026-11-10T08:18:01.329766+00:00"
+        "generatedAt": "2026-11-10T09:27:22.429310+00:00"
       }
     }
   ],
