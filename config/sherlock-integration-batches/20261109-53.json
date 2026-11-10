@@ -9,31 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器复用全局右栏及底栏缩放与首次发送交接",
+        "featureName": "浏览器自适应页签与网站图标及全局右栏最终修正",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "cea68518f88a22e236c74c49e67db4696c5edf7f",
-        "tipCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+        "baseCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+        "tipCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
         "commits": [
           {
-            "commit": "c2b4fc487e138a166ceb4c2ae9929e2f62eb28b1",
+            "commit": "3ace6d93f0b0505c0299d5c787e82359824769cd",
             "parents": [
-              "cea68518f88a22e236c74c49e67db4696c5edf7f"
+              "2a359a7909dc77299b9eb4a226faa41a6875d630"
             ],
-            "subject": "修复浏览器问答上下文隔离及空态输入区域宽度"
+            "subject": "保留首条消息配置等待期间导航变化后的草稿"
           },
           {
-            "commit": "c969a66394a6e4d9d1fa66cfbed52f4c606d4c4a",
+            "commit": "8cbf6403b0fcaf93dd25705c05121259e9023574",
             "parents": [
-              "c2b4fc487e138a166ceb4c2ae9929e2f62eb28b1"
+              "3ace6d93f0b0505c0299d5c787e82359824769cd"
             ],
-            "subject": "修复浏览器底栏缩放入口并同步当前页缩放控制"
+            "subject": "修正全局右栏空态并保留收起时的首页输入区"
           },
           {
-            "commit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
+            "commit": "eab112582fbb775a428c3880e7abc93fc20829a0",
             "parents": [
-              "c969a66394a6e4d9d1fa66cfbed52f4c606d4c4a"
+              "8cbf6403b0fcaf93dd25705c05121259e9023574"
             ],
-            "subject": "统一浏览器与全局右侧栏组件并保留首发创建会话规则"
+            "subject": "优化浏览器页签自适应宽度并显示真实网页图标"
+          },
+          {
+            "commit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
+            "parents": [
+              "eab112582fbb775a428c3880e7abc93fc20829a0"
+            ],
+            "subject": "同步全局右栏实际展开态并稳定原生焦点验收"
           }
         ],
         "files": [
@@ -47,14 +54,6 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-model-menu.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/pending-composer-preferences.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/pending-conversation-panel.mjs"
           },
           {
@@ -63,7 +62,19 @@
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "scripts/verify-browser-app-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-browser-favicon-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/favicon.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/browser/service.ts"
           },
           {
             "status": "M",
@@ -75,7 +86,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/figma-panels.css"
+            "path": "src/shared/browser-app.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-model.test.ts"
           },
           {
             "status": "M",
@@ -83,19 +98,11 @@
           },
           {
             "status": "A",
-            "path": "test/browser-status-zoom.test.ts"
+            "path": "test/browser-favicon.test.ts"
           },
           {
             "status": "M",
             "path": "test/fixtures/pending-conversation-browser.tsx"
-          },
-          {
-            "status": "A",
-            "path": "test/pending-composer-preferences.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation-panel.test.js"
           },
           {
             "status": "M",
@@ -131,12 +138,13 @@
               "test/sidebar-new-note-install.test.js",
               "test/browser-status-zoom.test.ts",
               "test/figma-model-menu.test.ts",
-              "test/dsh-file-drop-compat.test.ts"
+              "test/dsh-file-drop-compat.test.ts",
+              "test/browser-favicon.test.ts"
             ],
             "outcome": "passed",
-            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
-            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
-            "completedAt": "2026-11-09T23:54:16.097563+00:00",
+            "summary": "159项直接相关测试、类型检查及三组真实Chromium原生验证通过。",
+            "verifiedCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
+            "completedAt": "2026-11-10T00:17:30.518782+00:00",
             "timeoutMs": 120000
           },
           {
@@ -147,9 +155,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
-            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
-            "completedAt": "2026-11-09T23:54:16.097563+00:00",
+            "summary": "159项直接相关测试、类型检查及三组真实Chromium原生验证通过。",
+            "verifiedCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
+            "completedAt": "2026-11-10T00:17:30.518782+00:00",
             "timeoutMs": 120000
           },
           {
@@ -158,9 +166,9 @@
               "scripts/verify-browser-app-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
-            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
-            "completedAt": "2026-11-09T23:54:16.097563+00:00",
+            "summary": "159项直接相关测试、类型检查及三组真实Chromium原生验证通过。",
+            "verifiedCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
+            "completedAt": "2026-11-10T00:17:30.518782+00:00",
             "timeoutMs": 120000
           },
           {
@@ -169,15 +177,26 @@
               "scripts/verify-browser-page-agent-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "153项直接相关检查、类型检查及真实Chromium原生验证通过；原生焦点检查在两个Electron夹具并发时冲突，顺序复验通过。",
-            "verifiedCommit": "2a359a7909dc77299b9eb4a226faa41a6875d630",
-            "completedAt": "2026-11-09T23:54:16.097563+00:00",
+            "summary": "159项直接相关测试、类型检查及三组真实Chromium原生验证通过。",
+            "verifiedCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
+            "completedAt": "2026-11-10T00:17:30.518782+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-favicon-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "159项直接相关测试、类型检查及三组真实Chromium原生验证通过。",
+            "verifiedCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
+            "completedAt": "2026-11-10T00:17:30.518782+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "16组完整样式渲染流程通过，空态直接使用全局Workbench/TabBar/ResearchConversationPanel/ComposerSurface；模型、权限为原生组件数据适配，第一次发送原始引用与配置等待加锁通过。最终签名包UI复核待执行。"
+          "summary": "19组完整样式渲染流程通过；3/9/24普通页签含active等宽自适应、32页签窄屏active完整可见，网站图标SVG/ICO/内联转安全PNG、晚结果与隐私持久化边界通过。全局右栏native component渲染含compact实际open与持久状态不一致回归通过。69c签名实机已验证网页文字修改/撤销、底栏缩放与右栏收放；最终后继包待复验。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -192,65 +211,21 @@
           "切换owner或页签后拒绝排队旧请求，原有其他会话智能体浏览器保持独立",
           "无会话及浏览器右栏直接复用同一全局右栏和对话组件；不再手写页签或输入区界面",
           "底栏百分比展开实际页面缩放控制，支持边界、恢复100%与键盘关闭",
-          "首发配置准备锁定真实输入，预设/模型/权限失败保留真实草稿"
+          "首发配置准备锁定真实输入，预设/模型/权限失败保留真实草稿",
+          "选中与普通页签共同按数量及空间自适应宽度；超多页签仍可切换并避让全局右栏按钮",
+          "页签显示当前网站真实favicon，读取属于各自Chromium会话，导航及空图标更新清除旧图标，主UI只接收安全PNG",
+          "窄窗右栏按实际compact展开状态驱动原生composer；普通主页收起右栏恢复中央原生输入"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
           "Chrome账号同步与扩展商店不在本次设计范围",
           "缓存清理按所有时间执行，界面已明确说明",
           "网页修改仅在本地主文档文字展示层；不编辑iframe、canvas、表单或超长单文字节点，也不保存远程站点",
-          "实机模型发送能力还需随最终签名包验证，原生夹具与模型选择不能替代真实客户端问答",
-          "额外旧standard-agent-preset首项对build roster的断言在canonical main同样失败，未修改历史策略；新预设交接有独立回归。"
+          "额外旧standard-agent-preset首项对build roster的断言在canonical main同样失败，未修改历史策略；新预设交接有独立回归。",
+          "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
+          "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。"
         ],
-        "generatedAt": "2026-11-09T23:54:16.097563+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
-        "verificationCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
-            "completedAt": "2026-11-09T23:56:12.716Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
-            "completedAt": "2026-11-09T23:56:12.716Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "3a7b2f4602d25c9070d7ab3f3562acbd72adeec7",
-            "completedAt": "2026-11-09T23:56:12.716Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-09T23:56:12.716Z"
+        "generatedAt": "2026-11-10T00:17:30.518782+00:00"
       }
     }
   ],
