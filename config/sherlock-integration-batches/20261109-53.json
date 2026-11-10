@@ -218,6 +218,54 @@
           "原日常客户端CUA拖拽尝试没有被计为通过；隔离真实Electron原生held mouse输入可成功排序并保持activeId，buttons=0输入则按设计取消，未据此放宽鼠标按键守卫。"
         ],
         "generatedAt": "2026-11-10T06:23:12.580205+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
+        "verificationCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
+            "completedAt": "2026-11-10T06:24:57.760Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
+            "completedAt": "2026-11-10T06:24:57.760Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
+            "completedAt": "2026-11-10T06:24:57.760Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-10T06:24:57.760Z"
       }
     }
   ],
