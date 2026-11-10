@@ -1,3 +1,4 @@
+import {browserBookmarkAddress,updateBrowserBookmark,removeBrowserBookmarks} from './bookmarks'
 import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
 import {createBrowserCorners} from './corners'
@@ -102,7 +103,7 @@ export function registerBrowserApp(options:Options){
  }
  const inputString=(value:unknown,max=1024)=>{if(typeof value!=='string'||value.length>max)throw Error('参数无效。');return value}
  const request=async(method:string,input:Record<string,any>={})=>{
-  if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>32000)throw Error('浏览器参数无效。')
+  if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>(method==='bookmarks-remove'?700000:32000))throw Error('浏览器参数无效。')
   if(!model.tabs.length)model.newTab()
   if(method==='snapshot')return snapshot()
   if(method==='context'){if(!appActive)return undefined;if(current().url&&current().loading)throw Error('网页正在加载，请稍候再发送。');return pageAgent.context(authority(true))}
@@ -120,8 +121,10 @@ export function registerBrowserApp(options:Options){
   if(method==='close'){close(model.tab(input.id).id);return snapshot()}
   if(method==='reorder'){model.reorder(input.id,input.beforeId);sync();publish();return snapshot()}
   if(method==='restore'){const tab=model.restore();if(tab?.url)void navigate(tab,tab.url);sync();publish();return snapshot()}
+  if(method==='bookmark-update'){updateBrowserBookmark(model,input);publish();return snapshot()}
+  if(method==='bookmarks-remove'){removeBrowserBookmarks(model,input);publish();return snapshot()}
   if(method==='bookmark'){
-   const url=browserAddress(input.url),title=inputString(input.title).trim()||new URL(url).hostname,folder=inputString(input.folder??'',100).trim();const old=model.bookmarks.find(b=>b.url===url)
+   const url=browserBookmarkAddress(input.url),title=inputString(input.title).trim()||new URL(url).hostname,folder=inputString(input.folder??'',100).trim();const old=model.bookmarks.find(b=>b.url===url)
    if(input.remove)model.bookmarks=model.bookmarks.filter(b=>b.url!==url)
    else if(old)Object.assign(old,{title,folder});else model.bookmarks.unshift({id:randomUUID(),title,url,folder,at:Date.now()})
    if(folder&&!model.folders.includes(folder))model.folders.push(folder);publish();return snapshot()
