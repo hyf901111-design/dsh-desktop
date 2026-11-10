@@ -9,117 +9,64 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "实时网页上的原生菜单提示层与全局底部面板修复",
+        "featureName": "恢复全局更多菜单磨砂并自适应浏览器菜单，移除横纵滚动条",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
-        "tipCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
+        "baseCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
+        "tipCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
         "commits": [
           {
-            "commit": "cfcf05aa7fd98ea2411f4b71378a5ceadff9b2ac",
+            "commit": "371f2183723fbf502f294939fe28836a1379e259",
             "parents": [
-              "900013c72f2c63f4de9ceda8d86c598e98874f05"
+              "1ad94c0a8116cee8b7bd248156470dd0c7351314"
             ],
-            "subject": "让浏览器随全局底栏展开和拖拽实时避让"
+            "subject": "补验更多菜单无滚动条及低窗末项可达性"
           },
           {
-            "commit": "65428452e689b6824d94a8e89159984b7e95cf1d",
+            "commit": "094520db94e27d429eb9008fc84426efaf149a82",
             "parents": [
-              "cfcf05aa7fd98ea2411f4b71378a5ceadff9b2ac"
+              "371f2183723fbf502f294939fe28836a1379e259"
             ],
-            "subject": "新增保持网页实时的原生菜单覆盖层框架"
+            "subject": "适配全局磨砂原生弹窗的隔离验收"
           },
           {
-            "commit": "77ef9d8d79fc02dfdf1e834e6303ee577ada572c",
+            "commit": "0d63ed6920c3571dd3d911cdb1ee713d8186da5b",
             "parents": [
-              "65428452e689b6824d94a8e89159984b7e95cf1d"
+              "094520db94e27d429eb9008fc84426efaf149a82"
             ],
-            "subject": "补齐提示气泡原生穿透层并清除旧菜单画面"
+            "subject": "为全局更多菜单恢复系统磨砂层并支持低窗键盘定位"
           },
           {
-            "commit": "43042d02d0139ebc594870882b7b96f0596fd183",
+            "commit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
             "parents": [
-              "77ef9d8d79fc02dfdf1e834e6303ee577ada572c"
+              "0d63ed6920c3571dd3d911cdb1ee713d8186da5b"
             ],
-            "subject": "将浏览器父视图测试切换为实时网页菜单验收合同"
-          },
-          {
-            "commit": "d0499edd8bb025e7e0e7463a0d5804c82038fcd6",
-            "parents": [
-              "43042d02d0139ebc594870882b7b96f0596fd183"
-            ],
-            "subject": "增加实时网页原生菜单与提示层的隔离验收"
-          },
-          {
-            "commit": "444e67cefe3604b7d24495f06d27136dd5bc1ca6",
-            "parents": [
-              "d0499edd8bb025e7e0e7463a0d5804c82038fcd6"
-            ],
-            "subject": "补验原生菜单地址焦点与本地字体图标绘制"
-          },
-          {
-            "commit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
-            "parents": [
-              "444e67cefe3604b7d24495f06d27136dd5bc1ca6"
-            ],
-            "subject": "改为实时网页上的原生菜单和穿透提示层，移除界面截图替代"
+            "subject": "自适应更多菜单高度并去除滚动条，保留原生菜单滚动样式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "electron.vite.config.ts"
-          },
-          {
-            "status": "A",
             "path": "scripts/verify-browser-live-menus.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/verify-browser-menu-overlay-native.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/verify-browser-overlay-handoff.mjs"
-          },
-          {
-            "status": "A",
             "path": "src/main/browser/menu-overlay.ts"
           },
           {
             "status": "M",
-            "path": "src/main/browser/service.ts"
-          },
-          {
-            "status": "A",
             "path": "src/preload/browser/menu-preload.cjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/browser/native-menus.ts"
           },
           {
             "status": "M",
             "path": "src/preload/browser/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/browser-app.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workspace-bottom-panel-layout.test.js"
           }
         ],
         "checks": [
@@ -131,32 +78,12 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/browser-app-rendered.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
               "test/browser-bookmark-popover-overflow.test.js"
             ],
             "outcome": "passed",
-            "summary": "83项直接相关检查通过：父视图实时菜单合同、底部面板高度、页签加载/hover、圆角边界、侧栏和收藏弹层。",
-            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
-            "completedAt": "2026-11-10T09:27:22.429310+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "-t",
-              "gives footer controls safe hover padding"
-            ],
-            "outcome": "passed",
-            "summary": "通知hover四种主题/折叠组合4项通过，76项无关项跳过。",
-            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
-            "completedAt": "2026-11-10T09:27:22.429310+00:00",
+            "summary": "59项父视图与收藏弹层直接相关检查通过，菜单布局改动未影响其他浏览器交互。",
+            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
+            "completedAt": "2026-11-10T10:17:24.542542+00:00",
             "timeoutMs": 120000
           },
           {
@@ -167,9 +94,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "最终实时菜单投射控制器及主进程类型检查通过。",
-            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
-            "completedAt": "2026-11-10T09:27:22.429310+00:00",
+            "summary": "最终磨砂层、菜单样式与投射控制器类型检查通过。",
+            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
+            "completedAt": "2026-11-10T10:17:24.542542+00:00",
             "timeoutMs": 120000
           },
           {
@@ -178,15 +105,26 @@
               "scripts/verify-browser-live-menus.mjs"
             ],
             "outcome": "passed",
-            "summary": "21项真实Electron原生检查通过：4K网页实时、截图0次、菜单/全局More/提示层级、AX唯一、键盘/中文输入、地址焦点、隔离菜单分区、本地字体和CSS图标、关闭取消、单次穿透点击及125%坐标。",
-            "verifiedCommit": "1ad94c0a8116cee8b7bd248156470dd0c7351314",
-            "completedAt": "2026-11-10T09:27:22.429310+00:00",
+            "summary": "22项真实Electron原生检查通过：原21项合同保持，新增More正常窗口零横纵溢出且无滚动条、低窗无可见条仍可wheel至末项，全局More使用独立交互磨砂窗口；截图调用0。",
+            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
+            "completedAt": "2026-11-10T10:17:24.542542+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-menu-overlay-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "原生菜单框架定向检查通过：真实menu vibrancy、独立父子窗口、隐藏先绘制、输入法/键盘/取消/旧状态隔离、低窗焦点滚入及提示穿透。",
+            "verifiedCommit": "22d49cfe34a1e23442c92c78e1a3a60f0100d5dc",
+            "completedAt": "2026-11-10T10:17:24.542542+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "87项聚焦渲染检查、类型及21项真实Electron验收通过；尚待本轮签名原客户端最后核验，不视作全功能或真实模型验收。"
+          "summary": "59项相关渲染检查、类型、22项原生全合同及原生框架检查通过。合成页真实compositor已观察NS磨砂与外部锐利条纹；待本轮原客户端签名安装最后核验。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -251,7 +189,10 @@
           "首次网页唤醒仅在真实可见非零bounds后解除节流；已经唤醒的页面在弹层下仍保持awake。",
           "浏览器中全局底部面板可展开、调整高度和关闭；网页bounds随全局面板实时变化，不覆盖面板。",
           "菜单仅读取客户端自身origin的本地字体和图标资源；网页分区和网络策略不改变。",
-          "原生日常客户端保留原有工作区、会话、模型与站点登录数据，签名包构建后实机核验并保持打开。"
+          "原生日常客户端保留原有工作区、会话、模型与站点登录数据，签名包构建后实机核验并保持打开。",
+          "左侧全局More以系统原生磨砂材质覆盖实时网页；浏览器自身More保持不透明。",
+          "浏览器More按内容自然高度展开，正常窗口无横纵溢出及可见滚动条；低窗保留滚轮和键盘到达末项。",
+          "原生投射保留source滚动容器的伪元素样式、color-scheme与字体合成设置，避免白色轨道挤窄内容。"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -265,9 +206,10 @@
           "新增内部页采用focused原生夹具验证；旧full夹具的真实滚轮查找断言曾超时，未放宽断言，也未将旧全夹具当作本提交全部通过证据。",
           "原日常客户端CUA拖拽尝试没有被计为通过；隔离真实Electron原生held mouse输入可成功排序并保持activeId，buttons=0输入则按设计取消，未据此放宽鼠标按键守卫。",
           "性能数字来自独立受控网页，不能推断任意远端邮箱的冷启动时延；完整旧原生夹具不在本轮局部改动复验范围。",
-          "本轮以previewOnly聚焦集成供原日常客户端本地测试，尚未记录完整批次接受或晋升main；不公开发布。"
+          "本轮以previewOnly聚焦集成供原日常客户端本地测试，尚未记录完整批次接受或晋升main；不公开发布。",
+          "合成材质窗的物理跨窗外部首点未获CUA证明：工具在事件发送前拒绝越出所绑定子窗口；受控native事件已验证，不将工具拒绝计为产品失败或通过。"
         ],
-        "generatedAt": "2026-11-10T09:27:22.429310+00:00"
+        "generatedAt": "2026-11-10T10:17:24.542542+00:00"
       }
     }
   ],
