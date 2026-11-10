@@ -73,7 +73,9 @@ export function registerBrowserApp(options:Options){
    const awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error&&(e.awake===true||show&&!!rect)
    if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}
   }
-  corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise();region.raise();menu.raise()
+  // Valid region operations pin the viewport. Re-adding the corner siblings
+  // here would unseat its native pointer capture on every shell layout pass.
+  if(!regionScope)corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise();region.raise();menu.raise()
  }
  const sessionFor=(tab:Pick<BrowserTab,'private'>)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
