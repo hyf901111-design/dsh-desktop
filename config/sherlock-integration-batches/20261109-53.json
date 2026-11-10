@@ -215,6 +215,54 @@
           "新增内部页采用focused原生夹具验证；旧full夹具的真实滚轮查找断言曾超时，未放宽断言，也未将旧全夹具当作本提交全部通过证据。"
         ],
         "generatedAt": "2026-11-10T05:36:53.489946+00:00"
+      },
+      "merged": {
+        "mergeCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
+        "verificationCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
+            "completedAt": "2026-11-10T05:37:43.266Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
+            "completedAt": "2026-11-10T05:37:43.266Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
+            "completedAt": "2026-11-10T05:37:43.266Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-10T05:37:43.266Z"
       }
     }
   ],
