@@ -55,3 +55,33 @@ it('reorders tabs in both directions while preserving the active document and pe
  const restored=new BrowserModel(m.serialize());expect(restored.tabs.map(t=>t.title)).toEqual(['A','B','C']);expect(restored.tab(restored.activeId).title).toBe('B')
  const before=m.tabs.slice();expect(()=>m.reorder(a.id,'closed-tab')).toThrow();expect(m.tabs).toEqual(before)
 })
+
+it('preserves internal page types through tab order, persistence and recently closed restoration',()=>{
+ const m=new BrowserModel(),website=m.newTab(),history=m.newTab(false,'history'),downloads=m.newTab(false,'downloads')
+ m.visited(website.id,'https://example.com/','Example');m.visited(history.id,'https://ignored.example/','Ignored')
+ expect(history).toMatchObject({page:'history',url:'',title:'历史记录',private:false,loading:false})
+ expect(downloads).toMatchObject({page:'downloads',url:'',title:'下载内容',private:false})
+ expect(m.history.map(row=>row.url)).toEqual(['https://example.com/'])
+ m.reorder(downloads.id,website.id);m.activeId=history.id
+ const saved=m.serialize(),restored=new BrowserModel(saved)
+ expect(restored.tabs.map(tab=>tab.page??tab.url)).toEqual(['downloads','https://example.com/','history'])
+ expect(restored.tab(restored.activeId)).toMatchObject({page:'history',url:'',title:'历史记录'})
+ history.pinned=true;history.muted=true;m.close(history.id)
+ const reopened=new BrowserModel(m.serialize()).restore()
+ expect(reopened).toMatchObject({page:'history',url:'',title:'历史记录',private:false,pinned:true,muted:true})
+ expect(reopened!.id).not.toBe(history.id)
+ expect(()=>m.newTab(true,'downloads')).toThrow()
+})
+
+it('rejects forged saved internal page kinds and mixed URLs before restoring native or HTTP documents',()=>{
+ const metadata={id:'saved',title:'Forged title',at:1},badRows=[
+  {page:'file:///etc/passwd',url:''},{page:'history',url:'file:///etc/passwd'},
+  {page:'downloads',url:'https://example.com/'},{page:'history',url:'',private:true},
+  {page:'settings',url:'https://example.com/'},{url:'javascript:alert(1)'}
+ ]
+ const m=new BrowserModel({version:1,tabs:[...badRows,{page:'history',url:'',title:'Spoofed'},{page:'downloads',url:''},{url:'https://example.com/',title:'Example'}],closed:[...badRows.map(row=>({...metadata,...row})),{...metadata,page:'downloads',url:''}],history:[{...metadata,url:'https://example.com/',page:'history'}],bookmarks:[{...metadata,url:'https://example.com/',page:'downloads'}]})
+ expect(m.tabs.map(tab=>tab.page??tab.url)).toEqual(['history','downloads','https://example.com/'])
+ expect(m.tabs[0]).toMatchObject({title:'历史记录',url:'',private:false})
+ expect(m.closed).toHaveLength(1);expect(m.restore()).toMatchObject({page:'downloads',title:'下载内容',url:''})
+ expect(m.history[0]).not.toHaveProperty('page');expect(m.bookmarks[0]).not.toHaveProperty('page')
+})

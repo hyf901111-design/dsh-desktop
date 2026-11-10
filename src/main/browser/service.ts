@@ -9,7 +9,7 @@ import {randomUUID} from 'node:crypto'
 import {load} from 'cheerio'
 import {createBrowserFindOverlay} from './find-overlay'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
-import {BrowserModel,browserAddress,browserDownloadAddress,availableDownloadPath} from './model'
+import {BrowserModel,browserAddress,browserDownloadAddress,availableDownloadPath,browserInternalPage} from './model'
 import type {BrowserSnapshot,BrowserDownload,BrowserTab} from '../../shared/browser-app'
 
 const channel='browser-app:request',eventChannel='browser-app:state'
@@ -28,7 +28,7 @@ export function registerBrowserApp(options:Options){
  const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
  const finder=nativeFind?createBrowserFindOverlay(findPreload,window,value=>{const tab=current();if(value.kind==='close'){finder?.hide();live.get(tab.id)?.view.webContents.focus();window().webContents.send('browser-app:shortcut',{key:'Escape'});void request('find',{id:tab.id,text:''}).catch(()=>{})}else if(value.kind==='shortcut'){window().webContents.send('browser-app:shortcut',value)}else void request('find',{id:tab.id,text:value.text,next:value.kind==='next',forward:value.forward}).catch(()=>{})}):undefined
  const snapshot=():BrowserSnapshot=>({nativeFind,pageEdited,sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
- const pageAgent=createBrowserPageAgent(()=>{const tab=current(),entry=live.get(tab.id);if(!appActive||!entry||entry.view.webContents.isDestroyed()||!tab.url||tab.error)return undefined;return {tabId:tab.id,url:entry.view.webContents.getURL(),title:entry.view.webContents.getTitle()||tab.title,webContents:entry.view.webContents}})
+ const pageAgent=createBrowserPageAgent(()=>{const tab=current(),entry=live.get(tab.id);if(!appActive||!entry||entry.view.webContents.isDestroyed()||tab.page||!tab.url||tab.error)return undefined;return {tabId:tab.id,url:entry.view.webContents.getURL(),title:entry.view.webContents.getTitle()||tab.title,webContents:entry.view.webContents}})
  const authority=(documentBound=false)=>{const epoch=documentBound?appEpoch:ownerEpoch,owner=ownerSessionId,tabId=current().id;return()=>{if(!appActive||(documentBound?appEpoch:ownerEpoch)!==epoch||ownerSessionId!==owner||current().id!==tabId)throw Error('当前页签或会话已变化，旧请求已拒绝。')}}
  const persist=()=>{
   try{if(!safeStorage.isEncryptionAvailable()){storageWarning='系统加密不可用，本次浏览记录仅保留在内存。';return}mkdirSync(options.root,{recursive:true});const temp=path+'.tmp';writeFileSync(temp,safeStorage.encryptString(JSON.stringify({...model.serialize(),permissions:[...permissions].filter(([key])=>key.startsWith('normal:')),downloads:downloads.filter(d=>!d.private).map(d=>({...d,state:['progressing','paused'].includes(d.state)?'interrupted':d.state}))})),{mode:0o600});renameSync(temp,path)}catch{storageWarning='浏览状态暂时无法保存，请检查磁盘空间。'}
@@ -37,7 +37,7 @@ export function registerBrowserApp(options:Options){
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
- const sync=()=>{let shown=false;for(const [id,e]of live){const show=visible&&id===model.activeId&&!!model.tab(id).url&&!model.tab(id).error,awake=appActive&&id===model.activeId&&!!model.tab(id).url&&!model.tab(id).error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
+ const sync=()=>{let shown=false;for(const [id,e]of live){const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error,awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
  const sessionFor=(tab:BrowserTab)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
@@ -68,6 +68,7 @@ export function registerBrowserApp(options:Options){
   return s
  }
  const ensure=(tab:BrowserTab)=>{
+  if(tab.page)throw Error('请先打开网页。')
   const found=live.get(tab.id);if(found)return found
   const view=new WebContentsView({webPreferences:{session:sessionFor(tab),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,backgroundThrottling:true}})
   const e:Live={view,epoch:0};live.set(tab.id,e);window().contentView.addChildView(view);view.setVisible(false)
@@ -87,11 +88,11 @@ export function registerBrowserApp(options:Options){
   wc.on('did-fail-load',(_ev,code,description,url,isMain)=>{if(!isMain||code===-3)return;clearTimeout(e.timeout);tab.loading=false;tab.error=description||'网页加载失败';if(url)tab.url=url;sync();publish()})
   wc.on('render-process-gone',()=>{tab.loading=false;tab.error='网页进程已退出，请重新加载。';sync();publish()})
   wc.on('found-in-page',(_ev,result)=>{if(result.requestId!==e.findRequestId)return;tab.find={activeMatchOrdinal:result.activeMatchOrdinal,matches:result.matches};publish()})
-  wc.on('before-input-event',(event,input)=>{if(!(input.meta||input.control)||input.type!=='keyDown')return;if(['l','t','w','r','f','d','p','s','y','n'].includes(input.key.toLowerCase())){event.preventDefault();window().webContents.send('browser-app:shortcut',{key:input.key,metaKey:input.meta,ctrlKey:input.control,shiftKey:input.shift,altKey:input.alt})}})
+  wc.on('before-input-event',(event,input)=>{if(!(input.meta||input.control)||input.type!=='keyDown')return;if(['l','t','w','r','f','d','p','s','y','j','n'].includes(input.key.toLowerCase())){event.preventDefault();window().webContents.send('browser-app:shortcut',{key:input.key,metaKey:input.meta,ctrlKey:input.control,shiftKey:input.shift,altKey:input.alt})}})
   return e
  }
  const navigate=async(tab:BrowserTab,url:string)=>{
-  const e=ensure(tab),epoch=++e.epoch;clearTimeout(e.timeout);tab.favicon=undefined;tab.url=url;tab.title=new URL(url).hostname;tab.loading=true;tab.error=undefined;sync();publish()
+  tab.page=undefined;const e=ensure(tab),epoch=++e.epoch;clearTimeout(e.timeout);tab.favicon=undefined;tab.url=url;tab.title=new URL(url).hostname;tab.loading=true;tab.error=undefined;sync();publish()
   e.timeout=setTimeout(()=>{if(epoch!==e.epoch)return;tab.error='ERR_CONNECTION_TIMED_OUT';e.view.webContents.stop();tab.loading=false;sync();publish()},45000)
   try{await e.view.webContents.loadURL(url)}catch(error){if(epoch===e.epoch&&(error as any)?.code!=='ERR_ABORTED'){tab.error='暂时无法加载网页';tab.loading=false;sync();publish()}}finally{if(epoch===e.epoch)clearTimeout(e.timeout)}
  }
@@ -104,6 +105,7 @@ export function registerBrowserApp(options:Options){
  const inputString=(value:unknown,max=1024)=>{if(typeof value!=='string'||value.length>max)throw Error('参数无效。');return value}
  const request=async(method:string,input:Record<string,any>={})=>{
   if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>(method==='bookmarks-remove'?700000:32000))throw Error('浏览器参数无效。')
+  const internalPage=method==='internal-page'?browserInternalPage(input.page):undefined
   if(!model.tabs.length)model.newTab()
   if(method==='snapshot')return snapshot()
   if(method==='context'){if(!appActive)return undefined;if(current().url&&current().loading)throw Error('网页正在加载，请稍候再发送。');return pageAgent.context(authority(true))}
@@ -113,16 +115,18 @@ export function registerBrowserApp(options:Options){
    const active=input.active===true,owner=typeof input.sessionId==='string'?input.sessionId:'';if(appActive!==active||ownerSessionId!==owner){appEpoch++;ownerEpoch++;pageAgent.invalidate();const wasEdited=pageEdited;pageEdited=false;if(wasEdited)publish()}appActive=active;ownerSessionId=owner;
    visible=false;const r=input.bounds,win=window(),z=win.webContents.getZoomFactor(),[w,h]=win.getContentSize()
    if(input.visible===true&&r&&['x','y','width','height'].every(k=>Number.isFinite(r[k]))){const b={x:Math.round(r.x*z),y:Math.round(r.y*z),width:Math.round(r.width*z),height:Math.round(r.height*z)};if(b.x>=0&&b.y>=0&&b.width>0&&b.height>0&&b.x+b.width<=(w??0)&&b.y+b.height<=(h??0)){rect=b;visible=true}}
-   sync();const f=input.find;let findBounds:typeof rect;if(visible&&rect&&f?.bounds&&['x','y','width','height'].every(k=>Number.isFinite(f.bounds[k]))){const b={x:Math.round(f.bounds.x*z),y:Math.round(f.bounds.y*z),width:Math.round(f.bounds.width*z),height:Math.round(f.bounds.height*z)};if(b.x>=rect.x&&b.y>=0&&b.width>0&&b.height>0&&b.width<=468*z+2&&b.height<=60*z+2&&b.x+b.width<=rect.x+rect.width&&b.y+b.height<=rect.y+rect.height)findBounds=b}finder?.layout(findBounds,{...f,zoom:z},current());return true
+   sync();const f=input.find;let findBounds:typeof rect;if(visible&&rect&&current().url&&!current().page&&f?.bounds&&['x','y','width','height'].every(k=>Number.isFinite(f.bounds[k]))){const b={x:Math.round(f.bounds.x*z),y:Math.round(f.bounds.y*z),width:Math.round(f.bounds.width*z),height:Math.round(f.bounds.height*z)};if(b.x>=rect.x&&b.y>=0&&b.width>0&&b.height>0&&b.width<=468*z+2&&b.height<=60*z+2&&b.x+b.width<=rect.x+rect.width&&b.y+b.height<=rect.y+rect.height)findBounds=b}finder?.layout(findBounds,{...f,zoom:z},current());return true
   }
-  if(['new','select','close','restore'].includes(method)){appEpoch++;ownerEpoch++;pageAgent.invalidate();pageEdited=false}
+  if(['new','select','close','restore','duplicate','internal-page'].includes(method)){appEpoch++;ownerEpoch++;pageAgent.invalidate();pageEdited=false}
   if(method==='new'){const tab=model.newTab(input.private===true);if(input.url)void navigate(tab,browserAddress(input.url,model.settings.engine));sync();publish();return snapshot()}
-  if(method==='select'){model.activeId=model.tab(input.id).id;const tab=current();if(tab.url&&!live.has(tab.id))void navigate(tab,tab.url);sync();publish();return snapshot()}
+  if(method==='internal-page'){const tab=model.tabs.find(t=>t.page===internalPage&&!t.private)??model.newTab(false,internalPage);model.activeId=tab.id;finder?.hide();sync();publish();return snapshot()}
+  if(method==='select'){model.activeId=model.tab(input.id).id;const tab=current();if(tab.page)finder?.hide();else if(tab.url&&!live.has(tab.id))void navigate(tab,tab.url);sync();publish();return snapshot()}
   if(method==='close'){close(model.tab(input.id).id);return snapshot()}
   if(method==='reorder'){model.reorder(input.id,input.beforeId);sync();publish();return snapshot()}
   if(method==='restore'){const tab=model.restore();if(tab?.url)void navigate(tab,tab.url);sync();publish();return snapshot()}
   if(method==='bookmark-update'){updateBrowserBookmark(model,input);publish();return snapshot()}
   if(method==='bookmarks-remove'){removeBrowserBookmarks(model,input);publish();return snapshot()}
+  if(method==='history-remove'){const id=inputString(input.id,256);if(!id)throw Error('参数无效。');model.history=model.history.filter(row=>row.id!==id);publish();return snapshot()}
   if(method==='bookmark'){
    const url=browserBookmarkAddress(input.url),title=inputString(input.title).trim()||new URL(url).hostname,folder=inputString(input.folder??'',100).trim();const old=model.bookmarks.find(b=>b.url===url)
    if(input.remove)model.bookmarks=model.bookmarks.filter(b=>b.url!==url)
@@ -175,17 +179,17 @@ export function registerBrowserApp(options:Options){
   if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();return bitmap.isEmpty()?'':bitmap.resize({width:Math.min(1600,bitmap.getSize().width)}).toDataURL()}
   if(method==='navigate'){void navigate(tab,browserAddress(input.url,model.settings.engine));return snapshot()}
   if(method==='home'){
-   if(!tab.url&&!tab.loading&&!tab.error)return snapshot()
+   if(!tab.page&&!tab.url&&!tab.loading&&!tab.error)return snapshot()
    appEpoch++;ownerEpoch++;pageAgent.invalidate();pageEdited=false
    const e=live.get(tab.id),epoch=e?++e.epoch:0;clearTimeout(e?.timeout)
-   Object.assign(tab,{url:'',title:'新标签页',favicon:undefined,error:undefined,find:undefined,loading:false,canBack:false,canForward:false});sync();publish()
+   Object.assign(tab,{page:undefined,url:'',title:'新标签页',favicon:undefined,error:undefined,find:undefined,loading:false,canBack:false,canForward:false});sync();publish()
    if(e&&!e.view.webContents.isDestroyed()){
     const wc=e.view.webContents;wc.stop();try{await wc.loadURL('about:blank')}catch{}
     if(e.epoch===epoch&&!wc.isDestroyed()){tab.loading=false;tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward();sync();publish()}
    }
    return snapshot()
   }
-  if(method==='duplicate'){const next=model.newTab(tab.private);if(tab.url)void navigate(next,tab.url);publish();return snapshot()}
+  if(method==='duplicate'){const next=model.newTab(tab.private,tab.page);if(tab.url)void navigate(next,tab.url);if(next.page)finder?.hide();sync();publish();return snapshot()}
   if(method==='pin'){tab.pinned=!tab.pinned;model.tabs.sort((a,b)=>Number(b.pinned)-Number(a.pinned));publish();return snapshot()}
   if(method==='mute'){tab.muted=!tab.muted;live.get(tab.id)?.view.webContents.setAudioMuted(tab.muted);publish();return snapshot()}
   if(method==='close-others'){for(const t of [...model.tabs])if(t.id!==tab.id)close(t.id);return snapshot()}
@@ -240,7 +244,13 @@ export function registerBrowserApp(options:Options){
    if(input.op==='close'){await request('close',{id:tab.id});return {closed:true,closedTabId:tab.id}}
    await request('reload',{id:tab.id});return {reloading:true,tabId:tab.id,url}
   }
-  if(input.op==='open'){const tab=current(),entry=ensure(tab),epoch=entry.epoch+1,owner=ownerEpoch;await navigate(tab,browserAddress(input.url));if(current().id!==tab.id||entry.epoch!==epoch||!appActive||ownerEpoch!==owner||ownerSessionId!==sessionId)throw Error('当前网页已变化，请重新观察。');return pageAgent.run({op:'observe'},signal,authority())}
+  if(input.op==='open'){
+   const tab=current(),epoch=(live.get(tab.id)?.epoch??0)+1,owner=ownerEpoch;await navigate(tab,browserAddress(input.url))
+   const check=()=>{if(current().id!==tab.id||live.get(tab.id)?.epoch!==epoch||!appActive||ownerEpoch!==owner||ownerSessionId!==sessionId)throw Error('当前网页已变化，请重新观察。')};check()
+   // Chromium can resolve loadURL just before its loading flag clears.
+   const wc=live.get(tab.id)!.view.webContents;if(wc.isLoadingMainFrame())await new Promise<void>(resolve=>{const ready=()=>{clearTimeout(timer);wc.removeListener('did-stop-loading',ready);resolve()};const timer=setTimeout(ready,1000);wc.once('did-stop-loading',ready);if(!wc.isLoadingMainFrame())ready()})
+   check();return pageAgent.run({op:'observe'},signal,authority())
+  }
   const authorize=authority();authorize();const result=await pageAgent.run(input,signal,authorize);authorize();pageEdited=result.observation.canUndo;publish();return result
  }
  return {request,snapshot,dispose,agent,isActive:()=>appActive,ownsSession:(id:unknown)=>appActive&&typeof id==='string'&&!!id&&id===ownerSessionId}
