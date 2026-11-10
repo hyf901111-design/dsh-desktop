@@ -15,6 +15,20 @@ const host={register:(_name,el)=>document.body.append(el),open:()=>{},close:()=>
 },20000)
 afterAll(async()=>browser?.close())
 async function fixture(width=1920,height=1080,dark=true){const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.setContent(`<html><head><style>body{margin:0;background:#151515}.pI_x6G_centerCol{position:fixed;left:${width===1920?306:64}px;top:10px;right:${width===1920?420:10}px;bottom:10px}</style></head><body ${dark?'data-ds-dark-theme':''}><main class="pI_x6G_centerCol" style="position:fixed;left:${width===1920?306:64}px;right:${width===1920?420:10}px;top:10px;bottom:10px;width:auto;height:auto;margin:0;box-sizing:border-box"></main></body></html>`);await page.addScriptTag({content:code});await page.getByRole('heading',{name:'从这里，打开一个新视野。'}).waitFor();return {page,errors}}
+it('shows bookmarks only at home with padded text hovers and a square tab switcher',async()=>{
+ const {page}=await fixture(1440,900,true);try{
+  await page.evaluate(()=>window.setBrowserState({bookmarks:[{id:'bookmark',url:'https://example.com/',title:'浏览器验收 · 一个较长的收藏标题',at:Date.now()}]}))
+  for(const action of ['bookmarks','open-url']){
+   const button=page.locator('.eb-bookmarks-bar [data-action='+action+']');await button.hover();const box=await button.evaluate(el=>{const s=getComputedStyle(el);return{left:parseFloat(s.paddingLeft),right:parseFloat(s.paddingRight),top:parseFloat(s.paddingTop),bottom:parseFloat(s.paddingBottom)}});expect(box).toEqual({left:8,right:8,top:4,bottom:4})
+  }
+  await page.getByRole('button',{name:'新标签页',exact:true}).click();const switcher=page.getByRole('button',{name:'已打开的页签',exact:true});await switcher.hover();const shape=await switcher.evaluate(el=>{const r=el.getBoundingClientRect(),i=el.firstElementChild.getBoundingClientRect();return{width:r.width,height:r.height,dx:(i.left+i.right-r.left-r.right)/2,dy:(i.top+i.bottom-r.top-r.bottom)/2}});expect(shape.width).toBe(32);expect(shape.height).toBe(32);expect(Math.abs(shape.dx)).toBeLessThan(.5);expect(Math.abs(shape.dy)).toBeLessThan(.5)
+  await page.screenshot({path:evidence+'/home-bookmark-hover-dark.png'})
+  const initialTop=await page.locator('[data-browser-viewport]').evaluate(el=>el.getBoundingClientRect().top)
+  await page.evaluate(()=>{const state=window.snapshot(),tab=state.tabs.find(t=>t.id===state.activeId);tab.url='https://example.com/';tab.title='Example Domain';window.setBrowserState(state)})
+  expect(await page.locator('.eb-bookmarks-bar').count()).toBe(0);expect(await page.locator('[data-browser-viewport]').evaluate(el=>el.getBoundingClientRect().top)).toBe(initialTop-32)
+  await page.evaluate(()=>{const state=window.snapshot();state.tabs.find(t=>t.id===state.activeId).url='';window.setBrowserState(state)});expect(await page.locator('.eb-bookmarks-bar').count()).toBe(1)
+ }finally{await page.close()}
+})
 it('matches the Figma chrome dimensions and handles actual URL, multi-tab, collection and settings controls',async()=>{
  const {page,errors}=await fixture();try{
   await expect.poll(()=>page.locator('.eb-root').evaluate(el=>Math.round(el.getBoundingClientRect().width))).toBe(1194)
@@ -59,14 +73,14 @@ it('keeps many tabs compressed, the active tab visible, and the full-title switc
  }finally{await page.close()}
 })
 
-it('shares available tab width equally with the active tab and renders only supplied safe favicons',async()=>{
+it('adapts all tab widths while giving the crowded active tab more readable space and safe favicons',async()=>{
  const {page,errors}=await fixture(1440,900,false);try{
   const widths=[]
   for(const count of [3,9,24]){
    await page.evaluate(count=>{const base=window.snapshot().tabs[0],canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const ctx=canvas.getContext('2d');ctx.fillStyle='#2071f3';ctx.fillRect(0,0,32,32);window.setBrowserState({tabs:Array.from({length:count},(_,i)=>({...base,id:'adaptive'+i,url:'https://page'+i+'.example/',title:'完整页签标题 '+i,favicon:canvas.toDataURL()})),activeId:'adaptive'+(count-1)})},count)
-   const sizes=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));expect(Math.max(...sizes)-Math.min(...sizes)).toBeLessThan(1);widths.push(sizes[0]);expect(await page.locator('.eb-tab img.eb-tab-favicon').count()).toBe(count)
+   const sizes=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));if(count<=6)expect(Math.max(...sizes)-Math.min(...sizes)).toBeLessThan(1);else{expect(sizes.at(-1)).toBeGreaterThan(sizes[0]+30);expect(sizes.at(-1)).toBeGreaterThanOrEqual(112);expect(sizes.at(-1)).toBeLessThanOrEqual(sizes[0]*3.6)}widths.push(sizes[0]);expect(await page.locator('.eb-tab img.eb-tab-favicon').count()).toBe(count)
   }
-  expect(widths[0]).toBeGreaterThan(widths[1]);expect(widths[1]).toBeGreaterThan(widths[2]);await page.screenshot({path:evidence+'/adaptive-tabs-favicons-light.png'})
+  expect(widths[0]).toBeGreaterThan(widths[1]);expect(widths[1]).toBeGreaterThan(widths[2]);await page.setViewportSize({width:3000,height:900});const wide=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));expect(wide.at(-1)).toBeGreaterThan(wide[0]+30);await page.setViewportSize({width:1440,height:900});await page.screenshot({path:evidence+'/adaptive-tabs-favicons-light.png'})
   await page.getByRole('button',{name:'已打开的页签'}).click();expect(await page.locator('[data-browser-panel=tab-list] img.eb-tab-favicon').count()).toBe(24);await page.getByRole('menuitemradio',{name:'完整页签标题 0',exact:true}).click();await page.getByRole('button',{name:'关闭 完整页签标题 0',exact:true}).click();expect(await page.getByRole('tab',{selected:true}).getAttribute('data-id')).toBe('adaptive1');expect(await page.getByRole('tab',{selected:true}).evaluate(el=>el===document.activeElement)).toBe(true)
   await page.evaluate(()=>{const state=window.snapshot();state.tabs[0].favicon='https://external-favicon.invalid/private';window.setBrowserState(state)});expect(await page.locator('.eb-tab[data-id=adaptive1] img').count()).toBe(0);expect(errors).toEqual([])
  }finally{await page.close()}
@@ -76,7 +90,7 @@ it('keeps adaptive tabs reachable beside the native pane button in a crowded nar
  const {page,errors}=await fixture(640,700,true);try{
   await page.evaluate(()=>{const entry=document.createElement('button');entry.dataset.odysseyPanelEntry='right';entry.setAttribute('aria-expanded','false');entry.style.cssText='position:fixed;right:16px;top:16px;width:32px;height:32px;z-index:99';document.body.append(entry);const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:32},(_,i)=>({...base,id:'crowded'+i,title:'窄屏完整标题 '+i})),activeId:'crowded31'});window.dispatchEvent(new Event('resize'))})
   await expect.poll(()=>page.getByRole('tab',{selected:true}).evaluate(el=>{const list=el.parentElement.getBoundingClientRect(),box=el.getBoundingClientRect();return box.left>=list.left-1&&box.right<=list.right+1})).toBe(true)
-  const widths=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));expect(Math.max(...widths)-Math.min(...widths)).toBeLessThan(1)
+  const widths=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));expect(widths.at(-1)).toBeGreaterThan(widths[0]+30);expect(widths.at(-1)).toBeGreaterThanOrEqual(112)
   const next=await page.getByRole('button',{name:'新标签页',exact:true}).boundingBox(),entry=await page.locator('[data-odyssey-panel-entry=right]').boundingBox();expect(next.x+next.width).toBeLessThanOrEqual(entry.x-8)
   await page.getByRole('button',{name:'已打开的页签'}).click();expect(await page.getByRole('menuitemradio').count()).toBe(32);await page.getByRole('menuitemradio',{name:'窄屏完整标题 31',exact:true}).click();await page.getByRole('tab',{selected:true}).click({button:'middle'});expect(await page.getByRole('tab',{selected:true}).getAttribute('data-id')).toBe('crowded30');expect(await page.getByRole('tab',{selected:true}).evaluate(el=>el===document.activeElement)).toBe(true)
   await page.screenshot({path:evidence+'/adaptive-tabs-dark-narrow.png'});expect(errors).toEqual([])
