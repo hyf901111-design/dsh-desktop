@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto'
 import type {BrowserRegionOverlayEvent,BrowserRegionQuestion,BrowserRegionRect,BrowserRegionStart} from '../../shared/browser-region'
 
 const channel='browser-app:region-action',stateChannel='browser-app:region-state'
-const html='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>询问 EWork</title>'
+const html='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>询问AI</title>'
 function finiteRect(value:BrowserRegionRect):boolean{return !!value&&(['x','y','width','height'] as const).every(k=>Number.isFinite(value[k])&&Math.abs(value[k])<=30000)&&value.width>0&&value.height>0}
 /** Only controls live here. The original webpage remains the sole page surface. */
 export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserWindow,onEvent:(event:BrowserRegionOverlayEvent)=>void){
