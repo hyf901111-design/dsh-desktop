@@ -9,53 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复浏览器设置背景残留与网页操作超时恢复",
+        "featureName": "修复浏览器主页历史返回与首页图标悬停反馈",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
-        "tipCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
+        "baseCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
+        "tipCommit": "12572a5d291ce864633d1e9873ef8b00f183cb92",
         "commits": [
           {
-            "commit": "e4cda6bba613001986cb4b1aa032a959e57b03ba",
+            "commit": "12572a5d291ce864633d1e9873ef8b00f183cb92",
             "parents": [
-              "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4"
+              "b79cbae2611aa42b24f3eb3e366414133c94fb50"
             ],
-            "subject": "限制网页代理观察与编辑预算并撤销失效操作"
-          },
-          {
-            "commit": "7d569b6e8abea5164662092a8dba34570be61fb0",
-            "parents": [
-              "e4cda6bba613001986cb4b1aa032a959e57b03ba"
-            ],
-            "subject": "排除脚本与样式内容的网页公开文字预算"
-          },
-          {
-            "commit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
-            "parents": [
-              "7d569b6e8abea5164662092a8dba34570be61fb0"
-            ],
-            "subject": "修复浏览器设置底图残留并支持网页超时恢复"
+            "subject": "修复主页前后退历史并收紧首页入口悬停反馈"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/browser-use-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/verify-browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/page-agent.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/route.ts"
           },
           {
             "status": "M",
@@ -67,23 +37,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-page-agent.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-use-route.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-use-tools.test.js"
           }
         ],
         "checks": [
@@ -94,22 +48,12 @@
               "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "./node_modules/.bin/vitest",
               "run",
-              "test/browser-app-rendered.test.js",
-              "test/browser-bookmarks.test.ts",
-              "test/browser-bookmark-manager-rendered.test.js",
-              "test/figma-model-menu.test.ts",
-              "test/sidebar-new-note-browser.test.js",
-              "test/browser-app-model.test.ts",
-              "test/browser-use-route.test.ts",
-              "test/browser-use-tools.test.js",
-              "test/browser-page-agent.test.ts",
-              "test/canvas-use.test.js",
-              "test/canvas-use-tool-observation.test.js"
+              "test/browser-app-rendered.test.js"
             ],
             "outcome": "passed",
-            "summary": "96项直接相关检查通过，涵盖设置实色隔离、完整收藏管理、菜单与页签、网页观察和编辑预算、取消回滚与恢复工具。",
-            "verifiedCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
-            "completedAt": "2026-11-10T04:00:07.789294+00:00",
+            "summary": "21项直接相关渲染检查通过，包括深浅主题图标局部hover、设置背景隔离、菜单与页签、收藏管理接入。此前96项祖先提交检查另保留。",
+            "verifiedCommit": "12572a5d291ce864633d1e9873ef8b00f183cb92",
+            "completedAt": "2026-11-10T04:18:20.484183+00:00",
             "timeoutMs": 120000
           },
           {
@@ -121,8 +65,8 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过。",
-            "verifiedCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
-            "completedAt": "2026-11-10T04:00:07.789294+00:00",
+            "verifiedCommit": "12572a5d291ce864633d1e9873ef8b00f183cb92",
+            "completedAt": "2026-11-10T04:18:20.484183+00:00",
             "timeoutMs": 120000
           },
           {
@@ -131,15 +75,15 @@
               "scripts/verify-browser-app-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "原生Chromium单独运行通过，含隐藏缩放新帧、收藏真实路由及DOM通道卡住时的刷新/关闭确认。并发首轮滚轮断言超时，单独复核通过，未修改断言或超时。",
-            "verifiedCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
-            "completedAt": "2026-11-10T04:00:07.789294+00:00",
+            "summary": "真实Chromium主页前后退回归通过：空主页无历史时安全无操作，网页→主页→后退网页→前进主页，主页打开新网页再后退两次，重复主页不添加历史。其余原生直接能力检查通过。",
+            "verifiedCommit": "12572a5d291ce864633d1e9873ef8b00f183cb92",
+            "completedAt": "2026-11-10T04:18:20.484183+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "完整样式渲染与原生Chromium夹具通过。最终签名包待原日常路径实机复核，外部真实邮箱模型修改不作通过宣称。"
+          "summary": "21项相关渲染和原生主页往返检查通过；最终签名包原路径实机复核待完成。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -179,7 +123,9 @@
           "完整收藏管理支持搜索、文件夹、收藏增改、移动、单删/批删，草稿/光标跨后台更新保留",
           "设置页与管理收藏不保留网页快照，设置实色背景不透出原生网页",
           "网页观察限制节点/公开文字/总时长，脚本样式不计入公开文字预算；修改最多100项并在取消、导航或失效后回滚自有未被站点更改的文字",
-          "原生刷新和关闭恢复要求匹配活动页签及网址，不等待卡住的DOM通道，返回请求状态后重观测"
+          "原生刷新和关闭恢复要求匹配活动页签及网址，不等待卡住的DOM通道，返回请求状态后重观测",
+          "主页作为原生about:blank历史项参与前进后退，空主页无历史请求安全无操作，不出现请先打开网页错误",
+          "首页四入口仅图标40px背景随hover变色，文字提亮，不生成整块横向卡片背景"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -191,55 +137,7 @@
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。",
           "真实旧邮箱的超时现象未用私人邮箱重放；合成夹具证明预算和恢复行为，不代表任意远端站点的全量翻译兼容。"
         ],
-        "generatedAt": "2026-11-10T04:00:07.789294+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8821bdb920fa3817629bf26523eef98ecb98f2c5",
-        "verificationCommit": "8821bdb920fa3817629bf26523eef98ecb98f2c5",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "8821bdb920fa3817629bf26523eef98ecb98f2c5",
-            "completedAt": "2026-11-10T04:00:49.095Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "8821bdb920fa3817629bf26523eef98ecb98f2c5",
-            "completedAt": "2026-11-10T04:00:49.095Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "8821bdb920fa3817629bf26523eef98ecb98f2c5",
-            "completedAt": "2026-11-10T04:00:49.095Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T04:00:49.095Z"
+        "generatedAt": "2026-11-10T04:18:20.484183+00:00"
       }
     }
   ],
