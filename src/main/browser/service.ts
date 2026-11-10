@@ -37,7 +37,7 @@ export function registerBrowserApp(options:Options){
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
- const sync=()=>{let shown=false;for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error,awake=appActive&&id===model.activeId&&!model.tab(id).error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
+ const sync=()=>{let shown=false;for(const [id,e]of live){const show=visible&&id===model.activeId&&!!model.tab(id).url&&!model.tab(id).error,awake=appActive&&id===model.activeId&&!!model.tab(id).url&&!model.tab(id).error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
  const sessionFor=(tab:BrowserTab)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
@@ -73,14 +73,14 @@ export function registerBrowserApp(options:Options){
   const e:Live={view,epoch:0};live.set(tab.id,e);window().contentView.addChildView(view);view.setVisible(false)
   const wc=view.webContents;wc.setAudioMuted(tab.muted);wc.setZoomFactor(tab.zoom)
   trackBrowserFavicon(wc,favicon=>{if(disposed||live.get(tab.id)!==e||tab.favicon===favicon)return;tab.favicon=favicon;publish()})
-  const valid=(event:{preventDefault():void},url:string)=>{try{browserAddress(url)}catch{event.preventDefault()}}
+  const valid=(event:{preventDefault():void},url:string)=>{if(url==='about:blank')return;try{browserAddress(url)}catch{event.preventDefault()}}
   wc.on('will-navigate',valid);wc.on('will-redirect',valid)
   let popupGestureAt=0
   wc.on('before-mouse-event',(_event,input)=>{if(input.type==='mouseDown')popupGestureAt=Date.now()})
   wc.on('before-input-event',(_event,input)=>{if(input.type==='keyDown')popupGestureAt=Date.now()})
   wc.setWindowOpenHandler(({url})=>{try{const origin=new URL(wc.getURL()).origin,gesture=Date.now()-popupGestureAt<1000;popupGestureAt=0;if(!gesture&&permissions.get(permissionKey(tab,origin))?.popups!=='allow')return {action:'deny'};const target=browserAddress(url);const next=model.newTab(tab.private);void navigate(next,target);publish()}catch{}return {action:'deny'}})
   wc.on('did-start-loading',()=>{if(model.activeId===tab.id){appEpoch++;pageEdited=false}tab.loading=true;tab.error=undefined;publish()})
-  const refresh=()=>{if(wc.isDestroyed())return;tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward();const url=wc.getURL();if(/^https?:/.test(url)){tab.url=url;tab.title=wc.getTitle()||new URL(url).hostname}publish()}
+  const refresh=()=>{if(wc.isDestroyed())return;tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward();const url=wc.getURL();if(/^https?:/.test(url)){tab.url=url;tab.title=wc.getTitle()||new URL(url).hostname}else if(url==='about:blank'){Object.assign(tab,{url:'',title:'新标签页',favicon:undefined,error:undefined,find:undefined})}sync();publish()}
   wc.on('did-navigate',refresh);wc.on('did-navigate-in-page',refresh);wc.on('page-title-updated',refresh)
   wc.on('did-finish-load',()=>{if(wc.getURL().startsWith('about:'))return;tab.loading=false;tab.error=undefined;clearTimeout(e.timeout);try{model.visited(tab.id,browserAddress(wc.getURL()),wc.getTitle()||new URL(wc.getURL()).hostname)}catch{}refresh();sync()})
   wc.on('did-stop-loading',()=>{tab.loading=false;publish()})
@@ -174,7 +174,17 @@ export function registerBrowserApp(options:Options){
   const tab=model.tab(input.id??model.activeId)
   if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();return bitmap.isEmpty()?'':bitmap.resize({width:Math.min(1600,bitmap.getSize().width)}).toDataURL()}
   if(method==='navigate'){void navigate(tab,browserAddress(input.url,model.settings.engine));return snapshot()}
-  if(method==='home'){const e=live.get(tab.id);if(e){e.epoch++;clearTimeout(e.timeout);e.view.webContents.stop();void e.view.webContents.loadURL('about:blank')}Object.assign(tab,{url:'',title:'新标签页',favicon:undefined,error:undefined,loading:false});sync();publish();return snapshot()}
+  if(method==='home'){
+   if(!tab.url&&!tab.loading&&!tab.error)return snapshot()
+   appEpoch++;ownerEpoch++;pageAgent.invalidate();pageEdited=false
+   const e=live.get(tab.id),epoch=e?++e.epoch:0;clearTimeout(e?.timeout)
+   Object.assign(tab,{url:'',title:'新标签页',favicon:undefined,error:undefined,find:undefined,loading:false,canBack:false,canForward:false});sync();publish()
+   if(e&&!e.view.webContents.isDestroyed()){
+    const wc=e.view.webContents;wc.stop();try{await wc.loadURL('about:blank')}catch{}
+    if(e.epoch===epoch&&!wc.isDestroyed()){tab.loading=false;tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward();sync();publish()}
+   }
+   return snapshot()
+  }
   if(method==='duplicate'){const next=model.newTab(tab.private);if(tab.url)void navigate(next,tab.url);publish();return snapshot()}
   if(method==='pin'){tab.pinned=!tab.pinned;model.tabs.sort((a,b)=>Number(b.pinned)-Number(a.pinned));publish();return snapshot()}
   if(method==='mute'){tab.muted=!tab.muted;live.get(tab.id)?.view.webContents.setAudioMuted(tab.muted);publish();return snapshot()}
@@ -185,11 +195,17 @@ export function registerBrowserApp(options:Options){
    const sessionId=inputString(input.sessionId,256);if(!sessionId)throw Error('请先打开一个工作区会话。')
    const directory=await options.materialDirectory(sessionId);mkdirSync(directory,{recursive:true});const target=join(directory,'网页来源-'+Date.now()+'-'+randomUUID().slice(0,6)+'.md');const source={title:tab.title,url:browserAddress(tab.url),at:Date.now()};writeFileSync(target,`# ${source.title.replace(/[\r\n]/g,' ')}\n\n来源：${source.url}\n\n访问时间：${new Date(source.at).toISOString()}\n`,{mode:0o600});return {path:target,source}
   }
+  if(method==='back'||method==='forward'){
+   const e=live.get(tab.id),wc=e?.view.webContents
+   if(wc&&!wc.isDestroyed()){
+    tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward()
+    if(method==='back'?tab.canBack:tab.canForward){appEpoch++;ownerEpoch++;pageAgent.invalidate();pageEdited=false;e!.epoch++;clearTimeout(e!.timeout);tab.error=undefined;if(method==='back')wc.navigationHistory.goBack();else wc.navigationHistory.goForward()}
+   }else{tab.canBack=false;tab.canForward=false}
+   sync();publish();return snapshot()
+  }
   if(!tab.url)throw Error('请先打开网页。')
   const e=ensure(tab),wc=e.view.webContents
-  if(method==='back'){if(wc.navigationHistory.canGoBack())wc.navigationHistory.goBack()}
-  else if(method==='forward'){if(wc.navigationHistory.canGoForward())wc.navigationHistory.goForward()}
-  else if(method==='reload'){tab.error=undefined;void navigate(tab,tab.url)}
+  if(method==='reload'){tab.error=undefined;void navigate(tab,tab.url)}
   else if(method==='stop'){e.epoch++;clearTimeout(e.timeout);wc.stop();tab.loading=false}
   else if(method==='zoom'){if(!Number.isFinite(input.value))throw Error('缩放比例无效。');tab.zoom=Math.max(.25,Math.min(3,input.value));wc.setZoomFactor(tab.zoom);await Promise.race([wc.executeJavaScriptInIsolatedWorld(1007,[{code:'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))'}]).catch(()=>{}),new Promise(resolve=>setTimeout(resolve,120))])}
   else if(method==='find'){const text=inputString(input.text,500);if(text)e.findRequestId=wc.findInPage(text,{forward:input.forward!==false,findNext:input.next!==true});else{e.findRequestId=undefined;wc.stopFindInPage('clearSelection');tab.find=undefined}}

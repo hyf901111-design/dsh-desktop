@@ -172,3 +172,8 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-tab[data-tab-dragging=true]{opacity:.5}.eb-tab[data-drop-edge]::after{content:"";position:absolute;top:4px;bottom:4px;width:2px;border-radius:1px;background:var(--eb-ink);pointer-events:none}.eb-tab[data-drop-edge=before]::after{left:0}.eb-tab[data-drop-edge=after]::after{right:0}
 
 .eb-root .eb-settings{background:var(--eb-bg)}
+
+.eb-root .eb-shortcuts button:hover{background:transparent;color:var(--eb-ink)}
+.eb-shortcut-icon{transition:background-color 120ms ease,color 120ms ease}
+.eb-shortcuts button:hover .eb-shortcut-icon{background:color-mix(in srgb,var(--eb-field),var(--eb-ink) 12%)}
+@media(prefers-reduced-motion:reduce){.eb-shortcut-icon{transition:none}}
