@@ -148,9 +148,9 @@
     },
     {
       "branch": "codex/feat/board-folder-icons-20261109",
-      "tip": "80a31f2b5ed81f68758808f16163f1cc7c47e06e",
-      "decision": "docs/superpowers/parked/2026-11-10-release-1.5.1-scope.md",
-      "reason": "已合入 main 的功能保留；此精确后继涉及超限恢复及阅读优化，未在本会话验收，不临时合并。"
+      "tip": "3c4da955fb53acf4caa28553fc25539fcfb4d3e1",
+      "decision": "docs/releases/sherlock-1.5.2.md",
+      "reason": "独立研究看板开发仍待验收，保留精确 tip，排除于 1.5.2。"
     },
     {
       "branch": "codex/feat/research-swarm-cursors-20261109",

@@ -18,6 +18,15 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.5.2",
+      "date": "2026-11-11",
+      "items": [
+        "新对话首页的输入框下方新增五个快捷入口，可直接打开浏览器、插件、定时任务、研究看板和笔记。",
+        "将鼠标移到快捷图标上时，图标原位放大并显示应用名称；使用键盘聚焦时也可查看名称。",
+        "左侧栏「更多」菜单的插件图标换成实心插头，与首页入口一致。"
+      ]
+    },
+    {
       "version": "1.5.1",
       "date": "2026-11-10",
       "items": [
@@ -588,6 +597,15 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.5.2",
+      "date": "2026-11-11",
+      "items": [
+        "Open Browser, Plugins, Scheduled Tasks, Research Boards, or Notes directly from five new shortcuts below the composer on the new conversation screen.",
+        "Hover over a shortcut to enlarge its icon and reveal the app name. Keyboard focus also shows the name.",
+        "The Plugins item in the sidebar’s More menu now uses the same solid plug icon as the home shortcut."
+      ]
+    },
     {
       "version": "1.5.1",
       "date": "2026-11-10",

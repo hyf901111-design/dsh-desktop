@@ -1,6 +1,6 @@
 {
   "name": "sherlock",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "EWork Odyssey local-first desktop knowledge assistant.",
   "private": true,
   "type": "module",
