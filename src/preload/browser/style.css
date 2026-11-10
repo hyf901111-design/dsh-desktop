@@ -1,4 +1,4 @@
-.eb-root{--eb-bg:#fff;--eb-panel:#fff;--eb-field:#f7f7f7;--eb-line:#dfe0e3;--eb-ink:#292b2e;--eb-muted:#76787d;position:fixed;z-index:6;display:flex;flex-direction:column;overflow:hidden;border-radius:16px;background:var(--eb-bg);color:var(--eb-ink);font:13px/20px var(--odyssey-font-ui,'Noto Sans SC',sans-serif);-webkit-app-region:no-drag}
+.eb-root{--eb-bg:#fff;--eb-panel:#fff;--eb-field:#f7f7f7;--eb-line:#dfe0e3;--eb-ink:#292b2e;--eb-muted:#76787d;--eb-menu-line:color-mix(in srgb,var(--eb-ink) 8%,transparent);position:fixed;z-index:6;display:flex;flex-direction:column;overflow:hidden;border-radius:16px;background:var(--eb-bg);color:var(--eb-ink);font:13px/20px var(--odyssey-font-ui,'Noto Sans SC',sans-serif);-webkit-app-region:no-drag}
 .eb-root[data-dark=true]{--eb-bg:#1e1e1e;--eb-panel:#242424;--eb-field:#2e2e2e;--eb-line:#424242;--eb-ink:#e8e8e8;--eb-muted:#aaa;color-scheme:dark}
 .eb-root *{box-sizing:border-box}.eb-root[hidden]{display:none!important}.eb-root button,.eb-root input,.eb-root select{font:inherit;color:inherit}.eb-root button{border:0;background:transparent;padding:0;cursor:pointer;flex-shrink:0;border-radius:6px}.eb-root button:hover{background:color-mix(in srgb,var(--eb-ink) 8%,transparent)}.eb-root button:disabled{opacity:.35;cursor:default}.eb-root :focus-visible{outline:2px solid #498df4;outline-offset:1px}.eb-root input,.eb-root select{border:0;border-radius:6px;background:var(--eb-field);padding:8px 10px;min-width:0}.eb-root input::placeholder{color:var(--eb-muted)}
 .eb-icon{display:inline-block;width:17px;height:17px;flex:none;background:currentColor;mask:var(--eb-icon) center/contain no-repeat;vertical-align:middle}.eb-muted{color:var(--eb-muted)}.eb-spacer{flex:1;min-width:0}.eb-icon-button{display:grid;place-items:center;width:32px;height:32px;color:var(--eb-muted)!important}.eb-icon-button[data-on=true]{color:var(--eb-ink)!important;background:var(--eb-field)}
@@ -11,7 +11,11 @@
 @media(prefers-reduced-motion:reduce){.eb-root *{animation:none!important;transition:none!important}}
 /* Exact anchors from Figma page 76; content and list lengths remain live. */
 .eb-popover{top:96px;max-height:calc(100% - 112px)}
-.eb-popover[data-browser-panel=bookmarks],.eb-popover[data-browser-panel=history]{top:128px;max-height:calc(100% - 144px)}
+.eb-popover[data-browser-panel=history]{top:128px;max-height:calc(100% - 144px)}
+.eb-popover[data-browser-panel=bookmarks]{top:var(--eb-bookmarks-top,92px);right:var(--eb-bookmarks-right,16px);max-height:calc(100% - var(--eb-bookmarks-top,92px) - 16px);animation:eb-bookmarks-in 140ms ease-out both}
+@keyframes eb-bookmarks-in{from{opacity:0}to{opacity:1}}
+.eb-folder-create{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px!important;line-height:20px}
+.eb-folder-create>.eb-icon{width:16px;height:16px}
 .eb-popover[data-browser-panel=downloads]{width:440px}
 .eb-popover[data-browser-panel=site]{left:156px;right:auto}
 .eb-popover[data-browser-panel=tabs]{left:var(--eb-tab-menu-x,132px);right:auto;top:48px;width:300px;padding:16px;gap:8px}
@@ -25,7 +29,7 @@
 .eb-root .eb-app-label{height:32px;padding:0 6px;font-weight:500}
 
 .eb-root[data-settings-open=true]{visibility:hidden!important;pointer-events:none!important}
-.eb-menu hr{margin:0}
+.eb-menu hr{margin:0;border:0;height:1px;background:var(--eb-menu-line)}
 .eb-popover[data-browser-panel=tabs] .eb-menu-item{height:42px;gap:10px;padding:0 6px!important;font-size:12px!important}
 .eb-menu[data-browser-panel=menu]{height:616px}
 
@@ -114,7 +118,7 @@
 body .eb-root .eb-popover .eb-menu-item{gap:10px}
 body .eb-root .eb-popover .eb-tab-option{gap:10px;padding:8px 10px;font-size:14px;line-height:21px}
 
-body .eb-root .eb-popover[role=menu]{border:1px solid var(--eb-line);border-radius:12px;background:var(--eb-panel);color:var(--eb-ink);padding:8px;box-shadow:0 6px 20px #0004;backdrop-filter:none;font-family:inherit}
+body .eb-root[data-browser-app] .eb-popover[role=menu]{border:1px solid var(--eb-line);border-radius:12px;background:var(--eb-panel)!important;color:var(--eb-ink);padding:8px;box-shadow:0 6px 20px #0004;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;font-family:inherit}
 body .eb-root .eb-popover[data-browser-panel=tabs]{padding:16px;gap:8px}
 body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 
@@ -128,10 +132,10 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-download-card>progress{width:calc(100% - 24px);margin:0 12px}
 .eb-download-card[data-state=completed]>.eb-popup-actions,.eb-download-card[data-state=interrupted]>.eb-popup-actions,.eb-download-card[data-state=cancelled]>.eb-popup-actions{padding-bottom:0}
 
-.eb-zoom-controls{width:124px;border:0;box-shadow:inset 0 0 0 1px var(--eb-line)}
+.eb-zoom-controls{width:124px;border:0;box-shadow:inset 0 0 0 1px var(--eb-menu-line)}
 
 /* Figma strokes sit inside the frame without consuming its content width. */
-.eb-popover,body .eb-root .eb-popover[role=menu]{border:0;box-shadow:inset 0 0 0 1px var(--eb-line),0 6px 20px #0004}
+.eb-popover,body .eb-root[data-browser-app] .eb-popover[role=menu]{border:0;box-shadow:inset 0 0 0 1px var(--eb-line),0 6px 20px #0004}
 .eb-root[data-page-edited=true] .eb-menu[data-browser-panel=menu]{height:652px}
 
 .eb-popover[data-browser-panel=tabs] .eb-menu-item{line-height:19px}

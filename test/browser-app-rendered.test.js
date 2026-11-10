@@ -29,6 +29,15 @@ it('shows bookmarks only at home with padded text hovers and a square tab switch
   await page.evaluate(()=>{const state=window.snapshot();state.tabs.find(t=>t.id===state.activeId).url='';window.setBrowserState(state)});expect(await page.locator('.eb-bookmarks-bar').count()).toBe(1)
  }finally{await page.close()}
 })
+it('anchors bookmarks to the toolbar with aligned folder-plus action, gentle lines and opaque menus',async()=>{
+ const {page}=await fixture(1440,900,true);try{
+  await page.evaluate(()=>{const state=window.snapshot();state.tabs[0].url='https://example.com/';state.folders=['研究资料'];window.setBrowserState(state)})
+  const trigger=page.locator('.eb-toolbar [data-action=bookmarks]');await trigger.click();const panel=page.getByRole('dialog',{name:'收藏夹',exact:true}),anchor=await trigger.boundingBox(),box=await panel.boundingBox();expect(box.y-anchor.y-anchor.height).toBeGreaterThanOrEqual(4);expect(box.y-anchor.y-anchor.height).toBeLessThanOrEqual(8);expect(Math.abs(box.x+box.width-anchor.x-anchor.width)).toBeLessThan(1)
+  const create=panel.getByRole('button',{name:'新建文件夹',exact:true});const align=await create.evaluate(el=>{const i=el.querySelector('.eb-icon').getBoundingClientRect(),t=el.querySelector('span')?.getBoundingClientRect();return t?Math.abs(i.y+i.height/2-t.y-t.height/2):99});expect(align).toBeLessThan(1);expect(await create.locator('.eb-icon').getAttribute('style')).not.toBe(await panel.locator('[data-action=folder-open] .eb-icon').getAttribute('style'))
+  expect(await panel.evaluate(el=>getComputedStyle(el).animationName)).toBe('eb-bookmarks-in');await expect.poll(()=>panel.evaluate(el=>getComputedStyle(el).opacity)).toBe('1');await page.screenshot({path:evidence+'/bookmarks-anchored-dark.png'});await page.emulateMedia({reducedMotion:'reduce'});expect(await panel.evaluate(el=>getComputedStyle(el).animationName)).toBe('none');await page.keyboard.press('Escape')
+  await page.getByRole('button',{name:'更多浏览器操作'}).click();const material=await page.locator('[data-browser-panel=menu]').evaluate(el=>{const s=getComputedStyle(el);return{background:s.backgroundColor,blur:s.backdropFilter,divider:getComputedStyle(el.querySelector('hr')).backgroundColor,zoom:getComputedStyle(el.querySelector('.eb-zoom-controls')).boxShadow}});expect(material.background).toBe('rgb(36, 36, 36)');expect(material.blur).toBe('none');expect(material.divider).toMatch(/0\.08/);expect(material.zoom).toMatch(/0\.08/)
+ }finally{await page.close()}
+})
 it('matches the Figma chrome dimensions and handles actual URL, multi-tab, collection and settings controls',async()=>{
  const {page,errors}=await fixture();try{
   await expect.poll(()=>page.locator('.eb-root').evaluate(el=>Math.round(el.getBoundingClientRect().width))).toBe(1194)
