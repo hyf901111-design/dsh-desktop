@@ -9,17 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器网页直角与日常客户端交付修正",
+        "featureName": "浏览器完整收藏管理与真实客户端交互反馈修正",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
-        "tipCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
+        "baseCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
+        "tipCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
         "commits": [
           {
-            "commit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
+            "commit": "d528fffbcb25002fa1bd82ed03ec71c0fe89a6b8",
             "parents": [
-              "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4"
+              "50744b81bf2f5c8a457a9365e02068fb2dbd4284"
             ],
-            "subject": "保留网页底部圆角并恢复顶部直角"
+            "subject": "完善浏览器页签拖拽与菜单缩放交互"
+          },
+          {
+            "commit": "a24a40291b5c663459bb65bc8456d0cb0bb73cde",
+            "parents": [
+              "d528fffbcb25002fa1bd82ed03ec71c0fe89a6b8"
+            ],
+            "subject": "完善浏览器收藏管理与批量整理功能"
+          },
+          {
+            "commit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+            "parents": [
+              "a24a40291b5c663459bb65bc8456d0cb0bb73cde"
+            ],
+            "subject": "接入完整收藏管理并保留编辑状态"
           }
         ],
         "files": [
@@ -28,16 +42,32 @@
             "path": "docs/superpowers/plans/2026-11-09-browser-app-figma.md"
           },
           {
-            "status": "A",
-            "path": "src/main/browser/corners.ts"
+            "status": "M",
+            "path": "scripts/lib/figma-model-menu.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/browser/find-overlay.ts"
+            "path": "scripts/verify-browser-app-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/browser/bookmarks.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/browser/model.ts"
           },
           {
             "status": "M",
             "path": "src/main/browser/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/bookmark-manager.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/bookmark-manager.ts"
           },
           {
             "status": "M",
@@ -49,7 +79,31 @@
           },
           {
             "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-model.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-bookmark-manager-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-bookmarks.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-model-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-browser.test.js"
           }
         ],
         "checks": [
@@ -61,12 +115,16 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/browser-app-rendered.test.js",
-              "test/browser-app-view.test.ts"
+              "test/browser-bookmarks.test.ts",
+              "test/browser-bookmark-manager-rendered.test.js",
+              "test/figma-model-menu.test.ts",
+              "test/sidebar-new-note-browser.test.js",
+              "test/browser-app-model.test.ts"
             ],
             "outcome": "passed",
-            "summary": "23项直接相关渲染/视图检查通过，顶部直角及底部圆角均覆盖。",
-            "verifiedCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
-            "completedAt": "2026-11-10T02:48:59.330303+00:00",
+            "summary": "43项本轮相关检查通过，涵盖完整样式UI、拖拽/顺序持久化、收藏CRUD和草稿/光标保存、联想框、模型菜单和选中态。",
+            "verifiedCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+            "completedAt": "2026-11-10T03:33:35.772622+00:00",
             "timeoutMs": 120000
           },
           {
@@ -78,8 +136,8 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过。",
-            "verifiedCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
-            "completedAt": "2026-11-10T02:48:59.330303+00:00",
+            "verifiedCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+            "completedAt": "2026-11-10T03:33:35.772622+00:00",
             "timeoutMs": 120000
           },
           {
@@ -88,15 +146,15 @@
               "scripts/verify-browser-app-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "原生Chromium聚焦验收通过，原生探针已验证底角与工具栏响应。",
-            "verifiedCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
-            "completedAt": "2026-11-10T02:48:59.330303+00:00",
+            "summary": "原生Chromium验收通过，含隐藏页缩放绘制新帧与真实收藏创建/编辑网址/批删路由。",
+            "verifiedCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+            "completedAt": "2026-11-10T03:33:35.772622+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "23项直接相关渲染/视图检查、类型检查、原生Chromium验收及原生裁切探针通过。待最终签名包实机复核并更新原日常客户端路径，不迁移数据。"
+          "summary": "43项相关检查、类型检查、原生Chromium及收藏管理跨父视图的真实样式流程通过。最终签名包仍待原日常客户端路径实机复核。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -126,7 +184,14 @@
           "移除底栏后原生网页与快照仅底部保留16px内圆角，顶部直角；应用标题可拖动整个客户端",
           "空心星标及前进后退箭头线宽加粗",
           "网站记住登录的持久Cookie/站点存储跨正常完整退出重启保持，隐私/临时/过期/撤销边界尊重网站",
-          "最终正式身份本地包使用日常数据目录与真实模型配置，不迁移或覆盖数据和凭据"
+          "最终正式身份本地包使用日常数据目录与真实模型配置，不迁移或覆盖数据和凭据",
+          "联想框单行40px且无键盘说明，键盘选择/打开/Escape保留",
+          "浏览器未选中时图标灰色，仅进入浏览器后高亮",
+          "普通页签最大240px，继续按空间收缩且拥挤时活动项适当加宽",
+          "页签支持拖拽插入排序，活动文档不变，普通顺序持久化，外部拖入不改变顺序",
+          "模型菜单宽度/位置限制在全局右栏，嵌套全局菜单动态移位/变宽仍完整显示",
+          "菜单未关闭时缩放及时绘制新画面",
+          "完整收藏管理支持搜索、文件夹、收藏增改、移动、单删/批删，草稿/光标跨后台更新保留"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -137,55 +202,7 @@
           "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。"
         ],
-        "generatedAt": "2026-11-10T02:48:59.330303+00:00"
-      },
-      "merged": {
-        "mergeCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
-        "verificationCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
-            "completedAt": "2026-11-10T02:49:20.426Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
-            "completedAt": "2026-11-10T02:49:20.426Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
-            "completedAt": "2026-11-10T02:49:20.426Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T02:49:20.426Z"
+        "generatedAt": "2026-11-10T03:33:35.772622+00:00"
       }
     }
   ],
