@@ -9,74 +9,48 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器独立历史下载页、全局视图入口及页签按钮布局",
+        "featureName": "浏览器悬停导航动效、菜单显隐交接及完整收藏夹适配",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "46280288cf308a42c00e6ae1522ec48f8cb87824",
-        "tipCommit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
+        "baseCommit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
+        "tipCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
         "commits": [
           {
-            "commit": "5cbc89ef8d4f4bf164ae4f2f8e3056eb83ba9fa5",
+            "commit": "c99465aa455457342c682e57565a639a89f943ad",
             "parents": [
-              "46280288cf308a42c00e6ae1522ec48f8cb87824"
+              "6c216314647c6a7ec014db7e137a1de1adab0c34"
             ],
-            "subject": "将历史记录和下载内容建模为独立内部页签"
+            "subject": "将折叠侧栏探索按钮悬停背景改为圆角矩形"
           },
           {
-            "commit": "49ffe1a6fa1428cc43a6407226ac7fe18a7dee96",
+            "commit": "6c7d42707b5d334a4b61cbe44780a669121a424b",
             "parents": [
-              "5cbc89ef8d4f4bf164ae4f2f8e3056eb83ba9fa5"
+              "c99465aa455457342c682e57565a639a89f943ad"
             ],
-            "subject": "新增浏览器历史记录与下载内容独立全页组件"
+            "subject": "优化浏览器悬停视图切换动效和左置页签列表"
           },
           {
-            "commit": "58e6a8d86b6bf4ce639876f2d245b947d4d2ac4c",
+            "commit": "796dafdf10cb5057046dfb5e81fabc0103bd2b17",
             "parents": [
-              "49ffe1a6fa1428cc43a6407226ac7fe18a7dee96"
+              "6c7d42707b5d334a4b61cbe44780a669121a424b"
             ],
-            "subject": "将历史下载入口接入独立页签并替换主页下载记录"
+            "subject": "修复浏览器弹层显隐交接并保留收藏夹目录浏览"
           },
           {
-            "commit": "375e5d16effd28611625ca75bc5f38e9cdf89410",
+            "commit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
             "parents": [
-              "58e6a8d86b6bf4ce639876f2d245b947d4d2ac4c"
+              "796dafdf10cb5057046dfb5e81fabc0103bd2b17"
             ],
-            "subject": "增加浏览器标题后的全局视图展开入口"
-          },
-          {
-            "commit": "00cc7db701ffeb1f0c7d4c138af3d40a316835ba",
-            "parents": [
-              "375e5d16effd28611625ca75bc5f38e9cdf89410"
-            ],
-            "subject": "让新建页签按钮跟随末尾并适配窄窗展开入口"
-          },
-          {
-            "commit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
-            "parents": [
-              "00cc7db701ffeb1f0c7d4c138af3d40a316835ba"
-            ],
-            "subject": "修复来源页关闭后下载页重试并保留隐私分区"
+            "subject": "修复收藏夹菜单横向溢出并完善窄屏布局"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/verify-browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/model.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/service.ts"
-          },
-          {
             "status": "A",
-            "path": "src/preload/browser/activity-page.css"
+            "path": "src/preload/browser/assets/workspace.svg"
           },
           {
-            "status": "A",
-            "path": "src/preload/browser/activity-page.ts"
+            "status": "M",
+            "path": "src/preload/browser/icons.ts"
           },
           {
             "status": "M",
@@ -88,19 +62,23 @@
           },
           {
             "status": "M",
-            "path": "src/shared/browser-app.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-activity-page-rendered.test.js"
+            "path": "src/preload/explore-menu.css"
           },
           {
             "status": "M",
-            "path": "test/browser-app-model.test.ts"
+            "path": "src/preload/scheduled/style.ts"
           },
           {
             "status": "M",
             "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-bookmark-popover-overflow.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
           }
         ],
         "checks": [
@@ -116,12 +94,31 @@
               "test/browser-app-model.test.ts",
               "test/browser-app-view.test.ts",
               "test/browser-page-agent.test.ts",
-              "test/browser-use-route.test.ts"
+              "test/browser-use-route.test.ts",
+              "test/browser-bookmark-popover-overflow.test.js",
+              "test/browser-sidebar-entry.test.ts"
             ],
             "outcome": "passed",
-            "summary": "75项定向检查通过：独立页生命周期、搜索/光标、owner导航、不创建session、+跟随末尾、320px九页签展开边界、原生页签指针排序及现有上下文工具合约。",
-            "verifiedCommit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
-            "completedAt": "2026-11-10T05:36:53.489946+00:00",
+            "summary": "97项浏览器定向检查通过：38项父视图含延迟capture/native hide ack/取消/失败/外部菜单交接，11项收藏弹层明暗/320窄区完整边界、长文本、省略和纵向滚动，以及侧栏入口、内部页及上下文合约。",
+            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+            "completedAt": "2026-11-10T06:23:12.580205+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "gives footer controls safe hover padding"
+            ],
+            "outcome": "passed",
+            "summary": "4项探索真实组件渲染通过（明暗×展开/折叠），折叠hover背景12px圆角矩形、内部orb仍圆形；76项无关检查跳过。",
+            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+            "completedAt": "2026-11-10T06:23:12.580205+00:00",
             "timeoutMs": 120000
           },
           {
@@ -133,8 +130,8 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过。",
-            "verifiedCommit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
-            "completedAt": "2026-11-10T05:36:53.489946+00:00",
+            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+            "completedAt": "2026-11-10T06:23:12.580205+00:00",
             "timeoutMs": 120000
           },
           {
@@ -145,14 +142,14 @@
             ],
             "outcome": "passed",
             "summary": "真实Chromium内部页复用/恢复/持久化/owner隔离、下载来源关闭和陈旧ID重试、隐私分区、2MB下载及不改变当前下载页均通过。",
-            "verifiedCommit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
-            "completedAt": "2026-11-10T05:36:53.489946+00:00",
+            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+            "completedAt": "2026-11-10T06:23:12.580205+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "75项直接相关检查、类型检查、原生Chromium内部页与下载聚焦夹具通过；独立审查两项P2已修正并回归。签名日常客户端的新页、展开切换及指针排序尚待最终实机复核。"
+          "summary": "101项直接相关检查、类型检查、原生内部页及下载聚焦通过。真实Electron合成指针排序也通过；签名日常包的最新悬停/菜单/适配实机复核待构建完成后进行。独立复审已确认external overlay交接P2修正，无有证据阻断。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -201,7 +198,12 @@
           "主页研究资料入口替换为下载记录及下载图标，工具栏删除下载入口；更多菜单和快捷键保留",
           "标题后箭头展开/收起对话研究笔记轨迹四个原生会话视图入口，占据实际空间挤压网页页签；owner精确匹配，无owner不创建session",
           "新建页签按钮紧跟最后一枚页签，填满可用区域后保持右端；展开四入口和窄320px中心仍保留可选网页项及按钮",
-          "下载重试不依赖原网页仍打开，使用匹配普通/隐私分区的隐藏下载载体，不增加可见页签或改变当前页"
+          "下载重试不依赖原网页仍打开，使用匹配普通/隐私分区的隐藏下载载体，不增加可见页签或改变当前页",
+          "标题旁入口改四宫格图标并靠近标题，悬停自动展开四个原全局视图；离开160ms后收起，宽度/opacity过渡200ms且尊重减少动态效果",
+          "网页页签列表固定于第一枚网页页签左侧，包括单页签；默认圆角底色、弹层贴近触发按钮，新建按钮仍紧跟最后网页项",
+          "折叠侧栏浏览器图标使用与其他原生icon相同的共享色；探索hover背景为12px圆角矩形，头像保持圆形",
+          "自有菜单准备期间隐藏/inert，截图decode和paint后等待原生隐藏ack及双RAF再原地淡入，不重建已绘制cover；旧结果、取消、失败和外部菜单关闭交接均安全",
+          "收藏夹无横向滚动；标题/搜索/列表/更多/底部按钮完整位于padding内，长标题及网址真实省略，30条仍纵向滚动，长folder导航可用且不误关闭"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -212,57 +214,10 @@
           "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。",
           "真实旧邮箱的超时现象未用私人邮箱重放；合成夹具证明预算和恢复行为，不代表任意远端站点的全量翻译兼容。",
-          "新增内部页采用focused原生夹具验证；旧full夹具的真实滚轮查找断言曾超时，未放宽断言，也未将旧全夹具当作本提交全部通过证据。"
+          "新增内部页采用focused原生夹具验证；旧full夹具的真实滚轮查找断言曾超时，未放宽断言，也未将旧全夹具当作本提交全部通过证据。",
+          "原日常客户端CUA拖拽尝试没有被计为通过；隔离真实Electron原生held mouse输入可成功排序并保持activeId，buttons=0输入则按设计取消，未据此放宽鼠标按键守卫。"
         ],
-        "generatedAt": "2026-11-10T05:36:53.489946+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
-        "verificationCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
-            "completedAt": "2026-11-10T05:37:43.266Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
-            "completedAt": "2026-11-10T05:37:43.266Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "d3dc4de318d64d5deedda06d66341f522e4313e4",
-            "completedAt": "2026-11-10T05:37:43.266Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T05:37:43.266Z"
+        "generatedAt": "2026-11-10T06:23:12.580205+00:00"
       }
     }
   ],
