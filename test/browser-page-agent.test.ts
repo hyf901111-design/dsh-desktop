@@ -1,10 +1,10 @@
-import {afterEach,expect,it} from 'vitest'
+import {afterEach,expect,it,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import {EventEmitter} from 'node:events'
 import {createBrowserPageAgent,type BrowserPageTarget} from '../src/main/browser/page-agent'
 
 const windows:Window[]=[]
-afterEach(async()=>{await Promise.all(windows.splice(0).map(w=>w.happyDOM.abort()))})
+afterEach(async()=>{vi.useRealTimers();await Promise.all(windows.splice(0).map(w=>w.happyDOM.abort()))})
 function page(html='<h1>Research</h1><p>Read <a href="/next"><strong>the report</strong></a> today.</p>'){
  const w=new Window({url:'https://page.example.test/article',width:900,height:700});windows.push(w)
  w.document.body.innerHTML=html
@@ -119,7 +119,7 @@ it('rechecks the requesting owner when queued observe/context requests actually 
  const firstResult=a.agent.run({op:'observe'},undefined,authorize).catch(error=>error)
  await entered.promise
  const queuedObserve=a.agent.run({op:'observe'},undefined,authorize),queuedContext=a.agent.context(authorize)
- const observeDenied=expect(queuedObserve).rejects.toThrow(/owner changed/),contextDenied=expect(queuedContext).rejects.toThrow(/owner changed/)
+ const observeDenied=expect(queuedObserve).rejects.toThrow(/owner changed|已变化/),contextDenied=expect(queuedContext).rejects.toThrow(/owner changed|已变化/)
  owner='B';a.setActive(b.target);a.agent.invalidate();blocked.resolve()
  await firstResult;await Promise.all([observeDenied,contextDenied])
  expect(b.w.document.body.textContent).toBe('Owner B private page')
@@ -150,4 +150,85 @@ it('counts separators in the context budget and exposes the remaining text page'
  expect(first!.text.length).toBeLessThanOrEqual(60000);expect(first!.hasMoreText).toBe(true);expect(first!.truncated).toBe(true);expect(first!.nextTextOffset).toBe(983)
  const second=(await agent.run({op:'observe',textOffset:first!.nextTextOffset})).observation
  expect(second.textNodes).toHaveLength(17);expect(second.hasMoreText).toBe(false);expect(second.text.length).toBeLessThanOrEqual(60000)
+})
+
+it('revokes an aborted renderer request before its delayed edit can run',async()=>{
+ const {w,wc,agent}=page(),ob=(await agent.run({op:'observe'})).observation,node=ob.textNodes[0]!
+ const blocked=deferred(),entered=deferred(),execute=wc.executeJavaScriptInIsolatedWorld;let first=true
+ wc.executeJavaScriptInIsolatedWorld=async(world,scripts)=>{if(first){first=false;entered.resolve();await blocked.promise}return execute(world,scripts)}
+ const controller=new AbortController(),pending=agent.run({op:'edit',...scope(ob),patches:[{ref:node.ref,expectedText:node.text,replacementText:'Late edit'}]},controller.signal)
+ const denied=expect(pending).rejects.toThrow();await entered.promise;controller.abort();await denied
+ blocked.resolve();await new Promise(resolve=>setTimeout(resolve,30))
+ expect(w.document.querySelector('h1')!.textContent).toBe('Research')
+ expect((await agent.run({op:'observe'})).observation.text).toContain('Research')
+})
+
+it('revokes a delayed edit on same-URL navigation rather than only rejecting its result',async()=>{
+ const {w,wc,target,agent}=page(),ob=(await agent.run({op:'observe'})).observation,node=ob.textNodes[0]!
+ const blocked=deferred(),entered=deferred(),execute=wc.executeJavaScriptInIsolatedWorld;let first=true
+ wc.executeJavaScriptInIsolatedWorld=async(world,scripts)=>{if(first){first=false;entered.resolve();await blocked.promise}return execute(world,scripts)}
+ const pending=agent.run({op:'edit',...scope(ob),patches:[{ref:node.ref,expectedText:node.text,replacementText:'Old document edit'}]})
+ const denied=expect(pending).rejects.toThrow();await entered.promise;wc.emit('did-start-navigation',{},target.url,false,true)
+ blocked.resolve();await denied
+ expect(w.document.querySelector('h1')!.textContent).toBe('Research')
+})
+
+it('fails closed when a page exceeds the traversal budget before changing any text',async()=>{
+ const {w,agent}=page(),ob=(await agent.run({op:'observe'})).observation,node=ob.textNodes[0]!
+ w.document.body.insertAdjacentHTML('beforeend','<i></i>'.repeat(13000))
+ await expect(agent.run({op:'edit',...scope(ob),patches:[{ref:node.ref,expectedText:node.text,replacementText:'Changed'}]})).rejects.toThrow(/复杂|预算|上限/)
+ expect(w.document.querySelector('h1')!.textContent).toBe('Research')
+})
+
+it('does not require full-page innerText to observe safe text and interaction labels',async()=>{
+ const {w,agent}=page('<h1>Research</h1><button><span>Continue</span></button>')
+ Object.defineProperty(w.document.body,'innerText',{get(){throw Error('Full-page innerText is forbidden')}})
+ const ob=(await agent.run({op:'observe'})).observation
+ expect(ob.text).toBe('Research\nContinue');expect(ob.elements[0]!.label).toBe('Continue')
+})
+
+it('restores its own writes when cancellation arrives after a batch commits',async()=>{
+ const {w,agent}=page(),ob=(await agent.run({op:'observe'})).observation,node=ob.textNodes[0]!,controller=new AbortController()
+ let committed=false
+ const watcher=new w.MutationObserver(()=>{if(w.document.querySelector('h1')!.textContent==='Changed'){committed=true;controller.abort()}})
+ watcher.observe(w.document.body,{subtree:true,characterData:true})
+ await expect(agent.run({op:'edit',...scope(ob),patches:[{ref:node.ref,expectedText:node.text,replacementText:'Changed'}]},controller.signal)).rejects.toThrow()
+ await new Promise(resolve=>setTimeout(resolve,30));watcher.disconnect()
+ expect(committed).toBe(true);expect(w.document.querySelector('h1')!.textContent).toBe('Research')
+ expect((await agent.context())!.canUndo).toBe(false)
+})
+
+it('bounds the whole request including queue wait when Chromium never responds',async()=>{
+ const {wc,agent}=page();wc.executeJavaScriptInIsolatedWorld=()=>new Promise(()=>{})
+ vi.useFakeTimers()
+ const first=agent.run({op:'observe'}),second=agent.run({op:'observe'})
+ let secondSettled=false;const firstDenied=expect(first).rejects.toThrow(/超时/),secondDenied=expect(second).rejects.toThrow(/超时/)
+ void second.catch(()=>{secondSettled=true})
+ await vi.advanceTimersByTimeAsync(15001)
+ expect(secondSettled).toBe(true);await Promise.all([firstDenied,secondDenied])
+ agent.dispose()
+})
+
+it('rejects oversized edit batches before any DOM mutation',async()=>{
+ const {w,agent}=page('<p>a</p>'.repeat(101)),ob=(await agent.run({op:'observe'})).observation
+ await expect(agent.run({op:'edit',...scope(ob),patches:ob.textNodes.map(node=>({ref:node.ref,expectedText:node.text,replacementText:'b'}))})).rejects.toThrow(/批次|100/)
+ expect(w.document.querySelectorAll('p')[0]!.textContent).toBe('a')
+})
+
+it('rejects an observation changed by the website while a bounded scan yields',async()=>{
+ const {w,agent}=page('<p>Original</p>'.repeat(300))
+ setTimeout(()=>{w.document.querySelector('p')!.textContent='Website update'},0)
+ await expect(agent.run({op:'observe'})).rejects.toThrow(/观察.*变化|变化.*观察/)
+ expect(w.document.querySelector('p')!.textContent).toBe('Website update')
+})
+
+it('excludes non-public script and style text from the public text budget',async()=>{
+ const {agent}=page('<script>'+('x'.repeat(600000))+'</script><style>/*'+('x'.repeat(600000))+'*/</style><h1>Public article</h1>')
+ const ob=(await agent.run({op:'observe'})).observation
+ expect(ob.text).toBe('Public article');expect(ob.textNodes).toHaveLength(1)
+})
+
+it('still rejects visible article text above the public text budget',async()=>{
+ const {agent}=page('<p>'+('x'.repeat(1000001))+'</p>')
+ await expect(agent.run({op:'observe'})).rejects.toThrow(/文字过多|预算/)
 })

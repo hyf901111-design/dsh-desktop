@@ -19,3 +19,11 @@ it('does not dispatch cancelled or unauthenticated operations or follow an exter
  await expect(tool.execute(edit,{...exec,signal:cancel.signal})).rejects.toThrow();await expect(tool.execute(edit,{})).rejects.toThrow();expect(calls).toHaveLength(0)
  const foreign=setup({env:{...env,SHERLOCK_LOCAL_SEARCH_URL:'https://example.test'}});await expect(foreign.tool.execute(edit,exec)).rejects.toThrow();expect(foreign.calls).toHaveLength(0)
 })
+
+it('exposes native reload recovery and forwards recovery acknowledgements without requiring a DOM observation',async()=>{
+ const {tool}=setup({request:async(url,init)=>new Response(JSON.stringify({reloading:true,tabId:'active-tab'}))});const result=JSON.parse(await tool.execute({op:'reload',tabId:'active-tab',url:'https://example.test/article'},exec));expect(result.reloading).toBe(true)
+})
+
+it('rejects edit batches over 100 nodes before contacting the page bridge',async()=>{
+ const {tool,calls}=setup();await expect(tool.execute({...edit,patches:Array.from({length:101},()=>({...edit.patches[0]}))},exec)).rejects.toThrow(/100/);expect(calls).toHaveLength(0)
+})

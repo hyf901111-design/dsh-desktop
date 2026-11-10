@@ -6,5 +6,6 @@ it('keeps other sessions on their original browser and binds explicit page edits
  expect(await routeBrowserUse({sessionId:'B',op:'observe'},signal,app,legacy)).toBe('app')
  expect(await routeBrowserUse({sessionId:'A',op:'edit'},signal,app,legacy)).toBe('app')
  expect(await routeBrowserUse({sessionId:'A',op:'click',tabId:'old-tab'},signal,app,legacy)).toBe('app')
+ expect(await routeBrowserUse({sessionId:'A',op:'reload'},signal,app,legacy)).toBe('app')
  expect(legacy).toHaveBeenCalledTimes(1)
 })
