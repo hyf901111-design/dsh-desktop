@@ -47,3 +47,11 @@ it('keeps favicon resources transient and excludes private icons from saved brow
  const saved=model.serialize();expect(JSON.stringify(saved)).not.toMatch(/normal-icon|private-icon|private.example|favicon/)
  expect(new BrowserModel({...saved,tabs:[{...saved.tabs[0],favicon:'file:///private/icon.png'}]}).tabs[0]!.favicon).toBeUndefined()
 })
+
+it('reorders tabs in both directions while preserving the active document and persistent order',()=>{
+ const m=new BrowserModel(),a=m.newTab(),b=m.newTab(),c=m.newTab();a.title='A';b.title='B';c.title='C';b.pinned=true;m.activeId=b.id
+ m.reorder(c.id,a.id);expect(m.tabs.map(t=>t.title)).toEqual(['C','A','B']);expect(m.activeId).toBe(b.id);expect(m.tab(b.id).pinned).toBe(true)
+ m.reorder(c.id);expect(m.tabs.map(t=>t.title)).toEqual(['A','B','C']);m.reorder(a.id,a.id);expect(m.tabs.map(t=>t.title)).toEqual(['A','B','C'])
+ const restored=new BrowserModel(m.serialize());expect(restored.tabs.map(t=>t.title)).toEqual(['A','B','C']);expect(restored.tab(restored.activeId).title).toBe('B')
+ const before=m.tabs.slice();expect(()=>m.reorder(a.id,'closed-tab')).toThrow();expect(m.tabs).toEqual(before)
+})

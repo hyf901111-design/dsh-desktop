@@ -15,14 +15,18 @@ export function patchFigmaModelMenu(source) {
         const place = () => {
           const a = triggerRef.current?.getBoundingClientRect();
           if (!a) return;
-          const width = Math.min(320, window.innerWidth - 24);
+          const pane = triggerRef.current?.closest('.t8lSSG_panel')?.getBoundingClientRect();
+          const left = pane?.width ? Math.max(12,pane.left+12) : 12, right = pane?.width ? Math.min(window.innerWidth-12,pane.right-12) : window.innerWidth-12;
+          const width = Math.min(320, Math.max(0,right-left));
           const above = a.top - 20, below = window.innerHeight - a.bottom - 20;
           const up = above >= below;
-          setPosition({position:'fixed', width, left:Math.max(12,Math.min(a.right-width,window.innerWidth-width-12)),right:'auto',
+          setPosition({position:'fixed', width, left:Math.max(left,Math.min(a.right-width,right-width)),right:'auto',
             top:up?'auto':a.bottom+8,bottom:up?window.innerHeight-a.top+8:'auto',maxHeight:Math.min(480,Math.max(0,up?above:below))});
         };
         place(); window.addEventListener('resize',place);
-        return () => window.removeEventListener('resize',place);
+        const observer = typeof ResizeObserver==='function' ? new ResizeObserver(place) : null;
+        if(triggerRef.current)observer?.observe(triggerRef.current);const paneElement=triggerRef.current?.closest('.t8lSSG_panel');if(paneElement)observer?.observe(paneElement);
+        return () => {window.removeEventListener('resize',place);observer?.disconnect()};
       }, [open,pane]);`)
     .replace('if (!rootRef.current?.contains(event.target)) setOpen(false);', 'if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);')
     .replace('if (event.relatedTarget instanceof Node && rootRef.current?.contains(event.relatedTarget)) return;',
