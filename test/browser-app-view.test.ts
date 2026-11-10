@@ -36,9 +36,9 @@ it('keeps the composing address input mounted while IME and native loading updat
  view.dispose();await w.happyDOM.abort()
 })
 it('keeps actual permission grants selected when a background native update rerenders the site panel',async()=>{
- const w=new Window(),state={...initial(),sitePermissions:{geolocation:'allow'}};state.tabs[0]!.url='https://example.com/'
+ const w=new Window();(w.HTMLImageElement.prototype as any).decode=async()=>{};const state={...initial(),sitePermissions:{geolocation:'allow'}};state.tabs[0]!.url='https://example.com/'
  let receive:any
- const view=new BrowserAppView(w.document as any,{request:vi.fn(async(method:string)=>method==='capture'?'':method==='site'?{permissions:state.sitePermissions}:structuredClone(state)),subscribe:f=>{receive=f;return()=>{}},source:vi.fn()},{register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})} as any)
+ const view=new BrowserAppView(w.document as any,{request:vi.fn(async(method:string)=>method==='capture'?'data:image/png;base64,fixture':method==='site'?{permissions:state.sitePermissions}:structuredClone(state)),subscribe:f=>{receive=f;return()=>{}},source:vi.fn()},{register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})} as any)
  w.document.body.append(view.root as any);await view.open('A');await (view as any).show('site')
  expect(view.root.querySelector<HTMLSelectElement>('[data-permission=geolocation]')!.value).toBe('allow')
  receive({...state,tabs:[{...state.tabs[0],title:'New title'}]});expect(view.root.querySelector<HTMLSelectElement>('[data-permission=geolocation]')!.value).toBe('allow')
