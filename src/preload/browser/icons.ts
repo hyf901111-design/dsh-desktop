@@ -28,6 +28,7 @@ import search from './assets/search.svg?inline'
 import settings from './assets/settings.svg?inline'
 import shield from './assets/shield.svg?inline'
 import star from './assets/star.svg?inline'
+import starOutline from './assets/star-outline.svg?inline'
 import trash from './assets/trash.svg?inline'
 import up from './assets/up.svg?inline'
-export const browserIcons={back,book,chat,check,chevron,close,copy,download,external,file,folder,folderPlus,forward,globe,history,home,lock,moon,more,pause,pin,play,plus,print,refresh,ring,search,settings,shield,star,trash,up}
+export const browserIcons={back,book,chat,check,chevron,close,copy,download,external,file,folder,folderPlus,forward,globe,history,home,lock,moon,more,pause,pin,play,plus,print,refresh,ring,search,settings,shield,star,starOutline,trash,up}
