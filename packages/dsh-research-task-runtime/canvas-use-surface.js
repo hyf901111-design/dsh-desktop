@@ -8,10 +8,13 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
   const rect = el => { const r = box(el), b = box(root); return { x: (r.x - b.x) / b.width, y: (r.y - b.y) / b.height, width: r.width / b.width, height: r.height / b.height } }
   const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && !el.closest('[data-canvas-use-cursor]') && (!options.viewport || (r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth)) }
   const observe = (images=true) => {
+    options.checkpoint?.()
     const state = shared()
     refs.clear()
-    const elements = [...root.querySelectorAll('button,a,input,textarea,select,[role],[tabindex],canvas,svg,[contenteditable=true]')].filter(visible).slice(0,200).map(el => ({
-      ref: id(el), tag: el.tagName.toLowerCase(), role: el.getAttribute('role'), label: (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText || el.textContent || '').slice(0,240),
+    // Browser pages can supply a bounded traversal without changing the default
+    // canvas API. Callbacks are host-authored and never taken from tool input.
+    const elements = [...(options.candidates?.() ?? root.querySelectorAll('button,a,input,textarea,select,[role],[tabindex],canvas,svg,[contenteditable=true]'))].filter(el=>{options.checkpoint?.();return visible(el)}).slice(0,200).map(el => ({
+      ref: id(el), tag: el.tagName.toLowerCase(), role: el.getAttribute('role'), label: (options.label ? options.label(el) : (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText || el.textContent || '')).slice(0,240),
       ...(el.matches('input,textarea,select') ? {value: el.matches('[type=password]') ? '[redacted]' : String(el.value).slice(0,500)} : {}),
       ...(el.matches('input[type=checkbox],input[type=radio]') ? {checked:el.checked} : {}),
       ...(el.tagName==='SELECT' ? {options:[...el.options].slice(0,100).map(o=>({value:o.value,label:o.label,disabled:o.disabled}))} : {}),
@@ -19,7 +22,7 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
       disabled: el.disabled === true, bounds: rect(el),
       ...(el.tagName === 'CANVAS' && (images || !state) ? {image: (()=>{try{return el.toDataURL('image/png')}catch{return null}})()} : {})
     }))
-    const text = (root.innerText || root.textContent || '').slice(0,20000)
+    const text = (options.text ? options.text() : (root.innerText || root.textContent || '')).slice(0,20000)
     const revision = hash(JSON.stringify({url:location.href,text,elements:state?elements.map(({image,...element})=>element):elements,state}))
     if(!images)for(const element of elements)delete element.image
     previous = revision
@@ -29,6 +32,7 @@ export function createCanvasUseSurface(root = document.body, shared = () => null
     if (args.op === 'observe') return observe(args.images!==false)
     const authority=shared();if(authority&&(!authority.connected||authority.readOnly))throw Error('组件未连接或为只读，无法操作。')
     if (!previous || args.revision !== previous || observe().revision !== args.revision) throw Error('组件状态已变化，请重新观察。')
+    options.checkpoint?.()
     let el = args.ref ? refs.get(args.ref) : root
     if (!el || !el.isConnected || !visible(el) || el.disabled) throw Error('操作目标已不可用。')
     const space=el
