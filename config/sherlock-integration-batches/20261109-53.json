@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器最终圆角拖动与登录保持验收",
+        "featureName": "浏览器网页直角与日常客户端交付修正",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "a2a37f9ab0899c744468203f0f541c384e944b60",
-        "tipCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+        "baseCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+        "tipCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
         "commits": [
           {
-            "commit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+            "commit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
             "parents": [
-              "a2a37f9ab0899c744468203f0f541c384e944b60"
+              "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4"
             ],
-            "subject": "补齐网页圆角与窗口拖动并验证登录保持"
+            "subject": "保留网页底部圆角并恢复顶部直角"
           }
         ],
         "files": [
@@ -29,7 +29,11 @@
           },
           {
             "status": "A",
-            "path": "scripts/verify-browser-login-retention-native.mjs"
+            "path": "src/main/browser/corners.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/browser/find-overlay.ts"
           },
           {
             "status": "M",
@@ -37,19 +41,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/browser/assets/back.svg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/assets/forward.svg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/assets/star-outline.svg"
-          },
-          {
-            "status": "M",
             "path": "src/preload/browser/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/view.ts"
           },
           {
             "status": "M",
@@ -65,20 +61,12 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/browser-app-rendered.test.js",
-              "test/pending-conversation-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/pending-conversation.test.js",
-              "test/pending-conversation-panel.test.js",
-              "test/browser-status-zoom.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/scheduled-task-view.test.ts"
+              "test/browser-app-view.test.ts"
             ],
             "outcome": "passed",
-            "summary": "68项直接相关检查通过，含25组完整样式渲染；不运行全功能测试。",
-            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
-            "completedAt": "2026-11-10T02:17:17.696034+00:00",
+            "summary": "23项直接相关渲染/视图检查通过，顶部直角及底部圆角均覆盖。",
+            "verifiedCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
+            "completedAt": "2026-11-10T02:48:59.330303+00:00",
             "timeoutMs": 120000
           },
           {
@@ -90,8 +78,8 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过。",
-            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
-            "completedAt": "2026-11-10T02:17:17.696034+00:00",
+            "verifiedCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
+            "completedAt": "2026-11-10T02:48:59.330303+00:00",
             "timeoutMs": 120000
           },
           {
@@ -100,26 +88,15 @@
               "scripts/verify-browser-app-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "原生Chromium浏览器聚焦验收通过。",
-            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
-            "completedAt": "2026-11-10T02:17:17.696034+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-login-retention-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "受控HTTPS完整退出/新进程重启登录保持通过，临时会话/隐私/过期和撤销边界均通过。",
-            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
-            "completedAt": "2026-11-10T02:17:17.696034+00:00",
+            "summary": "原生Chromium聚焦验收通过，原生探针已验证底角与工具栏响应。",
+            "verifiedCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
+            "completedAt": "2026-11-10T02:48:59.330303+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "68项直接相关检查含25组完整样式渲染通过；原生浏览器及真实HTTPS双进程登录保持通过。最新圆角/标题拖动/图标包待实机复核，最终将以日常目录/真实模型启动。"
+          "summary": "23项直接相关渲染/视图检查、类型检查、原生Chromium验收及原生裁切探针通过。待最终签名包实机复核并更新原日常客户端路径，不迁移数据。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -133,7 +110,7 @@
           "浏览器当前网页正文在发送时作为不可信参考附加，AI可以修改当前主文档文字并整页撤销",
           "切换owner或页签后拒绝排队旧请求，原有其他会话智能体浏览器保持独立",
           "无会话及浏览器右栏直接复用同一全局右栏和对话组件；不再手写页签或输入区界面",
-          "底栏百分比展开实际页面缩放控制，支持边界、恢复100%与键盘关闭",
+          "更多菜单提供页面缩放控制，支持边界和恢复100%，底栏按用户决定移除",
           "首发配置准备锁定真实输入，预设/模型/权限失败保留真实草稿",
           "选中与普通页签共同按数量及空间自适应宽度；超多页签仍可切换并避让全局右栏按钮",
           "页签显示当前网站真实favicon，读取属于各自Chromium会话，导航及空图标更新清除旧图标，主UI只接收安全PNG",
@@ -146,7 +123,7 @@
           "截图失败、重定向、关闭动画期间开菜单自动重试或取消并明确提示",
           "设置浅色背景可辨，标题备注左对齐，字号加大；下载目录使用原生文件夹选择",
           "浏览器模式回复不显示添加到画布，其他模式保留",
-          "移除底栏后原生网页与快照都保留16px内圆角；应用标题可拖动整个客户端",
+          "移除底栏后原生网页与快照仅底部保留16px内圆角，顶部直角；应用标题可拖动整个客户端",
           "空心星标及前进后退箭头线宽加粗",
           "网站记住登录的持久Cookie/站点存储跨正常完整退出重启保持，隐私/临时/过期/撤销边界尊重网站",
           "最终正式身份本地包使用日常数据目录与真实模型配置，不迁移或覆盖数据和凭据"
@@ -160,55 +137,7 @@
           "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。"
         ],
-        "generatedAt": "2026-11-10T02:17:17.696034+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e1daf1a8ac92cea27717dd0ec25d5a6e74f8e07e",
-        "verificationCommit": "e1daf1a8ac92cea27717dd0ec25d5a6e74f8e07e",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "e1daf1a8ac92cea27717dd0ec25d5a6e74f8e07e",
-            "completedAt": "2026-11-10T02:22:15.223Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "e1daf1a8ac92cea27717dd0ec25d5a6e74f8e07e",
-            "completedAt": "2026-11-10T02:22:15.223Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "e1daf1a8ac92cea27717dd0ec25d5a6e74f8e07e",
-            "completedAt": "2026-11-10T02:22:15.223Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T02:22:15.223Z"
+        "generatedAt": "2026-11-10T02:48:59.330303+00:00"
       }
     }
   ],
