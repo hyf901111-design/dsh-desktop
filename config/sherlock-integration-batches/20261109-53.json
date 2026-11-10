@@ -9,48 +9,63 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器悬停导航动效、菜单显隐交接及完整收藏夹适配",
+        "featureName": "浏览器菜单交接延迟与侧栏悬停细节优化",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "6c216314647c6a7ec014db7e137a1de1adab0c34",
-        "tipCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+        "baseCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+        "tipCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
         "commits": [
           {
-            "commit": "c99465aa455457342c682e57565a639a89f943ad",
+            "commit": "49f7c171a3e9cb364de753a7bf10e4cae0aa6cc4",
             "parents": [
-              "6c216314647c6a7ec014db7e137a1de1adab0c34"
+              "577fb8bf8911e20faf4b69051861e95b999f54b6"
             ],
-            "subject": "将折叠侧栏探索按钮悬停背景改为圆角矩形"
+            "subject": "调整浏览器折线展开图标并统一弹层背景样式"
           },
           {
-            "commit": "6c7d42707b5d334a4b61cbe44780a669121a424b",
+            "commit": "3ce19b5a9d3745f9a0ab3a41e006916c54c25b86",
             "parents": [
-              "c99465aa455457342c682e57565a639a89f943ad"
+              "49f7c171a3e9cb364de753a7bf10e4cae0aa6cc4"
             ],
-            "subject": "优化浏览器悬停视图切换动效和左置页签列表"
+            "subject": "为折叠侧栏浏览器入口增加分隔线和选中强调色"
           },
           {
-            "commit": "796dafdf10cb5057046dfb5e81fabc0103bd2b17",
+            "commit": "1e40047578080702f1323e13f87f63197d13416f",
             "parents": [
-              "6c7d42707b5d334a4b61cbe44780a669121a424b"
+              "3ce19b5a9d3745f9a0ab3a41e006916c54c25b86"
             ],
-            "subject": "修复浏览器弹层显隐交接并保留收藏夹目录浏览"
+            "subject": "减少浏览器弹层截图编码耗时并避免状态更新重复捕获"
           },
           {
-            "commit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
+            "commit": "8bc239713d49396c4d690ff19a76eab34ddee251",
             "parents": [
-              "796dafdf10cb5057046dfb5e81fabc0103bd2b17"
+              "1e40047578080702f1323e13f87f63197d13416f"
             ],
-            "subject": "修复收藏夹菜单横向溢出并完善窄屏布局"
+            "subject": "修复原生折叠侧栏消息按钮悬停背景比例和居中间距"
+          },
+          {
+            "commit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "parents": [
+              "8bc239713d49396c4d690ff19a76eab34ddee251"
+            ],
+            "subject": "修复全局菜单开显前交接和原生网页激活时序"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "src/preload/browser/assets/workspace.svg"
+            "path": "scripts/verify-browser-overlay-handoff.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/icons.ts"
+            "path": "src/main/browser/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/assets/workspace.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/overlay-preflight.ts"
           },
           {
             "status": "M",
@@ -70,11 +85,23 @@
           },
           {
             "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
             "path": "test/browser-app-rendered.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/browser-bookmark-popover-overflow.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/browser-sidebar-entry-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
           },
           {
             "status": "M",
@@ -90,18 +117,29 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/browser-app-rendered.test.js",
-              "test/browser-activity-page-rendered.test.js",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-page-agent.test.ts",
-              "test/browser-use-route.test.ts",
-              "test/browser-bookmark-popover-overflow.test.js",
-              "test/browser-sidebar-entry.test.ts"
+              "test/scheduled-task-view.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/browser-sidebar-entry-rendered.test.js"
             ],
             "outcome": "passed",
-            "summary": "97项浏览器定向检查通过：38项父视图含延迟capture/native hide ack/取消/失败/外部菜单交接，11项收藏弹层明暗/320窄区完整边界、长文本、省略和纵向滚动，以及侧栏入口、内部页及上下文合约。",
-            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
-            "completedAt": "2026-11-10T06:23:12.580205+00:00",
+            "summary": "66项相关检查通过，含相交全局菜单预交接、延迟隐藏确认、取消清理、Enter菜单接管、侧栏次序与选择态。",
+            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "completedAt": "2026-11-10T07:30:41.417758+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-bookmark-popover-overflow.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "13项收藏夹窄屏、无横滚及统一弹层/柔和页签按钮/纯折线图标检查通过。",
+            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "completedAt": "2026-11-10T07:30:41.417758+00:00",
             "timeoutMs": 120000
           },
           {
@@ -116,9 +154,9 @@
               "gives footer controls safe hover padding"
             ],
             "outcome": "passed",
-            "summary": "4项探索真实组件渲染通过（明暗×展开/折叠），折叠hover背景12px圆角矩形、内部orb仍圆形；76项无关检查跳过。",
-            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
-            "completedAt": "2026-11-10T06:23:12.580205+00:00",
+            "summary": "4项明暗×展开折叠真实原生样式渲染通过，通知按钮40×40且四边10px；76项无关检查跳过。",
+            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "completedAt": "2026-11-10T07:30:41.417758+00:00",
             "timeoutMs": 120000
           },
           {
@@ -129,27 +167,26 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "Node类型检查通过。",
-            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
-            "completedAt": "2026-11-10T06:23:12.580205+00:00",
+            "summary": "类型检查通过，含修正通知夹具回调参数标注。",
+            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "completedAt": "2026-11-10T07:30:41.417758+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "scripts/verify-browser-app-native.mjs",
-              "--internal-pages"
+              "scripts/verify-browser-overlay-handoff.mjs"
             ],
             "outcome": "passed",
-            "summary": "真实Chromium内部页复用/恢复/持久化/owner隔离、下载来源关闭和陈旧ID重试、隐私分区、2MB下载及不改变当前下载页均通过。",
-            "verifiedCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
-            "completedAt": "2026-11-10T06:23:12.580205+00:00",
+            "summary": "临时profile真实Electron聚焦通过：3次首次激活/返回、9次自有/全局菜单显示、默认PNG与overlayJPEG分路、全局首帧hidden/隐藏原生后呈现/取消不复活。",
+            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+            "completedAt": "2026-11-10T07:30:41.417758+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "101项直接相关检查、类型检查、原生内部页及下载聚焦通过。真实Electron合成指针排序也通过；签名日常包的最新悬停/菜单/适配实机复核待构建完成后进行。独立复审已确认external overlay交接P2修正，无有证据阻断。"
+          "summary": "83项定向检查、类型及9次真实Electron菜单交接通过。受控复杂网页稳态150→67ms，非用户远端站点数据；原日常签名客户端实机复核待构建。两次独立复审发现的菜单双开及取消残图已修，Enter独立1/1通过。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -196,14 +233,18 @@
           "40页签在边缘持续滚动，取消后不改变顺序，不残留捕获、RAF或落点标记",
           "历史和下载以独立浏览器内部页打开，重复入口复用原页签，原网页保留；支持搜索、历史单删、下载状态和操作",
           "主页研究资料入口替换为下载记录及下载图标，工具栏删除下载入口；更多菜单和快捷键保留",
-          "标题后箭头展开/收起对话研究笔记轨迹四个原生会话视图入口，占据实际空间挤压网页页签；owner精确匹配，无owner不创建session",
           "新建页签按钮紧跟最后一枚页签，填满可用区域后保持右端；展开四入口和窄320px中心仍保留可选网页项及按钮",
           "下载重试不依赖原网页仍打开，使用匹配普通/隐私分区的隐藏下载载体，不增加可见页签或改变当前页",
-          "标题旁入口改四宫格图标并靠近标题，悬停自动展开四个原全局视图；离开160ms后收起，宽度/opacity过渡200ms且尊重减少动态效果",
           "网页页签列表固定于第一枚网页页签左侧，包括单页签；默认圆角底色、弹层贴近触发按钮，新建按钮仍紧跟最后网页项",
-          "折叠侧栏浏览器图标使用与其他原生icon相同的共享色；探索hover背景为12px圆角矩形，头像保持圆形",
           "自有菜单准备期间隐藏/inert，截图decode和paint后等待原生隐藏ack及双RAF再原地淡入，不重建已绘制cover；旧结果、取消、失败和外部菜单关闭交接均安全",
-          "收藏夹无横向滚动；标题/搜索/列表/更多/底部按钮完整位于padding内，长标题及网址真实省略，30条仍纵向滚动，长folder导航可用且不误关闭"
+          "收藏夹无横向滚动；标题/搜索/列表/更多/底部按钮完整位于padding内，长标题及网址真实省略，30条仍纵向滚动，长folder导航可用且不误关闭",
+          "浏览器标题旁纯折线箭头靠近标题；悬停展开四个原全局视图，200ms动效及160ms离开收起保留。",
+          "页签列表默认背景减淡；更多和收藏夹使用相同不透明背景、边框、圆角和阴影。",
+          "折叠侧栏按快捷创建→分割线→浏览器→更多排列；浏览器仅选中高对比，非选中匹配共享icon色。",
+          "折叠消息通知按钮及其hover容器40×40、radius10，图标四边10px；探索圆角矩形保留。",
+          "仅overlay快照JPEG95，默认PNG不变；后台状态更新保留同一解码cover，避免重复捕获。",
+          "原生网页先更新bounds/visible再解除节流，首次显示及返回均可capture。",
+          "全局More测量后先隐藏/inert，等capture/paint/native hide ack再出现；键盘接管收旧菜单不抢焦点，取消不复活或残图。"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -215,57 +256,11 @@
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。",
           "真实旧邮箱的超时现象未用私人邮箱重放；合成夹具证明预算和恢复行为，不代表任意远端站点的全量翻译兼容。",
           "新增内部页采用focused原生夹具验证；旧full夹具的真实滚轮查找断言曾超时，未放宽断言，也未将旧全夹具当作本提交全部通过证据。",
-          "原日常客户端CUA拖拽尝试没有被计为通过；隔离真实Electron原生held mouse输入可成功排序并保持activeId，buttons=0输入则按设计取消，未据此放宽鼠标按键守卫。"
+          "原日常客户端CUA拖拽尝试没有被计为通过；隔离真实Electron原生held mouse输入可成功排序并保持activeId，buttons=0输入则按设计取消，未据此放宽鼠标按键守卫。",
+          "性能数字来自独立受控网页，不能推断任意远端邮箱的冷启动时延；完整旧原生夹具不在本轮局部改动复验范围。",
+          "本轮以previewOnly聚焦集成供原日常客户端本地测试，尚未记录完整批次接受或晋升main；不公开发布。"
         ],
-        "generatedAt": "2026-11-10T06:23:12.580205+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
-        "verificationCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
-            "completedAt": "2026-11-10T06:24:57.760Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
-            "completedAt": "2026-11-10T06:24:57.760Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "6595a848f338025e39a178b2f74cd5f69f337b15",
-            "completedAt": "2026-11-10T06:24:57.760Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T06:24:57.760Z"
+        "generatedAt": "2026-11-10T07:30:41.417758+00:00"
       }
     }
   ],
