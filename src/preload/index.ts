@@ -248,6 +248,7 @@ function initializeUi(): void {
     subscribe:listener=>{const handle=(_event:unknown,value:import('../shared/browser-app').BrowserSnapshot)=>listener(value);ipcRenderer.on('browser-app:state',handle);return()=>ipcRenderer.removeListener('browser-app:state',handle)},
     source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
   },workspaceSurfaceHost)
+  ipcRenderer.on('browser-app:context-menu',(_event,value)=>browserApp.pageContextMenu(value))
   ipcRenderer.on('browser-app:context-action',(_event,value)=>browserApp.contextAction(value))
   ipcRenderer.on('browser-app:region-event',(_event,value)=>browserApp.regionEvent(value))
   ipcRenderer.on('browser-app:shortcut',(_event,value)=>window.dispatchEvent(new CustomEvent('sherlock:browser-shortcut',{detail:value})))

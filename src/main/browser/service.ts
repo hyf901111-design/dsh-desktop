@@ -1,3 +1,4 @@
+import {browserImageAddress,browserImageFilename} from './image-download'
 import {browserPageContextMenu} from './context-menu'
 import {createBrowserTranslationManager} from './translation'
 import {createBrowserRegionOverlay} from './region-overlay'
@@ -5,7 +6,7 @@ import {browserBookmarkAddress,updateBrowserBookmark,removeBrowserBookmarks} fro
 import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
 import {createBrowserCorners} from './corners'
-import {app,Menu,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type IpcMain,type DownloadItem,type Session} from 'electron'
+import {app,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type IpcMain,type DownloadItem,type Session} from 'electron'
 import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,copyFileSync} from 'node:fs'
 import {join,basename} from 'node:path'
 import {randomUUID} from 'node:crypto'
@@ -29,6 +30,7 @@ export function registerBrowserApp(options:Options){
  let appActive=false,ownerSessionId='',pageEdited=false,appEpoch=0,ownerEpoch=0;let privateSession:Session|undefined,visible=false,disposed=false,persistTimer:ReturnType<typeof setTimeout>|undefined,downloadPublishTimer:ReturnType<typeof setTimeout>|undefined,rect:{x:number;y:number;width:number;height:number}|undefined
  let attachedWindow:BrowserWindow|undefined
  const downloadOwners=new Map<boolean,DownloadOwner>()
+ const imageDownloads=new Map<number,{url:string;at:number}[]>()
  const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedWindow=win;win.once('closed',detachWindow)}return win}
  const permissionKey=(tab:Pick<BrowserTab,'private'>,origin:string)=>(tab.private?'private:':'normal:')+origin
  const activePermissions=()=>{try{const tab=model.tab(model.activeId);return permissions.get(permissionKey(tab,new URL(tab.url).origin))??{}}catch{return {}}}
@@ -45,7 +47,7 @@ export function registerBrowserApp(options:Options){
  const region=createBrowserRegionOverlay(regionPreload,window,value=>{if(value.kind==='selection')return;if(!regionScope||value.operationId!==regionScope.operationId)return;if(!regionValid()){cancelRegion();return}window().webContents.send('browser-app:region-event',value)})
  const regionValid=()=>{const scope=regionScope,e=scope&&live.get(scope.tabId);return !!scope&&appActive&&visible&&ownerSessionId===scope.owner&&current().id===scope.tabId&&current().url===scope.url&&!!e&&!e.view.webContents.isDestroyed()&&e.documentEpoch===scope.documentEpoch&&e.view.webContents.getURL()===scope.url&&JSON.stringify(rect)===JSON.stringify(scope.bounds)}
  const cancelRegion=()=>{const old=regionScope;regionScope=undefined;region.cancel();if(old){const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send('browser-app:region-event',{kind:'close',operationId:old.operationId})}}
- let contextScope:{token:string;owner:string;tabId:string;url:string;documentEpoch:number;expires:number}|undefined
+ let contextScope:{token:string;owner:string;tabId:string;url:string;documentEpoch:number;expires:number;imageURL?:string;commands:Map<string,()=>void>;commanded?:boolean}|undefined
  const checkContext=(token:unknown)=>{const c=contextScope,e=c&&live.get(c.tabId);if(typeof token!=='string'||!c||token!==c.token||Date.now()>c.expires||!appActive||ownerSessionId!==c.owner||current().id!==c.tabId||current().url!==c.url||!e||e.documentEpoch!==c.documentEpoch||e.view.webContents.isDestroyed()||e.view.webContents.getURL()!==c.url)throw Error('当前网页已变化，请重新打开右键菜单。')}
  const snapshot=():BrowserSnapshot=>({nativeFind,nativeMenus,nativeRegion,translation:translation.status(model.activeId),pageEdited,sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
  const pageAgent=createBrowserPageAgent(()=>{const tab=current(),entry=live.get(tab.id);if(!appActive||!entry||entry.view.webContents.isDestroyed()||tab.page||!tab.url||tab.error)return undefined;return {tabId:tab.id,url:entry.view.webContents.getURL(),title:entry.view.webContents.getTitle()||tab.title,webContents:entry.view.webContents}})
@@ -90,13 +92,16 @@ export function registerBrowserApp(options:Options){
   s.on('will-download',(event,item,wc)=>{
    const tabId=[...live].find(([,e])=>e.view.webContents===wc)?.[0],owner=tabId?model.tab(tabId):[...downloadOwners.values()].find(row=>row.view.webContents===wc)
    if(!owner){event.preventDefault();return}
-   try{const source=tabId?wc.getURL():retryDownloadAddress(item.getURL());if(policy(new URL(source).origin,'downloads')==='block')throw Error('站点下载已阻止');browserDownloadAddress(item.getURL(),source)}catch{event.preventDefault();return}
+   const jobs=imageDownloads.get(wc.id)||[],imageIndex=jobs.findIndex(job=>job.url===item.getURL()&&Date.now()-job.at<60000),image=imageIndex>=0
+   if(image){jobs.splice(imageIndex,1);if(!jobs.length)imageDownloads.delete(wc.id)}
+   try{const source=tabId?wc.getURL():retryDownloadAddress(item.getURL());if(policy(new URL(source).origin,'downloads')==='block')throw Error('站点下载已阻止');if(image)browserImageAddress(item.getURL(),source);else browserDownloadAddress(item.getURL(),source)}catch{event.preventDefault();return}
    // Native save dialogs remain the authority for overwrite confirmation.
-   let target='';if(!model.settings.askDownload){const directory=model.settings.downloadPath||app.getPath('downloads');target=availableDownloadPath(directory,item.getFilename(),new Set(downloads.filter(d=>['progressing','paused'].includes(d.state)).map(d=>d.path)),existsSync);item.setSavePath(target)}
-   const row:BrowserDownload={id:randomUUID(),tabId:owner.id,private:owner.private,url:item.getURL(),name:item.getFilename(),path:target,received:0,total:item.getTotalBytes(),state:'progressing'}
+   const imageName=image?browserImageFilename(item.getFilename(),item.getMimeType()):undefined;if(image)item.setSaveDialogOptions({title:'保存图片',defaultPath:join(model.settings.downloadPath||app.getPath('downloads'),imageName!)})
+   let target='';if(!image&&!model.settings.askDownload){const directory=model.settings.downloadPath||app.getPath('downloads');target=availableDownloadPath(directory,item.getFilename(),new Set(downloads.filter(d=>['progressing','paused'].includes(d.state)).map(d=>d.path)),existsSync);item.setSavePath(target)}
+   const row:BrowserDownload={id:randomUUID(),tabId:owner.id,private:owner.private,url:image&&item.getURL().startsWith('data:')?item.getURL().slice(0,item.getURL().indexOf(',')):item.getURL(),name:imageName||item.getFilename(),path:target,received:0,total:item.getTotalBytes(),state:'progressing'}
    downloads.unshift(row);items.set(row.id,item)
-   const update=()=>{row.received=item.getReceivedBytes();row.total=item.getTotalBytes();row.path=item.getSavePath()||row.path;row.state=item.isPaused()?'paused':item.getState();publishDownload()}
-   item.on('updated',update);item.once('done',(_event,state)=>{row.state=state;row.path=item.getSavePath()||row.path;row.received=item.getReceivedBytes();publish()});publish()
+   const update=()=>{row.received=item.getReceivedBytes();row.total=item.getTotalBytes();row.path=item.getSavePath()||row.path;if(image&&row.path)row.name=basename(row.path);row.state=item.isPaused()?'paused':item.getState();publishDownload()}
+   item.on('updated',update);item.once('done',(_event,state)=>{row.state=state;row.path=item.getSavePath()||row.path;if(image&&row.path)row.name=basename(row.path);row.received=item.getReceivedBytes();publish()});publish()
   })
   return s
  }
@@ -115,14 +120,16 @@ export function registerBrowserApp(options:Options){
   wc.on('did-start-navigation',(_event,_url,inPlace,isMain)=>{if(isMain){if(!inPlace)e.documentEpoch++;if(regionScope?.tabId===tab.id)cancelRegion();contextScope=undefined}})
   wc.on('context-menu',(_event,params)=>{
    if(!appActive||!visible||current().id!==tab.id||!tab.url||tab.page||tab.error)return
-   hideMenu(true);cancelRegion();const scope={token:randomUUID(),owner:ownerSessionId,tabId:tab.id,url:wc.getURL(),documentEpoch:e.documentEpoch,expires:Date.now()+120000};contextScope=scope
+   hideMenu(true);cancelRegion();let imageURL:string|undefined;if(params.hasImageContents&&params.srcURL){try{imageURL=browserImageAddress(params.srcURL,wc.getURL())}catch{}}const scope={token:randomUUID(),owner:ownerSessionId,tabId:tab.id,url:wc.getURL(),documentEpoch:e.documentEpoch,expires:Date.now()+120000,imageURL,commands:new Map<string,()=>void>()};contextScope=scope
    const safe=(fn:()=>void)=>()=>{try{checkContext(scope.token);fn()}catch{}}
    const perform=(action:string)=>safe(()=>window().webContents.send('browser-app:context-action',{action,tabId:tab.id,url:scope.url,ownerSessionId:scope.owner,contextToken:scope.token}))()
-   const t=translation.status(tab.id),template=browserPageContextMenu({isEditable:params.isEditable,selectionText:params.selectionText,linkURL:params.linkURL,hasImageContents:params.hasImageContents,finderPath:'',editFlags:params.editFlags},{openLink:url=>safe(()=>{void request('new',{url}).catch(()=>{})})(),openDesktopLink:url=>safe(()=>{void shell.openExternal(browserAddress(url)).catch(()=>{})})(),copyLink:url=>safe(()=>clipboard.writeText(url))(),copyImage:safe(()=>wc.copyImageAt(params.x,params.y)),revealItem:()=>{}},{loading:wc.isLoadingMainFrame(),translating:t.state==='translating',canRestore:t.canRestore,region:nativeRegion,perform,edit:action=>safe(()=>{const edits:Record<string,()=>void>={undo:()=>wc.undo(),redo:()=>wc.redo(),cut:()=>wc.cut(),copy:()=>wc.copy(),paste:()=>wc.paste(),selectAll:()=>wc.selectAll()};edits[action]?.()})()})
-   Menu.buildFromTemplate(template).popup({window:window()})
+   const t=translation.status(tab.id),template=browserPageContextMenu({isEditable:params.isEditable,selectionText:params.selectionText,linkURL:params.linkURL,hasImageContents:params.hasImageContents,finderPath:'',editFlags:params.editFlags},{openLink:url=>safe(()=>{void request('new',{url}).catch(()=>{})})(),openDesktopLink:url=>safe(()=>{void shell.openExternal(browserAddress(url)).catch(()=>{})})(),copyLink:url=>safe(()=>clipboard.writeText(url))(),copyImage:safe(()=>wc.copyImageAt(params.x,params.y)),revealItem:()=>{}},{loading:wc.isLoadingMainFrame(),translating:t.state==='translating',canRestore:t.canRestore,region:nativeRegion,image:!!imageURL,perform,edit:action=>safe(()=>{const edits:Record<string,()=>void>={undo:()=>wc.undo(),redo:()=>wc.redo(),cut:()=>wc.cut(),copy:()=>wc.copy(),paste:()=>wc.paste(),selectAll:()=>wc.selectAll()};edits[action]?.()})()})
+   const shortcuts:Record<string,string>={'复制':'⌘C','全选':'⌘A','剪切':'⌘X','粘贴':'⌘V','撤销':'⌘Z','重做':'⇧⌘Z','另存网页…':'⌘S','打印…':'⌘P','刷新':'⌘R'},items=template.map((item,index)=>{const id='item-'+index;if(item.type==='separator')return{id,separator:true};if(item.enabled!==false&&item.click)scope.commands.set(id,()=>item.click!(undefined as any,window(),{} as any));return{id,label:item.label||'',enabled:item.enabled!==false,shortcut:shortcuts[item.label||'']}}),z=window().webContents.getZoomFactor(),b=rect!
+   window().webContents.send('browser-app:context-menu',{contextToken:scope.token,tabId:scope.tabId,url:scope.url,ownerSessionId:scope.owner,x:(b.x+Math.max(0,Math.min(b.width,params.x)))/z,y:(b.y+Math.max(0,Math.min(b.height,params.y)))/z,items})
   })
   trackBrowserFavicon(wc,favicon=>{if(disposed||live.get(tab.id)!==e||tab.favicon===favicon)return;tab.favicon=favicon;publish()})
   const valid=(event:{preventDefault():void},url:string)=>{if(url==='about:blank')return;try{browserAddress(url)}catch{event.preventDefault()}}
+  wc.once('destroyed',()=>imageDownloads.delete(wc.id))
   wc.on('will-navigate',valid);wc.on('will-redirect',valid)
   let popupGestureAt=0
   wc.on('before-mouse-event',(_event,input)=>{if(input.type==='mouseDown')popupGestureAt=Date.now()})
@@ -166,6 +173,10 @@ export function registerBrowserApp(options:Options){
    if(!b||!['x','y','width','height'].every(k=>Number.isFinite(b[k]))||b.x<0||b.y<0||b.width<=0||b.height<=0||b.x*z+b.width*z>width+2||b.y*z+b.height*z>height+2)throw Error('菜单位置无效。')
    menuScope={id:input.id,revision:input.revision,owner:ownerSessionId,tabId:current().id,url:current().url,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.round(b.width*z),height:Math.round(b.height*z)},zoom:z}
    return menu.show({...input,id:input.id,revision:input.revision,html:input.html,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.min(width-Math.round(b.x*z),Math.round(b.width*z)),height:Math.min(height-Math.round(b.y*z),Math.round(b.height*z))},zoom:z})
+  }
+  if(method==='context-command'){checkContext(input.contextToken);const scope=contextScope!,command=scope.commands.get(inputString(input.itemId,40));if(!command||scope.commanded)throw Error('菜单操作已失效。');scope.commanded=true;command();return true}
+  if(method==='save-image'){
+   checkContext(input.contextToken);const scope=contextScope!,entry=live.get(scope.tabId),url=scope.imageURL;if(!url||!entry)throw Error('请重新右键点击需要保存的图片。');if(activePermissions().downloads==='block')throw Error('此网站的下载已被阻止。');browserImageAddress(url,scope.url);const wc=entry.view.webContents,jobs=(imageDownloads.get(wc.id)||[]).filter(job=>Date.now()-job.at<60000);if(jobs.length>=4)throw Error('请等待当前图片保存完成。');const job={url,at:Date.now()};jobs.push(job);imageDownloads.set(wc.id,jobs);const cleanup=setTimeout(()=>{const current=imageDownloads.get(wc.id);if(current){const remaining=current.filter(row=>row!==job);if(remaining.length)imageDownloads.set(wc.id,remaining);else imageDownloads.delete(wc.id)}},60000);cleanup.unref();try{wc.downloadURL(url)}catch(error){jobs.splice(jobs.indexOf(job),1);throw error}return{started:true}
   }
   if(method==='context-authorize'){checkContext(input.contextToken);return true}
   if(method==='translation-start'){
@@ -328,9 +339,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
