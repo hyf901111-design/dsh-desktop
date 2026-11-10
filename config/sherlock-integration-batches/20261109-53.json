@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器菜单交接延迟与侧栏悬停细节优化",
+        "featureName": "浏览器菜单性能、页签反馈和底部圆角细节修正",
         "branch": "codex/feat/browser-app-figma-20261109",
         "baseCommit": "577fb8bf8911e20faf4b69051861e95b999f54b6",
-        "tipCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
+        "tipCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
         "commits": [
           {
             "commit": "49f7c171a3e9cb364de753a7bf10e4cae0aa6cc4",
@@ -48,6 +48,27 @@
               "8bc239713d49396c4d690ff19a76eab34ddee251"
             ],
             "subject": "修复全局菜单开显前交接和原生网页激活时序"
+          },
+          {
+            "commit": "f7b25769fdb396b600afd68ec60e46091e0ceb84",
+            "parents": [
+              "61430a9645ce81912a0e85bb53001ffa7519897d"
+            ],
+            "subject": "延后原生网页首次唤醒直到可见布局完成"
+          },
+          {
+            "commit": "83775d3e501e01d1b0bb6e5bd316f32dc81a634e",
+            "parents": [
+              "f7b25769fdb396b600afd68ec60e46091e0ceb84"
+            ],
+            "subject": "增加页签轻量悬停反馈并让加载圆环持续旋转"
+          },
+          {
+            "commit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+            "parents": [
+              "83775d3e501e01d1b0bb6e5bd316f32dc81a634e"
+            ],
+            "subject": "按实际圆角边界采样浏览器遮罩背景色"
           }
         ],
         "files": [
@@ -119,27 +140,13 @@
               "test/browser-app-rendered.test.js",
               "test/scheduled-task-view.test.ts",
               "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "66项相关检查通过，含相交全局菜单预交接、延迟隐藏确认、取消清理、Enter菜单接管、侧栏次序与选择态。",
-            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
-            "completedAt": "2026-11-10T07:30:41.417758+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "./node_modules/.bin/vitest",
-              "run",
+              "test/browser-sidebar-entry-rendered.test.js",
               "test/browser-bookmark-popover-overflow.test.js"
             ],
             "outcome": "passed",
-            "summary": "13项收藏夹窄屏、无横滚及统一弹层/柔和页签按钮/纯折线图标检查通过。",
-            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
-            "completedAt": "2026-11-10T07:30:41.417758+00:00",
+            "summary": "83项相关检查通过，含46项父视图、scheduled菜单、侧栏布局和13项收藏弹层；覆盖加载旋转/完成favicon、明暗hover、真实圆角边界normal/clamp/resize。",
+            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+            "completedAt": "2026-11-10T08:18:01.329766+00:00",
             "timeoutMs": 120000
           },
           {
@@ -155,8 +162,8 @@
             ],
             "outcome": "passed",
             "summary": "4项明暗×展开折叠真实原生样式渲染通过，通知按钮40×40且四边10px；76项无关检查跳过。",
-            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
-            "completedAt": "2026-11-10T07:30:41.417758+00:00",
+            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+            "completedAt": "2026-11-10T08:18:01.329766+00:00",
             "timeoutMs": 120000
           },
           {
@@ -168,8 +175,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过，含修正通知夹具回调参数标注。",
-            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
-            "completedAt": "2026-11-10T07:30:41.417758+00:00",
+            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+            "completedAt": "2026-11-10T08:18:01.329766+00:00",
             "timeoutMs": 120000
           },
           {
@@ -178,15 +185,15 @@
               "scripts/verify-browser-overlay-handoff.mjs"
             ],
             "outcome": "passed",
-            "summary": "临时profile真实Electron聚焦通过：3次首次激活/返回、9次自有/全局菜单显示、默认PNG与overlayJPEG分路、全局首帧hidden/隐藏原生后呈现/取消不复活。",
-            "verifiedCommit": "61430a9645ce81912a0e85bb53001ffa7519897d",
-            "completedAt": "2026-11-10T07:30:41.417758+00:00",
+            "summary": "最终源码真实Electron严格原生验证通过：首次可见布局后解除节流，3轮激活与返回、9次菜单交接、默认PNG及overlayJPEG、隐藏overlay页面保持awake，取消不残留。",
+            "verifiedCommit": "900013c72f2c63f4de9ceda8d86c598e98874f05",
+            "completedAt": "2026-11-10T08:18:01.329766+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "83项定向检查、类型及9次真实Electron菜单交接通过。受控复杂网页稳态150→67ms，非用户远端站点数据；原日常签名客户端实机复核待构建。两次独立复审发现的菜单双开及取消残图已修，Enter独立1/1通过。"
+          "summary": "最终源码87项定向检查、类型及9次真实Electron菜单交接通过。另独立native8组角像素检查（宿主明暗×页面明暗×zoom/resize）通过。待签名原客户端最后实机核对；未将87项当作全应用全功能验收。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -244,7 +251,11 @@
           "折叠消息通知按钮及其hover容器40×40、radius10，图标四边10px；探索圆角矩形保留。",
           "仅overlay快照JPEG95，默认PNG不变；后台状态更新保留同一解码cover，避免重复捕获。",
           "原生网页先更新bounds/visible再解除节流，首次显示及返回均可capture。",
-          "全局More测量后先隐藏/inert，等capture/paint/native hide ack再出现；键盘接管收旧菜单不抢焦点，取消不复活或残图。"
+          "全局More测量后先隐藏/inert，等capture/paint/native hide ack再出现；键盘接管收旧菜单不抢焦点，取消不复活或残图。",
+          "未选中网页页签使用淡色hover背景和120ms过渡，选中背景与宽度不变。",
+          "loading圆环持续800ms线性旋转且优先于旧favicon，完成后恢复真实favicon；减少动态效果设置保留。",
+          "遮罩取色基于实际Browser root的底角而非未clamp的中心列边界，按命中背景层合成，明暗、普通/超高中心和resize都与gutter一致；原生网页内容不裁掉。",
+          "首次网页唤醒仅在真实可见非零bounds后解除节流；已经唤醒的页面在弹层下仍保持awake。"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -260,7 +271,7 @@
           "性能数字来自独立受控网页，不能推断任意远端邮箱的冷启动时延；完整旧原生夹具不在本轮局部改动复验范围。",
           "本轮以previewOnly聚焦集成供原日常客户端本地测试，尚未记录完整批次接受或晋升main；不公开发布。"
         ],
-        "generatedAt": "2026-11-10T07:30:41.417758+00:00"
+        "generatedAt": "2026-11-10T08:18:01.329766+00:00"
       }
     }
   ],
