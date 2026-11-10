@@ -9,65 +9,57 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器完整收藏管理与真实客户端交互反馈修正",
+        "featureName": "修复浏览器设置背景残留与网页操作超时恢复",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "50744b81bf2f5c8a457a9365e02068fb2dbd4284",
-        "tipCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+        "baseCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+        "tipCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
         "commits": [
           {
-            "commit": "d528fffbcb25002fa1bd82ed03ec71c0fe89a6b8",
+            "commit": "e4cda6bba613001986cb4b1aa032a959e57b03ba",
             "parents": [
-              "50744b81bf2f5c8a457a9365e02068fb2dbd4284"
+              "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4"
             ],
-            "subject": "完善浏览器页签拖拽与菜单缩放交互"
+            "subject": "限制网页代理观察与编辑预算并撤销失效操作"
           },
           {
-            "commit": "a24a40291b5c663459bb65bc8456d0cb0bb73cde",
+            "commit": "7d569b6e8abea5164662092a8dba34570be61fb0",
             "parents": [
-              "d528fffbcb25002fa1bd82ed03ec71c0fe89a6b8"
+              "e4cda6bba613001986cb4b1aa032a959e57b03ba"
             ],
-            "subject": "完善浏览器收藏管理与批量整理功能"
+            "subject": "排除脚本与样式内容的网页公开文字预算"
           },
           {
-            "commit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
+            "commit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
             "parents": [
-              "a24a40291b5c663459bb65bc8456d0cb0bb73cde"
+              "7d569b6e8abea5164662092a8dba34570be61fb0"
             ],
-            "subject": "接入完整收藏管理并保留编辑状态"
+            "subject": "修复浏览器设置底图残留并支持网页超时恢复"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/superpowers/plans/2026-11-09-browser-app-figma.md"
+            "path": "packages/dsh-research-task-runtime/browser-use-tools.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-model-menu.mjs"
+            "path": "packages/dsh-research-task-runtime/canvas-use-surface.js"
           },
           {
             "status": "M",
             "path": "scripts/verify-browser-app-native.mjs"
           },
           {
-            "status": "A",
-            "path": "src/main/browser/bookmarks.ts"
+            "status": "M",
+            "path": "src/main/browser/page-agent.ts"
           },
           {
             "status": "M",
-            "path": "src/main/browser/model.ts"
+            "path": "src/main/browser/route.ts"
           },
           {
             "status": "M",
             "path": "src/main/browser/service.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/browser/bookmark-manager.css"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/browser/bookmark-manager.ts"
           },
           {
             "status": "M",
@@ -79,31 +71,19 @@
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-model.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-app-rendered.test.js"
           },
           {
-            "status": "A",
-            "path": "test/browser-bookmark-manager-rendered.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/browser-bookmarks.test.ts"
+            "status": "M",
+            "path": "test/browser-page-agent.test.ts"
           },
           {
             "status": "M",
-            "path": "test/figma-model-menu.test.ts"
+            "path": "test/browser-use-route.test.ts"
           },
           {
             "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
+            "path": "test/browser-use-tools.test.js"
           }
         ],
         "checks": [
@@ -119,12 +99,17 @@
               "test/browser-bookmark-manager-rendered.test.js",
               "test/figma-model-menu.test.ts",
               "test/sidebar-new-note-browser.test.js",
-              "test/browser-app-model.test.ts"
+              "test/browser-app-model.test.ts",
+              "test/browser-use-route.test.ts",
+              "test/browser-use-tools.test.js",
+              "test/browser-page-agent.test.ts",
+              "test/canvas-use.test.js",
+              "test/canvas-use-tool-observation.test.js"
             ],
             "outcome": "passed",
-            "summary": "43项本轮相关检查通过，涵盖完整样式UI、拖拽/顺序持久化、收藏CRUD和草稿/光标保存、联想框、模型菜单和选中态。",
-            "verifiedCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
-            "completedAt": "2026-11-10T03:33:35.772622+00:00",
+            "summary": "96项直接相关检查通过，涵盖设置实色隔离、完整收藏管理、菜单与页签、网页观察和编辑预算、取消回滚与恢复工具。",
+            "verifiedCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
+            "completedAt": "2026-11-10T04:00:07.789294+00:00",
             "timeoutMs": 120000
           },
           {
@@ -136,8 +121,8 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过。",
-            "verifiedCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
-            "completedAt": "2026-11-10T03:33:35.772622+00:00",
+            "verifiedCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
+            "completedAt": "2026-11-10T04:00:07.789294+00:00",
             "timeoutMs": 120000
           },
           {
@@ -146,15 +131,15 @@
               "scripts/verify-browser-app-native.mjs"
             ],
             "outcome": "passed",
-            "summary": "原生Chromium验收通过，含隐藏页缩放绘制新帧与真实收藏创建/编辑网址/批删路由。",
-            "verifiedCommit": "0531179ee28ad7a5bc8ae2e89bbbd69315fb48e4",
-            "completedAt": "2026-11-10T03:33:35.772622+00:00",
+            "summary": "原生Chromium单独运行通过，含隐藏缩放新帧、收藏真实路由及DOM通道卡住时的刷新/关闭确认。并发首轮滚轮断言超时，单独复核通过，未修改断言或超时。",
+            "verifiedCommit": "b79cbae2611aa42b24f3eb3e366414133c94fb50",
+            "completedAt": "2026-11-10T04:00:07.789294+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "43项相关检查、类型检查、原生Chromium及收藏管理跨父视图的真实样式流程通过。最终签名包仍待原日常客户端路径实机复核。"
+          "summary": "完整样式渲染与原生Chromium夹具通过。最终签名包待原日常路径实机复核，外部真实邮箱模型修改不作通过宣称。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -191,7 +176,10 @@
           "页签支持拖拽插入排序，活动文档不变，普通顺序持久化，外部拖入不改变顺序",
           "模型菜单宽度/位置限制在全局右栏，嵌套全局菜单动态移位/变宽仍完整显示",
           "菜单未关闭时缩放及时绘制新画面",
-          "完整收藏管理支持搜索、文件夹、收藏增改、移动、单删/批删，草稿/光标跨后台更新保留"
+          "完整收藏管理支持搜索、文件夹、收藏增改、移动、单删/批删，草稿/光标跨后台更新保留",
+          "设置页与管理收藏不保留网页快照，设置实色背景不透出原生网页",
+          "网页观察限制节点/公开文字/总时长，脚本样式不计入公开文字预算；修改最多100项并在取消、导航或失效后回滚自有未被站点更改的文字",
+          "原生刷新和关闭恢复要求匹配活动页签及网址，不等待卡住的DOM通道，返回请求状态后重观测"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -200,57 +188,10 @@
           "网页修改仅在本地主文档文字展示层；不编辑iframe、canvas、表单或超长单文字节点，也不保存远程站点",
           "额外旧standard-agent-preset首项对build roster的断言在canonical main同样失败，未修改历史策略；新预设交接有独立回归。",
           "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
-          "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。"
+          "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。",
+          "真实旧邮箱的超时现象未用私人邮箱重放；合成夹具证明预算和恢复行为，不代表任意远端站点的全量翻译兼容。"
         ],
-        "generatedAt": "2026-11-10T03:33:35.772622+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cd2397c3266fe1fd3d789b460d87cac11583295c",
-        "verificationCommit": "cd2397c3266fe1fd3d789b460d87cac11583295c",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "cd2397c3266fe1fd3d789b460d87cac11583295c",
-            "completedAt": "2026-11-10T03:34:15.374Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "cd2397c3266fe1fd3d789b460d87cac11583295c",
-            "completedAt": "2026-11-10T03:34:15.374Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "cd2397c3266fe1fd3d789b460d87cac11583295c",
-            "completedAt": "2026-11-10T03:34:15.374Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T03:34:15.374Z"
+        "generatedAt": "2026-11-10T04:00:07.789294+00:00"
       }
     }
   ],
