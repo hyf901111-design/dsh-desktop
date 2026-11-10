@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { Window, DOMRect, type Element, type HTMLInputElement } from 'happy-dom'
+import { Window, DOMRect, type Element, type HTMLInputElement, type HTMLElement as HappyHTMLElement } from 'happy-dom'
 import { expect, it, vi } from 'vitest'
 import { patchFigmaModelMenu } from '../scripts/lib/figma-model-menu.mjs'
 
@@ -24,12 +24,13 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
     {id:'other',name:'Other',models:[{id:'second',name:'Second Model'}]}
   ]}
   const select=vi.fn(async()=>true),directory={subscribe:()=>()=>{},getSnapshot:()=>state}
-  const host=win.document.createElement('div');win.document.body.append(host);const root=createRoot(host)
+  const host=win.document.createElement('div');host.className='t8lSSG_panel';host.getBoundingClientRect=()=>new DOMRect(600,0,280,800);win.document.body.append(host);const root=createRoot(host)
   const click=async(el:Element)=>react.act(async()=>{el.dispatchEvent(new win.MouseEvent('mousedown',{bubbles:true,cancelable:true}));el.dispatchEvent(new win.MouseEvent('click',{bubbles:true}))})
   try {
     await react.act(async()=>root.render(jsx.jsx(ModelSelect,{locked:false,available:true,directory,load:()=>{},select,t:(key:string)=>key})))
     const trigger=host.querySelector('button')!;trigger.getBoundingClientRect=()=>new DOMRect(700,550,120,28)
     await click(trigger)
+    const menu=win.document.querySelector<HappyHTMLElement>('[role=menu]')!;expect(parseFloat(menu.style.left)).toBeGreaterThanOrEqual(612);expect(parseFloat(menu.style.left)+parseFloat(menu.style.width)).toBeLessThanOrEqual(868);expect(parseFloat(menu.style.width)).toBe(256);
     expect(win.document.querySelector('input[type=search]')).toBeNull()
     expect(win.document.querySelector('[role=menu]')?.textContent).toContain('menu.model')
     const model=win.document.querySelector('[role=menuitem]')!

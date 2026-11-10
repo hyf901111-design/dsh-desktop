@@ -1,3 +1,4 @@
+import {browserBookmarkAddress,updateBrowserBookmark,removeBrowserBookmarks} from './bookmarks'
 import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
 import {createBrowserCorners} from './corners'
@@ -13,7 +14,7 @@ import type {BrowserSnapshot,BrowserDownload,BrowserTab} from '../../shared/brow
 
 const channel='browser-app:request',eventChannel='browser-app:state'
 type Options={ipcMain:IpcMain;getMainWindow():BrowserWindow|undefined;root:string;materialDirectory(sessionId:string):Promise<string>;findPreload?:string}
-type Live={view:WebContentsView;epoch:number;findRequestId?:number;timeout?:ReturnType<typeof setTimeout>}
+type Live={view:WebContentsView;awake?:boolean;epoch:number;findRequestId?:number;timeout?:ReturnType<typeof setTimeout>}
 export function registerBrowserApp(options:Options){
  const path=join(options.root,'browser-state.bin')
  let saved:any,storageWarning:string|undefined
@@ -36,7 +37,7 @@ export function registerBrowserApp(options:Options){
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
- const sync=()=>{let shown=false;for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error;if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
+ const sync=()=>{let shown=false;for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error,awake=appActive&&id===model.activeId&&!model.tab(id).error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
  const sessionFor=(tab:BrowserTab)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
@@ -102,7 +103,7 @@ export function registerBrowserApp(options:Options){
  }
  const inputString=(value:unknown,max=1024)=>{if(typeof value!=='string'||value.length>max)throw Error('参数无效。');return value}
  const request=async(method:string,input:Record<string,any>={})=>{
-  if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>32000)throw Error('浏览器参数无效。')
+  if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>(method==='bookmarks-remove'?700000:32000))throw Error('浏览器参数无效。')
   if(!model.tabs.length)model.newTab()
   if(method==='snapshot')return snapshot()
   if(method==='context'){if(!appActive)return undefined;if(current().url&&current().loading)throw Error('网页正在加载，请稍候再发送。');return pageAgent.context(authority(true))}
@@ -118,9 +119,12 @@ export function registerBrowserApp(options:Options){
   if(method==='new'){const tab=model.newTab(input.private===true);if(input.url)void navigate(tab,browserAddress(input.url,model.settings.engine));sync();publish();return snapshot()}
   if(method==='select'){model.activeId=model.tab(input.id).id;const tab=current();if(tab.url&&!live.has(tab.id))void navigate(tab,tab.url);sync();publish();return snapshot()}
   if(method==='close'){close(model.tab(input.id).id);return snapshot()}
+  if(method==='reorder'){model.reorder(input.id,input.beforeId);sync();publish();return snapshot()}
   if(method==='restore'){const tab=model.restore();if(tab?.url)void navigate(tab,tab.url);sync();publish();return snapshot()}
+  if(method==='bookmark-update'){updateBrowserBookmark(model,input);publish();return snapshot()}
+  if(method==='bookmarks-remove'){removeBrowserBookmarks(model,input);publish();return snapshot()}
   if(method==='bookmark'){
-   const url=browserAddress(input.url),title=inputString(input.title).trim()||new URL(url).hostname,folder=inputString(input.folder??'',100).trim();const old=model.bookmarks.find(b=>b.url===url)
+   const url=browserBookmarkAddress(input.url),title=inputString(input.title).trim()||new URL(url).hostname,folder=inputString(input.folder??'',100).trim();const old=model.bookmarks.find(b=>b.url===url)
    if(input.remove)model.bookmarks=model.bookmarks.filter(b=>b.url!==url)
    else if(old)Object.assign(old,{title,folder});else model.bookmarks.unshift({id:randomUUID(),title,url,folder,at:Date.now()})
    if(folder&&!model.folders.includes(folder))model.folders.push(folder);publish();return snapshot()
@@ -187,7 +191,7 @@ export function registerBrowserApp(options:Options){
   else if(method==='forward'){if(wc.navigationHistory.canGoForward())wc.navigationHistory.goForward()}
   else if(method==='reload'){tab.error=undefined;void navigate(tab,tab.url)}
   else if(method==='stop'){e.epoch++;clearTimeout(e.timeout);wc.stop();tab.loading=false}
-  else if(method==='zoom'){if(!Number.isFinite(input.value))throw Error('缩放比例无效。');tab.zoom=Math.max(.25,Math.min(3,input.value));wc.setZoomFactor(tab.zoom)}
+  else if(method==='zoom'){if(!Number.isFinite(input.value))throw Error('缩放比例无效。');tab.zoom=Math.max(.25,Math.min(3,input.value));wc.setZoomFactor(tab.zoom);await Promise.race([wc.executeJavaScriptInIsolatedWorld(1007,[{code:'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))'}]).catch(()=>{}),new Promise(resolve=>setTimeout(resolve,120))])}
   else if(method==='find'){const text=inputString(input.text,500);if(text)e.findRequestId=wc.findInPage(text,{forward:input.forward!==false,findNext:input.next!==true});else{e.findRequestId=undefined;wc.stopFindInPage('clearSelection');tab.find=undefined}}
   else if(method==='site-data')return {cookies:(await sessionFor(tab).cookies.get({url:new URL(tab.url).origin})).length}
   else if(method==='site-clear'){await sessionFor(tab).clearStorageData({origin:new URL(tab.url).origin});publish();return true}

@@ -37,7 +37,7 @@
    reveal the selected tab and keep the full-title switcher outside the scroller. */
 .eb-root .eb-tabs{padding-right:var(--eb-tabs-right,12px)}
 .eb-tab-scroll{position:relative;flex:1 1 0;overflow-x:auto;overflow-y:hidden}
-.eb-tab{position:relative;flex:1 1 0;min-width:32px;overflow:hidden;cursor:pointer;border-radius:7px;line-height:17px}
+.eb-tab{position:relative;flex:1 1 0;min-width:32px;max-width:240px;overflow:hidden;cursor:pointer;border-radius:7px;line-height:17px}
 
 .eb-tabs[data-crowded=true] .eb-tab[aria-selected=true]:not([data-pinned=true]){flex-grow:1.6;min-width:min(112px,55%);padding-inline:8px!important}
 .eb-tab[data-pinned=true]{flex:0 0 42px}
@@ -164,3 +164,9 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 
 .eb-content{border-radius:0 0 16px 16px}
 .eb-root .eb-app-label,.eb-root .eb-app-label *{-webkit-app-region:drag;user-select:none;cursor:default}
+
+.eb-root .eb-suggestions{padding:6px;gap:2px}
+.eb-root .eb-suggestions .eb-list-row{min-height:40px;padding:6px 12px!important}
+.eb-suggestions .eb-row-text{gap:0}.eb-suggestions .eb-row-text strong{line-height:20px}.eb-suggestions .eb-row-text small{line-height:16px}
+
+.eb-tab[data-tab-dragging=true]{opacity:.5}.eb-tab[data-drop-edge]::after{content:"";position:absolute;top:4px;bottom:4px;width:2px;border-radius:1px;background:var(--eb-ink);pointer-events:none}.eb-tab[data-drop-edge=before]::after{left:0}.eb-tab[data-drop-edge=after]::after{right:0}
