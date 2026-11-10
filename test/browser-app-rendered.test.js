@@ -223,3 +223,18 @@ it('limits home shortcut hover feedback to the compact icon in both themes',asyn
   }finally{await page.close()}
  }
 })
+
+it('reorders with a captured pointer without starting a native OS drag and safely cancels outside the strip',async()=>{
+ const {page,errors}=await fixture(1440,900,true);try{
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:['Alpha','Beta','Gamma'].map((title,i)=>({...base,id:'pointer'+i,title,url:'https://example.com/'+i})),activeId:'pointer1'});window.nativeTabDrags=0;document.addEventListener('dragstart',()=>window.nativeTabDrags++)})
+  const gamma=await page.getByRole('tab',{name:'Gamma 关闭 Gamma',exact:true}).boundingBox(),alpha=await page.getByRole('tab',{name:'Alpha 关闭 Alpha',exact:true}).boundingBox();await page.mouse.move(gamma.x+40,gamma.y+16);await page.mouse.down();await page.mouse.move(alpha.x+5,alpha.y+16,{steps:10});expect(await page.evaluate(()=>window.nativeTabDrags)).toBe(0);expect(await page.locator('[data-tab-dragging=true]').count()).toBe(1);await page.mouse.up();await expect.poll(()=>page.evaluate(()=>window.snapshot().tabs.map(t=>t.id))).toEqual(['pointer2','pointer0','pointer1']);expect(await page.evaluate(()=>window.snapshot().activeId)).toBe('pointer1');expect(await page.locator('[data-drop-edge],[data-tab-dragging]').count()).toBe(0)
+  const moved=await page.getByRole('tab',{name:'Gamma 关闭 Gamma',exact:true}).boundingBox();await page.mouse.move(moved.x+40,moved.y+16);await page.mouse.down();await page.mouse.move(moved.x+140,moved.y+220,{steps:8});await page.mouse.up();expect(await page.evaluate(()=>window.snapshot().tabs.map(t=>t.id))).toEqual(['pointer2','pointer0','pointer1']);expect(await page.locator('[data-drop-edge],[data-tab-dragging]').count()).toBe(0)
+  await page.mouse.move(moved.x+40,moved.y+16);await page.mouse.down();await page.mouse.move(moved.x+160,moved.y+16,{steps:8});await page.keyboard.press('Escape');await page.mouse.up();expect(await page.evaluate(()=>window.snapshot().tabs.map(t=>t.id))).toEqual(['pointer2','pointer0','pointer1']);expect(await page.locator('[data-drop-edge],[data-tab-dragging]').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await page.mouse.up().catch(()=>{});await page.close()}
+})
+
+it('continues scrolling crowded tabs while a captured drag stays at the edge',async()=>{
+ const {page,errors}=await fixture(1440,900,true);try{
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:40},(_,i)=>({...base,id:'edge'+i,title:'Edge '+i})),activeId:'edge0'})});const first=await page.getByRole('tab').first().boundingBox(),strip=await page.locator('.eb-tab-scroll').boundingBox();await page.mouse.move(first.x+30,first.y+16);await page.mouse.down();await page.mouse.move(strip.x+strip.width-5,first.y+16,{steps:10});await expect.poll(()=>page.locator('.eb-tab-scroll').evaluate(el=>el.scrollLeft)).toBeGreaterThan(36);await page.keyboard.press('Escape');await page.mouse.up();expect(await page.evaluate(()=>window.snapshot().tabs.map(t=>t.id))).toEqual(Array.from({length:40},(_,i)=>'edge'+i));expect(await page.locator('[data-drop-edge],[data-tab-dragging]').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await page.mouse.up().catch(()=>{});await page.close()}
+})
