@@ -9,52 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "浏览器交互与菜单视觉修正及连续关闭动效",
+        "featureName": "浏览器最终圆角拖动与登录保持验收",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "07e2bddff02c8e3c25f5b28f1a596eb3f9752757",
-        "tipCommit": "a2a37f9ab0899c744468203f0f541c384e944b60",
+        "baseCommit": "a2a37f9ab0899c744468203f0f541c384e944b60",
+        "tipCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
         "commits": [
           {
-            "commit": "2ee66c88b9be5c0944b275a528d84c857f9ac816",
+            "commit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
             "parents": [
-              "07e2bddff02c8e3c25f5b28f1a596eb3f9752757"
+              "a2a37f9ab0899c744468203f0f541c384e944b60"
             ],
-            "subject": "优化活动页签宽度与收藏栏并清理输入框空白"
-          },
-          {
-            "commit": "46ea36754cf7700be1164febf523b7ab379c77ad",
-            "parents": [
-              "2ee66c88b9be5c0944b275a528d84c857f9ac816"
-            ],
-            "subject": "调整浏览器菜单材质与收藏弹层定位和动效"
-          },
-          {
-            "commit": "4af01b4b0c116d0769c11eb3d1630aaf1a7cbda7",
-            "parents": [
-              "46ea36754cf7700be1164febf523b7ab379c77ad"
-            ],
-            "subject": "改进地址栏全选与收藏切换并移除浏览器底栏"
-          },
-          {
-            "commit": "be46cd81c84acc2ffb86a38820be71d79c8487c0",
-            "parents": [
-              "4af01b4b0c116d0769c11eb3d1630aaf1a7cbda7"
-            ],
-            "subject": "修复菜单引起网页闪烁与侧栏更多隐藏网页的问题"
-          },
-          {
-            "commit": "6e4698eb6e9fcb50e80ec230638d0d67e162a05b",
-            "parents": [
-              "be46cd81c84acc2ffb86a38820be71d79c8487c0"
-            ],
-            "subject": "增加页签关闭补位与鼠标移出后的宽度动效"
-          },
-          {
-            "commit": "a2a37f9ab0899c744468203f0f541c384e944b60",
-            "parents": [
-              "6e4698eb6e9fcb50e80ec230638d0d67e162a05b"
-            ],
-            "subject": "修复菜单就绪恢复与下载目录并完善浏览器设置字号"
+            "subject": "补齐网页圆角与窗口拖动并验证登录保持"
           }
         ],
         "files": [
@@ -63,32 +28,24 @@
             "path": "docs/superpowers/plans/2026-11-09-browser-app-figma.md"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
+            "status": "A",
+            "path": "scripts/verify-browser-login-retention-native.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
+            "path": "src/main/browser/service.ts"
           },
           {
             "status": "M",
             "path": "src/preload/browser/assets/back.svg"
           },
           {
-            "status": "A",
-            "path": "src/preload/browser/assets/folder-plus.svg"
-          },
-          {
             "status": "M",
             "path": "src/preload/browser/assets/forward.svg"
           },
           {
-            "status": "A",
-            "path": "src/preload/browser/assets/star-outline.svg"
-          },
-          {
             "status": "M",
-            "path": "src/preload/browser/icons.ts"
+            "path": "src/preload/browser/assets/star-outline.svg"
           },
           {
             "status": "M",
@@ -96,39 +53,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-status-zoom.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/pending-conversation-browser.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
           }
         ],
         "checks": [
@@ -152,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "68项直接相关检查通过，含25组完整样式渲染；不运行全功能测试。",
-            "verifiedCommit": "a2a37f9ab0899c744468203f0f541c384e944b60",
-            "completedAt": "2026-11-10T01:48:28.796354+00:00",
+            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+            "completedAt": "2026-11-10T02:17:17.696034+00:00",
             "timeoutMs": 120000
           },
           {
@@ -165,14 +90,36 @@
             ],
             "outcome": "passed",
             "summary": "Node类型检查通过。",
-            "verifiedCommit": "a2a37f9ab0899c744468203f0f541c384e944b60",
-            "completedAt": "2026-11-10T01:48:28.796354+00:00",
+            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+            "completedAt": "2026-11-10T02:17:17.696034+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "原生Chromium浏览器聚焦验收通过。",
+            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+            "completedAt": "2026-11-10T02:17:17.696034+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-login-retention-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "受控HTTPS完整退出/新进程重启登录保持通过，临时会话/隐私/过期和撤销边界均通过。",
+            "verifiedCommit": "c91dbeb86894bd474d58c71f40fd8cfed1a1fde4",
+            "completedAt": "2026-11-10T02:17:17.696034+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "25组真实Chromium组件渲染通过，覆盖活动项加宽、关闭/连续关闭/持宽与离开重排、无痕/焦点、图标、菜单材质/锚点/动效/失败恢复及原生输入复用。最终签名包待实机复核。"
+          "summary": "68项直接相关检查含25组完整样式渲染通过；原生浏览器及真实HTTPS双进程登录保持通过。最新圆角/标题拖动/图标包待实机复核，最终将以日常目录/真实模型启动。"
         },
         "acceptanceCriteria": [
           "浏览器在中间工作区运行并保留原生右侧对话与草稿",
@@ -198,7 +145,11 @@
           "菜单截图解码并绘制后再切原生视图，关闭后反向交接；侧栏非相交更多菜单不隐藏网页",
           "截图失败、重定向、关闭动画期间开菜单自动重试或取消并明确提示",
           "设置浅色背景可辨，标题备注左对齐，字号加大；下载目录使用原生文件夹选择",
-          "浏览器模式回复不显示添加到画布，其他模式保留"
+          "浏览器模式回复不显示添加到画布，其他模式保留",
+          "移除底栏后原生网页与快照都保留16px内圆角；应用标题可拖动整个客户端",
+          "空心星标及前进后退箭头线宽加粗",
+          "网站记住登录的持久Cookie/站点存储跨正常完整退出重启保持，隐私/临时/过期/撤销边界尊重网站",
+          "最终正式身份本地包使用日常数据目录与真实模型配置，不迁移或覆盖数据和凭据"
         ],
         "risks": [
           "受控HTTPS夹具不证明任意远端网站均兼容",
@@ -209,55 +160,7 @@
           "真实签名69c实机的网页修改链路使用本地确定性验收模型；不代表外部真实模型的语义判断验收。",
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。"
         ],
-        "generatedAt": "2026-11-10T01:48:28.796354+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ec40c5aff395c0f746ac7768c0cdf93ab77e976b",
-        "verificationCommit": "ec40c5aff395c0f746ac7768c0cdf93ab77e976b",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/browser-app-model.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/browser-app-native.test.js",
-              "test/default-web-links-client.test.js",
-              "test/conversation-browser.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "ec40c5aff395c0f746ac7768c0cdf93ab77e976b",
-            "completedAt": "2026-11-10T01:49:17.673Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "ec40c5aff395c0f746ac7768c0cdf93ab77e976b",
-            "completedAt": "2026-11-10T01:49:17.673Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-browser-app-native.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
-            "verifiedCommit": "ec40c5aff395c0f746ac7768c0cdf93ab77e976b",
-            "completedAt": "2026-11-10T01:49:17.673Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-10T01:49:17.673Z"
+        "generatedAt": "2026-11-10T02:17:17.696034+00:00"
       }
     }
   ],
