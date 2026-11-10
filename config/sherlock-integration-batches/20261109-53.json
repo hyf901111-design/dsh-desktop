@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复浏览器框选连续性、右键悬停及翻译一键还原",
+        "featureName": "稳定网页框选原生层级并完成交互反馈修正",
         "branch": "codex/feat/browser-app-figma-20261109",
-        "baseCommit": "de215ba8204efacfb8fd86ed2abd9e45da68f3e0",
-        "tipCommit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
+        "baseCommit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
+        "tipCommit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
         "commits": [
           {
-            "commit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
+            "commit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
             "parents": [
-              "de215ba8204efacfb8fd86ed2abd9e45da68f3e0"
+              "6ded71c7769738c179c95eeff0bf75cf5ca8ed08"
             ],
-            "subject": "修复浏览器框选中断、菜单悬停和翻译一键还原交互"
+            "subject": "稳定框选期间的原生圆角层级避免拖拽丢失捕获"
           }
         ],
         "files": [
@@ -29,59 +29,11 @@
           },
           {
             "status": "M",
-            "path": "src/main/browser/menu-overlay.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/region-overlay.ts"
-          },
-          {
-            "status": "M",
             "path": "src/main/browser/service.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/menu-preload.cjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/region-preload.cjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-menu-overlay-focus.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-menu-preload-key.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/browser-page-actions-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-page-context-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-region-overlay.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-region-preload.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-status-zoom.test.ts"
           }
         ],
         "checks": [
@@ -105,9 +57,9 @@
               "test/browser-context-lifecycle-review.test.ts"
             ],
             "outcome": "passed",
-            "summary": "84项直接相关后台回归通过，含误取消、迟到截图、截图超时、非key菜单pointer和翻译状态恢复宽度。",
-            "verifiedCommit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
-            "completedAt": "2026-11-10T13:07:02.000646+00:00",
+            "summary": "85项直接相关后台回归通过，含误取消、迟到截图、截图超时、非key菜单pointer和翻译状态恢复宽度。",
+            "verifiedCommit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
+            "completedAt": "2026-11-10T13:11:35.624592+00:00",
             "timeoutMs": 120000
           },
           {
@@ -119,8 +71,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
-            "completedAt": "2026-11-10T13:07:02.000646+00:00",
+            "verifiedCommit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
+            "completedAt": "2026-11-10T13:11:35.624592+00:00",
             "timeoutMs": 120000
           },
           {
@@ -131,8 +83,8 @@
             ],
             "outcome": "passed",
             "summary": "菜单preload语法检查通过。",
-            "verifiedCommit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
-            "completedAt": "2026-11-10T13:07:02.000646+00:00",
+            "verifiedCommit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
+            "completedAt": "2026-11-10T13:11:35.624592+00:00",
             "timeoutMs": 120000
           },
           {
@@ -143,8 +95,8 @@
             ],
             "outcome": "passed",
             "summary": "框选preload语法检查通过。",
-            "verifiedCommit": "6ded71c7769738c179c95eeff0bf75cf5ca8ed08",
-            "completedAt": "2026-11-10T13:07:02.000646+00:00",
+            "verifiedCommit": "cd2c0d53e35375eee962eb9c0180c09b29f5906c",
+            "completedAt": "2026-11-10T13:11:35.624592+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -169,7 +121,8 @@
           "侧栏更多和纯材料菜单不接管主窗口激活，箭头/Enter/Escape经有限桥仍可操作，未painted时Esc也能取消，外部失焦不抢回来。",
           "布局刷新和内部焦点变化不误取消框选；截图超时明确提示且可以重试，旧截图不会影响新的operation。",
           "网页右键hover在非key原生菜单可见，仍保持主窗口激活。",
-          "翻译状态左侧留出间距；点击已翻译直接恢复原文，成功后按钮隐藏且地址栏恢复宽度，失败保留状态。"
+          "翻译状态左侧留出间距；点击已翻译直接恢复原文，成功后按钮隐藏且地址栏恢复宽度，失败保留状态。",
+          "框选期间不重挂底部圆角层，保留鼠标捕获；取消后恢复普通布局。"
         ],
         "risks": [
           "翻译覆盖可读DOM文字和显示属性；canvas、关闭shadow DOM、不可访问frame及超预算内容明确为部分覆盖。",
@@ -177,7 +130,7 @@
           "本轮仅previewOnly本地集成供用户测试，不执行完整批次接受或晋升main，不对外发布。",
           "重复前台原生夹具曾被用户正在输入的文字干扰，该次结果不记通过；本轮集成只重跑后台聚焦检查，最后在原客户端观察。"
         ],
-        "generatedAt": "2026-11-10T13:07:02.000646+00:00"
+        "generatedAt": "2026-11-10T13:11:35.624592+00:00"
       }
     }
   ],
