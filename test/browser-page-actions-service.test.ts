@@ -28,7 +28,7 @@ import {registerBrowserApp} from '../src/main/browser/service'
 const deferred=<T,>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(done=>{resolve=done});return{promise,resolve}}
 const cleanup:(()=>void)[]=[]
 afterEach(()=>{for(const close of cleanup.splice(0))close();vi.restoreAllMocks()})
-beforeEach(()=>{mock.views=[];mock.templates=[];mock.region={start:vi.fn(async()=>({x:24.2,y:32.8,width:100.1,height:60.1})),cancel:vi.fn(),raise:vi.fn(),showQuestion:vi.fn(),updateQuestion:vi.fn(),dispose:vi.fn()};mock.translation={status:()=>({state:'idle',completed:0,total:0,canRestore:false}),start:vi.fn(async()=>{}),restore:vi.fn(async()=>{}),cancel:vi.fn(),dispose:vi.fn()}})
+beforeEach(()=>{mock.views=[];mock.templates=[];mock.region={warm:vi.fn(async()=>true),start:vi.fn(async()=>({x:24.2,y:32.8,width:100.1,height:60.1})),cancel:vi.fn(),raise:vi.fn(),showQuestion:vi.fn(),updateQuestion:vi.fn(),dispose:vi.fn()};mock.translation={status:()=>({state:'idle',completed:0,total:0,canRestore:false}),start:vi.fn(async()=>{}),restore:vi.fn(async()=>{}),cancel:vi.fn(),dispose:vi.fn()}})
 async function fixture(owner='owner-A'){
  const directory=mkdtempSync(join(tmpdir(),'browser-page-actions-mock-')),mainWC=Object.assign(new EventEmitter(),{mainFrame:{processId:1,routingId:2},getZoomFactor:()=>1.25,send:vi.fn(),isDestroyed:()=>false}),win=Object.assign(new EventEmitter(),{isDestroyed:()=>false,webContents:mainWC,getContentSize:()=>[1500,1000],contentView:{addChildView:vi.fn(),removeChildView:vi.fn()}}),handlers=new Map<string,Function>(),ipcMain={handle:(channel:string,fn:Function)=>handlers.set(channel,fn),removeHandler:vi.fn()}
  const service=registerBrowserApp({ipcMain:ipcMain as any,getMainWindow:()=>win as any,root:directory,materialDirectory:async()=>directory,regionPreload:resolve('src/preload/browser/region-preload.cjs')})
@@ -79,3 +79,5 @@ it('keeps pending translation selection explicit and rejects page/subframe invoc
  expect(()=>handler({sender:f.page.webContents,senderFrame:f.page.webContents.mainFrame},'region-start',{contextToken:token})).toThrow('main EWork Odyssey')
  expect(()=>handler({sender:f.mainWC,senderFrame:{processId:1,routingId:999}},'region-start',{contextToken:token})).toThrow('main EWork Odyssey')
 })
+
+it('prewarms selection controls from the initial browser snapshot without starting selection',async()=>{const f=await fixture();await f.service.request('snapshot');expect(mock.region.warm).toHaveBeenCalledOnce();expect(mock.region.start).not.toHaveBeenCalled();expect(mock.region.showQuestion).not.toHaveBeenCalled()})

@@ -158,7 +158,7 @@ export function registerBrowserApp(options:Options){
   if(input.contextToken!==undefined)checkContext(input.contextToken)
   const internalPage=method==='internal-page'?browserInternalPage(input.page):undefined
   if(!model.tabs.length)model.newTab()
-  if(method==='snapshot'){if(nativeMenus)void menu.warm();return snapshot()}
+  if(method==='snapshot'){if(nativeMenus)void menu.warm();if(nativeRegion)void region.warm().catch(()=>{});return snapshot()}
   if(method==='menu-hide'){if(!input?.id||input.id===menuScope?.id){const focused=menu.isFocused();hideMenu();if(focused)window().webContents.focus()}return true}
   if(method==='menu'){
    if(!nativeMenus||!appActive||input.owner!==ownerSessionId||input.tabId!==current().id||input.url!==current().url||!current().url||current().page||current().error)throw Error('菜单所属网页已变化。')
