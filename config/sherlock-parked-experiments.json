@@ -139,6 +139,24 @@
       "tip": "832a7455b5f1b0dde5fa9511ddfb4d40fc2ff876",
       "decision": "docs/superpowers/parked/2026-11-07-release-1.5.0-scope.md",
       "reason": "历史分支或独立修正，未纳入本次验收基线；保留待后续处理"
+    },
+    {
+      "branch": "codex/feat/accounts-admin-20261110",
+      "tip": "f75abfdd4e2d2780dc1f1829033669232c7711b5",
+      "decision": "docs/superpowers/parked/2026-11-10-release-1.5.1-scope.md",
+      "reason": "独立管理后台开发，未进入本次桌面浏览器验收基线。"
+    },
+    {
+      "branch": "codex/feat/board-folder-icons-20261109",
+      "tip": "80a31f2b5ed81f68758808f16163f1cc7c47e06e",
+      "decision": "docs/superpowers/parked/2026-11-10-release-1.5.1-scope.md",
+      "reason": "已合入 main 的功能保留；此精确后继涉及超限恢复及阅读优化，未在本会话验收，不临时合并。"
+    },
+    {
+      "branch": "codex/feat/research-swarm-cursors-20261109",
+      "tip": "12e8b942d3f1ec86f83fa263d31f07338efca0a6",
+      "decision": "docs/superpowers/parked/2026-11-10-release-1.5.1-scope.md",
+      "reason": "用户已取消的光标动效排查归档；保留原现场，不恢复。"
     }
   ]
 }
