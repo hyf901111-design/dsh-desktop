@@ -217,8 +217,15 @@ export function registerBrowserApp(options:Options){
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
+  if(['close','reload'].includes(input.op)){
+   const tab=current(),entry=live.get(tab.id),url=entry&&!entry.view.webContents.isDestroyed()?entry.view.webContents.getURL():tab.url
+   if(typeof input.tabId!=='string'||input.tabId!==tab.id||typeof input.url!=='string'||input.url!==url)throw Error('当前页签或网址已变化，恢复操作已拒绝。')
+   pageAgent.invalidate()
+   if(input.op==='close'){await request('close',{id:tab.id});return {closed:true,closedTabId:tab.id}}
+   await request('reload',{id:tab.id});return {reloading:true,tabId:tab.id,url}
+  }
   if(input.op==='open'){const tab=current(),entry=ensure(tab),epoch=entry.epoch+1,owner=ownerEpoch;await navigate(tab,browserAddress(input.url));if(current().id!==tab.id||entry.epoch!==epoch||!appActive||ownerEpoch!==owner||ownerSessionId!==sessionId)throw Error('当前网页已变化，请重新观察。');return pageAgent.run({op:'observe'},signal,authority())}
-  const authorize=authority();authorize();const result=await pageAgent.run(input.op==='close'?{op:'observe'}:input,signal,authorize);authorize();pageEdited=result.observation.canUndo;publish();return result
+  const authorize=authority();authorize();const result=await pageAgent.run(input,signal,authorize);authorize();pageEdited=result.observation.canUndo;publish();return result
  }
  return {request,snapshot,dispose,agent,isActive:()=>appActive,ownsSession:(id:unknown)=>appActive&&typeof id==='string'&&!!id&&id===ownerSessionId}
 }
