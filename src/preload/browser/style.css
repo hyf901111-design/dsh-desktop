@@ -36,7 +36,7 @@
 /* Browser tabs share the native right-panel interaction: compress all tabs,
    reveal the selected tab and keep the full-title switcher outside the scroller. */
 .eb-root .eb-tabs{padding-right:var(--eb-tabs-right,12px)}
-.eb-tab-scroll{position:relative;flex:1 1 0;overflow-x:auto;overflow-y:hidden}
+.eb-tab-scroll{position:relative;flex:1 1 0;max-width:var(--eb-tabs-max);overflow-x:auto;overflow-y:hidden}
 .eb-tab{position:relative;flex:1 1 0;min-width:32px;max-width:240px;overflow:hidden;cursor:pointer;border-radius:7px;line-height:17px}
 
 .eb-tabs[data-crowded=true] .eb-tab[aria-selected=true]:not([data-pinned=true]){flex-grow:1.6;min-width:min(112px,55%);padding-inline:8px!important}
@@ -184,3 +184,11 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-workspace-toggle{-webkit-app-region:no-drag;flex:none}
 .eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(188px,23cqw,232px);width:clamp(188px,23cqw,232px);min-width:0;overflow:hidden;-webkit-app-region:no-drag}
 .eb-root .eb-workspace-tabs button{flex:1 1 0;min-width:0;height:32px;padding:0 6px;font-size:14px;line-height:22px;white-space:nowrap}
+@container(max-width:480px){
+ .eb-root .eb-tabs{gap:4px;padding-left:8px}
+ .eb-root .eb-app-label{width:28px;padding:0 4px}
+ .eb-tabs>.eb-icon-button{width:28px;height:28px}
+ .eb-workspace-tabs{flex-basis:128px;width:128px;gap:2px}
+ .eb-root .eb-workspace-tabs button{padding:0 2px;font-size:13px}
+ .eb-tabs[data-crowded=true] .eb-tab[aria-selected=true]:not([data-pinned=true]){min-width:32px}
+}

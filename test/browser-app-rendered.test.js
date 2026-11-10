@@ -269,3 +269,21 @@ it('uses the owner-matched native workspace tabs and preserves browser documents
   await page.evaluate(()=>window.browserView.open(''));expect(await page.getByRole('button',{name:'切换到研究',exact:true}).isDisabled()).toBe(true);expect(await page.getByRole('button',{name:'切换到笔记',exact:true}).isDisabled()).toBe(true);await page.getByRole('button',{name:'切换到对话',exact:true}).click();expect(await page.evaluate(()=>window.workspaceReveals)).toBe(5);expect(await page.evaluate(()=>window.workspaceNativeActions)).toHaveLength(4);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+
+it('keeps the new-tab button immediately after short tab rows and at the edge when crowded',async()=>{
+ const {page,errors}=await fixture(1440,900,true);try{
+  const measure=()=>page.evaluate(()=>{const root=document.querySelector('.eb-root').getBoundingClientRect(),last=[...document.querySelectorAll('.eb-tab')].at(-1).getBoundingClientRect(),add=document.querySelector('.eb-tabs [data-action=new]').getBoundingClientRect(),strip=document.querySelector('.eb-tab-scroll').getBoundingClientRect();return{gap:add.left-last.right,addRight:add.right,rootRight:root.right,stripRight:strip.right}})
+  let m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9);expect(m.rootRight-m.addRight).toBeGreaterThan(150)
+  await page.getByRole('button',{name:'新标签页',exact:true}).click();m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9)
+  await page.getByRole('button',{name:'展开工作区页签',exact:true}).click();m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9)
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:30},(_,i)=>({...base,id:'full'+i,title:'Full '+i})),activeId:'full29'})});await page.waitForTimeout(220);m=await measure();expect(m.rootRight-m.addRight).toBeLessThan(60);expect(m.addRight-m.stripRight).toBeGreaterThan(32);expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
+
+it('keeps expanded workspace controls and a selectable web tab inside a narrow center column',async()=>{
+ const {page,errors}=await fixture(394,700,false);try{
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:9},(_,i)=>({...base,id:'narrow'+i,title:'Web '+i})),activeId:'narrow8'})});await page.getByRole('button',{name:'展开工作区页签',exact:true}).click();await page.waitForTimeout(220);const sizes=await page.locator('.eb-root').evaluate(root=>{const box=root.getBoundingClientRect(),controls=[...root.querySelectorAll('.eb-tabs button,.eb-tab[aria-selected=true]')].map(el=>el.getBoundingClientRect());return{width:box.width,scroll:root.scrollWidth,maxRight:Math.max(...controls.map(r=>r.right))-box.left,minTab:root.querySelector('.eb-tab[aria-selected=true]').getBoundingClientRect().width}});expect(sizes.width).toBe(320);expect(sizes.scroll).toBeLessThanOrEqual(320);expect(sizes.maxRight).toBeLessThanOrEqual(320);expect(sizes.minTab).toBeGreaterThanOrEqual(30);await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'});expect(errors).toEqual([])
+ }finally{await page.close()}
+})
