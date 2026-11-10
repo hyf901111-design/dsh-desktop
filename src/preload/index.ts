@@ -1,3 +1,4 @@
+import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
 import {NativeBrowserMenuProjection} from './browser/native-menus'
 import {createComponentDataBridge} from './component-data-bridge'
@@ -242,10 +243,13 @@ function initializeUi(): void {
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
   const browserApp=new BrowserAppView(document,{
+    question,subscribeQuestion,translationModel,
     request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),
     subscribe:listener=>{const handle=(_event:unknown,value:import('../shared/browser-app').BrowserSnapshot)=>listener(value);ipcRenderer.on('browser-app:state',handle);return()=>ipcRenderer.removeListener('browser-app:state',handle)},
     source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
   },workspaceSurfaceHost)
+  ipcRenderer.on('browser-app:context-action',(_event,value)=>browserApp.contextAction(value))
+  ipcRenderer.on('browser-app:region-event',(_event,value)=>browserApp.regionEvent(value))
   ipcRenderer.on('browser-app:shortcut',(_event,value)=>window.dispatchEvent(new CustomEvent('sherlock:browser-shortcut',{detail:value})))
   const browserMenus=new NativeBrowserMenuProjection(document,{request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),subscribeAction:listener=>{const handle=(_event:unknown,value:any)=>listener(value);ipcRenderer.on('browser-app:menu-event',handle);return()=>ipcRenderer.removeListener('browser-app:menu-event',handle)}})
   window.addEventListener('unload',()=>{browserMenus.dispose();browserApp.dispose()},{once:true})

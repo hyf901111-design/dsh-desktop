@@ -1,7 +1,7 @@
 import {ipcMain,BrowserWindow,WebContentsView,type Rectangle} from 'electron'
 import {randomUUID} from 'node:crypto'
 
-export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;focusOwner?:boolean}
+export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;focusOwner?:boolean;material?:'menu'}
 export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number;through?:{x:number;y:number;button?:'left'|'middle'|'right'}}
 const actionChannel='browser-app:menu-action',stateChannel='browser-app:menu-state',clearChannel='browser-app:menu-clear'
 const kinds=new Set(['click','input','change','key','scroll','dismiss','pointer'])
@@ -9,19 +9,20 @@ const keys=new Set(['Escape','Enter','Tab','ArrowUp','ArrowDown','ArrowLeft','Ar
 const documentHtml='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data: http://127.0.0.1:*; font-src data: http://127.0.0.1:*; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>Browser menu overlay</title>'
 function validateState(state:BrowserMenuOverlayState){
  if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||['passive','focusOwner','reducedMotion'].some(key=>(state as any)[key]!==undefined&&typeof (state as any)[key]!=='boolean'))throw Error('原生菜单内容无效或过大。')
+ if(state.material!==undefined&&(state.material!=='menu'||state.passive))throw Error('原生菜单材质无效。')
  const r=state.bounds
  if(!r||!(['x','y','width','height'] as const).every(key=>Number.isFinite(r[key])&&Math.abs(r[key])<=30000)||r.width<=0||r.height<=0||!Number.isFinite(state.zoom)||state.zoom<.1||state.zoom>5)throw Error('原生菜单位置或缩放无效。')
  if(state.focusId!==undefined&&(typeof state.focusId!=='string'||state.focusId.length>256)||state.selection&&(!Number.isSafeInteger(state.selection.start)||!Number.isSafeInteger(state.selection.end)||state.selection.start<0||state.selection.end<state.selection.start||state.selection.end>1000000||state.selection.direction!==undefined&&!['forward','backward','none'].includes(state.selection.direction)))throw Error('原生菜单焦点无效。')
 }
 type Surface={view?:WebContentsView;popup?:BrowserWindow;ready:boolean;readyPromise?:Promise<boolean>;resolveReady?:(value:boolean)=>void;readyTimer?:ReturnType<typeof setTimeout>;hasContent:boolean;clearToken:number;clearPromise?:Promise<boolean>;resolveClear?:(value:boolean)=>void;clearTimer?:ReturnType<typeof setTimeout>}
 
-/** Interactive menus occupy only their rect. Passive tooltips use a truly click-through child window. */
+/** Opaque menus use a rect-sized sibling; glass menus and passive hints use separate native windows. */
 export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWindow,onAction:(action:BrowserMenuOverlayAction)=>void){
- const interactive:Surface={ready:false,hasContent:false,clearToken:0},passive:Surface={ready:false,hasContent:false,clearToken:0},surfaces=[interactive,passive]
+ const interactive:Surface={ready:false,hasContent:false,clearToken:0},passive:Surface={ready:false,hasContent:false,clearToken:0},material:Surface={ready:false,hasContent:false,clearToken:0},surfaces=[interactive,passive,material]
  let owner:BrowserWindow|undefined,state:BrowserMenuOverlayState|undefined,shown=false,disposed=false,request=0
  let pending:{request:number;resolve:(value:boolean)=>void;timer:ReturnType<typeof setTimeout>}|undefined
  const contents=(surface:Surface)=>surface.view?.webContents??surface.popup?.webContents
- const active=()=>state?.passive?passive:interactive
+ const active=()=>state?.passive?passive:state?.material==='menu'?material:interactive
  const finish=(value:boolean)=>{if(!pending)return;clearTimeout(pending.timer);const resolve=pending.resolve;pending=undefined;resolve(value)}
  const clear=(surface:Surface)=>{
   const wc=contents(surface)
@@ -48,11 +49,15 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(value.kind==='cleared'&&surface.resolveClear&&value._clear===surface.clearToken){surface.hasContent=false;clearTimeout(surface.clearTimer);surface.resolveClear?.(true);surface.resolveClear=undefined;return}
   if(!shown||!state||surface!==active()||value.id!==state.id||value.revision!==state.revision||value._request!==request)return
   if(value.kind==='painted'){
-   if(pending?.request!==request||!isShown())return
+   if(pending?.request!==request)return
+   // A material window paints while initially hidden, then reveals the fully
+   // prepared contents together with its native effect, never an empty glass rect.
+   if(surface===material&&surface.popup&&!surface.popup.isVisible())surface.popup.showInactive()
+   if(!isShown())return
    const wc=contents(surface)!
    // Source-key dispatch may temporarily focus the owner renderer. Return to
    // this surface without focusing an input or disturbing its composition.
-   if(!state.passive&&!state.focusOwner&&!wc.isFocused())wc.focus()
+   if(!state.passive&&!state.focusOwner){if(surface.popup&&!surface.popup.isFocused())surface.popup.focus();if(!wc.isFocused())wc.focus()}
    finish(true);return
   }
   if(state.passive||!kinds.has(value.kind)||value.controlId!==undefined&&(typeof value.controlId!=='string'||!value.controlId||value.controlId.length>256))return
@@ -76,7 +81,13 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(!owner){owner=win;win.once('closed',retire);win.on('hide',parentHidden);win.on('minimize',parentHidden)}
   const existing=contents(surface);if(existing&&!existing.isDestroyed())return surface.ready?Promise.resolve(true):surface.readyPromise!
   const webPreferences={preload,partition:'browser-menu-'+randomUUID(),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,backgroundThrottling:true}
-  if(surface===passive){surface.popup=new BrowserWindow({parent:win,width:1,height:1,show:false,frame:false,transparent:true,backgroundColor:'#00000000',focusable:false,resizable:false,movable:false,minimizable:false,maximizable:false,fullscreenable:false,skipTaskbar:true,hasShadow:false,webPreferences});surface.popup.setIgnoreMouseEvents(true)}
+  if(surface===passive||surface===material){
+   surface.popup=new BrowserWindow({parent:win,width:1,height:1,show:false,frame:false,transparent:true,backgroundColor:'#00000000',focusable:surface===material,acceptFirstMouse:true,resizable:false,movable:false,minimizable:false,maximizable:false,fullscreenable:false,skipTaskbar:true,hasShadow:surface===material,paintWhenInitiallyHidden:true,...(surface===material&&process.platform==='darwin'?{vibrancy:'menu' as const,visualEffectState:'active' as const,roundedCorners:true}:{}),webPreferences})
+   surface.popup.setIgnoreMouseEvents(surface===passive)
+   // NSVisualEffectView samples the live native compositor; Chromium backdrop
+   // filters cannot blur sibling WebContentsViews. No webpage bitmap is used.
+   if(surface===material&&process.platform==='darwin')surface.popup.setVibrancy('menu')
+  }
   else{surface.view=new WebContentsView({webPreferences});surface.view.setBackgroundColor('#00000000');surface.view.setVisible(false);win.contentView.addChildView(surface.view)}
   const wc=contents(surface)!
   // The menu document has an opaque origin. Reuse only this application's
@@ -106,7 +117,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   validateState(input);if(disposed)return false
   if(owner&&owner!==getWindow())retire()
   if(state?.id===input.id&&input.revision<state.revision)return false
-  if(state&&(state.id!==input.id||!!state.passive!==!!input.passive))conceal(active())
+  if(state&&(state.id!==input.id||!!state.passive!==!!input.passive||state.material!==input.material))conceal(active())
   const ticket=++request;finish(false)
   state={...input,bounds:{...input.bounds},...(input.selection?{selection:{...input.selection}}:{})}
   const snapshot=state,surface=active(),current=()=>!disposed&&ticket===request&&state===snapshot
@@ -118,7 +129,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(!current())return false
   const wc=contents(surface)!,bounds={x:Math.round(input.bounds.x),y:Math.round(input.bounds.y),width:Math.max(1,Math.round(input.bounds.width)),height:Math.max(1,Math.round(input.bounds.height))}
   wc.setZoomFactor(input.zoom)
-  if(surface.popup){const origin=owner!.getContentBounds();surface.popup.setBounds({...bounds,x:origin.x+bounds.x,y:origin.y+bounds.y});surface.popup.setIgnoreMouseEvents(true);surface.popup.showInactive()}
+  if(surface.popup){const origin=owner!.getContentBounds();surface.popup.setBounds({...bounds,x:origin.x+bounds.x,y:origin.y+bounds.y});surface.popup.setIgnoreMouseEvents(surface===passive);if(surface!==material)surface.popup.showInactive()}
   else{surface.view!.setBounds(bounds);owner!.contentView.addChildView(surface.view!);surface.view!.setVisible(true)}
   wc.setBackgroundThrottling(false);shown=true;surface.clearPromise=undefined;surface.hasContent=true
   return new Promise<boolean>(resolve=>{pending={request:ticket,resolve,timer:setTimeout(()=>{if(pending?.request===ticket)hide()},5000)};try{wc.send(stateChannel,{...snapshot,_request:ticket})}catch{hide()}})

@@ -1410,7 +1410,8 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   desktopComputer = createComputerCandidates()
-  const browserApp = registerBrowserApp({ipcMain,getMainWindow:()=>mainWindow,root:join(app.getPath('userData'),'browser-app'),materialDirectory:async sessionId=>{const root=await new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId);if(!root)throw Error('会话工作区不可用。');return join(root,'浏览器工作材料')}})
+  const browserApp = registerBrowserApp({
+  runtimeUrl: () => runtime?.snapshot().url,ipcMain,getMainWindow:()=>mainWindow,root:join(app.getPath('userData'),'browser-app'),materialDirectory:async sessionId=>{const root=await new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId);if(!root)throw Error('会话工作区不可用。');return join(root,'浏览器工作材料')}})
   const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,

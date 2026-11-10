@@ -44,7 +44,9 @@
 .eb-root[data-settings-open=true]{visibility:hidden!important;pointer-events:none!important}
 .eb-menu hr{margin:0;border:0;height:1px;background:var(--eb-menu-line)}
 .eb-popover[data-browser-panel=tabs] .eb-menu-item{height:42px;gap:10px;padding:0 6px!important;font-size:14px!important}
-.eb-menu[data-browser-panel=menu]{height:616px}
+.eb-menu[data-browser-panel=menu]{height:auto;overflow-x:hidden;overflow-y:auto;scrollbar-width:none}
+.eb-menu[data-browser-panel=menu]::-webkit-scrollbar{display:none}
+.eb-menu[data-browser-panel=menu]>*{min-width:0;max-width:100%}
 
 /* Browser tabs share the native right-panel interaction: compress all tabs,
    reveal the selected tab and keep the full-title switcher outside the scroller. */
@@ -149,7 +151,7 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 
 /* Figma strokes sit inside the frame without consuming its content width. */
 .eb-popover,body .eb-root[data-browser-app] .eb-popover[role=menu]{border:0;box-shadow:inset 0 0 0 1px var(--eb-line),0 6px 20px #0004}
-.eb-root[data-page-edited=true] .eb-menu[data-browser-panel=menu]{height:652px}
+.eb-root[data-page-edited=true] .eb-menu[data-browser-panel=menu]{height:auto}
 
 .eb-popover[data-browser-panel=tabs] .eb-menu-item{line-height:19px}
 
@@ -221,3 +223,5 @@ body .eb-root[data-browser-app] .eb-popover:is([data-browser-panel=menu],[data-b
 .eb-workspace-toggle .eb-icon{transition:transform 200ms cubic-bezier(.2,.8,.2,1)}
 .eb-workspace-toggle[aria-expanded=true] .eb-icon{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.eb-workspace-toggle .eb-icon{transition:none}}
+
+.eb-translation-status{flex:none;max-width:120px;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;font-size:12px;white-space:nowrap}.eb-translation-status:hover{background:var(--eb-hover)}

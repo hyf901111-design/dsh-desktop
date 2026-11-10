@@ -51,6 +51,7 @@ import { requestedComponentRefreshInterval } from './component-refresh-policy.js
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
+import { registerBrowserTranslation } from './browser-translation.js'
 import {registerScheduledTaskTool,SCHEDULED_TASK_TOOL} from './scheduled-task-tools.js'
 import { registerNotesAi } from './notes-ai.js'
 import { registerNotesChallenge } from './notes-challenge-runtime.js'
@@ -3589,6 +3590,7 @@ export async function apply(ctx) {
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
+    const disposeBrowserTranslation = registerBrowserTranslation(ctx, {isTrustedRequest})
     const disposeScheduledTaskTool = registerScheduledTaskTool(ctx)
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
@@ -3618,6 +3620,7 @@ export async function apply(ctx) {
       disposeImageGenerationTool()
       disposeRoutes()
       disposeScheduledTitle()
+      disposeBrowserTranslation()
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
@@ -3647,6 +3650,7 @@ export async function apply(ctx) {
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()
+      disposeBrowserTranslation()
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
