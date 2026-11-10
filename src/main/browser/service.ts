@@ -190,7 +190,7 @@ export function registerBrowserApp(options:Options){
    publish();return snapshot()
   }
   const tab=model.tab(input.id??model.activeId)
-  if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();return bitmap.isEmpty()?'':bitmap.resize({width:Math.min(1600,bitmap.getSize().width)}).toDataURL()}
+  if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();if(bitmap.isEmpty())return '';const image=bitmap.resize({width:Math.min(1600,bitmap.getSize().width)});return input.purpose==='overlay'?'data:image/jpeg;base64,'+image.toJPEG(95).toString('base64'):image.toDataURL()}
   if(method==='navigate'){void navigate(tab,browserAddress(input.url,model.settings.engine));return snapshot()}
   if(method==='home'){
    if(!tab.page&&!tab.url&&!tab.loading&&!tab.error)return snapshot()
