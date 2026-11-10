@@ -138,6 +138,54 @@
           "网站favicon读取失败时退回默认图标，图标只在内存保留，恢复后随网页重新读取。"
         ],
         "generatedAt": "2026-11-10T02:48:59.330303+00:00"
+      },
+      "merged": {
+        "mergeCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
+        "verificationCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
+            "completedAt": "2026-11-10T02:49:20.426Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
+            "completedAt": "2026-11-10T02:49:20.426Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "78db2b370ea2afbbece6ce1a58139255f4336b8a",
+            "completedAt": "2026-11-10T02:49:20.426Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-10T02:49:20.426Z"
       }
     }
   ],
