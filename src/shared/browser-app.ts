@@ -1,6 +1,8 @@
-export type BrowserTab = {id:string;url:string;title:string;private:boolean;pinned:boolean;muted:boolean;zoom:number;loading:boolean;canBack:boolean;canForward:boolean;favicon?:string;error?:string;find?:{activeMatchOrdinal:number;matches:number}}
+export type BrowserInternalPage = 'history'|'downloads'
+export type BrowserTab = {id:string;url:string;title:string;page?:BrowserInternalPage;private:boolean;pinned:boolean;muted:boolean;zoom:number;loading:boolean;canBack:boolean;canForward:boolean;favicon?:string;error?:string;find?:{activeMatchOrdinal:number;matches:number}}
 export type BrowserLink = {id:string;url:string;title:string;at:number;folder?:string}
+export type BrowserClosedTab = BrowserLink&{page?:BrowserInternalPage;pinned?:boolean;muted?:boolean}
 export type BrowserDownload = {id:string;tabId:string;private:boolean;url:string;name:string;path:string;received:number;total:number;state:'progressing'|'paused'|'completed'|'interrupted'|'cancelled'}
 export type BrowserSettings = {engine:'Google'|'Bing'|'百度';startup:'restore'|'new';bookmarksBar:boolean;askDownload:boolean;downloadPath:string}
-export type BrowserSnapshot = {nativeFind?:boolean;pageEdited?:boolean;tabs:BrowserTab[];activeId:string;closed:BrowserLink[];history:BrowserLink[];bookmarks:BrowserLink[];folders:string[];downloads:BrowserDownload[];settings:BrowserSettings;storageWarning?:string;sitePermissions?:Record<string,string>}
+export type BrowserSnapshot = {nativeFind?:boolean;pageEdited?:boolean;tabs:BrowserTab[];activeId:string;closed:BrowserClosedTab[];history:BrowserLink[];bookmarks:BrowserLink[];folders:string[];downloads:BrowserDownload[];settings:BrowserSettings;storageWarning?:string;sitePermissions?:Record<string,string>}
 export type BrowserBridge = {request(method:string,input?:Record<string,unknown>):Promise<any>;subscribe(listener:(state:BrowserSnapshot)=>void):()=>void;source(sessionId:string,source:{title:string;url:string;at:number}):Promise<void>}
