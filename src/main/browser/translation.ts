@@ -6,7 +6,7 @@ export type BrowserTranslationSelection={provider:string;model:string;reasoningE
 export type BrowserTranslationStatus={state:'idle'|'translating'|'translated'|'partial'|'error';completed:number;total:number;canRestore:boolean;error?:string;coverage?:{frames:number;skippedFrames:number;conflicts:number;limited:boolean}}
 export type BrowserTranslationTarget={tabId:string;url:string;title:string;webContents:WebContents}
 type Frame={frame?:WebFrameMain;key:string;documentId:string;url:string;main:boolean;canRestore:boolean;initialized?:boolean;records?:number;sourceChars?:number}
-type Transaction={target:BrowserTranslationTarget;status:BrowserTranslationStatus;frames:Frame[];generation:number;job?:string;controller?:AbortController;revoke?:Promise<unknown>;navigate:(...args:any[])=>void;destroy:()=>void}
+type Transaction={target:BrowserTranslationTarget;status:BrowserTranslationStatus;frames:Frame[];generation:number;job?:string;restoring?:number;controller?:AbortController;revoke?:Promise<unknown>;navigate:(...args:any[])=>void;destroy:()=>void}
 type Fragment={id:string;text:string;group:Group;index:number}
 type Group={source:string;fragments:Fragment[];answers:string[];refs:{frame:Frame;id:string;before:string;prefix:string;suffix:string}[]}
 const idle=():BrowserTranslationStatus=>({state:'idle',completed:0,total:0,canRestore:false})
@@ -49,7 +49,7 @@ export function createBrowserTranslationManager(options:{runtimeUrl?:()=>string|
   return bounded(pending,signal).then(value=>{if(typeof value!=='string'||value.length>6100000)throw Error('网页翻译状态无效。');const parsed=JSON.parse(value);if(parsed?.documentChanged===true){frame.canRestore=false;throw Object.assign(Error('网页文档已变化。'),{code:'DOCUMENT_CHANGED'})}const result=metadata(parsed,frame);if(args.op==='begin')frame.initialized=true;return result})
  }
  const revoke=(tx:Transaction,discard=false)=>{
-  const job=tx.job;tx.generation++;tx.job=undefined
+  const job=tx.job;tx.generation++;tx.job=undefined;tx.restoring=undefined
   // Queue revocation in each renderer BEFORE aborting provider requests. A late
   // apply has both this token gate and its absolute document/job deadline.
   const pending=tx.frames.map(frame=>execute(tx,frame,{op:'cancel',job,discard}).catch(()=>undefined))
@@ -70,10 +70,10 @@ export function createBrowserTranslationManager(options:{runtimeUrl?:()=>string|
  }
  const cancel=(tabId:string,{discard=false}:{discard?:boolean}={})=>{
   const tx=transactions.get(tabId);if(!tx)return
-  const pending=revoke(tx,discard),generation=tx.generation
+  const restoring=tx.restoring!==undefined,pending=revoke(tx,discard),generation=tx.generation
   if(discard){tx.frames=[];publish(tx,idle())}
-  else if(tx.status.state==='translating'){
-   const update=()=>{const canRestore=tx.frames.some(frame=>frame.canRestore);publish(tx,{state:canRestore?'partial':'idle',canRestore,error:canRestore?'翻译已停止，可还原已修改文字。':undefined})}
+  else if(tx.status.state==='translating'||restoring){
+   const update=()=>{const canRestore=tx.frames.some(frame=>frame.canRestore);publish(tx,{state:canRestore?'partial':'idle',canRestore,error:canRestore?(restoring?'页面语言还原已停止，可继续还原剩余文字。':'翻译已停止，可还原已修改文字。'):undefined})}
    update();void pending.then(()=>{if(tx.generation===generation)update()})
   }
  }
@@ -81,8 +81,10 @@ export function createBrowserTranslationManager(options:{runtimeUrl?:()=>string|
   const tx=transactions.get(tabId);if(!tx)return idle()
   const pending=revoke(tx),generation=tx.generation;await pending
   if(tx.generation!==generation)return{...tx.status}
+  tx.restoring=generation
   let conflicts=0,failed=0
   for(const frame of tx.frames){if(tx.generation!==generation)break;try{const result=await execute(tx,frame,{op:'restore'});if(!Number.isSafeInteger(result.conflicts)||result.conflicts<0||result.conflicts>10000)throw Error('无效还原结果');conflicts+=result.conflicts}catch{failed++}}
+  if(tx.restoring===generation)tx.restoring=undefined
   if(tx.generation!==generation)return{...tx.status}
   const canRestore=tx.frames.some(frame=>frame.canRestore)
   publish(tx,{...idle(),state:conflicts||failed?'partial':'idle',canRestore,error:conflicts||failed?'已还原可安全恢复的文字；网站更新或不可访问内容未覆盖。':undefined})
