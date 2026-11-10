@@ -243,13 +243,17 @@ export class ScheduledTaskView {
   }
   private mountBrowserEntry(group:Element){
     let button=group.querySelector<HTMLButtonElement>('[data-sidebar-browser]')
+    let separator=group.querySelector<HTMLElement>('[data-sidebar-browser-separator]')
     const collapsed=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')==='false'
-    if(!collapsed||!this.surfaceHost){button?.remove();return}
+    if(!collapsed||!this.surfaceHost){button?.remove();separator?.remove();return}
     if(!button){
       button=this.document.createElement('button');button.type='button';button.className='hHd-Xa_newSession';button.dataset.sidebarBrowser=''
       button.setAttribute('aria-label','浏览器');button.title='浏览器';button.onclick=()=>this.openBrowser()
       const more=group.querySelector('.st-more-zone');group.insertBefore(button,more)
     }
+    const more=group.querySelector('.st-more-zone');if(more&&button.nextElementSibling!==more)group.insertBefore(button,more)
+    if(!separator){separator=this.document.createElement('span');separator.dataset.sidebarBrowserSeparator='';separator.setAttribute('aria-hidden','true')}
+    if(separator.nextElementSibling!==button)group.insertBefore(separator,button)
     button.setAttribute('aria-pressed',String(this.document.body.dataset.workspaceSurface==='browser'))
   }
   private placeMore(group: Element, zone: HTMLElement) {
