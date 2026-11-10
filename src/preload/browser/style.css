@@ -192,6 +192,11 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 @media(prefers-reduced-motion:reduce){.eb-shortcut-icon{transition:none}}
 
 .eb-tab{user-select:none;touch-action:none;-webkit-user-drag:none}
+.eb-tab{transition:background-color 120ms ease}
+.eb-tab:not([aria-selected=true]):hover{background:color-mix(in srgb,var(--eb-field) 50%,transparent)}
+.eb-tab-loading{display:grid;place-items:center;width:16px;height:16px;flex:none}
+.eb-tab-loading>.eb-icon{animation:eb-tab-spin 800ms linear infinite}
+@keyframes eb-tab-spin{to{transform:rotate(360deg)}}
 
 /* Workspace shortcuts share the browser title row and reserve real tab space. */
 .eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}

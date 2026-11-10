@@ -15,6 +15,18 @@ let surface='browser';window.workspaceReveals=0;const host={register:(_name,el)=
 },20000)
 afterAll(async()=>browser?.close())
 async function fixture(width=1920,height=1080,dark=true){const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.setContent(`<html><head><style>body{margin:0;background:#151515}.pI_x6G_centerCol{position:fixed;left:${width===1920?306:64}px;top:10px;right:${width===1920?420:10}px;bottom:10px}</style></head><body ${dark?'data-ds-dark-theme':''}><main class="pI_x6G_centerCol" style="position:fixed;left:${width===1920?306:64}px;right:${width===1920?420:10}px;top:10px;bottom:10px;width:auto;height:auto;margin:0;box-sizing:border-box"></main></body></html>`);await page.addScriptTag({content:code});await page.getByRole('heading',{name:'从这里，打开一个新视野。'}).waitFor();return {page,errors}}
+for(const dark of [false,true])it(`rotates a loading tab before restoring its favicon and gives inactive tabs a gentle hover in ${dark?'dark':'light'}`,async()=>{
+ const{page,errors}=await fixture(1440,900,dark);try{
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0],canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;canvas.getContext('2d').fillRect(0,0,32,32);const favicon=canvas.toDataURL();window.setBrowserState({tabs:[{...base,id:'ready',title:'当前网页',url:'https://ready.example/',favicon},{...base,id:'loading',title:'正在加载网页',url:'https://loading.example/',favicon,loading:true}],activeId:'ready'})})
+  const selected=page.locator('.eb-tab[data-id=ready]'),tab=page.locator('.eb-tab[data-id=loading]'),spinner=tab.locator('.eb-tab-loading>.eb-icon');expect(await tab.locator('img').count()).toBe(0)
+  await expect.poll(()=>spinner.evaluate(el=>el.getAnimations()[0]?.currentTime??0)).toBeGreaterThan(80);const rotation=await spinner.evaluate(el=>getComputedStyle(el).transform);await expect.poll(()=>spinner.evaluate(el=>getComputedStyle(el).transform)).not.toBe(rotation)
+  await page.mouse.move(0,899);const before=await tab.evaluate(el=>({color:getComputedStyle(el).backgroundColor,width:el.getBoundingClientRect().width})),activeColor=await selected.evaluate(el=>getComputedStyle(el).backgroundColor)
+  await tab.hover();await expect.poll(()=>tab.evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe(before.color);expect(await tab.evaluate(el=>el.getBoundingClientRect().width)).toBe(before.width);expect(await selected.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(activeColor);expect(await tab.getAttribute('aria-selected')).toBe('false')
+  await page.locator('.eb-tabs').screenshot({path:evidence+'/tab-hover-loading-'+(dark?'dark':'light')+'.png'})
+  await page.emulateMedia({reducedMotion:'reduce'});expect(await spinner.evaluate(el=>getComputedStyle(el).animationName)).toBe('none')
+  await page.evaluate(()=>{const state=window.snapshot();state.tabs[1].loading=false;window.setBrowserState(state)});expect(await tab.locator('.eb-tab-loading').count()).toBe(0);expect(await tab.locator('img.eb-tab-favicon').count()).toBe(1);expect(errors).toEqual([])
+ }finally{await page.close()}
+})
 it('shows bookmarks only at home with padded text hovers and a square tab switcher',async()=>{
  const {page}=await fixture(1440,900,true);try{
   await page.evaluate(()=>window.setBrowserState({bookmarks:[{id:'bookmark',url:'https://example.com/',title:'浏览器验收 · 一个较长的收藏标题',at:Date.now()}]}))
