@@ -1,8 +1,11 @@
+import type {BrowserQuestionCommand,BrowserQuestionState,BrowserQuestionUpdate} from './browser-region'
 export type BrowserInternalPage = 'history'|'downloads'
 export type BrowserTab = {id:string;url:string;title:string;page?:BrowserInternalPage;private:boolean;pinned:boolean;muted:boolean;zoom:number;loading:boolean;canBack:boolean;canForward:boolean;favicon?:string;error?:string;find?:{activeMatchOrdinal:number;matches:number}}
 export type BrowserLink = {id:string;url:string;title:string;at:number;folder?:string}
 export type BrowserClosedTab = BrowserLink&{page?:BrowserInternalPage;pinned?:boolean;muted?:boolean}
 export type BrowserDownload = {id:string;tabId:string;private:boolean;url:string;name:string;path:string;received:number;total:number;state:'progressing'|'paused'|'completed'|'interrupted'|'cancelled'}
 export type BrowserSettings = {engine:'Google'|'Bing'|'百度';startup:'restore'|'new';bookmarksBar:boolean;askDownload:boolean;downloadPath:string}
-export type BrowserSnapshot = {nativeFind?:boolean;nativeMenus?:boolean;pageEdited?:boolean;tabs:BrowserTab[];activeId:string;closed:BrowserClosedTab[];history:BrowserLink[];bookmarks:BrowserLink[];folders:string[];downloads:BrowserDownload[];settings:BrowserSettings;storageWarning?:string;sitePermissions?:Record<string,string>}
-export type BrowserBridge = {request(method:string,input?:Record<string,unknown>):Promise<any>;subscribe(listener:(state:BrowserSnapshot)=>void):()=>void;source(sessionId:string,source:{title:string;url:string;at:number}):Promise<void>}
+export type BrowserModelSelection={provider:string;model:string;reasoningEffort?:string}
+export type BrowserTranslationStatus={state:'idle'|'translating'|'translated'|'partial'|'error';completed:number;total:number;canRestore:boolean;error?:string;coverage?:{frames:number;skippedFrames:number;conflicts:number;limited:boolean}}
+export type BrowserSnapshot = {nativeRegion?:boolean;translation?:BrowserTranslationStatus;nativeFind?:boolean;nativeMenus?:boolean;pageEdited?:boolean;tabs:BrowserTab[];activeId:string;closed:BrowserClosedTab[];history:BrowserLink[];bookmarks:BrowserLink[];folders:string[];downloads:BrowserDownload[];settings:BrowserSettings;storageWarning?:string;sitePermissions?:Record<string,string>}
+export type BrowserBridge = {question?(ownerSessionId:string|null,command:BrowserQuestionCommand):Promise<BrowserQuestionState>;subscribeQuestion?(listener:(update:BrowserQuestionUpdate)=>void):()=>void;translationModel?(ownerSessionId:string|null):Promise<BrowserModelSelection|undefined>;request(method:string,input?:Record<string,unknown>):Promise<any>;subscribe(listener:(state:BrowserSnapshot)=>void):()=>void;source(sessionId:string,source:{title:string;url:string;at:number}):Promise<void>}
