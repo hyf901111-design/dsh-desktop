@@ -24,7 +24,7 @@ it('translates and restores over 1000 records without changing elements or readi
 it('keeps restore records after tab cancellation and preserves website updates',async()=>{
  const f=page('<p>Hello world</p><p>Second text</p>');await f.manager.start(f.target);f.manager.cancel(f.target.tabId)
  f.w.document.querySelector('p')!.textContent='Site live update';const restored=await f.manager.restore(f.target.tabId)
- expect(f.w.document.querySelectorAll('p')[1]!.textContent).toBe('Second text');expect(f.w.document.querySelector('p')!.textContent).toBe('Site live update');expect(restored.state).toBe('partial');f.manager.dispose()
+ expect(f.w.document.querySelectorAll('p')[1]!.textContent).toBe('Second text');expect(f.w.document.querySelector('p')!.textContent).toBe('Site live update');expect(restored.canRestore).toBe(false);expect(restored.state).toBe('idle');f.manager.dispose()
 })
 it('revokes pending model results before restore so late response cannot retranslate',async()=>{
  const f=page();let release!:(value:Response)=>void;vi.stubGlobal('fetch',()=>new Promise<Response>(resolve=>{release=resolve}))
