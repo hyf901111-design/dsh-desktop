@@ -1,4 +1,5 @@
 import {BrowserAppView} from './browser/view'
+import {NativeBrowserMenuProjection} from './browser/native-menus'
 import {createComponentDataBridge} from './component-data-bridge'
 import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
@@ -246,7 +247,8 @@ function initializeUi(): void {
     source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
   },workspaceSurfaceHost)
   ipcRenderer.on('browser-app:shortcut',(_event,value)=>window.dispatchEvent(new CustomEvent('sherlock:browser-shortcut',{detail:value})))
-  window.addEventListener('unload',()=>browserApp.dispose(),{once:true})
+  const browserMenus=new NativeBrowserMenuProjection(document,{request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),subscribeAction:listener=>{const handle=(_event:unknown,value:any)=>listener(value);ipcRenderer.on('browser-app:menu-event',handle);return()=>ipcRenderer.removeListener('browser-app:menu-event',handle)}})
+  window.addEventListener('unload',()=>{browserMenus.dispose();browserApp.dispose()},{once:true})
   const noteOwners = new Map<string, string>()
   let noteIdentityEpoch=0
   const noteHistory=createNoteHistoryLoader({currentEpoch:()=>noteIdentityEpoch,load:sessionId=>ipcRenderer.invoke('notes:request','conversation-load',{sessionId}),accept:(sessionId,value)=>{noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))},onError:error=>console.warn('[notes-history]',noteUiError(error instanceof Error?error.message:String(error)))})

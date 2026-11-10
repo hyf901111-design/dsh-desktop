@@ -8,12 +8,13 @@ import {join,basename} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {load} from 'cheerio'
 import {createBrowserFindOverlay} from './find-overlay'
+import {createBrowserMenuOverlay} from './menu-overlay'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
 import {BrowserModel,browserAddress,browserDownloadAddress,availableDownloadPath,browserInternalPage} from './model'
 import type {BrowserSnapshot,BrowserDownload,BrowserTab} from '../../shared/browser-app'
 
 const channel='browser-app:request',eventChannel='browser-app:state'
-type Options={ipcMain:IpcMain;getMainWindow():BrowserWindow|undefined;root:string;materialDirectory(sessionId:string):Promise<string>;findPreload?:string}
+type Options={ipcMain:IpcMain;getMainWindow():BrowserWindow|undefined;root:string;materialDirectory(sessionId:string):Promise<string>;findPreload?:string;menuPreload?:string}
 type Live={view:WebContentsView;awake?:boolean;epoch:number;findRequestId?:number;timeout?:ReturnType<typeof setTimeout>}
 type DownloadOwner={id:string;private:boolean;view:WebContentsView}
 const retryDownloadAddress=(url:string)=>{if(!/^https?:\/\//i.test(url))throw Error('只能重试 HTTP(S) 下载，请重新打开原网页导出其他文件。');return browserAddress(url)}
@@ -30,7 +31,11 @@ export function registerBrowserApp(options:Options){
  const activePermissions=()=>{try{const tab=model.tab(model.activeId);return permissions.get(permissionKey(tab,new URL(tab.url).origin))??{}}catch{return {}}}
  const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
  const finder=nativeFind?createBrowserFindOverlay(findPreload,window,value=>{const tab=current();if(value.kind==='close'){finder?.hide();live.get(tab.id)?.view.webContents.focus();window().webContents.send('browser-app:shortcut',{key:'Escape'});void request('find',{id:tab.id,text:''}).catch(()=>{})}else if(value.kind==='shortcut'){window().webContents.send('browser-app:shortcut',value)}else void request('find',{id:tab.id,text:value.text,next:value.kind==='next',forward:value.forward}).catch(()=>{})}):undefined
- const snapshot=():BrowserSnapshot=>({nativeFind,pageEdited,sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
+ const menuPreload=options.menuPreload||join(__dirname,'../preload/browser-menu.cjs'),nativeMenus=existsSync(menuPreload)
+ let menuScope:{id:string;revision:number;owner:string;tabId:string;url:string;bounds?:{x:number;y:number;width:number;height:number};zoom?:number}|undefined
+ const menu=createBrowserMenuOverlay(menuPreload,window,value=>{const scope=menuScope;if(!scope||value.id!==scope.id||value.revision!==scope.revision||!appActive||ownerSessionId!==scope.owner||current().id!==scope.tabId||current().url!==scope.url){menu.hide();menuScope=undefined;return}window().webContents.send('browser-app:menu-event',value);if(value.kind==='dismiss'){hideMenu();const through=value.through,b=scope.bounds,z=scope.zoom||1;if(through&&b){const win=window(),[width=0,height=0]=win.getContentSize(),x=Math.round(b.x+through.x*z),y=Math.round(b.y+through.y*z);if(x>=0&&y>=0&&x<width&&y<height){const within=rect&&visible&&x>=rect.x&&x<rect.x+rect.width&&y>=rect.y&&y<rect.y+rect.height,target=within?live.get(scope.tabId)?.view.webContents:win.webContents;if(target&&!target.isDestroyed()){target.focus();const point={x:within?x-rect!.x:x,y:within?y-rect!.y:y,button:through.button||'left',clickCount:1};target.sendInputEvent({...point,type:'mouseDown'});target.sendInputEvent({...point,type:'mouseUp'})}}}}})
+ const hideMenu=(notify=false)=>{const scope=menuScope;menuScope=undefined;menu.hide();if(notify&&scope)window().webContents.send('browser-app:menu-event',{id:scope.id,revision:scope.revision,kind:'dismiss'})}
+ const snapshot=():BrowserSnapshot=>({nativeFind,nativeMenus,pageEdited,sitePermissions:activePermissions(),tabs:model.tabs,activeId:model.activeId,history:model.history,bookmarks:model.bookmarks,closed:model.closed,folders:model.folders,downloads,settings:model.settings,...(storageWarning?{storageWarning}:{})})
  const pageAgent=createBrowserPageAgent(()=>{const tab=current(),entry=live.get(tab.id);if(!appActive||!entry||entry.view.webContents.isDestroyed()||tab.page||!tab.url||tab.error)return undefined;return {tabId:tab.id,url:entry.view.webContents.getURL(),title:entry.view.webContents.getTitle()||tab.title,webContents:entry.view.webContents}})
  const authority=(documentBound=false)=>{const epoch=documentBound?appEpoch:ownerEpoch,owner=ownerSessionId,tabId=current().id;return()=>{if(!appActive||(documentBound?appEpoch:ownerEpoch)!==epoch||ownerSessionId!==owner||current().id!==tabId)throw Error('当前页签或会话已变化，旧请求已拒绝。')}}
  const persist=()=>{
@@ -42,6 +47,7 @@ export function registerBrowserApp(options:Options){
  const closeDownloadOwners=(isPrivate?:boolean)=>{for(const [key,owner]of downloadOwners)if(isPrivate===undefined||key===isPrivate){downloadOwners.delete(key);if(!owner.view.webContents.isDestroyed())owner.view.webContents.close()}}
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
  const sync=()=>{
+  if(menuScope&&(!appActive||ownerSessionId!==menuScope.owner||current().id!==menuScope.tabId||current().url!==menuScope.url))hideMenu()
   let shown=false
   for(const [id,e]of live){
    const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error
@@ -50,7 +56,7 @@ export function registerBrowserApp(options:Options){
    const awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error&&(e.awake===true||show&&!!rect)
    if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}
   }
-  corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()
+  corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise();menu.raise()
  }
  const sessionFor=(tab:Pick<BrowserTab,'private'>)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
@@ -98,6 +104,7 @@ export function registerBrowserApp(options:Options){
   wc.on('will-navigate',valid);wc.on('will-redirect',valid)
   let popupGestureAt=0
   wc.on('before-mouse-event',(_event,input)=>{if(input.type==='mouseDown')popupGestureAt=Date.now()})
+  wc.on('before-mouse-event',(_event,mouse)=>{if(mouse.type==='mouseDown'&&menu.isShown())hideMenu(true)})
   wc.on('before-input-event',(_event,input)=>{if(input.type==='keyDown')popupGestureAt=Date.now()})
   wc.setWindowOpenHandler(({url})=>{try{const origin=new URL(wc.getURL()).origin,gesture=Date.now()-popupGestureAt<1000;popupGestureAt=0;if(!gesture&&permissions.get(permissionKey(tab,origin))?.popups!=='allow')return {action:'deny'};const target=browserAddress(url);const next=model.newTab(tab.private);void navigate(next,target);publish()}catch{}return {action:'deny'}})
   wc.on('did-start-loading',()=>{if(model.activeId===tab.id){appEpoch++;pageEdited=false}tab.loading=true;tab.error=undefined;publish()})
@@ -124,10 +131,18 @@ export function registerBrowserApp(options:Options){
  }
  const inputString=(value:unknown,max=1024)=>{if(typeof value!=='string'||value.length>max)throw Error('参数无效。');return value}
  const request=async(method:string,input:Record<string,any>={})=>{
-  if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>(method==='bookmarks-remove'?700000:32000))throw Error('浏览器参数无效。')
+  if(typeof method!=='string'||!input||typeof input!=='object'||Array.isArray(input)||JSON.stringify(input).length>(method==='menu'?6000000:method==='bookmarks-remove'?700000:32000))throw Error('浏览器参数无效。')
   const internalPage=method==='internal-page'?browserInternalPage(input.page):undefined
   if(!model.tabs.length)model.newTab()
-  if(method==='snapshot')return snapshot()
+  if(method==='snapshot'){if(nativeMenus)void menu.warm();return snapshot()}
+  if(method==='menu-hide'){if(!input?.id||input.id===menuScope?.id){const focused=menu.isFocused();hideMenu();if(focused)window().webContents.focus()}return true}
+  if(method==='menu'){
+   if(!nativeMenus||!appActive||input.owner!==ownerSessionId||input.tabId!==current().id||input.url!==current().url||!current().url||current().page||current().error)throw Error('菜单所属网页已变化。')
+   const win=window(),z=win.webContents.getZoomFactor(),[width=0,height=0]=win.getContentSize(),b=input.bounds
+   if(!b||!['x','y','width','height'].every(k=>Number.isFinite(b[k]))||b.x<0||b.y<0||b.width<=0||b.height<=0||b.x*z+b.width*z>width+2||b.y*z+b.height*z>height+2)throw Error('菜单位置无效。')
+   menuScope={id:input.id,revision:input.revision,owner:ownerSessionId,tabId:current().id,url:current().url,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.round(b.width*z),height:Math.round(b.height*z)},zoom:z}
+   return menu.show({...input,id:input.id,revision:input.revision,html:input.html,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.min(width-Math.round(b.x*z),Math.round(b.width*z)),height:Math.min(height-Math.round(b.y*z),Math.round(b.height*z))},zoom:z})
+  }
   if(method==='context'){if(!appActive)return undefined;if(current().url&&current().loading)throw Error('网页正在加载，请稍候再发送。');return pageAgent.context(authority(true))}
   if(method==='undo-page'){const authorize=authority(true);authorize();const source=await pageAgent.context(authorize);if(!source?.canUndo)throw Error('当前网页没有可撤销的修改。');await pageAgent.run({op:'undo',revision:source.revision,tabId:source.tabId,url:source.url},undefined,authorize);authorize();pageEdited=false;publish();return snapshot()}
   if(method==='layout'){
@@ -200,7 +215,7 @@ export function registerBrowserApp(options:Options){
    publish();return snapshot()
   }
   const tab=model.tab(input.id??model.activeId)
-  if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();if(bitmap.isEmpty())return '';const image=bitmap.resize({width:Math.min(1600,bitmap.getSize().width)});return input.purpose==='overlay'?'data:image/jpeg;base64,'+image.toJPEG(95).toString('base64'):image.toDataURL()}
+  if(method==='capture'){if(input.purpose==='overlay')throw Error('界面菜单不使用网页截图。');const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();if(bitmap.isEmpty())return '';const image=bitmap.resize({width:Math.min(1600,bitmap.getSize().width)});return image.toDataURL()}
   if(method==='navigate'){void navigate(tab,browserAddress(input.url,model.settings.engine));return snapshot()}
   if(method==='home'){
    if(!tab.page&&!tab.url&&!tab.loading&&!tab.error)return snapshot()
@@ -255,9 +270,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();pageAgent.dispose();finder?.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
