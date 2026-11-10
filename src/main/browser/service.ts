@@ -34,7 +34,7 @@ export function registerBrowserApp(options:Options){
  const publish=()=>{if(disposed)return;finder?.update(current());const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
- const sync=()=>{for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error;if(show&&rect)e.view.setBounds(rect);e.view.setVisible(show&&!!rect)}}
+ const sync=()=>{for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error;if(show&&rect){e.view.setBounds(rect);e.view.setBorderRadius(Math.round(16*window().webContents.getZoomFactor()))}e.view.setVisible(show&&!!rect)}}
  const sessionFor=(tab:BrowserTab)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)

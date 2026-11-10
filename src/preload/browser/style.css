@@ -161,3 +161,6 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-root .eb-settings .eb-setting>span:first-child{text-align:left;min-width:0}
 .eb-settings .eb-setting small{margin-top:4px;font-size:12px;line-height:20px}
 .eb-root .eb-settings>[data-action=settings-close]{height:40px;flex:none;padding:0 16px;background:var(--eb-field);font-size:14px;line-height:22px}
+
+.eb-content{border-radius:16px}
+.eb-root .eb-app-label,.eb-root .eb-app-label *{-webkit-app-region:drag;user-select:none;cursor:default}
