@@ -177,3 +177,5 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-shortcut-icon{transition:background-color 120ms ease,color 120ms ease}
 .eb-shortcuts button:hover .eb-shortcut-icon{background:color-mix(in srgb,var(--eb-field),var(--eb-ink) 12%)}
 @media(prefers-reduced-motion:reduce){.eb-shortcut-icon{transition:none}}
+
+.eb-tab{user-select:none;touch-action:none;-webkit-user-drag:none}
