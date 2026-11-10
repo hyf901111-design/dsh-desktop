@@ -11,6 +11,10 @@ const button=(action:string,label:string,name?:keyof typeof browserIcons,disable
 const menuItem=(action:string,label:string,name:keyof typeof browserIcons,key='',disabled=false)=>`<button type="button" role="menuitem" class="eb-menu-item" data-action="${action}" ${disabled?'disabled':''}>${icon(name)}<span>${label}</span><kbd>${key}</kbd></button>`
 const hostname=(url:string)=>{try{return new URL(url).hostname}catch{return url}}
 const bytes=(n:number)=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB'
+// The shared Figma rules own the board menu's material, type and row geometry.
+// These structural rules also work before the research module mounts its CSS.
+const pageContextCss='[data-browser-page-context-menu]{position:fixed;z-index:3000;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}[data-browser-page-context-menu]>button{display:flex;align-items:center;gap:20px;box-sizing:border-box;width:100%;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer}[data-browser-page-context-menu]>button:disabled{opacity:.45;cursor:default}[data-browser-page-context-menu]>[role=separator]{height:1px;margin:5px;background:var(--odyssey-menu-border)}'
+type PageContextMenu={element:HTMLElement;contextToken:string;tabId:string;url:string;ownerSessionId:string;x:number;y:number;loading:boolean}
 export class BrowserAppView {
  readonly root:HTMLElement
  private startSection='';private startQuery='';private siteCookieCount=0;private composing=false;private editingBookmark?:BrowserLink;private state?:BrowserSnapshot;private sessionId='';private panel='';private folder='';private query='';private recent=false;private findFocus=0;private findOpen=false;private findText='';private suggestions=false;private suggestionIndex=0;private suggestionRows:BrowserLink[]=[];private settings=false;private image='';private notice='';private noticeError=false;private noticeTimer?:ReturnType<typeof setTimeout>;private disposed=false;private frame=0;private lastLayout='';private epoch=0;private lastTab='';private unsubscribe:()=>void;private observer?:MutationObserver;private resize?:ResizeObserver;private returningFocus?:HTMLElement
@@ -26,8 +30,9 @@ export class BrowserAppView {
  private questionUnsubscribe?:()=>void
  private questionStarting=false
  private questionEpoch=0
+ private pageContext?:PageContextMenu
  constructor(private document:Document,private bridge:BrowserBridge,private host:WorkspaceSurfaceHost){
-  const style=document.createElement('style');style.textContent=css;style.id='browser-app-style';if(!document.getElementById(style.id))document.head.append(style)
+  const style=document.createElement('style');style.textContent=css+pageContextCss;style.id='browser-app-style';if(!document.getElementById(style.id))document.head.append(style)
   this.root=document.createElement('section');this.root.className='eb-root';this.root.setAttribute('aria-label','浏览器');this.root.dataset.browserApp='';this.root.hidden=true
   host.register('browser',this.root)
   this.questionUnsubscribe=bridge.subscribeQuestion?.(update=>{const question=this.question;if(!question||question.ticket!==update.ticket)return;const owner=update.state.ownerSessionId,ownHandoff=question.state.ownerSessionId===null&&typeof owner==='string'&&!!owner&&update.state.busy;if(owner!==question.state.ownerSessionId&&!ownHandoff||owner===question.state.ownerSessionId&&update.state.draftRev<question.state.draftRev)return;if(ownHandoff)question.pendingHandoff=owner!;question.state=update.state;if(update.state.sent||!update.state.active){this.cancelQuestion();return}if(!this.questionValid(question)){this.cancelQuestion();return}void this.presentQuestion().catch(error=>this.toast(error.message,true))})
@@ -39,19 +44,46 @@ export class BrowserAppView {
   if(win.ResizeObserver){this.resize=new win.ResizeObserver(this.schedule);this.resize.observe(this.root)}
  }
  async open(sessionId='',url?:string){
-  this.sessionId=sessionId;const epoch=++this.epoch;this.state=await this.bridge.request('snapshot');if(this.disposed||epoch!==this.epoch)return
+  this.closePageContextMenu();this.sessionId=sessionId;const epoch=++this.epoch;this.state=await this.bridge.request('snapshot');if(this.disposed||epoch!==this.epoch)return
   this.host.open('browser');this.root.hidden=false;this.render()
   if(url)await this.run('new',{url});else if(this.tab()?.url)await this.run('select',{id:this.state!.activeId})
   this.schedule()
  }
- close(sessionId?:string){if(sessionId&&sessionId!==this.sessionId)return;this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();clearTimeout(this.workspaceTimer);this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.epoch++;this.sessionId='';this.panel='';this.panelPresented=false;this.image='';this.lastLayout='';this.host.close('browser');this.root.hidden=true;void this.bridge.request('layout',{active:false,visible:false}).catch(()=>{})}
+ close(sessionId?:string){if(sessionId&&sessionId!==this.sessionId)return;this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();clearTimeout(this.workspaceTimer);this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.epoch++;this.sessionId='';this.panel='';this.panelPresented=false;this.image='';this.lastLayout='';this.host.close('browser');this.root.hidden=true;void this.bridge.request('layout',{active:false,visible:false}).catch(()=>{})}
  private onOpen=(event:Event)=>{const d=(event as CustomEvent).detail;void this.open(typeof d?.sessionId==='string'?d.sessionId:'',d?.url).catch(error=>this.toast(error.message,true))}
  private onContext=(event:Event)=>{const id=(event as CustomEvent).detail?.sessionId;const next=typeof id==='string'?id:'';if(next!==this.sessionId){const q=this.question;if(q?.pendingHandoff){if(next===q.pendingHandoff)q.pendingHandoff=undefined;else this.cancelQuestion()}this.sessionId=next;this.render()}this.schedule()}
  private onClose=(event:Event)=>this.close((event as CustomEvent).detail?.sessionId)
- private surface=()=>{if(this.host.current()?.surface!=='browser'){this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();clearTimeout(this.workspaceTimer);this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.root.hidden=true;this.panel='';this.panelPresented=false;this.suggestions=false;this.image='';}this.schedule()}
+ private surface=()=>{if(this.host.current()?.surface!=='browser'){this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();clearTimeout(this.workspaceTimer);this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.root.hidden=true;this.panel='';this.panelPresented=false;this.suggestions=false;this.image='';}this.schedule()}
  private tabIcon(tab:BrowserTab){if(tab.page)return icon(tab.page==='history'?'history':'download');if(tab.loading)return `<span class="eb-tab-loading" aria-hidden="true">${icon('ring')}</span>`;const source=tab.favicon;return tab.url&&typeof source==='string'&&source.length<=32768&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(source)?`<span class="eb-tab-site-icon" aria-hidden="true"><img class="eb-tab-favicon" src="${source}" alt="" draggable="false" referrerpolicy="no-referrer">${icon('globe')}</span>`:icon(tab.private?'moon':'globe')}
  private faviconError=(event:Event)=>{const image=event.target as HTMLImageElement;if(image.matches?.('img.eb-tab-favicon')){image.hidden=true;image.parentElement!.dataset.faviconFailed='true'}}
  private tab(){return this.state?.tabs.find(t=>t.id===this.state?.activeId)}
+ private pageContextValid(menu:PageContextMenu){const tab=this.tab();return !this.disposed&&!this.root.hidden&&this.host.current()?.surface==='browser'&&this.pageContext===menu&&menu.tabId===tab?.id&&menu.url===tab.url&&menu.ownerSessionId===this.sessionId&&menu.loading===!!tab.loading&&!tab.page&&!tab.error&&!this.settings&&!this.managingBookmarks}
+ private closePageContextMenu(){const menu=this.pageContext;this.pageContext=undefined;menu?.element.remove()}
+ private positionPageContextMenu(){
+  const menu=this.pageContext;if(!menu)return;const win=this.document.defaultView!,element=menu.element,box=element.getBoundingClientRect(),left=Math.max(12,Math.min(menu.x,win.innerWidth-box.width-12)),top=Math.max(12,Math.min(menu.y,win.innerHeight-box.height-12))
+  if(element.style.left!==left+'px')element.style.left=left+'px';if(element.style.top!==top+'px')element.style.top=top+'px'
+ }
+ pageContextMenu(value:any){
+  const tab=this.tab();if(this.disposed||this.root.hidden||this.host.current()?.surface!=='browser'||!tab?.url||tab.page||tab.error||this.settings||this.managingBookmarks||!value||value.tabId!==tab.id||value.url!==tab.url||value.ownerSessionId!==this.sessionId||typeof value.contextToken!=='string'||!value.contextToken||!Number.isFinite(value.x)||!Number.isFinite(value.y)||!Array.isArray(value.items)||!value.items.length||value.items.length>80)return
+  this.closePageContextMenu();this.cancelFocusRestore();this.dismiss(false)
+  const element=this.document.createElement('div');element.className='rScV5Q_contextMenu ew-grid-context-menu';element.dataset.browserPageContextMenu='';element.setAttribute('role','menu');element.setAttribute('aria-label','网页操作')
+  const ids=new Set<string>()
+  for(const item of value.items){
+   if(!item||typeof item.id!=='string'||!/^[-\w:]{1,80}$/.test(item.id)||ids.has(item.id))continue;ids.add(item.id)
+   if(item.separator===true){const line=this.document.createElement('div');line.setAttribute('role','separator');element.append(line);continue}
+   if(typeof item.label!=='string'||!item.label||item.label.length>512)continue
+   const row=this.document.createElement('button');row.type='button';row.setAttribute('role','menuitem');row.dataset.browserContextId=item.id;row.disabled=item.enabled===false;row.append(item.label)
+   if(typeof item.shortcut==='string'&&item.shortcut.length<=80){const key=this.document.createElement('span');key.className='rScV5Q_contextMenuShortcut';key.textContent=item.shortcut;key.setAttribute('aria-hidden','true');row.append(key)}element.append(row)
+  }
+  if(!element.querySelector('button'))return
+  const menu:PageContextMenu={element,contextToken:value.contextToken,tabId:value.tabId,url:value.url,ownerSessionId:value.ownerSessionId,x:value.x,y:value.y,loading:!!tab.loading};this.pageContext=menu
+  element.addEventListener('click',event=>{const row=(event.target as Element).closest<HTMLButtonElement>('button[data-browser-context-id]');if(!row||row.disabled||!this.pageContextValid(menu))return;event.stopPropagation();this.closePageContextMenu();void this.bridge.request('context-command',{contextToken:menu.contextToken,itemId:row.dataset.browserContextId}).catch(error=>{if(!this.disposed&&!this.root.hidden&&this.tab()?.id===menu.tabId&&this.tab()?.url===menu.url&&this.sessionId===menu.ownerSessionId)this.toast(error instanceof Error?error.message:String(error),true)})})
+  element.addEventListener('keydown',event=>{if(event.isComposing||!this.pageContextValid(menu))return;const rows=[...element.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')],at=rows.indexOf(this.document.activeElement as HTMLButtonElement);if(event.key==='Escape'){event.preventDefault();event.stopPropagation();this.closePageContextMenu()}else if(['ArrowDown','ArrowUp','Home','End','Tab'].includes(event.key)){event.preventDefault();event.stopPropagation();const index=event.key==='Home'?0:event.key==='End'?rows.length-1:(at+(event.key==='ArrowUp'||event.key==='Tab'&&event.shiftKey?-1:1)+rows.length)%rows.length;rows[index]?.focus({preventScroll:true});rows[index]?.scrollIntoView({block:'nearest'})}})
+  this.document.body.append(element);this.positionPageContextMenu()
+  // A real native popup will focus its own first row. Never take the source
+  // document's focus from the live webpage just to prepare the projection.
+  if(!this.state?.nativeMenus&&this.document.hasFocus())element.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({preventScroll:true})
+ }
  private cancelQuestion(deleteImage=false){this.questionEpoch++;const question=this.question;this.question=undefined;if(!question)return;void this.bridge.request('region-cancel',{operationId:question.operationId}).catch(()=>{});void this.bridge.question?.(question.state.ownerSessionId,{kind:deleteImage?'delete':'close',ticket:question.ticket}).catch(()=>{})}
  private questionValid(q:NonNullable<BrowserAppView['question']>){return !this.disposed&&!this.root.hidden&&this.host.current()?.surface==='browser'&&this.question===q&&this.tab()?.id===q.tabId&&this.tab()?.url===q.url&&((this.sessionId||null)===q.state.ownerSessionId||!this.sessionId&&q.pendingHandoff===q.state.ownerSessionId)}
  private presentQuestion(first=false){const q=this.question;if(!q?.operationId||!q.rect||!this.questionValid(q))return Promise.resolve();return this.bridge.request('region-question',{operationId:q.operationId,...(first?{rect:q.rect}:{}),state:q.state}).then(()=>{})}
@@ -62,7 +94,7 @@ export class BrowserAppView {
    if(value.action==='translate'){const selection=await this.bridge.translationModel?.(this.sessionId||null);await this.run('translation-start',{contextToken:value.contextToken,selection});return}
    if(value.action==='translation-restore'||value.action==='translation-stop'){const result=await this.run(value.action,{contextToken:value.contextToken});if(value.action==='translation-restore')this.toast(result?.translation?.error||'已还原页面语言。',!!result?.translation?.error);return}
    if(value.action==='ask-ework'){await this.askRegion(value);return}
-   if(['save-page','print','reload'].includes(value.action)){const method=value.action==='save-page'?'save':value.action;const result=await this.run(method,{id:value.tabId,contextToken:value.contextToken});if(method==='save'&&result.saved)this.toast('网页已保存')}
+   if(['save-page','save-image','print','reload'].includes(value.action)){const method=value.action==='save-page'?'save':value.action;const result=await this.run(method,{id:value.tabId,contextToken:value.contextToken});if(method==='save'&&result.saved)this.toast('网页已保存')}
   }catch(error){this.toast(error instanceof Error?error.message:String(error),true)}
  }
  private async askRegion(value:any){
@@ -88,10 +120,11 @@ export class BrowserAppView {
    if(!state||this.question!==q||state.ownerSessionId===q.state.ownerSessionId&&state.draftRev<q.state.draftRev)return;q.state=state;if(state.sent||!state.active)this.cancelQuestion();else await this.presentQuestion()
   }catch(error){if(this.question===q){q.state={...q.state,busy:false,error:error instanceof Error?error.message:String(error)};await this.presentQuestion().catch(()=>{})}}
  }
- private prepareExternalOverlay=()=>{if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen))this.dismiss(false)}
- private nativeMenuDismiss=()=>{if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen))this.dismiss()}
+ private prepareExternalOverlay=()=>{this.closePageContextMenu();if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen))this.dismiss(false)}
+ private nativeMenuDismiss=()=>{this.closePageContextMenu();if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen))this.dismiss()}
  private schedule=()=>{if(this.disposed||this.frame)return;this.frame=this.document.defaultView!.requestAnimationFrame(()=>{this.frame=0;this.layout()})}
  private layout(){
+  this.positionPageContextMenu()
   const center=this.document.querySelector<HTMLElement>('.pI_x6G_centerCol'),box=center?.getBoundingClientRect()
   if(box){const win=this.document.defaultView!,bottom=box.bottom>win.innerHeight?win.innerHeight-10:box.bottom;
    // The resident bottom pane owns this reserved strip, including live drag sizes.
@@ -115,6 +148,7 @@ export class BrowserAppView {
  private async run(method:string,input:Record<string,unknown>={}){const result=await this.bridge.request(method,input);if(result?.tabs){this.state=result;this.render()}return result}
  private toast(message:string,error=false){this.notice=message;this.noticeError=error;clearTimeout(this.noticeTimer);this.render();this.noticeTimer=setTimeout(()=>{this.notice='';this.render()},5000)}
  private async show(panel:string){
+  this.closePageContextMenu()
   if(this.panel===panel){this.dismiss();return}this.cancelFocusRestore();this.returningFocus=this.document.activeElement as HTMLElement
   if(panel==='tabs'){const box=this.root.querySelector('[aria-selected=true].eb-tab')?.getBoundingClientRect(),root=this.root.getBoundingClientRect();this.root.style.setProperty('--eb-tab-menu-x',Math.max(8,Math.min(root.width-316,(box?.left??root.left)-root.left))+'px')}
   if(panel==='tab-list')this.positionTabList();if(panel==='bookmarks'){this.bookmarkAnchorBar=!!this.returningFocus?.closest('.eb-bookmarks-bar');this.positionBookmarks()}
@@ -126,7 +160,7 @@ export class BrowserAppView {
  private positionTabList(){const root=this.root.getBoundingClientRect(),anchor=this.root.querySelector('.eb-tab-switcher')?.getBoundingClientRect();if(anchor)this.root.style.setProperty('--eb-tab-list-x',Math.max(8,Math.min(root.width-316,anchor.left-root.left))+'px')}
  private positionBookmarks(){const root=this.root.getBoundingClientRect(),anchor=this.root.querySelector(this.bookmarkAnchorBar?'.eb-bookmarks-bar [data-action=bookmarks]':'.eb-toolbar [data-action=bookmarks]')?.getBoundingClientRect();if(!anchor)return;const width=Math.min(380,root.width-32),right=Math.min(Math.max(12,root.right-anchor.right),Math.max(12,root.width-width-12));this.root.style.setProperty('--eb-bookmarks-top',Math.max(8,anchor.bottom-root.top+6)+'px');this.root.style.setProperty('--eb-bookmarks-right',right+'px')}
  private focusZoom(){(this.root.querySelector<HTMLElement>('[data-browser-panel] .eb-zoom-controls button:not(:disabled)')??this.root.querySelector<HTMLElement>('[data-browser-panel=zoom] h2 button'))?.focus({preventScroll:true})}
- private dismiss(restoreFocus=true){this.panel='';this.panelPresented=false;this.suggestions=false;this.findOpen=false;this.query='';this.render();if(restoreFocus)this.restoreFocus();this.schedule();if(this.tab()?.url)void this.bridge.request('find',{id:this.tab()?.id,text:''}).catch(()=>{})}
+ private dismiss(restoreFocus=true){this.closePageContextMenu();this.panel='';this.panelPresented=false;this.suggestions=false;this.findOpen=false;this.query='';this.render();if(restoreFocus)this.restoreFocus();this.schedule();if(this.tab()?.url)void this.bridge.request('find',{id:this.tab()?.id,text:''}).catch(()=>{})}
  private cancelFocusRestore(){if(this.pendingFocusRestore)this.document.defaultView?.removeEventListener('focus',this.pendingFocusRestore);this.pendingFocusRestore=undefined}
  private restoreFocus(){
   // Closing a native surface returns keyboard ownership asynchronously.
@@ -149,6 +183,7 @@ export class BrowserAppView {
  }
  private row(row:BrowserLink,action='open-url',history=false){return `<button type="button" class="eb-list-row" data-action="${action}" data-url="${esc(row.url)}" data-row-id="${esc(row.id)}">${icon('globe')}<span class="eb-row-text"><strong>${esc(row.title)}</strong><small>${history?esc(new Date(row.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))+' · '+esc(hostname(row.url)):esc(hostname(row.url))+(row.at?' · '+esc(new Date(row.at).toLocaleDateString()):'')}</small></span></button>`}
  private render(){
+  if(this.pageContext&&!this.pageContextValid(this.pageContext))this.closePageContextMenu()
   if(this.draggingTab)return;
   if(!this.state||this.disposed||this.composing||this.closingTab)return
   const t=this.tab()!;if(!t)return
@@ -228,6 +263,7 @@ export class BrowserAppView {
  private addressPointer=(event:PointerEvent)=>{this.tabPointerMove(event);const input=(event.target as Element).closest<HTMLInputElement>('[data-field=address]');this.addressPress=input&&event.button===0?{x:event.clientX,y:event.clientY,select:this.addressBlurred||this.document.activeElement!==input}:undefined;this.addressBlurred=false}
  private click=(event:MouseEvent)=>{const ignore=this.document.defaultView!.performance.now()<this.ignoreTabClickUntil;this.ignoreTabClickUntil=0;if(ignore&&event.detail>0&&(event.target as Element).closest('.eb-tab')){event.preventDefault();event.stopPropagation();return}const address=(event.target as Element).closest<HTMLInputElement>('[data-field=address]');if(address){const press=this.addressPress;this.addressPress=undefined;if(press?.select&&Math.hypot(event.clientX-press.x,event.clientY-press.y)<4){event.preventDefault();address.select()}return}const target=(event.target as Element).closest<HTMLElement>('[data-action]');if(!target||target.hasAttribute('disabled'))return;event.preventDefault();event.stopPropagation();void this.action(target.dataset.action!,target).catch(error=>this.toast(error instanceof Error?error.message:String(error),true))}
  private async action(action:string,target?:HTMLElement){
+  this.closePageContextMenu()
   const t=this.tab();if(!t)return
   if(['select','new','private','open-url','suggestion','home','settings','reload','back','forward','close'].includes(action))this.managingBookmarks=false
   if(action==='translation-progress'){this.toast(this.state?.translation?.error||(this.state?.translation?.state==='translating'?'网页正在翻译，可通过右键菜单停止。':'可通过网页右键菜单还原页面语言。'),this.state?.translation?.state==='error');return}
@@ -337,6 +373,6 @@ export class BrowserAppView {
  private shortcut=(event:KeyboardEvent)=>{if(this.root.hidden||this.host.current()?.surface!=='browser'||event.isComposing||this.composing||!(event.metaKey||event.ctrlKey))return;if(this.pointerTabDrag)this.tabPointerCancel();const key=event.key.toLowerCase();if(this.managingBookmarks&&key==='f'){event.preventDefault();event.stopPropagation();this.bookmarkManager?.root.querySelector<HTMLInputElement>('[data-bm-field=search]')?.focus();return}const action=key==='t'?(event.shiftKey?'restore':'new'):key==='w'?'close':key==='r'?'reload':key==='f'?'find':key==='d'?'save':key==='p'?'print':key==='s'?'save-page':key==='y'?'history':key==='j'?'downloads':key==='n'&&event.shiftKey?'private':'';if(key==='l'){event.preventDefault();event.stopPropagation();const address=this.root.querySelector<HTMLInputElement>('[data-field=address]');address?.focus();address?.select()}else if(action){event.preventDefault();event.stopPropagation();void this.action(action).catch(error=>this.toast(error.message,true))}}
  private nativeShortcut=(event:Event)=>{const key=(event as CustomEvent).detail;if(key?.key==='Escape'){this.returningFocus=undefined;this.dismiss();return}if(typeof key?.key==='string')this.shortcut(new this.document.defaultView!.KeyboardEvent('keydown',key))}
  private contextMenu=(event:Event)=>{const tab=(event.target as Element).closest<HTMLElement>('.eb-tab');if(!tab)return;event.preventDefault();void this.run('select',{id:tab.dataset.id}).then(()=>this.show('tabs'))}
- private outside=(event:Event)=>{if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen)&&!this.root.querySelector('.eb-overlay-layer')?.contains(event.target as Node)&&!(event.target as Element).closest?.('.eb-toolbar,.eb-tabs'))this.dismiss()}
+ private outside=(event:Event)=>{if(this.pageContext&&!this.pageContext.element.contains(event.target as Node))this.closePageContextMenu();if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen)&&!this.root.querySelector('.eb-overlay-layer')?.contains(event.target as Node)&&!(event.target as Element).closest?.('.eb-toolbar,.eb-tabs'))this.dismiss()}
  dispose(){this.cancelQuestion();this.questionUnsubscribe?.();for(const page of this.activityPages.values())page.dispose();this.activityPages.clear();this.bookmarkManager?.dispose();this.disposed=true;clearTimeout(this.workspaceTimer);for(const animation of this.tabAnimations)animation.cancel();this.tabAnimations.clear();this.close();this.unsubscribe();clearTimeout(this.noticeTimer);this.observer?.disconnect();this.resize?.disconnect();this.document.defaultView?.cancelAnimationFrame(this.frame);this.document.defaultView?.removeEventListener('blur',this.addressBlur);this.document.defaultView?.removeEventListener('resize',this.schedule);this.document.defaultView?.removeEventListener('sherlock:browser-shortcut',this.nativeShortcut);this.document.removeEventListener('sherlock:browser-overlay-prepare',this.prepareExternalOverlay);this.document.removeEventListener('sherlock:browser-native-menu-dismiss',this.nativeMenuDismiss);this.document.removeEventListener('keydown',this.shortcut);this.document.removeEventListener('pointerdown',this.outside,true);this.document.removeEventListener('sherlock:browser-open',this.onOpen);this.document.removeEventListener('sherlock:browser-close',this.onClose);this.document.removeEventListener('sherlock:browser-context',this.onContext);this.document.removeEventListener('sherlock:workspace-surface-change',this.surface);this.root.remove()}
 }
