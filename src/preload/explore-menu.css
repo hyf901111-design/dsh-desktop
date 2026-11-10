@@ -6,7 +6,7 @@
 .sherlock-account-button[data-explore-trigger] span{font-size:14px;font-weight:500}
 [data-sidebar-collapsed=true] .sherlock-account-button[data-explore-trigger]{width:56px!important;height:56px;padding:8px;overflow:visible}
 .hHd-Xa_root.hHd-Xa_collapsed .srb-account-controls .sherlock-account-button[data-explore-trigger],
-[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button[data-explore-trigger]{width:56px!important;height:56px!important;min-height:56px;padding:8px;flex:none;justify-content:center;gap:0;overflow:visible;border-radius:50%!important}
+[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button[data-explore-trigger]{width:56px!important;height:56px!important;min-height:56px;padding:8px;flex:none;justify-content:center;gap:0;overflow:visible;border-radius:12px!important}
 .srb-account-controls:has([data-explore-trigger]){position:relative;isolation:isolate;overflow:visible;padding-top:8px}
 .srb-account-controls:has([data-explore-trigger]) [data-research-board-bell-host]{display:flex;align-items:center;justify-content:center;flex:none}
 .srb-account-controls:has([data-explore-trigger]) [data-research-board-bell-host]>button{width:40px!important;height:40px!important;min-width:40px;min-height:40px;max-width:40px;max-height:40px;padding:10px!important;box-sizing:border-box;flex:none;border-radius:10px!important}
