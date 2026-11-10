@@ -15,6 +15,7 @@ import {
 } from '../../shared/scheduled-tasks'
 import { icons } from './icons'
 import { scheduledStyles } from './style'
+import { prepareBrowserOverlay } from '../browser/overlay-preflight'
 const escape = (s: unknown) =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -902,6 +903,9 @@ export class ScheduledTaskView {
     anchor.closest<HTMLElement>('.st-row')?.setAttribute('data-menu-open', 'true')
     const menu = this.document.createElement('div')
     menu.className = 'st-menu'
+    menu.inert = true
+    menu.setAttribute('aria-hidden', 'true')
+    menu.style.visibility = 'hidden'
     menu.dataset.dark = String(this.dark())
     menu.role = 'menu'
     menu.innerHTML = items
@@ -934,7 +938,20 @@ export class ScheduledTaskView {
           items[i]!.run()
         }),
     )
-    menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    const present = () => {
+      if (this.menu !== menu || !menu.isConnected) return
+      menu.inert = false
+      menu.removeAttribute('aria-hidden')
+      menu.style.removeProperty('visibility')
+      menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    }
+    const prepared = prepareBrowserOverlay(this.document, menu)
+    if (prepared) void prepared.then(ready => {
+      if (this.menu !== menu || !menu.isConnected) return
+      if (ready) present()
+      else { this.closeMenu(); anchor.focus() }
+    })
+    else present()
   }
   private closeMenu() {
     this.menu?.remove()

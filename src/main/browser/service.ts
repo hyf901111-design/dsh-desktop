@@ -41,7 +41,16 @@ export function registerBrowserApp(options:Options){
  const current=()=>model.tab(model.activeId)
  const closeDownloadOwners=(isPrivate?:boolean)=>{for(const [key,owner]of downloadOwners)if(isPrivate===undefined||key===isPrivate){downloadOwners.delete(key);if(!owner.view.webContents.isDestroyed())owner.view.webContents.close()}}
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
- const sync=()=>{let shown=false;for(const [id,e]of live){const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error,awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
+ const sync=()=>{
+  let shown=false
+  for(const [id,e]of live){
+   const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error,awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error
+   if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)
+   // macOS must attach the visible surface before unthrottling its renderer.
+   if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}
+  }
+  corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()
+ }
  const sessionFor=(tab:Pick<BrowserTab,'private'>)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
