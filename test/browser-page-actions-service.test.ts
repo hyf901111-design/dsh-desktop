@@ -6,7 +6,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest'
 import type {BrowserSnapshot} from '../src/shared/browser-app'
 import type {BrowserRegionRect} from '../src/shared/browser-region'
 
-const mock=vi.hoisted(()=>({views:[] as any[],templates:[] as any[],region:null as any,regionEvent:null as any,translation:null as any,menu:null as any,app:null as any,partition:null as any}))
+const mock=vi.hoisted(()=>({views:[] as any[],templates:[] as any[],region:null as any,regionEvent:null as any,translation:null as any,menu:null as any,app:null as any,partition:null as any,corners:null as any}))
 vi.mock('electron',()=>{
  const app=Object.assign(new EventEmitter(),{getPath:()=>'/tmp'});mock.app=app
  const partition=Object.assign(new EventEmitter(),{setPermissionCheckHandler:vi.fn(),setPermissionRequestHandler:vi.fn(),clearStorageData:async()=>{},cookies:{get:async()=>[]}})
@@ -17,7 +17,7 @@ vi.mock('electron',()=>{
   setBounds=(value:any)=>{this.bounds=value};setVisible=(value:boolean)=>{this.visible=value}
  }}
 })
-vi.mock('../src/main/browser/corners',()=>({createBrowserCorners:()=>({layout:vi.fn(),dispose:vi.fn()})}))
+vi.mock('../src/main/browser/corners',()=>({createBrowserCorners:()=>(mock.corners={layout:vi.fn(),dispose:vi.fn()})}))
 vi.mock('../src/main/browser/favicon',()=>({trackBrowserFavicon:vi.fn()}))
 vi.mock('../src/main/browser/page-agent',()=>({createBrowserPageAgent:()=>({invalidate:vi.fn(),dispose:vi.fn()})}))
 vi.mock('../src/main/browser/find-overlay',()=>({createBrowserFindOverlay:()=>({update:vi.fn(),raise:vi.fn(),hide:vi.fn(),layout:vi.fn(),dispose:vi.fn()})}))
@@ -103,3 +103,5 @@ it('saves the actual clicked inline image through a native save dialog and downl
 it('routes material menu navigation from the parent and webpage only under the live scope',async()=>{const f=await fixture();await f.service.request('menu',{id:'native-menu',revision:1,owner:'owner-A',tabId:f.state.activeId,url:f.state.tabs.find(tab=>tab.id===f.state.activeId)!.url,bounds:{x:150,y:120,width:200,height:200},html:'<button>菜单</button>',css:''});mock.menu.key.mockReturnValue(true);for(const target of [f.mainWC,f.page.webContents]){const event={defaultPrevented:false,preventDefault(){this.defaultPrevented=true}};target.emit('before-input-event',event,{type:'keyDown',key:'ArrowDown',meta:false,control:false});expect(event.defaultPrevented).toBe(true)}expect(mock.menu.key).toHaveBeenCalledTimes(2);await f.layout({sessionId:'other'});const after={preventDefault:vi.fn()};f.mainWC.emit('before-input-event',after,{type:'keyDown',key:'Enter'});expect(after.preventDefault).not.toHaveBeenCalled()})
 
 it('cancels selection on actual parent-surface mouse down and removes that listener at disposal',async()=>{const f=await fixture();f.mainWC.emit('before-mouse-event',{}, {type:'mouseMove'});expect(mock.region.cancelSelecting).not.toHaveBeenCalled();f.mainWC.emit('before-mouse-event',{}, {type:'mouseDown'});expect(mock.region.cancelSelecting).toHaveBeenCalledOnce();f.service.dispose();f.mainWC.emit('before-mouse-event',{}, {type:'mouseDown'});expect(mock.region.cancelSelecting).toHaveBeenCalledOnce()})
+
+it('does not reorder native corner views underneath an active selection during stable layout',async()=>{const f=await fixture();await f.capture();mock.corners.layout.mockClear();await f.layout();await f.layout();expect(mock.corners.layout).not.toHaveBeenCalled();await f.service.request('region-cancel');await f.layout();expect(mock.corners.layout).toHaveBeenCalledOnce()})
