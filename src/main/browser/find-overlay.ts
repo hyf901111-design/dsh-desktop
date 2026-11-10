@@ -32,6 +32,7 @@ export function createBrowserFindOverlay(preload:string,getWindow:()=>BrowserWin
    if(focus&&ready){view.webContents.focus();view.webContents.send('browser-app:find-focus')}
   },
   update(tab:BrowserTab){if(shown&&state?.tabId===tab.id){state.find=tab.find;send()}},
+  raise(){if(shown&&view&&!view.webContents.isDestroyed()&&owner&&!owner.isDestroyed())owner.contentView.addChildView(view)},
   hide,
   dispose(){hide();ipcMain.removeListener(channel,receive);if(view&&!view.webContents.isDestroyed())view.webContents.close();view=undefined;owner=undefined;ready=false}
  }

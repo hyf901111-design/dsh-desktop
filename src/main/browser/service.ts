@@ -1,5 +1,6 @@
 import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
+import {createBrowserCorners} from './corners'
 import {app,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type IpcMain,type DownloadItem,type Session} from 'electron'
 import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,copyFileSync} from 'node:fs'
 import {join,basename} from 'node:path'
@@ -34,7 +35,8 @@ export function registerBrowserApp(options:Options){
  const publish=()=>{if(disposed)return;finder?.update(current());const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
- const sync=()=>{for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error;if(show&&rect){e.view.setBounds(rect);e.view.setBorderRadius(Math.round(16*window().webContents.getZoomFactor()))}e.view.setVisible(show&&!!rect)}}
+ const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
+ const sync=()=>{let shown=false;for(const [id,e]of live){const show=visible&&id===model.activeId&&!model.tab(id).error;if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
  const sessionFor=(tab:BrowserTab)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
@@ -106,6 +108,7 @@ export function registerBrowserApp(options:Options){
   if(method==='context'){if(!appActive)return undefined;if(current().url&&current().loading)throw Error('网页正在加载，请稍候再发送。');return pageAgent.context(authority(true))}
   if(method==='undo-page'){const authorize=authority(true);authorize();const source=await pageAgent.context(authorize);if(!source?.canUndo)throw Error('当前网页没有可撤销的修改。');await pageAgent.run({op:'undo',revision:source.revision,tabId:source.tabId,url:source.url},undefined,authorize);authorize();pageEdited=false;publish();return snapshot()}
   if(method==='layout'){
+   if(Array.isArray(input.cornerColor)&&input.cornerColor.length===3&&input.cornerColor.every((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=255))cornerColor=input.cornerColor
    const active=input.active===true,owner=typeof input.sessionId==='string'?input.sessionId:'';if(appActive!==active||ownerSessionId!==owner){appEpoch++;ownerEpoch++;pageAgent.invalidate();const wasEdited=pageEdited;pageEdited=false;if(wasEdited)publish()}appActive=active;ownerSessionId=owner;
    visible=false;const r=input.bounds,win=window(),z=win.webContents.getZoomFactor(),[w,h]=win.getContentSize()
    if(input.visible===true&&r&&['x','y','width','height'].every(k=>Number.isFinite(r[k]))){const b={x:Math.round(r.x*z),y:Math.round(r.y*z),width:Math.round(r.width*z),height:Math.round(r.height*z)};if(b.x>=0&&b.y>=0&&b.width>0&&b.height>0&&b.x+b.width<=(w??0)&&b.y+b.height<=(h??0)){rect=b;visible=true}}
@@ -204,9 +207,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();pageAgent.dispose();finder?.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();pageAgent.dispose();finder?.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
