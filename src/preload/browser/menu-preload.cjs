@@ -53,7 +53,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   style.textContent=typeof value.css==='string'?value.css:'';state=value
   if(same)for(const [key,scroll]of scrolls){const element=focusElement(key);if(element){element.scrollTop=scroll.top;element.scrollLeft=scroll.left}}
   const desired=value.focusId?focusElement(value.focusId):activeId?focusElement(activeId):content.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled),button:not(:disabled),[tabindex="0"]')
-  if(!value.passive&&desired&&!desired.disabled){if(document.activeElement!==desired)desired.focus({preventScroll:true});const wanted=!preserveComposition&&value.selection&&(!value.focusId||id(desired)===value.focusId)?{selectionStart:value.selection.start,selectionEnd:value.selection.end,direction:value.selection.direction}:id(desired)===activeId?caret:undefined;if(wanted?.selectionStart!==undefined)try{desired.setSelectionRange(wanted.selectionStart,wanted.selectionEnd,wanted.direction)}catch{}}
+  if(!value.passive&&!value.focusOwner&&desired&&!desired.disabled){if(document.activeElement!==desired)desired.focus({preventScroll:true});const wanted=!preserveComposition&&value.selection&&(!value.focusId||id(desired)===value.focusId)?{selectionStart:value.selection.start,selectionEnd:value.selection.end,direction:value.selection.direction}:id(desired)===activeId?caret:undefined;if(wanted?.selectionStart!==undefined)try{desired.setSelectionRange(wanted.selectionStart,wanted.selectionEnd,wanted.direction)}catch{}}
   if(!same&&!value.passive&&!value.reducedMotion)content.animate?.([{opacity:0},{opacity:1}],{duration:90,easing:'ease-out'})
   void paint(value)
  }
@@ -73,16 +73,19 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(queued){const value=queued;queued=undefined;render(value,true)}
   const target=focusElement(key)||element;if(target&&text!==undefined){target.value=text;if(caret.selectionStart!==undefined)try{target.setSelectionRange(caret.selectionStart,caret.selectionEnd)}catch{}lastComposition={element:target,value:text};emit('input',target,{value:text})}
  })
- document.addEventListener('input',event=>{const element=control(event.target);if(!element||composing||event.isComposing)return;if(lastComposition?.element===element&&lastComposition.value===element.value){lastComposition=undefined;return}emit('input',element,{value:element.value,...('checked'in element?{checked:element.checked}:{})})})
- document.addEventListener('change',event=>{const element=control(event.target);if(element&&!composing)emit('change',element,{...('value'in element?{value:element.value}:{}),...('checked'in element?{checked:element.checked}:{})})})
- document.addEventListener('pointerdown',event=>{if(!(event.target instanceof Element)||!event.target.closest('[role=menu],[role=dialog],[role=listbox],[data-native-menu-root]')){event.preventDefault();emit('dismiss')}},true)
- document.addEventListener('click',event=>{const element=control(event.target);if(!element||element.matches(':disabled,[aria-disabled=true]'))return;if(!element.matches('input,textarea,select,[contenteditable=true]'))event.preventDefault();emit('click',element)})
+ document.addEventListener('input',event=>{const element=control(event.target);if(!element||element.matches('input[type=checkbox],input[type=radio]')||composing||event.isComposing)return;if(lastComposition?.element===element&&lastComposition.value===element.value){lastComposition=undefined;return}emit('input',element,{value:element.value,...('checked'in element?{checked:element.checked}:{})})})
+ document.addEventListener('change',event=>{const element=control(event.target);if(element&&!element.matches('input[type=checkbox],input[type=radio]')&&!composing)emit('change',element,{...('value'in element?{value:element.value}:{}),...('checked'in element?{checked:element.checked}:{})})})
+ let outsidePress
+ document.addEventListener('pointerdown',event=>{if(!(event.target instanceof Element)||!event.target.closest('[role=menu],[role=dialog],[role=listbox],[data-native-menu-root]')){event.preventDefault();outsidePress={pointerId:event.pointerId,button:event.button}}},true)
+ document.addEventListener('pointerup',event=>{if(outsidePress?.pointerId!==event.pointerId)return;const previous=outsidePress;outsidePress=undefined;event.preventDefault();const outside=!(event.target instanceof Element)||!event.target.closest('[data-native-menu-root],[role=menu],[role=dialog],[role=listbox]');emit('dismiss',null,outside?{through:{x:event.clientX,y:event.clientY,button:['left','middle','right'][previous.button]||'left'}}:{})},true)
+ document.addEventListener('pointercancel',()=>{outsidePress=undefined})
+ document.addEventListener('click',event=>{const element=event.target instanceof Element?event.target.closest('[data-native-clickable]')||control(event.target):null;if(!element||element.matches(':disabled,[aria-disabled=true]'))return;if(!element.matches('input,textarea,select,[contenteditable=true]'))event.preventDefault();emit('click',element)})
  for(const [name,over]of [['pointerover',true],['pointerout',false]])document.addEventListener(name,event=>{const element=control(event.target),related=control(event.relatedTarget);if(element&&element!==related)emit('pointer',element,{over})})
  const navigation=new Set(['Escape','Enter','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown']),shortcuts=new Set(['l','t','w','r','f','d','p','s','y','n'])
  document.addEventListener('keydown',event=>{
   if(composing||event.isComposing)return
   const element=control(event.target),editing=editable(element),local=editing&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||element instanceof HTMLTextAreaElement&&['ArrowUp','ArrowDown','PageUp','PageDown'].includes(event.key)
-  if(local&&!event.metaKey&&!event.ctrlKey)return
+  if((local||element instanceof HTMLSelectElement&&!['Escape','Tab'].includes(event.key))&&!event.metaKey&&!event.ctrlKey)return
   if(!navigation.has(event.key)&&!((event.metaKey||event.ctrlKey)&&shortcuts.has(event.key.toLowerCase())))return
   event.preventDefault();emit('key',element,{key:event.key,metaKey:event.metaKey,ctrlKey:event.ctrlKey,shiftKey:event.shiftKey,altKey:event.altKey})
  },true)

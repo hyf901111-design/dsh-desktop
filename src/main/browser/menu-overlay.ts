@@ -1,14 +1,14 @@
 import {ipcMain,BrowserWindow,WebContentsView,type Rectangle} from 'electron'
 import {randomUUID} from 'node:crypto'
 
-export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean}
-export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number}
+export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;focusOwner?:boolean}
+export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number;through?:{x:number;y:number;button?:'left'|'middle'|'right'}}
 const actionChannel='browser-app:menu-action',stateChannel='browser-app:menu-state',clearChannel='browser-app:menu-clear'
 const kinds=new Set(['click','input','change','key','scroll','dismiss','pointer'])
 const keys=new Set(['Escape','Enter','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown','l','t','w','r','f','d','p','s','y','n'])
 const documentHtml='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data: http://127.0.0.1:*; font-src data: http://127.0.0.1:*; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>Browser menu overlay</title>'
 function validateState(state:BrowserMenuOverlayState){
- if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||state.passive!==undefined&&typeof state.passive!=='boolean')throw Error('原生菜单内容无效或过大。')
+ if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||['passive','focusOwner','reducedMotion'].some(key=>(state as any)[key]!==undefined&&typeof (state as any)[key]!=='boolean'))throw Error('原生菜单内容无效或过大。')
  const r=state.bounds
  if(!r||!(['x','y','width','height'] as const).every(key=>Number.isFinite(r[key])&&Math.abs(r[key])<=30000)||r.width<=0||r.height<=0||!Number.isFinite(state.zoom)||state.zoom<.1||state.zoom>5)throw Error('原生菜单位置或缩放无效。')
  if(state.focusId!==undefined&&(typeof state.focusId!=='string'||state.focusId.length>256)||state.selection&&(!Number.isSafeInteger(state.selection.start)||!Number.isSafeInteger(state.selection.end)||state.selection.start<0||state.selection.end<state.selection.start||state.selection.end>1000000||state.selection.direction!==undefined&&!['forward','backward','none'].includes(state.selection.direction)))throw Error('原生菜单焦点无效。')
@@ -52,7 +52,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
    const wc=contents(surface)!
    // Source-key dispatch may temporarily focus the owner renderer. Return to
    // this surface without focusing an input or disturbing its composition.
-   if(!state.passive&&!wc.isFocused())wc.focus()
+   if(!state.passive&&!state.focusOwner&&!wc.isFocused())wc.focus()
    finish(true);return
   }
   if(state.passive||!kinds.has(value.kind)||value.controlId!==undefined&&(typeof value.controlId!=='string'||!value.controlId||value.controlId.length>256))return
@@ -61,7 +61,9 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(value.kind==='key'&&(typeof value.key!=='string'||!keys.has(value.key.length===1?value.key.toLowerCase():value.key)))return
   if(value.kind==='pointer'&&typeof value.over!=='boolean')return
   for(const field of ['scrollTop','scrollLeft','selectionStart','selectionEnd'])if(value[field]!==undefined&&(!Number.isFinite(value[field])||value[field]<0||value[field]>10000000))return
+  if(value.through!==undefined&&(value.kind!=='dismiss'||!Number.isFinite(value.through?.x)||!Number.isFinite(value.through?.y)||value.through.x<0||value.through.y<0||value.through.x>state.bounds.width/state.zoom||value.through.y>state.bounds.height/state.zoom||!['left','middle','right'].includes(value.through.button)))return
   const action:BrowserMenuOverlayAction={id:state.id,revision:state.revision,kind:value.kind}
+  if(value.through)action.through={x:value.through.x,y:value.through.y,button:value.through.button}
   for(const field of ['controlId','value','checked','key','over','scrollTop','scrollLeft','selectionStart','selectionEnd'] as const)if(value[field]!==undefined)(action as any)[field]=value[field]
   for(const field of ['metaKey','ctrlKey','shiftKey','altKey'] as const)if(typeof value[field]==='boolean')action[field]=value[field]
   onAction(action)
@@ -77,6 +79,19 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(surface===passive){surface.popup=new BrowserWindow({parent:win,width:1,height:1,show:false,frame:false,transparent:true,backgroundColor:'#00000000',focusable:false,resizable:false,movable:false,minimizable:false,maximizable:false,fullscreenable:false,skipTaskbar:true,hasShadow:false,webPreferences});surface.popup.setIgnoreMouseEvents(true)}
   else{surface.view=new WebContentsView({webPreferences});surface.view.setBackgroundColor('#00000000');surface.view.setVisible(false);win.contentView.addChildView(surface.view)}
   const wc=contents(surface)!
+  // The menu document has an opaque origin. Reuse only this application's
+  // local font/icon assets without changing the webpage's session or CORS.
+  try{
+   const assets=new URL(win.webContents.getURL())
+   if(assets.protocol==='http:'&&assets.hostname==='127.0.0.1')wc.session.webRequest.onHeadersReceived({urls:[assets.origin+'/*']},(details,callback)=>{
+    const headers={...details.responseHeaders}
+    if(['font','image'].includes(details.resourceType)){
+     for(const key of Object.keys(headers))if(key.toLowerCase()==='access-control-allow-origin')delete headers[key]
+     headers['Access-Control-Allow-Origin']=['*']
+    }
+    callback({responseHeaders:headers})
+   })
+  }catch{}
   surface.ready=false;wc.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));wc.session.setPermissionCheckHandler(()=>false)
   wc.setWindowOpenHandler(()=>({action:'deny'}));wc.on('will-navigate',event=>event.preventDefault());wc.on('will-redirect',event=>event.preventDefault())
   const gone=()=>{if(contents(surface)===wc){if(active()===surface)hide();destroy(surface)}}
@@ -108,5 +123,5 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   wc.setBackgroundThrottling(false);shown=true;surface.clearPromise=undefined;surface.hasContent=true
   return new Promise<boolean>(resolve=>{pending={request:ticket,resolve,timer:setTimeout(()=>{if(pending?.request===ticket)hide()},5000)};try{wc.send(stateChannel,{...snapshot,_request:ticket})}catch{hide()}})
  }
- return {warm,show,hide,raise:()=>{if(!isShown())return;const surface=active();if(surface.view)owner!.contentView.addChildView(surface.view);else surface.popup?.moveTop()},dispose:()=>{if(disposed)return;disposed=true;retire();ipcMain.removeListener(actionChannel,receive)},isShown}
+ return {warm,show,hide,raise:()=>{if(!isShown())return;const surface=active();if(surface.view)owner!.contentView.addChildView(surface.view);else surface.popup?.moveTop()},dispose:()=>{if(disposed)return;disposed=true;retire();ipcMain.removeListener(actionChannel,receive)},isShown,isFocused:()=>{const wc=contents(active());return shown&&!state?.passive&&!!wc&&!wc.isDestroyed()&&wc.isFocused()}}
 }
