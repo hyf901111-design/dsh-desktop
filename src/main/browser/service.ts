@@ -44,9 +44,10 @@ export function registerBrowserApp(options:Options){
  const sync=()=>{
   let shown=false
   for(const [id,e]of live){
-   const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error,awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error
+   const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error
    if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)
-   // macOS must attach the visible surface before unthrottling its renderer.
+   // First activation needs an attached surface; a prepared page stays awake behind overlays.
+   const awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error&&(e.awake===true||show&&!!rect)
    if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}
   }
   corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()
