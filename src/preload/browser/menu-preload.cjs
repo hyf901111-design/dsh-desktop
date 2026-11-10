@@ -10,7 +10,7 @@ window.addEventListener('DOMContentLoaded',()=>{
  const id=element=>element?.getAttribute('data-native-control')
  const editable=element=>element instanceof HTMLInputElement&&!['button','submit','reset','checkbox','radio','file','color','range'].includes(element.type)||element instanceof HTMLTextAreaElement||element?.isContentEditable
  const selection=element=>{try{return typeof element.selectionStart==='number'?{selectionStart:element.selectionStart,selectionEnd:element.selectionEnd}: {}}catch{return {}}}
- const emit=(kind,element,extra={})=>{if(!state)return;ipcRenderer.send('browser-app:menu-action',{id:state.id,revision:state.revision,_request:state._request,kind,...(id(element)?{controlId:id(element)}:{}),...selection(element),...extra})}
+ const emit=(kind,element,extra={})=>{if(!state||state.passive)return;ipcRenderer.send('browser-app:menu-action',{id:state.id,revision:state.revision,_request:state._request,kind,...(id(element)?{controlId:id(element)}:{}),...selection(element),...extra})}
  const focusElement=key=>[...content.querySelectorAll('[data-native-control]')].find(element=>id(element)===key)
  const syncAttributes=(old,next)=>{
   for(const attribute of [...old.attributes])if(!next.hasAttribute(attribute.name))old.removeAttribute(attribute.name)
@@ -32,6 +32,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
   for(const child of [...old.childNodes])if(!used.has(child))child.remove()
   if(value!==undefined&&old.value!==value)old.value=value
+  if(old instanceof HTMLSelectElement&&old.value!==next.value)old.value=next.value
   if(focused&&caret.selectionStart!==undefined){try{old.setSelectionRange(caret.selectionStart,caret.selectionEnd)}catch{}}
   return old
  }
@@ -52,10 +53,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   style.textContent=typeof value.css==='string'?value.css:'';state=value
   if(same)for(const [key,scroll]of scrolls){const element=focusElement(key);if(element){element.scrollTop=scroll.top;element.scrollLeft=scroll.left}}
   const desired=value.focusId?focusElement(value.focusId):activeId?focusElement(activeId):content.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled),button:not(:disabled),[tabindex="0"]')
-  if(desired&&!desired.disabled){if(document.activeElement!==desired)desired.focus({preventScroll:true});const wanted=!preserveComposition&&value.selection&&(!value.focusId||id(desired)===value.focusId)?{selectionStart:value.selection.start,selectionEnd:value.selection.end,direction:value.selection.direction}:id(desired)===activeId?caret:undefined;if(wanted?.selectionStart!==undefined)try{desired.setSelectionRange(wanted.selectionStart,wanted.selectionEnd,wanted.direction)}catch{}}
-  if(!same&&!value.reducedMotion)content.animate?.([{opacity:0},{opacity:1}],{duration:90,easing:'ease-out'})
+  if(!value.passive&&desired&&!desired.disabled){if(document.activeElement!==desired)desired.focus({preventScroll:true});const wanted=!preserveComposition&&value.selection&&(!value.focusId||id(desired)===value.focusId)?{selectionStart:value.selection.start,selectionEnd:value.selection.end,direction:value.selection.direction}:id(desired)===activeId?caret:undefined;if(wanted?.selectionStart!==undefined)try{desired.setSelectionRange(wanted.selectionStart,wanted.selectionEnd,wanted.direction)}catch{}}
+  if(!same&&!value.passive&&!value.reducedMotion)content.animate?.([{opacity:0},{opacity:1}],{duration:90,easing:'ease-out'})
   void paint(value)
  }
+ ipcRenderer.on('browser-app:menu-clear',async(_event,value)=>{
+  paintToken++;state=undefined;composing=undefined;queued=undefined;lastComposition=undefined;content.replaceChildren()
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))
+  ipcRenderer.send('browser-app:menu-action',{kind:'cleared',_clear:value?._clear})
+ })
  ipcRenderer.on('browser-app:menu-state',(_event,value)=>{
   if(!value||typeof value.id!=='string'||typeof value.html!=='string')return
   if(composing&&state?.id===value.id){state=value;queued=value;void paint(value);return}
