@@ -15,6 +15,8 @@ import type {BrowserSnapshot,BrowserDownload,BrowserTab} from '../../shared/brow
 const channel='browser-app:request',eventChannel='browser-app:state'
 type Options={ipcMain:IpcMain;getMainWindow():BrowserWindow|undefined;root:string;materialDirectory(sessionId:string):Promise<string>;findPreload?:string}
 type Live={view:WebContentsView;awake?:boolean;epoch:number;findRequestId?:number;timeout?:ReturnType<typeof setTimeout>}
+type DownloadOwner={id:string;private:boolean;view:WebContentsView}
+const retryDownloadAddress=(url:string)=>{if(!/^https?:\/\//i.test(url))throw Error('只能重试 HTTP(S) 下载，请重新打开原网页导出其他文件。');return browserAddress(url)}
 export function registerBrowserApp(options:Options){
  const path=join(options.root,'browser-state.bin')
  let saved:any,storageWarning:string|undefined
@@ -22,8 +24,9 @@ export function registerBrowserApp(options:Options){
  const model=new BrowserModel(saved),live=new Map<string,Live>(),downloads:BrowserDownload[]=Array.isArray(saved?.downloads)?saved.downloads.filter((d:any)=>d&&typeof d.id==='string'&&typeof d.path==='string'&&typeof d.url==='string'&&typeof d.name==='string'&&d.private!==true&&['completed','interrupted','cancelled'].includes(d.state)).slice(0,100):[],items=new Map<string,DownloadItem>(),sessions=new Set<Session>(),permissions=new Map<string,Record<string,string>>((Array.isArray(saved?.permissions)?saved.permissions:[]).filter((row:any)=>Array.isArray(row)&&typeof row[0]==='string'&&/^normal:https?:\/\//.test(row[0])&&row[1]&&typeof row[1]==='object'))
  let appActive=false,ownerSessionId='',pageEdited=false,appEpoch=0,ownerEpoch=0;let privateSession:Session|undefined,visible=false,disposed=false,persistTimer:ReturnType<typeof setTimeout>|undefined,downloadPublishTimer:ReturnType<typeof setTimeout>|undefined,rect:{x:number;y:number;width:number;height:number}|undefined
  let attachedWindow:BrowserWindow|undefined
+ const downloadOwners=new Map<boolean,DownloadOwner>()
  const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedWindow=win;win.once('closed',detachWindow)}return win}
- const permissionKey=(tab:BrowserTab,origin:string)=>(tab.private?'private:':'normal:')+origin
+ const permissionKey=(tab:Pick<BrowserTab,'private'>,origin:string)=>(tab.private?'private:':'normal:')+origin
  const activePermissions=()=>{try{const tab=model.tab(model.activeId);return permissions.get(permissionKey(tab,new URL(tab.url).origin))??{}}catch{return {}}}
  const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
  const finder=nativeFind?createBrowserFindOverlay(findPreload,window,value=>{const tab=current();if(value.kind==='close'){finder?.hide();live.get(tab.id)?.view.webContents.focus();window().webContents.send('browser-app:shortcut',{key:'Escape'});void request('find',{id:tab.id,text:''}).catch(()=>{})}else if(value.kind==='shortcut'){window().webContents.send('browser-app:shortcut',value)}else void request('find',{id:tab.id,text:value.text,next:value.kind==='next',forward:value.forward}).catch(()=>{})}):undefined
@@ -36,9 +39,10 @@ export function registerBrowserApp(options:Options){
  const publish=()=>{if(disposed)return;finder?.update(current());const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
  const current=()=>model.tab(model.activeId)
+ const closeDownloadOwners=(isPrivate?:boolean)=>{for(const [key,owner]of downloadOwners)if(isPrivate===undefined||key===isPrivate){downloadOwners.delete(key);if(!owner.view.webContents.isDestroyed())owner.view.webContents.close()}}
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
  const sync=()=>{let shown=false;for(const [id,e]of live){const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error,awake=appActive&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error;if(e.awake!==awake){e.view.webContents.setBackgroundThrottling(!awake);e.awake=awake}if(show&&rect){e.view.setBounds(rect);shown=true}e.view.setVisible(show&&!!rect)}corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise()}
- const sessionFor=(tab:BrowserTab)=>{
+ const sessionFor=(tab:Pick<BrowserTab,'private'>)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
   if(sessions.has(s))return s;sessions.add(s)
   const keys=(permission:string,types:string[]=[])=>permission==='media'?(types.length?types:['video','audio']).map(type=>type==='video'?'camera':'microphone'):[permission]
@@ -55,17 +59,23 @@ export function registerBrowserApp(options:Options){
    }catch{callback(false)}
   })
   s.on('will-download',(event,item,wc)=>{
-   const tabId=[...live].find(([,e])=>e.view.webContents===wc)?.[0]
-   if(!tabId){event.preventDefault();return}
-   try{if(policy(new URL(wc.getURL()).origin,'downloads')==='block')throw Error('站点下载已阻止');browserDownloadAddress(item.getURL(),wc.getURL())}catch{event.preventDefault();return}
+   const tabId=[...live].find(([,e])=>e.view.webContents===wc)?.[0],owner=tabId?model.tab(tabId):[...downloadOwners.values()].find(row=>row.view.webContents===wc)
+   if(!owner){event.preventDefault();return}
+   try{const source=tabId?wc.getURL():retryDownloadAddress(item.getURL());if(policy(new URL(source).origin,'downloads')==='block')throw Error('站点下载已阻止');browserDownloadAddress(item.getURL(),source)}catch{event.preventDefault();return}
    // Native save dialogs remain the authority for overwrite confirmation.
    let target='';if(!model.settings.askDownload){const directory=model.settings.downloadPath||app.getPath('downloads');target=availableDownloadPath(directory,item.getFilename(),new Set(downloads.filter(d=>['progressing','paused'].includes(d.state)).map(d=>d.path)),existsSync);item.setSavePath(target)}
-   const row:BrowserDownload={id:randomUUID(),tabId,private:model.tab(tabId).private,url:item.getURL(),name:item.getFilename(),path:target,received:0,total:item.getTotalBytes(),state:'progressing'}
+   const row:BrowserDownload={id:randomUUID(),tabId:owner.id,private:owner.private,url:item.getURL(),name:item.getFilename(),path:target,received:0,total:item.getTotalBytes(),state:'progressing'}
    downloads.unshift(row);items.set(row.id,item)
    const update=()=>{row.received=item.getReceivedBytes();row.total=item.getTotalBytes();row.path=item.getSavePath()||row.path;row.state=item.isPaused()?'paused':item.getState();publishDownload()}
    item.on('updated',update);item.once('done',(_event,state)=>{row.state=state;row.path=item.getSavePath()||row.path;row.received=item.getReceivedBytes();publish()});publish()
   })
   return s
+ }
+ const downloadOwner=(isPrivate:boolean)=>{
+  if(isPrivate&&!privateSession)throw Error('隐私浏览已结束，请重新打开原网页下载。')
+  const found=downloadOwners.get(isPrivate);if(found&&!found.view.webContents.isDestroyed())return found
+  const view=new WebContentsView({webPreferences:{session:sessionFor({private:isPrivate}),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,backgroundThrottling:true}}),owner={id:randomUUID(),private:isPrivate,view}
+  view.webContents.setWindowOpenHandler(()=>({action:'deny'}));view.webContents.on('will-navigate',event=>event.preventDefault());downloadOwners.set(isPrivate,owner);return owner
  }
  const ensure=(tab:BrowserTab)=>{
   if(tab.page)throw Error('请先打开网页。')
@@ -99,7 +109,7 @@ export function registerBrowserApp(options:Options){
  const close=(id:string)=>{
   const e=live.get(id);if(e){clearTimeout(e.timeout);e.epoch++;window().contentView.removeChildView(e.view);e.view.webContents.close();live.delete(id)}
   const tab=model.close(id)
-  if(tab.private&&!model.tabs.some(t=>t.private)&&privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);for(const key of permissions.keys())if(key.startsWith('private:'))permissions.delete(key);for(const row of [...downloads])if(row.private){const item=items.get(row.id);if(item&&['progressing','paused'].includes(row.state))item.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}void old.clearStorageData().catch(()=>{})}
+  if(tab.private&&!model.tabs.some(t=>t.private)&&privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);closeDownloadOwners(true);for(const key of permissions.keys())if(key.startsWith('private:'))permissions.delete(key);for(const row of [...downloads])if(row.private){const item=items.get(row.id);if(item&&['progressing','paused'].includes(row.state))item.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}void old.clearStorageData().catch(()=>{})}
   sync();publish()
  }
  const inputString=(value:unknown,max=1024)=>{if(typeof value!=='string'||value.length>max)throw Error('参数无效。');return value}
@@ -168,7 +178,11 @@ export function registerBrowserApp(options:Options){
    if(input.action==='pause'&&row.state==='progressing'&&item){item.pause();row.state='paused'}
    else if(input.action==='resume'&&item?.canResume()){item.resume();row.state='progressing'}
    else if(input.action==='cancel'&&item){item.cancel();row.state='cancelled'}
-   else if(input.action==='retry'){const tab=model.tabs.find(t=>t.id===row.tabId)??current();ensure(tab).view.webContents.downloadURL(browserDownloadAddress(row.url,ensure(tab).view.webContents.getURL()))}
+   else if(input.action==='retry'){
+    const url=retryDownloadAddress(row.url),isPrivate=row.private===true,tab=model.tabs.find(t=>t.id===row.tabId&&t.private===isPrivate&&!t.page),source=tab?live.get(tab.id)?.view.webContents:undefined
+    // Retrying a saved download must not depend on an open webpage or select a tab.
+    const wc=source&&!source.isDestroyed()&&/^https?:\/\//i.test(source.getURL())?source:downloadOwner(isPrivate).view.webContents;wc.downloadURL(url)
+   }
    else if(input.action==='reveal'&&row.path)shell.showItemInFolder(row.path)
    else if(input.action==='open'&&row.state==='completed')await shell.openPath(row.path)
    else if(input.action==='material'&&row.state==='completed'){const id=inputString(input.sessionId,256);if(!id)throw Error('请先打开工作区会话。');const directory=await options.materialDirectory(id);mkdirSync(directory,{recursive:true});const target=join(directory,Date.now()+'-'+basename(row.name));copyFileSync(row.path,target);return {path:target}}
@@ -231,9 +245,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();pageAgent.dispose();finder?.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();pageAgent.dispose();finder?.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
