@@ -3,11 +3,11 @@ import {randomUUID} from 'node:crypto'
 import type {BrowserRegionOverlayEvent,BrowserRegionQuestion,BrowserRegionRect,BrowserRegionStart} from '../../shared/browser-region'
 
 const channel='browser-app:region-action',stateChannel='browser-app:region-state'
-const html='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>询问 EWork</title>'
+const html='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>询问AI</title>'
 function finiteRect(value:BrowserRegionRect):boolean{return !!value&&(['x','y','width','height'] as const).every(k=>Number.isFinite(value[k])&&Math.abs(value[k])<=30000)&&value.width>0&&value.height>0}
 /** Only controls live here. The original webpage remains the sole page surface. */
 export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserWindow,onEvent:(event:BrowserRegionOverlayEvent)=>void){
- let view:WebContentsView|undefined,owner:BrowserWindow|undefined,ready=false,disposed=false,epoch=0
+ let view:WebContentsView|undefined,owner:BrowserWindow|undefined,ready=false,disposed=false,epoch=0,attached=false
  let state:(BrowserRegionStart&Partial<BrowserRegionQuestion>&{mode:'selecting'|'waiting'|'question'})|undefined
  let readyPromise:Promise<boolean>|undefined,resolveReady:((value:boolean)=>void)|undefined,readyTimer:ReturnType<typeof setTimeout>|undefined
  let selected:((rect:BrowserRegionRect|null)=>void)|undefined
@@ -19,7 +19,7 @@ export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserW
  const destroy=()=>{
   cancel();clearTimeout(readyTimer);resolveReady?.(false);resolveReady=undefined;readyPromise=undefined;ready=false
   const old=view;view=undefined
-  if(owner){owner.removeListener('closed',destroy);owner.removeListener('hide',dismiss);owner.removeListener('minimize',dismiss);owner.removeListener('blur',selectingBlur);if(!owner.isDestroyed()&&old)owner.contentView.removeChildView(old)}owner=undefined
+  if(owner){owner.removeListener('closed',destroy);owner.removeListener('hide',dismiss);owner.removeListener('minimize',dismiss);owner.removeListener('blur',selectingBlur);if(!owner.isDestroyed()&&old&&attached)owner.contentView.removeChildView(old)}owner=undefined;attached=false
   if(old&&!old.webContents.isDestroyed())old.webContents.close()
  }
  const warm=()=>{
@@ -29,7 +29,9 @@ export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserW
   if(view&&!view.webContents.isDestroyed())return ready?Promise.resolve(true):readyPromise!
   owner=win;ready=false
   const next=new WebContentsView({webPreferences:{preload,partition:'browser-region-'+randomUUID(),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true}});view=next
-  next.setBackgroundColor('#00000000');next.setVisible(false);win.contentView.addChildView(next)
+  next.setBackgroundColor('#00000000');next.setVisible(false)
+  // Keep prewarming outside the native view tree: attaching a hidden macOS
+  // WebContentsView can take first-responder ownership before any explicit focus.
   win.once('closed',destroy);win.on('hide',dismiss);win.on('minimize',dismiss);win.on('blur',selectingBlur)
   const wc=next.webContents;wc.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));wc.session.setPermissionCheckHandler(()=>false)
   wc.setWindowOpenHandler(()=>({action:'deny'}));wc.on('will-navigate',event=>event.preventDefault());wc.on('will-redirect',event=>event.preventDefault());wc.on('blur',selectingBlur)
@@ -59,10 +61,11 @@ export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserW
  }
  ipcMain.on(channel,receive)
  return{
+  warm,
   start(input:BrowserRegionStart):Promise<BrowserRegionRect|null>{
    if(!input||typeof input.operationId!=='string'||!input.operationId||input.operationId.length>256||!finiteRect(input.bounds)||input.bounds.width<4||input.bounds.height<4)throw Error('网页框选位置无效。')
    cancel();const token=epoch;state={...input,bounds:{...input.bounds},mode:'selecting'}
-   return new Promise(resolve=>{selected=resolve;void warm().then(ok=>{if(token!==epoch)return;if(!ok||!view||!owner){cancel();return}view.setBounds({x:Math.round(input.bounds.x),y:Math.round(input.bounds.y),width:Math.round(input.bounds.width),height:Math.round(input.bounds.height)});view.webContents.setZoomFactor(1);owner.contentView.addChildView(view);view.setVisible(true);send();view.webContents.focus()})})
+   return new Promise(resolve=>{selected=resolve;void warm().then(ok=>{if(token!==epoch)return;if(!ok||!view||!owner){cancel();return}view.setBounds({x:Math.round(input.bounds.x),y:Math.round(input.bounds.y),width:Math.round(input.bounds.width),height:Math.round(input.bounds.height)});view.webContents.setZoomFactor(1);owner.contentView.addChildView(view);attached=true;view.setVisible(true);send();view.webContents.focus()})})
   },
   showQuestion(input:BrowserRegionQuestion){
    if(!state||state.operationId!==input.operationId||!finiteRect(input.rect))return
