@@ -6,7 +6,7 @@ import {browserBookmarkAddress,updateBrowserBookmark,removeBrowserBookmarks} fro
 import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
 import {createBrowserCorners} from './corners'
-import {app,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type IpcMain,type DownloadItem,type Session} from 'electron'
+import {app,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type WebContents,type IpcMain,type DownloadItem,type Session} from 'electron'
 import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,copyFileSync} from 'node:fs'
 import {join,basename} from 'node:path'
 import {randomUUID} from 'node:crypto'
@@ -28,10 +28,10 @@ export function registerBrowserApp(options:Options){
  try{if(existsSync(path))saved=JSON.parse(safeStorage.decryptString(readFileSync(path)))}catch{storageWarning='上次浏览状态未能读取，原文件已保留。'}
  const model=new BrowserModel(saved),live=new Map<string,Live>(),downloads:BrowserDownload[]=Array.isArray(saved?.downloads)?saved.downloads.filter((d:any)=>d&&typeof d.id==='string'&&typeof d.path==='string'&&typeof d.url==='string'&&typeof d.name==='string'&&d.private!==true&&['completed','interrupted','cancelled'].includes(d.state)).slice(0,100):[],items=new Map<string,DownloadItem>(),sessions=new Set<Session>(),permissions=new Map<string,Record<string,string>>((Array.isArray(saved?.permissions)?saved.permissions:[]).filter((row:any)=>Array.isArray(row)&&typeof row[0]==='string'&&/^normal:https?:\/\//.test(row[0])&&row[1]&&typeof row[1]==='object'))
  let appActive=false,ownerSessionId='',pageEdited=false,appEpoch=0,ownerEpoch=0;let privateSession:Session|undefined,visible=false,disposed=false,persistTimer:ReturnType<typeof setTimeout>|undefined,downloadPublishTimer:ReturnType<typeof setTimeout>|undefined,rect:{x:number;y:number;width:number;height:number}|undefined
- let attachedWindow:BrowserWindow|undefined
+ let attachedWindow:BrowserWindow|undefined,attachedKeyContents:WebContents|undefined
  const downloadOwners=new Map<boolean,DownloadOwner>()
  const imageDownloads=new Map<number,{url:string;at:number}[]>()
- const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedWindow=win;win.once('closed',detachWindow)}return win}
+ const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedWindow=win;attachedKeyContents=win.webContents;attachedKeyContents.on('before-input-event',routeMenuKey);win.once('closed',detachWindow)}return win}
  const permissionKey=(tab:Pick<BrowserTab,'private'>,origin:string)=>(tab.private?'private:':'normal:')+origin
  const activePermissions=()=>{try{const tab=model.tab(model.activeId);return permissions.get(permissionKey(tab,new URL(tab.url).origin))??{}}catch{return {}}}
  const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
@@ -40,6 +40,7 @@ export function registerBrowserApp(options:Options){
  let menuScope:{id:string;revision:number;owner:string;tabId:string;url:string;bounds?:{x:number;y:number;width:number;height:number};zoom?:number}|undefined
  const menu=createBrowserMenuOverlay(menuPreload,window,value=>{const scope=menuScope;if(!scope||value.id!==scope.id||value.revision!==scope.revision||!appActive||ownerSessionId!==scope.owner||current().id!==scope.tabId||current().url!==scope.url){menu.hide();menuScope=undefined;return}window().webContents.send('browser-app:menu-event',value);if(value.kind==='dismiss'){hideMenu();const through=value.through,b=scope.bounds,z=scope.zoom||1;if(through&&b){const win=window(),[width=0,height=0]=win.getContentSize(),x=Math.round(b.x+through.x*z),y=Math.round(b.y+through.y*z);if(x>=0&&y>=0&&x<width&&y<height){const within=rect&&visible&&x>=rect.x&&x<rect.x+rect.width&&y>=rect.y&&y<rect.y+rect.height,target=within?live.get(scope.tabId)?.view.webContents:win.webContents;if(target&&!target.isDestroyed()){target.focus();const point={x:within?x-rect!.x:x,y:within?y-rect!.y:y,button:through.button||'left',clickCount:1};target.sendInputEvent({...point,type:'mouseDown'});target.sendInputEvent({...point,type:'mouseUp'})}}}}})
  const hideMenu=(notify=false)=>{const scope=menuScope;menuScope=undefined;menu.hide();if(notify&&scope)window().webContents.send('browser-app:menu-event',{id:scope.id,revision:scope.revision,kind:'dismiss'})}
+ const routeMenuKey=(event:{preventDefault():void},input:Electron.Input)=>{const scope=menuScope;if(!scope||!appActive||scope.owner!==ownerSessionId||scope.tabId!==current().id||scope.url!==current().url)return false;if(menu.key(input)){event.preventDefault();return true}return false}
  const translation=createBrowserTranslationManager({runtimeUrl:()=>options.runtimeUrl?.(),onChange:()=>publish()})
  const regionPreload=options.regionPreload||join(__dirname,'../preload/browser-region.cjs'),nativeRegion=existsSync(regionPreload)
  type RegionScope={ticket?:string;handoffOwner?:string;selection?:{x:number;y:number;width:number;height:number};operationId:string;owner:string;tabId:string;url:string;documentEpoch:number;bounds:{x:number;y:number;width:number;height:number}}
@@ -134,7 +135,7 @@ export function registerBrowserApp(options:Options){
   let popupGestureAt=0
   wc.on('before-mouse-event',(_event,input)=>{if(input.type==='mouseDown')popupGestureAt=Date.now()})
   wc.on('before-mouse-event',(_event,mouse)=>{if(mouse.type==='mouseDown'&&menu.isShown())hideMenu(true)})
-  wc.on('before-input-event',(_event,input)=>{if(input.type==='keyDown')popupGestureAt=Date.now()})
+  wc.on('before-input-event',(event,input)=>{if(routeMenuKey(event,input))return;if(input.type==='keyDown')popupGestureAt=Date.now()})
   wc.setWindowOpenHandler(({url})=>{try{const origin=new URL(wc.getURL()).origin,gesture=Date.now()-popupGestureAt<1000;popupGestureAt=0;if(!gesture&&permissions.get(permissionKey(tab,origin))?.popups!=='allow')return {action:'deny'};const target=browserAddress(url);const next=model.newTab(tab.private);void navigate(next,target);publish()}catch{}return {action:'deny'}})
   wc.on('did-start-loading',()=>{if(model.activeId===tab.id){appEpoch++;pageEdited=false}tab.loading=true;tab.error=undefined;publish()})
   const refresh=()=>{if(wc.isDestroyed())return;tab.canBack=wc.navigationHistory.canGoBack();tab.canForward=wc.navigationHistory.canGoForward();const url=wc.getURL();if(/^https?:/.test(url)){tab.url=url;tab.title=wc.getTitle()||new URL(url).hostname}else if(url==='about:blank'){Object.assign(tab,{url:'',title:'新标签页',favicon:undefined,error:undefined,find:undefined})}sync();publish()}
@@ -144,7 +145,7 @@ export function registerBrowserApp(options:Options){
   wc.on('did-fail-load',(_ev,code,description,url,isMain)=>{if(!isMain||code===-3)return;clearTimeout(e.timeout);tab.loading=false;tab.error=description||'网页加载失败';if(url)tab.url=url;sync();publish()})
   wc.on('render-process-gone',()=>{tab.loading=false;tab.error='网页进程已退出，请重新加载。';sync();publish()})
   wc.on('found-in-page',(_ev,result)=>{if(result.requestId!==e.findRequestId)return;tab.find={activeMatchOrdinal:result.activeMatchOrdinal,matches:result.matches};publish()})
-  wc.on('before-input-event',(event,input)=>{if(!(input.meta||input.control)||input.type!=='keyDown')return;if(['l','t','w','r','f','d','p','s','y','j','n'].includes(input.key.toLowerCase())){event.preventDefault();window().webContents.send('browser-app:shortcut',{key:input.key,metaKey:input.meta,ctrlKey:input.control,shiftKey:input.shift,altKey:input.alt})}})
+  wc.on('before-input-event',(event,input)=>{if(event.defaultPrevented)return;if(!(input.meta||input.control)||input.type!=='keyDown')return;if(['l','t','w','r','f','d','p','s','y','j','n'].includes(input.key.toLowerCase())){event.preventDefault();window().webContents.send('browser-app:shortcut',{key:input.key,metaKey:input.meta,ctrlKey:input.control,shiftKey:input.shift,altKey:input.alt})}})
   return e
  }
  const navigate=async(tab:BrowserTab,url:string)=>{
@@ -339,9 +340,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
