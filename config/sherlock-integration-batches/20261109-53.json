@@ -138,6 +138,54 @@
           "真实旧邮箱的超时现象未用私人邮箱重放；合成夹具证明预算和恢复行为，不代表任意远端站点的全量翻译兼容。"
         ],
         "generatedAt": "2026-11-10T04:18:20.484183+00:00"
+      },
+      "merged": {
+        "mergeCommit": "98eb050e6dca9bba7a1b84b3399f1f0184559087",
+        "verificationCommit": "98eb050e6dca9bba7a1b84b3399f1f0184559087",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/browser-app-model.test.ts",
+              "test/browser-app-view.test.ts",
+              "test/browser-app-native.test.js",
+              "test/default-web-links-client.test.js",
+              "test/conversation-browser.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/browser-app-model.test.ts test/browser-app-view.test.ts test/browser-app-native.test.js test/default-web-links-client.test.js test/conversation-browser.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "98eb050e6dca9bba7a1b84b3399f1f0184559087",
+            "completedAt": "2026-11-10T04:19:11.727Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "98eb050e6dca9bba7a1b84b3399f1f0184559087",
+            "completedAt": "2026-11-10T04:19:11.727Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-browser-app-native.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-browser-app-native.mjs",
+            "verifiedCommit": "98eb050e6dca9bba7a1b84b3399f1f0184559087",
+            "completedAt": "2026-11-10T04:19:11.727Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-10T04:19:11.727Z"
       }
     }
   ],
