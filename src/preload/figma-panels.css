@@ -402,3 +402,5 @@ body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-member
 
 /* Inactive tabs retain their icon when the available title space runs out. */
 .t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose{display:none!important}
+
+body[data-workspace-surface=browser] [data-browser-canvas-action]{display:none!important}
