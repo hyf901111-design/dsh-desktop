@@ -224,4 +224,4 @@ body .eb-root[data-browser-app] .eb-popover:is([data-browser-panel=menu],[data-b
 .eb-workspace-toggle[aria-expanded=true] .eb-icon{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.eb-workspace-toggle .eb-icon{transition:none}}
 
-.eb-translation-status{flex:none;max-width:120px;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;font-size:12px;white-space:nowrap}.eb-translation-status:hover{background:var(--eb-hover)}
+.eb-translation-status{flex:none;margin-inline-start:8px;max-width:120px;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;font-size:12px;white-space:nowrap}.eb-translation-status:hover{background:var(--eb-hover)}

@@ -29,7 +29,7 @@ import {registerBrowserApp} from '../src/main/browser/service'
 const deferred=<T,>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(done=>{resolve=done});return{promise,resolve}}
 const cleanup:(()=>void)[]=[]
 afterEach(()=>{for(const close of cleanup.splice(0))close();vi.restoreAllMocks()})
-beforeEach(()=>{mock.partition.removeAllListeners();mock.views=[];mock.templates=[];mock.region={warm:vi.fn(async()=>true),start:vi.fn(async()=>({x:24.2,y:32.8,width:100.1,height:60.1})),cancel:vi.fn(),raise:vi.fn(),showQuestion:vi.fn(),updateQuestion:vi.fn(),dispose:vi.fn()};mock.translation={status:()=>({state:'idle',completed:0,total:0,canRestore:false}),start:vi.fn(async()=>{}),restore:vi.fn(async()=>{}),cancel:vi.fn(),dispose:vi.fn()}})
+beforeEach(()=>{mock.partition.removeAllListeners();mock.views=[];mock.templates=[];mock.region={warm:vi.fn(async()=>true),start:vi.fn(async()=>({x:24.2,y:32.8,width:100.1,height:60.1})),cancel:vi.fn(),cancelSelecting:vi.fn(),raise:vi.fn(),showQuestion:vi.fn(),updateQuestion:vi.fn(),dispose:vi.fn()};mock.translation={status:()=>({state:'idle',completed:0,total:0,canRestore:false}),start:vi.fn(async()=>{}),restore:vi.fn(async()=>{}),cancel:vi.fn(),dispose:vi.fn()}})
 async function fixture(owner='owner-A'){
  const directory=mkdtempSync(join(tmpdir(),'browser-page-actions-mock-')),mainWC=Object.assign(new EventEmitter(),{mainFrame:{processId:1,routingId:2},getZoomFactor:()=>1.25,send:vi.fn(),isDestroyed:()=>false}),win=Object.assign(new EventEmitter(),{isDestroyed:()=>false,webContents:mainWC,getContentSize:()=>[1500,1000],contentView:{addChildView:vi.fn(),removeChildView:vi.fn()}}),handlers=new Map<string,Function>(),ipcMain={handle:(channel:string,fn:Function)=>handlers.set(channel,fn),removeHandler:vi.fn()}
  const service=registerBrowserApp({ipcMain:ipcMain as any,getMainWindow:()=>win as any,root:directory,materialDirectory:async()=>directory,menuPreload:resolve('src/preload/browser/menu-preload.cjs'),regionPreload:resolve('src/preload/browser/region-preload.cjs')})
@@ -42,6 +42,8 @@ async function fixture(owner='owner-A'){
  return{service,page,win,mainWC,layout,context,menu,capture,handlers,bounds,state}
 }
 const state=(owner:string|null='owner-A')=>({ticket:'ticket-A',ownerSessionId:owner,draft:'提问草稿',draftRev:3,phase:'plain',busy:false,sequence:2,syncVersion:1,canSend:true})
+
+it('allows toolbar restore without a right-click token only while the browser is active',async()=>{const f=await fixture();await f.service.request('translation-restore');expect(mock.translation.restore).toHaveBeenCalledWith(f.state.activeId);await f.layout({active:false});await expect(f.service.request('translation-restore')).rejects.toThrow('变化')})
 
 it('crops original page-relative integer DIP at independent host/page zoom and preserves authoritative selection',async()=>{
  const f=await fixture(),capture=await f.capture();expect(mock.region.start).toHaveBeenCalledWith(expect.objectContaining({bounds:{x:175,y:120,width:800,height:450},dark:true}))
@@ -60,6 +62,17 @@ it('revalidates pending capture against changed bounds and drops events from can
  const pending=f.capture();await vi.waitFor(()=>expect(f.page.webContents.capturePage).toHaveBeenCalled());await f.layout({bounds:{...f.bounds,width:620}})
  bitmap.resolve({getSize:()=>({width:101,height:61}),isEmpty:()=>false,toPNG:()=>Buffer.from('stale PNG')});await expect(pending).rejects.toThrow('变化')
  f.mainWC.send.mockClear();mock.regionEvent({kind:'send',operationId:mock.region.start.mock.calls[0][0].operationId});expect(f.mainWC.send).not.toHaveBeenCalled();expect(mock.region.showQuestion).not.toHaveBeenCalled()
+})
+
+it('does not let a canceled capture completion close a later selection',async()=>{
+ const f=await fixture(),bitmap=deferred<any>();f.page.webContents.capturePage.mockImplementationOnce(()=>bitmap.promise)
+ const old=f.capture();await vi.waitFor(()=>expect(f.page.webContents.capturePage).toHaveBeenCalledOnce());await f.service.request('region-cancel')
+ const next=await f.capture();mock.region.cancel.mockClear();bitmap.resolve({getSize:()=>({width:101,height:61}),isEmpty:()=>false,toPNG:()=>Buffer.from('old')})
+ await expect(old).rejects.toThrow('变化');expect(mock.region.cancel).not.toHaveBeenCalled();await expect(f.service.request('region-question',{operationId:next.operationId,rect:next.rect,state:state()})).resolves.toBe(true)
+})
+
+it('ends a stuck region screenshot with a visible error and permits another capture',async()=>{
+ const f=await fixture(),bitmap=deferred<any>();vi.useFakeTimers();try{f.page.webContents.capturePage.mockImplementationOnce(()=>bitmap.promise);const pending=f.capture(),failure=expect(pending).rejects.toThrow('截取选区超时');await vi.advanceTimersByTimeAsync(8001);await failure;const next=await f.capture();expect(next.png).toBeTruthy();bitmap.resolve({getSize:()=>({width:101,height:61}),isEmpty:()=>false,toPNG:()=>Buffer.from('late')});await Promise.resolve();await expect(f.service.request('region-question',{operationId:next.operationId,rect:next.rect,state:state()})).resolves.toBe(true)}finally{vi.useRealTimers()}
 })
 it('rejects operation, ticket and nonpending owner substitution and forwards only current operation events',async()=>{
  const f=await fixture(),capture=await f.capture();await f.service.request('region-question',{operationId:capture.operationId,rect:capture.rect,state:state()})
@@ -88,3 +101,5 @@ it('exports a bounded client menu point and rejects forged or repeated commands'
 it('saves the actual clicked inline image through a native save dialog and download record',async()=>{const f=await fixture(),url='data:image/png;base64,iVBORw0KGgo=',command=f.context('保存图片…',{hasImageContents:true,srcURL:url,mediaType:'image'});await f.service.request('save-image',{contextToken:command.contextToken});expect(f.page.webContents.downloadURL).toHaveBeenCalledWith(url);const item=Object.assign(new EventEmitter(),{getURL:()=>url,getFilename:()=> 'download',getMimeType:()=> 'image/png',getReceivedBytes:()=>10,getTotalBytes:()=>10,isPaused:()=>false,getState:()=> 'progressing',getSavePath:()=>'',setSavePath:vi.fn(),setSaveDialogOptions:vi.fn()}),event={preventDefault:vi.fn()};mock.partition.emit('will-download',event,item,f.page.webContents);expect(event.preventDefault).not.toHaveBeenCalled();expect(item.setSavePath).not.toHaveBeenCalled();expect(item.setSaveDialogOptions).toHaveBeenCalledWith(expect.objectContaining({title:'保存图片',defaultPath:expect.stringMatching(/图片\.png$/)}));const snapshot=f.service.snapshot();expect(snapshot.downloads[0]!.url).toBe('data:image/png;base64');expect(snapshot.downloads[0]!.name).toBe('图片.png')})
 
 it('routes material menu navigation from the parent and webpage only under the live scope',async()=>{const f=await fixture();await f.service.request('menu',{id:'native-menu',revision:1,owner:'owner-A',tabId:f.state.activeId,url:f.state.tabs.find(tab=>tab.id===f.state.activeId)!.url,bounds:{x:150,y:120,width:200,height:200},html:'<button>菜单</button>',css:''});mock.menu.key.mockReturnValue(true);for(const target of [f.mainWC,f.page.webContents]){const event={defaultPrevented:false,preventDefault(){this.defaultPrevented=true}};target.emit('before-input-event',event,{type:'keyDown',key:'ArrowDown',meta:false,control:false});expect(event.defaultPrevented).toBe(true)}expect(mock.menu.key).toHaveBeenCalledTimes(2);await f.layout({sessionId:'other'});const after={preventDefault:vi.fn()};f.mainWC.emit('before-input-event',after,{type:'keyDown',key:'Enter'});expect(after.preventDefault).not.toHaveBeenCalled()})
+
+it('cancels selection on actual parent-surface mouse down and removes that listener at disposal',async()=>{const f=await fixture();f.mainWC.emit('before-mouse-event',{}, {type:'mouseMove'});expect(mock.region.cancelSelecting).not.toHaveBeenCalled();f.mainWC.emit('before-mouse-event',{}, {type:'mouseDown'});expect(mock.region.cancelSelecting).toHaveBeenCalledOnce();f.service.dispose();f.mainWC.emit('before-mouse-event',{}, {type:'mouseDown'});expect(mock.region.cancelSelecting).toHaveBeenCalledOnce()})

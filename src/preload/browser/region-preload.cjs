@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const same=state?.operationId===next.operationId,opening=next.mode==='question'&&(!same||state?.mode!=='question'),external=same&&(next.syncVersion??0)>(state?.syncVersion??0)
   if(same&&next.ownerSessionId===state.ownerSessionId&&next.draftRev!==undefined&&state.draftRev!==undefined&&next.draftRev<state.draftRev)return
   if(!same){clearRightCancel();localSequence=next.sequence??0;composing=false;queued=undefined;lastComposition=undefined;sendPending=false;gesture=undefined}
-  state=next;hint.hidden=next.mode!=='selecting';document.body.dataset.dark=String(next.dark===true);document.body.dataset.selecting=String(next.mode==='selecting');
+  state=next;hint.hidden=!['selecting','waiting'].includes(next.mode);hint.textContent=next.mode==='waiting'?'正在准备选区询问…':'拖动框选网页内容 · Esc 取消';document.body.dataset.dark=String(next.dark===true);document.body.dataset.selecting=String(next.mode==='selecting');
   if(next.mode==='closed'){clearRightCancel();popup.hidden=true;draw(null);gesture=undefined;sendPending=false;return}
   draw(next.rect);popup.hidden=next.mode!=='question';if(popup.hidden)return
   if(external){localSequence=Math.max(localSequence,next.sequence??0);sendPending=false}
@@ -80,7 +80,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(!gesture||gesture.id!==event.pointerId||state?.operationId!==gesture.operationId)return
   event.preventDefault();const selected=box(gesture.start,point(event));gesture=undefined;document.body.releasePointerCapture?.(event.pointerId)
   if(selected.width<4||selected.height<4){draw(null);return}
-  draw(selected);hint.hidden=true;state={...state,mode:'waiting',rect:selected};document.body.dataset.selecting='false';emit('selection',{rect:selected})
+  draw(selected);hint.hidden=false;hint.textContent='正在准备选区询问…';state={...state,mode:'waiting',rect:selected};document.body.dataset.selecting='false';emit('selection',{rect:selected})
  },true)
  document.addEventListener('contextmenu',event=>{
   if(!rightCancel&&state?.mode!=='selecting')return
@@ -94,7 +94,9 @@ window.addEventListener('DOMContentLoaded',()=>{
  document.addEventListener('pointercancel',cancelGesture);document.addEventListener('lostpointercapture',()=>{if(gesture)cancelGesture()})
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!event.isComposing&&!composing){event.preventDefault();if(!rightCancel)emit('close')}},true)
  document.addEventListener('wheel',event=>{if(!state||state.mode==='closed'||popup.contains(event.target))return;event.preventDefault();emit('close')},{capture:true,passive:false})
- window.addEventListener('blur',()=>{if(state?.mode==='selecting')emit('close',{reason:'blur'})});window.addEventListener('resize',()=>{if(state?.mode==='selecting'&&state.bounds&&(innerWidth!==Math.round(state.bounds.width)||innerHeight!==Math.round(state.bounds.height)))emit('close',{reason:'resize'});else locate()})
+ // A WebContents blur is not an app deactivation: raising a sibling native view
+ // can cause one while the user is still holding the selection gesture.
+ window.addEventListener('resize',()=>{if(state?.mode==='selecting'&&state.bounds&&(innerWidth!==Math.round(state.bounds.width)||innerHeight!==Math.round(state.bounds.height)))emit('close',{reason:'resize'});else locate()})
  document.addEventListener('scroll',()=>{if(state?.mode==='selecting')emit('close')},true)
  ipcRenderer.send('browser-app:region-action',{kind:'ready'})
 })

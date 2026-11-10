@@ -34,7 +34,9 @@ export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserW
   // WebContentsView can take first-responder ownership before any explicit focus.
   win.once('closed',destroy);win.on('hide',dismiss);win.on('minimize',dismiss);win.on('blur',selectingBlur)
   const wc=next.webContents;wc.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));wc.session.setPermissionCheckHandler(()=>false)
-  wc.setWindowOpenHandler(()=>({action:'deny'}));wc.on('will-navigate',event=>event.preventDefault());wc.on('will-redirect',event=>event.preventDefault());wc.on('blur',selectingBlur)
+  // Native sibling reordering can blur only this WebContents during a drag.
+  // The parent window and explicit outside presses own cancellation instead.
+  wc.setWindowOpenHandler(()=>({action:'deny'}));wc.on('will-navigate',event=>event.preventDefault());wc.on('will-redirect',event=>event.preventDefault())
   wc.once('destroyed',()=>{if(view===next){const old=state;destroy();if(old)onEvent({kind:'close',operationId:old.operationId})}})
   wc.once('render-process-gone',()=>{if(view===next){const old=state;destroy();if(old)onEvent({kind:'close',operationId:old.operationId})}})
   readyPromise=new Promise(resolve=>{resolveReady=resolve;readyTimer=setTimeout(()=>{if(view===next)destroy()},5000)})
@@ -77,7 +79,8 @@ export function createBrowserRegionOverlay(preload:string,getWindow:()=>BrowserW
    state={...state,...input};if(input.sent){cancel();return}send()
   },
   cancel,
-  raise(){if(state&&view&&!view.webContents.isDestroyed()&&owner&&!owner.isDestroyed())owner.contentView.addChildView(view)},
+  cancelSelecting(){if(state?.mode!=='selecting')return false;dismiss();return true},
+  raise(){if(state&&view&&!view.webContents.isDestroyed()&&owner&&!owner.isDestroyed()&&owner.contentView.children?.at(-1)!==view)owner.contentView.addChildView(view)},
   dispose(){if(disposed)return;disposed=true;destroy();ipcMain.removeListener(channel,receive)}
  }
 }

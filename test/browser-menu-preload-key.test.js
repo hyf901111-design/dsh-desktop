@@ -20,3 +20,10 @@ it('keeps mouse actions single and treats Space as activation without consuming 
  const f=await harness(),button=f.w.document.querySelector('button');button.click();expect(f.events.filter(event=>event.value.kind==='click')).toHaveLength(1);f.events.length=0;f.emit('browser-app:menu-key',{id:'one',revision:2,_request:3,key:' '});expect(f.events[0]?.value).toMatchObject({kind:'key',controlId:'a',key:' '})
  f.emit('browser-app:menu-state',{...f.state,id:'input-menu',material:undefined,html:'<section role="menu"><input data-native-control="query" value="a"></section>'});f.events.length=0;const input=f.w.document.querySelector('input'),event=new f.w.KeyboardEvent('keydown',{key:' ',bubbles:true,cancelable:true});input.dispatchEvent(event);expect(event.defaultPrevented).toBe(false);expect(f.events).toEqual([])
 })
+
+it('tracks non-key native pointer movement only for the current popup and clears it on exit',async()=>{
+ const f=await harness(),button=f.w.document.querySelector('button');f.w.document.elementFromPoint=()=>button
+ f.emit('browser-app:menu-pointer',{id:'one',revision:2,_request:2,x:4,y:5});expect(button.hasAttribute('data-native-hovered')).toBe(false)
+ f.emit('browser-app:menu-pointer',{id:'one',revision:2,_request:3,x:4,y:5});expect(button.hasAttribute('data-native-hovered')).toBe(true)
+ f.emit('browser-app:menu-pointer',{id:'one',revision:2,_request:3,x:-1,y:-1});expect(button.hasAttribute('data-native-hovered')).toBe(false)
+})
