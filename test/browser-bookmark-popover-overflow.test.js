@@ -44,3 +44,11 @@ it('keeps many bookmark rows vertically scrollable and the final action reachabl
   const last=panel.locator('[data-action=edit-bookmark]').last();await last.scrollIntoViewIfNeeded();expect(await panel.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await panel.evaluate(el=>el.scrollLeft)).toBe(0);await last.click();await page.getByRole('textbox',{name:'名称',exact:true}).waitFor();expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+for(const dark of [false,true])it(`shares bookmark/menu surface styling with a subtle tab switcher in ${dark?'dark':'light'}`,async()=>{
+ const{page,errors}=await fixture(760,dark);try{
+  const switcher=page.locator('.eb-tab-switcher'),background=await switcher.evaluate(el=>getComputedStyle(el).backgroundColor);expect(background).toMatch(/\/ 0\.04\)$/)
+  const surface=panel=>panel.evaluate(el=>{const s=getComputedStyle(el);return{background:s.backgroundColor,border:s.border,borderRadius:s.borderRadius,shadow:s.boxShadow,blur:s.backdropFilter}})
+  await page.locator('.eb-toolbar [data-action=bookmarks]').click();const bookmarkSurface=await surface(page.locator('[data-browser-panel=bookmarks]'));await page.keyboard.press('Escape');await page.getByRole('button',{name:'更多浏览器操作',exact:true}).click();expect(await surface(page.locator('[data-browser-panel=menu]'))).toEqual(bookmarkSurface);expect(bookmarkSurface.blur).toBe('none');await page.screenshot({path:evidence+'/shared-menu-surface-'+(dark?'dark':'light')+'.png'});expect(errors).toEqual([])
+ }finally{await page.close()}
+})
