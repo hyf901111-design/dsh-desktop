@@ -9,12 +9,19 @@ const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve()}
 async function fixture(url='https://example.com/'){
  const w=new Window(),state:BrowserSnapshot={tabs:[{id:'one',url,title:'Example',private:false,pinned:false,muted:false,zoom:1.25,loading:false,canBack:false,canForward:false}],activeId:'one',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}},calls:{method:string;input:Record<string,unknown>}[]=[]
  let receive!:(value:BrowserSnapshot)=>void
- const view=new BrowserAppView(w.document as any,{subscribe:fn=>{receive=fn;return()=>{}},source:async()=>{},request:async(method,input={})=>{calls.push({method,input});if(method==='capture')return '';if(method==='zoom')state.tabs.find(t=>t.id===input.id)!.zoom=Number(input.value);return structuredClone(state)}},{register:(_name:string,root:HTMLElement)=>w.document.body.append(root as any),open:()=>{},close:()=>{},current:()=>({surface:'browser'})} as any)
+ const view=new BrowserAppView(w.document as any,{subscribe:fn=>{receive=fn;return()=>{}},source:async()=>{},request:async(method,input={})=>{calls.push({method,input});if(method==='capture')return '';if(method==='translation-restore')state.translation={state:'idle',completed:0,total:0,canRestore:false};if(method==='zoom')state.tabs.find(t=>t.id===input.id)!.zoom=Number(input.value);return structuredClone(state)}},{register:(_name:string,root:HTMLElement)=>w.document.body.append(root as any),open:()=>{},close:()=>{},current:()=>({surface:'browser'})} as any)
  cleanup.push(async()=>{view.dispose();await w.happyDOM.abort()});await view.open('owner')
  const click=async(selector:string)=>{const button=view.root.querySelector<HTMLButtonElement>(selector)!;expect(button).not.toBeNull();button.focus();button.click();await settle()}
  const publish=()=>receive(structuredClone(state))
  return {w,state,view,calls,click,publish}
 }
+
+it('restores the translated page directly from its toolbar state',async()=>{
+ const {state,view,calls,click,publish}=await fixture();state.translation={state:'translated',completed:8,total:8,canRestore:true};publish()
+ await click('[data-action=translation-progress]')
+ expect(calls.filter(c=>c.method==='translation-restore')).toEqual([{method:'translation-restore',input:{}}])
+ expect(view.root.querySelector('.eb-toast')?.textContent||'').not.toContain('右键菜单');expect(view.root.querySelector('[data-action=translation-progress]')).toBeNull()
+})
 
 it('keeps zoom controls in More while the browser status bar is removed',async()=>{
  const {view,calls,click}=await fixture()

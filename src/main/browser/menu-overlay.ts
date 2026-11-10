@@ -93,6 +93,9 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   }
   else{surface.view=new WebContentsView({webPreferences});surface.view.setBackgroundColor('#00000000');surface.view.setVisible(false);win.contentView.addChildView(surface.view)}
   const wc=contents(surface)!
+  // Non-key macOS popups do not reliably update Chromium's :hover state.
+  // Forward their native movement without focusing either window.
+  wc.on('before-mouse-event',(_event,input)=>{if(surface!==material||!shown||active()!==material||!state||!['mouseMove','mouseLeave'].includes(input.type))return;const z=state.zoom||1;wc.send('browser-app:menu-pointer',{id:state.id,revision:state.revision,_request:request,x:input.type==='mouseLeave'?-1:input.x/z,y:input.type==='mouseLeave'?-1:input.y/z})})
   // The menu document has an opaque origin. Reuse only this application's
   // local font/icon assets without changing the webpage's session or CORS.
   try{

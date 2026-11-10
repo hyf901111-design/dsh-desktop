@@ -31,7 +31,7 @@ export function registerBrowserApp(options:Options){
  let attachedWindow:BrowserWindow|undefined,attachedKeyContents:WebContents|undefined
  const downloadOwners=new Map<boolean,DownloadOwner>()
  const imageDownloads=new Map<number,{url:string;at:number}[]>()
- const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedWindow=win;attachedKeyContents=win.webContents;attachedKeyContents.on('before-input-event',routeMenuKey);win.once('closed',detachWindow)}return win}
+ const window=()=>{const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用。');if(attachedWindow!==win){attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedWindow=win;attachedKeyContents=win.webContents;attachedKeyContents.on('before-input-event',routeMenuKey);attachedKeyContents.on('before-mouse-event',routeRegionPointer);win.once('closed',detachWindow)}return win}
  const permissionKey=(tab:Pick<BrowserTab,'private'>,origin:string)=>(tab.private?'private:':'normal:')+origin
  const activePermissions=()=>{try{const tab=model.tab(model.activeId);return permissions.get(permissionKey(tab,new URL(tab.url).origin))??{}}catch{return {}}}
  const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
@@ -41,6 +41,7 @@ export function registerBrowserApp(options:Options){
  const menu=createBrowserMenuOverlay(menuPreload,window,value=>{const scope=menuScope;if(!scope||value.id!==scope.id||value.revision!==scope.revision||!appActive||ownerSessionId!==scope.owner||current().id!==scope.tabId||current().url!==scope.url){menu.hide();menuScope=undefined;return}window().webContents.send('browser-app:menu-event',value);if(value.kind==='dismiss'){hideMenu();const through=value.through,b=scope.bounds,z=scope.zoom||1;if(through&&b){const win=window(),[width=0,height=0]=win.getContentSize(),x=Math.round(b.x+through.x*z),y=Math.round(b.y+through.y*z);if(x>=0&&y>=0&&x<width&&y<height){const within=rect&&visible&&x>=rect.x&&x<rect.x+rect.width&&y>=rect.y&&y<rect.y+rect.height,target=within?live.get(scope.tabId)?.view.webContents:win.webContents;if(target&&!target.isDestroyed()){target.focus();const point={x:within?x-rect!.x:x,y:within?y-rect!.y:y,button:through.button||'left',clickCount:1};target.sendInputEvent({...point,type:'mouseDown'});target.sendInputEvent({...point,type:'mouseUp'})}}}}})
  const hideMenu=(notify=false)=>{const scope=menuScope;menuScope=undefined;menu.hide();if(notify&&scope)window().webContents.send('browser-app:menu-event',{id:scope.id,revision:scope.revision,kind:'dismiss'})}
  const routeMenuKey=(event:{preventDefault():void},input:Electron.Input)=>{const scope=menuScope;if(!scope||!appActive||scope.owner!==ownerSessionId||scope.tabId!==current().id||scope.url!==current().url)return false;if(menu.key(input)){event.preventDefault();return true}return false}
+ const routeRegionPointer=(_event:unknown,input:{type:string})=>{if(input.type==='mouseDown')region.cancelSelecting()}
  const translation=createBrowserTranslationManager({runtimeUrl:()=>options.runtimeUrl?.(),onChange:()=>publish()})
  const regionPreload=options.regionPreload||join(__dirname,'../preload/browser-region.cjs'),nativeRegion=existsSync(regionPreload)
  type RegionScope={ticket?:string;handoffOwner?:string;selection?:{x:number;y:number;width:number;height:number};operationId:string;owner:string;tabId:string;url:string;documentEpoch:number;bounds:{x:number;y:number;width:number;height:number}}
@@ -185,19 +186,22 @@ export function registerBrowserApp(options:Options){
    if(input.selection!==undefined&&(!input.selection||typeof input.selection.provider!=='string'||!input.selection.provider||input.selection.provider.length>256||typeof input.selection.model!=='string'||!input.selection.model||input.selection.model.length>256||input.selection.reasoningEffort!==undefined&&(typeof input.selection.reasoningEffort!=='string'||input.selection.reasoningEffort.length>256)))throw Error('当前模型选择无效。')
    cancelRegion();void translation.start({tabId:tab.id,url:entry.view.webContents.getURL(),title:tab.title,webContents:entry.view.webContents},{selection:input.selection,sessionId:ownerSessionId||undefined}).catch(()=>{});return snapshot()
   }
-  if(method==='translation-restore'||method==='translation-stop'){checkContext(input.contextToken);if(method==='translation-stop')translation.cancel(current().id);else await translation.restore(current().id);return snapshot()}
+  if(method==='translation-restore'||method==='translation-stop'){authority(true)();if(method==='translation-stop')translation.cancel(current().id);else await translation.restore(current().id);return snapshot()}
   if(method==='region-cancel'){if(!input.operationId||input.operationId===regionScope?.operationId)cancelRegion();return true}
   if(method==='region-start'){
    checkContext(input.contextToken);if(!nativeRegion||!visible||!rect)throw Error('当前网页暂时无法框选。')
    cancelRegion();hideMenu(true);finder?.hide();const tab=current(),entry=live.get(tab.id)!;if(entry.view.webContents.isLoadingMainFrame())throw Error('请等待网页载入。')
    const scope:RegionScope={operationId:randomUUID(),owner:ownerSessionId,tabId:tab.id,url:entry.view.webContents.getURL(),documentEpoch:entry.documentEpoch,bounds:{...rect}};regionScope=scope
-   const selection=await region.start({operationId:scope.operationId,bounds:scope.bounds,dark:input.dark===true});if(!selection){cancelRegion();return null}
-   if(!regionValid()){cancelRegion();throw Error('网页位置已变化，请重新框选。')}
-   if(selection.width<4||selection.height<4||selection.x<0||selection.y<0||selection.x+selection.width>scope.bounds.width||selection.y+selection.height>scope.bounds.height){cancelRegion();throw Error('网页选区无效。')}
+   const cancelOwn=()=>{if(regionScope===scope)cancelRegion()},valid=()=>regionScope===scope&&regionValid()
+   const selection=await region.start({operationId:scope.operationId,bounds:scope.bounds,dark:input.dark===true});if(!selection){cancelOwn();return null}
+   if(!valid()){cancelOwn();throw Error('网页位置已变化，请重新框选。')}
+   if(selection.width<4||selection.height<4||selection.x<0||selection.y<0||selection.x+selection.width>scope.bounds.width||selection.y+selection.height>scope.bounds.height){cancelOwn();throw Error('网页选区无效。')}
    const crop={x:Math.floor(selection.x),y:Math.floor(selection.y),width:Math.min(scope.bounds.width,Math.ceil(selection.x+selection.width))-Math.floor(selection.x),height:Math.min(scope.bounds.height,Math.ceil(selection.y+selection.height))-Math.floor(selection.y)}
-   scope.selection=crop;const bitmap=await entry.view.webContents.capturePage(crop);if(!regionValid()){cancelRegion();throw Error('网页已变化，请重新框选。')}
-   const size=bitmap.getSize();if(bitmap.isEmpty()||size.width*size.height>20000000){cancelRegion();throw Error('选区过大或未能截取，请缩小后重试。')}
-   const png=bitmap.toPNG();if(png.length>15000000){cancelRegion();throw Error('选区图片过大，请缩小后重试。')}
+   scope.selection=crop;let timer:ReturnType<typeof setTimeout>|undefined,bitmap:Electron.NativeImage
+   try{bitmap=await Promise.race([entry.view.webContents.capturePage(crop),new Promise<never>((_resolve,reject)=>{timer=setTimeout(()=>reject(Error('截取选区超时，请重新框选。')),8000)})])}catch(error){cancelOwn();throw error}finally{clearTimeout(timer)}
+   if(!valid()){cancelOwn();throw Error('网页已变化，请重新框选。')}
+   const size=bitmap.getSize();if(bitmap.isEmpty()||size.width*size.height>20000000){cancelOwn();throw Error('选区过大或未能截取，请缩小后重试。')}
+   const png=bitmap.toPNG();if(png.length>15000000){cancelOwn();throw Error('选区图片过大，请缩小后重试。')}
    return {operationId:scope.operationId,rect:crop,png:png.toString('base64'),name:'网页选区.png',tabId:scope.tabId,url:scope.url}
   }
   if(method==='region-question'){
@@ -340,9 +344,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');
