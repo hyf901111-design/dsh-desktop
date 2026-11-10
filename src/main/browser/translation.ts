@@ -87,7 +87,7 @@ export function createBrowserTranslationManager(options:{runtimeUrl?:()=>string|
   if(tx.restoring===generation)tx.restoring=undefined
   if(tx.generation!==generation)return{...tx.status}
   const canRestore=tx.frames.some(frame=>frame.canRestore)
-  publish(tx,{...idle(),state:conflicts||failed?'partial':'idle',canRestore,error:conflicts||failed?'已还原可安全恢复的文字；网站更新或不可访问内容未覆盖。':undefined})
+  publish(tx,{...idle(),state:canRestore?'partial':'idle',canRestore,error:conflicts||failed?'已还原可安全恢复的文字；网站更新或不可访问内容未覆盖。':undefined})
   return{...tx.status}
  }
  const start=async(target:BrowserTranslationTarget,input:{selection?:BrowserTranslationSelection;sessionId?:string}={}):Promise<BrowserTranslationStatus>=>{

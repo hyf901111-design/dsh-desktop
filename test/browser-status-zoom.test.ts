@@ -59,3 +59,5 @@ it('disables unavailable zoom on an empty tab without sending a native zoom requ
  const panel=view.root.querySelector('[data-browser-panel=menu]')!
  expect(panel).not.toBeNull();expect([...panel.querySelectorAll<HTMLButtonElement>('.eb-zoom-controls button')].every(button=>button.disabled)).toBe(true);expect(calls.some(c=>c.method==='zoom')).toBe(false)
 })
+
+for(const canRestore of [true,false])it('restores a partial translation directly and removes its status even with stale restore metadata '+canRestore,async()=>{const {state,view,calls,click,publish}=await fixture();state.translation={state:'partial',completed:3,total:8,canRestore,error:'部分框架未覆盖'};publish();await click('[data-action=translation-progress]');expect(calls.filter(c=>c.method==='translation-restore')).toHaveLength(1);expect(view.root.querySelector('[data-action=translation-progress]')).toBeNull()})

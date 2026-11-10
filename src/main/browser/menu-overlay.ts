@@ -1,4 +1,4 @@
-import {ipcMain,BrowserWindow,WebContentsView,type Rectangle} from 'electron'
+import {ipcMain,BrowserWindow,WebContentsView,screen,type Rectangle} from 'electron'
 import {randomUUID} from 'node:crypto'
 
 export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;focusOwner?:boolean;material?:'menu'}
@@ -22,6 +22,15 @@ type Surface={view?:WebContentsView;popup?:BrowserWindow;ready:boolean;readyProm
 export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWindow,onAction:(action:BrowserMenuOverlayAction)=>void){
  const interactive:Surface={ready:false,hasContent:false,clearToken:0},passive:Surface={ready:false,hasContent:false,clearToken:0},material:Surface={ready:false,hasContent:false,clearToken:0},surfaces=[interactive,passive,material]
  let owner:BrowserWindow|undefined,state:BrowserMenuOverlayState|undefined,shown=false,disposed=false,request=0
+ let pointerTimer:ReturnType<typeof setInterval>|undefined,pointerSignature=''
+ const stopPointer=()=>{clearInterval(pointerTimer);pointerTimer=undefined;pointerSignature=''}
+ const samplePointer=()=>{
+  if(!shown||!state||active()!==material||!material.popup?.isVisible())return
+  const bounds=material.popup.getContentBounds(),point=screen.getCursorScreenPoint(),inside=point.x>=bounds.x&&point.y>=bounds.y&&point.x<bounds.x+bounds.width&&point.y<bounds.y+bounds.height,z=state.zoom||1,x=inside?(point.x-bounds.x)/z:-1,y=inside?(point.y-bounds.y)/z:-1,signature=JSON.stringify([state.id,state.revision,request,x,y])
+  if(signature===pointerSignature)return;pointerSignature=signature
+  contents(material)?.send('browser-app:menu-pointer',{id:state.id,revision:state.revision,_request:request,x,y})
+ }
+ const startPointer=()=>{stopPointer();if(active()!==material)return;samplePointer();pointerTimer=setInterval(samplePointer,32);pointerTimer.unref?.()}
  let pending:{request:number;resolve:(value:boolean)=>void;timer:ReturnType<typeof setTimeout>}|undefined
  const contents=(surface:Surface)=>surface.view?.webContents??surface.popup?.webContents
  const active=()=>state?.passive?passive:state?.material==='menu'?material:interactive
@@ -35,7 +44,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   wc.send(clearChannel,{_clear:token})
  }
  const conceal=(surface:Surface)=>{if(surface.view&&!surface.view.webContents.isDestroyed())surface.view.setVisible(false);if(surface.popup&&!surface.popup.isDestroyed())surface.popup.hide();clear(surface)}
- const hide=()=>{request++;shown=false;state=undefined;finish(false);surfaces.forEach(conceal)}
+ const hide=()=>{stopPointer();request++;shown=false;state=undefined;finish(false);surfaces.forEach(conceal)}
  const destroy=(surface:Surface)=>{
   clearTimeout(surface.readyTimer);clearTimeout(surface.clearTimer);surface.resolveReady?.(false);surface.resolveClear?.(false)
   const view=surface.view,popup=surface.popup;surface.view=undefined;surface.popup=undefined;surface.ready=false;surface.readyPromise=undefined;surface.resolveReady=undefined;surface.hasContent=false;surface.clearPromise=undefined;surface.resolveClear=undefined
@@ -61,7 +70,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
    // Source-key dispatch may temporarily focus the owner renderer. Return to
    // this surface without focusing an input or disturbing its composition.
    if(surface===interactive&&!state.focusOwner&&!wc.isFocused())wc.focus()
-   finish(true);return
+   startPointer();finish(true);return
   }
   if(state.passive||!kinds.has(value.kind)||value.controlId!==undefined&&(typeof value.controlId!=='string'||!value.controlId||value.controlId.length>256))return
   if(['click','input','change','pointer'].includes(value.kind)&&!value.controlId)return
@@ -126,6 +135,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(input.material&&/<(?:input|textarea|select)\b|\bcontenteditable(?:\s|=|>)/i.test(input.html))input={...input,material:undefined}
   if(owner&&owner!==getWindow())retire()
   if(state?.id===input.id&&input.revision<state.revision)return false
+  stopPointer()
   if(state&&(state.id!==input.id||!!state.passive!==!!input.passive||state.material!==input.material))conceal(active())
   const ticket=++request;finish(false)
   state={...input,bounds:{...input.bounds},...(input.selection?{selection:{...input.selection}}:{})}
