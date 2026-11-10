@@ -30,6 +30,9 @@ var SidebarStore = class {
  const pendingChat=current===undefined;
  react.useEffect(()=>{const created=event=>store.adoptPending(event.detail?.sessionId);window.addEventListener('sherlock:pending-conversation-created',created);return()=>window.removeEventListener('sherlock:pending-conversation-created',created)},[store]);`);
  part=exact(part,'if (state === void 0 || (!scheduledPanel.active && !workspacePanel.active && sessionId === void 0))','if (state === void 0)');
+ part=exact(part,'const collapsed = state === void 0 || !state.panelOpen;',`const collapsed = state === void 0 || !state.panelOpen;
+ react.useLayoutEffect(()=>{const publish=()=>window.dispatchEvent(new Event('sherlock:global-right-panel-state'));document.body.dataset.odysseyGlobalRightOpen=String(!collapsed);publish();return()=>{delete document.body.dataset.odysseyGlobalRightOpen;publish()}},[collapsed]);`);
+
  const fallbackStart=part.indexOf('if (state === void 0) return'),fallbackEnd=part.indexOf('const onNewTab',fallbackStart),fallback=part.slice(fallbackStart,fallbackEnd);
  if(fallbackStart<0||fallbackEnd<0)throw Error('Pending panel fallback missing');
  const clickStart=fallback.indexOf('onClick: () => {'),clickEnd=fallback.indexOf('children: /* @__PURE__ */',clickStart);

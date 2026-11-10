@@ -40,3 +40,10 @@ it('bounds history, keeps folders and bookmarks, and clears only the selected ti
  expect(m.bookmarks).toHaveLength(1)
  expect(new BrowserModel(m.serialize()).bookmarks).toEqual(m.bookmarks)
 })
+
+it('keeps favicon resources transient and excludes private icons from saved browser state',()=>{
+ const model=new BrowserModel(),normal=model.newTab(),privateTab=model.newTab(true)
+ normal.url='https://example.com/';normal.favicon='data:image/png;base64,normal-icon';privateTab.url='https://private.example/';privateTab.favicon='data:image/png;base64,private-icon'
+ const saved=model.serialize();expect(JSON.stringify(saved)).not.toMatch(/normal-icon|private-icon|private.example|favicon/)
+ expect(new BrowserModel({...saved,tabs:[{...saved.tabs[0],favicon:'file:///private/icon.png'}]}).tabs[0]!.favicon).toBeUndefined()
+})

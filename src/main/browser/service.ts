@@ -1,4 +1,5 @@
 import {createBrowserPageAgent} from './page-agent'
+import {trackBrowserFavicon} from './favicon'
 import {app,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type IpcMain,type DownloadItem,type Session} from 'electron'
 import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,copyFileSync} from 'node:fs'
 import {join,basename} from 'node:path'
@@ -68,6 +69,7 @@ export function registerBrowserApp(options:Options){
   const view=new WebContentsView({webPreferences:{session:sessionFor(tab),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,backgroundThrottling:true}})
   const e:Live={view,epoch:0};live.set(tab.id,e);window().contentView.addChildView(view);view.setVisible(false)
   const wc=view.webContents;wc.setAudioMuted(tab.muted);wc.setZoomFactor(tab.zoom)
+  trackBrowserFavicon(wc,favicon=>{if(disposed||live.get(tab.id)!==e||tab.favicon===favicon)return;tab.favicon=favicon;publish()})
   const valid=(event:{preventDefault():void},url:string)=>{try{browserAddress(url)}catch{event.preventDefault()}}
   wc.on('will-navigate',valid);wc.on('will-redirect',valid)
   let popupGestureAt=0
@@ -86,7 +88,7 @@ export function registerBrowserApp(options:Options){
   return e
  }
  const navigate=async(tab:BrowserTab,url:string)=>{
-  const e=ensure(tab),epoch=++e.epoch;clearTimeout(e.timeout);tab.url=url;tab.title=new URL(url).hostname;tab.loading=true;tab.error=undefined;sync();publish()
+  const e=ensure(tab),epoch=++e.epoch;clearTimeout(e.timeout);tab.favicon=undefined;tab.url=url;tab.title=new URL(url).hostname;tab.loading=true;tab.error=undefined;sync();publish()
   e.timeout=setTimeout(()=>{if(epoch!==e.epoch)return;tab.error='ERR_CONNECTION_TIMED_OUT';e.view.webContents.stop();tab.loading=false;sync();publish()},45000)
   try{await e.view.webContents.loadURL(url)}catch(error){if(epoch===e.epoch&&(error as any)?.code!=='ERR_ABORTED'){tab.error='暂时无法加载网页';tab.loading=false;sync();publish()}}finally{if(epoch===e.epoch)clearTimeout(e.timeout)}
  }
@@ -165,7 +167,7 @@ export function registerBrowserApp(options:Options){
   const tab=model.tab(input.id??model.activeId)
   if(method==='capture'){const wc=live.get(tab.id)?.view.webContents;if(!wc||wc.isDestroyed())return '';const bitmap=await wc.capturePage();return bitmap.isEmpty()?'':bitmap.resize({width:Math.min(1600,bitmap.getSize().width)}).toDataURL()}
   if(method==='navigate'){void navigate(tab,browserAddress(input.url,model.settings.engine));return snapshot()}
-  if(method==='home'){const e=live.get(tab.id);if(e){e.epoch++;clearTimeout(e.timeout);e.view.webContents.stop();void e.view.webContents.loadURL('about:blank')}Object.assign(tab,{url:'',title:'新标签页',error:undefined,loading:false});sync();publish();return snapshot()}
+  if(method==='home'){const e=live.get(tab.id);if(e){e.epoch++;clearTimeout(e.timeout);e.view.webContents.stop();void e.view.webContents.loadURL('about:blank')}Object.assign(tab,{url:'',title:'新标签页',favicon:undefined,error:undefined,loading:false});sync();publish();return snapshot()}
   if(method==='duplicate'){const next=model.newTab(tab.private);if(tab.url)void navigate(next,tab.url);publish();return snapshot()}
   if(method==='pin'){tab.pinned=!tab.pinned;model.tabs.sort((a,b)=>Number(b.pinned)-Number(a.pinned));publish();return snapshot()}
   if(method==='mute'){tab.muted=!tab.muted;live.get(tab.id)?.view.webContents.setAudioMuted(tab.muted);publish();return snapshot()}

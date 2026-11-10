@@ -59,6 +59,30 @@ it('keeps many tabs compressed, the active tab visible, and the full-title switc
  }finally{await page.close()}
 })
 
+it('shares available tab width equally with the active tab and renders only supplied safe favicons',async()=>{
+ const {page,errors}=await fixture(1440,900,false);try{
+  const widths=[]
+  for(const count of [3,9,24]){
+   await page.evaluate(count=>{const base=window.snapshot().tabs[0],canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const ctx=canvas.getContext('2d');ctx.fillStyle='#2071f3';ctx.fillRect(0,0,32,32);window.setBrowserState({tabs:Array.from({length:count},(_,i)=>({...base,id:'adaptive'+i,url:'https://page'+i+'.example/',title:'完整页签标题 '+i,favicon:canvas.toDataURL()})),activeId:'adaptive'+(count-1)})},count)
+   const sizes=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));expect(Math.max(...sizes)-Math.min(...sizes)).toBeLessThan(1);widths.push(sizes[0]);expect(await page.locator('.eb-tab img.eb-tab-favicon').count()).toBe(count)
+  }
+  expect(widths[0]).toBeGreaterThan(widths[1]);expect(widths[1]).toBeGreaterThan(widths[2]);await page.screenshot({path:evidence+'/adaptive-tabs-favicons-light.png'})
+  await page.getByRole('button',{name:'已打开的页签'}).click();expect(await page.locator('[data-browser-panel=tab-list] img.eb-tab-favicon').count()).toBe(24);await page.getByRole('menuitemradio',{name:'完整页签标题 0',exact:true}).click();await page.getByRole('button',{name:'关闭 完整页签标题 0',exact:true}).click();expect(await page.getByRole('tab',{selected:true}).getAttribute('data-id')).toBe('adaptive1');expect(await page.getByRole('tab',{selected:true}).evaluate(el=>el===document.activeElement)).toBe(true)
+  await page.evaluate(()=>{const state=window.snapshot();state.tabs[0].favicon='https://external-favicon.invalid/private';window.setBrowserState(state)});expect(await page.locator('.eb-tab[data-id=adaptive1] img').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
+it('keeps adaptive tabs reachable beside the native pane button in a crowded narrow strip',async()=>{
+ const {page,errors}=await fixture(640,700,true);try{
+  await page.evaluate(()=>{const entry=document.createElement('button');entry.dataset.odysseyPanelEntry='right';entry.setAttribute('aria-expanded','false');entry.style.cssText='position:fixed;right:16px;top:16px;width:32px;height:32px;z-index:99';document.body.append(entry);const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:32},(_,i)=>({...base,id:'crowded'+i,title:'窄屏完整标题 '+i})),activeId:'crowded31'});window.dispatchEvent(new Event('resize'))})
+  await expect.poll(()=>page.getByRole('tab',{selected:true}).evaluate(el=>{const list=el.parentElement.getBoundingClientRect(),box=el.getBoundingClientRect();return box.left>=list.left-1&&box.right<=list.right+1})).toBe(true)
+  const widths=await page.getByRole('tab').evaluateAll(tabs=>tabs.map(tab=>tab.getBoundingClientRect().width));expect(Math.max(...widths)-Math.min(...widths)).toBeLessThan(1)
+  const next=await page.getByRole('button',{name:'新标签页',exact:true}).boundingBox(),entry=await page.locator('[data-odyssey-panel-entry=right]').boundingBox();expect(next.x+next.width).toBeLessThanOrEqual(entry.x-8)
+  await page.getByRole('button',{name:'已打开的页签'}).click();expect(await page.getByRole('menuitemradio').count()).toBe(32);await page.getByRole('menuitemradio',{name:'窄屏完整标题 31',exact:true}).click();await page.getByRole('tab',{selected:true}).click({button:'middle'});expect(await page.getByRole('tab',{selected:true}).getAttribute('data-id')).toBe('crowded30');expect(await page.getByRole('tab',{selected:true}).evaluate(el=>el===document.activeElement)).toBe(true)
+  await page.screenshot({path:evidence+'/adaptive-tabs-dark-narrow.png'});expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
 it('gives every home shortcut its own content, opens the chosen URL, and supports empty research collections',async()=>{
  const {page}=await fixture(1440,900,false);try{
   await page.evaluate(()=>{window.setBrowserState({history:[{id:'h1',title:'经常访问的站点',url:'https://frequent.example/',at:300},{id:'h2',title:'经常访问的站点',url:'https://frequent.example/',at:200},{id:'h3',title:'最新访问',url:'https://recent.example/',at:400}],bookmarks:[{id:'b1',title:'研究报告',url:'https://research.example/',folder:'研究资料',at:1},{id:'b2',title:'其他收藏',url:'https://saved.example/',at:2}]})})

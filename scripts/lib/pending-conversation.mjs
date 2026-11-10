@@ -24,7 +24,9 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    handedOff=real;real.setResearchContextPreparing?.(true);
    publish({rightSession:id});onCreated(id,context);sessions.open(id);
    shell.commitSend([...(draft.imageIds??[])],draft.draft);
+   const transferredRevision=real.snapshot.draftRev;
    await prepareSession?.(id);
+   if(disposed||sessions.list.getSnapshot().current!==id||real.snapshot.draftRev!==transferredRevision)throw Error('当前会话或草稿已变化，首条消息保留在新会话中，请重新发送。');
    // The real shell owns file/reference serialization and command adjudication.
    real.setResearchContextPreparing?.(false);
    real.submit(mode);
