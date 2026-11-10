@@ -211,3 +211,15 @@ it('opens real bookmark management and preserves its editor across browser snaps
   await manager.getByRole('button',{name:'编辑 研究指南',exact:true}).click();const title=manager.getByRole('textbox',{name:'收藏名称',exact:true});await title.fill('已更新的研究指南');await title.press('ArrowLeft');const caret=await title.evaluate(el=>el.selectionStart);await page.evaluate(()=>window.update());expect(await title.inputValue()).toBe('已更新的研究指南');expect(await title.evaluate(el=>el===document.activeElement)).toBe(true);expect(await title.evaluate(el=>el.selectionStart)).toBe(caret);await manager.getByRole('button',{name:'保存',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.snapshot().bookmarks[0].title)).toBe('已更新的研究指南');await manager.getByRole('button',{name:'返回浏览器',exact:true}).click();await manager.waitFor({state:'detached'});await expect.poll(()=>page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='layout').at(-1)[1].visible)).toBe(true);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+it('limits home shortcut hover feedback to the compact icon in both themes',async()=>{
+ for(const dark of [true,false]){
+  const {page,errors}=await fixture(1440,900,dark);try{
+   const shortcuts=page.locator('.eb-shortcuts button');expect(await shortcuts.count()).toBe(4)
+   for(let i=0;i<4;i++){
+    const button=shortcuts.nth(i),icon=button.locator('.eb-shortcut-icon');const before=await icon.evaluate(el=>getComputedStyle(el).backgroundColor);await button.hover();expect(await button.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');await expect.poll(()=>icon.evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe(before);expect(await icon.evaluate(el=>el.getBoundingClientRect().width)).toBe(40)
+   }
+   await page.screenshot({path:evidence+'/home-shortcuts-hover-'+(dark?'dark':'light')+'.png'});expect(errors).toEqual([])
+  }finally{await page.close()}
+ }
+})
