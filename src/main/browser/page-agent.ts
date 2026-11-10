@@ -59,9 +59,10 @@ function createPageSurface(createSurface:any,token:string,cancelled:Set<string>)
     continue
    }
    if(node.nodeType!==Node.TEXT_NODE)continue
-   const text=node as Text;characters+=text.length
-   if(characters>1000000)throw Error('网页文字过多，已超过安全观察预算。')
+   const text=node as Text
    if(!eligible(text))continue
+   characters+=text.length
+   if(characters>1000000)throw Error('网页文字过多，已超过安全观察预算。')
    let ref=ids.get(text);if(!ref){ref='t'+ ++sequence;ids.set(text,ref)}
    fullHash=hashInto(fullHash,ref+'\u0000'+text.data+'\u0000')
    for(let el=text.parentElement;el;el=el.parentElement){const label=labels.get(el)||'';if(label.length<240)labels.set(el,(label+text.data.slice(0,240-label.length)+' ').slice(0,240))}

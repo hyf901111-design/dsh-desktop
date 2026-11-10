@@ -221,3 +221,14 @@ it('rejects an observation changed by the website while a bounded scan yields',a
  await expect(agent.run({op:'observe'})).rejects.toThrow(/观察.*变化|变化.*观察/)
  expect(w.document.querySelector('p')!.textContent).toBe('Website update')
 })
+
+it('excludes non-public script and style text from the public text budget',async()=>{
+ const {agent}=page('<script>'+('x'.repeat(600000))+'</script><style>/*'+('x'.repeat(600000))+'*/</style><h1>Public article</h1>')
+ const ob=(await agent.run({op:'observe'})).observation
+ expect(ob.text).toBe('Public article');expect(ob.textNodes).toHaveLength(1)
+})
+
+it('still rejects visible article text above the public text budget',async()=>{
+ const {agent}=page('<p>'+('x'.repeat(1000001))+'</p>')
+ await expect(agent.run({op:'observe'})).rejects.toThrow(/文字过多|预算/)
+})
