@@ -58,7 +58,6 @@ ctx.effect(()=>{const preferences=(${createPendingComposerPreferences.toString()
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
  const mode="const sidebarMode=(research || activeView==='notes')&&(!homeGuideResident||homeGuideSidebar);"
  replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);const off=eworkPendingConversation?.subscribe(callback);return()=>{document.removeEventListener('sherlock:workspace-surface-change',callback);off?.()}},()=>!subagentPanel&&(document.body.dataset.workspaceSurface==='browser'||!!sessionId&&eworkPendingConversation?.getSnapshot().rightSession===sessionId),()=>false);
-const pendingRight=sessionId===undefined&&!subagentPanel;
 const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);`)
  replace('if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar) return;', 'if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar&&!browserAppActive) return;')
  replace('[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]', '[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, homeGuideSidebar, browserAppActive, researchSidebar, sessionId]')
@@ -66,20 +65,25 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive || pendi
 
  // Feed the native global ConversationRoot/Panel/ComposerSurface with a draft,
  // rather than constructing another conversation layout for the Browser.
+ {const signature=source.match(/function HomeGuideNativeOriginalConversationRoot\([^\n]+\) \{/)?.[0];if(!signature)throw Error('Native conversation root signature drift');replace(signature,signature+`
+ const pendingPaneOpen=react.useSyncExternalStore(callback=>researchSidebar.service?.subscribeState?.(callback)||(()=>{}),()=>researchSidebar.service?.getSnapshot?.().state?.panelOpen===true,()=>false);
+ const pendingRight=sessionId===undefined&&!subagentPanel&&(document.body.dataset.workspaceSurface==='browser'||pendingPaneOpen);`)}
+
  replace('const inputState = useInput((s) => s);\n/* ework:notes-composer-slots:v1 */',`const nativeInputState = useInput((s) => s);
  const pendingDraft=react.useSyncExternalStore(eworkPendingConversation?.shell.state.subscribe||(()=>()=>{}),eworkPendingConversation?.shell.state.getSnapshot||(()=>undefined));
  const pendingChatState=react.useSyncExternalStore(eworkPendingConversation?.subscribe||(()=>()=>{}),eworkPendingConversation?.getSnapshot||(()=>undefined));
- const inputState=sessionId===undefined&&!subagentPanel?pendingDraft:nativeInputState;\n/* ework:notes-composer-slots:v1 */`)
+ const inputState=pendingRight?pendingDraft:nativeInputState;\n/* ework:notes-composer-slots:v1 */`)
  replace('sessionId === void 0 ? ABSENT_RESEARCH_SIDEBAR_STORE : researchSidebar.storeFor(sessionId)', 'researchSidebar.storeFor(sessionId)')
  replace('if (sessionId === void 0) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {','if (subagentPanel) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {')
  replace('if (sessionId !== void 0) researchSidebar.publish(sessionId, null);','researchSidebar.publish(sessionId, null);')
  replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingRight?pendingChatState?.workspaceId:pendingWorkspaceId));')
- replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && (activeView == null || activeView === "chat")')
- replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || research && sessionId !== void 0 && conversationVacant;')
+ replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
+ replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
+ replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', 'researchEmpty ? { placeholder: browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }')
  replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation:pendingRight,')
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingRight && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(sessionId===undefined&&eworkPendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
- replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined){eworkPendingConversation?.selectWorkspace(workspaceId);return;}')
+ replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined&&(document.body.dataset.workspaceSurface==="browser"||researchSidebar.service?.getSnapshot?.().state?.panelOpen)){eworkPendingConversation?.selectWorkspace(workspaceId);return;}')
  {const start=source.indexOf('function ResearchConversationPanel('),end=source.indexOf('\n\t\t//#endregion',start),before=source.slice(start,end);replace(before,exact(before,'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);','const workspace = (0, react.useMemo)(() => sessionId===undefined?{...ABSENT_RESEARCH_WORKSPACE,getSnapshot:()=>ABSENT_PENDING_RESEARCH_SNAPSHOT,setAssistantActionsActive:()=>{},clearPendingMessageJump:()=>{}}:researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'))}
  for(const name of ['conversation.input.left']){
   const pattern='"'+name+'": {',start=source.indexOf(pattern),end=source.indexOf('}',start),before=source.slice(start,end);if(start<0||!before.includes('scope: "session"'))throw Error('Pending native slot scope missing '+name);replace(before,before.replace('scope: "session"','scope: "session-maybe"'))
