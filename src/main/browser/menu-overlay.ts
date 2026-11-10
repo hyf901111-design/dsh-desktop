@@ -3,9 +3,11 @@ import {randomUUID} from 'node:crypto'
 
 export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;focusOwner?:boolean;material?:'menu'}
 export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number;through?:{x:number;y:number;button?:'left'|'middle'|'right'}}
+export type BrowserMenuKeyInput={type:string;key:string;meta?:boolean;control?:boolean;shift?:boolean;alt?:boolean;isComposing?:boolean}
 const actionChannel='browser-app:menu-action',stateChannel='browser-app:menu-state',clearChannel='browser-app:menu-clear'
 const kinds=new Set(['click','input','change','key','scroll','dismiss','pointer'])
-const keys=new Set(['Escape','Enter','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown','l','t','w','r','f','d','p','s','y','n'])
+const menuKeys=new Set(['Escape','Enter',' ','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown'])
+const keys=new Set([...menuKeys,'l','t','w','r','f','d','p','s','y','n'])
 const documentHtml='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data: http://127.0.0.1:*; font-src data: http://127.0.0.1:*; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>Browser menu overlay</title>'
 function validateState(state:BrowserMenuOverlayState){
  if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||['passive','focusOwner','reducedMotion'].some(key=>(state as any)[key]!==undefined&&typeof (state as any)[key]!=='boolean'))throw Error('原生菜单内容无效或过大。')
@@ -40,8 +42,9 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(view){if(owner&&!owner.isDestroyed())owner.contentView.removeChildView(view);if(!view.webContents.isDestroyed())view.webContents.close()}
   if(popup&&!popup.isDestroyed())popup.destroy()
  }
- const retire=()=>{hide();if(owner){owner.removeListener('closed',retire);owner.removeListener('hide',parentHidden);owner.removeListener('minimize',parentHidden)}surfaces.forEach(destroy);owner=undefined}
+ const retire=()=>{hide();if(owner){owner.removeListener('closed',retire);owner.removeListener('hide',parentHidden);owner.removeListener('minimize',parentHidden);owner.removeListener('blur',parentBlurred)}surfaces.forEach(destroy);owner=undefined}
  const parentHidden=()=>{const previous=state;hide();if(previous)onAction({id:previous.id,revision:previous.revision,kind:'dismiss'})}
+ const parentBlurred=()=>{if(state&&active()===material)parentHidden()}
  const receive=(event:Electron.IpcMainEvent,value:any)=>{
   const surface=surfaces.find(surface=>{const wc=contents(surface);return wc&&!wc.isDestroyed()&&event.sender===wc&&event.senderFrame===wc.mainFrame})
   if(!surface||!value||typeof value!=='object')return
@@ -57,7 +60,7 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
    const wc=contents(surface)!
    // Source-key dispatch may temporarily focus the owner renderer. Return to
    // this surface without focusing an input or disturbing its composition.
-   if(!state.passive&&!state.focusOwner){if(surface.popup&&!surface.popup.isFocused())surface.popup.focus();if(!wc.isFocused())wc.focus()}
+   if(surface===interactive&&!state.focusOwner&&!wc.isFocused())wc.focus()
    finish(true);return
   }
   if(state.passive||!kinds.has(value.kind)||value.controlId!==undefined&&(typeof value.controlId!=='string'||!value.controlId||value.controlId.length>256))return
@@ -78,11 +81,11 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(disposed)return Promise.resolve(false)
   const win=getWindow();if(!win||win.isDestroyed())return Promise.resolve(false)
   if(owner&&owner!==win)retire()
-  if(!owner){owner=win;win.once('closed',retire);win.on('hide',parentHidden);win.on('minimize',parentHidden)}
+  if(!owner){owner=win;win.once('closed',retire);win.on('hide',parentHidden);win.on('minimize',parentHidden);win.on('blur',parentBlurred)}
   const existing=contents(surface);if(existing&&!existing.isDestroyed())return surface.ready?Promise.resolve(true):surface.readyPromise!
   const webPreferences={preload,partition:'browser-menu-'+randomUUID(),sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,backgroundThrottling:true}
   if(surface===passive||surface===material){
-   surface.popup=new BrowserWindow({parent:win,width:1,height:1,show:false,frame:false,transparent:true,backgroundColor:'#00000000',focusable:surface===material,acceptFirstMouse:true,resizable:false,movable:false,minimizable:false,maximizable:false,fullscreenable:false,skipTaskbar:true,hasShadow:surface===material,paintWhenInitiallyHidden:true,...(surface===material&&process.platform==='darwin'?{vibrancy:'menu' as const,visualEffectState:'active' as const,roundedCorners:true}:{}),webPreferences})
+   surface.popup=new BrowserWindow({parent:win,width:1,height:1,show:false,frame:false,transparent:true,backgroundColor:'#00000000',focusable:false,acceptFirstMouse:true,resizable:false,movable:false,minimizable:false,maximizable:false,fullscreenable:false,skipTaskbar:true,hasShadow:surface===material,paintWhenInitiallyHidden:true,...(surface===material&&process.platform==='darwin'?{vibrancy:'menu' as const,visualEffectState:'active' as const,roundedCorners:true}:{}),webPreferences})
    surface.popup.setIgnoreMouseEvents(surface===passive)
    // NSVisualEffectView samples the live native compositor; Chromium backdrop
    // filters cannot blur sibling WebContentsViews. No webpage bitmap is used.
@@ -115,6 +118,9 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
  const isShown=()=>{const surface=active(),wc=contents(surface);return shown&&!!wc&&!wc.isDestroyed()&&(surface.view?.getVisible()??surface.popup?.isVisible()??false)}
  const show=async(input:BrowserMenuOverlayState):Promise<boolean>=>{
   validateState(input);if(disposed)return false
+  // Text controls need the established WCV keyboard/IME ownership contract.
+  // Pure glass menus remain non-key so their parent keeps its active chrome.
+  if(input.material&&/<(?:input|textarea|select)\b|\bcontenteditable(?:\s|=|>)/i.test(input.html))input={...input,material:undefined}
   if(owner&&owner!==getWindow())retire()
   if(state?.id===input.id&&input.revision<state.revision)return false
   if(state&&(state.id!==input.id||!!state.passive!==!!input.passive||state.material!==input.material))conceal(active())
@@ -134,5 +140,16 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   wc.setBackgroundThrottling(false);shown=true;surface.clearPromise=undefined;surface.hasContent=true
   return new Promise<boolean>(resolve=>{pending={request:ticket,resolve,timer:setTimeout(()=>{if(pending?.request===ticket)hide()},5000)};try{wc.send(stateChannel,{...snapshot,_request:ticket})}catch{hide()}})
  }
- return {warm,show,hide,raise:()=>{if(!isShown())return;const surface=active();if(surface.view)owner!.contentView.addChildView(surface.view);else surface.popup?.moveTop()},dispose:()=>{if(disposed)return;disposed=true;retire();ipcMain.removeListener(actionChannel,receive)},isShown,isFocused:()=>{const wc=contents(active());return shown&&!state?.passive&&!!wc&&!wc.isDestroyed()&&wc.isFocused()}}
+ const key=(input:BrowserMenuKeyInput)=>{
+  if(!state||active()!==material||state.focusOwner||!input||!['keyDown','keyUp'].includes(input.type)||input.isComposing||input.meta||input.control||input.alt||!menuKeys.has(input.key))return false
+  if(!isShown()){
+   if(input.key!=='Escape')return false
+   if(input.type==='keyDown'){const previous=state;hide();onAction({id:previous.id,revision:previous.revision,kind:'dismiss'})}
+   return true
+  }
+  // Key releases are consumed too, without dispatching a second action.
+  if(input.type==='keyUp')return true
+  try{contents(material)!.send('browser-app:menu-key',{id:state!.id,revision:state!.revision,_request:request,key:input.key,shiftKey:input.shift===true});return true}catch{hide();return false}
+ }
+ return {warm,show,hide,key,raise:()=>{if(!isShown())return;const surface=active();if(surface.view)owner!.contentView.addChildView(surface.view);else surface.popup?.moveTop()},dispose:()=>{if(disposed)return;disposed=true;retire();ipcMain.removeListener(actionChannel,receive)},isShown,isFocused:()=>{const wc=contents(active());return shown&&active()===interactive&&!!wc&&!wc.isDestroyed()&&wc.isFocused()}}
 }

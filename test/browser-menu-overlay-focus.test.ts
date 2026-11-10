@@ -1,0 +1,40 @@
+import {EventEmitter} from 'node:events'
+import {afterEach,beforeEach,expect,it,vi} from 'vitest'
+const mock=vi.hoisted(()=>({popups:[] as any[],views:[] as any[],listeners:new Map<string,Function>(),actions:[] as any[],holdReady:false}))
+vi.mock('electron',()=>{
+ const makeContents=()=>{const wc=Object.assign(new EventEmitter(),{mainFrame:{},isDestroyed:()=>false,isFocused:()=>false,focus:vi.fn(),close:vi.fn(),setWindowOpenHandler:vi.fn(),setZoomFactor:vi.fn(),setBackgroundThrottling:vi.fn(),session:{webRequest:{onHeadersReceived:vi.fn()},setPermissionRequestHandler:vi.fn(),setPermissionCheckHandler:vi.fn()},send:vi.fn((channel:string,value:any)=>{queueMicrotask(()=>{if(channel==='browser-app:menu-state')mock.listeners.get('browser-app:menu-action')?.({sender:wc,senderFrame:wc.mainFrame},{kind:'painted',id:value.id,revision:value.revision,_request:value._request});if(channel==='browser-app:menu-clear')mock.listeners.get('browser-app:menu-action')?.({sender:wc,senderFrame:wc.mainFrame},{kind:'cleared',_clear:value._clear})})}),loadURL:vi.fn(async()=>{if(!mock.holdReady)queueMicrotask(()=>mock.listeners.get('browser-app:menu-action')?.({sender:wc,senderFrame:wc.mainFrame},{kind:'ready'}))})});return wc}
+ return{ipcMain:{on:(name:string,fn:Function)=>mock.listeners.set(name,fn),removeListener:(name:string)=>mock.listeners.delete(name)},BrowserWindow:class extends EventEmitter{
+  webContents=makeContents();visible=false;options:any;constructor(options:any){super();this.options=options;mock.popups.push(this)}isDestroyed=()=>false;isVisible=()=>this.visible;isFocused=()=>false;setIgnoreMouseEvents=vi.fn();setVibrancy=vi.fn();setBounds=vi.fn();showInactive=()=>{this.visible=true};hide=()=>{this.visible=false};destroy=vi.fn();focus=vi.fn();moveTop=vi.fn()
+ },WebContentsView:class{webContents=makeContents();visible=false;constructor(){mock.views.push(this)}setBackgroundColor=vi.fn();setVisible=(value:boolean)=>{this.visible=value};getVisible=()=>this.visible;setBounds=vi.fn()}}
+})
+import {createBrowserMenuOverlay} from '../src/main/browser/menu-overlay'
+const dispose:(()=>void)[]=[]
+beforeEach(()=>{mock.popups=[];mock.views=[];mock.listeners.clear();mock.actions=[];mock.holdReady=false})
+afterEach(()=>{for(const close of dispose.splice(0))close()})
+function fixture(){const parent=Object.assign(new EventEmitter(),{isDestroyed:()=>false,webContents:{getURL:()=> 'http://127.0.0.1:59560/'},getContentBounds:()=>({x:100,y:50,width:900,height:700}),contentView:{addChildView:vi.fn(),removeChildView:vi.fn()}}),overlay=createBrowserMenuOverlay('/menu.cjs',()=>parent as any,value=>mock.actions.push(value));dispose.push(overlay.dispose);return{parent,overlay}}
+const state=(patch:any={})=>({id:'material-A',revision:1,material:'menu' as const,html:'<section role="menu" data-native-menu-root><button data-native-control="one" data-native-clickable>打开</button></section>',bounds:{x:200,y:100,width:240,height:120},zoom:1,...patch})
+it('paints a non-key material popup and never focuses either native window or WebContents',async()=>{
+ const f=fixture();expect(await f.overlay.show(state())).toBe(true);const popup=mock.popups[0];expect(popup.options).toMatchObject({parent:f.parent,focusable:false,acceptFirstMouse:true,transparent:true,hasShadow:true});expect(popup.visible).toBe(true);expect(popup.focus).not.toHaveBeenCalled();expect(popup.webContents.focus).not.toHaveBeenCalled();expect(f.overlay.isFocused()).toBe(false)
+ f.overlay.raise();f.overlay.hide();expect(popup.focus).not.toHaveBeenCalled();expect(popup.webContents.focus).not.toHaveBeenCalled();expect(popup.visible).toBe(false);expect(mock.actions).toEqual([])
+})
+it('forwards only finite unmodified menu keys with the current scope and never asks the OS to focus',async()=>{
+ const f=fixture();await f.overlay.show(state());const popup=mock.popups[0],key=(f.overlay as any).key
+ expect(key).toBeTypeOf('function');for(const input of [{type:'keyDown',key:'ArrowDown'},{type:'keyDown',key:'Tab',shift:true},{type:'keyDown',key:' '},{type:'keyDown',key:'Escape'}])expect(key(input)).toBe(true)
+ const forwarded=popup.webContents.send.mock.calls.filter(([name]:any)=>name==='browser-app:menu-key').map(([,value]:any)=>value);expect(forwarded).toHaveLength(4);expect(forwarded[0]).toMatchObject({id:'material-A',revision:1,_request:expect.any(Number),key:'ArrowDown'});expect(forwarded[1]).toMatchObject({shiftKey:true});expect(forwarded[2].key).toBe(' ')
+ expect(key({type:'keyUp',key:'ArrowDown'})).toBe(true);expect(popup.webContents.send.mock.calls.filter(([name]:any)=>name==='browser-app:menu-key')).toHaveLength(4)
+ for(const input of [{type:'keyDown',key:'q'},{type:'keyDown',key:'ArrowDown',meta:true},{type:'keyDown',key:'Enter',control:true},{type:'keyDown',key:'Enter',isComposing:true},{type:'char',key:'Enter'}])expect(key(input)).toBe(false)
+ expect(popup.webContents.focus).not.toHaveBeenCalled();f.overlay.hide();expect(key({type:'keyDown',key:'ArrowDown'})).toBe(false)
+})
+it('retains current sender and request validation for pointer actions from the non-key popup',async()=>{
+ const f=fixture();await f.overlay.show(state());const popup=mock.popups[0],wire=popup.webContents.send.mock.calls.find(([name]:any)=>name==='browser-app:menu-state')[1],emit=(patch:any,sender=popup.webContents)=>mock.listeners.get('browser-app:menu-action')!({sender,senderFrame:popup.webContents.mainFrame},{...wire,kind:'click',controlId:'one',...patch})
+ emit({id:'old'});emit({_request:wire._request-1});emit({},{});expect(mock.actions).toEqual([]);emit({});expect(mock.actions).toEqual([{id:'material-A',revision:1,kind:'click',controlId:'one'}]);expect(popup.focus).not.toHaveBeenCalled()
+})
+it('keeps text controls on the existing focusable WCV path instead of a non-key material popup',async()=>{
+ const f=fixture();await f.overlay.show(state({html:'<section role="menu"><input data-native-control="query" value="草稿"></section>'}));expect(mock.popups).toHaveLength(0);expect(mock.views).toHaveLength(1);expect(mock.views[0].webContents.focus).toHaveBeenCalledTimes(1);expect((f.overlay as any).key({type:'keyDown',key:'ArrowDown'})).toBe(false)
+})
+it('cancels a warming material request on Escape so its late ready acknowledgement cannot present it',async()=>{
+ mock.holdReady=true;const f=fixture(),pending=f.overlay.show(state());expect((f.overlay as any).key({type:'keyDown',key:'Escape'})).toBe(true);expect(mock.actions).toEqual([{id:'material-A',revision:1,kind:'dismiss'}]);const popup=mock.popups[0];mock.listeners.get('browser-app:menu-action')!({sender:popup.webContents,senderFrame:popup.webContents.mainFrame},{kind:'ready'});expect(await pending).toBe(false);expect(popup.visible).toBe(false);expect(popup.webContents.send.mock.calls.some(([name]:any)=>name==='browser-app:menu-state')).toBe(false)
+})
+it('dismisses a material menu when the parent really loses key focus and never activates the app again',async()=>{
+ const f=fixture();await f.overlay.show(state());f.parent.emit('blur');expect(f.overlay.isShown()).toBe(false);expect(mock.actions).toEqual([{id:'material-A',revision:1,kind:'dismiss'}]);expect(mock.popups[0].focus).not.toHaveBeenCalled();expect(mock.popups[0].webContents.focus).not.toHaveBeenCalled();f.overlay.dispose();expect(f.parent.listenerCount('blur')).toBe(0)
+})

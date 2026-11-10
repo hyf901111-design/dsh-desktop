@@ -81,14 +81,21 @@ window.addEventListener('DOMContentLoaded',()=>{
  document.addEventListener('pointercancel',()=>{outsidePress=undefined})
  document.addEventListener('click',event=>{const element=event.target instanceof Element?event.target.closest('[data-native-clickable]')||control(event.target):null;if(!element||element.matches(':disabled,[aria-disabled=true]'))return;if(!element.matches('input,textarea,select,[contenteditable=true]'))event.preventDefault();emit('click',element)})
  for(const [name,over]of [['pointerover',true],['pointerout',false]])document.addEventListener(name,event=>{const element=control(event.target),related=control(event.relatedTarget);if(element&&element!==related)emit('pointer',element,{over})})
- const navigation=new Set(['Escape','Enter','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown']),shortcuts=new Set(['l','t','w','r','f','d','p','s','y','n'])
+ const navigation=new Set(['Escape','Enter',' ','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown']),shortcuts=new Set(['l','t','w','r','f','d','p','s','y','n'])
  document.addEventListener('keydown',event=>{
   if(composing||event.isComposing)return
   const element=control(event.target),editing=editable(element),local=editing&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||element instanceof HTMLTextAreaElement&&['ArrowUp','ArrowDown','PageUp','PageDown'].includes(event.key)
+  if(editing&&event.key===' ')return
   if((local||element instanceof HTMLSelectElement&&!['Escape','Tab'].includes(event.key))&&!event.metaKey&&!event.ctrlKey)return
   if(!navigation.has(event.key)&&!((event.metaKey||event.ctrlKey)&&shortcuts.has(event.key.toLowerCase())))return
   event.preventDefault();emit('key',element,{key:event.key,metaKey:event.metaKey,ctrlKey:event.ctrlKey,shiftKey:event.shiftKey,altKey:event.altKey})
  },true)
+ ipcRenderer.on('browser-app:menu-key',(_event,value)=>{
+  if(!state||state.material!=='menu'||state.passive||state.focusOwner||composing||!value||value.id!==state.id||value.revision!==state.revision||value._request!==state._request||!navigation.has(value.key)||value.metaKey||value.ctrlKey||value.altKey)return
+  const active=control(document.activeElement),element=active&&!active.matches(':disabled,[aria-disabled=true]')?active:[...content.querySelectorAll('[data-native-clickable],button,[role=menuitem],[role=menuitemradio],[role=option]')].find(element=>!element.matches(':disabled,[aria-disabled=true]')&&!editable(element))
+  if(!element){if(value.key==='Escape')emit('dismiss',null);return}
+  element.dispatchEvent(new KeyboardEvent('keydown',{key:value.key,shiftKey:value.shiftKey===true,bubbles:true,cancelable:true}))
+ })
  const scrolling=new Map();let scrollFrame=0
  document.addEventListener('scroll',event=>{const element=control(event.target);if(!element)return;scrolling.set(id(element),element);if(!scrollFrame)scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;for(const element of scrolling.values())if(element.isConnected)emit('scroll',element,{scrollTop:element.scrollTop,scrollLeft:element.scrollLeft});scrolling.clear()})},true)
  document.addEventListener('submit',event=>event.preventDefault())
