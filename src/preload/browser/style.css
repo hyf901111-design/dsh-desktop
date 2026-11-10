@@ -152,3 +152,5 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-tab-site-icon[data-favicon-failed=true]>.eb-icon{display:inline-block}
 .eb-tab-site-icon>.eb-tab-favicon[hidden]{display:none}
 .eb-tab-option>.eb-tab-site-icon{width:16px;height:16px;min-width:16px;flex:none}
+
+.eb-tab-closing-slot{position:relative;height:32px;min-width:0;overflow:hidden;pointer-events:none;flex:none}
