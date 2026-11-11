@@ -178,7 +178,9 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-root .eb-settings>[data-action=settings-close]{height:40px;flex:none;padding:0 16px;background:var(--eb-field);font-size:14px;line-height:22px}
 
 .eb-content{border-radius:0 0 16px 16px}
-.eb-root .eb-app-label,.eb-root .eb-app-label *{-webkit-app-region:drag;user-select:none;cursor:default}
+.eb-root .eb-app-label,.eb-root .eb-app-label *{user-select:none;cursor:default}
+/* An expanded row needs pointer events even over the otherwise draggable title. */
+.eb-root .eb-tabs:has(.eb-workspace-toggle[aria-expanded=false]) :is(.eb-app-label,.eb-app-label *){-webkit-app-region:drag}
 
 .eb-root .eb-suggestions{padding:6px;gap:2px}
 .eb-root .eb-suggestions .eb-list-row{min-height:40px;padding:6px 12px!important}
