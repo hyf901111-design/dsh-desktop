@@ -1,7 +1,8 @@
 import type {BrowserQuestionState,BrowserRegionOverlayEvent,BrowserRegionRect} from '../../shared/browser-region'
-import type {BrowserBridge,BrowserSnapshot,BrowserTab,BrowserLink} from '../../shared/browser-app'
+import type {BrowserBridge,BrowserSnapshot,BrowserTab,BrowserLink,BrowserDownload} from '../../shared/browser-app'
 import {BrowserBookmarkManager} from './bookmark-manager'
 import {BrowserActivityPage} from './activity-page'
+import {downloadDetails,downloadIndicator} from './download-details'
 import type {WorkspaceSurfaceHost} from '../workspace-surface-host'
 import {mountWorkspaceTopbarStyles,workspaceBackButton} from '../workspace-topbar'
 import {browserIcons} from './icons'
@@ -11,7 +12,6 @@ const icon=(name:keyof typeof browserIcons)=>`<i class="eb-icon" aria-hidden="tr
 const button=(action:string,label:string,name?:keyof typeof browserIcons,disabled=false)=>`<button type="button" class="eb-icon-button" data-action="${action}" aria-label="${esc(label)}" title="${esc(label)}" ${disabled?'disabled':''}>${name?icon(name):esc(label)}</button>`
 const menuItem=(action:string,label:string,name:keyof typeof browserIcons,key='',disabled=false)=>`<button type="button" role="menuitem" class="eb-menu-item" data-action="${action}" ${disabled?'disabled':''}>${icon(name)}<span>${label}</span><kbd>${key}</kbd></button>`
 const hostname=(url:string)=>{try{return new URL(url).hostname}catch{return url}}
-const bytes=(n:number)=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB'
 // The shared Figma rules own the board menu's material, type and row geometry.
 // These structural rules also work before the research module mounts its CSS.
 const pageContextCss='[data-browser-page-context-menu]{position:fixed;z-index:3000;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}[data-browser-page-context-menu]>button{display:flex;align-items:center;gap:20px;box-sizing:border-box;width:100%;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer}[data-browser-page-context-menu]>button:disabled{opacity:.45;cursor:default}[data-browser-page-context-menu]>[role=separator]{height:1px;margin:5px;background:var(--odyssey-menu-border)}'
@@ -21,6 +21,8 @@ export class BrowserAppView {
  private startSection='';private startQuery='';private siteCookieCount=0;private composing=false;private editingBookmark?:BrowserLink;private state?:BrowserSnapshot;private sessionId='';private panel='';private folder='';private query='';private recent=false;private findFocus=0;private findOpen=false;private findText='';private suggestions=false;private suggestionIndex=0;private suggestionRows:BrowserLink[]=[];private settings=false;private image='';private notice='';private noticeError=false;private noticeTimer?:ReturnType<typeof setTimeout>;private disposed=false;private frame=0;private lastLayout='';private epoch=0;private lastTab='';private unsubscribe:()=>void;private observer?:MutationObserver;private resize?:ResizeObserver;private returningFocus?:HTMLElement
  private managingBookmarks=false;private bookmarkManager?:BrowserBookmarkManager;private draggingTab='';private draggingBefore?:string;private pointerInTabStrip=false;private frozenTabs?:Map<string,number>;private closingTab='';private holdTabWidths=false;private tabMotionUntil=0;private tabAnimations=new Set<Animation>()
  private activityPages=new Map<string,BrowserActivityPage>()
+ private downloadButtonShown=false
+ private downloadActionsInFlight=new Set<string>()
  private workspaceTabsExpanded=false;private workspaceMotionUntil=0;private workspaceTimer?:ReturnType<typeof setTimeout>
  private pointerTabDrag?:{id:string;pointerId:number;x:number;y:number;active:boolean};private ignoreTabClickUntil=0;private tabDragScrollFrame=0;private tabDragPoint?:{x:number;y:number}
  private panelPresented=false;private layoutAck=Promise.resolve(false)
@@ -134,6 +136,7 @@ export class BrowserAppView {
    this.root.style.left=box.left+'px';this.root.style.top=box.top+'px';this.root.style.width=box.width+'px';this.root.style.height=Math.max(0,bottom-box.top-reserved)+'px';this.root.dataset.dark=String(this.document.body.hasAttribute('data-ds-dark-theme')||this.document.documentElement.dataset.theme==='dark'||this.document.documentElement.classList.contains('dark'));if(center)this.resize?.observe(center)}
   if(box){const entry=this.document.querySelector<HTMLElement>('[data-odyssey-panel-entry=right][aria-expanded=false]'),r=entry?.getBoundingClientRect();const reserve=r&&r.width>0&&r.height>0&&r.bottom>box.top&&r.top<box.top+44&&r.left<box.right?Math.max(12,box.right-r.left+8):12;this.root.style.setProperty('--eb-tabs-right',reserve+'px')}
   if(this.panel==='bookmarks')this.positionBookmarks();if(this.panel==='tab-list')this.positionTabList()
+  if(this.panel==='recent-downloads')this.positionDownloads()
   this.revealActiveTab();if(this.workspaceMotionUntil>this.document.defaultView!.performance.now())this.schedule()
   const bounds=this.root.querySelector('[data-browser-viewport]')?.getBoundingClientRect(),tab=this.tab()
   // Sample the exposed gutter inside the actual rounded corner, after height clamping.
@@ -154,14 +157,25 @@ export class BrowserAppView {
   if(this.panel===panel){this.dismiss();return}this.cancelFocusRestore();this.returningFocus=this.document.activeElement as HTMLElement
   if(panel==='tabs'){const box=this.root.querySelector('[aria-selected=true].eb-tab')?.getBoundingClientRect(),root=this.root.getBoundingClientRect();this.root.style.setProperty('--eb-tab-menu-x',Math.max(8,Math.min(root.width-316,(box?.left??root.left)-root.left))+'px')}
   if(panel==='tab-list')this.positionTabList();if(panel==='bookmarks'){this.bookmarkAnchorBar=!!this.returningFocus?.closest('.eb-bookmarks-bar');this.positionBookmarks()}
+  if(panel==='recent-downloads')this.positionDownloads()
   this.panelPresented=true;this.panelOpenedAt=this.document.defaultView!.performance.now();this.suggestions=false;this.query='';this.panel=panel;this.render();this.schedule()
   if(panel==='print'){try{this.image=await this.bridge.request('capture',{id:this.tab()?.id});if(this.panel===panel)this.render()}catch{}}
   if(this.panel!==panel||!this.panelPresented)return
-  if(panel==='zoom')this.focusZoom();else this.root.querySelector<HTMLInputElement>('.eb-popover input')?.focus()
+  if(panel==='zoom')this.focusZoom()
+  else if(panel==='recent-downloads')this.root.querySelector<HTMLElement>('#eb-recent-downloads h2 button')?.focus({preventScroll:true})
+  else this.root.querySelector<HTMLInputElement>('.eb-popover input')?.focus()
  }
  private positionTabList(){const root=this.root.getBoundingClientRect(),anchor=this.root.querySelector('.eb-tab-switcher')?.getBoundingClientRect();if(anchor)this.root.style.setProperty('--eb-tab-list-x',Math.max(8,Math.min(root.width-316,anchor.left-root.left))+'px')}
  private positionBookmarks(){const root=this.root.getBoundingClientRect(),anchor=this.root.querySelector(this.bookmarkAnchorBar?'.eb-bookmarks-bar [data-action=bookmarks]':'.eb-toolbar [data-action=bookmarks]')?.getBoundingClientRect();if(!anchor)return;const width=Math.min(380,root.width-32),right=Math.min(Math.max(12,root.right-anchor.right),Math.max(12,root.width-width-12));this.root.style.setProperty('--eb-bookmarks-top',Math.max(8,anchor.bottom-root.top+6)+'px');this.root.style.setProperty('--eb-bookmarks-right',right+'px')}
  private focusZoom(){(this.root.querySelector<HTMLElement>('[data-browser-panel] .eb-zoom-controls button:not(:disabled)')??this.root.querySelector<HTMLElement>('[data-browser-panel=zoom] h2 button'))?.focus({preventScroll:true})}
+ private positionDownloads(){
+  const root=this.root.getBoundingClientRect()
+  const anchor=this.root.querySelector('.eb-toolbar [data-action=recent-downloads]')?.getBoundingClientRect()
+  if(!anchor)return
+  const right=Math.min(Math.max(12,root.right-anchor.right),Math.max(12,root.width-344-12))
+  this.root.style.setProperty('--eb-downloads-top',Math.max(8,anchor.bottom-root.top+6)+'px')
+  this.root.style.setProperty('--eb-downloads-right',right+'px')
+ }
  private dismiss(restoreFocus=true){this.closePageContextMenu();this.panel='';this.panelPresented=false;this.suggestions=false;this.findOpen=false;this.query='';this.render();if(restoreFocus)this.restoreFocus();this.schedule();if(this.tab()?.url)void this.bridge.request('find',{id:this.tab()?.id,text:''}).catch(()=>{})}
  private cancelFocusRestore(){if(this.pendingFocusRestore)this.document.defaultView?.removeEventListener('focus',this.pendingFocusRestore);this.pendingFocusRestore=undefined}
  private restoreFocus(){
@@ -213,15 +227,15 @@ export class BrowserAppView {
   const previousTabWidths=new Map([...this.root.querySelectorAll<HTMLElement>('.eb-tab')].map(el=>[el.dataset.id!,el.getBoundingClientRect().width]));
   const focused=this.root.contains(this.document.activeElement)?this.document.activeElement as HTMLInputElement:undefined,key=focused?.dataset.field,selection=typeof focused?.selectionStart==='number'?[focused.selectionStart,focused.selectionEnd]:undefined,values=new Map<string,string|boolean>(),same=this.lastTab===t.id
   if(same)for(const input of this.root.querySelectorAll<HTMLInputElement|HTMLSelectElement>('[data-field]')){if(input.dataset.field==='start-query'||input.dataset.field==='address'&&input!==focused)continue;values.set(input.dataset.field!,input instanceof this.document.defaultView!.HTMLInputElement&&input.type==='checkbox'?input.checked:input.value)}
-  const scrolls=[...this.root.querySelectorAll<HTMLElement>('.eb-start,.eb-settings,.eb-popover,.eb-tab-scroll')].map(el=>({selector:'.'+el.className.split(' ')[0],top:el.scrollTop,left:el.scrollLeft}));
+  const scrolls=[...this.root.querySelectorAll<HTMLElement>('.eb-start,.eb-settings,.eb-popover,.eb-tab-scroll,.eb-recent-download-list')].map(el=>({selector:'.'+el.className.split(' ')[0],top:el.scrollTop,left:el.scrollLeft}));
   this.lastTab=t.id;this.root.dataset.pageEdited=String(!!this.state.pageEdited);this.root.dataset.currentPageTitle=t.title;this.root.dataset.currentPageUrl=t.url;this.root.dataset.currentPageLoading=String(t.loading)
   const close=button('dismiss','关闭','close'),bookmark=this.state.bookmarks.some(b=>b.url===t.url)
   this.root.innerHTML=`<div class="eb-tabs" data-crowded="${this.state.tabs.length>6}">${workspaceBackButton('','exit')}<div class="eb-app-label">${icon('globe')}<span>浏览器</span></div><div class="eb-workspace-controls"><button type="button" class="eb-icon-button eb-workspace-toggle" data-action="workspace-tabs" aria-label="${this.workspaceTabsExpanded?'收起':'展开'}工作区页签" title="${this.workspaceTabsExpanded?'收起':'展开'}工作区页签：对话、研究、笔记、轨迹" aria-expanded="${this.workspaceTabsExpanded}" aria-controls="eb-workspace-tabs">${icon('workspace')}</button><nav id="eb-workspace-tabs" class="eb-workspace-tabs" aria-label="工作区视图" aria-hidden="${!this.workspaceTabsExpanded}" ${!this.workspaceTabsExpanded?'inert':''}>${[['chat','对话'],['research','研究'],['notes','笔记'],['trajectory','轨迹']].map(([view,label])=>`<button type="button" data-action="workspace-view" data-view="${view}" aria-label="切换到${label}" title="${!this.sessionId&&view!=='chat'?'选择会话后可打开'+label:label}" ${!this.sessionId&&view!=='chat'?'disabled':''}>${label}</button>`).join('')}</nav></div><span class="eb-app-divider"></span><button class="eb-icon-button eb-tab-switcher" type="button" data-action="tab-list" aria-label="已打开的页签" title="已打开的页签" aria-haspopup="menu" aria-expanded="${this.panel==='tab-list'}">${icon('chevron')}</button><div class="eb-tab-scroll" role="tablist" aria-label="网页标签页" style="--eb-tab-count:${this.state.tabs.length};--eb-tabs-max:${this.state.tabs.reduce((width,tab)=>width+(tab.pinned?42:240),0)+Math.max(0,this.state.tabs.length-1)*(this.state.tabs.length>6?2:8)}px">${this.state.tabs.map(tab=>`<div role="tab" draggable="false" tabindex="${tab.id===t.id?0:-1}" aria-selected="${tab.id===t.id}" class="eb-tab" data-action="select" data-id="${tab.id}" data-pinned="${tab.pinned}" title="${esc(tab.title)}${tab.private?' · 隐私浏览':''}">${this.tabIcon(tab)}${tab.pinned?'':`<span class="eb-tab-title">${esc(tab.title)}</span><button type="button" class="eb-tab-close" tabindex="-1" aria-label="关闭 ${esc(tab.title)}" data-action="close" data-id="${tab.id}">${icon('close')}</button>`}</div>`).join('')}</div>${button('new','新标签页','plus')}</div>
-  <div class="eb-toolbar">${button('back','后退','back',!t.canBack)}${button('forward','前进','forward',!t.canForward)}${button(t.loading?'stop':'reload',t.loading?'停止加载':'重新加载',t.loading?'close':'refresh',!t.url)}${button('home','主页','home')}<div class="eb-address-wrap">${button('site',t.url?'站点信息':'搜索',''+(t.url?(t.url.startsWith('https:')?'lock':'shield'):'search') as keyof typeof browserIcons,!t.url)}<input data-address data-field="address" aria-label="搜索或输入网址" role="combobox" aria-autocomplete="list" aria-expanded="${this.suggestions}" value="${esc(t.page?'odyssey://'+t.page:t.url)}" placeholder="搜索或输入网址" autocomplete="off" spellcheck="false"><button type="button" class="eb-icon-button" data-action="toggle-bookmark" aria-label="${bookmark?'取消收藏':'添加收藏'}" title="${bookmark?'取消收藏':'添加收藏'}" aria-pressed="${bookmark}" ${!t.url?'disabled':''}>${icon(bookmark?'star':'starOutline')}</button></div>${this.state.translation&&this.state.translation.state!=='idle'?`<button class="eb-translation-status" type="button" data-action="translation-progress" title="${esc(this.state.translation.state!=='translating'&&(this.state.translation.canRestore||['translated','partial'].includes(this.state.translation.state))?'点击还原原文':this.state.translation.error||'正在翻译网页')}" aria-label="${esc(this.state.translation.error||'网页翻译状态')}">${this.state.translation.state==='translating'?'翻译中 '+this.state.translation.completed+'/'+this.state.translation.total:this.state.translation.state==='translated'?'已翻译':this.state.translation.state==='partial'?'部分翻译':'翻译未完成'}</button>`:''}${button('bookmarks','收藏夹','book')}${button('menu','更多浏览器操作','more')}</div>
+  <div class="eb-toolbar">${button('back','后退','back',!t.canBack)}${button('forward','前进','forward',!t.canForward)}${button(t.loading?'stop':'reload',t.loading?'停止加载':'重新加载',t.loading?'close':'refresh',!t.url)}${button('home','主页','home')}<div class="eb-address-wrap">${button('site',t.url?'站点信息':'搜索',''+(t.url?(t.url.startsWith('https:')?'lock':'shield'):'search') as keyof typeof browserIcons,!t.url)}<input data-address data-field="address" aria-label="搜索或输入网址" role="combobox" aria-autocomplete="list" aria-expanded="${this.suggestions}" value="${esc(t.page?'odyssey://'+t.page:t.url)}" placeholder="搜索或输入网址" autocomplete="off" spellcheck="false">${this.downloadButton(t)}<button type="button" class="eb-icon-button" data-action="toggle-bookmark" aria-label="${bookmark?'取消收藏':'添加收藏'}" title="${bookmark?'取消收藏':'添加收藏'}" aria-pressed="${bookmark}" ${!t.url?'disabled':''}>${icon(bookmark?'star':'starOutline')}</button></div>${this.state.translation&&this.state.translation.state!=='idle'?`<button class="eb-translation-status" type="button" data-action="translation-progress" title="${esc(this.state.translation.state!=='translating'&&(this.state.translation.canRestore||['translated','partial'].includes(this.state.translation.state))?'点击还原原文':this.state.translation.error||'正在翻译网页')}" aria-label="${esc(this.state.translation.error||'网页翻译状态')}">${this.state.translation.state==='translating'?'翻译中 '+this.state.translation.completed+'/'+this.state.translation.total:this.state.translation.state==='translated'?'已翻译':this.state.translation.state==='partial'?'部分翻译':'翻译未完成'}</button>`:''}${button('bookmarks','收藏夹','book')}${button('menu','更多浏览器操作','more')}</div>
   ${this.state.settings.bookmarksBar&&!t.url&&!t.page&&!this.managingBookmarks&&!this.settings?`<div class="eb-bookmarks-bar">${this.state.folders.slice(0,5).map(f=>`<button data-action="folder-open" data-folder="${esc(f)}">${icon('folder')}<span class="eb-bookmark-title">${esc(f)}</span></button>`).join('')}${this.state.bookmarks.filter(b=>!b.folder).slice(0,5).map(b=>`<button data-action="open-url" data-url="${esc(b.url)}">${icon('globe')}<span class="eb-bookmark-title">${esc(b.title)}</span></button>`).join('')}<span class="eb-spacer"></span><button data-action="bookmarks">全部收藏</button></div>`:''}
   <div class="eb-content"><div class="eb-viewport" data-browser-viewport></div>${this.managingBookmarks?'<div data-bookmark-manager-host></div>':this.settings?this.settingsHTML():t.page?'<div data-browser-activity-host></div>':t.error?`<div class="eb-start eb-error"><h1>暂时无法打开这个网页</h1><p>请检查网络连接或网址是否正确，稍后再试。</p><small class="eb-muted">${esc(hostname(t.url))}</small><div class="eb-error-buttons"><button class="eb-primary" data-action="reload">重新加载</button><button data-action="external">在系统浏览器中打开</button><button data-action="back" ${!t.canBack?'disabled':''}>返回上一页</button></div><small class="eb-muted">${esc(t.error)}</small></div>`:!t.url?this.startHTML(t):''}</div>
 
-  <div class="eb-overlay-layer">${this.panel?`<div data-browser-panel="${this.panel}" ${!this.panelPresented?'inert aria-hidden="true" style="visibility:hidden;pointer-events:none;animation:none"':''} class="eb-popover ${['menu','tabs','tab-list'].includes(this.panel)?'eb-menu':''} ${['save','clear','folder','print','add-link'].includes(this.panel)?'eb-dialog':''} ${this.panel==='print'?'eb-print':''}" role="${['menu','tabs','tab-list'].includes(this.panel)?'menu':'dialog'}" aria-label="${esc(this.panelTitle())}" ${['save','clear','folder','print','add-link'].includes(this.panel)?'aria-modal="true"':''}>${!['menu','tabs','tab-list'].includes(this.panel)?`<h2>${esc(this.panelTitle())}${close}</h2>`:''}${this.panelHTML(t)}</div>`:''}
+  <div class="eb-overlay-layer">${this.panel?`<div data-browser-panel="${this.panel}" ${this.panel==='recent-downloads'?'id="eb-recent-downloads"':''} ${!this.panelPresented?'inert aria-hidden="true" style="visibility:hidden;pointer-events:none;animation:none"':''} class="eb-popover ${['menu','tabs','tab-list'].includes(this.panel)?'eb-menu':''} ${['save','clear','folder','print','add-link'].includes(this.panel)?'eb-dialog':''} ${this.panel==='print'?'eb-print':''}" role="${['menu','tabs','tab-list'].includes(this.panel)?'menu':'dialog'}" aria-label="${esc(this.panelTitle())}" ${['save','clear','folder','print','add-link'].includes(this.panel)?'aria-modal="true"':''}>${!['menu','tabs','tab-list'].includes(this.panel)?`<h2>${esc(this.panelTitle())}${close}</h2>`:''}${this.panelHTML(t)}</div>`:''}
   ${this.findOpen&&!this.state.nativeFind?`<div class="eb-popover eb-find" role="search" aria-label="页内查找"><input data-field="find" placeholder="在页面中查找" aria-label="查找内容" value="${esc(this.findText)}"><small>${t.find?.activeMatchOrdinal??0} / ${t.find?.matches??0}</small>${button('find-prev','上一个匹配','up')}${button('find-next','下一个匹配','chevron')}${close}</div>`:''}
   ${this.suggestions?`<div class="eb-popover eb-suggestions" role="listbox" aria-label="网址建议">${this.suggestionsHTML()}</div>`:''}</div>
   ${this.notice?`<div class="eb-toast" role="${this.noticeError?'alert':'status'}" data-error="${this.noticeError}">${icon(this.noticeError?'shield':'check')}${esc(this.notice)}</div>`:''}`
@@ -245,12 +259,51 @@ export class BrowserAppView {
   const empty=this.startQuery?'没有匹配的结果':kind==='research'?'还没有研究资料，添加网址或将已有收藏移到“研究资料”分类。':kind==='bookmarks'?'还没有收藏，添加网址或在浏览网页时点击地址栏的收藏按钮。':'还没有浏览记录，访问网页后会显示在这里。'
   return `<div class="eb-start eb-start-library"><button class="eb-library-back" data-action="start-home">${icon('back')}返回首页</button><div class="eb-library-heading"><h1>${labels[kind]}</h1><span class="eb-spacer"></span>${['research','bookmarks'].includes(kind)?'<button class="eb-primary" data-action="add-link">添加网址</button>':''}</div><p>${description[kind]}</p><div class="eb-panel-search">${icon('search')}<input data-field="start-query" aria-label="搜索${labels[kind]}" placeholder="搜索${labels[kind]}" value="${esc(this.startQuery)}"></div><div class="eb-library-list">${rows.slice(0,200).map(row=>`<div class="eb-library-row">${this.row(row,'open-url',kind==='history')}${['research','bookmarks'].includes(kind)?`<small>${esc(row.folder||'全部收藏')}</small><button class="eb-icon-button" data-action="edit-bookmark" data-row-id="${esc(row.id)}" aria-label="编辑 ${esc(row.title)}">${icon('more')}</button>`:''}</div>`).join('')||`<p class="eb-empty">${empty}</p>`}</div></div>`
  }
- private panelTitle(){return ({bookmarks:'收藏夹',history:'历史记录',downloads:'下载',save:'添加到收藏夹',site:'站点信息',clear:'清除浏览数据',folder:'新建文件夹',print:'打印与导出 PDF','add-link':'添加网址',cookies:'Cookie 与站点数据',zoom:'页面缩放'} as Record<string,string>)[this.panel]??'浏览器菜单'}
+ private panelTitle(){return ({bookmarks:'收藏夹',history:'历史记录',downloads:'下载','recent-downloads':'近期的下载记录',save:'添加到收藏夹',site:'站点信息',clear:'清除浏览数据',folder:'新建文件夹',print:'打印与导出 PDF','add-link':'添加网址',cookies:'Cookie 与站点数据',zoom:'页面缩放'} as Record<string,string>)[this.panel]??'浏览器菜单'}
+ private toolbarDownloads(t:BrowserTab):BrowserDownload[]{
+  return this.state!.downloads.filter(row=>!row.private||t.private)
+ }
+ private downloadButton(t:BrowserTab):string{
+  const rows=this.toolbarDownloads(t)
+  if(rows.some(row=>!row.private))this.downloadButtonShown=true
+  if(!this.downloadButtonShown&&!rows.length)return ''
+  const progress=downloadIndicator(rows)
+  const label=progress?`查看下载 · ${progress.label}`:'查看下载'
+  const indeterminate=!!progress&&progress.percent===undefined
+  const phase=indeterminate&&!progress.paused?`style="animation-delay:-${this.document.defaultView!.performance.now()%1000}ms"`:''
+  const glyph=progress?`<svg class="eb-download-ring" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+   <circle class="eb-download-ring-track" cx="10" cy="10" r="8.5"/>
+   <circle class="eb-download-ring-fill" ${phase} cx="10" cy="10" r="8.5" pathLength="100" stroke-dasharray="${progress.percent??27} 100" transform="rotate(-90 10 10)"/>
+   <path d="M10 5.5v8.5m-3-3 3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`:icon('download')
+  const state=progress?.paused?'paused':progress?'progressing':'idle'
+  return `<button type="button" class="eb-icon-button eb-download-entry" data-action="recent-downloads" data-state="${state}" ${indeterminate?'data-indeterminate':''} title="${label}" aria-label="查看下载" ${progress?`aria-description="${progress.label}"`:''} aria-haspopup="dialog" aria-expanded="${this.panel==='recent-downloads'}" aria-controls="eb-recent-downloads">${glyph}</button>`
+ }
+ private recentDownloads(t:BrowserTab):string{
+  const rows=this.toolbarDownloads(t).slice(0,5)
+  const records=rows.map(row=>{
+   const {active,percent,detail,commands}=downloadDetails(row)
+   const id=esc(row.id),name=esc(row.name||'未命名文件')
+   const filename=row.state==='completed'
+    ? `<button type="button" class="eb-recent-download-name" data-action="download-open" data-id="${id}" title="${name}" aria-label="打开 ${name}">${name}</button>`
+    : `<strong class="eb-recent-download-name" title="${name}">${name}</strong>`
+   const actions=commands.filter(([action])=>action!=='open').map(([action,label,glyph])=>
+    `<button type="button" class="eb-icon-button" data-action="download-${action}" data-id="${id}" title="${label}" aria-label="${label} ${name}">${icon(glyph)}</button>`
+   ).join('')
+   const bar=active?`<div class="eb-recent-download-progress" role="progressbar" aria-label="${name}下载进度" ${percent===undefined?'':`aria-valuenow="${percent}"`}><span style="width:${percent??25}%"></span></div>`:''
+   return `<article class="eb-recent-download-row" data-state="${row.state}">${icon('file')}<div class="eb-recent-download-copy">
+    ${filename}<div class="eb-recent-download-meta"><small title="${esc(detail)}">${esc(detail)}</small><div class="eb-recent-download-actions">${actions}</div></div>${bar}
+   </div></article>`
+  }).join('')
+  return `<div class="eb-recent-download-list">${records||'<p class="eb-empty">还没有下载内容</p>'}</div>
+   <footer><button type="button" data-action="downloads">完整的下载记录${icon('external')}</button></footer>`
+ }
  private zoomHTML(t:BrowserTab){return `<div class="eb-zoom">缩放<div class="eb-zoom-controls"><button type="button" data-action="zoom-out" aria-label="缩小" ${!t.url||t.zoom<=.25?'disabled':''}>−</button><button type="button" data-action="zoom-reset" aria-label="恢复 100%" title="恢复 100%" class="eb-zoom-reset" ${!t.url||t.zoom===1?'disabled':''}>${Math.round(t.zoom*100)}%</button><button type="button" data-action="zoom-in" aria-label="放大" ${!t.url||t.zoom>=3?'disabled':''}>+</button></div></div>`}
  private panelHTML(t:BrowserTab):string {
   const s=this.state!,footer=(inner:string)=>`<footer>${inner}</footer>`,search=(label:string)=>`<div class="eb-panel-search">${icon('search')}<input data-field="panel-query" aria-label="${label}" placeholder="${label}" value="${esc(this.query)}"></div>`
   if(this.panel==='menu')return `${menuItem('new','新标签页','plus','⌘T')}${menuItem('private','新建隐私标签页','moon','⇧⌘N')}${menuItem('restore','重新打开关闭的标签页','history','⇧⌘T',!s.closed.length)}<hr>${menuItem('bookmarks','收藏夹','book','⌥⌘B')}${menuItem('history','历史记录','history','⌘Y')}${menuItem('downloads','下载内容','download','⌥⌘J')}<hr>${this.zoomHTML(t)}${menuItem('find','在页面中查找','search','⌘F',!t.url)}${menuItem('save-page','另存网页…','file','⌘S',!t.url)}${menuItem('print','打印 / 导出 PDF…','print','⌘P',!t.url)}${menuItem('external','在系统浏览器中打开','external','',!t.url)}<hr>${menuItem('send','发送到对话','chat','',!t.url)}${menuItem('material','加入工作材料','folder','',!t.url)}${menuItem('copy','复制页面链接','copy','',!t.url)}<hr>${s.pageEdited?menuItem('undo-page','撤销网页修改','history'):''}${menuItem('settings','浏览器设置','settings')}${menuItem('clear','清除浏览数据…','shield')}`
   if(this.panel==='zoom')return this.zoomHTML(t)+(!t.url?'<small>打开网页后可调整缩放。</small>':'')
+  if(this.panel==='recent-downloads')return this.recentDownloads(t)
   if(this.panel==='tab-list')return `<div class="eb-tab-heading"><span>已打开的页签</span><span>${s.tabs.length}</span></div><hr><div class="eb-tab-options">${s.tabs.map(tab=>`<button type="button" class="eb-tab-option" role="menuitemradio" aria-checked="${tab.id===s.activeId}" data-action="switch-tab" data-id="${tab.id}">${this.tabIcon(tab)}<span>${esc(tab.title)}</span>${tab.id===s.activeId?icon('check'):''}</button>`).join('')}</div>`
   if(this.panel==='tabs')return `${menuItem('reload','重新加载','refresh','⌘R',!t.url)}${menuItem('duplicate','复制标签页','copy')}${menuItem('pin',t.pinned?'取消固定标签页':'固定标签页','pin')}${menuItem('mute',t.muted?'取消标签页静音':'静音此标签页','pause')}${menuItem('close','关闭标签页','close','⌘W')}${menuItem('close-others','关闭其他标签页','close','',s.tabs.length<2)}${menuItem('restore','重新打开关闭的标签页','history','⇧⌘T',!s.closed.length)}`
   if(this.panel==='bookmarks'){
@@ -295,7 +348,7 @@ export class BrowserAppView {
   if(action==='dismiss'){this.dismiss();return}
   if(action==='toggle-bookmark'){if(!t.url||this.bookmarkBusy)return;this.bookmarkBusy=true;try{await this.run('bookmark',{url:t.url,title:t.title,remove:this.state!.bookmarks.some(b=>b.url===t.url)})}finally{this.bookmarkBusy=false}return}
   if(action==='save')this.editingBookmark=undefined;
-  if(['menu','tabs','tab-list','bookmarks','save','clear','print','folder','zoom'].includes(action)){if(action==='folder')this.folder='';await this.show(action);return}
+  if(['menu','tabs','tab-list','bookmarks','recent-downloads','save','clear','print','folder','zoom'].includes(action)){if(action==='folder')this.folder='';await this.show(action);return}
   if(action==='switch-tab'){await this.run('select',{id:target?.dataset.id});this.dismiss();this.root.querySelector<HTMLElement>('[data-action=tab-list]')?.focus();return}
   if(action==='close'){await this.closeAnimated(target?.dataset.id??t.id);return}
   if(action==='select'){this.settings=false;this.image='';this.panel='';await this.run('select',{id:target?.dataset.id});this.focusTab();return}
@@ -313,7 +366,16 @@ export class BrowserAppView {
   if(action==='bookmark-save'||action==='bookmark-remove'){await this.run('bookmark',{url:this.editingBookmark?.url??t.url,title:this.field('bookmark-title'),folder:this.field('bookmark-folder'),remove:action==='bookmark-remove'});this.dismiss();this.toast(action==='bookmark-save'?'已保存到收藏夹':'已移除收藏');return}
   if(action==='history-all'||action==='history-closed'){this.recent=action==='history-closed';this.render();return}
   if(action==='download-location'){await this.run('settings',{chooseDirectory:true});return}
-  if(action.startsWith('download-')){await this.run('download',{id:target?.dataset.id,action:action.slice(9),sessionId:this.sessionId});if(action==='download-material')this.toast('下载文件已加入工作材料');return}
+  if(action.startsWith('download-')){
+   const id=target?.dataset.id
+   if(!id||this.downloadActionsInFlight.has(id))return
+   this.downloadActionsInFlight.add(id)
+   try{
+    await this.run('download',{id,action:action.slice(9),sessionId:this.sessionId})
+    if(action==='download-material')this.toast('下载文件已加入工作材料')
+   }finally{this.downloadActionsInFlight.delete(id)}
+   return
+  }
   if(action==='site-cookies'){const data=await this.bridge.request('site-data',{id:t.id});this.siteCookieCount=data.cookies;await this.show('cookies');return}
   if(action==='site-clear'){await this.run('site-clear',{id:t.id});this.dismiss();this.toast('已清除当前网站的 Cookie 与站点数据');return}
   if(action==='settings'){this.panel='';this.settings=true;this.render();return}

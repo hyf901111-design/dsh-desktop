@@ -74,7 +74,7 @@ function rendererFixture(){
 
 async function nativeFixture(config){
  const {app,BrowserWindow,ipcMain,webContents,screen}=require('electron')
- const {writeFile,readFile}=require('node:fs/promises'),{createServer}=require('node:http'),assert=require('node:assert/strict')
+ const {writeFile,readFile,mkdir}=require('node:fs/promises'),{createServer}=require('node:http'),assert=require('node:assert/strict')
  app.setPath('userData',config.profile);app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required')
  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),trace=[],checks=[],timings=[],consoleEvents=[],fontRequests=[],passiveInput=new Map()
  let win,api,page,pageView,menu,menuView,wireState,painted,server,display,scale,phase='boot',captureCalls=0,menuRequests=0,holdMenuStates=false
@@ -93,7 +93,7 @@ async function nativeFixture(config){
  const live=()=>page.executeJavaScript('({...window.live,cursor:document.querySelector("video").currentTime})')
  const advancing=async()=>{const before=await live();await until(async()=>{const after=await live();return after.timer>before.timer+2&&after.raf>before.raf+2&&after.video>before.video+1},'timer, animation and video continue under native menu');const after=await live();return{before,after}}
  const ax=async wc=>{if(!wc.debugger.isAttached())wc.debugger.attach('1.3');return(await wc.debugger.sendCommand('Accessibility.getFullAXTree')).nodes}
- const check=async(name,run)=>{if(config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
+ const check=async(name,run)=>{if(config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
  const dismiss=async()=>{await ui('qa.dismiss()');await until(()=>!locateMenu(),'native menu dismissed')}
  const diagnostics=async()=>({phase,error:null,window:win&&!win.isDestroyed()?{visible:win.isVisible(),focused:win.isFocused(),focusedWindow:BrowserWindow.getFocusedWindow()?.id,focusedContents:webContents.getFocusedWebContents()?.id,bounds:win.getContentBounds(),zoom:win.webContents.getZoomFactor()}:undefined,views:win&&!win.isDestroyed()?win.contentView.children.filter(view=>view.webContents&&!view.webContents.isDestroyed()).map(view=>({title:view.webContents.getTitle(),url:view.webContents.getURL().slice(0,160),visible:view.getVisible(),bounds:view.getBounds(),zoom:view.webContents.getZoomFactor()})):[],renderer:await Promise.race([ui('qa.diagnostics()'),pause(500).then(()=>({timeout:true}))]).catch(error=>({error:String(error)})),checks,timings,captureCalls,fontRequests,consoleEvents,trace})
  try{
@@ -104,7 +104,25 @@ async function nativeFixture(config){
   const ignoreMouseEvents=BrowserWindow.prototype.setIgnoreMouseEvents;BrowserWindow.prototype.setIgnoreMouseEvents=function(ignore,options){passiveInput.set(this.id,{ignore,options});return ignoreMouseEvents.call(this,ignore,options)}
   app.on('web-contents-created',(_,contents)=>{const focus=contents.focus.bind(contents);contents.focus=(...args)=>{record('wc-focus-call',{id:contents.id,title:contents.getTitle(),stack:new Error().stack?.split('\n').slice(1,5).join('\n')});return focus(...args)};contents.on('focus',()=>record('wc-focus',{id:contents.id,title:contents.getTitle()}));contents.on('blur',()=>record('wc-blur',{id:contents.id,title:contents.getTitle()}));contents.on('console-message',(details,...legacy)=>{consoleEvents.push({id:contents.id,title:contents.getTitle(),level:details.level??legacy[0],message:details.message??legacy[1]});if(consoleEvents.length>100)consoleEvents.shift()});const send=contents.send.bind(contents);contents.send=(channel,...args)=>{if(channel==='browser-app:menu-state'){wireState=structuredClone(args[0]);record('native-state',{id:wireState.id,revision:wireState.revision});if(holdMenuStates){heldMenuStates.push(()=>send(channel,...args));return}}return send(channel,...args)}})
   ipcMain.on('browser-app:menu-action',(_,action)=>{if(action?.kind==='painted')painted=action;record('native-action',{actionKind:action?.kind,id:action?.id,revision:action?.revision,controlId:action?.controlId})})
-  app.on('session-created',session=>session.protocol.handle('https',()=>new Response(`<!doctype html><title>Live menu fixture</title><style>html,body{margin:0;background:#141414;color:#f5f5f5;font:24px system-ui}button{position:fixed;left:30px;bottom:30px;padding:20px}video{width:320px;height:180px}canvas{display:none}</style><h1>Live synthetic webpage</h1><video muted autoplay playsinline></video><canvas width=320 height=180></canvas><button id=outside>First outside click</button><script>window.live={timer:0,raf:0,video:0,click:0};setInterval(()=>live.timer++,20);const canvas=document.querySelector('canvas'),context=canvas.getContext('2d');function frame(){live.raf++;context.fillStyle='hsl('+live.raf%360+' 70% 45%)';context.fillRect(0,0,320,180);requestAnimationFrame(frame)}requestAnimationFrame(frame);const video=document.querySelector('video');video.srcObject=canvas.captureStream(30);video.play();function videoFrame(){live.video++;video.requestVideoFrameCallback(videoFrame)}video.requestVideoFrameCallback(videoFrame);document.querySelector('#outside').onclick=()=>live.click++;</script>`,{headers:{'content-type':'text/html'}})))
+  app.on('session-created',session=>session.protocol.handle('https',request=>{
+   if(new URL(request.url).pathname==='/toolbar-download'){
+    let sent=0,timer
+    const total=4_000_000
+    const body=new ReadableStream({
+     start(controller){
+      timer=setInterval(()=>{
+       const length=Math.min(65536,total-sent)
+       if(length<=0){clearInterval(timer);controller.close();return}
+       controller.enqueue(new Uint8Array(length))
+       sent+=length
+      },60)
+     },
+     cancel(){clearInterval(timer)}
+    })
+    return new Response(body,{headers:{'content-type':'application/octet-stream','content-length':String(total),'content-disposition':'attachment; filename="toolbar-download.bin"'}})
+   }
+   return new Response(`<!doctype html><title>Live menu fixture</title><style>html,body{margin:0;background:#141414;color:#f5f5f5;font:24px system-ui}button{position:fixed;left:30px;bottom:30px;padding:20px}video{width:320px;height:180px}canvas{display:none}</style><h1>Live synthetic webpage</h1><video muted autoplay playsinline></video><canvas width=320 height=180></canvas><button id=outside>First outside click</button><script>window.live={timer:0,raf:0,video:0,click:0};setInterval(()=>live.timer++,20);const canvas=document.querySelector('canvas'),context=canvas.getContext('2d');function frame(){live.raf++;context.fillStyle='hsl('+live.raf%360+' 70% 45%)';context.fillRect(0,0,320,180);requestAnimationFrame(frame)}requestAnimationFrame(frame);const video=document.querySelector('video');video.srcObject=canvas.captureStream(30);video.play();function videoFrame(){live.video++;video.requestVideoFrameCallback(videoFrame)}video.requestVideoFrameCallback(videoFrame);document.querySelector('#outside').onclick=()=>live.click++;</script>`,{headers:{'content-type':'text/html'}})
+  }))
   display=screen.getAllDisplays().sort((a,b)=>b.size.width*b.size.height*b.scaleFactor*b.scaleFactor-a.size.width*a.size.height*a.scaleFactor*a.scaleFactor)[0];scale=display.scaleFactor
   record('display',{id:display.id,scale,workArea:display.workArea,pixels:{width:display.size.width*scale,height:display.size.height*scale}})
   win=new BrowserWindow({x:display.workArea.x+16,y:display.workArea.y+16,width:Math.ceil(4480/scale),height:Math.ceil(2500/scale),show:false,acceptFirstMouse:true,webPreferences:{preload:config.preload,sandbox:true,contextIsolation:true,nodeIntegration:false}})
@@ -304,13 +322,38 @@ async function nativeFixture(config){
    return{bounds,focusPreserved:true,copyForwarded:true}
   })
 
+  await check('recent downloads projects live progress and actions above the webpage',async()=>{
+   const directory=join(config.profile,'downloads')
+   await mkdir(directory,{recursive:true})
+   app.setPath('downloads',directory)
+   const entry='[data-action=recent-downloads]'
+   assert.equal(await ui(`!!document.querySelector('${entry}')`),false)
+   page.downloadURL('https://live-menu.example.test/toolbar-download')
+   await until(()=>ui(`document.querySelector('${entry}')?.dataset.state==="progressing"`),'download entry appears when transfer starts')
+   await ui(`qa.click('${entry}')`)
+   const bounds=await shown('recent downloads')
+   await until(()=>menuDOM('Number(document.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow"))>0'),'progress updates inside the native menu')
+   await clickNative('[data-action=download-pause]')
+   await until(()=>api.snapshot().downloads[0]?.state==='paused','native pause reaches the download')
+   await until(()=>menuDOM('!!document.querySelector("[data-action=download-resume]")'),'resume shown after pause')
+   await clickNative('[data-action=download-resume]')
+   await until(()=>api.snapshot().downloads[0]?.state==='completed','resumed file completes',8000)
+   await until(()=>menuDOM('!!document.querySelector("[data-action=download-open]")'),'completed file is actionable')
+   assert.equal((await readFile(join(directory,'toolbar-download.bin'))).length,4_000_000)
+   await clickNative('[data-action=dismiss]')
+   await until(async()=>!locateMenu()&&await ui(`document.querySelector('${entry}')?.getAttribute("aria-expanded")==="false"`),'menu closes and keeps the toolbar entry')
+   assert.equal(pageView.getVisible(),true)
+   assert.equal(captureCalls,0)
+   return {bounds,completed:true}
+  })
+
   const report={electron:process.versions.electron,chrome:process.versions.chrome,temporaryProfile:true,initialPass:config.initialPass,supplementOnly:config.supplementOnly,display:{id:display.id,scale,bounds:display.bounds},checks,timings,captureCalls,fontRequests,consoleEvents,trace}
   await writeFile(join(config.evidence,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));api.dispose();server.close();win.destroy();app.exit(0)
  }catch(error){const failure=await diagnostics();failure.error=String(error?.stack||error);await writeFile(join(config.evidence,'failure.json'),JSON.stringify(failure,null,2));console.error(JSON.stringify(failure,null,2));api?.dispose();server?.close();win?.destroy();app.exit(1)}
 }
 
 await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
-const config={hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
+const config={downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
 await build({stdin:{resolveDir:root,contents:`import {registerBrowserApp} from './src/main/browser/service';const {join}=require('node:path');(${nativeFixture.toString()})(${JSON.stringify(config)});`},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron'],logLevel:'silent'})
 const code=await new Promise((done,reject)=>{
  const child=spawn(require('electron'),[entry],{env:{...process.env,ELECTRON_RUN_AS_NODE:''},stdio:'inherit'}),timer=setTimeout(()=>child.kill('SIGTERM'),60000)

@@ -43,6 +43,79 @@ for(const dark of [false,true])it(`rotates a loading tab before restoring its fa
   await page.evaluate(()=>{const state=window.snapshot();state.tabs[1].loading=false;window.setBrowserState(state)});expect(await tab.locator('.eb-tab-loading').count()).toBe(0);expect(await tab.locator('img.eb-tab-favicon').count()).toBe(1);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+it('shows live download progress beside the bookmark and keeps the entry after closing the panel',async()=>{
+ const {page,errors}=await fixture(1440,900,true);try{
+  await liveWebsite(page)
+  const entry=page.getByRole('button',{name:'查看下载',exact:true}),panel=page.getByRole('dialog',{name:'近期的下载记录'})
+  expect(await entry.count()).toBe(0)
+  await page.evaluate(()=>{
+   const file={tabId:'tab0',private:false,url:'https://example.com/file',path:'/tmp/test',state:'progressing'}
+   window.setBrowserState({downloads:[{...file,id:'a',name:'报告.pdf',received:25,total:100},{...file,id:'b',name:'资料.zip',received:175,total:300}]})
+  })
+  expect(await entry.getAttribute('aria-description')).toBe('2 项下载中 · 50%')
+  expect(await entry.evaluate(el=>el.nextElementSibling.dataset.action)).toBe('toggle-bookmark')
+  expect(await panel.count()).toBe(0)
+  await entry.click()
+  expect(await panel.getByRole('progressbar',{name:'报告.pdf下载进度'}).getAttribute('aria-valuenow')).toBe('25')
+  const anchor=await entry.boundingBox(),popup=await panel.boundingBox()
+  expect(popup.y).toBeGreaterThan(anchor.y+anchor.height)
+  expect(Math.abs(popup.x+popup.width-anchor.x-anchor.width)).toBeLessThan(1)
+  await panel.getByRole('button',{name:'暂停 报告.pdf'}).click()
+  expect(await page.evaluate(()=>window.browserCalls.filter(([name])=>name==='download').at(-1))).toEqual(['download',{id:'a',action:'pause',sessionId:'session-A'}])
+  await page.evaluate(()=>{
+   const rows=window.snapshot().downloads
+   Object.assign(rows[0],{state:'paused'})
+   Object.assign(rows[1],{received:275})
+   window.setBrowserState({downloads:rows})
+  })
+  expect(await entry.getAttribute('aria-description')).toBe('2 项下载中 · 75%')
+  expect(await panel.getByRole('button',{name:'继续下载 报告.pdf'}).count()).toBe(1)
+  expect(await panel.getByRole('progressbar',{name:'资料.zip下载进度'}).getAttribute('aria-valuenow')).toBe('91')
+  await panel.screenshot({path:evidence+'/recent-downloads-dark.png'})
+  await panel.getByRole('button',{name:'关闭',exact:true}).click()
+  expect(await entry.getAttribute('aria-expanded')).toBe('false')
+  await page.evaluate(()=>{
+   const rows=window.snapshot().downloads.map(row=>({...row,state:'completed',received:row.total}))
+   window.setBrowserState({downloads:rows})
+  })
+  expect(await entry.getAttribute('aria-description')).toBeNull()
+  await entry.click()
+  await panel.getByRole('button',{name:'打开 报告.pdf'}).click()
+  await panel.getByRole('button',{name:'在文件夹中显示 报告.pdf'}).click()
+  expect(await page.evaluate(()=>window.browserCalls.filter(([name])=>name==='download').map(([,value])=>value.action))).toEqual(['pause','open','reveal'])
+  await panel.getByRole('button',{name:'完整的下载记录'}).click()
+  expect(await page.getByRole('heading',{name:'下载内容',exact:true}).count()).toBe(1)
+  expect(await panel.count()).toBe(0)
+  expect(await entry.count()).toBe(1)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
+it('keeps a compact recent downloads panel inside a narrow browser with unknown totals',async()=>{
+ const {page,errors}=await fixture(394,700,false);try{
+  const entry=page.getByRole('button',{name:'查看下载',exact:true}),panel=page.getByRole('dialog',{name:'近期的下载记录'})
+  await page.evaluate(()=>{
+   const file={tabId:'tab0',private:false,url:'https://example.com/file',path:'/tmp/test',state:'completed',received:300,total:300}
+   const rows=Array.from({length:7},(_,index)=>({...file,id:String(index),name:'文件-'+index+'-长文件名称测试测试测试.zip'}))
+   Object.assign(rows[0],{state:'progressing',total:0})
+   window.setBrowserState({downloads:rows})
+  })
+  expect(await entry.getAttribute('aria-description')).toBe('1 项下载中')
+  await entry.click()
+  expect(await panel.locator('article').count()).toBe(5)
+  expect(await panel.getByRole('progressbar').getAttribute('aria-valuenow')).toBeNull()
+  const geometry=await panel.evaluate(el=>{const a=el.getBoundingClientRect(),b=el.closest('.eb-root').getBoundingClientRect();return{inside:a.left>=b.left&&a.right<=b.right,fits:el.scrollWidth===el.clientWidth}})
+  expect(geometry).toEqual({inside:true,fits:true})
+  await page.keyboard.press('Escape')
+  expect(await panel.count()).toBe(0)
+  expect(await entry.evaluate(el=>el===document.activeElement)).toBe(true)
+  await page.evaluate(()=>window.setBrowserState({downloads:[]}))
+  await entry.click()
+  expect(await panel.getByText('还没有下载内容').count()).toBe(1)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
 it('shows bookmarks only at home with padded text hovers and a square tab switcher',async()=>{
  const {page}=await fixture(1440,900,true);try{
   await page.evaluate(()=>window.setBrowserState({bookmarks:[{id:'bookmark',url:'https://example.com/',title:'浏览器验收 · 一个较长的收藏标题',at:Date.now()}]}))

@@ -30,6 +30,38 @@
 .eb-folder-create{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px!important;line-height:20px}
 .eb-folder-create>.eb-icon{width:16px;height:16px}
 .eb-popover[data-browser-panel=downloads]{width:440px}
+.eb-root{--eb-download-accent:#285cac}
+.eb-root[data-dark=true]{--eb-download-accent:#98bff5}
+.eb-root .eb-download-entry[data-state=progressing]{color:var(--eb-download-accent)!important}
+.eb-root .eb-download-entry[aria-expanded=true]{background:color-mix(in srgb,var(--eb-ink) 10%,transparent)}
+.eb-download-ring{width:18px;height:18px}
+.eb-download-ring-track{opacity:.3}
+.eb-download-ring-fill{stroke-linecap:round}
+.eb-download-entry[data-indeterminate][data-state=progressing] .eb-download-ring-fill{transform-origin:center;animation:eb-download-spin 1s linear infinite}
+@keyframes eb-download-spin{from{rotate:0turn}to{rotate:1turn}}
+@media(prefers-reduced-motion:reduce){.eb-download-entry[data-indeterminate] .eb-download-ring-fill{animation:none}}
+.eb-root .eb-popover[data-browser-panel=recent-downloads]{
+  top:var(--eb-downloads-top,92px);right:var(--eb-downloads-right,16px);
+  width:344px;max-width:calc(100% - 24px);max-height:calc(100% - var(--eb-downloads-top,92px) - 12px);
+  padding:12px;gap:6px;overflow:hidden
+}
+.eb-popover[data-browser-panel=recent-downloads]>h2{flex:none;padding-inline:4px}
+.eb-recent-download-list{min-height:0;overflow:auto}
+.eb-recent-download-row{display:flex;align-items:flex-start;gap:10px;padding:8px 4px}
+.eb-recent-download-row+.eb-recent-download-row{border-top:1px solid var(--eb-menu-line)}
+.eb-recent-download-row>.eb-icon{width:18px;height:18px;margin-top:2px;color:var(--eb-muted)}
+.eb-recent-download-copy{flex:1;min-width:0}
+.eb-root .eb-recent-download-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-size:14px;font-weight:500;line-height:20px}
+.eb-recent-download-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:24px}
+.eb-recent-download-meta>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--eb-muted);line-height:18px}
+.eb-recent-download-actions{display:flex;align-items:center;flex:none;gap:2px}
+.eb-recent-download-actions>.eb-icon-button{width:24px;height:24px}
+.eb-recent-download-actions .eb-icon{width:14px;height:14px}
+.eb-recent-download-progress{height:3px;margin:4px 0 2px;overflow:hidden;border-radius:3px;background:var(--eb-line)}
+.eb-recent-download-progress>span{display:block;height:100%;border-radius:inherit;background:var(--eb-download-accent)}
+.eb-recent-download-row[data-state=paused] .eb-recent-download-progress>span{background:var(--eb-muted)}
+.eb-root .eb-popover[data-browser-panel=recent-downloads]>footer>button{width:100%;justify-content:space-between;padding-inline:4px}
+.eb-popover[data-browser-panel=recent-downloads]>footer .eb-icon{width:15px;height:15px;color:var(--eb-muted)}
 .eb-popover[data-browser-panel=site]{left:156px;right:auto}
 .eb-popover[data-browser-panel=tabs]{left:var(--eb-tab-menu-x,132px);right:auto;top:48px;width:300px;padding:16px;gap:8px}
 .eb-popover[data-browser-panel=save]{width:460px}
