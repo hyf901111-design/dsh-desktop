@@ -1,7 +1,7 @@
 import {ipcMain,BrowserWindow,WebContentsView,screen,type Rectangle} from 'electron'
 import {randomUUID} from 'node:crypto'
 
-export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;focusOwner?:boolean;material?:'menu'}
+export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;hoverCard?:boolean;focusOwner?:boolean;material?:'menu'}
 export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number;through?:{x:number;y:number;button?:'left'|'middle'|'right'}}
 export type BrowserMenuKeyInput={type:string;key:string;meta?:boolean;control?:boolean;shift?:boolean;alt?:boolean;isComposing?:boolean}
 const actionChannel='browser-app:menu-action',stateChannel='browser-app:menu-state',clearChannel='browser-app:menu-clear'
@@ -10,7 +10,7 @@ const menuKeys=new Set(['Escape','Enter',' ','Tab','ArrowUp','ArrowDown','ArrowL
 const keys=new Set([...menuKeys,'l','t','w','r','f','d','p','s','y','n'])
 const documentHtml='<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data: http://127.0.0.1:*; font-src data: http://127.0.0.1:*; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>Browser menu overlay</title>'
 function validateState(state:BrowserMenuOverlayState){
- if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||['passive','focusOwner','reducedMotion'].some(key=>(state as any)[key]!==undefined&&typeof (state as any)[key]!=='boolean'))throw Error('原生菜单内容无效或过大。')
+ if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||['passive','hoverCard','focusOwner','reducedMotion'].some(key=>(state as any)[key]!==undefined&&typeof (state as any)[key]!=='boolean'))throw Error('原生菜单内容无效或过大。')
  if(state.material!==undefined&&(state.material!=='menu'||state.passive))throw Error('原生菜单材质无效。')
  const r=state.bounds
  if(!r||!(['x','y','width','height'] as const).every(key=>Number.isFinite(r[key])&&Math.abs(r[key])<=30000)||r.width<=0||r.height<=0||!Number.isFinite(state.zoom)||state.zoom<.1||state.zoom>5)throw Error('原生菜单位置或缩放无效。')
@@ -83,6 +83,8 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(value.through)action.through={x:value.through.x,y:value.through.y,button:value.through.button}
   for(const field of ['controlId','value','checked','key','over','scrollTop','scrollLeft','selectionStart','selectionEnd'] as const)if(value[field]!==undefined)(action as any)[field]=value[field]
   for(const field of ['metaKey','ctrlKey','shiftKey','altKey'] as const)if(typeof value[field]==='boolean')action[field]=value[field]
+  // The source card owns its copy handler and needs document focus to write.
+  if(state.hoverCard&&(value.kind==='click'||value.kind==='key'&&['Enter',' '].includes(value.key)))owner?.webContents.focus()
   onAction(action)
  }
  ipcMain.on(actionChannel,receive)

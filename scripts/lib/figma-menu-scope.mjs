@@ -9,6 +9,20 @@ export function patchFigmaMenuScope(source, bundled = false) {
   return source.replace(before, after)
 }
 
+/** Identify portaled hover cards for the native browser overlay. */
+export function patchBrowserHoverCard(source, bundled = false) {
+  const attribute = '"data-odyssey-hover-card":""'
+  if (source.includes(attribute)) return source
+  const anchor = bundled
+    ? 'f.jsx("div",{ref:g,className:`${xr.card}'
+    : 'const card = open && pos !== null && jsx("div", {\n\t\tref: cardRef,'
+  if (source.split(anchor).length !== 2) throw Error('Shared HoverCard portal anchor drifted')
+  const patched = bundled
+    ? anchor.replace('ref:g,', 'ref:g,' + attribute + ',')
+    : anchor + '\n\t\t' + attribute + ','
+  return source.replace(anchor, patched)
+}
+
 export function patchFigmaSettingsModeDescription(source) {
   const marker = '/* odyssey:settings-mode-description:20260912 */'
   if (source.includes(marker)) return source

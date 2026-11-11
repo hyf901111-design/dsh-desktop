@@ -71,7 +71,7 @@ import {patchConversationResponseProgress,stripConversationResponseProgress} fro
 import {patchConversationTurnOrder} from './lib/conversation-turn-order.mjs'
 import {patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient} from './lib/conversation-history-page.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
-import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
+import { patchBrowserHoverCard, patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
 import { patchFigmaContainerMenu } from './lib/figma-container-menu.mjs'
 import { patchFigmaProviderMenu } from './lib/figma-provider-menu.mjs'
@@ -194,8 +194,8 @@ const imageAtomsPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui
 writeFileSync(imageAtomsPath,patchImagePreviewGallery(readFileSync(imageAtomsPath,'utf8')))
 writeFileSync(asset('.js'),patchImagePreviewGallery(readFileSync(asset('.js'),'utf8'),true))
 patchJavaScript(asset('.js'))
-writeFileSync(primitivesPath, patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8'))))
-writeFileSync(asset('.js'), patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true))
+writeFileSync(primitivesPath, patchBrowserHoverCard(patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8')))))
+writeFileSync(asset('.js'), patchBrowserHoverCard(patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true), true))
 patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
