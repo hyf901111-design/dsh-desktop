@@ -24,6 +24,7 @@ export class BrowserAppView {
  private downloadButtonShown=false
  private downloadActionsInFlight=new Set<string>()
  private workspaceTabsExpanded=false;private workspaceMotionUntil=0;private workspaceTimer?:ReturnType<typeof setTimeout>
+ private workspaceCheckGeneration=0
  private pointerTabDrag?:{id:string;pointerId:number;x:number;y:number;active:boolean};private ignoreTabClickUntil=0;private tabDragScrollFrame=0;private tabDragPoint?:{x:number;y:number}
  private panelPresented=false;private layoutAck=Promise.resolve(false)
  private addressBlurred=false;private bookmarkBusy=false;private addressPress?:{x:number;y:number;select:boolean}
@@ -53,11 +54,11 @@ export class BrowserAppView {
   if(url)await this.run('new',{url});else if(this.tab()?.url)await this.run('select',{id:this.state!.activeId})
   this.schedule()
  }
- close(sessionId?:string){if(sessionId&&sessionId!==this.sessionId)return;this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();clearTimeout(this.workspaceTimer);this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.epoch++;this.sessionId='';this.panel='';this.panelPresented=false;this.image='';this.lastLayout='';this.host.close('browser');this.root.hidden=true;void this.bridge.request('layout',{active:false,visible:false}).catch(()=>{})}
+ close(sessionId?:string){if(sessionId&&sessionId!==this.sessionId)return;this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();this.cancelWorkspaceCheck();this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.epoch++;this.sessionId='';this.panel='';this.panelPresented=false;this.image='';this.lastLayout='';this.host.close('browser');this.root.hidden=true;void this.bridge.request('layout',{active:false,visible:false}).catch(()=>{})}
  private onOpen=(event:Event)=>{const d=(event as CustomEvent).detail;void this.open(typeof d?.sessionId==='string'?d.sessionId:'',d?.url).catch(error=>this.toast(error.message,true))}
  private onContext=(event:Event)=>{const id=(event as CustomEvent).detail?.sessionId;const next=typeof id==='string'?id:'';if(next!==this.sessionId){const q=this.question;if(q?.pendingHandoff){if(next===q.pendingHandoff)q.pendingHandoff=undefined;else this.cancelQuestion()}this.sessionId=next;this.render()}this.schedule()}
  private onClose=(event:Event)=>this.close((event as CustomEvent).detail?.sessionId)
- private surface=()=>{if(this.host.current()?.surface!=='browser'){this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();clearTimeout(this.workspaceTimer);this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.root.hidden=true;this.panel='';this.panelPresented=false;this.suggestions=false;this.image='';}this.schedule()}
+ private surface=()=>{if(this.host.current()?.surface!=='browser'){this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();this.cancelWorkspaceCheck();this.workspaceTabsExpanded=false;this.managingBookmarks=false;this.root.hidden=true;this.panel='';this.panelPresented=false;this.suggestions=false;this.image='';}this.schedule()}
  private tabIcon(tab:BrowserTab){if(tab.page)return icon(tab.page==='history'?'history':'download');if(tab.loading)return `<span class="eb-tab-loading" aria-hidden="true">${icon('ring')}</span>`;const source=tab.favicon;return tab.url&&typeof source==='string'&&source.length<=32768&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(source)?`<span class="eb-tab-site-icon" aria-hidden="true"><img class="eb-tab-favicon" src="${source}" alt="" draggable="false" referrerpolicy="no-referrer">${icon('globe')}</span>`:icon(tab.private?'moon':'globe')}
  private faviconError=(event:Event)=>{const image=event.target as HTMLImageElement;if(image.matches?.('img.eb-tab-favicon')){image.hidden=true;image.parentElement!.dataset.faviconFailed='true'}}
  private tab(){return this.state?.tabs.find(t=>t.id===this.state?.activeId)}
@@ -184,22 +185,50 @@ export class BrowserAppView {
   const restore=()=>{if(!this.document.hasFocus())return;this.cancelFocusRestore();if(this.disposed||this.root.hidden)return;const field=saved.dataset.field,action=saved.dataset.action,id=saved.dataset.id,target=saved.isConnected?saved:field?[...this.root.querySelectorAll<HTMLElement>('[data-field]')].find(el=>el.dataset.field===field):[...this.root.querySelectorAll<HTMLElement>('[data-action]')].find(el=>el.dataset.action===action&&el.dataset.id===id);target?.focus({preventScroll:true})}
   if(this.document.hasFocus())restore();else{this.pendingFocusRestore=restore;this.document.defaultView?.addEventListener('focus',restore)}
  }
- private setWorkspaceExpanded(expanded:boolean){clearTimeout(this.workspaceTimer);if(this.workspaceTabsExpanded===expanded)return;this.workspaceTabsExpanded=expanded;this.frozenTabs=undefined;this.holdTabWidths=false;this.workspaceMotionUntil=this.document.defaultView!.performance.now()+200;this.tabMotionUntil=0;this.render()}
+ private setWorkspaceExpanded(expanded:boolean){
+  if(this.workspaceTabsExpanded===expanded)return
+  this.cancelWorkspaceCheck()
+  this.workspaceTabsExpanded=expanded
+  this.frozenTabs=undefined
+  this.holdTabWidths=false
+  this.workspaceMotionUntil=this.document.defaultView!.performance.now()+200
+  this.tabMotionUntil=0
+  this.render()
+  if(expanded&&this.bridge.workspacePointerInBar)this.scheduleWorkspaceCheck()
+ }
+ private cancelWorkspaceCheck(){
+  clearTimeout(this.workspaceTimer)
+  this.workspaceCheckGeneration++
+ }
+ private scheduleWorkspaceCheck(){
+  this.cancelWorkspaceCheck()
+  const generation=this.workspaceCheckGeneration
+  this.workspaceTimer=setTimeout(async()=>{
+   if(this.root.hidden||!this.workspaceTabsExpanded||this.root.querySelector('.eb-workspace-controls :focus-visible'))return
+   const bar=this.root.querySelector('.eb-tabs')
+   if(!bar)return
+   let inside=bar.matches(':hover')
+   // A native draggable title may not deliver mouse enter or leave to Chromium.
+   if(this.bridge.workspacePointerInBar){
+    const {x,y,width,height}=bar.getBoundingClientRect()
+    try{inside=await this.bridge.workspacePointerInBar({x,y,width,height})}catch{}
+   }
+   if(generation!==this.workspaceCheckGeneration||this.root.hidden||this.root.querySelector('.eb-workspace-controls :focus-visible'))return
+   if(!inside)this.setWorkspaceExpanded(false)
+   else if(this.bridge.workspacePointerInBar)this.scheduleWorkspaceCheck()
+  },160)
+ }
  private workspaceOver=(event:PointerEvent)=>{
   const target=event.target as Element
   if(event.pointerType==='touch'||!target.closest?.('.eb-tabs'))return
-  clearTimeout(this.workspaceTimer)
+  if(!this.bridge.workspacePointerInBar)this.cancelWorkspaceCheck()
   if(target.closest('.eb-workspace-toggle')&&!(event.relatedTarget as Element|null)?.closest?.('.eb-workspace-toggle'))this.setWorkspaceExpanded(true)
  }
  private workspaceOut=(event:PointerEvent|FocusEvent)=>{
-  if(!this.workspaceTabsExpanded)return
+  if(!this.workspaceTabsExpanded||this.bridge.workspacePointerInBar&&event.type!=='focusout')return
   const boundary=event.type==='focusout'?'.eb-workspace-controls':'.eb-tabs'
   if(!(event.target as Element).closest?.(boundary)||(event.relatedTarget as Element|null)?.closest?.(boundary))return
-  clearTimeout(this.workspaceTimer)
-  this.workspaceTimer=setTimeout(()=>{
-   if(this.root.hidden||this.root.querySelector('.eb-tabs')?.matches(':hover')||this.root.querySelector('.eb-workspace-controls :focus-visible'))return
-   this.setWorkspaceExpanded(false)
-  },160)
+  this.scheduleWorkspaceCheck()
  }
  private navigateWorkspace(view:string){
   if(!['chat','research','notes','trajectory'].includes(view))return
@@ -452,5 +481,5 @@ export class BrowserAppView {
  private nativeShortcut=(event:Event)=>{const key=(event as CustomEvent).detail;if(key?.key==='Escape'){this.returningFocus=undefined;this.dismiss();return}if(typeof key?.key==='string')this.shortcut(new this.document.defaultView!.KeyboardEvent('keydown',key))}
  private contextMenu=(event:Event)=>{const tab=(event.target as Element).closest<HTMLElement>('.eb-tab');if(!tab)return;event.preventDefault();void this.run('select',{id:tab.dataset.id}).then(()=>this.show('tabs'))}
  private outside=(event:Event)=>{if(this.pageContext&&!this.pageContext.element.contains(event.target as Node))this.closePageContextMenu();if(!this.root.hidden&&(this.panel||this.suggestions||this.findOpen)&&!this.root.querySelector('.eb-overlay-layer')?.contains(event.target as Node)&&!(event.target as Element).closest?.('.eb-toolbar,.eb-tabs'))this.dismiss()}
- dispose(){this.cancelQuestion();this.questionUnsubscribe?.();for(const page of this.activityPages.values())page.dispose();this.activityPages.clear();this.bookmarkManager?.dispose();this.disposed=true;clearTimeout(this.workspaceTimer);for(const animation of this.tabAnimations)animation.cancel();this.tabAnimations.clear();this.close();this.unsubscribe();clearTimeout(this.noticeTimer);this.observer?.disconnect();this.resize?.disconnect();this.document.defaultView?.cancelAnimationFrame(this.frame);this.document.defaultView?.removeEventListener('blur',this.addressBlur);this.document.defaultView?.removeEventListener('resize',this.schedule);this.document.defaultView?.removeEventListener('sherlock:browser-shortcut',this.nativeShortcut);this.document.removeEventListener('sherlock:browser-overlay-prepare',this.prepareExternalOverlay);this.document.removeEventListener('sherlock:browser-native-menu-dismiss',this.nativeMenuDismiss);this.document.removeEventListener('keydown',this.shortcut);this.document.removeEventListener('pointerdown',this.outside,true);this.document.removeEventListener('sherlock:browser-open',this.onOpen);this.document.removeEventListener('sherlock:browser-close',this.onClose);this.document.removeEventListener('sherlock:browser-context',this.onContext);this.document.removeEventListener('sherlock:workspace-surface-change',this.surface);this.root.remove()}
+ dispose(){this.cancelQuestion();this.questionUnsubscribe?.();for(const page of this.activityPages.values())page.dispose();this.activityPages.clear();this.bookmarkManager?.dispose();this.disposed=true;this.cancelWorkspaceCheck();for(const animation of this.tabAnimations)animation.cancel();this.tabAnimations.clear();this.close();this.unsubscribe();clearTimeout(this.noticeTimer);this.observer?.disconnect();this.resize?.disconnect();this.document.defaultView?.cancelAnimationFrame(this.frame);this.document.defaultView?.removeEventListener('blur',this.addressBlur);this.document.defaultView?.removeEventListener('resize',this.schedule);this.document.defaultView?.removeEventListener('sherlock:browser-shortcut',this.nativeShortcut);this.document.removeEventListener('sherlock:browser-overlay-prepare',this.prepareExternalOverlay);this.document.removeEventListener('sherlock:browser-native-menu-dismiss',this.nativeMenuDismiss);this.document.removeEventListener('keydown',this.shortcut);this.document.removeEventListener('pointerdown',this.outside,true);this.document.removeEventListener('sherlock:browser-open',this.onOpen);this.document.removeEventListener('sherlock:browser-close',this.onClose);this.document.removeEventListener('sherlock:browser-context',this.onContext);this.document.removeEventListener('sherlock:workspace-surface-change',this.surface);this.root.remove()}
 }

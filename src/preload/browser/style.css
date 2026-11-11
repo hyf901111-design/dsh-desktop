@@ -210,9 +210,7 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-root .eb-settings>[data-action=settings-close]{height:40px;flex:none;padding:0 16px;background:var(--eb-field);font-size:14px;line-height:22px}
 
 .eb-content{border-radius:0 0 16px 16px}
-.eb-root .eb-app-label,.eb-root .eb-app-label *{user-select:none;cursor:default}
-/* An expanded row needs pointer events even over the otherwise draggable title. */
-.eb-root .eb-tabs:has(.eb-workspace-toggle[aria-expanded=false]) :is(.eb-app-label,.eb-app-label *){-webkit-app-region:drag}
+.eb-root .eb-app-label,.eb-root .eb-app-label *{-webkit-app-region:drag;user-select:none;cursor:default}
 
 .eb-root .eb-suggestions{padding:6px;gap:2px}
 .eb-root .eb-suggestions .eb-list-row{min-height:40px;padding:6px 12px!important}
@@ -237,7 +235,7 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 /* Workspace shortcuts share the browser title row and reserve real tab space. */
 .eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
 .eb-workspace-toggle{-webkit-app-region:no-drag;flex:none}
-.eb-workspace-toggle[aria-expanded=true]{background:var(--eb-field)}
+.eb-root .eb-workspace-toggle[aria-expanded=true]{background:transparent}
 .eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(188px,23cqw,232px);width:clamp(188px,23cqw,232px);min-width:0;overflow:hidden;-webkit-app-region:no-drag}
 .eb-root .eb-workspace-tabs button{flex:1 1 0;min-width:0;height:32px;padding:0 6px;font-size:14px;line-height:22px;white-space:nowrap}
 @container(max-width:700px){.eb-root .eb-app-label{width:32px}}

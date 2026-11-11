@@ -28,6 +28,7 @@ function rendererFixture(){
   const calls=[],actions=[];let states=0
   const compact=input=>{const {html,css,...metadata}=input;let hash=0;for(let index=0;index<(html?.length||0);index++)hash=(Math.imul(hash,31)+html.charCodeAt(index))|0;return{...metadata,htmlBytes:html?.length,htmlHash:hash,cssBytes:css?.length}}
   const bridge={
+   workspacePointerInBar:bounds=>ipcRenderer.invoke('browser-app:request','workspace-pointer-in-bar',{bounds}),
    request:async(method,input={})=>{calls.push({method,input:method==='menu'?compact(input):input,at:performance.now()});return ipcRenderer.invoke('browser-app:request',method,input)},
    subscribe:listener=>{const receive=(_,state)=>{states++;listener(state)};ipcRenderer.on('browser-app:state',receive);return()=>ipcRenderer.removeListener('browser-app:state',receive)},
    subscribeAction:listener=>{const receive=(_,action)=>{actions.push(action);listener(action)};ipcRenderer.on('browser-app:menu-event',receive);return()=>ipcRenderer.removeListener('browser-app:menu-event',receive)},
@@ -93,7 +94,7 @@ async function nativeFixture(config){
  const live=()=>page.executeJavaScript('({...window.live,cursor:document.querySelector("video").currentTime})')
  const advancing=async()=>{const before=await live();await until(async()=>{const after=await live();return after.timer>before.timer+2&&after.raf>before.raf+2&&after.video>before.video+1},'timer, animation and video continue under native menu');const after=await live();return{before,after}}
  const ax=async wc=>{if(!wc.debugger.isAttached())wc.debugger.attach('1.3');return(await wc.debugger.sendCommand('Accessibility.getFullAXTree')).nodes}
- const check=async(name,run)=>{if(config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
+ const check=async(name,run)=>{if(config.workspaceTabsOnly&&!/expanded browser tabs survive/.test(name)||config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
  const dismiss=async()=>{await ui('qa.dismiss()');await until(()=>!locateMenu(),'native menu dismissed')}
  const diagnostics=async()=>({phase,error:null,window:win&&!win.isDestroyed()?{visible:win.isVisible(),focused:win.isFocused(),focusedWindow:BrowserWindow.getFocusedWindow()?.id,focusedContents:webContents.getFocusedWebContents()?.id,bounds:win.getContentBounds(),zoom:win.webContents.getZoomFactor()}:undefined,views:win&&!win.isDestroyed()?win.contentView.children.filter(view=>view.webContents&&!view.webContents.isDestroyed()).map(view=>({title:view.webContents.getTitle(),url:view.webContents.getURL().slice(0,160),visible:view.getVisible(),bounds:view.getBounds(),zoom:view.webContents.getZoomFactor()})):[],renderer:await Promise.race([ui('qa.diagnostics()'),pause(500).then(()=>({timeout:true}))]).catch(error=>({error:String(error)})),checks,timings,captureCalls,fontRequests,consoleEvents,trace})
  try{
@@ -347,13 +348,43 @@ async function nativeFixture(config){
    return {bounds,completed:true}
   })
 
+  await check('expanded browser tabs survive the native draggable title and collapse outside the bar',async()=>{
+   const toggle='.eb-workspace-toggle',label='.eb-app-label'
+   const originalPointer=screen.getCursorScreenPoint
+   let location
+   screen.getCursorScreenPoint=()=>{
+    const {x,y}=win.getContentBounds(),zoom=win.webContents.getZoomFactor()
+    return {x:Math.round(x+location.x*zoom),y:Math.round(y+location.y*zoom)}
+   }
+   const center=selector=>ui(`(()=>{const r=document.querySelector('${selector}').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+   const expanded=()=>ui(`document.querySelector('${toggle}').getAttribute('aria-expanded')==='true'`)
+   try{
+    location=await center(toggle)
+    if(!win.webContents.debugger.isAttached())win.webContents.debugger.attach('1.3')
+    await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent',{type:'mouseMoved',...location})
+    await until(expanded,'workspace tabs expand on the arrow')
+    assert.equal(await ui(`getComputedStyle(document.querySelector('${toggle}')).backgroundColor`),'rgba(0, 0, 0, 0)')
+    assert.equal(await ui(`getComputedStyle(document.querySelector('${label}')).getPropertyValue('-webkit-app-region')`),'drag')
+    // Moving across the native title need not emit any Chromium pointer events.
+    location=await center(label)
+    const [x,y]=win.getPosition()
+    win.setPosition(x+16,y+12)
+    await pause(400)
+    assert.equal(await expanded(),true,'hover remains inside the relocated window title')
+    location=await center('.eb-toolbar')
+    await until(async()=>!await expanded(),'native pointer leaves the tab bar')
+    assert.equal(pageView.getVisible(),true)
+    return {titleDraggable:true,windowMoved:[16,12]}
+   }finally{screen.getCursorScreenPoint=originalPointer}
+  })
+
   const report={electron:process.versions.electron,chrome:process.versions.chrome,temporaryProfile:true,initialPass:config.initialPass,supplementOnly:config.supplementOnly,display:{id:display.id,scale,bounds:display.bounds},checks,timings,captureCalls,fontRequests,consoleEvents,trace}
   await writeFile(join(config.evidence,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));api.dispose();server.close();win.destroy();app.exit(0)
  }catch(error){const failure=await diagnostics();failure.error=String(error?.stack||error);await writeFile(join(config.evidence,'failure.json'),JSON.stringify(failure,null,2));console.error(JSON.stringify(failure,null,2));api?.dispose();server?.close();win?.destroy();app.exit(1)}
 }
 
 await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
-const config={downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
+const config={workspaceTabsOnly:process.env.BROWSER_LIVE_MENU_WORKSPACE_TABS_ONLY==='1',downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
 await build({stdin:{resolveDir:root,contents:`import {registerBrowserApp} from './src/main/browser/service';const {join}=require('node:path');(${nativeFixture.toString()})(${JSON.stringify(config)});`},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron'],logLevel:'silent'})
 const code=await new Promise((done,reject)=>{
  const child=spawn(require('electron'),[entry],{env:{...process.env,ELECTRON_RUN_AS_NODE:''},stdio:'inherit'}),timer=setTimeout(()=>child.kill('SIGTERM'),60000)

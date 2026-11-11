@@ -245,6 +245,9 @@ function initializeUi(): void {
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
+    ...(process.platform==='darwin'||process.platform==='win32'?{
+      workspacePointerInBar:bounds=>ipcRenderer.invoke('browser-app:request','workspace-pointer-in-bar',{bounds})
+    }:{}),
     request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),
     subscribe:listener=>{const handle=(_event:unknown,value:import('../shared/browser-app').BrowserSnapshot)=>listener(value);ipcRenderer.on('browser-app:state',handle);return()=>ipcRenderer.removeListener('browser-app:state',handle)},
     source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
