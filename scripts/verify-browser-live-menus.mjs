@@ -78,6 +78,7 @@ async function nativeFixture(config){
  const {writeFile,readFile,mkdir}=require('node:fs/promises'),{createServer}=require('node:http'),assert=require('node:assert/strict')
  app.setPath('userData',config.profile);app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required')
  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),trace=[],checks=[],timings=[],consoleEvents=[],fontRequests=[],passiveInput=new Map()
+ const toolbarDownloadName='toolbar-download-acceptance-with-a-long-file-name-to-check-truncation.bin'
  let win,api,page,pageView,menu,menuView,wireState,painted,server,display,scale,phase='boot',captureCalls=0,menuRequests=0,holdMenuStates=false
  const heldMenuStates=[]
  const record=(kind,value={})=>{trace.push({at:performance.now(),phase,kind,...value});if(trace.length>100)trace.shift()}
@@ -120,7 +121,7 @@ async function nativeFixture(config){
      },
      cancel(){clearInterval(timer)}
     })
-    return new Response(body,{headers:{'content-type':'application/octet-stream','content-length':String(total),'content-disposition':'attachment; filename="toolbar-download.bin"'}})
+    return new Response(body,{headers:{'content-type':'application/octet-stream','content-length':String(total),'content-disposition':'attachment; filename="'+toolbarDownloadName+'"'}})
    }
    return new Response(`<!doctype html><title>Live menu fixture</title><style>html,body{margin:0;background:#141414;color:#f5f5f5;font:24px system-ui}button{position:fixed;left:30px;bottom:30px;padding:20px}video{width:320px;height:180px}canvas{display:none}</style><h1>Live synthetic webpage</h1><video muted autoplay playsinline></video><canvas width=320 height=180></canvas><button id=outside>First outside click</button><script>window.live={timer:0,raf:0,video:0,click:0};setInterval(()=>live.timer++,20);const canvas=document.querySelector('canvas'),context=canvas.getContext('2d');function frame(){live.raf++;context.fillStyle='hsl('+live.raf%360+' 70% 45%)';context.fillRect(0,0,320,180);requestAnimationFrame(frame)}requestAnimationFrame(frame);const video=document.querySelector('video');video.srcObject=canvas.captureStream(30);video.play();function videoFrame(){live.video++;video.requestVideoFrameCallback(videoFrame)}video.requestVideoFrameCallback(videoFrame);document.querySelector('#outside').onclick=()=>live.click++;</script>`,{headers:{'content-type':'text/html'}})
   }))
@@ -328,19 +329,31 @@ async function nativeFixture(config){
    await mkdir(directory,{recursive:true})
    app.setPath('downloads',directory)
    const entry='[data-action=recent-downloads]'
+   const centeredIcons=async selectors=>{
+    for(const selector of selectors){
+     const {dx,dy,square}=await menuDOM(`(()=>{const button=document.querySelector(${JSON.stringify(selector)}),r=button.getBoundingClientRect(),i=button.querySelector('.eb-icon').getBoundingClientRect();return{dx:(i.left+i.right-r.left-r.right)/2,dy:(i.top+i.bottom-r.top-r.bottom)/2,square:r.width===r.height}})()`)
+     assert.ok(square&&Math.abs(dx)<.5&&Math.abs(dy)<.5,`${selector} should center its icon in the native hover background (dx=${dx}, dy=${dy})`)
+    }
+   }
    assert.equal(await ui(`!!document.querySelector('${entry}')`),false)
    page.downloadURL('https://live-menu.example.test/toolbar-download')
    await until(()=>ui(`document.querySelector('${entry}')?.dataset.state==="progressing"`),'download entry appears when transfer starts')
    await ui(`qa.click('${entry}')`)
    const bounds=await shown('recent downloads')
    await until(()=>menuDOM('Number(document.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow"))>0'),'progress updates inside the native menu')
+   await centeredIcons(['[data-action=dismiss]','[data-action=download-pause]','[data-action=download-cancel]'])
    await clickNative('[data-action=download-pause]')
    await until(()=>api.snapshot().downloads[0]?.state==='paused','native pause reaches the download')
    await until(()=>menuDOM('!!document.querySelector("[data-action=download-resume]")'),'resume shown after pause')
    await clickNative('[data-action=download-resume]')
    await until(()=>api.snapshot().downloads[0]?.state==='completed','resumed file completes',8000)
    await until(()=>menuDOM('!!document.querySelector("[data-action=download-open]")'),'completed file is actionable')
-   assert.equal((await readFile(join(directory,'toolbar-download.bin'))).length,4_000_000)
+   await centeredIcons(['[data-action=download-reveal]','[data-action=download-material]','[data-action=download-remove]'])
+   const name=await menuDOM(`(()=>{const button=document.querySelector('[data-action=download-open]'),style=getComputedStyle(button),r=button.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,padded:parseFloat(style.paddingLeft)>=6&&style.paddingLeft===style.paddingRight&&parseFloat(style.paddingTop)>0&&style.paddingTop===style.paddingBottom,truncated:button.scrollWidth>button.clientWidth&&style.textOverflow==='ellipsis'}})()`)
+   assert.ok(name.padded&&name.truncated,'long filenames ellipsize inside a padded hover target')
+   await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:name.x,y:name.y})
+   await until(()=>menuDOM('document.querySelector("[data-action=download-open][data-native-hovered]")?.matches(":hover")'),'native filename button receives hover')
+   assert.equal((await readFile(join(directory,toolbarDownloadName))).length,4_000_000)
    await clickNative('[data-action=dismiss]')
    await until(async()=>!locateMenu()&&await ui(`document.querySelector('${entry}')?.getAttribute("aria-expanded")==="false"`),'menu closes and keeps the toolbar entry')
    assert.equal(pageView.getVisible(),true)
