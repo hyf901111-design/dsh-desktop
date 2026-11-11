@@ -40,13 +40,13 @@
   opacity:.6;
   transition:transform 160ms ease,opacity 160ms ease;
 }
-[data-home-app="browser"] { --home-app-icon:url('/odyssey-home-browser-28.svg'); --home-app-hover-icon:url('/odyssey-home-browser-32.svg'); }
-[data-home-app="plugin"] { --home-app-icon:url('/odyssey-home-plugin-28.svg'); --home-app-hover-icon:url('/odyssey-home-plugin-32.svg'); }
-[data-home-app="scheduled"] { --home-app-icon:url('/odyssey-home-scheduled-28.svg'); --home-app-hover-icon:url('/odyssey-home-scheduled-32.svg'); }
-[data-home-app="research"] { --home-app-icon:url('/odyssey-home-research-28.svg'); --home-app-hover-icon:url('/odyssey-home-research-32.svg'); }
-[data-home-app="note"] { --home-app-icon:url('/odyssey-home-note-28.svg'); --home-app-hover-icon:url('/odyssey-home-note-32.svg'); }
+[data-home-app="browser"] { --home-app-icon:url('/odyssey-home-browser-28.svg'); }
+[data-home-app="plugin"] { --home-app-icon:url('/odyssey-home-plugin-28.svg'); }
+[data-home-app="scheduled"] { --home-app-icon:url('/odyssey-home-scheduled-28.svg'); }
+[data-home-app="research"] { --home-app-icon:url('/odyssey-home-research-28.svg'); }
+[data-home-app="note"] { --home-app-icon:url('/odyssey-home-note-28.svg'); }
+/* Keep the painted mask when hover starts, including on a cold cache. */
 [data-home-app-shortcuts] > button:is(:hover,:focus-visible) .home-app-shortcut-icon {
-  mask-image:var(--home-app-hover-icon);
   transform:scale(1.1428571429);
   opacity:1;
 }

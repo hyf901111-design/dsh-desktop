@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
+import { PNG } from 'pngjs'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 
 // Full native CSS and production shell order; retain the empty workspace
@@ -19,7 +20,12 @@ beforeAll(async () => {
   // This retains generated palette rules and their production cascade order.
   const require = createRequire(import.meta.url)
   const result = await build({
-    stdin: { contents: "import {mountDesktopShellStyles} from './src/preload/shell-style'; mountDesktopShellStyles(document)", resolveDir: process.cwd(), loader: 'ts' },
+    stdin: { contents: `
+      import { mountDesktopShellStyles } from './src/preload/shell-style'
+      import { mountHomeAppShortcuts } from './src/preload/home-app-shortcuts'
+      mountDesktopShellStyles(document)
+      window.mountShortcuts = () => mountHomeAppShortcuts(document, () => {})
+    `, resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
     plugins: [{ name: 'raw-css', setup(b) {
       b.onResolve({ filter: /\.css\?raw$/ }, a => ({ path: a.path.startsWith('.') ? resolve(a.resolveDir, a.path.slice(0, -4)) : require.resolve(a.path.slice(0, -4)), namespace: 'raw' }))
@@ -102,4 +108,50 @@ it('does not apply the new entry spacing to started sessions, right-side or chil
       { gap: '8px', padding: '0px', align: 'center', mode: 'none' }
     ])
   } finally { await page.close() }
+})
+
+it('keeps each shortcut painted on first hover while new icon requests are pending', async () => {
+  const page = await open(true)
+  let holdRequests = false
+  let releaseRequests
+  const waiting = new Promise(resolve => { releaseRequests = resolve })
+  try {
+    await page.evaluate(() => {
+      const base = document.createElement('base')
+      base.href = 'https://home-shortcuts.test/'
+      document.head.prepend(base)
+    })
+    await page.route('https://home-shortcuts.test/odyssey-home-*.svg', async route => {
+      if (holdRequests) await waiting
+      const filename = new URL(route.request().url()).pathname.slice(1)
+      await route.fulfill({ path: resolve('build/brand', filename), contentType: 'image/svg+xml' })
+    })
+    const apps = ['browser', 'plugin', 'scheduled', 'research', 'note']
+    const loaded = apps.map(app => page.waitForResponse(response =>
+      response.ok() && new URL(response.url()).pathname.startsWith(`/odyssey-home-${app}-`)))
+    await page.evaluate(() => window.mountShortcuts())
+    await Promise.all(loaded)
+    const nav = page.getByRole('navigation', { name: '应用快捷入口' })
+    const brightPixels = async icon => {
+      const { data } = PNG.sync.read(await icon.screenshot())
+      let count = 0
+      for (let offset = 0; offset < data.length; offset += 4) {
+        if (Math.min(data[offset], data[offset + 1], data[offset + 2]) > 128) count++
+      }
+      return count
+    }
+    holdRequests = true
+    for (const app of apps) {
+      const button = nav.locator(`[data-home-app="${app}"]`)
+      const icon = button.locator('.home-app-shortcut-icon')
+      const restingPixels = await brightPixels(icon)
+      expect(restingPixels, app).toBeGreaterThan(40)
+      await button.hover()
+      expect(await button.locator('.home-app-shortcut-tooltip').isVisible(), app).toBe(true)
+      expect(await brightPixels(icon), app).toBeGreaterThanOrEqual(restingPixels)
+    }
+  } finally {
+    releaseRequests()
+    await page.close()
+  }
 })

@@ -5,13 +5,13 @@
 ## 更新内容
 
 - 新对话首页的输入框下方新增五个快捷入口，可直接打开浏览器、插件、定时任务、研究看板和笔记。
-- 将鼠标移到快捷图标上时，图标原位放大并显示应用名称；使用键盘聚焦时也可查看名称。
+- 快捷图标在悬停时原位放大并显示应用名称，快速划过时图标保持可见。键盘聚焦同样显示名称。
 - 左侧栏「更多」菜单的插件图标换成实心插头，与首页入口一致。
 
 ## Release notes
 
 - Open Browser, Plugins, Scheduled Tasks, Research Boards, or Notes directly from five new shortcuts below the composer on the new conversation screen.
-- Hover over a shortcut to enlarge its icon and reveal the app name. Keyboard focus also shows the name.
+- Hover over a shortcut to enlarge its icon and reveal the app name. Icons stay visible as you move between shortcuts, and keyboard focus also shows the name.
 - The Plugins item in the sidebar’s More menu now uses the same solid plug icon as the home shortcut.
 
 ## 发布范围
