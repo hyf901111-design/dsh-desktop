@@ -468,9 +468,18 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
       workspace.persist();selectTool('select')
     }else if(commit){workspace.applyWorkbenchCells(committed,false);workspace.persist()}
     else{workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry([...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts])}
+    let resized
+    if(commit&&op.kind==='resize'&&workspace.getWorkbenchResponsiveArrange?.()){
+      const previous=new Map(op.before.map(cell=>[cell.id,cell])),ids=new Set(op.selectedIds)
+      resized=workspace.getWorkbenchVisibleCells().filter(cell=>ids.has(cell.id)&&previous.has(cell.id)).map(cell=>{
+        const before=previous.get(cell.id)
+        return {id:cell.id,w:op.axis!=='y'&&cell.w!==before.w?cell.w:undefined,h:op.axis!=='x'&&cell.h!==before.h?cell.h:undefined}
+      }).filter(({w,h})=>w!==undefined||h!==undefined)
+    }
     const pointerId=op.pointerId;op=null;
     if(root.hasPointerCapture?.(pointerId))root.releasePointerCapture(pointerId)
     pending=null;preview.hidden=true;groupPreviews.splice(0).forEach(({element})=>element.remove());root.removeAttribute('data-grid-operation');root.querySelectorAll('[data-grid-active]').forEach(e=>{e.removeAttribute('data-grid-active');e.style.removeProperty('--grid-float-left');e.style.removeProperty('--grid-float-top')})
+    if(resized?.length)root.__eworkRequestResponsiveArrange?.(resized)
   }
   const autoScroll=()=>{
     autoFrame=0;if(!op||!lastPointer)return
@@ -567,6 +576,25 @@ export function workbenchPreviewToolbarChildren(children,previewMode) {
   return react.cloneElement(child,{...nested,...(disabled?{disabled:true}:{})})
  })
 }
+export function WorkbenchAutoResizeNotice({rootRef,bounds,sessionId}) {
+  const [notice,setNotice]=react.useState(null)
+  react.useEffect(()=>{
+    const root=rootRef.current;if(!root)return
+    const show=()=>setNotice({})
+    root.addEventListener('ework:manual-resize-overridden',show)
+    return()=>root.removeEventListener('ework:manual-resize-overridden',show)
+  },[rootRef])
+  react.useEffect(()=>{
+    if(!notice)return
+    const timer=window.setTimeout(()=>setNotice(null),2000)
+    return()=>window.clearTimeout(timer)
+  },[notice])
+  if(!notice||!bounds)return null
+  return react_dom.createPortal(react_jsx_runtime.jsxs('div',{'data-workbench-notice':'','data-workbench-auto-resize-notice':'','data-ework-toolbar-owner':sessionId,style:{position:'fixed',left:bounds.left,bottom:bounds.bottom+66,'--ework-toolbar-available-width':bounds.width+'px'},children:[
+    react_jsx_runtime.jsx('span',{role:'status',children:workbenchText('当前已开启自动整理，手动整理可能失效')}),
+    react_jsx_runtime.jsx('button',{type:'button','aria-label':workbenchText('关闭提示'),onClick:()=>{setNotice(null);rootRef.current?.focus({preventScroll:true})},children:react_jsx_runtime.jsx('span',{'aria-hidden':true,children:'×'})})
+  ]}),document.body)
+}
 export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {
   const previewMode=react.useSyncExternalStore(workspace?.subscribePreviewMode||(()=>()=>{}),workspace?.getPreviewMode||(()=>false),workspace?.getPreviewMode||(()=>false))
   const [bounds,setBounds]=react.useState(null)
@@ -579,7 +607,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();panelObserver.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
   },[rootRef,availableWidth,bottomOffset])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(workbenchPreviewToolbarChildren(children,previewMode)),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(workbenchPreviewToolbarChildren(children,previewMode)),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style'),react_jsx_runtime.jsx(WorkbenchAutoResizeNotice,{rootRef,bounds,sessionId},'auto-resize-notice:'+sessionId)]})():children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   const zoom=workbenchCanvasZoom(root)
@@ -793,6 +821,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
       if(target&&previous&&c.w!==previous.w){target.width=Math.round(target.width+(c.w-previous.w)*m.step);complete=false}
     }
     if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken,true)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
+    options.onLayout?.()
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
   const task={refit,finish,responsive,ids:arranged.map(n=>n.id)};root.__eworkContentFit=task
@@ -803,9 +832,9 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
 }
 export function installWorkbenchResponsiveArrange(root,workspace) {
   const view=root.ownerDocument.defaultView, specs=new WeakMap()
-  let frame=null,last=null
+  let frame=null,last=null,pendingResize=null
   const schedule=()=>{
-    if(!workspace.getWorkbenchResponsiveArrange()){last=null;return}
+    if(!workspace.getWorkbenchResponsiveArrange()){last=null;pendingResize=null;return}
     if(frame!==null)return
     frame=view.requestAnimationFrame(()=>{
       frame=null
@@ -826,10 +855,22 @@ export function installWorkbenchResponsiveArrange(root,workspace) {
       if(last?.sizeKey===sizeKey&&inputs.length===last.inputs.length&&inputs.every((input,i)=>input.every((value,j)=>value===last.inputs[i][j])))return
       last={sizeKey,inputs}
       const pending=workspace.pendingWorkbenchArrange()
-      arrangeWorkbenchContents(root,workspace,null,'auto',{focus:false,onFinish:durable=>{if(durable&&pending.length)workspace.consumeWorkbenchArrange(pending)}})
+      const resize=pendingResize;pendingResize=null
+      let notified=false
+      const onLayout=resize?()=>{
+        if(notified||!root.isConnected||!workspace.getWorkbenchResponsiveArrange()||root.hasAttribute('data-grid-operation')||workspace.getActiveBoardTab?.()!==resize.tab)return
+        const visible=new Map(workspace.getWorkbenchVisibleCells().map(cell=>[cell.id,cell]))
+        if(resize.sizes.some(({id,w,h})=>{const cell=visible.get(id);return cell&&(w!==undefined&&w!==cell.w||h!==undefined&&h!==cell.h)})){
+          notified=true
+          root.dispatchEvent(new view.Event('ework:manual-resize-overridden'))
+        }
+      }:undefined
+      arrangeWorkbenchContents(root,workspace,null,'auto',{focus:false,onLayout,onFinish:durable=>{if(durable&&pending.length)workspace.consumeWorkbenchArrange(pending)}})
     })
   }
-  const request=()=>{last=null;schedule()}
+  // Carry the release dimensions through the same deferred pass that reapplies
+  // the automatic layout. Ordinary resize/content observers have no gesture.
+  const request=sizes=>{if(sizes?.length)pendingResize={sizes,tab:workspace.getActiveBoardTab?.()};last=null;schedule()}
   const gestureEnd=()=>{if(root.hasAttribute('data-grid-operation'))request()}
   root.__eworkRequestResponsiveArrange=request
   const unsubscribe=workspace.subscribe(schedule)

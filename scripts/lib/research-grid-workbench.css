@@ -189,6 +189,8 @@ body [data-ework-grid] :is(.fund-native-table-wrap,.odyssey-native-table-grid)::
 [data-workbench-notice] [data-canvas-action-undo] { color:#2475d8; font-weight:600; }
 [data-workbench-notice] button:is(:hover,:focus-visible) { background:#0000000b; }
 [data-workbench-notice] button:disabled { opacity:.5; cursor:default; }
+[data-workbench-auto-resize-notice] { max-width:min(460px,var(--ework-toolbar-available-width)); }
+[data-workbench-auto-resize-notice] button { min-width:26px; font-size:17px; }
 body[data-ds-dark-theme] [data-workbench-notice] { border-color:#ffffff22; background:#292a2d; color:#f0f0f2; box-shadow:0 6px 20px #00000055; }
 body[data-ds-dark-theme] [data-workbench-notice] [data-canvas-action-undo] { color:#8ab8ff; }
 body[data-ds-dark-theme] [data-workbench-notice] button:is(:hover,:focus-visible) { background:#ffffff14; }
