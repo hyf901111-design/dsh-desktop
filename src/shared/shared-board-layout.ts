@@ -2,7 +2,8 @@ import type { Canvas } from './research-boards'
 
 type Node = Canvas['artifacts'][number]
 const layoutKeys = ['x', 'y', 'width', 'height', 'zIndex', 'stackOrder', 'order',
-  'rotation', 'scale', 'sizeMode', 'preserveGenerationSize'] as const
+  'rotation', 'scale', 'sizeMode', 'preserveGenerationSize', 'workbenchColumns',
+  'workbenchSpan', 'workbenchLayoutVersion', 'containerSizePreset'] as const
 const tabLayoutKeys = ['orientation', 'verticalWidth'] as const
 const collections = ['files', 'artifacts'] as const
 

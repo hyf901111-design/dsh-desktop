@@ -2185,4 +2185,19 @@ it('keeps recovered tabs visible without writing guesses during stale and queued
   const shared = projectDocument(t.doc)
   expect(membership(shared)).toEqual([[], []])
   expect(shared.artifacts.find(n => n.id === 'n')).toMatchObject({ title: '第二次编辑', excerpt: '其他用户的修改' })
+
+  const refreshed = t.service.getSnapshot().current!
+  const moved = structuredClone(refreshed.canvas)
+  const card = moved.artifacts.find(node => node.id === 'n')!
+  Object.assign(card, { workbenchColumns: 3, workbenchSpan: true, workbenchLayoutVersion: 1, containerSizePreset: 'large' })
+  const nav = moved.artifacts.find(node => node.id === 'tabs')!
+  const spec = boardTabsSpec(nav.containerSpec)!
+  spec.tabs[1]!.nodeIds = ['n']
+  spec.tabs[2]!.nodeIds = []
+  nav.containerSpec = { ...spec, revision: spec.revision + 1 }
+  expect((await send(refreshed.canvasRevision, 'legacy-tab-move', moved)).ok).toBe(true)
+  await t.service.flush()
+  const saved = projectDocument(t.doc)
+  expect(membership(saved)).toEqual([[], ['n']])
+  expect(saved.artifacts.find(node => node.id === 'n')).toEqual(shared.artifacts.find(node => node.id === 'n'))
 })
