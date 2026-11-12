@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-01",
+  "branch": "codex/integration/20261113-01",
+  "baseMainCommit": "8043231a5f143e5bc8ec9d3056bd0c7c8112eb5c",
+  "expectedMainCommit": "8043231a5f143e5bc8ec9d3056bd0c7c8112eb5c",
+  "createdAt": "2026-11-12T16:21:57.935Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "自动整理覆盖手动尺寸时提示",
+        "branch": "codex/feat/board-auto-resize-notice-20261112",
+        "baseCommit": "8043231a5f143e5bc8ec9d3056bd0c7c8112eb5c",
+        "tipCommit": "f32723cf44daab453f977ab9063587bff6645c14",
+        "commits": [
+          {
+            "commit": "f734593e9ee8476b6aecf19e89c00007fab03f12",
+            "parents": [
+              "8043231a5f143e5bc8ec9d3056bd0c7c8112eb5c"
+            ],
+            "subject": "在自动整理覆盖手动尺寸时提示用户"
+          },
+          {
+            "commit": "f32723cf44daab453f977ab9063587bff6645c14",
+            "parents": [
+              "f734593e9ee8476b6aecf19e89c00007fab03f12"
+            ],
+            "subject": "兼容首页引导的看板工具栏注入"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-auto-arrange-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-openterminal.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/workbench-auto-arrange-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/workbench-openterminal.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "86 项看板聚焦测试通过，覆盖尺寸回退、普通拖动、取消操作、提示位置和关闭方式。",
+            "verifiedCommit": "f32723cf44daab453f977ab9063587bff6645c14",
+            "completedAt": "2026-11-12T16:17:32.257Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "f32723cf44daab453f977ab9063587bff6645c14",
+            "completedAt": "2026-11-12T16:17:32.257Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./script/build_and_run.sh",
+              "--verify"
+            ],
+            "outcome": "passed",
+            "summary": "从确切提交构建、验证签名并启动正式身份本地客户端；跳过 Apple 公证。",
+            "verifiedCommit": "f32723cf44daab453f977ab9063587bff6645c14",
+            "completedAt": "2026-11-12T16:17:32.257Z",
+            "timeoutMs": 900000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "verify:package:mac",
+              "--",
+              "--app",
+              "dist-notarized/mac-arm64/EWork Odyssey.app"
+            ],
+            "outcome": "passed",
+            "summary": "完整本地 macOS 包检查通过。",
+            "verifiedCommit": "f32723cf44daab453f977ab9063587bff6645c14",
+            "completedAt": "2026-11-12T16:17:32.257Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在签名本地 EWork Odyssey 打开原来的指数运营协作看板；自动整理开启时拖高市场概览，实测尺寸还原并在底部工具栏上方显示提示，观察到自动消失，随后再拖动并点击 × 关闭。保留看板窗口供测试。"
+        },
+        "acceptanceCriteria": [
+          "自动整理覆盖手动拖动调整的组件尺寸时，工具栏上方显示提示。",
+          "提示约两秒后自动关闭，也可点击 × 立即关闭。",
+          "没有手动尺寸变动、取消拖动或关闭自动整理时不弹出。"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-12T16:17:32.257Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-auto-arrange-browser.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/research-grid-arrange-tabs.test.js",
+        "test/workbench-openterminal.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=30000"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
