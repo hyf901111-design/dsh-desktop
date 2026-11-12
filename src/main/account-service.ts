@@ -11,12 +11,29 @@ import {
 } from './collaboration-client'
 import { ResearchBoardsError } from '../shared/research-boards'
 import {IntegrationError} from '../shared/integrations'
+import type { BrowserSearchResult } from './search/browser-search-controller'
+
+type AccountProfile = { id: string; username: string; createdAt: number }
+type AccountIdentity = { id: string; profile?: AccountProfile }
+
+function readAccountIdentity(value: unknown): AccountIdentity | undefined {
+  const { id, username, createdAt } = (value ?? {}) as Partial<AccountProfile>
+  if (typeof id !== 'string' || !id || id.length > 256) return undefined
+  if (
+    typeof username === 'string' && username && username.length <= 128 &&
+    typeof createdAt === 'number' && Number.isSafeInteger(createdAt) && createdAt >= 0
+  )
+    return { id, profile: { id, username, createdAt } }
+  return { id }
+}
+
 export class AccountService {
   private readonly origin: string
   private token?: string
-  private identityId?: string
+  private identity?: AccountIdentity
   private server?: Server
   private serial: Promise<unknown> = Promise.resolve()
+  private sessionRevalidation?: { generation: number; result: Promise<void> }
   private sessionGeneration = 0
   private suspended = false
   private sessionAbort = new AbortController()
@@ -36,13 +53,26 @@ export class AccountService {
   get authenticated() {
     return !!this.token && !this.suspended
   }
-  get accountId(): string | undefined { return this.authenticated ? this.identityId : undefined }
-  private async rememberIdentity(user:unknown):Promise<boolean> {
-    const id=(user as {id?:unknown}|undefined)?.id
-    if(typeof id!=='string'||!id||id.length>256||!this.token)return false
-    const changed=this.identityId!==id;this.identityId=id
-    const data=JSON.stringify({id,fingerprint:createHash('sha256').update(this.token).digest('hex')})
-    try{await mkdir(this.directory,{recursive:true,mode:0o700});await writeFile(join(this.directory,'account-identity.tmp'),data,{mode:0o600});await rename(join(this.directory,'account-identity.tmp'),join(this.directory,'account-identity'))}catch{/* Online identity remains valid; offline identity will be revalidated next launch. */}
+  get accountId(): string | undefined {
+    return this.authenticated ? this.identity?.id : undefined
+  }
+  private async rememberIdentity(user: unknown): Promise<boolean> {
+    const identity = readAccountIdentity(user)
+    if (!identity || !this.token) return false
+    const changed = this.identity?.id !== identity.id
+    this.identity = identity
+    const data = JSON.stringify({
+      ...(identity.profile ?? { id: identity.id }),
+      fingerprint: createHash('sha256').update(this.token).digest('hex')
+    })
+    try {
+      await mkdir(this.directory, { recursive: true, mode: 0o700 })
+      const file = join(this.directory, 'account-identity')
+      await writeFile(`${file}.tmp`, data, { mode: 0o600 })
+      await rename(`${file}.tmp`, file)
+    } catch {
+      // The current online identity remains valid if the cache write fails.
+    }
     return changed
   }
   subscribeSessionChanged(listener: () => void) {
@@ -71,6 +101,44 @@ export class AccountService {
     const generation=this.generation
     const response=await (this.collaborationOptions.fetch??fetch)(`${this.origin}/v1/tushare/mcp`,{method:'POST',redirect:'error',headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:`Bearer ${this.token}`},body,signal:AbortSignal.any([this.sessionAbort.signal,signal,AbortSignal.timeout(30000)])})
     if(generation!==this.generation){await response.body?.cancel();throw new IntegrationError('ACCESS_DENIED','账户已变化，已取消 Tushare 请求')}
+    return response
+  }
+  async dataproMcpRequest(body: string, signal: AbortSignal): Promise<Response> {
+    return this.volcengineRequest('/v1/datapro/mcp', body, signal, '火山方舟专业数据集', 50_000)
+  }
+  async doubaoSearch(query: string, maxResults: number, signal: AbortSignal): Promise<BrowserSearchResult> {
+    if (Array.from(query.trim()).length > 100)
+      throw new IntegrationError('INVALID_CONFIG', '豆包搜索查询最多 100 个字符，请缩短关键词后重试。')
+    const response = await this.volcengineRequest(
+      '/v1/doubao/search', JSON.stringify({ query, maxResults }), signal, '豆包搜索', 24_000
+    )
+    if (!response.ok) {
+      await response.body?.cancel()
+      throw new IntegrationError(
+        response.status === 401 ? 'AUTH_REQUIRED' : 'RUNTIME_UNAVAILABLE',
+        response.status === 401 ? 'EWork 登录已失效，请重新登录后使用豆包搜索。' : '豆包搜索暂时不可用，请稍后重试。'
+      )
+    }
+    const result: BrowserSearchResult = await response.json()
+    if (result?.provider !== 'doubao' || !Array.isArray(result.sources))
+      throw new IntegrationError('RUNTIME_UNAVAILABLE', '豆包搜索返回了无效结果。')
+    return result
+  }
+  private async volcengineRequest(
+    path: '/v1/datapro/mcp' | '/v1/doubao/search', body: string, signal: AbortSignal,
+    name: string, timeout: number
+  ): Promise<Response> {
+    if (!this.authenticated) throw new IntegrationError('AUTH_REQUIRED', `请先登录 EWork 后使用${name}。`)
+    const generation = this.generation
+    const combined = AbortSignal.any([this.sessionAbort.signal, signal, AbortSignal.timeout(timeout)])
+    const response = await (this.collaborationOptions.fetch ?? fetch)(this.origin + path, {
+      method: 'POST', redirect: 'error', body, signal: combined,
+      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${this.token}` }
+    })
+    if (generation !== this.generation) {
+      await response.body?.cancel()
+      throw new IntegrationError('ACCESS_DENIED', 'EWork 账号已切换，本次请求已取消。')
+    }
     return response
   }
   private changed() {
@@ -150,8 +218,15 @@ export class AccountService {
       }
       current()
       if (!response.ok) {
-        if (response.status === 401 && value.error?.code === 'LOGIN_REQUIRED')
-          await this.clear()
+        if (response.status === 401 && value.error?.code === 'LOGIN_REQUIRED') {
+          // A collaboration worker failure can look like an expired account session.
+          // Only the account endpoint can revoke the local session after revalidation.
+          await this.revalidateSession(generation)
+          current()
+          throw new ResearchBoardsError(
+            'COLLABORATION_UNAVAILABLE', '协作服务暂时不可用，请稍后重试。', true, undefined, 503
+          )
+        }
         throw new ResearchBoardsError(
           value.error?.code ?? 'COLLABORATION_UNAVAILABLE',
           value.error?.message,
@@ -179,8 +254,12 @@ export class AccountService {
           await readFile(join(this.directory, 'account-session'))
         )
     } catch {}
-    if(this.token){
-      try{const identity=JSON.parse(await readFile(join(this.directory,'account-identity'),'utf8'));if(typeof identity.id==='string'&&identity.id.length<=256&&identity.fingerprint===createHash('sha256').update(this.token).digest('hex'))this.identityId=identity.id}catch{}
+    if (this.token) {
+      try {
+        const identity = JSON.parse(await readFile(join(this.directory, 'account-identity'), 'utf8'))
+        if (identity.fingerprint === createHash('sha256').update(this.token).digest('hex'))
+          this.identity = readAccountIdentity(identity)
+      } catch {}
       this.changed()
     }
     const secret = randomBytes(32).toString('hex')
@@ -253,13 +332,27 @@ export class AccountService {
     this.server?.closeAllConnections()
   }
   invoke(action: string, input: unknown) {
-    const result = this.serial.then(() => this.perform(action, input))
+    return this.serialize(() => this.perform(action, input))
+  }
+  private serialize<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.serial.then(operation)
     this.serial = result.catch(() => {})
+    return result
+  }
+  private revalidateSession(generation: number): Promise<void> {
+    if (this.sessionRevalidation?.generation === generation)
+      return this.sessionRevalidation.result
+    const result = this.serialize(async () => {
+      if (generation === this.generation) await this.perform('me', undefined)
+    }).finally(() => {
+      if (this.sessionRevalidation?.result === result) this.sessionRevalidation = undefined
+    })
+    this.sessionRevalidation = { generation, result }
     return result
   }
   private async clear() {
     this.token = undefined
-    this.identityId = undefined
+    this.identity = undefined
     this.suspended = false
     this.changed()
     await rm(join(this.directory, 'account-session'), { force: true })
@@ -274,13 +367,17 @@ export class AccountService {
       return { error: { code: 'INVALID_REQUEST' } }
     if (!this.token && ['me', 'usage'].includes(action)) return { user: null }
     if (!this.token && action === 'logout') return { ok: true }
+    const accountFailure = (error = { code: 'ACCOUNT_SERVICE_UNAVAILABLE' }) => {
+      const user = action === 'me' ? this.identity?.profile : undefined
+      return user ? { user, error } : { error }
+    }
     const suspend = action === 'logout' || action === 'password'
     if (suspend) {
       this.suspended = true
       this.changed()
     }
     try {
-      const response = await fetch(`${this.origin}/v1/account/${action}`, {
+      const response = await (this.collaborationOptions.fetch ?? fetch)(`${this.origin}/v1/account/${action}`, {
         method: ['me', 'usage'].includes(action) ? 'GET' : 'POST',
         redirect: 'error',
         headers: {
@@ -301,10 +398,8 @@ export class AccountService {
         await this.clear()
         if (action === 'logout') return { ok: true }
       }
-      if (!response.ok)
-        return {
-          error: value.error ?? { code: 'ACCOUNT_SERVICE_UNAVAILABLE' }
-        }
+      if (!response.ok) return accountFailure(value.error)
+      if (action === 'me' && !readAccountIdentity(value.user)?.profile) return accountFailure()
       if (action === 'logout' || action === 'password') await this.clear()
       if (value.token) {
         if (!/^[a-f0-9]{64}$/.test(value.token)) throw Error('Invalid session')
@@ -317,6 +412,7 @@ export class AccountService {
         })
         await rename(`${file}.tmp`, file)
         this.token = value.token
+        this.identity = undefined
         this.suspended = false
         await this.rememberIdentity(value.user)
         this.changed()
@@ -325,7 +421,7 @@ export class AccountService {
       const { token: _token, ...publicValue } = value
       return publicValue
     } catch {
-      return { error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } }
+      return accountFailure()
     } finally {
       if (suspend && this.suspended) {
         this.suspended = false

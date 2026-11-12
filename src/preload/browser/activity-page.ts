@@ -1,5 +1,6 @@
 import type {BrowserDownload,BrowserLink,BrowserSnapshot} from '../../shared/browser-app'
 import {browserIcons} from './icons'
+import {downloadDetails} from './download-details'
 import css from './activity-page.css?inline'
 
 type ActivityPage='history'|'downloads'
@@ -10,7 +11,6 @@ const icon=(name:keyof typeof browserIcons)=>`<i class="eb-activity-icon" aria-h
 const button=(action:string,label:string,extra='',glyph?:keyof typeof browserIcons)=>`<button type="button" data-activity-action="${action}" ${extra}>${glyph?icon(glyph):''}<span>${esc(label)}</span></button>`
 const httpUrl=(value:string)=>{try{const url=new URL(value);return ['https:','http:'].includes(url.protocol)?url.href:''}catch{return ''}}
 const host=(url:string)=>{try{return new URL(url).hostname||url}catch{return url}}
-const bytes=(value:number)=>{const size=Math.max(0,Number.isFinite(value)?value:0);if(size<1024)return `${Math.round(size)} B`;if(size<1024*1024)return `${(size/1024).toFixed(1)} KB`;if(size<1024*1024*1024)return `${(size/1024/1024).toFixed(1)} MB`;return `${(size/1024/1024/1024).toFixed(1)} GB`}
 const time=(at:number)=>Number.isFinite(at)?new Date(at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false}):'—'
 const day=(at:number)=>{
  const date=new Date(at),today=new Date();today.setHours(0,0,0,0)
@@ -108,11 +108,9 @@ export class BrowserActivityPage {
   return `<article class="eb-activity-history-row" data-activity-row="${esc(row.id)}"><time>${esc(time(row.at))}</time><button type="button" class="eb-activity-open" data-activity-action="open-history" ${id} aria-label="打开 ${esc(title)}" ${!httpUrl(row.url)?'disabled':''}>${icon('globe')}<span class="eb-activity-copy"><strong>${esc(title)}</strong><small title="${esc(row.url)}">${esc(row.url)}</small></span></button>${!this.recent?button('remove-history','删除',`${id} aria-label="删除 ${esc(title)}" ${busy?'disabled':''}`,'trash'):''}</article>`
  }
  private downloadRow(row:BrowserDownload){
-  const active=row.state==='progressing'||row.state==='paused',labels:Record<BrowserDownload['state'],string>={progressing:'正在下载',paused:'已暂停',completed:'已完成',interrupted:'下载中断',cancelled:'已取消'}
-  const total=Math.max(0,Number.isFinite(row.total)?row.total:0),received=Math.max(0,Number.isFinite(row.received)?row.received:0),percent=total?Math.min(100,Math.floor(received/total*100)):undefined
-  const status=labels[row.state]||'状态未知',detail=active?`${status}${percent===undefined?'':` · ${percent}%`} · ${bytes(received)}${total?` / ${bytes(total)}`:' · 大小未知'}`:`${status} · ${bytes(received)}`
+  const {active,total,received,detail,commands}=downloadDetails(row)
   const id=`data-activity-id="${esc(row.id)}"`,action=(value:string,label:string,glyph?:keyof typeof browserIcons)=>button('download-'+value,label,`${id} ${this.busy.has(row.id)?'disabled':''}`,glyph)
-  const actions=row.state==='progressing'?action('pause','暂停','pause')+action('cancel','取消','close'):row.state==='paused'?action('resume','继续下载','play')+action('cancel','取消','close'):row.state==='completed'?action('open','打开','external')+action('reveal','在文件夹中显示','folder')+action('material','加入工作材料','plus')+action('remove','移除记录','trash'):action('retry','重试','refresh')+action('remove','移除记录','trash')
+  const actions=commands.map(([value,label,glyph])=>action(value,label,glyph)).join('')
   return `<article class="eb-activity-download-row" data-activity-row="${esc(row.id)}" data-state="${esc(row.state)}"><div class="eb-activity-file-icon">${icon('file')}</div><div class="eb-activity-download-copy"><strong class="eb-activity-filename" title="${esc(row.name)}">${esc(row.name||'未命名文件')}</strong><p class="eb-activity-status">${esc(detail)}</p><button type="button" class="eb-activity-source" data-activity-action="open-source" ${id} aria-label="打开来源 ${esc(row.name)}" title="${esc(row.url)}" ${!httpUrl(row.url)?'disabled':''}>${esc(host(row.url))}${icon('external')}</button>${active?`<progress aria-label="${esc(row.name)}下载进度" max="${total||1}" ${total?`value="${Math.min(received,total)}"`:''}></progress>`:''}<div class="eb-activity-download-actions">${actions}</div></div></article>`
  }
  private input=(event:Event)=>{

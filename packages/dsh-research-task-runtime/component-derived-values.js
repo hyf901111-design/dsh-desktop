@@ -1,5 +1,5 @@
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)
-const selectors=new Set(['$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$optional','$reduce','$calc'])
+const selectors=new Set(['$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$optional','$reduce','$calc','$concat'])
 const arithmetic=new Set(['add','subtract','multiply','divide','pctChange'])
 const reductions=new Set(['first','last','min','max','sum','mean','change','pctChange','maxDrawdown','returnStdDev'])
 const chronological=new Set(['change','pctChange','maxDrawdown','returnStdDev'])

@@ -29,16 +29,18 @@ describe('bounded sourced table route',()=>{
   expect(renderMarketArtifact(market)).not.toBeNull()
   expect(templateDataIssue(market)).toBeNull()
  })
- it.each([[33,1],[1,101]])('rejects %i columns and %i rows through acceptance, renderer and repair diagnostics',(columns,rows)=>{
+ it.each([[33,1],[1,101]])('switches %i columns and %i rows to complete readable delivery',(columns,rows)=>{
   const data=synthetic(columns,rows),market={...data,type:'market',variant:'table'}
-  expect(accept(data)).toBeUndefined()
+  expect(model(data).columns).toEqual(data.columns)
+  expect(model(data).rows).toEqual(data.rows)
+  expect(JSON.parse(accept(data)).html).toContain('data-readable-page-size')
   expect(renderMarketArtifact(market)).toBeNull()
   expect(templateDataIssue(data)).toMatch(/32|100/)
   expect(templateDataIssue(market)).toMatch(/32|100/)
  })
- it('keeps ordinary native tables at twelve columns and the sourced three-column route intact',()=>{
+ it('uses readable delivery above native capacity and preserves small native tables',()=>{
   const {asOf,...ordinary}=synthetic(13)
-  expect(accept(ordinary)).toBeUndefined()
+  expect(model(ordinary).rows).toEqual(ordinary.rows)
   const twelve={...ordinary,columns:ordinary.columns.slice(0,12),rows:ordinary.rows.map(row=>row.slice(0,12))}
   expect(JSON.parse(accept(twelve))).toEqual(twelve)
   expect(model(synthetic(3)).columns).toHaveLength(3)
@@ -59,7 +61,7 @@ describe('bounded sourced table route',()=>{
  it('preserves the existing wider market text/scalar contract independently of generic capacities',()=>{
   const data={...synthetic(3),type:'market',variant:'table',columns:['列'.repeat(2000),'空字符串','大数'],rows:[['值'.repeat(513),'',1e16]]}
   expect(templateDataIssue(data)).toBeNull()
-  expect(model(data)).toEqual(data)
+  expect(model(data)).toEqual({...data,rows:[['值'.repeat(513),'—',1e16]]})
   for(const patch of [{columns:['列'.repeat(2001),'空字符串','大数']},{asOf:'时'.repeat(2001)},{note:'注'.repeat(2001)}]){
    expect(renderMarketArtifact({...data,...patch})).toBeNull()
    expect(templateDataIssue({...data,...patch})).toBeTruthy()
@@ -70,9 +72,7 @@ describe('bounded sourced table route',()=>{
   emptyColumns:a=>{a.columns=[]},emptyRows:a=>{a.rows=[]},wrongWidth:a=>{a.rows[0].pop()},
   emptyTitle:a=>{a.title=' '},longTitle:a=>{a.title='x'.repeat(257)},
   emptyLabel:a=>{a.columns[0]=''},longLabel:a=>{a.columns[0]='x'.repeat(129)},
-  emptyCell:a=>{a.rows[0][0]=' '},longCell:a=>{a.rows[0][0]='x'.repeat(513)},
-  booleanCell:a=>{a.rows[0][0]=false},objectCell:a=>{a.rows[0][0]={x:1}},nullCell:a=>{a.rows[0][0]=null},
-  nanCell:a=>{a.rows[0][0]=NaN},infiniteCell:a=>{a.rows[0][0]=Infinity},largeNumber:a=>{a.rows[0][0]=1e15+1},
+  booleanCell:a=>{a.rows[0][0]=false},objectCell:a=>{a.rows[0][0]={x:1}},largeNumber:a=>{a.rows[0][0]=1e15+1},
   badDate:a=>{a.asOf=4},emptyDate:a=>{a.asOf=''},longDate:a=>{a.asOf='x'.repeat(2001)},
   badNote:a=>{a.note={source:'x'}},emptyNote:a=>{a.note=' '},longNote:a=>{a.note='x'.repeat(2001)}
  }
@@ -88,6 +88,14 @@ describe('bounded sourced table route',()=>{
    expect(templateDataIssue(data)).toBeTruthy()
   }
  })
+ it.each([' ',null,'x'.repeat(513)])('preserves incomplete or long cells without rejecting other acquired records',value=>{
+  const data=synthetic(13);data.rows[0][0]=value
+  const output=JSON.parse(accept(data))
+  if(value!==' ')expect(output.html).toContain('data-readable-snapshot')
+  expect(model(data).rows[0].slice(1)).toEqual(data.rows[0].slice(1))
+  if(typeof value==='string'&&value.trim())expect(model(data).rows[0][0]).toBe(value)
+  else expect(output.html).toContain(value===null?'来源未提供':'—')
+ })
  it('states the interactive limits in both generic and market generation guidance',()=>{
   for(const prompt of [TABLE_GUIDANCE,MARKET_ARTIFACT_PROMPT,marketPanelSchema('table')]){
    expect(prompt).toContain('1–32列');expect(prompt).toContain('1–100行')
@@ -97,8 +105,8 @@ describe('bounded sourced table route',()=>{
   const full=synthetic(32,100),market={...full,type:'market',variant:'table'}
   expect(templateDataIssue(full)).toBeNull();expect(templateDataIssue(market)).toBeNull()
   expect(renderMarketArtifact(market)).not.toBeNull()
-  // Both dimensions are valid; their combined HTML still exceeds 200 KB.
-  expect(accept(full)).toBeUndefined()
+  // Host HTML now supports this complete 3,200-cell table, not only 200 KB.
+  expect(model(full).rows).toEqual(full.rows)
   const data=synthetic(32,100);data.rows=data.rows.map(row=>row.map(()=>'<'.repeat(512)))
   expect(accept(data)).toBeUndefined()
  })

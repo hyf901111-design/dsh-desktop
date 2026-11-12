@@ -35,6 +35,7 @@ export interface BrowserSearchControllerOptions {
 }
 
 export interface BrowserSearchResult {
+  provider?: 'doubao'
   sources: SearchSource[]
   truncated: false
   status?: 'no_results'

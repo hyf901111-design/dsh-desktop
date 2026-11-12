@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import plans from './fixtures/workbench-native-first-plans-20261108.json' with {type:'json'}
-import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { validateWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js'
 
 describe('native workbench planning replays', () => {
@@ -78,3 +78,55 @@ it('admits unresolved report summaries and relationship maps without requiring f
  expect(plan.panels.every(panel=>!panel.artifact)).toBe(true)
  expect(plan.panels[0].prompt).toBe('提炼趋势、技术和适用时点，标注报告页码。')
 })
+
+const cryptoRequest='创建一个加密货币行情实时监控工作台，能覆盖多个维度的加密货币数据、资讯等信息。'
+const krakenPanel=(pair,interval=1)=>({
+  title:`${pair} 价格与成交量`,type:'market',prompt:'展示最新收盘价及成交量，保留交易对、单位和真实数据源。',
+  publicData:{profile:'price-volume',layoutProfile:'openterminal',intervalMinutes:3,
+    requests:[{source:'kraken-candles',parameters_json:JSON.stringify({pair,interval,limit:60})}]}
+})
+const topicNews=(query,options={})=>({title:`${query}新闻`,type:'financial-widget',prompt:`搜索${query}相关的最新新闻。`,
+  library:{id:'builtin-news',options:{query,...options}}})
+const cryptoPlan=(panels,originalRequest=cryptoRequest)=>validateWorkbench({
+  requestId:'live-crypto-monitoring',title:'加密货币监控工作台',dataMode:'source',originalRequest,panels
+})
+
+it('prepares supported live crypto quotes and topic news from the observed planning shapes',()=>{
+  const plan=cryptoPlan([krakenPanel('XBTUSD'),krakenPanel('ETHUSD',60),krakenPanel('SOLUSD',1440),
+    ...['加密货币','比特币','数字资产 监管'].map(query=>topicNews(query))]);
+  expect(plan.panels.slice(0,3).map(panel=>panel.artifact)).toEqual([
+    ['BTC/USD','1m'],['ETH/USD','1h'],['SOL/USD','1d']
+  ].map(([code,period])=>expect.objectContaining({widget:'quote',dataSource:'kraken',period,visibleBars:60,refreshMinutes:3,refreshEnabled:true,
+    adjustment:'none',indicators:['MA','VOL','MACD'],symbols:[expect.objectContaining({market:'CRYPTO',code})]})));
+  expect(plan.panels.slice(3).map(panel=>[panel.artifact.widget,panel.artifact.dataSource,panel.artifact.query])).toEqual([
+    ['news','doubao','加密货币'],['news','doubao','比特币'],['news','doubao','数字资产 监管']
+  ]);
+  expect(validateWorkbench(plan)).toEqual(plan);
+});
+
+it('keeps authored chart forms, fixed windows, unsupported pairs and provider preferences',()=>{
+  const quote=krakenPanel('XBTUSD');
+  for(const scope of ['价格请用折线图，成交量用柱状图。','近 60 分钟的历史快照。','只看 Binance 行情。','用 OpenTerminal 量价图。',
+    '行情用 1 小时 K 线。','只看 ETH/USDT。','禁止联网。']){
+    expect(cryptoPlan([quote],cryptoRequest+scope).panels[0].publicData).toEqual(quote.publicData);
+  }
+  for(const original of [krakenPanel('XBTUSD',5),krakenPanel('DOGEUSD')]){
+    expect(cryptoPlan([original]).panels[0].publicData).toEqual(original.publicData);
+  }
+  const onlySina=cryptoPlan([topicNews('加密货币')],cryptoRequest+'新闻使用新浪财经。');
+  expect(onlySina.panels[0].artifact.dataSource).toBe('sina');
+  const otherProvider=cryptoPlan([topicNews('加密货币',{dataSource:'eastmoney'})]);
+  expect(otherProvider.panels[0].artifact.dataSource).toBe('eastmoney');
+});
+
+it('keeps a retrospective announcement or news record list as a native table',()=>{
+  const plan=cryptoPlan([
+    {...topicNews('数字资产'),title:'数字资产资讯明细',prompt:'整理数字资产最近30天的报道，逐条列出时间、发布机构、摘要和原文链接。'},
+    {title:'证券公告清单',type:'news',prompt:'整理过去30天的公告清单，保留原文链接。'}
+  ],'做个工作台，把过去30天数字资产报道和证券公告整理成表格。');
+  for(const panel of plan.panels){
+    expect(panel).toMatchObject({type:'market',prompt:expect.stringContaining('market.table')});
+    expect(panel).not.toHaveProperty('artifact');
+    expect(workbenchPanelPrompt(plan,panel)).toContain('【新闻主题约束】');
+  }
+});

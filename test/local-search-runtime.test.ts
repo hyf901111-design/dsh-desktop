@@ -77,3 +77,17 @@ it('carries the verified document query through the authenticated bridge into th
   expect(result.content).toContain('local   query')
  }finally{await runtime.stop()}
 })
+
+it('uses the account-backed Doubao search and retains its source label', async () => {
+  const runtime = await startLocalSearchRuntime({
+    createWindow: () => { throw Error('should not open a search window') },
+    search: async () => ({ provider: 'doubao', truncated: false, sources: [{ url: 'https://example.org/', title: 'Doubao result' }] })
+  })
+  try {
+    const result = await searchLocalBrowser({ query: 'public query', maxResults: 2 }, undefined, runtime.endpoint)
+    expect(result.content).toContain('豆包搜索')
+    expect(result.sources).toHaveLength(1)
+  } finally {
+    await runtime.stop()
+  }
+})

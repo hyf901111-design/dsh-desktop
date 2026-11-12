@@ -18,8 +18,8 @@ import { researchNotoFontCss } from './component-noto-font.js'
 import { MARKET_PRESENTATION_CSS } from './market-presentation.js'
 import { applyTerminalPresentation } from './terminal-presentation.js'
 import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from './workbench-presentation.js'
-export const MAX_RESEARCH_HTML_BYTES = 200_000
-export const RESEARCH_HTML_LIMIT_ERROR = 'HTML 页面超过 200 KB 上限，请精简内容后重试。'
+export const MAX_RESEARCH_HTML_BYTES = 1_000_000
+export const RESEARCH_HTML_LIMIT_ERROR = 'HTML 页面超过 1 MB 呈现上限。请按完整记录分页或拆分呈现，保留原始数据，不裁剪正文或记录。'
 
 export function parseResearchHtmlArtifact(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || value.version !== 1 || value.type !== 'html' ||
@@ -31,9 +31,9 @@ export function parseResearchHtmlArtifact(value) {
 }
 
 // Static evidence only. Never create a DOM or execute artifact code in the host.
-export function researchHtmlText(html) {
+export function researchHtmlText(html, { maxCharacters = 120_000 } = {}) {
   if (typeof html !== 'string') return ''
-  return html.replace(/<!--[\s\S]*?-->/g, ' ')
+  const text = html.replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(script|style|template|head)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
     .replace(/<(script|style|template|head)\b[^>]*>[\s\S]*$/gi, ' ')
     .replace(/<[^>]*>/g, '\n')
@@ -43,7 +43,10 @@ export function researchHtmlText(html) {
       return point > 0 && point <= 0x10ffff && !(point >= 0xd800 && point <= 0xdfff) ? String.fromCodePoint(point) : match
     })
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
-    .replace(/[^\S\n]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 120_000)
+    .replace(/[^\S\n]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  // Evidence previews remain bounded by default. A delivery fallback needs
+  // the entire readable body and applies its final artifact byte limit later.
+  return maxCharacters === null ? text : text.slice(0, maxCharacters)
 }
 
 // Older trusted dashboard outputs duplicated full metric explanations on the
@@ -503,6 +506,10 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
         // Chromium still returns table/range layout boxes inside a closed
         // details element. Only its first summary is actually displayed.
         for(let ancestor=element;ancestor&&ancestor!==document.body;ancestor=ancestor.parentElement){
+          // A floating scrollbar/action overlay is not document flow. Its
+          // children are usually static, so checking only the leaf measures
+          // their old viewport position and prevents a filtered card shrinking.
+          if(getComputedStyle(ancestor).position==='fixed')return false
           if(ancestor.tagName==='DETAILS'&&!ancestor.open&&ancestor!==element){const summary=Array.from(ancestor.children).find(child=>child.tagName==='SUMMARY');if(!summary?.contains(element))return false}
         }
         const style = getComputedStyle(element)

@@ -146,7 +146,8 @@ const exact=(s,a,b)=>{if(s.split(a).length!==2)throw Error('Browser app native a
 export function stripBrowserAppNative(source){const at=source.indexOf(START);if(at<0)return source;const end=source.indexOf(END,at);if(end<0)throw Error('Browser native restore journal missing');const pairs=JSON.parse(source.slice(at+START.length,end));source=source.slice(0,at)+source.slice(end+END.length);for(const [a,b]of pairs.reverse())source=exact(source,b,a);return source}
 export function patchBrowserAppNative(input){
  let source=stripBrowserAppNative(input);const pairs=[],replace=(a,b)=>{source=exact(source,a,b);pairs.push([a,b])}
- const canvasAction='"aria-label": (notes?workbenchText("添加到笔记"):workbenchText("添加到画布")),';
+ const splitCanvasAction='"aria-label": (notes?workbenchText("添加到笔记"):workbenchText("添加到画布")),';
+ const canvasAction=source.includes(splitCanvasAction)?splitCanvasAction:'"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),';
  replace(canvasAction,'"data-browser-canvas-action": "",\n'+canvasAction);
  const root='function HomeGuideNativeOriginalConversationRoot('
  replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n`+root)

@@ -27,6 +27,22 @@ it('projects only actual current card identity and state, without private conten
  expect(listener).toHaveBeenCalledOnce()
 })
 
+it('counts each structured partial delivery and legacy readable recovery without publishing unmet requirements',()=>{
+ const modes=['source-snapshot','readable-content','incomplete-scope']
+ const nodes=modes.map((recoveryMode,index)=>card('partial-'+index,'completed',{
+  containerSpec:{type:'table',rows:[['PRIVATE ROW']]},deliveryStatus:'partial',recoveryMode,unmetRequirements:['PRIVATE REQUIREMENT']
+ }))
+ nodes.push(card('legacy','completed',{containerSpec:{type:'html',html:'<body data-readable-content-recovery><p>PRIVATE BODY</p></body>'}}))
+ const snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',nodes)
+ expect(snapshot.nodes.map(node=>[node.status,node.recoveryMode])).toEqual([
+  ['partial','readable-content'],['partial','source-snapshot'],['partial','readable-content'],['partial','incomplete-scope']
+ ])
+ const state=workbenchProgressState(plans,snapshot)
+ expect(state).toMatchObject({phase:'partial',completed:0,partial:4})
+ for(const label of ['来源明细 1','保留可读内容 2','覆盖不完整 1'])expect(state.detail).toContain(label)
+ expect(JSON.stringify(snapshot)).not.toContain('PRIVATE')
+})
+
 it('reports all off-screen cards, current retries, removed cards and real terminal failures',()=>{
  const target=new EventTarget(),nodes=done()
  nodes[3]=card('card-3','running',{generationTaskId:'new-attempt'})
@@ -161,13 +177,13 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(original.slice(original.indexOf('const ExecutionStatusGroup =',helperStart))).toBe(installed.slice(shellStart))
  const source=patchResearchCreationProgress(original)
  const upgraded=patchResearchWorkbenchFeedback(original)
- expect(upgraded).toContain('/* ework:workbench-feedback:v12 */')
+ expect(upgraded).toContain('/* ework:workbench-feedback:v13 */')
  expect(upgraded).toContain('const [,renderLocale]=react.useState(0)')
  expect(patchResearchWorkbenchFeedback(upgraded)).toBe(upgraded)
  expect(source).toContain('const [,renderLocale]=react.useState(0)')
- expect(source.split('/* ework:workbench-feedback:v12 */')).toHaveLength(2)
+ expect(source.split('/* ework:workbench-feedback:v13 */')).toHaveLength(2)
  expect(source).toContain('data-research-workbench-progress')
- expect(source).toContain('const workbenchMeta=planningResponseMetadata(activityNodes)')
+ expect(source).not.toContain('const workbenchMeta=planningResponseMetadata(activityNodes)')
  expect(source).not.toContain('sessionId, plans:workbenchMeta.plans')
  expect(source.indexOf('footer:true')).toBeGreaterThan(source.indexOf('function ChatView('))
  expect(source).toContain('researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn)')
@@ -176,7 +192,7 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v12 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v13 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(componentDataStatusDefinitions()+source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[typeof initializer==='function'?snapshot:false,()=>{}],useEffect:()=>{},useCallback:fn=>fn,useSyncExternalStore:(_subscribe,read)=>read()},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
@@ -193,28 +209,28 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v12 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v13 */','/* ework:workbench-feedback:v1 */')
   .replace('\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);','')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
  // Simulate the installed v4 wiring, including its global footer and duplicate
  // execution status, so an existing client patch upgrades to the same output.
- const v4=source.replace('/* ework:workbench-feedback:v12 */','/* ework:workbench-feedback:v4 */')
+ const v4=source.replace('/* ework:workbench-feedback:v13 */','/* ework:workbench-feedback:v4 */')
   .replace('/* ework:workbench-flow:v1 */\nconst workbenchReceiptAnchors=researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn);\n','')
   .replace('const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
   .replace('renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{','renderFlow.map((entry) => {')
   .replace('};const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];})','}), workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null')
-  .replace('planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,','workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,')
+  .replace('open && progressSurface.detailGroups.length > 0 &&','workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, open && progressSurface.detailGroups.length > 0 &&')
  expect(patchResearchWorkbenchFeedback(v4)).toBe(source)
- const v7=source.replace('/* ework:workbench-feedback:v12 */','/* ework:workbench-feedback:v7 */').replace('refreshSnapshot.complete===true','true /* STALE_V7_INCOMPLETE_IS_STATIC */')
+ const v7=source.replace('/* ework:workbench-feedback:v13 */','/* ework:workbench-feedback:v7 */').replace('refreshSnapshot.complete===true','true /* STALE_V7_INCOMPLETE_IS_STATIC */')
  expect(v7).toContain('STALE_V7_INCOMPLETE_IS_STATIC')
  expect(patchResearchWorkbenchFeedback(v7)).toBe(source)
- const v6=source.replace('/* ework:workbench-feedback:v12 */','/* ework:workbench-feedback:v6 */').replace("const cacheKey='__sherlockWorkbenchGenerationV1'","const cacheKey='STALE_V6_PUBLISHER'")
+ const v6=source.replace('/* ework:workbench-feedback:v13 */','/* ework:workbench-feedback:v6 */').replace("const cacheKey='__sherlockWorkbenchGenerationV1'","const cacheKey='STALE_V6_PUBLISHER'")
  expect(v6).toContain('STALE_V6_PUBLISHER')
  expect(patchResearchWorkbenchFeedback(v6)).toBe(source)
- expect(source.split('/* ework:workbench-feedback:v12 */')).toHaveLength(2)
- const v5=source.replace('/* ework:workbench-feedback:v12 */','/* ework:workbench-feedback:v5 */')
+ expect(source.split('/* ework:workbench-feedback:v13 */')).toHaveLength(2)
+ const v5=source.replace('/* ework:workbench-feedback:v13 */','/* ework:workbench-feedback:v5 */')
  expect(patchResearchWorkbenchFeedback(v5)).toBe(source)
 })
 

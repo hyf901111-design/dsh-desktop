@@ -1,6 +1,8 @@
 import {beforeAll,afterAll,it,expect} from 'vitest'
 import {pathToFileURL} from 'node:url'
 import {renderMarketArtifact} from '../packages/dsh-research-task-runtime/market-artifact.js'
+import {retainTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
+import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 import {createWorkbenchRefreshSurface} from '../packages/dsh-research-task-runtime/workbench-refresh.js'
 let browser
@@ -31,6 +33,52 @@ it('bounds chart height by content width rather than frame height and keeps full
   expect(await page.locator('.price-volume-readout').textContent()).toContain('成交量 0 手')
  }finally{await page.close()}
 },20000)
+
+it.each(['standard', 'saved OpenTerminal'])('aligns the %s price-volume chevron in the workbench preview', async layout => {
+ const page = await browser.newPage({viewport:{width:832,height:600}})
+ try {
+  const standard = {...data, layoutProfile:undefined}
+  const rendered = renderMarketArtifact(standard)
+  const saved = layout === 'saved OpenTerminal'
+  if (saved) {
+   rendered.html = rendered.html
+    .replace('data-sherlock-market="price-volume"', 'data-layout-profile="openterminal" data-sherlock-market="price-volume"')
+    .replace('<details open data-workbench-default-open="price-volume-v1">', '<details>')
+  }
+  const artifact = retainTemplateModel(rendered, saved ? data : standard)
+  await page.setContent(buildResearchHtmlPreview(artifact.html, artifact.title, 'dark', {workbench:true,notoFont:'runtime'}))
+  const frame = page.frameLocator('#preview')
+  const summary = frame.locator('.price-volume>details>summary')
+  const table = frame.locator('.price-volume>details>table')
+  await summary.waitFor()
+  await page.evaluate(() => document.querySelector('#preview').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false}, '*'))
+
+  const measure = () => summary.evaluate(element => {
+   const textRange = document.createRange()
+   textRange.selectNodeContents(element)
+   const text = textRange.getBoundingClientRect()
+   const icon = getComputedStyle(element, '::before')
+   const height = parseFloat(icon.height)
+   const translateY = icon.translate.split(' ')[1] || '0'
+   const shift = parseFloat(translateY) * (translateY.endsWith('%') ? height / 100 : 1)
+   const center = element.getBoundingClientRect().top + parseFloat(icon.top) + shift + height / 2
+   const rotation = new DOMMatrixReadOnly(icon.transform)
+   return {offset:Math.abs(center - (text.top + text.height / 2)), angle:Math.atan2(rotation.b, rotation.a) * 180 / Math.PI}
+  })
+
+  expect(await table.isVisible()).toBe(true)
+  const expanded = await measure()
+  await summary.press('Enter')
+  expect(await table.isVisible()).toBe(false)
+  const collapsed = await measure()
+  expect(expanded.angle).toBe(0)
+  expect(collapsed.angle).toBe(-90)
+  expect(expanded.offset).toBeLessThan(1)
+  expect(collapsed.offset).toBeLessThan(1)
+ } finally {
+  await page.close()
+ }
+}, 15000)
 it('also compacts saved markup through the upgraded runtime without moving its original controls',async()=>{
  const page=await browser.newPage({viewport:{width:832,height:1200}})
  try{

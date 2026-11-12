@@ -4,6 +4,26 @@ import {filterScopedNewsArtifact} from './news-topic-filter.js'
 export const NEWS_SCOPE_MARKER='【新闻主题约束】'
 export const NEWS_CAPACITY_MARKER='【新闻容量适配】'
 export const NEWS_DISPLAY_INSTRUCTION='【新闻展示边界】\n原始需求JSON、来源配方与接口参数仅供执行和验证，保留在任务及绑定元信息中；不要复制到note、asOf、摘要、标题或其他可见内容。展示说明只用简短自然语言保留真实来源、实际报道日期与查询范围、未取得的对象及原因、当前刷新状态。检索仅覆盖首页或来源暂不可用时如实披露，不把获取时间当报道时间，不承诺完整区间或最新数据。不要展示source、parameters_json、requests、mapping、intervalMinutes等字段名及内部实现解释；不得以截断或清空原有note掩盖真实缺口，也不删除新闻条目来缩短说明。'
+const newsTopic=/公告|新闻|资讯|报道|\b(?:news|announcements?|filings?)\b/iu
+const newsPresentation=/资讯流|新闻流|时间线|正文解读|\b(?:timeline|news feed)\b/iu
+const recordList=/逐条|每条|清单|明细|全部|完整|\b(?:each|all|list of)\b/iu
+const recordWindow=/(?:最近|过去|近)\s*[一二三四五六七八九十两\d]+\s*(?:个)?\s*(?:天|日|周|月|年)|(?:19|20)\d{2}[-/年]\d{1,2}|\b(?:past|last)\s+\d+\s+(?:days?|weeks?|months?|years?)\b/iu
+const tablePresentation=/表格|(?:按|用|制成)表(?:\s|[，。；]|$)|\btable\b/iu
+
+export function retrospectiveNewsRecords(panel, originalRequest='') {
+ const local=`${panel.title}\n${panel.prompt.split('\n宿主来源能力校正：',1)[0]}`
+ if (!newsTopic.test(local)||newsPresentation.test(local)) return false
+ if (tablePresentation.test(local)||recordList.test(local)&&recordWindow.test(local)) return true
+ return recordList.test(local)&&originalRequest.split(/[。；;\n]/u).some(clause=>
+  newsTopic.test(clause)&&!newsPresentation.test(clause)&&(tablePresentation.test(clause)||recordWindow.test(clause)))
+}
+
+export function newsRecordTableGuidance(request,{planning=false}={}) {
+ return newsTopic.test(request)
+  ? '【资讯记录表格】有回顾区间、逐条盘点或明确表格要求的公告及新闻使用宿主 market.table（type:"market", variant:"table"），每条一行，列为标题、发布日期、类型、标的、发布机构和摘要。第一列标题用 rowLinks 按 rows 同序绑定已核实原文；无原文填 null，转载或检索入口在来源与口径中标明。保留全部相关条目，支持搜索及按日期排序。用户明确要求时间线、正文解读或特定资讯流时沿用其指定形式。'+
+   (planning?'实时或持续更新的可搜索新闻用组件库 builtin-news，保留主题和来源选择。':'')
+  : ''
+}
 const broadTitle=/^(?:全市场(?:财经)?(?:新闻|资讯)(?:总流)?|综合财经(?:新闻|资讯)|财经(?:新闻|资讯)?总流|(?:general|market-wide|all-market) (?:financial |finance )?news)$/iu
 const broadRequest=/全市场(?:财经)?(?:新闻|资讯)|综合财经(?:新闻|资讯)|财经(?:新闻|资讯)?总流|\b(?:general|market-wide|all-market) (?:financial |finance )?news\b/iu
 const genericTitle=/^(?:新闻(?:列表)?|资讯(?:列表)?|news)$/iu
@@ -27,7 +47,7 @@ export function newsScopeInstruction(scope){
 export function newsSourceScopeIssue(data,records=[],requirement){
  // Callers provide executed/observed arguments, using the shared mapping
  // evaluator before this identity check. Stored expressions are not identities.
- const news=data?.type==='news'||typeof requirement==='string'&&requirement.includes(NEWS_CAPACITY_MARKER)&&(data?.type==='table'||data?.type==='market'&&data.variant==='table')
+ const news=data?.type==='news'||typeof requirement==='string'&&(requirement.includes(NEWS_SCOPE_MARKER)||requirement.includes(NEWS_CAPACITY_MARKER))&&(data?.type==='table'||data?.type==='market'&&data.variant==='table')
  if(!news||generalNewsScope(requirement??data.title??''))return null
  // A static feed may contain a genuinely relevant article. Judge the actual
  // delivered rows rather than rejecting their provider name alone. Mapping

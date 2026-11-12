@@ -44,3 +44,18 @@ it('preserves zero-duration instants without a fabricated interval or invalid ge
  const dataset=bookDataset();dataset.records=dataset.records.slice(0,1);dataset.records[0].end=dataset.records[0].start;
  const value=datasetViewSchedule(dataset,scheduleView().sections[0]);expect(value.rows[0]).toMatchObject({missing:false,left:0,conflicts:[]});expect(Number.isFinite(value.rows[0].width)).toBe(true);expect(value.ticks).toHaveLength(1);expect(Date.parse(value.ticks[0].time)).toBe(Date.parse(dataset.records[0].start));
 })
+
+it('renders safe original links as anchors in native shared-record tables',()=>{
+ const value=spec(priorityView())
+ value.dataset.fields.push({key:'link',label:'已有链接'})
+ for(const [i,record] of value.dataset.records.entries())record.link=i===0?'https://example.org/notice?id=1&from=feed':i===1?'javascript:alert(1)':null
+ value.view.sections=[{kind:'records',fields:['disease','link']}]
+ const rendered=renderDatasetViewArtifact(value),w=new Window()
+ try {
+  w.document.write(rendered.html)
+  const links=[...w.document.querySelectorAll('.dv-records tbody a')]
+  expect(links.map(link=>link.getAttribute('href'))).toEqual(['https://example.org/notice?id=1&from=feed'])
+  expect(links[0].textContent).toBe('https://example.org/notice?id=1&from=feed')
+  expect(w.document.querySelector('.dv-records tbody tr:nth-child(2)').textContent).toContain('javascript:alert(1)')
+ } finally {w.happyDOM.abort()}
+})

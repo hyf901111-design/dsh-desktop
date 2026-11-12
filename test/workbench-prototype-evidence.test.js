@@ -58,6 +58,8 @@ describe('用户原型是首次规划的有限只读证据',()=>{
   expect(wire.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
   expect(wire.system).toContain('负责人待核')
   expect(wire.system).toContain('rows 保留原始行列')
+  expect(wire.system).toContain('可以直接用 content、sharedDatasets/view 或 artifact 交付')
+  expect(wire.system).not.toContain('省略 artifact')
   expect(workbenchDocumentCitationIssue('org.docx [T1] [P2]',documents)).toBeUndefined()
   expect(workbenchDocumentCitationIssue('org.docx [T2]',documents)).toContain('Word 出处')
   h.dispose()
@@ -170,8 +172,20 @@ describe('用户原型是首次规划的有限只读证据',()=>{
   receipt(s,'read',{file_path:path},'first')
   expect(h.guard('research_workbench_create',{})).toBeUndefined()
   expect(h.guard('read',{file_path:path,offset:2001},'page2')).toBeUndefined()
+  expect(h.prompt()).toContain('原型的业务页签（index 的 tabLabels）')
+  expect(h.prompt()).toContain('概览、对照分析、可查明细')
   expect(h.prompt()).not.toContain('实时ETF工作台预设')
   h.dispose()
+ })
+ it('does not expose alternate file or execution tools around exact reference readers',async()=>{
+  const h=harness(session(text));h.wire.tools=[...tools,...['read_file','read_prototype','Bash','exec_command'].map(name=>({name,parameters:{}}))]
+  try{
+   const wire=await h.context()
+   for(const name of ['read_file','read_prototype','Bash','exec_command']){
+    expect(wire.tools.some(tool=>tool.name===name)).toBe(false)
+    expect(h.guard(name,{file_path:'/tmp/not-authorized.html'})).toBeTruthy()
+   }
+  }finally{h.dispose()}
  })
  it('retains failed evidence as missing without trapping the plan, and reconstructs dedup after restart',async()=>{
   const s=session(text);receipt(s,'read',{file_path:path},'failed',true)
@@ -237,7 +251,15 @@ it('uses the real AgentLoop and ToolRuntime to read actual prototype evidence be
   parent.followup(human('认真分析原型 '+pathToFileURL(prototypePath).href+' 后创建数字运营工作台，不运行脚本。'));await parent.whenIdle()
   expect(errors).toEqual([]);expect(timeline.map(event=>event[0])).toEqual(['read','plan','child']);expect(requests).toHaveLength(4)
   expect(requests[0].tools.map(tool=>tool.name).sort()).toEqual(['read','research_workbench_create'])
-  expect(requests[0].reasoningEffort).toBe('low');expect(requests[3].reasoningEffort).toBe('max')
+  expect(requests[0].reasoningEffort).toBe('max');expect(requests[3].reasoningEffort).toBe('max')
   expect(parent.session.events.filter(event=>event.type==='tool/result'&&event.data.message.content[0].isError)).toHaveLength(3)
  }finally{dispose();await ctx.fiber.dispose();await rm(directory,{recursive:true,force:true})}
 },15000)
+
+it('recognizes the real composer attachment adjacent to the request without reading quoted markers',()=>{
+ const marker='📎 文件：`'+path+'`'
+ expect(authoredPrototypeEvidence('根据这个原型把看板做出来'+marker).files).toEqual([path])
+ expect(authoredPrototypeEvidence('解释“示例中的'+marker+'”这段文字').files).toEqual([])
+ const csv='/Users/qa/Downloads/交付清单.csv'
+ expect(workbenchDocumentScope('把这份交付清单做成工作台。📎 文件：`'+csv+'`')).toEqual([csv])
+})

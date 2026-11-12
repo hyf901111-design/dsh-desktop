@@ -41,6 +41,17 @@ it('accepts a redundant display title without downgrading a linked native panel'
  expect(plan.panels[1].artifact).toMatchObject({type:'financial-widget',widget:'quote',title:'quote'})
  expect(plan.links).toEqual(mixed.links)
 })
+it('uses the built-in index list for multi-index quotes and preserves refresh configuration',()=>{
+ const indices=[{code:'000001',market:'SH',name:'上证指数'},{code:'000300',market:'SH',name:'沪深300'}];
+ const input={requestId:'index-quotes',title:'盘中指数研究',panels:[
+  {...native('quote',{symbols:indices,refreshMinutes:1,refreshEnabled:true}),title:'盘中报价',prompt:'跟踪两只指数的实时报价和来源，60秒自动刷新。'}
+ ]};
+ const panel=validateWorkbench(input).panels[0];
+ expect(panel.artifact).toMatchObject({type:'financial-widget',widget:'indices',symbols:indices,refreshMinutes:1,refreshEnabled:true});
+ const kline=validateWorkbench({...input,panels:[{...input.panels[0],prompt:'展示两只指数的日K线和成交量。'}]}).panels[0];
+ expect(kline.type).toBe('chart');
+ expect(kline.artifact).toBeUndefined();
+});
 it('links actual IDs in dependency order and follows stock selection across dependent feeds',()=>{
  const plan=validateWorkbench(mixed)
  const panels=bindWorkbenchLibraryLinks(plan.panels.map((p,i)=>({...p,nodeId:'actual-'+i})),plan.links)
@@ -56,6 +67,13 @@ it('links actual IDs in dependency order and follows stock selection across depe
  expect(synchronizeFinancialLinks(pending)[1].containerSpec.linkedWatchlistId).toBe('actual-2')
  expect(synchronizeFinancialLinks(pending.filter(n=>n.id!=='actual-2'))[1].containerSpec.linkedWatchlistId).toBeUndefined()
 })
+it('persists the authored default watchlist selection across every linked stock card',()=>{
+ const plan=validateWorkbench({...mixed,originalRequest:'创建工作台，默认选北方华创，切换标的时联动行情、新闻和公告。'});
+ expect(plan.panels[2].artifact.selectedSymbol).toBe('SZ:002371');
+ const panels=bindWorkbenchLibraryLinks(plan.panels.map((panel,i)=>({...panel,nodeId:'selected-'+i})),plan.links);
+ for(const index of [0,1,3])expect(panels[index].artifact.symbols).toEqual([b]);
+ expect(validateWorkbench(plan)).toEqual(plan);
+});
 it('preserves unsupported library requirements as an independent data task instead of filling template fields',()=>{
  const input={requestId:'valuation',title:'估值观察',panels:[{...native('quote',{symbols:[a],fields:['PE','PB','研发费用率']}),prompt:'按真实财报展示市盈率、市净率和研发费用率'}]}
  const plan=validateWorkbench(input)
@@ -96,4 +114,11 @@ it('persists native configs, real links and tabs while dispatching only the unco
   expect((await tool.execute(mixed,{agent:{session:{id:'parent'}}})).planId).toBe(receipt.planId)
   expect(start).toHaveBeenCalledTimes(1)
  }finally{await dispose();await rm(dir,{recursive:true,force:true})}
+})
+
+it('uses the exact index names in a panel instead of mounting an empty list',()=>{
+ const panel={...native('indices',{symbols:[]}),prompt:'显示上证指数、深证成指、沪深300'}
+ const result=validateWorkbench({requestId:'named-indices',title:'指数工作台',panels:[panel]})
+ expect(result.panels[0].artifact.symbols.map(s=>s.code).sort()).toEqual(['000001','000300','399001'])
+ expect(validateWorkbench({requestId:'generic-indices',title:'指数工作台',panels:[native('indices')]}).panels[0].artifact.symbols).toEqual([])
 })

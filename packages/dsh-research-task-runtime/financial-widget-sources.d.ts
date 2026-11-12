@@ -1,1 +1,4 @@
-export function financialWidgetSources(spec:{widget:string;query?:string;linkedSourceId?:string;symbols?:Array<{name?:string;code:string}>}):Array<{id:'default'|'backup';name:string}>
+export type FinancialWidgetDataSource = 'default' | 'backup' | 'kraken' | 'bitfinex' | 'tushare' | 'datapro' | 'doubao' | 'eastmoney' | 'sina'
+type SourceSpec = { widget: string; dataSource?: string; symbols?: Array<{ market?: string }> }
+export function financialWidgetSources(spec: SourceSpec): Array<{ id: FinancialWidgetDataSource; name: string }>
+export function financialWidgetSourceId(spec: SourceSpec, query?: string): string

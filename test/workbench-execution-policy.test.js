@@ -8,20 +8,21 @@ import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../p
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 afterEach(() => vi.unstubAllGlobals())
 describe('workbench execution policy', () => {
-  it('uses the short host data-source path only for authorized supported finance plans', () => {
+  it('uses one concise data-first method across user domains without resident finance presets', () => {
     let prompt
-    const ctx = { tools: { schemas: () => [{ name: 'public_data_query' }] }, systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} }
-    registerWorkbenchExecutionPolicy(ctx)
-    const text = request => prompt.text({ agent: { session: session(request) } })
-    expect(text('使用免费源创建A股行情工作台，每分钟刷新')).toContain('publicData')
-    expect(text('使用免费源创建A股行情工作台，每分钟刷新').length).toBeLessThan(3400)
-    for (const request of ['禁止联网创建行情工作台', '使用通联MCP创建股票工作台', '使用Tushare创建股票行情工作台', '创建股票财报与宏观工作台', '做个A股宽基指数对比工作台，看看沪深300、中证500和创业板近三个月的表现', '帮我搭一个ETF指数运营工作台，看看最近一周规模变化和资金进出前五', '创建ETF收益与回撤比较看板']) expect(text(request)).not.toContain('【已适配来源快捷路径】')
-    expect(text('创建一个主流加密货币行情监控面板')).toContain('【已适配来源快捷路径】')
-    expect(text('创建一张沪深300近三个月日K行情看板')).toContain('【已适配来源快捷路径】')
-    expect(text('帮我搭一个ETF指数运营工作台，看看最近一周规模变化和资金进出前五')).toContain('真实数据模式使用 dataMode:"source"')
-    ctx.tools.schemas = () => []
-    expect(text('创建免费股票行情工作台')).not.toContain('【已适配来源快捷路径】')
+    registerWorkbenchExecutionPolicy({ tools: { schemas: () => [{ name: 'public_data_query' }] }, systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
+    for (const request of ['使用免费源创建A股行情工作台，每分钟刷新', '使用通联MCP创建股票工作台', '创建ETF收益与回撤比较看板', '创建医疗活动排班工作台', '创建一个主流加密货币行情监控面板']) {
+      const text = prompt.text({ agent: { session: session(request) } })
+      expect(text).toContain('先理解需求')
+      expect(text).toContain('已有真实记录')
+      expect(text).toContain('sharedDatasets/view')
+      expect(text.length).toBeLessThan(2300)
+      expect(text).not.toContain('【已适配来源快捷路径】')
+      expect(text).not.toContain('flowEstimateYi')
+      expect(text).not.toContain('cn-hot-etf-live')
+    }
   })
+
   it('keeps binding work open for accepted inline snapshots when the human requested minute updates', () => {
     let prompt
     registerWorkbenchExecutionPolicy({ systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
@@ -44,14 +45,14 @@ describe('workbench execution policy', () => {
     current.events.push({ type: 'tool/call', data: { name: 'research_workbench_create', callId: 'plan-call' } })
     const result = { type: 'tool/result', data: { message: { source: { kind: 'tool', callId: 'plan-call' }, content: [{ type: 'tool-result', isError: true, content: [{ type: 'text', text: JSON.stringify({ planId: 'plan', status: 'accepted' }) }] }] } } }
     current.events.push(result)
-    expect(text()).toContain('立即调用 research_workbench_create')
+    expect(text()).toContain('调用 research_workbench_create')
     result.data.message.content[0].isError = false
     expect(text()).toContain('主会话不要再重复接口发现')
     expect(text()).toContain('刷新配置待确认')
     expect(text()).toContain('不能由计划承诺自动刷新已生效')
     const next = session('再创建另一只股票的工作台').events[0]; next.data.id = 'human-next'
     current.events.push(next)
-    expect(text()).toContain('立即调用 research_workbench_create')
+    expect(text()).toContain('调用 research_workbench_create')
   })
   it('applies the early plan before the first human message is committed to session history', () => {
     const pending = { header: {}, events: [
@@ -61,7 +62,7 @@ describe('workbench execution policy', () => {
     ] }
     let prompt
     registerWorkbenchExecutionPolicy({ systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
-    expect(prompt.text({ agent: { session: pending } })).toContain('立即调用 research_workbench_create')
+    expect(prompt.text({ agent: { session: pending } })).toContain('调用 research_workbench_create')
     pending.events.push({ type: 'agent/inbox/spliced', data: { inserted: [{ ...session('创建工作台').events[0].data, source: { kind: 'tool' } }] } })
     expect(workbenchCreationRequest(pending).text).toBe('使用通联创建宁德时代工作台')
     pending.events.push(...session('解释一下当前数据').events)
@@ -77,15 +78,16 @@ describe('workbench execution policy', () => {
     const injected = session('创建工作台'); injected.events[0].data.source.kind = 'tool'
     expect(workbenchCreationRequest(injected)).toBeNull()
   })
-  it('limits the planning phase and restores the original controls for ordinary requests', async () => {
+  it('preserves the selected model controls during creation and ordinary requests', async () => {
     let handler, prompt
     const resolveModelInfo = vi.fn().mockResolvedValue({ reasoning: { efforts: ['low', 'high', 'max'].map(id => ({ id })) } })
     registerWorkbenchExecutionPolicy({ llm: { resolveModelInfo }, systemPrompt: { context: v => { prompt = v; return () => {} } }, on: (name, fn) => { if (name === 'agent/request') handler = fn; return () => {} } })
     const agent = { session: session('创建股票工作台') }, config = { provider: 'zai', model: 'GLM-5.3-Flash' }
-    expect(prompt.text({ agent })).toContain('立即调用 research_workbench_create')
+    expect(prompt.text({ agent })).toContain('调用 research_workbench_create')
     const automatic = await handler({ agent }, async () => config)
-    expect(automatic.reasoningEffort).toBe('low')
-    expect(await handler({ agent }, async () => ({ ...config, reasoningEffort: 'max' }))).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
+    expect(automatic).toBe(config)
+    expect(resolveModelInfo).not.toHaveBeenCalled()
+    expect(await handler({ agent }, async () => ({ ...config, reasoningEffort: 'max' }))).toEqual({ ...config, reasoningEffort: 'max' })
     // A new default request has its own original controls, independent of the
     // preceding explicit selection.
     await handler({ agent }, async () => config)
@@ -100,7 +102,7 @@ describe('workbench execution policy', () => {
     const explicit = { ...original, reasoningEfforts: false }
     expect(glmReasoningEntry(explicit, 'zai', 'https://api.z.ai/')).toBe(explicit)
   })
-  it('sends the temporary supported planning controls to the adapter and restores Max after acceptance', async () => {
+  it('sends the selected Max controls to the adapter before and after acceptance', async () => {
     const filename = resolve('node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/countdown-policy-test.mjs')
     const source = patchGlmReasoningCapabilities(readFileSync(resolve('node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js'), 'utf8'))
     expect(patchGlmReasoningCapabilities(source)).toBe(source)
@@ -125,8 +127,8 @@ describe('workbench execution policy', () => {
       for await (const chunk of adapter.stream({ ...planned, messages: [{ role: 'user', content: [{ type: 'text', text: '创建工作台' }] }] })) chunks.push(chunk)
       expect(body.model).toBe('GLM-5.3-Flash')
       expect(body.thinking.type).toBe('enabled')
-      expect(body.reasoning_effort).toBe('low')
-      expect(body.max_completion_tokens ?? body.max_tokens).toBe(4096)
+      expect(body.reasoning_effort).toBe('max')
+      expect(body.max_completion_tokens ?? body.max_tokens).toBe(16384)
       expect(chunks.at(-1).type).toBe('finish')
       agent.session.events.push({ type: 'tool/call', data: { name: 'research_workbench_create', callId: 'accepted' } },
         { type: 'tool/result', data: { message: { source: { callId: 'accepted' }, content: [{ type: 'tool-result', content: [{ type: 'text', text: JSON.stringify({ planId: 'p', status: 'accepted' }) }] }] } } })
@@ -164,10 +166,10 @@ describe('workbench planning continuation', () => {
     '给投研组做一组美股财报观察看板。',
     '给运营组做两套不同用途的发布动态看板。',
     '我要做一版模拟义诊排班工作台。',
-  ])('uses the bounded planning surface for a production request: %s', async text => {
+  ])('preserves authorized tools and bounded continuation for a production request: %s', async text => {
     const run = await planningRun(text)
     try {
-      expect(run.wire.tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
+      expect(run.wire.tools.map(tool => tool.name)).toEqual(['research_workbench_create', 'research_canvas_use'])
       expect(run.wire.system).toContain('准备卡只显示宿主进度')
       run.stop()
       run.stop()
@@ -190,4 +192,51 @@ describe('workbench planning continuation', () => {
       expect(run.agent.steer).not.toHaveBeenCalled()
     } finally { run.dispose() }
   })
+})
+
+it('在已保存的完整、部分和已启动工作台回执处结束父轮次，保留明确的数据绑定步骤',async()=>{
+ const {registerWorkbench}=await import('../packages/dsh-research-task-runtime/workbench.js')
+ const {mkdtemp,rm}=await import('node:fs/promises')
+ const {tmpdir}=await import('node:os')
+ const {join}=await import('node:path')
+ const dir=await mkdtemp(join(tmpdir(),'ework-terminal-plan-'))
+ let tool
+ const ctx={agents:{get:()=>({})},tools:{register:def=>{tool=def;return()=>{}}},webServer:{register:()=>()=>{}}}
+ const runtime={startPreparedBatch:async({panels})=>panels.map(p=>({taskId:p.canvasNodeId})),
+  startBatch:async({panels})=>panels.map(p=>({taskId:p.canvasNodeId}))}
+ const dispose=await registerWorkbench(ctx,runtime,{filePath:join(dir,'plans.json')})
+ const artifact={version:1,type:'table',title:'基金明细',columns:['代码','收益率'],rows:[['001',1]]}
+ const cases=[
+  ['创建基金工作台','prepared',true,artifact,'基金明细'],
+  ['创建基金工作台，至少比较3只基金的收益率','incomplete',true,artifact,'基金明细'],
+  ['创建基金工作台，每1分钟自动刷新','prepared',false,artifact,'基金明细'],
+  ['创建基金工作台','accepted',true,undefined,'基金明细']
+ ]
+ try{
+  for(const [i,[text,status,terminal,data,title]] of cases.entries()){
+   const parent=session(text);parent.id='root-'+i
+   const concludeTurn=vi.fn()
+   const receipt=await tool.execute({requestId:'case-'+i,title:'基金工作台',panels:[{title,prompt:'比较基金明细与收益率',type:'table',...(data?{artifact:data}:{})}]},
+    {agent:{session:parent},concludeTurn})
+   expect(receipt.status).toBe(status)
+   expect(concludeTurn).toHaveBeenCalledTimes(terminal?1:0)
+  }
+ }finally{await dispose();await rm(dir,{recursive:true,force:true})}
+},12000)
+
+it('拒绝把用户给定的模拟账簿替换成固定图表示例',async()=>{
+ const {registerWorkbench}=await import('../packages/dsh-research-task-runtime/workbench.js')
+ const {mkdtemp,rm}=await import('node:fs/promises')
+ const {tmpdir}=await import('node:os')
+ const {join}=await import('node:path')
+ const dir=await mkdtemp(join(tmpdir(),'ework-authored-ledger-'))
+ let tool
+ const ctx={agents:{get:()=>({})},tools:{register:def=>{tool=def;return()=>{}}},webServer:{register:()=>()=>{}}}
+ const runtime={startPreparedBatch:vi.fn()}
+ const dispose=await registerWorkbench(ctx,runtime,{filePath:join(dir,'plans.json')})
+ const human=session('做一个模拟归因工作台。采用以下原始数值：期初1000万元、利息+42万元、费用-5万元。禁止联网。');human.id='ledger'
+ try{
+  await expect(tool.execute({requestId:'ledger',dataMode:'simulated',title:'归因工作台',panels:[{title:'净值桥',type:'market',prompt:'variant: waterfall；使用账簿期初1000万元、利息+42万元、费用-5万元'}]},{agent:{session:human}})).rejects.toThrow('不要用固定模板样例替代用户记录')
+  expect(runtime.startPreparedBatch).not.toHaveBeenCalled()
+ }finally{await dispose();await rm(dir,{recursive:true,force:true})}
 })

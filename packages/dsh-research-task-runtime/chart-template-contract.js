@@ -14,6 +14,17 @@ export const CARTESIAN_CHART_TEMPLATES = Object.freeze([
 export const CHART_TEMPLATES=Object.freeze([...CARTESIAN_CHART_TEMPLATES,...SPECIAL_CHART_TEMPLATES,...ADVANCED_CHART_TEMPLATES]);
 export const CHART_VARIANTS = Object.freeze(CHART_TEMPLATES.map(t => t.variant));
 
+export function chartFieldUnit(field) {
+  return field.unit ?? /[（(](元|千元|万元|亿元|美元|港元|手|股|份|点|%|％|百分点|条|笔|个)[）)]$/u.exec(field.label)?.[1];
+}
+
+export function orderDatedChartRows(rows, dateOf) {
+  const date = row => String(dateOf(row));
+  return rows.every(row=>/^\d{4}(?:-\d{2}-\d{2}|\d{4})$/u.test(date(row)))
+    ? rows.toSorted((a,b)=>date(a).replaceAll('-','').localeCompare(date(b).replaceAll('-','')))
+    : rows;
+}
+
 // Equivalent literal chart shapes share the native renderer and its validators.
 // Convert only complete aligned records, preserving order, values and metadata.
 function normalizeLiteralCartesianChart(data) {
@@ -49,7 +60,22 @@ function normalizeLiteralCartesianChart(data) {
 // Preserve every character and the native renderer; never trim business data.
 export function normalizeChartMetadata(data) {
   data = normalizeLiteralCartesianChart(data);
+  if(data?.type==='chart'&&ADVANCED_CHART_VARIANTS.includes(data.variant)&&typeof data.source==='string'&&
+      data.source.trim()&&(data.sources===undefined||Array.isArray(data.sources))){
+    const {source,sources=[],...chart}=data;
+    data={...chart,sources:sources.some(row=>row?.label===source)?sources:[...sources,{label:source}]};
+  }
   if(data?.type!=='chart'||!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===data.variant))return data;
+  // Auxiliary columns are presentation metadata, not a reason to discard a
+  // valid chart. Reorder only when one column matches every label in order;
+  // never infer a join or reorder records by position.
+  if(Array.isArray(data.labels)&&data.labels.length&&Array.isArray(data.detailColumns)&&Array.isArray(data.detailRows)&&data.detailRows.length===data.labels.length&&data.detailRows.every(row=>Array.isArray(row)&&row.length===data.detailColumns.length)){
+    const matches=data.detailColumns.map((_,index)=>index).filter(index=>data.detailRows.every((row,i)=>row[index]===data.labels[i]));
+    if(matches.length===1&&matches[0]!==0){
+      const index=matches[0],order=[index,...data.detailColumns.map((_,i)=>i).filter(i=>i!==index)];
+      data={...data,detailColumns:order.map(i=>data.detailColumns[i]),detailRows:data.detailRows.map(row=>order.map(i=>row[i]))};
+    }
+  }
   // Source names use the same meaning in the KPI and chart presentations.
   // Normalize only the unambiguous spelling; keep conflicts and unsafe URLs
   // intact so the ordinary source validation can reject them.
@@ -133,7 +159,7 @@ export function chartDataIssue(spec) {
   const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
   if(spec.axisDecimals!==undefined&&(!Number.isInteger(spec.axisDecimals)||spec.axisDecimals<0||spec.axisDecimals>4))return 'axisDecimals 必须为0–4的整数';
   const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note','sources','axisDecimals','colorBySign','detailColumns','detailRows'];
-  if(spec.colorBySign!==undefined&&(typeof spec.colorBySign!=='boolean'||!['bar','horizontal','lollipop'].includes(spec.variant)))return 'colorBySign 仅支持 bar/horizontal/lollipop 的布尔值';
+  if(spec.colorBySign!==undefined&&(typeof spec.colorBySign!=='boolean'||spec.colorBySign&&!['bar','horizontal','lollipop'].includes(spec.variant)))return '启用 colorBySign 仅支持 bar/horizontal/lollipop，关闭时使用默认系列配色';
   if (spec.version !== 1 || !string(spec.title,256)) return '图表 version 必须为1，title 必须为1–256字';
   const unknown=Object.keys(spec).filter(key=>!allowed.includes(key));
   if(unknown.length)return '图表不支持的字段：'+unknown.join('、')+'。说明使用 note，辅助字段使用 detailColumns/detailRows；保留实际数据。';

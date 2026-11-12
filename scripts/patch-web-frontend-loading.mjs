@@ -22,6 +22,8 @@ import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
 import { patchSessionListStreamPerformance } from './lib/session-list-stream-performance.mjs'
+import { patchSessionIdentityList, patchStoredSessionIdentity } from './lib/session-identity-list.mjs'
+import { patchSessionRunningActivity } from './lib/session-running-activity.mjs'
 import { patchWorkbenchPlanningSessionCatalog, patchWorkbenchPlanningSessionAppend } from './lib/workbench-planning-session.mjs'
 import { patchHomeGuideSessionCatalog } from './lib/home-guide-session-catalog.mjs'
 import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
@@ -46,6 +48,7 @@ import { patchWorkspaceDragFeedback } from './lib/workspace-drag-feedback.mjs'
 import { patchResearchNativeWeb } from './lib/research-native-web-client.mjs'
 import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
+import { patchResearchBoardHeaderClient, stripResearchBoardHeaderClient } from './lib/research-board-header-client.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 import { patchCanvasUseClient } from './lib/canvas-use-client.mjs'
 import { patchCanvasTaskNotices } from './lib/canvas-task-notices.mjs'
@@ -71,7 +74,7 @@ import {patchConversationResponseProgress,stripConversationResponseProgress} fro
 import {patchConversationTurnOrder} from './lib/conversation-turn-order.mjs'
 import {patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient} from './lib/conversation-history-page.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
-import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
+import { patchBrowserHoverCard, patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
 import { patchFigmaContainerMenu } from './lib/figma-container-menu.mjs'
 import { patchFigmaProviderMenu } from './lib/figma-provider-menu.mjs'
@@ -194,14 +197,14 @@ const imageAtomsPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui
 writeFileSync(imageAtomsPath,patchImagePreviewGallery(readFileSync(imageAtomsPath,'utf8')))
 writeFileSync(asset('.js'),patchImagePreviewGallery(readFileSync(asset('.js'),'utf8'),true))
 patchJavaScript(asset('.js'))
-writeFileSync(primitivesPath, patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8'))))
-writeFileSync(asset('.js'), patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true))
+writeFileSync(primitivesPath, patchBrowserHoverCard(patchFigmaMenuPlacement(patchFigmaMenuScope(readFileSync(primitivesPath, 'utf8')))))
+writeFileSync(asset('.js'), patchBrowserHoverCard(patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true), true))
 patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-writeFileSync(gridConversationPath,stripBrowserAppNative(readFileSync(gridConversationPath,'utf8')))
+writeFileSync(gridConversationPath,stripBrowserAppNative(stripResearchBoardHeaderClient(readFileSync(gridConversationPath,'utf8'))))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
@@ -241,7 +244,7 @@ for (const [name, patch] of [
 }
 
 for (const [relative, patch] of [
-  ['dsh-client-runtime/lib/client.js', source=>patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source)))],
+  ['dsh-client-runtime/lib/client.js', source=>patchSessionRunningActivity(patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source))))],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
   ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]
@@ -334,7 +337,9 @@ const modeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-agent
 writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntimePath, 'utf8')))
 
 const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
-writeFileSync(noteHostPath, patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8'))))
+writeFileSync(noteHostPath, patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))))
+const sessionPersistencePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-session-persistence-jsonl/lib/index.js')
+writeFileSync(sessionPersistencePath,patchStoredSessionIdentity(readFileSync(sessionPersistencePath,'utf8')))
 const noteFeedbackPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js')
 writeFileSync(noteFeedbackPath,patchNoteFeedbackHost(readFileSync(noteFeedbackPath,'utf8')))
 for (const catalog of ['lib/index.js', 'lib/types/known-event-types.js']) {
@@ -384,4 +389,4 @@ writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationP
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
-writeFileSync(conversationPath,patchBrowserAppNative(readFileSync(conversationPath,'utf8')))
+writeFileSync(conversationPath,patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8'))))

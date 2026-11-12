@@ -7,6 +7,18 @@ import {ComponentDataRefresh,materializeComponentMapping} from '../packages/dsh-
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {normalizeKeyedTableProjection} from '../packages/dsh-research-task-runtime/table-projection.js'
+import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+
+it('preserves undeclared source fields on a prepared table without a model repair',()=>{
+ const artifact={version:1,type:'table',title:'任务清单',columns:[{key:'name',label:'任务'}],
+  rows:[{name:'任务 A',status:'待办'},{name:'任务 B',status:'完成',owner:'李明'}]}
+ const plan=validateWorkbench({requestId:'complete-keyed-table',title:'项目工作台',dataMode:'source',
+  panels:[{title:artifact.title,prompt:'显示全部任务明细。',type:'table',artifact}]})
+ const final=readTemplateModel(JSON.parse(acceptArtifactOutput(JSON.stringify(plan.panels[0].artifact)))).data
+ expect(final.columns).toEqual(['任务','status','owner'])
+ expect(final.rows).toEqual([['任务 A','待办',null],['任务 B','完成','李明']])
+ expect(artifact.columns).toHaveLength(1)
+})
 
 // Reuse the complete captured response, without repeating the native KPI task
 // or making a new query. Only the table's presentation shape is constructed.

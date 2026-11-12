@@ -404,7 +404,7 @@ export async function searchLocalBrowser(
     throw new WebError('本地搜索服务返回的结果格式无法读取，请稍后重试。', 'WEB_LOCAL_SEARCH_FAILED')
   }
   const sources = localSources(parsed)
-  let provenance = ''
+  let provenance = parsed.provider === 'doubao' ? '检索入口：豆包搜索。' : ''
   if (parsed.provenance !== undefined) {
     const value = parsed.provenance, normalize = text => text.trim().replace(/\s+/gu, ' ')
     if (!isRecord(value) || !['bing','duckduckgo'].includes(value.engine) || typeof value.requestedQuery !== 'string' || value.requestedQuery.length > 512 || normalize(value.requestedQuery) !== normalize(request.query) || typeof value.documentQuery !== 'string' || value.documentQuery.length > 512 || normalize(value.documentQuery) !== normalize(request.query) || typeof value.pageTitle !== 'string' || value.pageTitle.length > 512) {
@@ -415,9 +415,10 @@ export async function searchLocalBrowser(
     // session cookies, private model reasoning or full search-page HTML.
     provenance = `检索入口：${value.engine === 'bing' ? 'Bing' : 'DuckDuckGo'}；页面查询：${JSON.stringify(value.documentQuery)}；页面标题：${JSON.stringify(value.pageTitle)}。`
   }
-  const summary = nonEmptyString(parsed.content)
-  const content = [provenance, summary].filter(Boolean).join('\n') || undefined
   const noResults = parsed.status === 'no_results' && parsed.sources.length === 0
+  const summary = nonEmptyString(parsed.content)
+    ?? (noResults ? '未找到与当前关键词匹配的可引用来源，不能据此推断实时数据。' : undefined)
+  const content = [provenance, summary].filter(Boolean).join('\n') || undefined
   if (sources.length === 0 && !summary && !noResults) {
     throw new WebError(
       '本地搜索暂未返回可引用来源，请调整关键词或稍后重试。',
@@ -426,7 +427,7 @@ export async function searchLocalBrowser(
   }
   return {
     ...(noResults ? { status: 'no_results' } : {}),
-    ...(content ? { content } : noResults ? { content: '未找到与当前关键词匹配的可引用来源，不能据此推断实时数据。' } : {}),
+    ...(content ? { content } : {}),
     sources,
     truncated: parsed.truncated === true
   }
@@ -467,6 +468,15 @@ export class SessionModelSearchProvider {
       throw new WebError('Web search is disabled in EWork Odyssey settings.', 'WEB_SEARCH_DISABLED')
     }
     if (signal?.aborted) throw abortWebError(signal)
+
+    if (mode === 'auto' && this.dependencies.searchDefault) {
+      try {
+        return boundedResult(await this.dependencies.searchDefault(request, signal), request.maxResults)
+      } catch (error) {
+        if (aborted(signal, error)) throw abortWebError(signal, error)
+        throw error
+      }
+    }
 
     let route
     let nativeFailure
@@ -541,7 +551,8 @@ export function apply(ctx, config = { mode: 'auto' }) {
       mode: () => current().mode,
       resolveRoute: () => resolveSessionSearchRoute(ctx),
       resolveNativeOptions: () => resolveSessionSearchOptions(ctx),
-      searchLocal: searchLocalBrowser
+      searchLocal: searchLocalBrowser,
+      searchDefault: process.env[LOCAL_SEARCH_URL_ENV] ? searchLocalBrowser : undefined
     })
   )
 }

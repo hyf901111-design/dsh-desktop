@@ -61,8 +61,15 @@ export function extractDocxEvidence(data, budget) {
         const text = textOf(node).trim()
         if (text) add({id:`P${++paragraphs}`,text})
       } else if (tag === 'tbl') {
-        const rows = children(node,'tr').map(row => children(row,'tc').map(cell => textOf(cell).trim()))
-        if (rows.some(row => row.some(Boolean))) add({id:`T${++tables}`,rows})
+        const sourceRows = children(node,'tr')
+        const rows = sourceRows.map(row => children(row,'tc').map(cell => textOf(cell).trim()))
+        const headerRows = sourceRows.flatMap((row,index)=>{
+          const properties=children(row,'trPr')[0]
+          const header=properties&&children(properties,'tblHeader')[0]
+          const value=header&&Object.entries(header.attribs??{}).find(([key])=>key.split(':').at(-1)==='val')?.[1]
+          return header&&!/^(?:0|false|off)$/iu.test(value??'')?[index]:[]
+        })
+        if (rows.some(row => row.some(Boolean))) add({id:`T${++tables}`,rows,...(headerRows.length?{headerRows}:{})})
       } else if (['sdt','sdtContent','customXml','ins','moveTo'].includes(tag)) scan(node)
     }
   }

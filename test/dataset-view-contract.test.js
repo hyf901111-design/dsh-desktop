@@ -1,7 +1,22 @@
 import {expect,it} from 'vitest'
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js'
-import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue} from '../packages/dsh-research-task-runtime/dataset-view-contract.js'
+import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,WORKBENCH_DATASET_LIMITS} from '../packages/dsh-research-task-runtime/dataset-view-contract.js'
 const clone=x=>structuredClone(x)
+
+it('keeps decimal sums exact and computes a ratio of totals with an explicit zero denominator',()=>{
+ const source={id:'records',label:'成交原表',asOf:'2026-11-12',note:'模拟成交原表',fields:[{key:'order',label:'委托'},{key:'fill',label:'成交'}],records:[
+  {id:'1',order:1.2,fill:0.1},{id:'2',order:0.8,fill:0.2},{id:'3',order:-2,fill:null}
+ ]};
+ const total={id:'totals',label:'成交指标',aggregate:{dataset:'records',groupBy:[],measures:[
+  {key:'order',label:'委托合计',op:'sum',field:'order'},{key:'fill',label:'成交合计',op:'sum',field:'fill'},
+  {key:'ratio',label:'总体成交率',op:'percent',numerator:'fill',denominator:'order',unit:'%',digits:2}
+ ]}};
+ expect(validateWorkbenchDatasets([source,total])[1].records).toEqual([{id:'group-1',order:0,fill:0.3,ratio:null}]);
+ source.records.pop();
+ expect(validateWorkbenchDatasets([source,total])[1].records).toEqual([{id:'group-1',order:2,fill:0.3,ratio:15}]);
+ const invalid=clone(total);invalid.aggregate.measures[2].denominator='ratio';
+ expect(()=>validateWorkbenchDatasets([source,invalid])).toThrow(/比率|百分比/);
+});
 const aggregateSource=()=>({id:'facts',label:'明细',asOf:'2026-11-09',note:'模拟记录',fields:[{key:'owner',label:'负责人'},{key:'state',label:'状态'},{key:'amount',label:'金额',unit:'元'}],records:[{id:'a',owner:'甲',state:'完成',amount:10},{id:'b',owner:'甲',state:'待办',amount:-2},{id:'c',owner:'乙',state:'完成',amount:null}]})
 const aggregate=()=>({id:'totals',label:'派生汇总',note:'按明细计算',aggregate:{dataset:'facts',groupBy:['owner'],measures:[{key:'count',label:'数量',op:'count'},{key:'done',label:'完成数',op:'count',where:{field:'state',equals:'完成'}},{key:'total',label:'合计',op:'sum',field:'amount',unit:'元'}]}})
 it('computes grouped counts, filtered counts and sums from the same complete records in any declaration order',()=>{
@@ -41,10 +56,34 @@ it.each([
  ['mixed array',d=>{d.records[0].steps=['检查',1];return[d]}],['undefined cell',d=>{d.records[0].result=undefined;return[d]}],
  ['missing asOf',d=>{delete d.asOf;return[d]}],['missing note',d=>{delete d.note;return[d]}],
  ['reserved key',d=>{d.fields[1].key='constructor';return[d]}],['oversized field',d=>{d.records[0].handover='字'.repeat(8001);return[d]}],
- ['oversized record count',d=>{d.records=Array.from({length:201},(_,i)=>({...d.records[0],id:String(i)}));return[d]}],
- ['oversized byte count',d=>{for(const r of d.records)r.handover='文'.repeat(3000);return[d]}]
 ])('rejects %s without silently truncating or dropping source data',(_,bad)=>{
  const input=bad(bookDataset()),before=clone(input);expect(()=>validateWorkbenchDatasets(input)).toThrow();expect(input).toEqual(before)
+})
+const capacityDataset=(count,body='完整原始内容'.repeat(15),id='records')=>({id,label:'原始记录',asOf:'2026-11-11',note:'用户提供的完整来源',fields:[{key:'id',label:'编号'},{key:'body',label:'原文'},{key:'amount',label:'数值'}],records:Array.from({length:count},(_,i)=>({id:'R'+i,body,amount:i}))})
+it.each([201,1944])('preserves all %i records above the former display-sized count and byte budgets',count=>{
+ const raw=capacityDataset(count),before=clone(raw)
+ expect(Buffer.byteLength(JSON.stringify(raw))).toBeGreaterThan(48000)
+ const datasets=validateWorkbenchDatasets([raw])
+ expect(datasets[0]).toEqual(before);expect(raw).toEqual(before)
+ expect(Object.isFrozen(datasets[0].records.at(-1))).toBe(true)
+ const resolved=validateDatasetView({dataset:raw.id,sections:[{kind:'records',fields:['id','body','amount']}]},datasets)
+ expect(resolved.dataset.records).toEqual(before.records)
+})
+it('retains eight full source datasets and derives aggregates from records beyond the first page',()=>{
+ const raw=Array.from({length:8},(_,i)=>capacityDataset(243,undefined,'source'+i)),before=clone(raw)
+ const summary={id:'totals',label:'完整合计',note:'宿主从全量原记录计算',aggregate:{dataset:'source0',groupBy:['body'],measures:[{key:'count',label:'条数',op:'count'},{key:'amount',label:'总额',op:'sum',field:'amount'}]}}
+ const result=validateWorkbenchDatasets([...raw,summary])
+ expect(result.slice(0,8)).toEqual(before);expect(raw).toEqual(before)
+ expect(result[8].records[0]).toMatchObject({count:243,amount:243*242/2})
+})
+it.each([
+ ['dataset count',()=>Array.from({length:WORKBENCH_DATASET_LIMITS.datasets+1},(_,i)=>capacityDataset(1,'x','source'+i)),/完整记录集/],
+ ['record count',()=>[capacityDataset(WORKBENCH_DATASET_LIMITS.records+1,'x')],/条完整记录/],
+ ['dataset bytes',()=>[capacityDataset(Math.ceil(WORKBENCH_DATASET_LIMITS.datasetBytes/8000),'x'.repeat(8000))],/单份共同数据.*宿主存储配额/],
+ ['total bytes',()=>Array.from({length:5},(_,i)=>capacityDataset(Math.ceil(WORKBENCH_DATASET_LIMITS.totalBytes/5/8000),'x'.repeat(8000),'source'+i)),/共同数据总量.*宿主存储配额/]
+])('enforces the independent host %s quota without changing source data',(_,make,issue)=>{
+ const raw=make(),before=clone(raw)
+ expect(()=>validateWorkbenchDatasets(raw)).toThrow(issue);expect(raw).toEqual(before)
 })
 it.each([
  ['missing dataset',v=>({...v,dataset:'missing'})],['unknown field',v=>({...v,details:['not-provided']})],
@@ -82,6 +121,15 @@ it('identifies the failing dataset and every conflicting aggregate field without
  const a=aggregate();a.fields=[{key:'responsibility',label:'职责'}];a.records=[{id:'a',responsibility:'完整职责'}];const before=clone(a)
  expect(()=>validateWorkbenchDatasets([aggregateSource(),a])).toThrow(/totals.*fields、records/);expect(a).toEqual(before)
  const source=aggregateSource();delete source.asOf;expect(()=>validateWorkbenchDatasets([source])).toThrow(/facts.*缺少：asOf/)
+})
+it('reports missing sum fields across the whole plan in a single validation error',()=>{
+ const summaries=['totals','statusTotals'].map(id=>{
+  const summary={...aggregate(),id}
+  delete summary.aggregate.measures.find(item=>item.op==='sum').field
+  return summary
+ })
+ expect(()=>validateWorkbenchDatasets([aggregateSource(),...summaries]))
+  .toThrow(/「totals」.*「total」.*field.*facts.*「statusTotals」.*「total」.*field.*facts/u)
 })
 it('validates declared view subsets against original fields without changing master records',()=>{
  const source=aggregateSource(),base={dataset:'facts',sections:[{kind:'records',fields:['owner','state']}]},where=[{field:'state',op:'in',values:['待办']},{field:'amount',op:'notNull'}]

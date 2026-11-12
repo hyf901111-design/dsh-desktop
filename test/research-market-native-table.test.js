@@ -85,6 +85,21 @@ it('preserves footer order and exact safe hrefs for sources and cell details', (
   const dated=html.replace('<footer class="market-footer">','<footer class="market-footer"><span class="market-asof">已渲染日期</span>');
   expect(project(dated).footer[0]).toEqual([{text:'已渲染日期'}]);
 });
+it('makes validated URL cells in an original-link column actionable and preserves their full text', () => {
+  const direct = 'https://example.org/announcements/1?view=full&origin=source';
+  const search = 'https://example.org/search?q=batteries';
+  const rejected = ['javascript:alert(1)', 'https://user:secret@example.org/report', 'https://example.org/ not a URL'];
+  const rows = [['正式公告', direct], ['查找入口', search], ...rejected.map(value => ['无安全链接', value])];
+  const artifact = renderMarketArtifact({
+    ...model, title:'公告与新闻', columns:['标题', '已有原文链接或检索入口'], rows
+  });
+  const parsed = project(artifact.html);
+  expect(parsed.rows.map(row => row[1].text)).toEqual(rows.map(row => row[1]));
+  expect(parsed.rows.slice(0,2).map(row => row[1].parts)).toEqual([
+    [{text:direct,href:direct}],[{text:search,href:search}]
+  ]);
+  expect(parsed.rows.slice(2).map(row => row[1].parts)).toEqual([undefined,undefined,undefined]);
+});
 it.each(['javascript:alert(1)','data:text/html,evil','file:///tmp/x','https://user:secret@example.com/x','http://localhost/x','http://127.0.0.1/x','http://[::1]/x','/relative','https://example.com/'+ 'x'.repeat(8192),'https://example.com/'+'文'.repeat(1000)])('keeps unsafe or unrouteable link %s in the complete sandbox', href => {
   const html=renderMarketArtifact({...model,note:'备注',sources:[{label:'来源',url:'https://example.com/'}]}).html;
   expect(project(html.replace('href="https://example.com/"',`href="${href}"`))).toBeNull();

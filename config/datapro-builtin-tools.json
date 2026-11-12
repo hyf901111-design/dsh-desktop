@@ -1,0 +1,19 @@
+[
+  {
+    "name": "dataPro_search",
+    "description": "火山方舟专业数据集只读检索。覆盖股票、基金、财务、工商、企业风险、学术论文、法律法规、司法案例、汽车配置和销量等。每次明确一个检索意图；金融查询写明证券代码、指标和时间区间，法律法规与司法案例分开查，企业查询写明主体。一般网页新闻和政策原文优先使用 web_search。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "用自然语言写明主体、所需数据和时间范围。",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+  }
+]

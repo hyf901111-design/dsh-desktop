@@ -71,8 +71,8 @@ async function fixture(mode = 'native', businessResponse) {
   if (mode === 'code') parent.ctx.tools.presentAs('code')
   const api = createApiProxy(ctx, { cwd: root, defaultModelSelection: () => ({ provider: 'fixture-model', model: 'local' }) })
   ctx.provide('apiProxy', api)
-  const sessions = async () => {
-    const response = await api.sessions.list({ rpcId: randomUUID(), payload: {} })
+  const sessions = async identitySessionId => {
+    const response = await api.sessions.list({ rpcId: randomUUID(), payload: { identitySessionId } })
     if (!response.result.ok) throw Error(response.result.error.message)
     return response.result.value.items
   }

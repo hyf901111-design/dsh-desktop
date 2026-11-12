@@ -2,6 +2,7 @@
 export const MARKET_PRESENTATION_CSS = `/* ODYSSEY_MARKET_PRESENTATION_V3 */
 html{height:100%;background:var(--sherlock-surface)}
 body[data-sherlock-market]{min-height:100%;background:var(--sherlock-surface)!important;backdrop-filter:none!important;overflow:auto}
+body[data-sherlock-market="table"] td>a[aria-label^="打开链接："]{display:inline-block;max-inline-size:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 body[data-sherlock-market] small{font-size:11px}
 body[data-sherlock-market] details{margin:6px 0 0;padding:0;border-top:.5px solid var(--sherlock-border)}
 body[data-sherlock-market] details>summary{display:flex;align-items:center;gap:6px;min-height:32px;padding:5px 8px;border-radius:4px;list-style:none;font-size:11px;line-height:20px;cursor:pointer}

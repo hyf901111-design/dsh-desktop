@@ -96,12 +96,12 @@ it('preserves independent adapter caller contracts instead of searching their ar
 })
 it('retains the generic producer and previous output in a repair request without a second wrapper',async()=>{
  const final=JSON.stringify({version:1,type:'markdown',title:'政策说明',content:'已核对的资料。'})
- const f=await throughRuntime({outputs:['PUBLIC_PREVIOUS_OUTPUT_NOT_JSON',final]})
+ const f=await throughRuntime({outputs:[JSON.stringify({version:1,type:'table',title:'PUBLIC_PREVIOUS_OUTPUT_NOT_JSON',rows:'invalid'}),final]})
  expect(f.sent).toHaveLength(2)
  const repair=f.text();expect(repair).toContain('PUBLIC_PREVIOUS_OUTPUT_NOT_JSON')
  expect(repair).toContain(online)
  expect(occurrences(repair)).toBe(1)
- expect(repair.split('【EWork 内置基础数据源】')).toHaveLength(2)
+ expect(repair).not.toContain('【EWork 内置基础数据源】') // Format repair has no acquisition tools or repeated source catalog.
  expect(f.sent[1].toolFilter.allow).toEqual([])
 })
 it('keeps the shared structured producer canonical when its generic prompt is retained',async()=>{

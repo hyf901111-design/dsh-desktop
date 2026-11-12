@@ -7,21 +7,30 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   const conversationScope=/(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?/u
   const documentObject=/\b(?:PPTX?|PowerPoint|DOCX?|Word|XLSX?|Excel|PDF)\b|演示文稿|幻灯片|报告文件|文档文件|电子表格文件/iu
   function normalizeComponentClause(text){
-    return text.trim().replace(/^(?:(?:另外|另行|同时|然后|但是|但|并且|并)\s*)+/u,'')
+    return text.replace(/📎\s*文件：`(?:\\`|[^`])+`/gu,'').trim().replace(/^(?:(?:另外|另行|同时|然后|但是|但|并且|并)\s*)+/u,'')
       .replace(/^(?:(?:请|麻烦|帮我|现在|先|本轮|这次)\s*)*(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?\s*/u,'')
+      // Chinese imperatives need no classifier/quantity after 做. Normalize
+      // only the parser's view so the same negation, quotation and history
+      // checks also cover “给团队做发布工作台”; retain the authored request.
+      // 做出来 may describe an existing result before its noun; adding 一个
+      // would turn that descriptive phrase into a false creation predicate.
+      .replace(/做(?!出来|[一二两三四五六七八九十百零\d个套张份组版完好了过的得不])(?=[^，,。；;！？!?\n]{0,64}(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|看板|仪表盘|组件|表格|图表|思维导图|组织架构图|流程图))/gu,'做一个')
+      .replace(/搭(?=\s*(?:工作台|看板|仪表盘)(?:\s|$))/gu,'搭建')
   }
   function deliveryClauses(text){return text.split(/[，,。；;！？!?\n]+|(?=另外|另行|同时|然后|但是|但|并且|并(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|建(?:一个|一套|一张|个|套|张)))/u)}
   function authoredDeliveryText(text){
     // Quoted commands describe material to read; they do not authorize another
     // deliverable. Keep quoted titles and filenames that are not instructions.
     return text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'')
-      .replace(/“[^”]*”|「[^」]*」|『[^』]*』|‘[^’]*’|"[^"\n]*"|'[^'\n]*'/gu,quote=>/^(?:(?:请|先|再|继续|如何|怎么|怎样|必须|需要)\s*)*(?:制作|创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|构建|修复|修改|编辑|调整|优化|完成|导出|保存|交付|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|\b(?:create|build|generate)\b)/iu.test(quote.slice(1,-1))?'':quote)
+      .replace(/“[^”]*”|「[^」]*」|『[^』]*』|‘[^’]*’|"[^"\n]*"|'[^'\n]*'/gu,quote=>/^(?:(?:请|先|再|继续|如何|怎么|怎样|必须|需要)\s*)*(?:制作|创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|构建|修复|修改|编辑|调整|优化|完成|导出|保存|交付|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|\b(?:create|build|generate)\b)/iu.test(normalizeComponentClause(quote.slice(1,-1)))?'':quote)
   }
   function deliveryObjectText(tail){
     const phrase=tail.trim().replace(/^(?:成|为)?(?:至少|约)?(?:[一二三四五六七八九十\d]+\s*(?:个|张|套|份)?|an?\s+)\s*/iu,'')
     return /^(?:展示|显示|使用|利用|根据|基于|以|包含|带有|附有|含|比较|呈现|反映|分析|用于|用来).{0,160}的(.+)$/u.exec(phrase)?.[1]??phrase
   }
   function creationDenied(clause){
+    clause=normalizeComponentClause(clause)
+    if(/(?:不要|不用|无需|不需要|别|禁止|先不)(?:用|根据|基于).{1,80}搭建\s*(?:工作台|看板|仪表盘)/u.test(clause))return true
     if(/(?:暂不|先不|不要|不用|无需|不需要|别|禁止|不再)(?:再)?(?:把|将).{0,180}(?:做出来|搭出来|实现出来|还原出来|做成|转成|转换成|还原成|(?:梳理|整理)(?:成|为))/u.test(clause))return true
     return /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|尚未|还未|没有|并未|未|不)(?:再|重新|继续|直接|让我|让你|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:帮我|给我|替我|为我)?(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|规划|展示|显示|呈现|绘制|提供|编写|撰写|修改|编辑|完成|导出|保存|交付|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|建)/u.test(clause.replace(conversationScope,''))
   }

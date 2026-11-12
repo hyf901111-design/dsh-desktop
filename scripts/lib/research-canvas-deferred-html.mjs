@@ -9,6 +9,11 @@ function once(source, anchor, replacement) {
 
 /** Defer only the first HTML preview mount; panning must preserve iframe state. */
 export function patchResearchCanvasDeferredHtml(source) {
+  const unsafe = 'node.kind === "generated-container" && node.containerSpec !== void 0'
+  const guarded = 'node.kind === "generated-container" && node.containerSpec != null'
+  const checks = source.split(unsafe).length - 1
+  if (checks === 2) source = source.replaceAll(unsafe, guarded)
+  else if (checks !== 0 || source.split(guarded).length !== 3) throw Error('Generated canvas content checks missing or ambiguous')
   if (source.includes(marker)) return source
   source = once(source, 'function ResearchGeneratedContainer(', `${marker}
         function ResearchDeferredGeneratedContainer({ previewActive, ...props }) {

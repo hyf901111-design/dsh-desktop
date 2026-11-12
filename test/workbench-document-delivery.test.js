@@ -1,6 +1,15 @@
 import { expect, it } from 'vitest'
 import { acceptArtifactOutput, retainedTableData } from '../packages/dsh-research-task-runtime/artifact-output.js'
 import { workbenchDocumentCitationIssue, documentUncertaintyIssue, restoreDocumentLists, documentTableOutput,workbenchDocumentScope,workbenchDocumentInputs,workbenchDocumentPrompt,documentTableEntityCoverageIssue } from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+
+it('keeps explicitly requested PDF pages intact when other pages must be previewed',()=>{
+ const pages=Array.from({length:21},(_,i)=>({page:i+1,text:'普通正文'.repeat(420)+'末尾数据 '+(i+1)}))
+ const prompt=workbenchDocumentPrompt([{name:'报告.pdf',numPages:21,pages}],true,{originalRequest:'画第1页和第17–18页的预测数据。'})
+ expect(prompt).toContain('末尾数据 1"')
+ expect(prompt).toContain('末尾数据 17"')
+ expect(prompt).toContain('末尾数据 18"')
+ expect(prompt).not.toContain('末尾数据 19"')
+})
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 
 it('accepts complete editable notes with source aliases without retranscribing or dropping the content or references',()=>{
@@ -37,6 +46,17 @@ it('核对 Word 表格中的裸编号、组合与范围，不因格式误拦也�
  for(const text of ['"P35–P38"','[T9]','"P38–P36"','正文没有出处','ATP36x'])expect(workbenchDocumentCitationIssue(text,docs)).toBeTruthy()
 })
 
+it('checks the exact Word hyperlink target in prose, Markdown, and HTML',()=>{
+ const original='https://example.com/release(archive)?a=10&b=20'
+ const docs=[{blocks:[{id:'P1',text:`原始公告（${original}）`},{id:'T1',rows:[['附件']]}]}]
+ const card=value=>JSON.stringify({version:1,type:'markdown',title:'原文',content:value})
+ expect(workbenchDocumentCitationIssue(card(`[原始公告](${original}) [P1]`),docs)).toBeUndefined()
+ expect(workbenchDocumentCitationIssue(card(`${original}。 [P1]`),docs)).toBeUndefined()
+ expect(workbenchDocumentCitationIssue(JSON.stringify({version:1,type:'html',title:'原文',html:`<p>[P1] <a href="${original.replace('&','&amp;')}">公告</a></p>`}),docs)).toBeUndefined()
+ expect(workbenchDocumentCitationIssue(card('https://example.com/release(archive)?a=10 [P1]'),docs)).toMatch(/外部来源/)
+ expect(workbenchDocumentCitationIssue(card('https://example.com/unverified [P1]'),docs,{required:false})).toBeUndefined()
+})
+
 it('checks citations in delivered text and source footnotes instead of HTML implementation identifiers',()=>{
  const docs=[{blocks:[{id:'P1'},{id:'T2'}]}]
  const card=html=>JSON.stringify({version:1,type:'html',title:'来源对照',html})
@@ -47,6 +67,14 @@ it('checks citations in delivered text and source footnotes instead of HTML impl
  const pdf=[{pages:[{page:3}]}]
  expect(workbenchDocumentCitationIssue(card('<p>结论 第3页</p><script>const s="第999页"</script>'),pdf)).toBeUndefined()
  expect(workbenchDocumentCitationIssue(card('<p title="第3页">缺少出处</p>'),pdf)).toBeTruthy()
+})
+
+it('checks footer source annotations stored in attribute values without accepting script, template or unrelated attributes',()=>{
+ const docs=[{format:'tsv',blocks:[{id:'T1',rows:[['编号','正文'],['POST-001','实际原文']]}]}]
+ const card=html=>JSON.stringify({version:1,type:'html',title:'完整动态',html})
+ expect(workbenchDocumentCitationIssue(card('<main>实际原文</main><aside hidden data-component-source-info="来源：原附件.tsv [T1]"></aside>'),docs)).toBeUndefined()
+ for(const html of ['<aside hidden data-component-source-info="错误原文 [T2]"></aside>','<main title="[T1]">没有出处</main>','<script>const metadata=`<aside data-component-source-info="[T1]"></aside>`</script><main>没有出处</main>','<template><aside data-component-source-info="[T1]"></aside></template><main>没有出处</main>'])
+  expect(workbenchDocumentCitationIssue(card(html),docs)).toBeTruthy()
 })
 
 it('保留带空单元格的全部文档行、数值、链接和出处', () => {
@@ -67,8 +95,10 @@ it('保留带空单元格的全部文档行、数值、链接和出处', () => {
   expect(retainedTableData(result).rows).toEqual([
     ['业务甲',0,'—','[T1]'],['业务乙',2,'待核','[T1]'],['业务丙',3,'—','[T1]']
   ])
+  const marketResult=JSON.parse(acceptArtifactOutput(JSON.stringify({...table,type:'market',variant:'table'})))
+  expect(retainedTableData(marketResult).rows).toEqual(retainedTableData(result).rows)
   expect(result.html).toContain('https://example.com/report')
-  expect(workbenchDocumentCitationIssue(output,[{blocks:[{id:'T1'}]}])).toBeUndefined()
+  expect(workbenchDocumentCitationIssue(output,[{blocks:[{id:'T1',rows:[['报告原链接（https://example.com/report）']]}]}])).toBeUndefined()
   expect(acceptArtifactOutput(JSON.stringify({...table, rows:[{team:'业务甲',count:0,ref:'[T1]'}]}))).toBeUndefined()
 })
 
@@ -306,4 +336,25 @@ it('preserves explicitly unknown source values instead of inferring a vacant pos
  for(const content of ['未掌握负责人信息，不代表岗位空缺 [P1]','负责人未知，需复核 [P1]','不要把未知写成岗位空缺 [P1]'])expect(documentUncertaintyIssue(output(content),docs)).toBeUndefined()
  expect(documentUncertaintyIssue(output('岗位空缺1个 [P1]'),[{blocks:[{id:'P1',text:'已确认岗位空缺1个；其余未掌握的信息不代表岗位空缺。'}]}])).toBeUndefined()
  expect(documentUncertaintyIssue(output('正职空缺3个'),[])).toBeUndefined()
+})
+
+it('does not invert an explicit uncertainty-marker legend when carrying document records into a component',()=>{
+ const docs=[{blocks:[{id:'P1',text:'†：资料较早或未标更新日期，现职需复核。未掌握的信息不代表岗位空缺。'}]}]
+ const output=content=>JSON.stringify({version:1,type:'table',title:'原文记录',columns:['人员','状态'],rows:[['甲','现任待核']],note:content})
+ expect(documentUncertaintyIssue(output('核查状态：现任待核＝原文未标注†的人员记录；†待核＝原文标注†。'),docs)).toContain('未标注')
+ for(const note of ['†待核＝原文标注†的记录；未标注†的人员保留原文状态。','原文未标注†，不能据此认定待核或已核实。','未标注日期的记录暂列待核，见来源单独说明。'])expect(documentUncertaintyIssue(output(note),docs)).toBeUndefined()
+ expect(documentUncertaintyIssue(output('待核＝原文未标注†的记录。'),[])).toBeUndefined()
+})
+
+it.each(['table','market'])('delivers long original document cells in a readable expandable %s presentation without a second rewrite',async type=>{
+ const {Window}=await import('happy-dom'),window=new Window()
+ try{
+  const body='原始第一段。\n'+ '逐字段保留的长正文。\n'.repeat(70)+'末尾校验标记。'
+  const draft={version:1,type,...type==='market'?{variant:'table'}:{},title:'发布明细',asOf:'附件日期未标注',columns:['编号','标题','日期','正文','链接'],rows:Array.from({length:36},(_,i)=>['ID-'+i,'原始标题'+i,'2026-11-01',i===35?body:'短正文','https://example.org/posts/'+i]),note:'完整保留原文 [T1]'}
+  const output=JSON.parse(documentTableOutput(JSON.stringify(draft)))
+  expect(output.type).toBe('html');window.document.body.innerHTML=output.html
+  expect(window.document.querySelectorAll('tbody tr')).toHaveLength(36)
+  expect(window.document.querySelector('details[data-readable-long] [data-readable-full]').textContent).toBe(body)
+  expect(window.document.querySelectorAll('a[href="https://example.org/posts/35"]')).toHaveLength(1)
+ }finally{await window.happyDOM.abort()}
 })

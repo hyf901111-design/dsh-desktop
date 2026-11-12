@@ -18,7 +18,7 @@ const globalCodes:Record<string,[string,string]>={
  '^FCHI':['FCHI','Europe/Paris'],'^STOXX50E':['SX5E','Europe/Berlin'],'^GSPTSE':['TSX','America/Toronto'],'^BVSP':['BVSP','America/Sao_Paulo']
 }
 const dateAt=(seconds:number,zone:string)=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(seconds*1000))
-const yahooCode=(s:SymbolRef)=>s.market==='HK'?s.code.replace(/^0+/,'').padStart(4,'0')+'.HK':s.code.replace(/\.(?:OQ|N)$/,'')
+const yahooCode=(s:SymbolRef)=>s.market==='HK'?s.code.replace(/^0+/,'').padStart(4,'0')+'.HK':s.code.replace(/\.(?:OQ|N|AM)$/,'')
 
 async function yahoo(s:SymbolRef,io:BackupIO,period='1d',range='3mo'){
  const code=yahooCode(s),url=new URL('https://query2.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(code))

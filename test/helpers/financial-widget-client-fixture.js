@@ -19,6 +19,7 @@ export async function prepareFinancialClientSource(options={}){
  if(options.refreshState&&!options.notes){
   // Match the production unwind order before replacing serialized grid functions.
   for(const [file,strip] of [
+   ['browser-app-native','stripBrowserAppNative'],
    ['message-edit','stripMessageEditClient'],['conversation-live-activity','stripConversationLiveActivity'],['composer-voice','stripComposerVoice'],
    ['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput'],['home-guide-workbench-native','stripHomeGuideWorkbenchNative'],['home-workbench-client','stripHomeWorkbenchClient'],['home-guide-presentation-native','stripHomeGuidePresentationNative']
   ])source=require('../../scripts/lib/'+file+'.mjs')[strip](source)

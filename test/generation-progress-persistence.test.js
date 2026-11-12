@@ -1,12 +1,21 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
+import {createRequire} from 'node:module'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 import {generationProgressOnly,patchGenerationProgressPersistence} from '../scripts/lib/generation-progress-persistence.mjs'
 
 let f
+const require=createRequire(import.meta.url)
 afterEach(async()=>{await f?.dispose();f=undefined})
 const card={id:'progress-card',messageId:'message-1',kind:'generated-container',title:'实时分析',excerpt:'正在生成',refreshMinutes:0,containerPrompt:'保留业务需求',generationStatus:'running',generationTaskId:'task-1',generationChildSessionId:'child-1',generationStartedAt:100,generationLastSeq:1,generationEvents:[],sizeMode:'manual',x:400,y:300,width:720,height:400}
 const receipt=(patch={})=>({taskId:'task-1',canvasNodeId:card.id,state:'running',lastSeq:2,events:[],...patch})
 const canvasKey='sherlock.research.canvas.artifacts.v1:financial-test'
+const partialDelivery={deliveryStatus:'partial',recoveryMode:'incomplete-scope',unmetRequirements:['缺少部分标的']}
+const tableOutput=JSON.stringify({version:1,type:'table',title:'已取得的标的',columns:['标的'],rows:[['甲']]})
+async function setupPartial(){
+ const {patchResearchPartialDelivery}=require('../scripts/lib/research-partial-delivery.mjs')
+ const {patchResearchWorkbenchFeedback}=require('../scripts/lib/research-workbench-feedback.mjs')
+ f=await financialClientFixture({}, {sourceTransform:source=>patchResearchPartialDelivery(patchResearchWorkbenchFeedback(source))})
+}
 async function setup(node=card){
  f=await financialClientFixture({}, {generationProgress:true})
  await f.act(async()=>f.workspace.setArtifacts([structuredClone(node)]))
@@ -56,5 +65,42 @@ describe('生成进度的瞬态更新与持久结果',()=>{
   await apply(receipt())
   await f.act(async()=>f.workspace.renameNode(card.id,'用户改名'))
   expect(JSON.parse(f.win.localStorage.getItem(canvasKey))[0]).toMatchObject({title:'用户改名',generationLastSeq:2,containerPrompt:card.containerPrompt})
+ })
+ it.each(['prepared','hydrated','inspected'])('preserves %s partial deliveries and clears the old status when a retry completes in full',async entry=>{
+  await setupPartial()
+  const panel={nodeId:card.id,taskId:'task-1',title:card.title,prompt:card.containerPrompt,x:0,y:0,width:320,height:220}
+  const plan={id:'partial-plan',createdAt:Date.now(),panels:[panel]}
+  const prepared={...plan,panels:[{...panel,preparedOutput:tableOutput,preparedDelivery:partialDelivery}]}
+  await f.act(async()=>{
+   if(entry==='prepared')expect(f.workspace.applyWorkbench(prepared)).toBe(true)
+   else {
+    expect(f.workspace.applyWorkbench(plan)).toBe(true)
+    if(entry==='hydrated')expect(f.workspace.applyWorkbench(prepared)).toBe(true)
+    else expect(f.workspace.applyGenerationInspection(card.id,receipt({state:'completed',finalOutput:tableOutput,...partialDelivery}))).toBe(true)
+   }
+  })
+  const current=()=>f.workspace.getSnapshot().artifacts.find(node=>node.id===card.id)
+  expect(current()).toMatchObject({generationStatus:'completed',...partialDelivery,containerSpec:{type:'table',rows:[['甲']]}})
+  expect(current().lastSuccessfulAt).toBeUndefined()
+  const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test').getSnapshot().artifacts.find(node=>node.id===card.id)
+  expect(restored).toMatchObject(partialDelivery)
+  const retained=current().containerSpec
+  if(entry==='inspected'){
+   const notice=f.host.querySelector('[data-research-partial-delivery="incomplete-scope"]')
+   expect(notice?.querySelector('summary')?.textContent).toBe('已生成部分内容，覆盖不完整')
+   expect(notice?.querySelector('li')?.textContent).toBe('缺少部分标的')
+   await f.event('click',notice.querySelector('button'))
+   expect(f.generation.generate).toHaveBeenCalledWith({sessionId:'financial-test',kind:'container',targetNodeId:card.id,prompt:card.containerPrompt})
+  }
+  await f.act(async()=>{
+   if(entry!=='inspected')expect(f.workspace.retryGeneration(card.id)).toMatchObject({id:card.id,prompt:card.containerPrompt})
+   expect(current()).toMatchObject({generationStatus:'queued',containerSpec:retained,...partialDelivery})
+   expect(f.workspace.attachGenerationTask(card.id,receipt({taskId:'task-2',lastSeq:0}))).toBe(true)
+   expect(f.workspace.applyGenerationInspection(card.id,receipt({taskId:'task-2',state:'completed',finalOutput:tableOutput}))).toBe(true)
+  })
+  expect(current()).toMatchObject({generationStatus:'completed',lastSuccessfulAt:expect.any(Number)})
+  expect(current()).not.toHaveProperty('deliveryStatus')
+  expect(current()).not.toHaveProperty('recoveryMode')
+  expect(current()).not.toHaveProperty('unmetRequirements')
  })
 })

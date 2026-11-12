@@ -1,5 +1,6 @@
 import { resolveBoundComponent } from './component-source-binding.js'
 import {financialWidgetDefaults,financialWidgetSpec} from './financial-widget-contract.js'
+import {financialCryptoIntervals,findFinancialCryptoSymbol} from './financial-crypto-catalog.js'
 import {generalNewsScope,NEWS_CAPACITY_MARKER,NEWS_DISPLAY_INSTRUCTION} from './news-source-scope.js'
 import {normalizeCryptoTickerResult} from './crypto-source-results.js'
 import {NEWS_QUERY_MARKER} from './news-query-coverage.js'
@@ -181,11 +182,15 @@ export function publicDataHistoryTaskRequirement(value,type){
   return `宿主来源能力校正：price-volume直通仅支持单标的量价，不能表达本卡的对比分析；改由一个独立chart取数任务完成，保留原面板全部问题与以下已校验来源参数：${scope}。复用这些来源与原参数读取真实记录，不猜接口、交易所或字段；仅按原需求计算归一化、相对强弱与基准对比，不压成单标的量价。同轴比较需同单位和可比尺度；混合价格单位时采用共同基期100（值/共同起点值×100）或分面或单系列，说明公式和基期；用户明确要求原始值时用分面或单系列保留原值，禁止元与点直接同轴。需求包含超额收益时，按对齐日期的个股区间涨幅减基准区间涨幅计算并以%标注，不能仅用基期100曲线替代；缺失共同日期或起点值时明确缺失，不补值。保留真实日期、原单位、来源与缺失说明；不得将尚未取数写成已取得，或声称已开启刷新。`
 }
 
+const alternateChart=/折线图|面积图|柱状图|条形图|OHLC\s*(?:图|走势)|量价走势图|价格(?:与|和|及)成交量(?:图|走势图)|(?:用|指定|保留|做成).{0,8}量价图|\b(?:OpenTerminal|market\.price-volume|line chart|area chart|bar chart|OHLC chart|price.volume chart)\b/iu
+const fixedSnapshot=/快照|\bsnapshot\b|回测|复盘|固定(?:历史|日期|区间)|(?:19|20)\d{2}[-/年]\d{1,2}[-/月]\d{1,2}/iu
+
 // Live single-security K lines use the actual library renderer. Keep explicit
-// manual snapshots and index/unknown identifiers on their original data path.
-export function publicDataQuoteSpec(title,value,prompt=''){
+// snapshots, providers, non-daily periods and unknown identities on the source path.
+export function publicDataQuoteSpec(title,value,prompt='',originalRequest=''){
  if(value?.profile!=='candlestick'||value.intervalMinutes!==1||value.requests?.length!==1||value.requests[0].source!=='tencent-history')return null
- if(/快照|snapshot|回测|复盘|固定(?:历史|日期|区间)|(?:19|20)\d{2}[-/年]\d{1,2}[-/月]\d{1,2}/iu.test(title+' '+prompt))return null
+ if(fixedSnapshot.test(title+' '+prompt)||/周K|月K|年K|复权|分时/iu.test(title+' '+prompt)||
+  /腾讯|tencent|新浪|sina|雅虎|yahoo|tushare|通联|datayes|插件|接口|数据源|禁止联网|不要联网|不联网/iu.test(originalRequest))return null
  let p;try{p=JSON.parse(value.requests[0].parameters_json)}catch{return null}
  if(!p||typeof p!=='object'||Array.isArray(p)||Object.keys(p).some(k=>!['symbol','limit'].includes(k)))return null
  const match=typeof p.symbol==='string'&&p.symbol.match(/^(sh|sz|hk)(\d{5,6})$/)
@@ -195,10 +200,37 @@ export function publicDataQuoteSpec(title,value,prompt=''){
  return financialWidgetSpec({...financialWidgetDefaults('quote'),title,symbols:[{code:match[2],market:match[1].toUpperCase(),name}],visibleBars})
 }
 
+// An incidental public-data recipe from a live market plan can be upgraded
+// only when the native widget can keep the same venue, pair and granularity.
+function krakenNativeQuote(panel, recipe, originalRequest){
+ if(panel.type!=='market'||recipe?.profile!=='price-volume'||recipe.requests?.length!==1||recipe.requests[0]?.source!=='kraken-candles'||
+  !/实时|盘中|持续监控|\b(?:live|real.time)\b/iu.test(originalRequest)||alternateChart.test(originalRequest))return null
+ const intent=panel.title+'\n'+panel.prompt
+ if(fixedSnapshot.test(intent)||fixedSnapshot.test(originalRequest)||/复权|\b(?:adjusted|unadjusted)\b/iu.test(intent+'\n'+originalRequest)||
+  /(?:过去|最近|近)\s*[一二三四五六七八九十两\d]+\s*(?:个)?\s*(?:分钟|小时|天|交易日|日|周|月|年)|\b(?:last|past)\s+\d+\s+(?:minutes?|hours?|days?|weeks?|months?|years?)\b/iu.test(originalRequest))return null
+ const quoteClauses=originalRequest.split(/[，,。；;\n]/u).filter(clause=>!/新闻|资讯|\bnews\b/iu.test(clause)||/行情|报价|价格|\b(?:quote|price)\b/iu.test(clause)).join('\n')
+ if(/币安|欧易|\b(?:Binance|Coinbase|OKX|Bybit|Bitfinex|Huobi|Yahoo|Tushare|DataYes|Tencent|public_data_query)\b|https?:\/\/|禁止联网|不要联网|不联网|\boffline\b|(?:不要|不用|禁止|排除).{0,8}Kraken/iu.test(originalRequest)||
+  /(?:仅|只|必须).{0,8}(?:使用|用|调用|通过|接入|从)|(?:指定|限定).{0,8}(?:来源|接口)|(?:来源|数据源|接口)\s*(?:[:：]|为|仅限)/iu.test(quoteClauses.replace(/[^\n]*\bKraken\b[^\n]*/giu,'')))return null
+ const supported=validatePublicDataPanel(recipe,panel.type,{strictParameters:true})
+ const {pair,interval=1440,limit=20}=JSON.parse(supported.requests[0].parameters_json)
+ const symbol=/USD$/u.test(pair)?findFinancialCryptoSymbol(pair):undefined
+ const period=Object.keys(financialCryptoIntervals).find(key=>financialCryptoIntervals[key]===interval)
+ if(!symbol||!period)return null
+ const explicitPairs=[...originalRequest.matchAll(/\b(?:BTC|XBT|ETH|SOL)\s*[/／]\s*[A-Z]{2,8}\b/giu)]
+ if(explicitPairs.length&&!explicitPairs.some(([code])=>findFinancialCryptoSymbol(code)?.code===symbol.code))return null
+ const minuteFactors={分钟:1,小时:60,日:1440,周:10080}
+ const explicitIntervals=[...originalRequest.matchAll(/(\d+)\s*(分钟|小时|日|周)\s*(?:的?K\s*线|粒度|周期)/giu)]
+ if(explicitIntervals.length&&!explicitIntervals.some(([,amount,unit])=>Number(amount)*minuteFactors[unit]===interval))return null
+ if(/(?:月|年)\s*K\s*线|\b(?:monthly|yearly)\s+(?:candles?|candlesticks?)\b/iu.test(originalRequest))return null
+ return financialWidgetSpec({...financialWidgetDefaults('quote'),title:panel.title,symbols:[symbol],period,
+  dataSource:'kraken',visibleBars:limit,refreshMinutes:supported.intervalMinutes,refreshEnabled:supported.intervalMinutes>0})
+}
+
 // A valid security can be outside an adapter's market coverage. Route to a
 // native capability only when the original request permits its provider and
 // the native component can retain the exact period, scope and refresh setting.
 export function publicDataNativeAlternative(panel, recipe, originalRequest) {
+  if(recipe?.requests?.[0]?.source==='kraken-candles')return krakenNativeQuote(panel,recipe,originalRequest??'');
   if (panel.type !== 'market' || recipe?.profile !== 'candlestick' || recipe.requests?.length !== 1 ||
     recipe.requests[0]?.source !== 'tencent-history' || typeof originalRequest !== 'string') return null;
   if (/腾讯|tencent|新浪|sina|雅虎|yahoo|tushare|通联|datayes|插件|接口|数据源|来源.{0,8}(?:限定|指定)|(?:仅|只).{0,12}(?:使用|来自|查询|来源)|禁止联网|不要联网|无需联网|\b(?:only|exclusively|offline)\b/iu.test(originalRequest)) return null;

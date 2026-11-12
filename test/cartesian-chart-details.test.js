@@ -58,3 +58,13 @@ it('includes an independently observed supplementary source in provenance',()=>{
  expect(componentSourceMetadata(mapping,responses,records).matched.map(x=>x.response.source)).toEqual(['行情','产品资料']);
  expect(componentSourceMetadata(mapping,responses,records.slice(0,1))).toBeNull();
 });
+it('reorders only an unambiguous auxiliary name column, preserving all values',()=>{
+ const input={...chart,detailColumns:['代码','产品','规模（亿元）'],detailRows:[['001','甲',120],['002','乙',null]]}
+ expect(normalizeChartMetadata(input).detailRows).toEqual(chart.detailRows)
+ expect(JSON.parse(acceptArtifactOutput(JSON.stringify(input))).type).toBe('html')
+ expect(input.detailRows[0][0]).toBe('001')
+ const ambiguous={...input,detailColumns:['代码','产品','别名'],detailRows:[['001','甲','甲'],['002','乙','乙']]}
+ expect(normalizeChartMetadata(ambiguous)).toEqual(ambiguous)
+ const reordered={...input,detailRows:[['002','乙',null],['001','甲',120]]}
+ expect(normalizeChartMetadata(reordered)).toEqual(reordered)
+})

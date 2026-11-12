@@ -2,6 +2,23 @@ const native=new Set(['timeline','chart','table','market','kpi'])
 const fields=new Set(['label','name','title','url','text','fetchedAt'])
 const esc=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 
+export function tableSourceHref(label, value) {
+ if (!/链接|网址|^(?:原文|检索入口|url|link)$/iu.test(label.trim()) || typeof value !== 'string') return null
+ const href = value.trim()
+ if (!/^https?:\/\/[^\s\u0000-\u001f\u007f]+$/iu.test(href) || href.length > 8192) return null
+ try {
+  const url = new URL(href)
+  if (url.username || url.password) return null
+ } catch { return null }
+ return href
+}
+
+export function tableSourceLink(label, value) {
+ const href = tableSourceHref(label, value)
+ if (href === null) return null
+ return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="打开链接：${esc(href)}">${esc(value)}</a>`
+}
+
 // Provenance is not a business column or a renderer-specific schema. Retain
 // every supplied alias and retrieval date in the common inert source footer.
 // Never interpret a retrieval timestamp as the original data's asOf.

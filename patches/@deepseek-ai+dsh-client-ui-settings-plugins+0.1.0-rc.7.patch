@@ -312,8 +312,8 @@ index aa98760..ae1d379 100644
 -			webSearchMaxUsesHint: "How many times one request may search before it must answer."
 +			webSearchDescription: "Use model-native search when available, with a free local browser fallback.",
 +			webSearchMode: "Search mode",
-+			webSearchModeHint: "Automatic needs no search-service account or key.",
-+			webSearchModeAuto: "Automatic (recommended)",
++			webSearchModeHint: "Automatic uses the built-in Doubao Search after EWork sign-in.",
++			webSearchModeAuto: "Automatic · Doubao Search",
 +			webSearchModeNativeOnly: "Model native only",
 +			webSearchModeOff: "Off"
  		};
@@ -334,8 +334,8 @@ index aa98760..ae1d379 100644
 -			webSearchMaxUsesHint: "一次请求在必须作答前最多可以搜索多少次。"
 +			webSearchDescription: "模型支持时优先原生搜索，否则自动使用免费的本地浏览器。",
 +			webSearchMode: "搜索模式",
-+			webSearchModeHint: "自动模式无需额外搜索服务账号或密钥。",
-+			webSearchModeAuto: "自动（推荐）",
++			webSearchModeHint: "自动模式使用内置豆包搜索，登录 EWork 后可用。",
++			webSearchModeAuto: "自动 · 豆包搜索",
 +			webSearchModeNativeOnly: "仅模型原生",
 +			webSearchModeOff: "关闭"
  		};

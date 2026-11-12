@@ -53,7 +53,9 @@ function safe(value, depth = 0, strip = false) {
 function cleanNode(node) {
   const out = {}
   for (const [k, v] of Object.entries(node))
-    if (nodeFields.has(k) && !forbidden.test(k)) out[k] = safe(v, 0, true)
+    // IPC preserves explicit undefined on optional renderer fields; portable
+    // snapshots are JSON documents, so omitted fields have no representation.
+    if (v !== undefined && nodeFields.has(k) && !forbidden.test(k)) out[k] = safe(v, 0, true)
   if (
     ['pending', 'running', 'queued', 'generating'].includes(
       out.generationStatus

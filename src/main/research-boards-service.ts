@@ -121,6 +121,7 @@ export type ResearchBoardHooks = {
     accountGeneration: number
     operationId: string
     captureId?: string
+    includeHistory?: boolean
     signal: AbortSignal
   }): Promise<{
     sourceRevision: string
@@ -134,6 +135,7 @@ export type ResearchBoardHooks = {
     favoriteId: string
     accountId: string
     accountGeneration: number
+    includeHistory?: boolean
     signal: AbortSignal
   }): Promise<{
     captureId: string
@@ -426,7 +428,10 @@ export class ResearchBoardsService {
     { reservationId: string; generation: number }
   >()
   private readonly opening = new Map<string, Promise<RuntimeBoard>>()
-  private readonly creating = new Map<string, Promise<unknown>>()
+  private readonly creating = new Map<
+    string,
+    { includeHistory: boolean; operation: Promise<unknown> }
+  >()
   private currentBoard: string | null = null
   private activationVersion = 0
   private activeDispose?: () => void
@@ -1973,9 +1978,18 @@ export class ResearchBoardsService {
   private async createBoard(
     favoriteId: string,
     titleOverride?: string,
-    captureId?: string
+    captureId?: string,
+    includeHistory = true
   ) {
-    if (this.creating.has(favoriteId)) return this.creating.get(favoriteId)!
+    const scopeMismatch = () => new ResearchBoardsError(
+      'SHARE_SCOPE_CHANGED',
+      '待发送的协作副本与本次选择的分享范围不一致。'
+    )
+    const current = this.creating.get(favoriteId)
+    if (current) {
+      if (current.includeHistory !== includeHistory) throw scopeMismatch()
+      return current.operation
+    }
     const ctx = this.context()
     const favorite = this.store
       .snapshot()
@@ -1985,6 +1999,11 @@ export class ResearchBoardsService {
       const saved = this.store.account(ctx.userId).creates[favoriteId] ?? {
         operationId: randomUUID()
       }
+      // A retry must never send a previously frozen conversation after the user chose board-only.
+      if (
+        !includeHistory && saved.body &&
+        (saved.body.snapshot as Snapshot | undefined)?.history?.length !== 0
+      ) throw scopeMismatch()
       this.store.updateAccount(ctx.userId, (a) => {
         a.creates[favoriteId] = saved
       })
@@ -2018,11 +2037,13 @@ export class ResearchBoardsService {
         accountGeneration: ctx.generation,
         operationId: saved.operationId,
         ...(captureId ? { captureId } : {}),
+        ...(!includeHistory ? { includeHistory: false } : {}),
         signal: this.generationAbort.signal
       })
       this.check(ctx)
       try {
         const frozen = freezeSnapshot(captured.snapshot)
+        if (!includeHistory && frozen.history.length) throw scopeMismatch()
         const assets = captured.assets ?? []
         const refs = new Set(portableAssetIds(frozen))
         if ([...refs].some((id) => !assets.some((a) => a.assetId === id)))
@@ -2082,11 +2103,11 @@ export class ResearchBoardsService {
         await captured.dispose?.()
       }
     })()
-    this.creating.set(favoriteId, operation)
+    this.creating.set(favoriteId, { includeHistory, operation })
     try {
       return await operation
     } finally {
-      if (this.creating.get(favoriteId) === operation)
+      if (this.creating.get(favoriteId)?.operation === operation)
         this.creating.delete(favoriteId)
     }
   }
@@ -2205,15 +2226,24 @@ export class ResearchBoardsService {
         await this.refresh()
         return this.getSnapshot()
       case 'board.create': {
-        const p = exact(input, ['favoriteId'], ['title', 'captureId'])
+        const p = exact(input, ['favoriteId'], [
+          'title', 'captureId', 'includeHistory'
+        ])
+        if (
+          (p.includeHistory !== undefined && typeof p.includeHistory !== 'boolean') ||
+          (p.includeHistory === false && p.captureId === undefined)
+        ) throw new ResearchBoardsError('INVALID_REQUEST')
         return this.createBoard(
           safeId(p.favoriteId),
           p.title === undefined ? undefined : text(p.title),
-          p.captureId === undefined ? undefined : safeId(p.captureId)
+          p.captureId === undefined ? undefined : safeId(p.captureId),
+          p.includeHistory !== false
         )
       }
       case 'board.previewCapture': {
-        const p = exact(input, ['favoriteId'])
+        const p = exact(input, ['favoriteId'], ['includeHistory'])
+        if (p.includeHistory !== undefined && typeof p.includeHistory !== 'boolean')
+          throw new ResearchBoardsError('INVALID_REQUEST')
         const favoriteId = safeId(p.favoriteId)
         const favorite = this.store
           .snapshot()
@@ -2227,6 +2257,7 @@ export class ResearchBoardsService {
           favoriteId,
           accountId: ctx.userId,
           accountGeneration: ctx.generation,
+          ...(p.includeHistory === false ? { includeHistory: false } : {}),
           signal: this.generationAbort.signal
         })
         this.check(ctx)

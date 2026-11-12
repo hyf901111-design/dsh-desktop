@@ -47,6 +47,9 @@ body [data-ework-grid] [data-research-node-id]:has([data-financial-candle-snapsh
 body .ew-candle-snapshot{flex:1;min-height:0}
 body .ew-candle-original-data{flex:none;margin:0 6px;color:var(--fw-muted);font:11px/16px Inter,system-ui;border-top:1px solid var(--fw-grid)}
 body .ew-candle-original-data summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;min-height:28px;padding:4px 0;box-sizing:border-box}
+/* The workbench's generic marker follows the first text line. This summary
+   centers both labels in a padded flex row, so center its marker in that row. */
+body .ew-candle-original-data>summary::before{top:50%;translate:0 -50%}
 body .ew-candle-data-scroll{max-height:150px;overflow:auto;scrollbar-width:thin}
 body .ew-candle-data-scroll table{width:max-content;min-width:100%;border-collapse:collapse;font:11px/18px Inter,system-ui;color:var(--fw-text)}
 body .ew-candle-data-scroll :is(th,td){padding:4px 8px;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}

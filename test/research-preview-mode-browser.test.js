@@ -17,15 +17,15 @@ beforeAll(async()=>{
  const grid=require('../scripts/lib/research-grid-workbench.mjs'),tabs=require('../scripts/lib/board-tabs-client.mjs')
  source=tabs.patchBoardTabsClient(grid.patchResearchGridWorkbench(require('../scripts/lib/calendar-tool-client.mjs').patchCalendarToolClient(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))))
  expect(tabs.patchBoardTabsClient(source)).toBe(source)
- source=require('../scripts/lib/home-workbench-client.mjs').patchHomeWorkbenchClient(source)
+ source=require('../scripts/lib/research-board-header-client.mjs').patchResearchBoardHeaderClient(require('../scripts/lib/home-workbench-client.mjs').patchHomeWorkbenchClient(source))
  expect(()=>new Function(source)).not.toThrow()
  // Install the exact production host-subscription callback in the fixture; its
  // private refresh identity stays in the bundle closure and is never exported.
  const callbackStart=source.indexOf('async request=>{',source.indexOf('researchCanvasActions?.subscribe(')),callbackEnd=source.indexOf('\n        });',callbackStart)
  if(callbackStart<0||callbackEnd<0)throw Error('Real canvas subscription callback missing')
  const callback=source.slice(callbackStart,callbackEnd+10)
- source=source.replace('exports.ResearchCanvas = ResearchCanvas;', 'exports.__PreviewStudySpec=homeWorkbenchStudySpec;exports.__PreviewCalendar=CalendarTool;exports.__PreviewCalendarRequest=calendarToolRequest;exports.__registerPreviewHost=researchWorkspaces=>window.dshDesktop.researchCanvasActions.subscribe('+callback+');exports.ResearchCanvas = ResearchCanvas;')
- const entry=`import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host.ts';import {ResearchBoardHeader} from './src/preload/research-boards-ui.ts';import {installBoardUiStyles} from './src/preload/research-board-dialogs.ts';import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
+ source=source.replace('exports.ResearchCanvas = ResearchCanvas;', 'exports.__ResearchBoardHeader=sherlockBoardsPage.ResearchBoardHeader;exports.__PreviewStudySpec=homeWorkbenchStudySpec;exports.__PreviewCalendar=CalendarTool;exports.__PreviewCalendarRequest=calendarToolRequest;exports.__registerPreviewHost=researchWorkspaces=>window.dshDesktop.researchCanvasActions.subscribe('+callback+');exports.ResearchCanvas = ResearchCanvas;')
+ const entry=`import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host.ts';import {installBoardUiStyles} from './src/preload/research-board-dialogs.ts';import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
  let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.__copies=[];window.__library=[];window.__dataRequests=[];
  window.dshDesktop={researchCanvasActions:{subscribe:handler=>{window.__trustedCanvasHandler=handler;return()=>{}}},researchBoards:{isSharedSession:id=>id.startsWith('shared-')},researchClipboard:{copy:async value=>{window.__copies.push(value);return {ok:true}},read:async()=>({kind:'text',text:'unexpected pasted component'}),inspect:async()=>({available:true})},componentLibrary:{request:async value=>{window.__library.push(value);return value.action==='list'?[]:{ok:true}}},financialWidget:{request:async value=>{window.__dataRequests.push(value);return value.action==='search'?{symbols:[{code:'MSFT',market:'US',name:'微软'}]}:{quotes:[],news:[],announcements:[],bars:[],source:'fixture',receivedAt:Date.now()}}}};
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
@@ -34,7 +34,7 @@ beforeAll(async()=>{
  const registry=new bundle.ResearchWorkspaceRegistry(localStorage),root=createRoot(document.getElementById('host')),headerHost=document.getElementById('header'),headerRoot=headerHost?createRoot(headerHost):null;if(headerHost)installBoardUiStyles(document);let sessionId='preview-board';
  const workspace=()=>registry.for(sessionId);
  const headerState={account:{user:{userId:'self'}},favorites:[],boards:[]},headerPage={workspaceFor:id=>registry.for(id),getState:()=>headerState,subscribe:()=>()=>{},version:()=>0,getView:()=>null,isResearch:()=>true,showError:error=>{throw error},favorite:async()=>{}};
- const render=(next=sessionId)=>{sessionId=next;root.render(React.createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async()=>({taskId:'fixture-task'})},actions:{}}));headerRoot?.render(React.createElement(ResearchBoardHeader,{page:headerPage,sessionId,active:true}))};
+ const render=(next=sessionId)=>{sessionId=next;root.render(React.createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async()=>({taskId:'fixture-task'})},actions:{}}));headerRoot?.render(React.createElement(bundle.__ResearchBoardHeader,{page:headerPage,sessionId,active:true}))};
  const text=(id,x=180,y=170)=>({id,kind:'pasted-text',messageId:'fixture-message',title:'研究文字 '+id,excerpt:'可阅读的研究证据 '+id,x,y,width:320,height:220,sizeMode:'manual'});
  bundle.__registerPreviewHost(registry);window.fixture={bundle,registry,workspace,render,text,setHeaderState:value=>{Object.assign(headerState,value);render()},surfaceHost:new WorkspaceSurfaceHost(document),renderNoteCalendar:(owner,node)=>{const host=document.createElement('div');host.dataset.noteDocument='';const section=document.createElement('section');section.className='en-research en-native-component';section.dataset.researchNodeId=node.id;const native=document.createElement('div');native.className='en-native-component-host';native.dataset.noteSession=owner;native.dataset.noteComponent=node.id;section.append(native);host.append(section);document.body.append(host);createRoot(native).render(React.createElement(bundle.__PreviewCalendar,{sessionId:owner,node}));return host},openNoteCalendar(owner,node){const host=this.renderNoteCalendar(owner,node);host.style.cssText='position:fixed;inset:0;z-index:2000;background:white';this.surfaceHost.register('notes',host);this.surfaceHost.open('notes');return host}};document.querySelector('#preview-toggle').onclick=()=>workspace().setPreviewMode(!workspace().getPreviewMode());render();`
  script=(await build({stdin:{contents:entry,resolveDir:process.cwd()},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'})).outputFiles[0].text
@@ -47,7 +47,7 @@ afterAll(async()=>browser?.close())
 async function fixture({header=false}={}){
  const context=await browser.newContext({viewport:{width:1200,height:850},reducedMotion:'reduce'}),page=await context.newPage(),errors=[]
  page.setDefaultTimeout(5000);page.on('pageerror',error=>errors.push(error.message))
- await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\n[data-workspace-surface-hidden=true]{visibility:hidden!important}html,body{margin:0}#host{height:800px;width:100vw}[data-research-canvas]{height:740px!important}#preview-toggle{position:fixed;top:0;right:0;z-index:10000}</style>${header?'<div id="header" style="position:fixed;top:0;left:0;z-index:1000"></div>':''}<div class="pI_x6G_frame"><div class="pI_x6G_centerCol"><div id="host"></div></div></div><button id="preview-toggle">fixture preview toggle</button>`}))
+ await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\n[data-workspace-surface-hidden=true]{visibility:hidden!important}html,body{margin:0}#host{height:${header?784:800}px;width:100vw;--odyssey-workspace-header-height:44px}${header?'':'[data-research-canvas]{height:740px!important}'}#preview-toggle{position:fixed;bottom:0;right:0;z-index:10000}</style>${header?'<div id="header" style="position:fixed;top:12px;right:30px;z-index:1000"></div>':''}<div class="pI_x6G_frame"><div class="pI_x6G_centerCol"><div id="host"></div></div></div><button id="preview-toggle">fixture preview toggle</button>`}))
  await page.goto('https://research-preview.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-toolbar]').catch(error=>{throw Error(error.message+'; page errors: '+JSON.stringify(errors))})
  return {page,errors,close:()=>context.close()}
 }
@@ -462,25 +462,97 @@ it('rejects a hidden Research calendar origin and unknown owners despite an acti
  }finally{await close()}
 },20000)
 
-it.each(['workspace','listed-board'])('shows a quiet borderless mode pill after the right actions in four themes (%s)',async view=>{
+it.each(['workspace','listed-board'])('shows two matching icon tiles and the board menu in four themes (%s)',async view=>{
  const {page,close,errors}=await fixture({header:true})
  try{
   await page.evaluate(view=>window.fixture.setHeaderState({favorites:view==='listed-board'?[{favoriteId:'real-favorite',sessionId:'preview-board',pinned:true}]:[],boards:[]}),view)
-  const header=page.locator('#header'),pill=header.locator('[data-research-preview-toggle]'),collaboration=header.locator('[aria-label="创建协作"]');await pill.waitFor()
-  expect(await header.locator('.srb-favorite-button').count()).toBe(view==='workspace'?1:0)
+  await page.evaluate(()=>window.fixture.workspace().setArtifacts([window.fixture.text('a')]))
+  const header=page.locator('#header'),modeButton=header.locator('[data-research-preview-toggle]'),more=header.getByRole('button',{name:'更多看板操作'})
+  await modeButton.waitFor()
+  const shape=element=>element.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return{left:r.left,width:r.width,height:r.height,border:s.borderTopWidth,radius:s.borderTopLeftRadius,background:s.backgroundColor}})
   for(const theme of ['light','dark','enterprise','openterminal']){
    await page.evaluate(theme=>{document.body.toggleAttribute('data-ds-dark-theme',['dark','openterminal'].includes(theme));window.fixture.workspace().setWorkbenchStyle(theme,{scope:'board'})},theme)
+   await page.mouse.move(1150,810)
+   const modeBox=await shape(modeButton),moreBox=await shape(more)
+   expect(modeBox).toMatchObject({width:30,height:30,border:'0px',radius:'7px'})
+   expect(moreBox).toMatchObject({width:30,height:30,radius:'7px',background:modeBox.background})
+   expect(modeBox.left+modeBox.width).toBeLessThan(moreBox.left)
+   expect(modeBox.background).not.toBe('rgba(0, 0, 0, 0)')
    for(const mode of ['编辑模式','预览模式']){
-    expect(await pill.textContent()).toBe(mode);expect(await pill.locator('[data-research-preview-switch]').count()).toBe(1)
-    const box=await pill.evaluate(el=>{const s=getComputedStyle(el);return{left:el.getBoundingClientRect().left,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,scroll:el.scrollWidth,client:el.clientWidth,color:s.color,border:s.borderTopWidth,borderStyle:s.borderTopStyle,radius:parseFloat(s.borderTopLeftRadius),background:s.backgroundColor}})
-    expect(box.height).toBe(30);expect(box.width).toBeGreaterThanOrEqual(96);expect(box.width).toBeLessThanOrEqual(112);expect(box.scroll).toBeLessThanOrEqual(box.client);expect(box.border).toBe('0px');expect(box.borderStyle).toBe('none');expect(box.radius).toBeGreaterThanOrEqual(15);expect(box.background).not.toBe('rgba(0, 0, 0, 0)');expect(box.color).not.toBe('rgba(0, 0, 0, 0)')
-    expect(box.left).toBeGreaterThanOrEqual((await collaboration.boundingBox()).x+(await collaboration.boundingBox()).width)
-    if(mode==='编辑模式')expect(await pill.locator('[data-research-preview-glyph="pencil-line"]').count()).toBe(1)
-    if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await header.screenshot({path:process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/'+view+'-'+theme+'-'+(mode==='编辑模式'?'edit':'preview')+'.png'})
-    const target=mode==='编辑模式'?'预览模式':'编辑模式';expect(await pill.getAttribute('aria-label')).toBe('切换到'+target);expect(await pill.getAttribute('title')).toBe('当前为'+mode+'，点击切换到'+target)
-    await pill.click();await expect.poll(()=>pill.textContent()).toBe(target)
+    expect(await modeButton.textContent()).toBe('')
+    expect(await modeButton.locator('[data-research-preview-switch]').count()).toBe(0)
+    expect(await modeButton.locator('[data-research-preview-glyph="'+(mode==='编辑模式'?'pencil-line':'eye')+'"]').count()).toBe(1)
+    const target=mode==='编辑模式'?'预览模式':'编辑模式'
+    expect(await modeButton.getAttribute('aria-label')).toBe('切换到'+target)
+    await modeButton.click();await expect.poll(()=>modeButton.getAttribute('aria-label')).toBe('切换到'+mode)
    }
+   await more.click()
+   const menu=page.getByRole('menu',{name:'看板操作',exact:true}),bounds=await menu.boundingBox()
+   expect(bounds.x).toBeGreaterThanOrEqual(8)
+   expect(await menu.getByRole('menuitem',{name:'创建协作看板'}).evaluate(el=>getComputedStyle(el).justifyContent)).toBe('flex-start')
+   const membership=menu.getByRole('menuitem',{name:view==='workspace'?'加入至看板区':'已加入看板区'})
+   expect(await membership.isEnabled()).toBe(view==='workspace')
+   if(process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE)await page.screenshot({
+    path:process.env.SHERLOCK_TEST_RESEARCH_PREVIEW_EVIDENCE+'/'+view+'-'+theme+'-menu.png',
+    clip:{x:bounds.x-8,y:0,width:bounds.width+16,height:Math.ceil(bounds.y+bounds.height)+8}
+   })
+   await page.keyboard.press('Escape')
+   expect(await menu.count()).toBe(0)
+   expect(await more.evaluate(el=>el===document.activeElement)).toBe(true)
   }
+  expect(errors).toEqual([])
+ }finally{await close()}
+},30000)
+
+it('zooms the real canvas locally, refreshes it and routes arrange and select-all from the menu',async()=>{
+ const {page,close,errors}=await fixture({header:true})
+ try{
+  await page.evaluate(()=>{const w=window.fixture.workspace();w.setArtifacts([window.fixture.text('a'),{...window.fixture.text('b',600,500),messageId:'second-message'}]);const chat=document.createElement('aside');chat.id='fixture-chat';chat.style.cssText='position:fixed;right:0;top:40px;width:150px;height:20px';document.body.append(chat)})
+  const canvas=page.locator('[data-research-canvas]'),card=canvas.locator('[data-research-node-id="a"]')
+  await card.waitFor()
+  const otherWidth=async()=> (await page.locator('#fixture-chat').boundingBox()).width
+  const stableChatWidth=await otherWidth(),canvasBox=await canvas.boundingBox()
+  const other=(await page.locator('#header').boundingBox()).width
+  const menu=page.getByRole('menu',{name:'看板操作',exact:true}),more=page.getByRole('button',{name:'更多看板操作'})
+  const open=async()=>{await more.click();await menu.waitFor()}
+  await open();await menu.getByRole('menuitem',{name:'放大看板'}).click()
+  expect(await menu.getByRole('menuitem',{name:'恢复看板至 100%'}).textContent()).toBe('110%')
+  expect(await canvas.evaluate(el=>getComputedStyle(el).zoom)).toBe('1.1')
+  const enlargedCanvas=await canvas.boundingBox()
+  for(const key of ['width','height','y'])expect(Math.abs(enlargedCanvas[key]-canvasBox[key]),key).toBeLessThan(3)
+  expect(await otherWidth()).toBe(stableChatWidth)
+  expect((await page.locator('#header').boundingBox()).width).toBe(other)
+  const scale=await card.evaluate(el=>el.getBoundingClientRect().width/el.offsetWidth)
+  expect(scale).toBeCloseTo(1.1,2)
+  await page.keyboard.press('Escape')
+  const handle=canvas.locator('[data-workbench-drag-handle="a"]').first(),handleBox=await handle.boundingBox()
+  const x=handleBox.x+handleBox.width/2,y=handleBox.y+handleBox.height/2
+  const floatLeft=()=>card.evaluate(el=>parseFloat(el.style.getPropertyValue('--grid-float-left')))
+  await page.mouse.move(x,y);await page.mouse.down()
+  await expect.poll(floatLeft).not.toBeNaN()
+  const logicalStart=await floatLeft()
+  await page.mouse.move(x+55,y)
+  await expect.poll(async()=>Math.abs((await floatLeft())-logicalStart-50)).toBeLessThan(2)
+  await page.mouse.up()
+  await open();await menu.getByRole('menuitem',{name:'全选看板'}).click()
+  expect(await page.evaluate(()=>window.fixture.workspace().getSnapshot().selection.selectedNodeIds.toSorted())).toEqual(['a','b'])
+  await open();await menu.getByRole('menuitem',{name:'整理看板'}).click()
+  await page.locator('[data-research-arrange-feedback]').getByText('已整理 2 个组件').waitFor()
+  await open();await menu.getByRole('menuitem',{name:'刷新看板'}).click()
+  await page.getByText('画板已刷新',{exact:true}).waitFor()
+  expect(await canvas.evaluate(el=>getComputedStyle(el).zoom)).toBe('1.1')
+  await open();await menu.getByRole('menuitem',{name:'恢复看板至 100%'}).click()
+  expect(await menu.getByRole('menuitem',{name:'恢复看板至 100%'}).textContent()).toBe('100%')
+  expect(await canvas.evaluate(el=>getComputedStyle(el).zoom)).toBe('1')
+  await page.setViewportSize({width:600,height:600})
+  await expect.poll(async()=>{const box=await menu.boundingBox();return box.x>=8&&box.x+box.width<=592}).toBe(true)
+  await page.setViewportSize({width:420,height:600})
+  const zoomIn=menu.getByRole('menuitem',{name:'放大看板'})
+  for(let step=0;step<10;step++)await zoomIn.click()
+  expect(await zoomIn.isDisabled()).toBe(true)
+  await expect.poll(()=>canvas.evaluate(el=>getComputedStyle(el).overflowX==='auto'&&el.scrollWidth>el.clientWidth)).toBe(true)
+  await menu.getByRole('menuitem',{name:'恢复看板至 100%'}).click()
+  await page.keyboard.press('Escape')
   expect(errors).toEqual([])
  }finally{await close()}
 },30000)
@@ -518,6 +590,33 @@ const footerGeometry=(page,id,kind)=>page.locator('[data-research-node-id="'+id+
  const f=footer.getBoundingClientRect(),s=source.getBoundingClientRect(),r=state?.getBoundingClientRect(),style=getComputedStyle(footer)
  return{source:source.textContent,state:state?.textContent,left:s.left-f.left,right:r?f.right-r.right:null,paddingLeft:parseFloat(style.paddingLeft),paddingRight:parseFloat(style.paddingRight),ports:[...card.querySelectorAll('[data-financial-port]')].map(el=>({side:el.dataset.financialPort,display:getComputedStyle(el).display,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})),sourceTextInset:s.left-card.getBoundingClientRect().left+parseFloat(getComputedStyle(source).paddingLeft)}
 },kind)
+
+it('opens native news data settings only from the footer label or explicit menu',async()=>{
+ const {page,close,errors}=await fixture()
+ try{
+  const id=await page.evaluate(()=>window.fixture.workspace().createFinancialWidget('news').id)
+  const card=page.locator('[data-research-node-id="'+id+'"]'),footer=card.locator('.ew-financial-footer')
+  const source=footer.getByRole('button',{name:'数据源与自动更新',exact:true})
+  const dialog=page.getByRole('dialog',{name:'组件数据与自动更新',exact:true})
+  await expect.poll(()=>source.innerText()).toContain('fixture')
+  for(const mode of ['edit','preview']){
+   if(mode==='preview')await preview(page)
+   const bounds=await footer.boundingBox()
+   const x=bounds.x+bounds.width/2,y=bounds.y+bounds.height/2
+   await page.mouse.click(x,y)
+   expect(await dialog.count(),mode).toBe(0)
+   expect(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('button')?.className??null,{x,y}),mode).toBeNull()
+   await source.click();await dialog.waitFor()
+   await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'})
+   await source.focus();await page.keyboard.press('Enter');await dialog.waitFor()
+   await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'})
+  }
+  await card.locator('[data-workbench-more]').click()
+  await page.getByRole('menuitem',{name:'数据源与自动更新',exact:true}).click()
+  await dialog.waitFor()
+  expect(errors).toEqual([])
+ }finally{await close()}
+},20000)
 
 it('reclaims financial footer port slots in preview and restores edit geometry in all four themes',async()=>{
  const {page,close,errors}=await fixture(),evidence=[]

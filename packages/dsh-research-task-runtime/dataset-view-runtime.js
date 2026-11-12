@@ -1,3 +1,5 @@
+export const DATASET_VIEW_DEFAULT_PAGE_SIZE=20
+
 export function datasetViewValue(value,field){
  if(value===null||value===undefined)return '未提供'
  if(Array.isArray(value))return value.length?value.map(v=>'• '+v).join('\n'):'（无条目）'
@@ -17,23 +19,35 @@ export function datasetViewSchedule(dataset,section){
  })
  return {rows,ticks,zone:timed.length?(sample.includes('T')?(zone?'UTC'+zone[0]:sample.endsWith('Z')?'UTC':''):'日期'):''}
 }
+export function matchesDatasetViewScope(record,where=[]){
+ return where.every(rule=>{
+  const value=record[rule.field];
+  if(rule.op==='notNull')return value!==null;
+  if(rule.op==='in')return rule.values.some(candidate=>candidate===value);
+  if(typeof value!=='number'||!Number.isFinite(value))return false;
+  return rule.op==='gt'?value>rule.value:rule.op==='ne'&&value!==rule.value;
+ });
+}
 // Serialized into the existing opaque HTML sandbox. Values always come from
 // the canonical source; state holds only view choices and record identities.
-export function datasetViewRuntime(valueText){
+export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPageSize){
  const source=document.getElementById('dataset-view-source'),root=document.querySelector('.dv-shell')
  if(!source||!root||!window.sherlockShared)return
  const spec=JSON.parse(source.textContent),data=spec.dataset,view=spec.view,records=new Map(data.records.map(r=>[r.id,r])),ids=[...records.keys()],fields=new Map(data.fields.map(f=>[f.key,f]))
  const token=value=>JSON.stringify(value)
- const inScope=record=>(view.where??[]).every(rule=>rule.op==='notNull'?record[rule.field]!==null:rule.values.some(value=>value===record[rule.field]))
+ const inScope=record=>matchesScope(record,view.where)
  const filterOptions=new Map(view.filters.map(key=>[key,[...new Map(data.records.map(r=>[token(r[key]),valueText(r[key],fields.get(key))])).entries()]]))
  const searchText=new Map(data.records.map(r=>[r.id,data.fields.map(f=>valueText(r[f.key],f)).join(' ').toLocaleLowerCase()]))
  function normalize(raw){
-  const order=[...new Set((Array.isArray(raw?.order)?raw.order:[]).filter(id=>records.has(id)))];for(const id of ids)if(!order.includes(id))order.push(id)
+  const orderedIds=new Set((Array.isArray(raw?.order)?raw.order:[]).filter(id=>records.has(id)))
+  for(const id of ids)orderedIds.add(id)
+  const order=[...orderedIds]
   const filters={};for(const key of view.filters){const value=raw?.filters?.[key];filters[key]=filterOptions.get(key).some(([v])=>v===value)?value:''}
-  const query=typeof raw?.query==='string'?raw.query.slice(0,256):'',pageSize=[10,20,50,100].includes(raw?.pageSize)?raw.pageSize:20
+  const query=typeof raw?.query==='string'?raw.query.slice(0,256):'',pageSize=[10,20,50,100].includes(raw?.pageSize)?raw.pageSize:defaultPageSize
   const visible=order.filter(id=>inScope(records.get(id))&&searchText.get(id).includes(query.toLocaleLowerCase())&&view.filters.every(key=>!filters[key]||token(records.get(id)[key])===filters[key]))
   const pages=Object.fromEntries(view.sections.map((_,i)=>[i,Math.max(0,Math.min(Number.isInteger(raw?.pages?.[i])?raw.pages[i]:0,Math.ceil(visible.length/pageSize)-1))]))
-  const pair=[];for(const id of [...(Array.isArray(raw?.pair)?raw.pair:[]),...visible])if(visible.includes(id)&&!pair.includes(id)&&pair.length<2)pair.push(id)
+  const pair=[...new Set((Array.isArray(raw?.pair)?raw.pair:[]).filter(id=>visible.includes(id)))].slice(0,2)
+  for(const id of visible){if(pair.length===2)break;if(!pair.includes(id))pair.push(id)}
   return {order,filters,pair,query,pageSize,pages,selected:visible.includes(raw?.selected)?raw.selected:null,tab:Number.isInteger(raw?.tab)&&raw.tab>=0&&raw.tab<view.sections.length?raw.tab:0}
  }
  const visibleIds=s=>s.order.filter(id=>inScope(records.get(id))&&searchText.get(id).includes(s.query.toLocaleLowerCase())&&view.filters.every(key=>!s.filters[key]||token(records.get(id)[key])===s.filters[key]))
@@ -56,8 +70,57 @@ export function datasetViewRuntime(valueText){
  }
  const make=(tag,text,className)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el}
  const sectionNodes=[...root.querySelectorAll('[data-view-section]')]
- const rowMaps=sectionNodes.map(el=>new Map([...el.querySelectorAll('[data-record-id]')].map(row=>[row.dataset.recordId,row])))
+ const scheduleRows=sectionNodes.map(el=>new Map([...el.querySelectorAll('.dv-schedule-row')].map(row=>[row.dataset.recordId,row])))
+ function recordRow(id,section){
+  const record=records.get(id),row=make('tr')
+  row.dataset.recordId=id
+  row.tabIndex=0
+  if(view.reorder){
+   const rank=make('td',undefined,'dv-rank')
+   rank.dataset.viewRank=''
+   row.appendChild(rank)
+  }
+  const identity=make('td'),select=make('button',id,'dv-record-select')
+  select.type='button'
+  select.dataset.viewSelect=''
+  select.setAttribute('aria-label',`查看${id}完整详情`)
+  identity.appendChild(select)
+  row.appendChild(identity)
+  for(const key of section.fields){
+   if(key==='id')continue
+   const field=fields.get(key),value=record[key],cell=make('td')
+   const href=sourceHref(field.label,value)
+   if(href){
+    const link=make('a',value)
+    link.href=href
+    link.target='_blank'
+    link.rel='noopener noreferrer'
+    link.setAttribute('aria-label',`打开链接：${href}`)
+    cell.appendChild(link)
+   }else cell.textContent=valueText(value,field)
+   row.appendChild(cell)
+  }
+  if(view.reorder){
+   const actions=make('td',undefined,'dv-actions'),buttons=make('span',undefined,'dv-action-buttons')
+   for(const [direction,label,icon] of [['up','上移','↑'],['down','下移','↓']]){
+    const button=make('button',icon)
+    button.type='button'
+    button.dataset.viewMove=direction
+    button.dataset.id=id
+    button.title=label+id
+    button.setAttribute('aria-label',label+id)
+    buttons.appendChild(button)
+   }
+   actions.appendChild(buttons)
+   row.appendChild(actions)
+  }
+  return row
+ }
+ const sorts=new Map()
+ const collator=new Intl.Collator(undefined,{numeric:true})
+ let current,context
  function render(raw,ctx){
+  current=raw;context=ctx
   const s=normalize(raw),visible=visibleIds(s),selected=records.get(s.selected),disabled=ctx.readOnly||!ctx.connected
   root.querySelector('[data-view-count]').textContent=`显示 ${visible.length} / ${ids.length} 条记录`
   const search=root.querySelector('[data-view-search]');search.value=s.query;search.disabled=disabled
@@ -65,13 +128,38 @@ export function datasetViewRuntime(valueText){
   root.querySelectorAll('[data-view-tab]').forEach(button=>{const active=Number(button.dataset.viewTab)===s.tab;button.setAttribute('aria-selected',String(active));button.disabled=disabled})
   view.sections.forEach((section,i)=>{
    const el=sectionNodes[i];el.hidden=view.navigation==='tabs'&&s.tab!==i
-   if(section.kind==='records'||section.kind==='schedule'){
-    const target=el.querySelector(section.kind==='records'?'tbody':'.dv-schedule-rows'),map=rowMaps[i]
-    const pager=el.querySelector('.dv-pagination'),start=s.pages[i]*s.pageSize,shown=pager?visible.slice(start,start+s.pageSize):visible
-    for(const id of s.order){const row=map.get(id);row.hidden=!shown.includes(id);row.setAttribute('aria-selected',String(id===s.selected));target.appendChild(row)
+   if(section.kind==='records'){
+    const target=el.querySelector('tbody')
+    const sort=sorts.get(i)
+    const displayVisible=sort?[...visible].sort((left,right)=>{
+     const a=records.get(left)[sort.key],b=records.get(right)[sort.key]
+     if(a===null||b===null)return Number(a===null)-Number(b===null)
+     const value=typeof a==='number'&&typeof b==='number'?a-b:collator.compare(String(a),String(b))
+     return sort.descending?-value:value
+    }):visible
+    el.querySelectorAll('[data-view-sort]').forEach(button=>{
+     button.disabled=disabled
+     const header=button.closest('th')
+     if(button.dataset.viewSort===sort?.key)header.setAttribute('aria-sort',sort.descending?'descending':'ascending')
+     else header.removeAttribute('aria-sort')
+    })
+    const pager=el.querySelector('.dv-pagination'),start=s.pages[i]*s.pageSize,shown=pager?displayVisible.slice(start,start+s.pageSize):displayVisible
+    const mounted=[...target.rows],byId=new Map(mounted.map(row=>[row.dataset.recordId,row]))
+    const nextRows=shown.map(id=>byId.get(id)??recordRow(id,section))
+    for(const row of nextRows){
+     const id=row.dataset.recordId
+     row.setAttribute('aria-selected',String(id===s.selected))
      const seq=row.querySelector('[data-view-rank]');if(seq)seq.textContent=String(s.order.indexOf(id)+1)
-     row.querySelectorAll('[data-view-move]').forEach(button=>{const index=visible.indexOf(id);button.disabled=disabled||index<0||(button.dataset.viewMove==='up'?index===0:index===visible.length-1)})
-     row.querySelectorAll('[data-view-select]').forEach(button=>{button.disabled=disabled;button.setAttribute('aria-pressed',String(id===s.selected))})
+     row.querySelectorAll('[data-view-move]').forEach(button=>{const index=visible.indexOf(id);button.disabled=disabled||Boolean(sort)||(button.dataset.viewMove==='up'?index===0:index===visible.length-1)})
+     const select=row.querySelector('[data-view-select]')
+     select.disabled=disabled
+     select.setAttribute('aria-pressed',String(id===s.selected))
+    }
+    if(mounted.length!==nextRows.length||nextRows.some((row,index)=>row!==mounted[index])){
+     const focused=document.activeElement
+     const restoreFocus=target.contains(focused)
+     target.replaceChildren(...nextRows)
+     if(restoreFocus&&target.contains(focused))focused.focus({preventScroll:true})
     }
     el.querySelector('[data-view-empty]').hidden=visible.length!==0
     if(pager){
@@ -81,6 +169,17 @@ export function datasetViewRuntime(valueText){
      index.replaceChildren(...Array.from({length:total},(_,page)=>{const option=make('option',(page+1)+' / '+total);option.value=String(page);return option}));index.value=String(s.pages[i]);index.disabled=disabled
      for(const button of pager.querySelectorAll('[data-view-page]'))button.disabled=disabled||(Number(button.dataset.pageDelta)<0?s.pages[i]===0:s.pages[i]>=total-1)
     }
+   }else if(section.kind==='schedule'){
+    const shown=new Set(visible),target=el.querySelector('.dv-schedule-rows')
+    for(const id of s.order){
+     const row=scheduleRows[i].get(id),button=row.querySelector('[data-view-select]')
+     row.hidden=!shown.has(id)
+     row.setAttribute('aria-selected',String(id===s.selected))
+     button.disabled=disabled
+     button.setAttribute('aria-pressed',String(id===s.selected))
+     target.appendChild(row)
+    }
+    el.querySelector('[data-view-empty]').hidden=visible.length!==0
    }else{
     const selects=el.querySelectorAll('[data-view-compare]')
     selects.forEach((select,side)=>{select.replaceChildren(...visible.map(id=>{const option=make('option',valueText(records.get(id).id));option.value=id;return option}));select.value=s.pair[side]??'';select.disabled=disabled||visible.length<2})
@@ -110,6 +209,16 @@ export function datasetViewRuntime(valueText){
  })
  root.addEventListener('input',e=>{if(e.target.matches('[data-view-search]'))shared.dispatch({type:'search',query:e.target.value})})
  root.addEventListener('click',e=>{
+  const sort=e.target.closest('[data-view-sort]')
+  if(sort){
+   const index=Number(sort.closest('[data-view-section]').dataset.viewSection),key=sort.dataset.viewSort
+   const previous=sorts.get(index)
+   if(previous?.key===key&&previous.descending)sorts.delete(index)
+   else sorts.set(index,{key,descending:previous?.key===key})
+   if(current.pages[index])shared.dispatch({type:'page',index,value:0})
+   else render(current,context)
+   return
+  }
   const page=e.target.closest('[data-view-page]');if(page){const index=Number(page.dataset.viewPage);shared.dispatch({type:'page',index,delta:Number(page.dataset.pageDelta)});return}
   const move=e.target.closest('[data-view-move]');if(move){shared.dispatch({type:'move',id:move.dataset.id,dir:move.dataset.viewMove});return}
   const tab=e.target.closest('[data-view-tab]');if(tab){shared.dispatch({type:'tab',index:Number(tab.dataset.viewTab)});return}

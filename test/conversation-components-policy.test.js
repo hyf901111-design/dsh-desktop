@@ -14,6 +14,17 @@ function harness(s){
  return{agent,ctx,guards,startSubagent,prompt:()=>prompts.map(v=>v.text({agent})).filter(Boolean).join('\n'),config:()=>invoke('agent/request',{provider:'zai',model:'test',reasoningEffort:'high',maxTokens:16000}),wire:()=>invoke('agent/request-context',{system:'base',tools:schemas}),dispose:()=>{disposeConversation();disposeWorkbench()}}
 }
 describe('direct conversation component routing',()=>{
+ it.each(['给一个6人团队做新品上线协作工作台，用模拟数据。只要三张卡，跨卡用同一批12项任务。','请做跨部门交付看板','为客服团队做工单分析工作台'])('preserves the selected budget and creation path for a natural unquantified build request: %s',async text=>{
+  const s=session(text),h=harness(s)
+  try{
+   expect(workbenchCreationRequest(s)?.text).toBe(text)
+   expect((await h.wire()).tools.map(tool=>tool.name)).toContain('research_workbench_create')
+   expect(await h.config()).toMatchObject({reasoningEffort:'high',maxTokens:16000})
+  }finally{h.dispose()}
+ })
+ it.each(['不要做新品上线协作工作台','已经做新品上线协作工作台了，看看当前状态','怎么做新品上线协作工作台？','引用原文：“请做新品上线协作工作台”。只解释其含义。','继续修改现有的新品上线协作工作台'])('does not create a canvas for a negated, historical, quoted or existing-only request: %s',text=>{
+  expect(workbenchCreationRequest(session(text))).toBeNull()
+ })
  it('requires current catalog for bare components without planning cap or hiding data tools',async()=>{
   const s=session('创建一张模拟数据表格组件'),h=harness(s)
   expect(workbenchCreationRequest(s)).toBeNull();expect(policy.latestClientModeForAuthority(s)).toBeNull()
@@ -35,15 +46,15 @@ describe('direct conversation component routing',()=>{
  })
  it('research keeps its existing planning route and budget while notes keeps its capability',async()=>{
   const s=session('创建一个模拟柱状图组件');catalog(s,'research');const h=harness(s)
-  expect(workbenchCreationRequest(s)?.text).toContain('柱状图');expect(await h.config()).toMatchObject({reasoningEffort:'low',maxTokens:4096})
-  expect((await h.wire()).tools.map(v=>v.name)).toEqual(['research_workbench_create']);h.dispose()
+  expect(workbenchCreationRequest(s)?.text).toContain('柱状图');expect(await h.config()).toMatchObject({reasoningEffort:'high',maxTokens:16000})
+  expect((await h.wire()).tools.map(v=>v.name)).toEqual(schemas.map(v=>v.name));h.dispose()
   const n=session('创建一个表格组件');catalog(n,'notes');const notes=harness(n)
   expect(workbenchCreationRequest(n)).toBeNull();expect(await notes.config()).toMatchObject({maxTokens:16000})
   expect(notes.prompt()).toContain('notes.components.create');expect(notes.prompt()).not.toContain('capability:"conversation.components.create"');notes.dispose()
  })
  it.each(['conversation','research','notes'])('explicit workbench preserves research planning in %s',async mode=>{
   const s=session('创建一个股票研究工作台');catalog(s,mode);const h=harness(s)
-  expect(workbenchCreationRequest(s)).not.toBeNull();expect(await h.config()).toMatchObject({maxTokens:4096})
+  expect(workbenchCreationRequest(s)).not.toBeNull();expect(await h.config()).toMatchObject({maxTokens:16000})
   expect((await h.wire()).tools.map(v=>v.name)).toContain('research_workbench_create');h.dispose()
  })
  it('ordinary quote questions can choose a native card without entering planning',async()=>{
@@ -87,7 +98,7 @@ describe('natural component delivery expressions and defensive canvas boundary',
  for(const text of phrases)for(const mode of [null,'conversation','notes','research'])it(`${text} uses ${mode??'unknown'} mode consistently`,async()=>{
   const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
   expect(policy.componentCreationRequest(s)?.target).toBe('component')
-  expect((await h.config()).maxTokens).toBe(mode==='research'?4096:16000)
+  expect((await h.config()).maxTokens).toBe(16000)
   const allowed=(await h.wire()).tools.some(v=>v.name==='research_workbench_create')
   const denied=h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'accidental-canvas'}))
   expect(allowed).toBe(mode==='research');expect(denied).toBe(mode!=='research');h.dispose()
@@ -116,7 +127,7 @@ describe('existing-object delivery stays read-only while natural new delivery cr
  it.each(creators)('preserves %s as %s',async(text,target)=>{
   const s=session(text);catalog(s,'conversation');const h=harness(s)
   expect(policy.componentCreationRequest(s)?.target).toBe(target)
-  expect((await h.config()).maxTokens).toBe(target==='workbench'?4096:16000)
+  expect((await h.config()).maxTokens).toBe(16000)
   expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(target==='workbench');h.dispose()
  })
  it('keeps a later explicit addition after an existing-object inspection',()=>{
@@ -135,7 +146,7 @@ describe('normalized mixed clauses separate existing sources from creation targe
  ])('%s creates only the intended %s target',async(text,target)=>{
   const s=session(text);catalog(s,'conversation');const h=harness(s)
   expect(policy.componentCreationRequest(s)?.target).toBe(target)
-  expect((await h.config()).maxTokens).toBe(target==='workbench'?4096:16000)
+  expect((await h.config()).maxTokens).toBe(16000)
   expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(target==='workbench')
   expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'mixed'}))).toBe(target!=='workbench');h.dispose()
  })
@@ -194,7 +205,7 @@ describe('file-document deliverables keep authored file execution rather than UI
  for(const text of components)for(const mode of [null,'conversation','research','notes'])it(`preserves separate component delivery in ${mode??'unknown'} mode: ${text}`,async()=>{
   const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
   expect(policy.componentCreationRequest(s)?.target).toBe('component')
-  expect((await h.config()).maxTokens).toBe(mode==='research'?4096:16000)
+  expect((await h.config()).maxTokens).toBe(16000)
   expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(mode==='research')
   expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'mixed-component'}))).toBe(mode!=='research')
   if(mode!=='research'&&mode!=='notes')expect(h.prompt()).toContain('conversation.components.create')
@@ -202,7 +213,7 @@ describe('file-document deliverables keep authored file execution rather than UI
  })
  for(const text of ['制作PPT，并创建一个股票研究工作台','创建一个工作台，并把它的数据整理成一份PPT'])for(const mode of [null,'conversation','research','notes'])it(`preserves explicitly requested canvas in ${mode??'unknown'} mode: ${text}`,async()=>{
   const s=session(text);if(mode)catalog(s,mode);const h=harness(s)
-  expect(policy.componentCreationRequest(s)?.target).toBe('workbench');expect((await h.config()).maxTokens).toBe(4096)
+  expect(policy.componentCreationRequest(s)?.target).toBe('workbench');expect((await h.config()).maxTokens).toBe(16000)
   expect((await h.wire()).tools.some(tool=>tool.name==='research_workbench_create')).toBe(true)
   expect(h.guards.some(fn=>!!fn({agent:h.agent,name:'research_workbench_create',arguments:{},callId:'mixed-board'}))).toBe(false)
   h.dispose()

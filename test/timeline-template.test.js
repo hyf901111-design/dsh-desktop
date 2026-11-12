@@ -33,3 +33,13 @@ it('完整事件展开与最新定位重建恢复，只读浏览不写入来源�
  const readonly=fixture(f.state(),true);readonly.d.querySelector('.activity-details').open=false;readonly.d.querySelector('.activity-details').dispatchEvent(new readonly.w.Event('toggle'));expect(readonly.state()).toEqual(f.state());
  const updated=fixture({version:1,open:['zero','earlier'],selected:'zero'},false,{...source,items:source.items.slice(1)});expect(updated.d.querySelector('[data-event-id="earlier"] details').open).toBe(true);const next=updated.d.querySelector('.activity-details');next.open=true;next.dispatchEvent(new updated.w.Event('toggle'));expect(updated.state()).toEqual({version:1,open:['earlier','negative'],selected:null});for(const x of [f,restored,readonly,updated])await x.w.happyDOM.abort()
 })
+it('直接显示日期精度的事件，保持同一天的记录次序',async()=>{
+ const {timelineOrder,timelineDisplayTime}=await import('../packages/dsh-research-task-runtime/timeline-template-contract.js')
+ const day={...source,items:[
+  {id:'a',title:'A',time:'2026-10-01'},
+  {id:'b',title:'B',time:'2026-10-02'},
+  {id:'c',title:'C',time:'2026-10-02'}
+ ]};
+ expect(timelineOrder(day).items.map(i=>i.id)).toEqual(['b','c','a'])
+ expect(timelineDisplayTime(day.items[0],day)).toEqual({clock:'2026-10-01',date:''})
+})

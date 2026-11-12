@@ -61,3 +61,45 @@ it('does not invent a presentation skill when the actual builtin bundle was not 
   const service=await IntegrationService.open({root,encryption,getOwnerId:()=> 'owner'})
   try{expect(service.getPresentationSkill).toBeTypeOf('function');expect(service.getPresentationSkill('builtin:efund-ppt-maker')).toBeNull()}finally{await service.dispose()}
 })
+
+it('preinstalls the account-scoped professional dataset and executes its MCP tool as read-only', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ework-datapro-'))
+  roots.push(root)
+  let owner = 'local'
+  let authenticated = false
+  const { DATAPRO_TOOLS } = await import('../src/main/integrations/bundled-datapro')
+  const request = vi.fn(async (body: string) => {
+    const rpc = JSON.parse(body)
+    const reply = (result: unknown) => Response.json({ jsonrpc: '2.0', id: rpc.id, result })
+    switch (rpc.method) {
+      case 'initialize': return reply({ protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'DataPro', version: '1.0.0' } })
+      case 'notifications/initialized': return new Response(null, { status: 202 })
+      case 'tools/list': return reply({ tools: DATAPRO_TOOLS })
+      case 'tools/call': return reply({ content: [{ type: 'text', text: 'dataset result' }] })
+      default: throw Error('Unexpected MCP request')
+    }
+  })
+  const service = await IntegrationService.open({ root, encryption, getOwnerId: () => owner, bundledDatapro: { request, authenticated: () => authenticated } })
+  try {
+    expect(service.runtimeSnapshot().connections).toEqual([expect.objectContaining({ authState: 'unconfigured' })])
+    expect(await service.request({ type: 'snapshot' })).toMatchObject({ snapshot: { rows: [{ name: '火山方舟专业数据集', status: '请先登录 EWork', configurable: false }] } })
+    owner = 'account-1'
+    authenticated = true
+    service.rotateIdentity()
+    await service.request({ type: 'snapshot' })
+    const snapshot = service.runtimeSnapshot()
+    const [connection] = snapshot.connections
+    const [tool] = snapshot.tools
+    expect(connection).toBeDefined()
+    expect(tool).toMatchObject({ rawName: 'dataPro_search', effect: 'read' })
+    const result = await service.execute({
+      callId: 'datapro', toolId: tool!.id, connectionRevision: connection!.revision,
+      arguments: { query: '宁德时代 300750.SZ 公司基础信息' },
+      context: { ownerAccountId: owner, runtimeEpoch: snapshot.runtimeEpoch, workspaceId: 'research', sessionId: 'session', rootSessionId: 'session', unattended: false }
+    }, AbortSignal.timeout(5000))
+    expect(result.content[0]?.text).toContain('dataset result')
+    expect(request).toHaveBeenCalled()
+  } finally {
+    await service.dispose()
+  }
+})

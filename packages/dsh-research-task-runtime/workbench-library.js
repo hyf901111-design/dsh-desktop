@@ -1,27 +1,64 @@
 import {componentLibraryBuiltins} from './component-library-catalog.js'
 import {financialWidgetDefaults,financialWidgetSpec,financialCanLink,synchronizeFinancialLinks} from './financial-widget-contract.js'
+import {financialIndexCatalog} from './financial-index-catalog.js'
+import {retrospectiveNewsRecords} from './news-source-scope.js'
 
 // Same IDs as the visible component library; no second list of lookalike templates.
 export const WORKBENCH_LIBRARY_IDS=Object.freeze(componentLibraryBuiltins().map(item=>item.id))
-export const WORKBENCH_LIBRARY_GUIDANCE='【组件库基础能力】先按用户需求判断现有组件能覆盖哪些部分，再规划剩余取数与可视化；可以在同一个工作台混用原生组件和按数据生成的卡片。可直接调用组件库：builtin-watchlist 自选列表（搜索、增删、排序、选择证券并输出选股节点）；builtin-quote 行情面板（证券搜索、分时/K线、周期、复权、MA/VOL/MACD，接收自选节点并输出选股节点）；builtin-indices 市场指数总览；builtin-news 可搜索的实时新闻列表；builtin-announcements 证券公告列表（新闻和公告均接收自选或行情节点）；builtin-calendar 个人日历工具（已有日历与手动日程，不等于经济数据日历）。原生组件只用 panel.library:{id,options?}，同一面板不再传 artifact、publicData、requests 或 profile，也不生成重复HTML；金融组件 type:"financial-widget"，日历 type:"calendar-tool"。options 仅填配置，如 symbols:[{code,market:"SH|SZ|BJ|HK|US",name}]、query、period:"1m|1d|1w|1mo|1y"、adjustment:"none|forward|backward"、indicators:["MA","VOL","MACD"]、refreshMinutes、refreshEnabled；quote/announcements最多一个标的，自选和指数可多个，选中标的用selectedSymbol:"SH:688981"，不填行情数字或HTML；未指定标的可用空symbols保留搜索入口，指定标的须保留已确认代码与市场。单卡示例：{"title":"行情","prompt":"显示所选证券的行情","type":"financial-widget","library":{"id":"builtin-quote","options":{"symbols":[]}}}。需要联动时在根级 links:[{sourcePanel:0,targetPanel:1}] 按panels零基序号声明；允许自选→行情/新闻/公告、行情→新闻/公告，每个目标至多一个来源，宿主绑定真实节点ID。新闻独立使用时用query保留研究主题；与节点连接后跟随所选证券。按实体或主题分页用根级tabs，不用文字假装页签。原生组件无需预取价格、抄写记录或启动生成子任务，但配置完成不等于取数成功。库组件不覆盖的财务、估值、经营、风险、行业对比、指定来源/区间/筛选等需求，保留为独立数据卡；根据实际资料选择图形，现有模板只提供样式和交互参考，不补造字段、不删减需求、不因缺模板字段而失败。不能为复用库组件把多维投研缩成行情加新闻，也不把实时列表当作区间完整资讯。公开回报只说明交付内容与真实状态，不复述本规则。'
+export const WORKBENCH_LIBRARY_GUIDANCE=[
+ '【组件库基础能力】实时行情、K线及可搜索的实时新闻先评估组件库覆盖，再规划其余取数与呈现。原生组件直接用 panel.library:{id,options?}，无需预取数据，不混用 artifact、publicData、requests 或 profile。金融组件 type:"financial-widget"，个人日历 type:"calendar-tool"。',
+ 'builtin-quote 是交互行情面板，支持标的搜索、周期、MA/VOL/MACD 和来源配置；证券可选支持的复权。Kraken（kraken）和 Bitfinex（bitfinex）支持 BTC/USD、ETH/USD、SOL/USD 现货和 1m、1h、1d、1w，每对独立一张。示例 library:{id:"builtin-quote",options:{symbols:[{code:"BTC/USD",market:"CRYPTO",name:"比特币"}],dataSource:"kraken",period:"1m",adjustment:"none"}}。A股等证券保留已确认的代码和市场；A股可按来源能力使用 tushare 或 datapro。无标的可用 symbols:[] 保留搜索。',
+ 'builtin-news 是支持搜索与来源选择的实时新闻列表。独立列表使用 options.query 保留主题；加密货币、国际或其他专题搜索优先选择已配置的 dataSource:"doubao"，全市场财经新闻可用默认来源。按用户指定的可用来源填 doubao（豆包）、eastmoney（东方财富）或 sina（新浪财经）。区间内逐条整理公告或新闻使用 market.table；实时证券公告可用 builtin-announcements。',
+ 'builtin-watchlist 用于自选的搜索、增删、排序和选股，builtin-indices 用于市场指数总览，builtin-calendar 用于个人日历和手动日程。options 仅填配置，如 symbols:[{code,market,name}]、query、period、adjustment、indicators、visibleBars、refreshMinutes、refreshEnabled、dataSource。quote/announcements 最多一个标的，自选和指数可多个。选中标的用 selectedSymbol:"SH:688981"。',
+ '联动用根级 links:[{sourcePanel:0,targetPanel:1}]，panels 从零计数。允许自选→行情/新闻/公告、行情→新闻/公告，每个目标至多一个来源，联动新闻随上游标的变化。按实体或主题分页用根级 tabs。',
+ '工作台可同时包含库组件和独立数据卡。自定义量价图、组合对比、估值、经营、风险、指定历史区间及库组件无法覆盖的来源、周期或筛选沿用用户要求和实际数据。原生配置挂载后由客户端取数，报价来源、时点和刷新状态以实际返回为准。'
+].join('\n')
 
-export function resolveWorkbenchLibraryPanel(panel){
+function requestedNewsSource(request){
+ const names={doubao:/豆包|\bdoubao\b/iu,eastmoney:/东方财富|\beastmoney\b/iu,sina:/新浪|\bsina\b/iu}
+ const clauses=request.split(/[，,。；;\n]/u).filter(clause=>
+  /^\s*(?:全部|所有|各)?\s*(?:新闻|资讯|news).{0,12}(?:使用|采用|来自|(?:数据)?来源\s*(?:[:：]|为|是)|\b(?:using|from)\b)/iu.test(clause)&&
+  !/不要|禁止|排除|不用|不使用|可选|\b(?:not|without)\b/iu.test(clause))
+ const named=Object.keys(names).filter(source=>clauses.some(clause=>names[source].test(clause)))
+ return named.length===1?named[0]:undefined
+}
+
+export function resolveWorkbenchLibraryPanel(panel, originalRequest=''){
  if(panel?.library===undefined)return panel
  const {library,...rest}=panel
  if(!library||typeof library!=='object'||Array.isArray(library)||Object.keys(library).some(k=>!['id','options'].includes(k))||!WORKBENCH_LIBRARY_IDS.includes(library.id))throw Error('组件库ID无效，请使用已列出的内置组件。')
  if(panel.artifact!=null||panel.publicData!==undefined||panel.requests!==undefined||panel.profile!==undefined)throw Error('组件库配置与数据快照/取数配置不能同时覆盖同一张卡；请拆分互补展示。')
  const options=library.options??{}
  if(!options||typeof options!=='object'||Array.isArray(options)||JSON.stringify(options).length>16000)throw Error('组件库配置无效或过长。')
- const widget=componentLibraryBuiltins().find(item=>item.id===library.id).widget
+ const requested=componentLibraryBuiltins().find(item=>item.id===library.id).widget
+ const content=(panel.title??'')+' '+(panel.prompt??'')
+ const indexCatalog=requested==='quote'&&Array.isArray(options.symbols)&&options.symbols.length>1?financialIndexCatalog():[]
+ const missingFinancialFields=requested==='quote'&&/市盈率|市净率|\bPE\b|\bPB\b|研发费用率|毛利率|净利率|营业收入|财务报表/iu.test(content)
+ const aggregateQuote=indexCatalog.length&&!missingFinancialFields&&/指数/u.test(content)&&
+  options.symbols.every(symbol=>indexCatalog.some(({symbol:index})=>index.code===symbol?.code&&index.market===symbol.market))&&
+  !/K\s*线|蜡烛图|分时|日线|周线|月线|成交量|复权|均线|\b(?:MA|MACD|VOL)\b/iu.test(content)&&
+  (options.adjustment===undefined||options.adjustment==='none')&&!options.indicators?.length&&options.visibleBars===undefined&&options.selectedSymbol===undefined
+ const widget=aggregateQuote?'indices':requested
  if(widget==='calendar'){
   if(Object.keys(options).length)throw Error('日历工具复用已有日历，不接受生成的事件或提醒；经济事件请使用数据日历卡。')
   return {...rest,type:'calendar-tool',artifact:{version:1,type:'calendar-tool',title:panel.title}}
  }
  const safeKeys=['title','symbols','query','period','adjustment','indicators','market','selectedSymbol','visibleBars','dataSource','refreshMinutes','refreshEnabled']
  const defaults=financialWidgetDefaults(widget)
- const spec=(options.title===undefined||typeof options.title==='string'&&options.title.length<=256)&&Object.keys(options).every(key=>safeKeys.includes(key))&&financialWidgetSpec({...defaults,symbols:[],...options,title:panel.title})
- const content=(panel.title??'')+' '+(panel.prompt??'')
- const missingFinancialFields=widget==='quote'&&/市盈率|市净率|\bPE\b|\bPB\b|研发费用率|毛利率|净利率|营业收入|财务报表/iu.test(content)
+ const knownIndices=widget==='indices'&&(options.symbols===undefined||Array.isArray(options.symbols)&&!options.symbols.length)
+  ? defaults.symbols.filter(symbol=>content.includes(symbol.name)) : []
+ const preferTopicSearch=widget==='news'&&options.dataSource===undefined&&typeof options.query==='string'&&options.query.trim()&&
+  /加密货币|数字资产|\bcrypto\b/iu.test(originalRequest)&&/实时|持续更新|\b(?:live|real.time)\b/iu.test(originalRequest)&&
+  !/新浪|东方财富|通联|腾讯|豆包|彭博|路透|\b(?:sina|eastmoney|datayes|doubao|reuters|bloomberg|gdelt)\b|(?:仅|只).{0,8}(?:来源|使用|使用网页)|(?:数据源|来源).{0,8}(?:指定|限定)|禁止联网|不要联网|不联网/iu.test(originalRequest)
+ const cryptoQuote=widget==='quote'&&options.symbols?.[0]?.market==='CRYPTO'
+ const source=(widget==='news'?requestedNewsSource(originalRequest):undefined)??
+  (preferTopicSearch?'doubao':cryptoQuote&&options.dataSource===undefined?'kraken':undefined)
+ const spec=(options.title===undefined||typeof options.title==='string'&&options.title.length<=256)&&Object.keys(options).every(key=>safeKeys.includes(key))&&financialWidgetSpec({...defaults,symbols:[],...options,...(knownIndices.length?{symbols:knownIndices}:{}),...(source?{dataSource:source}:{}),title:panel.title})
+ if(['news','announcements'].includes(widget)&&retrospectiveNewsRecords(panel,originalRequest)){
+  const scope={query:options.query,symbols:options.symbols}
+  const searchScope=scope.query||scope.symbols?.length?`\n沿用原检索主题与标的：${JSON.stringify(scope)}。`:''
+  return {...rest,type:'market',prompt:`market.table；variant: table；${panel.prompt}${searchScope}`}
+ }
  if(spec&&!missingFinancialFields)return {...rest,type:'financial-widget',artifact:spec}
  // Keep all authored requirements when the library cannot represent them.
  // A wrong market/unsupported indicator is not permission to substitute a ticker.
@@ -29,17 +66,20 @@ export function resolveWorkbenchLibraryPanel(panel){
  return {...rest,type:['news','announcements'].includes(widget)?'news':candle?'chart':'table',prompt:(candle?'chart.candlestick；':'')+panel.prompt+'\n原生组件未覆盖以下展示配置，请依据原需求和真实数据选择呈现方式，保留字段、来源、标的与交互，不套原生字段或替换证券：'+JSON.stringify(options)}
 }
 
-export function validateWorkbenchLinks(value,panels){
+export function validateWorkbenchLinks(value,panels,{ignoreUnsupported=false}={}){
  if(value===undefined)return undefined
  if(!Array.isArray(value)||value.length>panels.length)throw Error('节点联动配置无效。')
  const targets=new Set()
- return value.map(link=>{
+ const links=value.flatMap(link=>{
   if(!link||typeof link!=='object'||Object.keys(link).some(key=>!['sourcePanel','targetPanel'].includes(key)))throw Error('节点联动使用sourcePanel和targetPanel面板序号。')
   const {sourcePanel:s,targetPanel:t}=link
-  if(!Number.isInteger(s)||!Number.isInteger(t)||s<0||t<0||s===t||s>=panels.length||t>=panels.length||targets.has(t)||!financialCanLink(panels[s].artifact,panels[t].artifact))throw Error('节点联动需连接兼容的原生组件：自选→行情/新闻/公告，行情→新闻/公告；每个目标一个来源。不支持联动的数据卡应保留独立展示。')
+  const valid=Number.isInteger(s)&&Number.isInteger(t)&&s>=0&&t>=0&&s!==t&&s<panels.length&&t<panels.length;
+  if(valid&&ignoreUnsupported&&panels[s].type!=='financial-widget'&&panels[t].type!=='financial-widget')return [];
+  if(!valid||targets.has(t)||!financialCanLink(panels[s].artifact,panels[t].artifact))throw Error('节点联动需连接兼容的原生组件：自选→行情/新闻/公告，行情→新闻/公告；每个目标一个来源。不支持联动的数据卡应保留独立展示。')
   if(panels[t].artifact.linkedWatchlistId||panels[t].artifact.linkedSourceId)throw Error('节点联动请使用面板序号，不同时提供外部节点ID。')
-  targets.add(t);return {sourcePanel:s,targetPanel:t}
+  targets.add(t);return [{sourcePanel:s,targetPanel:t}]
  })
+ return links.length||!ignoreUnsupported?links:undefined
 }
 
 // Resolve only after all real IDs exist. Works even when dependents precede sources.

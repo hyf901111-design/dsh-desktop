@@ -4,6 +4,13 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {createCanvasActionController} from '../packages/dsh-research-task-runtime/canvas-actions.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 const data={version:1,type:'market',variant:'metrics',title:'指标',asOf:'2026-09-25',items:[{label:'指数',value:'100'}]}
+it('resolves a missing envelope identity from unanimous real rows, not their values or mixed instruments',()=>{
+ const records=[{ts_code:'000032.OF',unit_nav:1.2},{ts_code:'000032.OF',unit_nav:1.3}]
+ expect(evaluateMapping({$from:'q',$path:'ts_code'},{q:{records}})).toBe('000032.OF')
+ expect(evaluateMapping({$from:'q',$path:'ts_code'},{q:{records,ts_code:'explicit'}})).toBe('explicit')
+ expect(()=>evaluateMapping({$from:'q',$path:'ts_code'},{q:{records:[...records,{ts_code:'000033.OF'}]}})).toThrow('接口缺少字段')
+ expect(()=>evaluateMapping({$from:'q',$path:'unit_nav'},{q:{records}})).toThrow('接口缺少字段')
+})
 function setup(){
  let now=100000,stored=[],spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),revision='r1'
  const execute=vi.fn(async()=>({items:[{name:'指数',price:101}],date:'2026-09-26'})),apply=vi.fn(async(s)=>{spec=s;revision+='x'})

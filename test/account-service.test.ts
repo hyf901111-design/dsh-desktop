@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 vi.mock('electron', () => ({
@@ -24,6 +25,11 @@ async function setup() {
   const service = new AccountService(dir)
   services.push(service)
   return { service, dir, endpoint: await service.start() }
+}
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(complete => { resolve = complete })
+  return { promise, resolve }
 }
 it('uses the encrypted EWork session for built-in MCP without exposing or accepting a DataYes key',async()=>{
  const {service}=await setup()
@@ -142,6 +148,132 @@ it('invalidates expired or disabled-account sessions but preserves sessions on n
   expect(remote).toHaveBeenCalledTimes(3)
 })
 
+it('restores the cached public account after an offline restart until revocation is confirmed', async () => {
+  const { service, dir } = await setup()
+  const user = { id: 'owner-a', username: 'tester', createdAt: 1 }
+  const remote = vi.fn()
+    .mockResolvedValueOnce(Response.json({ user, token: 'a'.repeat(64) }))
+    .mockRejectedValueOnce(Error('offline'))
+    .mockResolvedValueOnce(Response.json({ error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } }, { status: 503 }))
+    .mockResolvedValueOnce(Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 }))
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+  service.stop()
+
+  const restarted = new AccountService(dir)
+  services.push(restarted)
+  await restarted.start()
+  expect(await restarted.invoke('me', {})).toEqual({ user, error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } })
+  expect(await restarted.invoke('me', {})).toEqual({ user, error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } })
+  expect(await restarted.invoke('me', {})).toEqual({ error: { code: 'LOGIN_REQUIRED' } })
+  expect(await restarted.invoke('me', {})).toEqual({ user: null })
+  await expect(readFile(join(dir, 'account-session'))).rejects.toMatchObject({ code: 'ENOENT' })
+  await expect(readFile(join(dir, 'account-identity'))).rejects.toMatchObject({ code: 'ENOENT' })
+})
+
+it('upgrades an ID-only cache on the next online account check and ignores a different token fingerprint', async () => {
+  const { service, dir } = await setup()
+  const user = { id: 'owner-a', username: 'tester', createdAt: 1 }
+  const token = 'a'.repeat(64)
+  const fingerprint = createHash('sha256').update(token).digest('hex')
+  const file = join(dir, 'account-identity')
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(Response.json({ user, token }))
+    .mockResolvedValueOnce(Response.json({ user }))
+    .mockRejectedValue(Error('offline')))
+  await service.invoke('login', {})
+  service.stop()
+  await writeFile(file, JSON.stringify({ id: user.id, fingerprint }))
+
+  const restarted = new AccountService(dir)
+  services.push(restarted)
+  await restarted.start()
+  expect(restarted.accountId).toBe(user.id)
+  expect(await restarted.invoke('me', {})).toEqual({ user })
+  expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ ...user, fingerprint })
+  restarted.stop()
+  await writeFile(file, JSON.stringify({ ...user, fingerprint: 'b'.repeat(64) }))
+
+  const changedToken = new AccountService(dir)
+  services.push(changedToken)
+  await changedToken.start()
+  expect(changedToken.accountId).toBeUndefined()
+  expect(await changedToken.invoke('me', {})).toEqual({ error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } })
+})
+
+it.each([200, 503, 401])('revalidates a collaboration rejection with the account endpoint (status %i)', async status => {
+  const { service, dir } = await setup()
+  const token = 'a'.repeat(64)
+  const user = { id: 'owner-a', username: 'tester', createdAt: 1 }
+  const rejected = () => Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 })
+  const remote = vi.fn()
+    .mockResolvedValueOnce(Response.json({ user, token }))
+    .mockResolvedValueOnce(rejected())
+    .mockResolvedValueOnce(status === 200 ? Response.json({ user }) : status === 401
+      ? rejected()
+      : Response.json({ error: { code: 'ACCOUNT_SERVICE_UNAVAILABLE' } }, { status }))
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+
+  await expect(service.collaborationRequest({ kind: 'me' })).rejects.toMatchObject(status === 401
+    ? { code: 'SESSION_CHANGED' }
+    : { code: 'COLLABORATION_UNAVAILABLE', retryable: true, status: 503 })
+  expect(remote.mock.calls[2]?.[0]).toMatch(/\/v1\/account\/me$/)
+  expect(remote.mock.calls[2]?.[1].headers.authorization).toBe(`Bearer ${token}`)
+  expect(service.authenticated).toBe(status !== 401)
+  const stored = readFile(join(dir, 'account-session'))
+  if (status === 401) await expect(stored).rejects.toMatchObject({ code: 'ENOENT' })
+  else await expect(stored).resolves.toEqual(Buffer.from(`encrypted:${token}`))
+})
+
+it('shares one account revalidation across concurrent collaboration rejections', async () => {
+  const { service } = await setup()
+  const user = { id: 'owner-a', username: 'tester', createdAt: 1 }
+  const accountResponse = deferred<Response>()
+  const remote = vi.fn(async (url: string) => {
+    if (url.endsWith('/login')) return Response.json({ user, token: 'a'.repeat(64) })
+    if (url.endsWith('/account/me')) return accountResponse.promise
+    return Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 })
+  })
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+  const first = expect(service.collaborationRequest({ kind: 'me' })).rejects.toMatchObject({ code: 'COLLABORATION_UNAVAILABLE' })
+  const second = expect(service.collaborationRequest({ kind: 'boards.list' })).rejects.toMatchObject({ code: 'COLLABORATION_UNAVAILABLE' })
+  await new Promise<void>(resolve => setImmediate(resolve))
+  accountResponse.resolve(Response.json({ user }))
+  await Promise.all([first, second])
+  expect(remote.mock.calls.filter(([url]) => url.endsWith('/account/me'))).toHaveLength(1)
+})
+
+it('keeps an old collaboration rejection from clearing a session while a new login is pending', async () => {
+  const { service, dir } = await setup()
+  const oldToken = 'a'.repeat(64), newToken = 'b'.repeat(64)
+  const { promise: newLoginResponse, resolve: resolveNewLogin } = deferred<Response>()
+  const { promise: loginStarted, resolve: markLoginStarted } = deferred<void>()
+  const { promise: oldResponse, resolve: resolveOldResponse } = deferred<Response>()
+  const remote = vi.fn()
+    .mockResolvedValueOnce(Response.json({ user: { id: 'owner-a' }, token: oldToken }))
+    .mockReturnValueOnce(oldResponse)
+    .mockImplementationOnce(() => { markLoginStarted(); return newLoginResponse })
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+  const generation = service.generation
+  const collaboration = expect(service.collaborationRequest({ kind: 'me' })).rejects.toMatchObject({ code: 'SESSION_CHANGED' })
+  const newLogin = service.invoke('login', {})
+  await loginStarted
+  resolveOldResponse(Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 }))
+  await new Promise<void>(resolve => setImmediate(resolve))
+  const generationWhilePending = service.generation
+  resolveNewLogin(Response.json({ user: { id: 'owner-b' }, token: newToken }))
+  await newLogin
+  await collaboration
+
+  expect(generationWhilePending).toBe(generation)
+  expect(remote).toHaveBeenCalledTimes(3)
+  expect(service.accountId).toBe('owner-b')
+  expect(await readFile(join(dir, 'account-session'))).toEqual(Buffer.from(`encrypted:${newToken}`))
+})
+
 it('allows logout to finish after the server session has already expired', async () => {
   const { service } = await setup()
   vi.stubGlobal(
@@ -246,4 +378,29 @@ it('routes isolated native login and collaboration to the same loopback service'
   expect(remote.mock.calls[0]?.[0]).toBe('http://127.0.0.1:8773/v1/account/login')
   await service.collaborationRequest({ kind: 'me' })
   expect(remote.mock.calls[1]?.[0]).toBe('http://127.0.0.1:8773/v1/collaboration/me')
+})
+
+it('uses only the EWork session token for the professional dataset and Doubao search', async () => {
+  const { service } = await setup()
+  const signal = AbortSignal.timeout(5000)
+  await expect(service.doubaoSearch('public query', 2, signal)).rejects.toMatchObject({ code: 'AUTH_REQUIRED' })
+  const token = 'd'.repeat(64)
+  const remote = vi.fn().mockResolvedValueOnce(Response.json({ user: { id: 'owner-a' }, token }))
+    .mockResolvedValueOnce(Response.json({ provider: 'doubao', sources: [{ url: 'https://example.org/' }], truncated: false }))
+    .mockResolvedValueOnce(Response.json({ jsonrpc: '2.0', id: 1, result: { tools: [] } }))
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+  await expect(service.doubaoSearch('public query', 2, signal)).resolves.toMatchObject({ provider: 'doubao' })
+  const mcpBody = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
+  expect((await service.dataproMcpRequest(mcpBody, signal)).ok).toBe(true)
+  for (const [index, path, body] of [
+    [1, '/v1/doubao/search', JSON.stringify({ query: 'public query', maxResults: 2 })],
+    [2, '/v1/datapro/mcp', mcpBody]
+  ] as const) {
+    expect(remote.mock.calls[index]?.[0]).toBe('https://updates.evanarts.com' + path)
+    expect(remote.mock.calls[index]?.[1]).toMatchObject({
+      method: 'POST', redirect: 'error', body,
+      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: 'Bearer ' + token }
+    })
+  }
 })

@@ -1,3 +1,4 @@
+import {stripResearchBoardHeaderClient} from './research-board-header-client.mjs'
 import {serializeWorkbenchRestore,parseWorkbenchRestore} from './workbench-restore-codec.mjs'
 import {createResearchPreviewModeState,useResearchPreviewSession,installResearchPreviewMode} from './research-preview-mode.mjs'
 import {financialRecordsActionPayload,financialRecordsCsv} from '../../packages/dsh-research-task-runtime/financial-records.js'
@@ -40,7 +41,7 @@ export const nativeMindMapDepthCss=workbenchStructureDepthCss(
 )
 const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
 export function restoreResearchGridWorkbench(source){
-  source=stripComponentPptxMode(source)
+  source=stripComponentPptxMode(stripResearchBoardHeaderClient(source))
   const start=source.indexOf(begin);if(start<0)return source
   // The writer escapes comment terminators inside JSON; stop at this record's
   // own delimiter so later independent restore records remain intact.
@@ -136,7 +137,7 @@ export function patchResearchGridWorkbench(source){
   change('subscribeCanvasAction:listener=>{',methods+'subscribeCanvasAction:listener=>{')
   change('const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',`for(const node of workbenchGrid.planningNodes())if((plan.createdAt??0)>=node.startedAt-1000)workbenchGrid.releasePlanning(node.id);
                     const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);`)
-  change("if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');","if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');\n                    if(collaborationCanWrite()){const requestedStyle=['enterprise','light','dark','openterminal'].includes(plan.requestedStyle)?plan.requestedStyle:workbenchRequestedStyle(plan.originalRequest);if(!existing.size&&!workbenchStyleState.get()&&requestedStyle)workbenchStyleState.set(requestedStyle,{scope:'board'});workbenchAutoArrange.register(plan,existing);}")
+  change("if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');","if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');\n                    if(collaborationCanWrite()){const requestedStyle=['enterprise','light','dark','openterminal'].includes(plan.requestedStyle)?plan.requestedStyle:workbenchRequestedStyle(plan.originalRequest);if(!existing.size&&!workbenchStyleState.hasPreference()&&requestedStyle)workbenchStyleState.set(requestedStyle,{scope:'board'});workbenchAutoArrange.register(plan,existing);}")
   change('return structuredClone({ files: s.files, artifacts: s.artifacts });','return structuredClone(w.getWorkbenchDocument?.()??{ files: s.files, artifacts: s.artifacts });')
   change('files: value.files,','files: value.files,\nworkbenchCells:workbenchGrid.get(),')
   change('const restoreHistory = (entry) => {','const restoreHistory = (entry) => {\nif(entry.workbenchCells)workbenchGrid.set(entry.workbenchCells);')

@@ -102,7 +102,7 @@ export function sharedComponentRuntime(semantic) {
       // The journal runtime repaints the authoritative shared snapshot afterwards.
       if(semantic?.replaying||document.documentElement.hasAttribute('data-sherlock-interaction-replaying'))return false
       if (!connected || readOnly || stopped) return false
-      if (!valid(action, 4096)) return false
+      if (!valid(action, local && config.localOnly===true ? 65536 : 4096)) return false
       const payload=clone(action)
       let admitted=result=>result
       if(semantic?.current){
@@ -148,6 +148,12 @@ export function sharedComponentRuntime(semantic) {
     if (data?.type === 'sherlock-component-context') {
       identity = data.userId || 'local'
       readOnly = data.readOnly !== false
+      if (data.shared && config.localOnly===true) {
+        local=false;connected=true;host=false;readOnly=true
+        state=clone(config.initialState);revision=0
+        paint()
+        return
+      }
       if (!data.shared) {
         localAck=data.localAck===true
         if(semantic)semantic.notes=localAck
@@ -170,7 +176,7 @@ export function sharedComponentRuntime(semantic) {
       if (!data.online) { fail('连接中断，组件同步已暂停'); return }
       return
     }
-    if (data?.type !== 'sherlock-component-receive') return
+    if (data?.type !== 'sherlock-component-receive' || config.localOnly===true&&!local) return
     const m = data.message
     if (m?.peerId !== peerId) return
     if(localAck&&local&&m.kind==='local-commit'){
@@ -203,6 +209,7 @@ export function sharedComponentRuntime(semantic) {
   const heartbeat = setInterval(() => {
     if (!config || stopped) return
     if(local){if(localAck&&localProposal&&Date.now()-localProposal.startedAt>15000)rejectLocal();return}
+    if(config.localOnly===true&&connected)return
     if (connected && Date.now()-lastResponse>15000) fail('连接中断，组件同步已暂停')
     // Resend the SAME revision after a lost acknowledgment, never advance it.
     if (waiting && proposal) post({ op: 'commit', token, ...proposal })

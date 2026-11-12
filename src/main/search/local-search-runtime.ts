@@ -5,13 +5,15 @@ import {
 } from './browser-search-controller'
 import {
   LocalSearchBridge,
-  type LocalSearchEndpoint
+  type LocalSearchEndpoint,
+  type LocalSearchBridgeOptions
 } from './local-search-bridge'
 
 export interface LocalSearchRuntimeOptions {
   readPage?(url: string, signal: AbortSignal): Promise<unknown>
   computerUse?(input: unknown, signal: AbortSignal): Promise<unknown>
   browserUse?(input: unknown, signal: AbortSignal): Promise<unknown>
+  search?: LocalSearchBridgeOptions['search']
   createWindow(options: BrowserWindowConstructorOptions): BrowserSearchWindow
 }
 
@@ -23,9 +25,9 @@ export interface LocalSearchRuntime {
 export async function startLocalSearchRuntime(
   options: LocalSearchRuntimeOptions
 ): Promise<LocalSearchRuntime> {
-  const browser = new BrowserSearchController({ createWindow: options.createWindow })
+  const browser = options.search ? undefined : new BrowserSearchController({ createWindow: options.createWindow })
   const bridge = new LocalSearchBridge({
-    search: (query, maxResults, signal) => browser.search(query, maxResults, signal),
+    search: options.search ?? ((query, maxResults, signal) => browser!.search(query, maxResults, signal)),
     readPage: options.readPage,
     computerUse: options.computerUse,
     browserUse: options.browserUse
@@ -39,12 +41,12 @@ export async function startLocalSearchRuntime(
         if (stopped) return
         stopped = true
         await bridge.stop()
-        await browser.dispose()
+        await browser?.dispose()
       }
     }
   } catch (error) {
     await bridge.stop()
-    await browser.dispose()
+    await browser?.dispose()
     throw error
   }
 }

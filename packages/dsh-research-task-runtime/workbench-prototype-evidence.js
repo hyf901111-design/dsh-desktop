@@ -84,8 +84,8 @@ function authoredReferences(text){
  // Chat attachment chips serialize at their editor position, including after
  // the request. Recognize their exact token outside quoted source material.
  authored=authored.replace(/“[^”\n]*”|「[^」\n]*」|『[^』\n]*』|"[^"\n]*"/gu,quote=>quote.includes('📎 文件：`')?blank(quote):quote)
- authored=authored.replace(/(^|\s)📎 文件：`((?:\\`|[^`\r\n])+)`(?=$|[\s，。；！？,.!?])/gu,(all,space,path,index)=>{
-  add(path.replace(/\\`/gu,'`'),index+space.length,index+all.length,true)
+ authored=authored.replace(/📎 文件：`((?:\\`|[^`\r\n])+)`(?=$|[\s，。；！？,.!?])/gu,(all,path,index)=>{
+  add(path.replace(/\\`/gu,'`'),index,index+all.length,true)
   return blank(all)
  })
  // A Markdown link is a reference only when the author explicitly asks to use

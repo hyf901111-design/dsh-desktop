@@ -28,6 +28,7 @@ function rendererFixture(){
   const calls=[],actions=[];let states=0
   const compact=input=>{const {html,css,...metadata}=input;let hash=0;for(let index=0;index<(html?.length||0);index++)hash=(Math.imul(hash,31)+html.charCodeAt(index))|0;return{...metadata,htmlBytes:html?.length,htmlHash:hash,cssBytes:css?.length}}
   const bridge={
+   workspacePointerInBar:bounds=>ipcRenderer.invoke('browser-app:request','workspace-pointer-in-bar',{bounds}),
    request:async(method,input={})=>{calls.push({method,input:method==='menu'?compact(input):input,at:performance.now()});return ipcRenderer.invoke('browser-app:request',method,input)},
    subscribe:listener=>{const receive=(_,state)=>{states++;listener(state)};ipcRenderer.on('browser-app:state',receive);return()=>ipcRenderer.removeListener('browser-app:state',receive)},
    subscribeAction:listener=>{const receive=(_,action)=>{actions.push(action);listener(action)};ipcRenderer.on('browser-app:menu-event',receive);return()=>ipcRenderer.removeListener('browser-app:menu-event',receive)},
@@ -42,10 +43,29 @@ function rendererFixture(){
   const global=document.createElement('button');global.id='global-more-fixture';global.textContent='Global More';global.style.cssText='position:fixed;left:12px;top:200px;width:36px;height:36px';document.body.append(global)
   let globalAction=0
   global.addEventListener('click',()=>scheduled.showMenu(global,[{label:'Plugins',run:()=>globalAction++},{label:'Scheduled tasks',run:()=>globalAction++}]))
+  let copiedPath=''
+  function mountWorkspaceHoverCard(){
+   const anchor=document.createElement('div')
+   anchor.style.cssText='position:fixed;left:8px;top:240px;width:48px'
+   const fixtureCss=document.createElement('style')
+   fixtureCss.textContent='body>div[role=button][aria-label^="复制: "]{position:fixed;z-index:5000;width:220px;padding:12px;background:#292929;color:white;border-radius:8px}'
+   document.head.append(fixtureCss)
+   document.body.append(anchor)
+   Object.defineProperty(navigator.clipboard,'writeText',{value:async text=>{
+    if(!document.hasFocus())throw new Error('The source must own focus to copy the path')
+    copiedPath=text
+   }})
+   createRoot(anchor).render(jsx(HoverCard,{
+    anchor:jsx('button',{id:'workspace-hover-anchor',children:'项目'}),
+    content:jsx('div',{children:'项目路径'}),
+    copyText:'/tmp/example-workspace'
+   }))
+  }
   const click=selector=>{const element=document.querySelector(selector);if(!element)throw Error('Missing fixture control: '+selector);element.click()}
   contextBridge.exposeInMainWorld('qa',{
    open:()=>view.open('live-menu-synthetic-session'),close:()=>view.close(),
    click,global:()=>global.click(),dismiss:()=>{scheduled.closeMenu();view.dismiss()},
+   mountWorkspaceHoverCard,copiedWorkspacePath:()=>copiedPath,
    tooltip:bounds=>{document.querySelector('#live-menu-tooltip')?.remove();const tip=document.createElement('div');tip.id='live-menu-tooltip';tip.role='tooltip';tip.textContent='实时网页上的提示';tip.style.cssText='position:fixed;z-index:10000;padding:12px;background:#292929;color:white;border-radius:8px;left:'+bounds.x+'px;top:'+bounds.y+'px';document.body.append(tip)},removeTooltip:()=>document.querySelector('#live-menu-tooltip')?.remove(),
    diagnostics:()=>({rootHidden:view.root.hidden,panel:view.panel,presented:view.panelPresented,documentFocused:document.hasFocus(),activeField:document.activeElement?.getAttribute('data-field'),states,sourceMenus:[...document.querySelectorAll('.eb-popover,.st-menu')].map(el=>({role:el.getAttribute('role'),hidden:el.getAttribute('aria-hidden'),inert:el.inert,visibility:getComputedStyle(el).visibility})),viewport:document.querySelector('[data-browser-viewport]')?.getBoundingClientRect().toJSON(),globalAction,calls,actions,images:document.querySelectorAll('.eb-page-image').length}),
    dispose:()=>{projection.dispose();view.dispose();host.dispose()},
@@ -55,9 +75,10 @@ function rendererFixture(){
 
 async function nativeFixture(config){
  const {app,BrowserWindow,ipcMain,webContents,screen}=require('electron')
- const {writeFile,readFile}=require('node:fs/promises'),{createServer}=require('node:http'),assert=require('node:assert/strict')
+ const {writeFile,readFile,mkdir}=require('node:fs/promises'),{createServer}=require('node:http'),assert=require('node:assert/strict')
  app.setPath('userData',config.profile);app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required')
  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),trace=[],checks=[],timings=[],consoleEvents=[],fontRequests=[],passiveInput=new Map()
+ const toolbarDownloadName='toolbar-download-acceptance-with-a-long-file-name-to-check-truncation.bin'
  let win,api,page,pageView,menu,menuView,wireState,painted,server,display,scale,phase='boot',captureCalls=0,menuRequests=0,holdMenuStates=false
  const heldMenuStates=[]
  const record=(kind,value={})=>{trace.push({at:performance.now(),phase,kind,...value});if(trace.length>100)trace.shift()}
@@ -74,7 +95,7 @@ async function nativeFixture(config){
  const live=()=>page.executeJavaScript('({...window.live,cursor:document.querySelector("video").currentTime})')
  const advancing=async()=>{const before=await live();await until(async()=>{const after=await live();return after.timer>before.timer+2&&after.raf>before.raf+2&&after.video>before.video+1},'timer, animation and video continue under native menu');const after=await live();return{before,after}}
  const ax=async wc=>{if(!wc.debugger.isAttached())wc.debugger.attach('1.3');return(await wc.debugger.sendCommand('Accessibility.getFullAXTree')).nodes}
- const check=async(name,run)=>{if(config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
+ const check=async(name,run)=>{if(config.workspaceTabsOnly&&!/expanded browser tabs survive/.test(name)||config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
  const dismiss=async()=>{await ui('qa.dismiss()');await until(()=>!locateMenu(),'native menu dismissed')}
  const diagnostics=async()=>({phase,error:null,window:win&&!win.isDestroyed()?{visible:win.isVisible(),focused:win.isFocused(),focusedWindow:BrowserWindow.getFocusedWindow()?.id,focusedContents:webContents.getFocusedWebContents()?.id,bounds:win.getContentBounds(),zoom:win.webContents.getZoomFactor()}:undefined,views:win&&!win.isDestroyed()?win.contentView.children.filter(view=>view.webContents&&!view.webContents.isDestroyed()).map(view=>({title:view.webContents.getTitle(),url:view.webContents.getURL().slice(0,160),visible:view.getVisible(),bounds:view.getBounds(),zoom:view.webContents.getZoomFactor()})):[],renderer:await Promise.race([ui('qa.diagnostics()'),pause(500).then(()=>({timeout:true}))]).catch(error=>({error:String(error)})),checks,timings,captureCalls,fontRequests,consoleEvents,trace})
  try{
@@ -85,7 +106,25 @@ async function nativeFixture(config){
   const ignoreMouseEvents=BrowserWindow.prototype.setIgnoreMouseEvents;BrowserWindow.prototype.setIgnoreMouseEvents=function(ignore,options){passiveInput.set(this.id,{ignore,options});return ignoreMouseEvents.call(this,ignore,options)}
   app.on('web-contents-created',(_,contents)=>{const focus=contents.focus.bind(contents);contents.focus=(...args)=>{record('wc-focus-call',{id:contents.id,title:contents.getTitle(),stack:new Error().stack?.split('\n').slice(1,5).join('\n')});return focus(...args)};contents.on('focus',()=>record('wc-focus',{id:contents.id,title:contents.getTitle()}));contents.on('blur',()=>record('wc-blur',{id:contents.id,title:contents.getTitle()}));contents.on('console-message',(details,...legacy)=>{consoleEvents.push({id:contents.id,title:contents.getTitle(),level:details.level??legacy[0],message:details.message??legacy[1]});if(consoleEvents.length>100)consoleEvents.shift()});const send=contents.send.bind(contents);contents.send=(channel,...args)=>{if(channel==='browser-app:menu-state'){wireState=structuredClone(args[0]);record('native-state',{id:wireState.id,revision:wireState.revision});if(holdMenuStates){heldMenuStates.push(()=>send(channel,...args));return}}return send(channel,...args)}})
   ipcMain.on('browser-app:menu-action',(_,action)=>{if(action?.kind==='painted')painted=action;record('native-action',{actionKind:action?.kind,id:action?.id,revision:action?.revision,controlId:action?.controlId})})
-  app.on('session-created',session=>session.protocol.handle('https',()=>new Response(`<!doctype html><title>Live menu fixture</title><style>html,body{margin:0;background:#141414;color:#f5f5f5;font:24px system-ui}button{position:fixed;left:30px;bottom:30px;padding:20px}video{width:320px;height:180px}canvas{display:none}</style><h1>Live synthetic webpage</h1><video muted autoplay playsinline></video><canvas width=320 height=180></canvas><button id=outside>First outside click</button><script>window.live={timer:0,raf:0,video:0,click:0};setInterval(()=>live.timer++,20);const canvas=document.querySelector('canvas'),context=canvas.getContext('2d');function frame(){live.raf++;context.fillStyle='hsl('+live.raf%360+' 70% 45%)';context.fillRect(0,0,320,180);requestAnimationFrame(frame)}requestAnimationFrame(frame);const video=document.querySelector('video');video.srcObject=canvas.captureStream(30);video.play();function videoFrame(){live.video++;video.requestVideoFrameCallback(videoFrame)}video.requestVideoFrameCallback(videoFrame);document.querySelector('#outside').onclick=()=>live.click++;</script>`,{headers:{'content-type':'text/html'}})))
+  app.on('session-created',session=>session.protocol.handle('https',request=>{
+   if(new URL(request.url).pathname==='/toolbar-download'){
+    let sent=0,timer
+    const total=4_000_000
+    const body=new ReadableStream({
+     start(controller){
+      timer=setInterval(()=>{
+       const length=Math.min(65536,total-sent)
+       if(length<=0){clearInterval(timer);controller.close();return}
+       controller.enqueue(new Uint8Array(length))
+       sent+=length
+      },60)
+     },
+     cancel(){clearInterval(timer)}
+    })
+    return new Response(body,{headers:{'content-type':'application/octet-stream','content-length':String(total),'content-disposition':'attachment; filename="'+toolbarDownloadName+'"'}})
+   }
+   return new Response(`<!doctype html><title>Live menu fixture</title><style>html,body{margin:0;background:#141414;color:#f5f5f5;font:24px system-ui}button{position:fixed;left:30px;bottom:30px;padding:20px}video{width:320px;height:180px}canvas{display:none}</style><h1>Live synthetic webpage</h1><video muted autoplay playsinline></video><canvas width=320 height=180></canvas><button id=outside>First outside click</button><script>window.live={timer:0,raf:0,video:0,click:0};setInterval(()=>live.timer++,20);const canvas=document.querySelector('canvas'),context=canvas.getContext('2d');function frame(){live.raf++;context.fillStyle='hsl('+live.raf%360+' 70% 45%)';context.fillRect(0,0,320,180);requestAnimationFrame(frame)}requestAnimationFrame(frame);const video=document.querySelector('video');video.srcObject=canvas.captureStream(30);video.play();function videoFrame(){live.video++;video.requestVideoFrameCallback(videoFrame)}video.requestVideoFrameCallback(videoFrame);document.querySelector('#outside').onclick=()=>live.click++;</script>`,{headers:{'content-type':'text/html'}})
+  }))
   display=screen.getAllDisplays().sort((a,b)=>b.size.width*b.size.height*b.scaleFactor*b.scaleFactor-a.size.width*a.size.height*a.scaleFactor*a.scaleFactor)[0];scale=display.scaleFactor
   record('display',{id:display.id,scale,workArea:display.workArea,pixels:{width:display.size.width*scale,height:display.size.height*scale}})
   win=new BrowserWindow({x:display.workArea.x+16,y:display.workArea.y+16,width:Math.ceil(4480/scale),height:Math.ceil(2500/scale),show:false,acceptFirstMouse:true,webPreferences:{preload:config.preload,sandbox:true,contextIsolation:true,nodeIntegration:false}})
@@ -259,13 +298,106 @@ async function nativeFixture(config){
    const bounds=tooltip.getBounds();await ui('qa.removeTooltip()');await until(()=>tooltip.isDestroyed()||!tooltip.isVisible(),'tooltip removed');return{bounds,focusPreserved:true,firstClick:true}
   })
 
+  await check('workspace hover card projects over the live page and keeps its copy action',async()=>{
+   await ui('qa.mountWorkspaceHoverCard()')
+   const selector='[role=button][aria-label^="复制: "]'
+   await until(()=>ui('!!document.getElementById("workspace-hover-anchor")'),'workspace row mounted')
+   page.focus()
+   await ui('document.getElementById("workspace-hover-anchor").dispatchEvent(new PointerEvent("pointerover",{bubbles:true,pointerType:"mouse"}))')
+   await until(()=>ui('!!document.querySelector('+JSON.stringify(selector)+')'),'workspace hover card opened in the client')
+   await until(async()=>locateMenu()&&await menuDOM('!!document.querySelector('+JSON.stringify(selector)+')')&&painted?.id===wireState?.id,'workspace hover card painted over the webpage')
+   assert.equal(webContents.getFocusedWebContents(),page,'opening the hover card does not take focus')
+   const point=await menuDOM('(()=>{const r=document.querySelector('+JSON.stringify(selector)+').getBoundingClientRect();return{x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()')
+   const bounds=menuView.getBounds(),native=pageView.getBounds()
+   assert.ok(bounds.x+point.x>=native.x&&bounds.y+point.y>=native.y,'card content intersects the live webpage')
+   await ui('document.getElementById("workspace-hover-anchor").dispatchEvent(new PointerEvent("pointerout",{bubbles:true,pointerType:"mouse",relatedTarget:document.body}))')
+   await command('Input.dispatchMouseEvent',{type:'mouseMoved',...point})
+   await pause(300)
+   assert.equal(await menuDOM('!!document.querySelector('+JSON.stringify(selector)+')'),true,'pointer crossing from row to card keeps it open')
+   await clickNative(selector)
+   await until(()=>ui('qa.copiedWorkspacePath()').then(value=>value==='/tmp/example-workspace'),'copy reaches the focused client')
+   await until(()=>menuDOM('document.body.textContent.includes("复制成功")'),'copied feedback appears in the native card')
+   await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:4,y:4})
+   await until(()=>!locateMenu(),'hover card closes when the pointer leaves')
+   assert.equal(pageView.getVisible(),true)
+   assert.equal(captureCalls,0)
+   return{bounds,focusPreserved:true,copyForwarded:true}
+  })
+
+  await check('recent downloads projects live progress and actions above the webpage',async()=>{
+   const directory=join(config.profile,'downloads')
+   await mkdir(directory,{recursive:true})
+   app.setPath('downloads',directory)
+   const entry='[data-action=recent-downloads]'
+   const centeredIcons=async selectors=>{
+    for(const selector of selectors){
+     const {dx,dy,square}=await menuDOM(`(()=>{const button=document.querySelector(${JSON.stringify(selector)}),r=button.getBoundingClientRect(),i=button.querySelector('.eb-icon').getBoundingClientRect();return{dx:(i.left+i.right-r.left-r.right)/2,dy:(i.top+i.bottom-r.top-r.bottom)/2,square:r.width===r.height}})()`)
+     assert.ok(square&&Math.abs(dx)<.5&&Math.abs(dy)<.5,`${selector} should center its icon in the native hover background (dx=${dx}, dy=${dy})`)
+    }
+   }
+   assert.equal(await ui(`!!document.querySelector('${entry}')`),false)
+   page.downloadURL('https://live-menu.example.test/toolbar-download')
+   await until(()=>ui(`document.querySelector('${entry}')?.dataset.state==="progressing"`),'download entry appears when transfer starts')
+   await ui(`qa.click('${entry}')`)
+   const bounds=await shown('recent downloads')
+   await until(()=>menuDOM('Number(document.querySelector("[role=progressbar]")?.getAttribute("aria-valuenow"))>0'),'progress updates inside the native menu')
+   await centeredIcons(['[data-action=dismiss]','[data-action=download-pause]','[data-action=download-cancel]'])
+   await clickNative('[data-action=download-pause]')
+   await until(()=>api.snapshot().downloads[0]?.state==='paused','native pause reaches the download')
+   await until(()=>menuDOM('!!document.querySelector("[data-action=download-resume]")'),'resume shown after pause')
+   await clickNative('[data-action=download-resume]')
+   await until(()=>api.snapshot().downloads[0]?.state==='completed','resumed file completes',8000)
+   await until(()=>menuDOM('!!document.querySelector("[data-action=download-open]")'),'completed file is actionable')
+   await centeredIcons(['[data-action=download-reveal]','[data-action=download-material]','[data-action=download-remove]'])
+   const name=await menuDOM(`(()=>{const button=document.querySelector('[data-action=download-open]'),style=getComputedStyle(button),r=button.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,padded:parseFloat(style.paddingLeft)>=6&&style.paddingLeft===style.paddingRight&&parseFloat(style.paddingTop)>0&&style.paddingTop===style.paddingBottom,truncated:button.scrollWidth>button.clientWidth&&style.textOverflow==='ellipsis'}})()`)
+   assert.ok(name.padded&&name.truncated,'long filenames ellipsize inside a padded hover target')
+   await command('Input.dispatchMouseEvent',{type:'mouseMoved',x:name.x,y:name.y})
+   await until(()=>menuDOM('document.querySelector("[data-action=download-open][data-native-hovered]")?.matches(":hover")'),'native filename button receives hover')
+   assert.equal((await readFile(join(directory,toolbarDownloadName))).length,4_000_000)
+   await clickNative('[data-action=dismiss]')
+   await until(async()=>!locateMenu()&&await ui(`document.querySelector('${entry}')?.getAttribute("aria-expanded")==="false"`),'menu closes and keeps the toolbar entry')
+   assert.equal(pageView.getVisible(),true)
+   assert.equal(captureCalls,0)
+   return {bounds,completed:true}
+  })
+
+  await check('expanded browser tabs survive the native draggable title and collapse outside the bar',async()=>{
+   const toggle='.eb-workspace-toggle',label='.eb-app-label'
+   const originalPointer=screen.getCursorScreenPoint
+   let location
+   screen.getCursorScreenPoint=()=>{
+    const {x,y}=win.getContentBounds(),zoom=win.webContents.getZoomFactor()
+    return {x:Math.round(x+location.x*zoom),y:Math.round(y+location.y*zoom)}
+   }
+   const center=selector=>ui(`(()=>{const r=document.querySelector('${selector}').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+   const expanded=()=>ui(`document.querySelector('${toggle}').getAttribute('aria-expanded')==='true'`)
+   try{
+    location=await center(toggle)
+    if(!win.webContents.debugger.isAttached())win.webContents.debugger.attach('1.3')
+    await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent',{type:'mouseMoved',...location})
+    await until(expanded,'workspace tabs expand on the arrow')
+    assert.equal(await ui(`getComputedStyle(document.querySelector('${toggle}')).backgroundColor`),'rgba(0, 0, 0, 0)')
+    assert.equal(await ui(`getComputedStyle(document.querySelector('${label}')).getPropertyValue('-webkit-app-region')`),'drag')
+    // Moving across the native title need not emit any Chromium pointer events.
+    location=await center(label)
+    const [x,y]=win.getPosition()
+    win.setPosition(x+16,y+12)
+    await pause(400)
+    assert.equal(await expanded(),true,'hover remains inside the relocated window title')
+    location=await center('.eb-toolbar')
+    await until(async()=>!await expanded(),'native pointer leaves the tab bar')
+    assert.equal(pageView.getVisible(),true)
+    return {titleDraggable:true,windowMoved:[16,12]}
+   }finally{screen.getCursorScreenPoint=originalPointer}
+  })
+
   const report={electron:process.versions.electron,chrome:process.versions.chrome,temporaryProfile:true,initialPass:config.initialPass,supplementOnly:config.supplementOnly,display:{id:display.id,scale,bounds:display.bounds},checks,timings,captureCalls,fontRequests,consoleEvents,trace}
   await writeFile(join(config.evidence,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));api.dispose();server.close();win.destroy();app.exit(0)
  }catch(error){const failure=await diagnostics();failure.error=String(error?.stack||error);await writeFile(join(config.evidence,'failure.json'),JSON.stringify(failure,null,2));console.error(JSON.stringify(failure,null,2));api?.dispose();server?.close();win?.destroy();app.exit(1)}
 }
 
-await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {BrowserAppView} from './src/preload/browser/view';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],logLevel:'silent'})
-const config={profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
+await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
+const config={workspaceTabsOnly:process.env.BROWSER_LIVE_MENU_WORKSPACE_TABS_ONLY==='1',downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
 await build({stdin:{resolveDir:root,contents:`import {registerBrowserApp} from './src/main/browser/service';const {join}=require('node:path');(${nativeFixture.toString()})(${JSON.stringify(config)});`},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron'],logLevel:'silent'})
 const code=await new Promise((done,reject)=>{
  const child=spawn(require('electron'),[entry],{env:{...process.env,ELECTRON_RUN_AS_NODE:''},stdio:'inherit'}),timer=setTimeout(()=>child.kill('SIGTERM'),60000)

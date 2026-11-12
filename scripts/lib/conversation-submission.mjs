@@ -126,8 +126,8 @@ export function createNativeConversationSubmissions(){
  }
 }
 function useNativeSubmittedQueue(sessionId,inbox,useSession){
- const revision=react.useSyncExternalStore(NativeConversationSubmissions.subscribe,NativeConversationSubmissions.version,NativeConversationSubmissions.version),nodes=useSession(state=>state.chat.nodes)
- return react.useMemo(()=>NativeConversationSubmissions.queue(sessionId,inbox,nodes),[sessionId,inbox,nodes,revision])
+ const revision=react.useSyncExternalStore(NativeConversationSubmissions.subscribe,NativeConversationSubmissions.version,NativeConversationSubmissions.version),nodes=useSession(state=>state.chat?.nodes)
+ return react.useMemo(()=>NativeConversationSubmissions.queue(sessionId,inbox??[],nodes),[sessionId,inbox,nodes,revision])
 }
 function useNativeConversationSubmission(sessionId,order,nodeStore,useSession){
  const revision=react.useSyncExternalStore(NativeConversationSubmissions.subscribe,NativeConversationSubmissions.version,NativeConversationSubmissions.version)
@@ -202,7 +202,7 @@ function NativeConversationSubmittedUser({entry,loadImage,openFile,t}){
  const imageLoader=react.useCallback(attachment=>projected.urls.has(attachment)?Promise.resolve(projected.urls.get(attachment)):loadImage(attachment),[projected,loadImage])
  return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-anchor-key':'submitted:'+entry.rpcId,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-native-submitted-user':entry.rpcId},react.createElement(UserStyleBubble,{content:projected.content,imageLoader,openFile,t,nativeSubmittedAnnotation:entry.annotation}))
 }
-const START='/* sherlock:conversation-submission:v5 */',END='/* sherlock:conversation-submission:end */'
+const START='/* sherlock:conversation-submission:v6 */',END='/* sherlock:conversation-submission:end */'
 const definition=START+'\n'+[createNativeConversationSubmissions,useNativeConversationSubmission,useNativeSubmittedQueue,projectNativeConversationSubmissions,useNativeSubmittedAnnotation,NativeConversationSubmittedUser].map(fn=>fn.toString()).join('\n')+'\nconst NativeConversationSubmissions=createNativeConversationSubmissions();\n'+END+'\n'
 const queueTail='\n\t\t\tconst queue = (0, react.useMemo)(() => userQueuedMessages(inbox).map',queueBefore='const inbox = useSession((s) => s.queue);'+queueTail,queueAfter='const nativeSubmittedInbox = useSession((s) => s.queue);\nconst inbox = useNativeSubmittedQueue(arguments[0].sessionId,nativeSubmittedInbox,useSession);'+queueTail
 const bind='\nctx.effect(()=>NativeConversationSubmissions.watch({api:ctx.get("connection").api,sessions,inputHub}),"Native first submitted user");'
@@ -230,8 +230,8 @@ export function stripConversationSubmission(source){
  const markers=[...source.matchAll(/\/\* sherlock:conversation-submission:v(\d+) \*\//g)]
  if(!markers.length){if(source.includes(END)||traces.some(value=>source.includes(value)))throw Error('Native submitted user orphan drifted');return source}
  if(markers.length!==1||count(source,END)!==1)throw Error('Native submitted user installation drifted')
- const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2',3:'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045',4:'b0f4430a7ec60047379e1c16a0dfd872e58540afc1c1ffc465452514bbb287be'}
- if(version===5?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
+ const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2',3:'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045',4:'b0f4430a7ec60047379e1c16a0dfd872e58540afc1c1ffc465452514bbb287be',5:'e56b95764899cf1fec5ccb46ccf1c37ee159d7d77795fda9e59e9c15db6f7bf2'}
+ if(version===6?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
  let restored=one(source,installed,'');restored=one(restored,bind,'');restored=one(restored,version>=3?hook:oldHook,'')
  if(version>=4)restored=one(restored,queueAfter,queueBefore)
  if(version>=3){

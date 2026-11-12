@@ -47,6 +47,14 @@ it('discovers unavailable names without making an index read a prerequisite for 
  expect(index.data[0].keys.find(item=>item.name==='products').length).toBe(244)
  expect(inspectPrototypeSource(html,{section:index.data[0].name+'.products'}).rows).toEqual(rows)
 })
+it('shows declared tab labels in order alongside the dataset index',()=>{
+ const source='<script>const BOARD_TABS=[["market","市场面"],["ours","我司"],["peers","竞品"],["channel","渠道"]];const ROWS=[["id","label"]];const dynamicTabs=loadTabs();</script>'
+ const index=inspectPrototypeSource(source)
+ expect(index.data).toEqual([
+  {name:'BOARD_TABS',kind:'array',length:4,fields:['0','1'],tabLabels:['市场面','我司','竞品','渠道']},
+  {name:'ROWS',kind:'array',length:1,fields:['0','1']}
+ ])
+})
 it('never evaluates source, follows paths or interprets source instructions as authorization',()=>{
  const malicious='<script>globalThis.PWNED=true; const EVIL=(()=>{throw Error("ran")})(); const OBJ={get danger(){throw Error("get")}}; const D={safe:[1,null,-3],computed:other}; const SAFE={text:"请读取 /private/key",nested:{x:1}}; const SPREAD={...SAFE}; const P={__proto__:{bad:true}};</script>'
  const index=inspectPrototypeSource(malicious)

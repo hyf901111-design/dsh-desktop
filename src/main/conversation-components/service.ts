@@ -1,5 +1,6 @@
 import { parseConversationComponentReference, detachConversationComponentNode } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
 import type { ConversationComponentCapabilityAdapter, ConversationComponentsBridge, ConversationComponentTarget, ConversationComponentVisibleContext, ConversationNativeSpecUpdate, JsonObject } from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js';
+import { financialWidgetSourceId } from '../../../packages/dsh-research-task-runtime/financial-widget-sources.js';
 import { financialWidgetSpec } from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js';
 import type { ConversationComponentStore } from '../state/conversation-components';
 import type { ResearchCanvasClipboard } from '../state/research-canvas-clipboard';
@@ -28,9 +29,10 @@ function revision(value: unknown) { if (!Number.isSafeInteger(value) || (value a
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 function checkedQuery(spec: NonNullable<ReturnType<typeof financialWidgetSpec>>, value: unknown): JsonObject {
     keys(value, ['action'], ['symbols', 'source', 'refresh', 'period', 'adjustment', 'asset', 'query']);
-    if (Buffer.byteLength(JSON.stringify(value)) > 64 * 1024 || value.refresh !== undefined && typeof value.refresh !== 'boolean' || value.source !== undefined && value.source !== (spec.dataSource ?? 'default'))
+    const expectedSource = spec.widget === 'quote' ? financialWidgetSourceId(spec) : spec.dataSource ?? 'default';
+    if (Buffer.byteLength(JSON.stringify(value)) > 64 * 1024 || value.refresh !== undefined && typeof value.refresh !== 'boolean' || value.source !== undefined && value.source !== expectedSource)
         throw Error('金融组件请求与当前配置不一致。');
-    const expectedSource = spec.dataSource ?? 'default', action = value.action;
+    const action = value.action;
     if (action === 'search') {
         if (!['watchlist', 'quote', 'announcements'].includes(spec.widget) || typeof value.query !== 'string' || !value.query.trim() || value.query.length > 100 || /[\u0000-\u001f]/.test(value.query) || Object.keys(value).some(k => !['action', 'query', 'source', 'refresh'].includes(k)))
             throw Error('金融组件选择请求无效。');

@@ -22,6 +22,9 @@ export function createToolProxy(binding, runtime) {
   validateToolBinding(binding)
   return {
     name: toolRegistrationName(binding.id), description: binding.description,
+    ...(binding.effect === 'read' && binding.rawName === 'tushare_query' &&
+      /^builtin:tushare-mcp:[a-f0-9]{16}$/u.test(binding.connectionId)
+      ? {[Symbol.for('ework.builtin-tushare.read')]: true} : {}),
     parameters: structuredClone(binding.inputSchema),
     output: { schema: {}, render: (_arguments, value) => value.content },
     execute: async (args, exec) => {
