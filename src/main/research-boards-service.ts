@@ -36,7 +36,7 @@ import {
   type AuxiliaryRequest
 } from './state/research-boards-store'
 import type { ResearchCanvasStorage } from './state/research-canvas-storage'
-import { omitUnchangedTabRecovery } from './state/research-board-tab-membership'
+import { omitUnchangedTabRecovery, preserveSharedBoardTabMembership } from './state/research-board-tab-membership'
 import { boardTabsSpec } from '../../packages/dsh-research-task-runtime/board-tabs-contract.js'
 import {
   registerTrustedMainWindowHandler,
@@ -435,7 +435,7 @@ export class ResearchBoardsService {
   private readonly listeners = new Set<(event: ResearchBoardsEvent) => void>()
   private readonly reservations = new Map<
     string,
-    { reservationId: string; generation: number }
+    { reservationId: string; generation: number; previousSessionId?: string }
   >()
   private readonly opening = new Map<string, Promise<RuntimeBoard>>()
   private readonly creating = new Map<
@@ -1546,6 +1546,7 @@ export class ResearchBoardsService {
     validateCanvas(next)
     const displayedTabs = tabProjection(next)
     if (base.tabProjection) omitUnchangedTabRecovery(next, base.canvas, base.tabProjection)
+    preserveSharedBoardTabMembership(next, base.canvas)
     next = withSharedCanvasCompatibilityLayout(next, base.canvas)
     // Fork the exact page branch. Applying stale string indices directly to live Y.Text loses remote edits.
     const fork = decodeDocument(base.bytes)
@@ -2292,19 +2293,22 @@ export class ResearchBoardsService {
         return result
       }
       case 'board.open': {
-        const p = exact(input, ['boardId'])
+        const p = exact(input, ['boardId'], ['missingLocalSessionId'])
         const boardId = safeId(p.boardId)
+        const missingLocalSessionId = p.missingLocalSessionId === undefined ? undefined : safeId(p.missingLocalSessionId)
         await this.loadBoard(boardId, true)
         const account = this.userId()
         this.store.setPinned(account, boardId, true)
         const localSessionId = this.localSession(boardId)
         this.emitState()
-        if (localSessionId) return { localSessionId }
+        if (localSessionId && localSessionId !== missingLocalSessionId) return { localSessionId }
+        const previousSessionId = localSessionId ?? undefined
         let reservation = this.reservations.get(boardId)
-        if (!reservation) {
+        if (!reservation || reservation.previousSessionId !== previousSessionId) {
           reservation = {
             reservationId: randomUUID(),
-            generation: this.options.account.generation
+            generation: this.options.account.generation,
+            previousSessionId
           }
           this.reservations.set(boardId, reservation)
         }
@@ -2332,7 +2336,11 @@ export class ResearchBoardsService {
           if (raw && raw !== '[]')
             throw new ResearchBoardsError('BINDING_CONFLICT')
         }
-        this.store.bind(this.userId(), boardId, sessionId)
+        if (reservation.previousSessionId) {
+          this.store.rebind(this.userId(), boardId, reservation.previousSessionId, sessionId)
+        } else {
+          this.store.bind(this.userId(), boardId, sessionId)
+        }
         this.reservations.delete(boardId)
         await this.materialize(r)
         this.emitState()

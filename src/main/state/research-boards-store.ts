@@ -241,7 +241,10 @@ export class ResearchBoardsStore {
       const account = s.accounts[accountId]
       const existing = s.sharedSessions[sessionId]
       if (account?.bindings[boardId] === sessionId && existing?.accountId === accountId && existing?.boardId === boardId) return
-      if (!account || account.bindings[boardId] !== previousId || existing) throw new ResearchBoardsError('BINDING_CONFLICT')
+      if (!account || account.bindings[boardId] !== previousId || existing ||
+          s.favorites.some(f => f.sessionId === sessionId) ||
+          Object.values(s.accounts).some(a => Object.values(a.sources).some(source => source.sessionId === sessionId)))
+        throw new ResearchBoardsError('BINDING_CONFLICT')
       account.bindings[boardId] = sessionId
       s.sharedSessions[sessionId] = { accountId, boardId, localSessionId: sessionId }
     })

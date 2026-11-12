@@ -1,7 +1,11 @@
 // Shared by the host validator and the native canvas serializer.
+export function isBoardTabsRecovery(id) {
+ return typeof id==='string'&&/^ework-recovered-membership(?:-\d+)?$/.test(id)
+}
 export function boardTabsIssue(tabs) {
  if(!Array.isArray(tabs)||!tabs.length)return '至少保留一个页签'
- if(tabs.length>100)return '最多支持 100 个页签'
+ const recoveries=tabs.filter(t=>isBoardTabsRecovery(t?.id)).length
+ if(tabs.length-recoveries>100||recoveries>1)return '最多支持 100 个页签'
  const names=new Set(),ids=new Set(),members=new Set()
  for(const tab of tabs){
   if(!tab||typeof tab.id!=='string'||!/^[-\w:.]{1,128}$/.test(tab.id)||ids.has(tab.id))return '页签身份无效'
@@ -32,13 +36,13 @@ export function boardTabsInitial(ids,makeId) {
 }
 export function boardTabsNode(snapshot) {return snapshot.artifacts.find(n=>n.containerSpec?.type==='board-tabs')??null}
 export function boardTabsMove(spec,ids,target) {
- if(!boardTabsSpec(spec)||!spec.tabs.some(t=>t.id===target)||!ids.length||ids.some(id=>!spec.tabs.some(t=>t.nodeIds.includes(id))))return null
+ if(!boardTabsSpec(spec)||isBoardTabsRecovery(target)||!spec.tabs.some(t=>t.id===target)||!ids.length||ids.some(id=>!spec.tabs.some(t=>t.nodeIds.includes(id))))return null
  const moved=new Set(ids)
  return {...spec,revision:spec.revision+1,tabs:spec.tabs.map(t=>({...t,nodeIds:t.id===target?[...t.nodeIds.filter(id=>!moved.has(id)),...ids]:t.nodeIds.filter(id=>!moved.has(id))}))}
 }
 export function boardTabsSave(current,revision,draft) {
  if(!boardTabsSpec(current)||current.revision!==revision||!Array.isArray(draft))return null
- const tabs=draft.map(t=>({id:t.id,name:t.name,nodeIds:current.tabs.find(old=>old.id===t.id)?.nodeIds??[]}))
+ const tabs=[...draft.map(t=>({id:t.id,name:t.name,nodeIds:current.tabs.find(old=>old.id===t.id)?.nodeIds??[]})),...current.tabs.filter(t=>isBoardTabsRecovery(t.id))]
  if(boardTabsIssue(tabs))return null
  const keep=new Set(tabs.map(t=>t.id)),removedIds=current.tabs.filter(t=>!keep.has(t.id)).flatMap(t=>t.nodeIds)
  return {spec:boardTabsSpec({...current,revision:current.revision+1,tabs}),removedIds}
@@ -47,9 +51,10 @@ export function boardTabsReconcile(snapshot,activeId,targetId=activeId,targetFor
  const nav=boardTabsNode(snapshot);if(!nav)return snapshot
  const spec=boardTabsSpec(nav.containerSpec);if(!spec)return snapshot
  const nodes=[...snapshot.files,...snapshot.artifacts].filter(n=>n.id!==nav.id),live=new Set(nodes.map(n=>n.id)),known=new Set(spec.tabs.flatMap(t=>t.nodeIds)),fresh=nodes.filter(n=>!known.has(n.id))
- const target=spec.tabs.find(t=>t.id===targetId)||spec.tabs.find(t=>t.id===activeId)||spec.tabs[0]
+ const real=spec.tabs.filter(t=>!isBoardTabsRecovery(t.id)),first=real[0]??spec.tabs[0]
+ const target=real.find(t=>t.id===targetId)||real.find(t=>t.id===activeId)||first
  const assigned=new Map(spec.tabs.map(t=>[t.id,[]]))
- for(const node of fresh){const captured=targetForNode(node);const id=captured?.navId===null?spec.tabs[0].id:captured?.tabId??target.id;if(captured?.navId&&captured.navId!==nav.id||!assigned.has(id))throw Error('目标页签已删除，请保留生成结果并重新放置。');assigned.get(id).push(node.id)}
+ for(const node of fresh){const captured=targetForNode(node);const id=captured?.navId===null?first.id:isBoardTabsRecovery(captured?.tabId)?target.id:captured?.tabId??target.id;if(captured?.navId&&captured.navId!==nav.id||!assigned.has(id))throw Error('目标页签已删除，请保留生成结果并重新放置。');assigned.get(id).push(node.id)}
  const tabs=spec.tabs.map(t=>({...t,nodeIds:[...t.nodeIds.filter(id=>live.has(id)),...assigned.get(t.id)]}))
  if(JSON.stringify(tabs)===JSON.stringify(spec.tabs))return snapshot
  return {...snapshot,artifacts:snapshot.artifacts.map(n=>n.id===nav.id?{...n,containerSpec:{...spec,revision:spec.revision+1,tabs}}:n)}

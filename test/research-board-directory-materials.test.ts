@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, realpath, symlink } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ResearchBoardIntegration } from '../src/main/research-board-integration'
-import { omitUnchangedTabRecovery, restoreUnassignedSharedBoardCards } from '../src/main/state/research-board-tab-membership'
+import { omitUnchangedTabRecovery, preserveSharedBoardTabMembership, restoreUnassignedSharedBoardCards } from '../src/main/state/research-board-tab-membership'
 
 it('materializes a legacy shared workbench with its original card assignments', async () => {
   const nav = { id: 'new-nav', kind: 'generated-container', containerSpec: {
@@ -45,7 +45,7 @@ it('renders recoverable cards when every saved tab is empty and there is no link
   const rendered = await integration.materialize({
     accountId: 'a', boardId: 'b', epoch: 1, localSessionId: 's', canvas, signal: new AbortController().signal
   })
-  expect(rendered.artifacts[0].containerSpec.tabs.map((tab: any) => tab.nodeIds)).toEqual([['first', 'later'], []])
+  expect(rendered.artifacts[0].containerSpec.tabs.map((tab: any) => tab.nodeIds)).toEqual([[], [], ['first', 'later']])
   expect(canvas.artifacts[0]!.containerSpec!.tabs.map(tab => tab.nodeIds)).toEqual([[], []])
 })
 
@@ -63,10 +63,25 @@ it('keeps inferred placements local while allowing an explicit move to another t
   expect(edit.artifacts[0]!.containerSpec).toEqual(base.artifacts[0]!.containerSpec)
   expect(edit.artifacts[2]!.title).toBe('更新内容')
   const moved = structuredClone(visible)
-  const [one, two] = moved.artifacts[0]!.containerSpec!.tabs
-  one!.nodeIds = one!.nodeIds.filter(id => id !== 'orphan'); two!.nodeIds.push('orphan')
+  const [, two, recovery] = moved.artifacts[0]!.containerSpec!.tabs
+  recovery!.nodeIds = recovery!.nodeIds.filter(id => id !== 'orphan'); two!.nodeIds.push('orphan')
   omitUnchangedTabRecovery(moved, base, visible)
   expect(moved.artifacts[0]!.containerSpec!.tabs.map(t => t.nodeIds)).toEqual([['assigned'], ['orphan']])
+})
+
+it('preserves membership on a stale submission and accepts explicit moves', () => {
+  const base = { files: [], artifacts: [
+    { id: 'tabs', containerSpec: { version: 1, type: 'board-tabs', title: '页签', revision: 1,
+      tabs: [{ id: 'one', name: '一', nodeIds: ['keep', 'move', 'delete'] }, { id: 'two', name: '二', nodeIds: [] as string[] }] } },
+    { id: 'keep' }, { id: 'move' }, { id: 'delete' }
+  ] }
+  const next = structuredClone(base)
+  next.artifacts.pop()
+  const tabs = next.artifacts[0]!.containerSpec!.tabs
+  tabs[0]!.nodeIds = []
+  tabs[1]!.nodeIds = ['move']
+  preserveSharedBoardTabMembership(next, base)
+  expect(next.artifacts[0]!.containerSpec!.tabs.map(tab => tab.nodeIds)).toEqual([['keep'], ['move']])
 })
 
 it('restores missing shared component coordinates without changing the stored snapshot', async () => {

@@ -1,4 +1,4 @@
-import { boardTabsSpec } from '../../../packages/dsh-research-task-runtime/board-tabs-contract.js'
+import { boardTabsSpec, isBoardTabsRecovery } from '../../../packages/dsh-research-task-runtime/board-tabs-contract.js'
 import type { Canvas } from '../../shared/research-boards'
 
 export function remapBoardTabs(value: unknown, remap: (id: string) => string) {
@@ -97,7 +97,7 @@ export function restoreLocalSourceBoardLayout(canvas: Canvas, source: Canvas): v
   for (const [id, node] of matches) recoverPosition(node, localCards.get(id)!)
 }
 
-/** Expose orphaned shared cards in the first tab if their original tab cannot be established. */
+/** Give cards whose original page is unknown their own display-only page. */
 export function restoreUnassignedSharedBoardCards(canvas: Canvas): void {
   const nav = canvas.artifacts.find(node => boardTabsSpec(node.containerSpec))
   const spec = boardTabsSpec(nav?.containerSpec)
@@ -110,9 +110,12 @@ export function restoreUnassignedSharedBoardCards(canvas: Canvas): void {
   if (!orphans.length) return
   const index = (node: Canvas['artifacts'][number]) => typeof node.workbenchIndex === 'number'
     ? node.workbenchIndex : Infinity
-  // Keep all surviving placements and leave intentionally empty tabs intact.
-  // This is a display projection, so do not advance the shared tab revision.
-  tabs[0]!.nodeIds.push(...orphans.sort((a, b) => index(a) - index(b)).map(node => node.id))
+  let id = 'ework-recovered-membership', name = '待归类', suffix = 1
+  while (tabs.some(tab => tab.id === id || tab.name === name)) {
+    id = 'ework-recovered-membership-' + suffix
+    name = '待归类 ' + suffix++
+  }
+  tabs.push({ id, name, nodeIds: orphans.sort((a, b) => index(a) - index(b)).map(node => node.id) })
   nav.containerSpec = { ...spec, tabs }
 }
 
@@ -131,7 +134,30 @@ export function omitUnchangedTabRecovery(next: Canvas, base: Canvas, displayed: 
   }
   const savedIds = new Set(saved.tabs.flatMap(tab => tab.nodeIds))
   const inferred = new Map(visible.tabs.flatMap(tab => tab.nodeIds.filter(id => !savedIds.has(id)).map(id => [id, tab.id])))
-  nav.containerSpec = { ...outgoing, tabs: outgoing.tabs.map(tab => ({
+  nav.containerSpec = { ...outgoing, tabs: outgoing.tabs.filter(tab => !isBoardTabsRecovery(tab.id)).map(tab => ({
     ...tab, nodeIds: tab.nodeIds.filter(id => inferred.get(id) !== tab.id)
   })) }
+}
+
+
+/** An existing card can leave a surviving tab only by moving to another tab. */
+export function preserveSharedBoardTabMembership(next: Canvas, base: Canvas): void {
+  const nav = next.artifacts.find(node => boardTabsSpec(node.containerSpec))
+  if (!nav) return
+  const outgoing = boardTabsSpec(nav.containerSpec)
+  const prior = boardTabsSpec(base.artifacts.find(node => node.id === nav.id)?.containerSpec)
+  if (!outgoing || !prior) return
+  const live = new Set([...next.files, ...next.artifacts].map(node => node.id))
+  const assigned = new Set(outgoing.tabs.flatMap(tab => tab.nodeIds))
+  const original = new Map(prior.tabs.map(tab => [tab.id, tab.nodeIds]))
+  let repaired = false
+  for (const tab of outgoing.tabs) {
+    for (const id of original.get(tab.id) ?? []) {
+      if (!live.has(id) || assigned.has(id)) continue
+      tab.nodeIds.push(id)
+      assigned.add(id)
+      repaired = true
+    }
+  }
+  if (repaired) nav.containerSpec = outgoing
 }

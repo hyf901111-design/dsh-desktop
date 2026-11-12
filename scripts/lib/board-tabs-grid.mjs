@@ -2,18 +2,18 @@
 // Page cells are local to the content area. Project them beside or below navigation.
 export function createBoardTabsGridState(storage,sessionId,shared=false) {
  const normal=createWorkbenchGridState(storage,sessionId,shared),pages=new Map(),viewKey='ework.research.tabs.view.v1:'+sessionId
- let nav=null,activeId=null,width=0,saved=null,viewports={},override=null,presentation=null
+ let nav=null,activeId=null,width=0,saved=null,viewports={},override=null,presentation=null,viewportDirty=false
  const plannedTargets=new Map(),planTargets=new Map()
  try{saved=JSON.parse(storage?.getItem(viewKey)||'null');viewports=saved?.viewports??{};presentation=saved?.presentation??null}catch{}
   try{for(const [id,value] of saved?.plannedTargets??[])if(typeof id==='string'&&Number.isFinite(value?.startedAt)&&value?.target)plannedTargets.set(id,value);for(const [id,value] of saved?.planTargets??[])if(typeof id==='string'&&value)planTargets.set(id,value)}catch{}
-  const persistView=()=>{try{storage?.setItem(viewKey,JSON.stringify({navId:nav?.id,activeId,viewports,presentation,plannedTargets:[...plannedTargets].slice(-100),planTargets:[...planTargets].slice(-100)}))}catch{}}
+  const persistView=()=>{try{viewportDirty=storage?.setItem(viewKey,JSON.stringify({navId:nav?.id,activeId,recoveryTabId:nav?.containerSpec.tabs.find(t=>isBoardTabsRecovery(t.id))?.id,viewports,presentation,plannedTargets:[...plannedTargets].slice(-100),planTargets:[...planTargets].slice(-100)}))===false}catch{}}
  const layout=(size=width||1000)=>boardTabsLayout(nav?.containerSpec,size)
  const page=id=>{const key=nav.id+':'+id;if(!pages.has(key)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+key,shared);if(width)state.enable(layout().width);pages.set(key,state)}return pages.get(key)}
  const sync=snapshot=>{
   const next=boardTabsNode(snapshot)
   if(next?.id!==nav?.id){
    const previous=nav;nav=next
-   if(nav){activeId=saved?.navId===nav.id?saved.activeId:nav.containerSpec.tabs[0].id;if(!previous&&saved?.navId!==nav.id&&normal.get().length)page(nav.containerSpec.tabs[0].id).set(normal.get())}
+   if(nav){const recovery=nav.containerSpec.tabs.find(t=>isBoardTabsRecovery(t.id));const onlyRecovery=recovery&&nav.containerSpec.tabs.every(t=>t===recovery||!t.nodeIds.length);activeId=onlyRecovery&&saved?.recoveryTabId!==recovery.id?recovery.id:saved?.navId===nav.id?saved.activeId:nav.containerSpec.tabs[0].id;if(!previous&&saved?.navId!==nav.id&&normal.get().length)page(nav.containerSpec.tabs[0].id).set(normal.get())}
    else activeId=null
   }else nav=next
   if(nav&&!nav.containerSpec.tabs.some(t=>t.id===activeId))activeId=nav.containerSpec.tabs[0].id
@@ -61,7 +61,8 @@ export function createBoardTabsGridState(storage,sessionId,shared=false) {
   isPlanningVisible(id){const target=plannedTargets.get(id)?.target;if(!target)return true;if(!nav)return !target.navId;return target.navId?target.navId===nav.id&&target.tabId===activeId:activeId===nav.containerSpec.tabs[0].id},
   capturePlanTarget(plan,startedAt){const target=override??planTargets.get(plan.id)??[...plannedTargets.values()].find(t=>t.startedAt===startedAt)?.target??{navId:nav?.id??null,tabId:activeId};planTargets.set(plan.id,target);if(planTargets.size>100)planTargets.delete(planTargets.keys().next().value);persistView();return target},
   switch(id,snapshot){sync(snapshot);if(!nav?.containerSpec.tabs.some(t=>t.id===id))return null;viewports[activeId]=snapshot.viewport;activeId=id;persistView();return viewports[id]??{x:0,y:0,scale:1}},
-  rememberViewport(value){if(nav){viewports[activeId]=value;persistView()}},
+  rememberViewport(value){if(nav){viewports[activeId]=value;viewportDirty=true}},
+  flushViewport(){if(viewportDirty)persistView()},
   history:()=>({activeId,normal:normal.get(),pages:[...pages].map(([id,state])=>[id,state.get()])}),
   restore(value){if(!value)return;normal.set(value.normal);activeId=value.activeId;for(const [id,cells] of value.pages){if(!pages.has(id)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+id,shared);if(width)state.enable(layout().width);pages.set(id,state)}pages.get(id).set(cells)}},
   move(ids,target,snapshot){

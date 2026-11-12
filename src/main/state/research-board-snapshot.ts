@@ -157,6 +157,7 @@ export class ResearchBoardSnapshots {
     if (digest(this.options.readCanvas(sessionId)) !== before)
       throw Error('SOURCE_CHANGED')
     signal.throwIfAborted()
+    restoreLegacyBoardTabMembership(canvas)
     const history = exported
       ? mergeHumanHistory(
           this.importFor(sessionId)?.history ?? [],

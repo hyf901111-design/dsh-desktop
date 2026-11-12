@@ -39,7 +39,7 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
     }
     const fitted=cells.map(c=>{const value=contentHeights.get(c.id),node=nodesById.get(c.id);return value?.layoutFit&&!contentOverrides.has(c.id)&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(Math.max(c.w,limits(c).w)*m.step-m.gap))<=2?{...c,h:Math.max(m.minRows,Math.min(300,Math.ceil((value.height+m.gap)/m.rowStep)))}:c})
     const hasFit=fitted.some((c,i)=>c.h!==cells[i].h)
-    if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
+    if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return grid.alignResponsiveSpans(cells)
     // Preserve existing column intent when a narrow left column reaches the
     // shared minimum. Borrow the neighbouring column's spare span before
     // falling back to wrapping; every card on those edges moves together.
@@ -70,7 +70,7 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
       while(collisions.length){next.y=Math.max(...collisions.map(c=>c.y+c.h));collisions=placed.filter(c=>grid.overlap(next,c))}
       placed.push(next)
     }
-    const byId=new Map((hasFit?grid.compact(placed):placed).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
+    const byId=new Map(grid.alignResponsiveSpans(hasFit?grid.compact(placed):placed).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
   }
   function reconcile(snapshot) {
     if(!width)return snapshot

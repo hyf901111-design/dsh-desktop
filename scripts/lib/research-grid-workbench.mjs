@@ -39,7 +39,7 @@ export const nativeMindMapDepthCss=workbenchStructureDepthCss(
   'body [data-ework-grid][data-workbench-style=enterprise]',
   '.rScV5Q_mindMap .rScV5Q_mindMapNode','data-research-mind-map-depth'
 )
-const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
+const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
 export function restoreResearchGridWorkbench(source){
   source=stripComponentPptxMode(stripResearchBoardHeaderClient(source))
   const start=source.indexOf(begin);if(start<0)return source

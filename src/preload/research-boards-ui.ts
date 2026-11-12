@@ -1192,11 +1192,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   }))
 
   async function openBoard(boardId: string) {
+    const missingSession = (id: string) => {
+      const list = deps.sessions.list.getSnapshot()
+      return list.phase === 'ready' && (!list.byId[id] || !!list.byId[id].removed)
+    }
     // The account-scoped directory already identifies pinned local sessions.
     // Open the shell now; activate remains the authoritative fresh permission read.
     const known = state.account.status === 'ready' && state.account.user &&
       state.boards.find(board => board.boardId === boardId && board.pinned && board.localSessionId)
-    if (known && known.localSessionId) {
+    if (known && known.localSessionId && !missingSession(known.localSessionId)) {
       const id = known.localSessionId, generation = state.account.generation
       prime(id)
       deps.sessions.open(id)
@@ -1211,11 +1215,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     let pending = opening.get(boardId)
     if (!pending) {
       pending = (async () => {
-        const opened = await call<{
+        type OpenedBoard = {
           localSessionId?: string
           reservationId?: string
           title: string
-        }>('board.open', { boardId })
+        }
+        const missingLocalSessionId = known && known.localSessionId && missingSession(known.localSessionId)
+          ? known.localSessionId : undefined
+        let opened = await call<OpenedBoard>('board.open', { boardId, ...(missingLocalSessionId && { missingLocalSessionId }) })
+        if (opened.localSessionId && missingSession(opened.localSessionId) && opened.localSessionId !== missingLocalSessionId)
+          opened = await call<OpenedBoard>('board.open', { boardId, missingLocalSessionId: opened.localSessionId })
         if (opened.localSessionId) { await call('local.directory',{mode:'ensure',sessionId:opened.localSessionId}); return opened.localSessionId }
         const id = await freshBoard(opened.title, true)
         const bound = await call<{ view: BoardView }>('board.bind', {

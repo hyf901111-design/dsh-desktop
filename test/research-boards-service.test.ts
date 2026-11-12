@@ -224,6 +224,27 @@ async function ready(t: ReturnType<typeof make>) {
   })
   return t.service.getSnapshot().current!
 }
+it('reopens a shared board when the pinned local session no longer exists', async () => {
+  const t = make()
+  await ready(t)
+  const current: any = await t.service.invoke('board.open', {
+    boardId: 'board', missingLocalSessionId: 'other-session'
+  })
+  expect(current.value).toEqual({ localSessionId: 'shared-session' })
+  const opened: any = await t.service.invoke('board.open', {
+    boardId: 'board', missingLocalSessionId: 'shared-session'
+  })
+  expect(opened.value.reservationId).toBeTruthy()
+  const replacement: any = await t.service.invoke('board.bind', {
+    boardId: 'board', reservationId: opened.value.reservationId, localSessionId: 'replacement-session'
+  })
+  expect(replacement.ok).toBe(true)
+  expect(replacement.value.binding.localSessionId).toBe('replacement-session')
+  expect(t.store.sharedSession('shared-session')?.boardId).toBe('board')
+  expect(await t.service.invoke('board.open', {
+    boardId: 'board', missingLocalSessionId: 'shared-session'
+  })).toEqual({ ok: true, value: { localSessionId: 'replacement-session' } })
+})
 it('rejects original binding, viewer sync writes, arbitrary IPC and stale frame senders', async () => {
   const t = make()
   t.store.addFavorite({ sessionId: 'original', title: 'Original' })
@@ -2145,7 +2166,7 @@ it('keeps recovered tabs visible without writing guesses during stale and queued
   }))
   const view = t.service.getSnapshot().current!
   const membership = (canvas: Canvas) => boardTabsSpec(canvas.artifacts.find(n => n.id === 'tabs')?.containerSpec)?.tabs.map(tab => tab.nodeIds)
-  expect(membership(view.canvas)).toEqual([['n'], []])
+  expect(membership(view.canvas)).toEqual([[], [], ['n']])
   await t.remote((canvas: Canvas) => { canvas.artifacts.find(n => n.id === 'n')!.excerpt = '其他用户的修改' })
 
   const send = (revision: string, mutation: string, canvas: typeof view.canvas) =>
@@ -2159,7 +2180,7 @@ it('keeps recovered tabs visible without writing guesses during stale and queued
   edit.artifacts.find(n => n.id === 'n')!.title = '第二次编辑'
   const next: any = await send(first.value.localBranchRevision, 'legacy-tab-next', edit)
   expect(next.ok).toBe(true)
-  expect(membership(next.value.canvas)).toEqual([['n'], []])
+  expect(membership(next.value.canvas)).toEqual([[], [], ['n']])
   await t.service.flush()
   const shared = projectDocument(t.doc)
   expect(membership(shared)).toEqual([[], []])

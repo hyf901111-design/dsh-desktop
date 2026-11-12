@@ -42,6 +42,21 @@ export function createResearchGrid() {
     }
     return next
   }
+  // The next spanning component seals the space above it. Align the last
+  // cards that can reach that boundary without covering a neighbour.
+  function alignResponsiveSpans(items) {
+    const spans=items.filter(c=>Number.isSafeInteger(c.responsiveOrder))
+    if(spans.length<2)return items
+    const next=items.map(c=>({...c}))
+    for(const target of next.filter(c=>Number.isSafeInteger(c.responsiveOrder)).sort(order)){
+      for(const card of next){
+        if(!Number.isSafeInteger(card.responsiveOrder)||card.freePosition||card.w>=target.w||card.x<target.x||card.x+card.w>target.x+target.w||card.y+card.h>=target.y)continue
+        const grown={...card,h:target.y-card.y}
+        if(grown.h<=300&&!next.some(peer=>overlap(grown,peer)))card.h=grown.h
+      }
+    }
+    return next
+  }
   function closeColumnGaps(items) {
     const next=compact(items)
     // A full-width first row can mask an empty strip further down. Use the
@@ -410,5 +425,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,moveSlot,move,authoredBoardPlan,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,alignResponsiveSpans,place,resize,resizeSelection,moveSlot,move,authoredBoardPlan,arrange,append,draw,migrate,project}
 }

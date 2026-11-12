@@ -838,7 +838,16 @@ export function mountAccountUi(
     reconcileModelSettings()
   }
   document.defaultView?.addEventListener('sherlock:model-settings-open', openModelSettings)
-  const observer = new MutationObserver(() => { settingsBackground.reconcile(); reconcile(); reconcileModelSettings() })
+  const accountSurfaces = '.VOzbGW_trigger,.VOzbGW_overlay,.VOzbGW_panel,.sherlock-account-button,[data-settings-section-id="models"]'
+  const observer = new MutationObserver(records => {
+    const changed = records.some(record =>
+      [...record.addedNodes, ...record.removedNodes].some(node =>
+        node instanceof HTMLElement && (node.matches(accountSurfaces) || node.querySelector(accountSurfaces))))
+    if (!changed) return
+    settingsBackground.reconcile()
+    reconcile()
+    reconcileModelSettings()
+  })
   observer.observe(document.documentElement, { childList: true, subtree: true })
   const localeObserver = new MutationObserver(() => { if(options.explore) updateTrigger() })
   localeObserver.observe(document.documentElement, {attributes:true,attributeFilter:['data-odyssey-locale']})

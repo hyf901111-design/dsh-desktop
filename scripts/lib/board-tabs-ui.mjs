@@ -84,7 +84,7 @@ export function BoardTabsModal({title,theme,onClose,children}) {
  return react_dom.createPortal(jsx('div',{className:'ew-board-tabs-overlay','data-board-tabs-theme':theme,onPointerDown:e=>{e.stopPropagation();if(e.target===e.currentTarget)onClose()},children:jsxs('section',{ref,role:'dialog','aria-modal':true,'aria-labelledby':id,className:'ew-board-tabs-dialog',onPointerDown:e=>e.stopPropagation(),children:[jsxs('header',{children:[jsx('h2',{id,children:title}),jsx('button',{type:'button','aria-label':'关闭'+title,className:'ew-board-tabs-close',onClick:onClose,children:'×'})]}),children]})}),document.body)
 }
 export function BoardTabsSettings({nav,workspace,readOnly,theme,onClose}) {
- const {jsx,jsxs}=react_jsx_runtime,[draft,setDraft]=react.useState(()=>nav.containerSpec.tabs.map(t=>({id:t.id,name:t.name}))),[revision]=react.useState(nav.containerSpec.revision),[error,setError]=react.useState(''),[removed,setRemoved]=react.useState([]),[confirm,setConfirm]=react.useState(null),[dragging,setDragging]=react.useState(null),[drop,setDrop]=react.useState(null),list=react.useRef(null),pendingFocus=react.useRef(null)
+ const {jsx,jsxs}=react_jsx_runtime,[draft,setDraft]=react.useState(()=>nav.containerSpec.tabs.filter(t=>!isBoardTabsRecovery(t.id)).map(t=>({id:t.id,name:t.name}))),[revision]=react.useState(nav.containerSpec.revision),[error,setError]=react.useState(''),[removed,setRemoved]=react.useState([]),[confirm,setConfirm]=react.useState(null),[dragging,setDragging]=react.useState(null),[drop,setDrop]=react.useState(null),list=react.useRef(null),pendingFocus=react.useRef(null)
  const issue=boardTabsIssue(draft.map(t=>({...t,nodeIds:[]})))
  react.useLayoutEffect(()=>{if(pendingFocus.current){const input=list.current?.querySelector('[data-tab-name="'+CSS.escape(pendingFocus.current)+'"]');input?.focus();input?.select();input?.scrollIntoView?.({block:'nearest'});pendingFocus.current=null}},[draft.length])
  const remove=t=>{setRemoved(rows=>[...rows,{tab:t,index:draft.findIndex(row=>row.id===t.id)}]);setDraft(rows=>rows.filter(row=>row.id!==t.id));setConfirm(null);setError('')}
@@ -135,6 +135,7 @@ export function installBoardTabsDrag(root,workspace,readOnly,onNotice) {
   const vertical=bar.dataset.boardTabsOrientation==='vertical'
   let target=null
   for(const element of list.querySelectorAll('[data-board-tab]')){
+   if(isBoardTabsRecovery(element.dataset.boardTab))continue
    const tab=nav.containerSpec.tabs.find(t=>t.id===element.dataset.boardTab);if(!tab||tab.id===op.source)continue
    const r=element.getBoundingClientRect(),left=Math.max(r.left,lr.left,br.left,rr.left),right=Math.min(r.right,lr.right,br.right,rr.right),top=Math.max(r.top,lr.top,br.top,rr.top),bottom=Math.min(r.bottom,lr.bottom,br.bottom,rr.bottom)
    if(right<=left||bottom<=top)continue

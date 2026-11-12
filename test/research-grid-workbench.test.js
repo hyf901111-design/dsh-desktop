@@ -17,6 +17,25 @@ it('fits later cards below short neighbours without waiting for the tallest char
  expect(short.h*m.step-m.gap).toBeLessThan(240+m.step)
  expect(grid.arrange(nodes,arranged,1200,0,'auto')).toEqual(arranged)
 })
+it('closes holes before a full-width card even after a table refits',()=>{
+ const grid=createResearchGrid(),width=1200,state=createWorkbenchGridState(null,'full-width-boundary')
+ const html='<body data-sherlock-market="table"></body>'
+ const nodes=[['short',230],['middle',330],['tall',440],['gantt',340]].map(([id,height])=>({
+  id,kind:'generated-container',height,width:400,x:400,y:300,preferred:{height},
+  containerSpec:{type:'html',html:id==='gantt'?'<body data-research-kind="gantt"></body>':html}
+ }))
+ state.enable(width)
+ let snap=state.reconcile({files:[],artifacts:nodes,viewport:{y:0}})
+ state.set(grid.arrange(nodes,nodes.map((node,i)=>item(node.id,0,30*i)),width,0,'auto'),{automatic:true})
+ snap=state.reconcile(snap)
+ expect(state.contentHeight('short',{html,width:snap.artifacts[0].width,height:170,layoutFit:true})).toBe(true)
+ state.reconcile(snap)
+ const [short,middle,tall,gantt]=state.visible()
+ expect([short,middle,tall].map(c=>c.y+c.h)).toEqual([gantt.y,gantt.y,gantt.y])
+ expect(gantt.w).toBe(40)
+ expect(state.get()[0].h).toBeLessThan(short.h)
+ expect(state.visible().some(a=>state.visible().some(b=>grid.overlap(a,b)))).toBe(false)
+})
 it('真实表格分页测量可增高与缩短，末页收紧且不覆盖用户手动高度或共享文档',()=>{
  const state=createWorkbenchGridState(null,'page-fit'),grid=createResearchGrid(),html='<body data-sherlock-market="table"></body>'
  state.enable(900)

@@ -160,12 +160,25 @@ function checkBootFailureInDom(): void {
   queueBootFailure(errorText)
 }
 
+const desktopMaintenanceSurfaces = [
+  '[data-settings-section-id]', '[data-conversation-view-id]', '[data-srb-tabs]',
+  '[data-dsh-sidebar-footer]', '[data-slot="sidebar.settings"]', '.VOzbGW_overlay',
+  '.sherlock-about', '#sherlock-sidebar-update-button', '#sherlock-sidebar-update-panel'
+].join(',')
 let domMaintenanceFrame = 0
-const domObserver = new MutationObserver(() => {
-  if (domMaintenanceFrame) return
+const domObserver = new MutationObserver(records => {
+  let surfaceChanged = false
+  for (const record of records) {
+    for (const node of record.addedNodes) {
+      if (!bootFailureTriggered && node.textContent?.includes('Failed to load plugins')) checkBootFailureInDom()
+    }
+    if (surfaceChanged) continue
+    surfaceChanged = [...record.addedNodes, ...record.removedNodes].some(node =>
+      node instanceof Element && (node.matches(desktopMaintenanceSurfaces) || node.querySelector(desktopMaintenanceSurfaces)))
+  }
+  if (!surfaceChanged || domMaintenanceFrame) return
   domMaintenanceFrame = window.requestAnimationFrame(() => {
     domMaintenanceFrame = 0
-    checkBootFailureInDom()
     syncDeveloperModeVisibility()
     sidebarUpdateControl.mount()
   })

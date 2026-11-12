@@ -802,7 +802,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   refit();return true
 }
 export function installWorkbenchResponsiveArrange(root,workspace) {
-  const view=root.ownerDocument.defaultView
+  const view=root.ownerDocument.defaultView, specs=new WeakMap()
   let frame=null,last=null
   const schedule=()=>{
     if(!workspace.getWorkbenchResponsiveArrange()){last=null;return}
@@ -817,9 +817,14 @@ export function installWorkbenchResponsiveArrange(root,workspace) {
       if(!nodes.length){last=null;return}
       // Ignore selection, scroll and projected cell coordinates. Repacking in
       // response to its own geometry would fight content measurement.
-      const key=JSON.stringify([workspace.getActiveBoardTab?.(),Math.round(workspace.getWorkbenchContentWidth?.(width)??width),Math.round(size.visibleHeight||size.height),nodes.map(n=>[n.id,n.kind,n.title,n.excerpt,n.containerSpec,n.generationStatus])])
-      if(key===last)return
-      last=key
+      const sizeKey=[workspace.getActiveBoardTab?.(),Math.round(workspace.getWorkbenchContentWidth?.(width)??width),Math.round(size.visibleHeight||size.height)].join(':')
+      const inputs=nodes.map(n=>{
+        const spec=n.containerSpec
+        if(spec&&!specs.has(spec))specs.set(spec,JSON.stringify(spec))
+        return [n.id,n.kind,n.title,n.excerpt,spec&&specs.get(spec),n.generationStatus]
+      })
+      if(last?.sizeKey===sizeKey&&inputs.length===last.inputs.length&&inputs.every((input,i)=>input.every((value,j)=>value===last.inputs[i][j])))return
+      last={sizeKey,inputs}
       const pending=workspace.pendingWorkbenchArrange()
       arrangeWorkbenchContents(root,workspace,null,'auto',{focus:false,onFinish:durable=>{if(durable&&pending.length)workspace.consumeWorkbenchArrange(pending)}})
     })
@@ -914,7 +919,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       const cards=[...root.querySelectorAll('[data-research-node-id]')]
       for(const [card,bar] of scrollbars)if(!cards.includes(card)){bar.destroy();scrollbars.delete(card)}
       for(const card of cards){
-        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.fund-native-table-wrap,.odyssey-native-table-grid,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,[class*=editorPptxHost],textarea,.odyssey-generation-records')],()=>card.querySelector('iframe[data-research-html-artifact]')))
+        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('.hws-body')||card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.fund-native-table-wrap,.odyssey-native-table-grid,.hws-body,.hws-table-scroll,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,[class*=editorPptxHost],textarea,.odyssey-generation-records')],()=>card.querySelector('iframe[data-research-html-artifact]')))
         scrollbars.get(card).refresh()
       }
     }
@@ -987,8 +992,8 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const root=rootRef.current;if(!root)return
     const nodes=[...snapshot.files,...snapshot.artifacts,...workspace.getWorkbenchPlanningNodes()],width=snapshot.canvasSize.availableWidth||root.clientWidth,m=createResearchGrid().metrics(width),visibleHeight=root.clientHeight||snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height||700,contentBottom=Math.max(0,...nodes.map(n=>n.y+n.height/2)),bottom=workbenchScrollExtent(contentBottom,visibleHeight,m.rowStep,root.hasAttribute('data-workbench-toolbar-space'))
     for(const [id,value] of root.__eworkContentMeasurements||[])if(!nodes.some(n=>n.id===id&&n.containerSpec?.html===value.html))root.__eworkContentMeasurements.delete(id)
+    root.__eworkScrollLimit=Math.max(0,bottom-visibleHeight)
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
-    const viewport=snapshot.viewport;if(!root.hasAttribute('data-grid-operation')){const scrollTop=Math.max(0,Math.min(bottom-visibleHeight,-viewport.y));if(Math.abs(root.scrollTop-scrollTop)>.5)root.scrollTop=scrollTop;if(Math.abs(viewport.y+scrollTop)>.5)workspace.setViewport({x:0,y:-scrollTop,scale:1})}
     // Paint the viewport too: the content layer intentionally excludes the stable scrollbar gutter.
     root.style.setProperty('--grid-pattern',workbenchGridPattern(width));root.style.setProperty('--grid-step',m.step+'px');root.style.setProperty('--grid-scroll-top',root.scrollTop+'px')
     root.__eworkScrollbars?.()
@@ -1002,8 +1007,10 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       if(!active||root.hasAttribute('data-grid-operation'))return
       const candidates=nodes.filter(node=>node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='html'&&!['financial-widget','iframe','youtube','calendar-tool'].includes(node.containerSpec.type)&&!node.preserveGenerationSize)
       const height=workspace.getWorkbenchResponsiveArrange()?(snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height):0
-      const sizes=measureWorkbenchContents(root,candidates,height)
-      for(const node of candidates){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card||Math.abs(card.getBoundingClientRect().width/workbenchCanvasZoom(root)-node.width)>2)continue;const key=JSON.stringify([node.width,node.containerSpec,node.containerSpec.type==='chart'?height:0]);if(nativeFitted.get(node.id)===key)continue;const size=['code','form'].includes(node.containerSpec.type)?researchOptimalDimensions({...node,width:0,height:0}):sizes.get(node.id);if(size){nativeFitted.set(node.id,key);workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:size.height,layoutFit:true})}}
+      const fitKey=node=>JSON.stringify([node.width,node.containerSpec,node.containerSpec.type==='chart'?height:0])
+      const unfitted=candidates.filter(node=>nativeFitted.get(node.id)!==fitKey(node))
+      const sizes=measureWorkbenchContents(root,unfitted,height)
+      for(const node of unfitted){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card||Math.abs(card.getBoundingClientRect().width/workbenchCanvasZoom(root)-node.width)>2)continue;const key=fitKey(node);const size=['code','form'].includes(node.containerSpec.type)?researchOptimalDimensions({...node,width:0,height:0}):sizes.get(node.id);if(size){nativeFitted.set(node.id,key);workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:size.height,layoutFit:true})}}
     }
     fitNativeContents()
     const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width/workbenchCanvasZoom(root)-node.width)>2)continue;const fit=workbenchNativeTableFit(node,table);if(fit)workspace.setWorkbenchContentHeight(node.id,fit)}}
@@ -1015,7 +1022,14 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const observer=new ResizeObserver(fitTables),mutations=new MutationObserver(fitTables)
     for(const {table} of tables){observer.observe(table);for(const child of table.querySelectorAll('table,.terminal-native-context>*'))observer.observe(child);mutations.observe(table,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open']})}
     fitTables();return()=>{active=false;observer.disconnect();mutations.disconnect();nativeObserver.disconnect()}
-  },[snapshot])
+  },[snapshot.files,snapshot.artifacts,snapshot.canvasSize.width,snapshot.canvasSize.availableWidth,snapshot.canvasSize.visibleHeight,snapshot.canvasSize.height,workspace])
+  react.useLayoutEffect(()=>{
+    const root=rootRef.current
+    if(!root||root.hasAttribute('data-grid-operation'))return
+    const y=workspace.getSnapshot().viewport.y,top=Math.max(0,Math.min(root.__eworkScrollLimit??0,-y))
+    if(Math.abs(root.scrollTop-top)>.5)root.scrollTop=top
+    if(Math.abs(y+top)>.5)workspace.setViewport({x:0,y:-top,scale:1})
+  },[snapshot.viewport.y,snapshot.artifacts,snapshot.files,snapshot.canvasSize.availableWidth,snapshot.canvasSize.visibleHeight,workspace])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
 }
 
