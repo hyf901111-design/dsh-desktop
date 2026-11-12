@@ -126,7 +126,7 @@ const trustedUsage = usage => object(usage) && validCount(usage.prompt_tokens) &
 
 // Emit only successful protocol events. Do not relay upstream errors or headers.
 function chatStream(body, settle, estimate) {
-  let buffer = '', usage, done = false
+  let buffer = '', billed = false, done = false
   const decoder = new TextDecoder()
   async function drain(controller) {
     for (;;) {
@@ -138,18 +138,22 @@ function chatStream(body, settle, estimate) {
       const data = line.slice(5).trim()
       if (done) continue
       if (data === '[DONE]') {
-        if (!usage) throw Error('Hosted AI ended without usage')
-        await settle(estimate.billed(usage))
+        if (!billed) throw Error('Hosted AI ended without usage')
         done = true
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         continue
       }
       const frame = JSON.parse(data)
       if (!object(frame) || frame.error || !Array.isArray(frame.choices)) throw Error('Hosted AI stream failed')
-      if (trustedUsage(frame.usage)) usage = frame.usage
+      const hasUsage = trustedUsage(frame.usage)
+      // Ark sends the final total either in a separate usage event or alongside a finish reason.
+      if (!billed && hasUsage && (frame.choices.length === 0 || frame.choices.some(choice => choice.finish_reason != null))) {
+        await settle(estimate.billed(frame.usage))
+        billed = true
+      }
       const event = { id: frame.id, object: 'chat.completion.chunk', created: frame.created, model: frame.model,
         choices: frame.choices.map(choice => ({ index: choice.index, delta: choice.delta, finish_reason: choice.finish_reason })),
-        ...(trustedUsage(frame.usage) ? { usage: frame.usage } : {}) }
+        ...(hasUsage ? { usage: frame.usage } : {}) }
       controller.enqueue(encoder.encode('data: ' + JSON.stringify(event) + '\n\n'))
     }
     if (buffer.length > 2_000_000) throw Error('Hosted AI frame too large')
@@ -174,7 +178,7 @@ function chatStream(body, settle, estimate) {
 }
 
 export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQuotaLedger(db) } = {}) {
-  return async function handle(request, env) {
+  return async function handle(request, env, ctx) {
     const url = new URL(request.url)
     const action = url.pathname.slice(ROOT.length)
     if (url.search || !url.pathname.startsWith(ROOT) || !['catalog','quota','chat/completions','images','memory'].includes(action)) return fail('NOT_FOUND', 404)
@@ -212,9 +216,13 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       const { duplicate } = await ledger.reserve({ ...key, amountUnits: input.amountUnits })
       if (duplicate) return fail('HOSTED_AI_DUPLICATE', 409, '请求已受理，请勿重复提交。')
       const settle = actualUnits => ledger.settle({ ...key, actualUnits })
+      if (request.signal.aborted) {
+        await settle(0)
+        return fail('HOSTED_AI_CANCELLED', 499)
+      }
       const response = await send(ARK_PLAN_BASE + (image ? '/images/generations' : '/chat/completions'), {
         method: 'POST', redirect: 'manual',
-        signal: AbortSignal.any([request.signal, AbortSignal.timeout(image ? 240000 : 300000)]),
+        signal: image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(300000),
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.ARK_AGENT_PLAN_KEY },
         body: input.wire
       })
@@ -226,7 +234,12 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       }
       if (!image) {
         if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) return fail('HOSTED_AI_UPSTREAM', 502)
-        return new Response(chatStream(response.body, settle, input), { headers: { ...headers, 'content-type': 'text/event-stream' } })
+        const stream = chatStream(response.body, settle, input)
+        if (!ctx) return new Response(stream, { headers: { ...headers, 'content-type': 'text/event-stream' } })
+        const [client, accounting] = stream.tee()
+        // A client can close after the last token and before the provider's usage event.
+        ctx.waitUntil(accounting.pipeTo(new WritableStream()).catch(() => {}))
+        return new Response(client, { headers: { ...headers, 'content-type': 'text/event-stream' } })
       }
       const result = await readJson(response, 14_000_000)
       const b64 = result?.data?.length === 1 ? result.data[0]?.b64_json : undefined

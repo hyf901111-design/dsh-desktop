@@ -60,8 +60,25 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
       { id: 'chat', created: 123, model: input.model, choices: [{ index: 0, delta: { content: '你好' }, finish_reason: null }] },
       { id: 'chat', created: 123, model: input.model, choices: [], usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 } }
     ]
+    if (input.messages[0].content === 'cut') frames.pop()
+    if (input.messages[0].content === 'cut-after-finish') {
+      frames[0].choices[0].finish_reason = 'stop'
+      frames[0].usage = frames.pop().usage
+    }
+    if (input.messages[0].content === 'client-closed') {
+      const wire = frame => new TextEncoder().encode('data: ' + JSON.stringify(frame) + '\n\n')
+      return new Response(new ReadableStream({
+        async start(controller) {
+          controller.enqueue(wire(frames[0]))
+          await new Promise(resolve => setTimeout(resolve, 100))
+          controller.enqueue(wire(frames[1]))
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
+          controller.close()
+        }
+      }), {headers:{'content-type':'text/event-stream'}})
+    }
     return new Response(frames.map(frame => 'data: ' + JSON.stringify(frame) + '\n\n').join('') +
-      (input.messages[0].content === 'cut' ? '' : 'data: [DONE]\n\n'), { headers: { 'content-type': 'text/event-stream' } })
+      (['cut','cut-after-finish'].includes(input.messages[0].content) ? '' : 'data: [DONE]\n\n'), { headers: { 'content-type': 'text/event-stream' } })
   }
 }] }))
 try {
@@ -173,6 +190,20 @@ try {
       assert.deepEqual(actual[period],adminBalance[period],id)
     }
   }
+  const interruptedAfterFinish = await send('chat/completions',token,chat('cut-after-finish'),'cut-after-finish')
+  assert.match(await interruptedAfterFinish.text(), /HOSTED_AI_STREAM_INTERRUPTED/)
+  const billedAfterFinish = (await (await send('quota',token)).json()).quota
+  assert.equal(billedAfterFinish.fiveHour.used,(billedUnits+1500)/1_000_000)
+  assert.equal(billedAfterFinish.fiveHour.reserved,beforeMatrix.fiveHour.reserved)
+  const disconnected = await send('chat/completions',token,chat('client-closed'),'client-closed')
+  const reader = disconnected.body.getReader()
+  assert.match(new TextDecoder().decode((await reader.read()).value),/你好/)
+  await reader.cancel()
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if ((await admin.user('alice')).fiveHour.used === (billedUnits+3000)/1_000_000) break
+    await new Promise(resolve => setTimeout(resolve, 30))
+  }
+  assert.equal((await admin.user('alice')).fiveHour.used,(billedUnits+3000)/1_000_000)
   const outboundBefore = calls
   assert.equal((await send('chat/completions',token,chat([{type:'image_url',image_url:{url:'https://untrusted.invalid/image.png'}}]))).status,400)
   assert.equal(calls,outboundBefore)
