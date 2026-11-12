@@ -122,7 +122,7 @@ export function createBoardTabsGridState(storage,sessionId,shared=false) {
   },
   enable(value){width=value;const changed=normal.enable(value);for(const state of pages.values())state.enable(layout().width);return changed},
   enabled:()=>width>0,
-  get:()=>current().get(),visible:()=>current().visible(),set:cells=>current().set(cells),
+  get:()=>current().get(),visible:()=>current().visible(),set:(cells,options)=>current().set(cells,options),
   save(){persistView();return normal.save()&&[...pages.values()].every(state=>state.save())},
   contentHeight:(...args)=>current().contentHeight(...args),clearContentOverrides:()=>current().clearContentOverrides(),
   planningNodes:()=>current().planningNodes().map(n=>shift(n,layout())),

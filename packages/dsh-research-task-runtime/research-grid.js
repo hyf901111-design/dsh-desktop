@@ -310,7 +310,35 @@ export function createResearchGrid() {
     }
     return items.map(c=>bounded(planned.get(c.id)||c))
   }
+  function arrangeResponsive(nodes,items,width) {
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
+    const lanes=clamp(Math.floor(columns/m.minDraftColumns),1,3),baseSpan=Math.floor(columns/lanes)
+    const result=new Map()
+    let row=[],used=0,top=0
+    const flush=()=>{
+      if(!row.length)return
+      const spare=columns-used,share=Math.floor(spare/row.length),remainder=spare%row.length
+      let left=0
+      row.forEach(({cell,span,height},i)=>{
+        const w=span+share+Number(i<remainder)
+        result.set(cell.id,{...cell,x:left,y:top,w,h:height})
+        left+=w
+      })
+      top+=Math.max(...row.map(entry=>entry.height))
+      row=[];used=0
+    }
+    for(const {arrangeColumns,...cell} of ordered){
+      const node=byId.get(cell.id),preferred=node.preferred||node,min=minimum(node,m,true)
+      const span=Math.max(baseSpan,min.w)
+      const height=clamp(Math.max(min.h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
+      if(row.length>=lanes||used+span>columns)flush()
+      row.push({cell,span,height});used+=span
+    }
+    flush()
+    return items.map(c=>result.get(c.id)||bounded(c))
+  }
   function arrange(nodes,items,width,visibleHeight=0,mode='standard',options={}) {
+    if(mode==='auto')return arrangeResponsive(nodes,items,width)
     const authored=options.authoredBoard===true&&mode==='standard'&&authoredBoardPlan(nodes,items,width)
     if(authored)return authored
     const requested={three:3,two:2,one:1}[mode]

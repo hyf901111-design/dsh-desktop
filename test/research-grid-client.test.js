@@ -437,7 +437,7 @@ it('整理展开菜单选择排数、标记当前选项，主按钮重复当前�
  await f.event('click',toggle)
  let menu=f.document.querySelector('[data-workbench-arrange-menu]')
  expect(f.canvas.contains(menu)).toBe(false)
- expect([...menu.querySelectorAll('[role=menuitemradio]')].map(b=>b.textContent)).toEqual(['标准整理','三排整理','双排整理','单排整理'])
+ expect([...menu.querySelectorAll('[role=menuitemradio]')].map(b=>b.textContent)).toEqual(['自动整理','标准整理','三排整理','双排整理','单排整理'])
  expect([...menu.querySelectorAll('.ew-arrange-layout-icon')].every(svg=>svg.getAttribute('viewBox')==='0 0 24 24'&&svg.getAttribute('stroke-width')==='1.8')).toBe(true)
  expect(menu.querySelector('[data-arrange-mode=standard]').getAttribute('aria-checked')).toBe('true')
  const before=f.workspace.getWorkbenchCells()
