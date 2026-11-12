@@ -1,5 +1,6 @@
 import styles from './explore-menu.css?raw'
 import {createExploreOrb} from './explore-orb'
+import {readExploreQuota,renderExploreQuota,type ExploreQuota} from './explore-quota'
 import {createHomeOperationsDeck,HOME_OPERATIONS_COPY,type HomeOperationCard,type HomeOperationExample,type HomeOperationActionContext} from './home-operations'
 import {createHomeThemeGallery} from './home-theme-gallery'
 import type {HomeThemeController} from './home-theme-controls'
@@ -34,8 +35,8 @@ export function mountExploreMenu(doc:Document,options:Options){
   const tools=doc.createElement('div');tools.className='odyssey-explore-tools'
   const image=(src:string,width=20,height=width)=>{const img=doc.createElement('img');img.src=src;img.alt='';img.width=width;img.height=height;img.draggable=false;return img}
   const button=(label:string,src:string,onClick:()=>void,width=20)=>{const node=doc.createElement('button');node.type='button';node.className='odyssey-explore-tool';node.setAttribute('aria-label',label);node.title=label;node.append(image(src,width));node.onclick=onClick;return node}
-  let disposed=false,opened=false,closing:Promise<void>|undefined,caseIndex=0,tab:'quick'|'wallpapers'='quick',category='all',searching=false,busy=false,appearanceBusy=false
-  let accountOwner:string|null|undefined;let focusBefore:HTMLElement|null=null,action:AbortController|undefined,requestId='',openRequest='',results:ExploreResult[]=[],activeResult=-1
+  let disposed=false,opened=false,closing:Promise<void>|undefined,caseIndex=0,tab:'quick'|'wallpapers'|'usage'='quick',category='all',searching=false,busy=false,appearanceBusy=false
+  let accountOwner:string|null|undefined;let quota:ExploreQuota|undefined,quotaLoading=false;let focusBefore:HTMLElement|null=null,action:AbortController|undefined,requestId='',openRequest='',results:ExploreResult[]=[],activeResult=-1
   let outgoingTab:HTMLElement|undefined,tabAnimations:Animation[]=[],tabMotion=0,ownedDemoClose=false
   let dragOrigin=false,dragRelease:number|undefined
   const resetDrag=()=>{dragOrigin=false;if(dragRelease!==undefined){win.clearTimeout(dragRelease);dragRelease=undefined}}
@@ -53,8 +54,19 @@ export function mountExploreMenu(doc:Document,options:Options){
   searchWrap.append(searchButton,input,collapseSearch)
   const settings=button('设置',settingsIcon,()=>{void close(false).then(()=>win.dispatchEvent(new win.CustomEvent('sherlock:settings-open')))});tools.append(searchWrap,settings);header.append(brand,tools)
   const tabs=doc.createElement('div');tabs.className='odyssey-explore-tabs';tabs.role='tablist'
-  const quickTab=doc.createElement('button'),wallpaperTab=doc.createElement('button')
-  for(const [node,key]of [[quickTab,'quick'],[wallpaperTab,'wallpapers']] as const){node.type='button';node.role='tab';node.id='odyssey-explore-'+key+'-tab';node.setAttribute('aria-controls','odyssey-explore-'+key);node.onclick=()=>selectTab(key);node.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return;event.preventDefault();const next=event.key==='Home'||event.key==='ArrowLeft'?quickTab:wallpaperTab;next.click();next.focus()};tabs.append(node)}
+  const quickTab=doc.createElement('button'),wallpaperTab=doc.createElement('button'),usageTab=doc.createElement('button')
+  const tabItems=[[quickTab,'quick'],[wallpaperTab,'wallpapers'],[usageTab,'usage']] as const
+  for(const [node,key] of tabItems){
+    node.type='button';node.role='tab';node.id='odyssey-explore-'+key+'-tab'
+    node.setAttribute('aria-controls','odyssey-explore-'+key);node.onclick=()=>selectTab(key)
+    node.onkeydown=event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return
+      const visible=tabItems.map(([button])=>button).filter(button=>!button.hidden),index=visible.indexOf(node)
+      const next=event.key==='Home'?visible[0]:event.key==='End'?visible.at(-1):visible[(index+visible.length+(event.key==='ArrowLeft'?-1:1))%visible.length]
+      event.preventDefault();next?.click();next?.focus()
+    }
+    tabs.append(node)
+  }
   const appearance=button('切换为浅色',homeAppearanceIcon(false),()=>{if(appearanceBusy)return;appearanceBusy=true;appearance.disabled=true;void options.onToggleAppearance().catch(showError).finally(()=>{appearanceBusy=false;appearance.disabled=false;labels()})});appearance.dataset.exploreAppearance=''
   const navigation=doc.createElement('nav');navigation.className='odyssey-explore-navigation';navigation.append(tabs);tools.prepend(appearance);tools.append(searchWrap)
   const viewport=doc.createElement('div');viewport.className='odyssey-explore-viewport'
@@ -65,6 +77,8 @@ export function mountExploreMenu(doc:Document,options:Options){
   showcase.querySelector('.odyssey-operations-pagination')!.classList.add('odyssey-explore-pages')
   createButtons.forEach((node,index)=>{node.classList.add('odyssey-explore-create');node.dataset.exploreCard=cards[index]!})
   const wallpapers=doc.createElement('div');wallpapers.className='odyssey-explore-wallpapers';wallpapers.id='odyssey-explore-wallpapers';wallpapers.role='tabpanel';wallpapers.setAttribute('aria-labelledby',wallpaperTab.id)
+  const usage=doc.createElement('div');usage.className='odyssey-explore-quota';usage.id='odyssey-explore-usage'
+  usage.role='tabpanel';usage.setAttribute('aria-labelledby',usageTab.id)
   const gallery=createHomeThemeGallery(doc,options.themeController,{fitHeight:true,livePreview:true,paged:true});wallpapers.append(gallery.element)
   const searchPanel=doc.createElement('section');searchPanel.className='odyssey-explore-results';searchPanel.setAttribute('aria-label','搜索结果');searchPanel.hidden=true
   const categories=doc.createElement('div');categories.className='odyssey-explore-categories';categories.role='tablist'
@@ -72,16 +86,18 @@ export function mountExploreMenu(doc:Document,options:Options){
   for(const key of ['all','board','session','note']){const node=doc.createElement('button');node.type='button';node.role='tab';node.onclick=()=>{category=key;activeResult=-1;renderResults()};node.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const nodes=[...categoryButtons.values()],index=nodes.indexOf(node),next=event.key==='Home'?0:event.key==='End'?nodes.length-1:(index+(event.key==='ArrowLeft'?-1:1)+nodes.length)%nodes.length;nodes[next]?.click();nodes[next]?.focus()};categoryButtons.set(key,node);categories.append(node)}
   const list=doc.createElement('div');list.className='odyssey-explore-result-list';list.role='listbox';list.setAttribute('aria-label','会话搜索结果');searchPanel.append(categories,list)
   const feedback=doc.createElement('p');feedback.className='odyssey-explore-feedback';feedback.role='status';feedback.hidden=true
-  viewport.append(quick,wallpapers,searchPanel);body.append(header,navigation,viewport,feedback);dialog.append(edge,windowDrag,system,body);doc.body.append(dialog)
+  viewport.append(quick,wallpapers,usage,searchPanel);body.append(header,navigation,viewport,feedback);dialog.append(edge,windowDrag,system,body);doc.body.append(dialog)
   const dark=()=>doc.body.hasAttribute('data-ds-dark-theme')
   function showError(error:unknown){if(disposed)return;const message=error instanceof Error?error.message:text('暂时无法完成，请稍后重试。','Please try again.');if(opened){feedback.hidden=false;feedback.textContent=message}else{const toast=doc.createElement('p');toast.className='odyssey-explore-toast';toast.role='alert';toast.textContent=message;doc.body.append(toast);win.setTimeout(()=>toast.remove(),6000)}}
   function labels(){
-    name.textContent=text('探索','Explore');dialog.setAttribute('aria-label',name.textContent);quickTab.textContent=copy().heading;wallpaperTab.textContent=copy().wallpapers
+    name.textContent=text('探索','Explore');dialog.setAttribute('aria-label',name.textContent);quickTab.textContent=copy().heading;wallpaperTab.textContent=copy().wallpapers;usageTab.textContent=text('管理用量','Usage');usageTab.hidden=!accountOwner
     input.hidden=!searching;collapseSearch.hidden=!searching
     searchPanel.setAttribute('aria-label',text('搜索结果','Search results'));list.setAttribute('aria-label',text('会话搜索结果','Conversation search results'))
     for(const [node,label]of [[searchButton,text('搜索会话','Search conversations')],[settings,text('设置','Settings')],[closeButton,text('关闭探索','Close Explore')],[collapseSearch,text('收起搜索','Close search')]]as const){node.title=label;node.setAttribute('aria-label',label)}
-    for(const [node,key]of [[quickTab,'quick'],[wallpaperTab,'wallpapers']] as const){node.setAttribute('aria-selected',String(tab===key));node.tabIndex=tab===key?0:-1}
+    for(const [node,key]of tabItems){node.setAttribute('aria-selected',String(tab===key));node.tabIndex=tab===key?0:-1}
     quick.hidden=tab!=='quick'&&outgoingTab!==quick;quick.inert=tab!=='quick'||searching;quick.setAttribute('aria-hidden',String(tab!=='quick'||searching));wallpapers.hidden=tab!=='wallpapers'&&outgoingTab!==wallpapers;wallpapers.inert=tab!=='wallpapers'||searching;wallpapers.setAttribute('aria-hidden',String(tab!=='wallpapers'||searching));gallery.setVisible(opened&&tab==='wallpapers'&&!searching)
+    usage.hidden=tab!=='usage'||searching||!accountOwner
+    if(!usage.hidden)renderExploreQuota(usage,quota,quotaLoading?'loading':'unavailable',doc.documentElement.dataset.odysseyLocale==='en')
     const appearanceLabel=dark()?copy().light:copy().dark;appearance.title=appearanceLabel;appearance.setAttribute('aria-label',appearanceLabel);appearance.querySelector('img')!.src=homeAppearanceIcon(dark())
     deck.refresh()
     dots.forEach((node,index)=>node.setAttribute('aria-current',String(index===caseIndex)))
@@ -91,13 +107,14 @@ export function mountExploreMenu(doc:Document,options:Options){
   }
   function settleTabMotion(){tabMotion++;for(const animation of tabAnimations)animation.cancel();tabAnimations=[];outgoingTab=undefined}
   function selectTab(next:typeof tab){
-    if(busy||next===tab)return
-    settleTabMotion();const previous=tab==='quick'?quick:wallpapers,direction=next==='wallpapers'?1:-1
+    if(busy||next===tab||next==='usage'&&!accountOwner)return
+    settleTabMotion();const panels={quick,wallpapers,usage},previous=panels[tab],animate=tab!=='usage'&&next!=='usage',direction=next==='wallpapers'?1:-1
     tab=next;feedback.hidden=true;body.dataset.exploreTab=tab
-    if(!reduced.matches&&opened&&!searching)outgoingTab=previous
+    if(animate&&!reduced.matches&&opened&&!searching)outgoingTab=previous
+    if(next==='usage')win.dispatchEvent(new win.CustomEvent('sherlock:ai-quota-request'))
     labels();layout()
     if(!outgoingTab)return
-    const incoming=tab==='quick'?quick:wallpapers,epoch=tabMotion
+    const incoming=panels[tab],epoch=tabMotion
     tabAnimations=[previous.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:`translateX(${-10*direction}px)`}],{duration:240,easing:'cubic-bezier(.22,.61,.36,1)',fill:'both'}),incoming.animate([{opacity:0,transform:`translateX(${10*direction}px)`},{opacity:1,transform:'translateX(0)'}],{duration:260,easing:'cubic-bezier(.22,.61,.36,1)',fill:'both'})]
     void Promise.allSettled(tabAnimations.map(animation=>animation.finished)).then(()=>{if(epoch!==tabMotion)return;settleTabMotion();labels()})
   }
@@ -116,7 +133,18 @@ export function mountExploreMenu(doc:Document,options:Options){
   const searchReply=(event:Event)=>{const data=(event as CustomEvent).detail;if(!opened)return;if(data?.requestId===openRequest){openRequest='';list.removeAttribute('aria-busy');if(data.ok)void close(false).then(()=>doc.dispatchEvent(new win.CustomEvent('sherlock:search-session-opened')));else showError(Error(data.error||text('暂时无法打开','Could not open conversation')));return}if(!searching||data?.requestId!==requestId||!Array.isArray(data.results))return;results=data.results.filter((row:any)=>typeof row.key==='string'&&typeof row.title==='string'&&['board','session','note'].includes(row.kind));renderResults()}
   input.oninput=()=>{activeResult=-1;query()};input.onfocus=()=>{activeResult=-1;for(const item of list.querySelectorAll('button'))item.setAttribute('aria-selected','false')};input.onkeydown=event=>{if(event.isComposing)return;if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setSearch(false);return}const rows=[...list.querySelectorAll<HTMLButtonElement>('button')];if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();activeResult=event.key==='ArrowDown'?0:rows.length-1;rows[activeResult]?.focus()}else if(event.key==='Enter'){event.preventDefault();rows[Math.max(0,activeResult)]?.click()}}
   searchPanel.onkeydown=event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){const rows=[...list.querySelectorAll<HTMLButtonElement>('button')];event.preventDefault();rows[Math.max(0,Math.min(rows.length-1,activeResult+(event.key==='ArrowDown'?1:-1)))]?.focus()}}
-  const accountState=(event:Event)=>{const state=(event as CustomEvent).detail;if(!state||typeof state.username!=='string')return;const owner=typeof state.accountId==='string'?state.accountId:null;if(accountOwner!==undefined&&accountOwner!==owner)void close(false);accountOwner=owner;account.replaceChildren();const avatar=state.avatar instanceof win.HTMLElement&&state.avatar.ownerDocument===doc?state.avatar.cloneNode(true):undefined;if(avatar)account.append(avatar);const label=doc.createElement('span');label.textContent=state.username;label.dataset.uiPreserve='';account.append(label,image(chevronIcon,15));account.setAttribute('aria-label',state.username+text('，打开账户菜单',', open account menu'))}
+  const accountState=(event:Event)=>{const state=(event as CustomEvent).detail;if(!state||typeof state.username!=='string')return;const owner=typeof state.accountId==='string'?state.accountId:null;if(accountOwner!==owner){
+    if(accountOwner!==undefined)void close(false)
+    accountOwner=owner;quota=undefined;quotaLoading=false
+    if(!owner&&tab==='usage'){tab='quick';body.dataset.exploreTab=tab}
+    labels()
+  }account.replaceChildren();const avatar=state.avatar instanceof win.HTMLElement&&state.avatar.ownerDocument===doc?state.avatar.cloneNode(true):undefined;if(avatar)account.append(avatar);const label=doc.createElement('span');label.textContent=state.username;label.dataset.uiPreserve='';account.append(label,image(chevronIcon,15));account.setAttribute('aria-label',state.username+text('，打开账户菜单',', open account menu'))}
+  const quotaState=(event:Event)=>{
+    const state=(event as CustomEvent).detail
+    if(!accountOwner||state?.accountId!==accountOwner)return
+    quota=readExploreQuota(state.quota);quotaLoading=state.loading===true
+    if(tab==='usage'&&!searching)renderExploreQuota(usage,quota,quotaLoading?'loading':'unavailable',doc.documentElement.dataset.odysseyLocale==='en')
+  }
   function open(){
     if(disposed||opened)return;if(closing){void closing.then(open);return}
     options.onBeforeOpen?.();opened=true;focusBefore=doc.activeElement instanceof win.HTMLElement?doc.activeElement:null
@@ -124,7 +152,7 @@ export function mountExploreMenu(doc:Document,options:Options){
     // our close(false) demo handoff. Own restoration explicitly: refocusing the
     // home composer here can select a new session and cancel the armed guide.
     focusBefore?.blur()
-    feedback.hidden=true;dialog.showModal();doc.body.dataset.exploreOpen='';doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','true');dialog.dataset.motion='opening';labels();layout();(tab==='quick'?quickTab:wallpaperTab).focus({preventScroll:true});win.dispatchEvent(new win.CustomEvent('sherlock:account-state-request'));
+    feedback.hidden=true;dialog.showModal();doc.body.dataset.exploreOpen='';doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','true');dialog.dataset.motion='opening';labels();layout();(tab==='quick'?quickTab:tab==='usage'?usageTab:wallpaperTab).focus({preventScroll:true});win.dispatchEvent(new win.CustomEvent('sherlock:account-state-request'));if(tab==='usage')win.dispatchEvent(new win.CustomEvent('sherlock:ai-quota-request'));
   }
   function close(restoreFocus=true,preserveAction=false):Promise<void>{
     resetDrag()
@@ -149,9 +177,9 @@ export function mountExploreMenu(doc:Document,options:Options){
   dialog.addEventListener('click',event=>{const fromDrag=dragOrigin;resetDrag();if(fromDrag||event.target===windowDrag){event.preventDefault();event.stopPropagation()}},true)
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===edge){if(searching)setSearch(false,false);else void close()}else if(searching&&!searchPanel.contains(event.target as Node)&&!searchWrap.contains(event.target as Node))setSearch(false,false)})
   const openEvent=()=>open(),closeEvent=(event:Event)=>{void close((event as CustomEvent).detail?.restoreFocus!==false)},changed=(event:Event)=>{if((event as CustomEvent).detail?.ownerChanged){reset();return}if(opened&&searching)query()},reset=()=>{action?.abort();void close(false)}
-  win.addEventListener('sherlock:explore-open',openEvent);win.addEventListener('sherlock:explore-close',closeEvent);win.addEventListener('sherlock:account-state',accountState);doc.addEventListener('sherlock:explore-search-reply',searchReply);doc.addEventListener('sherlock:explore-search-changed',changed);win.addEventListener('sherlock:skill-menu-reset',reset)
+  win.addEventListener('sherlock:explore-open',openEvent);win.addEventListener('sherlock:explore-close',closeEvent);win.addEventListener('sherlock:account-state',accountState);win.addEventListener('sherlock:ai-quota-state',quotaState);doc.addEventListener('sherlock:explore-search-reply',searchReply);doc.addEventListener('sherlock:explore-search-changed',changed);win.addEventListener('sherlock:skill-menu-reset',reset)
   win.addEventListener('pointerdown',dragStart,true);win.addEventListener('pointerup',dragEnd,true);win.addEventListener('pointercancel',resetDrag,true);win.addEventListener('blur',resetDrag)
   const observer=new win.MutationObserver(()=>{labels();layout()});observer.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});const resize=new win.ResizeObserver(layout);resize.observe(body)
-  const dispose=()=>{if(disposed)return;disposed=true;resetDrag();settleTabMotion();cancelOpenResult();action?.abort();deck.dispose();gallery.dispose();observer.disconnect();resize.disconnect();win.removeEventListener('sherlock:explore-open',openEvent);win.removeEventListener('sherlock:explore-close',closeEvent);win.removeEventListener('sherlock:account-state',accountState);doc.removeEventListener('sherlock:explore-search-reply',searchReply);doc.removeEventListener('sherlock:explore-search-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',reset);win.removeEventListener('pointerdown',dragStart,true);win.removeEventListener('pointerup',dragEnd,true);win.removeEventListener('pointercancel',resetDrag,true);win.removeEventListener('blur',resetDrag);dialog.remove();style.remove();delete doc.body.dataset.exploreOpen;mounted.delete(doc)}
+  const dispose=()=>{if(disposed)return;disposed=true;resetDrag();settleTabMotion();cancelOpenResult();action?.abort();deck.dispose();gallery.dispose();observer.disconnect();resize.disconnect();win.removeEventListener('sherlock:explore-open',openEvent);win.removeEventListener('sherlock:explore-close',closeEvent);win.removeEventListener('sherlock:account-state',accountState);win.removeEventListener('sherlock:ai-quota-state',quotaState);doc.removeEventListener('sherlock:explore-search-reply',searchReply);doc.removeEventListener('sherlock:explore-search-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',reset);win.removeEventListener('pointerdown',dragStart,true);win.removeEventListener('pointerup',dragEnd,true);win.removeEventListener('pointercancel',resetDrag,true);win.removeEventListener('blur',resetDrag);dialog.remove();style.remove();delete doc.body.dataset.exploreOpen;mounted.delete(doc)}
   labels();mounted.set(doc,dispose);return dispose
 }

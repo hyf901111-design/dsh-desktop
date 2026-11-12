@@ -1,7 +1,9 @@
 import { safeStorage } from 'electron'
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createServer, type Server } from 'node:http'
+import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import {
@@ -21,6 +23,7 @@ export class AccountService {
   private sessionGeneration = 0
   private suspended = false
   private sessionAbort = new AbortController()
+  private hostedCatalog?: { generation: number; expires: number; pending: Promise<unknown> }
   private readonly listeners = new Set<() => void>()
   constructor(
     private directory: string,
@@ -211,6 +214,90 @@ export class AccountService {
       )
     }
   }
+  private async hostedRequest(path: string, signal: AbortSignal, body?: Buffer): Promise<Response> {
+    if (!this.authenticated) return Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 })
+    const response = await (this.collaborationOptions.fetch ?? fetch)(this.origin + '/v1/hosted-ai/' + path, {
+      method: body === undefined ? 'GET' : 'POST', redirect: 'error', body: body as Uint8Array<ArrayBuffer> | undefined,
+      headers: { authorization: 'Bearer ' + this.token, 'content-type': 'application/json' },
+      signal: AbortSignal.any([signal, this.sessionAbort.signal, AbortSignal.timeout(body === undefined ? 8000 : 310000)])
+    })
+    return response
+  }
+  private async readHostedCatalog(): Promise<{ models?: unknown; image?: boolean; memory?: boolean }> {
+    const empty = { models: [], image: false }
+    if (!this.authenticated || !this.accountId) return empty
+    const generation = this.generation
+    let cached = this.hostedCatalog
+    if (!cached || cached.generation !== generation || cached.expires <= Date.now()) {
+      const pending = this.hostedRequest('catalog', this.sessionAbort.signal).then(async response => {
+        if (response.ok) return await response.json()
+        await response.body?.cancel()
+        return empty
+      }).catch(() => empty)
+      cached = this.hostedCatalog = { generation, expires: Date.now() + 15000, pending }
+    }
+    const result = await cached.pending
+    return generation === this.generation && result && typeof result === 'object' ? result : empty
+  }
+  async openVikingMemory(owner: string, query: string, remember: boolean): Promise<string[]> {
+    if (!this.authenticated || this.accountId !== owner) return []
+    const generation = this.generation
+    try {
+      const catalog = await this.readHostedCatalog()
+      if (!catalog.memory || generation !== this.generation) return []
+      const response = await this.hostedRequest('memory', AbortSignal.timeout(4000), Buffer.from(JSON.stringify({query,remember})))
+      if (!response.ok) { await response.body?.cancel(); return [] }
+      const result = await response.json()
+      return generation === this.generation && Array.isArray(result?.memories) ?
+        result.memories.filter((value: unknown) => typeof value === 'string').slice(0,4) : []
+    } catch { return [] }
+  }
+  private async hostedBridge(req: IncomingMessage, res: ServerResponse, secret: string): Promise<void> {
+    const path = req.url?.slice('/hosted-ai/'.length)
+    const generation = this.generation
+    const equal = (value: string) => {
+      const supplied = Buffer.from(req.headers.authorization ?? ''), expected = Buffer.from('Bearer ' + value)
+      return supplied.length === expected.length && timingSafeEqual(supplied, expected)
+    }
+    if (path === 'catalog' && req.method === 'GET' && equal(secret)) {
+      const empty = { models: [], image: false }
+      if (!this.authenticated || !this.accountId) { res.setHeader('content-type','application/json'); res.end(JSON.stringify(empty)); return }
+      const result = await this.readHostedCatalog()
+      res.setHeader('content-type','application/json')
+      res.setHeader('cache-control','no-store')
+      res.end(JSON.stringify(generation === this.generation ? { ...result as object, generation } : empty))
+      return
+    }
+    if (!['chat/completions', 'images'].includes(path ?? '') || req.method !== 'POST' || !equal(secret + '.' + generation) || !this.authenticated) {
+      res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { code: 'LOGIN_REQUIRED', message: '请登录后重新选择云端模型。' } }))
+      return
+    }
+    const signal = new AbortController()
+    res.once('close', () => signal.abort())
+    const chunks: Buffer[] = []
+    let bytes = 0
+    for await (const chunk of req) {
+      if ((bytes += chunk.length) > (path === 'images' ? 12_000_000 : 2_000_000)) { res.writeHead(413).end(); return }
+      chunks.push(chunk)
+    }
+    if (generation !== this.generation || signal.signal.aborted) { res.writeHead(401).end(); return }
+    const response = await this.hostedRequest(path!, signal.signal, Buffer.concat(chunks))
+    if (generation !== this.generation || signal.signal.aborted) { await response.body?.cancel(); res.writeHead(401).end(); return }
+    res.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store' })
+    if (response.body) await pipeline(Readable.from(response.body as unknown as AsyncIterable<Uint8Array>), res)
+    else res.end()
+  }
+  private async hostedQuota(): Promise<unknown> {
+    if (!this.authenticated) return { user: null }
+    const generation = this.generation
+    try {
+      const response = await this.hostedRequest('quota', this.sessionAbort.signal)
+      const result = await response.json()
+      if (generation !== this.generation) return { user: null }
+      if (response.status === 401 && result?.error?.code === 'LOGIN_REQUIRED') await this.clear()
+      return result
+    } catch { return { error: { code: 'HOSTED_AI_UNAVAILABLE' } } }
+  }
   async start() {
     try {
       if (safeStorage.isEncryptionAvailable())
@@ -225,6 +312,16 @@ export class AccountService {
     const secret = randomBytes(32).toString('hex')
     this.server = createServer((req, res) => {
       void (async () => {
+        if (req.url?.startsWith('/hosted-ai/')) {
+          const port = (this.server?.address() as AddressInfo | null)?.port
+          if (req.socket.remoteAddress !== '127.0.0.1' || req.headers.host !== '127.0.0.1:' + port ||
+              req.headers.origin !== undefined || req.headers['sec-fetch-site'] === 'cross-site' ||
+              ['forwarded','x-forwarded-for','x-forwarded-host','x-real-ip'].some(header=>req.headers[header]!==undefined)) {
+            res.writeHead(403).end(); return
+          }
+          await this.hostedBridge(req, res, secret)
+          return
+        }
         const supplied = Buffer.from(req.headers.authorization ?? '')
         const expected = Buffer.from(`Bearer ${secret}`)
         if (
@@ -272,8 +369,9 @@ export class AccountService {
           })
           .end(data)
       })().catch(() => {
-        if (!res.headersSent)
-          res.writeHead(503, { 'content-type': 'application/json' })
+        if (res.destroyed) return
+        if (res.headersSent) { res.destroy(); return }
+        res.writeHead(503, { 'content-type': 'application/json' })
         res.end(JSON.stringify({ error: { code: 'FUND_SERVICE_UNAVAILABLE' } }))
       })
     })
@@ -292,7 +390,7 @@ export class AccountService {
     this.server?.closeAllConnections()
   }
   invoke(action: string, input: unknown) {
-    const result = this.serial.then(() => this.perform(action, input))
+    const result = this.serial.then(() => action === 'ai-quota' ? this.hostedQuota() : this.perform(action, input))
     this.serial = result.catch(() => {})
     return result
   }

@@ -1,4 +1,5 @@
 import {createExploreOrb} from './explore-orb'
+import {createQuotaRing, readExploreQuota, updateQuotaRing, type ExploreQuota} from './explore-quota'
 import exploreCopy from './explore-assets/account-copy.svg?raw'
 import exploreCheck from './explore-assets/account-check.svg?raw'
 import exploreId from './explore-assets/account-id-card.svg?raw'
@@ -21,6 +22,7 @@ import authSceneMask from './figma-settings-assets/auth-scene-mask.svg?raw'
 import { createSettingsBackgroundController } from './settings-background'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
+  quota?: unknown
   user?: Account | null
   error?: { code: string }
   usage?: { capability: string; requests: number; succeeded: number }[]
@@ -161,14 +163,39 @@ export function mountAccountUi(
     }
     return avatar
   }
+  let quota: ExploreQuota | undefined, quotaOwner: Account | null = null, quotaAt = 0
+  let quotaPending: Promise<void> | undefined, quotaLoading = false, quotaDisposed = false
+  function publishQuota() {
+    const label = document.documentElement.dataset.odysseyLocale === 'en' ? 'Explore' : '探索'
+    if(trigger) updateQuotaRing(trigger, quota, label, label === 'Explore')
+    dispatch('sherlock:ai-quota-state', {accountId:user?.id??null, quota, loading:quotaLoading})
+  }
+  function requestQuota() {
+    if(!user || !options.explore || quotaDisposed) return
+    if(quotaPending || Date.now()-quotaAt<5000){publishQuota();return}
+    const owner=user
+    quotaLoading=true;publishQuota()
+    const pending=invoke('ai-quota').then(reply=>{
+      if(quotaDisposed || user!==owner) return
+      if(reply.error?.code==='LOGIN_REQUIRED'){user=null;updateTrigger();return}
+      quota=readExploreQuota(reply.quota);quotaAt=Date.now()
+    }).catch(()=>{if(user===owner){quota=undefined;quotaAt=Date.now()}}).finally(()=>{
+      if(quotaPending!==pending)return
+      quotaPending=undefined;quotaLoading=false;publishQuota()
+    })
+    quotaPending=pending
+  }
   function publishAccountState(){dispatch('sherlock:account-state',{accountId:user?.id??null,username:user?.username??'登录',authenticated:!!user,avatar:createAvatar()})}
   function updateTrigger() {
+    document.documentElement.toggleAttribute('data-odyssey-hosted-account', !!user)
     if (!trigger) return
     trigger.replaceChildren()
     const avatar=createAvatar(),label=document.createElement('span')
     if(options.explore){
       label.textContent=document.documentElement.dataset.odysseyLocale==='en'?'Explore':'探索'
-      trigger.dataset.exploreTrigger='';trigger.append(createExploreOrb(document),label);trigger.setAttribute('aria-label',label.textContent);publishAccountState();return
+      if(quotaOwner!==user){quotaOwner=user;quota=undefined;quotaAt=0;quotaPending=undefined;quotaLoading=false}
+      const orb=createExploreOrb(document);orb.append(createQuotaRing(document))
+      trigger.dataset.exploreTrigger='';trigger.append(orb,label);publishAccountState();publishQuota();requestQuota();return
     }
     if(user)label.dataset.uiPreserve=''
     label.textContent=user?.username??'登录';trigger.append(avatar,label);trigger.setAttribute('aria-label',`${label.textContent}，打开账户菜单`)
@@ -705,6 +732,7 @@ export function mountAccountUi(
       document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')
     if (original && !trigger?.isConnected) {
       trigger = button('',()=>{if(options.explore)dispatch('sherlock:explore-open');else toggleAccountMenu(trigger!)},'sherlock-account-button')
+      if(options.explore){trigger.addEventListener('pointerenter',requestQuota);trigger.addEventListener('focus',requestQuota)}
       trigger.setAttribute('aria-haspopup', options.explore?'dialog':'menu')
       trigger.setAttribute('aria-expanded', 'false')
       const controls = document.createElement('div')
@@ -828,6 +856,7 @@ export function mountAccountUi(
   const exploreSettings=()=>open(false),exploreClose=()=>closeMenu()
   document.defaultView?.addEventListener('sherlock:account-menu-request',exploreAccount)
   document.defaultView?.addEventListener('sherlock:account-state-request',publishAccountState)
+  document.defaultView?.addEventListener('sherlock:ai-quota-request',requestQuota)
   document.defaultView?.addEventListener('sherlock:account-menu-close',exploreClose)
   document.defaultView?.addEventListener('sherlock:settings-open',exploreSettings)
   const openFromBoards = () => open(true)
@@ -851,6 +880,8 @@ export function mountAccountUi(
     })
     .catch(() => {})
   return () => {
+    quotaDisposed=true;quotaPending=undefined
+    document.documentElement.removeAttribute('data-odyssey-hosted-account')
     authDialog?.close()
     observer.disconnect()
     localeObserver.disconnect()
@@ -861,6 +892,7 @@ export function mountAccountUi(
     style.remove()
     document.defaultView?.removeEventListener('sherlock:account-menu-request',exploreAccount)
     document.defaultView?.removeEventListener('sherlock:account-state-request',publishAccountState)
+    document.defaultView?.removeEventListener('sherlock:ai-quota-request',requestQuota)
     document.defaultView?.removeEventListener('sherlock:account-menu-close',exploreClose)
     document.defaultView?.removeEventListener('sherlock:settings-open',exploreSettings)
     document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)

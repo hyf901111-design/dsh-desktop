@@ -12,7 +12,7 @@ import { canonicalMemoryKey, MemoryRetriever, normalizedMemoryText, MEMORY_BACKG
 
 type Summary = {signature:string;scopeEpoch:number;state:'pending'|'ready'|'failed';text?:string;updatedAt?:number;model?:string;attempts:number;ownerEpoch?:string}
 type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string|null>; disabled: Record<string,boolean>; settings: MemorySettings; settingsVersion?:2; candidatePolicyVersion?:1; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string;attempts?:number}>; imported:string[]; documentHash?:string;documentSignature?:string;documentPending?:{previousHash?:string;targetHash:string;signature:string};summary?:Summary;summaryRoute?:{provider:string;model:string};warning?:string }
-type Options = {root:string;encryption:MemoryEncryption;owner():string;isShared(sessionId:string):boolean;workspaceRoot(sessionId:string):Promise<string|null>;now?():number;legacyRoot?:string;changed?():void;semantic?:MemorySemanticProvider;semanticConfig?:LocalMemoryConfig}
+type Options = {cloudMemory?(owner:string,query:string,remember:boolean):Promise<string[]>;root:string;encryption:MemoryEncryption;owner():string;isShared(sessionId:string):boolean;workspaceRoot(sessionId:string):Promise<string|null>;now?():number;legacyRoot?:string;changed?():void;semantic?:MemorySemanticProvider;semanticConfig?:LocalMemoryConfig}
 type Capture = {owner:string;epoch:string;scopeEpoch:number;jobKey:string;turn:MemoryRuntimeTurn;projectId?:string}
 const kinds=new Set(['preference','background','decision','progress']), scopes=new Set(['global','project'])
 function fresh():State {return {schemaVersion:1,revision:0,scopeEpoch:0,secret:randomBytes(32).toString('hex'),rows:{},versions:{},projects:{},bindings:{},disabled:{},settings:{use:true,auto:true,semantic:true},settingsVersion:2,candidatePolicyVersion:1,suppression:[],usages:[],jobs:{},imported:[]}}
@@ -62,7 +62,7 @@ export class MemoryService {
     for(const id of removed){delete state.rows[id];delete state.versions[id]}
     for(const usage of state.usages)usage.entries=usage.entries.filter(entry=>!removed.has(entry.id))
     state.candidatePolicyVersion=1;state.scopeEpoch++
-    this.cancelPending(state);this.captures.clear();this.retriever.clear();this.semantic?.clear()
+    this.cancelPending(state);this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.clear();this.semantic?.clear()
     this.persist(state,owner,removed.size>0)
     return state
   }
@@ -95,9 +95,9 @@ export class MemoryService {
       const file=this.documents.read(owner)
       if(!original.documentHash){this.persist(original,owner,false,false);this.documentError=undefined;return original}
       if(file?.hash===original.documentHash){this.documentError=undefined;return original}
-      if(file&&file.signature!==original.documentSignature){this.documents.preserveConflict(owner);const state=structuredClone(original);state.documentHash=file.hash;state.documentSignature=undefined;state.scopeEpoch++;this.cancelPending(state);this.captures.clear();this.retriever.clear();this.semantic?.clear();this.persist(state,owner);this.documentError={owner,message:'旧版本编辑已保留在同目录的记忆冲突文档中，记忆.md 已恢复最新内容。'};return state}
+      if(file&&file.signature!==original.documentSignature){this.documents.preserveConflict(owner);const state=structuredClone(original);state.documentHash=file.hash;state.documentSignature=undefined;state.scopeEpoch++;this.cancelPending(state);this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.clear();this.semantic?.clear();this.persist(state,owner);this.documentError={owner,message:'旧版本编辑已保留在同目录的记忆冲突文档中，记忆.md 已恢复最新内容。'};return state}
       const state=structuredClone(original),purge=this.applyDocumentEntries(state,file?.entries??[])
-      state.documentHash=file?.hash;state.documentSignature=undefined;state.scopeEpoch++;this.cancelPending(state);this.captures.clear();this.retriever.clear();this.semantic?.clear();this.documentError=undefined;this.persist(state,owner,purge)
+      state.documentHash=file?.hash;state.documentSignature=undefined;state.scopeEpoch++;this.cancelPending(state);this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.clear();this.semantic?.clear();this.documentError=undefined;this.persist(state,owner,purge)
       return state
     }catch(error){this.documentError={owner,message:error instanceof Error?error.message:'记忆文件暂不可读取，原文件已保留。'};return original}
   }
@@ -183,7 +183,7 @@ export class MemoryService {
       const entries=parseEditableMemory(command.content,rows,projects)
       const purge=this.applyDocumentEntries(state,entries)
       state.documentHash=raw.hash;state.documentSignature=undefined;state.scopeEpoch++
-      this.cancelPending(state);this.captures.clear();this.retriever.clear();this.semantic?.clear()
+      this.cancelPending(state);this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.clear();this.semantic?.clear()
       this.persist(state,owner,purge);this.documentError=undefined
       return this.documentSnapshot(state,owner)
     }
@@ -249,12 +249,13 @@ export class MemoryService {
       changed=true
     }else throw Error('未知记忆操作。')
     if(changed){
-      if(state.scopeEpoch!==original.scopeEpoch){this.cancelPending(state);this.captures.clear();this.retriever.clear();this.semantic?.clear()}
+      if(state.scopeEpoch!==original.scopeEpoch){this.cancelPending(state);this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.clear();this.semantic?.clear()}
       this.persist(state,owner,purge)
     }
     return this.snapshot(state,'sessionId' in command?command.sessionId:undefined,command.type==='snapshot'?command.query:undefined)
   })}
-  async recall(context:MemoryRuntimeContext):Promise<MemoryRecall>{
+  private cloudMemoryTurns = new Map<string,Promise<string[]>>()
+  async recall(context:MemoryRuntimeContext):Promise<MemoryRecall & { cloudMemories?: string[] }>{
     const prepared=await this.serial(async(original,owner)=>{
       const sessionId=identifier(context.sessionId),state=structuredClone(original)
       const privateSession=!this.options.isShared(sessionId)
@@ -271,6 +272,19 @@ export class MemoryService {
         catch{selected=this.retriever.candidates(prepared.rows,prepared.query,prepared.projectId,this.now()).map(row=>({id:row.id,revision:row.revision}))}
       }else selected=this.retriever.candidates(prepared.rows,prepared.query,prepared.projectId,this.now()).map(row=>({id:row.id,revision:row.revision}))
     }
+    let cloudMemories:string[]=[]
+    if(prepared.enabled&&prepared.owner!=='local'&&this.options.cloudMemory&&context.turnId&&prepared.query.trim()&&
+       prepared.query.length<=1200&&!secretContent(prepared.query)&&!this.options.isShared(context.sessionId)){
+      const key=JSON.stringify([prepared.ownerEpoch,prepared.scopeEpoch,context.sessionId,context.turnId])
+      let work=this.cloudMemoryTurns.get(key)
+      if(!work){
+        if(this.cloudMemoryTurns.size>=128)this.cloudMemoryTurns.delete(this.cloudMemoryTurns.keys().next().value!)
+        const remember=prepared.autoEnabled&&/^(?:(?:请|帮我|请帮我)?记住|remember(?: that)?)\s*[:：,，]?\s*.{4,500}$/iu.test(prepared.query.trim())
+        work=this.options.cloudMemory(prepared.owner,prepared.query,remember).catch(()=>[])
+        this.cloudMemoryTurns.set(key,work)
+      }
+      cloudMemories=await work
+    }
     return this.serial((state,owner)=>{
       if(owner!==prepared.owner||this.epoch!==prepared.ownerEpoch||state.revision!==prepared.revision||state.scopeEpoch!==prepared.scopeEpoch)throw Error('记忆或账户状态已变化，旧检索已失效。')
       if(prepared.enabled&&(!this.usable(state,owner)||this.options.isShared(context.sessionId)))throw Error('当前会话不再允许使用记忆。')
@@ -279,7 +293,7 @@ export class MemoryService {
         unique.add(row.id);candidates.push({id:row.id,revision:row.revision,title:row.title,content:row.content,reason:'本地检索候选，尚未核对依据'})
         if(candidates.length===30)break
       }
-      return {enabled:prepared.enabled,autoEnabled:prepared.autoEnabled,ownerEpoch:prepared.ownerEpoch,revision:prepared.revision,scopeEpoch:prepared.scopeEpoch,projectId:prepared.projectId,entries:[],block:'',candidates,selectionRequired:true}
+      return {enabled:prepared.enabled,autoEnabled:prepared.autoEnabled,ownerEpoch:prepared.ownerEpoch,revision:prepared.revision,scopeEpoch:prepared.scopeEpoch,projectId:prepared.projectId,entries:[],block:'',candidates,selectionRequired:true,...(cloudMemories.length?{cloudMemories}:{})}
     })
   }
   async capture(turn:MemoryRuntimeTurn):Promise<MemoryCapture>{return this.serial(async(original,owner)=>{
@@ -371,8 +385,8 @@ export class MemoryService {
     if(!this.usable(original,owner)||input.ownerEpoch!==this.epoch||input.scopeEpoch!==original.scopeEpoch||input.signature!==this.summarySignature(original)||original.summary?.state!=='pending')return {ok:false}
     const state=structuredClone(original);state.summary={...state.summary!,state:'failed',text:undefined};this.persist(state,owner,false,false);return {ok:true}
   })}
-  rotateIdentity(){this.documentError=undefined;this.epoch=randomUUID();this.cache=undefined;this.captures.clear();this.retriever.clear();this.semantic?.clear();this.options.changed?.()}
-  async close(){if(this.closed)return;await this.queue;this.closed=true;this.captures.clear();this.retriever.close();this.semantic?.close();this.cache=undefined;this.store.close()}
+  rotateIdentity(){this.documentError=undefined;this.epoch=randomUUID();this.cache=undefined;this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.clear();this.semantic?.clear();this.options.changed?.()}
+  async close(){if(this.closed)return;await this.queue;this.closed=true;this.captures.clear();this.cloudMemoryTurns.clear();this.retriever.close();this.semantic?.close();this.cache=undefined;this.store.close()}
   private async legacy(){
     const root=this.options.legacyRoot;if(!root)return []
     const items:NonNullable<MemorySnapshot['legacy']>=[]

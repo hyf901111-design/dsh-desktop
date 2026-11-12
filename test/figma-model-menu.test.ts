@@ -21,7 +21,8 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
     react,jsx,reactDOM,new Proxy({}, {get:(_,key)=>'_7KE1Ra_'+String(key)}),new Proxy({}, {get:()=>()=>null}),(...x:unknown[])=>x.filter(Boolean).join(' '))
   let state={status:'ready',current:{provider:'kimi',model:'k3'},error:null,failures:[],groups:[
     {id:'kimi',name:'Kimi',models:[{id:'k3',name:'Kimi K3',reasoning:{efforts:[{id:'high',name:'High'}]}}]},
-    {id:'other',name:'Other',models:[{id:'second',name:'Second Model'}]}
+    {id:'other',name:'Other',models:[{id:'second',name:'Second Model'}]},
+    {id:'ework-ark',name:'EWork',models:[{id:'doubao-seed-2.1-lite',name:'Doubao Seed 2.1 Lite'}]}
   ]}
   const select=vi.fn(async()=>true),directory={subscribe:()=>()=>{},getSnapshot:()=>state}
   const host=win.document.createElement('div');host.className='t8lSSG_panel';host.getBoundingClientRect=()=>new DOMRect(600,0,280,800);win.document.body.append(host);const root=createRoot(host)
@@ -50,5 +51,15 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
     await click(trigger)
     await react.act(async()=>win.document.body.dispatchEvent(new win.MouseEvent('mousedown',{bubbles:true})))
     expect(win.document.querySelector('[role=menu]')).toBeNull()
+    await click(trigger)
+    await click(win.document.querySelector('[role=menuitem]')!)
+    const toggleLogin=async(on:boolean)=>react.act(async()=>{
+      win.document.documentElement.toggleAttribute('data-odyssey-hosted-account',on)
+      await win.happyDOM.whenAsyncComplete()
+    })
+    await toggleLogin(true)
+    expect(win.document.querySelector('[role=menu]')?.textContent).toContain('Doubao Seed 2.1 Lite')
+    await toggleLogin(false)
+    expect(win.document.querySelector('[role=menu]')?.textContent).not.toContain('Doubao Seed 2.1 Lite')
   } finally {await react.act(async()=>root.unmount());vi.unstubAllGlobals();await win.happyDOM.close()}
 })

@@ -272,3 +272,34 @@ it('uses only the EWork session token for the professional dataset and Doubao se
     })
   }
 })
+
+it('rejects old hosted-AI bridge generations before contacting Cloudflare',async()=>{
+  const {service,endpoint}=await setup()
+  const local=globalThis.fetch, provider=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+    const path=new URL(String(input)).pathname
+    if(path.endsWith('/login'))return Response.json({user:{id:'owner-a'},token:'a'.repeat(64)})
+    if(path.endsWith('/logout'))return Response.json({ok:true})
+    expect(init?.headers).toMatchObject({authorization:'Bearer '+'a'.repeat(64)})
+    if(path.endsWith('/catalog'))return Response.json({models:[{id:'doubao-seed-2.1-lite'}],image:true})
+    if(path.endsWith('/quota'))return Response.json({quota:{fiveHour:{limit:100,remaining:29,resetAt:null}}})
+    return new Response('data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}})
+  })
+  vi.stubGlobal('fetch',provider)
+  const base=new URL('/hosted-ai/',endpoint.url)
+  const catalog=()=>local(new URL('catalog',base),{headers:{authorization:'Bearer '+endpoint.token}})
+  const send=(generation:number)=>local(new URL('chat/completions',base),{method:'POST',body:'{}',headers:{authorization:'Bearer '+endpoint.token+'.'+generation}})
+  expect(await (await catalog()).json()).toEqual({models:[],image:false})
+  expect(await service.invoke('ai-quota',undefined)).toEqual({user:null})
+  expect((await send(service.generation)).status).toBe(401)
+  expect(provider).not.toHaveBeenCalled()
+  await service.invoke('login',{})
+  const generation=service.generation
+  expect(await (await catalog()).json()).toMatchObject({generation,image:true})
+  expect(await service.invoke('ai-quota',undefined)).toMatchObject({quota:{fiveHour:{remaining:29}}})
+  expect(await (await send(generation)).text()).toBe('data: [DONE]\n\n')
+  await service.invoke('logout',{})
+  await service.invoke('login',{})
+  const calls=provider.mock.calls.length
+  expect((await send(generation)).status).toBe(401)
+  expect(provider).toHaveBeenCalledTimes(calls)
+})
