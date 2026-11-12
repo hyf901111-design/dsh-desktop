@@ -270,3 +270,53 @@ it('keeps automatic arrangement selected and repacks the current page after live
   expect(errors).toEqual([])
  }finally{await page.close()}
 },30000)
+
+it('warns above the toolbar only when auto arrange overrides a committed manual resize',async()=>{
+ const page=await browser.newPage({viewport:{width:1240,height:820}})
+ page.setDefaultTimeout(4500)
+ try{
+  await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{width:1000px;height:760px}[data-research-canvas]{width:100%!important;height:100%!important}</style><div id="host"></div>`}))
+  await page.goto('https://auto-arrange.test/')
+  await page.addScriptTag({content:script})
+  await page.waitForSelector('[data-ework-grid]')
+  await page.evaluate(()=>{
+   fixture.workspace.setArtifacts(['resize-note','peer'].map((id,i)=>({id,messageId:id,kind:'pasted-text',title:id,excerpt:'测试手动调整组件尺寸',x:240+i*490,y:160,width:460,height:280,sizeMode:'manual'})))
+   fixture.workspace.setWorkbenchResponsiveArrange(true)
+   fixture.workspace.updateSelection(['resize-note'],'replace')
+  })
+  await page.waitForFunction(()=>fixture.calls()>0&&!document.querySelector('[data-research-canvas]').__eworkContentFit)
+  const handle=page.locator('[data-workbench-resize="resize-note"][data-workbench-resize-axis="y"]')
+  const toolbar=page.locator('[data-ework-toolbar]')
+  const notice=page.locator('[data-workbench-auto-resize-notice]')
+  const height=()=>page.evaluate(()=>fixture.workspace.getWorkbenchVisibleCells().find(c=>c.id==='resize-note').h)
+  const drag=async(cancel=false)=>{
+   await page.evaluate(()=>fixture.workspace.updateSelection(['resize-note'],'replace'))
+   const before=await height(),box=await handle.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2
+   await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y+128,{steps:4})
+   await expect.poll(height).toBeGreaterThan(before)
+   if(cancel)await page.keyboard.press('Escape')
+   await page.mouse.up()
+   return before
+  }
+  await handle.click()
+  await drag(true)
+  expect(await notice.count()).toBe(0)
+  const before=await drag()
+  await expect.poll(height).toBe(before)
+  await notice.waitFor({state:'visible',timeout:1600})
+  expect(await notice.getByRole('status').textContent()).toBe('当前已开启自动整理，手动整理可能失效')
+  const top=(await toolbar.boundingBox()).y,box=await notice.boundingBox()
+  expect(top-(box.y+box.height)).toBeGreaterThan(0)
+  await notice.getByRole('button',{name:'关闭提示'}).click()
+  await notice.waitFor({state:'hidden',timeout:600})
+  await drag()
+  await notice.waitFor({state:'visible',timeout:1600})
+  await page.waitForTimeout(1100)
+  expect(await notice.isVisible()).toBe(true)
+  await notice.waitFor({state:'hidden',timeout:1300})
+  await page.evaluate(()=>fixture.workspace.setWorkbenchResponsiveArrange(false))
+  const manual=await drag()
+  await expect.poll(height).toBeGreaterThan(manual)
+  expect(await notice.count()).toBe(0)
+ }finally{await page.close()}
+},15000)
