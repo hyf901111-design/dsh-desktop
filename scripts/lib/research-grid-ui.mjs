@@ -590,10 +590,10 @@ export function WorkbenchAutoResizeNotice({rootRef,bounds,sessionId}) {
     return()=>window.clearTimeout(timer)
   },[notice])
   if(!notice||!bounds)return null
-  return react_jsx_runtime.jsxs('div',{'data-workbench-notice':'','data-workbench-auto-resize-notice':'','data-ework-toolbar-owner':sessionId,style:{position:'fixed',left:bounds.left,bottom:bounds.bottom+66,'--ework-toolbar-available-width':bounds.width+'px'},children:[
+  return react_dom.createPortal(react_jsx_runtime.jsxs('div',{'data-workbench-notice':'','data-workbench-auto-resize-notice':'','data-ework-toolbar-owner':sessionId,style:{position:'fixed',left:bounds.left,bottom:bounds.bottom+66,'--ework-toolbar-available-width':bounds.width+'px'},children:[
     react_jsx_runtime.jsx('span',{role:'status',children:workbenchText('当前已开启自动整理，手动整理可能失效')}),
     react_jsx_runtime.jsx('button',{type:'button','aria-label':workbenchText('关闭提示'),onClick:()=>{setNotice(null);rootRef.current?.focus({preventScroll:true})},children:react_jsx_runtime.jsx('span',{'aria-hidden':true,children:'×'})})
-  ]})
+  ]}),document.body)
 }
 export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {
   const previewMode=react.useSyncExternalStore(workspace?.subscribePreviewMode||(()=>()=>{}),workspace?.getPreviewMode||(()=>false),workspace?.getPreviewMode||(()=>false))
@@ -607,8 +607,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();panelObserver.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
   },[rootRef,availableWidth,bottomOffset])
-  const toolbar=react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(workbenchPreviewToolbarChildren(children,previewMode)),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children})
-  return react_dom.createPortal(bottomOffset===20&&workspace?react_jsx_runtime.jsxs(react.Fragment,{children:[toolbar,react_jsx_runtime.jsx(WorkbenchAutoResizeNotice,{rootRef,bounds,sessionId},sessionId)]}):toolbar,document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(workbenchPreviewToolbarChildren(children,previewMode)),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style'),react_jsx_runtime.jsx(WorkbenchAutoResizeNotice,{rootRef,bounds,sessionId},'auto-resize-notice:'+sessionId)]})():children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   const zoom=workbenchCanvasZoom(root)
