@@ -37,22 +37,35 @@ async function fixture({legacy=false,owned=false,favorites=[] as any[],boards=[]
  cleanup.push(async()=>{await React.act(async()=>root.unmount());await win.happyDOM.abort()})
  const toggle=()=>host.querySelector('[data-research-preview-toggle]') as unknown as HTMLButtonElement|null
  const click=async()=>{expect(toggle()).not.toBeNull();await React.act(async()=>toggle()!.click())}
- return {win,host,page,workspaces,workspaceFor,disk,errors,native,toggle,click,render,setDiskUnavailable:()=>{diskUnavailable=true}}
+ const menu=async()=>{
+  const more=host.querySelector('[aria-label="更多看板操作"]') as unknown as HTMLButtonElement
+  await React.act(async()=>more.click())
+  return win.document.querySelector('[role="menu"][aria-label="看板操作"]')!
+ }
+ return {win,host,page,workspaces,workspaceFor,disk,errors,native,toggle,click,render,menu,setDiskUnavailable:()=>{diskUnavailable=true}}
 }
 
-it('shows the current mode pill after add-to-board and collaboration actions',async()=>{
- const f=await fixture(),buttons=[...f.host.querySelectorAll('button')]
- expect(f.toggle()).not.toBeNull();expect(buttons.at(-1)).toBe(f.toggle())
- expect(buttons[0]!.getAttribute('aria-label')).toBe('创建至看板区');expect(buttons[1]!.getAttribute('aria-label')).toBe('创建协作')
- expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到预览模式')
- expect(f.toggle()!.getAttribute('aria-pressed')).toBe('false');expect(f.toggle()!.title).toBe('当前为编辑模式，点击切换到预览模式');expect(f.toggle()!.textContent).toBe('编辑模式');expect(f.toggle()!.querySelector('[data-research-preview-switch]')).not.toBeNull()
+it('shows the icon-only mode first and keeps board actions in the more menu',async()=>{
+ const f=await fixture(),buttons=[...f.host.querySelectorAll('.srb-actions > button')]
+ expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(['切换到预览模式','更多看板操作'])
+ expect(buttons[0]).toBe(f.toggle())
+ expect(f.toggle()!.textContent).toBe('')
+ expect(f.toggle()!.querySelector('[data-research-preview-switch]')).toBeNull()
  expect(f.toggle()!.querySelector('[data-research-preview-icon="edit"][data-research-preview-glyph="pencil-line"]')).not.toBeNull()
  await f.click()
  expect(f.workspaceFor('a').getPreviewMode()).toBe(true)
  expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式')
- expect(f.toggle()!.getAttribute('aria-pressed')).toBe('true');expect(f.toggle()!.title).toBe('当前为预览模式，点击切换到编辑模式');expect(f.toggle()!.textContent).toBe('预览模式')
+ expect(f.toggle()!.title).toBe('当前为预览模式，点击切换到编辑模式')
+ expect(f.toggle()!.textContent).toBe('')
  expect(f.toggle()!.querySelector('[data-research-preview-icon="preview"]')).not.toBeNull()
- await f.click();expect(f.workspaceFor('a').getPreviewMode()).toBe(false)
+ const menuButton=buttons[1] as unknown as HTMLButtonElement
+ await React.act(async()=>menuButton.click())
+ const menu=f.win.document.querySelector('[aria-label="看板操作"]')!
+ expect(menu).not.toBeNull()
+ expect([...menu.querySelectorAll('[data-board-menu-action]')].map(item=>item.textContent)).toEqual([
+  '创建协作看板','加入至看板区','刷新看板','整理看板','全选看板'
+ ])
+ expect(menu.querySelector('[aria-label="缩放看板"]')?.textContent).toBe('−100%+')
  expect(f.errors).toEqual([])
 })
 
@@ -87,7 +100,7 @@ it('reports a failed preference save and keeps the current mode and button state
 
 it('keeps legacy page adapters without workspaceFor compatible',async()=>{
  const f=await fixture({legacy:true})
- expect(f.toggle()).toBeNull();expect(f.host.querySelector('.srb-favorite-button')).not.toBeNull()
+ expect(f.toggle()).toBeNull();expect((await f.menu()).querySelector('[data-board-menu-action="add"]')).not.toBeNull()
  await f.render('a',false);await f.render('b')
  expect(f.toggle()).toBeNull();expect(f.errors).toEqual([])
 })
@@ -127,19 +140,27 @@ it.each([
  {name:'registered personal board before view loads',favorites:[],boards:[{boardId:'stable-board',localSessionId:'a',sharingState:'ownerOnly',pinned:true}],view:null,add:false},
  {name:'registered shared board before view loads',favorites:[],boards:[{boardId:'stable-board',localSessionId:'a',sharingState:'shared',pinned:true}],view:null,add:false},
  {name:'unrelated records with the same title',favorites:[{sessionId:'other',favoriteId:'fav',title:'研究看板'}],boards:[{boardId:'other-board',localSessionId:'other',pinned:true,title:'研究看板'}],view:null,add:true}
-])('uses actual sidebar membership for $name without changing mode-control order',async row=>{
- const f=await fixture(row);expect(f.host.querySelectorAll('.srb-favorite-button').length).toBe(row.add?1:0)
- const actions=[...f.host.querySelectorAll('.srb-actions>button')];expect(actions.at(-1)).toBe(f.toggle());expect(actions.at(-2)!.getAttribute('aria-label')).toBe('创建协作');expect(f.errors).toEqual([])
+])('uses actual sidebar membership for $name inside the board menu',async row=>{
+ const f=await fixture(row),menu=await f.menu()
+ const action=menu.querySelector('[data-board-menu-action="add"]') as unknown as HTMLButtonElement
+ expect(action.disabled).toBe(!row.add)
+ expect(action.textContent).toBe(row.add?'加入至看板区':'已加入看板区')
+ expect(f.host.querySelector('.srb-actions>button')).toBe(f.toggle())
+ expect(f.errors).toEqual([])
 })
-it.each([true,false])('retains shared-view permissions and puts mode after collaboration controls (read=%s)',async read=>{
+it.each([true,false])('retains shared-view permissions in the board menu (read=%s)',async read=>{
  const view={...personalView,board:{sharingState:'shared',lifecycle:'active'},permissions:{read,manage:read}},f=await fixture({view,boards:[{boardId:'stable-board',localSessionId:'a',pinned:true}]})
- expect(f.host.querySelector('.srb-favorite-button')).toBeNull();expect(f.host.querySelector('.srb-create-collaboration')).toBeNull();expect([...f.host.querySelectorAll('button')].at(-1)).toBe(f.toggle());expect(f.host.textContent?.includes('管理')).toBe(read);expect(f.host.textContent?.includes('共享访问已结束')).toBe(!read);expect(f.errors).toEqual([])
+ const menu=await f.menu()
+ expect(menu.querySelector('[data-board-menu-action="manage"]')?.textContent).toBe(read?'管理协作':undefined)
+ expect(menu.querySelector('[data-board-menu-action="people"]')?.textContent).toBe(read?'添加协作者':undefined)
+ expect(f.host.textContent?.includes('共享访问已结束')).toBe(!read)
+ expect(f.errors).toEqual([])
 })
 
 it('localizes the real mode toggle state, action and accessible hint live without changing the persisted mode',async()=>{
  const f=await fixture();const stop=mountUiLocalization(f.win.document as unknown as Document);cleanup.push(async()=>stop());
  f.win.document.documentElement.dataset.odysseyLocale='en';await f.win.happyDOM.waitUntilComplete();
- expect(f.toggle()!.textContent).toBe('Edit mode');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to preview mode');expect(f.toggle()!.title).toBe('Edit mode is active. Click to switch to preview mode');
- await f.click();await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('Preview mode');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to edit mode');expect(f.toggle()!.title).toBe('Preview mode is active. Click to switch to edit mode');
- f.win.document.documentElement.dataset.odysseyLocale='zh';await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('预览模式');expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式');expect(f.workspaceFor('a').getPreviewMode()).toBe(true);expect(f.errors).toEqual([])
+ expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to preview mode');expect(f.toggle()!.title).toBe('Edit mode is active. Click to switch to preview mode');
+ await f.click();await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to edit mode');expect(f.toggle()!.title).toBe('Preview mode is active. Click to switch to edit mode');
+ f.win.document.documentElement.dataset.odysseyLocale='zh';await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式');expect(f.workspaceFor('a').getPreviewMode()).toBe(true);expect(f.errors).toEqual([])
 })

@@ -75,7 +75,7 @@ const htmlFitStates = new Map();`)
  // Keep draw, drag and fit calculations in the page-local grid.
  change('grid.arrange(nodes,workbenchGrid.visible(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),','grid.arrange(nodes,workbenchGrid.visible(),workbenchGrid.contentWidth(Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),')
  change('const width=()=>Math.max(240,Math.min(root.clientWidth,workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth))','const width=()=>workspace.getWorkbenchContentWidth(Math.min(root.clientWidth,workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth))')
- change('return {x:e.clientX-r.left,y:e.clientY-r.top+root.scrollTop}}','return {x:e.clientX-r.left-(workspace.getWorkbenchLayoutOffsetX?.()||0),y:e.clientY-r.top+root.scrollTop-(workspace.getWorkbenchLayoutOffset?.()||0)}}')
+ change('const point=e=>workbenchCanvasPoint(root,e)','const point=e=>{const {x,y}=workbenchCanvasPoint(root,e);return {x:x-(workspace.getWorkbenchLayoutOffsetX?.()||0),y:y-(workspace.getWorkbenchLayoutOffset?.()||0)}}')
  change("left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px'", "left:n.x-n.width/2+(workspace.getWorkbenchLayoutOffsetX?.()||0)+'px',top:n.y-n.height/2+(workspace.getWorkbenchLayoutOffset?.()||0)+'px',width:n.width+'px'")
  change("workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,", "workspace.createContainerDraft({x:n.x+(workspace.getWorkbenchLayoutOffsetX?.()||0),y:n.y+(workspace.getWorkbenchLayoutOffset?.()||0),width:n.width,height:n.height,")
  // Keep the existing canvas pointer engine. The optional controller only

@@ -402,10 +402,22 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]>svg{display:none}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:has(>svg):after{content:'';flex:none;width:14px;height:14px;background:currentColor;mask:url(/figma-check.svg) center/contain no-repeat}
 .srb-actions{gap:6px}.srb-actions:has(.srb-presence){gap:16px}.srb-actions button{font-weight:400;line-height:18px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
-.srb-actions .srb-preview-toggle{flex:none;width:auto;min-width:100px;height:30px;padding:0 8px;border:0;border-radius:16px;background:var(--srb-control);color:var(--srb-label);gap:5px;white-space:nowrap;cursor:pointer;transition:background-color 120ms ease}.srb-actions .srb-preview-toggle:not(:disabled):hover{background:var(--srb-control-strong)}.srb-actions .srb-preview-toggle:not(:disabled):active{background:color-mix(in srgb,var(--srb-control-strong) 88%,var(--srb-label) 12%)}.srb-actions .srb-preview-toggle:disabled{opacity:.5;cursor:default}.srb-actions .srb-preview-toggle:focus-visible{outline:1px solid var(--srb-blue,#168cf0);outline-offset:2px}.srb-preview-toggle>svg{display:block;flex:none;width:14px;height:14px}.srb-preview-toggle>[data-research-preview-label]{white-space:nowrap}.srb-preview-toggle>svg[data-research-preview-switch]{width:10px;height:10px;opacity:.65}
-@media(prefers-reduced-motion:reduce){.srb-actions .srb-preview-toggle{transition:none}}
-.srb-actions .srb-favorite-button,.srb-actions .srb-create-collaboration{height:30px;padding:0 10px;border:1px solid var(--srb-control-border);border-radius:7px;background:var(--srb-control);color:var(--srb-label);line-height:18px;gap:6px}
-.srb-actions .srb-favorite-button[aria-pressed=true]{background:var(--srb-control-strong);color:var(--srb-muted)}
+.srb-actions .srb-header-control{flex:none;width:30px;height:30px;padding:0;border:0;border-radius:7px;background:#f1f1f2;color:var(--srb-label);cursor:pointer;transition:background-color 120ms ease}
+:where(body[data-ds-dark-theme]) .srb-actions .srb-header-control{background:#292929}
+.srb-actions .srb-header-control:not(:disabled):hover,.srb-actions .srb-header-more[aria-expanded=true]{background:var(--srb-control-strong)}
+.srb-actions .srb-header-control:not(:disabled):active{background:var(--srb-control-border)}
+.srb-actions .srb-header-control:disabled{opacity:.5;cursor:default}
+@media(prefers-reduced-motion:reduce){.srb-actions .srb-header-control{transition:none}}
+.srb-header-menu{position:fixed;inset:auto;z-index:11000;box-sizing:border-box;width:min(252px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;margin:0;padding:5px;border:1px solid var(--srb-border);border-radius:9px;background:var(--srb-surface);color:var(--srb-label);box-shadow:var(--srb-shadow);backdrop-filter:blur(16px);font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui)}
+.srb-header-menu button{box-sizing:border-box;border:0;background:none;color:inherit;font:inherit;cursor:pointer;border-radius:5px}
+.srb-header-menu>button{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:0 8px;width:100%;height:32px;text-align:left}
+.srb-header-menu button:disabled{color:var(--srb-muted);opacity:.6;cursor:default}
+.srb-header-menu button:not(:disabled):is(:hover,:focus-visible){background:var(--srb-row-hover)}
+.srb-header-menu button:focus-visible{outline:1px solid var(--srb-blue);outline-offset:-1px}
+.srb-header-zoom{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 8px;margin:4px 0;border-block:1px solid var(--srb-border)}
+.srb-header-zoom [role=group]{display:flex;align-items:center;border:1px solid var(--srb-border);border-radius:6px}
+.srb-header-zoom button{height:26px;min-width:25px;padding:0 5px;font-variant-numeric:tabular-nums}
+.srb-header-zoom button:nth-child(2){min-width:48px;opacity:1}
 .srb-favorite-icon,.srb-close-icon,.srb-plus-icon,.srb-check-icon,.srb-people-icon{display:inline-block;width:16px;height:16px;flex:none;background:currentColor;mask:url(/figma-favorite.svg) center/contain no-repeat}
 .srb-favorite-button[aria-pressed=true] .srb-favorite-icon{mask-image:url(/figma-favorite-selected.svg)}
 .srb-people-icon{mask-image:url(/figma-people.svg)}

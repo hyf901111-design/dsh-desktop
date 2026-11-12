@@ -729,7 +729,8 @@ if (process.argv.includes('--serve')) {
     await page.waitForFunction(() => window.fixture?.ready)
     await peer.waitForFunction(() => window.fixture?.ready)
     if (process.argv.includes('--shared-queue-focus')) {
-      await page.getByRole('button', { name: '创建协作', exact: true }).click()
+      await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+      await page.locator('.srb-header-menu').getByRole('menuitem', { name: '创建协作看板', exact: true }).click()
       await page.getByLabel('对方专有 ID').fill('0000 0000 02')
       await page.getByRole('button', { name: '查找并核对', exact: true }).click()
       await page.locator('.srb-recipient').filter({ hasText: '周同事' }).waitFor()
@@ -793,7 +794,8 @@ if (process.argv.includes('--serve')) {
         }
       ])
     )
-    await page.getByRole('button', { name: '添加至研究看板', exact: true }).click()
+    await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+    await page.locator('.srb-header-menu').getByRole('menuitem', { name: '加入至看板区', exact: true }).click()
     const favoriteRow = page.locator('.srb-row').filter({ hasText: '黄金市场研究' }).first()
     const workspaceRow = page.locator('.fixture-workspaces [role="treeitem"]').filter({ hasText: '黄金市场研究' }).first()
     await favoriteRow.locator('button').first().click()
@@ -919,12 +921,15 @@ if (process.argv.includes('--serve')) {
     console.log('BOARD_NAVIGATION_V2_PASSED new/empty-directory/right-click/rename/search/sort/hover-menu/return-to-workspace')
     // Figma A: repeated header clicks retain the board. Prepare the separate
     // direct-collaboration scenario through the existing service fixture.
-    await page.getByRole('button', { name: '已添加至研究看板', exact: true }).click()
+    await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+    assert.equal(await page.locator('.srb-header-menu').getByRole('menuitem', { name: '已加入看板区', exact: true }).isDisabled(), true)
+    await page.keyboard.press('Escape')
     const retainedFavorite = users[0].service.getSnapshot().favorites.find(f => f.sessionId === 'original')
     assert.ok(retainedFavorite, 'added header action must not remove the board')
     await users[0].service.invoke('favorite.remove', { favoriteId: retainedFavorite.favoriteId })
     await until(async () => await favoriteRow.count() === 0, 'source removed from favorites before direct collaboration')
-    await page.getByRole('button', { name: '创建协作', exact: true }).click()
+    await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+    await page.locator('.srb-header-menu').getByRole('menuitem', { name: '创建协作看板', exact: true }).click()
     await page.getByLabel('对方专有 ID').fill('0000 0000 02')
     await page
       .getByRole('button', { name: '查找并核对', exact: true })
@@ -997,7 +1002,7 @@ if (process.argv.includes('--serve')) {
     )
     // The actual session header keeps editable fields usable while chrome is not selectable.
     const chromeGeometry = await page.evaluate(() => {
-      const header = document.querySelector('[data-srb-session-header]'), avatar = document.querySelector('.srb-avatar'), button = document.querySelector('.srb-manage-button')
+      const header = document.querySelector('[data-srb-session-header]'), avatar = document.querySelector('.srb-avatar'), button = document.querySelector('.srb-header-more')
       const mid = el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2 }
       const headerRect = header.getBoundingClientRect()
       return { header: { top: headerRect.top, height: headerRect.height, center: mid(header) }, avatar: mid(avatar), button: mid(button),
@@ -1018,7 +1023,7 @@ if (process.argv.includes('--serve')) {
     assert.ok(Math.abs(chromeGeometry.avatar - chromeGeometry.button) < 1)
     for (const section of chromeGeometry.sidebarHeaders.slice(0, 2)) assert.equal(section.paddingLeft, '0px')
     assert.ok(Math.abs(chromeGeometry.sidebarHeaders[0].buttons[0].x - chromeGeometry.sidebarHeaders[1].buttons[0].x) < 1, JSON.stringify(chromeGeometry.sidebarHeaders))
-    assert.equal(chromeGeometry.buttonBorder, '1px')
+    assert.equal(chromeGeometry.buttonBorder, '0px')
     assert.equal(chromeGeometry.sidebarSelect, 'none')
     assert.equal(chromeGeometry.headerSelect, 'none')
     assert.equal(chromeGeometry.inputSelect, 'text')
@@ -1237,11 +1242,13 @@ if (process.argv.includes('--serve')) {
         await page.locator('.srb-add-collaborator-dialog').waitFor({ state: 'detached' })
       }
       if (await peer.getByRole('button', { name: '关闭提醒', exact: true }).count()) await peer.getByRole('button', { name: '关闭提醒', exact: true }).click()
-      await page.getByRole('button', { name: '添加协作者', exact: true }).click(); await sendAgain()
+      await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+      await page.locator('.srb-header-menu').getByRole('menuitem', { name: '添加协作者', exact: true }).click(); await sendAgain()
       await peer.locator('.srb-bubble').getByRole('button', { name: '接受', exact: true }).click()
       await peer.locator('.srb-bubble').getByRole('button', { name: '打开看板', exact: true }).click()
       await peer.waitForFunction(() => window.fixture.page.getState().current?.permissions.edit)
-      await page.getByRole('button', { name: '管理', exact: true }).click()
+      await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+      await page.locator('.srb-header-menu').getByRole('menuitem', { name: '管理协作', exact: true }).click()
       assert.equal(await page.getByRole('tab', { name: '画板设置', exact: true }).getAttribute('aria-selected'), 'true')
       await page.getByRole('button', { name: '取消共享', exact: true }).click()
       await page.getByRole('button', { name: '确认', exact: true }).click()
@@ -1252,7 +1259,8 @@ if (process.argv.includes('--serve')) {
       await page.keyboard.press('Escape')
       await page.screenshot({ path: join(out, 'cancel-sharing-owner.png') }); await peer.screenshot({ path: join(out, 'cancel-sharing-peer.png') })
       if (await peer.getByRole('button', { name: '关闭提醒', exact: true }).count()) await peer.getByRole('button', { name: '关闭提醒', exact: true }).click()
-      await page.getByRole('button', { name: '创建协作', exact: true }).click(); await sendAgain()
+      await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
+      await page.locator('.srb-header-menu').getByRole('menuitem', { name: '创建协作看板', exact: true }).click(); await sendAgain()
       await peer.locator('.srb-bubble').getByRole('button', { name: '拒绝', exact: true }).click()
       await peer.waitForFunction(() => window.fixture.page.getState().notifications.notifications.some(n => n.invitation?.status === 'declined'))
       await peer.screenshot({ path: join(out, 'invitation-declined.png') })
@@ -1935,8 +1943,10 @@ if (process.argv.includes('--serve')) {
     )
     await peer.screenshot({ path: join(out, 'personal-import-light.png') })
     const reshareCalls = users.map(u => u.modelCalls())
-    await peer.getByRole('button', { name: '添加至研究看板', exact: true }).click()
-    await peer.getByRole('button', { name: '创建协作', exact: true }).click()
+    await peer.getByRole('button', { name: '更多看板操作', exact: true }).click()
+    await peer.locator('.srb-header-menu').getByRole('menuitem', { name: '加入至看板区', exact: true }).click()
+    await peer.getByRole('button', { name: '更多看板操作', exact: true }).click()
+    await peer.locator('.srb-header-menu').getByRole('menuitem', { name: '创建协作看板', exact: true }).click()
     await peer.getByLabel('协作名称').fill('第二代独立协作')
     // Preview has completed. Later private transcript/file edits must stay private.
     users[1].sessionData.get(personalId).append('user/message', {
@@ -2232,7 +2242,8 @@ if (process.argv.includes('--serve')) {
     await peer.locator('[data-personal-import]').first().waitFor()
     const oldFavorite = users[1].service.getSnapshot().favorites.find(f => f.sessionId === personal.personalId)
     if (oldFavorite) await users[1].service.invoke('favorite.remove', { favoriteId: oldFavorite.favoriteId })
-    await peer.getByRole('button', { name: '添加至研究看板', exact: true }).click()
+    await peer.getByRole('button', { name: '更多看板操作', exact: true }).click()
+    await peer.locator('.srb-header-menu').getByRole('menuitem', { name: '加入至看板区', exact: true }).click()
     await until(() => users[1].service.getSnapshot().favorites.some(f => f.sessionId === personal.personalId), 'signed-out favorite created')
     const signedOutFavorite = { value: users[1].service.getSnapshot().favorites.find(f => f.sessionId === personal.personalId) }
     assert.equal((await users[1].service.invoke('favorite.rename', { favoriteId: signedOutFavorite.value.favoriteId, title: '本机常用重命名' })).ok, true)
