@@ -49,6 +49,10 @@ export function createBoardTabsWorkspace(adapter) {
    if(!current)return false
    const spec=boardTabsSpec({...current,orientation,...(verticalWidth===undefined?{}:{verticalWidth}),revision:current.revision+1})
    if(!spec||spec.orientation===(current.orientation??'horizontal')&&spec.verticalWidth===current.verticalWidth)return false
+   if(grid.saveSharedPresentation(nav.id,spec)) {
+    adapter.publish({artifacts:snapshot.artifacts.map(node=>node.id===nav.id?{...node,containerSpec:{...spec,revision:current.revision}}:node)})
+    return true
+   }
    return adapter.transact({artifacts:snapshot.artifacts.map(node=>node.id===nav.id?{...node,containerSpec:spec}:node)})
   },
   saveBoardTabs(revision,draft){

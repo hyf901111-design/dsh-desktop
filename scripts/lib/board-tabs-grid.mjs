@@ -1,14 +1,14 @@
 // Wrap the existing grid without letting one page pack or resize another page.
 // Page cells are local to the content area. Project them beside or below navigation.
-export function createBoardTabsGridState(storage,sessionId) {
- const normal=createWorkbenchGridState(storage,sessionId),pages=new Map(),viewKey='ework.research.tabs.view.v1:'+sessionId
- let nav=null,activeId=null,width=0,saved=null,viewports={},override=null
+export function createBoardTabsGridState(storage,sessionId,shared=false) {
+ const normal=createWorkbenchGridState(storage,sessionId,shared),pages=new Map(),viewKey='ework.research.tabs.view.v1:'+sessionId
+ let nav=null,activeId=null,width=0,saved=null,viewports={},override=null,presentation=null
  const plannedTargets=new Map(),planTargets=new Map()
- try{saved=JSON.parse(storage?.getItem(viewKey)||'null');viewports=saved?.viewports??{}}catch{}
+ try{saved=JSON.parse(storage?.getItem(viewKey)||'null');viewports=saved?.viewports??{};presentation=saved?.presentation??null}catch{}
   try{for(const [id,value] of saved?.plannedTargets??[])if(typeof id==='string'&&Number.isFinite(value?.startedAt)&&value?.target)plannedTargets.set(id,value);for(const [id,value] of saved?.planTargets??[])if(typeof id==='string'&&value)planTargets.set(id,value)}catch{}
-  const persistView=()=>{try{storage?.setItem(viewKey,JSON.stringify({navId:nav?.id,activeId,viewports,plannedTargets:[...plannedTargets].slice(-100),planTargets:[...planTargets].slice(-100)}))}catch{}}
+  const persistView=()=>{try{storage?.setItem(viewKey,JSON.stringify({navId:nav?.id,activeId,viewports,presentation,plannedTargets:[...plannedTargets].slice(-100),planTargets:[...planTargets].slice(-100)}))}catch{}}
  const layout=(size=width||1000)=>boardTabsLayout(nav?.containerSpec,size)
- const page=id=>{const key=nav.id+':'+id;if(!pages.has(key)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+key);if(width)state.enable(layout().width);pages.set(key,state)}return pages.get(key)}
+ const page=id=>{const key=nav.id+':'+id;if(!pages.has(key)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+key,shared);if(width)state.enable(layout().width);pages.set(key,state)}return pages.get(key)}
  const sync=snapshot=>{
   const next=boardTabsNode(snapshot)
   if(next?.id!==nav?.id){
@@ -63,7 +63,7 @@ export function createBoardTabsGridState(storage,sessionId) {
   switch(id,snapshot){sync(snapshot);if(!nav?.containerSpec.tabs.some(t=>t.id===id))return null;viewports[activeId]=snapshot.viewport;activeId=id;persistView();return viewports[id]??{x:0,y:0,scale:1}},
   rememberViewport(value){if(nav){viewports[activeId]=value;persistView()}},
   history:()=>({activeId,normal:normal.get(),pages:[...pages].map(([id,state])=>[id,state.get()])}),
-  restore(value){if(!value)return;normal.set(value.normal);activeId=value.activeId;for(const [id,cells] of value.pages){if(!pages.has(id)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+id);if(width)state.enable(layout().width);pages.set(id,state)}pages.get(id).set(cells)}},
+  restore(value){if(!value)return;normal.set(value.normal);activeId=value.activeId;for(const [id,cells] of value.pages){if(!pages.has(id)){const state=createWorkbenchGridState(storage,sessionId+':tabs:'+id,shared);if(width)state.enable(layout().width);pages.set(id,state)}pages.get(id).set(cells)}},
   move(ids,target,snapshot){
    sync(snapshot);if(!nav||target===activeId||!nav.containerSpec.tabs.some(t=>t.id===target))return false
    const source=page(activeId),dest=page(target),cells=source.get(),moving=cells.filter(c=>ids.includes(c.id))
@@ -87,6 +87,32 @@ export function createBoardTabsGridState(storage,sessionId) {
    for(const tab of nav.containerSpec.tabs){const ids=new Set(tab.nodeIds),part={files:snapshot.files.filter(n=>ids.has(n.id)),artifacts:snapshot.artifacts.filter(n=>ids.has(n.id))},out=page(tab.id).document(part,area.width);for(const n of [...out.files,...out.artifacts])byId.set(n.id,shift(n,area))}
    byId.set(nav.id,{...nav,x:area.vertical?12+area.railWidth/2:500,y:29,width:area.vertical?area.railWidth:976,height:34})
    return {files:snapshot.files.map(n=>byId.get(n.id)??n),artifacts:snapshot.artifacts.map(n=>byId.get(n.id)??n)}
+  },
+  receiveShared(nodes){
+   for(const node of nodes) delete node.preserveGenerationSize
+   const incoming=boardTabsNode({artifacts:nodes})
+   if(incoming) {
+    const previous=presentation
+    if(previous?.id===incoming.id) {
+     const spec=boardTabsSpec({...incoming.containerSpec,orientation:previous.orientation,verticalWidth:previous.verticalWidth})
+     if(spec) incoming.containerSpec=spec
+    }
+   }
+   sync({files:[],artifacts:nodes})
+   if(!nav) {
+    const ordered=[...nodes].sort((a,b)=>(a.y-a.height/2)-(b.y-b.height/2)||a.x-b.x)
+    normal.receiveShared(ordered)
+    return
+   }
+   const byId=new Map(nodes.map(node=>[node.id,node]))
+   for(const tab of nav.containerSpec.tabs)
+    page(tab.id).receiveShared(tab.nodeIds.map(id=>byId.get(id)).filter(Boolean))
+  },
+  saveSharedPresentation(id,spec){
+   if(!shared)return false
+   presentation={id,orientation:spec.orientation,verticalWidth:spec.verticalWidth}
+   persistView()
+   return true
   },
   receiveCanonical(nodes){
    const snapshot={files:[],artifacts:nodes};sync(snapshot)

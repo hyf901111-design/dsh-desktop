@@ -19,6 +19,8 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.selection.v1:',
   'sherlock.research.canvas.viewport.v1:',
   'ework.research.grid.v1:',
+  'ework.research.shared-grid.v1:',
+  'ework.research.zoom.v1:',
   'sherlock.workbench.auto-arrange.v1:',
   'ework.research.tabs.view.v1:',
   'ework.research.presentation.v1:',

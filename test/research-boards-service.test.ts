@@ -342,7 +342,7 @@ it('keeps B changes when A undoes and never reports resurrecting a tombstoned no
   const t = make()
   const view = await ready(t)
   const after = structuredClone(view.canvas)
-  after.artifacts[0]!.x = 100
+  after.artifacts[0]!.title = "A changed"
   await t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -361,6 +361,7 @@ it('keeps B changes when A undoes and never reports resurrecting a tombstoned no
   expect(undo.ok).toBe(true)
   expect(undo.value.canvas.artifacts[0]).toMatchObject({
     x: 0,
+    title: '研究',
     excerpt: 'B changed'
   })
   const remove: any = await t.service.invoke('canvas.apply', {
@@ -522,7 +523,7 @@ it('keeps pending until the acknowledged checkpoint can be saved atomically', as
     return result
   }
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 10
+  canvas.artifacts[0]!.title = "Local edit"
   await t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -538,8 +539,8 @@ it('keeps pending until the acknowledged checkpoint can be saved atomically', as
   await t.service.flush()
   expect(t.store.account('u').pending).toHaveLength(0)
   expect(
-    t.store.account('u').checkpoints.board?.snapshot.canvas.artifacts[0]!.x
-  ).toBe(10)
+    t.store.account('u').checkpoints.board?.snapshot.canvas.artifacts[0]!.title
+  ).toBe('Local edit')
 })
 
 it('recovers only the edited nested table cell and chart point after revocation', async () => {
@@ -589,7 +590,7 @@ it('rejects stale IPC typing immediately while a role downgrade waits on receipt
   const view = await ready(t)
   t.setOnline(false)
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 20
+  canvas.artifacts[0]!.title = "Before downgrade"
   await t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -901,7 +902,7 @@ it('aborts board resource hooks on revocation and rejects their late completion'
   })
   const view = await ready(t)
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 9
+  canvas.artifacts[0]!.title = "Late edit"
   const applying = t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -1934,7 +1935,7 @@ it('keeps sharing authority and refreshed file materialization when moving a boa
   await t.service.invoke('board.activate', { localSessionId: 'workspace-session' })
   const view = t.service.getSnapshot().current!
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 80
+  canvas.artifacts[0]!.title = "After move"
   expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'workspace-session', baseRevision: view.canvasRevision, clientMutationId: 'after-move', canvas })).ok).toBe(true)
   expect(t.service.getSnapshot().boards[0]?.pinned).toBe(false)
   expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision, clientMutationId: 'old-session', canvas })).ok).toBe(false)
@@ -2112,4 +2113,18 @@ it('binds component transport to the active board, exact HTML version and editor
   t.setRole('viewer');await t.service.receiveBoard('board',t.snapshot())
   expect((await t.service.invoke('component.send',{boardId:'board',message})).ok).toBe(true)
   expect((await t.service.invoke('component.send',{boardId:'board',message:{...message,op:'input',inputId:'input',sequence:1,payload:{type:'increment'}}})).ok).toBe(false)
+})
+
+it('publishes shared content without changing existing compatibility geometry', async () => {
+  const t = make()
+  const view = await ready(t)
+  const first = view.canvas.artifacts[0]!
+  const canvas = { files: [], artifacts: [{ ...first, x: 680, width: 350, title: '共享标题' }] }
+  const result = await t.service.invoke('canvas.apply', {
+    boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision,
+    clientMutationId: 'shared-content-only', canvas
+  })
+  expect(result.ok).toBe(true)
+  await t.service.flush()
+  expect(projectDocument(t.doc).artifacts[0]).toEqual({ ...first, title: '共享标题' })
 })

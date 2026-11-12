@@ -1,3 +1,4 @@
+import { withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 import { cleanActivity } from 'dsh-research-collaboration/activity'
 import { componentVersion, validateComponentMessage } from 'dsh-research-collaboration/component-state'
 import {
@@ -1530,6 +1531,7 @@ export class ResearchBoardsService {
     if (this.boards.get(boardId) !== r || (latestRequired && !matchesHead()))
       throw new ResearchBoardsError('STALE_CANVAS_REVISION')
     validateCanvas(next)
+    next = withSharedCanvasCompatibilityLayout(next, base.canvas)
     // Fork the exact page branch. Applying stale string indices directly to live Y.Text loses remote edits.
     const fork = decodeDocument(base.bytes)
     let delta: Uint8Array

@@ -112,9 +112,10 @@ it('applies the pending edit on the same field and preserves other changes', asy
     if (action !== 'canvas.apply') return { ok: true, value: null }
     if (++writes === 1) return { ok: false, error: { code: 'STALE_CANVAS_REVISION', message: 'expired mutation' } }
     expect(input.requireLatest).toBe(true)
+    const [freshContent, anotherCard] = fresh.canvas.artifacts.map(({ x: _x, y: _y, ...content }) => content)
     expect(input.canvas.artifacts).toEqual([
-      { ...fresh.canvas.artifacts[0]!, excerpt: 'my local edit', config: { theme: 'dark', label: 'My label' } },
-      fresh.canvas.artifacts[1]!
+      { ...freshContent, excerpt: 'my local edit', config: { theme: 'dark', label: 'My label' } },
+      anotherCard
     ])
     return { ok: true, value: { ...fresh, canvas: input.canvas, localBranchRevision: 'new-branch' } }
   })
@@ -311,4 +312,29 @@ it('retains both the current canvas and message draft when the refresh really fa
     expect(f.workspace.getSnapshot().artifacts[0]!.excerpt).toBe('My pending edit')
     expect(notify).toHaveBeenCalledWith('error', expect.stringContaining('本机修改已保留'))
   } finally { f.dispose() }
+})
+
+it('keeps a local drag out of shared mutations and sends a later content edit', async () => {
+  const f = await pageFixture()
+  const original = f.view.canvas.artifacts[0]!
+  const attempts: any[] = []
+  f.bridge.invoke.mockImplementation(async (action, input) => {
+    if (action !== 'canvas.apply') return { ok: true, value: null }
+    attempts.push(input)
+    return { ok: true, value: { ...f.view, canvas: input.canvas, localBranchRevision: 'saved' } }
+  })
+  try {
+    f.workspace.setArtifacts([{ ...original, x: 260, y: 120 }])
+    f.page.finishGesture('shared')
+    expect(attempts).toHaveLength(0)
+
+    f.workspace.setArtifacts([{ ...original, x: 260, y: 120, excerpt: 'New content' }])
+    await vi.waitFor(() => expect(attempts).toHaveLength(1))
+    const [sent] = attempts[0].canvas.artifacts
+    expect(sent.excerpt).toBe('New content')
+    expect(sent.x).not.toBe(260)
+    expect(sent.y).not.toBe(120)
+  } finally {
+    f.dispose()
+  }
 })

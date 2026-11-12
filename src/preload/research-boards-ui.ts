@@ -1,5 +1,6 @@
 import { ResearchBoardHeaderMenu } from './research-board-header-menu'
 import { mergeSharedCanvas } from './shared-board-canvas-merge'
+import { sharedCanvasContent, withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 export { useResearchBoardCanvasHeader } from './research-board-header-menu'
 import {waitForMemorySource} from './memory/source'
 import {installHomeGuideEntryNative} from './home-guide-entry-native'
@@ -46,7 +47,7 @@ type Store<T> = {
 type LegacyNode = Record<string, any>
 type Workspace = {
   isCollaborationGesture?(): boolean
-  getWorkbenchDocument?(): Canvas
+  getVisibleBoardSnapshot?(): LegacyNode
 
   getSnapshot(): LegacyNode
   subscribe(fn: () => void): () => void
@@ -102,11 +103,14 @@ const emptyState = (): ResearchBoardsState => ({
   }
 })
 const canvasOf = (w: Workspace): Canvas => {
-  if (w.getWorkbenchDocument) return structuredClone(w.getWorkbenchDocument())
   const s = w.getSnapshot()
-  return structuredClone({ files: s.files, artifacts: s.artifacts })
+  return structuredClone(sharedCanvasContent({ files: s.files, artifacts: s.artifacts }))
 }
 const signature = (v: unknown) => JSON.stringify(v)
+const canvasSignature = (canvas: Canvas) => {
+  const byId = (a: Canvas['artifacts'][number], b: Canvas['artifacts'][number]) => a.id.localeCompare(b.id)
+  return signature({ files: [...canvas.files].sort(byId), artifacts: [...canvas.artifacts].sort(byId) })
+}
 const uuid = () => crypto.randomUUID()
 type EditState = {
   accountId: string
@@ -365,7 +369,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     // workspace when its authority or content changed. Revision alone is not
     // enough: generation progress is overlaid without a document revision bump.
     const canvas = v.permissions.read ? v.canvas : { files: [], artifacts: [] }
-    const remoteSignature = signature(canvas)
+    const remoteSignature = canvasSignature(sharedCanvasContent(canvas))
     if (
       e.appliedCanvas?.revision === v.canvasRevision &&
       e.appliedCanvas.signature === remoteSignature
@@ -378,7 +382,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       )
       e.revision = v.canvasRevision
       e.baseCanvas = canvasOf(e.workspace)
-      e.observed = signature(e.baseCanvas)
+      e.observed = canvasSignature(e.baseCanvas)
       e.appliedCanvas = { revision: v.canvasRevision, signature: remoteSignature }
     } finally {
       e.applying = false
@@ -396,8 +400,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         unsubscribe: () => {},
         view: v,
         revision: v.canvasRevision,
-        baseCanvas: v.canvas,
-        observed: signature(canvasOf(workspace)),
+        baseCanvas: sharedCanvasContent(v.canvas),
+        observed: canvasSignature(canvasOf(workspace)),
         applying: false,
         busy: false,
         paused: false
@@ -411,7 +415,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           editor.accountId !== state.account.user?.userId
         ) return
         const next = canvasOf(workspace),
-          sig = signature(next)
+          sig = canvasSignature(next)
         if (sig === editor.observed) return
         // Local edits invalidate the remote-content cache, including held gestures.
         editor.appliedCanvas = undefined
@@ -549,23 +553,27 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         // Acknowledged changes are already part of the board's history. Only
         // edits made after that submission should take precedence on retry.
         const base = failure.kind === 'recorded' ? mutation.canvas : e.baseCanvas
-        const merged = mergeSharedCanvas(base, e.queued ?? mutation.canvas, latest.canvas)
+        const latestContent = sharedCanvasContent(latest.canvas)
+        const merged = mergeSharedCanvas(base, e.queued ?? mutation.canvas, latestContent)
         // Keep the user's draft on screen until the refreshed revision and merge are ready.
-        const needsSync = signature(merged) !== signature(latest.canvas)
+        const needsSync = canvasSignature(merged) !== canvasSignature(latestContent)
         e.applying = true
         try {
-          e.workspace.applyRemoteCanvas(merged, { revision: latest.canvasRevision })
-          e.observed = signature(canvasOf(e.workspace))
+          e.workspace.applyRemoteCanvas(
+            withSharedCanvasCompatibilityLayout(merged, latest.canvas),
+            { revision: latest.canvasRevision }
+          )
+          e.observed = canvasSignature(canvasOf(e.workspace))
         } finally {
           e.applying = false
         }
         e.view = latest
         e.remote = undefined
         e.revision = latest.canvasRevision
-        e.baseCanvas = latest.canvas
+        e.baseCanvas = latestContent
         e.appliedCanvas = needsSync
           ? undefined
-          : { revision: latest.canvasRevision, signature: signature(latest.canvas) }
+          : { revision: latest.canvasRevision, signature: canvasSignature(latestContent) }
         e.queued = undefined
         e.mutation = needsSync
           ? { id: uuid(), canvas: merged, base: latest.canvasRevision, requireLatest: true }
@@ -615,34 +623,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         return
       const s = current.workspace.getSnapshot(),
         selectedIds = s.selection.selectedNodeIds.slice(0, 100)
-      const previews =
-        current.view.permissions.edit &&
-        current.workspace.isCollaborationGesture?.()
-          ? (['files', 'artifacts'] as const)
-              .flatMap((collection) =>
-                s[collection]
-                  .filter((n: LegacyNode) => selectedIds.includes(n.id))
-                  .map((n: LegacyNode) => ({
-                    collection,
-                    nodeId: n.id,
-                    x: n.x,
-                    y: n.y,
-                    width: n.width,
-                    height: n.height
-                  }))
-              )
-              .slice(0, 100)
-          : []
-      const hints = { cursor: p!.cursor, selectedIds, previews }
-      while (
-        new TextEncoder().encode(JSON.stringify(hints)).byteLength > 8192
-      ) {
-        if (hints.selectedIds.length) {
-          const id = hints.selectedIds.pop()
-          const i = hints.previews.findIndex((n) => n.nodeId === id)
-          if (i >= 0) hints.previews.splice(i, 1)
-        } else if (hints.previews.length) hints.previews.pop()
-        else return
+      const hints = { cursor: p!.cursor, selectedIds, previews: [] }
+      while (new TextEncoder().encode(JSON.stringify(hints)).byteLength > 8192) {
+        if (!hints.selectedIds.length) return
+        hints.selectedIds.pop()
       }
       void call('presence.update', {
         boardId: current.view.boardId,
@@ -672,9 +656,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const e = editors.get(id)
     clearPresence(id)
     if (!e?.view.permissions.edit) return
-    e.queued = canvasOf(e.workspace)
+    const canvas = canvasOf(e.workspace)
+    const submitted = e.mutation?.canvas ?? e.baseCanvas
+    e.queued = canvasSignature(canvas) === canvasSignature(submitted) ? undefined : canvas
     clearTimeout(e.timer)
-    void drain(e)
+    if (!e.queued && !e.mutation && !e.busy && e.remote) {
+      const remote = e.remote
+      e.remote = undefined
+      hydrate(e, remote)
+      notify()
+    } else {
+      void drain(e)
+    }
   }
   let clearingEditors = false
   const clearEditors = () => {
@@ -2045,6 +2038,7 @@ export function ResearchBoardHeader({
     h(ResearchBoardHeaderMenu, {
       key: sessionId,
       workspace: page.workspaceFor?.(sessionId),
+      sessionId,
       collaboration: shared ? [
         ...(v.permissions.read ? [{ label: '管理协作', icon: 'manage' as const, run: () => manageBoard(page, v.boardId, 'settings') }] : []),
         ...(canInvite ? [{ label: '添加协作者', icon: 'people' as const, run: invite }] : []),
@@ -3382,23 +3376,7 @@ export function ResearchBoardCanvasOverlay({
     workspace.getSnapshot,
     workspace.getSnapshot
   )
-  const [previewTick, setPreviewNow] = React.useState(Date.now())
-  const previewNow = Math.max(previewTick, Date.now())
   const v = page.getView(sessionId)
-  const nextPreviewExpiry = (v?.presence ?? []).reduce((next, peer) => {
-    const expires = peer.previewExpiresAt ?? 0
-    return peer.userId !== state.account.user?.userId && peer.role !== 'viewer' &&
-      v?.board.lifecycle === 'active' && peer.previewSeq === v?.seq &&
-      peer.previews?.length && peer.selectedIds?.length && expires > previewNow
-      ? Math.min(next, expires) : next
-  }, Infinity)
-  React.useEffect(() => {
-    if (!Number.isFinite(nextPreviewExpiry)) return
-    // Presence events already render new geometry. Wake once only when a
-    // transient preview expires; idle boards need no recurring React updates.
-    const timer = setTimeout(() => setPreviewNow(Date.now()), Math.max(0, nextPreviewExpiry - Date.now()) + 1)
-    return () => clearTimeout(timer)
-  }, [nextPreviewExpiry])
   if (page.isLoading(sessionId)) return h('div',
     { className: 'srb-canvas-loading', role: 'status', 'aria-live': 'polite', 'aria-busy': true },
     h('span', { className: 'srb-canvas-loading-spinner', 'aria-hidden': true }),
@@ -3414,7 +3392,7 @@ export function ResearchBoardCanvasOverlay({
       h('h3', null, '共享内容不可访问'),
       h('button', { onClick: () => showRecovery(page) }, '恢复我的未发送内容')
     )
-  const snapshot = workspace.getSnapshot(),
+  const snapshot = workspace.getVisibleBoardSnapshot?.() ?? workspace.getSnapshot(),
     viewport = snapshot.viewport
   const syncNotice = page.canvasSyncNotice?.(sessionId)
   return h(
@@ -3461,22 +3439,13 @@ export function ResearchBoardCanvasOverlay({
               h('span', null, p.username)
             ),
           ...(p.role !== 'viewer' && v.board.lifecycle === 'active' ? p.selectedIds ?? [] : []).slice(0, 100).map((id) => {
-            const accepted = [...snapshot.files, ...snapshot.artifacts].find(
-              (n) => n.id === id
-            )
-            const preview =
-              p.previewExpiresAt! > previewNow && p.previewSeq === v.seq
-                ? p.previews?.find((q) => q.nodeId === id)
-                : undefined
-            const n =
-              accepted && preview ? { ...accepted, ...preview } : accepted
+            const n = [...snapshot.files, ...snapshot.artifacts].find(node => node.id === id)
             return (
               n &&
               h(
                 'div',
                 {
                   className: 'srb-occupied',
-                  'data-geometry-preview': !!preview,
                   key: `${p.userId}:${id}`,
                   style: {
                     left: (n.x - n.width / 2) * viewport.scale + viewport.x,

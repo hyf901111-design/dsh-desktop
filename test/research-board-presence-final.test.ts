@@ -146,17 +146,16 @@ it('offers board-only sharing when saved history contains a local path and uses 
 })
 
 
-it('keeps idle presence free of polling and expires geometry previews once', async()=>{
+it('draws a collaborator selection using the local card geometry', async()=>{
  vi.useFakeTimers({toFake:['setTimeout','clearTimeout','setInterval','clearInterval','Date']})
  const interval=vi.spyOn(globalThis,'setInterval')
  const f=await mount('presence')
  expect(interval).not.toHaveBeenCalled()
+ const localBox=f.host.querySelector('.srb-occupied')!.getAttribute('style')
  f.view.presence[0].previewExpiresAt=Date.now()+1000
  f.view.presence[0].previewSeq=1
  f.view.presence[0].previews=[{nodeId:'card',x:600,y:300,width:656,height:456}]
  await f.emit()
- expect(f.host.querySelector('.srb-occupied')!.getAttribute('data-geometry-preview')).toBe('true')
- await act(async()=>{await vi.advanceTimersByTimeAsync(1001)})
- expect(f.host.querySelector('.srb-occupied')!.getAttribute('data-geometry-preview')).toBe('false')
+ expect(f.host.querySelector('.srb-occupied')!.getAttribute('style')).toBe(localBox)
  expect(vi.getTimerCount()).toBe(0)
 })

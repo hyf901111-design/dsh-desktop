@@ -81,7 +81,7 @@ export function patchResearchGridWorkbench(source){
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
   change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
-  change(anchor,anchor+'\nconst implicitGenerationResizes=new Set();const workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
+  change(anchor,anchor+'\nconst implicitGenerationResizes=new Set();const workbenchGrid=createWorkbenchGridState(storage,sessionId,typeof sherlockShared==="function"&&sherlockShared(sessionId));const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
   change('const canvasActions = canvasWorkspaceActions({\n        snapshot:()=>snapshot,',`const canvasActions = canvasWorkspaceActions({
         snapshot:()=>snapshot,
         presentation:()=>({workbenchStyle:workbenchStyleState.get()||readResearchComponentTheme()}),
@@ -138,13 +138,11 @@ export function patchResearchGridWorkbench(source){
   change('const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',`for(const node of workbenchGrid.planningNodes())if((plan.createdAt??0)>=node.startedAt-1000)workbenchGrid.releasePlanning(node.id);
                     const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);`)
   change("if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');","if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');\n                    if(collaborationCanWrite()){const requestedStyle=['enterprise','light','dark','openterminal'].includes(plan.requestedStyle)?plan.requestedStyle:workbenchRequestedStyle(plan.originalRequest);if(!existing.size&&!workbenchStyleState.hasPreference()&&requestedStyle)workbenchStyleState.set(requestedStyle,{scope:'board'});workbenchAutoArrange.register(plan,existing);}")
-  change('return structuredClone({ files: s.files, artifacts: s.artifacts });','return structuredClone(w.getWorkbenchDocument?.()??{ files: s.files, artifacts: s.artifacts });')
   change('files: value.files,','files: value.files,\nworkbenchCells:workbenchGrid.get(),')
   change('const restoreHistory = (entry) => {','const restoreHistory = (entry) => {\nif(entry.workbenchCells)workbenchGrid.set(entry.workbenchCells);')
-  // Shared documents store geometry in a fixed 1000px logical coordinate system.
-  // View width is local and never creates a collaboration edit.
-  change('applyRemoteCanvas(canvas, metadata = {}) {','applyRemoteCanvas(canvas, metadata = {}) {\nworkbenchGrid.receiveCanonical([...canvas.files,...canvas.artifacts]);')
-  change('if(collaborationAppliedRevision!==metadata.revision){', 'workbenchGrid.receiveCanonical([...files,...artifacts]);\nif(collaborationAppliedRevision!==metadata.revision){')
+  // Remote content joins the local grid by ID. Legacy geometry is only used to
+  // order an ungrouped board on first open.
+  change('if(collaborationAppliedRevision!==metadata.revision){', 'workbenchGrid.receiveShared([...files,...artifacts]);\nif(collaborationAppliedRevision!==metadata.revision){')
   const hydrated='snapshot = researchWorkspaceSnapshot({...snapshot,files,artifacts,selection:parseResearchCanvasSelection(JSON.stringify(snapshot.selection),files,artifacts)});'
   change('collaborationAppliedRevision=metadata.revision;\n                    '+hydrated,'collaborationAppliedRevision=metadata.revision;\n                    '+hydrated.replace('researchWorkspaceSnapshot({','researchWorkspaceSnapshot(workbenchGrid.reconcile({').replace(')});',')}));'))
   change('pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\n                    '+hydrated,'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\nworkbenchGrid.receiveCanonical([...files,...artifacts]);\n                    '+hydrated.replace('researchWorkspaceSnapshot({','researchWorkspaceSnapshot(workbenchGrid.reconcile({').replace(')});',')}));'))

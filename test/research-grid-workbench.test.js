@@ -601,3 +601,32 @@ it('混合高度和尾部单张卡首次占满行宽，单卡页签直接满宽'
  const single=createWorkbenchGridState(null,'single');single.enable(1000);single.reconcile({...snapshot,artifacts:[panels[0]]})
  expect(single.get()[0]).toMatchObject({x:0,y:0,w:40})
 })
+
+it('opens shared cards full width and keeps the local layout when shared content changes', () => {
+ const values = new Map(), storage = {getItem: key => values.get(key), setItem: (key, value) => values.set(key, value)}
+ const cards = [
+  {id:'one',kind:'pasted-text',x:160,y:150,width:260,height:210},
+  {id:'two',kind:'pasted-text',x:160,y:390,width:260,height:210}
+ ]
+ const snapshot = artifacts => ({files:[],artifacts,viewport:{y:0}})
+ const layout = createWorkbenchGridState(storage,'shared-layout',true)
+ layout.enable(900)
+ layout.receiveShared(cards)
+ const initial = layout.reconcile(snapshot(cards))
+ expect(initial.artifacts.map(node => node.width)).toEqual([876,876])
+ layout.set(layout.get().map(cell => cell.id === 'one' ? {...cell,w:24} : cell))
+ const edited = layout.reconcile(initial)
+ layout.save()
+
+ const remote = cards.map(node => ({...node,x:650,width:410,excerpt:'Remote content'}))
+ layout.receiveShared(remote)
+ expect(layout.reconcile(snapshot(remote)).artifacts[0]).toMatchObject({width:edited.artifacts[0].width,excerpt:'Remote content'})
+
+ const reopened = createWorkbenchGridState(storage,'shared-layout',true)
+ reopened.enable(1200)
+ reopened.receiveShared([...remote,{...cards[0],id:'three'}])
+ const reopenedCards = reopened.reconcile(snapshot([...remote,{...cards[0],id:'three'}])).artifacts
+ expect(reopened.get().find(cell => cell.id === 'one').w).toBe(24)
+ expect(reopenedCards[2].width).toBe(1176)
+ expect(reopenedCards[2].y).toBeGreaterThan(reopenedCards[1].y)
+})

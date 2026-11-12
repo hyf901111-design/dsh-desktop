@@ -8,8 +8,18 @@ const noSubscription = () => () => {}
 const defaultStatus = () => defaults
 const minZoom = 50, maxZoom = 200, step = 10
 
-function canvasControls() {
-  let status = defaults, actions: CanvasActions = {}
+function canvasControls(sessionId?: string) {
+  const key = sessionId ? 'ework.research.zoom.v1:' + sessionId : null
+  const storage = typeof window === 'undefined' ? undefined :
+    (window as Window & { dshDesktop?: { researchCanvasStorage?: Storage } }).dshDesktop?.researchCanvasStorage
+  let zoom = defaults.zoom
+  if (key && storage) {
+    try {
+      const saved = Number(storage.getItem(key))
+      if (Number.isInteger(saved) && saved >= minZoom && saved <= maxZoom) zoom = saved
+    } catch {}
+  }
+  let status = { ...defaults, zoom }, actions: CanvasActions = {}
   const listeners = new Set<() => void>()
   const publish = (next: CanvasStatus) => {
     if (next.zoom === status.zoom && next.actions.join() === status.actions.join()) return
@@ -19,15 +29,21 @@ function canvasControls() {
   return {
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify) } },
     getSnapshot: () => status,
-    setZoom(zoom: number) { publish({ ...status, zoom: Math.max(minZoom, Math.min(maxZoom, zoom)) }) },
+    setZoom(value: number) {
+      const next = Math.max(minZoom, Math.min(maxZoom, value))
+      if (key && storage && next !== status.zoom) {
+        try { storage.setItem(key, String(next)) } catch {}
+      }
+      publish({ ...status, zoom: next })
+    },
     bind(next: CanvasActions) { actions = next; publish({ ...status, actions: Object.keys(next) as CanvasAction[] }) },
     run(action: CanvasAction) { actions[action]?.() }
   }
 }
 const controlsByWorkspace = new WeakMap<object, ReturnType<typeof canvasControls>>()
-function controlsFor(workspace: object) {
+function controlsFor(workspace: object, sessionId?: string) {
   let controls = controlsByWorkspace.get(workspace)
-  if (!controls) { controls = canvasControls(); controlsByWorkspace.set(workspace, controls) }
+  if (!controls) { controls = canvasControls(sessionId); controlsByWorkspace.set(workspace, controls) }
   return controls
 }
 
@@ -36,9 +52,10 @@ export function useResearchBoardCanvasHeader(
   workspace: object,
   rootRef: React.RefObject<HTMLElement>,
   enabled: boolean,
-  actions: CanvasActions
+  actions: CanvasActions,
+  sessionId?: string
 ) {
-  const controls = controlsFor(workspace)
+  const controls = controlsFor(workspace, sessionId)
   const latest = React.useRef(actions)
   latest.current = actions
   const available = Object.keys(actions).join(',')
@@ -95,12 +112,13 @@ const h = React.createElement
 const actionIcon = (icon: MenuAction['icon']) =>
   h('svg', { width: 16, height: 16, viewBox: '0 0 22 22', 'aria-hidden': true, fill: 'none', stroke: 'currentColor', strokeWidth: 1.55, strokeLinecap: 'round', strokeLinejoin: 'round' }, h('path', { d: paths[icon] }))
 
-export function ResearchBoardHeaderMenu({ workspace, collaboration, membership }: {
+export function ResearchBoardHeaderMenu({ workspace, sessionId, collaboration, membership }: {
   workspace?: object
+  sessionId?: string
   collaboration: MenuAction[]
   membership: MenuAction
 }) {
-  const controls = workspace ? controlsFor(workspace) : null
+  const controls = workspace ? controlsFor(workspace, sessionId) : null
   const { zoom, actions } = React.useSyncExternalStore(controls?.subscribe ?? noSubscription, controls?.getSnapshot ?? defaultStatus, defaultStatus)
   const [open, setOpen] = React.useState(false)
   const trigger = React.useRef<HTMLButtonElement>(null)

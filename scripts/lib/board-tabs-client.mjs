@@ -17,11 +17,13 @@ export function patchBoardTabsClient(source){
  source=stripBoardTabsClient(source)
  const preview=source.includes("const workbenchPreview=createResearchPreviewModeState(")
  const write=preview?"structureCanWrite()":"collaborationCanWrite()"
+ const gridBinding='const workbenchGrid=createWorkbenchGridState(storage,sessionId,typeof sherlockShared==="function"&&sherlockShared(sessionId));'
+ const legacyGridBinding='const workbenchGrid=createWorkbenchGridState(storage,sessionId);'
  const changes=[],change=(before,after,from=0)=>{const at=source.indexOf(before,from);if(at<0)throw Error('页签补丁缺少锚点: '+before.slice(0,110));changes.push([before,after]);source=source.slice(0,at)+after+source.slice(at+before.length)}
  const css=readFileSync(new URL('./board-tabs.css',import.meta.url),'utf8')+['board-tabs','tabs-more','tabs-grip'].map(name=>'.ew-board-tabs-icon[data-tabs-icon="'+name+'"]{mask-image:url("data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-component-library/'+name+'.svg',import.meta.url)).toString('base64')+'")}').join('\n')
  const definitions=start+'\n'+[...Object.values(contract),createBoardTabsGridState,createBoardTabsWorkspace,...Object.values(ui)].map(fn=>fn.toString()).join('\n')+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-board-tabs-style");if(!style){style=document.createElement("style");style.id="ework-board-tabs-style";document.head.append(style)}style.textContent='+JSON.stringify(css)+'}\n'+end+'\n'
  source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',definitions+'function createResearchWorkspaceSession(storage, sessionId) {')
- change('const workbenchGrid=createWorkbenchGridState(storage,sessionId);','const workbenchGrid=createBoardTabsGridState(storage,sessionId);')
+ change(source.includes(gridBinding)?gridBinding:legacyGridBinding,gridBinding.replace('createWorkbenchGridState','createBoardTabsGridState'))
  change('const htmlFitStates = new Map();',`const boardTabsWorkspace=createBoardTabsWorkspace({read:()=>snapshot,grid:workbenchGrid,canWrite:()=>${write},publish:patch=>update(patch,false),notify:()=>listeners.forEach(listener=>listener()),createId:createResearchCanvasArtifactId,canonical:canonicalResearchCanvasArtifactNode,bound:boundedResearchCanvasArtifactNodes,remove:removeResearchCanvasNodes,
  transact:(patch,prepare)=>{
   if(!${write})return false;finalizeHistoryTransaction();const before=historyState(),old=snapshot,redo=[...redoHistory];let staged=false;
