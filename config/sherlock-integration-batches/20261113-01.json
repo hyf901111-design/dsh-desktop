@@ -122,6 +122,42 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-12T16:17:32.257Z"
+      },
+      "merged": {
+        "mergeCommit": "0ddde72f77aaa16106fa675f2ca38701df4ca556",
+        "verificationCommit": "0ddde72f77aaa16106fa675f2ca38701df4ca556",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0ddde72f77aaa16106fa675f2ca38701df4ca556",
+            "completedAt": "2026-11-12T16:22:10.336Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-auto-arrange-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/workbench-openterminal.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-auto-arrange-browser.test.js test/research-grid-workbench.test.js test/research-grid-arrange-tabs.test.js test/workbench-openterminal.test.js --maxWorkers=1 --testTimeout=30000",
+            "verifiedCommit": "0ddde72f77aaa16106fa675f2ca38701df4ca556",
+            "completedAt": "2026-11-12T16:22:10.336Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-12T16:22:10.336Z"
       }
     }
   ],
