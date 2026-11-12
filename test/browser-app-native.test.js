@@ -1,6 +1,14 @@
 import {expect,it,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import {installBrowserNative,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
+it('patches the canvas action before its translated ternary is split into per-label calls',()=>{
+ const raw=stripBrowserAppNative(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const before=raw.replace('"aria-label": (notes?workbenchText("添加到笔记"):workbenchText("添加到画布")),','"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),')
+ const patched=patchBrowserAppNative(before)
+ expect(stripBrowserAppNative(patched)).toBe(before)
+ expect(patchBrowserAppNative(patched)).toBe(patched)
+ expect(()=>new Function(patched)).not.toThrow()
+})
 import {readFileSync} from 'node:fs'
 it('registers the browser view with the actual production module and restores every patch byte',()=>{
  const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),before=stripBrowserAppNative(raw),patched=patchBrowserAppNative(before)

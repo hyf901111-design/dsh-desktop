@@ -10,6 +10,8 @@ export interface SearchSource {
   url: string
   title?: string
   snippet?: string
+  siteName?: string
+  publishedAt?: string
 }
 
 const SEARCH_HOSTS: Record<SearchEngineId, ReadonlySet<string>> = {

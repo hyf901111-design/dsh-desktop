@@ -11,6 +11,7 @@ import {
 } from './collaboration-client'
 import { ResearchBoardsError } from '../shared/research-boards'
 import {IntegrationError} from '../shared/integrations'
+import type { BrowserSearchResult } from './search/browser-search-controller'
 export class AccountService {
   private readonly origin: string
   private token?: string
@@ -71,6 +72,44 @@ export class AccountService {
     const generation=this.generation
     const response=await (this.collaborationOptions.fetch??fetch)(`${this.origin}/v1/tushare/mcp`,{method:'POST',redirect:'error',headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:`Bearer ${this.token}`},body,signal:AbortSignal.any([this.sessionAbort.signal,signal,AbortSignal.timeout(30000)])})
     if(generation!==this.generation){await response.body?.cancel();throw new IntegrationError('ACCESS_DENIED','账户已变化，已取消 Tushare 请求')}
+    return response
+  }
+  async dataproMcpRequest(body: string, signal: AbortSignal): Promise<Response> {
+    return this.volcengineRequest('/v1/datapro/mcp', body, signal, '火山方舟专业数据集', 50_000)
+  }
+  async doubaoSearch(query: string, maxResults: number, signal: AbortSignal): Promise<BrowserSearchResult> {
+    if (Array.from(query.trim()).length > 100)
+      throw new IntegrationError('INVALID_CONFIG', '豆包搜索查询最多 100 个字符，请缩短关键词后重试。')
+    const response = await this.volcengineRequest(
+      '/v1/doubao/search', JSON.stringify({ query, maxResults }), signal, '豆包搜索', 24_000
+    )
+    if (!response.ok) {
+      await response.body?.cancel()
+      throw new IntegrationError(
+        response.status === 401 ? 'AUTH_REQUIRED' : 'RUNTIME_UNAVAILABLE',
+        response.status === 401 ? 'EWork 登录已失效，请重新登录后使用豆包搜索。' : '豆包搜索暂时不可用，请稍后重试。'
+      )
+    }
+    const result: BrowserSearchResult = await response.json()
+    if (result?.provider !== 'doubao' || !Array.isArray(result.sources))
+      throw new IntegrationError('RUNTIME_UNAVAILABLE', '豆包搜索返回了无效结果。')
+    return result
+  }
+  private async volcengineRequest(
+    path: '/v1/datapro/mcp' | '/v1/doubao/search', body: string, signal: AbortSignal,
+    name: string, timeout: number
+  ): Promise<Response> {
+    if (!this.authenticated) throw new IntegrationError('AUTH_REQUIRED', `请先登录 EWork 后使用${name}。`)
+    const generation = this.generation
+    const combined = AbortSignal.any([this.sessionAbort.signal, signal, AbortSignal.timeout(timeout)])
+    const response = await (this.collaborationOptions.fetch ?? fetch)(this.origin + path, {
+      method: 'POST', redirect: 'error', body, signal: combined,
+      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${this.token}` }
+    })
+    if (generation !== this.generation) {
+      await response.body?.cancel()
+      throw new IntegrationError('ACCESS_DENIED', 'EWork 账号已切换，本次请求已取消。')
+    }
     return response
   }
   private changed() {

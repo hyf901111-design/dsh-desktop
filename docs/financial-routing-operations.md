@@ -53,6 +53,18 @@ npm run fund-service:deploy
 
 健康检查 `/v1/fund-research/health` 返回 `ready` 只表示必要绑定及至少一个数据源凭证存在；不能用它替代股票、基金两条实际查询链路验收。
 
+## 方舟专业数据集与豆包搜索
+
+`sherlock-fund-data` 通过 `VOLCENGINE_AGENT_PLAN_KEY` Worker Secret 使用方舟 Agent Plan 企业版席位。席位的专业数据集和豆包搜索需开启 Harness 套餐抵扣。轮换时使用 Cloudflare 的 Secret 输入框，或在以下命令的交互提示中录入新的企业版密钥：
+
+```bash
+npx wrangler secret put VOLCENGINE_AGENT_PLAN_KEY --config services/fund-data/wrangler.jsonc
+```
+
+登录后的客户端使用 `/v1/datapro/mcp` 调用只读 `dataPro_search`，并在默认搜索模式下通过 `/v1/doubao/search` 获取可引用网页。Worker 只将检索词及必要参数发送给各自的供应商接口。两条路由沿用 EWork 登录鉴权，独立按账号限流。
+
+轮换后用登录的客户端分别查询一个明确的证券代码和一条公开网页信息，检查工具返回数据和来源链接。匿名 POST 应收到 HTTP 401。
+
 ## 分钟数据范围
 
 2026-09-08 使用已授权账户实际读取 A 股 MCP 工具目录，共 21 个工具；历史行情 `get_a_share_prices_historical` 的 `interval` 枚举为 `1d`、`1w`、`1mo`，没有分钟 K 线。最新行情快照可查询，并由应用检查行情时间是否满足 60 秒时效目标；它不等于历史一分钟 K 线。

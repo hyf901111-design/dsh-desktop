@@ -1,7 +1,16 @@
 // The canvas already owns the accepted generation state for every card,
 // including off-screen cards. Publish only identity and state, never contents,
 // prompts, tool arguments, errors or private model reasoning.
-export function isPartialWorkbenchNode(node){return node?.generationStatus==='completed'&&node.containerSpec?.type==='html'&&typeof node.containerSpec.html==='string'&&node.containerSpec.html.includes('data-observed-table-recovery')}
+export function researchWorkbenchRecoveryMode(node) {
+ const spec=node?.containerSpec
+ if(!spec)return null
+ if(node.deliveryStatus==='partial'&&['source-snapshot','readable-content','incomplete-scope'].includes(node.recoveryMode))return node.recoveryMode
+ if(spec.type!=='html'||typeof spec.html!=='string')return null
+ if(/<body\b[^>]*\sdata-observed-table-recovery(?:[=\s>])/i.test(spec.html))return 'source-snapshot'
+ if(/<body\b[^>]*\sdata-readable-content-recovery(?:[=\s>])/i.test(spec.html))return 'readable-content'
+ return null
+}
+export function isPartialWorkbenchNode(node){return node?.generationStatus==='completed'&&researchWorkbenchRecoveryMode(node)!==null}
 export function publishResearchWorkbenchProgress(target,sessionId,artifacts,active=true,retryAvailable=true) {
  if(!target||typeof sessionId!=='string'||!sessionId)return null
  const cacheKey='__sherlockWorkbenchGenerationV1'
@@ -12,9 +21,9 @@ export function publishResearchWorkbenchProgress(target,sessionId,artifacts,acti
   if(typeof node?.id!=='string'||typeof node.workbenchId!=='string'||!node.workbenchId)continue
   let status=valid.includes(node.generationStatus)?node.generationStatus:'unknown'
   if(status==='completed'&&!(node.containerSpec&&typeof node.containerSpec==='object'&&typeof node.containerSpec.type==='string'))status='unknown'
-  // This publisher is also serialized by the independent canvas watcher.
-  if(status==='completed'&&node.containerSpec?.type==='html'&&typeof node.containerSpec.html==='string'&&node.containerSpec.html.includes('data-observed-table-recovery'))status='partial'
-  current.set(node.id,{id:node.id,planId:node.workbenchId,status,...(node.containerSpec?.type==='financial-widget'?{builtin:true}:{}),...(typeof node.generationTaskId==='string'?{taskId:node.generationTaskId}:{})})
+  const recoveryMode=status==='completed'?researchWorkbenchRecoveryMode(node):null
+  if(recoveryMode)status='partial'
+  current.set(node.id,{id:node.id,planId:node.workbenchId,status,...(recoveryMode?{recoveryMode}:{}),...(node.containerSpec?.type==='financial-widget'?{builtin:true}:{}),...(typeof node.generationTaskId==='string'?{taskId:node.generationTaskId}:{})})
  }
  const nodes=[...current.values()].sort((a,b)=>a.id.localeCompare(b.id)),prior=cache.get(sessionId)
  if(prior?.active===active&&prior.retryAvailable===retryAvailable&&JSON.stringify(prior.nodes)===JSON.stringify(nodes))return prior
@@ -47,12 +56,15 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  const say=(zh,en)=>english?en:zh,ids=new Map((plans??[]).filter(p=>typeof p?.id==='string').map(p=>[p.id,p]))
  const planned=[...ids.values()].reduce((sum,p)=>sum+(Number.isSafeInteger(p.count)&&p.count>0?p.count:0),0)
  const nodes=[...new Map((snapshot?.nodes??[]).filter(n=>ids.has(n.planId)).map(n=>[n.id,n])).values()]
- const total=nodes.length,completed=nodes.filter(n=>n.status==='completed').length,partial=nodes.filter(n=>n.status==='partial').length,pending=nodes.filter(n=>['queued','running','retrying'].includes(n.status)).length
+ const partialNodes=nodes.filter(n=>n.status==='partial'),partial=partialNodes.length
+ const total=nodes.length,completed=nodes.filter(n=>n.status==='completed').length,pending=nodes.filter(n=>['queued','running','retrying'].includes(n.status)).length
  const retrying=nodes.filter(n=>n.status==='retrying').length
  const failed=nodes.filter(n=>['failed','interrupted'].includes(n.status)).length,cancelled=nodes.filter(n=>n.status==='cancelled').length,unknown=total-completed-partial-pending-failed-cancelled
  const phase=!snapshot?'waiting':!total?'empty':unknown?'unknown':pending&&snapshot.active===false?'inactive':pending?'running':failed||cancelled||partial?'partial':'completed'
- const title=phase==='waiting'?say('等待组件状态','Awaiting component status'):phase==='empty'?say('当前画布没有这批组件','These components are not on the current canvas'):phase==='unknown'?say('组件状态待确认','Component status needs verification'):phase==='inactive'?say('组件状态等待更新','Awaiting updated component status'):phase==='running'?say(`组件生成中 · 已生成 ${completed}/${total}`,`Generating components · ${completed}/${total} generated`):phase==='partial'?say(`组件生成已结束 · ${completed}/${total} 已生成`,`Generation ended · ${completed}/${total} generated`):say(`组件已生成 · ${completed}/${total}`,`Components generated · ${completed}/${total}`)
- const counts=[say(`已生成 ${completed}`,`${completed} generated`),partial?say(`来源明细 ${partial}（原功能未完成）`,`${partial} source snapshots (original features incomplete)`):'',pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
+ const title=phase==='waiting'?say('等待组件状态','Awaiting component status'):phase==='empty'?say('当前画布没有这批组件','These components are not on the current canvas'):phase==='unknown'?say('组件状态待确认','Component status needs verification'):phase==='inactive'?say('组件状态等待更新','Awaiting updated component status'):phase==='running'?say(`组件生成中 · 已生成 ${completed}/${total}`,`Generating components · ${completed}/${total} generated`):phase==='partial'?say(`组件生成已结束 · ${completed}/${total} 已完整生成`,`Generation ended · ${completed}/${total} fully generated`):say(`组件已生成 · ${completed}/${total}`,`Components generated · ${completed}/${total}`)
+ const readable=partialNodes.filter(n=>n.recoveryMode==='readable-content').length,scopeIncomplete=partialNodes.filter(n=>n.recoveryMode==='incomplete-scope').length
+ const sources=partial-readable-scopeIncomplete
+ const counts=[say(`已生成 ${completed}`,`${completed} generated`),sources?say(`来源明细 ${sources}（原功能未完成）`,`${sources} source snapshots (original features incomplete)`):'',readable?say(`保留可读内容 ${readable}`,`${readable} readable fallbacks`):'',scopeIncomplete?say(`覆盖不完整 ${scopeIncomplete}`,`${scopeIncomplete} with incomplete coverage`):'',pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
  const scope=planned&&total!==planned?say(`当前画布 ${total} 个组件，原计划 ${planned} 个。`,`Current canvas: ${total} components; original plan: ${planned}.`):''
  const detail=phase==='waiting'?say('正在读取这批组件在画布中的实际生成状态。','Reading the actual generation state of these canvas components.'):phase==='empty'?say('尚未挂载或已从画布移除。','Not mounted or removed from the canvas.'):[counts,scope,snapshot.active===false?say('以上为上次状态，打开研究看板可查看最新进度。','These are the last observed states; open the research canvas for current progress.'):''].filter(Boolean).join(' ')
  const rows=new Map((refreshSnapshot?.rows??[]).map(row=>[row.nodeId,row])),refreshGroups=new Map()
@@ -213,13 +225,14 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  ]})
 }
 
-export function researchWorkbenchFeedbackDefinitions(){return [isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
+export function researchWorkbenchFeedbackDefinitions(){return [researchWorkbenchRecoveryMode,isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v12 */',ending='/* ework:workbench-feedback:end */'
+ const marker='/* ework:workbench-feedback:v13 */',ending='/* ework:workbench-feedback:end */'
+ source=source.replace('\nconst workbenchMeta=planningResponseMetadata(activityNodes);','')
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'+ending+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[01]|[1-9]) \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[012]|[1-9]) \*\//)
  if(previous>=0){
   // Several later patches append their own helpers before ExecutionStatusGroup.
   // Replace this patch's functions only; never consume those adjacent owners.
@@ -235,9 +248,6 @@ export function patchResearchWorkbenchFeedback(source) {
  }else{
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t, planningRequest }) {'
  exact(anchor,helpers+anchor.replace('t, planningRequest','t, planningRequest, sessionId'))
- const meta='const planningMeta=planningRequest && entry.running ? planningResponseMetadata(activityNodes) : null;'
- exact(meta,meta+'\nconst workbenchMeta=planningResponseMetadata(activityNodes);')
- exact('planningMeta ? react_jsx_runtime.jsx(ResearchPlanningFeedback,',"planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,")
  const props='activityNodes,\n\t\t\t\t\t\t\t\t\tplanningRequest,'
  exact(props,'activityNodes, sessionId,\n\t\t\t\t\t\t\t\t\tplanningRequest,')
  }

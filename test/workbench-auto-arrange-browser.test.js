@@ -1,6 +1,7 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {mkdir,readFile,writeFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
+import {execFileSync} from 'node:child_process'
 import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
@@ -11,7 +12,8 @@ let browser,script
 beforeAll(async()=>{
  const pw=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await (pw.chromium||pw.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
- const source=require('../scripts/lib/research-grid-workbench.mjs').patchResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const resident=await (await import('./helpers/financial-widget-client-fixture.js')).prepareFinancialClientSource({refreshState:true})
+ const source=execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{componentTypographyPatch,patchLegacyDashboardPreview}from'./scripts/lib/patch-research-board-client.mjs';process.stdout.write(patchLegacyDashboardPreview(componentTypographyPatch(readFileSync(0,'utf8'))))"],{input:resident,encoding:'utf8',maxBuffer:64*1024*1024})
  const entry=`import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
  let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.dshDesktop={};
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
@@ -87,3 +89,34 @@ it('production Standard keeps the note/table row filled after native and HTML re
   if(process.env.SHERLOCK_TEST_EVIDENCE_DIR){await mkdir(process.env.SHERLOCK_TEST_EVIDENCE_DIR,{recursive:true});await writeFile(join(process.env.SHERLOCK_TEST_EVIDENCE_DIR,'standard-rows-browser.json'),JSON.stringify(restored,null,2)+'\n');await page.screenshot({path:join(process.env.SHERLOCK_TEST_EVIDENCE_DIR,'standard-rows-browser.png')})}
  }finally{await page.close()}
 },25000)
+
+it.each(['table','market'])('shrinks a filtered readable %s beside a taller peer and fits its expanded body',async type=>{
+ const {componentReadableDocumentTable}=await import('../packages/dsh-research-task-runtime/component-readable-snapshot.js')
+ const spec=componentReadableDocumentTable({version:1,type,...type==='market'?{variant:'table',asOf:'明确标注的模拟验收数据'}:{},title:'完整原始资料',columns:['编号','机构','负责人','职务','日期','状态','备注','定位','其他'],rows:Array.from({length:180},(_,i)=>[String(i),'模拟机构','人员'+i,'职务','2026-11-05','原文记录','说明','[T1]',i===179?'完整长正文。\n'.repeat(100):'原始字段'])})
+ const page=await browser.newPage({viewport:{width:1240,height:760}})
+ try{
+  await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{width:1000px;height:700px}[data-research-canvas]{width:1000px!important;height:700px!important}</style><div id="host"></div>`}))
+  await page.goto('https://auto-arrange.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-grid]')
+  await page.evaluate(spec=>fixture.workspace.applyWorkbench({id:'filtered-plan',createdAt:Date.now(),panels:[spec,{version:1,type:'html',title:'完整阅读材料',html:'<html><body>'+Array.from({length:60},(_,i)=>'<p>研究说明'+i+'</p>').join('')+'</body></html>'}].map((spec,i)=>({nodeId:['filter-table','tall-peer'][i],title:spec.title,prompt:'保留全部资料',taskId:'filtered-task-'+i,preparedOutput:JSON.stringify(spec),width:480,height:1100,x:i*500,y:0,size:'large'}))}),spec)
+  await page.waitForFunction(()=>fixture.workspace.pendingWorkbenchArrange().length===0&&fixture.calls()===1,null,{timeout:9000})
+  await page.evaluate(()=>fixture.workspace.updateSelection(['filter-table'],'replace'))
+  const outer=await page.locator('[data-research-node-id="filter-table"] iframe').elementHandle(),frame=await outer.contentFrame()
+  const inner=frame.childFrames()[0];await inner.waitForSelector('tbody tr')
+  await inner.getByRole('textbox',{name:'搜索完整数据'}).fill('人员179')
+  await expect.poll(()=>inner.locator('tbody tr:visible').count()).toBe(1)
+  await page.waitForTimeout(600)
+  const result=await page.evaluate(()=>({measurements:[...document.querySelector('[data-research-canvas]').__eworkContentMeasurements].map(([id,{html,...size}])=>[id,size]),nodes:fixture.workspace.getSnapshot().artifacts.map(n=>({id:n.id,height:n.height,width:n.width})),cells:fixture.workspace.getWorkbenchCells()}))
+  expect(result.nodes.find(n=>n.id==='filter-table').height).toBeLessThan(350)
+  expect(result.nodes.find(n=>n.id==='tall-peer').height).toBeGreaterThan(900)
+  await inner.waitForFunction(()=>document.documentElement.dataset.workbenchSelected==='true')
+  // The long cell extends horizontally beyond the iframe viewport; click its
+  // visible disclosure edge, not the offscreen centre of the full cell.
+  await inner.locator('details[data-readable-long] summary').click({position:{x:12,y:12}})
+  await expect.poll(()=>page.evaluate(()=>fixture.workspace.getSnapshot().artifacts.find(n=>n.id==='filter-table').height)).toBeGreaterThan(500)
+  expect(await inner.locator('[data-readable-expanded-text]').textContent()).toBe('完整长正文。\n'.repeat(100))
+  expect(await inner.locator('[data-readable-expanded-text]').evaluate(element=>element.getBoundingClientRect().width<=document.documentElement.clientWidth-24)).toBe(true)
+  expect(await inner.locator('[data-readable-expanded-text]').evaluate(element=>{const port=element.closest('main');return port.clientHeight>=port.scrollHeight-1})).toBe(true)
+  await inner.locator('details[data-readable-long] summary').click({position:{x:12,y:12}})
+  await expect.poll(()=>page.evaluate(()=>fixture.workspace.getSnapshot().artifacts.find(n=>n.id==='filter-table').height)).toBeLessThan(350)
+ }finally{await page.close()}
+},20000)

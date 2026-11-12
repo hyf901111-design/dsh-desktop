@@ -1,3 +1,4 @@
+import {tableSourceLink} from './component-provenance.js'
 import {validOpenTerminalLayout,openTerminalMarketBody,openTerminalColumnLabel} from './openterminal-layout.js'
 import { trendRuntime } from './market-trend-runtime.js'
 import { refineTrendPresentation } from './market-trend-presentation.js'
@@ -214,7 +215,14 @@ export function renderMarketArtifact(s) {
   const labels=s.columns.map(c=>c.replace(/\s/g,''));
   const weights=labels.length===4&&labels[1]==='最新'&&labels[3]==='市场'?[35,20,20,25]:labels.length===5&&labels[0]==='时间'&&labels[1]==='成交价'?[18,10.5,20.5,21.5,29.5]:null;
   const columnLayout=weights?` style="table-layout:fixed"><colgroup>${weights.map(w=>`<col style="width:${w}%">`).join('')}</colgroup>`:'>';
-  body=`<div class="terminal-table-toolbar"><input type="search" data-market-search aria-label="搜索表格内容" placeholder="搜索表格内容"><span data-market-count role="status"></span></div><div class="market-table-wrap"><table${columnLayout}<thead><tr>${s.columns.map((c,i)=>`<th data-numeric="${numericColumns[i]}"><button data-column="${i}" aria-label="按${esc(c)}排序">${esc(s.layoutProfile==='openterminal'?openTerminalColumnLabel(c):c)}</button></th>`).join('')}</tr></thead><tbody>${s.rows.map((r,i)=>`<tr>${r.map((c,j)=>`<td data-numeric="${numericColumns[j]}" data-tone="${tone(s.tones?.[i]?.[j])}">${j===0&&s.rowLinks?.[i]?`<a href="${esc(s.rowLinks[i])}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${esc(c)} 详情">${esc(c)}</a>`:esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="terminal-table-readout" role="status"></div>`
+  const renderRow = (row, index) => `<tr>${row.map((value, column) => {
+   const href = column === 0 ? s.rowLinks?.[index] : null
+   const content = href
+    ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${esc(value)} 详情">${esc(value)}</a>`
+    : tableSourceLink(s.columns[column], value) ?? esc(value)
+   return `<td data-numeric="${numericColumns[column]}" data-tone="${tone(s.tones?.[index]?.[column])}">${content}</td>`
+  }).join('')}</tr>`
+  body=`<div class="terminal-table-toolbar"><input type="search" data-market-search aria-label="搜索表格内容" placeholder="搜索表格内容"><span data-market-count role="status"></span></div><div class="market-table-wrap"><table${columnLayout}<thead><tr>${s.columns.map((c,i)=>`<th data-numeric="${numericColumns[i]}"><button data-column="${i}" aria-label="按${esc(c)}排序">${esc(s.layoutProfile==='openterminal'?openTerminalColumnLabel(c):c)}</button></th>`).join('')}</tr></thead><tbody>${s.rows.map(renderRow).join('')}</tbody></table></div><div class="terminal-table-readout" role="status"></div>`
   script=`(${marketTableRuntime.toString()})();`
  } else if(s.variant==='candlestick') {
   if(s.datasets!==undefined&&s.candles!==undefined)return null

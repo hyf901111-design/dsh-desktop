@@ -2,6 +2,7 @@ import { authenticate, authError, handleAccountRequest } from '../accounts/auth.
 import { validateServiceQuery, RESEARCH_REQUEST_BYTES } from '../../packages/dsh-fund-research-runtime/research-operations.js'
 import { DATAYES_PATH, handleDatayesMcp } from './datayes-mcp.js'
 import { TUSHARE_PATH, handleTushareMcp } from './tushare-mcp.js'
+import { DATAPRO_PATH, DOUBAO_SEARCH_PATH, handleDataproMcp, handleDoubaoSearch } from './volcengine-search.js'
 
 export const QUERY_PATH = '/v1/fund-research/query'
 export const HEALTH_PATH = '/v1/fund-research/health'
@@ -48,6 +49,8 @@ export async function handleRequest(request, env) {
   if (!url.search && url.pathname.startsWith('/v1/account/')) return handleAccountRequest(request, env)
   if (!url.search && url.pathname === TUSHARE_PATH) return handleTushareMcp(request, env)
   if (!url.search && url.pathname === DATAYES_PATH) return handleDatayesMcp(request, env)
+  if (!url.search && url.pathname === DATAPRO_PATH) return handleDataproMcp(request, env)
+  if (!url.search && url.pathname === DOUBAO_SEARCH_PATH) return handleDoubaoSearch(request, env)
   if (url.search || ![QUERY_PATH, HEALTH_PATH].includes(url.pathname)) return failure(404, 'NOT_FOUND')
   if (url.pathname === HEALTH_PATH && request.method === 'GET') {
     const ready = Boolean(env.ACCOUNTS_DB && (env.TUSHARE_TOKEN?.trim() || env.YINGMI_API_KEY?.trim() || env.TONGHUASHUN_API_KEY?.trim()) && env.FUND_REQUEST_LIMITER && env.FUND_COORDINATOR)

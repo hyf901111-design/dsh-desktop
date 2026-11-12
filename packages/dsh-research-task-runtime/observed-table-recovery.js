@@ -1,12 +1,47 @@
 import {isDeepStrictEqual} from 'node:util'
+import {createHash} from 'node:crypto'
 import {acceptArtifactOutput,extractArtifactObjects} from './artifact-output.js'
 import {componentMappableSource,componentBindingRequested} from './component-source-binding.js'
 import {MAX_RESEARCH_HTML_BYTES} from './html-artifact.js'
+import {validateWorkbenchDatasets} from './dataset-view-contract.js'
 
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const escape=v=>String(v).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const text=v=>v===null||v===undefined?'本次未取得':typeof v==='object'?JSON.stringify(v):String(v)
 const safeUrl=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:undefined}catch{}}
+const sourceRef=record=>createHash('sha256').update(JSON.stringify([record.tool,record.args])).digest('hex').slice(0,24)
+const localSource=record=>record?.tool==='workbench_source_read'
+function completeHostSnapshot(record){
+ if(!localSource(record)||record.purpose!=='snapshot'||!componentMappableSource(record))return false
+ const {response:r,args}=record,n=r.records.length,p=r.pagination
+ if(r.dataMode!=='source'||r.snapshotOnly!==true||!n||r.kind==='catalog'||r.error!==undefined||r.success===false||
+    !object(args)||Object.keys(args).some(key=>!['dataset','offset','limit'].includes(key))||args.dataset!==r.datasetId||args.offset!==0||args.limit!==n||
+    !object(p)||p.offset!==0||p.limit!==n||p.returned!==n||p.total!==n||p.possiblyMore!==false||p.nextOffset!==undefined||
+    r.sourceRef!==undefined&&r.sourceRef!==sourceRef(record))return false
+ try{
+  validateWorkbenchDatasets([{id:r.datasetId,label:r.label,asOf:r.asOf,note:r.note,fields:r.fields,records:r.records}])
+  return true
+ }catch{return false}
+}
+function ownedSource(record,records){
+ if(!componentMappableSource(record)||record.purpose==='discovery')return null
+ if(!localSource(record))return record.purpose==='snapshot'?null:record
+ if(completeHostSnapshot(record))return record
+ // Observation pages may refer only to this task's complete host snapshot.
+ // Check both the reference and the exact slice before replacing a page by
+ // that full collection; a supplied sourceRef alone is not proof.
+ const r=record.response,args=record.args,p=r.pagination
+ const matches=records.filter(item=>completeHostSnapshot(item)&&sourceRef(item)===r.sourceRef)
+ if(matches.length!==1||!object(args)||Object.keys(args).some(key=>!['dataset','offset','limit'].includes(key)))return null
+ const full=matches[0],offset=args.offset??0,limit=args.limit??50,all=full.response
+ if(args.dataset!==all.datasetId||r.datasetId!==all.datasetId||!Number.isSafeInteger(offset)||offset<0||offset>all.records.length||!Number.isSafeInteger(limit)||limit<1||limit>200||
+    r.dataMode!=='source'||r.snapshotOnly!==true||r.error!==undefined||r.success===false||r.kind==='catalog'||r.status!==undefined&&!['complete','partial'].includes(r.status)||
+    !isDeepStrictEqual(r.fields,all.fields)||r.asOf!==all.asOf||r.note!==all.note||r.label!==all.label||r.source!==all.source||
+    !isDeepStrictEqual(r.records,all.records.slice(offset,offset+limit)))return null
+ const next=offset+r.records.length,more=next<all.records.length
+ if(!object(p)||p.offset!==offset||p.limit!==limit||p.returned!==r.records.length||p.total!==all.records.length||p.possiblyMore!==more||p.nextOffset!==(more?next:undefined))return null
+ return full
+}
 
 // Last presentation strategy, after bounded model repair. This compiles only
 // observed business responses, not a model-authored HTML/table or API examples.
@@ -27,15 +62,23 @@ export function recoverObservedTable(records,{panelType,panelRequest='',original
   // A malformed final reply must not erase independently verified tool data.
   // These are this task's actual successful responses, not requests invented
   // by the failed model. Keep the same human scope and partial-delivery gates.
-  for(const record of [...records].reverse()){
-   if(!componentMappableSource(record)||['discovery','snapshot'].includes(record.purpose))continue
+  for(const candidate of [...records].reverse()){
+   const record=ownedSource(candidate,records)
+   if(!record)continue
    if(!observed.some(r=>r.tool===record.tool&&isDeepStrictEqual(r.args,record.args)))observed.push(record)
   }
   if(!observed.length||observed.length>16)return null
  }else{
  if(candidate?.type!=='data-bound'||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>16||candidate.mapping?.type!=='table')return null
  for(const request of candidate.requests){
-  const record=records.findLast(r=>r.tool===request.tool&&isDeepStrictEqual(r.args,request.args)&&componentMappableSource(r)&&!['discovery','snapshot'].includes(r.purpose))
+  let selected
+  if(request.sourceRef!==undefined){
+   if(request.tool!==undefined||request.args!==undefined)return null
+   const matches=records.filter(r=>sourceRef(r)===request.sourceRef&&componentMappableSource(r))
+   if(matches.length!==1)return null
+   selected=matches[0]
+  }else selected=records.findLast(r=>r.tool===request.tool&&isDeepStrictEqual(r.args,request.args)&&componentMappableSource(r))
+  const record=selected&&ownedSource(selected,records)
   if(!record)return null
   if(!observed.some(r=>r.tool===record.tool&&isDeepStrictEqual(r.args,record.args)))observed.push(record)
  }
@@ -48,7 +91,7 @@ export function recoverObservedTable(records,{panelType,panelRequest='',original
   const fields=[...new Set(rows.flatMap(row=>Object.keys(row)))]
   if(fields.length>128||fields.some(key=>!key.trim()||['__proto__','prototype','constructor'].includes(key)))return null
   rowCount+=rows.length
-  sections.push({response,rows,fields})
+  sections.push({response:localSource(record)?{...response,sourceRef:sourceRef(record)}:response,rows,fields})
  }
  if(!rowCount||rowCount>5000)return null
  const label=typeof title==='string'&&title.trim()?title:'已取得的来源数据'

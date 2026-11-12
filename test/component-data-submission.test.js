@@ -10,10 +10,11 @@ import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import {apply as spawn} from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import {createComponentDataSubmission} from '../packages/dsh-research-task-runtime/component-data-submission.js'
 import {resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
-import {createSubagentAdapter} from '../packages/dsh-research-task-runtime/index.js'
+import {createSubagentAdapter,ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 import {workbenchPanelPrompt,DATA_FIRST_PRESENTATION} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {releaseTimelineScope,observedReleaseTimeline} from '../packages/dsh-research-task-runtime/observed-dated-feed.js'
+import {componentDeliveryScopeIssue} from '../packages/dsh-research-task-runtime/component-delivery-scope.js'
 
 const args={operation:'query',source:'fixture',parameters_json:'{}'}
 const response={source:'Fixture',asOf:'2026-11-06',records:[{name:'甲',value:2.1},{name:'乙',value:-3.2}]}
@@ -57,6 +58,32 @@ it('offers document and custom presentation schemas without pretending that ever
  }
  expect((await lookup('unsupported')).isError).toBe(true)
 })
+it('lists only callable presentation types while preserving successful source references',async()=>{
+ const f=await fixture(),lookup=arguments_=>f.ctx.tools.execute({name:'component_presentation_schema',arguments:arguments_,callId:'presentation-catalog',agent:f.child,signal:f.controller.signal})
+ const catalogResult=await lookup({});expect(catalogResult.isError).toBe(false)
+ const catalog=JSON.parse(catalogResult.content[0].text)
+ expect(catalog.types).toEqual(expect.arrayContaining(['table','chart','market','html','view']))
+ expect(catalog.variants.chart).toContain('horizontal');expect(catalog.sources).toHaveLength(1)
+ for(const type of catalog.types){
+  const result=await lookup({type});expect(result.isError,type).toBe(false)
+  const value=JSON.parse(result.content[0].text);expect(value.type).toBe(type);expect(value.schema).toBeTruthy();expect(value.sources).toEqual(catalog.sources)
+ }
+ expect(f.records).toEqual([record])
+})
+it.each([['research.table','table'],['research.html','html'],['research.chart','chart','horizontal'],['research.market','market','charting']])('resolves the exact design alias %s without fetching or changing records',async(alias,type,variant)=>{
+ const f=await fixture(),lookup=arguments_=>f.ctx.tools.execute({name:'component_presentation_schema',arguments:arguments_,callId:'presentation-alias',agent:f.child,signal:f.controller.signal})
+ const canonical=await lookup({type,...(variant?{variant}:{})}),aliased=await lookup({type:alias,...(variant?{variant}:{})})
+ expect(aliased.isError).toBe(false);expect(JSON.parse(aliased.content[0].text)).toEqual(JSON.parse(canonical.content[0].text))
+ expect(f.records).toEqual([record])
+})
+it('rejects invented presentation names and inapplicable variants while keeping real schemas available',async()=>{
+ const f=await fixture(),lookup=arguments_=>f.ctx.tools.execute({name:'component_presentation_schema',arguments:arguments_,callId:'presentation-conflict',agent:f.child,signal:f.controller.signal})
+ for(const type of ['research.table.invented','research.research.table','research.chart.invented'])expect((await lookup({type})).isError).toBe(true)
+ for(const [type,variant] of [['research.chart','invented'],['table','horizontal']]){
+  const result=await lookup({type,variant});expect(result.isError).toBe(true);expect(JSON.stringify(result)).toContain('不适用')
+ }
+ expect((await lookup({type:'research.table'})).isError).toBe(false)
+})
 it('accepts source-backed chart labels with redundant numeric precision without losing leading zeroes',async()=>{
  const f=await fixture(),candidate=structuredClone(input)
  f.records[0].response.records=[{name:'000300.SH',value:-13.644},{name:'000905.SH',value:-17.334}]
@@ -78,6 +105,40 @@ it('rejects malformed mapping inside the same child and accepts corrected data w
  f.submission.accept(receipt());f.submission.accept({type:'step/end'})
  const output=(await f.submission.result).output[0].text
  expect(resolveBoundComponent(output,f.records).data.series[0].values).toEqual([2.1,-3.2]);expect(f.records).toHaveLength(1)
+})
+it('keeps real rows when an optional fetch timestamp is missing, without forgiving missing business values',async()=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ f.records[0].response.dataTime='2026-11-06'
+ candidate.mapping.asOf.$path='receivedAt'
+ const bad=structuredClone(candidate);bad.mapping.series[0].values.$map.$path='unit_nav'
+ expect((await f.invoke(bad)).isError).toBe(true)
+ expect(f.submission.lastIssue()).toContain('unit_nav')
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ const snapshot=resolveBoundComponent((await f.submission.result).output[0].text,f.records)
+ expect(snapshot.data.series[0].values).toEqual([2.1,-3.2]);expect(snapshot.data.asOf).toContain('2026-11-06')
+})
+
+it.each(['empty','missing-field'])('automatically reacquires after a %s result rather than doing a tool-free formatting retry',async mode=>{
+ const originalRequest='对比至少2个产品的真实净值'
+ const prompt=workbenchPanelPrompt({title:'净值比较',dataMode:'source',originalRequest},{title:'净值比较',type:'table',prompt:originalRequest})
+ const previous={...record,response:{records:mode==='empty'?[]:[{name:'甲',manager:'示例机构'}]}}
+ const followup={...record,args:{...args,source:'verified-alternative'},response:{source:'Fixture',asOf:'2026-11-06',records:[{name:'甲',unit_nav:1.15},{name:'乙',unit_nav:1.18}]}}
+ const ready={version:1,type:'data-bound',requests:[{key:'q',tool:followup.tool,args:followup.args}],mapping:{version:1,type:'table',title:'净值比较',columns:['名称','净值'],rows:{$from:'q',$each:'records',$map:[{$path:'name'},{$path:'unit_nav'}]}}}
+ const starts=[]
+ const forbiddenRepair=()=>{throw Error('Insufficient acquisition must not enter format-only repair')}
+ const adapter={dispose:async()=>{},start:async request=>{
+  starts.push(request)
+  const result=starts.length===1?{stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,sourceRecords:[previous],output:[],submissionIssue:mode==='missing-field'?'接口缺少字段：unit_nav':undefined}:{stopReason:'completed',sourceRecords:[followup],output:[{type:'text',text:JSON.stringify(ready)}]}
+  return{childSessionId:'acquisition-'+starts.length,result:Promise.resolve(result),dispose:async()=>{},repair:forbiddenRepair}
+ }}
+ const runtime=new ResearchTaskRuntime({adapter,storage:{load:async()=>undefined,save:async()=>{}},createId:()=> 'acquisition-task'})
+ cleanup.push(()=>runtime.dispose())
+ await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt},{workbenchRequest:{dataMode:'source',originalRequest},sourceRequirement:originalRequest,sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:originalRequest}})
+ await runtime.tasks.get('acquisition-task').runPromise
+ const task=runtime.inspect({parentSessionId:'parent',taskId:'acquisition-task'})
+ expect(task.state,task.error).toBe('completed');expect(starts).toHaveLength(2)
+ expect(starts[1].synthesisOnly).toBe(false);expect(starts[1].retainedSourceRecords).toEqual([previous]);expect(starts[1].prompt).toContain('续接取数')
 })
 it.each(['public_data_query','ework__t_48cd5c8d6962ae3cb7caba80a77c15fe'])('reuses the sole successful %s call without model-authored defaults and persists a complete recipe',async(tool)=>{
  const f=await fixture(),candidate=structuredClone(input)
@@ -374,6 +435,30 @@ it('maps original web object and array paths without changing row scope or prove
  expect(mapped.data.series[0].values).toEqual([4,9])
 })
 
+it('accepts a JSON-wrapped MCP parameter object only when it selects the same observed request',async()=>{
+ const f=await fixture(),tool='ework__t_abcd'
+ const args={api_name:'index_daily',params:{ts_code:'000300.SH',start_date:'20261101'},fields:'ts_code,close',limit:100}
+ f.records.splice(0,1,{tool,args,response},{tool,args:{...args,params:{...args.params,ts_code:'000905.SH'}},response:{...response,records:[{name:'丙',value:7}]}})
+ const candidate={...input,requests:[{key:'q',tool,args:{...args,params:JSON.stringify(args.params)}}]}
+ const wrong={...candidate,requests:[{key:'q',tool,args:{...args,params:JSON.stringify({...args.params,start_date:'20261001'})}}]}
+ expect((await f.invoke(wrong)).isError).toBe(true)
+ expect((await f.invoke(candidate)).isError).toBe(false)
+ const text=JSON.stringify({version:1,type:'data-bound',...candidate})
+ const bound=resolveBoundComponent(text,f.records)
+ expect(bound.recipe.requests[0].args).toEqual(args)
+ expect(bound.data.series[0].values).toEqual([2.1,-3.2])
+ expect(resolveComponentSnapshot(text,f.records).data.series[0].values).toEqual([2.1,-3.2])
+})
+
+it('keeps grouped comparison charts valid when the default sign coloring is explicitly off',async()=>{
+ const f=await fixture(),candidate=structuredClone(input)
+ candidate.mapping.variant='groupedBar'
+ candidate.mapping.colorBySign=false
+ candidate.mapping.series.push({...candidate.mapping.series[0],name:'对照'})
+ expect((await f.invoke({...candidate,mapping:{...candidate.mapping,colorBySign:true}})).isError).toBe(true)
+ expect((await f.invoke(candidate)).isError).toBe(false)
+})
+
 it('accepts a verified release list with a long body in the original submit call',async()=>{
  const f=await fixture(),sourceUrl='https://example.com/api/releases',link='https://example.com/releases/v2'
  const body='完整发布说明。'.repeat(500)
@@ -454,4 +539,58 @@ it('returns nested response paths with the requested schema in one bounded call 
  expect(value.sources[0].sourceRef).toMatch(/^[a-f0-9]{24}$/)
  expect(JSON.stringify(value.sources)).not.toContain('do-not-copy-records')
  expect(JSON.stringify(value.sources).length).toBeLessThan(3500)
+})
+it('submits content through its own validation and successful receipt boundary',async()=>{
+ const validateContent=(snapshot,records)=>{
+  expect(snapshot.data.rows).toEqual([['甲',0],['乙',2]])
+  expect(records).toHaveLength(1)
+  return JSON.stringify(snapshot.data)
+ }
+ const f=await fixture(undefined,{validateContent}),content={title:'比较',rows:[{name:'甲',value:0},{name:'乙',value:2}]}
+ let done=false;f.submission.result.then(()=>{done=true})
+ expect((await f.invoke({content},f.parent)).isError).toBe(true)
+ expect((await f.invoke({content,artifact:{}})).isError).toBe(true)
+ expect((await f.invoke({content})).isError).toBe(false)
+ f.submission.accept(receipt('unrelated'));f.submission.accept({type:'step/end'});await Promise.resolve()
+ expect(done).toBe(false)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ expect(JSON.parse((await f.submission.result).output[0].text).rows).toEqual([['甲',0],['乙',2]])
+})
+it('requires a real refresh recipe when submitted content requested automatic updates',async()=>{
+ const f=await fixture(undefined,{bindingRequested:true,validateContent:()=>{throw Error('must not call')}})
+ const result=await f.invoke({content:{title:'快照',body:'正文'}})
+ expect(result.isError).toBe(true)
+ expect(JSON.stringify(result)).toContain('自动刷新')
+})
+it('retains the real missing-cohort issue across title and empty retries until its successful delivery receipt',async()=>{
+ const validateContent=snapshot=>{
+  const issue=componentDeliveryScopeIssue(snapshot.data,'至少比较8只基金的收益')
+  if(issue)throw Error(issue)
+  return JSON.stringify(snapshot.data)
+ }
+ const f=await fixture(undefined,{validateContent}),content=count=>({title:'收益比较',rows:Array.from({length:count},(_,i)=>({name:'基金'+i,value:i+1}))})
+ expect((await f.invoke({content:content(5)})).isError).toBe(true)
+ const issue=f.submission.acquisitionIssue();expect(issue).toContain('实际交付5')
+ expect((await f.invoke({content:{note:'资料未齐'}})).isError).toBe(true);expect(f.submission.lastIssue()).toContain('content.title')
+ for(let i=0;i<3;i++)expect((await f.invoke({content:{title:'收益比较',note:'资料未齐'}})).isError).toBe(true)
+ expect(f.submission.lastIssue()).toContain('尚无正文或记录');expect(f.submission.acquisitionIssue()).toBe(issue)
+ expect((await f.invoke({content:content(8)},f.parent)).isError).toBe(true);expect(f.submission.acquisitionIssue()).toBe(issue)
+ expect((await f.invoke({content:content(8)})).isError).toBe(false)
+ f.submission.accept(receipt('unrelated'));f.submission.accept({type:'step/end'});expect(f.submission.acquisitionIssue()).toBe(issue)
+ f.submission.accept(receipt('data-submit',true));f.submission.accept({type:'step/end'});expect(f.submission.acquisitionIssue()).toBe(issue)
+ expect((await f.invoke({content:content(8)})).isError).toBe(false)
+ f.submission.accept(receipt());expect(f.submission.acquisitionIssue()).toBe(issue)
+ f.submission.accept({type:'step/end'});expect(JSON.parse((await f.submission.result).output[0].text).rows).toHaveLength(8)
+ expect(f.submission.acquisitionIssue()).toBeUndefined();expect(f.submission.lastIssue()).toBeUndefined()
+})
+it('keeps an observed missing-field issue local and does not clear it after cancellation',async()=>{
+ const f=await fixture(),other=await fixture(),bad=structuredClone(input)
+ bad.mapping.series[0].values.$map.$path='unit_nav'
+ expect((await f.invoke(bad)).isError).toBe(true)
+ const issue=f.submission.acquisitionIssue();expect(issue).toMatch(/^接口缺少字段：unit_nav/u)
+ expect((await f.invoke({content:{note:'缺失'}})).isError).toBe(true)
+ expect(f.submission.acquisitionIssue()).toBe(issue);expect(other.submission.acquisitionIssue()).toBeUndefined()
+ f.controller.abort();expect((await f.invoke()).isError).toBe(true)
+ f.submission.accept(receipt());f.submission.accept({type:'step/end'})
+ expect(f.submission.acquisitionIssue()).toBe(issue);expect(f.ctx.tools.schemas(f.child)).toEqual([])
 })

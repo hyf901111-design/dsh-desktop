@@ -21,6 +21,7 @@ function timeKey(item,spec){
  if(item.time===null)return {kind:'missing',value:null};
  const full=typeof item.time==='string'&&item.time.match(/^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/);
  if(full&&dateValue(full[1])&&Number.isFinite(Date.parse(item.time)))return {kind:'absolute',value:Date.parse(item.time)};
+ if(dateValue(item.time))return {kind:'date',value:Date.parse(item.time)};
  const clock=typeof item.time==='string'&&item.time.match(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
  if(clock&&dateValue(spec.date)&&spec.timeZone)return {kind:'clock',value:Number(clock[1])*3600+Number(clock[2])*60+Number(clock[3]||0)};
  return {kind:'unresolved',value:null};
@@ -35,5 +36,6 @@ export function timelineDisplayTime(item,spec){
  if(key.kind==='absolute'&&spec.timeZone){const value=new Intl.DateTimeFormat('zh-CN',{timeZone:spec.timeZone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(key.value);return {clock:value,date:new Intl.DateTimeFormat('sv-SE',{timeZone:spec.timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(key.value)};}
  if(key.kind==='absolute')return {clock:item.time.slice(11,16),date:item.time.slice(0,10),offset:item.time.match(/(Z|[+-]\d{2}:\d{2})$/)[1]};
  if(key.kind==='clock')return {clock:item.time,date:spec.date};
+ if(key.kind==='date')return {clock:item.time,date:''};
  return {clock:'时间待定',date:''};
 }

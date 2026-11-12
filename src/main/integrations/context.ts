@@ -9,7 +9,7 @@ export async function resolveIntegrationContext(input: CapabilityContext, option
         path: string;
         sessionIds?: string[];
     }>>;
-    sessions(): Promise<Array<{
+    sessions(sessionId: string): Promise<Array<{
         sessionId: string;
         cwd?: string;
         origin?: string;
@@ -20,7 +20,10 @@ export async function resolveIntegrationContext(input: CapabilityContext, option
         !input.sessionId || !input.rootSessionId || !input.workspaceId) {
         throw new IntegrationError('ACCESS_DENIED', '当前会话或账户身份已变化');
     }
-    const [workspaces, sessions] = await Promise.all([options.workspaces(), options.sessions()]);
+    const [workspaces, sessions] = await Promise.all([options.workspaces(), options.sessions(input.sessionId)]).catch(error => {
+        if (error instanceof IntegrationError) throw error;
+        throw new IntegrationError('RUNTIME_UNAVAILABLE', '会话身份暂时无法核验，数据请求尚未发出');
+    });
     const session = sessions.find(item => item.sessionId === input.sessionId);
     const workspace = workspaces.find(item => item.workspaceId === input.workspaceId);
     if (!session || !workspace || (session.cwd ? session.cwd !== workspace.path : !workspace.sessionIds?.includes(session.sessionId))) {

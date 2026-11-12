@@ -155,3 +155,42 @@ it('分时使用实际分钟价格与增量成交量，不拿日线替代',async
  const r=await f.service.query({action:'history',symbols:[stock],period:'1m',adjustment:'none'})
  expect(r.bars[0]).toMatchObject({date:'2026-10-09T09:30:00+08:00',close:1255.42,volume:195});expect(r.bars[1].volume).toBe(1400);expect(r.nativePeriod).toBe(true)
 })
+
+it('routes selected MCP prices through fixed account tools with exact symbols, date ranges and units',async()=>{
+ const date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Shanghai'}),compact=date.replaceAll('-','')
+ const dataProDay=new Date(Date.now()-86400000).toLocaleDateString('en-CA',{timeZone:'Asia/Shanghai'})
+ const record={ts_code:'600519.SH',trade_date:compact,open:100,high:105,low:98,close:102,change:2,pct_chg:2,vol:1000}
+ const rpc=(result:unknown)=>Response.json({jsonrpc:'2.0',id:1,result})
+ const tushare=vi.fn(async(_body:string)=>rpc({structuredContent:{source:'Tushare',api:'daily',records:[record,{...record,ts_code:'600519.SZ',close:200}]}}))
+ const datapro=vi.fn(async(_body:string)=>rpc({content:[{type:'text',text:JSON.stringify({code:0,dataset_type:'stock_finance',items:[
+  {证券代码:'600519.SH',records:[
+   {证券代码:'600519.SH',日期:dataProDay,开盘价:100,最高价:105,最低价:98,收盘价:102,成交量:1234},
+   {证券代码:'600519.SZ',日期:dataProDay,开盘价:1,最高价:2,最低价:1,收盘价:2,成交量:99}
+  ]}
+ ]})}]}))
+ const fetch=vi.fn(async()=>{throw Error('Unexpected public request')})
+ const service=createPublicFinancialWidgetData({identity:()=> 'one',fetch,accountSources:{tushare,datapro}})
+ const input={action:'history',symbols:[stock],period:'1w',adjustment:'none'}
+ const history=await service.query({...input,source:'tushare'})
+ expect(history).toMatchObject({source:'Tushare',volumeUnit:'手',nativePeriod:false,bars:[{date,close:102,volume:1000}],quotes:[{price:102,priceChange:2,asOf:date,quotedAt:null}]})
+ expect(JSON.parse(tushare.mock.calls[0]![0]).params).toMatchObject({name:'tushare_query',arguments:{api_name:'daily',params:{ts_code:'600519.SH',end_date:compact}}})
+ expect(await service.query({...input,source:'datapro'})).toMatchObject({source:'火山方舟专业数据集',volumeUnit:'股',bars:[{date:dataProDay,close:102,volume:1234}],quotes:[{price:102,priceChange:null,quotedAt:null}]})
+ expect(JSON.parse(datapro.mock.calls[0]![0]).params).toMatchObject({name:'dataPro_search',arguments:{query:expect.stringContaining('600519.SH')}})
+ await expect(service.query({...input,source:'tushare',period:'1m'})).rejects.toThrow(/未复权日线/)
+ expect(fetch).not.toHaveBeenCalled()
+})
+
+it('maps Doubao news source and optional publication time independently of retrieval time',async()=>{
+ const doubao=vi.fn(async()=>({provider:'doubao' as const,truncated:false as const,sources:[
+  {url:'https://example.com/btc',title:'比特币市场消息',siteName:'市场通讯',publishedAt:'2026-11-12T09:00:00+08:00',snippet:'市场动态'},
+  {url:'https://example.net/btc',title:'交易所资讯'},
+  {url:'https://name:pass@example.net/private',title:'Invalid'}
+ ]}))
+ const service=createPublicFinancialWidgetData({identity:()=> 'one',accountSources:{doubao}})
+ const result=await service.query({action:'news',query:'比特币',source:'doubao'})
+ expect(doubao).toHaveBeenCalledWith('比特币 最新新闻',8,expect.any(AbortSignal))
+ expect(result).toMatchObject({source:'豆包搜索',receivedAt:expect.any(String),news:[
+  {title:'比特币市场消息',source:'市场通讯',time:'2026-11-12T09:00:00+08:00'},
+  {title:'交易所资讯',source:'example.net',time:null}
+ ]})
+})

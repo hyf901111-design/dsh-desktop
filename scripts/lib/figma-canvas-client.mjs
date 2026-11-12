@@ -7,6 +7,7 @@ import { patchResearchComponentHeaderNote, researchComponentHeaderNoteCss } from
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
 import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
+import { patchResearchPartialDelivery } from './research-partial-delivery.mjs'
 import { patchResearchCreationProgress } from './research-creation-progress.mjs'
 import { parseResearchMarketNativeTable, ResearchMarketNativeTable, researchMarketNativeTableCss } from './research-market-native-table.mjs'
 import { ResearchInteractiveTable, ResearchContainerChart } from './research-native-interactivity.mjs'
@@ -282,7 +283,7 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchResearchNativeInteractivity(patchCreationAfterCanvasUse(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))))))));
+  return patchResearchPartialDelivery(patchResearchNativeInteractivity(patchCreationAfterCanvasUse(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))))))));
 }
 function patchResearchNativeInteractivity(source) {
   return replaceResearchContainerTable(source);

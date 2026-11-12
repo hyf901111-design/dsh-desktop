@@ -16,12 +16,13 @@ import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from '.
 import {normalizeObservedUnitMapping} from './component-unit-projection.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
-const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize','$calc','$reduce'])
+const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize','$calc','$reduce','$concat'])
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
 const sourceId=v=>typeof v==='string'&&/^[a-zA-Z0-9][\w.-]{0,63}$/.test(v)
 const sourceRecipe=(s,templateId)=>record(s)&&sourceId(s.id)&&typeof s.name==='string'&&s.name.trim().length>0&&s.name.length<=128&&!/[\u0000-\u001f]/.test(s.name)&&Array.isArray(s.requests)&&s.requests.length>0&&s.requests.length<=16&&record(s.mapping)&&templateFor(s.mapping)?.id===templateId
+export const COMPONENT_PAGE_MAPPING_GUIDANCE='已成功读取的多页记录可用 {$concat:[{$from:"page1",$path:"真实列表路径"},{$from:"page2",$path:"真实列表路径"}],$each:"",$sortBy:"真实日期字段",$order:"asc",$map:{$path:"真实数值字段"}} 合并后再筛选、排序、统计或归一化；分页参数仍逐字保留原请求，不能填入字面记录或省略已取得页。labels 使用相同合并与日期排序，$map 选日期；values 选数值，可加 $normalize:"base100" 或 $reduce。不同标的不能按位置拼接。该能力只证明实际合并的数据，不代表分页已取齐；继续读取来源明确的后续页并核验实体数、日期区间和字段覆盖。保留全部原始观测，超过原生图表容量时仍提交完整映射，由宿主切换完整图表加分页明细；不得缩短区间、删除标的或采样冒充完整交付。不支持字符串 $concat、$join 或 $format；名称直接选真实字段。'
 const refreshNewsScopeIssue=(mapping,requests,scope,now)=>newsSourceScopeIssue(mapping,requests.map(request=>({...request,args:evaluateMapping(request.args,{},now)})),scope)
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
@@ -193,10 +194,25 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  }
  const unknown=Object.keys(mapping).find(k=>k.startsWith('$')&&!mappingOperators.has(k))
  if(unknown)throw Object.assign(Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。'),{code:'UNSUPPORTED_MAPPING_OPERATOR'})
+ // Page aggregation only selects full observed record arrays. Never evaluate
+ // arbitrary operands/defaults or flatten scalar series by position. Filtering,
+ // chronological validation, calculation and presentation run after merging.
+ let merged
+ if(Object.hasOwn(mapping,'$concat')){
+  const pages=mapping.$concat
+  if(!Array.isArray(pages)||pages.length<2||pages.length>16||mapping.$each!==''||['$from','$path','$calc','$date'].some(key=>Object.hasOwn(mapping,key)))throw Error('$concat 分页合并需要 2–16 个真实列表选择器、$each:""，不能同时指定其他来源或表达式')
+  merged=[]
+  for(const page of pages){
+   if(!record(page)||Object.keys(page).length!==2||!Object.hasOwn(page,'$from')||typeof page.$path!=='string')throw Error('$concat 分页合并只能逐页引用 {$from:"成功请求key",$path:"真实记录列表路径"}，不能填入记录或默认值')
+   const rows=next(page,row,'')
+   if(!Array.isArray(rows)||!rows.every(record)||merged.length+rows.length>2000)throw Error('分页来源必须是完整记录列表，合并后不能超过 2000 条；不能跳过缺失页')
+   merged.push(...rows)
+  }
+ }
  if(Object.hasOwn(mapping,'$calc'))return scalarMapping(calculateSourceValue(mapping,value=>next(value,row,'')),mapping)
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在。$from 必须使用 requests 中的 key；$map 内选择当前记录字段时省略 $from。')
- const source=mapping.$from!==undefined?responses[mapping.$from]:row
+ const source=merged??(mapping.$from!==undefined?responses[mapping.$from]:row)
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
  if(mapping.$reduce!==undefined&&eachPath===undefined)throw Error('$reduce 必须指定真实列表 $each 和字段选择 $map:{"$path":"实际字段"}')
  if(mapping.$normalize!==undefined&&(mapping.$normalize!=='base100'||eachPath===undefined||mapping.$single===true))throw Error('归一化仅支持列表 $each 的 $normalize:"base100"，不能用于单值或表达式')
@@ -273,6 +289,13 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
+  // Some sources repeat the one instrument identity on every observation
+  // instead of returning it in the envelope. Recheck consensus on every
+  // materialization; never take the first row from mixed-identity results.
+  if(value===undefined&&mapping.$from!==undefined&&/^(?:ts_code|fund_code|symbol|ticker|instrument)$/u.test(mapping.$path)&&Array.isArray(source?.records)&&source.records.length){
+   const identity=source.records[0]?.[mapping.$path]
+   if(typeof identity==='string'&&identity.trim()&&source.records.every(row=>record(row)&&Object.hasOwn(row,mapping.$path)&&row[mapping.$path]===identity))value=identity
+  }
   if(Object.hasOwn(mapping,'$default')){
    if(mapping.$default!==null&&!['string','number','boolean'].includes(typeof mapping.$default))throw Error('缺失值只能使用文字或标量')
    if(value===undefined||value===null||value==='')value=mapping.$default
@@ -370,10 +393,11 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
   try{data.asOf=evaluateMapping(asOf,responses,now,responses,0,{nodes:0},'timestamp')}
   catch(error){
    const absentNewsTime=mapping.type==='news'&&record(asOf)&&Object.keys(asOf).every(key=>['$from','$path'].includes(key))&&['dataTime','asOf','updatedAt'].includes(asOf.$path)&&metadata?.matched.some(source=>source.key===asOf.$from&&!Object.hasOwn(source.response,asOf.$path))&&error.message==='接口缺少字段：'+asOf.$path
-   if(!absentNewsTime&&(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined))throw error
+   const absentFetchTime=record(asOf)&&Object.keys(asOf).every(key=>['$from','$path'].includes(key))&&asOf.$path==='receivedAt'&&Object.hasOwn(responses,asOf.$from)&&error.message==='接口缺少字段：receivedAt'
+   if(!absentNewsTime&&!absentFetchTime&&(!['UNSUPPORTED_MAPPING_OPERATOR','UNSUPPORTED_DISPLAY_FORMAT'].includes(error.code)||!metadata||metadata.time===undefined))throw error
    // A broken presentation formatter cannot replace actual quote time with a
    // fetched/current date. Disagreeing source times remain an error.
-   data.asOf=metadata.time??observedPresentationMetadata(metadata.matched).period?.label??'来源未提供'
+   data.asOf=metadata?.time??observedPresentationMetadata(metadata?.matched??[]).period?.label??'来源未提供'
   }
  }
  if(metadata?.gaps.length){

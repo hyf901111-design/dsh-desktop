@@ -107,7 +107,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=fa
   const rss=componentRssStatusView(node)
   const refreshing=busy||binding?.status==='refreshing'
   const refreshState=workbenchRefreshState(node,binding,{rss,reload:typeof onReload==='function',error})
-  const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'?node.generationCompletedAt:null),now)
+  const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'&&node.deliveryStatus!=='partial'?node.generationCompletedAt:null),now)
   const refresh=async()=>{
     if(busy||readOnly)return {error:'组件当前不可刷新'}
     setBusy(true)
@@ -332,6 +332,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     separator('generate'),
     target.node.containerSpec?.type==='financial-widget'&&target.node.containerSpec.widget==='indices'&&row('settings','配置指数',()=>onConfigureIndices?.(target.node.id)),
+    target.node.containerSpec?.type==='financial-widget'&&row('data','数据源与自动更新',()=>card()?.querySelector('.ew-financial-provenance')?.click(),false),
     target.node.containerSpec?.type==='financial-widget'&&row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly),
     target.node.containerSpec?.type==='calendar-tool'&&row('schedule','新建事项',()=>card()?.querySelector('[data-calendar-add]')?.click(),readOnly),
     row('schedule','设定定时任务',()=>openComponentSchedule(target.sessionId,target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-component-schedule-open':target.node.id}),

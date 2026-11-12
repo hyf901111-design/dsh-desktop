@@ -1,6 +1,16 @@
 import {expect,it} from 'vitest'
-import {workbenchSourcePolicy} from '../packages/dsh-research-task-runtime/workbench-source-policy.js'
+import {restoreWorkbenchHostContext,workbenchSourcePolicy} from '../packages/dsh-research-task-runtime/workbench-source-policy.js'
 const news={title:'近期新闻',type:'news',prompt:'使用通联DataYes取得三家公司新闻，保留日期和链接。'}
+it('preserves a host-computed comparison table for source-only child tasks',()=>{
+ const originalRequest='比较已取得的真实业务记录，保留单位和统计日期。'
+ const table={version:1,type:'table',title:'比较明细',columns:['对象','指标'],rows:[['A',0],['B',null]],
+  asOf:'2026-11-10',sources:[{label:'已验证来源',url:'https://example.test/records'}]}
+ const context={workbenchRequest:{originalRequest,dataMode:'source'},sourceRequirement:originalRequest,
+  sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:originalRequest},sharedEvidence:JSON.stringify(table)}
+ expect(JSON.parse(restoreWorkbenchHostContext(context).sharedEvidence)).toEqual(table)
+ expect(()=>restoreWorkbenchHostContext({...context,workbenchRequest:{originalRequest,dataMode:'simulated'}})).toThrow()
+ expect(()=>restoreWorkbenchHostContext({...context,sharedEvidence:JSON.stringify({...table,rows:[['A']]})})).toThrow()
+})
 it.each([
  ['创建真实工作台。',false,false],
  ['创建工作台，所有卡使用DataYes。',true,false],

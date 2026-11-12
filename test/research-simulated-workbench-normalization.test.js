@@ -14,6 +14,80 @@ const metric = panel('医药行业核心指标（模拟）', 'market', {
 });
 
 describe('真实客户端模拟工作台输入修复', () => {
+  it('将完整的量价与风险表投影为原生图，保留分组柱图的季度和序列对应关系', () => {
+    const panel = (title, prompt, rows, visualization) => ({
+      title, prompt, type:'chart', content:{title, rows, visualization, sources:[{label:'原台账'}]},
+    });
+    const input = {
+      requestId:'trade-chart-projection', title:'复盘工作台',
+      originalRequest:'「量价」K线，开高低收（元）及量（手）。「风险」用散点图，横轴年化波动率、纵轴年度收益率，单位均为百分比。「对标」用分组柱图。',
+      panels:[
+        panel('量价','保留2个交易日',[
+          {date:'2026-10-13',open:102,high:103,low:97,close:98,volume:4200},
+          {date:'2026-10-12',open:100,high:104,low:99,close:102,volume:3000},
+        ]),
+        panel('风险','保留2个产品',[
+          {name:'产品甲',volatility:2.5,return:3.4},
+          {name:'产品乙',volatility:4.4,return:-0.8},
+        ]),
+        panel('对标','组合与基准',[
+          {quarter:'2026Q2',portfolio:-0.5,benchmark:-0.2},
+          {quarter:'2026Q1',portfolio:1.6,benchmark:1},
+        ],{kind:'bar',label:'quarter',values:['portfolio','benchmark'],unit:'%'}),
+      ],
+    };
+    const [candle,scatter,grouped] = validateWorkbench(input).panels.map(p=>p.artifact);
+    expect(candle).toMatchObject({variant:'candlestick',unit:'元',volumeUnit:'手',candles:[
+      {date:'2026-10-12',close:102,volume:3000},{date:'2026-10-13',close:98,volume:4200},
+    ]});
+    expect(scatter).toMatchObject({variant:'scatter',xAxis:{label:'年化波动率',unit:'%'},yAxis:{label:'年度收益率',unit:'%'},
+      points:[{label:'产品甲',x:2.5,y:3.4},{label:'产品乙',x:4.4,y:-0.8}]});
+    expect(grouped).toMatchObject({variant:'groupedBar',labels:['2026Q1','2026Q2'],series:[
+      {name:'portfolio',values:[1.6,-0.5]},{name:'benchmark',values:[1,-0.2]},
+    ]});
+    const prepared = prepareSimulatedArtifact({
+      type:'chart',title:'模拟量价',artifact:{...candle,sources:undefined,source:'原台账'},
+    });
+    expect(prepared).toMatchObject({volumeUnit:'手',candles:candle.candles,sources:[{label:'原台账'}]});
+    const [candleInput,scatterInput] = input.panels;
+    const mapped = validateWorkbench({...input,panels:[
+      {title:candleInput.title,type:'chart',prompt:candleInput.prompt,artifact:{version:1,chartType:'candlestick',
+        source:'原台账',unit:{price:'元',volume:'手'},xField:'date',openField:'open',highField:'high',
+        lowField:'low',closeField:'close',volumeField:'volume',data:candleInput.content.rows}},
+      {title:scatterInput.title,type:'chart',prompt:scatterInput.prompt,artifact:{version:1,type:'chart.scatter',
+        source:'原台账',unit:{x:'%',y:'%'},labelField:'name',xField:'volatility',yField:'return',data:scatterInput.content.rows}},
+    ]}).panels.map(p=>p.artifact);
+    expect(mapped[0].candles).toEqual(candle.candles);
+    expect(mapped[1].points).toEqual(scatter.points);
+  });
+  it('保留用户给出的瀑布图、配置环图与风险矩阵原值，拒绝账簿勾稽不符或改用 HTML', () => {
+    const source = '用户提供的账簿';
+    const market = (title, variant, details) => ({
+      title, type:'market', prompt:'展示'+title, artifact:{version:1,type:'market',title,variant,asOf:'账簿期末',source,...details},
+    });
+    const waterfall = market('净值桥（瀑布图）','waterfall',{unit:'元',items:[
+      {label:'期初',value:100,kind:'total'},
+      {label:'利息',value:20,kind:'increase'},
+      {label:'费用',value:-5,kind:'decrease'},
+      {label:'期末',value:115,kind:'total'},
+    ]});
+    const donut = market('配置环形图','allocation-donut',{unit:'元',items:[{name:'债券',value:110,unit:'元'},{name:'现金',value:5,unit:'元'}]});
+    const risk = market('风险矩阵','risk-matrix',{items:[{name:'赎回',probability:2,impact:4}]});
+    const originalRequest = '基于账簿制作工作台，画「净值桥」瀑布图、「配置环形图」和「风险矩阵」。';
+    const input = {requestId:'specialized-market', title:'账簿工作台', dataMode:'source',originalRequest, panels:[waterfall,donut,risk]};
+    const result = validateWorkbench(input);
+    expect(result.panels[0].artifact).toMatchObject({source,unit:'元',start:100,startLabel:'期初',endLabel:'期末',changes:[{label:'利息',value:20},{label:'费用',value:-5}]});
+    expect(result.panels[1].artifact.items.map(({label,value})=>[label,value])).toEqual([['债券',110],['现金',5]]);
+    expect(result.panels[2].artifact.items[0]).toMatchObject({label:'赎回',probability:2,impact:4});
+    const mismatch = structuredClone(input);
+    mismatch.panels[0].artifact.items.at(-1).value = 120;
+    expect(()=>validateWorkbench(mismatch)).toThrow('期末金额与期初金额加各期增减额不一致');
+    const wrongUnit = structuredClone(input);
+    wrongUnit.panels[1].artifact.items[0].unit = '万元';
+    expect(()=>validateWorkbench(wrongUnit)).toThrow('必须使用同一单位');
+    expect(()=>validateWorkbench({...input,panels:[{...waterfall,type:'html',artifact:{version:1,type:'html',title:waterfall.title,html:'<p>净值桥</p>'}}]}))
+      .toThrow('需使用用户指定的原生 market.waterfall');
+  });
   it('按规划保留基金指标模板和六个季度时点', () => {
     const trend = generateSimulatedPanel({ title:'基金 vs 基准 累计收益率趋势（模拟）', prompt:'market.trend；6 个季度时点，两条同量纲序列', type:'market', size:'medium' }, '研究工作台双卡面板规划');
     const kpi = generateSimulatedPanel({ title:'基金核心指标卡（模拟）', prompt:'fund.kpi；最大回撤需要较长口径说明', type:'market', size:'medium' }, '研究工作台双卡面板规划');
@@ -157,3 +231,19 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(() => validateWorkbench(plan(metric, table))).toThrow(/第2行.*2.*3/);
   });
 });
+
+it('恢复用户明示的原生柱图和指标卡，保留原始数据',()=>{
+ const output=validateWorkbench({
+   requestId:'inline-presentation',title:'限额工作台',
+   originalRequest:'做「限额占用率」用原生柱图展示百分比；「限额概览」用指标卡显示总数。',
+   panels:[
+     {type:'table',title:'限额占用率',prompt:'按组展示占用率百分比柱状图',artifact:{
+       version:1,type:'table',title:'限额占用率',columns:['组别','占用率（%）'],rows:[['甲',120],['乙',0]]}},
+     {type:'table',title:'限额概览',prompt:'原生指标卡',artifact:{
+       version:1,type:'table',title:'限额概览',columns:['指标','数值','单位'],rows:[['总数',2,'组']]}}
+   ]
+ })
+ expect(output.panels.map(panel=>panel.type)).toEqual(['chart','kpi'])
+ expect(output.panels[0].artifact).toMatchObject({variant:'bar',unit:'%',labels:['甲','乙'],series:[{values:[120,0]}]})
+ expect(output.panels[1].artifact.items).toEqual([{label:'总数',value:2,unit:'组'}])
+})

@@ -40,6 +40,49 @@ async function setup(start) {
 }
 
 describe('领域自适应模拟工作台延后生成', () => {
+  it('requests one shared simulated cohort before mounting a legacy board whose fixed samples are short',async()=>{
+    const f=await setup(()=>{throw Error('inconsistent plans must not start')})
+    const request='用模拟数据建立交付工作台，准备32项任务。概览统计要和明细一致。'
+    f.exec.agent.session.events[0].data.content[0].text=request
+    const payload={title:'交付工作台',dataMode:'simulated',panels:[
+      {title:'交付概览',type:'dashboard',prompt:'按状态统计同一批任务。'},
+      {title:'任务明细',type:'table',prompt:'展示全部32项任务，保留编号、任务名称、状态和负责人。'}
+    ]}
+    try {
+      await expect(f.tool.execute(payload,f.exec)).rejects.toThrow(/同一份完整模拟记录集.*sharedDatasets/su)
+      expect(f.runtime.tasks.size).toBe(0);expect(f.adapter.start).not.toHaveBeenCalled()
+      await expect(readFile(f.filePath,'utf8')).rejects.toMatchObject({code:'ENOENT'})
+    }finally{await f.close()}
+  })
+
+  it('recovers an isolated simulated quantity shortfall through deferred generation and keeps the request id',async()=>{
+    const f=await setup(async request=>({childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'table',title:'任务明细（模拟）',columns:['编号','任务名称'],rows:Array.from({length:32},(_,i)=>['T'+i,'模拟任务'+i])})}]}),dispose:async()=>{}}))
+    const request='创建任务工作台，用模拟数据展示全部32项任务。'
+    f.exec.agent.session.events[0].data.content[0].text=request
+    const payload={title:'任务工作台',dataMode:'simulated',panels:[{title:'任务明细',type:'table',prompt:'展示全部32项任务，保留编号和任务名称。'}]}
+    try {
+      const receipt=await f.tool.execute(payload,f.exec);expect(receipt.status).toBe('accepted')
+      await expect.poll(()=>[...f.runtime.tasks.values()][0].state).toBe('completed')
+      const task=[...f.runtime.tasks.values()][0]
+      expect(task.prompt).toContain('【宿主延后模拟生成】');expect(task.prompt).toContain(request)
+      expect(readTemplateModel(JSON.parse(task.finalOutput)).data.rows).toHaveLength(32)
+      expect((await f.tool.execute(payload,f.exec)).planId).toBe(receipt.planId);expect(f.adapter.start).toHaveBeenCalledOnce()
+    }finally{await f.close()}
+  })
+
+  it('retains available simulated rows as a partial result when deferred generation is unavailable',async()=>{
+    const f=await setup(()=>{throw Error('deferred generation is unavailable')})
+    f.runtime.startBatch=undefined
+    f.exec.agent.session.events[0].data.content[0].text='创建模拟市场工作台，展示全部32条观察样本。'
+    const payload={title:'模拟市场工作台',dataMode:'simulated',panels:[{title:'样本明细',type:'table',prompt:'展示全部32条观察样本，包含数值和变化。'}]}
+    try {
+      const receipt=await f.tool.execute(payload,f.exec);expect(receipt.status).toBe('incomplete');expect(receipt.detail).toContain('实际交付5，尚缺27')
+      const [task]=f.runtime.tasks.values();expect(task.deliveryStatus).toBe('partial')
+      expect(readTemplateModel(JSON.parse(task.finalOutput)).data.rows).toHaveLength(5)
+      expect((await f.tool.execute(payload,f.exec)).planId).toBe(receipt.planId);expect(f.adapter.start).not.toHaveBeenCalled()
+    }finally{await f.close()}
+  })
+
   it('keeps the type parameter aligned with the shared-context custom interaction route',async()=>{
     const f=await setup(()=>{throw Error('metadata only')});
     try{const schema=JSON.stringify(f.tool.parameters);expect(schema).not.toContain('省略dataMode/generationMode/sharedContext/originalRequest');expect(schema).toContain('保留deferred与sharedContext')}finally{await f.close()}
@@ -167,15 +210,22 @@ describe('领域自适应模拟工作台延后生成', () => {
     ]) expect(() => validateWorkbench(invalid)).toThrow()
   })
 
-  it('keeps each declared template despite unrelated shared chart/table words and passes complete facts to every child', () => {
+  it('preserves each panel question and complete shared facts under the content-first delivery contract', () => {
     const plan = validateWorkbench({ ...input(), originalRequest: original + '；另一个图表参考chart.bar，不要让所有面板变成图表。' })
     for (const p of plan.panels) {
       const prompt = workbenchPanelPrompt(plan, p)
       expect(prompt).toContain(original)
       expect(prompt).toContain(common)
       const built = buildResearchTaskPrompt({ kind: 'container', parentSessionId: 'p', canvasNodeId: p.title, prompt })
-      expect(built).toContain(`"type":"${p.type}"`)
-      expect(built).toContain('items等字段放在根对象，不再包裹panel或artifact')
+      expect(built).toContain(`本面板：${p.title}`)
+      expect(built).toContain(p.prompt)
+      expect(built).toContain(original)
+      expect(built).toContain(common)
+      expect(built).toContain('component_presentation_schema')
+      expect(built).toMatch(/理解需求[\s\S]*收集与处理内容[\s\S]*可视化交付/u)
+      expect(built).toMatch(/完整内容模型[\s\S]*搜索[\s\S]*排序[\s\S]*分页[\s\S]*计数/u)
+      expect(built).toMatch(/submit_component_data[^\n]*content/u)
+      expect(built).toMatch(/不得[^\n]*样例[^\n]*缺失值[^\n]*真实业务数据/u)
       if(p.type==='timeline')expect(built).not.toContain('同次提供artifact:')
       expect(built).not.toContain('唯一交付格式：undefined')
     }
@@ -204,7 +254,12 @@ describe('领域自适应模拟工作台延后生成', () => {
         resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify(artifact(request.query)) }] })
       }
       await vi.waitFor(() => expect([...f.runtime.tasks.values()].map(t => ({ state: t.state, error: t.error }))).toEqual(Array.from({ length: 6 }, () => ({ state: 'completed', error: undefined }))))
-      expect([...f.runtime.tasks.values()].map(t => readTemplateModel(JSON.parse(t.finalOutput))?.templateId ?? JSON.parse(t.finalOutput).type)).toEqual(['table', 'gantt', 'tasks', 'table', 'timeline', 'note'])
+      expect([...f.runtime.tasks.values()].map(t => readTemplateModel(JSON.parse(t.finalOutput))?.templateId ?? JSON.parse(t.finalOutput).type)).toEqual(['market.table', 'gantt', 'tasks', 'market.table', 'timeline', 'note'])
+      for(const index of [0,3]){
+        const delivered=readTemplateModel(JSON.parse([...f.runtime.tasks.values()][index].finalOutput)).data
+        expect(delivered.asOf).toBe('2026-11-01')
+        expect(delivered.rows).toEqual(artifact([...f.runtime.tasks.values()][index].prompt).rows)
+      }
       expect([...f.runtime.tasks.values()].every(t => t.finalOutput.includes('模拟'))).toBe(true)
       expect(f.adapter.start).toHaveBeenCalledTimes(6)
     } finally { await f.close() }

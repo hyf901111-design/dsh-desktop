@@ -170,7 +170,7 @@ describe('web search settings card', () => {
     const html = renderToStaticMarkup(card.props.children)
 
     expect(html).toContain('id="plugin-config-web-search-mode"')
-    expect(html).toContain('value="auto" selected="">自动（推荐）')
+    expect(html).toContain('value="auto" selected="">自动 · 豆包搜索')
     expect(html).toContain('value="native-only">仅模型原生')
     expect(html).toContain('value="off">关闭')
     expect(html).not.toContain('API Key')

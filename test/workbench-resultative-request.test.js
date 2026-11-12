@@ -2,48 +2,58 @@ import {expect,it} from 'vitest'
 import {pathToFileURL} from 'node:url'
 import {componentCreationRequest} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 import {workbenchCreationRequest,registerWorkbenchExecutionPolicy} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {classifyResearchCreationRequest} from '../scripts/lib/research-creation-progress.mjs'
 const file='/Users/heyafeng/Downloads/指数运营工作台_v3_候选.html'
 const original=pathToFileURL(file).href+' 你去根据这个原型文件，在研究看板上帮我把这个原型里的指数运营看板用工作台形式做出来'
 const session=text=>({header:{},events:[{type:'user/message',data:{id:'user',role:'user',source:{kind:'user'},content:[{type:'text',text}]}}],append(type,data){this.events.push({type,data})}})
+it('rejects a planning placeholder before it can become a durable receipt',()=>{
+ const base={requestId:'report',title:'报告工作台',dataMode:'source'}
+ expect(()=>validateWorkbench({...base,panels:[{title:'占位',prompt:'占位',type:'markdown'}]})).toThrow('面板只有占位文字')
+ expect(validateWorkbench({...base,panels:[{title:'核心判断',prompt:'提取报告原文的核心判断和页码',type:'markdown'}]}).panels).toHaveLength(1)
+})
 it.each([original,'帮我把这个原型里的客户留存看板做出来。','请把这个HTML转成一个研究工作台。','将原型还原成可使用的仪表盘。'])('admits authored resultative creation: %s',text=>{
  expect(componentCreationRequest(session(text))?.target).toBe('workbench')
  expect(workbenchCreationRequest(session(text))?.messageId).toBe('user')
  expect(classifyResearchCreationRequest(text)?.kind).toBe('workbench')
 })
-it.each(['不要把原型里的看板做出来，先读一下。','我已经把原型里的看板做出来了。','这个按原型做出来的看板是什么？','如何把原型里的看板做出来？','请修改当前工作台，按原型调整布局。','先不把这个HTML转成工作台。','请解释“把原型里的看板做出来”是什么意思。'])('does not authorize a new board: %s',text=>{
+it.each(['不要把原型里的看板做出来，先读一下。','我已经把原型里的看板做出来了。','这个按原型做出来的看板是什么？','这个做出来的图表是什么？','刚才做出来的工作台有哪些内容？','如何把原型里的看板做出来？','请修改当前工作台，按原型调整布局。','先不把这个HTML转成工作台。','请解释“把原型里的看板做出来”是什么意思。'])('does not authorize a new board: %s',text=>{
  expect(workbenchCreationRequest(session(text))).toBeNull()
  expect(classifyResearchCreationRequest(text)).toBeNull()
 })
-it('uses the original file read gate and bounded planning budget for the exact failed user wording',async()=>{
+it('still recognizes a separate creation after a question about an existing result',()=>{
+ expect(workbenchCreationRequest(session('这个按原型做出来的看板是什么？另外创建一个活动工作台。'))?.target).toBe('workbench')
+})
+it('uses the original file read gate and selected model budget for the exact failed user wording',async()=>{
  const hooks=new Map(),s=session(original),agent={session:s};let guard
  const tools=[{name:'read',parameters:{type:'object',properties:{file_path:{type:'string'}}}},{name:'research_workbench_create',parameters:{type:'object',properties:{}}},{name:'bash',parameters:{}}]
  const dispose=registerWorkbenchExecutionPolicy({on:(name,fn)=>{hooks.set(name,fn);return()=>{}},systemPrompt:{context:()=>()=>{}},llm:{resolveModelInfo:async()=>({reasoning:{efforts:[{id:'low'},{id:'max'}]},defaultMaxTokens:16000})},tools:{schemas:()=>tools,guard:fn=>{guard=fn;return()=>{}}}})
  try{
   const opts=await hooks.get('agent/request')({agent},async()=>({provider:'qa',model:'qa',reasoningEffort:'max',maxTokens:16000}))
-  expect(opts).toMatchObject({reasoningEffort:'low',maxTokens:4096})
+  expect(opts).toMatchObject({reasoningEffort:'max',maxTokens:16000})
   const wire=await hooks.get('agent/request-context')({agent},async()=>({system:'',messages:[s.events[0].data],tools}))
   expect(wire.tools.map(t=>t.name)).toEqual(['read','research_workbench_create'])
   expect(wire.tools[1].parameters.properties.dataMode.enum).toEqual(['source'])
-  expect(wire.tools[1].description).toContain('不抄写全量记录')
+  expect(wire.tools[1].description).toContain('已解析的真实正文')
   expect(wire.tools[0].parameters.properties.file_path.enum).toEqual([file])
   expect(guard({agent,name:'research_workbench_create',arguments:{},callId:'early'})).toContain('先读取')
  }finally{dispose()}
 })
-it('removes complete artifact routes from prototype planning without changing the shared tool definition',async()=>{
+it('retains parsed content and artifact routes in prototype planning without changing the shared tool definition',async()=>{
  const hooks=new Map(),s=session(original),agent={session:s};let prompt
- const panel={type:'object',properties:{title:{type:'string'},prompt:{type:'string'},type:{enum:['chart','html','view']},size:{type:'string'},layout:{type:'string'},artifact:{type:'object'},publicData:{type:'object'},view:{type:'object'}},required:['title','prompt']}
+ const panel={type:'object',properties:{title:{type:'string'},prompt:{type:'string'},type:{enum:['chart','html','view']},size:{type:'string'},layout:{type:'string'},artifact:{type:'object'},content:{type:'object'},publicData:{type:'object'},view:{type:'object'}},required:['title','prompt']}
  const params={type:'object',properties:{title:{type:'string'},preset:{enum:['cn-hot-etf-live']},sharedDatasets:{type:'array'},panels:{type:'array',items:panel}}}
  const dispose=registerWorkbenchExecutionPolicy({on:(name,fn)=>{hooks.set(name,fn);return()=>{}},systemPrompt:{context:value=>{prompt=value;return()=>{}}},tools:{guard:()=>()=>{}}})
  try{
   const wire=await hooks.get('agent/request-context')({agent},async()=>({system:'base',messages:[s.events[0].data],tools:[{name:'research_workbench_create',parameters:params}]}))
-  expect(Object.keys(wire.tools[0].parameters.properties.panels.items.properties)).toEqual(['title','prompt','type','size','layout'])
+  expect(Object.keys(wire.tools[0].parameters.properties.panels.items.properties)).toEqual(['title','prompt','type','size','layout','artifact','content','view'])
   expect(wire.tools[0].parameters.properties).not.toHaveProperty('preset')
   expect(wire.tools[0].parameters.properties.panels.items.additionalProperties).toBe(false)
-  expect(wire.system).toContain('首次只提交')
+  expect(wire.system).toContain('已解析的真实正文')
+  expect(wire.tools[0].parameters.properties).toHaveProperty('sharedDatasets')
   expect(wire.system).not.toContain('已有真实记录直接保留完整 artifact')
   expect(prompt.text({agent})).not.toContain('一次提供完整sharedDatasets')
-  expect(prompt.text({agent})).toContain('独立组件会读取原型')
+  expect(prompt.text({agent})).toContain('多卡复用同一份数据')
   expect(params.properties.panels.items.properties).toHaveProperty('artifact')
   expect(params.properties).toHaveProperty('preset')
  }finally{dispose()}
@@ -53,4 +63,16 @@ it('keeps explicit permission to generate new simulated data with a reference',a
  const params={type:'object',properties:{dataMode:{type:'string',enum:['source','simulated']}}},tools=[{name:'research_workbench_create',parameters:params}]
  const dispose=registerWorkbenchExecutionPolicy({on:(name,fn)=>{hooks.set(name,fn);return()=>{}},systemPrompt:{context:()=>()=>{}},tools:{schemas:()=>tools,guard:()=>()=>{}}})
  try{const wire=await hooks.get('agent/request-context')({agent},async()=>({system:'',messages:[s.events[0].data],tools}));expect(wire.tools[0].parameters).toBe(params)}finally{dispose()}
+})
+
+it('识别无量词的搭工作台请求，保留只读与否定句',()=>{
+ expect(classifyResearchCreationRequest('帮我根据成交台账搭工作台。')).toMatchObject({kind:'workbench'})
+ expect(classifyResearchCreationRequest('怎么根据成交台账搭工作台？')).toBeNull()
+ expect(classifyResearchCreationRequest('不要根据成交台账搭工作台。')).toBeNull()
+})
+
+it('识别客户端在句末追加原型附件的同一用户请求',()=>{
+ const attached='你去根据这个原型文件，在研究看板上帮我把这个原型里的指数运营看板用工作台形式做出来📎 文件：`'+file+'`'
+ expect(workbenchCreationRequest(session(attached))?.target).toBe('workbench')
+ expect(workbenchCreationRequest(session(attached))?.text).toContain(file)
 })

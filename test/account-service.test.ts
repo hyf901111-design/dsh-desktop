@@ -247,3 +247,28 @@ it('routes isolated native login and collaboration to the same loopback service'
   await service.collaborationRequest({ kind: 'me' })
   expect(remote.mock.calls[1]?.[0]).toBe('http://127.0.0.1:8773/v1/collaboration/me')
 })
+
+it('uses only the EWork session token for the professional dataset and Doubao search', async () => {
+  const { service } = await setup()
+  const signal = AbortSignal.timeout(5000)
+  await expect(service.doubaoSearch('public query', 2, signal)).rejects.toMatchObject({ code: 'AUTH_REQUIRED' })
+  const token = 'd'.repeat(64)
+  const remote = vi.fn().mockResolvedValueOnce(Response.json({ user: { id: 'owner-a' }, token }))
+    .mockResolvedValueOnce(Response.json({ provider: 'doubao', sources: [{ url: 'https://example.org/' }], truncated: false }))
+    .mockResolvedValueOnce(Response.json({ jsonrpc: '2.0', id: 1, result: { tools: [] } }))
+  vi.stubGlobal('fetch', remote)
+  await service.invoke('login', {})
+  await expect(service.doubaoSearch('public query', 2, signal)).resolves.toMatchObject({ provider: 'doubao' })
+  const mcpBody = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
+  expect((await service.dataproMcpRequest(mcpBody, signal)).ok).toBe(true)
+  for (const [index, path, body] of [
+    [1, '/v1/doubao/search', JSON.stringify({ query: 'public query', maxResults: 2 })],
+    [2, '/v1/datapro/mcp', mcpBody]
+  ] as const) {
+    expect(remote.mock.calls[index]?.[0]).toBe('https://updates.evanarts.com' + path)
+    expect(remote.mock.calls[index]?.[1]).toMatchObject({
+      method: 'POST', redirect: 'error', body,
+      headers: { 'content-type': 'application/json', accept: 'application/json', authorization: 'Bearer ' + token }
+    })
+  }
+})

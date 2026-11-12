@@ -9,9 +9,63 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import {apply as applySpill} from '@deepseek-ai/dsh-spill-policy'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from '../packages/dsh-research-task-runtime/component-source-projection.js'
 import {componentSourceCollector,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {registerWorkbenchExecutionPolicy} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {captureWorkbenchObservedSources} from '../packages/dsh-research-task-runtime/workbench-observed-sources.js'
 
 const response={retCode:1,retMsg:'Success',data:Array.from({length:60},(_,i)=>({secID:'600027.XSHG',ticker:'600027',exchangeCD:'XSHG',publishDate:i<30?'2026-08-28':'2026-07-25',endDate:'2026-06-30',fiscalPeriod:6,source:'公司已披露公告',itemName:'真实指标'+i,value:i===0?0:i%2?-i:i,unit:i%2?'万千瓦':'亿千瓦时',content:(i<30?'半年报经营说明。':'上半年发电量公告。').repeat(80),unusualMetric:{active:false,detail:null,list:[i,'未知字段保留']},...(i%3?{}:{optional:null})}))}
 const payload={content:[{type:'text',text:JSON.stringify(response)}],executionOnlySecret:'not-for-model-content'}
+const nav={source:'Tushare',api:'fund_nav',fields:['ts_code','nav_date','unit_nav','accum_nav','net_asset','adj_nav'],
+ records:Array.from({length:288},(_,i)=>({ts_code:'110037.OF',nav_date:new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10).replaceAll('-',''),unit_nav:1+i/10000,accum_nav:1.2+i/10000,net_asset:i%94?null:i*10000,adj_nav:i?1.03+i/10000:0})),
+ pagination:{offset:0,limit:1000,returned:288,possiblyMore:false},sourceUrl:'https://tushare.pro/document/2?doc_id=119'}
+
+it('round trips the Tushare NAV shape in positional rows and fails closed on missing fields or tampering',()=>{
+ const before=JSON.stringify(nav),projection=compactBusinessEvidence(nav,{tushareRecords:true})
+ expect(projection).toBeTruthy();expect(projection.records).toHaveLength(288)
+ expect(Buffer.byteLength(JSON.stringify(projection))).toBeLessThan(Buffer.byteLength(before)*.5)
+ expect(expandBusinessEvidence(projection)).toEqual(nav);expect(JSON.stringify(nav)).toBe(before)
+ expect(projection.pagination).toEqual(nav.pagination);expect(projection.sourceUrl).toBe(nav.sourceUrl)
+ const sparse=structuredClone(nav);delete sparse.records[0].net_asset
+ expect(compactBusinessEvidence(sparse,{tushareRecords:true})).toBeUndefined()
+ const corrupted=structuredClone(projection);corrupted.records[0][1]=999
+ expect(()=>expandBusinessEvidence(corrupted)).toThrow(/无损/)
+ const oversized=structuredClone(projection);oversized.__eworkEvidenceProjection.constants.ts_code='x'.repeat(9000)
+ expect(()=>expandBusinessEvidence(oversized)).toThrow(/超出/)
+})
+
+it('projects only an accepted Tushare root call belonging to the current authored workbench turn and restores it from the source handoff',async()=>{
+ const hooks=new Map(),turn=1,signal=new AbortController().signal
+ const tool='ework__t_tushare_test',builtin={[Symbol.for('ework.builtin-tushare.read')]:true}
+ const ctx={tools:{get:name=>name===tool?builtin:undefined},systemPrompt:{context:()=>()=>{}},on:(name,fn)=>{hooks.set(name,fn);return ()=>hooks.delete(name)}}
+ const stop=registerWorkbenchExecutionPolicy(ctx)
+ try{
+  const human={id:'human',role:'user',source:{kind:'user'},content:[{type:'text',text:'创建纯债基金比较工作台。'}]}
+  const args={api_name:'fund_nav',params:{ts_code:'110037.OF'}},callId='nav'
+  const agent={session:{events:[{type:'user/message',data:human},{type:'tool/call',data:{name:tool,arguments:args,turn,callId}}]}}
+  const request={system:'base',messages:[human],tools:[{name:'research_workbench_create'},{name:tool}]}
+  await hooks.get('agent/request-context')({agent,turn,signal},async()=>request)
+  const value={content:[{type:'text',text:JSON.stringify(nav)}],privateMetadata:'not for model'}
+  const result={isError:false,value,content:value.content},original={kind:'accept'}
+  const exec={agent,name:tool,callId,arguments:args,signal}
+  const post=hooks.get('tools/post-execute')
+  const projected=await post(exec,result,async()=>original)
+  expect(projected.content[0].text).not.toContain('not for model')
+  expect(expandBusinessEvidence(JSON.parse(projected.content[0].text))).toEqual(nav)
+  expect(result.value).toBe(value);expect(result.content).toEqual(value.content)
+  agent.session.events.push({type:'tool/result',data:{message:{source:{kind:'tool',callId},content:[{type:'tool-result',toolCallId:callId,content:projected.content}]}}})
+  expect(captureWorkbenchObservedSources({session:agent.session,messageId:'human',schemas:[{name:tool}]})).toEqual([{tool,args,response:nav}])
+  for(const unapproved of [{...exec,callId:'not-durable'},{...exec,parent:Symbol('nested')},{...exec,agent:{session:agent.session}},{...exec,name:'ework__spoof'}]) {
+   expect(await post(unapproved,result,async()=>original)).toBe(original)
+  }
+  const replacement={kind:'accept',value:{filtered:true}}
+  expect(await post(exec,result,async()=>replacement)).toBe(replacement)
+  const blocked={kind:'block',feedback:[]}
+  expect(await post(exec,result,async()=>blocked)).toBe(blocked)
+  expect(await post(exec,result,async()=>{
+   agent.session.events.push({type:'user/message',data:{...human,id:'next',content:[{type:'text',text:'解释上一张图。'}]}})
+   return original
+  })).toBe(original)
+ }finally{stop()}
+})
 
 it('losslessly factors all repeated fields and descriptions while preserving every row, missing field, zero, negative value and unknown column',()=>{
  const before=JSON.stringify(response),projection=compactBusinessEvidence(response)
@@ -102,6 +156,19 @@ it('keeps sibling results and disposed child observations on their original pipe
  expect(stopped.content[0].text).toContain('Omitted ')
  expect(stopped.value).toEqual(payload)
  expect(f.saveText).toHaveBeenCalledTimes(2)
+})
+
+it('delivers host interpretation context with an approved web result without changing its canonical evidence',async()=>{
+ const f=await fixture();f.stop()
+ const value={content:[{type:'text',text:'approved original web content'}]},observe=vi.fn(()=> '宿主核验的目标集合：v4.0.9、v4.0.8、v4.0.7')
+ f.ctx.tools.register({name:'web_fetch',description:'读取网页',parameters:{type:'object',properties:{}},output:{schema:{},render:(_args,value)=>value.content},execute:async()=>value})
+ const stop=registerComponentSourceProjection(f.ctx,{child:f.child,allowed:['web_fetch'],signal:new AbortController().signal,onWebResponse:observe});cleanups.push(stop)
+ const invoke=agent=>f.ctx.tools.execute({name:'web_fetch',arguments:{url:'https://example.com/releases'},callId:'web',agent,signal:new AbortController().signal})
+ const result=await invoke(f.child)
+ expect(observe).toHaveBeenCalledWith({url:'https://example.com/releases'},'approved original web content')
+ expect(result.value).toEqual(value)
+ expect(result.content).toEqual([...value.content,{type:'text',text:observe.mock.results[0].value}])
+ expect((await invoke(f.sibling)).content).toEqual(value.content)
 })
 
 it('respects a policy that replaces canonical data instead of resurrecting the original response',async()=>{

@@ -4,6 +4,7 @@ import {constants} from 'node:fs'
 import {lstat,open,realpath,stat} from 'node:fs/promises'
 import {isAbsolute,relative,resolve,sep} from 'node:path'
 import {unzipSync} from 'fflate'
+import {loadPdfLibrary} from './pdf-library.js'
 
 export const PRESENTATION_FILES_TOOL='presentation_files'
 const MAX_BYTES=128*1024*1024,MAX_XML=2*1024*1024
@@ -68,7 +69,7 @@ function presentationFormat(bytes){
 
 async function pdfFormat(bytes,signal){
  if(!bytes.subarray(0,1024).includes(Buffer.from('%PDF-')))throw Error('文件不是可读取的 PDF。')
- const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs')
+ const {getDocument}=await loadPdfLibrary()
  signal?.throwIfAborted()
  const task=getDocument({data:new Uint8Array(bytes),isEvalSupported:false,useSystemFonts:false,useWorkerFetch:false,verbosity:0})
  let destroy

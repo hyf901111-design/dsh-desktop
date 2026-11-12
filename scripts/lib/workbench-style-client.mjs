@@ -12,7 +12,7 @@ export function createWorkbenchStyleState(storage,sessionId) {
  try{const saved=JSON.parse(storage?.getItem(key)||'null');if(saved?.version===1&&['light','dark','enterprise','openterminal'].includes(saved.mode)){mode=saved.mode;boardOnly=saved.scope==='board'}}catch{}
  const trial=()=>{if(shared.override!==null)return shared.override;try{return storage?.getItem(trialKey)==='enabled'}catch{return false}}
  const notify=()=>{if(typeof window!=='undefined')window.dispatchEvent(new window.Event('ework-workbench-trial-change'))}
- return {get:()=>boardOnly?mode:trial()?'openterminal':mode,set(value,options={}){
+ return {hasPreference:()=>mode!==null,get:()=>boardOnly?mode:trial()?'openterminal':mode,set(value,options={}){
   if(!['light','dark','enterprise','openterminal'].includes(value))return false
   // Conversation actions are bound to one board. Keep the existing global
   // trial picker while allowing a durable board preference through this same setter.

@@ -9,9 +9,8 @@
 - id: llm-deepseek
   disabled: true
 
-# Search follows the model selected for the active session. The provider reads
-# that route's user-configured endpoint and credential for each request, so the
-# desktop never requires or silently falls back to DEEPSEEK_API_KEY.
+# Desktop auto search uses EWork's authenticated Doubao gateway. The provider
+# also honors explicit model-native and disabled settings.
 - id: web
   config:
     searchProvider: sherlock-session-model

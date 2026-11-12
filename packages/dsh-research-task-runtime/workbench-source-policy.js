@@ -2,6 +2,9 @@ import {restoreExplicitScope} from './workbench-explicit-scope.js'
 import { componentPluginSourceRequired, componentPluginSourceProhibited, componentSourceAllowsAlternatives } from './component-source-tools.js'
 import {validatePublicDataPanel} from './workbench-public-data.js'
 import {isDeepStrictEqual} from 'node:util'
+import {validateWorkbenchDatasets} from './dataset-view-contract.js'
+import {WORKBENCH_SOURCE_TOOL} from './workbench-source-snapshot.js'
+import {restoreWorkbenchObservedSources} from './workbench-observed-sources.js'
 
 const webOnly = /(?:(?:只|仅)(?:能|可)?(?:使用|用)|走|使用|用)\s*(?:公开)?网页/u
 const plugin = /tushare|通联|datayes|萝卜投研|\bMCP\b|插件/iu
@@ -28,6 +31,9 @@ function samePublicRequest(actual,expected){
 // This is a monotonic SDK guard, not prompt advice or a new network grant.
 export function workbenchPublicSourceCallIssue(policy,name,args){
   if(!policy?.publicSourceRequests)return
+  // This scoped reader only inspects host-owned bytes. It cannot dispatch a
+  // different provider; the evidence gate below still requires the real source.
+  if(name===WORKBENCH_SOURCE_TOOL)return
   if(name!=='public_data_query'||!args||typeof args!=='object'||Array.isArray(args))return publicSourceDenied
   if(args.operation==='catalog')return Object.keys(args).every(key=>['operation','source','category','parameters_json'].includes(key))&&(args.source===undefined||args.source==='tencent-quotes')&&(args.category===undefined||args.category==='market')&&(args.parameters_json===undefined||policy.publicSourceRequests.some(request=>samePublicRequest({operation:'query',source:'tencent-quotes',parameters_json:args.parameters_json},request)))?undefined:publicSourceDenied
   return policy.publicSourceRequests.some(request=>samePublicRequest(args,request))?undefined:publicSourceDenied
@@ -37,6 +43,15 @@ export function workbenchPublicSourceEvidenceIssue(policy,records){
   const business=records.filter(record=>record.purpose!=='discovery')
   if(business.some(record=>workbenchPublicSourceCallIssue(policy,record.tool,record.args)))return publicSourceDenied
   if(!business.some(record=>record.tool==='public_data_query'&&record.args?.operation==='query'&&!workbenchPublicSourceCallIssue(policy,record.tool,record.args)&&record.response?.sourceId==='tencent-quotes'&&Array.isArray(record.response.records)))return '本组件必须实际取得已校验的腾讯报价响应；接口目录或其他来源不能作为取数结果。'
+}
+
+export function workbenchObservedSourcesForPolicy(records,policy){
+  const allowed=records?.filter(record=>{
+    const plugin=record.tool.startsWith('ework__')
+    return (!policy?.pluginProhibited||!plugin)&&(!policy?.pluginRequired||plugin)&&
+      !workbenchPublicSourceCallIssue(policy,record.tool,record.args)
+  })
+  return allowed?.length?restoreWorkbenchObservedSources(allowed):undefined
 }
 
 // This parser takes an authored request, never a prompt marker. Only the
@@ -108,5 +123,23 @@ export function restoreWorkbenchHostContext(value) {
         request.dataMode !== undefined && !['source','simulated'].includes(request.dataMode)) ambiguous()
     workbenchRequest = Object.freeze({originalRequest:request.originalRequest,dataMode:request.dataMode ?? 'source'})
   }
-  return Object.freeze({...(value.sourceMessageId === undefined ? {} : {sourceMessageId:value.sourceMessageId}),...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest,...policy.publicSourceRequests===undefined?{}:{publicSourceRequests:strictPublicRequests(policy.publicSourceRequests)}}),sourceRequirement:value.sourceRequirement})
+  if(value.sharedDatasets!==undefined&&!workbenchRequest)ambiguous()
+  if(value.sharedObservedRecords!==undefined&&(!workbenchRequest||workbenchRequest.dataMode==='simulated'))ambiguous()
+  let sharedEvidence
+  if (value.sharedEvidence !== undefined) {
+    if (workbenchRequest?.dataMode !== 'source' || typeof value.sharedEvidence !== 'string' ||
+        Buffer.byteLength(value.sharedEvidence) > 64_000) ambiguous()
+    let artifact
+    try { artifact = JSON.parse(value.sharedEvidence) } catch { ambiguous() }
+    if (artifact?.version !== 1 || artifact.type !== 'table' || !Array.isArray(artifact.columns) ||
+        !artifact.columns.length || !artifact.columns.every(column => typeof column === 'string') ||
+        !Array.isArray(artifact.rows) || !artifact.rows.length ||
+        !artifact.rows.every(row => Array.isArray(row) && row.length === artifact.columns.length &&
+          row.every(cell => cell === null || typeof cell === 'string' || Number.isFinite(cell)))) ambiguous()
+    sharedEvidence = value.sharedEvidence
+  }
+  const sharedDatasets=value.sharedDatasets===undefined?undefined:validateWorkbenchDatasets(value.sharedDatasets)
+  const sharedObservedRecords=restoreWorkbenchObservedSources(value.sharedObservedRecords)
+  if(sharedObservedRecords&&workbenchObservedSourcesForPolicy(sharedObservedRecords,policy)?.length!==sharedObservedRecords.length)ambiguous()
+  return Object.freeze({...(value.sourceMessageId === undefined ? {} : {sourceMessageId:value.sourceMessageId}),...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),...(sharedDatasets?{sharedDatasets}:{}),...(sharedObservedRecords?{sharedObservedRecords}:{}),...(sharedEvidence?{sharedEvidence}:{}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest,...policy.publicSourceRequests===undefined?{}:{publicSourceRequests:strictPublicRequests(policy.publicSourceRequests)}}),sourceRequirement:value.sourceRequirement})
 }

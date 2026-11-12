@@ -22,6 +22,8 @@ import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
 import { patchSessionListStreamPerformance } from './lib/session-list-stream-performance.mjs'
+import { patchSessionIdentityList, patchStoredSessionIdentity } from './lib/session-identity-list.mjs'
+import { patchSessionRunningActivity } from './lib/session-running-activity.mjs'
 import { patchWorkbenchPlanningSessionCatalog, patchWorkbenchPlanningSessionAppend } from './lib/workbench-planning-session.mjs'
 import { patchHomeGuideSessionCatalog } from './lib/home-guide-session-catalog.mjs'
 import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
@@ -241,7 +243,7 @@ for (const [name, patch] of [
 }
 
 for (const [relative, patch] of [
-  ['dsh-client-runtime/lib/client.js', source=>patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source)))],
+  ['dsh-client-runtime/lib/client.js', source=>patchSessionRunningActivity(patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source))))],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
   ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]
@@ -334,7 +336,9 @@ const modeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-agent
 writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntimePath, 'utf8')))
 
 const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
-writeFileSync(noteHostPath, patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8'))))
+writeFileSync(noteHostPath, patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))))
+const sessionPersistencePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-session-persistence-jsonl/lib/index.js')
+writeFileSync(sessionPersistencePath,patchStoredSessionIdentity(readFileSync(sessionPersistencePath,'utf8')))
 const noteFeedbackPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js')
 writeFileSync(noteFeedbackPath,patchNoteFeedbackHost(readFileSync(noteFeedbackPath,'utf8')))
 for (const catalog of ['lib/index.js', 'lib/types/known-event-types.js']) {

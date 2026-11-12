@@ -9,6 +9,7 @@ it('constructs a workbench preview inside the shipped client closure rather than
   import {runInNewContext} from 'node:vm';
   import {Window} from 'happy-dom';
   import {componentTypographyPatch,patchLegacyDashboardPreview} from './scripts/lib/patch-research-board-client.mjs';
+  import {MAX_RESEARCH_HTML_BYTES,parseResearchHtmlArtifact} from './packages/dsh-research-task-runtime/html-artifact.js';
   const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
   const source=patchLegacyDashboardPreview(componentTypographyPatch(raw));
   let module;
@@ -18,6 +19,10 @@ it('constructs a workbench preview inside the shipped client closure rather than
   if(!source.includes('exports.apply = apply;'))throw Error('Client export anchor missing');
   runInNewContext(source.replace('exports.apply = apply;','exports.__preview=buildResearchHtmlPreview;\nexports.apply = apply;'),{window,document:window.document,navigator:window.navigator,localStorage:window.localStorage,sessionStorage:window.sessionStorage,CustomEvent:window.CustomEvent,AbortController,TextEncoder,TextDecoder,console,setTimeout,clearTimeout,queueMicrotask});
   const exports=module.factory(()=>fallback);
+  for(const size of [301859,MAX_RESEARCH_HTML_BYTES,MAX_RESEARCH_HTML_BYTES+1]){
+   const spec={version:1,type:'html',title:'产品明细',html:'<p>'+'x'.repeat(size-7)+'</p>'};
+   if(Boolean(exports.parseResearchContainerSpec(spec))!==Boolean(parseResearchHtmlArtifact(spec)))throw Error('Client and runtime disagree at '+size+' bytes');
+  }
   for(const workbench of [false,true]){
    const preview=exports.__preview('<p>完整业务内容</p>','依赖验收','dark',{workbench,notoFont:'runtime'});
    if(!preview.includes('完整业务内容'))throw Error('Original content missing');

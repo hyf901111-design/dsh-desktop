@@ -86,6 +86,8 @@ export function createNoteComponentRepair({ctx,child,signal,timeoutMs=90000,queu
    // its repair into an unfinished turn or count that turn as repair output.
    if(await Promise.race([waitForIdle(),terminal])===expired)return timedOut()
    assertNotAborted();assertLive()
+   // The SDK masks inherited tools here. Child-scoped readers and submission
+   // tools stay available through their existing registrations.
    if(synthesisOnly)lift=child.ctx.tools.restrict({allow:[]})
    assertNotAborted();assertLive()
    // Install a child-owned submission only after its original turn is idle.

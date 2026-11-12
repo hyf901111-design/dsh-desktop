@@ -164,3 +164,19 @@ it('首个计划沿用原始用户指定主题，重新投递计划不覆盖后�
  expect(w.getWorkbenchStyle()).toBe('dark')
  }finally{await f.dispose()}
 })
+
+it('新看板明确主题优先于全局彭博试用，且不改变其他看板或后续手选主题',async()=>{
+ const f=await fixture()
+ try{
+  f.a.setWorkbenchStyle('openterminal')
+  const w=f.bundle.createResearchWorkspaceSession(f.storage,'explicit-theme-with-trial')
+  expect(w.getWorkbenchStyle()).toBe('openterminal')
+  const plan={id:'explicit-theme-with-trial',requestedStyle:'enterprise',createdAt:Date.now(),ready:false,panels:[{nodeId:'explicit-panel',title:'组织图',type:'mind-map',prompt:'按材料层级',x:0,y:0,width:656,height:340,size:'medium',pending:true}]}
+  expect(w.applyWorkbench(plan)).toBe(true)
+  expect(w.getWorkbenchStyle()).toBe('enterprise')
+  expect(f.a.getWorkbenchStyle()).toBe('openterminal')
+  w.setWorkbenchStyle('dark',{scope:'board'})
+  w.applyWorkbench({...plan,id:'later-plan',panels:[{...plan.panels[0],nodeId:'later-panel'}]})
+  expect(w.getWorkbenchStyle()).toBe('dark')
+ }finally{await f.dispose()}
+})

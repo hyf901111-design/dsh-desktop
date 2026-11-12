@@ -1,5 +1,6 @@
 import {it,expect} from 'vitest'
 import {componentAcquisitionFollowup} from '../packages/dsh-research-task-runtime/component-acquisition-followup.js'
+import {componentAcquiredBusinessData} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 
 it('keeps unfinished pagination executable instead of treating any returned row as a complete research phase',()=>{
  const records=[{tool:'catalog',purpose:'discovery',response:{kind:'catalog',queryLimits:{maxLimit:1000}}},{tool:'query',args:{api_name:'fund_nav',params:{ts_code:'A.OF,B.OF'},fields:'code,date,nav',limit:20},response:{records:[{nav:1}],pagination:{possiblyMore:true,nextOffset:20,limit:20}}}]
@@ -21,4 +22,16 @@ it('keeps discovery-only handoffs in acquisition and carries exact positive and 
  expect(followup).toContain('业务数据尚未取得');expect(followup).toContain('available');expect(followup).toContain('symbol');expect(followup).toContain('absent');expect(followup).toContain('其他已授权来源');
  expect(componentAcquisitionFollowup([])).toBe('');
  expect(componentAcquisitionFollowup([...records,{tool:'query',response:{records:[{value:1}]}}])).toBe('');
+});
+
+it('distinguishes missing acquisition from wrong mapping paths without counting metadata as metric coverage',()=>{
+ const records=[{tool:'query',response:{data:[{id:'A',manager:'管理人'}]}},{tool:'catalog',purpose:'discovery',response:{kind:'catalog',interfaces:[{fields:{unit_nav:'净值'}}]}}]
+ const options={acquisitionRequired:true,hasUsableData:records.some(componentAcquiredBusinessData)}
+ expect(componentAcquisitionFollowup(records,{...options,submissionIssue:'接口缺少字段：unit_nav'})).toContain('补查')
+ expect(componentAcquisitionFollowup(records,{...options,submissionIssue:'接口缺少字段：data.manager'})).toBe('')
+ expect(componentAcquisitionFollowup(records,{...options,submissionIssue:'接口缺少字段：receivedAt'})).toBe('')
+ const empty=[{tool:'query',response:{records:[]}}]
+ expect(empty.some(componentAcquiredBusinessData)).toBe(false)
+ expect(componentAcquisitionFollowup(empty,{acquisitionRequired:true})).toContain('尚无可用业务结果')
+ expect(componentAcquisitionFollowup(empty)).toBe('')
 });

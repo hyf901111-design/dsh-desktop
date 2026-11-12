@@ -228,3 +228,17 @@ it('does not replace requested interpretation with a raw release list or count a
  expect(releaseLinkedSourceFollowup([record],request)).toContain('https://github.com/example/product/blob/main/CHANGELOG.md')
  expect(releaseLinkedSourceFollowup([record],'仅列出版本号与原链接')).toBeUndefined()
 })
+
+it('states the exact acquired release cohort before interpretation rather than correcting a different minor-version cohort only at delivery',async()=>{
+ const {observedReleaseCohortGuidance}=await import('../packages/dsh-research-task-runtime/observed-dated-feed.js')
+ const original='给同事看 Product 最近3个正式版本的日期与主要变化，以及对应升级注意事项。',url='https://api.github.com/repos/example/product/releases?per_page=4'
+ const list=rows('product').map((row,i)=>({...row,tag_name:['v4.1.0-rc.1','v4.0.9','v4.0.8','v4.0.7'][i],prerelease:i===0}))
+ const record=hostStructuredWebRecord(page(url,list),url)
+ const guidance=observedReleaseCohortGuidance([record],original,'升级注意事项')
+ for(const row of list.slice(1)){expect(guidance).toContain(row.tag_name);expect(guidance).toContain(row.html_url);expect(guidance).toContain(row.published_at)}
+ expect(guidance).not.toContain('v4.1.0-rc.1')
+ expect(guidance).toContain('不能替换成最近几个次版本')
+ expect(observedReleaseCohortGuidance([{...record,response:{...record.response,records:list.slice(0,2)}}],original,'升级注意事项')).toBeUndefined()
+ expect(observedReleaseCohortGuidance([record],original,'团队分工')).toBeUndefined()
+ expect(observedReleaseCohortGuidance([record],'仅分析v3的迁移办法','升级注意事项')).toBeUndefined()
+})

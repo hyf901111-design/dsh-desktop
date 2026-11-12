@@ -5,6 +5,7 @@ import {renderToStaticMarkup} from 'react-dom/server'
 import {runInNewContext} from 'node:vm'
 import {readFile} from 'node:fs/promises'
 import {patchNotesClient} from '../scripts/lib/notes-client.mjs'
+import {stripBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
 import {createNotesChallengeSidebar,NotesChallengeTab,normalizeNotesChallengeEvent,patchNotesChallengeClient} from '../scripts/lib/notes-challenge-client.mjs'
 
 const evidence={kind:'note',label:'相关原文',blockId:'original',quote:'营收为 100 亿元'}
@@ -119,7 +120,7 @@ it.each([
  }finally{await window.happyDOM.abort()}
 })
 it('installs the controller inside the real coordinator attach scope and upgrades definitions idempotently',async()=>{
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const source=stripBrowserAppNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const patched=patchNotesChallengeClient(source);expect(patchNotesChallengeClient(patched)).toBe(patched)
  const minimal='class ResearchSidebarCoordinator { attach(service,t,sessions){const unregisterGenerated=service.registerTab({});return()=>{unregisterGenerated?.();};}}'
  const registrations=[],window=new Window(),service={registerTab:value=>{registrations.push(value);return()=>{}},closeTab:()=>{}}
@@ -132,7 +133,7 @@ it('installs the controller inside the real coordinator attach scope and upgrade
 })
 
 it('wires the evidence controller through the complete notes-client patch',async()=>{
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const source=stripBrowserAppNative(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const patched=patchNotesClient(source)
  expect(patched.includes('/* EWORK_NOTES_CHALLENGE_CLIENT_BEGIN */')).toBe(true)
  expect(patchNotesClient(patched)).toBe(patched)

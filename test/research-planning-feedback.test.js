@@ -2,7 +2,6 @@ import {stripConversationGridOverlays} from './fixtures/strip-conversation-trans
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
-import {Window} from 'happy-dom'
 import {planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,patchResearchPlanningFeedback} from '../scripts/lib/research-planning-feedback.mjs'
 import {classifyResearchCreationRequest,patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench,patchResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
@@ -18,20 +17,26 @@ it('projects actual response metadata without retaining private reasoning or too
  expect(advancePlanningHeartbeat(first,meta,4000)).toBe(first)
  expect(advancePlanningHeartbeat(first,planningResponseMetadata([model('longer private reasoning')]),5000)).toMatchObject({firstAt:1000,lastAt:5000})
 })
-it('distinguishes waiting, active streaming, a stalled response and an actual accepted receipt',()=>{
+it('retains planning status without introducing a two-minute notice',()=>{
  const empty=planningResponseMetadata([])
- expect(planningFeedbackState(empty,null,0,20000,true)).toMatchObject({phase:'waiting',warning:''})
+ expect(planningFeedbackState(empty,null,0,20000,true)).toMatchObject({phase:'waiting'})
  const meta=planningResponseMetadata([model()]),beat=advancePlanningHeartbeat(null,meta,120000)
  const active=planningFeedbackState(meta,beat,0,125000,true)
- expect(active.phase).toBe('responding');expect(active.warning).toContain('仍在处理中')
- expect(active.warning).not.toContain('%');expect(active.detail).toContain('内容生成还未开始')
- expect(planningFeedbackState(meta,beat,0,170000,true).warning).toContain('暂未收到新的进展')
- expect(planningFeedbackState(meta,beat,0,170000,false)).toMatchObject({phase:'ended',warning:''})
+ expect(active.phase).toBe('responding');expect(active).not.toHaveProperty('warning')
+ expect(active.detail).toContain('内容生成还未开始')
+ expect(planningFeedbackState(meta,beat,0,170000,true).title).toBe('正在准备工作台')
+ expect(planningFeedbackState(meta,beat,0,170000,false)).toMatchObject({phase:'ended'})
  const accepted=planningResponseMetadata([{key:'create',kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId:'plan',status:'accepted',panels:[{},{}]})}]}}}])
- expect(planningFeedbackState(accepted,null,0,180000,true)).toMatchObject({phase:'accepted',warning:''})
+ expect(planningFeedbackState(accepted,null,0,180000,true)).toMatchObject({phase:'accepted'})
  expect(planningFeedbackState(accepted,null,0,180000,true).detail).toContain('2 个组件')
  expect(accepted.prepared).toBe(false)
- expect(planningFeedbackState(empty,null,0,130000,true,true).warning).toContain('exceeded 2 minutes')
+ expect(planningFeedbackState(empty,null,0,130000,true,true)).not.toHaveProperty('warning')
+})
+it('anchors an incomplete workbench receipt to its submitted plan without claiming full preparation',()=>{
+ const value={planId:'partial-plan',status:'incomplete',panels:['可读表格'],detail:'PRIVATE SCOPE DETAIL'}
+ const meta=planningResponseMetadata([{kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify(value)}]}}}])
+ expect(meta).toMatchObject({accepted:true,prepared:false,plans:[{id:'partial-plan',count:1}]})
+ expect(JSON.stringify(meta)).not.toContain('PRIVATE')
 })
 it('limits the feedback to the matching user creation turn, excluding ordinary chats and stale turns',()=>{
  const nodes=new Map([['old',{kind:'user',location:{kind:'turn',turn:{turn:1}},data:{content:[{text:'生成金融工作台'}]}}],['current',{kind:'user',location:{kind:'turn',turn:{turn:2}},data:{content:[{text:'做一个艺术节筹备工作台，用模拟记录'}]}}],['qa',{kind:'user',location:{kind:'turn',turn:{turn:3}},data:{content:[{text:'为什么生成工作台这么慢'}]}}]])
@@ -99,24 +104,18 @@ it('patches the real progress component and its owning turn without duplicating 
  const original=currentClient()
  const patched=patchResearchCreationProgress(original)
  expect(patchResearchCreationProgress(patched)).toBe(patched)
- expect(patched).toContain('/* ework:workbench-feedback:v12 */')
+ expect(patched).toContain('/* ework:workbench-feedback:v13 */')
  expect(patched).toContain('function publishResearchWorkbenchProgress(')
- expect(patched).toContain('data-research-planning-feedback')
+ expect(patched).not.toMatch(/data-research-planning-feedback|准备已超过 2 分钟|Preparation has exceeded 2 minutes/)
  expect(patched).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,')
  expect(patched).toContain('planningRequest,\n\t\t\t\t\t\t\t\t\tstartTime:')
  const start=patched.indexOf('/* ework:planning-feedback:v1 */'),end=patched.indexOf('/* ework:workbench-feedback:',start)
- const statuses=[]
- const react={useRef:()=>({current:null})},jsx=(type,props)=>({type,props})
- const win=new Window()
- const Feedback=runInNewContext(patched.slice(start,end)+';ResearchPlanningFeedback',{react,react_jsx_runtime:{jsx,jsxs:jsx},document:win.document})
- const view=Feedback({meta:planningResponseMetadata([model('SECRET_REASONS')]),startedAt:0,now:20000,running:true})
- expect(JSON.stringify(view)).not.toContain('SECRET_REASONS')
- expect(view).toBeNull()
- const delayed=Feedback({meta:planningResponseMetadata([model('SECRET_REASONS')]),startedAt:0,now:130000,running:true})
- expect(delayed.props.children).toContain('准备已超过 2 分钟')
- expect(JSON.stringify(delayed)).not.toMatch(/SECRET_REASONS|最近响应|模型|组件清单/)
- expect(planningFeedbackState(planningResponseMetadata([model()]),null,0,20000,true).title).toBe('正在准备工作台')
- void win.happyDOM.abort()
+ expect(patched.slice(start,end)).not.toContain('function ResearchPlanningFeedback(')
+ expect(planningFeedbackState(planningResponseMetadata([model()]),null,0,130000,true).title).toBe('正在准备工作台')
+ const oldNotice='function ResearchPlanningFeedback() {\n return "准备已超过 2 分钟";\n}\n'
+ const slot="planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,{meta:planningMeta,startedAt:anchor,now:entry.running?now:(endTime??now),running:entry.running},String(anchor)) : null, "
+ const legacy=patched.slice(0,end)+oldNotice+patched.slice(end).replace('open && progressSurface.detailGroups.length > 0 &&',slot+'open && progressSurface.detailGroups.length > 0 &&')
+ expect(patchResearchCreationProgress(legacy)).toBe(patched)
 })
 it('upgrades the legacy production planning call without a surface argument exactly once',()=>{
  const fresh=patchResearchCreationProgress(currentClient()),surface='const researchPlanningSurface = useStore((s) => s.view === "research");',suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text,researchPlanningSurface) : null;'

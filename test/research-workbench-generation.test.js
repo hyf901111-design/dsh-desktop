@@ -87,3 +87,19 @@ it('compacts saved host dashboards at display time without changing their data',
   expect(compact.split(detail)).toHaveLength(7);
   expect(compactHostDashboardHtml('<main class="list research-metrics">user-authored</main>')).toBe('<main class="list research-metrics">user-authored</main>');
 });
+
+it('prepares more than ten workbench cards in one durable batch', async () => {
+  const start = vi.fn();
+  const save = vi.fn(async () => {});
+  const runtime = new ResearchTaskRuntime({ adapter: { start }, storage: { save } });
+  const panels = Array.from({ length: 11 }, (_, index) => ({
+    canvasNodeId: 'card-' + index, prompt: '阅读已有材料',
+    artifact: { version: 1, type: 'markdown', title: '材料 ' + index, content: '已核对原文内容' }
+  }));
+  try {
+    const tasks = await runtime.startPreparedBatch({ parentSessionId: 'parent', panels });
+    expect(tasks.map(task => task.state)).toEqual(Array(11).fill('completed'));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(start).not.toHaveBeenCalled();
+  } finally { await runtime.dispose(); }
+});

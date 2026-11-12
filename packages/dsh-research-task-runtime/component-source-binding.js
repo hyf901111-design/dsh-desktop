@@ -1,4 +1,6 @@
+import {componentAcquisitionFailure} from './component-acquisition-followup.js'
 import {load} from 'cheerio'
+import {componentSourceMetadata} from './component-source-metadata.js'
 import {isCryptoTickerRequest} from './crypto-source-results.js'
 import {evidenceWindows,usesHumanSourceScope,applicableExplicitScope} from './workbench-explicit-scope.js'
 import {readTemplateModel} from './component-template-registry.js'
@@ -6,7 +8,7 @@ import {articleTimelineRequired,articleTimelineDay,articleTimelineWindowIssue} f
 import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
 import {createHash} from 'node:crypto'
-import { decodeDataResponse, evaluateMapping, materializeComponentProjection, normalizeWebSnapshotPaths } from './component-data-refresh.js'
+import { decodeDataResponse, evaluateMapping, materializeComponentProjection, normalizeWebSnapshotPaths, COMPONENT_PAGE_MAPPING_GUIDANCE } from './component-data-refresh.js'
 import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
@@ -32,7 +34,7 @@ export function componentDiscoveryToolNames(schemas=[]) {
   }).map(schema=>schema.name))
 }
 
-export function componentSourceCollector(allowed,schemas=[]) {
+export function componentSourceCollector(allowed,schemas=[],initialRecords=[]) {
   const discovery=componentDiscoveryToolNames(schemas)
   const calls=new Map(), records=[], attempts=[]
   const retain=record=>{
@@ -47,6 +49,9 @@ export function componentSourceCollector(allowed,schemas=[]) {
       records.splice(directory<0?0:directory,1)
     }
   }
+  // Only the owning task can seed its prior observations. A restarted child
+  // cannot access any tool outside its freshly resolved parent-visible scope.
+  for(const record of initialRecords)if(allowed.includes(record.tool))retain(record)
   return {
     records, attempts,
     acceptWebResponse(args,text){
@@ -64,12 +69,14 @@ export function componentSourceCollector(allowed,schemas=[]) {
       calls.delete(message.source.callId)
       const result=message.content?.find(b=>b.type==='tool-result')
       if(!result)return
-      const snapshotTool=['web_fetch','financial_query'].includes(call.tool)
+      const snapshotTool=['web_fetch','financial_query','workbench_source_read'].includes(call.tool)
       const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'||call.tool==='financial_query'&&['resolve','search','catalog'].includes(call.args?.intent)?'discovery':snapshotTool?'snapshot':undefined
       let response,snapshotRows,decodeFailed=false
       try { response=expandBusinessEvidence(decodeDataResponse(result)) }
       catch {decodeFailed=true;response=null}
-      const attempt=operatingSourceAttempt(call,result,response,purpose)??newsQueryAttempt(call,result,response)
+      const acquisitionFailure=componentAcquisitionFailure(call,result,purpose)
+      const attempt=acquisitionFailure?.kind==='acquisition-interrupted'?acquisitionFailure:
+        operatingSourceAttempt(call,result,response,purpose)??newsQueryAttempt(call,result,response)??acquisitionFailure
       if(attempt){attempts.push(attempt);if(attempts.length>64)attempts.shift()}
       if(result.isError||result.error||decodeFailed&&!purpose)return
       if(call.tool==='web_fetch') {
@@ -221,7 +228,7 @@ function snapshotLinkMatches(url,record,row) {
 }
 function snapshotRecordMatches(value,record) {
   if(!value||typeof value!=='object'||!Array.isArray(record.snapshotRows))return false
-  const rawDate=value.date??value.publishedAt??value.notice_date,title=snapshotTitle(value.title??value.headline??value.name),date=snapshotDate(rawDate),url=snapshotUrl(value.url??value.link)
+  const rawDate=value.date??value.time??value.publishedAt??value.notice_date,title=snapshotTitle(value.title??value.headline??value.name),date=snapshotDate(rawDate),url=snapshotUrl(value.url??value.link)
   if(!title||rawDate!==undefined&&!date||!url&&(value.url!==undefined||value.link!==undefined))return false
   return record.snapshotRows.some(row=>{
     // Formatting can change width/whitespace, never business wording, signs
@@ -252,14 +259,14 @@ export function restoreSnapshotFeedHeadlines(text,records) {
   if(!['news','reports','timeline'].includes(data?.type)||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>(data.type==='timeline'?60:40))return
   let changed=false
   const items=data.items.map(item=>{
-    const url=snapshotUrl(item?.url),date=snapshotDate(item?.date)
-    if(data.type==='timeline'||announcementItemRequired(data,item,records)||!url||!date)return item
+    const url=snapshotUrl(item?.url),date=snapshotDate(data.type==='timeline'?item?.time:item?.date)
+    if(announcementItemRequired(data,item,records)||!url||!date)return item
     const matches=records.filter(record=>record.tool==='web_fetch'&&record.purpose==='snapshot').flatMap(record=>(record.snapshotRows??[]).filter(row=>(row.dates??[row.date]).includes(date)&&typeof row.sourceTitle==='string'&&row.sourceTitle.trim()&&row.sourceTitle.length<=256&&snapshotLinkMatches(url,record,row)))
     if(!matches.length||new Set(matches.map(row=>row.sourceTitle)).size!==1)return item
     const title=matches[0].sourceTitle,subjects=[...new Set(matches.flatMap(row=>row.subjects??[]))]
     const previous=typeof item.publisher==='string'?item.publisher:''
     const publisher=[previous,...subjects.filter(subject=>!previous.includes(subject))].filter(Boolean).join(' · ')
-    const addPublisher=publisher&&publisher.length<=2000&&publisher!==item.publisher
+    const addPublisher=data.type!=='timeline'&&publisher&&publisher.length<=2000&&publisher!==item.publisher
     if(title===item.title&&!addPublisher)return item
     changed=true
     return {...item,title,...(addPublisher?{publisher}:{})}
@@ -399,8 +406,8 @@ export function componentSnapshotEvidence(text,records,options={}) {
       // Citation metadata is collected by the host footer, so a cited fetched
       // URL there has the same retrieval meaning as a visible anchor. Never
       // scan arbitrary markup/comments, and never bypass per-record feed gates.
-      return $('[data-component-source-info]').toArray().some(element=>
-        [...$(element).text().matchAll(/https?:\/\/[^\s<>"'，。；、（）【】]+/gu)].some(match=>urls.has(snapshotUrl(match[0]))))
+      return componentSourceMetadata(data.html).some(text=>
+        [...text.matchAll(/https?:\/\/[^\s<>"'，。；、（）【】]+/gu)].some(match=>urls.has(snapshotUrl(match[0]))))
     }
     return [data.content,data.source?.text].filter(value=>typeof value==='string').some(value=>[...value.matchAll(/\[[^\]\n]+\]\(<?(https?:\/\/[^\s<>]+?)>?(?:\s+"[^"\n]*")?\)/gu)].some(match=>urls.has(snapshotUrl(match[1]))))
   }
@@ -426,7 +433,23 @@ export function componentMappableSource(record) {
  if(record?.purpose==='discovery'||!record?.response||typeof record.response!=='object')return false
  if(record.purpose!=='snapshot')return true
  if(record.tool==='web_fetch')return Array.isArray(record.response.records)||record.response.data&&typeof record.response.data==='object'
- return record.tool==='financial_query'&&Array.isArray(record.response.records)&&record.response.records.length>0&&(record.response.status===undefined||['complete','partial'].includes(record.response.status))
+ // The local reader's non-callable descriptor owns the original response.
+ // Its paged reads omit snapshotKind and expose rows through records instead.
+ if(record.tool==='workbench_source_read'&&record.args?.snapshot===true&&record.response.snapshotKind==='workbench-observed-source'){
+  return record.response.data!==null&&typeof record.response.data==='object'
+ }
+ return ['financial_query','workbench_source_read'].includes(record.tool)&&Array.isArray(record.response.records)&&record.response.records.length>0&&(record.response.status===undefined||['complete','partial'].includes(record.response.status))
+}
+
+export function componentAcquiredBusinessData(record){
+ if(record?.purpose==='snapshot'&&record.snapshotRows?.length)return true
+ if(!componentMappableSource(record))return false
+ const response=record.response
+ if(response.kind==='catalog'||Object.hasOwn(response,'retCode')&&response.retCode!==1)return false
+ const rows=[response.records,response.data].find(Array.isArray)
+ // An empty result may still own verified aggregate metrics and be mappable;
+ // it does not demonstrate record acquisition for a comparison.
+ return !rows||rows.length>0
 }
 
 // Recover only source-backed mappings. An unused bad request may invalidate the
@@ -582,10 +605,11 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
   try {
     const keys=new Set()
     for(const request of candidate.requests){
-      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query','read_prototype','web_fetch'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
+      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query','read_prototype','web_fetch','workbench_source_read'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
       keys.add(request.key)
       const args=evaluateMapping(normalizeRequestDates(request.args),{},now)
-      const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&componentMappableSource(record))
+      const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&componentMappableSource(record))??
+        uniquelyMatchMcpParameterObject(records,request.tool,args)
       if(source){responses[request.key]=source.response;sources[request.key]=source}
     }
     if(!Object.keys(responses).length)return null
@@ -631,10 +655,11 @@ export const COMPONENT_MAPPING_EXAMPLES = {
 }
 const MAPPING_SHAPE_GUIDANCE = `
 ${COMPONENT_DERIVED_VALUE_GUIDANCE}
+${COMPONENT_PAGE_MAPPING_GUIDANCE}
 【映射最小正确结构】最终输出严格 JSON，所有键（包括 "$digits"）加双引号。只交当前模板要求的字段；不额外创造 missing、artifact 或重复来源说明。
 仅当实际响应包含这些字段时使用以下示例，其他响应替换为已观察字段：指标 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.metric)}；缺失 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.missing)}；金额排名 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.ranking)}。
 $optional/$default 只能写在 value 等字段的选择器对象内，不与 label/value 并列、不写在整张卡或整行。确定存在的字段直接选择，不需一律加缺失包装。来源完全没有的字段可直接填“本次未取得”，不得猜路径。
-不支持 $concat/$join/$format/$fallback 或插值表达式；图表 labels 直接选择名称字段，代码另放真实明细，不拼接长标签。asOf 直接选择实际日期标量，不能指向整个 period 对象。labels 与 values 必须使用完全一致的筛选、排序和数量；涨跌/增减排名保留负号，用 horizontal，不画折线。`
+不支持 $join/$format/$fallback 或插值表达式；图表 labels 直接选择名称字段，代码另放真实明细，不拼接长标签。asOf 直接选择实际日期标量，不能指向整个 period 对象。labels 与 values 必须使用完全一致的筛选、排序和数量；涨跌/增减排名保留负号，用 horizontal，不画折线。`
 
 export const COMPONENT_STATIC_DATA_PROMPT = `${MAPPING_SHAPE_GUIDANCE}
 
@@ -778,6 +803,19 @@ function equivalentPublicQueryArgs(value) {
   } catch {return null}
 }
 
+// A submission may encode the parameter object as JSON. Resolve it against
+// one observed call from this card, then retain the observed native arguments.
+// Never send the model's string or relax any date, symbol, field or page.
+function uniquelyMatchMcpParameterObject(records,tool,args) {
+  if(!/^ework__t_[a-f\d]+$/iu.test(tool??'')||typeof args?.params!=='string'||args.params.length>16000)return
+  let params
+  try{params=JSON.parse(args.params)}catch{return}
+  if(!params||typeof params!=='object'||Array.isArray(params))return
+  const expected={...args,params}
+  const matches=records.filter(record=>record.tool===tool&&isDeepStrictEqual(record.args,expected)&&componentMappableSource(record))
+  return matches.length===1?matches[0]:undefined
+}
+
 export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
   if(!candidate)return null
@@ -797,6 +835,10 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     const normalized=request.tool==='public_data_query'?equivalentPublicQueryArgs(args):null
     if(!source&&normalized){
       source=records.findLast(record=>record.tool===request.tool&&record.args?.operation==='query'&&isDeepStrictEqual(equivalentPublicQueryArgs(record.args),normalized))
+      if(source)requestArgs=structuredClone(source.args)
+    }
+    if(!source){
+      source=uniquelyMatchMcpParameterObject(records,request.tool,args)
       if(source)requestArgs=structuredClone(source.args)
     }
     if(source?.purpose==='discovery'){const error=Error('接口目录和参数定义不是业务数据；必须继续调用已确认的业务接口取得真实数值，再生成映射。');error.code='SOURCE_DATA_REQUIRED';throw error}

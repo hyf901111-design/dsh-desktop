@@ -13,7 +13,7 @@ import { join } from 'node:path'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {componentCreationRequest} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
-import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { validateWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import { AIRLINE_REAL_WORKBENCH_REQUEST, AFFIRMATIVE_WORKBENCH_REQUESTS, NON_CREATION_WORKBENCH_REQUESTS } from './fixtures/workbench-creation-requests.js'
 
 const session = (text, id = 'u') => ({ header: {}, events: [{ type: 'user/message', data: { id, source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
@@ -48,15 +48,43 @@ async function registeredCreationSchema() {
   return tool
 }
 
-describe('工作台首次规划阶段预算', () => {
+describe('工作台数据获取与用户预算', () => {
+  it('accepts an incomplete acquisition receipt without converting it to an invalid tool output',async()=>{
+    const tool=await registeredCreationSchema()
+    expect(validateJsonSchemaValue(tool.output.schema,{planId:'same-plan',panels:['比较明细'],templateIds:['table'],status:'incomplete',detail:'来源暂不可用，保留当前计划。'})).toEqual([])
+  })
+  it('uses a native linked table for announcements and news records in both planning and per-card presentation', async () => {
+    const h = harness(undefined, planningTools)
+    const text = '创建动力电池权益研究工作台，整理宁德时代的公告和新闻，保留日期、标的、摘要和原文。'
+    try {
+      const wire = await h.context({ session: session(text) }, wireRequest())
+      expect(wire.system).toContain('【资讯记录表格】')
+      expect(wire.system).toContain('market.table')
+      expect(wire.system).toContain('rowLinks')
+      expect(wire.system).toContain('检索入口')
+      const prompt = workbenchPanelPrompt({ title: '动力电池研究', originalRequest: text }, {
+        type: 'markdown', title: '公告与新闻', prompt: '整理逐条资讯和原文', size: 'large'
+      })
+      expect(prompt).toContain('【资讯记录表格】')
+      expect(prompt).toContain('时间线')
+      const unrelated = await h.context({ session: session('创建行情工作台，展示三只股票的 K 线') }, wireRequest())
+      expect(unrelated.system).not.toContain('【资讯记录表格】')
+      const live = await h.context({ session: session('创建实时加密货币行情工作台，涵盖比特币行情和可搜索的数字资产资讯。') }, wireRequest())
+      expect(live.system).toContain('market:"CRYPTO"')
+      expect(live.system).toContain('dataSource:"kraken"')
+      expect(live.system).toContain('dataSource:"doubao"')
+      expect(live.system).toContain('组件库覆盖的实时面板直接提交配置')
+    } finally { h.dispose() }
+  })
+
   it('preserves comparison and concise progress guidance in the final model request', async () => {
     const tool=await registeredCreationSchema()
     const h=harness(undefined,[tool,...planningTools.slice(1)])
     const agent={session:session('做个A股宽基指数对比工作台，看看沪深300、中证500和创业板近三个月的表现')}
     const wire=await h.context(agent,{...wireRequest(),tools:[tool,...planningTools.slice(1)]})
     expect(wire.tools[0].parameters).toBe(tool.parameters)
-    expect(wire.system).toContain('历史表现比较把共同基期走势图放首屏第一张')
-    expect(wire.system).toContain('不要公开接口目录、来源选择原则')
+    expect(wire.system).toContain('先理解用户问题和约束')
+    expect(wire.system).toContain('不公开接口目录、来源选择原则')
     h.dispose()
   })
   it('rejects simulated output at the actual creation boundary for an authored real-data request', async()=>{
@@ -68,7 +96,7 @@ describe('工作台首次规划阶段预算', () => {
     }
   })
 
-  it.each(AFFIRMATIVE_WORKBENCH_REQUESTS)('bounds explicit natural-language creation before research: %s', async text => {
+  it.each(AFFIRMATIVE_WORKBENCH_REQUESTS)('preserves authorized acquisition and user controls for natural-language creation: %s', async text => {
     for (const inbox of [false, true]) {
       const s = session(text)
       if (inbox) s.events = [{ type: 'agent/inbox/spliced', data: { inserted: s.events.map(event => event.data) } }]
@@ -76,12 +104,12 @@ describe('工作台首次规划阶段预算', () => {
       s.append = (type, data) => s.events.push({ type, data })
       const h = harness(undefined, planningTools), agent = { session: s }
       expect(workbenchCreationRequest(s)?.text).toBe(text)
-      expect(await h.request(agent, config)).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
-      expect(s.events.find(event => event.type === 'sherlock/workbench-planning-budget')?.data.phase).toBe('planning')
+      expect(await h.request(agent, config)).toBe(config)
+      expect(s.events.find(event => event.type === 'sherlock/workbench-planning-budget')).toBeUndefined()
       const wire = await h.context(agent, wireRequest())
-      expect(wire.tools.map(tool => tool.name)).toEqual(['research_workbench_create', 'public_data_query', 'financial_query'])
-      expect(h.guard(invocation(agent, 'skill'))).toContain('首次规划阶段')
-      expect(h.guard(invocation(agent, 'financial_query', { intent: 'quote' }))).toContain('首次规划阶段')
+      expect(wire.tools.map(tool => tool.name)).toEqual(planningTools.map(tool => tool.name))
+      expect(h.guard(invocation(agent, 'skill'))).toBeUndefined()
+      expect(h.guard(invocation(agent, 'financial_query', { intent: 'quote' }))).toBeUndefined()
       expect(h.guard(invocation(agent, 'research_workbench_create'))).toBeUndefined()
       if (text === AIRLINE_REAL_WORKBENCH_REQUEST) expect(wire.tools[0].parameters.properties.dataMode.enum).toEqual(['source'])
       h.dispose()
@@ -138,13 +166,13 @@ describe('工作台首次规划阶段预算', () => {
       '请检查当前已有工作台，并创建一张折线图组件。'
     ]) expect(workbenchCreationRequest(researchSession(text)), text).not.toBeNull()
   })
-  it('gives explicit new single-component requests the same bounded planning phase in known research mode and restores Max after acceptance', async () => {
+  it('preserves the selected budget for explicit single components before and after acceptance', async () => {
     for (const text of ['创建一个装置撤展交接组件，用8条模拟记录，点击查看完整说明', '请生成一张古籍修复流转卡片，用虚构记录']) {
       const h = harness(), agent = { session: researchSession(text) }
       expect(workbenchCreationRequest(agent.session)?.text).toBe(text)
       const planned = await h.request(agent, config)
-      expect(planned).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
-      expect(h.text(agent)).toContain('立即调用 research_workbench_create')
+      expect(planned).toBe(config)
+      expect(h.text(agent)).toContain('调用 research_workbench_create')
       accepted(agent.session)
       expect(await h.request(agent, planned)).toEqual(config)
     }
@@ -153,14 +181,14 @@ describe('工作台首次规划阶段预算', () => {
   it('does not expand a single popular ETF quote component into the eight-panel workbench preset', () => {
     const h = harness(undefined, [{ name: 'public_data_query' }])
     const text = h.text({ session: researchSession('创建一个国内热门基金报价组件') })
-    expect(text).toContain('panel.publicData')
+    expect(text).toContain('publicData')
     expect(text).not.toContain('"preset":"cn-hot-etf-live"')
   })
 
-  it('limits only unaccepted creation and restores the explicit Max and output cap after acceptance', async () => {
+  it('keeps the explicit Max and output cap through creation acceptance', async () => {
     const h = harness(), agent = { session: session('创建活动筹备工作台，使用自洽模拟数据') }
     const planned = await h.request(agent, config)
-    expect(planned).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
+    expect(planned).toBe(config)
     expect(config).toEqual({ provider: 'zai', model: 'GLM-5.3-Flash', reasoningEffort: 'max', maxTokens: 16384 })
     accepted(agent.session)
     // The loop can reconstruct the next seed from its last execution config.
@@ -169,7 +197,7 @@ describe('工作台首次规划阶段预算', () => {
     expect(h.text(agent)).toContain('已成功受理')
   })
 
-  it('keeps failed planning bounded, stops on cancellation, and starts a new bounded phase for a new human request', async () => {
+  it('keeps controls through failed creation, cancellation and a new human request', async () => {
     const h = harness(), agent = { session: session('创建展览工作台，模拟数据') }
     const first = await h.request(agent, config)
     accepted(agent.session, true)
@@ -193,11 +221,11 @@ describe('工作台首次规划阶段预算', () => {
     const unsupported = harness(['high', 'max'])
     expect(await unsupported.request({ session: session('创建活动工作台') }, config)).toBe(config)
     const minimal = harness(['minimal', 'max'])
-    expect((await minimal.request({ session: session('创建活动工作台') }, { ...config, maxTokens: 2048 })).reasoningEffort).toBe('minimal')
+    expect((await minimal.request({ session: session('创建活动工作台') }, { ...config, maxTokens: 2048 })).reasoningEffort).toBe('max')
     expect((await minimal.request({ session: session('创建活动工作台') }, { ...config, maxTokens: 2048 })).maxTokens).toBe(2048)
   })
 
-  it('preserves a concurrent route/effort switch and does not continue a cancelled model lookup', async () => {
+  it('preserves a route/effort switch and does not continue a cancelled request', async () => {
     const h = harness(), agent = { session: session('创建医疗器械活动工作台') }
     await h.request(agent, config)
     agent.session = session('停止创建，讨论一下计划', 'stop')
@@ -214,7 +242,8 @@ describe('工作台首次规划阶段预算', () => {
     const s = session('创建活动工作台，使用模拟数据')
     s.append = (type, data) => s.events.push({ type, data })
     const agent = { session: s }, before = harness()
-    const limited = await before.request(agent, config)
+    const limited = { ...config, reasoningEffort: 'low', maxTokens: 4096 }
+    s.append('sherlock/workbench-planning-budget', { version: 1, messageId: 'u', provider: config.provider, model: config.model, original: { reasoningEffort: config.reasoningEffort, maxTokens: config.maxTokens }, limited: { reasoningEffort: 'low', maxTokens: 4096 }, phase: 'planning' })
     const record = s.events.find(event => event.type === 'sherlock/workbench-planning-budget')
     expect(record).toBeDefined()
     expect(Object.keys(record.data).sort()).toEqual(['limited', 'messageId', 'model', 'original', 'phase', 'provider', 'version'])
@@ -231,7 +260,8 @@ describe('工作台首次规划阶段预算', () => {
       for (const restart of [false, true]) {
         const s = session('创建活动工作台，模拟数据'); s.id = 'selected-session'
         s.append = (type, data) => s.events.push({ type, data })
-        const agent = { session: s }, before = harness(), limited = await before.request(agent, config)
+        const agent = { session: s }, before = harness(), limited = { ...config, reasoningEffort: 'low', maxTokens: 4096 }
+        s.append('sherlock/workbench-planning-budget', { version: 1, messageId: 'u', provider: config.provider, model: config.model, original: { reasoningEffort: config.reasoningEffort, maxTokens: config.maxTokens }, limited: { reasoningEffort: 'low', maxTokens: 4096 }, phase: 'planning' })
         const h = restart ? harness() : before
         h.select({ sessionId: s.id, provider: config.provider, model: config.model, ...(reasoningEffort ? { reasoningEffort } : {}) })
         s.events.push(...session('取消创建，讨论人员分配', 'switch').events)
@@ -243,7 +273,7 @@ describe('工作台首次规划阶段预算', () => {
     }
   })
 
-  it('plans diverse domains with a short metadata-first contract rather than complete sample arrays', () => {
+  it('uses a concise shared-content contract across diverse simulated domains', () => {
     const h = harness()
     for (const domain of ['海边三天夜间艺术节', '研究生实验排期', '仓储配送', '社区义诊', '博物馆巡展']) {
       const text = h.text({ session: session(`创建${domain}工作台，用自洽模拟数据；需要排期、人员、物资、预算和风险预案。`) })
@@ -251,7 +281,7 @@ describe('工作台首次规划阶段预算', () => {
       expect(text.length).toBeLessThan(4000)
       expect(text).toContain('generationMode:"deferred"')
       expect(text).toContain('sharedContext')
-      expect(text).toContain('立即调用 research_workbench_create')
+      expect(text).toContain('调用 research_workbench_create')
       expect(text).not.toContain('market.pipeline')
       expect(text).not.toContain('首次调用必须同时附完整artifact')
     }
@@ -270,7 +300,7 @@ describe('工作台首次规划阶段预算', () => {
     } finally { vi.useRealTimers() }
   })
 
-  it('narrows the planning tools at the final request boundary without changing the prepared model config', async () => {
+  it('keeps authorized tools at the final request boundary without changing the prepared model config', async () => {
     const h = harness(), agent = { session: session('创建巡展工作台，用模拟数据') }
     const originalTool = Object.freeze({ name: 'research_workbench_create', description: '旧完整规范'.repeat(1000), parameters: { type: 'object', properties: { generationMode: { enum: ['parallel', 'deferred'] } } } })
     const other = { name: 'other', description: '其他工具', parameters: {} }
@@ -281,7 +311,7 @@ describe('工作台首次规划阶段预算', () => {
     expect(short.tools[0].description.length).toBeLessThan(2000)
     expect(short.tools[0].description).toContain('deferred')
     expect(short.tools[0].parameters).toBe(originalTool.parameters)
-    expect(short.tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
+    expect(short.tools.map(tool => tool.name)).toEqual(['research_workbench_create', 'other'])
     expect(short.reasoningEffort).toBe('max')
     expect(short.maxTokens).toBe(16384)
     expect(originalTool.description.length).toBe(5000)
@@ -289,49 +319,42 @@ describe('工作台首次规划阶段预算', () => {
     expect(await hook({ agent }, async () => request)).toBe(request)
   })
 
-  it('restricts the very first pending creation request to planning and source discovery, including actual execution', async () => {
-    const h = harness(), agent = { session: { header: {}, events: [{ type: 'agent/inbox/spliced', data: { inserted: session('创建农业病虫害监测工作台，使用真实来源').events.map(event => event.data) } }] } }
+  it('allows complete authorized acquisition before the first submission without mutating source schemas', async () => {
+    const h = harness(), agent = { session: session('创建农业病虫害监测工作台，使用真实来源') }
     const request = wireRequest(), planned = await h.context(agent, request)
-    expect(planned.tools.map(tool => tool.name)).toEqual(['research_workbench_create', 'public_data_query', 'financial_query'])
-    expect(planned.tools[1].parameters.properties.operation.enum).toEqual(['catalog'])
-    expect(planned.tools[2].parameters.properties.intent.enum).toEqual(['resolve', 'catalog'])
-    expect(request.tools[1].parameters.properties.operation.enum).toEqual(['catalog', 'query'])
-    for (const [name, args] of [['financial_query', { intent: 'history' }], ['public_data_query', { operation: 'query' }], ['ework__api', {}], ['web_search', {}], ['read', {}], ['bash', {}], ['run_code', {}]]) {
-      expect(h.guard(invocation(agent, name, args))).toContain('research_workbench_create')
+    expect(planned.tools.map(tool => tool.name)).toEqual(request.tools.map(tool => tool.name))
+    expect(planned.tools[1]).toBe(request.tools[1])
+    expect(planned.tools[2].parameters.properties.intent.enum).toEqual(['resolve', 'catalog', 'quote', 'history'])
+    for (const [name, args] of [['financial_query', { intent: 'history' }], ['public_data_query', { operation: 'query' }], ['ework__api', {}], ['web_search', {}], ['read', {}], ['run_code', {}]]) {
+      expect(h.guard(invocation(agent, name, args))).toBeUndefined()
     }
-    expect(h.guard(invocation(agent, 'research_workbench_create'))).toBeUndefined()
+    expect(planned.system).toContain('同一批对象')
+    expect(planned.system).toContain('panel.content')
     expect(planned.system).toContain('原系统要求')
-    expect(planned.system).toContain('真实来源')
+    expect(planned.system).not.toContain('先规划再取数')
   })
 
-  it('allows bounded discovery for multiple companies across steps and concurrent calls, then advertises only create', async () => {
+  it('does not replace acquisition with a directory budget after multiple source calls', async () => {
     const h = harness(), agent = { session: session('创建股票与宏观工作台，使用真实来源') }, request = wireRequest()
     await h.context(agent, request)
-    expect(h.guard(invocation(agent, 'financial_query', { intent: 'resolve', query: '用户指定标的' }, 'first'))).toBeUndefined()
-    expect(h.guard(invocation(agent, 'public_data_query', { operation: 'catalog' }, 'second'))).toBeUndefined()
-    for (let i=2;i<6;i++) expect(h.guard(invocation(agent, 'financial_query', { intent: 'resolve', query: '公司'+i }, 'resolve-'+i))).toBeUndefined()
-    expect(h.guard(invocation(agent, 'financial_query', { intent: 'catalog' }, 'seventh'))).toContain('research_workbench_create')
-    expect((await h.context(agent, request)).tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
-    // Attempts to use a hidden query or Code Mode cannot bypass the guard.
-    expect(h.guard(invocation(agent, 'public_data_query', { operation: 'query' }, 'fourth'))).toContain('research_workbench_create')
-    expect(h.guard(invocation(agent, 'run_code', {}, 'code'))).toContain('research_workbench_create')
+    for (let i = 0; i < 9; i++) expect(h.guard(invocation(agent, 'financial_query', { intent: 'history', query: '对象' + i }, 'data-' + i))).toBeUndefined()
+    const next = await h.context(agent, request)
+    expect(next.tools.map(tool => tool.name)).toEqual(request.tools.map(tool => tool.name))
+    expect(next.tools.find(tool => tool.name === 'financial_query').parameters).toBe(request.tools[2].parameters)
   })
 
-  it('recovers the discovery budget from the current human request after runtime recreation', async () => {
-    const agent = { session: session('创建供应链工作台，使用真实来源') }
-    agent.session.events.unshift(...session('创建旧工作台', 'old').events,
-      { type: 'tool/call', data: { name: 'financial_query', callId: 'old-discovery', arguments: { intent: 'resolve' } } })
-    agent.session.events.push({ type: 'tool/call', data: { name: 'public_data_query', callId: 'catalog', arguments: '{"operation":"catalog"}' } },
-      { type: 'tool/call', data: { name: 'financial_query', callId: 'resolve', arguments: { intent: 'resolve' } } })
-    for (let i=2;i<6;i++) agent.session.events.push({type:'tool/call',data:{name:'financial_query',callId:'resolve-'+i,arguments:{intent:'resolve',query:'公司'+i}}})
-    const resumed = harness()
-    expect((await resumed.context(agent, wireRequest())).tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
-    expect(resumed.guard(invocation(agent, 'financial_query', { intent: 'catalog' }))).toContain('research_workbench_create')
-    agent.session.events.push(...session('创建另一套供应链工作台，使用真实来源', 'new').events)
-    expect((await resumed.context(agent, wireRequest())).tools).toHaveLength(3)
+  it('restores a legacy planning cap even while the original creation is pending', async () => {
+    const s = session('创建供应链工作台，使用真实来源')
+    s.append = (type, data) => s.events.push({ type, data })
+    s.append('sherlock/workbench-planning-budget', { version: 1, messageId: 'u', provider: config.provider, model: config.model, original: { reasoningEffort: 'max', maxTokens: 16384 }, limited: { reasoningEffort: 'low', maxTokens: 4096 }, phase: 'planning' })
+    const h = harness(), agent = { session: s }
+    expect(await h.request(agent, { ...config, reasoningEffort: 'low', maxTokens: 4096 })).toEqual(config)
+    expect(s.events.at(-1).data.phase).toBe('restored')
+    expect(h.resolveModelInfo).not.toHaveBeenCalled()
+    expect((await h.context(agent, wireRequest())).tools.map(tool => tool.name)).toEqual(planningTools.map(tool => tool.name))
   })
 
-  it('retains the planning gate for failed, preparing, malformed and unrelated receipts and releases only the matching accepted result', async () => {
+  it('retains acquisition context for invalid receipts and releases only on the matching accepted result', async () => {
     const h = harness(), agent = { session: session('创建能源供应链工作台') }, request = wireRequest()
     await h.context(agent, request)
     accepted(agent.session, true)
@@ -339,11 +362,11 @@ describe('工作台首次规划阶段预算', () => {
     for (const value of [{ planId: 'plan', status: 'accepted', isError: true }, { planId: 'plan', status: 'preparing' }, { planId: '', status: 'accepted' }, { status: 'accepted' }, 'not a receipt']) {
       result.isError = Boolean(value.isError)
       result.content[0].text = JSON.stringify(value)
-      expect((await h.context(agent, request)).tools.map(tool => tool.name)).not.toContain('web_search')
+      expect(await h.context(agent, request)).not.toBe(request)
     }
     result.content[0].text = JSON.stringify({ planId: 'plan', status: 'accepted' })
     agent.session.events.at(-1).data.message.source.callId = 'another-call'
-    expect(h.guard(invocation(agent, 'web_search'))).toContain('research_workbench_create')
+    expect(h.guard(invocation(agent, 'web_search'))).toBeUndefined()
     agent.session.events.at(-1).data.message.source.callId = 'create'
     // Release immediately on the receipt, before another model request.
     expect(h.guard(invocation(agent, 'web_search'))).toBeUndefined()
@@ -371,7 +394,7 @@ describe('工作台首次规划阶段预算', () => {
       const h = harness(), agent = { session: session('创建展览进度工作台') }, request = wireRequest(), controller = new AbortController()
       const limited = await h.request(agent, config, controller.signal)
       await h.context(agent, request, controller.signal)
-      expect(h.guard(invocation(agent, 'web_search'))).toContain('research_workbench_create')
+      expect(h.guard(invocation(agent, 'web_search'))).toBeUndefined()
       if (finish === 'abort') controller.abort(Error('cancelled'))
       if (finish === 'error') h.hooks.get('agent/error')?.({ agent, error: Error('model failed') })
       if (finish === 'turn/end') h.hooks.get('session/event')?.(agent.session, { type: 'turn/end', data: { reason: { kind: 'error' } } })
@@ -394,13 +417,13 @@ describe('工作台首次规划阶段预算', () => {
     expect((await h.context(child, request)).tools).toBe(planningTools)
   })
 
-  it('does not allow hidden discovery calls for offline or simulated planning', async () => {
-    for (const text of ['创建考古工作台，使用模拟数据', '创建事故记录工作台，禁止联网，只用已有记录']) {
-      const h = harness(), agent = { session: session(text) }
-      expect((await h.context(agent, wireRequest())).tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
-      expect(h.guard(invocation(agent, 'financial_query', { intent: 'resolve' }))).toContain('research_workbench_create')
-      expect(h.guard(invocation(agent, 'public_data_query', { operation: 'catalog' }))).toContain('research_workbench_create')
-    }
+  it('preserves explicit offline constraints without restricting unrelated simulation tools', async () => {
+    const offline = harness(), agent = { session: session('创建事故记录工作台，禁止联网，只用已有记录') }
+    expect((await offline.context(agent, wireRequest())).tools.map(tool => tool.name)).toEqual(['research_workbench_create'])
+    expect(offline.guard(invocation(agent, 'financial_query', { intent: 'history' }))).toContain('联网限制')
+    const simulation = harness(), simulated = { session: session('创建考古工作台，使用模拟数据') }
+    expect((await simulation.context(simulated, wireRequest())).tools.map(tool => tool.name)).toEqual(planningTools.map(tool => tool.name))
+    expect(simulation.guard(invocation(simulated, 'run_code'))).toBeUndefined()
   })
 
   it('offers only valid source creation parameters on the real first wire schema when simulation is explicitly forbidden', async () => {
@@ -414,8 +437,10 @@ describe('工作台首次规划阶段预算', () => {
       expect(schema.properties.preset.enum).not.toContain('openterminal-research')
       for (const key of ['generationMode', 'sharedContext', 'originalRequest']) expect(schema.properties).not.toHaveProperty(key)
       const panel = schema.properties.panels.items
-      expect(panel.properties).not.toHaveProperty('view')
-      expect(panel.properties.type.enum).not.toContain('view')
+      expect(panel.properties).toHaveProperty('view')
+      expect(panel.properties).toHaveProperty('content')
+      expect(schema.properties).toHaveProperty('sharedDatasets')
+      expect(panel.properties.type.enum).toContain('view')
       for (const key of ['prompt','artifact','publicData','layout']) expect(panel.properties[key]).toEqual(originalTool.parameters.properties.panels.items.properties[key])
       const input = { requestId: 'actual-source', title: '真实记录', dataMode: 'source', panels: [{ title: '观察记录', prompt: '实际来源，缺失字段明确标注', type: 'table', size: 'large' }] }
       expect(validateJsonSchemaValue(schema, input)).toEqual([])
@@ -427,6 +452,8 @@ describe('工作台首次规划阶段预算', () => {
       const snapshot = { ...input, panels: [{ ...input.panels[0], artifact: { version: 1, type: 'table', title: '已有真实记录', columns: ['字段', '记录'], rows: [['实测数量', '3']] } }] }
       expect(validateJsonSchemaValue(schema, snapshot)).toEqual([])
       expect(validateWorkbench(snapshot).panels[0].artifact.rows).toEqual([['实测数量', '3']])
+      const contentSnapshot = { ...input, panels: [{ ...input.panels[0], content: { rows: [{ field: '实测数量', value: 3 }], columns: [{ key: 'field', label: '字段' }, { key: 'value', label: '记录' }], sources: ['实测文件'], asOf: '2026-11-11' } }] }
+      expect(validateJsonSchemaValue(schema, contentSnapshot)).toEqual([])
       expect(() => validateWorkbench({ ...input, generationMode: 'deferred', sharedContext: '真实数据的公共约束' })).toThrow('仅适用于模拟数据')
       expect(planned.tools[0].description).toContain('省略 generationMode、sharedContext、originalRequest')
       expect(planned.tools[0].description).toContain('已有真实记录')
@@ -448,12 +475,12 @@ describe('工作台首次规划阶段预算', () => {
       expect(planned.tools[0].parameters.properties.panels.items.properties.type.enum).toContain('html')
     }
     const text = h.text({ session: session('创建古籍交接工作台，允许模拟，点击行展开详情') })
-    expect(text).toContain('模拟场景仍保留deferred和sharedContext')
-    expect(text).toContain('dataMode:"simulated"、generationMode:"deferred"')
+    expect(text).toContain('sharedDatasets+view')
+    expect(text).toContain('dataMode:"simulated"')
     expect(text).not.toContain('仅原请求为模拟数据时，省略dataMode')
   })
 
-  it.each(['创建珊瑚礁生态监测工作台，使用真实来源', AIRLINE_REAL_WORKBENCH_REQUEST])('enforces plan-first through the real agent loop and tool scheduler while workers retain every parent source: %s', async text => {
+  it.each(['创建珊瑚礁生态监测工作台，使用真实来源', AIRLINE_REAL_WORKBENCH_REQUEST])('acquires real data through the real agent loop and tool scheduler while workers retain every parent source: %s', async text => {
     const ctx = new Context(), requests = [], bodies = [], errors = []
     new SessionStore(ctx); new AgentRegistry(ctx); new LlmRuntime(ctx); new SystemPrompt(ctx, {}); new ToolRuntime(ctx)
     new AgentLoop(ctx, { agents: [], maxParallelToolCalls: 2 })
@@ -492,18 +519,18 @@ describe('工作台首次规划阶段预算', () => {
       await parent.whenIdle()
       expect(errors).toEqual([])
       expect(requests).toHaveLength(3)
-      expect(requests[0].tools.map(value => value.name)).toEqual(['financial_query', 'research_workbench_create'])
-      expect(requests[0].tools[0].parameters.properties.intent.enum).toEqual(['resolve', 'catalog'])
-      expect(requests[0].reasoningEffort).toBe('low')
-      expect(requests[0].maxTokens).toBe(4096)
-      expect(parent.session.events.find(event => event.type === 'sherlock/workbench-planning-budget')?.data.phase).toBe('planning')
-      expect(bodies).toEqual([['planning-child', 'web_search']])
+      expect(requests[0].tools.map(value => value.name).sort()).toEqual(['financial_query', 'research_workbench_create', 'web_search'])
+      expect(requests[0].tools[0].parameters.properties.intent.enum).toEqual(['resolve', 'catalog', 'quote', 'history'])
+      expect(requests[0].reasoningEffort).toBe('max')
+      expect(requests[0].maxTokens).toBe(16384)
+      expect(parent.session.events.find(event => event.type === 'sherlock/workbench-planning-budget')).toBeUndefined()
+      expect(bodies).toEqual([['planning-parent', 'financial_query'], ['planning-parent', 'web_search'], ['planning-child', 'web_search']])
       expect(inherited.sort()).toEqual(['financial_query', 'research_workbench_create', 'web_search'])
       expect(ctx.tools.schemas(child).map(value => value.name).sort()).toEqual(inherited)
       expect(requests[2].tools.map(value => value.name).sort()).toEqual(inherited)
       expect(requests[2].reasoningEffort).toBe('max')
       expect(requests[2].maxTokens).toBe(16384)
-      expect(parent.session.events.filter(event => event.type === 'tool/result' && event.data.message.content[0].isError)).toHaveLength(2)
+      expect(parent.session.events.filter(event => event.type === 'tool/result' && event.data.message.content[0].isError)).toHaveLength(0)
     } finally { dispose(); await ctx.fiber.dispose() }
   })
 })

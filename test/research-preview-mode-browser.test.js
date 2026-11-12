@@ -519,6 +519,33 @@ const footerGeometry=(page,id,kind)=>page.locator('[data-research-node-id="'+id+
  return{source:source.textContent,state:state?.textContent,left:s.left-f.left,right:r?f.right-r.right:null,paddingLeft:parseFloat(style.paddingLeft),paddingRight:parseFloat(style.paddingRight),ports:[...card.querySelectorAll('[data-financial-port]')].map(el=>({side:el.dataset.financialPort,display:getComputedStyle(el).display,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height})),sourceTextInset:s.left-card.getBoundingClientRect().left+parseFloat(getComputedStyle(source).paddingLeft)}
 },kind)
 
+it('opens native news data settings only from the footer label or explicit menu',async()=>{
+ const {page,close,errors}=await fixture()
+ try{
+  const id=await page.evaluate(()=>window.fixture.workspace().createFinancialWidget('news').id)
+  const card=page.locator('[data-research-node-id="'+id+'"]'),footer=card.locator('.ew-financial-footer')
+  const source=footer.getByRole('button',{name:'数据源与自动更新',exact:true})
+  const dialog=page.getByRole('dialog',{name:'组件数据与自动更新',exact:true})
+  await expect.poll(()=>source.innerText()).toContain('fixture')
+  for(const mode of ['edit','preview']){
+   if(mode==='preview')await preview(page)
+   const bounds=await footer.boundingBox()
+   const x=bounds.x+bounds.width/2,y=bounds.y+bounds.height/2
+   await page.mouse.click(x,y)
+   expect(await dialog.count(),mode).toBe(0)
+   expect(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('button')?.className??null,{x,y}),mode).toBeNull()
+   await source.click();await dialog.waitFor()
+   await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'})
+   await source.focus();await page.keyboard.press('Enter');await dialog.waitFor()
+   await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'})
+  }
+  await card.locator('[data-workbench-more]').click()
+  await page.getByRole('menuitem',{name:'数据源与自动更新',exact:true}).click()
+  await dialog.waitFor()
+  expect(errors).toEqual([])
+ }finally{await close()}
+},20000)
+
 it('reclaims financial footer port slots in preview and restores edit geometry in all four themes',async()=>{
  const {page,close,errors}=await fixture(),evidence=[]
  try{

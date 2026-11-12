@@ -27,7 +27,8 @@ import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-
 import { loadBundledSkills, readBundledSkill, isBundledSkillId, type BundledSkill } from './bundled-skills';
 import datayesHistoricalTools from '../../../config/datayes-tools.json';
 import {isBundledDatayesId} from './bundled-datayes';
-import {bundledTushareConnection,bundledTushareId,isBundledTushareId,TUSHARE_TOOLS,type BundledTushareOptions} from './bundled-tushare';
+import { bundledDataproConnection, bundledDataproToolEffect, isBundledDataproId, DATAPRO_TOOLS, type BundledDataproOptions } from './bundled-datapro';
+import {bundledTushareConnection,bundledTushareId,bundledTushareToolEffect,isBundledTushareId,TUSHARE_TOOLS,type BundledTushareOptions} from './bundled-tushare';
 export interface IntegrationServiceOptions {
     root: string;
     encryption: PlatformEncryption;
@@ -44,7 +45,11 @@ export interface IntegrationServiceOptions {
     legacySkillRoots?: LegacySkillRoot[];
     legacyConnectionSources?: LegacyConnectionSource[];
     bundledTushare?: BundledTushareOptions;
+    bundledDatapro?: BundledDataproOptions;
 }
+const isBundledMcpId = (id: unknown) => isBundledTushareId(id) || isBundledDataproId(id);
+const bundledMcpToolEffect = (connection: Connection, name: string) =>
+    isBundledDataproId(connection.id) ? bundledDataproToolEffect(connection, name) : bundledTushareToolEffect(connection, name);
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const text = (value: unknown, max = 4000) => { if (typeof value !== 'string' || value.length > max || value.includes('\0'))
     throw new IntegrationError('INVALID_CONFIG', '字段格式无效'); return value.trim(); };
@@ -75,21 +80,44 @@ export class IntegrationService {
     private migrations = new Map<string, Promise<void>>();
     private compatibility = new Map<string, string>();
     private disposed = false;
-    private bundledTushareSync: Promise<void> = Promise.resolve();
+    private bundledMcpSync: Promise<void> = Promise.resolve();
     private constructor(readonly store: IntegrationStore, private options: IntegrationServiceOptions) {
         this.vault = new CredentialVault(join(options.root, 'vault'), options.encryption);
         this.operations = new OperationManager(store);
-        this.mcp = new McpSupervisor(this.vault, undefined, options.bundledTushare?.request);
+        this.mcp = new McpSupervisor(this.vault, undefined, options.bundledTushare?.request, options.bundledDatapro?.request);
         this.api = new HttpApiAdapter(this.vault);
         this.catalog = new IntegrationCatalog({ bundledRoot: options.bundledCatalogRoot ?? join(options.root, 'catalog'), clientVersion: options.clientVersion ?? '1.0.6', cacheRoot: join(options.root, 'catalog-cache'), readCredential: ref => this.vault.read(ref) });
         this.installer = new DeclarativeInstaller(join(options.root, 'packages'));
         this.providers = options.providers ?? {};
     }
-    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); service.computerUseBundle = await loadBundledComputerUse(options.bundledComputerUseRoot); await service.syncBundledTushare(); return service; }
-    private syncBundledTushare(resetAuthentication = false): Promise<void> {
-        const pending = this.bundledTushareSync.then(() => this.updateBundledTushare(resetAuthentication));
-        this.bundledTushareSync = pending.catch(() => {});
+    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); service.computerUseBundle = await loadBundledComputerUse(options.bundledComputerUseRoot); await service.syncBundledMcp(); return service; }
+    private syncBundledMcp(resetAuthentication = false): Promise<void> {
+        const pending = this.bundledMcpSync.then(async () => {
+            await this.updateBundledTushare(resetAuthentication);
+            await this.updateBundledDatapro(resetAuthentication);
+        });
+        this.bundledMcpSync = pending.catch(() => {});
         return pending;
+    }
+    private async updateBundledDatapro(resetAuthentication: boolean) {
+        const options = this.options.bundledDatapro;
+        const owner = this.options.getOwnerId();
+        if (this.disposed || !options || !owner) return;
+        const authenticated = options.authenticated();
+        const expected = bundledDataproConnection(owner, authenticated);
+        const matches = (current?: Connection) => current?.configDigest === expected.configDigest &&
+            (authenticated ? current.authState !== 'unconfigured' : current.authState === 'unconfigured');
+        if (!resetAuthentication && matches(this.store.snapshot().connections[expected.id])) return;
+        await this.store.change(state => {
+            if (this.disposed || this.options.getOwnerId() !== owner || options.authenticated() !== authenticated) return;
+            const prior = state.connections[expected.id];
+            if (!resetAuthentication && matches(prior)) return;
+            const connection = prior?.configDigest === expected.configDigest
+                ? { ...prior, authState: expected.authState, health: expected.health, lastError: undefined, revision: prior.revision + 1 }
+                : expected;
+            state.connections[expected.id] = connection;
+            if (connection === expected) this.replaceTools(state, connection, DATAPRO_TOOLS);
+        });
     }
     private async updateBundledTushare(resetAuthentication: boolean) {
         const options=this.options.bundledTushare,owner=this.options.getOwnerId();if(this.disposed||!options||!owner)return;
@@ -100,6 +128,17 @@ export class IntegrationService {
             for(const c of retired){this.abortCalls(c.id);await this.mcp.dispose(c.id);}
             await this.store.change(state=>{for(const c of retired){delete state.connections[c.id];for(const [id,tool] of Object.entries(state.tools))if(tool.connectionId===c.id)delete state.tools[id];}});
         }
+        // Repair old discovery effects in place, preserving learned schemas and grants.
+        const needsEffectRepair=(state:IntegrationState)=>Object.values(state.tools).some(tool=>tool.connectionId===key&&tool.effect==='unknown'&&state.connections[key]&&bundledTushareToolEffect(state.connections[key]!,tool.rawName??tool.operationId)==='read');
+        if(needsEffectRepair(this.store.snapshot()))await this.store.change(state=>{
+            if(this.disposed||this.options.getOwnerId()!==owner)return;
+            const connection=state.connections[key];if(!connection)return;
+            const changed=new Set<string>();
+            for(const tool of Object.values(state.tools))if(tool.connectionId===key&&tool.effect==='unknown'&&bundledTushareToolEffect(connection,tool.rawName??tool.operationId)==='read'){
+                tool.effect='read';tool.schemaDigest=hash([tool.inputSchema,tool.effect]);changed.add(tool.id);
+            }
+            if(changed.size){connection.revision++;connection.unattendedToolGrants=connection.unattendedToolGrants.filter(id=>!changed.has(id));}
+        });
         // A successful discovery can legitimately have a different tool count
         // and schema from the bootstrap catalog. Keep that verified cache;
         // authentication rotation must not reintroduce removed wire names.
@@ -261,10 +300,12 @@ export class IntegrationService {
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
         const connectionId=command.type==='save-connection'?command.draft?.id:'id' in command?command.id:undefined;
-        if(isBundledTushareId(connectionId)&&['uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
-            this.owner();throw new IntegrationError('ACCESS_DENIED','内置 Tushare 数据源 随客户端更新，可以启用或停用，不能删除或修改配置');
+        if(isBundledMcpId(connectionId)&&['uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
+            this.owner();
+            const name = isBundledDataproId(connectionId) ? '火山方舟专业数据集' : 'Tushare 数据源';
+            throw new IntegrationError('ACCESS_DENIED', `内置${name}随客户端更新，可以启用或停用，不能删除或修改配置`);
         }
-        await this.syncBundledTushare();
+        await this.syncBundledMcp();
         if (command.type === 'uninstall' && (isBundledSkillId(command.id) || isComputerUsePlugin(command.id))) {
             this.owner();
             throw new IntegrationError('ACCESS_DENIED', '内置能力随客户端更新，可以启用或停用，不能删除');
@@ -694,7 +735,7 @@ export class IntegrationService {
             }
             else if (previous.config.type === 'mcp') {
                 const discovery = await this.mcp.connect(previous, signal);
-                tools = discovery.tools.map(tool => ({ ...tool, effect: 'unknown' as const }));
+                tools = discovery.tools.map(tool => ({ ...tool, effect: bundledMcpToolEffect(previous, tool.name) }));
                 negotiatedVersion = discovery.negotiatedVersion;
                 verified = true;
             }
@@ -754,8 +795,13 @@ export class IntegrationService {
             for (const c of Object.values(state.connections))
                 if (c.ownerAccountId === owner) {
                     const tools = Object.values(state.tools).filter(tool => tool.connectionId === c.id);
-                    const bundled=isBundledTushareId(c.id)&&!!this.options.bundledTushare;
-                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'提供股票、指数、ETF、基金及财务等结构化数据，支持投研问答和看板组件取数。登录后可用。':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&c.enabled&&!this.options.bundledTushare?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
+                    const datapro = isBundledDataproId(c.id);
+                    const bundled = datapro ? this.options.bundledDatapro : isBundledTushareId(c.id) ? this.options.bundledTushare : undefined;
+                    const description = bundled
+                        ? datapro ? '检索金融、工商、学术、法律法规和司法案例等专业数据。登录后可用。'
+                            : '提供股票、指数、ETF、基金及财务等结构化数据，支持投研问答和看板组件取数。登录后可用。'
+                        : c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId;
+                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description, enabled: c.enabled, status: bundled&&c.enabled&&!bundled.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
                         connectionSummary: {
                             workspaceLabel: c.workspaceGrant.mode === 'all-owned' ? '当前账号的所有工作区' : c.workspaceGrant.workspaceIds.length ? `已选择 ${c.workspaceGrant.workspaceIds.length} 个工作区` : '未选择工作区',
                             authLabel: bundled?'EWork 账号授权 · 云端密钥已配置':c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
@@ -840,7 +886,7 @@ export class IntegrationService {
             const combined = AbortSignal.any([signal, controller.signal, AbortSignal.timeout(connection.config.type === 'mcp' ? 60000 : 30000)]);
             if (connection.config.type === 'mcp') {
                 const discovery = await this.mcp.connect(connection, combined);
-                const discovered = discovery.tools.map(item => ({ ...item, effect: 'unknown' as const }));
+                const discovered = discovery.tools.map(item => ({ ...item, effect: bundledMcpToolEffect(connection, item.name) }));
                 const digest = hash(discovered.map(item => [item.name, item.inputSchema, item.effect]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
                 const prior = hash(Object.values(this.store.snapshot().tools).filter(item => item.connectionId === connection.id).map(item => [item.operationId, item.inputSchema, item.effect]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
                 if (digest !== prior) {
@@ -882,13 +928,13 @@ export class IntegrationService {
     private async expireConnection(previous: Connection) { await this.store.change(state => { const c = state.connections[previous.id]; if (c?.revision === previous.revision) {
         c.authState = 'expired';
         c.health = 'unreachable';
-        c.lastError = isBundledTushareId(c.id) ? 'EWork 登录已失效，请重新登录后测试连接' : '授权已失效，请重新授权';
+        c.lastError = isBundledMcpId(c.id) ? 'EWork 登录已失效，请重新登录后测试连接' : '授权已失效，请重新授权';
         c.revision++;
     } }); }
     private async recordCall(call: ToolCall, connectionId: string, status: 'succeeded' | 'failed' | 'unknown', errorCode?: import('../../shared/integrations').IntegrationErrorCode) { await this.store.change(state => { state.calls.push({ id: call.callId, toolId: call.toolId, connectionId, sessionId: call.context.sessionId, taskId: call.context.taskId, time: Date.now(), status, errorCode }); state.calls = state.calls.slice(-1000); }); }
     private abortCalls(connectionId: string) { for (const controller of this.calls.get(connectionId) ?? [])
         controller.abort(); }
     rotateIdentity() { this.runtimeEpoch = randomUUID(); this.computerUseStatus = {}; this.options.onComputerUseRevoked?.(); this.operations.abortAll(); for (const key of this.calls.keys())
-        this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledTushare(true).catch(()=>{}); }
+        this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledMcp(true).catch(()=>{}); }
     async dispose() { this.disposed=true; this.rotateIdentity(); await this.operations.dispose(); await this.mcp.disposeAll(); }
 }

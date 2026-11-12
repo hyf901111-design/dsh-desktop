@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { KNOWN_SESSION_EVENT_TYPES, Session } from '@deepseek-ai/dsh-session'
 import { PersistenceCoordinator } from '@deepseek-ai/dsh-session-persistence'
 import {
@@ -458,4 +458,17 @@ it('does not claim verified query provenance for a local result carrying another
 it('does not turn query provenance alone into a successful search with no sources or evidence',async()=>{
  const query='煤电政策',localURL=await listen((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(JSON.stringify({sources:[],truncated:false,provenance:{engine:'bing',requestedQuery:query,documentQuery:query,pageTitle:query+' - 搜索'}}))})
  await expect(searchLocalBrowser({query,maxResults:5},undefined,{url:localURL,token:'test-token'})).rejects.toMatchObject({code:'WEB_LOCAL_SEARCH_FAILED'})
+})
+
+it('routes desktop auto mode directly to Doubao even with a model-native search route', async () => {
+  const resolveRoute = vi.fn(async () => ({ nativeKind: 'openai-responses' }))
+  const searchDefault = vi.fn(async () => ({ sources: [{ url: 'https://example.org' }], truncated: false }))
+  const provider = new SessionModelSearchProvider({ mode: () => 'auto', resolveRoute, searchDefault })
+  const request = { query: 'public query', maxResults: 2 }
+  await expect(provider.search(request)).resolves.toMatchObject({ sources: [{ url: 'https://example.org' }] })
+  expect(searchDefault).toHaveBeenCalledWith(request, undefined)
+  expect(resolveRoute).not.toHaveBeenCalled()
+  searchDefault.mockRejectedValueOnce(new Error('Doubao unavailable'))
+  await expect(provider.search(request)).rejects.toThrow('Doubao unavailable')
+  expect(resolveRoute).not.toHaveBeenCalled()
 })

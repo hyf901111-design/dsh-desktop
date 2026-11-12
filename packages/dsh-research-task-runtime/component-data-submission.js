@@ -10,20 +10,31 @@ import {COMPONENT_DERIVED_VALUE_GUIDANCE} from './component-derived-values.js'
 import {TIMELINE_DATA_GUIDANCE} from './timeline-template-contract.js'
 import {COMPONENT_TEMPLATES} from './component-template-registry.js'
 import {DERIVED_GUIDANCE} from './derived-template-contract.js'
+import {COMPONENT_PAGE_MAPPING_GUIDANCE} from './component-data-refresh.js'
+import {PANEL_COLOR_INSTRUCTION} from './design-policy.js'
+import {SHARED_PANEL_INSTRUCTION} from './shared-component-contract.js'
+
+import {compileComponentContent,COMPONENT_CONTENT_GUIDANCE} from './component-content.js'
 
 const NAME='submit_component_data'
 const SCHEMA='component_presentation_schema'
+const PRESENTATION_TYPES=[...new Set(['table','chart','market','timeline','kpi','mind-map','summary','markdown','html',...COMPONENT_TEMPLATES.filter(template=>template.schema).map(template=>template.type)])]
+const PRESENTATION_VARIANTS=Object.fromEntries(['chart','market'].map(type=>[type,[...new Set(COMPONENT_TEMPLATES.filter(template=>template.type===type&&template.id.startsWith(type+'.')).map(template=>template.variant??template.id.slice(type.length+1)))]]))
+// Accept only names that identify one registered presentation. A design
+// contract prefix is not a different data format, and never changes content.
+const PRESENTATION_NAMES=new Map(PRESENTATION_TYPES.flatMap(type=>[[type,{type}],['research.'+type,{type}]]))
 
 export const COMPONENT_SUBMISSION_MAPPING_GUIDANCE = `requests 引用本卡已成功执行的数据请求；mapping 描述呈现结构，数据用真实字段路径引用完整响应，不复制整组数值。
 同一工具有多个响应时，可调用 component_presentation_schema({}) 查看本卡 sourceRef 与可引用的根字段，提交 {key:"q",sourceRef:"实际编号"}，由宿主恢复精确原请求。无需重新取数或手抄参数。静态卡支持本轮 web_fetch 完整 JSON；数组读 records，对象读 data.字段。网页纯文本、截断、目录或错误响应不能作为结构化引用，也不能建立刷新绑定。
 同一工具在本卡仅有一个成功业务请求时，优先写 {key:"q",tool:"实际工具名"}，省略 args，由宿主复用其完整原参数；不要补写默认值或 null。若同一工具有多个成功业务请求，才提供原 args 明确选择，不能省略；接口目录不计为业务请求。
 需要明确选择 public_data_query 的多次请求时，requests 项为 {key:"q",tool:"public_data_query",args:{operation:"query",source:"实际来源标识",parameters_json:"成功查询时的原 JSON"}}；完整复用调用的外层 args，不把 symbol、limit 等内层参数平铺出来。
 ${COMPONENT_DERIVED_VALUE_GUIDANCE}
+${COMPONENT_PAGE_MAPPING_GUIDANCE}
 $from 指 requests.key；$path 为响应内的点分路径；$each 选择实际数组，$map 映射每行字段。表格 rows 使用 {$from:"q",$each:"实际列表",$map:[{$path:"名称字段"},{$path:"数值字段"}]}，columns 与单元格一一对应。
 带点的原始键用 JSON 字符串下标逐字引用，例如 data.data["usAAPL.OQ"].day；不要删掉交易所后缀或把一个原始键拆为多个字段。遇到同名嵌套键时使用下标明确消歧。
 时间线或发布动态列表用 items:[{$from:"q",$each:"records",$map:{id:{$path:"实际ID"},title:{$path:"原始标题"},time:{$path:"原始发布日期"},url:{$path:"原文链接"}}}]。每个来源可提供一组。title、time、url 必须直接取自同一条记录，不改写、拼接或猜测。只要这些核心字段可核验，条数、附加长说明和原生载荷超限时宿主自动交付可浏览的完整来源列表，无需重取或删记录；需要完整正文时仍可引用原始长字段，由宿主提供展开查看。
 列表可用 $filter:{字段:原值} 等值筛选、$sortBy:"字段"、$order:"asc|desc" 排序、$take:5 取前五或 $take:-20 取末二十；$single:true 在筛选后恰好一条时取单值。$as:"number|string" 转标量，$scale 换单位，$digits:2 控制精度，$prefix/$suffix 加文字。图表 labels 和 series.values 的 $map 必须是单个字段选择器，不用表格行的数组写法；每个标的聚合后得到单值时，使用由这些选择器组成的 values 数组。日期区间可用 $filter:{真实日期字段:{$gte:"YYYY-MM-DD",$lte:"YYYY-MM-DD"}}，边界包含当天，支持实际 YYYY-MM-DD/ YYYYMMDD 日期，先筛选再统计；自然月不能替换为固定交易日数量。共同基期比较在 values 的列表选择器用 $normalize:"base100"；日期和值必须采用完全相同的筛选排序，不把缺失填成0。
-可用字段才使用相应示例：指标 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.metric)}；排名 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.ranking)}。排名保留负号。不支持 $concat/$join/$format；名称直接选原字段，代码放明细。chart 的补充明细用 detailColumns 与 detailRows（二维数组，和表格 rows 的映射相同）；labels 和 detailRows 使用完全相同的 $from/$each/筛选/排序/截取，$map 选择各自所需字段，表头与每行等长。宿主会关联同一记录的名称并加入绘图数值，辅助明细不必重复名称，主图不堆放这些字段。不同来源或不同排序不能按行号强行拼接。长表指标按对象键关联：在当前行的 $map 内，另一来源选择可用 $filter:{"目标真实键":{$row:"当前行真实键"},"指标字段":"实际指标"} 和 $single:true/$map:{"$path":"实际值字段"}。例如 records 中的 instrument/metric/value 长表，按收益排序后的每行净值用 {"$from":"q","$each":"records","$filter":{"instrument":{$row:"instrument"},"metric":"单位净值"},"$single":true,"$map":{"$path":"value"},"$optional":true}；日期有多条时需再明确实际日期条件，不凭数组位置拼接，不把已取得指标写成未取得。
+可用字段才使用相应示例：指标 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.metric)}；排名 ${JSON.stringify(COMPONENT_MAPPING_EXAMPLES.ranking)}。排名保留负号。不支持字符串拼接 $concat/$join/$format；名称直接选原字段，代码放明细。chart 的补充明细用 detailColumns 与 detailRows（二维数组，和表格 rows 的映射相同）；labels 和 detailRows 使用完全相同的 $from/$each/筛选/排序/截取，$map 选择各自所需字段，表头与每行等长。宿主会关联同一记录的名称并加入绘图数值，辅助明细不必重复名称，主图不堆放这些字段。不同来源或不同排序不能按行号强行拼接。长表指标按对象键关联：在当前行的 $map 内，另一来源选择可用 $filter:{"目标真实键":{$row:"当前行真实键"},"指标字段":"实际指标"} 和 $single:true/$map:{"$path":"实际值字段"}。例如 records 中的 instrument/metric/value 长表，按收益排序后的每行净值用 {"$from":"q","$each":"records","$filter":{"instrument":{$row:"instrument"},"metric":"单位净值"},"$single":true,"$map":{"$path":"value"},"$optional":true}；日期有多条时需再明确实际日期条件，不凭数组位置拼接，不把已取得指标写成未取得。
 $optional/$default 写在字段选择器内，不能和 label/value 并列。不存在的非必需字段直接省略；关键缺失明确说明，不能猜路径或填假数值。来源、数据日期、单位保留真实含义；获取时间不冒充报价时间。容量不足仍引用完整响应，不删记录。宿主会从本卡实际响应补齐来源和统计区间，不必拼接 asOf；如需显式来源，kpi 使用 sources:[{name,url?}]，table/chart/market 使用 sources:[{label,url?}]，没有顶层 source 字段。非必需口径字段不存在时省略，不猜 summary.note 等路径。note 只写影响理解的一两句口径，详细来源由底栏提供，不重述所有数值、工具参数或生成过程。不要凭日历推算交易日数；如说明实际观测数量，必须按筛选后真实记录计数，不用查询 limit 或原始响应条数代替。`
 
 // Validate only an explicit per-series count for a daily chart. A requested
@@ -106,32 +117,46 @@ function reuseObservedRequests(requests,records){
 // Acquisition and presentation are separate. The child chooses a renderer
 // after seeing its own complete responses, and receives correctable validation
 // feedback before ending. No source values are supplied by this tool's caller.
-export function createComponentDataSubmission({observeRecords,signal,options={},bindingRequested=false,validateSnapshot,validateArtifact}){
- let child,disposed=false,pending,accepted,finish
+export function createComponentDataSubmission({observeRecords,signal,options={},bindingRequested=false,validateSnapshot,validateArtifact,validateContent}){
+ let child,disposed=false,pending,accepted,finish,lastIssue,acquisitionIssue
  const releases=[],result=new Promise(resolve=>{finish=resolve})
  const check=exec=>{
   signal?.throwIfAborted();exec.signal?.throwIfAborted()
   if(disposed||exec.agent!==child||pending||accepted)throw Error('This component submission is closed or belongs to another execution.')
  }
  const schema=defineTool({
-  name:SCHEMA,description:'List successful responses for this component as sourceRef, or inspect a presentation schema by passing type. This does not fetch data or change the component.',
-  parameters:{type:{type:'string'},variant:{type:'string'}},
+  name:SCHEMA,description:'Without type, list available presentation types, variants and successful sourceRef responses. Pass a listed type to inspect its schema. This does not fetch data or change the component.',
+  parameters:{type:{type:'string',enum:[...PRESENTATION_NAMES.keys()],description:'Use a listed presentation type. Exact research.<type> design names are accepted aliases; pass chart/market variants separately.'},variant:{type:'string',description:'Use a variant listed for the selected type by component_presentation_schema({}).'},mapping:{type:'boolean',description:'Include field-path mapping instructions when reusing structured source responses.'}},
   output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>true,
   execute(args,exec){
-   check(exec);if(!args.type)return {sources:sourceReferences(observeRecords()),staticDelivery:'文档解析、网页正文及关系图可用 submit_component_data({artifact:完整宿主组件JSON})；不需要伪造 requests 或 mapping。原始取数、来源和完整性校验仍执行。'}
-   const schema=args.type==='chart'?chartTemplateSchema(args.variant):args.type==='market'?marketPanelSchema(args.variant):args.type==='table'?TABLE_INPUT_SCHEMA:args.type==='timeline'?TIMELINE_DATA_GUIDANCE:args.type==='kpi'?'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}':['mind-map','summary'].includes(args.type)?DERIVED_GUIDANCE:args.type==='markdown'?'{"version":1,"type":"markdown","title":"标题","content":"完整正文与原始出处链接"}':args.type==='html'?'{"version":1,"type":"html","title":"标题","html":"完整自包含离线HTML"}':COMPONENT_TEMPLATES.find(template=>template.type===args.type&&template.schema)?.schema
+   check(exec);if(!args.type)return {types:PRESENTATION_TYPES,variants:PRESENTATION_VARIANTS,...(args.mapping?{mapping:COMPONENT_SUBMISSION_MAPPING_GUIDANCE}:{}),sources:sourceReferences(observeRecords()),staticDelivery:'常规内容可用 submit_component_data({content:{title,body?,rows?,sources?}})；自定义呈现用 artifact。无需伪造 requests 或 mapping；原始取数、来源和完整性校验仍执行。'}
+   const target=PRESENTATION_NAMES.get(args.type)
+   if(!target)throw Error('请选择 component_presentation_schema({}) 返回的实际呈现类型。')
+   const {type}=target,{variant}=args
+   if(variant!==undefined&&!PRESENTATION_VARIANTS[type]?.includes(variant))throw Error('variant 不适用于当前类型；使用 component_presentation_schema({}) 返回的该类型变体，不改变业务内容。')
+   const schema=type==='chart'?chartTemplateSchema(variant):type==='market'?marketPanelSchema(variant):type==='table'?TABLE_INPUT_SCHEMA:type==='timeline'?TIMELINE_DATA_GUIDANCE:type==='kpi'?'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}':['mind-map','summary'].includes(type)?DERIVED_GUIDANCE:type==='markdown'?'{"version":1,"type":"markdown","title":"标题","content":"完整正文与原始出处链接"}':type==='html'?'{"version":1,"type":"html","title":"标题","html":"完整自包含离线HTML"}':COMPONENT_TEMPLATES.find(template=>template.type===type&&template.schema)?.schema
    if(!schema)throw Error('该呈现形式没有独立映射协议。可沿已提供的宿主组件协议提交 artifact；不为通过提交而改变业务内容。')
-   return{schema,sources:sourceReferences(observeRecords()),guidance:args.type==='kpi'?KPI_GUIDANCE:'结构化数据用 requests/mapping；文档或网页正文用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
+   return{type,...(variant?{variant}:{}),schema,sources:sourceReferences(observeRecords()),...(args.mapping?{mapping:COMPONENT_SUBMISSION_MAPPING_GUIDANCE}:{}),...(type==='html'?{style:PANEL_COLOR_INSTRUCTION,interaction:SHARED_PANEL_INSTRUCTION}:{}),guidance:type==='kpi'?KPI_GUIDANCE:'常规内容用 content；结构化响应引用用 requests/mapping；自定义呈现用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
   }
  })
  const definition=defineTool({
-  name:NAME,description:'Deliver this component after acquisition and processing. For structured observed responses use requests:[{key,sourceRef}] and mapping; sourceRef comes from component_presentation_schema({}). Alternatively requests:[{key,tool}] reuses a sole successful call; multiple calls require exact original args. For parsed documents, webpage prose or custom relationships, use artifact with the complete host component JSON instead, without requests/mapping. This static path still checks sources, content and completeness, and cannot provide automatic refresh. Correct errors in the same child using acquired material. Acceptance ends this component.',
-  parameters:{requests:{type:'array',items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string'},sourceRef:{type:'string',description:'The exact reference returned by component_presentation_schema({}); omit tool and args.'},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',additionalProperties:true},artifact:{type:'object',description:'Static delivery of the complete existing host component JSON after reading actual documents or webpages. Mutually exclusive with requests/mapping. No invented data, no refresh recipe.',additionalProperties:true}},
+  name:NAME,description:'交付本组件已处理的内容。常规使用 content，引用完整响应或自动刷新使用 requests/mapping，自定义交互使用 artifact。三条路径互斥；接受后结束本组件。',
+  parameters:{content:{type:'object',description:COMPONENT_CONTENT_GUIDANCE,additionalProperties:true},requests:{type:'array',items:{type:'object',properties:{key:{type:'string',required:true},tool:{type:'string'},sourceRef:{type:'string',description:'The exact reference returned by component_presentation_schema({}); omit tool and args.'},args:{type:'object',description:'Omit to reuse the sole successful business call of this tool. Required only to select among multiple calls; copy exact original arguments without adding defaults.',additionalProperties:true}},additionalProperties:false}},mapping:{type:'object',additionalProperties:true},artifact:{type:'object',description:'Static delivery of the complete existing host component JSON after reading actual documents or webpages. Mutually exclusive with requests/mapping. No invented data, no refresh recipe.',additionalProperties:true}},
   output:{schema:{type:'object',properties:{accepted:{type:'boolean',required:true}},additionalProperties:false},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},isConcurrencySafe:()=>false,
   execute(args,exec){
    check(exec)
-   if(!args||Object.keys(args).some(key=>!['requests','mapping','artifact'].includes(key)))throw Error('只提交 requests/mapping，或单独提交完整静态 artifact。')
+   try{
+   if(!args||Object.keys(args).some(key=>!['requests','mapping','artifact','content'].includes(key)))throw Error('提交 content、requests/mapping 或 artifact 中的一种。')
    if(Buffer.byteLength(JSON.stringify(args))>256000)throw Error('Use paths into the complete observed responses instead of copying source records into the submission.')
+   if(Object.hasOwn(args,'content')){
+    if(Object.keys(args).length!==1)throw Error('content 独立提交；引用响应时使用 requests/mapping。')
+    if(bindingRequested)throw Error('本卡要求自动刷新，请使用实际成功请求的 requests/mapping 保留刷新配方。')
+    if(typeof validateContent!=='function')throw Error('内容交付边界不可用。')
+    const snapshot=compileComponentContent(structuredClone(args.content))
+    const text=validateContent(snapshot,structuredClone(observeRecords()))
+    if(typeof text!=='string'||!text.trim())throw Error('尚无可交付内容。')
+    check(exec);pending={callId:exec.callId,text};return{accepted:true}
+   }
    if(Object.hasOwn(args,'artifact')){
     if(Object.hasOwn(args,'requests')||Object.hasOwn(args,'mapping'))throw Error('artifact 与 requests/mapping 互斥；静态材料不需要伪造数据请求。')
     if(bindingRequested)throw Error('本卡要求自动刷新，静态 artifact 不能替代已验证的刷新配方。')
@@ -168,13 +193,21 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
    check(exec)
    pending={callId:exec.callId,text}
    return{accepted:true}
+   }catch(error){
+    lastIssue=typeof error?.message==='string'?error.message.slice(0,800):undefined
+    // A later malformed title or empty submission does not resolve a known
+    // missing cohort/field. Keep that recovery cause until delivery succeeds.
+    if(/^(?:交付范围(?:未满足|无法核验)|当前仅取得发布日期|接口缺少字段：)/u.test(lastIssue??''))acquisitionIssue=lastIssue
+    throw error
+   }
   }
  })
  const dispose=()=>{if(disposed)return;disposed=true;for(const release of releases.splice(0).reverse())release();signal?.removeEventListener('abort',dispose);pending=accepted=undefined}
  signal?.addEventListener('abort',dispose,{once:true})
  return{
-  instruction:'【数据先行的组件交付】先取得并理解本卡所需的真实数据，再决定呈现形式。规划类型只是建议，模板提供样式和交互，不要求数据迁就模板字段；用户明确要求的图形、比较范围、口径和功能必须保留。指标用紧凑指标区；类别排名使用 chart 的 horizontal 变体，只绘制排名指标，辅助规模等信息放明细，不用折线连接无时间关系的产品；时间序列适合趋势图，明细用可排序、可调列宽的表格。需要换形式且不熟悉字段时只调用一次 component_presentation_schema({type,variant})，同一响应会给出呈现协议、当前 sourceRef、实际嵌套数组路径及条数；直接映射完整数组，不再单独查询空参数目录，不手抄长序列。取得结构化数据后调用 submit_component_data，传 requests 与 mapping。已解析的文档、网页正文、关系图或自定义静态呈现，调用同一工具传 artifact:完整宿主组件JSON，不传 requests/mapping；不用为文字内容伪造业务请求，不将正文包装成刷新配方。两条路径均保留本卡真实来源并继续校验完整性；静态交付不能替代明确要求的刷新。数值和记录引用真实路径，不复制数值或构造假数据。提交若返回校验错误，在当前任务直接修正并再次提交，不重新取数、不退出、不把内部错误写入正文。缺失仅标记实际未取得的字段，已有数据必须保留；不能用空状态冒充完成。',
-  result,
+  instruction:'资料齐全后调用 submit_component_data：通常使用 content；引用已有响应使用 requests/mapping；复杂交互按需查询协议并用 artifact。接受后结束本组件。失败保留已有资料，按反馈修正或换呈现方式；缺失信息如实标注。',
+
+  result, lastIssue:()=>lastIssue, acquisitionIssue:()=>acquisitionIssue,
   register(agent){
    signal?.throwIfAborted()
    if(disposed||child||!agent.ctx.tools?.register||!agent.ctx.tools?.guard)throw Error('组件提交边界不可用。')
@@ -193,7 +226,10 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
      pending=undefined
     }
    }
-   if(event?.type==='step/end'&&accepted)finish({stopReason:'completed',output:[{type:'text',text:accepted.text}]})
+   if(event?.type==='step/end'&&accepted){
+    lastIssue=acquisitionIssue=undefined
+    finish({stopReason:'completed',output:[{type:'text',text:accepted.text}]})
+   }
   },
   dispose
  }

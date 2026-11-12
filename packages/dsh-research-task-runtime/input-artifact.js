@@ -6,25 +6,56 @@ export const CODE_VIEWPORT_CSS='body[data-research-kind="code"] main{height:calc
 function inputRuntime(spec){
  const get=id=>document.getElementById(id);
  if(spec.type==='form'){
-  const form=get('input-form'),submit=get('form-submit'),records=get('form-records');let submitted=false,count=0;
-  const validate=f=>{
-   const control=get('field-'+f.id),value=control.value.trim();let error='';
+  const form=get('input-form'),submit=get('form-submit'),records=get('form-records'),reset=get('form-reset'),status=get('form-status');
+  let submitted=false,state={version:1,entries:[]},canSubmit=true;
+  const errorFor=(f,raw)=>{
+   const value=raw.trim();let error='';
    if(f.required&&!value)error='请填写'+f.label;
-   else if(control.value.length>(f.maxLength??4000))error='最多'+(f.maxLength??4000)+'字';
+   else if(raw.length>(f.maxLength??4000))error='最多'+(f.maxLength??4000)+'字';
    else if(value&&f.kind==='number'&&(!Number.isFinite(Number(value))||f.min!==undefined&&Number(value)<f.min||f.max!==undefined&&Number(value)>f.max))error='请输入有效数值'+(f.min!==undefined?'，最小 '+f.min:'')+(f.max!==undefined?'，最大 '+f.max:'');
    else if(value&&f.kind==='date'&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(value+'T00:00:00Z'))||new Date(value+'T00:00:00Z').toISOString().slice(0,10)!==value))error='请输入有效日期';
+   else if(value&&f.kind==='select'&&!f.options.some(option=>option.value===value))error='请选择有效选项';
+   return error;
+  };
+  const validate=f=>{
+   const control=get('field-'+f.id),error=errorFor(f,control.value);
    get('error-'+f.id).textContent=error;control.setAttribute('aria-invalid',String(Boolean(error)));return !error;
   };
-  for(const f of spec.fields){const control=get('field-'+f.id);control.addEventListener('blur',()=>validate(f));for(const name of ['input','change'])control.addEventListener(name,()=>{submitted=false;submit.disabled=count>=20;get('form-status').textContent='';if(control.getAttribute('aria-invalid')==='true')validate(f);});}
+  const validEntry=entry=>Array.isArray(entry)&&entry.length===spec.fields.length&&entry.every((value,index)=>typeof value==='string'&&!errorFor(spec.fields[index],value));
+  const setControls=()=>{submit.disabled=!canSubmit||submitted||state.entries.length>=20;reset.disabled=!canSubmit;};
+  const render=(saved,context)=>{
+   const entries=saved?.version===1&&Array.isArray(saved.entries)?saved.entries.filter(validEntry).slice(0,20):[];
+   state={version:1,entries};canSubmit=context.connected&&!context.readOnly;
+   records.replaceChildren(...entries.map((entry,index)=>{
+    const article=document.createElement('article'),heading=document.createElement('strong');
+    heading.textContent='本地输入记录 '+(entries.length-index);article.append(heading);
+    spec.fields.forEach((f,i)=>{
+     const p=document.createElement('p'),value=entry[i],label=f.kind==='select'?f.options.find(option=>option.value===value)?.label:value;
+     p.textContent=f.label+'：'+(label||'—');article.append(p);
+    });
+    return article;
+   }));
+   records.hidden=!entries.length;
+   if(context.connected&&context.readOnly)status.textContent='当前工作台为只读，不能提交本地记录。';
+   setControls();
+  };
+  const reduce=(current,action)=>action?.type==='submit'&&validEntry(action.entry)&&Array.isArray(current?.entries)&&current.entries.length<20
+   ? {version:1,entries:[action.entry,...current.entries]} : current;
+  const shared=typeof window==='undefined'?null:window.sherlockShared?.register({initialState:state,localOnly:true,reduce,render});
+  for(const f of spec.fields){const control=get('field-'+f.id);control.addEventListener('blur',()=>validate(f));for(const name of ['input','change'])control.addEventListener(name,()=>{submitted=false;setControls();status.textContent='';if(control.getAttribute('aria-invalid')==='true')validate(f);});}
   form.addEventListener('submit',e=>e.preventDefault());
   submit.addEventListener('click',()=>{
-   if(submitted||count>=20)return;
+   if(!canSubmit||submitted||state.entries.length>=20)return;
    const invalid=spec.fields.filter(f=>!validate(f));if(invalid.length){get('field-'+invalid[0].id).focus();return;}
-   const article=document.createElement('article'),heading=document.createElement('strong');heading.textContent='本地输入记录 '+(++count);article.append(heading);
-   for(const f of spec.fields){const p=document.createElement('p'),control=get('field-'+f.id);p.textContent=f.label+'：'+(control.tagName==='SELECT'?control.selectedOptions[0]?.textContent:control.value||'—');article.append(p);}
-   records.prepend(article);records.hidden=false;submitted=true;submit.disabled=true;get('form-status').textContent='已保存本画布的输入记录'+(count>=20?'；已达20条记录上限':'');
+   const action={type:'submit',entry:spec.fields.map(f=>get('field-'+f.id).value)};
+   const next=reduce(state,action);
+   if(new TextEncoder().encode(JSON.stringify(next)).length>65536){status.textContent='本卡输入记录已达存储容量，现有记录已保留。';return;}
+   if(shared&&!shared.dispatch(action)){status.textContent='本次记录未保存，请重试。';return;}
+   if(!shared)render(next,{connected:true,readOnly:false});
+   submitted=true;setControls();
+   status.textContent=(shared?'已保存本画布的输入记录':'已记录，本次打开期间可查看')+(next.entries.length>=20?'，已达20条记录上限':'');
   });
-  get('form-reset').addEventListener('click',()=>{form.reset();submitted=false;submit.disabled=count>=20;get('form-status').textContent='';for(const f of spec.fields){get('error-'+f.id).textContent='';get('field-'+f.id).setAttribute('aria-invalid','false');}});
+  reset.addEventListener('click',()=>{form.reset();submitted=false;setControls();status.textContent='';for(const f of spec.fields){get('error-'+f.id).textContent='';get('field-'+f.id).setAttribute('aria-invalid','false');}});
  }else{
   const format=get('code-format'),output=get('code-content'),status=get('code-status'),expand=get('code-expand');let requestId=null,requestTimer=null;
   function render(){let content=spec.content;get('code-error').textContent='';if(spec.language==='json'){try{const parsed=JSON.parse(content);if(format.value==='formatted')content=JSON.stringify(parsed,null,2);}catch{get('code-error').textContent='JSON 格式无效，已保留原始内容';format.value='original';}}

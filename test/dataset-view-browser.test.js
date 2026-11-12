@@ -24,6 +24,19 @@ async function open(view,{dataset=bookDataset(),context,saved,width=900,mode='op
  return {page,frame,close:()=>page.close(),saved:async()=>{const revision=await frame.locator('html').evaluate(()=>window.sherlockShared.inspect().revision);await expect.poll(()=>page.evaluate(()=>window.viewEvents.filter(e=>e.message?.op==='localCommit').at(-1)?.message?.revision)).toBe(revision);return page.evaluate(()=>window.viewEvents.filter(e=>e.message?.op==='localCommit').at(-1)?.message)}}
 }
 const order=frame=>frame.locator('tbody tr:not([hidden])').evaluateAll(rows=>rows.map(r=>r.dataset.recordId))
+it('shows strict numeric exceptions and excludes equal or unknown amounts in the client renderer',async()=>{
+ const dataset={id:'amounts',label:'对账记录',asOf:'2026-11-12',note:'模拟原表',fields:[{key:'id',label:'编号'},{key:'delta',label:'差额',unit:'万元'}],records:[
+  {id:'A1',delta:-2},{id:'A2',delta:0},{id:'A3',delta:3},{id:'A4',delta:null}
+ ]};
+ for(const [op,ids] of [['gt',['A3']],['ne',['A1','A3']]]){
+  const c=await open({dataset:'amounts',where:[{field:'delta',op,value:0}],sections:[{kind:'records',fields:['id','delta']}]},{dataset});
+  try{
+   await expect.poll(()=>order(c.frame)).toEqual(ids);
+   expect(await c.frame.locator('[data-view-count]').textContent()).toBe(`显示 ${ids.length} / 4 条记录`);
+   expect(await c.frame.locator('#dataset-view-source').evaluate(el=>JSON.parse(el.textContent).dataset.records)).toEqual(dataset.records);
+  }finally{await c.close();}
+ }
+});
 it('uses Chinese field references in real host filters while preserving plain scenario notes safely',async()=>{
  const dataset=bookDataset();dataset.fields.find(f=>f.key==='owner').key='负责人';for(const r of dataset.records){r['负责人']=r.owner;delete r.owner;}
  const c=await open({dataset:dataset.id,filters:['负责人'],details:['负责人'],sections:[{kind:'records',fields:['负责人']}]},{dataset,width:400,context:'演练说明：<script>window.unsafeContext=true</script>三日窗口不延长。'})
@@ -31,12 +44,14 @@ it('uses Chinese field references in real host filters while preserving plain sc
 })
 it('filters and reorders visible records while keeping hidden identities and all source values intact',async()=>{
  const view=priorityView();view.sections[0].fields=view.sections[0].fields.filter(key=>key!=='id');
+ view.sections.push(scheduleView().sections[0])
  const c=await open(view)
  try{
   expect(await c.frame.getByRole('button',{name:'查看B01完整详情',exact:true}).textContent()).toBe('B01')
   expect(await order(c.frame)).toEqual(['B01','B02','B03','B04','B05','B06','B07','B08'])
   await c.frame.getByRole('button',{name:'上移B03',exact:true}).click()
   expect(await order(c.frame)).toEqual(['B01','B03','B02','B04','B05','B06','B07','B08'])
+  expect(await c.frame.locator('.dv-schedule-row').evaluateAll(rows=>rows.map(row=>row.dataset.recordId))).toEqual(await order(c.frame))
   await c.frame.getByRole('button',{name:'下移B03',exact:true}).click()
   await c.frame.getByRole('combobox',{name:'负责人',exact:true}).selectOption({label:'修复师甲'})
   await c.frame.getByRole('button',{name:'上移B05',exact:true}).click()
@@ -189,3 +204,36 @@ it('applies a declared subset before search and paging without deleting canonica
   expect(await order(c.frame)).toEqual(expected)
  }finally{await c.close()}
 })
+
+it('mounts only the current page of a 244-row workbench and reaches late records through sorting and search',async()=>{
+ const dataset=bookDataset()
+ dataset.fields.push({key:'url',label:'原文链接'})
+ dataset.records=Array.from({length:244},(_,i)=>({
+  ...dataset.records[i%8],
+  id:'P'+String(i+1).padStart(3,'0'),
+  title:'市场产品'+(i+1),
+  url:i===243?'https://example.org/product?id=244&source=exchange':'javascript:alert(1)'
+ }))
+ const view={...priorityView(),sections:[{kind:'records',fields:dataset.fields.map(field=>field.key)}]}
+ const c=await open(view,{dataset})
+ try{
+  const rows=c.frame.locator('tbody tr')
+  expect(await rows.count()).toBe(20)
+  expect(await c.frame.locator('[data-view-count]').textContent()).toBe('显示 244 / 244 条记录')
+  await c.frame.getByRole('combobox',{name:'表格页码',exact:true}).selectOption('12')
+  expect(await rows.count()).toBe(4)
+  expect(await order(c.frame)).toEqual(['P241','P242','P243','P244'])
+  expect(await rows.last().getByRole('link').getAttribute('href')).toBe(dataset.records.at(-1).url)
+  expect(await rows.first().getByRole('link').count()).toBe(0)
+  await c.frame.getByRole('button',{name:'查看P244完整详情',exact:true}).click()
+  expect(await c.frame.locator('.dv-detail').textContent()).toContain('记录 P244')
+  const sort=c.frame.getByRole('button',{name:'按'+dataset.fields[0].label+'排序',exact:true})
+  await sort.click()
+  await sort.click()
+  expect((await order(c.frame))[0]).toBe('P244')
+  await c.frame.getByRole('searchbox',{name:'搜索完整数据',exact:true}).fill('P243')
+  expect(await order(c.frame)).toEqual(['P243'])
+  expect(await rows.count()).toBe(1)
+  expect(await c.frame.locator('#dataset-view-source').evaluate(el=>JSON.parse(el.textContent).dataset.records)).toEqual(dataset.records)
+ }finally{await c.close()}
+},20000)

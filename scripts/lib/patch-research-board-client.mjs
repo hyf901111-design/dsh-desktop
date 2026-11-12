@@ -17,7 +17,7 @@ import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, join } from 'node:path'
-import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
+import { compactHostDashboardHtml, MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
 import { candleRuntime, candleControls, refineCandlestickHtml, CANDLE_CONTROLS_CSS } from '../../packages/dsh-research-task-runtime/market-candlestick.js'
 import { refineStoredSpecialChartHtml, SPECIAL_CHART_LAYOUT_RUNTIME, SPECIAL_CHART_LAYOUT_VIEW, SPECIAL_CHART_LAYOUT_CSS } from '../../packages/dsh-research-task-runtime/special-chart-layout.js'
 import {REVENUE_EXPANSION_CSS} from '../../packages/dsh-research-task-runtime/financial-revenue.js'
@@ -694,6 +694,11 @@ function canvasInteractionPatch(source) {
 }
 
 function generationFeedbackPatch(source) {
+  for (const [name, value] of Object.entries({ MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR })) {
+    const declaration = source.match(new RegExp(`^[\\t ]*const ${name} = [^\\n]+;$`, 'm'))?.[0]
+    if (!declaration) throw Error('Research HTML limit declaration missing: ' + name)
+    source = replace(source, declaration, declaration.slice(0, declaration.indexOf('=') + 1) + ' ' + JSON.stringify(value) + ';')
+  }
   source = componentTypographyPatch(source)
   source = componentRuntimeFontPatch(source)
   source = generationProgressOverlayPatch(source)

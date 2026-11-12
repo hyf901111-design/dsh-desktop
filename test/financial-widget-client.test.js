@@ -335,3 +335,33 @@ it('放大阅读菜单跟随组件进入对话框顶层并可正常关闭',async
  await f.event('click',action())
  expect(card.open).toBe(false)
 })
+
+it('原生现货行情可从标题选 BTC 并在数据设置切换交易所',async()=>{
+ const crypto={market:'CRYPTO',code:'BTC/USD',name:'比特币'}
+ const bridge=service()
+ bridge.request.mockImplementation(async q=>{
+  if(q.action==='search')return {symbols:[crypto]}
+  if(q.action==='history')return {bars:bars.slice(0,8),source:q.source,volumeUnit:'BTC',nativePeriod:true}
+  return {quotes:[{...crypto,price:75000,source:q.source}],source:q.source}
+ })
+ const f=await fixture({financialWidget:bridge})
+ await f.act(async()=>f.workspace.createFinancialWidget('quote'))
+ const input=f.host.querySelector('input[aria-label="搜索个股代码或名字"]')
+ await f.event('focusin',input)
+ await f.input(input,'比特币')
+ await f.act(async()=>{await vi.waitFor(()=>expect(bridge.request).toHaveBeenCalledWith({action:'search',query:'比特币',includeCrypto:true}))})
+ const suggestion=f.document.querySelector('.ew-financial-suggestions [role=option]')
+ expect(suggestion?.textContent).toContain('BTC/USD')
+ await f.event('click',suggestion)
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull())
+ expect(bridge.request).toHaveBeenCalledWith({action:'search',query:'比特币',includeCrypto:true})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toMatchObject({symbols:[crypto],dataSource:'kraken',period:'1d'})
+ expect(f.host.querySelector('.ew-quote-periods').textContent).toBe('分时小时K日K周K')
+ await f.event('click',f.host.querySelector('.ew-financial-provenance'))
+ const select=f.document.querySelector('select[aria-label="数据源"]')
+ expect([...select.options].map(option=>option.value)).toEqual(['kraken','bitfinex'])
+ select.value='bitfinex'
+ await f.event('change',select)
+ await vi.waitFor(()=>expect(bridge.request).toHaveBeenCalledWith(expect.objectContaining({action:'history',source:'bitfinex',symbols:[crypto]})))
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec.dataSource).toBe('bitfinex')
+},30000)

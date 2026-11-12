@@ -141,6 +141,19 @@ export function normalizeKeyedTableProjection(data,mapping){
  if(mapping!==undefined&&!selected(mapping.rows))return unchanged
  if(!(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant))||!Array.isArray(data.columns)||!data.columns.length||!Array.isArray(data.rows))return unchanged
  if(data.columns.some(column=>!object(column)||Object.keys(column).some(key=>!['key','label'].includes(key))||typeof column.key!=='string'||!column.key.trim()||column.key.length>512||/[\u0000-\u001f]/u.test(column.key)||column.key.startsWith('$')||forbidden.has(column.key)||typeof column.label!=='string'||!column.label.trim()))return unchanged
+ // A static table may declare fewer headers than there are source fields.
+ // Keep all of those fields as columns. Bound mappings still require an
+ // explicit projection because an undeclared field must never change refresh.
+ if (mapping === undefined && data.type === 'table' && data.rows.length && data.rows.every(object)) {
+  const declared = new Set(data.columns.map(column => column.key))
+  const extra = [...new Set(data.rows.flatMap(Object.keys))].filter(key => !declared.has(key))
+  if (extra.length && extra.every(key => key.trim() && key.length <= 512 &&
+      !/[\u0000-\u001f]/u.test(key) && !key.startsWith('$') && !forbidden.has(key)) &&
+      data.rows.every(row => [...declared].every(key => Object.hasOwn(row, key)) && Object.values(row).every(scalar))) {
+   data = {...data, columns: [...data.columns, ...extra.map(key => ({key,label:key}))],
+    rows: data.rows.map(row => Object.fromEntries([...declared,...extra].map(key => [key, Object.hasOwn(row,key) ? row[key] : null])))}
+  }
+ }
  // Only explicit declarations can become a persisted canonical projection.
  // Materializing a dynamic column key/label once would freeze its future scope.
  if(mapping!==undefined&&(!Array.isArray(mapping.columns)||mapping.columns.length!==data.columns.length||mapping.columns.some((column,i)=>!object(column)||column.key!==data.columns[i].key||column.label!==data.columns[i].label)))return unchanged

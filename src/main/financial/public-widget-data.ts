@@ -3,10 +3,14 @@ import {normalizeFinancialBars} from './widget-data'
 import {financialIndexCatalog} from '../../../packages/dsh-research-task-runtime/financial-index-catalog.js'
 import {parsePublicIndexChart} from './index-data'
 import {queryBackupFinancialWidget} from './backup-widget-data'
+import {queryKrakenFinancialWidget} from './kraken-widget-data'
+import {queryBitfinexFinancialWidget} from './bitfinex-widget-data'
+import {financialCryptoPair,findFinancialCryptoSymbol} from '../../../packages/dsh-research-task-runtime/financial-crypto-catalog.js'
+import {queryAccountFinancialWidget,type AccountFinancialSources} from './account-widget-data'
 
 type Row=Record<string,any>
 type SymbolRef={code:string;market:string;name:string}
-const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com','https://query2.finance.yahoo.com','https://quotes.sina.cn','https://push2.eastmoney.com','https://www.cninfo.com.cn']
+const origins=['https://api.kraken.com','https://api-pub.bitfinex.com','https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com','https://query2.finance.yahoo.com','https://quotes.sina.cn','https://push2.eastmoney.com','https://www.cninfo.com.cn']
 const number=(value:unknown):number|null=>typeof value==='number'&&Number.isFinite(value)?value:typeof value==='string'&&value.trim()&&Number.isFinite(Number(value))?Number(value):null
 const unavailable=()=>Error('公开数据源暂不可用，请稍后重试')
 const tradingDate=(value:string)=>{
@@ -16,13 +20,15 @@ const tradingDate=(value:string)=>{
 const plain=(value:unknown)=>String(value??'').replace(/<[^>]*>/g,'').replace(/&(?:amp|lt|gt|quot|apos|nbsp);/g,s=>({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&apos;':"'",'&nbsp;':' '}[s]!)).trim()
 const quoteCode=(code:string)=>code.replace(/\.(?:OQ|N)$/,'')
 const symbolId=(s:SymbolRef)=>s.market.toLowerCase()+(s.market==='US'?quoteCode(s.code):s.code)
-const validSymbol=(s:any)=>s&&typeof s.code==='string'&&(s.market==='INDEX'?financialIndexCatalog().some(e=>e.symbol.market==='INDEX'&&e.symbol.code===s.code):['SH','SZ','BJ','HK','US'].includes(s.market)&&(s.market==='US'?/^[A-Z][A-Z0-9.^-]{0,19}$/.test(s.code):new RegExp('^\\d{'+(s.market==='HK'?5:6)+'}$').test(s.code)))
+const validSymbol=(s:any)=>s&&typeof s.code==='string'&&(s.market==='CRYPTO'?Boolean(financialCryptoPair(s.code)):s.market==='INDEX'?financialIndexCatalog().some(e=>e.symbol.market==='INDEX'&&e.symbol.code===s.code):['SH','SZ','BJ','HK','US'].includes(s.market)&&(s.market==='US'?/^[A-Z][A-Z0-9.^-]{0,19}$/.test(s.code):new RegExp('^\\d{'+(s.market==='HK'?5:6)+'}$').test(s.code)))
 const validQuery=(q:any)=>{
- if(!q||!['search','quotes','history','news','announcements'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh','source'].includes(k))||q.source!==undefined&&!['default','backup'].includes(q.source)||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
+ if(!q||!['search','quotes','history','news','announcements'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh','source','includeCrypto'].includes(k))||q.source!==undefined&&!['default','backup','kraken','bitfinex','tushare','datapro','doubao','eastmoney','sina'].includes(q.source)||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
+ if(q.includeCrypto!==undefined&&(q.action!=='search'||typeof q.includeCrypto!=='boolean'))throw Error('搜索参数无效')
  if(['quotes','history','announcements'].includes(q.action)&&(!Array.isArray(q.symbols)||q.symbols.length>200||q.symbols.some((s:any)=>!validSymbol(s))))throw Error('证券参数无效')
  if(q.symbols?.some((s:any)=>s.market==='INDEX')&&(q.action!=='quotes'||q.asset!=='index'))throw Error('指数请求参数无效')
+ if(q.symbols?.some((s:any)=>s.market==='CRYPTO')&&(q.asset!==undefined||!['quotes','history'].includes(q.action)||q.symbols.some((s:any)=>s.market!=='CRYPTO')))throw Error('交易对请求参数无效')
  if(q.action==='announcements'&&q.symbols.length!==1)throw Error('公告证券参数无效')
- if(q.action==='history'&&(q.symbols.length!==1||!['1m','1d','1w','1mo','1y'].includes(q.period)||!['none','forward','backward'].includes(q.adjustment)))throw Error('图表参数无效')
+ if(q.action==='history'&&(q.symbols.length!==1||!['1m','1h','1d','1w','1mo','1y'].includes(q.period)||q.period==='1h'&&q.symbols[0]?.market!=='CRYPTO'||!['none','forward','backward'].includes(q.adjustment)))throw Error('图表参数无效')
 }
 const safeLink=(value:unknown)=>{try{const u=new URL(String(value));return u.protocol==='https:'&&!u.username&&!u.password?u.href:null}catch{return null}}
 function quoteTimestamp(value:string,market:string):string|null{
@@ -40,7 +46,7 @@ function quoteTimestamp(value:string,market:string):string|null{
 // Read-only public sources use fixed origins in the main process. They need no
 // provider credentials, never execute returned scripts, and carry their own
 // source and trading date rather than inheriting an MCP provenance label.
-export function createPublicFinancialWidgetData(options:{identity:()=>string|null;fetch?:(input:string|URL,init?:RequestInit)=>Promise<Response>}){
+export function createPublicFinancialWidgetData(options:{identity:()=>string|null;fetch?:(input:string|URL,init?:RequestInit)=>Promise<Response>;accountSources?:AccountFinancialSources}){
  let owner:string|null=null
  const cache=new Map<string,{at:number;value:Row}>(),pending=new Map<string,Promise<Row>>()
  const fetcher=options.fetch??((url,init)=>networkFetch(url,init,{allowedOrigins:origins},{timeoutMs:12000}))
@@ -53,7 +59,7 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
   if(!refresh&&previous&&Date.now()-previous.at<(q.action==='search'?300000:60000)){check();return structuredClone(previous.value)}
   if(pending.has(key)){const value=await pending.get(key)!;check();return structuredClone(value)}
   const work=(async()=>{
-   const signal=AbortSignal.timeout(25000)
+   const signal=AbortSignal.timeout(q.source==='datapro'?51000:25000)
    const get=async(url:URL|string,gbk=false,body?:URLSearchParams)=>{
     check();signal.throwIfAborted()
     let response:Response
@@ -126,7 +132,16 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
     return {symbol:s,bars,source:'腾讯财经',basis:({none:'不复权',forward:'前复权',backward:'后复权'} as Row)[adjustment],volumeUnit:['HK','US'].includes(s.market)?'股':'手',nativePeriod:period!=='1y'}
    }
    let result:Row
-   if(q.source==='backup'&&['quotes','history','announcements'].includes(q.action))result=await queryBackupFinancialWidget(q,{text:get,json,check,sinaQuotes,parseSinaQuote})
+   const cryptoSearch=q.action==='search'&&q.includeCrypto?findFinancialCryptoSymbol(q.query):undefined
+   const cryptoQuote=q.symbols?.[0]?.market==='CRYPTO'
+   if(cryptoSearch)result={symbols:[cryptoSearch],source:'Kraken'}
+   else if(['tushare','datapro','doubao'].includes(q.source))result=await queryAccountFinancialWidget(q,options.accountSources??{},signal)
+   else if(cryptoQuote||['kraken','bitfinex'].includes(q.source)){
+    if(!cryptoQuote||q.source&&!['default','backup','kraken','bitfinex'].includes(q.source))throw Error('此行情源只支持已登记的加密资产现货交易对')
+    const provider=q.source==='bitfinex'?queryBitfinexFinancialWidget:queryKrakenFinancialWidget
+    result=await provider(q,{json})
+   }else if(['sina','eastmoney'].includes(q.source)&&q.action!=='news')throw Error('此数据源只支持新闻查询')
+   else if(q.source==='backup'&&['quotes','history','announcements'].includes(q.action))result=await queryBackupFinancialWidget(q,{text:get,json,check,sinaQuotes,parseSinaQuote})
    else if(q.action==='quotes'){
     const values=new Map<string,Row>(),missing=new Map<string,Row>();let rows=new Map<string,string[]>(),primaryError:Error|undefined
     const domestic=q.symbols.filter((s:SymbolRef)=>s.market!=='INDEX'),global=q.symbols.filter((s:SymbolRef)=>s.market==='INDEX')
@@ -176,7 +191,7 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
      if(!/^AN\d{14,24}$/.test(id)||!title||!day||seen.has(id))return [];seen.add(id)
      return [{id,title:title.slice(0,1000),date:day,category:Array.isArray(r.columns)?r.columns.map((c:Row)=>plain(c.column_name)).filter(Boolean).join(' · ').slice(0,120):'',url:'https://data.eastmoney.com/notices/detail/'+code+'/'+id+'.html'}]
     }).sort((a:Row,b:Row)=>b.date.localeCompare(a.date)).slice(0,30)}
-   }else if(q.source==='backup'?!q.query?.trim():q.query?.trim()){
+   }else if(q.source==='eastmoney'||q.source!=='sina'&&(q.source==='backup'?!q.query?.trim():q.query?.trim())){
     const url=new URL('https://search-api-web.eastmoney.com/search/jsonp');url.searchParams.set('cb','ework');url.searchParams.set('param',JSON.stringify({uid:'',keyword:q.query?.trim()||'财经',type:['cmsArticle'],client:'web',clientType:'web',clientVersion:'curr',param:{cmsArticle:{searchScope:'default',sort:'latest',pageIndex:1,pageSize:20,preTag:'',postTag:''}}}))
     const text=(await get(url)).trim(),match=text.match(/^ework\(([\s\S]*)\);?$/);let value:Row
     try{value=JSON.parse(match?.[1]??'')}catch{throw Error('新闻搜索数据暂不可用')}
@@ -190,11 +205,11 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
     const value=await json(url);if(value.result?.status?.code!==0||!Array.isArray(value.result.data))throw unavailable()
     result={source:'新浪财经',news:value.result.data.flatMap((r:Row)=>{
      const title=plain(r.title),seconds=number(r.ctime),url=safeLink(r.url)
-     const terms=q.source==='backup'?q.query?.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean):null,matched=!terms?.length||terms.some((term:string)=>(title+' '+plain(r.summary)).toLocaleLowerCase().includes(term))
+     const terms=['backup','sina'].includes(q.source)?q.query?.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean):null,matched=!terms?.length||terms.some((term:string)=>(title+' '+plain(r.summary)).toLocaleLowerCase().includes(term))
      return matched&&title&&seconds!==null&&seconds>=946656000&&seconds<4102416000&&url?[{id:String(r.docid??url),title:title.slice(0,1000),source:plain(r.media_name)||'新浪财经',time:new Date(seconds*1000).toISOString(),url,summary:plain(r.summary).slice(0,1000)}]:[]
     })}
    }
-   if(result.news){const seen=new Set<string>();result.news=result.news.sort((a:Row,b:Row)=>Date.parse(b.time)-Date.parse(a.time)).filter((n:Row)=>{if(seen.has(n.id))return false;seen.add(n.id);return true}).slice(0,20)}
+   if(result.news){const seen=new Set<string>();result.news=result.news.sort((a:Row,b:Row)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0)).filter((n:Row)=>{if(seen.has(n.id))return false;seen.add(n.id);return true}).slice(0,20)}
    check();result.receivedAt=new Date().toISOString()
    if(!result.error&&(!result.errors?.length||result.quotes?.length)){cache.set(key,{at:Date.now(),value:result});if(cache.size>200)cache.delete(cache.keys().next().value!)}
    return result

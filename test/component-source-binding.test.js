@@ -94,7 +94,7 @@ it('repairs a label-only metric using the exact field diagnostic and full templa
   const repair=start.mock.calls[1][0]
   expect(repair.synthesisOnly).toBe(true)
   expect(repair.prompt).toContain('metrics.items[0].value')
-  expect(repair.prompt).toContain('mapping 的模板结构：')
+  expect(repair.prompt).toMatch(/mapping[^\n]*所选呈现的 schema/u)
   expect(repair.prompt).toContain('每项必须同时有 label 和 value')
   expect(repair.prompt).toContain('"price":2.059')
   expect(bindData).toHaveBeenCalledOnce()
@@ -167,7 +167,7 @@ it('repairs an invalid binding with its observed response instead of reverting t
   expect(repair.synthesisOnly).toBe(true)
   expect(repair.prompt).toContain('responseSample')
   expect(repair.prompt).toContain('列表字段不存在')
-  expect(repair.prompt).not.toContain('唯一交付格式：')
+  expect(repair.prompt).toContain('此协议替代上文直接提交静态模板 JSON 的输出要求')
   expect(bindData).toHaveBeenCalledOnce()
  } finally {await runtime.dispose()}
 })
@@ -182,7 +182,7 @@ it('recovers verified data after the retrieval deadline even when the first outp
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledTimes(2)
   expect(start.mock.calls[1][0]).toMatchObject({synthesisOnly:true})
-  expect(start.mock.calls[1][0].prompt).toContain('mapping 的模板结构')
+  expect(start.mock.calls[1][0].prompt).toMatch(/mapping[^\n]*所选呈现的 schema/u)
   expect(start.mock.calls[1][0].prompt).toContain('responseSample')
   expect(bindData).toHaveBeenCalledOnce()
  }finally{await runtime.dispose()}
@@ -692,6 +692,9 @@ it('recognizes fetched URLs in source metadata without granting identity to feed
  const sources=[{tool:'web_fetch',purpose:'snapshot',args:{url},snapshotRows:[{title:'原始统计',date:'2026-10-20',dates:['2026-10-20'],urls:[url],ids:[]}]}];
  const artifact=html=>JSON.stringify({version:1,type:'html',title:'指标分析',html});
  expect(componentSnapshotEvidence(artifact('<main>实际指标</main><aside hidden data-component-source-info>统计依据（2026-10-20）：'+url+'</aside>'),sources)).toBe(true);
+ expect(componentSnapshotEvidence(artifact('<main>实际指标</main><aside hidden data-component-source-info="来源：'+url+'"></aside>'),sources)).toBe(true);
+ expect(componentSnapshotEvidence(artifact('<main>实际指标</main><aside hidden data-component-source-info="https://example.org/other"></aside>'),sources)).toBe(false);
+ expect(componentSnapshotEvidence(artifact('<script>const raw=`<aside data-component-source-info="'+url+'"></aside>`</script><main>未引用来源</main>'),sources)).toBe(false);
  expect(componentSnapshotEvidence(artifact('<main>实际指标</main><aside hidden data-component-source-info>https://example.org/other</aside>'),sources)).toBe(false);
  expect(componentSnapshotEvidence(artifact('<main>无来源</main><!-- '+url+' -->'),sources)).toBe(false);
  expect(componentSnapshotEvidence(JSON.stringify({version:1,type:'news',title:'新闻',items:[{title:'改写且未验证的标题',date:'2026-10-20',url}]}),sources)).toBe(false);

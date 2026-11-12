@@ -20,7 +20,7 @@ const shapes={
  bubble:'xAxis:{label:"客单价",unit:"元"},yAxis:{label:"转化率",unit:"%"},sizeLabel:"订单量",sizeUnit:"单",points:[{label:"样本A",x:120,y:6,size:400,group:"A组"}]；1–300个具名样本、最多6组；面积与非负size成比例，零值不伪造成有面积',
  heatmap:'labels:["收入","利润"],values:[[1,0.6],[0.6,1]]；2–16个不同指标，方阵、对称、对角线1、固定范围[-1,1]；未知相关系数用null，不用0替代缺失；须使用实际计算或明确模拟的相关系数',
  calendar:'start:"2026-09-01",end:"2026-09-30",values:[{date:"2026-09-01",value:8},{date:"2026-09-02",value:0}]；ISO自然日范围≤366天，每日最多一条非负值；显式0是零值，未提供的日期是缺失而非0，范围外留白',
- candlestick:'unit:"元",volumeUnit:"万手",candles:[{date:"2026-09-01",open:100,high:105,low:98,close:103,volume:20}]；1–366条按日期严格升序的真实OHLC结构，high≥max(open,close)、low≤min(open,close)，数值与成交量非负，不用收盘折线替代',
+ candlestick:'unit、volumeUnit分别填写原价格和成交量单位，保留原数值、不自行换算。candles:[{date:"2026-09-01",open:100,high:105,low:98,close:103,volume:20}]；1–366条按日期严格升序的真实OHLC结构，high≥max(open,close)、low≤min(open,close)，数值与成交量非负，不用收盘折线替代',
  ohlc:'unit:"元",volumeUnit:"万手",candles:[{date:"2026-09-01",open:100,high:105,low:98,close:103,volume:20}]；同K线数据契约；绘制高低竖线、左开右收刻度及对齐成交量'
 };
 export function advancedChartSchema(variant){

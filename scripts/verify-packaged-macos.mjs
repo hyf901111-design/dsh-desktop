@@ -75,11 +75,20 @@ async function loadDependency(name, required) {
   console.log(name + ': loadable')
 }
 
+async function loadResearchPdf() {
+  const loader = path.join(runtimeRoot, 'node_modules', 'dsh-research-task-runtime', 'pdf-library.js')
+  const { loadPdfLibrary } = await import(pathToFileURL(loader).href)
+  const { getDocument } = await loadPdfLibrary()
+  if (typeof getDocument !== 'function') throw new Error('Research PDF.js has no document loader')
+  console.log('research PDF.js: loadable')
+}
+
 Promise.resolve()
   .then(() => loadDependency('apache-arrow', true))
   .then(() => loadDependency('@trycua/cua-driver', true))
   .then(() => loadDependency('dsh-computer-backends', true))
   .then(() => loadDependency('@lancedb/lancedb', false))
+  .then(loadResearchPdf)
   .catch((error) => {
     console.error(error && error.stack ? error.stack : error)
     process.exitCode = 1

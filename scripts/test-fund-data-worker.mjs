@@ -21,11 +21,28 @@ for (const redirectUpstream of [false, true]) {
     workers: [{
       modules: true, script: built.outputFiles[0].text,
       compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
-      bindings: { YINGMI_API_KEY: fakeKey, DAILY_RESEARCH_LIMIT: '1', CACHE_TTL_SECONDS: '600' },
+      bindings: { YINGMI_API_KEY: fakeKey, VOLCENGINE_AGENT_PLAN_KEY: fakeKey, DAILY_RESEARCH_LIMIT: '1', CACHE_TTL_SECONDS: '600' },
       d1Databases: { ACCOUNTS_DB: 'test-accounts' },
       durableObjects: { FUND_COORDINATOR: { className: 'FundResearchCoordinator', useSQLite: true } },
-      ratelimits: { FUND_REQUEST_LIMITER: { namespace_id: '2026090701', simple: { limit: 20, period: 60 } } },
+      ratelimits: {
+        FUND_REQUEST_LIMITER: { namespace_id: '2026090701', simple: { limit: 20, period: 60 } },
+        VOLCENGINE_REQUEST_LIMITER: { namespace_id: '2026111201', simple: { limit: 30, period: 60 } }
+      },
       outboundService: async request => {
+        if (request.url === 'https://open.feedcoopapi.com/search_api/web_search') {
+          assert.equal(request.headers.get('authorization'), `Bearer ${fakeKey}`)
+          const { Query } = await request.json()
+          if (Query === 'test redirect') return Response.redirect('https://untrusted.invalid/collect', 302)
+          return Response.json({ Result: { WebResults: [{ Url: 'https://example.com/' }] } })
+        }
+        if (request.url === 'https://datapro.hqd.cn-beijing.volces.com/mcp') {
+          assert.equal(request.headers.get('x-agent-plan-key'), fakeKey)
+          const rpc = await request.json()
+          if (rpc.method === 'notifications/initialized') return new Response(null, { status: 202 })
+          const result = rpc.method === 'initialize' ? { protocolVersion: '2025-03-26' }
+            : { content: [{ type: 'text', text: 'professional data' }] }
+          return Response.json({ jsonrpc: '2.0', id: rpc.id, result })
+        }
         assert.equal(request.url, 'https://stargate.yingmi.com/mcp/v2')
         assert.equal(request.headers.get('x-api-key'), fakeKey)
         const body = await request.json()
@@ -99,6 +116,21 @@ for (const redirectUpstream of [false, true]) {
       assert.equal(health.status, 200)
       console.log('Workers runtime: no-key desktop → Worker → SQLite coordinator → mocked data source passed.')
       console.log('Original timestamps, cache reuse, global budget, secret isolation: passed.')
+    }
+    if (!redirectUpstream) {
+      const search = (path, body) => mf.dispatchFetch(`https://fund.local/v1/${path}`, {
+        method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      })
+      const web = await search('doubao/search', { query: 'public query' })
+      assert.equal(web.status, 200)
+      assert.deepEqual((await web.json()).sources, [{ url: 'https://example.com/' }])
+      assert.equal((await search('doubao/search', { query: 'test redirect' })).status, 502)
+      const dataset = await search('datapro/mcp', { jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'dataPro_search', arguments: { query: 'public query' } } })
+      assert.equal(dataset.status, 200)
+      assert.equal((await dataset.json()).result.content[0].text, 'professional data')
+      console.log('Workers runtime: authenticated Doubao search, DataPro MCP and redirect rejection passed.')
     }
     const usage=await (await auth('usage',null,token)).json()
     assert.ok(usage.usage[0].requests>=1)

@@ -1,12 +1,17 @@
 import {afterEach,expect,it,vi} from 'vitest'
+import {Context} from '@deepseek-ai/cordis'
 import {createAssistantMessage} from '@deepseek-ai/dsh-llm'
-import {canRepairNoteComponentChild,createNoteComponentRepair} from '../packages/dsh-research-task-runtime/note-component-repair.js'
+import {createScope} from '@deepseek-ai/dsh-scope'
+import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
+import ToolRuntime,{defineTool} from '@deepseek-ai/dsh-tools'
+import {canRepairNoteComponentChild,createNoteComponentRepair,createComponentRepair} from '../packages/dsh-research-task-runtime/note-component-repair.js'
+import {createWorkbenchSourceSnapshot,WORKBENCH_SOURCE_TOOL} from '../packages/dsh-research-task-runtime/workbench-source-snapshot.js'
 
 // Keep the real SDK event vocabulary and output/accounting folds. Only model
 // execution is replaced: these tests must never make a provider request.
-function fixture(){
+function fixture({tools=['web_search']}={}){
  const events=[],messages=[],cancellations=[],restrictions=[],followed=Promise.withResolvers()
- let registered,turn=1,idle,allowed=['web_search']
+ let registered,turn=1,idle,allowed=[...tools]
  const append=(type,data)=>events.push({type,seq:events.length,time:Date.now(),data,...(['assistant/message','user/message'].includes(type)?{surfaceOp:'append'}:{})})
  const assistant=text=>createAssistantMessage({content:text===undefined?[]:[{type:'text',text}],source:{provider:'fixture',model:'fixture'}})
  const child={id:'same-component-child',status:'idle',session:{id:'same-component-child',events},ctx:{tools:{restrict(filter){
@@ -31,7 +36,30 @@ function fixture(){
  return {ctx,child,events,messages,cancellations,restrictions,followed,append,finish,allowed:()=>allowed,replace:()=>{registered={...child}}}
 }
 
-afterEach(()=>vi.useRealTimers())
+const sdkCleanup=[]
+afterEach(async()=>{
+ vi.useRealTimers()
+ for(const close of sdkCleanup.splice(0).reverse())await close()
+})
+
+function scopedSnapshotFixture(){
+ const f=fixture(),sdk=new Context()
+ new SystemPrompt(sdk,{})
+ new ToolRuntime(sdk)
+ sdkCleanup.push(()=>sdk.fiber.dispose())
+ sdk.tools.register(defineTool({name:'web_search',description:'Fixture global tool',parameters:{},
+  output:{schema:{type:'object',additionalProperties:true},render:()=>[]},execute(){throw Error('Network tool must stay closed during synthesis')}}))
+ const scope=createScope(sdk,f.child)
+ f.child.ctx=scope.ctx
+ sdkCleanup.push(()=>scope.dispose())
+ const snapshot=createWorkbenchSourceSnapshot({hostContext:{sharedDatasets:[{
+  id:'source',label:'来源',asOf:'2026-11-11',note:'原始记录',fields:[{key:'id',label:'编号'}],records:[{id:'record-1'}]
+ }]}})
+ snapshot.register(f.child)
+ sdkCleanup.push(snapshot.dispose)
+ return {...f,allowed:()=>sdk.tools.schemas(f.child).map(tool=>tool.name).sort(),
+  read:()=>sdk.tools.execute({name:WORKBENCH_SOURCE_TOOL,arguments:{dataset:'source'},callId:'repair-read',agent:f.child,signal:new AbortController().signal})}
+}
 
 it('repairs in a second turn of the same live child with an identified plugin message',async()=>{
  const f=fixture(),repair=createNoteComponentRepair(f)
@@ -81,6 +109,31 @@ it('does not alter inherited tools when explicitly allowed a nonsynthesis repair
  const f=fixture(),result=createNoteComponentRepair(f)({prompt:'修复',synthesisOnly:false})
  await f.followed.promise;expect(f.allowed()).toEqual(['web_search']);f.finish({text:'CURRENT'})
  await expect(result).resolves.toMatchObject({stopReason:'completed'});expect(f.restrictions).toEqual([])
+})
+
+it('keeps the scoped source reader usable while masking SDK global tools during synthesis',async()=>{
+ const f=scopedSnapshotFixture(),prepare=vi.fn(()=>{expect(f.allowed()).toEqual([WORKBENCH_SOURCE_TOOL])})
+ const repair=createComponentRepair(f)
+ const result=repair({prompt:'仅根据既有本地快照修复',prepare})
+ await Promise.race([f.followed.promise,result])
+ expect(prepare).toHaveBeenCalledOnce();expect(f.allowed()).toEqual([WORKBENCH_SOURCE_TOOL])
+ const read=await f.read()
+ expect(read.isError).toBe(false)
+ expect(JSON.parse(read.content[0].text).records).toEqual([{id:'record-1'}])
+ f.finish({text:'LOCAL_SNAPSHOT_DELIVERY'})
+ await expect(result).resolves.toMatchObject({stopReason:'completed',output:[{text:'LOCAL_SNAPSHOT_DELIVERY'}]})
+ expect(f.allowed()).toEqual(['web_search',WORKBENCH_SOURCE_TOOL])
+})
+
+it('does not reopen network tools after an aborted local-reader repair until the same child is idle',async()=>{
+ const f=scopedSnapshotFixture(),controller=new AbortController()
+ const result=createComponentRepair({...f,signal:controller.signal})({prompt:'复用本地记录'})
+ const rejected=expect(result).rejects.toMatchObject({name:'AbortError'})
+ await f.followed.promise;expect(f.allowed()).toEqual([WORKBENCH_SOURCE_TOOL])
+ controller.abort();await rejected
+ expect(f.cancellations).toEqual([{kind:'parent'}]);expect(f.allowed()).toEqual([WORKBENCH_SOURCE_TOOL])
+ f.finish({text:'LATE_OUTPUT'});await Promise.resolve();await Promise.resolve()
+ expect(f.allowed()).toEqual(['web_search',WORKBENCH_SOURCE_TOOL]);expect(f.messages).toHaveLength(1)
 })
 
 it.each(['followup','whenIdle','cancel','restriction','registry','events'])('reports unavailable SDK capability %s without sending work',async capability=>{

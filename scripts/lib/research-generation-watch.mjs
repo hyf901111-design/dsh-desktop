@@ -1,5 +1,5 @@
 import { patchGenerationProgressPersistence } from './generation-progress-persistence.mjs';
-import {publishResearchWorkbenchProgress} from './research-workbench-feedback.mjs';
+import {publishResearchWorkbenchProgress,researchWorkbenchRecoveryMode} from './research-workbench-feedback.mjs';
 
 export function patchGenerationTaskReceipts(source) {
   const marker='/* SHERLOCK_GENERATION_TASK_RECEIPTS_V1 */';
@@ -28,7 +28,7 @@ export function installResearchGenerationWatch({ workspace, sessionId, inspect, 
   // Initial unbound queues may have survived a process exit between durable
   // queue creation and receipt attachment. New queues must never adopt an old
   // attempt just because the node id is the same.
-  const unboundSince = new Map(workspace.getSnapshot().artifacts.filter(n=>n.generationStatus==='queued'&&!n.generationTaskId).map(n=>[n.id,0]));
+  const unboundSince = new Map(workspace.getSnapshot().artifacts.filter(n=>n.generationStatus==='queued'&&!n.generationTaskId).map(n=>[n.id,Date.now()]));
   const tag = value => { let hash = 2166136261; for (const letter of String(value)) hash = Math.imul(hash ^ letter.charCodeAt(0), 16777619); return hash >>> 0; };
   const report = (type, values = {}) => { try { trace?.({ version: 1, at: Date.now(), watch, session: tag(sessionId), type, ...values }); } catch {} };
   const nodes = () => workspace.getSnapshot().artifacts.filter(node => ['queued','running','retrying'].includes(node.generationStatus));
@@ -47,10 +47,11 @@ export function installResearchGenerationWatch({ workspace, sessionId, inspect, 
       try {
         const unbound = typeof node.generationTaskId !== 'string';
         if(unbound&&!unboundSince.has(node.id))unboundSince.set(node.id,Date.now());
-        const result = await inspect({ parentSessionId: sessionId, ...(unbound?{canvasNodeId:node.id,createdAfter:unboundSince.get(node.id)}:{taskId:node.generationTaskId}), afterSeq: unbound||full ? 0 : node.generationLastSeq ?? 0 }, controller.signal);
+        const result = await inspect({ parentSessionId: sessionId, ...(unbound?{canvasNodeId:node.id,createdAfter:node.generationStartedAt??0}:{taskId:node.generationTaskId}), afterSeq: unbound||full ? 0 : node.generationLastSeq ?? 0 }, controller.signal);
         const received = Date.now(); let accepted = false;
         if (valid(node) && result?.canvasNodeId === node.id) {
-          if(unbound&&typeof result.taskId==='string')accepted=workspace.attachGenerationTask?.(node.id,result)===true;
+          if(unbound&&result.pending===true)unboundSince.set(node.id,Date.now());
+          else if(unbound&&typeof result.taskId==='string')accepted=workspace.attachGenerationTask?.(node.id,result)===true;
           else if(result.taskId===node.generationTaskId)accepted = apply(node.id, result) === true;
         }
         const applyMs = Math.max(0, Date.now() - received);
@@ -92,11 +93,12 @@ export function installResearchGenerationWatch({ workspace, sessionId, inspect, 
 export function patchResearchGenerationWatch(source) {
   source = patchGenerationProgressPersistence(source);
   source = patchGenerationTaskReceipts(source);
-  const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V7 */';
+  const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V8 */';
   if (source.includes(marker)) return source;
   const ending = '}, [sessionId, workspace, selectionGeneration?.inspect]);';
-  const hook = `(0, react.useEffect)(() => {\n${marker}\nif (typeof selectionGeneration?.inspect !== 'function') return;\nreturn (${installResearchGenerationWatch.toString()})({workspace,sessionId,eventTarget:window,documentTarget:document,publishProgress:${publishResearchWorkbenchProgress.toString()},canRetry:()=>typeof selectionGeneration?.generate==='function'&&selectionGeneration.disabled!==true&&(!sherlockShared(sessionId)||sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit===true),inspect:(request,signal)=>selectionGeneration.inspect(request,{signal}),apply:(id,result)=>!sherlockShared(sessionId)&&workspace.applyGenerationInspection(id,result),trace:value=>console.info('[ework-generation-delivery] '+JSON.stringify(value))});\n${ending}`;
-  const prior = Math.max(...['V1','V2','V3','V4','V5','V6'].map(version=>source.indexOf(`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)));
+  const publisher = `(() => { ${researchWorkbenchRecoveryMode.toString()} return ${publishResearchWorkbenchProgress.toString()} })()`;
+  const hook = `(0, react.useEffect)(() => {\n${marker}\nif (typeof selectionGeneration?.inspect !== 'function') return;\nreturn (${installResearchGenerationWatch.toString()})({workspace,sessionId,eventTarget:window,documentTarget:document,publishProgress:${publisher},canRetry:()=>typeof selectionGeneration?.generate==='function'&&selectionGeneration.disabled!==true&&(!sherlockShared(sessionId)||sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit===true),inspect:(request,signal)=>selectionGeneration.inspect(request,{signal}),apply:(id,result)=>!sherlockShared(sessionId)&&workspace.applyGenerationInspection(id,result),trace:value=>console.info('[ework-generation-delivery] '+JSON.stringify(value))});\n${ending}`;
+  const prior = Math.max(...['V1','V2','V3','V4','V5','V6','V7'].map(version=>source.indexOf(`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)));
   if (prior >= 0) {
     const start = source.lastIndexOf('(0, react.useEffect)(() => {', prior), end = source.indexOf(ending, prior);
     if (start < 0 || end < 0) throw Error('任务检查恢复无法升级原生轮询生命周期。');

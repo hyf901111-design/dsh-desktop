@@ -52,7 +52,7 @@ export function getComponentSourceInfo(node){
    const annotation=el.getAttribute('data-component-source-info')?.trim()
    const business=el.querySelector('table,svg,canvas,button,input,select,textarea,[data-sherlock-structure],[data-node-id]')
    if(!annotation&&business&&el.matches('[data-component-source-info],.source-info,.chart-source'))continue
-   const text=annotation||el.textContent?.trim();if(el.matches('.src,footer')&&!annotation&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text))notes.push(text)
+   const text=annotation||el.textContent?.trim();if(el.matches('.src,footer')&&!annotation&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text)&&!records.some(row=>row.label===text))notes.push(text)
    if(annotation)continue
    for(const a of el.querySelectorAll('a[href]'))add({label:a.textContent,url:a.getAttribute('href')})
   }
@@ -153,7 +153,7 @@ export function patchComponentSourceHost(source){
  exact('attach(service, t, sessions) {','attach(service, t, sessions, sourceWorkspaces) { this.sourceWorkspaces=sourceWorkspaces;')
  exact('researchSidebar.attach(sidebarCtx.betterSidebar, t, sessions)','researchSidebar.attach(sidebarCtx.betterSidebar, t, sessions, ctx.get("workspaces"))')
  exact("const unregisterGenerated=service.registerTab(",marker+"\nconst unregisterSources=service.registerTab({id:'sherlock-component-sources',title:()=> '来源信息',hidden:true,single:false,component:props=>react_jsx_runtime.jsx(ComponentSourceDetailsTab,{...props,coordinator})});\nconst unregisterGenerated=service.registerTab(")
- exact('notesChallengeSidebar.dispose();unregisterGenerated?.();','unregisterSources?.();notesChallengeSidebar.dispose();unregisterGenerated?.();')
+ exact('unregisterGenerated?.();','unregisterSources?.();unregisterGenerated?.();')
  exact('react_jsx_runtime.jsx(OdysseySubagentPortals,{snapshot:researchSidebarSnapshot,renderSlot,renderSlotChain})','react_jsx_runtime.jsxs(react.Fragment,{children:[!subagentPanel&&react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar}),react_jsx_runtime.jsx(OdysseySubagentPortals,{snapshot:researchSidebarSnapshot,renderSlot,renderSlotChain})]})')
  return source
 }

@@ -11,6 +11,8 @@ body details>summary{list-style:none!important;cursor:pointer;position:relative;
 body details>summary::-webkit-details-marker{display:none}
 body details>summary::before{content:'';display:block;position:absolute;inset-inline-start:0;top:calc(.5lh - 6px);width:12px;height:12px;margin:0;flex:0 0 12px;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='black' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;transform:rotate(-90deg);transform-origin:center}
 body details[open]>summary::before{transform:rotate(0deg)}
+/* Price-volume labels are centered in a padded flex row. Saved cards use the same markup. */
+body .price-volume>details>summary::before{top:50%;translate:0 -50%}
 `
 export const WORKBENCH_PRESENTATION_CSS = `/* EWORK_OPENBB_COMPONENT_V1 */
 @layer ework-workbench {
@@ -92,6 +94,9 @@ body[data-sherlock-market="fund-holdings"]{display:flex!important;flex-direction
 body[data-sherlock-market="fund-holdings"] .fund-filters{flex:0 0 auto;margin-bottom:12px!important}
 body[data-sherlock-market="fund-holdings"] .fund-table-wrap{flex:1 1 auto;max-height:none!important}
 body[data-sherlock-market="fund-holdings"] .fund-footer{flex:0 0 auto;min-height:17px;margin-top:6px!important}
+/* The trusted full-record reader owns document-flow pagination and disclosures.
+   Origin metadata must not impose a native market viewport on that reader. */
+body[data-readable-snapshot][data-sherlock-market]{display:block!important;height:auto!important;min-height:0!important;overflow:visible!important}
 body :is(.market-candle,.market-trend,.market-scatter,.market-price-volume,.market-fund-flow){min-width:0!important;min-height:0!important;background:transparent!important;border:0!important}
 body :is(.trend-head,.trend-legend){font-size:11px!important;line-height:17px!important;gap:8px!important;flex-wrap:wrap!important;color:var(--sherlock-muted)!important}
 body :is(.trend-key,.sample-entry,.allocation-legend button){background:transparent!important;border:0!important;border-radius:0!important;min-height:22px!important;padding:1px 4px!important;color:var(--sherlock-text)!important}

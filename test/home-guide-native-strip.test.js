@@ -88,6 +88,7 @@ it('supports repeated strip, original subagent/grid refresh and tutorial reapply
   expect(source.split('/* odyssey:home-guide-presentation:start:v1 */')).toHaveLength(2)
   expect(source.split('const homeGuideProvider = react.useContext(HomeGuideNativeFinancialContext);')).toHaveLength(4)
   expect(source).toContain('const bridge=homeGuideProvider??window.dshDesktop?.financialWidget;')
+  expect(source).toContain("await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim(),...(variant==='quote'?{includeCrypto:true}:{})})")
  }
 },30000)
 

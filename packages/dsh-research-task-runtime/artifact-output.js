@@ -26,6 +26,7 @@ import { financialWidgetDefaults } from './financial-widget-contract.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
 import {derivedOutline} from './derived-template-contract.js';
 import {nativeProvenance,appendProvenance} from './component-provenance.js';
+import {componentReadableDocumentTable} from './component-readable-snapshot.js';
 
 // Linear scan, string/escape aware: prose around a complete JSON object is harmless.
 // Never eval model output, concatenate fragments, or guess missing values.
@@ -126,11 +127,34 @@ export function restoreHostTemplateArtifact(text) {
 export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
+  // Body is content, not provenance. Render it independently of table/chart
+  // capacity, retaining the same complete records for subsequent validation.
+  const composed=original?.type==='html'?readTemplateModel(original)?.data:original;
+  if(['table','chart'].includes(composed?.type)&&composed.body!==undefined){
+   if(typeof composed.body!=='string'||!composed.body.trim())continue;
+   const {body,...data}=composed;
+   const rendered=acceptArtifactOutput(JSON.stringify(data.type==='table'&&!data.sources?.length?{...data,type:'market',variant:'table',asOf:data.asOf??'静态快照'}:data));
+   if(!rendered)continue;
+   let spec=JSON.parse(rendered);
+   if(spec.type!=='html')continue;
+   const escaped=body.replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+   const narrative='<section data-component-body style="white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 12px">'+escaped+'</section>';
+   spec={...spec,html:spec.html.replace(/<script id="sherlock-template-data" type="application\/json">[^<]*<\/script>/gu,'')};
+   spec={...spec,html:/<body\b[^>]*>/iu.test(spec.html)?spec.html.replace(/<body\b[^>]*>/iu,'$&'+narrative):narrative+spec.html};
+   return JSON.stringify(retainTemplateModel(spec,composed));
+  }
   // Retained JSON is data, not proof that model-supplied HTML displays it.
   // Rebuild tables with the same trusted renderer used for structured output.
   const tableData=retainedTableData(original)??original;
   const provenance=nativeProvenance(tableData);
   if(provenance.invalid)continue;
+  // Rebuild oversized tables from their complete data on every pass. Embedded
+  // HTML is not trusted, and renderer capacity is not a reason to lose rows.
+  const readableTable=templateDataIssue(provenance.data)?componentReadableDocumentTable(tableData):undefined;
+  if(readableTable){
+   const parsed=parseResearchContainerSpec(readableTable);
+   if(parsed)return JSON.stringify(retainTemplateModel(parsed,tableData));
+  }
   let candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(provenance.data)));
   if(normalizeChartGeometry&&candidate?.type==='html'&&typeof candidate.html==='string'){const projected=generatedChartGeometry(candidate.html);if(projected.html!==candidate.html)candidate={...candidate,html:projected.html};}
   const missingChart=preserveMissingChartExplanation(candidate);
@@ -296,7 +320,7 @@ function normalizeTemplateAliases(value) {
  if(keyed!==value)value={...keyed,rows:keyed.rows.map(row=>row.map(cell=>cell===null?'—':cell))};
  // Explicitly empty cells display as missing. Keep the row, including all
  // nonempty values, and do not fill absent column keys or nested values.
- if(value?.type==='table'&&Array.isArray(value.rows)&&value.rows.every(Array.isArray)) {
+ if((value?.type==='table'||value?.type==='market'&&value.variant==='table')&&Array.isArray(value.rows)&&value.rows.every(Array.isArray)) {
   const blank=cell=>cell===null||typeof cell==='string'&&!cell.trim();
   value={...value,rows:value.rows.map(row=>row.some(cell=>!blank(cell))?row.map(cell=>blank(cell)?'—':cell):row)};
  }
@@ -420,14 +444,34 @@ function preserveLongChartCaption(candidate) {
 // Recovery preserves only actual delivered content, never reasoning, prompts, or fabricated data.
 export function artifactReadableFallback(text) {
  for(const value of extractArtifactObjects(text).reverse()) {
-  const title=typeof value.title==='string'&&value.title.trim()?value.title.slice(0,256):'已取得的研究内容';
+  const title=typeof value.title==='string'&&value.title.trim()&&value.title.length<=256?value.title:'已取得的研究内容';
   let content;
-  if(value.type==='html' && typeof value.html==='string')content=researchHtmlText(value.html);
+  if(value.type==='html' && typeof value.html==='string')content=researchHtmlText(value.html,{maxCharacters:null});
   else if(['markdown','mind-map'].includes(value.type)&&typeof value.content==='string')content=value.content;
   else if(value.type==='table'&&Array.isArray(value.columns)&&Array.isArray(value.rows)) {
-   content=value.rows.filter(r=>Array.isArray(r)&&r.length===value.columns.length&&r.every(c=>['string','number'].includes(typeof c))).map(r=>r.map((c,i)=>`${String(value.columns[i]).slice(0,128)}：${String(c)}`).join('\n\n')).join('\n\n---\n\n');
+   const display=v=>v===null?'本次未取得':typeof v==='object'?JSON.stringify(v):String(v);
+   // Malformed presentation must not remove long labels, irregular rows,
+   // nested values or explicit gaps from the readable source material.
+   content=value.rows.map(r=>Array.isArray(r)?r.map((c,i)=>`${i<value.columns.length?display(value.columns[i]):'原记录额外字段 '+(i+1)}：${display(c)}`).join('\n\n'):display(r)).join('\n\n---\n\n');
   }
-  if(content?.trim().length>=20)return JSON.stringify({version:1,type:'markdown',title,content:('> 已保留可读内容，交互视图暂未完成。\n\n'+content).slice(0,32000)});
+  if(content?.trim().length>=20){
+   const metadata=['body','asOf','note','sources','source'].filter(key=>value[key]!==undefined&&value[key]!==content).map(key=>key+'：'+(typeof value[key]==='object'?JSON.stringify(value[key]):String(value[key])));
+   if(value.title!==title&&typeof value.title==='string')metadata.unshift('原始标题：'+value.title);
+   const complete=['> 已保留可读内容，交互视图暂未完成。',content,...metadata].join('\n\n');
+   const markdown={version:1,type:'markdown',title,content:complete};
+   if(parseResearchContainerSpec(markdown))return JSON.stringify(markdown);
+   const escape=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+   const cell=value=>escape(value===null?'本次未取得':typeof value==='object'?JSON.stringify(value):value);
+   // Long tables render their headers once. Repeating a long label beside
+   // every cell would needlessly exhaust the transfer budget.
+   const body=value.type==='table'
+    ? '<aside>已保留可读内容，交互视图暂未完成。</aside><div style="overflow:auto"><table><thead><tr>'+value.columns.map(c=>'<th>'+cell(c)+'</th>').join('')+'</tr></thead><tbody>'+value.rows.map(r=>'<tr>'+(Array.isArray(r)?r.map(c=>'<td>'+cell(c)+'</td>').join(''):'<td colspan="'+Math.max(1,value.columns.length)+'">'+cell(r)+'</td>')+'</tr>').join('')+'</tbody></table></div>'+metadata.map(v=>'<pre>'+escape(v)+'</pre>').join('')
+    : '<pre>'+escape(complete)+'</pre>';
+   const html={version:1,type:'html',title,html:'<html><body data-readable-content-recovery><style>body{margin:12px;font:13px/1.6 var(--sherlock-font-sans);color:var(--sherlock-text)}pre,td,th{white-space:pre-wrap;overflow-wrap:anywhere}pre{font:inherit}table{border-collapse:collapse;min-width:100%}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--sherlock-border);max-width:560px}</style>'+body+'</body></html>'};
+   // A real transfer-capacity failure stays a failure; never publish a prefix
+   // as if it retained the original material.
+   if(parseResearchContainerSpec(html))return JSON.stringify(html);
+  }
  }
  return undefined;
 }

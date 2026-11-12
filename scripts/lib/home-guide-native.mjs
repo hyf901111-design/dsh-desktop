@@ -944,7 +944,7 @@ export function stripHomeGuideNative(source) {
   ]) source = replaceOne(source, signature + '\n ' + hook, signature)
   for (const [patched, native] of [
     ['const bridge=homeGuideProvider??window.dshDesktop?.financialWidget;', 'const bridge=window.dshDesktop?.financialWidget;'],
-    ["await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()})", "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()})"],
+    ["await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()", "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()"],
     ["const load=react.useCallback(async()=>{if(homeGuideProvider?.runId){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;", 'const load=react.useCallback(async()=>{if(!window.dshDesktop?.componentLibrary?.request)return;'],
     ["className:'ew-grid-menu ew-financial-library','data-home-guide-native-library':homeGuideProvider?.runId,", "className:'ew-grid-menu ew-financial-library',"],
     ["'data-financial-place':widget,disabled:busy||Boolean(homeGuideProvider?.runId&&!['indices','watchlist','quote','news','announcements','calendar'].includes(widget)),", "'data-financial-place':widget,disabled:busy,"],
@@ -978,8 +978,8 @@ export function patchHomeGuideNative(source) {
   ]) if (!source.includes(signature + '\n ' + hook)) source = replaceOne(source, signature, signature + '\n ' + hook)
   const bridge = 'const bridge=homeGuideProvider??window.dshDesktop?.financialWidget;'
   if (!source.includes(bridge)) source = replaceOne(source, 'const bridge=window.dshDesktop?.financialWidget;', bridge)
-  const search = "await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()})"
-  if (!source.includes(search)) source = replaceOne(source, "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()})", search)
+  const search = "await (homeGuideProvider??window.dshDesktop?.financialWidget)?.request({action:'search',query:text.trim()"
+  if (!source.includes(search)) source = replaceOne(source, "await window.dshDesktop?.financialWidget?.request({action:'search',query:text.trim()", search)
   const library = "const load=react.useCallback(async()=>{if(homeGuideProvider?.runId){setItems([]);setError('');return;}if(!window.dshDesktop?.componentLibrary?.request)return;"
   if (!source.includes(library)) source = replaceOne(source, 'const load=react.useCallback(async()=>{if(!window.dshDesktop?.componentLibrary?.request)return;', library)
   const menu = "className:'ew-grid-menu ew-financial-library','data-home-guide-native-library':homeGuideProvider?.runId,"

@@ -1415,6 +1415,7 @@ async function bootstrap(): Promise<void> {
   const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
+    search: (query, maxResults, signal) => accountService!.doubaoSearch(query, maxResults, signal),
     readPage: readBrowserPage,
     browserUse: (input,signal)=>routeBrowserUse(input,signal,browserApp,(value,abort)=>conversationBrowser.run(value,abort)),
     computerUse: (input, signal) => {
@@ -1516,6 +1517,7 @@ async function bootstrap(): Promise<void> {
       bundledSkillDirectory: bundledSkillDirectory(),
       bundledComputerUseRoot: process.platform === 'darwin' ? join(app.getAppPath(), 'node_modules/dsh-integration-runtime') : undefined,
       onComputerUseRevoked: () => desktopComputer?.cancel(),
+      bundledDatapro: { request: (body, signal) => accountService!.dataproMcpRequest(body, signal), authenticated: () => accountService!.authenticated },
       bundledTushare:{request:(body,signal)=>accountService!.tushareMcpRequest(body,signal),authenticated:()=>accountService!.authenticated},
       clientVersion: app.getVersion(),
       legacySkillRoots: legacySkillRoots({ userDataRoot: app.getPath('userData'), bundledSkillDirectory: bundledSkillDirectory() }),
@@ -1528,7 +1530,7 @@ async function bootstrap(): Promise<void> {
       resolveContext: context => resolveIntegrationContext(context, {
         ownerId: integrationOwner(), tasks: [...(scheduledStoreForIntegrations?.list() ?? []),...(componentDataService?.contextTasks() ?? []),...(noteComponentDataService?.contextTasks() ?? [])],
         workspaces: async () => (await taskRpc('workspace.list', {})).items,
-        sessions: async () => (await taskRpc('session.list', {})).items,
+        sessions: async sessionId => (await taskRpc('session.list', { identitySessionId: sessionId })).items,
       }),
       approveWrite: async (_call, tool, connection) => {
         return maySkipGrantedToolPrompt(tool, connection)
@@ -1601,7 +1603,11 @@ async function bootstrap(): Promise<void> {
   try { if (integrationService) componentDataService = await createComponentDataService({file:join(app.getPath('userData'),'component-data-bindings.json'),skillDirectory:bundledSkillDirectory(),integrations:integrationService,canvas:canvasActions,rpc:taskRpc,owner:integrationOwner,isShared:id=>researchBoardsService?.isSharedSession(id)===true,personalBoard:id=>researchBoardsService?.getSnapshot().favorites.find(board=>board.sessionId===id&&board.dedicated),onStatusChange:(sessionId,rows)=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('component-data:status',{sessionId,rows})}}) } catch(error) { console.error('[component-data] 配置读取失败，原文件已保留',error) }
   try { if(integrationService) noteComponentDataService=await createComponentDataService({file:join(app.getPath('userData'),'note-component-data-bindings.json'),skillDirectory:bundledSkillDirectory(),integrations:integrationService,canvas:noteComponentActions,rpc:taskRpc,owner:integrationOwner,isShared:id=>researchBoardsService?.isSharedSession(id)===true,onStatusChange:(sessionId,rows)=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('notes:component-data-status',{owner:integrationOwner()||'local',sessionId,rows})}}) } catch(error) { console.error('[notes-component-data] 配置读取失败，原文件已保留',error) }
   const financialIdentity=()=>accountService?.authenticated?accountService.accountId??null:null
-  const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
+  const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity,accountSources:{
+    tushare:(body,signal)=>accountService!.tushareMcpRequest(body,signal),
+    datapro:(body,signal)=>accountService!.dataproMcpRequest(body,signal),
+    doubao:(query,count,signal)=>accountService!.doubaoSearch(query,count,signal)
+  }})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
   registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openClientLink(mainWindow,url))
   noteComponentLibrary=await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
