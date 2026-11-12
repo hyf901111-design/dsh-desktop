@@ -91,7 +91,7 @@ const htmlFitStates = new Map();`)
  const hook=(before,after)=>{if(!hooked.includes(before))throw Error('页签拖动钩子缺失: '+before.slice(0,70));hooked=hooked.replace(before,after)}
  hook('const finish=(commit,event)=>{','const finish=(commit,event,preserveLayout=false)=>{')
  hook('else{workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry(', 'else{if(!preserveLayout)workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry(')
- hook('workspace.applyWorkbenchCells(pending,false);const visible=', 'workspace.applyWorkbenchCells(pending,false);op.boardTabsPreviewCells=pending;const visible=')
+ hook('workspace.applyWorkbenchCells(pending,false);const visible=', 'workspace.applyWorkbenchCells(pending,false);op.boardTabsPreviewCells=workspace.getWorkbenchCells();const visible=')
  hook('Math.max(12+origin.width/2,Math.min(width()-12-origin.width/2,origin.x+p.x-op.start.x))','Math.max(12+origin.width/2,Math.min(width()-12-origin.width/2,origin.x+p.x-op.start.x))+(workspace.getWorkbenchLayoutOffsetX?.()||0)')
  hook('Math.max(12+origin.height/2,origin.y+p.y-op.start.y)', 'Math.max(12+origin.height/2,origin.y+p.y-op.start.y)+(workspace.getWorkbenchLayoutOffset?.()||0)')
  hook("root.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e", "root.__ewBoardTabsDrag?.begin(e,op);\nroot.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e")

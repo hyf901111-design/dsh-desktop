@@ -102,10 +102,9 @@ const emptyState = (): ResearchBoardsState => ({
     pendingCount: 0
   }
 })
-const canvasOf = (w: Workspace): Canvas => {
-  const s = w.getSnapshot()
-  return structuredClone(sharedCanvasContent({ files: s.files, artifacts: s.artifacts }))
-}
+const canvasFromSnapshot = (s: LegacyNode): Canvas =>
+  structuredClone(sharedCanvasContent({ files: s.files, artifacts: s.artifacts }))
+const canvasOf = (w: Workspace): Canvas => canvasFromSnapshot(w.getSnapshot())
 const signature = (v: unknown) => JSON.stringify(v)
 const canvasSignature = (canvas: Canvas) => {
   const byId = (a: Canvas['artifacts'][number], b: Canvas['artifacts'][number]) => a.id.localeCompare(b.id)
@@ -408,13 +407,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       }
       editors.set(v.localSessionId, e)
       const editor = e
+      let { files: observedFiles, artifacts: observedArtifacts } = workspace.getSnapshot()
       e.unsubscribe = workspace.subscribe(() => {
+        const snapshot = workspace.getSnapshot()
+        if (snapshot.files === observedFiles && snapshot.artifacts === observedArtifacts) return
+        observedFiles = snapshot.files
+        observedArtifacts = snapshot.artifacts
         if (
           editor.applying ||
           editor.generation !== state.account.generation ||
           editor.accountId !== state.account.user?.userId
         ) return
-        const next = canvasOf(workspace),
+        const next = canvasFromSnapshot(snapshot),
           sig = canvasSignature(next)
         if (sig === editor.observed) return
         // Local edits invalidate the remote-content cache, including held gestures.

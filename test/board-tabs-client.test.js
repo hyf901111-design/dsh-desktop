@@ -5,6 +5,23 @@ afterEach(async()=>{await f?.dispose();f=null})
 const fixture=async(options={})=>f=await financialClientFixture({}, {boardTabs:true,sourceTransform:source=>source.replace('exports.ResearchCanvas = ResearchCanvas;',"exports.__setBoardTabsPlanningIntent=value=>odysseyCreationIntents.set('financial-test',value);exports.ResearchCanvas = ResearchCanvas;"),...options})
 const nav=w=>w.getSnapshot().artifacts.find(n=>n.containerSpec?.type==='board-tabs')
 async function settings(f){await f.event('click',f.document.querySelector('[data-board-tabs-more]'));await f.event('click',[...f.document.querySelectorAll('[role=menuitem]')].find(n=>n.textContent==='页签设置'))}
+it('通过页签菜单批量归还选中的待归类组件',async()=>{
+ const f=await fixture(), w=f.workspace
+ let a,b,untouched
+ await f.act(()=>{a=w.createFinancialWidget('indices');b=w.createFinancialWidget('watchlist');untouched=w.createFinancialWidget('news');w.createBoardTabs()})
+ const current=w.getSnapshot(), n=nav(w), recovery='ework-recovered-membership'
+ const tabs=n.containerSpec.tabs.map(tab=>({...tab,nodeIds:[]}))
+ tabs.push({id:recovery,name:'待归类',nodeIds:[a.id,b.id,untouched.id]})
+ await f.act(()=>w.applyDirectoryCanvas({files:[],artifacts:current.artifacts.map(node=>node.id===n.id?{...node,containerSpec:{...n.containerSpec,tabs}}:node)}))
+ await f.event('click',f.document.querySelector('[data-board-tab="'+recovery+'"]'))
+ await f.act(()=>w.updateSelection([a.id,b.id],'replace'))
+ await f.event('click',f.document.querySelector('[data-board-tabs-more]'))
+ const target=[...f.document.querySelectorAll('[role=menuitem]')].find(el=>el.textContent==='移至「页签 2」')
+ expect(target).toBeTruthy()
+ await f.event('click',target)
+ expect(nav(w).containerSpec.tabs.map(tab=>tab.nodeIds)).toEqual([[],[a.id,b.id],[untouched.id]])
+ expect(w.getActiveBoardTab()).toBe(recovery)
+})
 it('库中放置页签只作用于当前看板，重复放置复用；切页空白且新建归入当前页',async()=>{
  const f=await fixture();let original
  await f.act(()=>{original=f.workspace.createFinancialWidget('indices')})
