@@ -22,7 +22,13 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
   let state={status:'ready',current:{provider:'kimi',model:'k3'},error:null,failures:[],groups:[
     {id:'kimi',name:'Kimi',models:[{id:'k3',name:'Kimi K3',supportsImageInput:true,reasoning:{efforts:[{id:'high',name:'High'}]}}]},
     {id:'other',name:'Other',models:[{id:'second',name:'Second Model'}]},
-    {id:'ework-ark',name:'EWork',models:[{id:'doubao-seed-2.1-lite',name:'Doubao Seed 2.1 Lite'}]}
+    {id:'ework-ark',name:'EWork · 火山方舟',models:[
+      {id:'doubao-seed-2.1-lite',name:'Doubao Seed 2.1 Lite',supportsImageInput:true},
+      {id:'glm-5.3',name:'GLM 5.3'},
+      {id:'deepseek-v4-pro',name:'DeepSeek V4 Pro'},
+      {id:'kimi-k3.1-pro',name:'Kimi K3.1 Pro',supportsImageInput:true},
+      {id:'deepseek-v4.1-flash',name:'DeepSeek V4.1 Flash',supportsImageInput:true}
+    ]}
   ]}
   const select=vi.fn(async()=>true),directory={subscribe:()=>()=>{},getSnapshot:()=>state}
   const host=win.document.createElement('div');host.className='t8lSSG_panel';host.getBoundingClientRect=()=>new DOMRect(600,0,280,800);win.document.body.append(host);const root=createRoot(host)
@@ -64,7 +70,17 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
       await win.happyDOM.whenAsyncComplete()
     })
     await toggleLogin(true)
-    expect(win.document.querySelector('[role=menu]')?.textContent).toContain('Doubao Seed 2.1 Lite')
+    const groups = [...win.document.querySelectorAll('[role=menu] [role=group]')]
+    const headings = groups.map(group => win.document.getElementById(group.getAttribute('aria-labelledby')!))
+    expect(headings.map(heading => heading?.textContent)).toEqual(['Kimi','Other','Doubao','Kimi','DeepSeek','GLM'])
+    expect(new Set(headings.map(heading => heading?.id)).size).toBe(groups.length)
+    const hostedRows = groups.slice(2).flatMap(group => [...group.querySelectorAll('[role=menuitemradio]')])
+    expect(hostedRows.map(row => row.querySelector('.odyssey-model-vision-tag')?.textContent ?? null))
+      .toEqual(['视觉','视觉',null,'视觉',null])
+    await click(hostedRows[3]!)
+    expect(select).toHaveBeenLastCalledWith({provider:'ework-ark',model:'deepseek-v4.1-flash'})
+    await click(trigger)
+    await click(win.document.querySelector('[role=menuitem]')!)
     await toggleLogin(false)
     expect(win.document.querySelector('[role=menu]')?.textContent).not.toContain('Doubao Seed 2.1 Lite')
   } finally {await react.act(async()=>root.unmount());vi.unstubAllGlobals();await win.happyDOM.close()}

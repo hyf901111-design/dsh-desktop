@@ -5,7 +5,7 @@ import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completio
 import { ImageGenerationError, validateGeneratedImage } from './image-generation-provider.js'
 
 export const HOSTED_ARK_PROVIDER = 'ework-ark'
-const displayName = 'EWork · 火山方舟'
+const displayName = 'EWork'
 const defaultImage = 'doubao-seedream-5.0-flash'
 
 function bridgeOptions(raw) {
@@ -23,8 +23,8 @@ function adapterFor(ctx, base, apiKey, models) {
   const piProvider = createProvider({
     id: provider, name: displayName, baseUrl: base,
     auth: { apiKey: { name: displayName, resolve: ({ credential }) => Promise.resolve({ auth: { apiKey: credential?.key }, source: displayName }) } },
-    models: models.map(({ id, name, contextWindow }) => ({
-      id, name, provider, api: 'openai-completions', baseUrl: base, input: ['text'], contextWindow, maxTokens: 32768,
+    models: models.map(({ id, name, contextWindow, supportsImageInput }) => ({
+      id, name, provider, api: 'openai-completions', baseUrl: base, input: supportsImageInput === true ? ['text', 'image'] : ['text'], contextWindow, maxTokens: 32768,
       reasoning: false, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       compat: { supportsDeveloperRole: false, supportsReasoningEffort: false, maxTokensField: 'max_tokens',
         ...(id.startsWith('deepseek-') ? { requiresThinkingAsText: false, thinkingFormat: 'deepseek' } : {}) }

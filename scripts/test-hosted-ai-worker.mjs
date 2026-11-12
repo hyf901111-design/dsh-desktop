@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { hash } from '../services/accounts/auth.js'
+import { AiQuotaLedger } from '../services/accounts/ai-quota.js'
 import { ARK_PLAN_BASE } from '../services/hosted-ai/ark-catalog.js'
 
 const { outputFiles: [built] } = await build({
@@ -15,7 +16,7 @@ let calls = 0, memoryCalls = 0
 const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
   modules: true, script: built.text, compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
   d1Databases: { ACCOUNTS_DB: 'hosted-test' },
-  ratelimits: { ARK_LIMITER: { namespace_id: '2026111202', simple: { limit: 24, period: 60 } } },
+  ratelimits: { ARK_LIMITER: { namespace_id: '2026111202', simple: { limit: 60, period: 60 } } },
   bindings: { ARK_HOSTED_MODE: 'authorized-agent-plan', ARK_AUTHORIZED_ACCOUNT_IDS: 'alice',
     ARK_AGENT_PLAN_KEY: key, ARK_ENABLE_SEEDREAM: 'true', ARK_ENABLE_OPENVIKING: 'true',
     OPENVIKING_USER_KEYS: JSON.stringify({alice:'synthetic-viking-user-key'}) },
@@ -47,6 +48,12 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     assert.equal(input.stream_options.include_usage, true)
     assert.equal(input.messages[0].role, 'user')
     assert.equal(input.upstream, undefined)
+    if (Array.isArray(input.messages[0].content)) {
+      assert.deepEqual(input.messages[0].content, [
+        {type:'text',text:'读图'},
+        {type:'image_url',image_url:{url:'data:image/png;base64,' + pngFixture}}
+      ])
+    }
     if (input.messages[0].content === 'redirect') return Response.redirect('https://untrusted.invalid/collect')
     if (input.messages[0].content === 'reject') return Response.json({ error: key }, { status: 400 })
     const frames = [
@@ -130,6 +137,45 @@ try {
   assert.equal(redirected.status,502)
   assert.ok(!(await redirected.text()).includes('untrusted'))
   assert.equal(calls,6)
+  // Expected factors and modalities are taken from the Agent Plan documentation,
+  // independently of the service catalog and its billing implementation.
+  const matrix = [
+    ['doubao-seed-2.1-pro', 250, true], ['doubao-seed-evolving', 250, true],
+    ['doubao-seed-2.1-lite', 50, true], ['doubao-seed-2.0-mini', 25, true],
+    ['kimi-k3.1-pro', 700, true], ['deepseek-v4.1-flash', 250, true],
+    ['deepseek-v4.1-flash-economy', 200, true], ['deepseek-v4-flash', 50, false],
+    ['glm-5.3', 450, false], ['glm-5.3-flash', 50, true], ['deepseek-v4-pro', 550, false]
+  ]
+  const inline = [{type:'text',text:'读图'},{type:'image_url',image_url:{
+    url:'data:image/png;base64,' + pngFixture, file_id:'untrusted-file-id'
+  }}]
+  const admin = new AiQuotaLedger(db)
+  const beforeMatrix = (await (await send('quota',token)).json()).quota
+  let billedUnits = Math.round(beforeMatrix.fiveHour.used * 1_000_000)
+  for (const [id, unitsPerToken, vision] of matrix) {
+    assert.equal(catalog.models.find(model=>model.id===id)?.supportsImageInput,vision)
+    const requestSuffix = id.replaceAll('.', '-')
+    const textReply = await send('chat/completions',token,{...chat(),model:id},'text-'+requestSuffix)
+    assert.equal(textReply.status,200,id)
+    assert.match(await textReply.text(), /你好[\s\S]*\[DONE\]/,id)
+    billedUnits += 30 * unitsPerToken
+    const imageReply = await send('chat/completions',token,{...chat(inline),model:id},'vision-'+requestSuffix)
+    assert.equal(imageReply.status,vision?200:400,id)
+    if (vision) {
+      assert.match(await imageReply.text(), /你好[\s\S]*\[DONE\]/,id)
+      billedUnits += 30 * unitsPerToken
+    } else await imageReply.text()
+    const actual = (await (await send('quota',token)).json()).quota
+    const adminBalance = (await admin.balances()).get('alice')
+    for (const period of ['fiveHour','week']) {
+      assert.equal(actual[period].used,billedUnits/1_000_000,id)
+      assert.equal(actual[period].reserved,beforeMatrix[period].reserved,id)
+      assert.deepEqual(actual[period],adminBalance[period],id)
+    }
+  }
+  const outboundBefore = calls
+  assert.equal((await send('chat/completions',token,chat([{type:'image_url',image_url:{url:'https://untrusted.invalid/image.png'}}]))).status,400)
+  assert.equal(calls,outboundBefore)
   await db.prepare('UPDATE users SET disabled=1 WHERE id=?').bind('alice').run()
   assert.equal((await send('catalog',token)).status,401)
   assert.equal((await send('chat/completions',token,chat())).status,401)

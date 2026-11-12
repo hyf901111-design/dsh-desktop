@@ -26,19 +26,6 @@ export function patchFigmaModelMenu(source) {
   const end = source.indexOf('\n\t\t//#endregion', start)
   if (start < 0 || end < start) throw Error('ModelSelect boundary drifted')
   let restored = original
-    .replace('const choices = (0, react.useMemo)(() => state.groups.flatMap', `const [hostedAccount, setHostedAccount] = (0, react.useState)(() => document.documentElement.hasAttribute('data-odyssey-hosted-account'));
-      (0, react.useEffect)(() => {
-        const root = document.documentElement;
-        const sync = () => setHostedAccount(root.hasAttribute('data-odyssey-hosted-account'));
-        const observer = new document.defaultView.MutationObserver(sync);
-        observer.observe(root, {attributes:true, attributeFilter:['data-odyssey-hosted-account']});
-        sync();
-        return () => observer.disconnect();
-      }, []);
-      const groups = (0, react.useMemo)(() => hostedAccount ? state.groups : state.groups.filter(group => group.id !== 'ework-ark'), [state.groups, hostedAccount]);
-      const choices = (0, react.useMemo)(() => groups.flatMap`)
-    .replace('}))), [state.groups]);', '}))), [groups]);')
-    .replace('children: state.groups.map((group)', 'children: groups.map((group)')
     .replace('const id = (0, react.useId)();', `const id = (0, react.useId)();
       const menuRef = (0, react.useRef)(null);
       const [position, setPosition] = (0, react.useState)({});

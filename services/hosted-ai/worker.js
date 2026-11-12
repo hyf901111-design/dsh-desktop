@@ -12,6 +12,7 @@ const validCount = x => Number.isSafeInteger(x) && x >= 0
 const nonempty = x => typeof x === 'string' && x.trim().length > 0
 const modelMap = new Map(ARK_TEXT_MODELS.map(model => [model.id, model]))
 const encoder = new TextEncoder()
+const inlineImage = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/
 
 async function readJson(request, maxBytes) {
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json') || !request.body) throw Error('body')
@@ -39,19 +40,33 @@ function chatInput(input) {
   const model = modelMap.get(input.model)
   const max = input.max_completion_tokens ?? input.max_tokens ?? 8192
   if (!validCount(max) || max === 0) throw Error('max_tokens')
+  let imageCount = 0
+  let encodedImageBytes = 0
   const out = {
     model: model.id, stream: true, stream_options: { include_usage: true },
     max_tokens: Math.min(max, 32768),
-    // Preserve multi-turn tool calls. Do not pass URL-bearing inputs or backend tools.
+    // Preserve multi-turn tool calls and inline images. The gateway never fetches caller URLs.
     messages: input.messages.map(msg => {
       if (!object(msg) || !['system', 'developer', 'user', 'assistant', 'tool'].includes(msg.role)) throw Error('role')
       const { role } = msg
       let content = msg.content
       if (Array.isArray(content)) {
-        if (!content.every(part => part?.type === 'text' && typeof part.text === 'string')) throw Error('modality')
-        content = content.map(part => part.text).join('\n')
+        if (content.every(part => part?.type === 'text' && typeof part.text === 'string')) {
+          content = content.map(part => part.text).join('\n')
+        } else {
+          if (role !== 'user' || !model.supportsImageInput) throw Error('modality')
+          content = content.map(part => {
+            if (part?.type === 'text' && typeof part.text === 'string') return { type: 'text', text: part.text }
+            const url = part?.image_url?.url
+            if (part?.type !== 'image_url' || typeof url !== 'string' || !inlineImage.test(url) || ++imageCount > 4) {
+              throw Error('image')
+            }
+            encodedImageBytes += url.length
+            return { type: 'image_url', image_url: { url } }
+          })
+        }
       }
-      if (typeof content !== 'string' && !(role === 'assistant' && content == null && Array.isArray(msg.tool_calls))) throw Error('content')
+      if (typeof content !== 'string' && !Array.isArray(content) && !(role === 'assistant' && content == null && Array.isArray(msg.tool_calls))) throw Error('content')
       const message = { role: role === 'developer' ? 'system' : role, content: content ?? null }
       if (role === 'assistant' && Array.isArray(msg.tool_calls)) {
         if (msg.tool_calls.length > 64) throw Error('calls')
@@ -82,7 +97,11 @@ function chatInput(input) {
     if (out.tools.length) out.tool_choice = 'auto'
   }
   const wire = JSON.stringify(out)
-  const inputBound = Math.min(model.contextWindow, encoder.encode(wire).length + 4096 + out.messages.length * 24)
+  const textBytes = encoder.encode(wire).length - encodedImageBytes
+  if (textBytes > 2_000_000) throw Error('limit')
+  // Base64 bytes are transport overhead. Reserve image tokens separately and settle from provider usage.
+  const imageTokens = imageCount * (model.id.startsWith('doubao-') ? 5120 : 32768)
+  const inputBound = Math.min(model.contextWindow, textBytes + imageTokens + 4096 + out.messages.length * 24)
   return { wire, amountUnits: (inputBound + out.max_tokens) * model.unitsPerToken,
     billed: usage => (usage.prompt_tokens + usage.completion_tokens) * model.unitsPerToken }
 }
@@ -91,7 +110,7 @@ function imageInput(input) {
   if (!object(input) || !ARK_IMAGE_MODELS.has(input.model) || !nonempty(input.prompt) || input.prompt.length > 16000 ||
       !['auto', '1024x1024', '1024x1536', '1536x1024'].includes(input.size)) throw Error('input')
   const refs = input.references ?? []
-  if (!Array.isArray(refs) || refs.length > 4 || !refs.every(ref => typeof ref === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(ref))) throw Error('reference')
+  if (!Array.isArray(refs) || refs.length > 4 || !refs.every(ref => typeof ref === 'string' && inlineImage.test(ref))) throw Error('reference')
   const { units } = ARK_IMAGE_MODELS.get(input.model)
   const refUnits = input.model === 'doubao-seedream-5-0-pro' ? Math.max(0, refs.length - 1) * 6_500_000 : 0
   return { wire: JSON.stringify({ model: input.model, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
@@ -186,7 +205,7 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       if (!active || image && env.ARK_ENABLE_SEEDREAM !== 'true') return fail('HOSTED_AI_NOT_ENABLED', 403, '当前账号未开通该云端能力。')
       if (!env.ARK_LIMITER || !(await env.ARK_LIMITER.limit({ key: user.id })).success) return fail('HOSTED_AI_BUSY', 429, '请求较多，请稍后重试。')
       let input
-      try { input = (image ? imageInput : chatInput)(await readJson(request, image ? 12_000_000 : 2_000_000)) }
+      try { input = (image ? imageInput : chatInput)(await readJson(request, 12_000_000)) }
       catch { return fail('INVALID_REQUEST', 400, '方舟请求参数无效或超出大小限制。') }
       const requestId = request.headers.get('x-ework-request-id') || crypto.randomUUID()
       const key = { userId: user.id, requestId }

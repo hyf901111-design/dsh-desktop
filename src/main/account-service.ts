@@ -314,7 +314,7 @@ export class AccountService {
     const chunks: Buffer[] = []
     let bytes = 0
     for await (const chunk of req) {
-      if ((bytes += chunk.length) > (path === 'images' ? 12_000_000 : 2_000_000)) { res.writeHead(413).end(); return }
+      if ((bytes += chunk.length) > 12_000_000) { res.writeHead(413).end(); return }
       chunks.push(chunk)
     }
     if (generation !== this.generation || signal.signal.aborted) { res.writeHead(401).end(); return }

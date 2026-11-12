@@ -9,7 +9,29 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			const triggerRef = (0, react.useRef)(null);
 			const itemRefs = (0, react.useRef)([]);
 			const id = (0, react.useId)();
-			const choices = (0, react.useMemo)(() => state.groups.flatMap((group) => group.models.map((model) => ({
+			const [hostedAccount, setHostedAccount] = (0, react.useState)(() => document.documentElement.hasAttribute("data-odyssey-hosted-account"));
+			(0, react.useEffect)(() => {
+				const root = document.documentElement;
+				const sync = () => setHostedAccount(root.hasAttribute("data-odyssey-hosted-account"));
+				const observer = new document.defaultView.MutationObserver(sync);
+				observer.observe(root, { attributes: true, attributeFilter: ["data-odyssey-hosted-account"] });
+				sync();
+				return () => observer.disconnect();
+			}, []);
+			const groups = (0, react.useMemo)(() => state.groups.flatMap((group) => {
+				if (group.id !== "ework-ark") return [group];
+				if (!hostedAccount) return [];
+				const brands = new Map([["doubao", "Doubao"], ["kimi", "Kimi"], ["deepseek", "DeepSeek"], ["glm", "GLM"]]);
+				const modelsByBrand = new Map([...brands.values(), "EWork"].map((brand) => [brand, []]));
+				for (const model of group.models) {
+					const prefix = model.id.split("-", 1)[0];
+					modelsByBrand.get(brands.get(prefix) ?? "EWork").push(model);
+				}
+				return Array.from(modelsByBrand, ([name, models]) => ({
+					id: group.id, key: `${group.id}-${name}`, name, models
+				})).filter((section) => section.models.length > 0);
+			}), [state.groups, hostedAccount]);
+			const choices = (0, react.useMemo)(() => groups.flatMap((group) => group.models.map((model) => ({
 				group,
 				model,
 				selection: {
@@ -17,7 +39,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 					model: model.id,
 					...model.reasoning?.defaultEffort === void 0 ? {} : { reasoningEffort: model.reasoning.defaultEffort }
 				}
-			}))), [state.groups]);
+			}))), [groups]);
 			const currentChoice = choices[state.current === null ? -1 : choices.findIndex((c) => c.selection.provider === state.current?.provider && c.selection.model === state.current.model)];
 			const reasoning = currentChoice?.model.reasoning;
 			const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort;
@@ -250,8 +272,9 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								}, failure.id)),
 								(0, react_jsx_runtime.jsx)("div", {
 									className: clsx(ModelSelect_module_css_default.groups, "scrollable"),
-									children: state.groups.map((group) => {
-										const headingId = `${id}-${group.id}`;
+									children: groups.map((group) => {
+										const groupKey = group.key ?? group.id;
+									const headingId = `${id}-${groupKey}`;
 										return (0, react_jsx_runtime.jsxs)("section", {
 											role: "group",
 											"aria-labelledby": headingId,
@@ -294,7 +317,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 													})]
 												}, model.id);
 											})]
-										}, group.id);
+										}, groupKey);
 									})
 								}),
 								state.status === "ready" && choices.length === 0 && (0, react_jsx_runtime.jsx)("div", {
