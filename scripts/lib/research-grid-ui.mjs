@@ -981,12 +981,23 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     }
     root.addEventListener('toggle',nativeDisclosure,true)
     root.__eworkNativeDisclosure=nativeDisclosure
-    const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect()),fit=root.__eworkContentFit;if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)fit?.finish(!fit.responsive);workspace.setWorkbenchWidth(width);const zoom=workbenchCanvasZoom(root),size={width:bounds.width/zoom,height:bounds.height/zoom,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))/zoom},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
-    measure();const observer=new ResizeObserver(measure);observer.observe(root)
-    window.addEventListener('resize',measure)
+    root.__eworkMeasureViewport=(bounds,panelBounds)=>{
+      if(!(bounds.width>0))return
+      const zoom=workbenchCanvasZoom(root),width=workbenchAvailableWidth(root,bounds,panelBounds)
+      const size={width:bounds.width/zoom,height:bounds.height/zoom,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))/zoom}
+      const previous=workspace.getSnapshot().canvasSize
+      if(Math.abs(width-(previous.availableWidth||width))>1){
+        const fit=root.__eworkContentFit
+        fit?.finish(!fit.responsive)
+      }
+      workspace.setWorkbenchWidth(width)
+      if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)
+    }
+    const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)')
+    root.__eworkMeasureViewport(root.getBoundingClientRect(),panel?.getBoundingClientRect())
     const scroll=()=>{root.style.setProperty('--grid-scroll-top',root.scrollTop+'px');const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);root.removeEventListener('toggle',nativeDisclosure,true);delete root.__eworkNativeDisclosure;delete root.__eworkNativeInitialFits;if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
+    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();delete root.__eworkMeasureViewport;window.removeEventListener('message',contentSize);root.removeEventListener('toggle',nativeDisclosure,true);delete root.__eworkNativeDisclosure;delete root.__eworkNativeInitialFits;if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);for(const key of ['--grid-pattern','--grid-step','--grid-scroll-top'])root.style.removeProperty(key);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return

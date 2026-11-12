@@ -62,8 +62,11 @@ export function useResearchBoardCanvasHeader(
   React.useLayoutEffect(() => {
     const root = rootRef.current
     if (!enabled || !root || root.closest('[data-home-guide]')) return
+    let appliedZoom: number | undefined
     const update = () => {
       const { zoom } = controls.getSnapshot()
+      if (appliedZoom === zoom) return
+      appliedZoom = zoom
       if (zoom === 100) {
         root.style.removeProperty('zoom')
         root.style.removeProperty('--srb-board-display-zoom')
@@ -73,6 +76,7 @@ export function useResearchBoardCanvasHeader(
         root.style.setProperty('--srb-board-display-zoom', scale)
       }
       root.toggleAttribute('data-research-board-zoomed-in', zoom > 100)
+      root.dispatchEvent(new Event('ework:board-display-zoom'))
     }
     update()
     const off = controls.subscribe(update)

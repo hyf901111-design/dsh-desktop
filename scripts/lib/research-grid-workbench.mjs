@@ -118,8 +118,13 @@ try{const saved=storage?.getItem(responsiveArrangeKey);if(saved==='auto'||saved=
   change('saveResearchCanvasSelection(storage, sessionId, snapshot.selection);','saveResearchCanvasSelection(storage, sessionId, parseResearchCanvasSelection(JSON.stringify(snapshot.selection),snapshot.files,snapshot.artifacts));')
   change('setCanvasSize(canvasSize) {','setCanvasSize(canvasSize) {\nif(workbenchGrid.enabled()){const size={...snapshot.canvasSize,...canvasSize};workbenchGrid.enable(Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)));}')
   change("if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){","if(!root.hasAttribute('data-ework-grid')&&document.documentElement.hasAttribute('data-odyssey-window-resizing')){")
-  change('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);','const availableWidth=root.hasAttribute("data-ework-grid")?workbenchAvailableWidth(root,bounds,panelBounds):researchCanvasUnobscuredWidth(bounds,panelBounds);')
-  change('const viewport=researchCanvasViewportForAreaChange(current,next);','const viewport=root.hasAttribute("data-ework-grid")?current.viewport:researchCanvasViewportForAreaChange(current,next);')
+  // The native input region is in screen pixels. Delegate grid geometry to
+  // its logical-pixel measurement so the two paths cannot overwrite it.
+  change('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);','')
+  change('const current=workspace.getSnapshot(),previous=current.canvasSize;','if(root.__eworkMeasureViewport)root.__eworkMeasureViewport(bounds,panelBounds);\nelse {\nconst availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);\nconst current=workspace.getSnapshot(),previous=current.canvasSize;')
+  change('publishRegion(bounds,document.visibilityState!=="hidden");','}\npublishRegion(bounds,document.visibilityState!=="hidden");')
+  change('window.addEventListener("resize", scheduleSync);','root.addEventListener("ework:board-display-zoom",scheduleSync);\nwindow.addEventListener("resize", scheduleSync);')
+  change('window.removeEventListener("resize", scheduleSync);','root.removeEventListener("ework:board-display-zoom",scheduleSync);\nwindow.removeEventListener("resize", scheduleSync);')
   change('snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));','snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));')
   const methods=`
     getWorkbenchResponsiveArrange:()=>responsiveArrange===true,
