@@ -191,8 +191,8 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       const active = env.ARK_HOSTED_MODE === 'authorized-agent-plan' && nonempty(env.ARK_AGENT_PLAN_KEY) && allow.includes(user.id)
       const ledger = ledgerFor(env.ACCOUNTS_DB)
       if (action === 'quota') {
-        const { fiveHour, week, paused } = await ledger.user(user.id)
-        return json({ quota: { fiveHour, week, paused, unit: 'AFP' } })
+        const { fiveHour, week, paused, monthResetAt } = await ledger.user(user.id)
+        return json({ quota: { fiveHour, week, paused, monthResetAt, unit: 'AFP' } })
       }
       const memoryKey = allow.includes(user.id) && openVikingKey(env, user.id)
       if (action === 'catalog') {

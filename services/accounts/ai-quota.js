@@ -258,7 +258,7 @@ export class AiQuotaLedger {
     const data = await this.current()
     const person = data.people.find(item => item.id === userId)
     if (!person) throw new AiQuotaError('AI_QUOTA_USER_MISSING', '账号不存在', 404)
-    return { ...userBalance(data, person), version: person.version,
+    return { ...userBalance(data, person), version: person.version, monthResetAt: data.month.endAt,
       fiveHourLimit: person.five_hour_limit_units === null ? null : person.five_hour_limit_units / AFP_UNITS,
       weekLimit: person.weekly_limit_units === null ? null : person.weekly_limit_units / AFP_UNITS,
       maxFiveHourLimit: data.pool.five_hour_limit_units / AFP_UNITS,

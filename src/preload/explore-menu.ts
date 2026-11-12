@@ -192,7 +192,13 @@ export function mountExploreMenu(doc:Document,options:Options){
   // boundary for platforms that also synthesize a click after the gesture.
   dialog.addEventListener('click',event=>{const fromDrag=dragOrigin;resetDrag();if(fromDrag||event.target===windowDrag){event.preventDefault();event.stopPropagation()}},true)
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===edge){if(searching)setSearch(false,false);else void close()}else if(searching&&!searchPanel.contains(event.target as Node)&&!searchWrap.contains(event.target as Node))setSearch(false,false)})
-  const openEvent=()=>open(),closeEvent=(event:Event)=>{void close((event as CustomEvent).detail?.restoreFocus!==false)},changed=(event:Event)=>{if((event as CustomEvent).detail?.ownerChanged){reset();return}if(opened&&searching)query()},reset=()=>{action?.abort();void close(false)}
+  const openEvent=(event:Event)=>{
+    if((event as CustomEvent).detail?.tab==='usage'&&accountOwner){
+      if(opened)selectTab('usage')
+      else tab='usage'
+    }
+    open()
+  },closeEvent=(event:Event)=>{void close((event as CustomEvent).detail?.restoreFocus!==false)},changed=(event:Event)=>{if((event as CustomEvent).detail?.ownerChanged){reset();return}if(opened&&searching)query()},reset=()=>{action?.abort();void close(false)}
   win.addEventListener('sherlock:explore-open',openEvent);win.addEventListener('sherlock:explore-close',closeEvent);win.addEventListener('sherlock:account-state',accountState);win.addEventListener('sherlock:ai-quota-state',quotaState);doc.addEventListener('sherlock:explore-search-reply',searchReply);doc.addEventListener('sherlock:explore-search-changed',changed);win.addEventListener('sherlock:skill-menu-reset',reset)
   win.addEventListener('pointerdown',dragStart,true);win.addEventListener('pointerup',dragEnd,true);win.addEventListener('pointercancel',resetDrag,true);win.addEventListener('blur',resetDrag)
   const observer=new win.MutationObserver(()=>{labels();layout()});observer.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});const resize=new win.ResizeObserver(layout);resize.observe(body)

@@ -3,7 +3,7 @@ import {createExploreBrowserFixture} from './helpers/explore-menu-browser-fixtur
 
 const ui=createExploreBrowserFixture(process.env.SHERLOCK_EXPLORE_EVIDENCE??'/tmp/sherlock-hosted-ai-ui')
 const now=Math.floor(Date.now()/1000)
-const quota={fiveHour:{limit:100,remaining:29,resetAt:now+7200},week:{limit:100,remaining:7,resetAt:now+90000},paused:false}
+const quota={fiveHour:{limit:100,used:60,reserved:11,remaining:29,resetAt:now+7200},week:{limit:100,used:87,reserved:6,remaining:7,resetAt:now+90000},paused:false}
 it('renders the account quota, grows the hover arc, and clears it at sign-out',async()=>{
   const {page,close}=await ui.fixture({quotaFixture:quota,reduced:false,collapsed:true})
   try {
@@ -27,6 +27,7 @@ it('renders the account quota, grows the hover arc, and clears it at sign-out',a
     await ui.uiExpect(usageTab).toHaveAttribute('aria-selected','true')
     await ui.uiExpect(page.getByRole('meter',{name:/5 小时/})).toHaveAttribute('aria-valuenow','29')
     await ui.uiExpect(page.getByRole('meter',{name:/周用量/})).toHaveAttribute('aria-valuenow','7')
+    await ui.uiExpect(page.getByText('已用 60 AFP · 预留 11 AFP',{exact:true})).toBeVisible()
     await page.screenshot({path:ui.evidence+'/explore-usage.png'})
     await page.locator('.odyssey-explore-account').click()
     await page.getByRole('menuitem',{name:'退出登录'}).click()

@@ -1,5 +1,5 @@
-export type QuotaWindow = { limit: number; remaining: number; resetAt: number | null }
-export type ExploreQuota = { fiveHour: QuotaWindow; week: QuotaWindow; paused: boolean }
+export type QuotaWindow = { limit: number; remaining: number; resetAt: number | null; used?: number; reserved?: number }
+export type ExploreQuota = { fiveHour: QuotaWindow; week: QuotaWindow; paused: boolean; monthResetAt?: number }
 export function readExploreQuota(value: unknown): ExploreQuota | undefined {
   const data = value as Partial<ExploreQuota> | null
   const valid = (entry: QuotaWindow | undefined): entry is QuotaWindow => !!entry &&
@@ -7,7 +7,9 @@ export function readExploreQuota(value: unknown): ExploreQuota | undefined {
     entry.remaining >= 0 && entry.remaining <= entry.limit &&
     (entry.resetAt === null || Number.isSafeInteger(entry.resetAt) && entry.resetAt > 0)
   if (!data || !valid(data.fiveHour) || !valid(data.week)) return
-  return { fiveHour: data.fiveHour, week: data.week, paused: data.paused === true }
+  return { fiveHour: data.fiveHour, week: data.week, paused: data.paused === true,
+    ...(typeof data.monthResetAt === 'number' && Number.isSafeInteger(data.monthResetAt) && data.monthResetAt > 0
+      ? { monthResetAt: data.monthResetAt } : {}) }
 }
 export const quotaRatio = (entry: QuotaWindow): number => entry.limit > 0 ? Math.min(1, entry.remaining / entry.limit) : 0
 export const quotaPercent = (ratio: number): number => ratio > 0 && ratio < 1 ? Math.max(1, Math.min(99, Math.round(ratio * 100))) : Math.round(ratio * 100)
@@ -58,6 +60,7 @@ export function renderExploreQuota(panel: HTMLElement, quota: ExploreQuota | und
   }
   const card = doc.createElement('div')
   card.className = 'odyssey-explore-quota-card'
+  const formatAfp = new Intl.NumberFormat(english ? 'en' : 'zh-CN', { maximumFractionDigits: 2 })
   for (const [label, entry] of [[word('5 小时用量','5-hour usage'), quota.fiveHour], [word('周用量','Weekly usage'), quota.week]] as const) {
     const ratio = quotaRatio(entry), percent = quotaPercent(ratio)
     const row = doc.createElement('section'), body = doc.createElement('div'), heading = doc.createElement('div')
@@ -82,6 +85,15 @@ export function renderExploreQuota(panel: HTMLElement, quota: ExploreQuota | und
     progress.style.width = `${100 * ratio}%`
     progress.toggleAttribute('data-low', ratio > 0 && ratio < .1)
     track.append(progress);body.append(heading,track)
+    if (typeof entry.used === 'number' && Number.isFinite(entry.used) && entry.used >= 0 &&
+        typeof entry.reserved === 'number' && Number.isFinite(entry.reserved) && entry.reserved >= 0) {
+      const breakdown = doc.createElement('div')
+      breakdown.className = 'odyssey-explore-quota-breakdown'
+      const used = formatAfp.format(entry.used), reserved = formatAfp.format(entry.reserved)
+      breakdown.textContent = word(`已用 ${used} AFP · 预留 ${reserved} AFP`, `Used ${used} AFP · Reserved ${reserved} AFP`)
+      breakdown.title = word('预留用量来自进行中或尚未结算的请求。', 'Reserved usage includes in-progress and unsettled requests.')
+      body.append(breakdown)
+    }
     const balance = doc.createElement('div'), number = doc.createElement('strong'), remaining = doc.createElement('span')
     balance.className = 'odyssey-explore-quota-balance'
     number.textContent = percent + '%';remaining.textContent = word('剩余用量','Remaining')

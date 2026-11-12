@@ -15,9 +15,9 @@ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .srb-account-controls:
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .srb-account-controls:has([data-explore-trigger])>[data-research-board-bell-host]>.srb-bell{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;margin:0!important;padding:10px!important;box-sizing:border-box!important;border-radius:10px!important}
 .odyssey-explore{--explore-ink:#26313a;--explore-muted:#626d79;--explore-tool:rgb(255 255 255/.32);--explore-tool-hover:rgb(255 255 255/.52);--explore-result:rgb(245 247 249/.82);--explore-row:rgb(255 255 255/.48);position:fixed;inset:0;margin:0;padding:64px 48px 48px;width:100vw;height:100dvh;max-width:none;max-height:none;box-sizing:border-box;border:0;background:transparent;color:var(--explore-ink);font-family:"Noto Sans SC","PingFang SC",sans-serif;overflow:hidden;-webkit-app-region:no-drag}
 .odyssey-explore[open]{display:flex;align-items:center;justify-content:center}
-.odyssey-explore::backdrop{background:rgb(219 225 233/.44);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:odyssey-explore-veil 280ms ease-out both}
+.odyssey-explore::backdrop{background:rgb(219 225 233/.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:odyssey-explore-veil 280ms ease-out both}
 [data-ds-dark-theme] .odyssey-explore{--explore-ink:#e3e8ef;--explore-muted:#94a0b1;--explore-tool:rgb(255 255 255/.075);--explore-tool-hover:rgb(255 255 255/.15);--explore-result:rgb(54 54 54/.8);--explore-row:rgb(255 255 255/.14)}
-[data-ds-dark-theme] .odyssey-explore::backdrop{background:rgb(16 21 36/.48)}
+[data-ds-dark-theme] .odyssey-explore::backdrop{background:rgb(16 21 36/.86)}
 .odyssey-explore *, .odyssey-explore *:before,.odyssey-explore *:after{box-sizing:border-box}
 .odyssey-explore button,.odyssey-explore input{font-family:inherit;color:inherit;-webkit-app-region:no-drag}
 .odyssey-explore button:not(.odyssey-operations-quick-card){appearance:none;border:0;cursor:pointer;background:transparent;padding:0}
@@ -182,6 +182,7 @@ html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .
 .odyssey-explore-quota-heading{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin-bottom:11px}
 .odyssey-explore-quota-heading strong{font-size:15px;font-weight:500}
 .odyssey-explore-quota-heading small{font-size:11px;line-height:20px;padding:0 8px;border-radius:7px;background:var(--explore-tool-hover);white-space:nowrap}
+.odyssey-explore-quota-breakdown{margin-top:8px;color:var(--explore-muted);font-size:12px;line-height:18px;font-variant-numeric:tabular-nums}
 .odyssey-explore-quota-track{height:7px;border-radius:100px;background:var(--explore-row);overflow:hidden}
 .odyssey-explore-quota-track i{display:block;height:100%;border-radius:inherit;background:var(--explore-ink)}
 .odyssey-explore-quota-track i[data-low]{background:#e36670}
