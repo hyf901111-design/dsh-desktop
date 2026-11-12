@@ -31,10 +31,6 @@ function billingCycle(pool, at) {
   return { startAt: boundary(offset), endAt: boundary(offset + 1) }
 }
 
-function scale(amount, numerator, denominator) {
-  return Number(BigInt(amount) * BigInt(numerator) / BigInt(denominator))
-}
-
 function balance(limit, used, reserved) {
   return Math.max(0, limit - used - reserved)
 }
@@ -179,17 +175,16 @@ export class AiQuotaLedger {
     const month = { ...cycle, limit: pool.monthly_limit_units, ...monthUsage.results[0] }
     month.remaining = balance(month.limit, month.used, month.reserved)
     const storedWeek = windows.results.find(row => row.kind === 'week')
-    const weekLimit = storedWeek?.limit_units ??
-      scale(month.remaining, weekEnd - weekStart, cycle.endAt - weekStart)
+    // Each window has its own configured ceiling. The monthly balance is a
+    // separate admission limit, not a time-based reduction to either window.
     const week = projectWindow({ kind: 'week', stored: storedWeek, startAt: weekStart, endAt: weekEnd,
-      limit: Math.min(pool.weekly_limit_units, weekLimit), data, usageRows: weekUsage.results,
+      limit: pool.weekly_limit_units, data, usageRows: weekUsage.results,
       grantRows: grants.results.filter(row => row.kind === 'week'), capField: 'weekly_limit_units' })
 
     const storedShort = windows.results.find(row => row.kind === 'fiveHour')
-    const shortLimit = storedShort?.limit_units ?? Math.min(scale(week.limit, 2, 7), week.remaining, month.remaining)
     const fiveHour = projectWindow({ kind: 'fiveHour', stored: storedShort,
       startAt: storedShort?.start_at ?? at, endAt: storedShort?.end_at ?? Math.min(at + FIVE_HOURS, weekEnd),
-      limit: Math.min(pool.five_hour_limit_units, shortLimit), data, usageRows: shortUsage.results,
+      limit: pool.five_hour_limit_units, data, usageRows: shortUsage.results,
       grantRows: grants.results.filter(row => row.kind === 'fiveHour'), capField: 'five_hour_limit_units' })
     return { ...data, month, week, fiveHour }
   }

@@ -207,6 +207,31 @@ try {
   const outboundBefore = calls
   assert.equal((await send('chat/completions',token,chat([{type:'image_url',image_url:{url:'https://untrusted.invalid/image.png'}}]))).status,400)
   assert.equal(calls,outboundBefore)
+  // Upgrading a live window keeps the same history and deadlines, but replaces the
+  // time-prorated allocation with the configured pool ceilings.
+  const beforeUpgrade = (await (await send('quota',token)).json()).quota
+  await db.prepare("UPDATE ai_quota_windows SET limit_units=30000000000 WHERE kind='fiveHour'").run()
+  await db.prepare("UPDATE ai_quota_windows SET limit_units=105000000000 WHERE kind='week'").run()
+  const upgraded = (await (await send('quota',token)).json()).quota
+  const pool = await admin.summary()
+  assert.equal(pool.month.limit, 900000)
+  assert.equal(pool.week.limit, 350000)
+  assert.equal(pool.fiveHour.limit, 100000)
+  for (const kind of ['fiveHour','week']) {
+    assert.equal(upgraded[kind].used,beforeUpgrade[kind].used)
+    assert.equal(upgraded[kind].reserved,beforeUpgrade[kind].reserved)
+    assert.equal(upgraded[kind].resetAt,beforeUpgrade[kind].resetAt)
+    assert.ok(Math.abs(upgraded[kind].remaining - pool[kind].remaining/2) <= 0.000001)
+    assert.deepEqual(upgraded[kind],(await admin.user('alice'))[kind])
+  }
+  await db.prepare('INSERT INTO ai_quota_user_settings(user_id,five_hour_limit_units,weekly_limit_units,paused,version) VALUES(?,?,?,?,?)')
+    .bind('alice',200000000,300000000,0,1).run()
+  const capped = (await (await send('quota',token)).json()).quota
+  assert.equal(capped.fiveHour.limit,200)
+  assert.equal(capped.week.limit,300)
+  await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
+  assert.equal((await admin.user('alice')).fiveHour.remaining,0)
+  await assert.rejects(admin.reserve({userId:'alice',requestId:'month-hard-limit',amountUnits:1}),{code:'AI_QUOTA_MONTH'})
   await db.prepare('UPDATE users SET disabled=1 WHERE id=?').bind('alice').run()
   assert.equal((await send('catalog',token)).status,401)
   assert.equal((await send('chat/completions',token,chat())).status,401)
