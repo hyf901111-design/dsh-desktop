@@ -93,6 +93,54 @@ it('renders the checked creation recipient from lookup and clears it when the ID
 })
 
 
+it('offers board-only sharing when saved history contains a local path and uses the reviewed capture', async () => {
+  const w = new Window({ url: 'http://localhost/' })
+  vi.stubGlobal('document', w.document)
+  cleanup.push(async () => { await w.happyDOM.abort() })
+  const flush = () => new Promise(resolve => setTimeout(resolve, 0))
+  const call = vi.fn(async (action: string, input: any) => {
+    if (action === 'board.previewCapture') {
+      if (input.includeHistory !== false) {
+        throw Object.assign(Error('研究对话含无法安全转换的本机路径'), { code: 'PRIVATE_PATH_IN_HISTORY' })
+      }
+      return { captureId: 'board-only', nodeCount: 12, historyCount: 0, assetBytes: 1024 }
+    }
+    if (action === 'user.lookup') return { user: { publicId: '2468135790', username: '林然' } }
+    if (action === 'board.create') return { board: { boardId: 'board' } }
+    if (action === 'invitation.send') return {}
+    throw Error('Unexpected action: ' + action)
+  })
+  const page: any = {
+    getState: () => ({ account: { status: 'ready', user: { userId: 'self' } } }),
+    call,
+    openBoard: async () => {},
+    current: () => ''
+  }
+  shareFavorite(page, { favoriteId: 'favorite', title: '指数运营研究' } as any)
+  await flush()
+  const dialog = w.document.querySelector('.srb-create-collaboration-dialog')!
+  const button = (name: string) => [...dialog.querySelectorAll('button')].find(b => b.textContent === name)!
+  expect(dialog.textContent).toContain('本机路径')
+  expect(call.mock.calls).toEqual([['board.previewCapture', { favoriteId: 'favorite' }]])
+  const shareBoardOnly = button('仅共享看板')
+  expect(shareBoardOnly).toBeDefined()
+  shareBoardOnly.click()
+  await flush()
+  expect(dialog.textContent).toContain('12 个组件')
+  expect(dialog.textContent).toContain('不包含原研究对话')
+  expect(call).toHaveBeenLastCalledWith('board.previewCapture', { favoriteId: 'favorite', includeHistory: false })
+  const input = dialog.querySelector('[aria-label="对方专有 ID"]') as unknown as HTMLInputElement
+  input.value = '2468135790'
+  button('查找并核对').click()
+  await flush()
+  button('发送邀请').click()
+  await flush()
+  expect(call).toHaveBeenCalledWith('board.create', {
+    favoriteId: 'favorite', title: '指数运营研究 · 协作', captureId: 'board-only', includeHistory: false
+  })
+})
+
+
 it('keeps idle presence free of polling and expires geometry previews once', async()=>{
  vi.useFakeTimers({toFake:['setTimeout','clearTimeout','setInterval','clearInterval','Date']})
  const interval=vi.spyOn(globalThis,'setInterval')
