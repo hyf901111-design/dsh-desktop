@@ -84,3 +84,47 @@ it('shows turn interruptions in normal reply prose without leaking runtime excep
     dom.window.close()
   }
 })
+
+it('aligns the quota notice with both edges of the input card', async () => {
+  const { pathToFileURL } = await import('node:url')
+  const playwright = await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT ||
+    '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
+  const browser = await playwright.chromium.launch({
+    headless: true,
+    executablePath: process.env.SHERLOCK_TEST_CHROMIUM ||
+      '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+  })
+  try {
+    const page = await browser.newPage()
+    const bundle = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+    const nativeRules = ['.wSkVaW_root{', '.wSkVaW_composerStack{', '.uV2eYG_root{', '.uV2eYG_card{']
+      .map(selector => {
+        const start = bundle.indexOf(selector)
+        expect(start).toBeGreaterThanOrEqual(0)
+        return bundle.slice(start, bundle.indexOf('}', start) + 1)
+      })
+    const styles = readFileSync('src/preload/figma-reading.css', 'utf8')
+    for (const { width, clearance, maxWidth } of [
+      { width: 1090, clearance: 16, maxWidth: '780px' },
+      { width: 420, clearance: 16, maxWidth: '780px' },
+      { width: 320, clearance: 0, maxWidth: '100%' },
+      { width: 1090, clearance: 16, maxWidth: '652px' }
+    ]) {
+      await page.setContent(`<style>${nativeRules.join('\n')}\n${styles}</style>
+        <div class="wSkVaW_root" data-odyssey-page="conversation"
+          style="width:${width}px; --dsh-composer-side-clearance:${clearance}px; --dsh-composer-card-max-width:${maxWidth}">
+          <div data-center-composer-host><div class="wSkVaW_composerStack">
+            <div class="odyssey-hosted-quota-notice">额度不足</div>
+            <div class="uV2eYG_root"><div class="uV2eYG_card">输入框</div></div>
+          </div></div>
+        </div>`)
+      const notice = await page.locator('.odyssey-hosted-quota-notice').boundingBox()
+      const input = await page.locator('.uV2eYG_card').boundingBox()
+      expect(notice.x).toBeCloseTo(input.x, 1)
+      expect(notice.width).toBeCloseTo(input.width, 1)
+      expect(input.y - (notice.y + notice.height)).toBe(8)
+    }
+  } finally {
+    await browser.close()
+  }
+}, 15000)

@@ -60,11 +60,12 @@ body[data-ds-dark-theme] .lXshSW_root { background:var(--odyssey-composer-solid)
 body .sRp_composer .lXshSW_root { width:100%; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .lXshSW_root { width:calc(100% - 32px); }
 body .odyssey-hosted-quota-notice {
-  box-sizing:border-box; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; width:100%;
-  max-width:780px; padding:10px 12px; border:1px solid var(--odyssey-reading-border); border-radius:12px;
+  box-sizing:border-box; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
+  width:calc(100% - 2 * var(--dsh-composer-side-clearance, 0px));
+  max-width:var(--dsh-composer-card-max-width, 100%); margin-inline:auto;
+  padding:10px 12px; border:1px solid var(--odyssey-reading-border); border-radius:12px;
   background:var(--odyssey-composer-solid); color:var(--odyssey-text); font:400 13px/20px var(--odyssey-font-ui);
 }
-body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .odyssey-hosted-quota-notice { width:calc(100% - 32px); }
 body .odyssey-hosted-quota-notice > div { flex:1 1 220px; }
 body .odyssey-hosted-quota-notice strong { font-weight:600; }
 body .odyssey-hosted-quota-notice p { margin:2px 0 0; color:var(--odyssey-muted); }
