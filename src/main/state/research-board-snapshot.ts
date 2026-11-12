@@ -10,6 +10,7 @@ import { join, extname } from 'node:path'
 import { stat } from 'node:fs/promises'
 import { FrozenBoardFiles, type FrozenFile } from './research-board-assets'
 import { digest } from './research-board-request-journal'
+import { remapBoardTabs, restoreLegacyBoardTabMembership } from './research-board-tab-membership'
 import { freezeSnapshot } from '../../../packages/dsh-research-collaboration/document.js'
 import {
   mergeHumanHistory,
@@ -223,7 +224,7 @@ export class ResearchBoardSnapshots {
           ? Object.fromEntries(
               Object.entries(v).map(([key, value]) => [
                 key,
-                rewrite(value, key)
+                (key === 'containerSpec' && remapBoardTabs(value, remap)) || rewrite(value, key)
               ])
             )
           : typeof v === 'string' &&
@@ -361,6 +362,7 @@ export class ResearchBoardSnapshots {
       const epoch = input.snapshot.board.sharingEpoch
       this.options.authorize(input.accountId, input.boardId, epoch)
       const snap = structuredClone(input.snapshot.snapshot)
+      restoreLegacyBoardTabMembership(snap.canvas)
       for (const n of snap.canvas.artifacts) {
         n.refreshMinutes = 0
         delete n.refreshScheduleId
@@ -414,7 +416,7 @@ export class ResearchBoardSnapshots {
             ? Object.fromEntries(
                 Object.entries(v).map(([key, value]) => [
                   key,
-                  rewrite(value, key)
+                  (key === 'containerSpec' && remapBoardTabs(value, map)) || rewrite(value, key)
                 ])
               )
             : typeof v === 'string' &&

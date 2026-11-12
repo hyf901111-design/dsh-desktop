@@ -19,6 +19,7 @@ import {
   ResearchRequestJournal,
   digest
 } from './state/research-board-request-journal'
+import { restoreLegacyBoardTabMembership } from './state/research-board-tab-membership'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
 import { freezeSnapshot, createDocument, encodeDocument, decodeDocument, projectDocument, applyCanvasDiff } from '../../packages/dsh-research-collaboration/document.js'
 import { taskFailureMessage, toBase64, fromBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
@@ -374,6 +375,7 @@ export class ResearchBoardIntegration {
   }) {
     this.authority(i.accountId, i.boardId, i.epoch)
     const canvas = structuredClone(i.canvas)
+    restoreLegacyBoardTabMembership(canvas)
     const directory = (canvas.files.length || canvas.artifacts.some(node => (node.generationSources as any[] ?? []).some(source => source.type === 'file' && source.assetId))) ? await this.runtime('directory', {mode:'ensure',sessionId:i.localSessionId}, i.signal) : null
     i.signal.throwIfAborted()
     this.authority(i.accountId,i.boardId,i.epoch)

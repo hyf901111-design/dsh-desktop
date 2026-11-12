@@ -120,6 +120,53 @@ it('retains imported baseline exactly once when a personal copy is shared again'
     )
   ).toHaveLength(1)
 })
+it.each(['share', 'personal-copy'] as const)('keeps the same cards on each tab when creating a %s', async direction => {
+  const { ResearchBoardSnapshots } = await import('../src/main/state/research-board-snapshot')
+  const { mkdtemp, rm } = await import('node:fs/promises')
+  const { join } = await import('node:path')
+  const { tmpdir } = await import('node:os')
+  const root = await mkdtemp(join(tmpdir(), 'board-tabs-copy-'))
+  let canvas: any = { files: [], artifacts: [
+    { id: 'nav', kind: 'generated-container', title: '页签', containerSpec: {
+      version: 1, type: 'board-tabs', title: '页签', revision: 0, orientation: 'vertical',
+      tabs: [{ id: 'first', name: '市场', nodeIds: ['overview', 'flows'] }, { id: 'second', name: '竞品', nodeIds: ['peers'] }]
+    } },
+    ...['flows', 'peers', 'overview'].map(id => ({ id, kind: 'generated-container', title: id }))
+  ] }
+  const store = new ResearchBoardSnapshots({
+    root, readCanvas: () => canvas, writeCanvas: (_id, value) => { canvas = value },
+    history: async () => ({ history: [], revision: 'r' }), resolveSource: async () => null,
+    runtime: async () => ({ revision: 'empty' }), authorize() {},
+    download: async () => { throw Error('UNEXPECTED_DOWNLOAD') }
+  })
+  const signal = new AbortController().signal
+  try {
+    if (direction === 'share') {
+      const preview = await store.preview({ sessionId: 'local', accountId: 'a', signal })
+      canvas = (await store.capture({ sessionId: 'local', accountId: 'a', operationId: 'share', captureId: preview.captureId, signal })).snapshot.canvas
+    } else {
+      const { copyId } = await store.prepareCopy({
+        accountId: 'a', boardId: 'shared', signal,
+        snapshot: { board: { sharingEpoch: 1, title: 'test' }, snapshot: { canvas, history: [] }, messages: [] } as any
+      })
+      canvas = { files: [], artifacts: [] }
+      await store.finalizeCopy({ accountId: 'a', copyId, localSessionId: 'personal', signal })
+    }
+    const byId = new Map(canvas.artifacts.map((node: any) => [node.id, node.title]))
+    const tabs = canvas.artifacts.find((node: any) => node.title === '页签').containerSpec.tabs
+    expect(tabs.map((tab: any) => [tab.name, tab.nodeIds.map((id: string) => byId.get(id))]))
+      .toEqual([['市场', ['overview', 'flows']], ['竞品', ['peers']]])
+    expect(tabs.flatMap((tab: any) => tab.nodeIds)).not.toContain('overview')
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+it('freezes older workbench nodes with an absent optional layout version', async () => {
+  const { freezeSnapshot, validateCanvas } = await import('../packages/dsh-research-collaboration/document.js')
+  const canvas = { files: [], artifacts: [{ id: 'card', workbenchId: 'plan', workbenchIndex: 0, workbenchLayoutVersion: undefined }] }
+  const frozen = freezeSnapshot({ canvas }).canvas
+  expect(frozen.artifacts).toEqual([{ id: 'card', workbenchId: 'plan', workbenchIndex: 0 }])
+  expect(() => validateCanvas(canvas)).toThrow('INVALID_DOCUMENT')
+})
 it('reviewed capture reopens identical frozen manifest after source and history change', async () => {
   const { ResearchBoardSnapshots } = await import(
     '../src/main/state/research-board-snapshot'
