@@ -2434,25 +2434,54 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
     )
     return
   }
-  const start = async () => {
-    d.body.replaceChildren()
-    const capture = await d.run(
-      () =>
-        page.call<{
+  const historyProblems = new Map([
+    ['PRIVATE_PATH_IN_HISTORY', '原研究对话含有本机路径，无法一并共享。'],
+    ['HISTORY_UNSUPPORTED_ATTACHMENT', '原研究对话含有暂不支持共享的附件。'],
+    ['HISTORY_TOO_LARGE', '原研究对话超过协作共享上限。']
+  ])
+  const start = async (includeHistory = true) => {
+    const scope = includeHistory ? {} : { includeHistory: false }
+    const result = await d.run(async () => {
+      try {
+        const capture = await page.call<{
           captureId: string
           nodeCount: number
           historyCount: number
           assetBytes: number
-        }>('board.previewCapture', { favoriteId: f.favoriteId }),
-      '准备研究内容…'
-    )
-    if (!d.dialog.isConnected || !capture) return
+        }>('board.previewCapture', { favoriteId: f.favoriteId, ...scope })
+        return { capture }
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code
+        const reason = includeHistory && code ? historyProblems.get(code) : undefined
+        if (!reason) throw error
+        return { reason }
+      }
+    }, includeHistory ? '准备研究内容…' : '准备看板和资料…')
+    if (!d.dialog.isConnected || !result) return
+    d.body.replaceChildren()
+    if (!result.capture) {
+      const action = boardButton(document, '仅共享看板', () => start(false))
+      action.className = 'srb-primary'
+      const footer = uiText('div', '', 'srb-dialog-footer')
+      footer.append(action)
+      d.body.append(
+        uiText('p', `${result.reason} 你可以继续共享画板上的组件和资料，原对话会保留在本机。`, 'srb-description'),
+        footer
+      )
+      action.focus()
+      return
+    }
+    const { capture } = result
     const name = document.createElement('input')
     name.value = `${f.title} · 协作`
     name.setAttribute('aria-label', '协作名称')
     const panel = uiText('div', '', 'srb-info-panel')
     const summary = uiText('div', '', 'srb-capture-summary')
-    summary.append(uiText('span', `${capture.nodeCount} 个组件`), uiText('span', `${capture.historyCount} 条已保存对话`), uiText('span', `${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料`))
+    summary.append(
+      uiText('span', `${capture.nodeCount} 个组件`),
+      uiText('span', includeHistory ? `${capture.historyCount} 条已保存对话` : '不包含原研究对话'),
+      uiText('span', `${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料`)
+    )
     panel.append(summary, uiText('p', '成员将共同编辑同一块共享画板。原个人研究独立保留，后续修改互不影响。'))
     const field = uiText('label', '画板名称')
     field.append(name)
@@ -2466,13 +2495,15 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
           {
             favoriteId: f.favoriteId,
             title: name.value,
-            captureId: capture.captureId
+            captureId: capture.captureId,
+            ...scope
           }
         )
         return result.board.boardId
       },
       '发送邀请'
     )
+    if (!includeHistory) name.focus()
   }
   void start()
 }

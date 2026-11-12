@@ -121,7 +121,7 @@ export class ResearchBoardIntegration {
         if (error instanceof ResearchBoardsError) throw error
         const message = error instanceof Error ? error.message : ''
         const match =
-          /^(BOARD_BUSY|RESOURCE_UNAVAILABLE|HISTORY_TOO_LARGE|HISTORY_UNSUPPORTED_ATTACHMENT|HISTORY_UNSAVED|ASSET_SIZE_LIMIT|SOURCE_CHANGED|PRIVATE_PATH_IN_HISTORY|DESTINATION_NOT_EMPTY|DESTINATION_NOT_FRESH|DESTINATION_CHANGED|COPY_FINALIZING)(?:: (.*))?$/.exec(
+          /^(BOARD_BUSY|RESOURCE_UNAVAILABLE|HISTORY_TOO_LARGE|HISTORY_UNSUPPORTED_ATTACHMENT|HISTORY_UNSAVED|ASSET_SIZE_LIMIT|SOURCE_CHANGED|PRIVATE_PATH_IN_HISTORY|SHARE_SCOPE_CHANGED|DESTINATION_NOT_EMPTY|DESTINATION_NOT_FRESH|DESTINATION_CHANGED|COPY_FINALIZING)(?:: (.*))?$/.exec(
             message
           )
         if (!match) throw error
@@ -135,6 +135,7 @@ export class ResearchBoardIntegration {
           ASSET_SIZE_LIMIT: '引用文件超过 50 MiB 上限',
           SOURCE_CHANGED: '原研究在保存期间改变，请重新预览',
           PRIVATE_PATH_IN_HISTORY: '研究对话含无法安全转换的本机路径',
+          SHARE_SCOPE_CHANGED: '待发送的协作副本与本次选择的分享范围不一致。',
           DESTINATION_NOT_EMPTY: '目标个人研究已有对话',
           DESTINATION_NOT_FRESH: '请使用刚创建的空白个人研究',
           DESTINATION_CHANGED: '目标研究已改变，无法覆盖',
