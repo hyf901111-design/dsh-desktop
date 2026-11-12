@@ -327,6 +327,11 @@ it('refreshes the bound canvas and rejects a recovered write if it becomes stale
   const latest = await t.service.invoke('canvas.refresh', target)
   expect(latest.ok).toBe(true)
   if (!latest.ok) throw Error('Canvas refresh failed')
+  // A duplicate GET can give the same document a different local token.
+  const duplicate = await t.service.invoke('canvas.refresh', target)
+  expect(duplicate.ok).toBe(true)
+  if (!duplicate.ok) throw Error('Duplicate canvas refresh failed')
+  expect((duplicate.value as typeof initial).canvasRevision).not.toBe((latest.value as typeof initial).canvasRevision)
   expect(await t.service.invoke('canvas.apply', {
     ...pending, baseRevision: (latest.value as typeof initial).canvasRevision
   })).toMatchObject({ ok: true, value: { canvas } })

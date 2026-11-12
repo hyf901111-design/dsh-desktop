@@ -1503,7 +1503,13 @@ export class ResearchBoardsService {
       throw new ResearchBoardsError('INVALID_REQUEST')
     const latestRequired = input.requireLatest === true
     const base = r.revisions.get(baseRevision)
-    if (!base || (latestRequired && baseRevision !== r.revision))
+    // GET and socket snapshots can materialize the same document under a new
+    // local token. Only an actual intervening document change invalidates a retry.
+    const matchesHead = () => {
+      const head = r.revisions.get(r.revision)
+      return baseRevision === r.revision || !!(base && head && Buffer.compare(base.bytes, head.bytes) === 0)
+    }
+    if (!base || (latestRequired && !matchesHead()))
       throw new ResearchBoardsError(
         'STALE_CANVAS_REVISION',
         '画板版本已更新，请保留当前草稿并重新载入。'
@@ -1521,7 +1527,7 @@ export class ResearchBoardsService {
       })
     this.check(ctx)
     this.requireBoard(boardId, localSessionId, true)
-    if (this.boards.get(boardId) !== r || (latestRequired && baseRevision !== r.revision))
+    if (this.boards.get(boardId) !== r || (latestRequired && !matchesHead()))
       throw new ResearchBoardsError('STALE_CANVAS_REVISION')
     validateCanvas(next)
     // Fork the exact page branch. Applying stale string indices directly to live Y.Text loses remote edits.
@@ -2360,10 +2366,13 @@ export class ResearchBoardsService {
         const p = exact(input, ['boardId', 'localSessionId'])
         const boardId = safeId(p.boardId), localSessionId = safeId(p.localSessionId)
         const ctx = this.context()
-        this.requireBoard(boardId, localSessionId)
+        if (this.getBinding(localSessionId)?.boardId !== boardId)
+          throw new ResearchBoardsError('BINDING_CONFLICT')
         await this.loadBoard(boardId, true)
         this.check(ctx)
-        return this.view(this.requireBoard(boardId, localSessionId))
+        const view = this.view(this.requireBoard(boardId, localSessionId))
+        void this.flush()
+        return view
       }
       case 'canvas.undo':
       case 'canvas.redo': {

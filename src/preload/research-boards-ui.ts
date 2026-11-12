@@ -519,7 +519,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (e.queued && !e.paused) void drain(e)
     }
   }
-  async function retryCanvas(id: string) {
+  async function retryCanvas(id: string, refreshed?: BoardView) {
     const e = editors.get(id)
     const failure = e?.syncFailure
     if (!e || !failure || e.retrying || e.busy || !e.view.permissions.edit || !e.mutation) return
@@ -539,10 +539,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     notify()
     try {
       if (failure.kind !== 'retry') {
-        const fresh = await call<BoardView>('canvas.refresh', { boardId, localSessionId: id })
-        if (!valid()) return
-        if (fresh.boardId !== boardId || fresh.localSessionId !== id || fresh.epoch !== epoch || !fresh.permissions.edit)
-          throw Error('BOARD_ACCESS_CHANGED')
+        const fresh = refreshed ?? await loadLatestCanvas(id, e)
+        if (!valid() || !fresh.permissions.edit) return
         if (e.workspace.isCollaborationGesture?.()) {
           e.syncFailure = { ...failure, message: '请先完成当前拖动或缩放，再同步看板修改。', dismissed: false }
           return
@@ -1343,19 +1341,49 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     )
   }
 
-  async function flushCanvas(sessionId: string) {
+  async function loadLatestCanvas(id: string, e: EditState) {
+    const { boardId, epoch } = e.view
+    const fresh = await call<BoardView>('canvas.refresh', { boardId, localSessionId: id })
+    if (
+      disposed || editors.get(id) !== e || e.generation !== state.account.generation ||
+      e.accountId !== state.account.user?.userId || fresh.boardId !== boardId ||
+      fresh.localSessionId !== id || fresh.epoch !== epoch || e.view.epoch !== epoch ||
+      !fresh.permissions.read || !e.view.permissions.read
+    ) throw Error('看板访问权限已变化，请重新打开看板。')
+    return e.view.seq > fresh.seq ? e.view : fresh
+  }
+
+  async function refreshCanvas(id: string) {
+    const e = editors.get(id)
+    if (!e?.view.permissions.read) throw Error('协作看板暂时不可用，请重新打开看板。')
+    const fresh = await loadLatestCanvas(id, e)
+    hydrate(e, fresh)
+    notify()
+    if (e.view.permissions.edit) await flushCanvas(id, { recover: true, refreshed: fresh })
+  }
+
+  async function flushCanvas(sessionId: string, { recover = false, refreshed }: { recover?: boolean; refreshed?: BoardView } = {}) {
     const e = editors.get(sessionId)
     if (!e || !e.view.permissions.edit) throw Error('当前画板不可编辑')
     if (e.workspace.isCollaborationGesture?.())
       throw Error('请先完成当前拖动或缩放')
     const until = Date.now() + 30000
-    while (e.busy || e.queued || e.mutation || e.view.pendingCount) {
-      if (e.paused || Date.now() > until || !e.view.permissions.edit)
-        throw Error(e.syncFailure?.message ?? '画板更改尚未确认')
-      if (!e.busy && (e.queued || e.mutation)) await drain(e)
+    let attempted = false
+    const active = () => !disposed && editors.get(sessionId) === e &&
+      e.generation === state.account.generation && e.accountId === state.account.user?.userId &&
+      e.view.permissions.edit
+    while (e.busy || e.retrying || e.queued || e.mutation || e.view.pendingCount) {
+      if (!active() || Date.now() > until)
+        throw Error('画板更改尚未确认')
+      if (e.paused && !e.retrying) {
+        if (!recover || attempted || !e.syncFailure || !e.mutation)
+          throw Error(e.syncFailure?.message ?? '画板更改尚未确认')
+        attempted = true
+        await retryCanvas(sessionId, refreshed)
+      } else if (!e.busy && !e.retrying && (e.queued || e.mutation)) await drain(e)
       await new Promise((r) => setTimeout(r, 20))
     }
-    if (e.view.pendingCount) throw Error('画板更改尚未由云端确认')
+    if (!active()) throw Error('看板访问权限已变化，请重新打开看板。')
     return e.view
   }
   let updateLocked = false, priorInert = false
@@ -1545,10 +1573,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         }))
       }
       await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
-      await flushCanvas(sessionId)
+      const current = await flushCanvas(sessionId, { recover: true })
       if (generation !== state.account.generation) return
+      if (!current.permissions.execute || current.boardId !== v.boardId || current.epoch !== v.epoch)
+        throw Error('看板当前无法发送消息，输入已保留。')
       const reply = await call<RequestReply>('request.submit', {
-        boardId: v.boardId,
+        boardId: current.boardId,
         text,
         clientMutationId: request.id,
         context
@@ -1706,6 +1736,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     whenHomeGuideSessionsReady,
     submitShared,
     flushCanvas,
+    refreshCanvas,
     prepareForUpdate,
     generateShared,
     hasRetainedResult: (sessionId: string, nodeId: string) => !!retainedResult(sessionId, nodeId),

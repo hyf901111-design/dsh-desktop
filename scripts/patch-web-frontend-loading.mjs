@@ -48,6 +48,7 @@ import { patchWorkspaceDragFeedback } from './lib/workspace-drag-feedback.mjs'
 import { patchResearchNativeWeb } from './lib/research-native-web-client.mjs'
 import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
+import { patchComposerNoticeDismissal } from './lib/composer-submit-policy.mjs'
 import { patchResearchBoardHeaderClient, stripResearchBoardHeaderClient } from './lib/research-board-header-client.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 import { patchCanvasUseClient } from './lib/canvas-use-client.mjs'
@@ -378,7 +379,7 @@ writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileS
 // Board tabs wrap the final resident canvas and reverse before all earlier passes.
 writeFileSync(conversationPath,patchBoardTabsClient(readFileSync(conversationPath,'utf8')))
 // Dictation wraps the final shared controlled InputBar and unwinds before all refreshes.
-writeFileSync(conversationPath,patchComposerVoice(readFileSync(conversationPath,'utf8')))
+writeFileSync(conversationPath,patchComposerNoticeDismissal(patchComposerVoice(readFileSync(conversationPath,'utf8'))))
 
 // Keep image generation visible outside the folded execution details.
 writeFileSync(conversationPath,patchImageGenerationClient(readFileSync(conversationPath,'utf8')))

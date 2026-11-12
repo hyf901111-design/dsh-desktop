@@ -2,21 +2,26 @@
 export async function refreshResearchCanvasView({sessionId,shared,adapter,remount,isActive}) {
   if (shared) {
     if (!adapter) throw Error('协作画板暂不可用。');
-    if (adapter.getView(sessionId)?.permissions.edit) await adapter.flushCanvas(sessionId);
     if (!isActive()) return;
-    await adapter.call('boards.refresh');
+    await adapter.refreshCanvas(sessionId);
   }
   if (isActive()) remount();
 }
 export function patchCanvasRefresh(source) {
   const marker='/* odyssey:canvas-refresh:v1 */';
-  if(source.includes(marker))return source;
+  const state='const [contextMenu, setContextMenu] = (0, react.useState)(null);';
+  const helper=marker+'\n'+refreshResearchCanvasView.toString()+'\n';
+  const existing=source.indexOf(marker);
+  if(existing>=0){
+    const end=source.indexOf(state,existing+marker.length);
+    if(end<0)throw Error('Canvas refresh helper boundary missing');
+    return source.slice(0,existing)+helper+source.slice(end);
+  }
   const replace=(anchor,value)=>{
     if(source.split(anchor).length!==2)throw Error('Canvas refresh anchor missing or ambiguous: '+anchor.slice(0,90));
     source=source.replace(anchor,value);
   };
-  const state='const [contextMenu, setContextMenu] = (0, react.useState)(null);';
-  replace(state,marker+'\n'+refreshResearchCanvasView.toString()+'\n'+state);
+  replace(state,helper+state);
   // Older builds may retain hooks while the layout patch regenerated helpers.
   if(source.includes('const [canvasRefreshEpoch,setCanvasRefreshEpoch]'))return source;
   replace(state,state+`

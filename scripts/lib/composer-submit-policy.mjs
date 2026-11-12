@@ -10,3 +10,30 @@ export function patchComposerSubmitPolicy(source) {
   }`
   return source.slice(0,start)+primary.replace('inputActions.submit();',replacement)+source.slice(end)
 }
+
+
+export function patchComposerNoticeDismissal(source) {
+  if (source.includes('data-composer-notice-dismiss')) return source
+  const anchor = /notice !== null && \(0, react_jsx_runtime\.jsx\)\("div", \{\s*className: clsx\(InputBar_module_css_default\.notice, notice\.level === "error" && InputBar_module_css_default\.noticeError\),\s*role: "status",\s*children: notice\.text\s*\}\)/
+  if (source.split(anchor).length !== 2) throw Error('Composer notice renderer missing or ambiguous')
+  return source.replace(anchor, `notice !== null && react_jsx_runtime.jsxs("div", {
+    className: clsx(InputBar_module_css_default.notice, notice.level === "error" && InputBar_module_css_default.noticeError),
+    "data-composer-notice": "",
+    children: [
+      react_jsx_runtime.jsx("span", { role: "status", children: notice.text }),
+      notice.level === "error" && keyboard?.notices?.getSnapshot() === notice && react_jsx_runtime.jsx("button", {
+        type: "button",
+        "data-composer-notice-dismiss": "",
+        "aria-label": workbenchText("关闭对话提示"),
+        onPointerDown: event => { event.preventDefault(); event.stopPropagation(); },
+        onClick: event => {
+          event.stopPropagation();
+          if (keyboard.notices.getSnapshot() !== notice) return;
+          keyboard.notices.set(null);
+          if (event.detail === 0) inputRef.current?.focus({ preventScroll: true });
+        },
+        children: "×"
+      })
+    ]
+  })`)
+}

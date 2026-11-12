@@ -26,6 +26,9 @@ type ComponentType<Props> = (props: Props) => unknown
 type ReactNode = unknown
 
 const requireModule = createRequire(import.meta.url)
+const { patchComposerNoticeDismissal } = requireModule('../scripts/lib/composer-submit-policy.mjs') as {
+  patchComposerNoticeDismissal(source: string): string
+}
 const { createElement, StrictMode, useEffect, useLayoutEffect, useSyncExternalStore } = requireModule('react') as {
   createElement: (type: unknown, props?: unknown, ...children: unknown[]) => unknown
   StrictMode: unknown
@@ -5982,6 +5985,68 @@ describe('Sherlock workspace and composer controls', () => {
       'pdf', 'word', 'presentation', 'text', 'image', 'spreadsheet'
     ])
   })
+
+  it('dismisses the right composer error without changing the draft or its selected component reference', async () => {
+    const browserWindow = new Window({ url: 'https://sherlock.local/' })
+    const restoreGlobals = installBrowserGlobals(browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-conversation', undefined, {
+      document: browserWindow.document, window: browserWindow, exposeInputBar: true,
+      transformSource: source => {
+        const patched = patchComposerNoticeDismissal(source)
+        expect(patchComposerNoticeDismissal(patched)).toBe(patched)
+        return patched
+      },
+      modules: {
+        '@deepseek-ai/dsh-client-runtime/client': { createSnapshotStore },
+        '@deepseek-ai/dsh-client-ui-primitives': { Tooltip: ({ children }: any) => children },
+        '@deepseek-ai/dsh-client-ui-attachment': { DropOverlay: () => null, AttachmentRail: () => null }
+      }
+    })
+    const shell = new (client.SessionInputShell as any)({ actx: {}, defaultSink: () => undefined })
+    const artifact = { id: 'overview', messageId: 'overview-message', title: '市场概览', excerpt: '原始资料' }
+    const board = { files: [], artifacts: [artifact], selection: { selectedNodeIds: [artifact.id] } }
+    const workspace = { subscribe: () => () => {}, getSnapshot: () => board }
+    shell.setDraft('总结')
+    shell.insertReference((client.researchArtifactReference as any)(artifact), {
+      start: 0, end: 0, draftRev: shell.snapshot.draftRev
+    })
+    const before = shell.snapshot
+    expect(before.occurrences).toHaveLength(1)
+    const host = browserWindow.document.createElement('div')
+    browserWindow.document.body.appendChild(host)
+    const root = createRoot(host)
+    const props = {
+      useSession: (select: any) => select({ running: false, promptError: null, subagent: null, removed: false }),
+      useInput: (select: any) => useSyncExternalStore(shell.state.subscribe, () => select(shell.snapshot), () => select(shell.snapshot)),
+      inputActions: shell.actions, keyboard: shell, renderSlot: () => null,
+      useNotices: (select: any) => useSyncExternalStore(shell.notices.subscribe, () => select(shell.notices.getSnapshot()), () => null),
+      useLexicon: (select: any) => select(new Map()), useMenuLauncher: (select: any) => select(null),
+      useProjection: (_name: string, select?: any) => select?.(undefined),
+      researchCanvasWorkspace: workspace, researchFileReferences: [], researchArtifactReferences: [artifact],
+      sessionId: 'board-notice', t: (key: string) => key, variant: 'composer'
+    }
+    try {
+      await act(async () => {
+        root.render(createElement(client.__testInputBar as any, props))
+        shell.notify('error', '未能载入最新看板。')
+      })
+      const notice = () => host.querySelector('[data-composer-notice]')
+      expect(notice()?.textContent).toContain('未能载入最新看板。')
+      const close = notice()?.querySelector<HappyDOMHTMLElement>('button[aria-label="关闭对话提示"]')
+      expect(close).toBeTruthy()
+      await act(async () => close?.click())
+      expect(notice()).toBeNull()
+      expect(shell.notices.getSnapshot()).toBeNull()
+      expect(shell.snapshot.draft).toBe(before.draft)
+      expect(shell.snapshot.occurrences).toEqual(before.occurrences)
+      await act(async () => shell.notify('error', '同步仍暂时不可用。'))
+      expect(notice()?.textContent).toContain('同步仍暂时不可用。')
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+      restoreGlobals()
+    }
+  }, 15000)
 
   it('renders progressive canvas context in the actual InputBar with metadata-only expansion and per-send optout', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
