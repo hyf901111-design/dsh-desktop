@@ -22,31 +22,36 @@ async function mount(kind: 'header' | 'presence', sharingState = 'shared', role 
   cleanup.push(async () => { await act(async () => root.unmount()); await w.happyDOM.abort() })
   return { host, view, actions, setSnapshot: async (next: any) => { snapshot = next; await act(async () => listeners.forEach(fn => fn())) }, emit: async () => { currentState = { ...currentState }; await act(async () => listeners.forEach(fn => fn())) } }
 }
-it('keeps an added private board when its header icon is clicked again', async () => {
-  const f = await mount('header', 'shared')
-  expect(f.host.querySelector('.srb-favorite-button')).toBeNull()
-  f.view.board.sharingState = 'ownerOnly'; await f.emit()
-  const button = f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
-  expect(button.getAttribute('aria-label')).toBe('已创建至看板区')
-  expect(button.getAttribute('aria-pressed')).toBe('true')
-  expect(button.textContent).toBe('')
+async function openHeaderMenu(host: Awaited<ReturnType<typeof mount>>['host']) {
+  const more = host.querySelector('[aria-label="更多看板操作"]') as unknown as HTMLButtonElement
+  await act(async () => more.click())
+  return host.querySelector('.srb-header-menu')!
+}
+it('keeps an already pinned private board in the board area', async () => {
+  const f = await mount('header', 'ownerOnly')
+  const menu = await openHeaderMenu(f.host)
+  const button = menu.querySelector('[data-board-menu-action="add"]') as unknown as HTMLButtonElement
+  expect(button.textContent).toBe('已加入看板区')
+  expect(button.disabled).toBe(true)
   await act(async () => button.click())
   expect(f.actions).toEqual([])
-  expect(button.getAttribute('aria-pressed')).toBe('true')
 })
-it('adds a dedicated private board through board pin instead of deleting its favorite', async () => {
+it('pins a dedicated private board through its menu action', async () => {
   const f = await mount('header', 'ownerOnly', 'owner', false)
-  const button = f.host.querySelector('.srb-favorite-button') as unknown as HTMLButtonElement
-  expect(button.getAttribute('aria-label')).toBe('创建至看板区')
+  const menu = await openHeaderMenu(f.host)
+  const button = menu.querySelector('[data-board-menu-action="add"]') as unknown as HTMLButtonElement
+  expect(button.textContent).toBe('加入至看板区')
   await act(async () => button.click())
   expect(f.actions).toEqual(['board.pin'])
-  expect(button.getAttribute('aria-label')).toBe('已创建至看板区')
+  const pinnedMenu = await openHeaderMenu(f.host)
+  expect(pinnedMenu.querySelector('[data-board-menu-action="add"]')?.textContent).toBe('已加入看板区')
 })
-it('keeps shared viewer management without dedicated pin or invitation actions', async () => {
+it('keeps shared viewer management without pin or invitation actions', async () => {
   const f = await mount('header', 'shared', 'viewer')
-  expect(f.host.querySelector('.srb-favorite-button')).toBeNull()
-  expect(f.host.querySelector('.srb-add-collaborator')).toBeNull()
-  expect(f.host.querySelector('.srb-manage-button')?.textContent).toBe('管理')
+  const menu = await openHeaderMenu(f.host)
+  expect(menu.querySelector('[data-board-menu-action="add"]')?.hasAttribute('disabled')).toBe(true)
+  expect(menu.querySelector('[data-board-menu-action="people"]')).toBeNull()
+  expect(menu.querySelector('[data-board-menu-action="manage"]')?.textContent).toBe('管理协作')
 })
 it('projects peer geometry through the viewport while rendering vector cursor and an editing label', async () => {
   const f = await mount('presence')

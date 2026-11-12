@@ -37,7 +37,7 @@ for(const dark of [false,true])for(const locale of ['zh','en'])it(`keeps mode an
   expect(await notes.isEnabled()).toBe(true);expect(await notes.getAttribute('aria-label')).toBe(locale==='en'?'AI Copilot mode: Off':'随航模式，当前关闭')
   for(const [name,control]of [['research',research],['notes',notes]]as const){
    await page.mouse.move(4,4);const idle=await style(control)
-   expect(idle.opacity).toBe('1');expect(idle.cursor).toBe('pointer');expect(idle.iconOpacity).toBe('1');expect(idle.border).toBe('0px');expect(parseFloat(idle.radius)).toBeGreaterThanOrEqual(15);expect(idle.height).toBe(30);expect(idle.scroll).toBeLessThanOrEqual(idle.client+1);expect(idle.contentFits).toBe(true)
+   expect(idle.opacity).toBe('1');expect(idle.cursor).toBe('pointer');expect(idle.iconOpacity).toBe('1');expect(idle.border).toBe('0px');expect(parseFloat(idle.radius)).toBeGreaterThanOrEqual(name==='research'?7:15);expect(idle.height).toBe(30);expect(idle.scroll).toBeLessThanOrEqual(idle.client+1);expect(idle.contentFits).toBe(true)
    // The existing masked busy perimeter extends 1px beyond the pill; actual label/icon bounds must fit.
    await control.screenshot({path:`${evidence}/${dark?'dark':'light'}-${locale}-${name}-normal.png`})
    const primary=await control.evaluate((el:HTMLElement,name:string)=>getComputedStyle(el).getPropertyValue(name==='research'?'--srb-label':'--en-challenge-ink').trim(),name)
@@ -47,7 +47,7 @@ for(const dark of [false,true])for(const locale of ['zh','en'])it(`keeps mode an
    await page.mouse.down();await page.waitForTimeout(180);const pressed=await style(control);expect(pressed.background).not.toBe(hover.background);await page.mouse.move(4,4);await page.mouse.up()
    records.push({name,idle,hover,pressed})
   }
-  await research.click();await expect.poll(()=>research.getAttribute('aria-pressed')).toBe('true');await expect.poll(()=>research.textContent()).toBe(locale==='en'?'Preview mode':'预览模式')
+  await research.click();await expect.poll(()=>research.getAttribute('aria-pressed')).toBe('true');expect(await research.textContent()).toBe('');await expect.poll(()=>research.getAttribute('aria-label')).toBe(locale==='en'?'Switch to edit mode':'切换到编辑模式')
   await notes.click();const slider=page.getByRole('slider');await slider.waitFor();expect(await notes.getAttribute('aria-expanded')).toBe('true');await slider.press('End');await expect.poll(()=>page.evaluate(()=>(window as any).levelChanges)).toEqual([4]);await slider.press('Escape')
   await page.evaluate(()=>(window as any).fixture.setDisabled(true));await expect.poll(()=>research.isDisabled()).toBe(true);await expect.poll(()=>notes.isDisabled()).toBe(true)
   for(const control of [research,notes]){const disabled=await style(control);expect(disabled.opacity).toBe('0.5');expect(disabled.cursor).toBe('default')}
