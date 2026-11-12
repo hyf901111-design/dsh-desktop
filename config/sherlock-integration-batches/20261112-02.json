@@ -1,0 +1,485 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261112-02",
+  "branch": "codex/integration/20261112-02",
+  "baseMainCommit": "9c7914c1393e661e951bf7bfc6cd243ca027c9fe",
+  "expectedMainCommit": "9c7914c1393e661e951bf7bfc6cd243ca027c9fe",
+  "createdAt": "2026-11-12T15:23:42.854Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "各整理模式消除组件之间的空区",
+        "branch": "codex/feat/board-table-reading-20261112",
+        "baseCommit": "9c7914c1393e661e951bf7bfc6cd243ca027c9fe",
+        "tipCommit": "dcc659123869b96b88f63ab182c9fdc6d6c19bb6",
+        "commits": [
+          {
+            "commit": "533c8309c4fc3db3601361b639956c83456ca021",
+            "parents": [
+              "9c7914c1393e661e951bf7bfc6cd243ca027c9fe"
+            ],
+            "subject": "修复协作看板版本冲突后的同步重试"
+          },
+          {
+            "commit": "abe3d19b1447e914c70cf357ea20c6a5eba86bc0",
+            "parents": [
+              "533c8309c4fc3db3601361b639956c83456ca021"
+            ],
+            "subject": "修复旧协作看板缺少组件坐标时无法加载"
+          },
+          {
+            "commit": "090b964e5349702ae39783adccf031aa0ba783e2",
+            "parents": [
+              "abe3d19b1447e914c70cf357ea20c6a5eba86bc0"
+            ],
+            "subject": "从原个人看板恢复旧协作看板页签归属"
+          },
+          {
+            "commit": "869afa0b495802bb09aeb12374feb72ccdef69c4",
+            "parents": [
+              "090b964e5349702ae39783adccf031aa0ba783e2"
+            ],
+            "subject": "修复看板整理高度、宽表可读性和页签取消选中"
+          },
+          {
+            "commit": "d67311bfd84e33a143fa9f02ee86a69708a6db16",
+            "parents": [
+              "869afa0b495802bb09aeb12374feb72ccdef69c4"
+            ],
+            "subject": "修复协作看板刷新和消息发送的同步恢复，支持关闭对话提示"
+          },
+          {
+            "commit": "aa5c6c4156253558d12fe2b367355b96fd293c9e",
+            "parents": [
+              "d67311bfd84e33a143fa9f02ee86a69708a6db16"
+            ],
+            "subject": "为看板表格横向滚动条预留独立空间"
+          },
+          {
+            "commit": "8d8160ac9ac210d0f4adc4d8734977476f13d84e",
+            "parents": [
+              "aa5c6c4156253558d12fe2b367355b96fd293c9e"
+            ],
+            "subject": "协作看板仅同步组件内容与页签归属"
+          },
+          {
+            "commit": "df5b66d5b402b210219a45de112bc03c9b3cd8b6",
+            "parents": [
+              "8d8160ac9ac210d0f4adc4d8734977476f13d84e"
+            ],
+            "subject": "增加研究看板本机自动整理模式"
+          },
+          {
+            "commit": "c3ff4aecda31dbc2a2b76fec36805a55a8792ec4",
+            "parents": [
+              "df5b66d5b402b210219a45de112bc03c9b3cd8b6"
+            ],
+            "subject": "修复研究看板自动整理、组件连线与协作页签空白"
+          },
+          {
+            "commit": "67cce94db3a2573c3a629f94dea8a5b9db1782af",
+            "parents": [
+              "c3ff4aecda31dbc2a2b76fec36805a55a8792ec4"
+            ],
+            "subject": "修复研究看板自动整理与页签恢复并减少客户端卡顿"
+          },
+          {
+            "commit": "b9b0f34d72b9fdccbac1a182dad757d1b7944586",
+            "parents": [
+              "67cce94db3a2573c3a629f94dea8a5b9db1782af"
+            ],
+            "subject": "修正看板菜单样式和协作组件归类交互"
+          },
+          {
+            "commit": "a43d3df67c7df0e9ffbaf78e0f5f99ae31696cdc",
+            "parents": [
+              "b9b0f34d72b9fdccbac1a182dad757d1b7944586"
+            ],
+            "subject": "阻止本机列宽进入协作同步，修复旧看板页签归类保存"
+          },
+          {
+            "commit": "79c4050e92dbaa2c5ae07a6a32979f9eb97c574a",
+            "parents": [
+              "a43d3df67c7df0e9ffbaf78e0f5f99ae31696cdc"
+            ],
+            "subject": "恢复易方达表头蓝色并修复缩放后的看板铺满"
+          },
+          {
+            "commit": "dcc659123869b96b88f63ab182c9fdc6d6c19bb6",
+            "parents": [
+              "79c4050e92dbaa2c5ae07a6a32979f9eb97c574a"
+            ],
+            "subject": "修复各整理模式测高后重新出现的组件间空隙"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-scrollbars.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-grid.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-workspace.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-refresh.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/composer-submit-policy.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-link.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-workbench-study.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-board-header-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-preview-mode.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-auto-arrange.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-board-snapshot.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-board-tab-membership.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-boards-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-header-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/shared-board-canvas-merge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/shared-board-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-connection-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/canvas-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-connection-row-routing.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/openterminal-table-header-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-directory-materials.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-presence-final.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-mode-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/session-view-preferences.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/shared-board-canvas-sync.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-auto-arrange-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-scrollbar-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-grid-workbench.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/workbench-auto-arrange-browser.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "77 项通过，含五种整理方式的实测内容高度、板块覆盖、浏览器渲染与页签隔离。",
+            "verifiedCommit": "dcc659123869b96b88f63ab182c9fdc6d6c19bb6",
+            "completedAt": "2026-11-12T15:20:56.157Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "automatically fills",
+              "--maxWorkers=1",
+              "--testTimeout=25000"
+            ],
+            "outcome": "passed",
+            "summary": "真实菜单缩放后仍可完整铺到右边缘。",
+            "verifiedCommit": "dcc659123869b96b88f63ab182c9fdc6d6c19bb6",
+            "completedAt": "2026-11-12T15:20:56.157Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "dcc659123869b96b88f63ab182c9fdc6d6c19bb6",
+            "completedAt": "2026-11-12T15:20:56.157Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "本地签名客户端打开原指数运营协作看板市场面；标准整理使不等高的资金流向与概览卡片底边对齐，下一行紧贴正常间距；双排整理让分类资金流向接在短卡片下方；恢复标准整理并保持客户端打开。"
+        },
+        "acceptanceCriteria": [
+          "标准整理在组件重新测高后保留原有同行并消除下方空区",
+          "自动整理及单排、双排、三排整理铺满实际布局区域且无重叠"
+        ],
+        "risks": [
+          "旧 research-grid-client.test.js 的整理用例在基线与候选版本均因历史夹具依赖的 Workbench restore anchor 已变而无法初始化。"
+        ],
+        "generatedAt": "2026-11-12T15:20:56.157Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/research-grid-workbench.test.js",
+        "test/research-grid-arrange-tabs.test.js",
+        "test/workbench-auto-arrange-browser.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=30000"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/research-preview-mode-browser.test.js",
+        "-t",
+        "automatically fills",
+        "--maxWorkers=1",
+        "--testTimeout=25000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "vitest",
+        "--",
+        "run",
+        "test/shared-board-canvas-sync.test.ts",
+        "test/workbench-scrollbar-theme-browser.test.js",
+        "test/board-tabs-connection-browser.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=30000"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
