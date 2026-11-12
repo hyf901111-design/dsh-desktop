@@ -1,4 +1,4 @@
-import { LlmError } from '@deepseek-ai/dsh-llm'
+import { LlmError, resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import { createProvider } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
@@ -7,6 +7,8 @@ import { ImageGenerationError, validateGeneratedImage } from './image-generation
 export const HOSTED_ARK_PROVIDER = 'ework-ark'
 const displayName = 'EWork'
 const defaultImage = 'doubao-seedream-5.0-flash'
+const hostedRequestBytes = 12_000_000
+const retryPolicy = resolveRetryPolicy({ mode: 'normal', maxRetries: 0 }, HOSTED_ARK_PROVIDER)
 
 function bridgeOptions(raw) {
   try {
@@ -18,8 +20,56 @@ function bridgeOptions(raw) {
   } catch { return undefined }
 }
 
+function fitHostedChatPayload(payload) {
+  const images = []
+  for (const { content } of payload.messages) {
+    if (!Array.isArray(content)) continue
+    content.forEach((part, index) => {
+      if (part.type === 'image_url') images.push({ content, index })
+    })
+  }
+  const newest = images.at(-1)?.content
+  const omitted = { type: 'text', text: '[较早的图片未随本次请求发送]' }
+  let bytes = Buffer.byteLength(JSON.stringify(payload))
+  let count = images.length
+  // Keep the newest batch intact, and trim only older images when the gateway's bounds require it.
+  for (const { content, index } of images) {
+    if (content === newest || (count <= 4 && bytes <= hostedRequestBytes)) break
+    bytes -= Buffer.byteLength(JSON.stringify(content[index])) - Buffer.byteLength(JSON.stringify(omitted))
+    content[index] = omitted
+    count--
+  }
+  if (count > 4) throw new Error('本次发送的图片太多，请选择最多四张图片后重试。')
+  if (bytes > hostedRequestBytes) throw new Error('本次消息和图片过大，请压缩图片或缩短消息后重试。')
+  return payload
+}
+
+class HostedPiAiAdapter extends PiAiAdapter {
+  async *stream(options) {
+    for await (const event of super.stream(options)) {
+      if (event.type !== 'finish' || event.reason.kind !== 'error') {
+        yield event
+        continue
+      }
+      const { failure } = event.reason
+      const quotaWindow = /\bAI_QUOTA_(FIVE_HOUR|WEEK|MONTH)\b/.exec(failure.message)?.[1]
+      let visibleFailure = failure
+      if (quotaWindow) {
+        const label = { FIVE_HOUR: '5 小时', WEEK: '本周', MONTH: '本月' }[quotaWindow]
+        visibleFailure = { ...failure, code: 'AI_QUOTA_' + quotaWindow, message: `${label}剩余额度不足以开始本次模型调用。` }
+      } else if (failure.message.includes('HOSTED_AI_PAYLOAD_TOO_LARGE')) {
+        visibleFailure = { ...failure, message: '本次消息和图片过大，请压缩图片或缩短消息后重试。' }
+      } else if (failure.message.includes('Stream ended without finish_reason') || failure.message.includes('HOSTED_AI_STREAM_INTERRUPTED')) {
+        visibleFailure = { ...failure, message: '模型输出中断，请重新发起请求。' }
+      }
+      yield { ...event, reason: { ...event.reason, failure: visibleFailure } }
+    }
+  }
+}
+
 function adapterFor(ctx, base, apiKey, models) {
   const provider = HOSTED_ARK_PROVIDER
+  const api = openAICompletionsApi()
   const piProvider = createProvider({
     id: provider, name: displayName, baseUrl: base,
     auth: { apiKey: { name: displayName, resolve: ({ credential }) => Promise.resolve({ auth: { apiKey: credential?.key }, source: displayName }) } },
@@ -29,11 +79,15 @@ function adapterFor(ctx, base, apiKey, models) {
       compat: { supportsDeveloperRole: false, supportsReasoningEffort: false, maxTokensField: 'max_tokens',
         ...(id.startsWith('deepseek-') ? { requiresThinkingAsText: false, thinkingFormat: 'deepseek' } : {}) }
     })),
-    api: openAICompletionsApi()
+    api: {
+      ...api,
+      streamSimple: (model, context, options) =>
+        api.streamSimple(model, context, { ...options, onPayload: fitHostedChatPayload })
+    }
   })
   const profiles = new Map([[provider, { displayName, piProvider, streamIdleTimeoutMs: 120000,
-    configuredMaxTokens: new Map(models.map(({ id }) => [id, 16384])), retryPolicy: { maxRetries: 0 } }]])
-  return new PiAiAdapter({ profiles: () => profiles, resolveApiKey: async () => apiKey, resolveAttachments: () => ctx.get?.('attachments') })
+    configuredMaxTokens: new Map(models.map(({ id }) => [id, 16384])), retryPolicy }]])
+  return new HostedPiAiAdapter({ profiles: () => profiles, resolveApiKey: async () => apiKey, resolveAttachments: () => ctx.get?.('attachments') })
 }
 
 /** The only credential Pi sees is a loopback capability tied to one account generation. */
@@ -88,7 +142,7 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
         assertCurrent?.()
         const references = input.references.map(image => 'data:' + image.mediaType + ';base64,' + Buffer.from(image.data).toString('base64'))
         const body = JSON.stringify({ model: input.model, prompt: input.prompt, size: input.size, references })
-        if (Buffer.byteLength(body) > 12_000_000) throw new ImageGenerationError('参考图过大，请压缩后重试。')
+        if (Buffer.byteLength(body) > hostedRequestBytes) throw new ImageGenerationError('参考图过大，请压缩后重试。')
         const response = await request(base + '/images', { method: 'POST', redirect: 'error',
           headers: { 'content-type': 'application/json', authorization: 'Bearer ' + access.key }, body,
           signal: AbortSignal.any([signal, lifetime.signal]) })

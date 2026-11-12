@@ -314,7 +314,13 @@ export class AccountService {
     const chunks: Buffer[] = []
     let bytes = 0
     for await (const chunk of req) {
-      if ((bytes += chunk.length) > 12_000_000) { res.writeHead(413).end(); return }
+      if ((bytes += chunk.length) > 12_000_000) {
+        const message = path === 'images' ? '参考图过大，请压缩后重试。' : '本次消息和图片过大，请压缩图片或缩短消息后重试。'
+        res.writeHead(413, { 'content-type': 'application/json' }).end(JSON.stringify({
+          error: { code: 'HOSTED_AI_PAYLOAD_TOO_LARGE', message }
+        }))
+        return
+      }
       chunks.push(chunk)
     }
     if (generation !== this.generation || signal.signal.aborted) { res.writeHead(401).end(); return }

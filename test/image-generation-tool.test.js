@@ -4,17 +4,18 @@ import {registerImageGenerationTool,conversationImageReferences} from '../packag
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=','base64')
 const cleanups=[]
 afterEach(async()=>{await Promise.all(cleanups.splice(0).map(fn=>fn()))})
-function fixture(options={}){
+function fixture({uploaded=false,...options}={}){
  const tools=new Map(),prompts=[],saved=[],reads=[],state={live:true,key:'test-private-key',profile:{apiKeyEnv:'CUSTOM_IMAGE_KEY'}}
  const ref={attachmentId:'user-image',mediaType:'image/png',bytes:png.length,width:1,height:1,name:'参考图.png'}
- const agent={id:'chat',session:{id:'chat',header:{cwd:'/workspace'},events:[{type:'turn/start',data:{turn:1}},{type:'user/message',data:{id:'human-1',source:{kind:'user'},content:[{type:'text',text:'画一只猫'},{type:'image',attachment:ref}]}}]}}
+ const agent={id:'chat',session:{id:'chat',header:{cwd:'/workspace'},events:[{type:'turn/start',data:{turn:1}},{type:'user/message',data:{id:'human-1',source:{kind:'user'},content:[{type:'text',text:'画一只猫'},...(uploaded?[{type:'image',attachment:ref}]:[])]}}]}}
  const attachments={imageLimits:{maxImageBytes:20*1024*1024},readImage:async r=>{reads.push(r);return{ref:r,data:png}},saveImage:async input=>{saved.push(input);return{...ref,attachmentId:'generated-'+saved.length,name:input.name}}}
  const credentials={resolve:vi.fn(async()=>state.key?{value:state.key}:undefined)}
  const ctx={tools:{register:t=>{tools.set(t.name,t);return()=>tools.delete(t.name)},schemas:()=>[...tools.values()]},agents:{get:()=>state.live?agent:undefined},systemPrompt:{context:p=>{prompts.push(p);return()=>{}}},get:n=>({attachments,credentials,settings:{get:()=>({providers:{openai:state.profile}})}}[n])}
  const request=vi.fn(async()=>new Response(JSON.stringify({data:[{b64_json:png.toString('base64')}]})))
  const dispose=registerImageGenerationTool(ctx,{fetch:request,...options});cleanups.push(dispose)
- const call=(args={},signal)=>tools.get('image_generate').execute({prompt:'水彩橘猫',...args},{agent,callId:'call-'+Math.random(),signal})
- return{tools,prompts,state,agent,attachments,credentials,request,saved,reads,call,ref}
+ const concludeTurn=vi.fn()
+ const call=(args={},signal,scope={})=>tools.get('image_generate').execute({prompt:'水彩橘猫',...args},{agent,callId:'call-'+Math.random(),signal,concludeTurn,...scope})
+ return{tools,prompts,state,agent,attachments,credentials,request,saved,reads,call,ref,concludeTurn}
 }
 it('generates using the configured credential and returns a durable native image without credentials',async()=>{
  const f=fixture(),result=await f.call()
@@ -35,11 +36,28 @@ it('deduplicates concurrent and repeated requests for the same human instruction
  await f.call();expect(f.request).toHaveBeenCalledTimes(2)
 })
 it('edits only images already present in this session',async()=>{
- const f=fixture();await f.call({reference_image_ids:[f.ref.attachmentId]})
+ const f=fixture({uploaded:true});await f.call({reference_image_ids:[f.ref.attachmentId]})
  expect(f.reads).toEqual([f.ref]);const [url,init]=f.request.mock.calls[0]
  expect(url).toContain('/images/edits');expect(init.body).toBeInstanceOf(FormData);expect(init.body.get('image[]')).toBeInstanceOf(Blob)
  await expect(f.call({reference_image_ids:['another-session-image']})).rejects.toThrow(/当前会话/)
  expect(f.request).toHaveBeenCalledTimes(1)
+})
+it('uses the current upload directly and concludes only a successfully delivered standalone request',async()=>{
+ const f=fixture({uploaded:true})
+ const result=await f.call({continue_after_delivery:true})
+ expect(f.request.mock.calls[0][0]).toContain('/images/edits')
+ expect(f.reads).toEqual([f.ref])
+ expect(f.concludeTurn).not.toHaveBeenCalled()
+ expect(await f.call({},undefined,{parent:Symbol('code-mode')})).toEqual(result)
+ expect(f.concludeTurn).not.toHaveBeenCalled()
+ f.concludeTurn.mockImplementationOnce(()=>expect(f.saved).toHaveLength(1))
+ expect(await f.call()).toEqual(result)
+ expect(f.request).toHaveBeenCalledTimes(1)
+ expect(f.concludeTurn).toHaveBeenCalledOnce()
+ const noReference=fixture({uploaded:true})
+ await noReference.call({reference_image_ids:[]})
+ expect(noReference.reads).toEqual([])
+ expect(noReference.request.mock.calls[0][0]).toContain('/images/generations')
 })
 it('rejects arbitrary URLs, unknown models, invalid sizes, excess references and delegate sessions before billing',async()=>{
  const f=fixture()
@@ -56,6 +74,7 @@ it('does not repeat a failed paid call or reflect provider errors / keys',async(
  const f=fixture();f.request.mockResolvedValue(new Response(JSON.stringify({error:{message:'test-private-key secret'}}),{status:429}))
  await expect(f.call()).rejects.toThrow(/额度|频率/);await expect(f.call()).rejects.toThrow(/额度|频率/)
  expect(f.request).toHaveBeenCalledTimes(1);expect(f.saved).toHaveLength(0)
+ expect(f.concludeTurn).not.toHaveBeenCalled()
 })
 it('cancellation discards late success and exposes no generated image',async()=>{
  const f=fixture(),controller=new AbortController();let resolve,started
