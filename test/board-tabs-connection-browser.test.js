@@ -120,3 +120,26 @@ it('竖向页签的跨页连线从标签右侧接出，保留可点击的页签'
   expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)
+
+it('看板缩放并滚动后，连线仍从实际端口接出',async()=>{
+ const {page,errors}=await fixture()
+ try{
+  const aligned=()=> {
+   const path=document.querySelector('.ew-financial-connection-line'),port=document.querySelector('[data-financial-port-node=watch][data-financial-port=output]')
+   const root=document.querySelector('main')
+   if(!path||!port||root.scrollTop===0)return false
+   const p=path.getPointAtLength(0).matrixTransform(path.getScreenCTM()),r=port.getBoundingClientRect()
+   return Math.hypot(p.x-r.left-r.width/2,p.y-r.top-r.height/2)<1
+  }
+  for(const zoom of [.7,1.3]){
+   await page.locator('main').evaluate((root,zoom)=>{
+    Object.assign(root.style,{zoom,border:'2px solid transparent'})
+    root.style.setProperty('height','440px','important')
+    root.style.setProperty('overflow','auto','important')
+    root.scrollTop=80
+   },zoom)
+   await page.waitForFunction(aligned,null,{timeout:3000})
+  }
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})

@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import type { BoardSnapshot } from '../src/shared/research-boards'
+import type { BoardSnapshot, Canvas } from '../src/shared/research-boards'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { exportHumanHistory } from '../packages/dsh-research-collaboration/context.js'
 import { tmpdir } from 'node:os'
@@ -17,6 +17,8 @@ import {
   fromBase64
 } from '../packages/dsh-research-collaboration/protocol.js'
 import { ResearchBoardsStore } from '../src/main/state/research-boards-store'
+import { boardTabsSpec } from '../packages/dsh-research-task-runtime/board-tabs-contract.js'
+import { restoreUnassignedSharedBoardCards } from '../src/main/state/research-board-tab-membership'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 import {
   ResearchBoardsService,
@@ -2127,4 +2129,39 @@ it('publishes shared content without changing existing compatibility geometry', 
   expect(result.ok).toBe(true)
   await t.service.flush()
   expect(projectDocument(t.doc).artifacts[0]).toEqual({ ...first, title: '共享标题' })
+})
+
+it('keeps recovered tabs visible without writing guesses during stale and queued content edits', async () => {
+  const t = make({ materializeBoard: async ({ canvas }) => {
+    restoreUnassignedSharedBoardCards(canvas)
+    return canvas
+  } })
+  await ready(t)
+  await t.remote(canvas => canvas.artifacts.push({
+    id: 'tabs', kind: 'generated-container', containerSpec: {
+      version: 1, type: 'board-tabs', title: '页签', revision: 1,
+      tabs: [{ id: 'first', name: '市场面', nodeIds: [] }, { id: 'next', name: '渠道', nodeIds: [] }]
+    }
+  }))
+  const view = t.service.getSnapshot().current!
+  const membership = (canvas: Canvas) => boardTabsSpec(canvas.artifacts.find(n => n.id === 'tabs')?.containerSpec)?.tabs.map(tab => tab.nodeIds)
+  expect(membership(view.canvas)).toEqual([['n'], []])
+  await t.remote((canvas: Canvas) => { canvas.artifacts.find(n => n.id === 'n')!.excerpt = '其他用户的修改' })
+
+  const send = (revision: string, mutation: string, canvas: typeof view.canvas) =>
+    t.service.invoke('canvas.apply', {
+      boardId: 'board', localSessionId: 'shared-session', baseRevision: revision, clientMutationId: mutation, canvas
+    })
+  const edit = structuredClone(view.canvas)
+  edit.artifacts.find(n => n.id === 'n')!.title = '第一次编辑'
+  const first: any = await send(view.canvasRevision, 'legacy-tab-first', edit)
+  expect(first.ok).toBe(true)
+  edit.artifacts.find(n => n.id === 'n')!.title = '第二次编辑'
+  const next: any = await send(first.value.localBranchRevision, 'legacy-tab-next', edit)
+  expect(next.ok).toBe(true)
+  expect(membership(next.value.canvas)).toEqual([['n'], []])
+  await t.service.flush()
+  const shared = projectDocument(t.doc)
+  expect(membership(shared)).toEqual([[], []])
+  expect(shared.artifacts.find(n => n.id === 'n')).toMatchObject({ title: '第二次编辑', excerpt: '其他用户的修改' })
 })

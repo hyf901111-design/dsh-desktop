@@ -36,6 +36,8 @@ import {
   type AuxiliaryRequest
 } from './state/research-boards-store'
 import type { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { omitUnchangedTabRecovery } from './state/research-board-tab-membership'
+import { boardTabsSpec } from '../../packages/dsh-research-task-runtime/board-tabs-contract.js'
 import {
   registerTrustedMainWindowHandler,
   registerTrustedMainWindowListener,
@@ -194,7 +196,14 @@ export type ResearchBoardHooks = {
     signal: AbortSignal
   }): Promise<unknown>
 }
-type Revision = { bytes: Uint8Array; canvas: Canvas }
+type Revision = { bytes: Uint8Array; canvas: Canvas; tabProjection?: Pick<Canvas, 'artifacts'> }
+function tabProjection(canvas: Canvas): Revision['tabProjection'] {
+  const artifacts = canvas.artifacts.flatMap(node => {
+    const spec = boardTabsSpec(node.containerSpec)
+    return spec ? [{ id: node.id, containerSpec: spec }] : []
+  })
+  return artifacts.length ? { artifacts } : undefined
+}
 type RuntimeBoard = {
   activities?: Array<Record<string, any>>
   abort: AbortController
@@ -1265,6 +1274,8 @@ export class ResearchBoardsService {
           r.materializedSessionId = localSessionId
           r.materialized = copy(value)
           r.materializedRevision = revision
+          const entry = r.revisions.get(revision)
+          if (entry) entry.tabProjection = tabProjection(r.materialized)
         })()
         pending = { revision, localSessionId, promise }
         r.materialization = pending
@@ -1530,7 +1541,11 @@ export class ResearchBoardsService {
     this.requireBoard(boardId, localSessionId, true)
     if (this.boards.get(boardId) !== r || (latestRequired && !matchesHead()))
       throw new ResearchBoardsError('STALE_CANVAS_REVISION')
+    // The renderer continues to edit its submitted branch until it hydrates.
+    // Keep that branch's display-only memberships distinct from the room data.
     validateCanvas(next)
+    const displayedTabs = tabProjection(next)
+    if (base.tabProjection) omitUnchangedTabRecovery(next, base.canvas, base.tabProjection)
     next = withSharedCanvasCompatibilityLayout(next, base.canvas)
     // Fork the exact page branch. Applying stale string indices directly to live Y.Text loses remote edits.
     const fork = decodeDocument(base.bytes)
@@ -1569,6 +1584,7 @@ export class ResearchBoardsService {
     if (deleted.length) r.undo.undoStack.at(-1)?.meta.set('deleted', deleted)
     r.revision = this.revision(r)
     const localBranchRevision = this.revision(r, branchBytes, next)
+    r.revisions.get(localBranchRevision)!.tabProjection = displayedTabs
     try {
       await this.materialize(r, ctx)
     } catch (error) {

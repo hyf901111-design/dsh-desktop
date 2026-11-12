@@ -29,6 +29,25 @@ beforeAll(async()=>{
  script=await bundle(source)
  tabsScript=await bundle(require('../scripts/lib/board-tabs-client.mjs').patchBoardTabsClient(source))
 },30000)
+
+it('uses automatic arrangement for a new research workspace and preserves an explicit manual choice',async()=>{
+ const page=await browser.newPage({viewport:{width:1240,height:760}})
+ try{
+  await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\n#host{width:1000px;height:700px}[data-research-canvas]{width:100%!important;height:100%!important}</style><div id="host"></div>`}))
+  await page.goto('https://auto-arrange.test/');await page.addScriptTag({content:script})
+  await page.waitForSelector('[data-ework-grid]')
+  const state=await page.evaluate(()=>{
+   const {workspace,registry}=fixture
+   const fresh=registry.for('new-research')
+   fresh.initializeWorkbenchResponsiveArrange()
+   const initial=fresh.getWorkbenchResponsiveArrange()
+   fresh.setWorkbenchResponsiveArrange(false)
+   fresh.initializeWorkbenchResponsiveArrange()
+   return {initial,manual:fresh.getWorkbenchResponsiveArrange(),existing:workspace.getWorkbenchResponsiveArrange(),stored:localStorage.getItem('ework.research.responsive-arrange.v1:new-research')}
+  })
+  expect(state).toEqual({initial:true,manual:false,existing:false,stored:'manual'})
+ }finally{await page.close()}
+},20000)
 afterAll(async()=>browser?.close())
 
 it('production canvas waits for the batch, measures offscreen iframe content, then persists one standard arrangement without taking focus',async()=>{

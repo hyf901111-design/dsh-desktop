@@ -845,10 +845,11 @@ export function WorkbenchArrangeIcon({mode}) {
 }
 export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled,onArrange}) {
   useWorkbenchLocale()
-  const [mode,setMode]=react.useState(()=>workspace.getWorkbenchResponsiveArrange()?'auto':'standard'),[open,setOpen]=react.useState(false)
+  const responsive=react.useSyncExternalStore(workspace.subscribe,workspace.getWorkbenchResponsiveArrange,workspace.getWorkbenchResponsiveArrange)
+  const [manualMode,setMode]=react.useState('standard'),[open,setOpen]=react.useState(false),mode=responsive?'auto':manualMode
   const groupRef=react.useRef(null),toggleRef=react.useRef(null),menuRef=react.useRef(null)
   const options=[['auto','自动整理'],['standard','标准整理'],['three','三排整理'],['two','双排整理'],['one','单排整理']],label=options.find(o=>o[0]===mode)[1]
-  react.useEffect(()=>{setMode(workspace.getWorkbenchResponsiveArrange()?'auto':'standard');setOpen(false)},[sessionId,workspace])
+  react.useEffect(()=>{setMode('standard');setOpen(false)},[sessionId,workspace])
   react.useEffect(()=>{if(disabled)setOpen(false)},[disabled])
   react.useLayoutEffect(()=>{
     if(!open)return
@@ -864,7 +865,7 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
     if(next==='auto'){
       if(!workspace.setWorkbenchResponsiveArrange(true))return
       rootRef.current.__eworkRequestResponsiveArrange?.()
-      setMode(next);setOpen(false);toggleRef.current?.focus({preventScroll:true})
+      setOpen(false);toggleRef.current?.focus({preventScroll:true})
       onArrange(workbenchText('已开启自动整理'))
       return
     }

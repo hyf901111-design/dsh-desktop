@@ -5,6 +5,18 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('fits later cards below short neighbours without waiting for the tallest chart',()=>{
+ const grid=createResearchGrid(),m=grid.metrics(1200)
+ const nodes=[240,720,330,250,270].map((height,i)=>({id:'card'+i,preferred:{height}}))
+ const cells=nodes.map((node,i)=>item(node.id,0,i*20))
+ const arranged=grid.arrange(nodes,cells,1200,0,'auto'),[short,tall,medium,firstFill,secondFill]=arranged
+ expect(short.y).toBe(0);expect(tall.y).toBe(0);expect(medium.y).toBe(0)
+ expect(firstFill.y).toBe(short.y+short.h)
+ expect(secondFill.y).toBe(medium.y+medium.h)
+ expect(arranged.every((cell,i)=>arranged.every((peer,j)=>i===j||!grid.overlap(cell,peer)))).toBe(true)
+ expect(short.h*m.step-m.gap).toBeLessThan(240+m.step)
+ expect(grid.arrange(nodes,arranged,1200,0,'auto')).toEqual(arranged)
+})
 it('真实表格分页测量可增高与缩短，末页收紧且不覆盖用户手动高度或共享文档',()=>{
  const state=createWorkbenchGridState(null,'page-fit'),grid=createResearchGrid(),html='<body data-sherlock-market="table"></body>'
  state.enable(900)

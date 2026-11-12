@@ -1804,6 +1804,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const i = identity(id)
       if (!i) throw Error('研究看板尚未就绪')
       await call('favorite.add', { identity: { ...i, title: '新研究看板' }, dedicated: true })
+      deps.researchWorkspaces.for(id).initializeWorkbenchResponsiveArrange?.()
       await api.openPersonal(id)
       selectBoardSession(id)
       trackTemporary(id)

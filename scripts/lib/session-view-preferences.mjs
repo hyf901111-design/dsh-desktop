@@ -17,7 +17,7 @@ export function hasSessionViewPreference(sessionId, view) {
 
 // The workspace flow can reuse a blank scope which is not currently rendered.
 // Record the explicit intent before open; a component-local event alone loses it.
-export function installInitialChatViewIntent(chatStore, sessions) {
+export function installInitialChatViewIntent(chatStore, sessions, researchWorkspaces) {
   const key = Symbol.for('sherlock:initial-chat-reuse')
   const policy = { canReuse: id => {
     const page = sherlockBoardsAdapter
@@ -36,7 +36,12 @@ export function installInitialChatViewIntent(chatStore, sessions) {
     explicitResearchViewSessions.add(id)
     chatStore.create(id).actions.setView('chat')
   }
-  const research = event => { explicitHomeViewSessions.delete(event.detail?.sessionId) }
+  const research = event => {
+    const id = event.detail?.sessionId
+    explicitHomeViewSessions.delete(id)
+    if (event.detail?.newResearch === true && typeof id === 'string' && sessions.list.getSnapshot().ids.includes(id))
+      researchWorkspaces?.for(id)?.initializeWorkbenchResponsiveArrange?.()
+  }
   window.addEventListener('sherlock:conversation-initial-chat', chat)
   window.addEventListener('sherlock:conversation-initial-research', research)
   return () => {
@@ -68,10 +73,18 @@ export function patchNewChatSidebar(source) {
   const next='/* ework:sidebar-new-chat-reuse:v1 */\nctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {\nwindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId } }));\n}, { canReuse: id => window[Symbol.for("sherlock:initial-chat-reuse")]?.canReuse(id) === true }));'
   if(source.includes('/* ework:sidebar-new-chat-reuse:')){
     if(source.split('/* ework:sidebar-new-chat-reuse:').length!==2||source.split(next).length!==2)throw Error('New Chat sidebar reuse hook drifted')
-    return source
+  } else {
+    if(source.split(before).length!==2)throw Error('New Chat sidebar reuse anchor drifted')
+    source=source.replace(before,next)
   }
-  if(source.split(before).length!==2)throw Error('New Chat sidebar reuse anchor drifted')
-  return source.replace(before,next)
+  const research='window.dispatchEvent(new CustomEvent("sherlock:conversation-initial-research", { detail: { sessionId } }));'
+  const tagged=research.replace('{ sessionId }', '{ sessionId, newResearch: true }')
+  if(source.includes(research)){
+    if(source.split(research).length!==2||source.includes(tagged))throw Error('New Research sidebar intent anchor drifted')
+    source=source.replace(research,tagged)
+  }
+  if(source.split(tagged).length!==2)throw Error('New Research sidebar intent missing')
+  return source
 }
 
 export function useInitialChatSessionView(sessionId, storedView, actions) {
@@ -206,7 +219,9 @@ export function patchSessionViewPreferences(source) {
   }
   if (source.split(after).length !== 3) throw Error('Session view recovery anchors missing')
   const init = 'const chatStore = createChatStore();'
-  const installed = init + '\n/* ework:initial-chat-view-intent:v1 */\nctx.effect(() => installInitialChatViewIntent(chatStore, sessions), "ui-conversation: initial Chat view intent");'
+  const legacy = init + '\n/* ework:initial-chat-view-intent:v1 */\nctx.effect(() => installInitialChatViewIntent(chatStore, sessions), "ui-conversation: initial Chat view intent");'
+  const installed = legacy.replace('installInitialChatViewIntent(chatStore, sessions)', 'installInitialChatViewIntent(chatStore, sessions, researchWorkspaces)')
+  if (source.split(legacy).length === 2) source = source.replace(legacy, installed)
   if (source.includes('/* ework:initial-chat-view-intent:')) {
     if (source.split(installed).length !== 2 || source.split('/* ework:initial-chat-view-intent:').length !== 2) throw Error('Initial Chat view intent hook drifted')
   } else {

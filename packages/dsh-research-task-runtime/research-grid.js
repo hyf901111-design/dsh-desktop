@@ -311,30 +311,36 @@ export function createResearchGrid() {
     return items.map(c=>bounded(planned.get(c.id)||c))
   }
   function arrangeResponsive(nodes,items,width) {
-    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
-    const lanes=clamp(Math.floor(columns/m.minDraftColumns),1,3),baseSpan=Math.floor(columns/lanes)
-    const result=new Map()
-    let row=[],used=0,top=0
-    const flush=()=>{
-      if(!row.length)return
-      const spare=columns-used,share=Math.floor(spare/row.length),remainder=spare%row.length
-      let left=0
-      row.forEach(({cell,span,height},i)=>{
-        const w=span+share+Number(i<remainder)
-        result.set(cell.id,{...cell,x:left,y:top,w,h:height})
-        left+=w
-      })
-      top+=Math.max(...row.map(entry=>entry.height))
-      row=[];used=0
-    }
-    for(const {arrangeColumns,...cell} of ordered){
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n]))
+    const rank=cell=>Number.isSafeInteger(cell.responsiveOrder)?cell.responsiveOrder:Infinity
+    const ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort((a,b)=>rank(a)-rank(b)||order(a,b))
+    const lanes=clamp(Math.floor(columns/m.minDraftColumns),1,Math.min(3,Math.max(1,ordered.length)))
+    const edges=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes)),placed=[]
+    for(const [index,{arrangeColumns,...cell}] of ordered.entries()){
       const node=byId.get(cell.id),preferred=node.preferred||node,min=minimum(node,m,true)
-      const span=Math.max(baseSpan,min.w)
-      const height=clamp(Math.max(min.h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
-      if(row.length>=lanes||used+span>columns)flush()
-      row.push({cell,span,height});used+=span
+      const h=clamp(Math.max(min.h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
+      let best
+      for(let i=0;i<lanes;i++){
+        const x=edges[i],end=edges.findIndex((edge,j)=>j>i&&edge-x>=min.w)
+        if(end<0)continue
+        const next={...cell,x,y:0,w:edges[end]-x,h,responsiveOrder:index}
+        // Find the first fit in this lane, including holes above spanning cards.
+        for(let blockers; (blockers=placed.filter(peer=>overlap(next,peer))).length;)
+          next.y=Math.max(...blockers.map(peer=>peer.y+peer.h))
+        if(!best||next.y<best.y||next.y===best.y&&next.w<best.w)best=next
+      }
+      placed.push(best)
     }
-    flush()
+    // Fill a completely unused lane beside a card when it can grow without
+    // covering any other card. Keep the height tied to its actual content.
+    for(const cell of placed){
+      for(const end of edges.filter(edge=>edge>cell.x+cell.w)){
+        const wider={...cell,w:end-cell.x}
+        if(placed.some(peer=>overlap(wider,peer)))break
+        cell.w=wider.w
+      }
+    }
+    const result=new Map(placed.map(cell=>[cell.id,cell]))
     return items.map(c=>result.get(c.id)||bounded(c))
   }
   function arrange(nodes,items,width,visibleHeight=0,mode='standard',options={}) {
@@ -350,7 +356,7 @@ export function createResearchGrid() {
       // text at its own size and let each component wrap or scroll its content.
       const lanes=Math.max(1,Math.min(requested,ordered.length))
       const edges=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes)),result=new Map(),tails=Array(lanes).fill(0)
-      for(const c of ordered){
+      for(const {responsiveOrder,...c} of ordered){
         const lane=tails.indexOf(Math.min(...tails)),node=byId.get(c.id),preferred=node.preferred||node
         const h=clamp(Math.max(minimum(node,m).h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
         result.set(c.id,{...c,x:edges[lane],w:edges[lane+1]-edges[lane],y:tails[lane],h,arrangeColumns:requested})
@@ -358,7 +364,7 @@ export function createResearchGrid() {
       }
       return items.map(c=>result.get(c.id)||bounded(c))
     }
-    let next=items.map(({arrangeColumns,...c})=>bounded(c))
+    let next=items.map(({arrangeColumns,responsiveOrder,...c})=>bounded(c))
     // A width minimum may split a row. Settle that boundary once, then keep it
     // stable when later native or HTML measurements supply natural heights.
     for(let pass=0;pass<items.length*4+4;pass++){

@@ -45,6 +45,11 @@ export function restoreLegacyBoardTabMembership(canvas: Canvas): void {
   }
 }
 
+export function hasEmptyBoardTabMembership(canvas: Canvas): boolean {
+  if (canvas.files.length + canvas.artifacts.length < 2) return false
+  return canvas.artifacts.some(node => boardTabsSpec(node.containerSpec)?.tabs.every(tab => !tab.nodeIds.length))
+}
+
 /** Recover the layout of a damaged shared copy from its linked local source. */
 export function restoreLocalSourceBoardLayout(canvas: Canvas, source: Canvas): void {
   const sharedNav = canvas.artifacts.find(node => boardTabsSpec(node.containerSpec))
@@ -90,4 +95,43 @@ export function restoreLocalSourceBoardLayout(canvas: Canvas, source: Canvas): v
   }
   recoverPosition(sharedNav, localNav)
   for (const [id, node] of matches) recoverPosition(node, localCards.get(id)!)
+}
+
+/** Expose orphaned shared cards in the first tab if their original tab cannot be established. */
+export function restoreUnassignedSharedBoardCards(canvas: Canvas): void {
+  const nav = canvas.artifacts.find(node => boardTabsSpec(node.containerSpec))
+  const spec = boardTabsSpec(nav?.containerSpec)
+  if (!nav || !spec) return
+  const cards = [...canvas.files, ...canvas.artifacts].filter(node => node.id !== nav.id)
+  const live = new Set(cards.map(node => node.id))
+  const tabs = spec.tabs.map(tab => ({ ...tab, nodeIds: tab.nodeIds.filter(id => live.has(id)) }))
+  const assigned = new Set(tabs.flatMap(tab => tab.nodeIds))
+  const orphans = cards.filter(node => !assigned.has(node.id))
+  if (!orphans.length) return
+  const index = (node: Canvas['artifacts'][number]) => typeof node.workbenchIndex === 'number'
+    ? node.workbenchIndex : Infinity
+  // Keep all surviving placements and leave intentionally empty tabs intact.
+  // This is a display projection, so do not advance the shared tab revision.
+  tabs[0]!.nodeIds.push(...orphans.sort((a, b) => index(a) - index(b)).map(node => node.id))
+  nav.containerSpec = { ...spec, tabs }
+}
+
+/** An ordinary card edit must not write the materialized fallback memberships to the room. */
+export function omitUnchangedTabRecovery(next: Canvas, base: Canvas, displayed: Pick<Canvas, 'artifacts'>): void {
+  const nav = next.artifacts.find(node => boardTabsSpec(node.containerSpec))
+  if (!nav) return
+  const saved = boardTabsSpec(base.artifacts.find(node => node.id === nav.id)?.containerSpec)
+  const visible = boardTabsSpec(displayed.artifacts.find(node => node.id === nav.id)?.containerSpec)
+  const outgoing = boardTabsSpec(nav.containerSpec)
+  if (!saved || !visible || !outgoing || JSON.stringify(saved.tabs) === JSON.stringify(visible.tabs)) return
+  if (JSON.stringify(outgoing.tabs) === JSON.stringify(visible.tabs)) {
+    const appearanceChanged = outgoing.orientation !== visible.orientation || outgoing.verticalWidth !== visible.verticalWidth
+    nav.containerSpec = { ...outgoing, revision: appearanceChanged ? outgoing.revision : saved.revision, tabs: saved.tabs }
+    return
+  }
+  const savedIds = new Set(saved.tabs.flatMap(tab => tab.nodeIds))
+  const inferred = new Map(visible.tabs.flatMap(tab => tab.nodeIds.filter(id => !savedIds.has(id)).map(id => [id, tab.id])))
+  nav.containerSpec = { ...outgoing, tabs: outgoing.tabs.map(tab => ({
+    ...tab, nodeIds: tab.nodeIds.filter(id => inferred.get(id) !== tab.id)
+  })) }
 }

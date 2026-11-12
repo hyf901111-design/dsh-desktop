@@ -261,13 +261,14 @@ it('installs one lifecycle-owned Chat intent and strictly preserves each real sc
   expect(patched.split('/* ework:initial-chat-view-intent:v1 */')).toHaveLength(2)
   expect(patched.split('const storedView = useInitialChatSessionView(sessionId, useStore((s) => s.view), actions);')).toHaveLength(3)
   expect(()=>patchSessionViewPreferences(patched+'\n/* ework:initial-chat-view-intent:v1 */')).toThrow(/intent hook drifted/)
-  expect(()=>patchSessionViewPreferences(patched.replace('installInitialChatViewIntent(chatStore, sessions), "ui-conversation:', 'installInitialChatViewIntent(chatStore, missing), "ui-conversation:'))).toThrow(/intent hook drifted/)
+  expect(()=>patchSessionViewPreferences(patched.replace('installInitialChatViewIntent(chatStore, sessions, researchWorkspaces), "ui-conversation:', 'installInitialChatViewIntent(chatStore, missing, researchWorkspaces), "ui-conversation:'))).toThrow(/intent hook drifted/)
 })
 
 it('filters only explicit New Chat reuse in native entry/runtime installers and rejects partial reentry',async()=>{
  const runtime=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'),sidebar=await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js','utf8')
  const r=patchNewChatSessionRuntime(runtime),s=patchNewChatSidebar(sidebar)
  expect(patchNewChatSessionRuntime(r)).toBe(r);expect(patchNewChatSidebar(s)).toBe(s)
+ expect(s).toContain('new CustomEvent("sherlock:conversation-initial-research", { detail: { sessionId, newResearch: true } })')
  expect(()=>patchNewChatSessionRuntime(r+'\n/* ework:new-chat-reuse-filter:v1 */')).toThrow(/hook drifted/)
  expect(()=>patchNewChatSessionRuntime(r.replace('typeof canReuse !== "function"','typeof missingReuse !== "function"'))).toThrow(/hook drifted/)
  expect(()=>patchNewChatSidebar(s+'\n/* ework:sidebar-new-chat-reuse:v1 */')).toThrow(/hook drifted/)
