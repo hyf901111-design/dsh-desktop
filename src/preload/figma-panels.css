@@ -394,6 +394,9 @@ body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow
 
 /* Native drag regions must yield pointer events to dismiss open top-layer UI. */
 body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-members-popover:popover-open,.srb-avatar-info:popover-open,.srb-session-search[open]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
+body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]),
+body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]) .wSkVaW_titleRow{-webkit-app-region:no-drag}
+
 
 /* Tabs fit their labels; only inactive tabs yield width when the row is crowded. */
 .t8lSSG_panel [data-odyssey-panel-tab]{flex:0 1 auto;min-width:32px;max-width:160px}

@@ -1,3 +1,5 @@
+import { ResearchBoardHeaderMenu } from './research-board-header-menu'
+export { useResearchBoardCanvasHeader } from './research-board-header-menu'
 import {waitForMemorySource} from './memory/source'
 import {installHomeGuideEntryNative} from './home-guide-entry-native'
 import {homeGuideSessionTitle,isHomeGuideSessionTitle} from '../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
@@ -1866,15 +1868,15 @@ function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;se
   const currentMode=preview?'预览模式':'编辑模式',targetMode=preview?'编辑模式':'预览模式'
   if(!workspace?.getPreviewMode||!workspace?.setPreviewMode)return null
   return h('button',{
-    type:'button',className:'srb-preview-toggle','data-research-preview-toggle':'',
+    type:'button',className:'srb-header-control srb-preview-toggle','data-research-preview-toggle':'',
     'aria-label':preview?'切换到编辑模式':'切换到预览模式','aria-pressed':preview,
     title:locked?'工作台演示进行中，结束后可切换模式':'当前为'+currentMode+'，点击切换到'+targetMode,disabled:locked,
     onClick:()=>{try{workspace.setPreviewMode(!workspace.getPreviewMode())}catch(error){page.showError(error)}}
-  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'preview':'edit','data-research-preview-glyph':preview?'eye':'pencil-line',width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'},
+  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'preview':'edit','data-research-preview-glyph':preview?'eye':'pencil-line',width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'},
     preview
       ?h(React.Fragment,null,h('path',{d:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'}),h('circle',{cx:12,cy:12,r:3}))
       :h(React.Fragment,null,h('path',{d:'M16 3a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4Z'}),h('path',{d:'m14 5 3 3M12 20h8'}))
-  ),h('span',{'data-research-preview-label':'',children:currentMode}),h('svg',{'aria-hidden':true,'data-research-preview-switch':'',width:12,height:12,viewBox:'0 0 20 20',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M3 6h14m-3-3 3 3-3 3M17 14H3m3-3-3 3 3 3'})))
+  ))
 }
 export function ResearchBoardHeader({
   page,
@@ -1894,66 +1896,51 @@ export function ResearchBoardHeader({
   const v = currentBoard(page, sessionId),
     f = s.favorites.find((f) => f.sessionId === sessionId)
   const dedicatedBoard = v?.board.sharingState === 'ownerOnly' && v.permissions.read
-  const inBoardArea = boardOnlySession(s, sessionId) || (!!v && s.boards.some(board => board.boardId === v.boardId && board.pinned === true))
+  const shared = v?.board.sharingState === 'shared'
+  const inBoardArea = boardOnlySession(s, sessionId) ||
+    (!!v && s.boards.some(board => board.boardId === v.boardId && board.pinned === true))
+  const canInvite = !v || (v.permissions.manage && v.board.lifecycle === 'active')
+  const invite = safely(page, async () => {
+    if (v) addBoardCollaborator(page, v.boardId, sessionId)
+    else shareFavorite(page, await page.collaborationSource(sessionId))
+  })
   return h(
     'div',
     { className: 'srb-actions', 'data-srb-board-bound': !!(v || f || inBoardArea) },
-    v && !dedicatedBoard
-      ? h(
-          React.Fragment,
-          null,
-          (v.board.sharingState !== 'shared' ||
-            !v.permissions.read ||
-            v.board.lifecycle === 'archived') &&
-            h(
-              'span',
-              { className: 'srb-badge' },
-              !v.permissions.read
-                ? '共享访问已结束'
-                : v.board.lifecycle === 'archived'
-                  ? '已归档'
-                  : '仅自己可见'
-            ),
-          h(ResearchBoardPresence, { page, sessionId })
-        )
-      : !inBoardArea && h(
-          'button',
-          {
-            'aria-label': '创建至看板区',
-            title: '创建至看板区',
-            'aria-pressed': false,
-            className: 'srb-favorite-button',
-            onClick: safely(page, async () => {
-              if (inBoardArea) return
-              if (dedicatedBoard) await page.call('board.pin', { boardId: v.boardId })
-              else await page.favorite(sessionId)
-            })
-          },
-          h('span', { className: 'srb-board-add-icon', 'aria-hidden': true })
-        ),
-    v?.board.sharingState === 'shared'
-      ? v.permissions.read && h('button', {
-          className: 'srb-manage-button',
-          onClick: () => manageBoard(page, v.boardId, 'settings')
-        }, '管理')
-      : h('button', {
-          className: 'srb-create-collaboration',
-          'aria-label': '创建协作', title: '创建协作',
-          disabled: !!v && (!v.permissions.manage || v.board.lifecycle !== 'active'),
-          onClick: safely(page, async () => {
-            if (v) addBoardCollaborator(page, v.boardId, sessionId)
-            else shareFavorite(page, await page.collaborationSource(sessionId))
-          })
-        }, boardIcon('people')),
-    h(ResearchBoardPreviewToggle,{page,sessionId})
+    v && !dedicatedBoard && h(React.Fragment, null,
+      (!shared || !v.permissions.read || v.board.lifecycle === 'archived') &&
+        h('span', { className: 'srb-badge' },
+          !v.permissions.read ? '共享访问已结束' : v.board.lifecycle === 'archived' ? '已归档' : '仅自己可见'),
+      h(ResearchBoardPresence, { page, sessionId, showInvite: false })
+    ),
+    h(ResearchBoardPreviewToggle, { page, sessionId }),
+    h(ResearchBoardHeaderMenu, {
+      key: sessionId,
+      workspace: page.workspaceFor?.(sessionId),
+      collaboration: shared ? [
+        ...(v.permissions.read ? [{ label: '管理协作', icon: 'manage' as const, run: () => manageBoard(page, v.boardId, 'settings') }] : []),
+        ...(canInvite ? [{ label: '添加协作者', icon: 'people' as const, run: invite }] : [])
+      ] : [{ label: '创建协作看板', icon: 'people', run: invite, disabled: !canInvite }],
+      membership: {
+        label: inBoardArea ? '已加入看板区' : '加入至看板区',
+        icon: 'add',
+        disabled: inBoardArea || (!!v && !dedicatedBoard),
+        run: safely(page, async () => {
+          if (dedicatedBoard) await page.call('board.pin', { boardId: v.boardId })
+          else await page.favorite(sessionId)
+        })
+      }
+    })
   )
 }
 export function ResearchBoardPresence({
   page,
-  sessionId
+  sessionId,
+  showInvite = true
 }: {
   page: ResearchBoardsPage
   sessionId: string
+  showInvite?: boolean
 }) {
   const s = useBoard(page),
     v = page.getView(sessionId)
@@ -1983,7 +1970,7 @@ export function ResearchBoardPresence({
       'aria-haspopup': 'dialog',
       onClick: (event: React.MouseEvent<HTMLButtonElement>) => showBoardMembers(page, sessionId, event.currentTarget)
     }, `+${users.length - 3}`),
-    v.permissions.manage && v.board.lifecycle === 'active' && h('button', {
+    showInvite && v.permissions.manage && v.board.lifecycle === 'active' && h('button', {
       className: 'srb-add-collaborator', 'aria-label': '添加协作者',
       onClick: () => addBoardCollaborator(page, v.boardId, sessionId)
     }, h('span', { className: 'srb-plus-icon', 'aria-hidden': true })))
@@ -2434,25 +2421,54 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
     )
     return
   }
-  const start = async () => {
-    d.body.replaceChildren()
-    const capture = await d.run(
-      () =>
-        page.call<{
+  const historyProblems = new Map([
+    ['PRIVATE_PATH_IN_HISTORY', '原研究对话含有本机路径，无法一并共享。'],
+    ['HISTORY_UNSUPPORTED_ATTACHMENT', '原研究对话含有暂不支持共享的附件。'],
+    ['HISTORY_TOO_LARGE', '原研究对话超过协作共享上限。']
+  ])
+  const start = async (includeHistory = true) => {
+    const scope = includeHistory ? {} : { includeHistory: false }
+    const result = await d.run(async () => {
+      try {
+        const capture = await page.call<{
           captureId: string
           nodeCount: number
           historyCount: number
           assetBytes: number
-        }>('board.previewCapture', { favoriteId: f.favoriteId }),
-      '准备研究内容…'
-    )
-    if (!d.dialog.isConnected || !capture) return
+        }>('board.previewCapture', { favoriteId: f.favoriteId, ...scope })
+        return { capture }
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code
+        const reason = includeHistory && code ? historyProblems.get(code) : undefined
+        if (!reason) throw error
+        return { reason }
+      }
+    }, includeHistory ? '准备研究内容…' : '准备看板和资料…')
+    if (!d.dialog.isConnected || !result) return
+    d.body.replaceChildren()
+    if (!result.capture) {
+      const action = boardButton(document, '仅共享看板', () => start(false))
+      action.className = 'srb-primary'
+      const footer = uiText('div', '', 'srb-dialog-footer')
+      footer.append(action)
+      d.body.append(
+        uiText('p', `${result.reason} 你可以继续共享画板上的组件和资料，原对话会保留在本机。`, 'srb-description'),
+        footer
+      )
+      action.focus()
+      return
+    }
+    const { capture } = result
     const name = document.createElement('input')
     name.value = `${f.title} · 协作`
     name.setAttribute('aria-label', '协作名称')
     const panel = uiText('div', '', 'srb-info-panel')
     const summary = uiText('div', '', 'srb-capture-summary')
-    summary.append(uiText('span', `${capture.nodeCount} 个组件`), uiText('span', `${capture.historyCount} 条已保存对话`), uiText('span', `${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料`))
+    summary.append(
+      uiText('span', `${capture.nodeCount} 个组件`),
+      uiText('span', includeHistory ? `${capture.historyCount} 条已保存对话` : '不包含原研究对话'),
+      uiText('span', `${(capture.assetBytes / 1024 / 1024).toFixed(1)} MB 资料`)
+    )
     panel.append(summary, uiText('p', '成员将共同编辑同一块共享画板。原个人研究独立保留，后续修改互不影响。'))
     const field = uiText('label', '画板名称')
     field.append(name)
@@ -2466,13 +2482,15 @@ export function shareFavorite(page: ResearchBoardsPage, f: Favorite) {
           {
             favoriteId: f.favoriteId,
             title: name.value,
-            captureId: capture.captureId
+            captureId: capture.captureId,
+            ...scope
           }
         )
         return result.board.boardId
       },
       '发送邀请'
     )
+    if (!includeHistory) name.focus()
   }
   void start()
 }

@@ -63,6 +63,7 @@ async function pageModule() {
 }
 export async function patchResearchBoardConversation(source) {
   const bundle = await pageModule()
+  source = source.replace('void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});', 'const zoom=Number(root.style.getPropertyValue("zoom"))||1;void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:((e.clientX-r.left)/zoom+(root.scrollLeft||0)-s.viewport.x)/s.viewport.scale,y:((e.clientY-r.top)/zoom-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});')
   const legacyEntry='sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,slots,bridge:window.dshDesktop.researchBoards})'
   if(source.includes(legacyEntry))source=replace(source,legacyEntry,'sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,chatStore,getInput:id=>typeof eworkActiveInput==="function"?eworkActiveInput(id,inputHub.shells.get(id)):inputHub.shells.get(id),slots,bridge:window.dshDesktop.researchBoards})')
   if (source.includes(START)) {
@@ -307,7 +308,7 @@ export async function patchResearchBoardConversation(source) {
             (0,react.useEffect)(()=>{
                 if(!sherlockShared(sessionId)||!sherlockBoardsAdapter)return;
                 const root=rootRef.current;if(!root)return;let last=0;
-                const move=e=>{if(Date.now()-last<100)return;last=Date.now();const s=workspace.getSnapshot(),r=root.getBoundingClientRect();void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});};
+                const move=e=>{if(Date.now()-last<100)return;last=Date.now();const s=workspace.getSnapshot(),r=root.getBoundingClientRect();const zoom=Number(root.style.getPropertyValue("zoom"))||1;void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:((e.clientX-r.left)/zoom+(root.scrollLeft||0)-s.viewport.x)/s.viewport.scale,y:((e.clientY-r.top)/zoom-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});};
                 const leave=()=>{const v=sherlockBoardsAdapter.getView(sessionId);if(v)sherlockBoardsAdapter.clearPresence(sessionId);};root.addEventListener("pointermove",move);root.addEventListener("pointerleave",leave);window.addEventListener("blur",leave);root.addEventListener("pointercancel",leave);return()=>{window.removeEventListener("blur",leave);root.removeEventListener("pointercancel",leave);root.removeEventListener("pointermove",move);root.removeEventListener("pointerleave",leave);leave();};
             },[sessionId,workspace]);`
   )
@@ -367,7 +368,7 @@ function gesturePatch(source) {
     source = replace(
       source,
       oldMove,
-      'void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});'
+      'const zoom=Number(root.style.getPropertyValue("zoom"))||1;void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:((e.clientX-r.left)/zoom+(root.scrollLeft||0)-s.viewport.x)/s.viewport.scale,y:((e.clientY-r.top)/zoom-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});'
     )
   const oldLeave =
     'if(v)void sherlockBoardsAdapter.call("presence.update",{boardId:v.boardId,cursor:null,selectedIds:[]}).catch(()=>{});'

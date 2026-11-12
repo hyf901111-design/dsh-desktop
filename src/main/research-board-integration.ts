@@ -19,6 +19,7 @@ import {
   ResearchRequestJournal,
   digest
 } from './state/research-board-request-journal'
+import { restoreLegacyBoardTabMembership } from './state/research-board-tab-membership'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
 import { freezeSnapshot, createDocument, encodeDocument, decodeDocument, projectDocument, applyCanvasDiff } from '../../packages/dsh-research-collaboration/document.js'
 import { taskFailureMessage, toBase64, fromBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
@@ -121,7 +122,7 @@ export class ResearchBoardIntegration {
         if (error instanceof ResearchBoardsError) throw error
         const message = error instanceof Error ? error.message : ''
         const match =
-          /^(BOARD_BUSY|RESOURCE_UNAVAILABLE|HISTORY_TOO_LARGE|HISTORY_UNSUPPORTED_ATTACHMENT|HISTORY_UNSAVED|ASSET_SIZE_LIMIT|SOURCE_CHANGED|PRIVATE_PATH_IN_HISTORY|DESTINATION_NOT_EMPTY|DESTINATION_NOT_FRESH|DESTINATION_CHANGED|COPY_FINALIZING)(?:: (.*))?$/.exec(
+          /^(BOARD_BUSY|RESOURCE_UNAVAILABLE|HISTORY_TOO_LARGE|HISTORY_UNSUPPORTED_ATTACHMENT|HISTORY_UNSAVED|ASSET_SIZE_LIMIT|SOURCE_CHANGED|PRIVATE_PATH_IN_HISTORY|SHARE_SCOPE_CHANGED|DESTINATION_NOT_EMPTY|DESTINATION_NOT_FRESH|DESTINATION_CHANGED|COPY_FINALIZING)(?:: (.*))?$/.exec(
             message
           )
         if (!match) throw error
@@ -135,6 +136,7 @@ export class ResearchBoardIntegration {
           ASSET_SIZE_LIMIT: '引用文件超过 50 MiB 上限',
           SOURCE_CHANGED: '原研究在保存期间改变，请重新预览',
           PRIVATE_PATH_IN_HISTORY: '研究对话含无法安全转换的本机路径',
+          SHARE_SCOPE_CHANGED: '待发送的协作副本与本次选择的分享范围不一致。',
           DESTINATION_NOT_EMPTY: '目标个人研究已有对话',
           DESTINATION_NOT_FRESH: '请使用刚创建的空白个人研究',
           DESTINATION_CHANGED: '目标研究已改变，无法覆盖',
@@ -374,6 +376,7 @@ export class ResearchBoardIntegration {
   }) {
     this.authority(i.accountId, i.boardId, i.epoch)
     const canvas = structuredClone(i.canvas)
+    restoreLegacyBoardTabMembership(canvas)
     const directory = (canvas.files.length || canvas.artifacts.some(node => (node.generationSources as any[] ?? []).some(source => source.type === 'file' && source.assetId))) ? await this.runtime('directory', {mode:'ensure',sessionId:i.localSessionId}, i.signal) : null
     i.signal.throwIfAborted()
     this.authority(i.accountId,i.boardId,i.epoch)

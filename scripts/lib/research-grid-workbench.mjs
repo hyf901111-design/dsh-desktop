@@ -1,3 +1,4 @@
+import {stripResearchBoardHeaderClient} from './research-board-header-client.mjs'
 import {serializeWorkbenchRestore,parseWorkbenchRestore} from './workbench-restore-codec.mjs'
 import {createResearchPreviewModeState,useResearchPreviewSession,installResearchPreviewMode} from './research-preview-mode.mjs'
 import {financialRecordsActionPayload,financialRecordsCsv} from '../../packages/dsh-research-task-runtime/financial-records.js'
@@ -40,7 +41,7 @@ export const nativeMindMapDepthCss=workbenchStructureDepthCss(
 )
 const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
 export function restoreResearchGridWorkbench(source){
-  source=stripComponentPptxMode(source)
+  source=stripComponentPptxMode(stripResearchBoardHeaderClient(source))
   const start=source.indexOf(begin);if(start<0)return source
   // The writer escapes comment terminators inside JSON; stop at this record's
   // own delimiter so later independent restore records remain intact.

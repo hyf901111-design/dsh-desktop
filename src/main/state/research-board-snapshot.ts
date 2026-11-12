@@ -10,6 +10,7 @@ import { join, extname } from 'node:path'
 import { stat } from 'node:fs/promises'
 import { FrozenBoardFiles, type FrozenFile } from './research-board-assets'
 import { digest } from './research-board-request-journal'
+import { remapBoardTabs, restoreLegacyBoardTabMembership } from './research-board-tab-membership'
 import { freezeSnapshot } from '../../../packages/dsh-research-collaboration/document.js'
 import {
   mergeHumanHistory,
@@ -145,18 +146,23 @@ export class ResearchBoardSnapshots {
   private async freeze(
     sessionId: string,
     accountId: string,
-    signal: AbortSignal
+    signal: AbortSignal,
+    includeHistory = true
   ): Promise<Capture> {
     const canvas = structuredClone(this.options.readCanvas(sessionId))
     const before = digest(canvas)
-    const exported = await this.options.history(sessionId, signal)
+    const exported = includeHistory
+      ? await this.options.history(sessionId, signal)
+      : null
     if (digest(this.options.readCanvas(sessionId)) !== before)
       throw Error('SOURCE_CHANGED')
     signal.throwIfAborted()
-    const history = mergeHumanHistory(
-      this.importFor(sessionId)?.history ?? [],
-      exported.history
-    )
+    const history = exported
+      ? mergeHumanHistory(
+          this.importFor(sessionId)?.history ?? [],
+          exported.history
+        )
+      : []
     const idMap = new Map<string, string>(),
       fileMap: Record<string, FrozenFile> = {}
     const assetByNode = new Map<string, string>()
@@ -223,7 +229,7 @@ export class ResearchBoardSnapshots {
           ? Object.fromEntries(
               Object.entries(v).map(([key, value]) => [
                 key,
-                rewrite(value, key)
+                (key === 'containerSpec' && remapBoardTabs(value, remap)) || rewrite(value, key)
               ])
             )
           : typeof v === 'string' &&
@@ -261,7 +267,7 @@ export class ResearchBoardSnapshots {
       sessionId,
       sourceRevision: digest([
         before,
-        exported.revision,
+        exported?.revision ?? null,
         snapshot,
         Object.values(fileMap).map((f) => f.sha256)
       ]),
@@ -276,12 +282,14 @@ export class ResearchBoardSnapshots {
   async preview(input: {
     sessionId: string
     accountId: string
+    includeHistory?: boolean
     signal: AbortSignal
   }) {
     const c = await this.freeze(
       input.sessionId,
       input.accountId,
-      input.signal
+      input.signal,
+      input.includeHistory
     )
     return {
       captureId: c.id,
@@ -297,6 +305,7 @@ export class ResearchBoardSnapshots {
     accountId: string
     operationId: string
     captureId?: string
+    includeHistory?: boolean
     signal: AbortSignal
   }) {
     const key = digest([input.accountId, input.operationId])
@@ -316,6 +325,8 @@ export class ResearchBoardSnapshots {
       c.sessionId !== input.sessionId
     )
       throw Error('CAPTURE_UNAVAILABLE')
+    if (input.includeHistory === false && c.snapshot.history.length)
+      throw Error('SHARE_SCOPE_CHANGED')
     input.signal.throwIfAborted()
     for (const f of Object.values(c.files))
       if (!(await this.files.verify(f))) throw Error('RESOURCE_UNAVAILABLE')
@@ -361,6 +372,7 @@ export class ResearchBoardSnapshots {
       const epoch = input.snapshot.board.sharingEpoch
       this.options.authorize(input.accountId, input.boardId, epoch)
       const snap = structuredClone(input.snapshot.snapshot)
+      restoreLegacyBoardTabMembership(snap.canvas)
       for (const n of snap.canvas.artifacts) {
         n.refreshMinutes = 0
         delete n.refreshScheduleId
@@ -414,7 +426,7 @@ export class ResearchBoardSnapshots {
             ? Object.fromEntries(
                 Object.entries(v).map(([key, value]) => [
                   key,
-                  rewrite(value, key)
+                  (key === 'containerSpec' && remapBoardTabs(value, map)) || rewrite(value, key)
                 ])
               )
             : typeof v === 'string' &&
