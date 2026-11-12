@@ -423,6 +423,82 @@
           "旧 research-grid-client.test.js 的整理用例在基线与候选版本均因历史夹具依赖的 Workbench restore anchor 已变而无法初始化。"
         ],
         "generatedAt": "2026-11-12T15:20:56.157Z"
+      },
+      "merged": {
+        "mergeCommit": "9764e97ea3f668e877450202bcbe68f4bc93d6a7",
+        "verificationCommit": "9764e97ea3f668e877450202bcbe68f4bc93d6a7",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-grid-workbench.test.js",
+              "test/research-grid-arrange-tabs.test.js",
+              "test/workbench-auto-arrange-browser.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-grid-workbench.test.js test/research-grid-arrange-tabs.test.js test/workbench-auto-arrange-browser.test.js --maxWorkers=1 --testTimeout=30000",
+            "verifiedCommit": "9764e97ea3f668e877450202bcbe68f4bc93d6a7",
+            "completedAt": "2026-11-12T15:23:45.921Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "automatically fills",
+              "--maxWorkers=1",
+              "--testTimeout=25000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/research-preview-mode-browser.test.js -t automatically fills --maxWorkers=1 --testTimeout=25000",
+            "verifiedCommit": "9764e97ea3f668e877450202bcbe68f4bc93d6a7",
+            "completedAt": "2026-11-12T15:23:45.921Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9764e97ea3f668e877450202bcbe68f4bc93d6a7",
+            "completedAt": "2026-11-12T15:23:45.921Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "--",
+              "run",
+              "test/shared-board-canvas-sync.test.ts",
+              "test/workbench-scrollbar-theme-browser.test.js",
+              "test/board-tabs-connection-browser.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec vitest -- run test/shared-board-canvas-sync.test.ts test/workbench-scrollbar-theme-browser.test.js test/board-tabs-connection-browser.test.js --maxWorkers=1 --testTimeout=30000",
+            "verifiedCommit": "9764e97ea3f668e877450202bcbe68f4bc93d6a7",
+            "completedAt": "2026-11-12T15:23:45.921Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-12T15:23:45.921Z"
       }
     }
   ],
