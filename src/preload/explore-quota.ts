@@ -23,7 +23,7 @@ export function createQuotaRing(doc: Document) {
   for (const part of ['track','value']) {
     const circle = doc.createElementNS(svgNs, 'circle')
     circle.classList.add('odyssey-quota-' + part)
-    circle.setAttribute('cx','20');circle.setAttribute('cy','20');circle.setAttribute('r','15')
+    circle.setAttribute('cx','20');circle.setAttribute('cy','20');circle.setAttribute('r','13')
     circle.setAttribute('pathLength','100')
     svg.append(circle)
   }

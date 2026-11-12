@@ -14,6 +14,22 @@ it('renders the account quota, grows the hover arc, and clears it at sign-out',a
     expect(await arc.evaluate((el:Element)=>parseFloat(getComputedStyle(el).strokeDashoffset))).toBe(100)
     await trigger.hover()
     await expect.poll(()=>arc.evaluate((el:Element)=>parseFloat(getComputedStyle(el).strokeDashoffset))).toBe(71)
+    const ring = await arc.evaluate((el: Element) => {
+      const circle = el as SVGCircleElement
+      const matrix = circle.getScreenCTM()!
+      const { x, y } = new DOMPoint(circle.cx.baseVal.value, circle.cy.baseVal.value)
+      const radius = circle.r.baseVal.value
+      const center = new DOMPoint(x, y).matrixTransform(matrix)
+      const start = new DOMPoint(x + radius, y).matrixTransform(matrix)
+      const quarter = new DOMPoint(x, y + radius).matrixTransform(matrix)
+      return { radius, startX: start.x - center.x, startY: start.y - center.y,
+        quarterX: quarter.x - center.x, quarterY: quarter.y - center.y }
+    })
+    expect(ring.radius).toBe(13)
+    expect(ring.startX).toBeCloseTo(0)
+    expect(ring.startY).toBeLessThan(0)
+    expect(ring.quarterX).toBeLessThan(0)
+    expect(ring.quarterY).toBeCloseTo(0)
     await trigger.screenshot({path:ui.evidence+'/explore-ring.png',scale:'device'})
     await page.mouse.move(300,150)
     await expect.poll(()=>arc.evaluate((el:Element)=>parseFloat(getComputedStyle(el).strokeDashoffset))).toBe(100)
