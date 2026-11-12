@@ -44,3 +44,50 @@ export function restoreLegacyBoardTabMembership(canvas: Canvas): void {
     if (changed) node.containerSpec = { ...spec, tabs }
   }
 }
+
+/** Recover the layout of a damaged shared copy from its linked local source. */
+export function restoreLocalSourceBoardLayout(canvas: Canvas, source: Canvas): void {
+  const sharedNav = canvas.artifacts.find(node => boardTabsSpec(node.containerSpec))
+  const localNav = source.artifacts.find(node => boardTabsSpec(node.containerSpec))
+  const sharedTabs = boardTabsSpec(sharedNav?.containerSpec)
+  const localTabs = boardTabsSpec(localNav?.containerSpec)
+  if (!sharedNav || !localNav || !sharedTabs || !localTabs ||
+      sharedTabs.tabs.some(tab => tab.nodeIds.length) ||
+      sharedTabs.tabs.length !== localTabs.tabs.length ||
+      sharedTabs.tabs.some((tab, index) => tab.name !== localTabs.tabs[index]?.name)) return
+
+  const positionKey = (node: Canvas['artifacts'][number]) =>
+    typeof node.workbenchId === 'string' && node.workbenchId &&
+    typeof node.workbenchIndex === 'number' && Number.isSafeInteger(node.workbenchIndex) && node.workbenchIndex >= 0
+      ? JSON.stringify([node.workbenchId, node.workbenchIndex]) : undefined
+  const sharedCards = new Map<string, Canvas['artifacts'][number] | null>()
+  for (const node of canvas.artifacts) {
+    const key = positionKey(node)
+    if (key) sharedCards.set(key, sharedCards.has(key) ? null : node)
+  }
+  const localCards = new Map(source.artifacts.map(node => [node.id, node]))
+  const matches = new Map<string, Canvas['artifacts'][number]>()
+  const ids = new Set<string>()
+  for (const id of localTabs.tabs.flatMap(tab => tab.nodeIds)) {
+    const local = localCards.get(id)
+    const key = local && positionKey(local)
+    const shared = key && sharedCards.get(key)
+    if (!shared || ids.has(shared.id)) return
+    ids.add(shared.id)
+    matches.set(id, shared)
+  }
+  if (!matches.size) return
+
+  sharedNav.containerSpec = {
+    ...sharedTabs,
+    tabs: sharedTabs.tabs.map((tab, index) => ({
+      ...tab, nodeIds: localTabs.tabs[index]!.nodeIds.map(id => matches.get(id)!.id)
+    }))
+  }
+  const recoverPosition = (node: Canvas['artifacts'][number], local: Canvas['artifacts'][number]) => {
+    for (const field of ['x', 'y', 'width', 'height'] as const)
+      if (!Number.isFinite(node[field]) && Number.isFinite(local[field])) node[field] = local[field]
+  }
+  recoverPosition(sharedNav, localNav)
+  for (const [id, node] of matches) recoverPosition(node, localCards.get(id)!)
+}

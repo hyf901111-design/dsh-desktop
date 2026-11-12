@@ -19,7 +19,7 @@ import {
   ResearchRequestJournal,
   digest
 } from './state/research-board-request-journal'
-import { restoreLegacyBoardTabMembership } from './state/research-board-tab-membership'
+import { restoreLegacyBoardTabMembership, restoreLocalSourceBoardLayout } from './state/research-board-tab-membership'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
 import { freezeSnapshot, createDocument, encodeDocument, decodeDocument, projectDocument, applyCanvasDiff } from '../../packages/dsh-research-collaboration/document.js'
 import { taskFailureMessage, toBase64, fromBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
@@ -411,9 +411,13 @@ export class ResearchBoardIntegration {
     canvas: Canvas
     signal: AbortSignal
   }) {
-    this.authority(i.accountId, i.boardId, i.epoch)
+    const { sourceSessionId } = this.authority(i.accountId, i.boardId, i.epoch)
     const canvas = structuredClone(i.canvas)
     restoreLegacyBoardTabMembership(canvas)
+    if (sourceSessionId && canvas.artifacts.some(node => !Number.isFinite(node.x) || !Number.isFinite(node.y))) {
+      // If the personal source has been removed, the generic geometry fallback still applies.
+      try { restoreLocalSourceBoardLayout(canvas, this.readOriginal(sourceSessionId)) } catch {}
+    }
     restoreMissingSharedGeometry(canvas)
     const directory = (canvas.files.length || canvas.artifacts.some(node => (node.generationSources as any[] ?? []).some(source => source.type === 'file' && source.assetId))) ? await this.runtime('directory', {mode:'ensure',sessionId:i.localSessionId}, i.signal) : null
     i.signal.throwIfAborted()

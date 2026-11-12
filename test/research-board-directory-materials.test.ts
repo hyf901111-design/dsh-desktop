@@ -53,6 +53,41 @@ it('restores missing shared component coordinates without changing the stored sn
   expect(canvas.artifacts[1]).not.toHaveProperty('x')
 })
 
+it('recovers empty legacy tabs from the verified local source with the same workbench cards', async () => {
+  const tabs = (nodeIds: string[]) => ({
+    version: 1, type: 'board-tabs', title: '页签', revision: 1,
+    tabs: [{ id: 'market', name: '市场', nodeIds }]
+  })
+  const canvas = { files: [], artifacts: [
+    { id: 'shared-tabs', kind: 'generated-container', containerSpec: tabs([]) },
+    { id: 'shared-card', kind: 'generated-container', workbenchId: 'plan', workbenchIndex: 0 }
+  ] }
+  const source = { files: [], artifacts: [
+    { id: 'local-tabs', containerSpec: tabs(['local-card']) },
+    { id: 'local-card', workbenchId: 'plan', workbenchIndex: 0, x: 300, y: 240 }
+  ] }
+  const integration: any = Object.create(ResearchBoardIntegration.prototype)
+  integration.authority = () => ({ snapshot: { tasks: [] }, sourceSessionId: 'verified-source' })
+  integration.readOriginal = (sessionId: string) => {
+    expect(sessionId).toBe('verified-source')
+    return source
+  }
+  integration.active = new Map()
+  integration.schedules = {}
+  const input = {
+    accountId: 'a', boardId: 'b', epoch: 1, localSessionId: 's', canvas, signal: new AbortController().signal
+  }
+  const rendered = await integration.materialize(input)
+  expect(rendered.artifacts[0].containerSpec.tabs[0].nodeIds).toEqual(['shared-card'])
+  expect(rendered.artifacts[1]).toMatchObject({ x: 300, y: 240 })
+  expect(canvas.artifacts[0]!.containerSpec!.tabs[0]!.nodeIds).toEqual([])
+  const positioned = structuredClone(canvas)
+  Object.assign(positioned.artifacts[0]!, { x: 112, y: 29 })
+  Object.assign(positioned.artifacts[1]!, { x: 300, y: 240 })
+  const current = await integration.materialize({ ...input, canvas: positioned })
+  expect(current.artifacts[0].containerSpec.tabs[0].nodeIds).toEqual([])
+})
+
 it.each([false, true])('copies canvas and generation sources into the project, including unchanged sessions (%s)', async changed => {
   const temp = await mkdtemp(join(tmpdir(), 'board-materials-'))
   try {

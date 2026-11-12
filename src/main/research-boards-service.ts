@@ -2911,9 +2911,11 @@ export class ResearchBoardsService {
     const r = this.requireBoard(boardId, undefined, write)
     if (epoch !== undefined && r.snapshot.board.sharingEpoch !== epoch)
       throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+    const account = this.store.account(accountId)
     return {
       snapshot: copy(r.snapshot),
-      localSessionId: this.store.account(accountId).bindings[boardId],
+      localSessionId: account.bindings[boardId],
+      sourceSessionId: r.snapshot.board.ownerId === accountId ? account.sources[boardId]?.sessionId : undefined,
       signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
     }
   }
