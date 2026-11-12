@@ -86,7 +86,7 @@ body .wSkVaW_header .wSkVaW_headerActions { order:3; display:flex; align-items:c
 body .wSkVaW_header [data-srb-utilities] { order:4; flex:none; height:28px!important; min-height:0; margin:0 0 0 auto!important; align-self:center!important; align-items:center; }
 body .wSkVaW_header .cubgiG_seat { width:auto; min-width:0; height:28px; min-height:28px; padding:0 8px; gap:6px; border-radius:7px; transform:none; font:400 13px/20px var(--odyssey-font-ui); }
 body .wSkVaW_header .srb-actions { display:flex; align-items:center; gap:4px; }
-body .wSkVaW_header .srb-actions:has(.srb-presence) { gap:16px; }
+body .wSkVaW_header .srb-actions .srb-presence { margin-inline-end:12px; }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration) { width:28px; height:28px; padding:0; border:0; border-radius:8px; background:transparent; color:var(--odyssey-text); flex:none; }
 body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaboration):hover { background:var(--odyssey-menu-row); }
 body .wSkVaW_header .srb-actions .srb-favorite-button[aria-pressed=true] { color:var(--odyssey-muted); }
@@ -370,7 +370,7 @@ body :is(.t8lSSG_panel,.t8lSSG_bottomPanel) .t8lSSG_tabClose>svg { flex:none; wi
 body .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { flex-basis:20px; width:20px; }
 body :is(.t8lSSG_panel,.t8lSSG_bottomPanel) .t8lSSG_tabClose:hover { background:var(--odyssey-menu-row); }
 body .wSkVaW_header .odyssey-members-compact { display:none; }
-body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-actions:has(.srb-presence) { gap:4px; }
+body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-actions .srb-presence { margin-inline-end:0; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-presence>:not(.odyssey-members-compact) { display:none!important; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-members-compact { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:6px; border-radius:7px; }
 

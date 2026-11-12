@@ -401,7 +401,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:is(:hover,:focus-visible){background:var(--srb-row-hover)}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]>svg{display:none}
 body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menuitem]:has(>svg):after{content:'';flex:none;width:14px;height:14px;background:currentColor;mask:url(/figma-check.svg) center/contain no-repeat}
-.srb-actions{gap:6px}.srb-actions:has(.srb-presence){gap:16px}.srb-actions button{font-weight:400;line-height:18px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.srb-actions{gap:6px}.srb-actions button{font-weight:400;line-height:18px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .srb-actions .srb-header-control{flex:none;width:30px;height:30px;padding:0;border:0;border-radius:7px;background:#f1f1f2;color:var(--srb-label);cursor:pointer;transition:background-color 120ms ease}
 :where(body[data-ds-dark-theme]) .srb-actions .srb-header-control{background:#292929}
 .srb-actions .srb-header-control:not(:disabled):hover,.srb-actions .srb-header-more[aria-expanded=true]{background:var(--srb-control-strong)}
@@ -423,7 +423,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-people-icon{mask-image:url(/figma-people.svg)}
 .srb-plus-icon{mask-image:url(/figma-collaboration-plus.svg)}.srb-close-icon{mask-image:url(/figma-close.svg)}.srb-check-icon{mask-image:url(/figma-check.svg);color:var(--srb-blue)}
 .srb-actions .srb-manage-button{width:44px;height:28px;padding:0;border:1px solid var(--srb-control-border);border-radius:6px;background:var(--srb-control)}
-.srb-actions .srb-presence{gap:6px;padding:0}
+.srb-actions .srb-presence{gap:6px;padding:0;margin-inline-end:10px}
 .srb-avatar.srb-avatar{width:28px;height:28px;border:0!important;background:var(--srb-avatar-background)!important;color:#fff!important;font-size:13px;font-weight:500;line-height:18px}
 .srb-avatar.srb-avatar:after{display:none}
 .srb-actions .srb-add-collaborator,.srb-presence .srb-avatar-overflow{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:var(--srb-control-strong);color:var(--srb-muted);flex:none}
