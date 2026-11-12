@@ -96,7 +96,8 @@ function imageInput(input) {
   const refUnits = input.model === 'doubao-seedream-5-0-pro' ? Math.max(0, refs.length - 1) * 6_600_000 : 0
   return { wire: JSON.stringify({ model: input.model, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
     size: '1K', output_format: 'png', response_format: 'b64_json',
-    sequential_image_generation: 'disabled', stream: false, watermark: true,
+    // Seedream 5.0 Pro and Flash generate a single image by default.
+    stream: false, watermark: true,
     ...(refs.length ? { image: refs.length === 1 ? refs[0] : refs } : {})
   }), amountUnits: units + refUnits }
 }

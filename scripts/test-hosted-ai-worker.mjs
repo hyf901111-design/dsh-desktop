@@ -38,7 +38,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     if (request.url === ARK_PLAN_BASE + '/images/generations') {
       assert.equal(input.model, 'doubao-seedream-5.0-flash')
       assert.equal(input.response_format, 'b64_json')
-      assert.equal(input.sequential_image_generation, 'disabled')
+      assert.equal(Object.hasOwn(input, 'sequential_image_generation'), false)
       return Response.json({ data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XQAAAAASUVORK5CYII=' }] })
     }
     assert.equal(request.url, ARK_PLAN_BASE + '/chat/completions')
