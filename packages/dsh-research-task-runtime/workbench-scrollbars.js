@@ -1,5 +1,5 @@
 // Shared by native card bodies and opaque HTML sandboxes. Native scrollbars stay
-// hidden: these controls paint over the viewport and never change content width.
+// hidden. Tables reserve a gutter below the rows for the horizontal control.
 export function isWorkbenchScrollbarMessage(data, kind) {
   if(!data||typeof data!=='object'||Array.isArray(data))return false
   const keys=Object.keys(data),finite=n=>Number.isFinite(n)&&n>=0&&n<=1e7
@@ -25,7 +25,24 @@ export function installWorkbenchScrollbars(container, viewport, selected, scroll
   if(fullscreen)layer.style.position='fixed'
   container.append(layer)
   let frame=0,drag=null,destroyed=false,dirty=true,candidates=[],delegated=false,lastReport='',remoteFrame=null
-  const remote=new Map()
+  const remote=new Map(), tableGutters=new Map()
+  const gutterHeight=12, trackGap=2
+  const reserveTableGutter=element=>{
+    if(tableGutters.has(element))return
+    const margin=parseFloat(view.getComputedStyle(element).marginBottom)||0
+    if(margin>=gutterHeight)return
+    const old=element.style.getPropertyValue('margin-bottom')
+    const priority=element.style.getPropertyPriority('margin-bottom')
+    element.style.setProperty('margin-bottom',gutterHeight+'px','important')
+    tableGutters.set(element,()=>{
+      if(element.style.getPropertyValue('margin-bottom')===gutterHeight+'px'&&element.style.getPropertyPriority('margin-bottom')==='important')
+        element.style.setProperty('margin-bottom',old,priority)
+    })
+  }
+  const visibleTableGutter=(rect,outer,scale)=>{
+    if(rect.bottom+gutterHeight*scale>outer.bottom+1)return null
+    return clip(rect,outer)
+  }
   const isTablePort=element=>element.matches?.('table,.fund-native-table-wrap,.odyssey-native-table-grid,.rScV5Q_containerTableScroll,:has(> table)')
   const clip=(inner,outer)=>{
     const box={left:Math.max(inner.left,outer.left),top:Math.max(inner.top,outer.top),right:Math.min(inner.right,outer.right),bottom:Math.min(inner.bottom,outer.bottom)}
@@ -73,6 +90,9 @@ export function installWorkbenchScrollbars(container, viewport, selected, scroll
     const port=viewport();if(!port)return
     const base=fullscreen?{left:0,top:0}:container.getBoundingClientRect(),portBounds=port.getBoundingClientRect(),bounds=fullscreen?{left:0,top:0,right:view.innerWidth,bottom:view.innerHeight}:{left:base.left,top:portBounds.top,right:base.right,bottom:portBounds.bottom}
     const axes={x:null,y:null}
+    const scaleX=fullscreen?1:base.width/(container.offsetWidth||1)||1
+    const scaleY=fullscreen?1:base.height/(container.offsetHeight||1)||1
+    for(const [element,restore] of tableGutters)if(!element.isConnected){restore();tableGutters.delete(element)}
     if(dirty)candidates=[...new Set(scrollports())].filter(el=>el&&!layer.contains(el)&&!el.closest?.('[data-workbench-scroll-overlay]'))
     for(const el of observed)if(!candidates.includes(el)){resize.unobserve(el);observed.delete(el)}
     for(const el of candidates)if(!observed.has(el)){observed.add(el);resize.observe(el)}
@@ -110,22 +130,24 @@ export function installWorkbenchScrollbars(container, viewport, selected, scroll
       if(tablePort&&isRemote){
         const rect=remoteFrame.getBoundingClientRect(),local=owner.tableBounds
         const sx=rect.width/(remoteFrame.clientWidth||1),sy=rect.height/(remoteFrame.clientHeight||1)
-        tableBounds=clip({left:rect.left+local.left*sx,top:rect.top+local.top*sy,right:rect.left+local.right*sx,bottom:rect.top+local.bottom*sy},bounds)
+        tableBounds=visibleTableGutter({left:rect.left+local.left*sx,top:rect.top+local.top*sy,right:rect.left+local.right*sx,bottom:rect.top+local.bottom*sy},bounds,scaleY)
       }else if(tablePort){
-        tableBounds=clip(owner.getBoundingClientRect(),bounds)
+        reserveTableGutter(owner)
+        const outer=owner===port&&!fullscreen
+          ? {...bounds,bottom:Math.min(base.bottom,owner.getBoundingClientRect().bottom+gutterHeight*scaleY)}
+          : bounds
+        tableBounds=visibleTableGutter(owner.getBoundingClientRect(),outer,scaleY)
         if(fullscreen&&tableBounds)axes[axis].tableBounds=tableBounds
       }
       if(tablePort&&!tableBounds){axes[axis]=null;part.track.hidden=true;continue}
       const trackBounds=tableBounds||bounds
-      const scaleX=fullscreen?1:base.width/(container.offsetWidth||1)||1
-      const scaleY=fullscreen?1:base.height/(container.offsetHeight||1)||1
       const scale=horizontal?scaleX:scaleY
       const span=Math.max(0,(horizontal?trackBounds.right-trackBounds.left:trackBounds.bottom-trackBounds.top)/scale-12)
       const length=Math.min(span,Math.max(28,span*owner[size]/owner[total])),travel=span-length,offset=travel*owner[at]/Math.max(1,owner[total]-owner[size])
       part.length=length;part.travel=travel;part.scale=scale
       part.track.toggleAttribute('data-workbench-table-scrollbar',Boolean(tablePort))
       part.thumb.style.background=tablePort?'var(--grid-muted,var(--sherlock-control-muted,#777781))':'var(--grid-scroll-thumb,var(--sherlock-scroll-thumb,var(--ework-scroll-thumb,#0000001a)))'
-      Object.assign(part.track.style,horizontal?{left:(trackBounds.left-base.left)/scaleX+6+'px',top:(trackBounds.bottom-base.top)/scaleY-10+'px',width:span+'px',height:'10px'}:{left:(bounds.right-base.left)/scaleX-10+'px',top:(bounds.top-base.top)/scaleY+6+'px',width:'10px',height:span+'px'})
+      Object.assign(part.track.style,horizontal?{left:(trackBounds.left-base.left)/scaleX+6+'px',top:(trackBounds.bottom-base.top)/scaleY+(tablePort?trackGap:-10)+'px',width:span+'px',height:'10px'}:{left:(bounds.right-base.left)/scaleX-10+'px',top:(bounds.top-base.top)/scaleY+6+'px',width:'10px',height:span+'px'})
       Object.assign(part.thumb.style,horizontal?{left:offset+'px',top:'3px',width:length+'px',height:'5px'}:{top:offset+'px',left:'3px',height:length+'px',width:'5px'})
       part.track.setAttribute('aria-valuemin','0');part.track.setAttribute('aria-valuemax',String(owner[total]-owner[size]));part.track.setAttribute('aria-valuenow',String(Math.round(owner[at])))
     }
@@ -137,5 +159,5 @@ export function installWorkbenchScrollbars(container, viewport, selected, scroll
   if(fullscreen&&view.parent!==view)view.parent.postMessage({type:'sherlock-workbench-scrollbar-ready'},'*')
   bind()
   schedule()
-  return {refresh(){bind();rescan()},destroy(){destroyed=true;view.cancelAnimationFrame(frame);resize.disconnect();mutation.disconnect();scrollEvents.removeEventListener('scroll',schedule,true);view.removeEventListener('resize',schedule);view.removeEventListener('message',receive);layer.remove()}}
+  return {refresh(){bind();rescan()},destroy(){destroyed=true;view.cancelAnimationFrame(frame);resize.disconnect();mutation.disconnect();scrollEvents.removeEventListener('scroll',schedule,true);view.removeEventListener('resize',schedule);view.removeEventListener('message',receive);for(const restore of tableGutters.values())restore();tableGutters.clear();layer.remove()}}
 }

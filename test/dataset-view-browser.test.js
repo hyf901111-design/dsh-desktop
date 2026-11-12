@@ -285,7 +285,9 @@ it('keeps disabled column labels readable and exposes the selected wide table sc
   // Child-frame coordinates are local CSS pixels, even when the card is zoomed.
   const table=await wrap.evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,bottom:r.bottom,width:innerWidth,height:innerHeight}})
   const viewport=await page.locator('#preview').boundingBox()
-  expect(Math.abs(viewport.y+table.bottom*viewport.height/table.height-trackBox.y-trackBox.height)).toBeLessThanOrEqual(2)
+  const tableBottom=viewport.y+table.bottom*viewport.height/table.height
+  expect(trackBox.y).toBeGreaterThanOrEqual(tableBottom+1)
+  expect(trackBox.y-tableBottom).toBeLessThanOrEqual(5)
   expect(trackBox.x).toBeGreaterThan(viewport.x+table.left*viewport.width/table.width)
   await page.mouse.move(thumb.x+thumb.width/2,thumb.y+thumb.height/2)
   await page.mouse.down();await page.mouse.move(thumb.x+thumb.width/2+70,thumb.y+thumb.height/2,{steps:5});await page.mouse.up()
