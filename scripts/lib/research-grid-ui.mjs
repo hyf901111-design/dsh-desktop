@@ -394,13 +394,23 @@ export function handleWorkbenchWheel(root,workspace,event) {
   root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),root.scrollTop+(Number.isFinite(event.deltaY)?event.deltaY*unit:0)))
   const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})
 }
+// CSS zoom changes screen rectangles and pointer positions; grid cells and
+// scroll offsets still use the canvas's unscaled CSS pixels.
+export function workbenchCanvasZoom(element) {
+  const root=element?.closest?.('[data-research-canvas]')??element
+  return Number(root?.style?.getPropertyValue?.('zoom'))||1
+}
+export function workbenchCanvasPoint(root, event) {
+  const bounds=root.getBoundingClientRect(),zoom=workbenchCanvasZoom(root)
+  return {x:(event.clientX-bounds.left)/zoom+(root.scrollLeft||0),y:(event.clientY-bounds.top)/zoom+root.scrollTop}
+}
 export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly) {
   const grid=createResearchGrid(),view=root.ownerDocument.defaultView
   let op=null,frame=0,pending=null,autoFrame=0,lastPointer=null
   const preview=document.createElement('div');preview.className='ew-grid-placeholder';preview.hidden=true;root.appendChild(preview)
   const groupPreviews=[]
   const width=()=>Math.max(240,Math.min(root.clientWidth,workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth))
-  const point=e=>{const r=root.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top+root.scrollTop}}
+  const point=e=>workbenchCanvasPoint(root,e)
   const allowed=(cells,before=op.before)=>!cells.some(c=>{const old=before.find(n=>n.id===c.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]');return card?.hasAttribute('data-research-geometry-blocked')&&old&&['x','y','w','h'].some(k=>old[k]!==c[k])})
   const floatCard=p=>{
     if(op?.kind!=='move')return
@@ -415,7 +425,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const show=(c,element=preview)=>{if(!c)return;const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(element.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});element.style.setProperty('--grid-gap',m.gap+'px');element.hidden=false}
   const update=(e,releasing=false)=>{
     if(!op)return
-    const sample=op.lastSample,p=releasing&&sample?{x:sample.point.x+e.clientX-op.lastClient.x,y:sample.point.y+e.clientY-op.lastClient.y}:point(e),m=releasing&&sample?sample.metrics:grid.metrics(width());let target
+    const sample=op.lastSample,zoom=workbenchCanvasZoom(root),p=releasing&&sample?{x:sample.point.x+(e.clientX-op.lastClient.x)/zoom,y:sample.point.y+(e.clientY-op.lastClient.y)/zoom}:point(e),m=releasing&&sample?sample.metrics:grid.metrics(width());let target
     if(op.kind==='draw'&&Math.hypot(e.clientX-op.startClient.x,e.clientY-op.startClient.y)>4)op.drawn=true
     op.lastClient={x:e.clientX,y:e.clientY}
     op.lastSample={point:p,metrics:m}
@@ -466,7 +476,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     autoFrame=0;if(!op||!lastPointer)return
     const bounds=root.getBoundingClientRect(),y=lastPointer.clientY-bounds.top
     const delta=y<48?-Math.ceil((48-y)/4):y>bounds.height-64?Math.ceil((y-bounds.height+64)/4):0
-    if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before){update(lastPointer);autoFrame=view.requestAnimationFrame(autoScroll)}}
+    if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta/workbenchCanvasZoom(root)));if(root.scrollTop!==before){update(lastPointer);autoFrame=view.requestAnimationFrame(autoScroll)}}
   }
   const down=e=>{
     if(e.target?.closest?.('[data-workbench-column-resize]'))return
@@ -562,7 +572,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     if(bottomOffset===20)root.setAttribute('data-workbench-toolbar-space','')
-    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth||r.width),panelHeight=parseFloat(root.ownerDocument.defaultView?.getComputedStyle(root.ownerDocument.documentElement).getPropertyValue('--dsh-sidebar-height')||'0')||0,next={left:r.left+width/2,bottom:Math.max(bottomOffset+panelHeight,window.innerHeight-r.bottom+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
+    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth?availableWidth*workbenchCanvasZoom(root):r.width),panelHeight=parseFloat(root.ownerDocument.defaultView?.getComputedStyle(root.ownerDocument.documentElement).getPropertyValue('--dsh-sidebar-height')||'0')||0,next={left:r.left+width/2,bottom:Math.max(bottomOffset+panelHeight,window.innerHeight-r.bottom+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
     const panelObserver=new MutationObserver(measure);panelObserver.observe(root.ownerDocument.documentElement,{attributes:true,attributeFilter:['style']})
     window.addEventListener('resize',measure)
@@ -571,7 +581,8 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
   return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(workbenchPreviewToolbarChildren(children,previewMode)),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
-  return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
+  const zoom=workbenchCanvasZoom(root)
+  return Math.max(240,Math.min(root.clientWidth||bounds.width/zoom,researchCanvasUnobscuredWidth(bounds,panelBounds)/zoom))
 }
 export function workbenchNativeTableFit(node,tableRoot) {
   const size=workbenchNativeTableDimensions(tableRoot)
@@ -582,16 +593,16 @@ export function workbenchNativeTableFit(node,tableRoot) {
 }
 export function workbenchNativeTableDimensions(tableRoot) {
   if(tableRoot?.getAttribute('data-sherlock-market-native')!=='table'||!(tableRoot.getBoundingClientRect().width>0))return null
-  const view=tableRoot.ownerDocument.defaultView,pixels=value=>Math.max(0,parseFloat(value)||0)
+  const view=tableRoot.ownerDocument.defaultView,zoom=workbenchCanvasZoom(tableRoot),pixels=value=>Math.max(0,parseFloat(value)||0)
   const insets=element=>{const s=view.getComputedStyle(element);return pixels(s.paddingTop)+pixels(s.paddingBottom)+pixels(s.borderTopWidth)+pixels(s.borderBottomWidth)}
   const margins=element=>{const s=view.getComputedStyle(element);return pixels(s.marginTop)+pixels(s.marginBottom)}
   const children=Array.from(tableRoot.children).filter(el=>view.getComputedStyle(el).display!=='none')
   let height=insets(tableRoot)+Math.max(0,children.length-1)*pixels(view.getComputedStyle(tableRoot).rowGap)
   for(const element of children){
-    let natural=element.getBoundingClientRect().height
+    let natural=element.getBoundingClientRect().height/zoom
     if(element.classList.contains('fund-native-table-wrap')){
       const table=element.querySelector('table'),rows=Array.from(table?.querySelectorAll('tbody tr')||[])
-      natural=(table?.querySelector('thead')?.getBoundingClientRect().height||0)+rows.reduce((n,row)=>n+row.getBoundingClientRect().height,0)+insets(element)
+      natural=((table?.querySelector('thead')?.getBoundingClientRect().height||0)+rows.reduce((n,row)=>n+row.getBoundingClientRect().height,0))/zoom+insets(element)
       if(element.scrollWidth>element.clientWidth+1)natural+=16
     }else if(element.classList.contains('terminal-native-context'))natural=Math.min(240,Math.max(natural,element.scrollHeight)+pixels(view.getComputedStyle(element).borderTopWidth))
     else if(element.classList.contains('terminal-native-readout'))natural=Math.min(136,Math.max(natural,element.scrollHeight))
@@ -600,7 +611,7 @@ export function workbenchNativeTableDimensions(tableRoot) {
   const bounds=tableRoot.getBoundingClientRect(),card=tableRoot.closest('[data-research-node-id]')
   // The native renderer can sit inside an inset host content wrapper. Measure
   // that chrome too; it is additional to the table's own padding and source.
-  const chrome=card?Math.max(58,Math.min(200,Math.ceil(card.getBoundingClientRect().height-bounds.height))):58
+  const chrome=card?Math.max(58,Math.min(200,Math.ceil((card.getBoundingClientRect().height-bounds.height)/zoom))):58
   return {width:656,height:Math.min(tableRoot.querySelector('.terminal-table-pagination')?12000:840,Math.max(160,Math.ceil(height+chrome)))}
 }
 export function workbenchMeasuredDimensions(node,value,width=value?.width||node.width) {
@@ -646,7 +657,7 @@ export function measureWorkbenchContents(root,nodes) {
       // The official video has a stable aspect ratio, independent of the
       // manually resized frame. Refit it at the arranged available width.
       const player=body?.querySelector('[data-youtube-player]')
-      const width=player?.getBoundingClientRect().width||Math.max(200,(body?.clientWidth||node.width)-20)
+      const width=(player?.getBoundingClientRect().width||0)/workbenchCanvasZoom(root)||Math.max(200,(body?.clientWidth||node.width)-20)
       // The loaded column has natural height: expanded supplied notes and
       // subtitles, wrapped actions and thumbnails must remain readable too.
       const naturalHeight=body?.querySelector('.ew-youtube-loaded')?.offsetHeight||0
@@ -684,7 +695,7 @@ export function measureWorkbenchContents(root,nodes) {
     // template's readable plot. Only an expanded data viewport adds height.
     if(node.containerSpec?.type==='chart'){
       const details=body.querySelector('.odyssey-native-chart-data[open]>div')
-      const detailHeight=details?Math.min(180,Math.max(0,details.getBoundingClientRect().height)):0
+      const detailHeight=details?Math.min(180,Math.max(0,details.getBoundingClientRect().height/workbenchCanvasZoom(root))):0
       measured.set(node.id,{width:preferred.width,height:preferred.height+detailHeight});continue
     }
     const origin=card.getBoundingClientRect();let bottom=0
@@ -693,7 +704,7 @@ export function measureWorkbenchContents(root,nodes) {
     for(const element of body.querySelectorAll('table,svg,canvas,img,pre,p,li,input,select,textarea,h1,h2,h3,h4')){
       const bounds=element.getBoundingClientRect();if(!(bounds.height>0&&bounds.width>0))continue
       let scroll=0;for(let parent=element.parentElement;parent&&parent!==card;parent=parent.parentElement)scroll+=parent.scrollTop||0
-      bottom=Math.max(bottom,bounds.bottom-origin.top+scroll)
+      bottom=Math.max(bottom,(bounds.bottom-origin.top)/workbenchCanvasZoom(root)+scroll)
     }
     if(bottom>0)measured.set(node.id,{width:preferred.width,height:Math.ceil(bottom+(parseFloat(root.ownerDocument.defaultView.getComputedStyle(body).paddingBottom)||0)+(card.querySelector(':scope > .odyssey-data-stamp')?24:0)+8)})
   }
@@ -757,7 +768,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
       const target=expected.get(c.id),cache=root.__eworkContentMeasurements?.get(c.id)
       const node=currentNodes.find(n=>n.id===c.id)
       const card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]'),frame=card?.querySelector('iframe[data-research-html-artifact]')
-      const cardWidth=card?.getBoundingClientRect().width,rendered=!cardWidth||node&&Math.abs(cardWidth-node.width)<=2
+      const cardWidth=(card?.getBoundingClientRect().width||0)/workbenchCanvasZoom(root),rendered=!cardWidth||node&&Math.abs(cardWidth-node.width)<=2
       // First-load offscreen frames have no cached inset. Once mounted, use
       // their actual inner width; do not mistake card padding for stale data.
       if(target&&rendered&&frame?.clientWidth>0)target.width=Math.round(frame.clientWidth)
@@ -902,15 +913,16 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       const open=[...body.querySelectorAll('details[open]')],disclosureOpen=open.length>0
       // Reserve only the newly revealed flow, never the full scrollable diagram
       // or its current scroll offset. Saved card geometry remains the baseline.
-      const extraHeight=Math.ceil(open.filter(detail=>!open.some(parent=>parent!==detail&&parent.contains(detail))).reduce((sum,detail)=>sum+[...detail.children].filter(child=>child.tagName!=='SUMMARY').reduce((height,child)=>{const style=getComputedStyle(child);return height+child.getBoundingClientRect().height+(parseFloat(style.marginTop)||0)+(parseFloat(style.marginBottom)||0)},0),0))
+      const zoom=workbenchCanvasZoom(root)
+      const extraHeight=Math.ceil(open.filter(detail=>!open.some(parent=>parent!==detail&&parent.contains(detail))).reduce((sum,detail)=>sum+[...detail.children].filter(child=>child.tagName!=='SUMMARY').reduce((height,child)=>{const style=getComputedStyle(child);return height+child.getBoundingClientRect().height/zoom+(parseFloat(style.marginTop)||0)+(parseFloat(style.marginBottom)||0)},0),0))
       const preset=body.querySelector('[data-research-derived-preset]'),layoutFit=!!preset?.querySelector('[data-research-mind-map-layout="wide"]')
-      const chrome=(card.querySelector('.ew-grid-header')?.getBoundingClientRect().height||38)+(card.querySelector('.odyssey-data-stamp')?.getBoundingClientRect().height||0)
-      const height=layoutFit?Math.ceil(chrome+Math.max(preset.scrollHeight,preset.getBoundingClientRect().height)):extraHeight
+      const chrome=(card.querySelector('.ew-grid-header')?.getBoundingClientRect().height/zoom||38)+((card.querySelector('.odyssey-data-stamp')?.getBoundingClientRect().height||0)/zoom)
+      const height=layoutFit?Math.ceil(chrome+Math.max(preset.scrollHeight,preset.getBoundingClientRect().height/zoom)):extraHeight
       workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height,extraHeight,disclosureOpen,layoutFit})
     }
     root.addEventListener('toggle',nativeDisclosure,true)
     root.__eworkNativeDisclosure=nativeDisclosure
-    const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)root.__eworkContentFit?.finish();workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
+    const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)root.__eworkContentFit?.finish();workspace.setWorkbenchWidth(width);const zoom=workbenchCanvasZoom(root),size={width:bounds.width/zoom,height:bounds.height/zoom,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))/zoom},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root)
     window.addEventListener('resize',measure)
     const scroll=()=>{root.style.setProperty('--grid-scroll-top',root.scrollTop+'px');const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
@@ -936,10 +948,10 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       if(!active||root.hasAttribute('data-grid-operation'))return
       const candidates=nodes.filter(node=>node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='html'&&!['financial-widget','iframe','youtube','calendar-tool'].includes(node.containerSpec.type)&&!node.preserveGenerationSize)
       const sizes=measureWorkbenchContents(root,candidates)
-      for(const node of candidates){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card||Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const key=JSON.stringify([node.width,node.containerSpec]);if(nativeFitted.get(node.id)===key)continue;const size=['code','form'].includes(node.containerSpec.type)?researchOptimalDimensions({...node,width:0,height:0}):sizes.get(node.id);if(size){nativeFitted.set(node.id,key);workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:size.height,layoutFit:true})}}
+      for(const node of candidates){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card||Math.abs(card.getBoundingClientRect().width/workbenchCanvasZoom(root)-node.width)>2)continue;const key=JSON.stringify([node.width,node.containerSpec]);if(nativeFitted.get(node.id)===key)continue;const size=['code','form'].includes(node.containerSpec.type)?researchOptimalDimensions({...node,width:0,height:0}):sizes.get(node.id);if(size){nativeFitted.set(node.id,key);workspace.setWorkbenchContentHeight(node.id,{native:true,contentKey:JSON.stringify(node.containerSpec),width:node.width,height:size.height,layoutFit:true})}}
     }
     fitNativeContents()
-    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width-node.width)>2)continue;const fit=workbenchNativeTableFit(node,table);if(fit)workspace.setWorkbenchContentHeight(node.id,fit)}}
+    const fitTables=()=>{if(!active||root.hasAttribute('data-grid-operation'))return;for(const {node,card,table} of tables){if(Math.abs(card.getBoundingClientRect().width/workbenchCanvasZoom(root)-node.width)>2)continue;const fit=workbenchNativeTableFit(node,table);if(fit)workspace.setWorkbenchContentHeight(node.id,fit)}}
     const nativeDetails=[...root.querySelectorAll('[data-research-preview-body] details')].filter(details=>!details.closest('[data-research-node-id]')?.querySelector('iframe'))
     const refitNative=()=>{if(active&&!root.hasAttribute('data-grid-operation'))for(const details of nativeDetails)if(details.isConnected)root.__eworkNativeDisclosure?.({target:details})}
     const nativeObserver=new ResizeObserver(refitNative)

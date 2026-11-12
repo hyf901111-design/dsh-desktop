@@ -2,9 +2,10 @@
 /* Square-grid heights depend on the available width. Keep that width stable
    when toolbar clearance crosses the scroll threshold, avoiding a resize loop. */
 body [data-research-canvas][data-ework-grid]{scrollbar-gutter:stable}
-body [data-research-canvas][data-ework-grid]{margin-top:var(--odyssey-workspace-header-height,44px)!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:var(--ework-scroll-thumb,#0000001a) transparent}
+body [data-research-canvas][data-ework-grid]{--srb-board-header-clearance:calc(var(--odyssey-workspace-header-height,44px) / var(--srb-board-display-zoom,1));margin-top:var(--srb-board-header-clearance)!important;height:calc(100% - var(--srb-board-header-clearance))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:var(--ework-scroll-thumb,#0000001a) transparent}
+body [data-research-canvas][data-ework-grid][data-research-board-zoomed-in]{overflow-x:auto!important}
 /* Keep the full canvas visible; reserve toolbar clearance in scrollable content. */
-body [data-research-canvas][data-ework-grid][data-workbench-toolbar-space]{flex:none!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;scroll-padding-bottom:80px}
+body [data-research-canvas][data-ework-grid][data-workbench-toolbar-space]{flex:none!important;height:calc(100% - var(--srb-board-header-clearance))!important;scroll-padding-bottom:80px}
 body [data-ework-toolbar][data-toolbar-overflow=true]{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
 body [data-ework-toolbar][data-toolbar-overflow=true]::-webkit-scrollbar{display:none}
 body[data-ds-dark-theme] [data-ework-grid]{--grid-card:#151518;--grid-text:#e7e8ec;--grid-muted:#a0a5b1;--grid-menu:#1c1b20;background:#09090b!important}

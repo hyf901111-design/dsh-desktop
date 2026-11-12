@@ -48,6 +48,7 @@ import { patchWorkspaceDragFeedback } from './lib/workspace-drag-feedback.mjs'
 import { patchResearchNativeWeb } from './lib/research-native-web-client.mjs'
 import { patchCanvasCreationTools } from './lib/canvas-creation-tools.mjs'
 import { patchCanvasRefresh } from './lib/canvas-refresh.mjs'
+import { patchResearchBoardHeaderClient, stripResearchBoardHeaderClient } from './lib/research-board-header-client.mjs'
 import { patchCanvasActionsClient } from './lib/canvas-actions-client.mjs'
 import { patchCanvasUseClient } from './lib/canvas-use-client.mjs'
 import { patchCanvasTaskNotices } from './lib/canvas-task-notices.mjs'
@@ -203,7 +204,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-writeFileSync(gridConversationPath,stripBrowserAppNative(readFileSync(gridConversationPath,'utf8')))
+writeFileSync(gridConversationPath,stripBrowserAppNative(stripResearchBoardHeaderClient(readFileSync(gridConversationPath,'utf8'))))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
@@ -388,4 +389,4 @@ writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationP
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
-writeFileSync(conversationPath,patchBrowserAppNative(readFileSync(conversationPath,'utf8')))
+writeFileSync(conversationPath,patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8'))))
