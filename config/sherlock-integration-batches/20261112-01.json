@@ -107,6 +107,44 @@
           "本次验证使用测试账户和本地数据，没有发送真实邀请。"
         ],
         "generatedAt": "2026-11-12T05:57:48.571Z"
+      },
+      "merged": {
+        "mergeCommit": "710f041a17d8583e758ee33253568c7a3af40de7",
+        "verificationCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/account-service.test.ts",
+              "test/research-boards-service.test.ts",
+              "test/research-board-snapshot.test.ts",
+              "test/research-board-directory-materials.test.ts",
+              "test/research-board-document.test.js",
+              "test/research-preview-header.test.ts",
+              "test/header-mode-pill-theme-browser.test.ts",
+              "test/research-board-presence-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/.bin/vitest run test/account-service.test.ts test/research-boards-service.test.ts test/research-board-snapshot.test.ts test/research-board-directory-materials.test.ts test/research-board-document.test.js test/research-preview-header.test.ts test/header-mode-pill-theme-browser.test.ts test/research-board-presence-final.test.ts",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-12T07:36:33.421Z"
       }
     },
     {
@@ -253,6 +291,44 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-12T07:05:38.487Z"
+      },
+      "merged": {
+        "mergeCommit": "26d8f86cce19cfeca4cf2114d2bb3887d42038a8",
+        "verificationCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/account-service.test.ts",
+              "test/research-boards-service.test.ts",
+              "test/research-board-snapshot.test.ts",
+              "test/research-board-directory-materials.test.ts",
+              "test/research-board-document.test.js",
+              "test/research-preview-header.test.ts",
+              "test/header-mode-pill-theme-browser.test.ts",
+              "test/research-board-presence-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/.bin/vitest run test/account-service.test.ts test/research-boards-service.test.ts test/research-board-snapshot.test.ts test/research-board-directory-materials.test.ts test/research-board-document.test.js test/research-preview-header.test.ts test/header-mode-pill-theme-browser.test.ts test/research-board-presence-final.test.ts",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-12T07:36:33.421Z"
       }
     },
     {
@@ -336,6 +412,44 @@
           "生产账户、生产 Worker 和已打包客户端未纳入此交接验证。"
         ],
         "generatedAt": "2026-11-12T06:27:53.745Z"
+      },
+      "merged": {
+        "mergeCommit": "9787c7334fb54d44ca3f8a813c962a53a801f369",
+        "verificationCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/account-service.test.ts",
+              "test/research-boards-service.test.ts",
+              "test/research-board-snapshot.test.ts",
+              "test/research-board-directory-materials.test.ts",
+              "test/research-board-document.test.js",
+              "test/research-preview-header.test.ts",
+              "test/header-mode-pill-theme-browser.test.ts",
+              "test/research-board-presence-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/.bin/vitest run test/account-service.test.ts test/research-boards-service.test.ts test/research-board-snapshot.test.ts test/research-board-directory-materials.test.ts test/research-board-document.test.js test/research-preview-header.test.ts test/header-mode-pill-theme-browser.test.ts test/research-board-presence-final.test.ts",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-12T07:36:33.421Z"
       }
     },
     {
@@ -424,6 +538,44 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-12T07:31:44.372Z"
+      },
+      "merged": {
+        "mergeCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+        "verificationCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/account-service.test.ts",
+              "test/research-boards-service.test.ts",
+              "test/research-board-snapshot.test.ts",
+              "test/research-board-directory-materials.test.ts",
+              "test/research-board-document.test.js",
+              "test/research-preview-header.test.ts",
+              "test/header-mode-pill-theme-browser.test.ts",
+              "test/research-board-presence-final.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/.bin/vitest run test/account-service.test.ts test/research-boards-service.test.ts test/research-board-snapshot.test.ts test/research-board-directory-materials.test.ts test/research-board-document.test.js test/research-preview-header.test.ts test/header-mode-pill-theme-browser.test.ts test/research-board-presence-final.test.ts",
+            "verifiedCommit": "b38f64ca0cbae1c8eb0edf45b739f7013d818cc6",
+            "completedAt": "2026-11-12T07:36:33.421Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-12T07:36:33.421Z"
       }
     }
   ],
