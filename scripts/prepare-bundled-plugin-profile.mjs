@@ -102,14 +102,20 @@ async function copyInstalledPlugin(source, target) {
 
 async function validatePortableTree(root) {
   const prohibitedNames = new Set(['.credentials.yaml', 'settings.yaml', 'sessions', 'workspaces'])
+  const sdkSessionModules = new Set([
+    path.join('node_modules', '@anthropic-ai', 'sdk', 'resources', 'beta', 'sessions'),
+    path.join('node_modules', '@anthropic-ai', 'sdk', 'src', 'resources', 'beta', 'sessions')
+  ])
   const pending = [root]
   while (pending.length > 0) {
     const directory = pending.pop()
     for (const entry of await readdir(directory, { withFileTypes: true })) {
-      if (prohibitedNames.has(entry.name)) {
-        throw new Error(`Refusing to bundle user-owned Harness data: ${path.join(directory, entry.name)}`)
-      }
       const entryPath = path.join(directory, entry.name)
+      // The SDK ships source and compiled API modules named "sessions".
+      const sdkSource = entry.isDirectory() && sdkSessionModules.has(path.relative(root, entryPath))
+      if (prohibitedNames.has(entry.name) && !sdkSource) {
+        throw new Error(`Refusing to bundle user-owned Harness data: ${entryPath}`)
+      }
       const stat = await lstat(entryPath)
       if (stat.isSymbolicLink()) {
         const resolved = await realpath(entryPath)
