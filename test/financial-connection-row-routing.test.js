@@ -25,3 +25,12 @@ for(const [name,spec] of [['directory to analysis',docs],['watchlist to performa
 it('preserves the existing same-row curve and exact footer endpoints',async()=>{
  const spec={from:overview.from,to:{...card(475,58,965,584),x:485,y:571},others:[]},result=await sample(spec);expect(result.crossings).toEqual([]);expect(result.d).toContain(' C ');expect(result.first).toEqual([338,571]);expect(result.last).toEqual([485,571])
 })
+it('routes around a tall intervening chart after uneven cards are repacked',async()=>{
+ const spec={from:{...card(12,58,476,298),x:464,y:284},
+  to:{...card(968,518,1432,790),x:980,y:776},
+  others:[card(486,58,958,718),card(968,58,1432,508),card(12,308,476,650)]}
+ const result=await sample(spec)
+ expect(result.crossings).toEqual([])
+ expect(result.first).toEqual([464,284])
+ expect(result.last).toEqual([980,776])
+})

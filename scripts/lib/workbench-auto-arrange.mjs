@@ -48,10 +48,10 @@ export function installWorkbenchAutoArrange(root,workspace,readOnly) {
   const pageKey=id=>JSON.stringify([workspace.getActiveBoardTab?.()??null,id])
   let frame=null,stopped=false
   const check=()=>{
-    if(stopped||frame!==null||!workspace.pendingWorkbenchArrange().some(id=>!attempted.has(pageKey(id))))return
+    if(stopped||frame!==null||workspace.getWorkbenchResponsiveArrange?.()||!workspace.pendingWorkbenchArrange().some(id=>!attempted.has(pageKey(id))))return
     frame=view.requestAnimationFrame(()=>{frame=view.requestAnimationFrame(()=>{
       frame=null
-      if(stopped||!root.isConnected||root.getBoundingClientRect().width<=0||root.hasAttribute('data-grid-operation')||root.__eworkContentFit)return
+      if(stopped||workspace.getWorkbenchResponsiveArrange?.()||!root.isConnected||root.getBoundingClientRect().width<=0||root.hasAttribute('data-grid-operation')||root.__eworkContentFit)return
       const ids=workspace.pendingWorkbenchArrange().filter(id=>!attempted.has(pageKey(id)))
       if(!ids.length)return
       // Same all-canvas content measurement, offscreen mount preview, native

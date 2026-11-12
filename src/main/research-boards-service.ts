@@ -1,3 +1,4 @@
+import { withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 import { cleanActivity } from 'dsh-research-collaboration/activity'
 import { componentVersion, validateComponentMessage } from 'dsh-research-collaboration/component-state'
 import {
@@ -35,6 +36,8 @@ import {
   type AuxiliaryRequest
 } from './state/research-boards-store'
 import type { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { omitUnchangedTabRecovery, preserveSharedBoardTabMembership } from './state/research-board-tab-membership'
+import { boardTabsSpec } from '../../packages/dsh-research-task-runtime/board-tabs-contract.js'
 import {
   registerTrustedMainWindowHandler,
   registerTrustedMainWindowListener,
@@ -193,7 +196,14 @@ export type ResearchBoardHooks = {
     signal: AbortSignal
   }): Promise<unknown>
 }
-type Revision = { bytes: Uint8Array; canvas: Canvas }
+type Revision = { bytes: Uint8Array; canvas: Canvas; tabProjection?: Pick<Canvas, 'artifacts'> }
+function tabProjection(canvas: Canvas): Revision['tabProjection'] {
+  const artifacts = canvas.artifacts.flatMap(node => {
+    const spec = boardTabsSpec(node.containerSpec)
+    return spec ? [{ id: node.id, containerSpec: spec }] : []
+  })
+  return artifacts.length ? { artifacts } : undefined
+}
 type RuntimeBoard = {
   activities?: Array<Record<string, any>>
   abort: AbortController
@@ -425,7 +435,7 @@ export class ResearchBoardsService {
   private readonly listeners = new Set<(event: ResearchBoardsEvent) => void>()
   private readonly reservations = new Map<
     string,
-    { reservationId: string; generation: number }
+    { reservationId: string; generation: number; previousSessionId?: string }
   >()
   private readonly opening = new Map<string, Promise<RuntimeBoard>>()
   private readonly creating = new Map<
@@ -1264,6 +1274,8 @@ export class ResearchBoardsService {
           r.materializedSessionId = localSessionId
           r.materialized = copy(value)
           r.materializedRevision = revision
+          const entry = r.revisions.get(revision)
+          if (entry) entry.tabProjection = tabProjection(r.materialized)
         })()
         pending = { revision, localSessionId, promise }
         r.materialization = pending
@@ -1498,8 +1510,18 @@ export class ResearchBoardsService {
         false,
         { operationId: durable.operationId, canvasRevision: r.revision }
       )
-    const base = r.revisions.get(safeId(input.baseRevision))
-    if (!base)
+    const baseRevision = safeId(input.baseRevision)
+    if (input.requireLatest !== undefined && typeof input.requireLatest !== 'boolean')
+      throw new ResearchBoardsError('INVALID_REQUEST')
+    const latestRequired = input.requireLatest === true
+    const base = r.revisions.get(baseRevision)
+    // GET and socket snapshots can materialize the same document under a new
+    // local token. Only an actual intervening document change invalidates a retry.
+    const matchesHead = () => {
+      const head = r.revisions.get(r.revision)
+      return baseRevision === r.revision || !!(base && head && Buffer.compare(base.bytes, head.bytes) === 0)
+    }
+    if (!base || (latestRequired && !matchesHead()))
       throw new ResearchBoardsError(
         'STALE_CANVAS_REVISION',
         '画板版本已更新，请保留当前草稿并重新载入。'
@@ -1517,9 +1539,15 @@ export class ResearchBoardsService {
       })
     this.check(ctx)
     this.requireBoard(boardId, localSessionId, true)
-    if (this.boards.get(boardId) !== r)
+    if (this.boards.get(boardId) !== r || (latestRequired && !matchesHead()))
       throw new ResearchBoardsError('STALE_CANVAS_REVISION')
+    // The renderer continues to edit its submitted branch until it hydrates.
+    // Keep that branch's display-only memberships distinct from the room data.
     validateCanvas(next)
+    const displayedTabs = tabProjection(next)
+    if (base.tabProjection) omitUnchangedTabRecovery(next, base.canvas, base.tabProjection)
+    preserveSharedBoardTabMembership(next, base.canvas)
+    next = withSharedCanvasCompatibilityLayout(next, base.canvas)
     // Fork the exact page branch. Applying stale string indices directly to live Y.Text loses remote edits.
     const fork = decodeDocument(base.bytes)
     let delta: Uint8Array
@@ -1557,6 +1585,7 @@ export class ResearchBoardsService {
     if (deleted.length) r.undo.undoStack.at(-1)?.meta.set('deleted', deleted)
     r.revision = this.revision(r)
     const localBranchRevision = this.revision(r, branchBytes, next)
+    r.revisions.get(localBranchRevision)!.tabProjection = displayedTabs
     try {
       await this.materialize(r, ctx)
     } catch (error) {
@@ -2264,19 +2293,22 @@ export class ResearchBoardsService {
         return result
       }
       case 'board.open': {
-        const p = exact(input, ['boardId'])
+        const p = exact(input, ['boardId'], ['missingLocalSessionId'])
         const boardId = safeId(p.boardId)
+        const missingLocalSessionId = p.missingLocalSessionId === undefined ? undefined : safeId(p.missingLocalSessionId)
         await this.loadBoard(boardId, true)
         const account = this.userId()
         this.store.setPinned(account, boardId, true)
         const localSessionId = this.localSession(boardId)
         this.emitState()
-        if (localSessionId) return { localSessionId }
+        if (localSessionId && localSessionId !== missingLocalSessionId) return { localSessionId }
+        const previousSessionId = localSessionId ?? undefined
         let reservation = this.reservations.get(boardId)
-        if (!reservation) {
+        if (!reservation || reservation.previousSessionId !== previousSessionId) {
           reservation = {
             reservationId: randomUUID(),
-            generation: this.options.account.generation
+            generation: this.options.account.generation,
+            previousSessionId
           }
           this.reservations.set(boardId, reservation)
         }
@@ -2304,7 +2336,11 @@ export class ResearchBoardsService {
           if (raw && raw !== '[]')
             throw new ResearchBoardsError('BINDING_CONFLICT')
         }
-        this.store.bind(this.userId(), boardId, sessionId)
+        if (reservation.previousSessionId) {
+          this.store.rebind(this.userId(), boardId, reservation.previousSessionId, sessionId)
+        } else {
+          this.store.bind(this.userId(), boardId, sessionId)
+        }
         this.reservations.delete(boardId)
         await this.materialize(r)
         this.emitState()
@@ -2346,14 +2382,24 @@ export class ResearchBoardsService {
       }
       case 'canvas.apply':
         return this.applyCanvas(
-          exact(input, [
-            'boardId',
-            'localSessionId',
-            'baseRevision',
-            'clientMutationId',
-            'canvas'
-          ])
+          exact(
+            input,
+            ['boardId', 'localSessionId', 'baseRevision', 'clientMutationId', 'canvas'],
+            ['requireLatest']
+          )
         )
+      case 'canvas.refresh': {
+        const p = exact(input, ['boardId', 'localSessionId'])
+        const boardId = safeId(p.boardId), localSessionId = safeId(p.localSessionId)
+        const ctx = this.context()
+        if (this.getBinding(localSessionId)?.boardId !== boardId)
+          throw new ResearchBoardsError('BINDING_CONFLICT')
+        await this.loadBoard(boardId, true)
+        this.check(ctx)
+        const view = this.view(this.requireBoard(boardId, localSessionId))
+        void this.flush()
+        return view
+      }
       case 'canvas.undo':
       case 'canvas.redo': {
         const p = exact(input, ['boardId', 'localSessionId'])
@@ -2900,9 +2946,11 @@ export class ResearchBoardsService {
     const r = this.requireBoard(boardId, undefined, write)
     if (epoch !== undefined && r.snapshot.board.sharingEpoch !== epoch)
       throw new ResearchBoardsError('BOARD_ACCESS_CHANGED')
+    const account = this.store.account(accountId)
     return {
       snapshot: copy(r.snapshot),
-      localSessionId: this.store.account(accountId).bindings[boardId],
+      localSessionId: account.bindings[boardId],
+      sourceSessionId: r.snapshot.board.ownerId === accountId ? account.sources[boardId]?.sessionId : undefined,
       signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
     }
   }

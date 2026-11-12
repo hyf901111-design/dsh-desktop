@@ -42,7 +42,7 @@ export const WORKBENCH_ENGLISH={
  '计算口径与来源':'Methodology and sources',
  '同时调整组件宽高':'Resize component width and height','拖动右下角调整宽高':'Drag corner to resize width and height',
  '日K':'Daily','周K':'Weekly','月K':'Monthly','年K':'Yearly','显示交易日数量':'Visible bars','K线标的':'Chart instrument','数据来源':'Data source','条':'records','日期':'Date','开盘':'Open','最高':'High','最低':'Low','收盘':'Close','成交量':'Volume','开 ':'O ','高 ':'H ','低 ':'L ','收 ':'C ',
-'标准整理':'Standard arrange','三排整理':'Three columns','双排整理':'Two columns','单排整理':'One column','展开整理选项':'Choose arrangement','一键整理画布':'Arrange canvas','窄画布已适配':'Adapted to narrow canvas',
+'自动整理':'Auto arrange','已开启自动整理':'Auto arrange enabled','标准整理':'Standard arrange','三排整理':'Three columns','双排整理':'Two columns','单排整理':'One column','展开整理选项':'Choose arrangement','一键整理画布':'Arrange canvas','窄画布已适配':'Adapted to narrow canvas',
 '画布宽度不足，无法进行三排整理，请扩大画布后重试':'The canvas is too narrow for three columns. Widen it and try again.',
 '画布宽度不足，无法进行双排整理，请扩大画布后重试':'The canvas is too narrow for two columns. Widen it and try again.',
 '编辑组件需求':'Edit component request','描述要创建的内容':'Describe what to create','Enter 创建 · Shift Enter 换行':'Enter to create · Shift Enter for a new line','结果将作为独立组件保留在当前工作台。':'The result stays as a separate component in this workspace.','添加网页链接':'Add a web link','粘贴网页或文章链接…':'Paste a web or article link…','网页内容在这里呈现':'Web content appears here','添加后自动读取标题，并按组件宽度展示。':'The title loads automatically and the page fits the component width.','支持网页与文章链接':'Supports web and article links',

@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import type { BoardSnapshot } from '../src/shared/research-boards'
+import type { BoardSnapshot, Canvas } from '../src/shared/research-boards'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { exportHumanHistory } from '../packages/dsh-research-collaboration/context.js'
 import { tmpdir } from 'node:os'
@@ -17,6 +17,8 @@ import {
   fromBase64
 } from '../packages/dsh-research-collaboration/protocol.js'
 import { ResearchBoardsStore } from '../src/main/state/research-boards-store'
+import { boardTabsSpec } from '../packages/dsh-research-task-runtime/board-tabs-contract.js'
+import { restoreUnassignedSharedBoardCards } from '../src/main/state/research-board-tab-membership'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 import {
   ResearchBoardsService,
@@ -222,6 +224,27 @@ async function ready(t: ReturnType<typeof make>) {
   })
   return t.service.getSnapshot().current!
 }
+it('reopens a shared board when the pinned local session no longer exists', async () => {
+  const t = make()
+  await ready(t)
+  const current: any = await t.service.invoke('board.open', {
+    boardId: 'board', missingLocalSessionId: 'other-session'
+  })
+  expect(current.value).toEqual({ localSessionId: 'shared-session' })
+  const opened: any = await t.service.invoke('board.open', {
+    boardId: 'board', missingLocalSessionId: 'shared-session'
+  })
+  expect(opened.value.reservationId).toBeTruthy()
+  const replacement: any = await t.service.invoke('board.bind', {
+    boardId: 'board', reservationId: opened.value.reservationId, localSessionId: 'replacement-session'
+  })
+  expect(replacement.ok).toBe(true)
+  expect(replacement.value.binding.localSessionId).toBe('replacement-session')
+  expect(t.store.sharedSession('shared-session')?.boardId).toBe('board')
+  expect(await t.service.invoke('board.open', {
+    boardId: 'board', missingLocalSessionId: 'shared-session'
+  })).toEqual({ ok: true, value: { localSessionId: 'replacement-session' } })
+})
 it('rejects original binding, viewer sync writes, arbitrary IPC and stale frame senders', async () => {
   const t = make()
   t.store.addFavorite({ sessionId: 'original', title: 'Original' })
@@ -305,11 +328,44 @@ it('uses exact base and branch revisions while remote insertion races queued loc
   await t.service.flush()
   expect(projectDocument(t.doc).artifacts[0]!.excerpt).toBe('Xabcde')
 })
+it('refreshes the bound canvas and rejects a recovered write if it becomes stale again', async () => {
+  const t = make()
+  const initial = await ready(t)
+  const target = { boardId: 'board', localSessionId: 'shared-session' }
+  expect(await t.service.invoke('canvas.refresh', { ...target, localSessionId: 'wrong-session' }))
+    .toMatchObject({ ok: false })
+  const refreshed = await t.service.invoke('canvas.refresh', target)
+  expect(refreshed.ok).toBe(true)
+  if (!refreshed.ok) throw Error('Canvas refresh failed')
+  const fresh = refreshed.value as typeof initial
+  expect(fresh.canvasRevision).not.toBe(initial.canvasRevision)
+  await t.remote(canvas => { canvas.artifacts[0]!.excerpt = 'collaborator edit' })
+
+  const canvas = structuredClone(fresh.canvas)
+  canvas.artifacts[0]!.excerpt = 'local edit'
+  const pending = { ...target, clientMutationId: 'recovered-edit', requireLatest: true, canvas }
+  expect(await t.service.invoke('canvas.apply', { ...pending, baseRevision: fresh.canvasRevision }))
+    .toMatchObject({ ok: false, error: { code: 'STALE_CANVAS_REVISION' } })
+
+  const latest = await t.service.invoke('canvas.refresh', target)
+  expect(latest.ok).toBe(true)
+  if (!latest.ok) throw Error('Canvas refresh failed')
+  // A duplicate GET can give the same document a different local token.
+  const duplicate = await t.service.invoke('canvas.refresh', target)
+  expect(duplicate.ok).toBe(true)
+  if (!duplicate.ok) throw Error('Duplicate canvas refresh failed')
+  expect((duplicate.value as typeof initial).canvasRevision).not.toBe((latest.value as typeof initial).canvasRevision)
+  expect(await t.service.invoke('canvas.apply', {
+    ...pending, baseRevision: (latest.value as typeof initial).canvasRevision
+  })).toMatchObject({ ok: true, value: { canvas } })
+  await t.service.flush()
+  expect(projectDocument(t.doc).artifacts[0]!.excerpt).toBe('local edit')
+})
 it('keeps B changes when A undoes and never reports resurrecting a tombstoned node', async () => {
   const t = make()
   const view = await ready(t)
   const after = structuredClone(view.canvas)
-  after.artifacts[0]!.x = 100
+  after.artifacts[0]!.title = "A changed"
   await t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -328,6 +384,7 @@ it('keeps B changes when A undoes and never reports resurrecting a tombstoned no
   expect(undo.ok).toBe(true)
   expect(undo.value.canvas.artifacts[0]).toMatchObject({
     x: 0,
+    title: '研究',
     excerpt: 'B changed'
   })
   const remove: any = await t.service.invoke('canvas.apply', {
@@ -489,7 +546,7 @@ it('keeps pending until the acknowledged checkpoint can be saved atomically', as
     return result
   }
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 10
+  canvas.artifacts[0]!.title = "Local edit"
   await t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -505,8 +562,8 @@ it('keeps pending until the acknowledged checkpoint can be saved atomically', as
   await t.service.flush()
   expect(t.store.account('u').pending).toHaveLength(0)
   expect(
-    t.store.account('u').checkpoints.board?.snapshot.canvas.artifacts[0]!.x
-  ).toBe(10)
+    t.store.account('u').checkpoints.board?.snapshot.canvas.artifacts[0]!.title
+  ).toBe('Local edit')
 })
 
 it('recovers only the edited nested table cell and chart point after revocation', async () => {
@@ -556,7 +613,7 @@ it('rejects stale IPC typing immediately while a role downgrade waits on receipt
   const view = await ready(t)
   t.setOnline(false)
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 20
+  canvas.artifacts[0]!.title = "Before downgrade"
   await t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -868,7 +925,7 @@ it('aborts board resource hooks on revocation and rejects their late completion'
   })
   const view = await ready(t)
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 9
+  canvas.artifacts[0]!.title = "Late edit"
   const applying = t.service.invoke('canvas.apply', {
     boardId: 'board',
     localSessionId: 'shared-session',
@@ -1901,7 +1958,7 @@ it('keeps sharing authority and refreshed file materialization when moving a boa
   await t.service.invoke('board.activate', { localSessionId: 'workspace-session' })
   const view = t.service.getSnapshot().current!
   const canvas = structuredClone(view.canvas)
-  canvas.artifacts[0]!.x = 80
+  canvas.artifacts[0]!.title = "After move"
   expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'workspace-session', baseRevision: view.canvasRevision, clientMutationId: 'after-move', canvas })).ok).toBe(true)
   expect(t.service.getSnapshot().boards[0]?.pinned).toBe(false)
   expect((await t.service.invoke('canvas.apply', { boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision, clientMutationId: 'old-session', canvas })).ok).toBe(false)
@@ -2079,4 +2136,68 @@ it('binds component transport to the active board, exact HTML version and editor
   t.setRole('viewer');await t.service.receiveBoard('board',t.snapshot())
   expect((await t.service.invoke('component.send',{boardId:'board',message})).ok).toBe(true)
   expect((await t.service.invoke('component.send',{boardId:'board',message:{...message,op:'input',inputId:'input',sequence:1,payload:{type:'increment'}}})).ok).toBe(false)
+})
+
+it('publishes shared content without changing existing compatibility geometry', async () => {
+  const t = make()
+  const view = await ready(t)
+  const first = view.canvas.artifacts[0]!
+  const canvas = { files: [], artifacts: [{ ...first, x: 680, width: 350, title: '共享标题' }] }
+  const result = await t.service.invoke('canvas.apply', {
+    boardId: 'board', localSessionId: 'shared-session', baseRevision: view.canvasRevision,
+    clientMutationId: 'shared-content-only', canvas
+  })
+  expect(result.ok).toBe(true)
+  await t.service.flush()
+  expect(projectDocument(t.doc).artifacts[0]).toEqual({ ...first, title: '共享标题' })
+})
+
+it('keeps recovered tabs visible without writing guesses during stale and queued content edits', async () => {
+  const t = make({ materializeBoard: async ({ canvas }) => {
+    restoreUnassignedSharedBoardCards(canvas)
+    return canvas
+  } })
+  await ready(t)
+  await t.remote(canvas => canvas.artifacts.push({
+    id: 'tabs', kind: 'generated-container', containerSpec: {
+      version: 1, type: 'board-tabs', title: '页签', revision: 1,
+      tabs: [{ id: 'first', name: '市场面', nodeIds: [] }, { id: 'next', name: '渠道', nodeIds: [] }]
+    }
+  }))
+  const view = t.service.getSnapshot().current!
+  const membership = (canvas: Canvas) => boardTabsSpec(canvas.artifacts.find(n => n.id === 'tabs')?.containerSpec)?.tabs.map(tab => tab.nodeIds)
+  expect(membership(view.canvas)).toEqual([[], [], ['n']])
+  await t.remote((canvas: Canvas) => { canvas.artifacts.find(n => n.id === 'n')!.excerpt = '其他用户的修改' })
+
+  const send = (revision: string, mutation: string, canvas: typeof view.canvas) =>
+    t.service.invoke('canvas.apply', {
+      boardId: 'board', localSessionId: 'shared-session', baseRevision: revision, clientMutationId: mutation, canvas
+    })
+  const edit = structuredClone(view.canvas)
+  edit.artifacts.find(n => n.id === 'n')!.title = '第一次编辑'
+  const first: any = await send(view.canvasRevision, 'legacy-tab-first', edit)
+  expect(first.ok).toBe(true)
+  edit.artifacts.find(n => n.id === 'n')!.title = '第二次编辑'
+  const next: any = await send(first.value.localBranchRevision, 'legacy-tab-next', edit)
+  expect(next.ok).toBe(true)
+  expect(membership(next.value.canvas)).toEqual([[], [], ['n']])
+  await t.service.flush()
+  const shared = projectDocument(t.doc)
+  expect(membership(shared)).toEqual([[], []])
+  expect(shared.artifacts.find(n => n.id === 'n')).toMatchObject({ title: '第二次编辑', excerpt: '其他用户的修改' })
+
+  const refreshed = t.service.getSnapshot().current!
+  const moved = structuredClone(refreshed.canvas)
+  const card = moved.artifacts.find(node => node.id === 'n')!
+  Object.assign(card, { workbenchColumns: 3, workbenchSpan: true, workbenchLayoutVersion: 1, containerSizePreset: 'large' })
+  const nav = moved.artifacts.find(node => node.id === 'tabs')!
+  const spec = boardTabsSpec(nav.containerSpec)!
+  spec.tabs[1]!.nodeIds = ['n']
+  spec.tabs[2]!.nodeIds = []
+  nav.containerSpec = { ...spec, revision: spec.revision + 1 }
+  expect((await send(refreshed.canvasRevision, 'legacy-tab-move', moved)).ok).toBe(true)
+  await t.service.flush()
+  const saved = projectDocument(t.doc)
+  expect(membership(saved)).toEqual([[], ['n']])
+  expect(saved.artifacts.find(node => node.id === 'n')).toEqual(shared.artifacts.find(node => node.id === 'n'))
 })

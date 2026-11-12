@@ -59,7 +59,7 @@ const legacyStructureLevels=[
 const svgNodeShape=':is(rect,ellipse,circle,polygon,path)'
 export const WORKBENCH_MODE_CSS=workbenchModeCss()+workbenchStructureDepthCss(enterpriseRoot,structureNodes,'data-sherlock-structure-depth',legacyStructureLevels)+`
 :root[data-workbench-style="openterminal"] body :is(button,input,select,textarea){border-radius:0!important;font-family:var(--sherlock-font-sans)!important}
-:root[data-workbench-style="openterminal"] body th{background:#111!important;color:#808080!important}
+:root[data-workbench-style="openterminal"] body th{background:#111!important;color:var(--sherlock-text)!important}
 
 :root[data-workbench-style="enterprise"] body th{background:var(--sherlock-table-heading)!important;color:var(--sherlock-table-heading-text)!important}
 :root[data-workbench-style="enterprise"] body th button{color:inherit!important}

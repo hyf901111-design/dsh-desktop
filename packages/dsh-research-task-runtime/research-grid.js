@@ -26,6 +26,59 @@ export function createResearchGrid() {
   const bounded=n=>({...n,w:clamp(Math.round(n.w)||4,4,columns),h:clamp(Math.round(n.h)||3,3,300),x:clamp(Math.round(n.x)||0,0,columns-clamp(Math.round(n.w)||4,4,columns)),y:Math.max(0,Math.round(n.y)||0)})
   const overlap=(a,b)=>a.id!==b.id&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y
   const order=(a,b)=>a.y-b.y||a.x-b.x
+  const unband=({arrangeBand,arrangeRow,...cell})=>cell
+  function fitWidths(cells,minima) {
+    const widths=Array(cells.length),open=new Set(cells.map((_,i)=>i));let remaining=columns
+    while(open.size){
+      const weight=[...open].reduce((sum,i)=>sum+cells[i].w,0),limited=[...open].filter(i=>remaining*cells[i].w/weight<minima[i])
+      if(!limited.length){for(const i of open)widths[i]=remaining*cells[i].w/weight;break}
+      for(const i of limited){widths[i]=minima[i];remaining-=minima[i];open.delete(i)}
+    }
+    const spans=widths.map(Math.floor),fractions=widths.map((w,i)=>({i,remainder:w-spans[i]})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i)
+    for(let spare=columns-spans.reduce((sum,w)=>sum+w,0),i=0;spare>0;spare--,i++)spans[fractions[i].i]++
+    return spans
+  }
+  function splitRow(cells,minWidth) {
+    const rows=[];let row=[],used=0
+    for(const cell of cells){
+      const width=minWidth(cell)
+      if(row.length&&used+width>columns){rows.push(row);row=[];used=0}
+      row.push(cell);used+=width
+    }
+    if(row.length)rows.push(row)
+    return rows
+  }
+  function projectArranged(items,minWidth,height) {
+    if(!items.length||items.some(c=>!Number.isSafeInteger(c.arrangeBand)))return null
+    const bands=new Map(),result=new Map();let top=0
+    for(const c of items){if(!bands.has(c.arrangeBand))bands.set(c.arrangeBand,[]);bands.get(c.arrangeBand).push(c)}
+    for(const [,band] of [...bands].sort(([a],[b])=>a-b)){
+      if(band[0].arrangeRow){
+        for(const row of splitRow(band.sort((a,b)=>a.x-b.x),minWidth)){
+          const widths=fitWidths(row,row.map(minWidth));let x=0
+          const cards=row.map((c,i)=>{const placed={...c,x,y:top,w:widths[i]};x+=placed.w;return placed})
+          const h=Math.max(...cards.map(height))
+          for(const card of cards)result.set(card.id,{...card,h})
+          top+=h
+        }
+        continue
+      }
+      const lanes=new Map()
+      for(const c of band.sort(order)){if(!lanes.has(c.x))lanes.set(c.x,[]);lanes.get(c.x).push(c)}
+      const groups=[...lanes].sort(([a],[b])=>a-b).map(([,lane])=>lane),widths=fitWidths(groups.map(lane=>lane[0]),groups.map(()=>0))
+      const tails=[];let x=0,bottom=top
+      for(const [i,lane] of groups.entries()){
+        let y=top
+        for(const c of lane){const card={...c,x,y,w:widths[i]};card.h=height(card);y+=card.h;result.set(c.id,card)}
+        tails.push(result.get(lane.at(-1).id));x+=widths[i];bottom=Math.max(bottom,y)
+      }
+      // Keep earlier cards at their natural height. The last card in each
+      // column closes the band so the next section never hangs above a hole.
+      for(const tail of tails)tail.h=bottom-tail.y
+      top=bottom
+    }
+    return items.map(c=>result.get(c.id))
+  }
   function closeSmallGaps(items,width) {
     const m=metrics(width),next=items.map(bounded)
     // A spanning card forms a shared row boundary. Close a small skyline gap
@@ -39,6 +92,21 @@ export function createResearchGrid() {
       const grown={...card,h:card.h+missing}
       if(grown.h>300||next.some(other=>overlap(grown,other)))continue
       card.h=grown.h
+    }
+    return next
+  }
+  // The next spanning component seals the space above it. Align the last
+  // cards that can reach that boundary without covering a neighbour.
+  function alignResponsiveSpans(items) {
+    const spans=items.filter(c=>Number.isSafeInteger(c.responsiveOrder))
+    if(spans.length<2)return items
+    const next=items.map(c=>({...c}))
+    for(const target of next.filter(c=>Number.isSafeInteger(c.responsiveOrder)).sort(order)){
+      for(const card of next){
+        if(!Number.isSafeInteger(card.responsiveOrder)||card.freePosition||card.w>=target.w||card.x<target.x||card.x+card.w>target.x+target.w||card.y+card.h>=target.y)continue
+        const grown={...card,h:target.y-card.y}
+        if(grown.h<=300&&!next.some(peer=>overlap(grown,peer)))card.h=grown.h
+      }
     }
     return next
   }
@@ -138,7 +206,7 @@ export function createResearchGrid() {
     return next
   }
   function place(items,target,id=target.id) {
-    const active=bounded({...target,id}), rest=items.filter(n=>n.id!==id).map(bounded)
+    const active=bounded({...unband(target),id}), rest=items.filter(n=>n.id!==id).map(n=>bounded(unband(n)))
     // Colliding peers start underneath the pointer's occupied slot. Cascades
     // retain their previous order, including unequal height cards.
     for(const n of rest)if(overlap(n,active))n.y=active.y+active.h
@@ -196,7 +264,7 @@ export function createResearchGrid() {
     let cursor=active.x+active.w
     const changed=new Map([[active.id,active]])
     peers.forEach((c,i)=>{if(i<count){changed.set(c.id,{...c,x:cursor,w:widths[i]});cursor+=widths[i]}else changed.set(c.id,{...c,y:active.y+active.h})})
-    return compact(items.map(c=>changed.get(c.id)||c),active)
+    return compact(items.map(c=>unband(changed.get(c.id)||c)),unband(active))
   }
   // A selection shares one grid delta. Clamp the whole group, rather than
   // letting a small member stop while the other cards keep changing size.
@@ -221,7 +289,7 @@ export function createResearchGrid() {
       let deficit=Math.max(0,first+widths.reduce((sum,w)=>sum+w,0)-columns),x=first
       row.forEach((c,i)=>{let shrink=0;if(!selected.has(c.id)){shrink=Math.min(deficit,Math.max(0,widths[i]-peerMin(c)));widths[i]-=shrink;deficit-=shrink}const original=changed.get(c.id)||items.find(n=>n.id===c.id);changed.set(c.id,{...original,x,w:selected.has(c.id)||shrink?widths[i]:original.w});x+=widths[i]})
     }
-    return compact(items.map(c=>changed.get(c.id)||c))
+    return compact(items.map(c=>unband(changed.get(c.id)||c)))
   }
   // Use the grabbed header's row for insertion. A tall article's distant
   // centre must not keep the card below the peer under the pointer.
@@ -256,31 +324,17 @@ export function createResearchGrid() {
       if(!row||row.top!==cell.y){row={top:cell.y,cells:[]};rows.push(row)}
       row.cells.push(cell)
     }
-    const result=new Map();let top=0
+    const result=new Map();let top=0,band=0
     const placeRow=cells=>{
       const minima=cells.map(c=>rowMinimum(byId.get(c.id)).w)
-      // Only an actual reading minimum can split an existing row. Never borrow
-      // a following row's card to fill a slot or shrink a full-row component.
-      if(minima.reduce((sum,w)=>sum+w,0)>columns){
-        let part=[],used=0
-        cells.forEach((c,i)=>{if(part.length&&used+minima[i]>columns){placeRow(part);part=[];used=0}part.push(c);used+=minima[i]})
-        if(part.length)placeRow(part)
-        return
-      }
-      const widths=Array(cells.length),open=new Set(cells.map((_,i)=>i));let remaining=columns
-      while(open.size){
-        const weight=[...open].reduce((sum,i)=>sum+cells[i].w,0),limited=[...open].filter(i=>remaining*cells[i].w/weight<minima[i])
-        if(!limited.length){for(const i of open)widths[i]=remaining*cells[i].w/weight;break}
-        for(const i of limited){widths[i]=minima[i];remaining-=minima[i];open.delete(i)}
-      }
-      const spans=widths.map(Math.floor),fractions=widths.map((w,i)=>({i,remainder:w-spans[i]})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i)
-      for(let spare=columns-spans.reduce((sum,w)=>sum+w,0),i=0;spare>0;spare--,i++)spans[fractions[i].i]++
+      const spans=fitWidths(cells,minima)
       const height=Math.max(...cells.map(c=>{const node=byId.get(c.id),preferred=node.preferred||node;return clamp(Math.max(rowMinimum(node).h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)}))
       let left=0
-      cells.forEach((c,i)=>{result.set(c.id,{...c,x:left,y:top,w:spans[i],h:height});left+=spans[i]})
-      top+=height
+      cells.forEach((c,i)=>{result.set(c.id,{...c,x:left,y:top,w:spans[i],h:height,arrangeBand:band,arrangeRow:true});left+=spans[i]})
+      top+=height;band++
     }
-    for(const row of rows)placeRow(row.cells)
+    // Only a reading minimum can split an existing row.
+    for(const row of rows)for(const part of splitRow(row.cells,c=>rowMinimum(byId.get(c.id)).w))placeRow(part)
     return items.map(c=>result.get(c.id)||bounded(c))
   }
   // Only the explicitly authored native Board example owns these row groups.
@@ -300,17 +354,53 @@ export function createResearchGrid() {
     const m=metrics(width),pair=m.minColumns<=20,calendarPair=pair&&m.width>=800&&byName.has('smart')
     const rows=[['indices'],...(pair?[['watchlist','quote'],['news','announcements']]:[['watchlist'],['quote'],['news'],['announcements']]),...(calendarPair?[['calendar','smart']]:[['calendar'],['smart']])]
     const heights={indices:m.width-48<=520?420:340,watchlist:600,quote:600,news:340,announcements:340,calendar:420,smart:420}
-    const planned=new Map();let top=0
+    const planned=new Map();let top=0,band=0
     for(const row of rows){
       const members=row.filter(name=>byName.has(name));if(!members.length)continue
       const height=Math.max(...members.map(name=>Math.ceil((heights[name]+m.gap)/m.rowStep)))
-      const split=row[0]==='watchlist'&&pair&&m.minColumns<=16
-      for(const name of members){const index=row.indexOf(name),node=byName.get(name),{arrangeColumns,...cell}=items.find(c=>c.id===node.id);planned.set(node.id,{...cell,x:split?(index?16:0):index*(40/row.length),y:top,w:split?(index?24:16):40/row.length,h:height})}
-      top+=height
+      const split=members.length===2&&row[0]==='watchlist'&&pair&&m.minColumns<=16
+      for(const [index,name] of members.entries()){const node=byName.get(name),{arrangeColumns,responsiveOrder,...cell}=items.find(c=>c.id===node.id);planned.set(node.id,{...cell,x:split?(index?16:0):index*(40/members.length),y:top,w:split?(index?24:16):40/members.length,h:height,arrangeBand:band,arrangeRow:true})}
+      top+=height;band++
     }
     return items.map(c=>bounded(planned.get(c.id)||c))
   }
+  function arrangeResponsive(nodes,items,width) {
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n]))
+    const rank=cell=>Number.isSafeInteger(cell.responsiveOrder)?cell.responsiveOrder:Infinity
+    const ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort((a,b)=>rank(a)-rank(b)||order(a,b))
+    const lanes=clamp(Math.floor(columns/m.minDraftColumns),1,Math.min(3,Math.max(1,ordered.length)))
+    const edges=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes)),placed=[]
+    const laneWidth=Math.min(...edges.slice(1).map((edge,i)=>edge-edges[i]))
+    let top=0,band=0,tails=Array(lanes).fill(0)
+    for(const [index,{arrangeColumns,arrangeRow,...cell}] of ordered.entries()){
+      const node=byId.get(cell.id),preferred=node.preferred||node,min=minimum(node,m,true)
+      const h=clamp(Math.max(min.h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
+      if(min.w>laneWidth){
+        const bottom=Math.max(...tails)
+        if(bottom>top){top=bottom;band++}
+        // A component that needs more than one column starts a full-width
+        // section; a partial span could cut across several different tails.
+        placed.push({...cell,x:0,y:top,w:columns,h,responsiveOrder:index,arrangeBand:band++})
+        top+=h;tails=Array(lanes).fill(top)
+      }else{
+        const lane=tails.indexOf(Math.min(...tails))
+        placed.push({...cell,x:edges[lane],y:tails[lane],w:edges[lane+1]-edges[lane],h,responsiveOrder:index,arrangeBand:band})
+        tails[lane]+=h
+      }
+    }
+    // Refit uses these widths, so fill any unused columns in the plan too.
+    const spans=new Map()
+    for(const c of placed){if(!spans.has(c.arrangeBand))spans.set(c.arrangeBand,new Map());spans.get(c.arrangeBand).set(c.x,c.w)}
+    for(const lanes of spans.values()){
+      const active=[...lanes].sort(([a],[b])=>a-b),widths=fitWidths(active.map(([,w])=>({w})),active.map(()=>0))
+      let x=0;for(const [i,[from]] of active.entries()){lanes.set(from,{x,w:widths[i]});x+=widths[i]}
+    }
+    for(const c of placed)Object.assign(c,spans.get(c.arrangeBand).get(c.x))
+    const result=new Map(placed.map(cell=>[cell.id,cell]))
+    return items.map(c=>result.get(c.id)||bounded(c))
+  }
   function arrange(nodes,items,width,visibleHeight=0,mode='standard',options={}) {
+    if(mode==='auto')return arrangeResponsive(nodes,items,width)
     const authored=options.authoredBoard===true&&mode==='standard'&&authoredBoardPlan(nodes,items,width)
     if(authored)return authored
     const requested={three:3,two:2,one:1}[mode]
@@ -322,15 +412,15 @@ export function createResearchGrid() {
       // text at its own size and let each component wrap or scroll its content.
       const lanes=Math.max(1,Math.min(requested,ordered.length))
       const edges=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes)),result=new Map(),tails=Array(lanes).fill(0)
-      for(const c of ordered){
+      for(const {responsiveOrder,arrangeRow,...c} of ordered){
         const lane=tails.indexOf(Math.min(...tails)),node=byId.get(c.id),preferred=node.preferred||node
         const h=clamp(Math.max(minimum(node,m).h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
-        result.set(c.id,{...c,x:edges[lane],w:edges[lane+1]-edges[lane],y:tails[lane],h,arrangeColumns:requested})
+        result.set(c.id,{...c,x:edges[lane],w:edges[lane+1]-edges[lane],y:tails[lane],h,arrangeColumns:requested,arrangeBand:0})
         tails[lane]+=h
       }
       return items.map(c=>result.get(c.id)||bounded(c))
     }
-    let next=items.map(({arrangeColumns,...c})=>bounded(c))
+    let next=items.map(({arrangeColumns,responsiveOrder,...c})=>bounded(c))
     // A width minimum may split a row. Settle that boundary once, then keep it
     // stable when later native or HTML measurements supply natural heights.
     for(let pass=0;pass<items.length*4+4;pass++){
@@ -376,5 +466,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,moveSlot,move,authoredBoardPlan,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,alignResponsiveSpans,projectArranged,place,resize,resizeSelection,moveSlot,move,authoredBoardPlan,arrange,append,draw,migrate,project}
 }

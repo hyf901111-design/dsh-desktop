@@ -23,7 +23,7 @@ export function patchResearchBoardHeaderClient(source) {
         workspace.updateSelection(canvasNodes.map(node=>node.id),"replace");
         rootRef.current?.focus({preventScroll:true});
       }}:{})
-    });
+    },sessionId);
 ${end}
 ${anchor}`)
 }

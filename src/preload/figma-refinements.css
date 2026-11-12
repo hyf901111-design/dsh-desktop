@@ -108,7 +108,7 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; min-width:0; width:auto; gap:6px; border-radius:7px; transform:none; }
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
 /* Shared menu material. Specialized menus retain their semantic rows and actions. */
-body [role=menu]:not(.rScV5Q_contextMenu), body .h8S2Va_menu {
+body [role=menu]:not(.rScV5Q_contextMenu,.srb-header-menu), body .h8S2Va_menu {
   box-sizing:border-box; max-width:calc(100vw - 24px); border:1px solid var(--odyssey-menu-border);
   border-radius:10px; background:var(--odyssey-menu); color:var(--odyssey-text);
   padding:6px; box-shadow:0 8px 24px -4px #00000024; backdrop-filter:blur(24px);
@@ -604,6 +604,11 @@ html[data-odyssey-locale=en] .rScV5Q_globalToolSlot{flex:0 0 auto;width:auto}
 
 /* Canvas feedback shares the toolbar's centered floating-card placement. */
 body .sRp_sourceStatus,body .srb-readonly[data-canvas-error]{position:absolute;left:50%;right:auto;top:auto;bottom:80px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);padding:12px 16px;border:1px solid var(--dsw-alias-border-l2,#414141);border-radius:12px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 4px 16px #0002;font:13px/20px var(--odyssey-font-ui);z-index:40;overflow-wrap:anywhere}
+body .srb-readonly[data-canvas-error] { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; box-sizing:border-box; }
+.srb-sync-actions { display:flex; align-items:center; gap:2px; }
+.srb-sync-actions button:not(:disabled):is(:hover,:focus-visible) { background:var(--dsw-alias-interactive-bg-hover,#8882); }
+.srb-sync-actions button:disabled { opacity:.55; cursor:default; }
+.srb-sync-actions .srb-sync-close { display:grid; place-items:center; width:28px; height:28px; padding:0; }
 
 /* Unified sidebar session title search. */
 body [data-srb-section-header] .qDHVXG_headerActions{margin-left:auto}
@@ -667,7 +672,7 @@ body .srb-notifications .srb-notification{backdrop-filter:none;-webkit-backdrop-
 
 /* One neutral frosted material for every expanded menu, including portal menus.
    Deliberately leave layout, content, action colors and dialog surfaces to their owners. */
-body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],.sherlock-account-menu,.st-menu,.ig-menu,.srb-notifications,.srb-session-search,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover,.rScV5Q_mindMapMenu,.rScV5Q_contextMenu,.en-block-menu,.en-export-menu,.en-file-menu,.en-toc-popover,.bn-suggestion-menu,.bn-formatting-toolbar,.mantine-Menu-dropdown,.bn-menu-dropdown,.bn-panel,.mantine-Popover-dropdown:not(.bn-panel-popover):not(.bn-emoji-picker-popover)) {
+body :is([role=menu]:not(.srb-header-menu),.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],.sherlock-account-menu,.st-menu,.ig-menu,.srb-notifications,.srb-session-search,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover,.rScV5Q_mindMapMenu,.rScV5Q_contextMenu,.en-block-menu,.en-export-menu,.en-file-menu,.en-toc-popover,.bn-suggestion-menu,.bn-formatting-toolbar,.mantine-Menu-dropdown,.bn-menu-dropdown,.bn-panel,.mantine-Popover-dropdown:not(.bn-panel-popover):not(.bn-emoji-picker-popover)) {
   background:var(--odyssey-menu)!important;
   border-color:var(--odyssey-menu-border)!important;
   outline-color:var(--odyssey-menu-border)!important;
@@ -712,3 +717,10 @@ body::-webkit-scrollbar-thumb, body *::-webkit-scrollbar-thumb { background-colo
 body::-webkit-scrollbar-thumb:hover, body *::-webkit-scrollbar-thumb:hover { background-color:var(--ework-scroll-hover,#c9c9c9)!important; }
 body::-webkit-scrollbar-thumb:active, body *::-webkit-scrollbar-thumb:active { background-color:var(--ework-scroll-active,#b5b5b5)!important; }
 body::-webkit-scrollbar-track, body *::-webkit-scrollbar-track, body::-webkit-scrollbar-corner, body *::-webkit-scrollbar-corner { background-color:transparent!important; }
+
+
+[data-composer-notice]{display:flex;align-items:flex-start;gap:8px}
+[data-composer-notice]>span{flex:1;min-width:0;overflow-wrap:anywhere}
+[data-composer-notice-dismiss]{display:grid;place-items:center;flex:none;width:20px;height:20px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;font:18px/1 system-ui;cursor:pointer}
+[data-composer-notice-dismiss]:hover{background:color-mix(in srgb,currentColor 12%,transparent)}
+[data-composer-notice-dismiss]:focus-visible{outline:1px solid currentColor;outline-offset:1px}

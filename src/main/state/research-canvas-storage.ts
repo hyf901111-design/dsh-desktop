@@ -12,6 +12,7 @@ import path from 'node:path'
 const RESEARCH_CANVAS_STORAGE_DIRECTORY = 'research-canvas'
 const HOME_GUIDE_SESSION_PREFIX = 'sherlock.home-guide.sessions.v1:'
 const WORKBENCH_TRIAL_KEY = 'ework.research.openterminal-trial.v1'
+const RESPONSIVE_ARRANGE_PREFIX = 'ework.research.responsive-arrange.v1:'
 const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   HOME_GUIDE_SESSION_PREFIX,
   'sherlock.research.canvas.files.v1:',
@@ -19,6 +20,9 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.selection.v1:',
   'sherlock.research.canvas.viewport.v1:',
   'ework.research.grid.v1:',
+  'ework.research.shared-grid.v1:',
+  'ework.research.zoom.v1:',
+  RESPONSIVE_ARRANGE_PREFIX,
   'sherlock.workbench.auto-arrange.v1:',
   'ework.research.tabs.view.v1:',
   'ework.research.presentation.v1:',
@@ -123,6 +127,7 @@ export class ResearchCanvasStorage {
     if (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(value)) return false
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(value)) return false
+    if (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && value !== 'auto' && value !== 'manual') return false
     if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(value)) return false
@@ -162,6 +167,7 @@ export class ResearchCanvasStorage {
           (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(record.value)) ||
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(record.value)) ||
+          (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && record.value !== 'auto' && record.value !== 'manual') ||
           (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(record.value)) ||
           (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value)) ||
           (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(record.value)) ||

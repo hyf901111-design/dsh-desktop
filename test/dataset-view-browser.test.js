@@ -2,6 +2,7 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {pathToFileURL} from 'node:url'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
+import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js'
 let browser
 beforeAll(async()=>{
@@ -237,3 +238,64 @@ it('mounts only the current page of a 244-row workbench and reaches late records
   expect(await c.frame.locator('#dataset-view-source').evaluate(el=>JSON.parse(el.textContent).dataset.records)).toEqual(dataset.records)
  }finally{await c.close()}
 },20000)
+
+
+it('keeps disabled column labels readable and exposes the selected wide table scrollbar at its bottom',async()=>{
+ const dataset=bookDataset()
+ const view={dataset:dataset.id,sections:[{kind:'records',fields:dataset.fields.map(field=>field.key)}]}
+ const {page,frame,close}=await open(view,{dataset,width:560,readOnly:true})
+ try{
+  const header=frame.locator('thead th').first()
+  const contrast=(a,b)=>{
+   const luminance=value=>value.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>v/255)
+    .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0)
+   const light=luminance(a),dark=luminance(b)
+   return (Math.max(light,dark)+.05)/(Math.min(light,dark)+.05)
+  }
+  for(const mode of ['light','dark','enterprise','openterminal']){
+   await frame.locator('html').evaluate((el,mode)=>el.dataset.workbenchStyle=mode,mode)
+   const colors=await header.evaluate(el=>{
+    const label=getComputedStyle(el.querySelector('button'))
+    return {background:getComputedStyle(el).backgroundColor,text:label.color,opacity:label.opacity}
+   })
+   expect(colors.opacity,mode).toBe('1')
+   expect(contrast(colors.background,colors.text),mode).toBeGreaterThanOrEqual(4.5)
+  }
+  await page.addScriptTag({content:`
+   const isWorkbenchScrollbarMessage=${isWorkbenchScrollbarMessage.toString()};
+   const installWorkbenchScrollbars=${installWorkbenchScrollbars.toString()};
+   const preview=document.querySelector('#preview'), card=document.createElement('article');
+   card.style.cssText='position:relative;width:520px;height:600px;zoom:.8';
+   document.body.append(card);card.append(preview);
+   preview.style.height='100%';
+   window.selectCard=selected=>{
+    card.dataset.selected=String(selected);
+    preview.contentWindow.postMessage({type:'sherlock-workbench-selection',selected},'*');
+   };
+   installWorkbenchScrollbars(card,()=>preview,()=>card.dataset.selected==='true',()=>[],()=>preview);
+  `})
+  await frame.locator('.dv-shell').waitFor()
+  const wrap=frame.locator('.dv-table-wrap'),track=page.locator('article [data-workbench-scrollbar="x"]')
+  expect(await wrap.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeGreaterThan(100)
+  expect(await track.isVisible()).toBe(false)
+  await page.evaluate(()=>selectCard(true))
+  await track.waitFor()
+  expect(await track.getAttribute('data-workbench-table-scrollbar')).not.toBeNull()
+  const trackBox=await track.boundingBox(),thumb=await track.locator('span').boundingBox()
+  // Child-frame coordinates are local CSS pixels, even when the card is zoomed.
+  const table=await wrap.evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,bottom:r.bottom,width:innerWidth,height:innerHeight}})
+  const viewport=await page.locator('#preview').boundingBox()
+  const tableBottom=viewport.y+table.bottom*viewport.height/table.height
+  expect(trackBox.y).toBeGreaterThanOrEqual(tableBottom+1)
+  expect(trackBox.y-tableBottom).toBeLessThanOrEqual(5)
+  expect(trackBox.x).toBeGreaterThan(viewport.x+table.left*viewport.width/table.width)
+  await page.mouse.move(thumb.x+thumb.width/2,thumb.y+thumb.height/2)
+  await page.mouse.down();await page.mouse.move(thumb.x+thumb.width/2+70,thumb.y+thumb.height/2,{steps:5});await page.mouse.up()
+  await expect.poll(()=>wrap.evaluate(el=>el.scrollLeft)).toBeGreaterThan(50)
+  await page.evaluate(()=>selectCard(false))
+  await track.waitFor({state:'hidden'})
+  await page.evaluate(()=>selectCard(true))
+  await track.waitFor()
+  expect(await wrap.evaluate(el=>el.scrollLeft)).toBeGreaterThan(50)
+ }finally{await close()}
+},15000)

@@ -39,7 +39,7 @@ export const nativeMindMapDepthCss=workbenchStructureDepthCss(
   'body [data-ework-grid][data-workbench-style=enterprise]',
   '.rScV5Q_mindMap .rScV5Q_mindMapNode','data-research-mind-map-depth'
 )
-const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
+const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+'@layer ework-workbench{'+workbenchModeCss('body [data-ework-grid]',' [data-research-node-id]')+workbenchModeCss('body [data-ework-grid]',' .rScV5Q_containerContent')+nativeMindMapDepthCss+'}'+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')+readFileSync(new URL('./workbench-style.css',import.meta.url),'utf8')+modeIcons
 export function restoreResearchGridWorkbench(source){
   source=stripComponentPptxMode(stripResearchBoardHeaderClient(source))
   const start=source.indexOf(begin);if(start<0)return source
@@ -81,7 +81,11 @@ export function patchResearchGridWorkbench(source){
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
   change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
-  change(anchor,anchor+'\nconst implicitGenerationResizes=new Set();const workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
+  change(anchor,anchor+'\nconst implicitGenerationResizes=new Set();const workbenchGrid=createWorkbenchGridState(storage,sessionId,typeof sherlockShared==="function"&&sherlockShared(sessionId));const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);')
+  change('const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);',`const workbenchAutoArrange=createWorkbenchAutoArrangeState(storage,sessionId);
+const responsiveArrangeKey='ework.research.responsive-arrange.v1:'+sessionId;
+let responsiveArrange;
+try{const saved=storage?.getItem(responsiveArrangeKey);if(saved==='auto'||saved==='manual')responsiveArrange=saved==='auto'}catch{}`)
   change('const canvasActions = canvasWorkspaceActions({\n        snapshot:()=>snapshot,',`const canvasActions = canvasWorkspaceActions({
         snapshot:()=>snapshot,
         presentation:()=>({workbenchStyle:workbenchStyleState.get()||readResearchComponentTheme()}),
@@ -114,10 +118,27 @@ export function patchResearchGridWorkbench(source){
   change('saveResearchCanvasSelection(storage, sessionId, snapshot.selection);','saveResearchCanvasSelection(storage, sessionId, parseResearchCanvasSelection(JSON.stringify(snapshot.selection),snapshot.files,snapshot.artifacts));')
   change('setCanvasSize(canvasSize) {','setCanvasSize(canvasSize) {\nif(workbenchGrid.enabled()){const size={...snapshot.canvasSize,...canvasSize};workbenchGrid.enable(Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)));}')
   change("if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){","if(!root.hasAttribute('data-ework-grid')&&document.documentElement.hasAttribute('data-odyssey-window-resizing')){")
-  change('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);','const availableWidth=root.hasAttribute("data-ework-grid")?workbenchAvailableWidth(root,bounds,panelBounds):researchCanvasUnobscuredWidth(bounds,panelBounds);')
-  change('const viewport=researchCanvasViewportForAreaChange(current,next);','const viewport=root.hasAttribute("data-ework-grid")?current.viewport:researchCanvasViewportForAreaChange(current,next);')
+  // The native input region is in screen pixels. Delegate grid geometry to
+  // its logical-pixel measurement so the two paths cannot overwrite it.
+  change('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);','')
+  change('const current=workspace.getSnapshot(),previous=current.canvasSize;','if(root.__eworkMeasureViewport)root.__eworkMeasureViewport(bounds,panelBounds);\nelse {\nconst availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);\nconst current=workspace.getSnapshot(),previous=current.canvasSize;')
+  change('publishRegion(bounds,document.visibilityState!=="hidden");','}\npublishRegion(bounds,document.visibilityState!=="hidden");')
+  change('window.addEventListener("resize", scheduleSync);','root.addEventListener("ework:board-display-zoom",scheduleSync);\nwindow.addEventListener("resize", scheduleSync);')
+  change('window.removeEventListener("resize", scheduleSync);','root.removeEventListener("ework:board-display-zoom",scheduleSync);\nwindow.removeEventListener("resize", scheduleSync);')
   change('snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));','snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));')
   const methods=`
+    getWorkbenchResponsiveArrange:()=>responsiveArrange===true,
+    initializeWorkbenchResponsiveArrange(){
+      if(responsiveArrange!==undefined||snapshot.files.length||snapshot.artifacts.length||sherlockShared(sessionId))return false;
+      return this.setWorkbenchResponsiveArrange(true);
+    },
+    setWorkbenchResponsiveArrange(value){
+      if(!collaborationCanWrite())return false;
+      if(value===responsiveArrange)return true;
+      try{if(storage?.setItem(responsiveArrangeKey,value?'auto':'manual')===false)return false}catch{return false}
+      responsiveArrange=value;listeners.forEach(listener=>listener());return true;
+    },
+    saveWorkbenchResponsiveLayout:()=>workbenchGrid.save(),
     pendingWorkbenchArrange:()=>collaborationCanWrite()?workbenchAutoArrange.ready(snapshot):[],
     consumeWorkbenchArrange:ids=>workbenchAutoArrange.consume(ids),
     getWorkbenchTableColumns:(id,index,labels)=>workbenchTableColumns.get(id,index,labels),
@@ -132,19 +153,17 @@ export function patchResearchGridWorkbench(source){
     reserveWorkbenchPlanning(intent,position){if(workbenchGrid.reservePlanning(intent,snapshot,position)){update({},false);return true}return false},
     releaseWorkbenchPlanning(id){if(workbenchGrid.releasePlanning(id)){update({},false);return true}return false},
     setWorkbenchWidth(width){if(workbenchGrid.enable(width)){initialWorkbenchFit=false;autoFitManaged=false;autoFitActive=false;update({},false);}},
-    applyWorkbenchCells(cells,persist=false,layoutToken,automatic=false){if(!collaborationCanWrite())return false;if(pendingHistoryTransaction===null)pendingHistoryTransaction=historyState();workbenchGrid.set(cells,{automatic});const nodes=createResearchGrid().project([...snapshot.files,...snapshot.artifacts],cells,Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)));this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},
+    applyWorkbenchCells(cells,persist=false,layoutToken,automatic=false){if(!collaborationCanWrite())return false;if(automatic&&responsiveArrange){workbenchGrid.set(cells,{automatic:true});update({},false);return !persist||workbenchGrid.save();}if(responsiveArrange&&!automatic)cells=cells.map(({responsiveOrder,...cell})=>cell);if(pendingHistoryTransaction===null)pendingHistoryTransaction=historyState();workbenchGrid.set(cells,{automatic});const nodes=createResearchGrid().project([...snapshot.files,...snapshot.artifacts],cells,Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)));this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},
   `
   change('subscribeCanvasAction:listener=>{',methods+'subscribeCanvasAction:listener=>{')
   change('const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',`for(const node of workbenchGrid.planningNodes())if((plan.createdAt??0)>=node.startedAt-1000)workbenchGrid.releasePlanning(node.id);
                     const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);`)
   change("if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');","if (artifacts.length !== snapshot.artifacts.length + nodes.length) throw new Error('画布容量不足，工作台尚未加入');\n                    if(collaborationCanWrite()){const requestedStyle=['enterprise','light','dark','openterminal'].includes(plan.requestedStyle)?plan.requestedStyle:workbenchRequestedStyle(plan.originalRequest);if(!existing.size&&!workbenchStyleState.hasPreference()&&requestedStyle)workbenchStyleState.set(requestedStyle,{scope:'board'});workbenchAutoArrange.register(plan,existing);}")
-  change('return structuredClone({ files: s.files, artifacts: s.artifacts });','return structuredClone(w.getWorkbenchDocument?.()??{ files: s.files, artifacts: s.artifacts });')
   change('files: value.files,','files: value.files,\nworkbenchCells:workbenchGrid.get(),')
   change('const restoreHistory = (entry) => {','const restoreHistory = (entry) => {\nif(entry.workbenchCells)workbenchGrid.set(entry.workbenchCells);')
-  // Shared documents store geometry in a fixed 1000px logical coordinate system.
-  // View width is local and never creates a collaboration edit.
-  change('applyRemoteCanvas(canvas, metadata = {}) {','applyRemoteCanvas(canvas, metadata = {}) {\nworkbenchGrid.receiveCanonical([...canvas.files,...canvas.artifacts]);')
-  change('if(collaborationAppliedRevision!==metadata.revision){', 'workbenchGrid.receiveCanonical([...files,...artifacts]);\nif(collaborationAppliedRevision!==metadata.revision){')
+  // Remote content joins the local grid by ID. Legacy geometry is only used to
+  // order an ungrouped board on first open.
+  change('if(collaborationAppliedRevision!==metadata.revision){', 'workbenchGrid.receiveShared([...files,...artifacts]);\nif(collaborationAppliedRevision!==metadata.revision){')
   const hydrated='snapshot = researchWorkspaceSnapshot({...snapshot,files,artifacts,selection:parseResearchCanvasSelection(JSON.stringify(snapshot.selection),files,artifacts)});'
   change('collaborationAppliedRevision=metadata.revision;\n                    '+hydrated,'collaborationAppliedRevision=metadata.revision;\n                    '+hydrated.replace('researchWorkspaceSnapshot({','researchWorkspaceSnapshot(workbenchGrid.reconcile({').replace(')});',')}));'))
   change('pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\n                    '+hydrated,'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\nworkbenchGrid.receiveCanonical([...files,...artifacts]);\n                    '+hydrated.replace('researchWorkspaceSnapshot({','researchWorkspaceSnapshot(workbenchGrid.reconcile({').replace(')});',')}));'))
@@ -159,7 +178,7 @@ export function patchResearchGridWorkbench(source){
   change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(researchGridNodeIds.has(node?.id))return {width:Math.max(1,node.width),height:Math.max(1,node.height),sizeMode:"manual",resizable:true};')
   change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid")){handleWorkbenchWheel(root,workspace,event);return;}')
   change('function researchCanvasMeasureForArrange(root,nodes) {','function researchCanvasMeasureForArrange(root,nodes) {\nif(root?.hasAttribute("data-ework-grid"))return measureWorkbenchContents(root,nodes);')
-  change('function researchCanvasArrangeWithMotion(root, workspace, measured) {','function researchCanvasArrangeWithMotion(root, workspace, measured, arrangeMode="standard") {\nif(root?.hasAttribute("data-ework-grid"))return arrangeWorkbenchContents(root,workspace,measured,arrangeMode);')
+  change('function researchCanvasArrangeWithMotion(root, workspace, measured) {','function researchCanvasArrangeWithMotion(root, workspace, measured, arrangeMode="standard") {\nif(root?.hasAttribute("data-ework-grid"))return arrangeWorkbenchContents(root,workspace,measured,arrangeMode==="standard"&&workspace.getWorkbenchResponsiveArrange?.()?"auto":arrangeMode);')
   change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map(), arrangeMode="standard") {
     if(workbenchGrid.enabled()){
       workbenchGrid.clearContentOverrides();

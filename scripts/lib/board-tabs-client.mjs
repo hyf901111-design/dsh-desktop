@@ -17,11 +17,13 @@ export function patchBoardTabsClient(source){
  source=stripBoardTabsClient(source)
  const preview=source.includes("const workbenchPreview=createResearchPreviewModeState(")
  const write=preview?"structureCanWrite()":"collaborationCanWrite()"
+ const gridBinding='const workbenchGrid=createWorkbenchGridState(storage,sessionId,typeof sherlockShared==="function"&&sherlockShared(sessionId));'
+ const legacyGridBinding='const workbenchGrid=createWorkbenchGridState(storage,sessionId);'
  const changes=[],change=(before,after,from=0)=>{const at=source.indexOf(before,from);if(at<0)throw Error('页签补丁缺少锚点: '+before.slice(0,110));changes.push([before,after]);source=source.slice(0,at)+after+source.slice(at+before.length)}
  const css=readFileSync(new URL('./board-tabs.css',import.meta.url),'utf8')+['board-tabs','tabs-more','tabs-grip'].map(name=>'.ew-board-tabs-icon[data-tabs-icon="'+name+'"]{mask-image:url("data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-component-library/'+name+'.svg',import.meta.url)).toString('base64')+'")}').join('\n')
  const definitions=start+'\n'+[...Object.values(contract),createBoardTabsGridState,createBoardTabsWorkspace,...Object.values(ui)].map(fn=>fn.toString()).join('\n')+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-board-tabs-style");if(!style){style=document.createElement("style");style.id="ework-board-tabs-style";document.head.append(style)}style.textContent='+JSON.stringify(css)+'}\n'+end+'\n'
  source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',definitions+'function createResearchWorkspaceSession(storage, sessionId) {')
- change('const workbenchGrid=createWorkbenchGridState(storage,sessionId);','const workbenchGrid=createBoardTabsGridState(storage,sessionId);')
+ change(source.includes(gridBinding)?gridBinding:legacyGridBinding,gridBinding.replace('createWorkbenchGridState','createBoardTabsGridState'))
  change('const htmlFitStates = new Map();',`const boardTabsWorkspace=createBoardTabsWorkspace({read:()=>snapshot,grid:workbenchGrid,canWrite:()=>${write},publish:patch=>update(patch,false),notify:()=>listeners.forEach(listener=>listener()),createId:createResearchCanvasArtifactId,canonical:canonicalResearchCanvasArtifactNode,bound:boundedResearchCanvasArtifactNodes,remove:removeResearchCanvasNodes,
  transact:(patch,prepare)=>{
   if(!${write})return false;finalizeHistoryTransaction();const before=historyState(),old=snapshot,redo=[...redoHistory];let staged=false;
@@ -37,7 +39,9 @@ const htmlFitStates = new Map();`)
  change('publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection }, true, true);','publish({ ...snapshot, files: entry.files, artifacts: artifacts2, selection: entry.selection,viewport:entry.boardTabsViewport??snapshot.viewport }, true, true);')
  change('subscribeCanvasAction:listener=>{','...boardTabsWorkspace,\ngetWorkbenchLayoutOffset:()=>workbenchGrid.offset(),\ngetWorkbenchLayoutOffsetX:()=>workbenchGrid.offsetX(),\ngetWorkbenchContentWidth:width=>workbenchGrid.contentWidth(width),\nsubscribeCanvasAction:listener=>{')
  change('const nodes=createResearchGrid().project([...snapshot.files,...snapshot.artifacts],cells,Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)));this.applyPointerGeometry('+(preview?'nodes,previewToken':'nodes')+');','const visible=boardTabsVisible(snapshot,workbenchGrid.active()),nodes=createResearchGrid().project([...visible.files,...visible.artifacts],cells,workbenchGrid.contentWidth(Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity))).map(n=>({...n,x:n.x+workbenchGrid.offsetX(),y:n.y+workbenchGrid.offset()}));this.applyPointerGeometry('+(preview?'nodes,previewToken':'nodes')+');')
+ change('const flushViewport=()=>{','const flushViewport=()=>{\nworkbenchGrid.flushViewport();')
  change('setViewport(viewport, automatic=false) {','setViewport(viewport, automatic=false) { workbenchGrid.rememberViewport({...snapshot.viewport,...viewport});')
+ change('autoFitActive=automatic; update({ viewport: { ...snapshot.viewport, ...viewport } }, false); scheduleViewportSave();','autoFitActive=automatic; if(workbenchGrid.enabled()){const next={...snapshot.viewport,y:Math.min(0,viewport.y??snapshot.viewport.y),x:0,scale:1};if(next.y!==snapshot.viewport.y||next.x!==snapshot.viewport.x||next.scale!==snapshot.viewport.scale){snapshot=Object.freeze({...snapshot,viewport:Object.freeze(next)});listeners.forEach(listener=>listener());}}else update({ viewport: { ...snapshot.viewport, ...viewport } }, false); scheduleViewportSave();')
  const types=source.match(/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[[^\]]+\]/)?.[0];if(!types)throw Error('页签类型注册缺失');change(types,types.replace('new Set([','new Set(["board-tabs",'))
  change('if (value.type === "web") {','if(value.type===\'board-tabs\')return boardTabsSpec(value);\nif (value.type === "web") {')
  change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(node?.containerSpec?.type===\'board-tabs\')return {width:Math.max(1,node.width),height:34,sizeMode:"manual",resizable:false};')
@@ -87,7 +91,7 @@ const htmlFitStates = new Map();`)
  const hook=(before,after)=>{if(!hooked.includes(before))throw Error('页签拖动钩子缺失: '+before.slice(0,70));hooked=hooked.replace(before,after)}
  hook('const finish=(commit,event)=>{','const finish=(commit,event,preserveLayout=false)=>{')
  hook('else{workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry(', 'else{if(!preserveLayout)workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry(')
- hook('workspace.applyWorkbenchCells(pending,false);const visible=', 'workspace.applyWorkbenchCells(pending,false);op.boardTabsPreviewCells=pending;const visible=')
+ hook('workspace.applyWorkbenchCells(pending,false);const visible=', 'workspace.applyWorkbenchCells(pending,false);op.boardTabsPreviewCells=workspace.getWorkbenchCells();const visible=')
  hook('Math.max(12+origin.width/2,Math.min(width()-12-origin.width/2,origin.x+p.x-op.start.x))','Math.max(12+origin.width/2,Math.min(width()-12-origin.width/2,origin.x+p.x-op.start.x))+(workspace.getWorkbenchLayoutOffsetX?.()||0)')
  hook('Math.max(12+origin.height/2,origin.y+p.y-op.start.y)', 'Math.max(12+origin.height/2,origin.y+p.y-op.start.y)+(workspace.getWorkbenchLayoutOffset?.()||0)')
  hook("root.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e", "root.__ewBoardTabsDrag?.begin(e,op);\nroot.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e")

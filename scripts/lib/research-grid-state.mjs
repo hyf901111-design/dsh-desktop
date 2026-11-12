@@ -7,35 +7,57 @@ export function workbenchScrollExtent(contentBottom,visibleHeight,rowStep,toolba
   if(contentBottom>0&&contentBottom>=visibleHeight*.75)return Math.ceil(visibleHeight+Math.max(160,visibleHeight*.25))
   return Math.max(visibleHeight,Math.ceil(contentBottom+(toolbarSpace?80:0)))
 }
-export function createWorkbenchGridState(storage,sessionId) {
-  const grid=createResearchGrid(), key='ework.research.grid.v1:'+sessionId
+export function createWorkbenchGridState(storage,sessionId,shared=false) {
+  const grid=createResearchGrid()
+  const key=(shared ? 'ework.research.shared-grid.v1:' : 'ework.research.grid.v1:')+sessionId
+  let pendingSharedIds=null, receivedSharedCanvas=false
   let width=0,cells=[],initialized=false,previous=new Map(),nodesById=new Map(),forced=false,legacyRows=false
   const planning=new Map()
   // Responsive content floors belong to this viewport, not the shared document.
   // An explicit resize overrides them until the viewport changes again.
   const contentHeights=new Map(),contentOverrides=new Set()
   const durableCells=()=>cells.filter(c=>!planning.has(c.id))
-  try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
+  try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1
+    if(shared && Array.isArray(saved.contentOverrides))
+      for(const id of saved.contentOverrides) if(cells.some(c=>c.id===id)) contentOverrides.add(id)}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&(!n.workbenchId||n.preserveGenerationSize)&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(projectWidth=width||1000){
-    const m=grid.metrics(projectWidth),limits=c=>{
-      const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id)),value=contentHeights.get(c.id)
+    const m=grid.metrics(projectWidth),baseLimits=c=>{
+      const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id))
       // Explicit columns keep their saved spans consistently for all components.
       if([1,2,3].includes(c.arrangeColumns))min.w=Math.min(min.w,c.w)
+      return min
+    }
+    const matchingMeasurement=(c,w)=>{
+      const node=nodesById.get(c.id),value=contentHeights.get(c.id)
+      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(w*m.step-m.gap))<=2)return value
+    }
+    const fitHeight=(c,min,value)=>value&&Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep))
+    // Keep row/column structure through asynchronous intrinsic measurements.
+    // Padding used to close a band is only projected on this client.
+    const arranged=grid.projectArranged(cells,c=>baseLimits(c).w,c=>{
+      const min=baseLimits(c).h,value=matchingMeasurement(c,c.w)
+      if(!value)return Math.max(min,c.h)
+      const measured=fitHeight(c,min,value)
+      return value.layoutFit&&!contentOverrides.has(c.id)?Math.max(m.minRows,measured):Math.max(min,c.h,measured)
+    })
+    if(arranged)return arranged
+    const limits=c=>{
+      const min=baseLimits(c)
       // A narrow viewport can expand a saved half-column to the template's
       // readable minimum. The sandbox measured that displayed width; comparing
       // it with the smaller saved span discards the first content height.
-      const displayedWidth=Math.max(c.w,min.w)*m.step-m.gap
-      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-displayedWidth)<=2){
-        const measured=Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min.h)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep))
+      const value=matchingMeasurement(c,Math.max(c.w,min.w))
+      if(value){
+        const measured=fitHeight(c,min.h,value)
         min.h=value.layoutFit?Math.max(m.minRows,measured):Math.max(min.h,measured)
       }
       return min
     }
-    const fitted=cells.map(c=>{const value=contentHeights.get(c.id),node=nodesById.get(c.id);return value?.layoutFit&&!contentOverrides.has(c.id)&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(Math.max(c.w,limits(c).w)*m.step-m.gap))<=2?{...c,h:Math.max(m.minRows,Math.min(300,Math.ceil((value.height+m.gap)/m.rowStep)))}:c})
+    const fitted=cells.map(c=>{const value=matchingMeasurement(c,Math.max(c.w,baseLimits(c).w));return value?.layoutFit&&!contentOverrides.has(c.id)?{...c,h:Math.max(m.minRows,fitHeight(c,m.minRows,value))}:c})
     const hasFit=fitted.some((c,i)=>c.h!==cells[i].h)
-    if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
+    if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return grid.alignResponsiveSpans(cells)
     // Preserve existing column intent when a narrow left column reaches the
     // shared minimum. Borrow the neighbouring column's spare span before
     // falling back to wrapping; every card on those edges moves together.
@@ -66,11 +88,12 @@ export function createWorkbenchGridState(storage,sessionId) {
       while(collisions.length){next.y=Math.max(...collisions.map(c=>c.y+c.h));collisions=placed.filter(c=>grid.overlap(next,c))}
       placed.push(next)
     }
-    const byId=new Map((hasFit?grid.compact(placed):placed).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
+    const byId=new Map(grid.alignResponsiveSpans(hasFit?grid.compact(placed):placed).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
   }
   function reconcile(snapshot) {
     if(!width)return snapshot
     const nodes=[...snapshot.files,...snapshot.artifacts,...planning.values()],ids=new Set(nodes.map(n=>n.id))
+    if(shared && !receivedSharedCanvas && !nodes.length) return snapshot
     const priorNodes=nodesById
     nodesById=new Map(nodes.map(n=>[n.id,n]))
     // Automatic workbench panels participate in packing while they generate.
@@ -87,7 +110,7 @@ export function createWorkbenchGridState(storage,sessionId) {
       // migrating their template pixels preserves narrow cards and gutters.
       const automatic=nodes.filter(n=>n.workbenchId&&n.sizeMode!=='manual'&&!n.preserveGenerationSize)
       const planned=new Set(automatic.filter(n=>automatic.some(p=>p.id!==n.id&&p.workbenchId===n.workbenchId)||!n.containerSpec&&['queued','running','retrying'].includes(n.generationStatus)).map(n=>n.id))
-      cells=grid.migrate(nodes.filter(n=>!planned.has(n.id)),width);initialized=true
+      cells=pendingSharedIds ? [] : grid.migrate(nodes.filter(n=>!planned.has(n.id)),width);initialized=true
     }
     const removed=cells.some(n=>!ids.has(n.id));cells=cells.filter(n=>ids.has(n.id))
     const m=grid.metrics(width)
@@ -109,7 +132,20 @@ export function createWorkbenchGridState(storage,sessionId) {
     // panel independently stacks the entire group in a narrow left column.
     // Allocate its default frames once; later generation events reuse them.
     const known=new Set(cells.map(c=>c.id)),fresh=nodes.filter(n=>!known.has(n.id)),groups=new Map()
-    for(const n of fresh)if(n.workbenchId&&n.sizeMode!=='manual'&&!n.preserveGenerationSize){
+    if(pendingSharedIds) {
+      const byId=new Map(fresh.map(node=>[node.id,node]))
+      let y=Math.max(0,...cells.map(cell=>cell.y+cell.h))
+      for(const id of pendingSharedIds) {
+        const node=byId.get(id)
+        if(!node) continue
+        const h=Math.max(grid.minimum(node,m).h,Math.ceil((240+m.gap)/m.rowStep))
+        cells.push(grid.bounded({id,x:0,y,w:m.columns,h}))
+        known.add(id)
+        y+=h
+      }
+      pendingSharedIds=null
+    }
+    for(const n of fresh)if(!known.has(n.id)&&n.workbenchId&&n.sizeMode!=='manual'&&!n.preserveGenerationSize){
       const group=groups.get(n.workbenchId)||[];group.push(n);groups.set(n.workbenchId,group)
     }
     for(const [id,group] of groups){
@@ -150,6 +186,11 @@ export function createWorkbenchGridState(storage,sessionId) {
   }
   return {
     reconcile,receiveCanonical,
+    receiveShared(nodes) {
+      pendingSharedIds=nodes.map(node=>node.id)
+      receivedSharedCanvas=true
+      forced=true
+    },
     reservePlanning(intent,snapshot,position){
       if(!width||!intent?.id)return false
       if(planning.has(intent.id))return false
@@ -163,7 +204,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     planningNodes:(projectWidth=width||1000)=>grid.project([...planning.values()],visibleCells(projectWidth),projectWidth),
     projectPreview:(nodes,projectWidth)=>grid.project(nodes,visibleCells(projectWidth),projectWidth),
     document(snapshot,canonicalWidth=1000){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,canonicalWidth),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
-    enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();contentOverrides.clear();forced=true;return true},
+    enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();if(!shared)contentOverrides.clear();forced=true;return true},
     contentHeight(id,value){
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"|<body data-research-kind="chart" data-chart-template="(?:line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"/.test(node?.containerSpec?.html||'')
       if(value.native?(!node?.containerSpec||node.containerSpec.type==='html'||value.contentKey!==JSON.stringify(node.containerSpec)):(node?.containerSpec?.type!=='html'||value.html!==node.containerSpec.html))return false
@@ -189,7 +230,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     visible:()=>freeCells(visibleCells()),
     set(next,{automatic=false}={}){for(const c of automatic?[]:next){const old=cells.find(n=>n.id===c.id);if(old&&(old.w!==c.w||old.h!==c.h))contentOverrides.add(c.id)}cells=next.map(grid.bounded);forced=true},
     append:id=>grid.append(cells,id),
-    save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells:durableCells()}))!==false}catch{return false}return true},
+    save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells:durableCells(),...(shared && {contentOverrides:[...contentOverrides].filter(id=>cells.some(c=>c.id===id))})}))!==false}catch{return false}return true},
     enabled:()=>width>0
   }
 }

@@ -1,8 +1,7 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
-import {patchFinancialWidgetClient} from '../scripts/lib/financial-widget-client.mjs'
-import {patchResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {prepareFinancialClientSource} from './helpers/financial-widget-client-fixture.js'
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 import {generationCss} from '../scripts/lib/figma-generation-client.mjs'
 
@@ -10,7 +9,7 @@ let browser,css
 beforeAll(async()=>{
  const pw=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await (pw.chromium||pw.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
- const client=patchResearchGridWorkbench(patchFinancialWidgetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+ const client=await prepareFinancialClientSource({refreshState:true})
  const start=client.indexOf('/* EWORK_GRID_WORKBENCH_BEGIN */'),block=client.slice(start,client.indexOf('/* EWORK_GRID_WORKBENCH_END */',start))
  css=JSON.parse(block.match(/style\.textContent=("(?:\\.|[^"\\])*")/)[1])+'\n'+await readFile('src/preload/figma-refinements.css','utf8')
 },30000)

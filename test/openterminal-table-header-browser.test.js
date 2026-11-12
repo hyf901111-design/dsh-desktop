@@ -23,7 +23,7 @@ async function fixture(){
 
 it('uses the same readable header palette for frozen and scrolling columns in all four modes',async()=>{
  const page=await fixture()
- const palettes={enterprise:{header:'rgb(30, 185, 225)',text:'rgb(255, 255, 255)',body:'rgb(255, 255, 255)',bodyText:'rgb(60, 60, 60)'},dark:{header:'rgb(36, 36, 43)',text:'rgb(232, 232, 237)',body:'rgb(21, 21, 24)',bodyText:'rgb(232, 232, 237)'},light:{header:'rgb(244, 244, 246)',text:'rgb(37, 37, 43)',body:'rgb(255, 255, 255)',bodyText:'rgb(37, 37, 43)'},openterminal:{header:'rgb(17, 17, 17)',text:'rgb(128, 128, 128)',body:'rgb(10, 10, 10)',bodyText:'rgb(217, 217, 217)'}}
+ const palettes={enterprise:{header:'rgb(30, 185, 225)',text:'rgb(255, 255, 255)',body:'rgb(255, 255, 255)',bodyText:'rgb(60, 60, 60)'},dark:{header:'rgb(36, 36, 43)',text:'rgb(232, 232, 237)',body:'rgb(21, 21, 24)',bodyText:'rgb(232, 232, 237)'},light:{header:'rgb(244, 244, 246)',text:'rgb(37, 37, 43)',body:'rgb(255, 255, 255)',bodyText:'rgb(37, 37, 43)'},openterminal:{header:'rgb(17, 17, 17)',text:'rgb(217, 217, 217)',body:'rgb(10, 10, 10)',bodyText:'rgb(217, 217, 217)'}}
  try{
   for(const mode of ['enterprise','dark','light','openterminal','enterprise']){
    await page.evaluate(mode=>document.documentElement.dataset.workbenchStyle=mode,mode)

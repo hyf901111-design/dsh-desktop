@@ -19,7 +19,7 @@ import {
   ResearchRequestJournal,
   digest
 } from './state/research-board-request-journal'
-import { restoreLegacyBoardTabMembership } from './state/research-board-tab-membership'
+import { hasEmptyBoardTabMembership, restoreLegacyBoardTabMembership, restoreLocalSourceBoardLayout, restoreUnassignedSharedBoardCards } from './state/research-board-tab-membership'
 import { normalizeRequestContext } from '../../packages/dsh-research-collaboration/context.js'
 import { freezeSnapshot, createDocument, encodeDocument, decodeDocument, projectDocument, applyCanvasDiff } from '../../packages/dsh-research-collaboration/document.js'
 import { taskFailureMessage, toBase64, fromBase64 } from '../../packages/dsh-research-collaboration/protocol.js'
@@ -35,7 +35,7 @@ import type { Canvas } from '../shared/research-boards'
 import { ResearchBoardsError } from '../shared/research-boards'
 import { validateWorkbench, layoutWorkbench, workbenchPanelPrompt } from '../../packages/dsh-research-task-runtime/workbench-plan.js'
 import { bindWorkbenchLibraryLinks } from '../../packages/dsh-research-task-runtime/workbench-library.js'
-import { boardTabsApplyWorkbench } from '../../packages/dsh-research-task-runtime/board-tabs-contract.js'
+import { boardTabsApplyWorkbench, boardTabsSpec } from '../../packages/dsh-research-task-runtime/board-tabs-contract.js'
 type Options = {
   root: string
   storage: ResearchCanvasStorage
@@ -53,6 +53,43 @@ type Options = {
     body: any,
     signal: AbortSignal
   ) => Promise<any>
+}
+function restoreMissingSharedGeometry(canvas: Canvas): void {
+  const nodes = [...canvas.files, ...canvas.artifacts]
+  const needsPosition = nodes.filter(node => !Number.isFinite(node.x) || !Number.isFinite(node.y))
+  if (!needsPosition.length) return
+
+  const inset = 12
+  const gap = 16
+  const isTabs = (node: Canvas['artifacts'][number]) => boardTabsSpec(node.containerSpec) !== null
+  const size = (node: Canvas['artifacts'][number], tabs: boolean) => ({
+    width: typeof node.width === 'number' && Number.isFinite(node.width) && node.width > 0
+      ? node.width
+      : tabs ? 200 : node.containerSizePreset === 'small' ? 320 : 656,
+    height: typeof node.height === 'number' && Number.isFinite(node.height) && node.height > 0
+      ? node.height
+      : tabs ? 34 : node.containerSizePreset === 'large' ? 456 : 220
+  })
+  let bottom = nodes.reduce((edge, node) => {
+    if (typeof node.y !== 'number' || !Number.isFinite(node.y)) return edge
+    return Math.max(edge, node.y + size(node, isTabs(node)).height / 2 + gap)
+  }, inset)
+  const workbenchIndex = (node: Canvas['artifacts'][number]) =>
+    typeof node.workbenchIndex === 'number' && Number.isFinite(node.workbenchIndex)
+      ? node.workbenchIndex : Number.MAX_SAFE_INTEGER
+
+  // Legacy snapshots can contain valid cards without their saved positions.
+  // Supply display geometry on the detached copy so opening the board never writes to the room.
+  needsPosition.sort((a, b) => Number(isTabs(b)) - Number(isTabs(a)) || workbenchIndex(a) - workbenchIndex(b))
+  for (const node of needsPosition) {
+    const tabs = isTabs(node)
+    const { width, height } = size(node, tabs)
+    if (!Number.isFinite(node.x)) node.x = inset + width / 2
+    if (!Number.isFinite(node.y)) node.y = (tabs ? inset : bottom) + height / 2
+    node.width = width
+    node.height = height
+    bottom = Math.max(bottom, Number(node.y) + height / 2 + gap)
+  }
 }
 export class ResearchBoardIntegration {
   readonly snapshots: ResearchBoardSnapshots
@@ -374,9 +411,15 @@ export class ResearchBoardIntegration {
     canvas: Canvas
     signal: AbortSignal
   }) {
-    this.authority(i.accountId, i.boardId, i.epoch)
+    const { sourceSessionId } = this.authority(i.accountId, i.boardId, i.epoch)
     const canvas = structuredClone(i.canvas)
     restoreLegacyBoardTabMembership(canvas)
+    if (sourceSessionId && hasEmptyBoardTabMembership(canvas)) {
+      // If the personal source has been removed, the generic geometry fallback still applies.
+      try { restoreLocalSourceBoardLayout(canvas, this.readOriginal(sourceSessionId)) } catch {}
+    }
+    restoreUnassignedSharedBoardCards(canvas)
+    restoreMissingSharedGeometry(canvas)
     const directory = (canvas.files.length || canvas.artifacts.some(node => (node.generationSources as any[] ?? []).some(source => source.type === 'file' && source.assetId))) ? await this.runtime('directory', {mode:'ensure',sessionId:i.localSessionId}, i.signal) : null
     i.signal.throwIfAborted()
     this.authority(i.accountId,i.boardId,i.epoch)

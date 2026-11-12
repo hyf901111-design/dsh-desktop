@@ -10,6 +10,12 @@ export function FinancialConnectionPort({node,side,readOnly,surface}){
 export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readOnly,surface='research'}){
  const {jsx,jsxs}=react_jsx_runtime,[draft,setDraft]=react.useState(null),draftRef=react.useRef(null),[geometry,setGeometry]=react.useState({width:0,height:0,ports:{},tabs:{}}),[feedback,setFeedback]=react.useState(null),previousLinks=react.useRef({sessionId,links:new Map()})
  const portKey=(id,side)=>id+':'+side
+ const canvasSpace=root=>{
+  const zoom=Number(root.style.zoom)||1,overlay=root.querySelector(':scope > .ew-financial-connections'),bounds=(overlay||root).getBoundingClientRect()
+  // The overlay's screen origin already includes the real border and scroll
+  // displacement, including fractional CSS zoom rounding.
+  return {zoom,x:value=>(value-bounds.left)/zoom+(overlay?0:root.scrollLeft-root.clientLeft),y:value=>(value-bounds.top)/zoom+(overlay?0:root.scrollTop-root.clientTop)}
+ }
  const active=()=>surface==='research'&&rootRef.current?.isConnected&&rootRef.current.matches('[data-research-canvas]')
  const page=workspace.getVisibleBoardSnapshot?.()??snapshot,visible=new Set([...page.files,...page.artifacts].map(n=>n.id)),tabs=snapshot.artifacts.find(n=>n.containerSpec?.type==='board-tabs')?.containerSpec.tabs||[],tabByNode=new Map(tabs.flatMap(t=>t.nodeIds.map(id=>[id,t])))
  // Drag direction is independent of data direction: output always feeds input.
@@ -26,28 +32,28 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const observed=new Set();let observer
   const watch=element=>{if(element&&!observed.has(element)){observed.add(element);observer.observe(element)}}
   const measure=()=>{
-   // The SVG starts inside the scroll viewport's border, while DOMRects include
-   // that border. Use the same padding-box origin for circles and pointer paths.
-   const base=root.getBoundingClientRect(),originX=base.left+root.clientLeft,originY=base.top+root.clientTop,ports={},tabAnchors={},cards=[]
+   const {zoom,x,y}=canvasSpace(root),ports={},tabAnchors={},cards=[]
+   const box=r=>({left:x(r.left),right:x(r.right),top:y(r.top),bottom:y(r.bottom)})
    // Independent cards have no ports, but their edges still bound routing gutters.
    for(const node of root.querySelectorAll('[data-research-node-id]')){
     if(workspace.isBoardNodeVisible?.(node.dataset.researchNodeId)===false)continue
     const r=node.getBoundingClientRect();if(r.width<=0||r.height<=0)continue;watch(node)
-    cards.push({left:r.left-originX+root.scrollLeft,right:r.right-originX+root.scrollLeft,top:r.top-originY+root.scrollTop,bottom:r.bottom-originY+root.scrollTop})
+    cards.push(box(r))
    }
    for(const port of root.querySelectorAll('[data-financial-port]')){
     if(workspace.isBoardNodeVisible?.(port.dataset.financialPortNode)===false)continue
     watch(port);watch(port.closest('[data-research-node-id]'))
     const r=port.getBoundingClientRect(),card=port.closest('[data-research-node-id]')?.getBoundingClientRect()
-    ports[portKey(port.dataset.financialPortNode,port.dataset.financialPort)]={x:r.left+r.width/2-originX+root.scrollLeft,y:r.top+r.height/2-originY+root.scrollTop,left:(card?.left??r.left)-originX+root.scrollLeft,right:(card?.right??r.right)-originX+root.scrollLeft,top:(card?.top??r.top)-originY+root.scrollTop,bottom:(card?.bottom??r.bottom)-originY+root.scrollTop}
+    if(r.width<=0||r.height<=0)continue
+    ports[portKey(port.dataset.financialPortNode,port.dataset.financialPort)]={...box(card??r),x:x(r.left+r.width/2),y:y(r.top+r.height/2)}
    }
    const nav=root.querySelector('[data-board-tabs-nav]'),list=nav?.querySelector('[role=tablist]'),clip=list?.getBoundingClientRect(),navRect=nav?.getBoundingClientRect()
    watch(nav);watch(list)
    for(const tab of nav?.querySelectorAll('[data-board-tab]')||[]){
     watch(tab);const r=tab.getBoundingClientRect();if(!clip||clip.width<=0||clip.height<=0||r.width<=0||r.height<=0)continue
     if(nav.dataset.boardTabsOrientation==='vertical'){
-     const x=navRect.right,y=Math.max(clip.top+1,Math.min(clip.bottom-1,r.top+r.height/2))
-     tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,vertical:true,stemLeft:r.right-navRect.left-nav.clientLeft,stemTop:y-navRect.top-nav.clientTop-.75,stemWidth:Math.max(0,x-r.right)}
+     const clientX=navRect.right,clientY=Math.max(clip.top+zoom,Math.min(clip.bottom-zoom,r.top+r.height/2))
+     tabAnchors[tab.dataset.boardTab]={x:x(clientX),y:y(clientY),tabId:tab.dataset.boardTab,vertical:true,stemLeft:(r.right-navRect.left)/zoom-nav.clientLeft,stemTop:(clientY-navRect.top)/zoom-nav.clientTop-.75,stemWidth:Math.max(0,(clientX-r.right)/zoom)}
      continue
     }
     const left=Math.max(r.left,clip.left),right=Math.min(r.right,clip.right),overflow=right>left?null:r.left>=clip.right?'right':'left'
@@ -55,11 +61,11 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
     watch(arrow);const ar=arrow?.getBoundingClientRect(),usable=ar&&ar.width>0&&ar.height>0
     // A clipped title uses its visible portion; an off-list title uses the
     // existing paging control, never another tab or the hidden card's (0,0).
-    const x=overflow?(usable?ar.left+ar.width/2:overflow==='left'?clip.left:clip.right):(left+right)/2,y=overflow&&usable?ar.bottom:r.bottom
-    tabAnchors[tab.dataset.boardTab]={x:x-originX+root.scrollLeft,y:y-originY+root.scrollTop,tabId:tab.dataset.boardTab,overflow,stemLeft:x-navRect.left-nav.clientLeft,stemTop:y-navRect.top-nav.clientTop-.75,stemHeight:Math.max(0,navRect.bottom-y)+1.5}
+    const clientX=overflow?(usable?ar.left+ar.width/2:overflow==='left'?clip.left:clip.right):(left+right)/2,clientY=overflow&&usable?ar.bottom:r.bottom
+    tabAnchors[tab.dataset.boardTab]={x:x(clientX),y:y(clientY),tabId:tab.dataset.boardTab,overflow,stemLeft:(clientX-navRect.left)/zoom-nav.clientLeft,stemTop:(clientY-navRect.top)/zoom-nav.clientTop-.75,stemHeight:Math.max(0,(navRect.bottom-clientY)/zoom)+1.5}
    }
    const content=root.querySelector('[data-research-content-layer]')
-   const next={width:root.clientWidth,height:Math.max(root.clientHeight,content?.scrollHeight||content?.getBoundingClientRect().height||0),ports,cards,tabs:tabAnchors}
+   const next={width:Math.ceil(Math.max(root.clientWidth,content?.scrollWidth||0,...cards.map(c=>c.right))),height:Math.ceil(Math.max(root.clientHeight,content?.scrollHeight||0,...cards.map(c=>c.bottom))),ports,cards,tabs:tabAnchors}
    setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next)
   }
   let frame=0,until=0
@@ -117,7 +123,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    if(!dragging.moved&&Math.hypot(e.clientX-dragging.x,e.clientY-dragging.y)<4)return
    if(!dragging.moved)workspace.updateSelection([dragging.nodeId],'replace')
    dragging.moved=true;e.preventDefault()
-   const r=root.getBoundingClientRect(),target=portAt(document.elementFromPoint(e.clientX,e.clientY)),valid=compatible(dragging,target),value={nodeId:dragging.nodeId,side:dragging.side,sourceId:valid?.sourceId??(dragging.side==='output'?dragging.nodeId:null),targetId:valid?.targetId??(dragging.side==='input'?dragging.nodeId:null),previousTargetId:dragging.side==='input'?dragging.nodeId:null,x:e.clientX-r.left-root.clientLeft+root.scrollLeft,y:e.clientY-r.top-root.clientTop+root.scrollTop,dropId:valid?target.dataset.financialPortNode:null,invalidId:target&&!valid?target.dataset.financialPortNode:null,invalidSide:target&&!valid?target.dataset.financialPort:null};draftRef.current=value;setDraft(value)
+   const {x,y}=canvasSpace(root),target=portAt(document.elementFromPoint(e.clientX,e.clientY)),valid=compatible(dragging,target),value={nodeId:dragging.nodeId,side:dragging.side,sourceId:valid?.sourceId??(dragging.side==='output'?dragging.nodeId:null),targetId:valid?.targetId??(dragging.side==='input'?dragging.nodeId:null),previousTargetId:dragging.side==='input'?dragging.nodeId:null,x:x(e.clientX),y:y(e.clientY),dropId:valid?target.dataset.financialPortNode:null,invalidId:target&&!valid?target.dataset.financialPortNode:null,invalidSide:target&&!valid?target.dataset.financialPort:null};draftRef.current=value;setDraft(value)
   }
   const up=e=>{
    if(!active()||!dragging||e.pointerId!==dragging.pointerId)return
@@ -149,6 +155,48 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   }
   const last=points[points.length-1];return d+` L ${last[0]} ${last[1]}`
  }
+ // Search the open gutters between card boundaries. Use canvas coordinates so
+ // the same route follows the actual ports after reflow, resize, or zoom.
+ const clearSegment=(a,b,boxes)=>!boxes.some(c=>a[0]===b[0]
+  ?a[0]>c.left&&a[0]<c.right&&Math.min(a[1],b[1])<c.bottom&&Math.max(a[1],b[1])>c.top
+  :a[1]>c.top&&a[1]<c.bottom&&Math.min(a[0],b[0])<c.right&&Math.max(a[0],b[0])>c.left)
+ const findGutterPath=(from,to,cards)=>{
+  const start=[from.right+1,from.y],end=[to.left-1,to.y]
+  const boxes=cards.map(c=>({left:c.left-1,right:c.right+1,top:c.top-1,bottom:c.bottom+1}))
+  const axes=(a,b,low,high,edges)=>[...new Set([a,b,low,high,...edges])].filter(x=>x>=low&&x<=high).sort((x,y)=>x-y)
+  const xs=axes(start[0],end[0],0,geometry.width,boxes.flatMap(c=>[c.left,c.right])),ys=axes(start[1],end[1],0,geometry.height,boxes.flatMap(c=>[c.top,c.bottom]))
+  const w=xs.length,size=w*ys.length,index=([x,y])=>{const i=xs.indexOf(x),j=ys.indexOf(y);return i<0||j<0?-1:j*w+i},source=index(start),target=index(end)
+  if(source<0||target<0||size>30000)return ''
+  const point=id=>[xs[id%w],ys[Math.floor(id/w)]],dist=new Float64Array(size).fill(Infinity),parent=new Int32Array(size).fill(-1),heap=[]
+  const push=(id,cost)=>{
+   let i=heap.length;heap.push([id,cost])
+   while(i>0){const p=(i-1)>>1;if(heap[p][1]<=cost)break;heap[i]=heap[p];i=p}
+   heap[i]=[id,cost]
+  }
+  const pop=()=>{
+   const first=heap[0],last=heap.pop()
+   if(heap.length){let i=0;while(2*i+1<heap.length){let child=2*i+1;if(child+1<heap.length&&heap[child+1][1]<heap[child][1])child++;if(heap[child][1]>=last[1])break;heap[i]=heap[child];i=child}heap[i]=last}
+   return first
+  }
+  const estimate=p=>Math.abs(p[0]-end[0])+Math.abs(p[1]-end[1])
+  dist[source]=0;push(source,estimate(start))
+  while(heap.length){
+   const [id,cost]=pop(),p=point(id)
+   if(cost>dist[id]+estimate(p))continue
+   if(id===target)break
+   for(const next of [id%w>0?id-1:-1,id%w+1<w?id+1:-1,id-w,id+w]){
+    if(next<0||next>=size)continue
+    const q=point(next),step=Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1]),distance=dist[id]+step
+    if(distance>=dist[next]||!clearSegment(p,q,boxes))continue
+    dist[next]=distance;parent[next]=id;push(next,distance+estimate(q))
+   }
+  }
+  if(!Number.isFinite(dist[target]))return ''
+  const reverse=[]
+  for(let id=target;id>=0;id=parent[id])reverse.push(point(id))
+  const points=[[from.x,from.y],...reverse.reverse(),[to.x,to.y]]
+  return orthogonal(points.filter((p,i)=>!i||i===points.length-1||!([0,1].some(axis=>p[axis]===points[i-1][axis]&&p[axis]===points[i+1][axis]))),1)
+ }
  const path=(from,to)=>{
   if(to.tabId&&to.vertical){
    const exit=Math.min(geometry.width-2,from.right+12),rail=to.x+6,lane=Math.min(from.top-6,to.y)
@@ -166,24 +214,25 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    const entry=Math.max(2,to.left-12),lane=Math.min(to.top-12,from.y+24)
    return orthogonal([[from.x,from.y],[from.x,lane],[entry,lane],[entry,to.y],[to.x,to.y]])
   }
+  const cards=geometry.cards||[],sameBox=(c,p)=>['left','right','top','bottom'].every(k=>Math.abs(c[k]-p[k])<.5),others=cards.filter(c=>!sameBox(c,from)&&!sameBox(c,to))
   if(to.top>from.bottom){
-   const cards=geometry.cards||[],nextRow=Math.min(to.top,...cards.filter(c=>c.top>=from.bottom).map(c=>c.top)),rowBottom=Math.max(from.bottom,...cards.filter(c=>c.top<from.bottom&&c.bottom>from.top).map(c=>c.bottom))
+   const nextRow=Math.min(to.top,...cards.filter(c=>c.top>=from.bottom).map(c=>c.top)),rowBottom=Math.max(from.bottom,...cards.filter(c=>c.top<from.bottom&&c.bottom>from.top).map(c=>c.bottom))
    if(nextRow===to.top&&rowBottom<to.top){
     const right=Math.min(Infinity,...cards.filter(c=>c.left>=from.right&&c.top<from.bottom&&c.bottom>from.top).map(c=>c.left)),left=Math.max(-Infinity,...cards.filter(c=>c.right<=to.left&&c.top<to.bottom&&c.bottom>to.top).map(c=>c.right))
     const exit=Number.isFinite(right)?(from.right+right)/2:Math.min(geometry.width-2,from.right+12),entry=Number.isFinite(left)?(left+to.left)/2:Math.max(2,to.left-12),lane=(rowBottom+to.top)/2
     // A cross-row link travels through actual column and row gutters, never
     // diagonally through an unrelated component. Tight gutters reduce the radius.
-    return orthogonal([[from.x,from.y],[exit,from.y],[exit,lane],[entry,lane],[entry,to.y],[to.x,to.y]],Math.max(0,Math.min(12,exit-from.right,to.left-entry,(to.top-rowBottom)/2)))
+    const points=[[from.x,from.y],[exit,from.y],[exit,lane],[entry,lane],[entry,to.y],[to.x,to.y]]
+    if(points.every((p,i)=>!i||clearSegment(points[i-1],p,others)))return orthogonal(points,Math.max(0,Math.min(12,exit-from.right,to.left-entry,(to.top-rowBottom)/2)))
    }
   }
-  if(to.left>=from.right){
+  if(to.left>=from.right&&Math.abs(from.top-to.top)<2&&!others.some(c=>c.left<to.left&&c.right>from.right&&c.top<=Math.max(from.y,to.y)&&c.bottom>=Math.min(from.y,to.y))){
    if(to.left-from.right>=40){const bend=Math.max(24,(to.x-from.x)/2);return `M ${from.x} ${from.y} C ${from.x+bend} ${from.y} ${to.x-bend} ${to.y} ${to.x} ${to.y}`}
    const lane=(from.right+to.left)/2,dy=to.y-from.y,bend=Math.min(24,Math.abs(dy)/2)*Math.sign(dy)
    // Curve into the gutter before travelling vertically to avoid other cards.
    return `M ${from.x} ${from.y} C ${lane} ${from.y} ${lane} ${from.y} ${lane} ${from.y+bend} C ${lane} ${from.y+bend} ${lane} ${to.y-bend} ${lane} ${to.y-bend} C ${lane} ${to.y} ${lane} ${to.y} ${to.x} ${to.y}`
   }
-  const exit=Math.min(geometry.width-2,from.right+12),entry=Math.max(2,to.left-12),bottom=Math.min(geometry.height-2,Math.max(from.bottom,to.bottom)+16),radius=Math.max(0,Math.min(12,(exit-entry)/2,bottom-Math.max(from.y,to.y)))
-  return `M ${from.x} ${from.y} C ${exit} ${from.y} ${exit} ${from.y} ${exit} ${from.y+12} C ${exit} ${from.y+12} ${exit} ${bottom-radius} ${exit} ${bottom-radius} C ${exit} ${bottom} ${exit} ${bottom} ${exit-radius} ${bottom} C ${exit-radius} ${bottom} ${entry+radius} ${bottom} ${entry+radius} ${bottom} C ${entry} ${bottom} ${entry} ${bottom} ${entry} ${bottom-radius} C ${entry} ${bottom-radius} ${entry} ${to.y+12} ${entry} ${to.y+12} C ${entry} ${to.y} ${entry} ${to.y} ${to.x} ${to.y}`
+  return findGutterPath(from,to,[...others,from,to])
  }
  const endpoint=(id,side)=>visible.has(id)?geometry.ports[portKey(id,side)]:geometry.tabs?.[tabByNode.get(id)?.id]
  const selected=new Set(snapshot.selection.selectedNodeIds),input=id=>endpoint(id,'input'),output=id=>endpoint(id,'output'),links=snapshot.artifacts.flatMap(n=>{
@@ -207,6 +256,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  },[rootRef,geometry,snapshot.artifacts,snapshot.selection,draft,sessionId,surface])
  return active()&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(({node:n,sourceId,creation})=>{
   const from=output(sourceId),to=input(n.id),d=path(from,to),hit=path(from.tabId?from:{...from,x:from.right+1},to.tabId?to:{...to,x:to.left-1}),editable=!readOnly&&(!creation||workbenchSmartCreateTarget(n)),remote=from.tabId?from:to.tabId?to:null,tab=remote&&tabs.find(t=>t.id===remote.tabId),relation=tab?(to.tabId?'输出连接至':'输入连接来自')+'「'+tab.name+'」页签'+(remote.overflow?'（向'+(remote.overflow==='left'?'左':'右')+'翻页）':''):'',action=creation?workbenchText('断开创建基准连接'):'断开组件数据连接'
-  return jsxs('g',{[creation?'data-workbench-create-link':'data-financial-link']:n.id,'data-connection-source':sourceId,children:[jsx('path',{d,className:'ew-financial-connection-line'+(feedback?.ids.includes(n.id)?' ew-financial-connection-success':'')}),jsx('path',{d:hit,className:'ew-financial-connection-hit',role:'button',tabIndex:editable?0:-1,'aria-label':relation?relation+' · '+action:action,onPointerDown:e=>e.stopPropagation(),onContextMenu:e=>{e.preventDefault();e.stopPropagation();if(editable)commit(null,n.id)},onKeyDown:e=>{if(editable&&['Delete','Backspace','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();commit(null,n.id)}},children:jsx('title',{children:(relation?relation+' · ':'')+(editable?'右键断开连接':workbenchText('创建基准'))})})]},n.id+':'+sourceId)
+  if(!d)return null
+  return jsxs('g',{[creation?'data-workbench-create-link':'data-financial-link']:n.id,'data-connection-source':sourceId,children:[jsx('path',{d,className:'ew-financial-connection-line'+(feedback?.ids.includes(n.id)?' ew-financial-connection-success':'')}),jsx('path',{d:hit||d,className:'ew-financial-connection-hit',role:'button',tabIndex:editable?0:-1,'aria-label':relation?relation+' · '+action:action,onPointerDown:e=>e.stopPropagation(),onContextMenu:e=>{e.preventDefault();e.stopPropagation();if(editable)commit(null,n.id)},onKeyDown:e=>{if(editable&&['Delete','Backspace','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();commit(null,n.id)}},children:jsx('title',{children:(relation?relation+' · ':'')+(editable?'右键断开连接':workbenchText('创建基准'))})})]},n.id+':'+sourceId)
  }),...(feedback?.ids||[]).filter(id=>visible.has(id)&&input(id)&&snapshot.artifacts.some(n=>n.id===id&&financialLinkSourceId(n.containerSpec))).map(id=>{const p=input(id);return jsx('rect',{'data-financial-feedback':id,className:'ew-financial-connection-frame',x:p.left+1,y:p.top+1,width:Math.max(0,p.right-p.left-2),height:Math.max(0,p.bottom-p.top-2),rx:5,pathLength:100,'aria-hidden':true},id+'-'+feedback.stamp)}),draft&&geometry.ports[portKey(draft.nodeId,draft.side)]&&(()=>{const anchor=geometry.ports[portKey(draft.nodeId,draft.side)],from=output(draft.sourceId),to=input(draft.targetId),bend=Math.max(40,Math.min(160,Math.abs(draft.x-anchor.x)/2))*(draft.side==='input'?-1:1);return jsx('path',{className:'ew-financial-connection-line ew-financial-connection-draft',d:from&&to?path(from,to):`M ${anchor.x} ${anchor.y} C ${anchor.x+bend} ${anchor.y} ${draft.x-bend} ${draft.y} ${draft.x} ${draft.y}`})})()]}),rootRef.current)
 }

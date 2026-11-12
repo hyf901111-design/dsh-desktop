@@ -73,7 +73,8 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-watch-table>:is(.ew-watch-columns,.ew-watch-rows){min-width:0}
  body .ew-watch-columns,body .ew-watch-row{display:grid;grid-template-columns:minmax(110px,1fr) 78px 78px;align-items:center;column-gap:0;padding:0}
  body .ew-watch-columns{height:32px;flex:none;background:var(--fw-heading)!important;color:var(--fw-heading-text)!important}
- body .ew-watch-columns>span{padding:0 6px}
+ body .ew-watch-columns>span{padding:0 6px;color:inherit!important}
+ body [data-workbench-style=enterprise] .ew-watch-columns{background:var(--sherlock-table-heading,#1eb9e1)!important;color:var(--sherlock-table-heading-text,#fff)!important}
  body .ew-watch-columns>:nth-child(n+2){text-align:right}
  body .ew-watch-columns>:last-child{padding-right:12px}
  body .ew-watch-rows{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}

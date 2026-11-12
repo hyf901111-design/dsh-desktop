@@ -5,6 +5,70 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+
+it.each(['standard','auto','three','two','one'])('%s 整理后组件异步测高或收起时仍铺满且不重叠',mode=>{
+ const grid=createResearchGrid(),width=1240,state=createWorkbenchGridState(null,'closed-'+mode)
+ const nodes=[['region',780],['overview',295],['schedule',490],['products',610]].map(([id,height])=>({
+  id,kind:'generated-container',height,width:400,x:300,y:300,preferred:{height},
+  containerSpec:{type:'html',html:id==='schedule'?'<body data-research-kind="gantt"></body>':'<body data-sherlock-market="table"></body>'}
+ }))
+ const cells=[item('region',0,0,20,30),item('overview',20,0,20,12),item('schedule',0,30,40,18),item('products',0,48,40,23)]
+ state.enable(width)
+ let snap=state.reconcile({files:[],artifacts:nodes,viewport:{y:0}})
+ state.set(grid.arrange(nodes,cells,width,0,mode),{automatic:true})
+ snap=state.reconcile(snap)
+ const check=()=>{
+  const shown=state.visible(),bottom=Math.max(...shown.map(c=>c.y+c.h))
+  for(let y=0;y<bottom;y++){
+   const row=shown.filter(c=>c.y<=y&&c.y+c.h>y).sort((a,b)=>a.x-b.x)
+   let edge=0
+   for(const card of row){expect(card.x).toBe(edge);edge+=card.w}
+   expect(edge).toBe(grid.columns)
+  }
+ }
+ check()
+ const saved=state.get()
+ for(const [id,height] of [['overview',170],['region',1000],['region',450],['products',270]]){
+  const node=snap.artifacts.find(n=>n.id===id)
+  expect(state.contentHeight(id,{html:node.containerSpec.html,width:node.width,height,layoutFit:true})).toBe(true)
+  snap=state.reconcile(snap)
+  expect(snap.artifacts.find(n=>n.id===id).height).toBeGreaterThanOrEqual(height)
+  check()
+ }
+ expect(state.get()).toEqual(saved)
+})
+
+it('fits later cards below short neighbours without waiting for the tallest chart',()=>{
+ const grid=createResearchGrid(),m=grid.metrics(1200)
+ const nodes=[240,720,330,250,270].map((height,i)=>({id:'card'+i,preferred:{height}}))
+ const cells=nodes.map((node,i)=>item(node.id,0,i*20))
+ const arranged=grid.arrange(nodes,cells,1200,0,'auto'),[short,tall,medium,firstFill,secondFill]=arranged
+ expect(short.y).toBe(0);expect(tall.y).toBe(0);expect(medium.y).toBe(0)
+ expect(firstFill.y).toBe(short.y+short.h)
+ expect(secondFill.y).toBe(medium.y+medium.h)
+ expect(arranged.every((cell,i)=>arranged.every((peer,j)=>i===j||!grid.overlap(cell,peer)))).toBe(true)
+ expect(short.h*m.step-m.gap).toBeLessThan(240+m.step)
+ expect(grid.arrange(nodes,arranged,1200,0,'auto')).toEqual(arranged)
+})
+it('closes holes before a full-width card even after a table refits',()=>{
+ const grid=createResearchGrid(),width=1200,state=createWorkbenchGridState(null,'full-width-boundary')
+ const html='<body data-sherlock-market="table"></body>'
+ const nodes=[['short',230],['middle',330],['tall',440],['gantt',340]].map(([id,height])=>({
+  id,kind:'generated-container',height,width:400,x:400,y:300,preferred:{height},
+  containerSpec:{type:'html',html:id==='gantt'?'<body data-research-kind="gantt"></body>':html}
+ }))
+ state.enable(width)
+ let snap=state.reconcile({files:[],artifacts:nodes,viewport:{y:0}})
+ state.set(grid.arrange(nodes,nodes.map((node,i)=>item(node.id,0,30*i)),width,0,'auto'),{automatic:true})
+ snap=state.reconcile(snap)
+ expect(state.contentHeight('short',{html,width:snap.artifacts[0].width,height:170,layoutFit:true})).toBe(true)
+ state.reconcile(snap)
+ const [short,middle,tall,gantt]=state.visible()
+ expect([short,middle,tall].map(c=>c.y+c.h)).toEqual([gantt.y,gantt.y,gantt.y])
+ expect(gantt.w).toBe(40)
+ expect(state.get()[0].h).toBeLessThan(short.h)
+ expect(state.visible().some(a=>state.visible().some(b=>grid.overlap(a,b)))).toBe(false)
+})
 it('真实表格分页测量可增高与缩短，末页收紧且不覆盖用户手动高度或共享文档',()=>{
  const state=createWorkbenchGridState(null,'page-fit'),grid=createResearchGrid(),html='<body data-sherlock-market="table"></body>'
  state.enable(900)
@@ -392,7 +456,7 @@ it('ETF标准整理保留同行两列比例，后续独行量价卡铺满且重�
  for(const width of [1000,1334,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('candle',0,0,40,14),item('donut',0,14,27,16),item('table',27,14,13,9),item('volume',0,30,27,18)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
-  expect(at('candle')).toEqual(before[0]);expect(at('donut')).toEqual(before[1]);expect(at('table')).toMatchObject({x:27,y:14,w:13,h:16})
+  expect(at('candle')).toMatchObject(before[0]);expect(at('donut')).toMatchObject(before[1]);expect(at('table')).toMatchObject({x:27,y:14,w:13,h:16})
   expect(at('volume')).toMatchObject({x:0,y:30,w:40,h:18})
   expect(at('volume').w*m.step-m.gap).toBeGreaterThanOrEqual(280)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
@@ -600,4 +664,33 @@ it('混合高度和尾部单张卡首次占满行宽，单卡页签直接满宽'
  expect(last).toMatchObject({x:0,y:left.h,w:40})
  const single=createWorkbenchGridState(null,'single');single.enable(1000);single.reconcile({...snapshot,artifacts:[panels[0]]})
  expect(single.get()[0]).toMatchObject({x:0,y:0,w:40})
+})
+
+it('opens shared cards full width and keeps the local layout when shared content changes', () => {
+ const values = new Map(), storage = {getItem: key => values.get(key), setItem: (key, value) => values.set(key, value)}
+ const cards = [
+  {id:'one',kind:'pasted-text',x:160,y:150,width:260,height:210},
+  {id:'two',kind:'pasted-text',x:160,y:390,width:260,height:210}
+ ]
+ const snapshot = artifacts => ({files:[],artifacts,viewport:{y:0}})
+ const layout = createWorkbenchGridState(storage,'shared-layout',true)
+ layout.enable(900)
+ layout.receiveShared(cards)
+ const initial = layout.reconcile(snapshot(cards))
+ expect(initial.artifacts.map(node => node.width)).toEqual([876,876])
+ layout.set(layout.get().map(cell => cell.id === 'one' ? {...cell,w:24} : cell))
+ const edited = layout.reconcile(initial)
+ layout.save()
+
+ const remote = cards.map(node => ({...node,x:650,width:410,excerpt:'Remote content'}))
+ layout.receiveShared(remote)
+ expect(layout.reconcile(snapshot(remote)).artifacts[0]).toMatchObject({width:edited.artifacts[0].width,excerpt:'Remote content'})
+
+ const reopened = createWorkbenchGridState(storage,'shared-layout',true)
+ reopened.enable(1200)
+ reopened.receiveShared([...remote,{...cards[0],id:'three'}])
+ const reopenedCards = reopened.reconcile(snapshot([...remote,{...cards[0],id:'three'}])).artifacts
+ expect(reopened.get().find(cell => cell.id === 'one').w).toBe(24)
+ expect(reopenedCards[2].width).toBe(1176)
+ expect(reopenedCards[2].y).toBeGreaterThan(reopenedCards[1].y)
 })

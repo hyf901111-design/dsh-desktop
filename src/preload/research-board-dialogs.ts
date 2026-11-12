@@ -408,7 +408,7 @@ body:has(.srb-navigation-menu button[aria-expanded=true])>[role=menu] [role=menu
 .srb-actions .srb-header-control:not(:disabled):active{background:var(--srb-control-border)}
 .srb-actions .srb-header-control:disabled{opacity:.5;cursor:default}
 @media(prefers-reduced-motion:reduce){.srb-actions .srb-header-control{transition:none}}
-.srb-header-menu{position:fixed;inset:auto;z-index:11000;box-sizing:border-box;width:min(252px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;margin:0;padding:5px;border:1px solid var(--srb-border);border-radius:9px;background:var(--srb-surface);color:var(--srb-label);box-shadow:var(--srb-shadow);backdrop-filter:blur(16px);font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui)}
+.srb-header-menu{--srb-border:#424242;--srb-label:#e8e8e8;--srb-muted:#aaa;--srb-row-hover:#ffffff12;position:fixed;inset:auto;z-index:11000;box-sizing:border-box;width:min(252px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;margin:0;padding:5px;border:1px solid var(--srb-border);border-radius:9px;background:#242424;color:var(--srb-label);box-shadow:0 6px 20px #0004;font:13px/20px 'Noto Sans SC',var(--dsw-font-family,system-ui)}
 .srb-header-menu button{box-sizing:border-box;border:0;background:none;color:inherit;font:inherit;cursor:pointer;border-radius:5px}
 .srb-header-menu>button{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:0 8px;width:100%;height:32px;text-align:left}
 .srb-header-menu button:disabled{color:var(--srb-muted);opacity:.6;cursor:default}

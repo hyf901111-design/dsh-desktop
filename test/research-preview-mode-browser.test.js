@@ -557,6 +557,36 @@ it('zooms the real canvas locally, refreshes it and routes arrange and select-al
  }finally{await close()}
 },30000)
 
+it('automatically fills the visible board to its right edge after changing display zoom',async()=>{
+ const {page,close,errors}=await fixture({header:true})
+ try{
+  await page.evaluate(()=>{
+   const {workspace,text}=window.fixture,w=workspace()
+   w.setArtifacts(Array.from({length:4},(_,i)=>({...text('zoom-'+i,180,170+i*240),messageId:'zoom-'+i})))
+   w.createBoardTabs()
+   w.setBoardTabsPresentation('horizontal')
+   w.setWorkbenchResponsiveArrange(true)
+  })
+  const canvas=page.locator('[data-research-canvas]')
+  const geometry=()=>canvas.evaluate(root=>{
+   const zoom=Number(getComputedStyle(root).zoom),bounds=root.getBoundingClientRect()
+   const cards=[...root.querySelectorAll('[data-research-node-id^="zoom-"]')].map(el=>el.getBoundingClientRect())
+   const tabs=root.querySelector('[data-board-tabs-nav]').getBoundingClientRect()
+   return {zoom,canvasWidth:bounds.width,gap:tabs.right-Math.max(...cards.map(r=>r.right)),columns:new Set(cards.map(r=>Math.round(r.left))).size}
+  })
+  await expect.poll(async()=> (await geometry()).columns).toBe(3)
+  const original=await geometry()
+  await page.getByRole('button',{name:'更多看板操作'}).click()
+  const menu=page.getByRole('menu',{name:'看板操作',exact:true})
+  const zoomIn=menu.getByRole('menuitem',{name:'放大看板'}),zoomOut=menu.getByRole('menuitem',{name:'缩小看板'}),reset=menu.getByRole('menuitem',{name:'恢复看板至 100%'})
+  for(const [controls,zoom,columns] of [[[zoomIn,zoomIn,zoomIn],1.3,2],[[reset,zoomOut,zoomOut],.8,3],[[reset],1,3]]){
+   for(const button of controls)await button.click()
+   await expect.poll(geometry).toEqual({zoom,canvasWidth:original.canvasWidth,gap:expect.closeTo(0,0),columns})
+  }
+  expect(errors).toEqual([])
+ }finally{await close()}
+},25000)
+
 it('hides only preview canvas selection and connection decoration while preserving links and selected watchlist rows in every theme',async()=>{
  const {page,close,errors}=await fixture()
  try{

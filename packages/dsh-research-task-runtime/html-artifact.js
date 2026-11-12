@@ -582,6 +582,15 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
           intrinsicMetrics = true;
         }
       }
+      if (workbench && document.body.dataset.sherlockTemplate === 'kpi') {
+        // Generated KPIs use an auto-height body. Its box includes the tiles,
+        // wrapped labels, expanded details, and padding at the current width.
+        const body = document.body;
+        if (body.querySelector('.indicator-grid > .indicator-tile') && getComputedStyle(body).display !== 'none') {
+          bottom = body.getBoundingClientRect().height;
+          intrinsicMetrics = true;
+        }
+      }
       // Ordinary source tables also need an intrinsic reading height. Using
       // their current clipped scroll box makes every Arrange shrink them again.
       if (workbench && document.body.dataset.sherlockMarket === 'table') {

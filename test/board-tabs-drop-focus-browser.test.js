@@ -28,7 +28,7 @@ beforeAll(async()=>{
  expect(()=>new Function(source)).not.toThrow()
  const entry=`import * as React from 'react';import * as ReactDom from 'react-dom';import * as jsx from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
  import {buildResearchHtmlPreview} from './packages/dsh-research-task-runtime/html-artifact.js';window.fixtureBuildHtml=buildResearchHtmlPreview;
- let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.dshDesktop={};
+ let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};window.dshDesktop={researchBoards:{isSharedSession:()=>location.search==='?shared'}};
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
  (0,eval)(${JSON.stringify(source)});
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?jsx:id==='react-dom'?ReactDom:id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>React.createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake);
@@ -430,3 +430,55 @@ it('shrinks the fixed vertical rail to the current right content bottom after la
   expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)
+
+it('renders shared content in independent local layouts across window sizes, refresh and reopen',async()=>{
+ const pages=await Promise.all([browser.newPage({viewport:{width:1150,height:800}}),browser.newPage({viewport:{width:800,height:800}})])
+ const note=(id,title)=>({id,messageId:id,kind:'pasted-text',title,excerpt:title,x:260,y:120,width:260,height:200,sizeMode:'manual'})
+ const navigation={id:'nav',messageId:'nav',kind:'generated-container',title:'页签',excerpt:'页签',containerPrompt:'导航',generationStatus:'completed',refreshMinutes:0,x:100,y:40,width:200,height:34,sizeMode:'manual',
+  containerSpec:{type:'board-tabs',title:'页签',version:1,revision:0,orientation:'vertical',tabs:[{id:'market',name:'市场面',nodeIds:['one','two']},{id:'other',name:'其他',nodeIds:[]}]}}
+ const first={files:[],artifacts:[navigation,note('one','第一项'),note('two','第二项')]}
+ const errors=[]
+ const load=async(page,index)=>{
+  await page.route('https://tab-drop-focus.test/?shared',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{height:740px;width:${index?700:1050}px}[data-research-canvas]{height:700px!important}</style><div id="host"></div>`}))
+  await page.goto('https://tab-drop-focus.test/?shared')
+  await page.addScriptTag({content:script})
+  await page.waitForSelector('[data-ework-grid]')
+ }
+ const apply=(page,canvas,revision)=>page.evaluate(({canvas,revision})=>{fixture.workspace.setCollaborationAccess(true);fixture.workspace.applyRemoteCanvas(canvas,{revision})},{canvas,revision})
+ const metrics=page=>page.evaluate(()=>{
+  const w=fixture.workspace,s=w.getSnapshot(),node=s.artifacts.find(n=>n.id==='one')
+  return {cells:w.getWorkbenchCells(),width:node.width,available:w.getWorkbenchContentWidth(s.canvasSize.availableWidth),title:node.title}
+ })
+ try{
+  for(const page of pages)page.on('pageerror',error=>errors.push(error.message))
+  await Promise.all(pages.map(load))
+  await Promise.all(pages.map(page=>apply(page,first,'first')))
+  await Promise.all(pages.map(page=>page.waitForSelector('[data-research-node-id="one"]')))
+  const [wide,narrow]=await Promise.all(pages.map(metrics))
+  expect(wide.width).toBeGreaterThan(narrow.width)
+  for(const view of [wide,narrow])expect(view.width).toBeCloseTo(view.available-24)
+  await pages[0].evaluate(()=>{
+   const w=fixture.workspace
+   w.applyWorkbenchCells(w.getWorkbenchCells().map(c=>c.id==='one'?{...c,w:25}:c),true)
+  })
+  expect((await metrics(pages[0])).cells.find(c=>c.id==='one').w).toBe(25)
+  const updated=structuredClone(first)
+  updated.artifacts[0].containerSpec.tabs[0].nodeIds=['one']
+  updated.artifacts[0].containerSpec.tabs[1].nodeIds=['two']
+  updated.artifacts[0].containerSpec.revision=1
+  updated.artifacts[1].title='来自协作者'
+  updated.artifacts[1].width=480
+  await Promise.all(pages.map(page=>apply(page,updated,'refresh')))
+  for(const [index,page] of pages.entries()){
+   const view=await metrics(page)
+   expect(view.title).toBe('来自协作者')
+   expect(view.cells.map(c=>[c.id,c.w])).toEqual([['one',index?40:25]])
+  }
+  await pages[0].reload()
+  await pages[0].addScriptTag({content:script})
+  await pages[0].waitForSelector('[data-ework-grid]')
+  await apply(pages[0],updated,'reopened')
+  expect((await metrics(pages[0])).cells.map(c=>[c.id,c.w])).toEqual([['one',25]])
+  expect(errors).toEqual([])
+ }finally{await Promise.all(pages.map(page=>page.close()))}
+},25000)

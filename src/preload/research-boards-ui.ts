@@ -1,4 +1,6 @@
 import { ResearchBoardHeaderMenu } from './research-board-header-menu'
+import { mergeSharedCanvas } from './shared-board-canvas-merge'
+import { sharedCanvasContent, withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 export { useResearchBoardCanvasHeader } from './research-board-header-menu'
 import {waitForMemorySource} from './memory/source'
 import {installHomeGuideEntryNative} from './home-guide-entry-native'
@@ -45,6 +47,7 @@ type Store<T> = {
 type LegacyNode = Record<string, any>
 type Workspace = {
   isCollaborationGesture?(): boolean
+  getVisibleBoardSnapshot?(): LegacyNode
 
   getSnapshot(): LegacyNode
   subscribe(fn: () => void): () => void
@@ -99,11 +102,14 @@ const emptyState = (): ResearchBoardsState => ({
     pendingCount: 0
   }
 })
-const canvasOf = (w: Workspace): Canvas => {
-  const s = w.getSnapshot()
-  return structuredClone({ files: s.files, artifacts: s.artifacts })
-}
+const canvasFromSnapshot = (s: LegacyNode): Canvas =>
+  structuredClone(sharedCanvasContent({ files: s.files, artifacts: s.artifacts }))
+const canvasOf = (w: Workspace): Canvas => canvasFromSnapshot(w.getSnapshot())
 const signature = (v: unknown) => JSON.stringify(v)
+const canvasSignature = (canvas: Canvas) => {
+  const byId = (a: Canvas['artifacts'][number], b: Canvas['artifacts'][number]) => a.id.localeCompare(b.id)
+  return signature({ files: [...canvas.files].sort(byId), artifacts: [...canvas.artifacts].sort(byId) })
+}
 const uuid = () => crypto.randomUUID()
 type EditState = {
   accountId: string
@@ -112,6 +118,7 @@ type EditState = {
   unsubscribe: () => void
   view: BoardView
   revision: string
+  baseCanvas: Canvas
   observed: string
   appliedCanvas?: { revision: string; signature: string }
   applying: boolean
@@ -120,9 +127,17 @@ type EditState = {
   busy: boolean
   paused: boolean
   timer?: ReturnType<typeof setTimeout>
-  mutation?: { id: string; canvas: Canvas; base: string }
-  error?: string
+  mutation?: { id: string; canvas: Canvas; base: string; requireLatest?: boolean }
+  syncFailure?: CanvasSyncFailure
+  retrying?: boolean
 }
+type CanvasSyncFailure = {
+  kind: 'stale' | 'recorded' | 'retry'
+  message: string
+  dismissed: boolean
+}
+const canvasErrorCode = (error: unknown) =>
+  error instanceof Error && 'code' in error ? error.code : undefined
 export type SharedRequestContext = {
   scope: 'board' | 'references'
   references: { collection: 'files' | 'artifacts'; nodeId: string }[]
@@ -327,7 +342,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       !e.queued
     ) {
       e.paused = false
-      e.error = undefined
+      e.syncFailure = undefined
     }
     e.view = v
     e.workspace.setCollaborationAccess(v.permissions.edit)
@@ -353,19 +368,20 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     // workspace when its authority or content changed. Revision alone is not
     // enough: generation progress is overlaid without a document revision bump.
     const canvas = v.permissions.read ? v.canvas : { files: [], artifacts: [] }
-    const remoteSignature = signature(canvas)
+    const remoteSignature = canvasSignature(sharedCanvasContent(canvas))
     if (
       e.appliedCanvas?.revision === v.canvasRevision &&
       e.appliedCanvas.signature === remoteSignature
     ) return
     e.applying = true
     try {
-      e.revision = v.canvasRevision
       e.workspace.applyRemoteCanvas(
         canvas,
         { revision: v.canvasRevision }
       )
-      e.observed = signature(canvasOf(e.workspace))
+      e.revision = v.canvasRevision
+      e.baseCanvas = canvasOf(e.workspace)
+      e.observed = canvasSignature(e.baseCanvas)
       e.appliedCanvas = { revision: v.canvasRevision, signature: remoteSignature }
     } finally {
       e.applying = false
@@ -383,21 +399,27 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         unsubscribe: () => {},
         view: v,
         revision: v.canvasRevision,
-        observed: signature(canvasOf(workspace)),
+        baseCanvas: sharedCanvasContent(v.canvas),
+        observed: canvasSignature(canvasOf(workspace)),
         applying: false,
         busy: false,
         paused: false
       }
       editors.set(v.localSessionId, e)
       const editor = e
+      let { files: observedFiles, artifacts: observedArtifacts } = workspace.getSnapshot()
       e.unsubscribe = workspace.subscribe(() => {
+        const snapshot = workspace.getSnapshot()
+        if (snapshot.files === observedFiles && snapshot.artifacts === observedArtifacts) return
+        observedFiles = snapshot.files
+        observedArtifacts = snapshot.artifacts
         if (
           editor.applying ||
           editor.generation !== state.account.generation ||
           editor.accountId !== state.account.user?.userId
         ) return
-        const next = canvasOf(workspace),
-          sig = signature(next)
+        const next = canvasFromSnapshot(snapshot),
+          sig = canvasSignature(next)
         if (sig === editor.observed) return
         // Local edits invalidate the remote-content cache, including held gestures.
         editor.appliedCanvas = undefined
@@ -431,7 +453,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return
     e.busy = true
     const generation = state.account.generation
-    const mutation = e.mutation ?? {
+    const mutation: NonNullable<EditState['mutation']> = e.mutation ?? {
       id: uuid(),
       canvas: e.queued!,
       base: e.revision
@@ -444,17 +466,20 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         localSessionId: e.view.localSessionId,
         baseRevision: mutation.base,
         clientMutationId: mutation.id,
-        canvas: mutation.canvas
+        canvas: mutation.canvas,
+        ...(mutation.requireLatest && { requireLatest: true })
       })
       if (
         disposed ||
         state.account.generation !== generation ||
-        !e.view.permissions.read
+        !e.view.permissions.read ||
+        e.mutation !== mutation
       )
         return
       e.mutation = undefined
       e.revision = result.localBranchRevision
-      e.error = undefined
+      e.baseCanvas = mutation.canvas
+      e.syncFailure = undefined
       // The ACK covers its submitted local canvas, even if a later held gesture
       // has not entered the queue. Hydration is held while busy, so this diff
       // contains only locally authored changes after that exact submission.
@@ -480,24 +505,100 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         hydrate(e, pending && pending.seq > merged.seq ? pending : merged)
       }
     } catch (error) {
-      if (state.account.generation !== generation) return
+      if (disposed || state.account.generation !== generation || e.mutation !== mutation) return
       e.paused = true
-      e.error =
-        error instanceof Error ? error.message : '修改未同步，请保留草稿。'
-      // Never rebase an unknown/duplicate mutation onto an unrelated revision or regenerate its ID.
-      if ((error as any)?.code === 'MUTATION_ALREADY_APPLIED' && !e.queued) {
-        e.mutation = undefined
-        await call('boards.refresh')
-        const refreshed = state.current
-        if (refreshed?.boardId === e.view.boardId) {
-          e.busy = false
-          hydrate(e, refreshed)
+      const code = canvasErrorCode(error)
+      const dismissed = e.syncFailure?.dismissed ?? false
+      if (code === 'STALE_CANVAS_REVISION')
+        e.syncFailure = {
+          kind: 'stale',
+          message: mutation.requireLatest
+            ? '同步时看板又有更新。本机修改已保留，请重试。'
+            : '共享看板已有更新。本机修改尚未同步。',
+          dismissed
         }
-      }
+      else if (code === 'MUTATION_ALREADY_APPLIED')
+        e.syncFailure = { kind: 'recorded', message: '上次修改已记录，需要载入最新看板。', dismissed }
+      else
+        e.syncFailure = { kind: 'retry', message: '看板修改尚未同步，请稍后重试。', dismissed }
     } finally {
       e.busy = false
       notify()
       if (e.queued && !e.paused) void drain(e)
+    }
+  }
+  async function retryCanvas(id: string, refreshed?: BoardView) {
+    const e = editors.get(id)
+    const failure = e?.syncFailure
+    if (!e || !failure || e.retrying || e.busy || !e.view.permissions.edit || !e.mutation) return
+    if (e.workspace.isCollaborationGesture?.()) {
+      e.syncFailure = { ...failure, message: '请先完成当前拖动或缩放，再同步看板修改。', dismissed: false }
+      notify()
+      return
+    }
+    const mutation = e.mutation
+    const { boardId, epoch } = e.view
+    const valid = () =>
+      !disposed && editors.get(id) === e && e.mutation === mutation &&
+      e.generation === state.account.generation && e.accountId === state.account.user?.userId &&
+      e.view.epoch === epoch && e.view.permissions.edit
+    e.retrying = true
+    e.syncFailure = { ...failure, dismissed: false }
+    notify()
+    try {
+      if (failure.kind !== 'retry') {
+        const fresh = refreshed ?? await loadLatestCanvas(id, e)
+        if (!valid() || !fresh.permissions.edit) return
+        if (e.workspace.isCollaborationGesture?.()) {
+          e.syncFailure = { ...failure, message: '请先完成当前拖动或缩放，再同步看板修改。', dismissed: false }
+          return
+        }
+        const latest = e.remote && e.remote.seq > fresh.seq ? e.remote : fresh
+        // Acknowledged changes are already part of the board's history. Only
+        // edits made after that submission should take precedence on retry.
+        const base = failure.kind === 'recorded' ? mutation.canvas : e.baseCanvas
+        const latestContent = sharedCanvasContent(latest.canvas)
+        const merged = mergeSharedCanvas(base, e.queued ?? mutation.canvas, latestContent)
+        // Keep the user's draft on screen until the refreshed revision and merge are ready.
+        const needsSync = canvasSignature(merged) !== canvasSignature(latestContent)
+        e.applying = true
+        try {
+          e.workspace.applyRemoteCanvas(
+            withSharedCanvasCompatibilityLayout(merged, latest.canvas),
+            { revision: latest.canvasRevision }
+          )
+          e.observed = canvasSignature(canvasOf(e.workspace))
+        } finally {
+          e.applying = false
+        }
+        e.view = latest
+        e.remote = undefined
+        e.revision = latest.canvasRevision
+        e.baseCanvas = latestContent
+        e.appliedCanvas = needsSync
+          ? undefined
+          : { revision: latest.canvasRevision, signature: canvasSignature(latestContent) }
+        e.queued = undefined
+        e.mutation = needsSync
+          ? { id: uuid(), canvas: merged, base: latest.canvasRevision, requireLatest: true }
+          : undefined
+        if (!needsSync) {
+          e.syncFailure = undefined
+          ownRecovery.delete(`canvas:${boardId}`)
+        }
+      }
+      e.paused = false
+      await drain(e)
+    } catch {
+      if (valid())
+        e.syncFailure = {
+          ...failure,
+          message: '未能载入最新看板。本机修改已保留，请稍后重试。',
+          dismissed: e.syncFailure?.dismissed ?? false
+        }
+    } finally {
+      e.retrying = false
+      notify()
     }
   }
   function presence(
@@ -526,34 +627,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         return
       const s = current.workspace.getSnapshot(),
         selectedIds = s.selection.selectedNodeIds.slice(0, 100)
-      const previews =
-        current.view.permissions.edit &&
-        current.workspace.isCollaborationGesture?.()
-          ? (['files', 'artifacts'] as const)
-              .flatMap((collection) =>
-                s[collection]
-                  .filter((n: LegacyNode) => selectedIds.includes(n.id))
-                  .map((n: LegacyNode) => ({
-                    collection,
-                    nodeId: n.id,
-                    x: n.x,
-                    y: n.y,
-                    width: n.width,
-                    height: n.height
-                  }))
-              )
-              .slice(0, 100)
-          : []
-      const hints = { cursor: p!.cursor, selectedIds, previews }
-      while (
-        new TextEncoder().encode(JSON.stringify(hints)).byteLength > 8192
-      ) {
-        if (hints.selectedIds.length) {
-          const id = hints.selectedIds.pop()
-          const i = hints.previews.findIndex((n) => n.nodeId === id)
-          if (i >= 0) hints.previews.splice(i, 1)
-        } else if (hints.previews.length) hints.previews.pop()
-        else return
+      const hints = { cursor: p!.cursor, selectedIds, previews: [] }
+      while (new TextEncoder().encode(JSON.stringify(hints)).byteLength > 8192) {
+        if (!hints.selectedIds.length) return
+        hints.selectedIds.pop()
       }
       void call('presence.update', {
         boardId: current.view.boardId,
@@ -583,9 +660,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const e = editors.get(id)
     clearPresence(id)
     if (!e?.view.permissions.edit) return
-    e.queued = canvasOf(e.workspace)
+    const canvas = canvasOf(e.workspace)
+    const submitted = e.mutation?.canvas ?? e.baseCanvas
+    e.queued = canvasSignature(canvas) === canvasSignature(submitted) ? undefined : canvas
     clearTimeout(e.timer)
-    void drain(e)
+    if (!e.queued && !e.mutation && !e.busy && e.remote) {
+      const remote = e.remote
+      e.remote = undefined
+      hydrate(e, remote)
+      notify()
+    } else {
+      void drain(e)
+    }
   }
   let clearingEditors = false
   const clearEditors = () => {
@@ -766,6 +852,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (e) {
         e.queued = undefined
         e.mutation = undefined
+        e.syncFailure = undefined
         e.remote = undefined
         e.busy = false
         e.paused = true
@@ -1109,11 +1196,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   }))
 
   async function openBoard(boardId: string) {
+    const missingSession = (id: string) => {
+      const list = deps.sessions.list.getSnapshot()
+      return list.phase === 'ready' && (!list.byId[id] || !!list.byId[id].removed)
+    }
     // The account-scoped directory already identifies pinned local sessions.
     // Open the shell now; activate remains the authoritative fresh permission read.
     const known = state.account.status === 'ready' && state.account.user &&
       state.boards.find(board => board.boardId === boardId && board.pinned && board.localSessionId)
-    if (known && known.localSessionId) {
+    if (known && known.localSessionId && !missingSession(known.localSessionId)) {
       const id = known.localSessionId, generation = state.account.generation
       prime(id)
       deps.sessions.open(id)
@@ -1128,11 +1219,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     let pending = opening.get(boardId)
     if (!pending) {
       pending = (async () => {
-        const opened = await call<{
+        type OpenedBoard = {
           localSessionId?: string
           reservationId?: string
           title: string
-        }>('board.open', { boardId })
+        }
+        const missingLocalSessionId = known && known.localSessionId && missingSession(known.localSessionId)
+          ? known.localSessionId : undefined
+        let opened = await call<OpenedBoard>('board.open', { boardId, ...(missingLocalSessionId && { missingLocalSessionId }) })
+        if (opened.localSessionId && missingSession(opened.localSessionId) && opened.localSessionId !== missingLocalSessionId)
+          opened = await call<OpenedBoard>('board.open', { boardId, missingLocalSessionId: opened.localSessionId })
         if (opened.localSessionId) { await call('local.directory',{mode:'ensure',sessionId:opened.localSessionId}); return opened.localSessionId }
         const id = await freshBoard(opened.title, true)
         const bound = await call<{ view: BoardView }>('board.bind', {
@@ -1251,19 +1347,49 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     )
   }
 
-  async function flushCanvas(sessionId: string) {
+  async function loadLatestCanvas(id: string, e: EditState) {
+    const { boardId, epoch } = e.view
+    const fresh = await call<BoardView>('canvas.refresh', { boardId, localSessionId: id })
+    if (
+      disposed || editors.get(id) !== e || e.generation !== state.account.generation ||
+      e.accountId !== state.account.user?.userId || fresh.boardId !== boardId ||
+      fresh.localSessionId !== id || fresh.epoch !== epoch || e.view.epoch !== epoch ||
+      !fresh.permissions.read || !e.view.permissions.read
+    ) throw Error('看板访问权限已变化，请重新打开看板。')
+    return e.view.seq > fresh.seq ? e.view : fresh
+  }
+
+  async function refreshCanvas(id: string) {
+    const e = editors.get(id)
+    if (!e?.view.permissions.read) throw Error('协作看板暂时不可用，请重新打开看板。')
+    const fresh = await loadLatestCanvas(id, e)
+    hydrate(e, fresh)
+    notify()
+    if (e.view.permissions.edit) await flushCanvas(id, { recover: true, refreshed: fresh })
+  }
+
+  async function flushCanvas(sessionId: string, { recover = false, refreshed }: { recover?: boolean; refreshed?: BoardView } = {}) {
     const e = editors.get(sessionId)
     if (!e || !e.view.permissions.edit) throw Error('当前画板不可编辑')
     if (e.workspace.isCollaborationGesture?.())
       throw Error('请先完成当前拖动或缩放')
     const until = Date.now() + 30000
-    while (e.busy || e.queued || e.mutation || e.view.pendingCount) {
-      if (e.paused || Date.now() > until || !e.view.permissions.edit)
-        throw Error(e.error ?? '画板更改尚未确认')
-      if (!e.busy && (e.queued || e.mutation)) await drain(e)
+    let attempted = false
+    const active = () => !disposed && editors.get(sessionId) === e &&
+      e.generation === state.account.generation && e.accountId === state.account.user?.userId &&
+      e.view.permissions.edit
+    while (e.busy || e.retrying || e.queued || e.mutation || e.view.pendingCount) {
+      if (!active() || Date.now() > until)
+        throw Error('画板更改尚未确认')
+      if (e.paused && !e.retrying) {
+        if (!recover || attempted || !e.syncFailure || !e.mutation)
+          throw Error(e.syncFailure?.message ?? '画板更改尚未确认')
+        attempted = true
+        await retryCanvas(sessionId, refreshed)
+      } else if (!e.busy && !e.retrying && (e.queued || e.mutation)) await drain(e)
       await new Promise((r) => setTimeout(r, 20))
     }
-    if (e.view.pendingCount) throw Error('画板更改尚未由云端确认')
+    if (!active()) throw Error('看板访问权限已变化，请重新打开看板。')
     return e.view
   }
   let updateLocked = false, priorInert = false
@@ -1453,10 +1579,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         }))
       }
       await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
-      await flushCanvas(sessionId)
+      const current = await flushCanvas(sessionId, { recover: true })
       if (generation !== state.account.generation) return
+      if (!current.permissions.execute || current.boardId !== v.boardId || current.epoch !== v.epoch)
+        throw Error('看板当前无法发送消息，输入已保留。')
       const reply = await call<RequestReply>('request.submit', {
-        boardId: v.boardId,
+        boardId: current.boardId,
         text,
         clientMutationId: request.id,
         context
@@ -1614,6 +1742,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     whenHomeGuideSessionsReady,
     submitShared,
     flushCanvas,
+    refreshCanvas,
     prepareForUpdate,
     generateShared,
     hasRetainedResult: (sessionId: string, nodeId: string) => !!retainedResult(sessionId, nodeId),
@@ -1688,6 +1817,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const i = identity(id)
       if (!i) throw Error('研究看板尚未就绪')
       await call('favorite.add', { identity: { ...i, title: '新研究看板' }, dedicated: true })
+      deps.researchWorkspaces.for(id).initializeWorkbenchResponsiveArrange?.()
       await api.openPersonal(id)
       selectBoardSession(id)
       trackTemporary(id)
@@ -1789,13 +1919,17 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         copyFlights.delete(key)
       }
     },
-    async retryCanvas(id: string) {
+    retryCanvas,
+    canvasSyncNotice(id: string) {
       const e = editors.get(id)
-      if (!e) return
-      e.paused = false
-      await drain(e)
+      return e?.syncFailure && { ...e.syncFailure, retrying: e.retrying === true }
     },
-    editorError: (id: string) => editors.get(id)?.error,
+    dismissCanvasSyncNotice(id: string, dismissed = true) {
+      const e = editors.get(id)
+      if (!e?.syncFailure) return
+      e.syncFailure = { ...e.syncFailure, dismissed }
+      notify()
+    },
     localRecovery: () =>
       [...ownRecovery.entries()]
         .filter(
@@ -1900,6 +2034,7 @@ export function ResearchBoardHeader({
   const inBoardArea = boardOnlySession(s, sessionId) ||
     (!!v && s.boards.some(board => board.boardId === v.boardId && board.pinned === true))
   const canInvite = !v || (v.permissions.manage && v.board.lifecycle === 'active')
+  const syncNotice = page.canvasSyncNotice?.(sessionId)
   const invite = safely(page, async () => {
     if (v) addBoardCollaborator(page, v.boardId, sessionId)
     else shareFavorite(page, await page.collaborationSource(sessionId))
@@ -1917,9 +2052,11 @@ export function ResearchBoardHeader({
     h(ResearchBoardHeaderMenu, {
       key: sessionId,
       workspace: page.workspaceFor?.(sessionId),
+      sessionId,
       collaboration: shared ? [
         ...(v.permissions.read ? [{ label: '管理协作', icon: 'manage' as const, run: () => manageBoard(page, v.boardId, 'settings') }] : []),
-        ...(canInvite ? [{ label: '添加协作者', icon: 'people' as const, run: invite }] : [])
+        ...(canInvite ? [{ label: '添加协作者', icon: 'people' as const, run: invite }] : []),
+        ...(v.permissions.read && syncNotice?.dismissed ? [{ label: '查看看板同步提示', icon: 'refresh' as const, run: () => page.dismissCanvasSyncNotice(sessionId, false) }] : [])
       ] : [{ label: '创建协作看板', icon: 'people', run: invite, disabled: !canInvite }],
       membership: {
         label: inBoardArea ? '已加入看板区' : '加入至看板区',
@@ -3253,23 +3390,7 @@ export function ResearchBoardCanvasOverlay({
     workspace.getSnapshot,
     workspace.getSnapshot
   )
-  const [previewTick, setPreviewNow] = React.useState(Date.now())
-  const previewNow = Math.max(previewTick, Date.now())
   const v = page.getView(sessionId)
-  const nextPreviewExpiry = (v?.presence ?? []).reduce((next, peer) => {
-    const expires = peer.previewExpiresAt ?? 0
-    return peer.userId !== state.account.user?.userId && peer.role !== 'viewer' &&
-      v?.board.lifecycle === 'active' && peer.previewSeq === v?.seq &&
-      peer.previews?.length && peer.selectedIds?.length && expires > previewNow
-      ? Math.min(next, expires) : next
-  }, Infinity)
-  React.useEffect(() => {
-    if (!Number.isFinite(nextPreviewExpiry)) return
-    // Presence events already render new geometry. Wake once only when a
-    // transient preview expires; idle boards need no recurring React updates.
-    const timer = setTimeout(() => setPreviewNow(Date.now()), Math.max(0, nextPreviewExpiry - Date.now()) + 1)
-    return () => clearTimeout(timer)
-  }, [nextPreviewExpiry])
   if (page.isLoading(sessionId)) return h('div',
     { className: 'srb-canvas-loading', role: 'status', 'aria-live': 'polite', 'aria-busy': true },
     h('span', { className: 'srb-canvas-loading-spinner', 'aria-hidden': true }),
@@ -3285,23 +3406,31 @@ export function ResearchBoardCanvasOverlay({
       h('h3', null, '共享内容不可访问'),
       h('button', { onClick: () => showRecovery(page) }, '恢复我的未发送内容')
     )
-  const snapshot = workspace.getSnapshot(),
+  const snapshot = workspace.getVisibleBoardSnapshot?.() ?? workspace.getSnapshot(),
     viewport = snapshot.viewport
+  const syncNotice = page.canvasSyncNotice?.(sessionId)
   return h(
     React.Fragment,
     null,
-    (!v.permissions.edit || page.editorError(sessionId)) &&
-      h(
-        'div',
-        { className: 'srb-readonly', 'data-canvas-error': page.editorError(sessionId) ? '' : undefined },
-        page.editorError(sessionId) ?? '仅可查看',
-        page.editorError(sessionId) &&
-          h(
-            'button',
-            { onClick: safely(page, () => page.retryCanvas(sessionId)) },
-            '重试同步'
-          )
-      ),
+    !v.permissions.edit && h('div', { className: 'srb-readonly' }, '仅可查看'),
+    syncNotice && !syncNotice.dismissed && h('div',
+      {
+        className: 'srb-readonly', 'data-canvas-error': '',
+        onPointerDown: (event: React.PointerEvent) => event.stopPropagation()
+      },
+      h('span', { role: 'status' }, syncNotice.retrying ? '正在同步看板修改…' : syncNotice.message),
+      h('div', { className: 'srb-sync-actions' },
+        v.permissions.edit && h('button', {
+          type: 'button', disabled: syncNotice.retrying,
+          onClick: () => void page.retryCanvas(sessionId)
+        }, syncNotice.kind === 'retry' ? '重试同步看板修改' : '载入最新看板并同步'),
+        h('button', {
+          type: 'button', className: 'srb-sync-close',
+          'aria-label': '关闭看板同步提示', title: '关闭看板同步提示',
+          onClick: () => page.dismissCanvasSyncNotice(sessionId)
+        }, h('span', { className: 'srb-close-icon', 'aria-hidden': true }))
+      )
+    ),
     h(
       'div',
       { className: 'srb-canvas-presence', 'aria-hidden': true },
@@ -3324,22 +3453,13 @@ export function ResearchBoardCanvasOverlay({
               h('span', null, p.username)
             ),
           ...(p.role !== 'viewer' && v.board.lifecycle === 'active' ? p.selectedIds ?? [] : []).slice(0, 100).map((id) => {
-            const accepted = [...snapshot.files, ...snapshot.artifacts].find(
-              (n) => n.id === id
-            )
-            const preview =
-              p.previewExpiresAt! > previewNow && p.previewSeq === v.seq
-                ? p.previews?.find((q) => q.nodeId === id)
-                : undefined
-            const n =
-              accepted && preview ? { ...accepted, ...preview } : accepted
+            const n = [...snapshot.files, ...snapshot.artifacts].find(node => node.id === id)
             return (
               n &&
               h(
                 'div',
                 {
                   className: 'srb-occupied',
-                  'data-geometry-preview': !!preview,
                   key: `${p.userId}:${id}`,
                   style: {
                     left: (n.x - n.width / 2) * viewport.scale + viewport.x,

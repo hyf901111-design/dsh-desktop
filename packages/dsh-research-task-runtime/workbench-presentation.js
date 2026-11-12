@@ -56,8 +56,11 @@ body:not([data-sherlock-market]) table{table-layout:auto!important}
 body :is(th,td){height:26px!important;box-sizing:border-box!important;padding:4px 8px!important;border:0!important;white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;font-size:12px!important;line-height:18px!important}
 /* Keep full source values on one line; wider data scrolls horizontally. */
 body .financial-profile :is(th,td){white-space:nowrap!important;overflow-wrap:normal!important}
-body th{position:sticky;top:0;z-index:1;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;font-weight:500!important}
+body th{position:sticky;top:0;z-index:1;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;font-weight:600!important}
 body th button{border:0!important;background:none!important;color:inherit!important;padding:0!important;text-align:inherit!important;font:inherit!important;min-height:0!important}
+/* A disabled sort action still contains the column's visible label. */
+body th button:disabled{opacity:1!important}
+body th button[data-view-sort]{color:inherit!important}
 /* Detail navigation owns its geometry in component-reading-footer.js. */
 body tbody tr{background:var(--sherlock-bg)!important}body tbody tr:nth-child(even){background:var(--sherlock-row-alternate)!important}body tbody tr:hover,body tbody tr[aria-selected="true"]{background:var(--sherlock-row-selected)!important}
 body td{background:transparent!important}body:where([data-sherlock-market]) td{color:var(--sherlock-text)!important}body:where(:not([data-sherlock-market])) :where(td){color:var(--sherlock-text)}body :is(td,th)[data-numeric="true"]{text-align:right!important}body :is(td,th)[data-numeric="false"]{text-align:left!important}
