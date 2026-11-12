@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import type { BoardSnapshot } from '../src/shared/research-boards'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { exportHumanHistory } from '../packages/dsh-research-collaboration/context.js'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as Y from 'yjs'
@@ -1173,7 +1174,7 @@ it('resumes a committed staged creation after losing its ACK without reopening i
             files: [{ id: 'file', name: 'document.txt', assetId }],
             artifacts: []
           },
-          history: []
+          history: [{ id: 'q', role: 'user', text: 'Previously reviewed question' }]
         },
         assets: [
           {
@@ -1233,6 +1234,10 @@ it('resumes a committed staged creation after losing its ACK without reopening i
       })
     ).ok
   ).toBe(false)
+  expect(await t.service.invoke('board.create', {
+    favoriteId: favorite.favoriteId, captureId: 'board-only-preview', includeHistory: false
+  })).toMatchObject({ ok: false, error: { code: 'SHARE_SCOPE_CHANGED' } })
+  expect(bodies).toHaveLength(1)
   expect(
     await t.service.invoke('board.create', {
       favoriteId: favorite.favoriteId
@@ -1636,6 +1641,87 @@ import {
   FileResearchPreviewAuthorizationStorage
 } from '../src/main/state/research-file-preview'
 import { readFileSync, realpathSync } from 'node:fs'
+it('shares a frozen canvas and authorized files without exporting private saved history', async () => {
+  const hooks: ResearchBoardHooks = {}
+  const t = make(hooks)
+  const sessionId = 'original'
+  const privatePath = '/Users/example/Documents/指数 原型.html'
+  const events = [{
+    type: 'assistant/message', surfaceOp: 'append',
+    data: { message: { id: 'answer', content: [{ type: 'text', text: `已读取 ${privatePath}` }] } }
+  }]
+  let historyReads = 0
+  const root = realpathSync(t.dir)
+  const registry = new ResearchFilePreviewRegistry({
+    storage: new FileResearchPreviewAuthorizationStorage(t.dir)
+  })
+  const integration = new ResearchBoardIntegration({
+    root: join(root, 'integration'),
+    storage: t.storage,
+    registry,
+    clipboard: () => undefined,
+    client: t.client as any,
+    service: () => t.service,
+    runtimeUrl: () => null,
+    runtimeToken: 'fixture',
+    revealFile() {},
+    invalidate() {},
+    runtimeRequest: async (action) => {
+      expect(action).toBe('history')
+      historyReads++
+      return { revision: 'saved', history: exportHumanHistory(events) }
+    }
+  })
+  Object.assign(hooks, integration.hooks)
+  const filePath = join(root, 'board-source.txt')
+  writeFileSync(filePath, 'board data')
+  const grant = await registry.admitFinder({ path: filePath, sessionId, nodeId: 'source-file' })
+  expect(grant).not.toBeNull()
+  t.storage.setItem(`sherlock.research.canvas.files.v1:${sessionId}`, JSON.stringify([
+    { id: 'source-file', name: 'board-source.txt', path: filePath, authorizationId: grant!.authorizationId }
+  ]))
+  t.storage.setItem(`sherlock.research.canvas.artifacts.v1:${sessionId}`, JSON.stringify([
+    { id: 'market', kind: 'pasted-text', title: '市场概览', excerpt: '看板内容' }
+  ]))
+  const { favoriteId } = t.store.addFavorite({ sessionId, title: '指数运营研究' })
+  const base = t.client.request
+  const staged: any[] = []
+  const created: any[] = []
+  t.client.request = async (e: any) => {
+    if (e.kind === 'upload.create') return { uploadId: 'upload', boardId: null } as any
+    if (e.kind === 'asset.stage') {
+      staged.push(e)
+      return { assetId: e.assetId } as any
+    }
+    if (e.kind === 'board.create') {
+      created.push(e.body)
+      return { board: { ...t.snapshot().board, boardId: 'created-board' } } as any
+    }
+    return base(e)
+  }
+  await t.service.start()
+  expect(await t.service.invoke('board.previewCapture', { favoriteId })).toMatchObject({
+    ok: false, error: { code: 'PRIVATE_PATH_IN_HISTORY' }
+  })
+  const preview = await t.service.invoke('board.previewCapture', { favoriteId, includeHistory: false })
+  expect(preview).toMatchObject({ ok: true, value: { nodeCount: 2, historyCount: 0, assetBytes: 10 } })
+  expect(created).toEqual([])
+  expect(staged).toEqual([])
+  if (!preview.ok) throw Error(preview.error.code)
+  const { captureId } = preview.value as { captureId: string }
+  expect(await t.service.invoke('board.create', { favoriteId, captureId, includeHistory: false })).toMatchObject({
+    ok: true, value: { board: { boardId: 'created-board' } }
+  })
+  expect(created[0].snapshot.history).toEqual([])
+  expect(created[0].snapshot.canvas.artifacts[0]).toMatchObject({ title: '市场概览', excerpt: '看板内容' })
+  expect(created[0].snapshot.canvas.files[0]).toMatchObject({ name: 'board-source.txt', assetId: staged[0].assetId })
+  expect(JSON.stringify(created)).not.toContain(privatePath)
+  expect(JSON.stringify(created)).not.toContain(filePath)
+  expect(staged).toHaveLength(1)
+  expect(await new Response(staged[0].data).text()).toBe('board data')
+  expect(historyReads).toBe(1)
+})
+
 it.each(['preview-file', 'nonpreview-file', 'artifact', 'concurrent-file'])(
   'restores deleted %s through production materialization without reimporting cloud assets',
   async (kind) => {
