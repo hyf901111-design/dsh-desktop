@@ -5,6 +5,7 @@ import * as jsx from 'react/jsx-runtime'
 import { createRoot } from 'react-dom/client'
 import { expect, it, vi } from 'vitest'
 import { patchHostedQuotaNotice } from '../scripts/lib/hosted-quota-notice.mjs'
+import { patchConversationFailureCopy } from '../scripts/lib/conversation-failure-copy.mjs'
 
 it('shows the latest quota failure and reset above the composer and clears it on dismissal or a new turn', async () => {
   const installed = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
@@ -43,6 +44,40 @@ it('shows the latest quota failure and reset above the composer and clears it on
     expect(host.querySelector('[role=status]')?.textContent).toMatch(/本月额度不足.*重置/)
     await render(session('AI_QUOTA_MONTH', 'second', true))
     expect(host.textContent).toBe('')
+  } finally {
+    await react.act(() => root.unmount())
+    vi.unstubAllGlobals()
+    dom.window.close()
+  }
+})
+
+it('shows turn interruptions in normal reply prose without leaking runtime exception details', async () => {
+  const installed = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+  const patch = source => patchConversationFailureCopy(patchHostedQuotaNotice(source))
+  const patched = patch(installed)
+  expect(patch(patched)).toBe(patched)
+  const start = patched.indexOf('function TurnErrorItem(')
+  const end = patched.indexOf('/** Persistent, turn-positioned notice', start)
+  const Failure = new Function('react_jsx_runtime', patched.slice(start, end) + '\nreturn TurnErrorItem;')(jsx)
+  const dom = new JSDOM('<html><body><div id="app"></div></body></html>')
+  vi.stubGlobal('window', dom.window)
+  vi.stubGlobal('document', dom.window.document)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const host = document.getElementById('app')
+  const root = createRoot(host)
+  try {
+    for (const [code, expected] of [
+      ['UNKNOWN', /这轮任务没有顺利完成/],
+      ['TRANSPORT', /模型连接中断了/],
+      ['AI_QUOTA_FIVE_HOUR', /输入框上方查看/],
+    ]) {
+      await react.act(() => root.render(jsx.jsx(Failure, { node: {
+        code, message: "Cannot read properties of undefined (reading 'includes')",
+      } })))
+      expect(host.querySelector('p.odyssey-conversation-failure[role="status"]')?.textContent).toMatch(expected)
+      expect(host.textContent).not.toMatch(/Cannot read|includes|UNKNOWN|AI_QUOTA/)
+      expect(host.querySelector('code')).toBeNull()
+    }
   } finally {
     await react.act(() => root.unmount())
     vi.unstubAllGlobals()

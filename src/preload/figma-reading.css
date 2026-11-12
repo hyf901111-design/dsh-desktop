@@ -72,6 +72,7 @@ body .odyssey-hosted-quota-notice button {
   border:0; border-radius:6px; padding:4px 6px; background:none; color:inherit; font:inherit; cursor:pointer;
 }
 body .odyssey-hosted-quota-notice button:hover { background:var(--odyssey-menu-row); }
+body .odyssey-conversation-failure { margin:0; color:var(--odyssey-text); font:400 15px/26px var(--odyssey-font-ui); }
 body .lXshSW_body { padding:0; gap:0; }
 body .lXshSW_root:has([data-task-continuation]) { max-height:252px; }
 body [data-task-continuation] { box-sizing:border-box; display:flex; justify-content:flex-end; min-width:0; padding:0 12px 8px; }
@@ -208,7 +209,7 @@ body [data-chat-flow-kind=execution][data-response-progress=total][data-state].M
 /* Reserve the same compact space for message actions before and during hover. */
 body [data-chat-flow] > [data-chat-flow-kind=user] .gdEzaW_userRow { gap:2px; }
 body [data-chat-flow] > [data-chat-flow-kind=user] .gdEzaW_userRow > .p-xYUq_actions { height:24px; }
-body [data-chat-flow] > [data-chat-flow-kind=user] + :is([data-chat-flow-kind=execution], [data-chat-flow-kind=assistant], [data-chat-flow-kind=conversation-component]) {
+body [data-chat-flow] > [data-chat-flow-kind=user] + :is([data-chat-flow-kind=execution], [data-chat-flow-kind=assistant-step], [data-chat-flow-kind=conversation-component]) {
   margin-block-start:-8px;
 }
 
