@@ -25,3 +25,5 @@
 上线推理前，核对项目席位范围、关闭超额后付费、当前 AFP 系数、图片大小计费、D1 池限额和供应商账单。缺少可信完成用量或上游执行结果不明时保留预留，未自动重试；对账后由后台处理。模型接入及费用依据：[企业版兼容接口](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-other-tools?lang=zh)、[企业版抵扣规则](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-afp-credits-billing-rules?lang=zh)、[订阅套餐条款](https://docs.volcengine.com/docs/ark/subscription-package-service-terms-conditions?lang=zh)、[Seedream 接口](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-visual-models?lang=zh)、[OpenViking 用户隔离](https://docs.volcengine.com/docs/vector_database_vikingdb/Databasesspaceandusers?lang=en)。
 
 聚焦验证：`node scripts/test-hosted-ai-worker.mjs` 运行本地 workerd + D1，模拟方舟与 OpenViking。客户端浏览器夹具加载现有探索模块并模拟 5 小时、周用量，签名客户端和真实供应商调用另行验收。
+
+按本地构建手册启动签名测试包后，可运行 `node scripts/start-native-acceptance-services.mjs --hosted-ai`，将隔离客户端连接到脚本输出的本地服务。使用 `fixture.json` 里的「验收所有者」查看 11 个模型和 29% 的初始 5 小时余量，再用未开通的验收账号和退出状态核对模型菜单。这套服务使用真实登录与额度处理器、本地 D1 和合成数据，实际供应商调用需在线单独验收。
