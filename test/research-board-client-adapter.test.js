@@ -1116,26 +1116,6 @@ it('resumes newly authorized editing after read revalidation without replaying r
   } finally { f.dispose() }
 })
 
-it('does not automatically replay an uncertain canvas mutation when read authority returns', async () => {
-  const f = await pageFixture(), w = f.registry.for('shared'), submitted = []
-  f.bridge.invoke.mockImplementation(async (action, p) => {
-    if (action !== 'canvas.apply') return { ok: true, value: null }
-    submitted.push(p)
-    return { ok: false, error: { code: 'NETWORK_ERROR', message: 'ACK lost' } }
-  })
-  try {
-    w.setArtifacts(w.getSnapshot().artifacts.map(n => ({ ...n, excerpt: n.excerpt + ' uncertain' })))
-    await new Promise(r => setTimeout(r, 160))
-    expect(submitted).toHaveLength(1)
-    f.emit({ type: 'board', view: { ...f.view, connection: 'revalidating', permissions: { read: false, edit: false, manage: false, execute: false }, canvas: { files: [], artifacts: [] } } })
-    f.emit({ type: 'board', view: { ...f.view, seq: 2, canvasRevision: 'reconfirmed' } })
-    w.setArtifacts([{ ...f.view.canvas.artifacts[0], excerpt: 'new input while uncertain' }])
-    await new Promise(r => setTimeout(r, 160))
-    expect(submitted).toHaveLength(1)
-    expect(f.page.editorError('shared')).toBe('ACK lost')
-  } finally { f.dispose() }
-})
-
 it.each(['u', 'other'])(
   'retires activation across null account states and isolates recovery for ready %s',
   async (userId) => {

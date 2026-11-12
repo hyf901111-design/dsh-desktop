@@ -604,6 +604,11 @@ html[data-odyssey-locale=en] .rScV5Q_globalToolSlot{flex:0 0 auto;width:auto}
 
 /* Canvas feedback shares the toolbar's centered floating-card placement. */
 body .sRp_sourceStatus,body .srb-readonly[data-canvas-error]{position:absolute;left:50%;right:auto;top:auto;bottom:80px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);padding:12px 16px;border:1px solid var(--dsw-alias-border-l2,#414141);border-radius:12px;background:var(--dsw-alias-bg-layer-2,#292929);color:var(--dsw-alias-label-primary,#eee);box-shadow:0 4px 16px #0002;font:13px/20px var(--odyssey-font-ui);z-index:40;overflow-wrap:anywhere}
+body .srb-readonly[data-canvas-error] { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; box-sizing:border-box; }
+.srb-sync-actions { display:flex; align-items:center; gap:2px; }
+.srb-sync-actions button:not(:disabled):is(:hover,:focus-visible) { background:var(--dsw-alias-interactive-bg-hover,#8882); }
+.srb-sync-actions button:disabled { opacity:.55; cursor:default; }
+.srb-sync-actions .srb-sync-close { display:grid; place-items:center; width:28px; height:28px; padding:0; }
 
 /* Unified sidebar session title search. */
 body [data-srb-section-header] .qDHVXG_headerActions{margin-left:auto}

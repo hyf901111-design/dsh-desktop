@@ -1498,8 +1498,12 @@ export class ResearchBoardsService {
         false,
         { operationId: durable.operationId, canvasRevision: r.revision }
       )
-    const base = r.revisions.get(safeId(input.baseRevision))
-    if (!base)
+    const baseRevision = safeId(input.baseRevision)
+    if (input.requireLatest !== undefined && typeof input.requireLatest !== 'boolean')
+      throw new ResearchBoardsError('INVALID_REQUEST')
+    const latestRequired = input.requireLatest === true
+    const base = r.revisions.get(baseRevision)
+    if (!base || (latestRequired && baseRevision !== r.revision))
       throw new ResearchBoardsError(
         'STALE_CANVAS_REVISION',
         '画板版本已更新，请保留当前草稿并重新载入。'
@@ -1517,7 +1521,7 @@ export class ResearchBoardsService {
       })
     this.check(ctx)
     this.requireBoard(boardId, localSessionId, true)
-    if (this.boards.get(boardId) !== r)
+    if (this.boards.get(boardId) !== r || (latestRequired && baseRevision !== r.revision))
       throw new ResearchBoardsError('STALE_CANVAS_REVISION')
     validateCanvas(next)
     // Fork the exact page branch. Applying stale string indices directly to live Y.Text loses remote edits.
@@ -2346,14 +2350,21 @@ export class ResearchBoardsService {
       }
       case 'canvas.apply':
         return this.applyCanvas(
-          exact(input, [
-            'boardId',
-            'localSessionId',
-            'baseRevision',
-            'clientMutationId',
-            'canvas'
-          ])
+          exact(
+            input,
+            ['boardId', 'localSessionId', 'baseRevision', 'clientMutationId', 'canvas'],
+            ['requireLatest']
+          )
         )
+      case 'canvas.refresh': {
+        const p = exact(input, ['boardId', 'localSessionId'])
+        const boardId = safeId(p.boardId), localSessionId = safeId(p.localSessionId)
+        const ctx = this.context()
+        this.requireBoard(boardId, localSessionId)
+        await this.loadBoard(boardId, true)
+        this.check(ctx)
+        return this.view(this.requireBoard(boardId, localSessionId))
+      }
       case 'canvas.undo':
       case 'canvas.redo': {
         const p = exact(input, ['boardId', 'localSessionId'])

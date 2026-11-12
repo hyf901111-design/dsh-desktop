@@ -305,6 +305,34 @@ it('uses exact base and branch revisions while remote insertion races queued loc
   await t.service.flush()
   expect(projectDocument(t.doc).artifacts[0]!.excerpt).toBe('Xabcde')
 })
+it('refreshes the bound canvas and rejects a recovered write if it becomes stale again', async () => {
+  const t = make()
+  const initial = await ready(t)
+  const target = { boardId: 'board', localSessionId: 'shared-session' }
+  expect(await t.service.invoke('canvas.refresh', { ...target, localSessionId: 'wrong-session' }))
+    .toMatchObject({ ok: false })
+  const refreshed = await t.service.invoke('canvas.refresh', target)
+  expect(refreshed.ok).toBe(true)
+  if (!refreshed.ok) throw Error('Canvas refresh failed')
+  const fresh = refreshed.value as typeof initial
+  expect(fresh.canvasRevision).not.toBe(initial.canvasRevision)
+  await t.remote(canvas => { canvas.artifacts[0]!.excerpt = 'collaborator edit' })
+
+  const canvas = structuredClone(fresh.canvas)
+  canvas.artifacts[0]!.excerpt = 'local edit'
+  const pending = { ...target, clientMutationId: 'recovered-edit', requireLatest: true, canvas }
+  expect(await t.service.invoke('canvas.apply', { ...pending, baseRevision: fresh.canvasRevision }))
+    .toMatchObject({ ok: false, error: { code: 'STALE_CANVAS_REVISION' } })
+
+  const latest = await t.service.invoke('canvas.refresh', target)
+  expect(latest.ok).toBe(true)
+  if (!latest.ok) throw Error('Canvas refresh failed')
+  expect(await t.service.invoke('canvas.apply', {
+    ...pending, baseRevision: (latest.value as typeof initial).canvasRevision
+  })).toMatchObject({ ok: true, value: { canvas } })
+  await t.service.flush()
+  expect(projectDocument(t.doc).artifacts[0]!.excerpt).toBe('local edit')
+})
 it('keeps B changes when A undoes and never reports resurrecting a tombstoned node', async () => {
   const t = make()
   const view = await ready(t)
