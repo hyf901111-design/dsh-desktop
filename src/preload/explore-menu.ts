@@ -88,6 +88,21 @@ export function mountExploreMenu(doc:Document,options:Options){
   const feedback=doc.createElement('p');feedback.className='odyssey-explore-feedback';feedback.role='status';feedback.hidden=true
   viewport.append(quick,wallpapers,usage,searchPanel);body.append(header,navigation,viewport,feedback);dialog.append(edge,windowDrag,system,body);doc.body.append(dialog)
   const dark=()=>doc.body.hasAttribute('data-ds-dark-theme')
+  let quotaRefreshTimer: number | undefined
+  const requestUsage = () => win.dispatchEvent(new win.CustomEvent('sherlock:ai-quota-request'))
+  function syncQuotaRefresh() {
+    const visible = opened && tab === 'usage' && !searching && !!accountOwner && !doc.hidden
+    if (visible && quotaRefreshTimer === undefined) {
+      quotaRefreshTimer = win.setInterval(requestUsage, 15000)
+    } else if (!visible && quotaRefreshTimer !== undefined) {
+      win.clearInterval(quotaRefreshTimer)
+      quotaRefreshTimer = undefined
+    }
+  }
+  const quotaVisibilityChanged = () => {
+    syncQuotaRefresh()
+    if (quotaRefreshTimer !== undefined) requestUsage()
+  }
   function showError(error:unknown){if(disposed)return;const message=error instanceof Error?error.message:text('暂时无法完成，请稍后重试。','Please try again.');if(opened){feedback.hidden=false;feedback.textContent=message}else{const toast=doc.createElement('p');toast.className='odyssey-explore-toast';toast.role='alert';toast.textContent=message;doc.body.append(toast);win.setTimeout(()=>toast.remove(),6000)}}
   function labels(){
     name.textContent=text('探索','Explore');dialog.setAttribute('aria-label',name.textContent);quickTab.textContent=copy().heading;wallpaperTab.textContent=copy().wallpapers;usageTab.textContent=text('管理用量','Usage');usageTab.hidden=!accountOwner
@@ -98,6 +113,7 @@ export function mountExploreMenu(doc:Document,options:Options){
     quick.hidden=tab!=='quick'&&outgoingTab!==quick;quick.inert=tab!=='quick'||searching;quick.setAttribute('aria-hidden',String(tab!=='quick'||searching));wallpapers.hidden=tab!=='wallpapers'&&outgoingTab!==wallpapers;wallpapers.inert=tab!=='wallpapers'||searching;wallpapers.setAttribute('aria-hidden',String(tab!=='wallpapers'||searching));gallery.setVisible(opened&&tab==='wallpapers'&&!searching)
     usage.hidden=tab!=='usage'||searching||!accountOwner
     if(!usage.hidden)renderExploreQuota(usage,quota,quotaLoading?'loading':'unavailable',doc.documentElement.dataset.odysseyLocale==='en')
+    syncQuotaRefresh()
     const appearanceLabel=dark()?copy().light:copy().dark;appearance.title=appearanceLabel;appearance.setAttribute('aria-label',appearanceLabel);appearance.querySelector('img')!.src=homeAppearanceIcon(dark())
     deck.refresh()
     dots.forEach((node,index)=>node.setAttribute('aria-current',String(index===caseIndex)))
@@ -111,7 +127,7 @@ export function mountExploreMenu(doc:Document,options:Options){
     settleTabMotion();const panels={quick,wallpapers,usage},previous=panels[tab],animate=tab!=='usage'&&next!=='usage',direction=next==='wallpapers'?1:-1
     tab=next;feedback.hidden=true;body.dataset.exploreTab=tab
     if(animate&&!reduced.matches&&opened&&!searching)outgoingTab=previous
-    if(next==='usage')win.dispatchEvent(new win.CustomEvent('sherlock:ai-quota-request'))
+    if(next==='usage')requestUsage()
     labels();layout()
     if(!outgoingTab)return
     const incoming=panels[tab],epoch=tabMotion
@@ -152,7 +168,7 @@ export function mountExploreMenu(doc:Document,options:Options){
     // our close(false) demo handoff. Own restoration explicitly: refocusing the
     // home composer here can select a new session and cancel the armed guide.
     focusBefore?.blur()
-    feedback.hidden=true;dialog.showModal();doc.body.dataset.exploreOpen='';doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','true');dialog.dataset.motion='opening';labels();layout();(tab==='quick'?quickTab:tab==='usage'?usageTab:wallpaperTab).focus({preventScroll:true});win.dispatchEvent(new win.CustomEvent('sherlock:account-state-request'));if(tab==='usage')win.dispatchEvent(new win.CustomEvent('sherlock:ai-quota-request'));
+    feedback.hidden=true;dialog.showModal();doc.body.dataset.exploreOpen='';doc.querySelector('[data-explore-trigger]')?.setAttribute('aria-expanded','true');dialog.dataset.motion='opening';labels();layout();(tab==='quick'?quickTab:tab==='usage'?usageTab:wallpaperTab).focus({preventScroll:true});win.dispatchEvent(new win.CustomEvent('sherlock:account-state-request'));if(tab==='usage')requestUsage()
   }
   function close(restoreFocus=true,preserveAction=false):Promise<void>{
     resetDrag()
@@ -181,5 +197,11 @@ export function mountExploreMenu(doc:Document,options:Options){
   win.addEventListener('pointerdown',dragStart,true);win.addEventListener('pointerup',dragEnd,true);win.addEventListener('pointercancel',resetDrag,true);win.addEventListener('blur',resetDrag)
   const observer=new win.MutationObserver(()=>{labels();layout()});observer.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});observer.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});const resize=new win.ResizeObserver(layout);resize.observe(body)
   const dispose=()=>{if(disposed)return;disposed=true;resetDrag();settleTabMotion();cancelOpenResult();action?.abort();deck.dispose();gallery.dispose();observer.disconnect();resize.disconnect();win.removeEventListener('sherlock:explore-open',openEvent);win.removeEventListener('sherlock:explore-close',closeEvent);win.removeEventListener('sherlock:account-state',accountState);win.removeEventListener('sherlock:ai-quota-state',quotaState);doc.removeEventListener('sherlock:explore-search-reply',searchReply);doc.removeEventListener('sherlock:explore-search-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',reset);win.removeEventListener('pointerdown',dragStart,true);win.removeEventListener('pointerup',dragEnd,true);win.removeEventListener('pointercancel',resetDrag,true);win.removeEventListener('blur',resetDrag);dialog.remove();style.remove();delete doc.body.dataset.exploreOpen;mounted.delete(doc)}
-  labels();mounted.set(doc,dispose);return dispose
+  doc.addEventListener('visibilitychange', quotaVisibilityChanged)
+  const cleanup = () => {
+    win.clearInterval(quotaRefreshTimer)
+    doc.removeEventListener('visibilitychange', quotaVisibilityChanged)
+    dispose()
+  }
+  labels();mounted.set(doc,cleanup);return cleanup
 }

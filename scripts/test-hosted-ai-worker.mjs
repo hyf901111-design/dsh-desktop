@@ -10,6 +10,7 @@ const { outputFiles: [built] } = await build({
   platform: 'neutral', external: ['node:*']
 })
 const token = '1'.repeat(64), other = '2'.repeat(64), key = 'synthetic-provider-secret'
+const pngFixture = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XQAAAAASUVORK5CYII='
 let calls = 0, memoryCalls = 0
 const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
   modules: true, script: built.text, compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
@@ -36,10 +37,11 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     assert.equal(request.headers.get('authorization'), 'Bearer ' + key)
     const input = await request.json()
     if (request.url === ARK_PLAN_BASE + '/images/generations') {
-      assert.equal(input.model, 'doubao-seedream-5.0-flash')
+      if (input.model === 'doubao-seedream-5-0-pro') assert.equal(input.image.length, 2)
+      else assert.equal(input.model, 'doubao-seedream-5.0-flash')
       assert.equal(input.response_format, 'b64_json')
       assert.equal(Object.hasOwn(input, 'sequential_image_generation'), false)
-      return Response.json({ data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XQAAAAASUVORK5CYII=' }] })
+      return Response.json({ data: [{ b64_json: pngFixture }] })
     }
     assert.equal(request.url, ARK_PLAN_BASE + '/chat/completions')
     assert.equal(input.stream_options.include_usage, true)
@@ -108,6 +110,17 @@ try {
   assert.equal(png.status,200)
   assert.match((await png.json()).data,/^iVBOR/)
   assert.equal((await (await send('quota',token)).json()).quota.fiveHour.used,40.0015)
+  const pro = await send('images', token, {
+    model: 'doubao-seedream-5-0-pro', prompt: '合成两张参考图', size: 'auto',
+    references: Array(2).fill('data:image/png;base64,' + pngFixture)
+  }, 'pro')
+  assert.equal(pro.status, 200)
+  await pro.json()
+  const afterPro = (await (await send('quota', token)).json()).quota
+  for (const period of [afterPro.fiveHour, afterPro.week]) {
+    assert.equal(period.used, 146.5015)
+    assert.equal(period.reserved, 0)
+  }
   const cut = await send('chat/completions',token,chat('cut'),'four')
   const broken = await cut.text()
   assert.match(broken, /HOSTED_AI_STREAM_INTERRUPTED/)
@@ -116,7 +129,7 @@ try {
   const redirected = await send('chat/completions',token,chat('redirect'),'five')
   assert.equal(redirected.status,502)
   assert.ok(!(await redirected.text()).includes('untrusted'))
-  assert.equal(calls,5)
+  assert.equal(calls,6)
   await db.prepare('UPDATE users SET disabled=1 WHERE id=?').bind('alice').run()
   assert.equal((await send('catalog',token)).status,401)
   assert.equal((await send('chat/completions',token,chat())).status,401)

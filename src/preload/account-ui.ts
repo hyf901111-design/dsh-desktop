@@ -165,26 +165,45 @@ export function mountAccountUi(
   }
   let quota: ExploreQuota | undefined, quotaOwner: Account | null = null, quotaAt = 0
   let quotaPending: Promise<void> | undefined, quotaLoading = false, quotaDisposed = false
+  let quotaInvalidated = false
   function publishQuota() {
     const label = document.documentElement.dataset.odysseyLocale === 'en' ? 'Explore' : '探索'
     if(trigger) updateQuotaRing(trigger, quota, label, label === 'Explore')
     dispatch('sherlock:ai-quota-state', {accountId:user?.id??null, quota, loading:quotaLoading})
   }
-  function requestQuota() {
-    if(!user || !options.explore || quotaDisposed) return
-    if(quotaPending || Date.now()-quotaAt<5000){publishQuota();return}
-    const owner=user
-    quotaLoading=true;publishQuota()
-    const pending=invoke('ai-quota').then(reply=>{
-      if(quotaDisposed || user!==owner) return
-      if(reply.error?.code==='LOGIN_REQUIRED'){user=null;updateTrigger();return}
-      quota=readExploreQuota(reply.quota);quotaAt=Date.now()
-    }).catch(()=>{if(user===owner){quota=undefined;quotaAt=Date.now()}}).finally(()=>{
-      if(quotaPending!==pending)return
-      quotaPending=undefined;quotaLoading=false;publishQuota()
+  function requestQuota(force = false) {
+    if (!user || !options.explore || quotaDisposed) return
+    if (quotaPending) {
+      quotaInvalidated ||= force
+      publishQuota()
+      return
+    }
+    const now = Date.now()
+    const expired = quota && [quota.fiveHour, quota.week].some(window => window.resetAt !== null && window.resetAt * 1000 <= now)
+    if (!force && !expired && now - quotaAt < 5000) { publishQuota(); return }
+    const owner = user
+    quotaLoading = true
+    publishQuota()
+    const pending = invoke('ai-quota').then(reply => {
+      if (quotaDisposed || user !== owner) return
+      if (reply.error?.code === 'LOGIN_REQUIRED') { user = null; updateTrigger(); return }
+      if (!quotaInvalidated) quota = readExploreQuota(reply.quota)
+      quotaAt = Date.now()
+    }).catch(() => {
+      if (user === owner && !quotaInvalidated) { quota = undefined; quotaAt = Date.now() }
+    }).finally(() => {
+      if (quotaPending !== pending) return
+      quotaPending = undefined
+      quotaLoading = false
+      if (quotaInvalidated) {
+        quotaInvalidated = false
+        requestQuota(true)
+      } else publishQuota()
     })
-    quotaPending=pending
+    quotaPending = pending
   }
+  const refreshQuota = () => requestQuota()
+  const refreshSettledQuota = () => requestQuota(true)
   function publishAccountState(){dispatch('sherlock:account-state',{accountId:user?.id??null,username:user?.username??'登录',authenticated:!!user,avatar:createAvatar()})}
   function updateTrigger() {
     document.documentElement.toggleAttribute('data-odyssey-hosted-account', !!user)
@@ -193,7 +212,7 @@ export function mountAccountUi(
     const avatar=createAvatar(),label=document.createElement('span')
     if(options.explore){
       label.textContent=document.documentElement.dataset.odysseyLocale==='en'?'Explore':'探索'
-      if(quotaOwner!==user){quotaOwner=user;quota=undefined;quotaAt=0;quotaPending=undefined;quotaLoading=false}
+      if(quotaOwner!==user){quotaOwner=user;quota=undefined;quotaAt=0;quotaPending=undefined;quotaLoading=false;quotaInvalidated=false}
       const orb=createExploreOrb(document);orb.append(createQuotaRing(document))
       trigger.dataset.exploreTrigger='';trigger.append(orb,label);publishAccountState();publishQuota();requestQuota();return
     }
@@ -732,7 +751,7 @@ export function mountAccountUi(
       document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')
     if (original && !trigger?.isConnected) {
       trigger = button('',()=>{if(options.explore)dispatch('sherlock:explore-open');else toggleAccountMenu(trigger!)},'sherlock-account-button')
-      if(options.explore){trigger.addEventListener('pointerenter',requestQuota);trigger.addEventListener('focus',requestQuota)}
+      if(options.explore){trigger.addEventListener('pointerenter',refreshQuota);trigger.addEventListener('focus',refreshQuota)}
       trigger.setAttribute('aria-haspopup', options.explore?'dialog':'menu')
       trigger.setAttribute('aria-expanded', 'false')
       const controls = document.createElement('div')
@@ -856,7 +875,8 @@ export function mountAccountUi(
   const exploreSettings=()=>open(false),exploreClose=()=>closeMenu()
   document.defaultView?.addEventListener('sherlock:account-menu-request',exploreAccount)
   document.defaultView?.addEventListener('sherlock:account-state-request',publishAccountState)
-  document.defaultView?.addEventListener('sherlock:ai-quota-request',requestQuota)
+  document.defaultView?.addEventListener('sherlock:ai-quota-request',refreshQuota)
+  document.defaultView?.addEventListener('sherlock:ai-quota-changed',refreshSettledQuota)
   document.defaultView?.addEventListener('sherlock:account-menu-close',exploreClose)
   document.defaultView?.addEventListener('sherlock:settings-open',exploreSettings)
   const openFromBoards = () => open(true)
@@ -892,7 +912,8 @@ export function mountAccountUi(
     style.remove()
     document.defaultView?.removeEventListener('sherlock:account-menu-request',exploreAccount)
     document.defaultView?.removeEventListener('sherlock:account-state-request',publishAccountState)
-    document.defaultView?.removeEventListener('sherlock:ai-quota-request',requestQuota)
+    document.defaultView?.removeEventListener('sherlock:ai-quota-request',refreshQuota)
+    document.defaultView?.removeEventListener('sherlock:ai-quota-changed',refreshSettledQuota)
     document.defaultView?.removeEventListener('sherlock:account-menu-close',exploreClose)
     document.defaultView?.removeEventListener('sherlock:settings-open',exploreSettings)
     document.defaultView?.removeEventListener('sherlock:account-open', openFromBoards)

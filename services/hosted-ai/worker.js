@@ -93,7 +93,7 @@ function imageInput(input) {
   const refs = input.references ?? []
   if (!Array.isArray(refs) || refs.length > 4 || !refs.every(ref => typeof ref === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(ref))) throw Error('reference')
   const { units } = ARK_IMAGE_MODELS.get(input.model)
-  const refUnits = input.model === 'doubao-seedream-5-0-pro' ? Math.max(0, refs.length - 1) * 6_600_000 : 0
+  const refUnits = input.model === 'doubao-seedream-5-0-pro' ? Math.max(0, refs.length - 1) * 6_500_000 : 0
   return { wire: JSON.stringify({ model: input.model, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
     size: '1K', output_format: 'png', response_format: 'b64_json',
     // Seedream 5.0 Pro and Flash generate a single image by default.

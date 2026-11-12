@@ -46,6 +46,7 @@ export class AccountService {
     private readonly collaborationOptions: {
       origin?: string
       fetch?: typeof fetch
+      onHostedQuotaChanged?: () => void
     } = {}
   ) {
     this.origin = collaborationOrigin(collaborationOptions.origin)
@@ -317,11 +318,15 @@ export class AccountService {
       chunks.push(chunk)
     }
     if (generation !== this.generation || signal.signal.aborted) { res.writeHead(401).end(); return }
-    const response = await this.hostedRequest(path!, signal.signal, Buffer.concat(chunks))
-    if (generation !== this.generation || signal.signal.aborted) { await response.body?.cancel(); res.writeHead(401).end(); return }
-    res.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store' })
-    if (response.body) await pipeline(Readable.from(response.body as unknown as AsyncIterable<Uint8Array>), res)
-    else res.end()
+    try {
+      const response = await this.hostedRequest(path!, signal.signal, Buffer.concat(chunks))
+      if (generation !== this.generation || signal.signal.aborted) { await response.body?.cancel(); res.writeHead(401).end(); return }
+      res.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store' })
+      if (response.body) await pipeline(Readable.from(response.body as unknown as AsyncIterable<Uint8Array>), res)
+      else res.end()
+    } finally {
+      if (generation === this.generation && this.authenticated) this.collaborationOptions.onHostedQuotaChanged?.()
+    }
   }
   private async hostedQuota(): Promise<unknown> {
     if (!this.authenticated) return { user: null }

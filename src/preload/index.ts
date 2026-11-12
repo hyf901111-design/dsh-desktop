@@ -187,6 +187,7 @@ function initializeUi(): void {
   mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
   mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards, {explore:process.platform==='darwin'})
+  ipcRenderer.on('account:quota-changed', () => window.dispatchEvent(new Event('sherlock:ai-quota-changed')))
   const memoryListeners = new Set<() => void>()
   ipcRenderer.on('memory:changed', () => { for (const listener of memoryListeners) listener() })
   const memoryUi = mountMemoryUi(document, {

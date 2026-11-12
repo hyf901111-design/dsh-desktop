@@ -19,10 +19,10 @@ afterEach(async () => {
   for (const path of directories.splice(0))
     await rm(path, { recursive: true, force: true })
 })
-async function setup() {
+async function setup(options?: ConstructorParameters<typeof AccountService>[1]) {
   const dir = await mkdtemp(join(tmpdir(), 'sherlock-account-test-'))
   directories.push(dir)
-  const service = new AccountService(dir)
+  const service = new AccountService(dir, options)
   services.push(service)
   return { service, dir, endpoint: await service.start() }
 }
@@ -406,7 +406,8 @@ it('uses only the EWork session token for the professional dataset and Doubao se
 })
 
 it('rejects old hosted-AI bridge generations before contacting Cloudflare',async()=>{
-  const {service,endpoint}=await setup()
+  const onHostedQuotaChanged = vi.fn()
+  const {service,endpoint}=await setup({ onHostedQuotaChanged })
   const local=globalThis.fetch, provider=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
     const path=new URL(String(input)).pathname
     if(path.endsWith('/login'))return Response.json({user:{id:'owner-a'},token:'a'.repeat(64)})
@@ -429,11 +430,13 @@ it('rejects old hosted-AI bridge generations before contacting Cloudflare',async
   expect(await (await catalog()).json()).toMatchObject({generation,image:true})
   expect(await service.invoke('ai-quota',undefined)).toMatchObject({quota:{fiveHour:{remaining:29}}})
   expect(await (await send(generation)).text()).toBe('data: [DONE]\n\n')
+  await expect.poll(() => onHostedQuotaChanged.mock.calls.length).toBe(1)
   await service.invoke('logout',{})
   await service.invoke('login',{})
   const calls=provider.mock.calls.length
   expect((await send(generation)).status).toBe(401)
   expect(provider).toHaveBeenCalledTimes(calls)
+  expect(onHostedQuotaChanged).toHaveBeenCalledTimes(1)
 })
 
 it('does not sign out an account until the account service confirms a quota-gateway 401',async()=>{

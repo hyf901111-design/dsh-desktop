@@ -46,3 +46,32 @@ it('uses the final ring size immediately when reduced motion is enabled',async()
     }))).toEqual({offset:93,stroke:'rgb(245, 118, 126)'})
   } finally { await close() }
 },20000)
+
+it('refreshes the open usage panel and the ring after settlement and after an external change', async () => {
+  const { page, close } = await ui.fixture({ quotaFixture: quota })
+  try {
+    await page.clock.install({ time: new Date() })
+    const trigger = page.locator('[data-explore-trigger]')
+    await ui.open(page)
+    await page.getByRole('tab', { name: '管理用量' }).click()
+    const fiveHour = page.getByRole('meter', { name: /5 小时/ })
+    const week = page.getByRole('meter', { name: /周用量/ })
+    await ui.uiExpect(fiveHour).toHaveAttribute('aria-valuenow', '29')
+    const setBalance = (remaining: number, notify: boolean) => page.evaluate(({ remaining, notify }: { remaining: number; notify: boolean }) => {
+      const testWindow = window as Window & { quotaFixture?: typeof quota }
+      if (!testWindow.quotaFixture) throw new Error('Quota fixture missing')
+      testWindow.quotaFixture.fiveHour.remaining = remaining
+      testWindow.quotaFixture.week.remaining = remaining
+      if (notify) window.dispatchEvent(new Event('sherlock:ai-quota-changed'))
+    }, { remaining, notify })
+    await setBalance(5, true)
+    await ui.uiExpect(fiveHour).toHaveAttribute('aria-valuenow', '5', { timeout: 2000 })
+    await ui.uiExpect(week).toHaveAttribute('aria-valuenow', '5')
+    await ui.uiExpect(trigger).toHaveAttribute('title', '探索 · 5 小时剩余用量 5%')
+    await setBalance(0, false)
+    await page.clock.fastForward(15000)
+    await ui.uiExpect(fiveHour).toHaveAttribute('aria-valuenow', '0')
+    await ui.uiExpect(week).toHaveAttribute('aria-valuenow', '0')
+    await ui.uiExpect(trigger).toHaveAttribute('data-quota-empty', '')
+  } finally { await close() }
+}, 20000)
