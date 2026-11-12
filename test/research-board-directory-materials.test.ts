@@ -4,6 +4,30 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ResearchBoardIntegration } from '../src/main/research-board-integration'
 
+it('materializes a legacy shared workbench with its original card assignments', async () => {
+  const nav = { id: 'new-nav', kind: 'generated-container', containerSpec: {
+    version: 1, type: 'board-tabs', title: '页签', revision: 1,
+    tabs: [{ id: 'market', name: '市场', nodeIds: ['plan-0', 'unchanged'] },
+      { id: 'competitors', name: '竞品', nodeIds: ['plan-1'] },
+      { id: 'notes', name: '备注', nodeIds: ['other-0'] }]
+  } }
+  const canvas = { files: [], artifacts: [nav,
+    { id: 'new-peers', workbenchId: 'plan', workbenchIndex: 1 },
+    { id: 'new-summary', workbenchId: 'plan', workbenchIndex: 0 },
+    { id: 'unchanged', workbenchId: 'other', workbenchIndex: 0 }
+  ] }
+  const integration: any = Object.create(ResearchBoardIntegration.prototype)
+  integration.authority = () => ({ snapshot: { tasks: [] } })
+  integration.active = new Map()
+  integration.schedules = {}
+  const rendered = await integration.materialize({
+    accountId: 'a', boardId: 'b', epoch: 1, localSessionId: 's', canvas, signal: new AbortController().signal
+  })
+  expect(rendered.artifacts[0].containerSpec.tabs.map((tab: any) => tab.nodeIds))
+    .toEqual([['new-summary', 'unchanged'], ['new-peers'], ['other-0']])
+  expect(nav.containerSpec.tabs[0]!.nodeIds).toEqual(['plan-0', 'unchanged'])
+})
+
 it.each([false, true])('copies canvas and generation sources into the project, including unchanged sessions (%s)', async changed => {
   const temp = await mkdtemp(join(tmpdir(), 'board-materials-'))
   try {
