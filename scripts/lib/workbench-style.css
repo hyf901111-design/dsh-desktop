@@ -11,7 +11,10 @@ body [data-ework-grid][data-workbench-style] .ew-selected-create-source{backgrou
 body [data-ework-grid][data-workbench-style] :is(.rScV5Q_containerDraft,.ew-selected-create-draft) textarea{background:var(--grid-control)!important;color:var(--grid-text)!important;border-color:var(--grid-border)!important;caret-color:var(--grid-text)!important}
 body [data-ework-grid][data-workbench-style=enterprise] .ew-grid-header{color:#25252b}
 body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerKpis>div{border:0!important;box-shadow:none!important}
-body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}
+body [data-ework-grid][data-workbench-style] .rScV5Q_containerContent th{color:var(--grid-text)!important;font-weight:600}
+body [data-ework-grid][data-workbench-style] .rScV5Q_containerContent th button{color:inherit!important}
+body [data-ework-grid][data-workbench-style] .rScV5Q_containerContent th button:disabled{opacity:1!important}
+body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:#092c3b!important}
 body [data-ework-grid][data-workbench-style] .odyssey-generation-surface{--generation-bg:var(--grid-card)!important;--generation-title:var(--grid-text)!important;--generation-phase:var(--grid-text)!important;--generation-detail:var(--grid-muted)!important;--generation-icon:var(--grid-muted)!important;--generation-time:var(--grid-muted)!important;--generation-border:var(--grid-border)!important;--generation-button:var(--grid-row)!important;--generation-action-icon:var(--grid-text)!important}
 /* Standalone and sourced mind maps inherit the current board style. */
 body [data-ework-grid][data-workbench-style] [data-research-generated-mind-map] :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.rScV5Q_mindMap){background:var(--grid-card)!important;color:var(--grid-text)!important}

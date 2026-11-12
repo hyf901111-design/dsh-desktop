@@ -489,6 +489,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     const draw=toolRef.current==='component'&&!resize
     if(readOnly||workspace.getPreviewMode?.()||!draw&&(!handle&&!resize)||e.target?.closest?.('input,textarea,button,a,select,summary,[contenteditable=true]')&&!resize)return
     if(card?.hasAttribute('data-research-geometry-blocked')||card?.hasAttribute('open'))return
+    root.__eworkContentFit?.finish()
     const current=workspace.getSnapshot(),canonicalBefore=workspace.getWorkbenchCells(),before=workspace.getWorkbenchVisibleCells(),id=(resize||handle)?.getAttribute(resize?'data-workbench-resize':'data-workbench-drag-handle')
     if(!draw&&!before.some(c=>c.id===id))return
     e.preventDefault();e.stopImmediatePropagation();root.focus({preventScroll:true});root.setPointerCapture?.(e.pointerId)
@@ -624,7 +625,7 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   // The explicit metrics measurement covers complete max-content tracks and
   // provenance. Its actual height replaces the conservative starting estimate.
   // Older clipped viewport reports still need that estimate as a safety floor.
-  const floor=table&&value?.intrinsicTable===true?160:table?.height||(metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0)
+  const floor=value?.intrinsicMetrics===true||table&&value?.intrinsicTable===true?160:table?.height||metrics?.height||0
   const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership|stock-ownership|company-filings|historical-price|charting)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
   const height=Math.max(floor,value?.height?value.height+chrome:preferred.height)
@@ -649,7 +650,7 @@ export function measureWorkbenchContents(root,nodes) {
     // report. Keep their confirmed reading space until they load; falling back
     // to a generic 260px box would hide most of a timeline or evidence table.
     // Native market templates retain their own template sizing policy.
-    if(node.containerSpec?.type==='html'&&!/<body\b[^>]*data-sherlock-market=/.test(node.containerSpec.html||'')){
+    if(node.containerSpec?.type==='html'&&!/<body\b[^>]*data-sherlock-(?:market=|template="kpi")/.test(node.containerSpec.html||'')){
       measured.set(node.id,{width:preferred.width,height:Math.max(preferred.height,node.height||0)});continue
     }
     const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),body=card?.querySelector('[data-research-preview-body]')
@@ -750,9 +751,10 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   }))
   let cells=workspace.getWorkbenchCells(),encoded=JSON.stringify(cells),done=false,nativeReady=false,settle,deadline,nativeTimer
   const unchanged=()=>workspace.getActiveBoardTab?.()===activeTab&&JSON.stringify(workspace.getWorkbenchCells())===encoded&&expected.size===[...workspace.getSnapshot().artifacts].filter(n=>expected.has(n.id)&&n.containerSpec?.html===expected.get(n.id).html).length
+  const finishOnTabChange=event=>{if(event.target?.closest?.('[data-board-tab]'))finish()}
   const finish=()=>{
     if(done)return;done=true;view.clearTimeout(settle);view.clearTimeout(deadline);view.clearTimeout(nativeTimer)
-    root.removeEventListener('pointerdown',finish,true);view.removeEventListener('keydown',finish,true)
+    root.removeEventListener('pointerdown',finishOnTabChange,true);view.removeEventListener('keydown',finish,true)
     if(root.__eworkContentFit===task)delete root.__eworkContentFit
     view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:false}}))
     const durable=unchanged()?workspace.persist():false
@@ -793,7 +795,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   }
   const task={refit,finish,ids:arranged.map(n=>n.id)};root.__eworkContentFit=task
   view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:true}}))
-  root.addEventListener('pointerdown',finish,true);view.addEventListener('keydown',finish,true)
+  root.addEventListener('pointerdown',finishOnTabChange,true);view.addEventListener('keydown',finish,true)
   deadline=view.setTimeout(finish,6000);nativeTimer=view.setTimeout(()=>{nativeReady=true;refit(true)},380)
   refit();return true
 }
