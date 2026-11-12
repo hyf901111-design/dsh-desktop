@@ -28,6 +28,31 @@ it('materializes a legacy shared workbench with its original card assignments', 
   expect(nav.containerSpec.tabs[0]!.nodeIds).toEqual(['plan-0', 'unchanged'])
 })
 
+it('restores missing shared component coordinates without changing the stored snapshot', async () => {
+  const canvas = { files: [], artifacts: [
+    { id: 'tabs', kind: 'generated-container', x: 112, width: 200, height: 34,
+      containerSpec: { version: 1, type: 'board-tabs', title: '页签', revision: 1,
+        tabs: [{ id: 'market', name: '市场', nodeIds: ['first', 'later'] }] } },
+    { id: 'later', kind: 'generated-container', workbenchId: 'plan', workbenchIndex: 2 },
+    { id: 'first', kind: 'generated-container', workbenchId: 'plan', workbenchIndex: 1 },
+    { id: 'placed', kind: 'generated-container', x: 280, y: 240, width: 320, height: 220 }
+  ] }
+  const integration: any = Object.create(ResearchBoardIntegration.prototype)
+  integration.authority = () => ({ snapshot: { tasks: [] } })
+  integration.active = new Map()
+  integration.schedules = {}
+  const rendered = await integration.materialize({
+    accountId: 'a', boardId: 'b', epoch: 1, localSessionId: 's', canvas, signal: new AbortController().signal
+  })
+  const [tabs, later, first, placed] = rendered.artifacts
+  expect(tabs).toMatchObject({ x: 112, y: expect.any(Number), width: 200, height: 34 })
+  expect(first.y).toBeLessThan(later.y)
+  expect(first).toMatchObject({ x: expect.any(Number), width: expect.any(Number), height: expect.any(Number) })
+  expect(placed).toMatchObject({ x: 280, y: 240, width: 320, height: 220 })
+  expect(canvas.artifacts[0]).not.toHaveProperty('y')
+  expect(canvas.artifacts[1]).not.toHaveProperty('x')
+})
+
 it.each([false, true])('copies canvas and generation sources into the project, including unchanged sessions (%s)', async changed => {
   const temp = await mkdtemp(join(tmpdir(), 'board-materials-'))
   try {
