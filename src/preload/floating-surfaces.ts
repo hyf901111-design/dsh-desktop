@@ -14,7 +14,7 @@ export function placeFloatingSurface(anchor: DOMRect, width: number, height: num
 
 export function mountFloatingSurfaces(doc: Document) {
   const win = doc.defaultView!
-  const customTriggers = '.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand,.srb-favorite-button,.srb-create-collaboration,[data-odyssey-board-directory]'
+  const customTriggers = '.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand,.srb-favorite-button,.srb-create-collaboration,.srb-preview-toggle,.srb-header-more,[data-odyssey-board-directory]'
   const tracked = new Map<HTMLElement, HTMLElement | null>()
   let active: HTMLElement | null = null, frame = 0
   const style = doc.createElement('style')
