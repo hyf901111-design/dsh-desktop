@@ -526,6 +526,17 @@ body .odyssey-subagent-composer-popover .odyssey-run-info{flex:0 0 100%;width:10
 
 /* Preserve the original model / reasoning directory and native option states. */
 body .odyssey-restored-model-menu { z-index:3000; box-sizing:border-box; overflow:auto; }
+.odyssey-model-name-row { display:flex; align-items:center; gap:6px; min-width:0; }
+.odyssey-model-name-row > ._7KE1Ra_modelName { min-width:0; }
+.odyssey-model-vision-tag {
+  flex:none;
+  padding:0 5px;
+  border-radius:4px;
+  color:var(--dsw-alias-label-secondary);
+  background:var(--dsw-alias-interactive-bg-hover);
+  font:500 10px/16px var(--odyssey-font-ui);
+  white-space:nowrap;
+}
 /* The restored picker uses a portal and does not carry the old menu class. */
 body .odyssey-restored-model-menu ._7KE1Ra_groupTitle{position:static;background:transparent;padding:6px 8px 4px;font:400 11px/18px var(--odyssey-font-ui);color:#757575}
 body[data-ds-dark-theme] .odyssey-restored-model-menu ._7KE1Ra_groupTitle{color:#9c9c9c}

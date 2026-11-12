@@ -126,6 +126,10 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 				select(selection).then(settleSelection);
 			};
 			const modelLabel = currentChoice?.model.name ?? t("trigger.fallback");
+			const visionTag = (model) => model?.supportsImageInput === true ? (0, react_jsx_runtime.jsx)("span", {
+				className: "odyssey-model-vision-tag",
+				children: t("option.vision")
+			}) : null;
 			const triggerLabel = effortLabel === void 0 ? modelLabel : `${modelLabel} · ${effortLabel}`;
 			const triggerAria = currentChoice === void 0 ? t("trigger.selectAria") : effortLabel === void 0 ? t("trigger.aria", { model: modelLabel }) : t("trigger.ariaEffort", {
 				model: modelLabel,
@@ -149,7 +153,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 						ref: triggerRef,
 						type: "button",
 						className: ModelSelect_module_css_default.trigger,
-						"aria-label": triggerAria,
+						"aria-label": currentChoice?.model.supportsImageInput === true ? `${triggerAria} · ${t("option.vision")}` : triggerAria,
 						"aria-haspopup": "menu",
 						"aria-expanded": open,
 						"aria-controls": open ? `${id}-menu` : void 0,
@@ -164,6 +168,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								className: ModelSelect_module_css_default.triggerLabel,
 								children: modelLabel
 							}),
+							visionTag(currentChoice?.model),
 							effortLabel !== void 0 && (0, react_jsx_runtime.jsx)("span", {
 								className: ModelSelect_module_css_default.triggerEffort,
 								children: effortLabel
@@ -273,9 +278,12 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 													},
 													children: [(0, react_jsx_runtime.jsxs)("span", {
 														className: ModelSelect_module_css_default.optionCopy,
-														children: [(0, react_jsx_runtime.jsx)("span", {
-															className: ModelSelect_module_css_default.modelName,
-															children: model.name
+												children: [(0, react_jsx_runtime.jsxs)("span", {
+													className: "odyssey-model-name-row",
+													children: [(0, react_jsx_runtime.jsx)("span", {
+														className: ModelSelect_module_css_default.modelName,
+														children: model.name
+													}), visionTag(model)]
 														}), model.description !== void 0 && (0, react_jsx_runtime.jsx)("span", {
 															className: ModelSelect_module_css_default.description,
 															children: model.description

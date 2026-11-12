@@ -65,7 +65,7 @@ import { patchResearchResidentConversation } from './lib/research-resident-conve
 import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPanelConversation, patchSubagentPanelEntry } from './lib/figma-subagent-panel.mjs'
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
-import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
+import { patchFigmaModelMenu, patchHostModelCatalog, patchModelCatalogSchema } from './lib/figma-model-menu.mjs'
 import { patchSkillCommandPopup, patchSkillCommandLabels } from './lib/skill-command-menu.mjs'
 import {patchPlainSlashInput,stripPlainSlashInput} from './lib/plain-slash-input.mjs'
 import {patchComposerVoice,stripComposerVoice} from './lib/composer-voice.mjs'
@@ -226,6 +226,7 @@ for (const [name, patch] of [
   ['dsh-client-locale', patchDesktopLocaleBridge],
   ['dsh-client-ui-user-questions', patchQuestionCountdown],
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
+  ['dsh-client-connection', patchModelCatalogSchema],
   ['dsh-client-ui-commands', patchSkillCommandPopup],
   ['dsh-client-ui-input-trigger', patchSkillCommandLabels],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
@@ -337,7 +338,16 @@ const modeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-agent
 writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntimePath, 'utf8')))
 
 const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
-writeFileSync(noteHostPath, patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))))
+const hostSource = patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8'))))
+writeFileSync(noteHostPath, patchModelCatalogSchema(patchHostModelCatalog(hostSource)))
+const hostApiPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types')
+for (const [file, patch] of [
+  ['api-proxy.js', patchHostModelCatalog],
+  ['api/sessions.schema.js', patchModelCatalogSchema]
+]) {
+  const path = join(hostApiPath, file)
+  writeFileSync(path, patch(readFileSync(path, 'utf8')))
+}
 const sessionPersistencePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-session-persistence-jsonl/lib/index.js')
 writeFileSync(sessionPersistencePath,patchStoredSessionIdentity(readFileSync(sessionPersistencePath,'utf8')))
 const noteFeedbackPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js')
