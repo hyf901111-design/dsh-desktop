@@ -1,0 +1,456 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261112-01",
+  "branch": "codex/integration/20261112-01",
+  "baseMainCommit": "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60",
+  "expectedMainCommit": "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60",
+  "createdAt": "2026-11-12T07:34:42.374Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究对话含本机路径时仅共享看板",
+        "branch": "codex/feat/board-share-without-private-history-20261112",
+        "baseCommit": "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60",
+        "tipCommit": "2c1a978e9a97072790f2e492022285dcc44b6ece",
+        "commits": [
+          {
+            "commit": "2c1a978e9a97072790f2e492022285dcc44b6ece",
+            "parents": [
+              "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60"
+            ],
+            "subject": "修复：研究对话含本机路径时可仅共享看板"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-research-collaboration-operations.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-board-snapshot.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-presence-final.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-boards-service.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "2c1a978e9a97072790f2e492022285dcc44b6ece",
+            "completedAt": "2026-11-12T05:57:48.571Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-boards-service.test.ts",
+              "test/research-board-snapshot.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "协作服务和快照 71 项通过。",
+            "verifiedCommit": "2c1a978e9a97072790f2e492022285dcc44b6ece",
+            "completedAt": "2026-11-12T05:57:48.571Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-board-presence-final.test.ts",
+              "-t",
+              "creation recipient|offers board-only sharing"
+            ],
+            "outcome": "passed",
+            "summary": "创建协作的邀请和仅共享看板交互 2 项通过。",
+            "verifiedCommit": "2c1a978e9a97072790f2e492022285dcc44b6ece",
+            "completedAt": "2026-11-12T05:57:48.571Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在自动化 DOM 运行真实创建协作 UI，验证本机路径提示、仅共享看板、接收人核对和创建请求；尚未构建或验收真实 macOS 客户端。"
+        },
+        "acceptanceCriteria": [
+          "对话含本机路径时可选择仅共享看板，并在发送前看到范围。",
+          "协作快照包含画板组件和获授权资料，不含研究对话。",
+          "完整共享默认行为及原个人研究保持不变。"
+        ],
+        "risks": [
+          "存在 2 项看板标题栏置顶测试的既有基线失败，与此次分享路径无关。",
+          "本次验证使用测试账户和本地数据，没有发送真实邀请。"
+        ],
+        "generatedAt": "2026-11-12T05:57:48.571Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究顶栏菜单、悬停提示与协作按钮间距",
+        "branch": "codex/feat/research-header-menu-20261112",
+        "baseCommit": "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60",
+        "tipCommit": "7cd001a62d301253ce1af0bac4bd7ae53ca97241",
+        "commits": [
+          {
+            "commit": "1f1e02354253de997d5d79fb42262c7fc62e86c3",
+            "parents": [
+              "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60"
+            ],
+            "subject": "优化：精简研究顶栏并集中看板操作"
+          },
+          {
+            "commit": "37a9ed417ba834542123ac91c48a4cbc748a7a01",
+            "parents": [
+              "1f1e02354253de997d5d79fb42262c7fc62e86c3"
+            ],
+            "subject": "修复：研究顶栏悬停提示和空白处收起菜单"
+          },
+          {
+            "commit": "7cd001a62d301253ce1af0bac4bd7ae53ca97241",
+            "parents": [
+              "37a9ed417ba834542123ac91c48a4cbc748a7a01"
+            ],
+            "subject": "修复：统一协作和普通研究看板的顶栏按钮间距"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-tabs-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-board-header-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/floating-surfaces.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-board-header-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/board-tabs-drop-focus-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/header-mode-pill-theme-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-presence-final.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-header.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-mode-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "vitest",
+              "run",
+              "--",
+              "test/header-mode-pill-theme-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "研究顶栏交互聚焦测试 6 项通过。",
+            "verifiedCommit": "7cd001a62d301253ce1af0bac4bd7ae53ca97241",
+            "completedAt": "2026-11-12T07:05:28.005Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 使用应用样式测得普通与协作顶栏间距均为 4 px，宽、中、窄布局一致；协作头像间距保持原值。"
+        },
+        "acceptanceCriteria": [
+          "两个图标悬停显示动作提示。",
+          "菜单打开时点击顶栏空白处关闭，关闭后可拖窗。",
+          "普通和协作研究看板右上角按钮间距相同。"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-12T07:05:38.487Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复账户会话误退出",
+        "branch": "codex/feat/account-session-persistence-20261112",
+        "baseCommit": "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60",
+        "tipCommit": "72fcde51b50c289c9646812fb81ed2aa36562eac",
+        "commits": [
+          {
+            "commit": "72fcde51b50c289c9646812fb81ed2aa36562eac",
+            "parents": [
+              "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60"
+            ],
+            "subject": "修复：保留网络异常期间的账户会话"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/account-service.test.ts",
+              "test/collaboration-client.test.ts",
+              "test/fund-data-service.test.js",
+              "test/ipc-trust.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "47 项聚焦测试通过，覆盖离线重启、并发鉴权复核、真实失效与旧请求竞态。",
+            "verifiedCommit": "72fcde51b50c289c9646812fb81ed2aa36562eac",
+            "completedAt": "2026-11-12T06:27:18.182Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "72fcde51b50c289c9646812fb81ed2aa36562eac",
+            "completedAt": "2026-11-12T06:27:27.430Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-fund-data-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "本地 workerd/D1 测试通过，覆盖注册、登录、改密、撤销会话、匿名访问限制。",
+            "verifiedCommit": "72fcde51b50c289c9646812fb81ed2aa36562eac",
+            "completedAt": "2026-11-12T06:27:20.635Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "本次验证覆盖桌面主进程和合成账户服务。真实客户端验收留给集成批次。"
+        },
+        "acceptanceCriteria": [
+          "账户资料缓存与加密会话令牌绑定。已缓存用户在离线或账户服务暂不可用时仍能查看本地登录身份。",
+          "协作服务报告需要登录时由账户服务复核。仅确认当前会话已失效时才清除加密会话。",
+          "旧协作请求的鉴权失败无法影响新登录会话，旧版身份缓存可在成功联网后升级。"
+        ],
+        "risks": [
+          "仅保有账户 ID 的旧版缓存需成功查询一次账户服务才能补齐离线显示资料。",
+          "生产账户、生产 Worker 和已打包客户端未纳入此交接验证。"
+        ],
+        "generatedAt": "2026-11-12T06:27:53.745Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "协作看板原页签内容恢复",
+        "branch": "codex/feat/collaboration-tab-membership-20261112",
+        "baseCommit": "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60",
+        "tipCommit": "efcb1634032950db233c53ec7166350c01d0cd1b",
+        "commits": [
+          {
+            "commit": "efcb1634032950db233c53ec7166350c01d0cd1b",
+            "parents": [
+              "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60"
+            ],
+            "subject": "修复：协作看板页签丢失组件和旧布局同步失败"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-collaboration/document.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-board-snapshot.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-board-tab-membership.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-directory-materials.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-snapshot.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "efcb1634032950db233c53ec7166350c01d0cd1b",
+            "completedAt": "2026-11-12T07:22:57.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-board-snapshot.test.ts",
+              "test/research-board-directory-materials.test.ts",
+              "test/research-board-document.test.js",
+              "test/research-boards-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "快照、资料载入、协作文档和协作服务聚焦测试共 90 项通过。",
+            "verifiedCommit": "efcb1634032950db233c53ec7166350c01d0cd1b",
+            "completedAt": "2026-11-12T07:22:57.484Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "本地签名包 2ce018ed9 在原协作看板实测：市场面 4、我司 3、竞品 2、渠道 4；逐页打开未出现同步错误。客户端留在竞品页。"
+        },
+        "acceptanceCriteria": [
+          "原协作看板四个页签恢复各自组件。",
+          "创建协作看板和个人副本保留组件所属页签。",
+          "旧布局可选字段缺失不再阻断同步。"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-12T07:31:44.372Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/account-service.test.ts",
+        "test/research-boards-service.test.ts",
+        "test/research-board-snapshot.test.ts",
+        "test/research-board-directory-materials.test.ts",
+        "test/research-board-document.test.js",
+        "test/research-preview-header.test.ts",
+        "test/header-mode-pill-theme-browser.test.ts",
+        "test/research-board-presence-final.test.ts"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
