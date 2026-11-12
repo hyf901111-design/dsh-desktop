@@ -23,21 +23,39 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&(!n.workbenchId||n.preserveGenerationSize)&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(projectWidth=width||1000){
-    const m=grid.metrics(projectWidth),limits=c=>{
-      const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id)),value=contentHeights.get(c.id)
+    const m=grid.metrics(projectWidth),baseLimits=c=>{
+      const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id))
       // Explicit columns keep their saved spans consistently for all components.
       if([1,2,3].includes(c.arrangeColumns))min.w=Math.min(min.w,c.w)
+      return min
+    }
+    const matchingMeasurement=(c,w)=>{
+      const node=nodesById.get(c.id),value=contentHeights.get(c.id)
+      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(w*m.step-m.gap))<=2)return value
+    }
+    const fitHeight=(c,min,value)=>value&&Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep))
+    // Keep row/column structure through asynchronous intrinsic measurements.
+    // Padding used to close a band is only projected on this client.
+    const arranged=grid.projectArranged(cells,c=>baseLimits(c).w,c=>{
+      const min=baseLimits(c).h,value=matchingMeasurement(c,c.w)
+      if(!value)return Math.max(min,c.h)
+      const measured=fitHeight(c,min,value)
+      return value.layoutFit&&!contentOverrides.has(c.id)?Math.max(m.minRows,measured):Math.max(min,c.h,measured)
+    })
+    if(arranged)return arranged
+    const limits=c=>{
+      const min=baseLimits(c)
       // A narrow viewport can expand a saved half-column to the template's
       // readable minimum. The sandbox measured that displayed width; comparing
       // it with the smaller saved span discards the first content height.
-      const displayedWidth=Math.max(c.w,min.w)*m.step-m.gap
-      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-displayedWidth)<=2){
-        const measured=Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min.h)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep))
+      const value=matchingMeasurement(c,Math.max(c.w,min.w))
+      if(value){
+        const measured=fitHeight(c,min.h,value)
         min.h=value.layoutFit?Math.max(m.minRows,measured):Math.max(min.h,measured)
       }
       return min
     }
-    const fitted=cells.map(c=>{const value=contentHeights.get(c.id),node=nodesById.get(c.id);return value?.layoutFit&&!contentOverrides.has(c.id)&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(Math.max(c.w,limits(c).w)*m.step-m.gap))<=2?{...c,h:Math.max(m.minRows,Math.min(300,Math.ceil((value.height+m.gap)/m.rowStep)))}:c})
+    const fitted=cells.map(c=>{const value=matchingMeasurement(c,Math.max(c.w,baseLimits(c).w));return value?.layoutFit&&!contentOverrides.has(c.id)?{...c,h:Math.max(m.minRows,fitHeight(c,m.minRows,value))}:c})
     const hasFit=fitted.some((c,i)=>c.h!==cells[i].h)
     if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return grid.alignResponsiveSpans(cells)
     // Preserve existing column intent when a narrow left column reaches the

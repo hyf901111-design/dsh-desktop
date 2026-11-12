@@ -5,6 +5,39 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+
+it.each(['standard','auto','three','two','one'])('%s 整理后组件异步测高或收起时仍铺满且不重叠',mode=>{
+ const grid=createResearchGrid(),width=1240,state=createWorkbenchGridState(null,'closed-'+mode)
+ const nodes=[['region',780],['overview',295],['schedule',490],['products',610]].map(([id,height])=>({
+  id,kind:'generated-container',height,width:400,x:300,y:300,preferred:{height},
+  containerSpec:{type:'html',html:id==='schedule'?'<body data-research-kind="gantt"></body>':'<body data-sherlock-market="table"></body>'}
+ }))
+ const cells=[item('region',0,0,20,30),item('overview',20,0,20,12),item('schedule',0,30,40,18),item('products',0,48,40,23)]
+ state.enable(width)
+ let snap=state.reconcile({files:[],artifacts:nodes,viewport:{y:0}})
+ state.set(grid.arrange(nodes,cells,width,0,mode),{automatic:true})
+ snap=state.reconcile(snap)
+ const check=()=>{
+  const shown=state.visible(),bottom=Math.max(...shown.map(c=>c.y+c.h))
+  for(let y=0;y<bottom;y++){
+   const row=shown.filter(c=>c.y<=y&&c.y+c.h>y).sort((a,b)=>a.x-b.x)
+   let edge=0
+   for(const card of row){expect(card.x).toBe(edge);edge+=card.w}
+   expect(edge).toBe(grid.columns)
+  }
+ }
+ check()
+ const saved=state.get()
+ for(const [id,height] of [['overview',170],['region',1000],['region',450],['products',270]]){
+  const node=snap.artifacts.find(n=>n.id===id)
+  expect(state.contentHeight(id,{html:node.containerSpec.html,width:node.width,height,layoutFit:true})).toBe(true)
+  snap=state.reconcile(snap)
+  expect(snap.artifacts.find(n=>n.id===id).height).toBeGreaterThanOrEqual(height)
+  check()
+ }
+ expect(state.get()).toEqual(saved)
+})
+
 it('fits later cards below short neighbours without waiting for the tallest chart',()=>{
  const grid=createResearchGrid(),m=grid.metrics(1200)
  const nodes=[240,720,330,250,270].map((height,i)=>({id:'card'+i,preferred:{height}}))
@@ -423,7 +456,7 @@ it('ETF标准整理保留同行两列比例，后续独行量价卡铺满且重�
  for(const width of [1000,1334,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('candle',0,0,40,14),item('donut',0,14,27,16),item('table',27,14,13,9),item('volume',0,30,27,18)]
   const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
-  expect(at('candle')).toEqual(before[0]);expect(at('donut')).toEqual(before[1]);expect(at('table')).toMatchObject({x:27,y:14,w:13,h:16})
+  expect(at('candle')).toMatchObject(before[0]);expect(at('donut')).toMatchObject(before[1]);expect(at('table')).toMatchObject({x:27,y:14,w:13,h:16})
   expect(at('volume')).toMatchObject({x:0,y:30,w:40,h:18})
   expect(at('volume').w*m.step-m.gap).toBeGreaterThanOrEqual(280)
   expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
