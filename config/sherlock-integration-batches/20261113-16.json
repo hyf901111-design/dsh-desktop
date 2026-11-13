@@ -9,30 +9,66 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "现金流快捷用例公式核对",
+        "featureName": "表格组件主题、底栏与更多菜单",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "197bfa9bebea092a43e609f38a36bc32620b634b",
-        "tipCommit": "6883303eacf63de25f24f5212de5520eed2d6eb8",
+        "baseCommit": "6883303eacf63de25f24f5212de5520eed2d6eb8",
+        "tipCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
         "commits": [
           {
-            "commit": "6883303eacf63de25f24f5212de5520eed2d6eb8",
+            "commit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
             "parents": [
-              "197bfa9bebea092a43e609f38a36bc32620b634b"
+              "6883303eacf63de25f24f5212de5520eed2d6eb8"
             ],
-            "subject": "核对现金流快捷用例的跨表公式和计算结果"
+            "subject": "统一表格组件主题和底栏并复用组件操作菜单"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
           },
           {
             "status": "M",
-            "path": "test/conversation-components-policy.test.js"
+            "path": "scripts/lib/component-surface-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-components.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
+            "completedAt": "2026-11-13T23:42:44.110Z",
+            "timeoutMs": 180000
+          },
           {
             "argv": [
               "node",
@@ -43,68 +79,22 @@
               "test/notes-native-components.test.js"
             ],
             "outcome": "passed",
-            "summary": "190 项组件和表格聚焦验证通过",
-            "verifiedCommit": "6883303eacf63de25f24f5212de5520eed2d6eb8",
-            "completedAt": "2026-11-13T23:31:28.658Z",
+            "summary": "191 项组件和表格聚焦验证通过",
+            "verifiedCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
+            "completedAt": "2026-11-13T23:42:44.110Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端已复现公式行引用错误，已增加现金流公式检验要求。"
+          "summary": "真实客户端已复现主题不一致和双底栏，已接入共享组件主题和菜单。"
         },
         "acceptanceCriteria": [
-          "现金流快捷用例写入当前工作簿",
-          "跨表公式与独立复算一致"
+          "单层组件底栏和完整的顶栏按钮",
+          "共享更多菜单可定位选区、导出和移除组件"
         ],
         "risks": [],
-        "generatedAt": "2026-11-13T23:31:28.658Z"
-      },
-      "merged": {
-        "mergeCommit": "e3e2431671848b2c80a8c9c83ad85505c21af35e",
-        "verificationCommit": "e3e2431671848b2c80a8c9c83ad85505c21af35e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e3e2431671848b2c80a8c9c83ad85505c21af35e",
-            "completedAt": "2026-11-13T23:32:21.121Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "e3e2431671848b2c80a8c9c83ad85505c21af35e",
-            "completedAt": "2026-11-13T23:32:21.121Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "e3e2431671848b2c80a8c9c83ad85505c21af35e",
-            "completedAt": "2026-11-13T23:32:21.121Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T23:32:21.121Z"
+        "generatedAt": "2026-11-13T23:42:44.110Z"
       }
     }
   ],
