@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-14",
+  "branch": "codex/integration/20261113-14",
+  "baseMainCommit": "72e0a6a80c388d04896d72b1b2c71e541baf2885",
+  "expectedMainCommit": "72e0a6a80c388d04896d72b1b2c71e541baf2885",
+  "createdAt": "2026-11-13T11:30:43.089Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话权限默认值、空会话首页与套餐生图修复",
+        "branch": "codex/feat/conversation-permission-home-20261113",
+        "baseCommit": "72e0a6a80c388d04896d72b1b2c71e541baf2885",
+        "tipCommit": "3c9b71040da148c62a62deff4327010311d6b1aa",
+        "commits": [
+          {
+            "commit": "ddbd894f8b0f2f94cc9a11fe3cc26c0803cf86ad",
+            "parents": [
+              "72e0a6a80c388d04896d72b1b2c71e541baf2885"
+            ],
+            "subject": "修复新对话权限继承与权限切换后的首页跳转"
+          },
+          {
+            "commit": "3c9b71040da148c62a62deff4327010311d6b1aa",
+            "parents": [
+              "ddbd894f8b0f2f94cc9a11fe3cc26c0803cf86ad"
+            ],
+            "subject": "修复套餐生图路由并柔化竖向生成占位"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-permission-default.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-conversation-vacancy.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-composer-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-generation-flow.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/blank-compaction-home.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-permission-default.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/new-chat-view-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-flow.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/new-chat-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-composer-preferences.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/permission-localization.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/conversation-permission-default.test.js",
+              "test/blank-compaction-home.test.js",
+              "test/permission-localization.test.ts",
+              "test/new-chat-view-browser.test.js",
+              "test/session-view-preferences.test.js",
+              "test/pending-composer-preferences.test.js",
+              "test/pending-conversation.test.js",
+              "test/pending-conversation-rendered.test.js",
+              "test/image-generation-tool.test.js",
+              "test/image-generation-client.test.js",
+              "test/image-generation-flow.test.js",
+              "test/image-generation-ui.test.js",
+              "test/hosted-ark-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "13 个相关测试文件，91 个用例通过。",
+            "verifiedCommit": "3c9b71040da148c62a62deff4327010311d6b1aa",
+            "completedAt": "2026-11-13T11:26:39.253Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "3c9b71040da148c62a62deff4327010311d6b1aa",
+            "completedAt": "2026-11-13T11:26:39.253Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离的 1.5.5 桌面客户端加载修改后的渲染模块，切换只读与完全访问并重复新建对话，始终显示首页；进程重启后确认只读设置保留。Chromium 使用真实卡片组件和 Canvas 动画验证竖向占位。"
+        },
+        "acceptanceCriteria": [
+          "切换访问模式后保留当前空对话首页，新建对话和重启后延续所选模式。",
+          "拥有套餐 Seedream 权益时，历史 GPT Image 模型参数归一到套餐默认模型。",
+          "生成中显示 2:3 竖卡、低对比缓慢渐变，完成后按图片实际比例显示。"
+        ],
+        "risks": [
+          "生图路由使用本地替身验证，未请求线上 Seedream。正式签名构建仍待独立验收。"
+        ],
+        "generatedAt": "2026-11-13T11:26:39.253Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
