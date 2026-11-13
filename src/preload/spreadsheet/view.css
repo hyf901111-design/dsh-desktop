@@ -32,20 +32,19 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet :is(button,input):focus-visible,.ew-sheet-welcome button:focus-visible{outline:1px solid var(--ss-blue);outline-offset:-2px}
 .ew-sheet button svg,.ew-sheet-welcome button svg{flex:none;color:var(--ss-icon);vertical-align:middle;overflow:visible;display:block}
 .ew-sheet .ew-sheet-button{display:inline-flex;min-width:30px;height:30px;gap:6px;flex:none;align-items:center;justify-content:center;white-space:nowrap;border-radius:6px;padding:0 7px;text-align:center}
-.ew-sheet :is(.ew-sheet-button,.ew-sheet-ribbon-tabs button,.ew-sheet-tab button):is(:hover,:focus-visible,[aria-expanded=true]):not(:disabled){background:var(--ss-hover)}
+.ew-sheet :is(.ew-sheet-button,.ew-sheet-tab button):is(:hover,:focus-visible,[aria-expanded=true]):not(:disabled){background:var(--ss-hover)}
 .ew-sheet .ew-sheet-button.outlined{border:1px solid var(--ss-border);padding-inline:13px}
 .ew-sheet .ew-sheet-button.primary{background:var(--ss-primary);color:var(--ss-primary-text)}
 .ew-sheet .ew-sheet-button.primary:hover:not(:disabled){background:var(--ss-primary);filter:brightness(.90)}
 .ew-sheet .ew-sheet-button.primary svg{color:currentColor}
-.ew-sheet-ribbon-tabs{height:32px;padding-inline:12px;display:flex;gap:4px;align-items:center;overflow:auto;scrollbar-width:none}
-.ew-sheet .ew-sheet-ribbon-tabs button{border-radius:5px;min-width:40px;flex:none;text-align:center;padding:4px 8px;color:var(--ss-muted)}
-.ew-sheet .ew-sheet-ribbon-tabs [aria-selected=true]{color:var(--ss-text);font-weight:600}
 .ew-sheet-ribbon{height:42px;background:var(--ss-ribbon);display:flex;align-items:center;gap:4px;padding:0 8px;white-space:nowrap}
 .ew-sheet-ribbon-tools,.ew-sheet-ribbon-end{display:flex;align-items:center;gap:2px}
 .ew-sheet-ribbon-tools{flex:1;min-width:0;overflow:hidden}
 .ew-sheet-ribbon-end{flex:none}
 .ew-sheet-ribbon [hidden]{display:none!important}
 .ew-sheet .ew-sheet-ribbon .ew-sheet-button{min-width:28px;gap:4px;padding-inline:5px}
+.ew-sheet .ew-sheet-ribbon [data-value=commands]{background:var(--ss-selected);padding-inline:7px}
+.ew-sheet .ew-sheet-ribbon [data-value=commands]:is(:hover,:focus-visible,[aria-expanded=true]){background:var(--ss-hover)}
 .ew-sheet-ribbon .ew-sheet-button svg{width:18px;height:18px}
 .ew-sheet-ribbon .ew-sheet-button[aria-pressed=true]{background:var(--ss-blue-quiet);color:var(--ss-blue)}
 .ew-sheet-ribbon .ew-sheet-button[data-value=filter][aria-pressed=true]{background:var(--ss-selected);color:var(--ss-text)}
@@ -102,6 +101,7 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet .ew-sheet-empty-notice{min-height:20px;margin-top:12px}
 .ew-sheet-menu{position:absolute;z-index:15;width:max-content;min-width:min(154px,calc(100% - 20px));max-width:calc(100% - 20px);max-height:calc(100% - 16px);overflow:auto;padding:6px;box-sizing:border-box;background:var(--odyssey-menu,var(--ss-menu));border:1px solid var(--odyssey-menu-border,var(--ss-border));border-radius:10px;box-shadow:var(--odyssey-menu-shadow,0 8px 24px #0003);backdrop-filter:var(--odyssey-menu-blur,none)}
 .ew-sheet-menu:is([data-menu=book],[data-menu=export]){min-width:min(204px,calc(100% - 20px))}
+.ew-sheet-menu:is([data-menu=commands],[data-menu=edit],[data-menu=insert],[data-menu=format],[data-menu=data],[data-menu=formulas],[data-menu=view]){min-width:min(176px,calc(100% - 20px))}
 .ew-sheet-menu-title{display:flex;align-items:center;gap:6px;margin-bottom:4px;color:var(--ss-muted);font-size:12px;line-height:20px}
 .ew-sheet .ew-sheet-menu button{display:flex;align-items:center;gap:11px;width:100%;min-height:32px;border-radius:6px;padding:5px 9px;white-space:nowrap}
 .ew-sheet .ew-sheet-menu[data-menu=book] button{display:grid;grid-template-columns:16px minmax(0,1fr) 12px;gap:9px}
@@ -114,6 +114,7 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet .ew-sheet-menu :is(button[role=menuitem],.ew-sheet-menu-title button[data-action=menu-back]):is(:hover,:focus-visible):not(:disabled){background:var(--odyssey-menu-row,var(--ss-hover))}
 .ew-sheet-menu button span{display:flex;flex-direction:column;min-width:0}
 .ew-sheet-menu button[aria-haspopup=menu] svg:last-child{margin-inline-start:auto}
+.ew-sheet-menu kbd{margin-inline-start:auto;color:var(--ss-muted);font:inherit;font-size:11px}
 .ew-sheet-menu button small{font-size:11px;color:var(--ss-muted);margin-top:3px}
 .ew-sheet-dialog{position:absolute;inset:0;z-index:16;display:grid;place-items:center;padding:16px;overflow:auto}
 .ew-sheet-dialog section{width:min(100%,400px);padding:16px;border-radius:10px;background:var(--ss-menu);border:1px solid var(--ss-border);box-shadow:0 12px 38px #0005}
@@ -131,7 +132,7 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-dialog-body>label :is(input,select){display:block;margin-top:4px}
 .ew-sheet-dialog-body select{font:inherit;color:var(--ss-text);background:var(--ss-bg);border:1px solid var(--ss-border);border-radius:6px;padding:5px 8px}
 .ew-sheet .ew-sheet-dialog .ew-sheet-chart-header input{display:inline;width:auto;margin-right:5px}
-.ew-sheet-charts{position:absolute;z-index:8;top:118px;right:14px;width:min(470px,calc(100% - 28px));max-height:calc(100% - 195px);overflow:auto;box-sizing:border-box;padding:12px 14px;background:var(--ss-menu);border:1px solid var(--ss-border);border-radius:10px;box-shadow:0 6px 22px #0004;--sherlock-chart-1:#729fee;--sherlock-chart-2:#39a992;--sherlock-chart-3:#ce8a51;--sherlock-chart-4:#b18be0;--sherlock-chart-5:#cb6f87;--sherlock-chart-6:#89a656}
+.ew-sheet-charts{position:absolute;z-index:8;top:86px;right:14px;width:min(470px,calc(100% - 28px));max-height:calc(100% - 163px);overflow:auto;box-sizing:border-box;padding:12px 14px;background:var(--ss-menu);border:1px solid var(--ss-border);border-radius:10px;box-shadow:0 6px 22px #0004;--sherlock-chart-1:#729fee;--sherlock-chart-2:#39a992;--sherlock-chart-3:#ce8a51;--sherlock-chart-4:#b18be0;--sherlock-chart-5:#cb6f87;--sherlock-chart-6:#89a656}
 .ew-sheet-charts header,.ew-sheet-charts footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ew-sheet-charts footer{justify-content:flex-end}
 .ew-sheet-charts p{margin:2px 0 8px;color:var(--ss-muted)}
