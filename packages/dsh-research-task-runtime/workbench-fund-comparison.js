@@ -330,7 +330,8 @@ export function prepareFundComparisonOverview(panel, comparison, evidence) {
    {missing:'部分基金缺少可核对的规模或规模日期'}:
    {detail:scaleDates.size===1?'规模数据日 '+iso(rows[0].scaleDate):'按各基金各自规模数据日加总，详见比较明细'})}
  ];
- return {version:1,type:'kpi',title:panel.title,asOf:evidence.asOf,note:evidence.note,items};
+ const sources=evidence.sources?.map(({label,url})=>({name:label,url}));
+ return {version:1,type:'kpi',title:panel.title,asOf:evidence.asOf,note:evidence.note,items,...(sources?.length?{sources}:{})};
 }
 
 

@@ -91,6 +91,7 @@ it('retains a requested median even when the planner omits the overview card',as
  const receipt=await f.run()
  expect(receipt.panels).toContain('样本概览指标')
  const [{panels}]=f.runtime.startPreparedBatch.mock.calls[0]
+ expect(panels[0].artifact.sources).toEqual([{name:'Tushare',url:'https://tushare.pro/'}])
  expect(panels[0].artifact.items).toContainEqual(expect.objectContaining({label:'近一年收益率中位数',value:2.805205,unit:'%',source:'Tushare'}))
  const [saved]=await f.plans()
  expect(saved.panels.at(-1)).toMatchObject({title:'样本概览指标',taskId:'prepared-0'})
