@@ -79,6 +79,25 @@
           "额外的两个测试文件有 7 个既有失败，已在旧集成版本复现相同失败。"
         ],
         "generatedAt": "2026-11-13T12:10:21.102Z"
+      },
+      "merged": {
+        "mergeCommit": "4c2a8d37d1b7ae1e45fe92fff10c3039fcaf9450",
+        "verificationCommit": "4c2a8d37d1b7ae1e45fe92fff10c3039fcaf9450",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4c2a8d37d1b7ae1e45fe92fff10c3039fcaf9450",
+            "completedAt": "2026-11-13T12:10:24.582Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T12:10:24.582Z"
       }
     }
   ],
