@@ -1,0 +1,526 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-02",
+  "branch": "codex/integration/20261113-02",
+  "baseMainCommit": "b3617b58ef5f07d5cafc2f232716743618224f8f",
+  "expectedMainCommit": "b3617b58ef5f07d5cafc2f232716743618224f8f",
+  "createdAt": "2026-11-13T01:35:09.407Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "探索用量、自定义模型与账户密码体验",
+        "branch": "codex/feat/hosted-ark-20261112",
+        "baseCommit": "9c7914c1393e661e951bf7bfc6cd243ca027c9fe",
+        "tipCommit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+        "commits": [
+          {
+            "commit": "517e6248a22d497b6e1105b66ac9641ca497348b",
+            "parents": [
+              "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60"
+            ],
+            "subject": "同步管理后台已有的账号用量账本与迁移"
+          },
+          {
+            "commit": "f937a8074fa4b46beba89a380759594d1baee137",
+            "parents": [
+              "517e6248a22d497b6e1105b66ac9641ca497348b"
+            ],
+            "subject": "接入登录后托管方舟模型、Seedream 生图和探索用量"
+          },
+          {
+            "commit": "a4345a731bf44a2f160f599b9ac20b2cf236491f",
+            "parents": [
+              "f937a8074fa4b46beba89a380759594d1baee137",
+              "9c7914c1393e661e951bf7bfc6cd243ca027c9fe"
+            ],
+            "subject": "同步本地主干并保留额度网关异常时的账号会话"
+          },
+          {
+            "commit": "280a9f80412d5c35c8c410a93d71e0e2929ee0d2",
+            "parents": [
+              "a4345a731bf44a2f160f599b9ac20b2cf236491f"
+            ],
+            "subject": "补充托管模型目录与额度圆环的本地客户端验收服务"
+          },
+          {
+            "commit": "d07c7db2dbfb52dce889027492389e3d66cd9b21",
+            "parents": [
+              "280a9f80412d5c35c8c410a93d71e0e2929ee0d2"
+            ],
+            "subject": "锁定探索页管理用量位于主题壁纸右侧的验收"
+          },
+          {
+            "commit": "a556b127f18bb910ff0a3e0da24ce07484501f1e",
+            "parents": [
+              "d07c7db2dbfb52dce889027492389e3d66cd9b21"
+            ],
+            "subject": "修复方舟 Seedream 5.0 单图请求的参数"
+          },
+          {
+            "commit": "d045daa8e7f1eddf49f6bf8bb6b6bb55f69bf27d",
+            "parents": [
+              "a556b127f18bb910ff0a3e0da24ce07484501f1e"
+            ],
+            "subject": "修复方舟用量刷新与 Seedream 参考图扣减"
+          },
+          {
+            "commit": "885e0b9d27851a9ce64a8ef41b558054bde80ef6",
+            "parents": [
+              "d045daa8e7f1eddf49f6bf8bb6b6bb55f69bf27d"
+            ],
+            "subject": "在输入框模型选择器标记视觉输入能力"
+          },
+          {
+            "commit": "9932feebd03886bba6ad55965e28f815f9beb0de",
+            "parents": [
+              "885e0b9d27851a9ce64a8ef41b558054bde80ef6"
+            ],
+            "subject": "允许打包方舟适配器依赖的 SDK 会话接口源码"
+          },
+          {
+            "commit": "bfacb214e90f2025b86b4ebe18dd3dee7c0c8759",
+            "parents": [
+              "9932feebd03886bba6ad55965e28f815f9beb0de"
+            ],
+            "subject": "按品牌展示方舟模型并开放受支持的图片输入"
+          },
+          {
+            "commit": "4f95f51d58d7d62ae8a5eb578fc3254e5043c0dd",
+            "parents": [
+              "bfacb214e90f2025b86b4ebe18dd3dee7c0c8759"
+            ],
+            "subject": "在对话客户端断开后结算方舟最终用量"
+          },
+          {
+            "commit": "6719ae8ac79c90d2fd4d23f8982bd40191ab7cc2",
+            "parents": [
+              "4f95f51d58d7d62ae8a5eb578fc3254e5043c0dd"
+            ],
+            "subject": "修复参考图生图收尾和托管模型错误提示"
+          },
+          {
+            "commit": "166611e067a25d5553e044e773b4609be15cc0d5",
+            "parents": [
+              "6719ae8ac79c90d2fd4d23f8982bd40191ab7cc2"
+            ],
+            "subject": "缩小生图占位卡并加快渐变流动"
+          },
+          {
+            "commit": "748c64426b4d20e191382dba409c5783b08fe0c1",
+            "parents": [
+              "166611e067a25d5553e044e773b4609be15cc0d5"
+            ],
+            "subject": "在输入框显示额度恢复提示并收紧对话间距"
+          },
+          {
+            "commit": "153ae5954c08de958d60ce6f4111aa422a22511f",
+            "parents": [
+              "748c64426b4d20e191382dba409c5783b08fe0c1"
+            ],
+            "subject": "以普通回复样式说明会话中断原因"
+          },
+          {
+            "commit": "cf460f7c837ee278de847820e78c3601bd8ea254",
+            "parents": [
+              "153ae5954c08de958d60ce6f4111aa422a22511f"
+            ],
+            "subject": "按独立窗口上限分配托管模型额度"
+          },
+          {
+            "commit": "5cbad4d1e856390690f23e014ab09615aaed09ed",
+            "parents": [
+              "cf460f7c837ee278de847820e78c3601bd8ea254"
+            ],
+            "subject": "让额度提示卡与输入框对齐"
+          },
+          {
+            "commit": "35bc78617f7f5acefebb61f38ef47e3746829c56",
+            "parents": [
+              "5cbad4d1e856390690f23e014ab09615aaed09ed"
+            ],
+            "subject": "将探索用量圆环内收并改为逆时针生长"
+          },
+          {
+            "commit": "1b179763245554a62c51acf1d2ea28ca34ac8c4a",
+            "parents": [
+              "35bc78617f7f5acefebb61f38ef47e3746829c56"
+            ],
+            "subject": "精简探索用量并在输入框提供自定义模型入口"
+          },
+          {
+            "commit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+            "parents": [
+              "1b179763245554a62c51acf1d2ea28ca34ac8c4a"
+            ],
+            "subject": "收紧密码圆点间距并将新密码最低长度调整为八位"
+          }
+        ],
+        "boundaryParents": [
+          "4a9c2adc2bab7e1e070a2b1e90251ae5be2bfb60"
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-accounts.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/sherlock-hosted-ai.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-11-12-hosted-ark.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-web-search-session-model/index.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/conversation-failure-copy.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-model-menu.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-model-menu.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/hosted-quota-notice.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/model-select-restored.txt"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/prepare-bundled-plugin-profile.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/start-native-acceptance-services.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-fund-data-worker.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/test-hosted-ai-worker.mjs"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/ai-quota.js"
+          },
+          {
+            "status": "M",
+            "path": "services/accounts/auth.js"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/migrations/0005_ai_quota.sql"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/password-policy.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/password-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/ark-catalog.js"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/openviking.js"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/worker.js"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/wrangler.jsonc"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/explore-quota.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-auth.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-generation-flow.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/explore-quota-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-errors.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-auth-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-model-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/explore-menu-browser-fixture.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/hosted-ark-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/hosted-quota-notice.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/model-picker-null-current.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/session-model-web-search.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/test-fund-data-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "实际 Worker 与 D1 验证密码长度边界、登录和密码变更",
+            "verifiedCommit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+            "completedAt": "2026-11-13T01:05:24.588Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "桌面 TypeScript 检查",
+            "verifiedCommit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+            "completedAt": "2026-11-13T01:05:24.588Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-auth-errors.test.js",
+              "test/figma-auth-layout.test.ts",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "44 项登录注册、圆点间距与账户测试",
+            "verifiedCommit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+            "completedAt": "2026-11-13T01:05:24.588Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "托管网关与用量结算",
+            "verifiedCommit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+            "completedAt": "2026-11-13T01:05:24.588Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/hosted-ark-runtime.test.js",
+              "test/figma-model-menu.test.ts",
+              "test/explore-quota-browser.test.ts",
+              "test/model-settings-actions-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "用量、DIN Pro 和自定义模型配置",
+            "verifiedCommit": "ecd410953a4576e0e7b57aa86220d1cf0018f609",
+            "completedAt": "2026-11-13T01:05:24.588Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "浏览器验证圆点间距、长度提示及登录提交；独立客户端验证用量和自定义模型实际响应。"
+        },
+        "acceptanceCriteria": [
+          "用量百分比使用 DIN Pro，自定义模型保存后可以选用。",
+          "登录和注册密码圆点收紧，8 位密码可注册及登录。"
+        ],
+        "risks": [
+          "线上 8 位密码注册依赖账户 Worker 部署。"
+        ],
+        "generatedAt": "2026-11-13T01:05:24.588Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/test-fund-data-worker.mjs"
+      ],
+      "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/figma-auth-errors.test.js",
+        "test/figma-auth-layout.test.ts",
+        "test/account-service.test.ts"
+      ],
+      "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/test-hosted-ai-worker.mjs"
+      ],
+      "timeoutMs": 90000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/hosted-ark-runtime.test.js",
+        "test/figma-model-menu.test.ts",
+        "test/explore-quota-browser.test.ts",
+        "test/model-settings-actions-browser.test.js"
+      ],
+      "timeoutMs": 90000
+    }
+  ],
+  "mainSynchronizations": []
+}
