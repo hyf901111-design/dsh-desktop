@@ -101,3 +101,22 @@ export function prepareWorkbenchPomodoro(panel,request) {
 <div data-timer-controls><button data-action="start">开始</button><button data-action="pause">暂停</button><button data-action="reset">重置</button><button data-action="switch">切换阶段</button></div></main>
 <script>(${mountPomodoro.toString()})(${JSON.stringify(settings)});</script></html>`}};
 }
+
+// Prepare authored local operations alongside a timer; a malformed companion
+// card would otherwise block the entire board before the timer could mount.
+export function preparePomodoroCompanion(panel,request) {
+    if (!panel?.title || !workbenchPomodoroSettings(request) || panel.library || panel.publicData || panel.view) return panel;
+    const title=panel.title.trim();
+    const clause=[...request.matchAll(/「([^」\n]+)」([^「。\n]*)/gu)].find(match=>match[1]===title)?.[2];
+    if (!clause) return panel;
+    if (panel.type==='calendar-tool' && !panel.artifact && /原生(?:个人)?日历/u.test(clause))
+        return {...panel,artifact:{version:1,type:'calendar-tool',title}};
+    if (panel.type!=='tasks' || !/勾选|添加/u.test(clause)) return panel;
+    const listed=/初始\s*(?:\d+|[一二两三四五六七八九十]+)?\s*项\s*(?:是|为|[:：])\s*([^；;。]+)/u.exec(clause)?.[1];
+    const entries=listed?.split(/、|，/u).map(entry=>entry.trim());
+    if (!entries?.length||entries.length>100||new Set(entries).size!==entries.length||
+        entries.some(entry=>!entry||entry.length>256||/[:：]/u.test(entry)))return panel;
+    const items=entries.map((entry,index)=>({id:'initial-'+(index+1),title:entry,completed:false}));
+    const {content,artifact,...planned}=panel;
+    return {...planned,artifact:{version:1,type:'tasks',title,asOf:'本轮用户提供的初始事项',mode:'local',items}};
+}

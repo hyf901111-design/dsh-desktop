@@ -84,8 +84,26 @@ export function authoredFinanceLedger(request = '') {
     return tables;
 }
 
+export function completeInlineFinancePlan(plan) {
+    if (plan.tabs || plan.links || !Array.isArray(plan.panels) ||
+        plan.panels.some(panel=>panel?.library||panel?.publicData||panel?.profile||panel?.requests)) return plan;
+    const request=plan.originalRequest??'';
+    const clauses=[...request.matchAll(/「([^」\n]+)」([^「。；\n]*)/gu)];
+    if(clauses.length!==3||new Set(clauses.map(([,title])=>title)).size!==3||
+       !clauses.every(([,title,clause])=>title.length<=80&&specializedMarketVariants.includes(explicitPresentation(clause)?.split('.')[1])))return plan;
+    const prepared=clauses.map(([,title,clause])=>{
+        const prior=plan.panels.find(panel=>typeof panel?.title==='string'&&panel.title.startsWith(title));
+        const prompt=prior?.prompt||clause.trim();
+        return applyInlineFinanceLedger({title,type:'market',prompt,...(prior?.size?{size:prior.size}:{}),
+            ...(prior?.layout?{layout:prior.layout}:{})},request);
+    });
+    if(!prepared.every(panel=>panel.artifact))return plan;
+    const {sharedDatasets,generationMode,sharedContext,...base}=plan;
+    return {...base,panels:prepared};
+}
+
 // Inline ledger clauses are direct evidence when every entry parses in full.
-export function applyInlineFinanceLedger(panel, request = '') {
+function applyInlineFinanceLedger(panel, request = '') {
     if (!panel?.title || panel.library || panel.publicData || panel.profile || panel.requests ||
         !/(?:禁止|不要|不用|不)\s*联网/u.test(request) || !/模拟[^。；\n]{0,30}(?:账簿|台账)|模拟(?:账簿|台账)/u.test(request)) return panel;
     const title = panel.title.split(/[（(]/u)[0].trim();
@@ -115,7 +133,7 @@ export function applyInlineFinanceLedger(panel, request = '') {
         const normalized = value => value.replace('−','-');
         const total=changes.reduce((sum,{raw})=>addDecimal(sum,decimalParts(raw)),decimalParts(normalized(start)));
         if (decimalNumber(total)!==Number(normalized(end))) throw Error('瀑布图的期末金额与期初金额加各项增减额不一致，请核对账簿。');
-        artifact={...base,variant:'waterfall',unit:units,start:Number(normalized(start)),changes:changes.map(({label,value})=>({label,value}))};
+        artifact={...base,variant:'waterfall',unit:units,note:base.note+'。期末 '+normalized(end)+' '+units+'。',start:Number(normalized(start)),changes:changes.map(({label,value})=>({label,value}))};
     } else if (kind === 'market.allocation-donut') {
         const body = /(?:环形图|环图)[，、：:]\s*(.*?)(?:[，、](?:图例|标注|显示|保留).*)?$/u.exec(clause)?.[1];
         const units=body?.match(/(?:万元|亿元|元)\s*$/u)?.[0].trim();
@@ -197,12 +215,22 @@ export function expandMappedWorkbenchChart(panel){
 }
 
 export function labelRequestedReportSeries(panel,request){
-    const content=panel?.content,view=content?.visualization;
-    if(panel?.type!=='chart'||!content||content.columns!==undefined||!Array.isArray(view?.values)||view.values.length!==2||
-       !view.values.includes('revenue')||!view.values.includes('profit')||!Array.isArray(content.rows)||
-       !/研报|研究报告/u.test(request??'')||!/(?:营业收入|营收).{0,12}归母净利润/u.test(request??'')||
-       !/(?:营业收入|营收).{0,12}归母净利润/u.test([panel.title,content.title,panel.prompt].join('\n')))return panel;
-    return {...panel,content:{...content,columns:[{key:'revenue',label:'营业收入'},{key:'profit',label:'归母净利润'}]}};
+    const content=panel?.content, artifact=panel?.artifact;
+    if(panel?.type!=='chart'||!/研报|研究报告/u.test(request??'')||
+       !/(?:营业收入|营收).{0,12}归母净利润/u.test(request??'')||
+       !/(?:营业收入|营收).{0,12}归母净利润/u.test([panel.title,content?.title,panel.prompt].join('\n')))return panel;
+    const labels={revenue:'营业收入',rev:'营业收入',profit:'归母净利润',np:'归母净利润',netProfit:'归母净利润'};
+    const names=content?.visualization?.values??(Array.isArray(artifact?.series)?artifact.series.map(series=>series?.name):undefined);
+    if(!Array.isArray(names)||names.length!==2||new Set(names.map(name=>Object.hasOwn(labels,name)?labels[name]:undefined)).size!==2||
+       !names.every(name=>Object.hasOwn(labels,name)))return panel;
+    if(content&&content.columns===undefined&&Array.isArray(content.rows))return {
+        ...panel,content:{...content,columns:names.map(key=>({key,label:labels[key]}))}
+    };
+    if(artifact?.type==='chart'&&!content)return {...panel,artifact:{...artifact,
+        series:artifact.series.map(series=>({...series,name:labels[series.name]})),
+        ...(Array.isArray(artifact.detailColumns)?{detailColumns:artifact.detailColumns.map(column=>
+            typeof column==='string'&&Object.hasOwn(labels,column)?labels[column]:column)}:{})}};
+    return panel;
 }
 
 export function normalizeSharedChart(panel,datasets,request=''){

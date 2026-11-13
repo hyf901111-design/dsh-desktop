@@ -251,7 +251,9 @@ export function completeWordOrganizationPanels(panels,documents,request=''){
  const groups=documentOutlineGroups(document);
  const index=panels.findIndex(panel=>{
   const artifact=panel.artifact;
-  if(artifact?.type!=='mind-map'||!orgScope.test(panel.title))return false;
+  if(panel.type!=='mind-map'||!orgScope.test(panel.title))return false;
+  if(!artifact)return true;
+  if(artifact.type!=='mind-map')return false;
   const outline=derivedOutline(artifact.content);
   if(!outline)return false;
   const cited=JSON.stringify(artifact.source).includes(document.name)&&/\[(?:P|T)\d+\]/u.test(artifact.source?.text??'');
@@ -269,7 +271,7 @@ export function completeWordOrganizationPanels(panels,documents,request=''){
  const trees=chapters.map(chapter=>chapterOrganizationTree(chapter,groups));
  if(trees.some(tree=>tree.children.length<2))return panels;
  trees.forEach(tree=>visit(tree,0));
- const original=panels[index].artifact;
+ const original=panels[index].artifact??{version:1,type:'mind-map'};
  const text=chapters.flatMap(chapter=>[chapter.heading+' ['+chapter.id+']',...chapter.blocks.map(block=>
   `[${block.id}] ${block.text??JSON.stringify(block.rows)}`)]).join('\n');
  const artifact=parseDerivedSpec({...original,title,content:lines.join('\n'),source:{title:document.name,text}});

@@ -332,3 +332,21 @@ export function prepareFundComparisonOverview(panel, comparison, evidence) {
  ];
  return {version:1,type:'kpi',title:panel.title,asOf:evidence.asOf,note:evidence.note,items};
 }
+
+
+export function verifiedFundComparisonOverview(artifact,evidence) {
+ if(artifact?.type!=='kpi'||typeof evidence!=='string')return;
+ let source;
+ try{source=JSON.parse(evidence)}catch{return;}
+ const code=source?.columns?.indexOf('代码'),gain=source?.columns?.indexOf('近一年收益（%）');
+ const drawdown=source?.columns?.indexOf('近半年最大回撤（%）');
+ if(!(code>=0&&gain>=0&&drawdown>=0)||!Array.isArray(source.rows)||!source.rows.length||
+    !source.sources?.[0]?.url||source.asOf!==artifact.asOf||
+    !source.rows.every(row=>Array.isArray(row)&&/^[0-9]{6}\.OF$/u.test(row[code]))||
+    new Set(source.rows.map(row=>row[code])).size!==source.rows.length)return;
+ const rows=source.rows.map(row=>({gain:row[gain],drawdown:row[drawdown]}));
+ const expected=prepareFundComparisonOverview({title:artifact.title},{rows},source);
+ if(expected?.items.slice(0,3).every(item=>artifact.items?.some(candidate=>
+    candidate.label===item.label&&candidate.value===item.value&&candidate.unit===item.unit&&candidate.url===item.url)))
+    return rows.length;
+}

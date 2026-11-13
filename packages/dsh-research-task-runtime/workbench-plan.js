@@ -1,4 +1,4 @@
-import {prepareWorkbenchPomodoro} from './workbench-pomodoro.js';
+import {preparePomodoroCompanion,prepareWorkbenchPomodoro} from './workbench-pomodoro.js';
 import {resolveWorkbenchLibraryPanel,validateWorkbenchLinks} from './workbench-library.js';
 import {validateWorkbenchTabs} from './workbench-tabs.js';
 import {comparisonWindowInstruction} from './workbench-comparison-window.js';
@@ -32,7 +32,7 @@ import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
 import {authoredPrototypeEvidence} from './workbench-prototype-evidence.js';
 import {compileComponentContent} from './component-content.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
-import {applyAuthoredFinanceLedger,authoredFinanceLedger, applyInlineFinanceLedger,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
+import {applyAuthoredFinanceLedger,authoredFinanceLedger, completeInlineFinancePlan,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
 import {marketPanelSchema} from './market-artifact.js';
 import {verifiedAggregateRecordCount,verifiedChartRecordCount,verifiedKpiRecordCount} from './dataset-aggregate.js';
 import {resolvePastedWorkbenchPlan} from './workbench-pasted-tables.js';
@@ -40,6 +40,7 @@ import {matchesDatasetViewScope} from './dataset-view-runtime.js';
 import {componentCohortRequest,componentDeliveryModel,componentDeliveryScopeIssue,datedRecordIdentities,isActionScope,isDatedRecordScope,isDecimalPrecisionScope,verifiesFundManagerGroups,verifiedOutlineCoverage} from './component-delivery-scope.js';
 import {wordOutlineCoverage} from './workbench-word-grid.js';
 import {prepareAuthoredLocalForm} from './workbench-authored-form.js';
+import {verifiedFundComparisonOverview} from './workbench-fund-comparison.js';
 
 const scopeNumber=value=>{
     if(/^\d+$/u.test(value))return Number(value);
@@ -141,7 +142,7 @@ export function workbenchScopeDeficits(plan) {
         const local=workbenchQuantityDeclarations(panel.prompt),data=panelScopeData(panel),all=panelScopeData(panel,false);
         const labels=(all?.columns??[]).map(column=>typeof column==='string'?column:column.label??column.key??'');
         const target=panel.title+'\n'+panel.prompt+'\n'+labels.join('\n');
-        const verifiedFunds=verifiesFundManagerGroups(data,panel.prompt,plan.sharedEvidence);
+        const verifiedFunds=verifiesFundManagerGroups(data,panel.prompt,plan.sharedEvidence)||verifiedFundComparisonOverview(data,plan.sharedEvidence);
         const coveredFunds=verifiedFunds&&original.some(scope=>scope.unit==='只'&&/基金/u.test(scope.entity))&&
             original.filter(scope=>scope.unit==='只'&&/基金/u.test(scope.entity)).every(scope=>verifiedFunds>=scope.expected);
         const groupedChart=panel.type==='chart'&&panel.view&&plan.sharedDatasets?.some(dataset=>dataset.id===panel.view.dataset&&dataset.groupBy?.length);
@@ -585,7 +586,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > MAX_WORKBENCH_PANELS)
         throw Error('工作台需要 1–30 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
-    value=resolvePastedWorkbenchPlan(value);
+    value=completeInlineFinancePlan(resolvePastedWorkbenchPlan(value));
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';
     const deferred = value.generationMode === 'deferred';
@@ -610,7 +611,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         if(!deferred&&!parallel){
             p=prepareAuthoredLocalForm(p,value.originalRequest);
             p=prepareWorkbenchPomodoro(p,value.originalRequest);
-            if(!datasets)p=applyInlineFinanceLedger(p,value.originalRequest);
+            if(!isSimulated)p=preparePomodoroCompanion(p,value.originalRequest);
         }
         p=labelRequestedReportSeries(p,value.originalRequest);
         p=normalizeSharedChart(resolveWorkbenchPanelLabels(p,datasets),datasets,value.originalRequest);
