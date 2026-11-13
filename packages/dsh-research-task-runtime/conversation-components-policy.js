@@ -75,8 +75,9 @@ export function latestClientModeForAuthority(session){
  }
  return mode
 }
-const SHEET_WRITE_GUIDANCE='【当前表格】交付目标是当前会话左侧可编辑的工作簿。先顺序调用 client_capabilities，再用 client_action 执行 spreadsheet.inspect（arguments={scope:"workbook"}），获取工作表真实标识和 revision。用 spreadsheet.apply 保存真实单元格与公式；每次传最新 revision。空工作簿可传 createName，首张表标识为 sheet-1；已经有工作簿时用实际标识和 addSheet，保留用户内容。write 的 cells 示例：[["公司","估值"],["甲",{formula:"=180/30"}]]。数据和公式可分批保存，下一批以前一回执 revision 为准。图表用 addChart 绑定实际区域；引用用 scope=reference 及 referenceIndex，只有一个引用可用 scope=selected。工具报错按实际错误调整，再用新的 requestId 重试。只有 saved=true 的回执能证明写入；无写入时如实说明。除非用户同时明确要求文件，交付只在当前工作簿完成。'
+const SHEET_WRITE_GUIDANCE='【当前表格】交付目标是当前会话左侧可编辑的工作簿。先顺序调用 client_capabilities，再用 client_action 执行 spreadsheet.inspect（arguments={scope:"workbook"}），获取工作表真实标识和 revision。用 spreadsheet.apply 保存真实单元格与公式；每次传最新 revision。空工作簿可传 createName，首张表是 sheet-1（Sheet1）；在写跨表公式前用 renameSheet 命名首表。已经有工作簿时用实际标识和 addSheet，保留用户内容。write 的 cells 示例：[["公司","估值"],["甲",{formula:"=180/30"}]]。数据和公式可分批保存，下一批以前一回执 revision 为准。图表用 addChart 绑定实际区域；引用用 scope=reference 及 referenceIndex，只有一个引用可用 scope=selected。工具报错按实际错误调整，再用新的 requestId 重试。只有 saved=true 的回执能证明写入；无写入时如实说明。除非用户同时明确要求文件，交付只在当前工作簿完成。'
 const SHEET_QUICK_GUIDANCE='【表格快捷用例】本轮必须交付到当前工作簿。先取得表格能力，直接用 spreadsheet.inspect、spreadsheet.apply 读取和提交数据与公式。对话里的预览、生成或附带的 Excel 文件、子任务完成状态都不构成写入回执。先提交并核对单元格再汇报。'
+const CASH_FLOW_QUICK_GUIDANCE='【现金流预测】使用可编辑的演示假设。NOPAT = EBIT × (1 − 税率)，自由现金流 = NOPAT + 折旧摊销 − 资本开支 − 净营运资本增加；若支出以负数记录则直接相加。写入前逐项对照实际行号和符号。保存后用 spreadsheet.inspect 读取实际预测区的公式与计算值，从假设独立复算第一年和第五年；发现引用错误、符号错误或公式报错就修正并重读，再汇报工作簿结果。'
 
 function savedSpreadsheetWrite(session){
  const events=session.events??[]
@@ -114,7 +115,7 @@ export function registerConversationComponentsPolicy(ctx){
   if(!session||session.header?.origin==='subagent'||(session.header?.delegationDepth??0)>0)return ''
   const request=componentCreationRequest(session),mode=latestClientModeForAuthority(session)
   const quick=spreadsheetQuickPrompt(planningHumanRequest(session)?.text)
-  if(quick>=0&&!documentOnly(session)&&(!mode||mode==='spreadsheet'))return SHEET_QUICK_GUIDANCE+'\n'+SHEET_WRITE_GUIDANCE
+  if(quick>=0&&!documentOnly(session)&&(!mode||mode==='spreadsheet'))return [SHEET_QUICK_GUIDANCE,SHEET_WRITE_GUIDANCE,quick===2?CASH_FLOW_QUICK_GUIDANCE:''].filter(Boolean).join('\n')
   if(documentOnly(session))return '【文件交付】本轮制作或修订的是文件，文件中的图表、表格和版式属于该交付件。沿用户指定技能和原有文件读取、代码执行、渲染检查、保存与文件交付流程完成；保留原任务预算，不将内部图表替换为独立界面组件或新研究画布。'
   if(mode==='spreadsheet')return SHEET_WRITE_GUIDANCE
   if(!mode&&!request&&/表格|工作簿|工作表|单元格|选区|公式|xlsx|spreadsheet/i.test(planningHumanRequest(session)?.text??''))return '本轮涉及表格或单元格；先查询 client_capabilities 确认客户端模式。spreadsheet 模式用 spreadsheet.inspect、spreadsheet.apply 或 spreadsheet.undo，其它模式遵循本轮目录。'

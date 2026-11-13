@@ -283,6 +283,8 @@ it('routes the right-side cash-flow preset to the workbook before file tools are
   expect((await h.wire()).tools.map(tool=>tool.name)).toEqual(['client_capabilities'])
   catalog(s,'spreadsheet')
   expect((await h.wire()).tools.map(tool=>tool.name)).toEqual(['client_capabilities','client_action'])
+  expect(h.prompt()).toContain('NOPAT = EBIT × (1 − 税率)')
+  expect(h.prompt()).toContain('从假设独立复算第一年和第五年')
   s.events.push({type:'assistant/chunk',data:{chunk:{type:'finish',reason:{kind:'stop'}}}})
   h.stop();h.stop()
   expect(h.agent.steer).toHaveBeenCalledTimes(1)
@@ -303,6 +305,7 @@ it('accepts a matching workbook write receipt and preserves other input modes an
  try{
   catalog(attachment,'spreadsheet')
   expect((await r.wire()).tools.map(tool=>tool.name)).toContain('read_file')
+  expect(r.prompt()).not.toContain('NOPAT = EBIT')
  }finally{r.dispose()}
  const conversation=session(SPREADSHEET_QUICK_PROMPTS.en[2]),c=harness(conversation)
  try{
