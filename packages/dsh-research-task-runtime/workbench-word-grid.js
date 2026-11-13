@@ -122,7 +122,12 @@ export function wordOutlineCoverage(artifact,documents,prompt=''){
  };
  visit(outline);
  const intended=outlineName(prompt);
+ const chapterIds=new Set(organizationChapters(sources[0],prompt).filter(chapter=>
+  outline.children.some(branch=>branch.children.length>0&&branch.label.includes('['+chapter.id+']')&&
+   [chapter.heading,shortOrganization(chapter.heading)].some(name=>outlineName(branch.label)===outlineName(name))))
+  .map(chapter=>chapter.id));
  return ({expected,entity,unit})=>{
+  if(unit==='家'&&/^(?:监管)?机构$/u.test(entity)&&chapterIds.size)return chapterIds.size;
   if(unit!=='个')return;
   const name=outlineName(entity);
   const found=verified.filter(group=>{
