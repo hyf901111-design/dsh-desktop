@@ -6,6 +6,7 @@ import {patchBashBackgroundLifecycle} from './bash-background-lifecycle.mjs'
 import {patchMemoryRequestContext} from './memory-request-context.mjs'
 import {patchHumanSteeringYield} from './human-steering-yield.mjs'
 import {patchNoteFeedbackHost} from './notes-reply-actions.mjs'
+import {patchGlmReasoningCapabilities} from './glm-reasoning-capabilities.mjs'
 import {patchOpenAIResponsesToolOptionals} from './openai-responses-tool-optionals.mjs'
 import {readFile,writeFile,readdir,realpath} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
@@ -23,6 +24,7 @@ const entries = [
   ['@deepseek-ai/dsh-goal-round-driver', '/* sherlock:goal-round-identity:rc7:v1 */', true],
   ['@deepseek-ai/dsh-tool-bash', '/* sherlock:bash-background-lifecycle:v1 */', true],
   ['@deepseek-ai/dsh-message-feedback', '/* ework:note-feedback-target:v1 */', true],
+  ['@deepseek-ai/dsh-llm-pi-ai', 'SHERLOCK_GLM_53_REASONING_V2', true],
   ['@deepseek-ai/dsh-llm', 'function toolImagesAsText(message)'],
   ['@deepseek-ai/dsh-tool-fs', 'The LLM boundary handles text-only model projection.', true],
   ['@deepseek-ai/dsh-skill', 'registerCandidatePolicy(policy)']
@@ -60,21 +62,21 @@ async function sources(projectRoot, modulesRoot) {
   return (await Promise.all(entries.map(async ([name, marker, optional, entry = 'lib/index.js']) => {
     const sourceRoot = path.join(projectRoot, 'node_modules', name)
     const targetRoot = path.join(modulesRoot, name)
-    // The host driver is optional in a preset, but a legal nested dependency
+    // The adapter and host driver can be absent from a preset. A nested copy
     // can shadow the patched host fallback even without a top-level link.
-    const goalRoundTargets = name === '@deepseek-ai/dsh-goal-round-driver' ? await skillCopies(modulesRoot, name) : null
-    if (optional && goalRoundTargets?.length === 0) return null
+    const nestedTargets = ['@deepseek-ai/dsh-goal-round-driver','@deepseek-ai/dsh-llm-pi-ai'].includes(name) ? await skillCopies(modulesRoot, name) : null
+    if (optional && nestedTargets?.length === 0) return null
     let targetManifest
-    try { targetManifest = await readFile(path.join(goalRoundTargets?.[0] ?? targetRoot, 'package.json'), 'utf8') }
-    catch (error) { if (optional && goalRoundTargets === null && error.code === 'ENOENT') return null; throw error }
+    try { targetManifest = await readFile(path.join(nestedTargets?.[0] ?? targetRoot, 'package.json'), 'utf8') }
+    catch (error) { if (optional && nestedTargets === null && error.code === 'ENOENT') return null; throw error }
     const [sourceManifest, originalSource] = await Promise.all([
       readFile(path.join(sourceRoot, 'package.json'), 'utf8'),
       readFile(path.join(sourceRoot, entry), 'utf8')
     ])
-    const source = name === '@earendil-works/pi-ai' ? patchOpenAIResponsesToolOptionals(originalSource) : name === '@deepseek-ai/dsh-agent-loop' ? patchHumanSteeringYield(patchMemoryRequestContext(originalSource)) : name === '@deepseek-ai/dsh-goal-round-driver' ? patchGoalRoundGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-goal' ? patchGoalToolGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-plan-mode' ? patchPlanPendingReplay(originalSource) : name === '@deepseek-ai/dsh-tool-bash' ? patchBashBackgroundLifecycle(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
+    const source = name === '@earendil-works/pi-ai' ? patchOpenAIResponsesToolOptionals(originalSource) : name === '@deepseek-ai/dsh-llm-pi-ai' ? patchGlmReasoningCapabilities(originalSource) : name === '@deepseek-ai/dsh-agent-loop' ? patchHumanSteeringYield(patchMemoryRequestContext(originalSource)) : name === '@deepseek-ai/dsh-goal-round-driver' ? patchGoalRoundGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-goal' ? patchGoalToolGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-plan-mode' ? patchPlanPendingReplay(originalSource) : name === '@deepseek-ai/dsh-tool-bash' ? patchBashBackgroundLifecycle(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
     if (JSON.parse(sourceManifest).version !== JSON.parse(targetManifest).version) throw Error(`Plugin runtime version mismatch: ${name}`)
     if (!source.includes(marker)) throw Error(`Required runtime patch missing: ${name}`)
-    const targets=goalRoundTargets??(['@earendil-works/pi-ai','@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop','@deepseek-ai/dsh-tool-bash','@deepseek-ai/dsh-plan-mode','@deepseek-ai/dsh-tool-goal','@deepseek-ai/dsh-goal-round-driver'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot])
+    const targets=nestedTargets??(['@earendil-works/pi-ai','@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop','@deepseek-ai/dsh-tool-bash','@deepseek-ai/dsh-plan-mode','@deepseek-ai/dsh-tool-goal','@deepseek-ai/dsh-goal-round-driver'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot])
     const files=[]
     for(const target of targets){
       if(JSON.parse(await readFile(path.join(target,'package.json'),'utf8')).version!==JSON.parse(sourceManifest).version)throw Error(`Plugin runtime version mismatch: ${name}`)
