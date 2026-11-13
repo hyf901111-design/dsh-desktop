@@ -255,13 +255,26 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
   const units=new Map();
   verifiedUnits.set(id,units);
   const identity=mode==='entries'?'key':prototypeTable.identity;
-  if(!rows.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&(identity===undefined||typeof prototypeFieldValue(row,identity)==='string'))||
-     !fields.every(field=>field.key==='id'||rows.some(row=>prototypeFieldValue(row,field.key)!==undefined)))
-   throw Error('原型视图的编号与字段须来自原数据段。');
+  const aliases = new Map();
+  const valueKeys = new Map();
+  for(const {key,label:fieldLabel} of fields){
+   // Accept the UI's descriptive weekly-return field name when the actual
+   // original market table stores that value under its legacy scalar key.
+   if(prototypeTable.section.endsWith('.prods')&&key==='ret1w'&&
+      /(?:本周|近\s*1\s*周|1\s*周|一周).{0,4}收益/u.test(fieldLabel)&&
+      rows.every(row=>row&&typeof row==='object'&&!Object.hasOwn(row,key)&&(row.ret===null||Number.isFinite(row.ret)))&&
+      rows.some(row=>Number.isFinite(row.ret)))
+    valueKeys.set(key,'ret');
+  }
+  const valueFor=(row,key)=>prototypeFieldValue(row,valueKeys.get(key)??key);
+  const missing=fields.filter(field=>field.key!=='id'&&!rows.some(row=>row&&typeof row==='object'&&valueFor(row,field.key)!==undefined));
+  if(missing.length)throw Error(`原型数据段「${prototypeTable.section}」没有字段 ${missing.map(field=>field.key).join('、')}。请保留其他已核验字段，仅修正这组引用。`);
+  if(!rows.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&(identity===undefined||typeof prototypeFieldValue(row,identity)==='string')))
+   throw Error(`原型数据段「${prototypeTable.section}」的记录身份 ${identity??''} 必须来自原数据。`);
   const nestedFields=fields.flatMap(({key})=>{
    if(key==='id')return [];
    for(const row of rows){
-    const value=prototypeFieldValue(row,key);
+    const value=valueFor(row,key);
     if(!value||typeof value!=='object'||Array.isArray(value))continue;
     const leaves=Object.keys(value).filter(part=>!forbidden.has(part)&&!part.includes('.')).slice(0,4);
     return [leaves.length?`${key} 可用 ${leaves.map(part=>key+'.'+part).join('、')}`:key];
@@ -269,7 +282,6 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
    return [];
   });
   if(nestedFields.length)throw Error(`原型数据段「${prototypeTable.section}」的表格列需引用标量字段。请在同一 section 下改用行内字段路径：${nestedFields.join('；')}。`);
-  const aliases=new Map();
   const used=new Set(fields.map(field=>field.key));
   if(identity!==undefined&&(!used.has(identity)||mode==='entries'))aliases.set(identity,'id');
   const projected=mode==='entries'?fields.filter(field=>field.key!=='key'):fields;
@@ -277,8 +289,9 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
   const columns=projected.map((original,index)=>{
    const verifiedUnit=prototypeMonetaryUnit(sourceIndex,prototypeTable.section,original.key,original.label,presentation);
    const sourceField=withPrototypeUnit(original,verifiedUnit);
-   const unit=sourceField.unit??(/收益$/u.test(original.label??'')&&description.includes(original.label+'（比例）')?'比例':undefined);
-   const field=unit==='比例'&&/收益$/u.test(original.label??'')?{...sourceField,unit,label:original.label+'率'}:sourceField;
+   const unit=sourceField.unit??(valueKeys.has(original.key)?'比例':undefined)??(/收益$/u.test(original.label??'')&&description.includes(original.label+'（比例）')?'比例':undefined);
+   const label=unit==='比例'&&/收益(?!率)/u.test(sourceField.label)?sourceField.label.replace(/收益(?!率)/u,'收益率'):sourceField.label;
+   const field={...sourceField,label,...(unit?{unit}:{})};
    if(datasetKey.test(field.key)){if(verifiedUnit)units.set(field.key,verifiedUnit);return field;}
    let key='sourceField'+(index+1);
    while(used.has(key))key+='-';
@@ -295,7 +308,7 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
   const duplicateIdentity=identity!=='id'&&columns.some(field=>field.key===identity&&field.label===columns.find(field=>field.key==='id')?.label);
   prototypeFields.set(id,{all:columns.map(field=>field.key),visible:columns.filter(field=>!duplicateIdentity||field.key!=='id').map(field=>field.key)});
   const records=rows.map((row,index)=>({id:identity===undefined?`row-${index+1}`:prototypeFieldValue(row,identity),...Object.fromEntries(projected.filter(field=>field.key!=='id').map(field=>[
-   aliases.get(field.key)??field.key,prototypeFieldValue(row,field.key)??null]))}));
+   aliases.get(field.key)??field.key,valueFor(row,field.key)??null]))}));
   const source=`${prototypeTable.document} · ${prototypeTable.section}，原型静态快照`;
   const provenance=mode==='rows'?await siblingPrototypeSources(ctx,exec,path,prototypeTable.section,revision,indexes):undefined;
   const sourceNote=[source,provenance,window?.citation,note===undefined?undefined:'规划备注：'+note.trim()].filter(Boolean).join('\n');

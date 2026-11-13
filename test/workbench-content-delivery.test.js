@@ -443,7 +443,7 @@ it('recovers the two requested organizations from source chapters when a plan on
   expect(map.content).not.toContain('三 核查说明');
   expect(f.adapter.start).not.toHaveBeenCalled();
   const pending=await f.tool.execute({requestId:'pending-word-org',title:'监管速查',dataMode:'source',panels:[
-   {title,type:'mind-map',prompt:'展示机关职能部门2个+机关党委、3个证监局、2个专员办。'}
+   {title,type:'mind-map',prompt:'梳理2家机构的层级关系：甲监管机构与基金业协会。展示机关职能部门2个+机关党委、3个证监局、2个专员办。'}
   ]},f.exec);
   expect(pending).toMatchObject({status:'prepared'});
   expect([...f.runtime.tasks.values()]).toHaveLength(2);
@@ -749,14 +749,14 @@ it('keeps verified DOCX siblings and regenerates only the view containing an out
 
 it('uses original monetary units throughout a prototype board and restores an omitted reconciliation table',async()=>{
  const rows=Array.from({length:30},(_,i)=>({c:'P'+(i+1),n:'产品'+(i+1),cc:i+.25,sv:i,bs:i-.25,d:'0.5%',m:'待核'}));
- const source='<p>金额以百万元计，占比和收益以百分数计。</p><script>const BOARD_TABS=[["market","市场面"],["channel","渠道"]];const DYN={prods:[{c:"A",n:"甲",flow:2,scale:12,chg:3},{c:"B",n:"乙",flow:-1,scale:20,chg:-2}]};const PROV={sources:{底稿:"原表",口径:"三方对账"},recon_rows:'+JSON.stringify(rows)+'};</script>';
+ const source='<p>金额以百万元计，占比和收益以比例计。</p><script>const BOARD_TABS=[["market","市场面"],["channel","渠道"]];const DYN={prods:[{c:"A",n:"甲",flow:2,scale:12,chg:3,ret:-.05},{c:"B",n:"乙",flow:-1,scale:20,chg:-2,ret:null}]};const PROV={sources:{底稿:"原表",口径:"三方对账"},recon_rows:'+JSON.stringify(rows)+'};</script>';
  const f=await setup({request:'📎 文件：`/workspace/指数原型.html`\n依照原型生成指数运营工作台，保留所有业务页。',prototype:source});
  const view=(dataset,fields,label)=>({dataset,sections:[{kind:'records',fields,...(label?{label}:{})}]});
  const input={title:'指数运营工作台',tabs:[{name:'市场面',panelIndexes:[0,1,2]},{name:'渠道',panelIndexes:[3]}],sharedDatasets:[
-  {id:'products',label:'产品明细',prototypeTable:{document:'指数原型.html',section:'DYN.prods',identity:'c'},fields:[{key:'n',label:'名称'},{key:'flow',label:'净流入（亿元）',unit:'亿元'},{key:'scale',label:'规模',unit:'亿元'},{key:'chg',label:'规模变化',unit:'%'}]},
+  {id:'products',label:'产品明细',prototypeTable:{document:'指数原型.html',section:'DYN.prods',identity:'c'},fields:[{key:'n',label:'名称'},{key:'flow',label:'净流入（亿元）',unit:'亿元'},{key:'scale',label:'规模',unit:'亿元'},{key:'chg',label:'规模变化',unit:'%'},{key:'ret1w',label:'1周收益(比例)'}]},
   {id:'totals',label:'市场汇总',aggregate:{dataset:'products',groupBy:[],measures:[{key:'flow',label:'流入合计',op:'sum',field:'flow',unit:'亿元'}]}}
  ],panels:[
-  {type:'view',title:'全市场明细',prompt:'保留原表',view:{...view('products',['n','flow','scale','chg']),type:'table'}},
+  {type:'view',title:'全市场明细',prompt:'保留原表',view:{...view('products',['n','flow','scale','chg','ret1w']),type:'table'}},
   {type:'chart',title:'资金流向',prompt:'保留原表',view:{...view('products',['n','flow']),unit:'亿元',variant:'horizontal'}},
   {type:'kpi',title:'市场概览',prompt:'汇总原表',view:view('totals',['flow'])},
   {type:'markdown',title:'口径',prompt:'保留说明',content:{body:'原型数据为合成快照。'}}
@@ -768,6 +768,8 @@ it('uses original monetary units throughout a prototype board and restores an om
   const [table,chart,kpi,,recon]=saved.panels.map(panel=>panel.artifact);
   expect(table.dataset.fields.filter(field=>['flow','scale','chg'].includes(field.key)).map(field=>[field.label,field.unit])).toEqual([['净流入','百万元'],['规模','百万元'],['规模变化','百万元']]);
   expect(table.dataset.records.map(row=>row.flow)).toEqual([2,-1]);
+  expect(table.dataset.records.map(row=>row.ret1w)).toEqual([-.05,null]);
+  expect(table.dataset.fields.find(field=>field.key==='ret1w')).toMatchObject({label:'1周收益率(比例)',unit:'比例'});
   expect(chart).toMatchObject({unit:'百万元',series:[{values:[2,-1]}]});
   expect(kpi.items[0]).toMatchObject({unit:'百万元',value:1});
   expect(saved.tabs.find(tab=>tab.name==='渠道').panelIndexes).toEqual([3,4]);
