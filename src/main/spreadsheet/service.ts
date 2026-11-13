@@ -1,6 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto'
 import {blankWorkbook,inspectWorkbook,safeId,sheetRange} from '../../shared/spreadsheet/workbook'
-import {SpreadsheetStore,type WorkbookKey,type WorkbookRecord} from './store'
+import {SpreadsheetStore,type WorkbookKey,type WorkbookRecord,type WorkbookPosition} from './store'
 import type {CapabilityHandler} from '../../../packages/dsh-research-task-runtime/client-capabilities'
 
 type Selection={sheetId:string;range:string}
@@ -10,7 +10,7 @@ const index=(key:WorkbookKey)=>JSON.stringify([key.owner,key.sessionId])
 const receipt=(data:unknown,message?:string)=>({status:'succeeded' as const,data,...message?{message}:{}})
 export class SpreadsheetService{
  private admitted=new Map<string,Map<string,Admission>>()
- constructor(readonly store:SpreadsheetStore,private options:{flush(key:WorkbookKey,signal?:AbortSignal):Promise<void>;changed(key:WorkbookKey,value:WorkbookRecord):void}){}
+ constructor(readonly store:SpreadsheetStore,private options:{flush(key:WorkbookKey,signal?:AbortSignal):Promise<void>;changed(key:WorkbookKey,value:WorkbookRecord,position?:WorkbookPosition):void}){}
  admit(key:WorkbookKey,instruction:unknown,bookId:unknown,input:unknown){
   if(typeof instruction!=='string'||!Array.isArray(input)||input.length>24)throw Error('表格消息引用无效。')
   if(instruction.length>8000){
@@ -88,8 +88,10 @@ export class SpreadsheetService{
     bookId=row.workbook?.id??null
     const changed=row.revision!==current.revision
     if(!changed)return receipt({saved:true,changed:false,revision:row.revision},'工作簿内容未变化。')
-    this.options.changed(key,row)
     const affected=args.operations.filter((item:any)=>item.range).map((item:any)=>({sheetId:item.sheetId,range:item.range}))
+    const operations=[...args.operations].reverse()
+    const destination=operations.find(item=>item.op==='addChart')??operations.find(item=>item.op==='write')
+    this.options.changed(key,row,destination?{sheetId:destination.sheetId,range:destination.range}:undefined)
     return receipt({saved:true,changed:true,revision:row.revision,actionId:id,workbook:row.workbook?.name,affected},'工作簿修改已保存。')
    },
    undoSpreadsheet:async(args,_context,signal,requestId)=>{

@@ -1,4 +1,5 @@
 import {spreadsheetRangeCodec,collectSpreadsheetReferences,installSpreadsheetReferences,spreadsheetMessageParts} from './spreadsheet-inline-references.mjs'
+import {SPREADSHEET_QUICK_PROMPTS} from '../../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
 const marker='/* ework:spreadsheet-client:v2 */'
 const restore='/* ework:spreadsheet-client:restore '
 function replace(source,before,after,label){
@@ -27,7 +28,7 @@ function EWorkSpreadsheetView({sessionId}){
 }
 slots.register({name:'conversation.view',id:'spreadsheet',order:10,label:()=>document.documentElement.dataset.odysseyLocale==='en'?'Spreadsheet':'表格',inject:sessionId=>({sessionId})},EWorkSpreadsheetView);
 ctx.effect(()=>{
- const prompts={zh:['请用明确标注的演示数据创建消费行业可比估值表，包含盈利预测和数据来源工作表，用公式计算净利率及估值倍数。','请检查当前工作簿中实际使用的数据区域，整理表头和格式；找出重复记录并告诉我去重依据，再按当前数据去重。','请用明确标注的演示假设创建现金流预测模型，区分输入与公式，并用公式计算各期自由现金流。'],en:['Build a consumer-sector comparables table using clearly labeled sample data. Add earnings forecast and data source worksheets, and use formulas for net margins and valuation multiples.','Inspect the used range in the current workbook and clean up its headers and formatting. Identify duplicate records, explain how you matched them, and remove the duplicates.','Build a cash flow forecast using clearly labeled sample assumptions. Distinguish inputs from formulas and calculate free cash flow for each period.']};
+ const prompts=${JSON.stringify(SPREADSHEET_QUICK_PROMPTS)};
  const fill=event=>{
   const detail=event.detail,choices=prompts[document.documentElement.dataset.odysseyLocale==='en'?'en':'zh'];
   if(!detail||sessions.list.getSnapshot().current!==detail.sessionId||document.body.dataset.eworkSpreadsheetSession!==detail.sessionId||!Object.hasOwn(choices,detail.action))return;

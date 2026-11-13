@@ -4,6 +4,7 @@ import { join, dirname } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { applyOperations, MAX_BOOK_BYTES, validateWorkbook, type Workbook } from '../../shared/spreadsheet/workbook'
 
+export type WorkbookPosition = {sheetId:string;range:string}
 export type WorkbookKey = { owner: string; sessionId: string }
 export type WorkbookRecord = { revision: number; workbook: Workbook | null; lastAction?: string; canRedoAI?:boolean }
 type Stored = WorkbookRecord & { undo?: { actionId: string; revision: number; before: Workbook | null }; redo?:{revision:number;after:Workbook;actionId:string}; replay?: { actionId: string; digest: string }; recent?: string[] }
