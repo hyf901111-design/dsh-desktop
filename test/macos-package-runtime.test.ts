@@ -117,7 +117,10 @@ describe('macOS package runtime verification', () => {
         expect(result.status, result.stderr).toBe(0)
         expect(result.stdout).toContain('apache-arrow: loadable')
         expect(result.stdout).toContain('signature: skipped (unsigned CI package)')
-        expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.39.82 (source parity)')
+        const workbenchVersion = JSON.parse(
+          readFileSync(path.join(projectRoot, 'skills', 'ework-workbench-components', '_meta.json'), 'utf8')
+        ).version
+        expect(result.stdout).toContain(`bundled skill: ework-workbench-components ${workbenchVersion} (source parity)`)
         expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.8 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-finance-analysis v1.7.3 (source parity)')
         expect(result.stdout).toContain('bundled skill: ework-equity-research v1.4.0 (source parity)')

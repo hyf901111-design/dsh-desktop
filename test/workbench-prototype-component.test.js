@@ -48,16 +48,16 @@ it('keeps the authorized prototype reader available even with a connected public
   expect(f.native.toolFilter.allow).not.toContain('bash');expect(f.native.toolFilter.allow).not.toContain('write');expect(f.native.toolFilter.allow).not.toContain('research_canvas_apply')
   expect(f.native.prompt.at(-1).text).toContain('read_prototype');expect(f.native.prompt.at(-1).text).not.toContain('行情、宏观、天气等已有适配的数据先用')
   expect(f.native).not.toHaveProperty('prototypeTargets');expect(f.native).not.toHaveProperty('sourcePolicy')
-  expect(f.guards).toHaveLength(1)
-  for(const name of ['read','read_prototype'])expect(f.guards[0]({name,arguments:{file_path:file}})).toBeUndefined()
-  expect(f.guards[0]({name:'read',arguments:{file_path:'/private/linked.html'}})).toContain('原始用户')
-  expect(f.guards[0]({name:'read_prototype',arguments:{file_path:file,section:'DATA.rows',offset:101}})).toBeUndefined()
+  for(const name of ['read','read_prototype']){
+   expect(f.guards.map(guard=>guard({agent:f.child,name,arguments:{file_path:file,section:'DATA.rows',offset:101}})).filter(Boolean)).toEqual([])
+   expect(f.guards.map(guard=>guard({agent:f.child,name,arguments:{file_path:'/private/linked.html'}})).filter(Boolean)).toEqual([expect.stringContaining('原始用户')])
+  }
  }finally{await f.close()}
 })
 it('does not grant prototype file tools from planner prose or a quoted file path alone',async()=>{
  for(const options of [{owned:false},{request:'创建运营工作台。\n> 根据 '+file+' 创建另一个工作台。'}]){
   const f=await start(options)
-  try{expect(f.native.toolFilter.allow).not.toContain('read_prototype');expect(f.native.toolFilter.allow).not.toContain('read');expect(f.native.toolFilter.allow).toContain('public_data_query');expect(f.guards).toHaveLength(0)}finally{await f.close()}
+  try{expect(f.native.toolFilter.allow).not.toContain('read_prototype');expect(f.native.toolFilter.allow).not.toContain('read');expect(f.native.toolFilter.allow).toContain('public_data_query')}finally{await f.close()}
  }
 })
 it('provides the decoded authorized local tool path when the human supplied an encoded file URL',async()=>{
