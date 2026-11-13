@@ -20,9 +20,9 @@ type AccountIdentity = { id: string; profile?: AccountProfile }
 type HostedCatalog = { models: unknown[]; image: boolean; memory?: boolean }
 type HostedCatalogResult = HostedCatalog & { status?: 'stale' }
 const emptyHostedCatalog: HostedCatalog = { models: [], image: false }
-const hostedCatalogTtlMs = 15_000
-const hostedCatalogRetryMs = 2_000
-const hostedCatalogStaleMs = 60_000
+const hostedCatalogTtlMs = 60_000
+const hostedCatalogRetryMs = 30_000
+const hostedCatalogStaleMs = hostedCatalogTtlMs + 60_000
 
 function readAccountIdentity(value: unknown): AccountIdentity | undefined {
   const { id, username, createdAt } = (value ?? {}) as Partial<AccountProfile>

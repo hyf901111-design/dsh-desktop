@@ -128,6 +128,15 @@ export class AiQuotaLedger {
       FROM users u LEFT JOIN ai_quota_user_settings s ON s.user_id=u.id WHERE u.id=?`, userId).first()
   }
 
+  async eligible(userId) {
+    const person = await this.statement(`SELECT u.disabled, COALESCE(s.paused,0) AS paused, p.first_start
+      FROM users u LEFT JOIN ai_quota_user_settings s ON s.user_id=u.id
+      LEFT JOIN ai_quota_pool p ON p.id=1 WHERE u.id=?`, userId).first()
+    if (!person) throw new AiQuotaError('AI_QUOTA_USER_MISSING', '账号不存在', 404)
+    if (person.first_start === null || this.clock() < person.first_start) throw unavailable()
+    return !person.disabled && !person.paused
+  }
+
   async limits() {
     const pool = await this.statement('SELECT weekly_limit_units, five_hour_limit_units FROM ai_quota_pool WHERE id=1').first()
     if (!pool) throw unavailable()
