@@ -61,3 +61,44 @@ it('reuses the actual research generation process, grid, progress, stopping and 
  await f.act(async()=>publish({...entry,node:{...node,generationStatus:'cancelled',generationCompletedAt:Date.now()}}));expect(section.textContent).toContain('已停止生成');await f.event('click',section.querySelector('[aria-label="重新生成"]'));expect(actions.at(-1)).toMatchObject({action:'generation-retry',taskId:'task-a',nodeId:'smart'})
  acknowledge=false;await f.event('click',section.querySelector('[aria-label="重新生成"]'));expect(section.querySelector('[data-progress-detail]').textContent).toContain('组件任务已变化')
 },15000)
+
+it('opens spreadsheet card actions in the shared menu and adds range navigation to the native footer',async()=>{
+ const financialWidget={request:vi.fn(async()=>({quotes:[],source:'验收来源'}))}
+ const f=await financialClientFixture({financialWidget},{notes:true})
+ const workSheet=f.document.createElement('div')
+ workSheet.dataset.eworkSpreadsheetView='sheet-session'
+ workSheet.innerHTML='<section class="ew-sheet-component-card"><div id="sheet-title"></div><div class="ew-sheet-component-host" id="sheet-card" data-sheet-session="sheet-session" data-sheet-component="indices"></div></section>'
+ f.document.body.append(workSheet)
+ const outlet=f.document.createElement('div')
+ f.document.body.append(outlet)
+ const root=createRoot(outlet),actions=[]
+ const receive=event=>{
+  const value=event.detail
+  actions.push(value.action)
+  f.document.dispatchEvent(new f.win.CustomEvent('sherlock:notes-component-ack',{detail:{...value,ok:true}}))
+ }
+ f.document.addEventListener('sherlock:notes-component-action',receive)
+ close.push(async()=>{
+  f.document.removeEventListener('sherlock:notes-component-action',receive)
+  await f.act(async()=>root.unmount())
+  await f.dispose()
+ })
+ await f.act(async()=>{
+  root.render(React.createElement(f.bundle.EWorkNoteComponentViews,{sessionId:'sheet-session',spreadsheet:true}))
+  f.document.dispatchEvent(new f.win.CustomEvent('sherlock:notes-component-view',{detail:{
+   surface:'spreadsheet',mode:'component',instanceId:'sheet-instance',hostId:'sheet-card',headerId:'sheet-title',
+   sessionId:'sheet-session',dark:true,source:'月度收益!A1:F6',node:{id:'indices',title:'市场指数',containerSpec:financialWidgetDefaults('indices')}
+  }}))
+ })
+ const more=workSheet.querySelector('[data-workbench-more]')
+ const menu=()=>f.document.querySelector('[data-component-menu-surface=spreadsheet]')
+ expect(workSheet.querySelector('.ew-financial-footer .ew-sheet-native-source')?.title).toBe('月度收益!A1:F6')
+ await f.event('click',more)
+ expect(more.getAttribute('aria-expanded')).toBe('true')
+ expect(menu()).toBeTruthy()
+ expect(menu().querySelector('[data-component-menu-action=export]')?.getAttribute('aria-haspopup')).toBe('menu')
+ await f.event('click',menu().querySelector('[data-component-menu-action=source]'))
+ expect(actions).toEqual(['source'])
+ expect(menu()).toBeNull()
+ expect(more.getAttribute('aria-expanded')).toBe('false')
+},15000)

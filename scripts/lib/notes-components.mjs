@@ -17,9 +17,12 @@ export function createNoteComponentViewStore(doc){
  return {snapshot:()=>snapshot,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},dispose:()=>{doc?.removeEventListener('sherlock:notes-component-view',update);doc?.removeEventListener('sherlock:notes-reset',reset);reset()}}
 }
 export function EWorkNoteComponentView({entry,officePreview}){
+ useWorkbenchLocale()
  const rootRef=react.useRef(entry.host.closest('[data-research-node-id]')),[indices,setIndices]=react.useState(false),[error,setError]=react.useState(''),pending=react.useRef(new Map()),sequence=react.useRef(0),generationPending=react.useRef(new Map()),node=entry.node,spec=node.containerSpec||{type:'assistant-result'}
  const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
  const spreadsheet=entry.surface==='spreadsheet'
+ const [sheetMenu,setSheetMenu]=react.useState(null)
+ eworkComponentSurfaceUi.useComponentTheme(rootRef,entry.dark?'dark':'light',spreadsheet)
  const binding=react.useSyncExternalStore(react.useCallback(fn=>spreadsheet?()=>{}:componentDataStatusStore.subscribe(entry.sessionId,node.id,fn,'notes'),[spreadsheet,entry.sessionId,node.id]),react.useCallback(()=>spreadsheet?undefined:componentDataStatusStore.read(entry.sessionId,node.id,'notes'),[spreadsheet,entry.sessionId,node.id]))
  const [refreshBusy,setRefreshBusy]=react.useState(false),[refreshError,setRefreshError]=react.useState('')
  const [dataSettings,setDataSettings]=react.useState(false),[dataRecord,setDataRecord]=react.useState(null),[dataBusy,setDataBusy]=react.useState(false),[dataError,setDataError]=react.useState('')
@@ -51,17 +54,6 @@ export function EWorkNoteComponentView({entry,officePreview}){
   root.__eworkNoteMenu=adapter
   return()=>{if(root.__eworkNoteMenu===adapter)delete root.__eworkNoteMenu}
  },[entry.instanceId,entry.host,node,entry.readOnly])
- react.useEffect(()=>{
-  if(!spreadsheet||entry.mode!=='component')return
-  const exportImage=event=>{
-   const value=event.detail
-   if(value?.sessionId!==entry.sessionId||value.instanceId!==entry.instanceId||!entry.host.isConnected)return
-   const root=rootRef.current
-   void exportWorkbenchContent(root,node,'png').catch(error=>action('error',{message:error.message}))
-  }
-  document.addEventListener('sherlock:spreadsheet-component-export',exportImage)
-  return()=>document.removeEventListener('sherlock:spreadsheet-component-export',exportImage)
- },[spreadsheet,entry.instanceId,entry.mode,entry.sessionId,entry.host,node])
  const interactionBridge=react.useMemo(()=>eworkCreateNoteHtmlInteraction(node.config?.interactionState,async(version,event)=>{
   const result=await new Promise((resolve,reject)=>{
    const requestId=entry.instanceId+':interaction:'+(++sequence.current),timer=setTimeout(()=>{generationPending.current.delete(requestId);reject(Error('笔记交互保存未确认，请重试。'))},6000)
@@ -82,7 +74,8 @@ export function EWorkNoteComponentView({entry,officePreview}){
  react.useEffect(()=>()=>sharedBridge.dispose(),[sharedBridge])
  const refresh=async()=>{if(refreshing||entry.readOnly)return;setRefreshBusy(true);try{await generationAction('refresh');setRefreshError('')}catch(e){setRefreshError(e.message)}finally{setRefreshBusy(false)}}
  if(entry.mode==='generation'&&!node.containerSpec)return react_dom.createPortal(react.createElement(ResearchGenerationProcess,{node,sessionId:entry.sessionId,onCancel:entry.readOnly?undefined:()=>generationAction('generation-stop'),onRetry:entry.readOnly?undefined:()=>{void generationAction('generation-retry').catch(error=>setError(error.message))},phaseOverride:entry.phase?workbenchText(entry.phase):undefined,detailOverride:error||(entry.detail?workbenchText(entry.detail):undefined)}),entry.host,entry.instanceId)
- const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save}):react.createElement(spreadsheet?ResearchContainerContent:ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{
+ const sourceButton=spreadsheet?react.createElement('button',{type:'button',className:'ew-sheet-native-source','aria-label':workbenchText('定位选区'),title:entry.source,onClick:()=>{void generationAction('source').catch(error=>setError(error.message))}},react.createElement(WorkbenchIcon,{name:'branch'})):null
+ const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save,footerExtra:sourceButton}):react.createElement(spreadsheet?ResearchContainerContent:ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{
   // ResearchHtmlArtifact reports outer-card height. Notes stores the content
   // host height, then renders its own chrome around that host.
   const frame=entry.host.querySelector('iframe.rScV5Q_webFrame'),card=entry.host.closest('[data-research-node-id]')
@@ -103,10 +96,16 @@ export function EWorkNoteComponentView({entry,officePreview}){
    await generationAction('refresh')
   }:undefined
   const titleExtra=spec.widget==='indices'?react.createElement('button',{type:'button','aria-label':workbenchText('配置指数'),title:workbenchText('配置指数'),onPointerDown:event=>event.stopPropagation(),onClick:()=>setIndices(true),disabled:entry.readOnly},react.createElement(WorkbenchIcon,{name:'settings'})):null
+  const menuActions=[
+   {id:'source',icon:'branch',label:workbenchText('定位选区'),run:()=>generationAction('source')},
+   {id:'export',icon:'download',label:workbenchText('导出'),children:['svg','png','jpg'].map(format=>({id:format,label:format.toUpperCase(),run:()=>exportWorkbenchContent(rootRef.current,node,format,{body:entry.host})}))},
+   {id:'remove',icon:'remove',label:workbenchText('移除组件'),run:run('remove'),disabled:entry.readOnly}
+  ]
   return react.createElement(react.Fragment,null,
    react_dom.createPortal(react.createElement(WorkbenchChrome,{node,sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra,onReload:reload,
-    surfaceActions:{surface:'notes',onSpecChange:save,buttons},
-    onAsk:run('ask'),onMore:run('more')}),entry.header),
+    surfaceActions:{surface:'notes',onSpecChange:save,buttons,menuOpen:!!sheetMenu},
+    onAsk:run('ask'),onMore:(_node,event)=>{const trigger=event.currentTarget;setSheetMenu(previous=>previous?null:trigger)}}),entry.header),
+   sheetMenu&&react.createElement(eworkComponentSurfaceUi.Menu,{surface:'spreadsheet',trigger:sheetMenu,actions:menuActions,onClose:()=>setSheetMenu(null)}),
    react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},
     error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),
     react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true}},body),
