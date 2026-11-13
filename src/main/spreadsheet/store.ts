@@ -110,7 +110,7 @@ export class SpreadsheetStore {
     if(old.replay.digest!==digest)throw Error('请求标识已用于不同操作。')
     return this.public(old)
   }
-  apply(key:WorkbookKey,actionId:string,input:{revision:number;operations:readonly unknown[];createName?:string;create?:()=>Workbook}){
+  apply(key:WorkbookKey,actionId:string,input:{revision:number;operations:readonly unknown[];createName?:string;create?:()=>Workbook;undo?:boolean}){
     const old=this.read(key),digest=hash(['apply',input.revision,input.createName,input.operations])
     const replay=this.replay(old,actionId,digest);if(replay)return replay
     this.expect(old,input.revision)
@@ -125,7 +125,7 @@ export class SpreadsheetStore {
       const unchanged=isDeepStrictEqual(old.workbook,next)||isDeepStrictEqual(withoutFormulaCache(old.workbook),withoutFormulaCache(next))
       if(unchanged)return this.public(old)
     }
-    return this.commit(key,old,next,{actionId,digest,undo:true})
+    return this.commit(key,old,next,{actionId,digest,undo:input.undo!==false})
   }
   undo(key:WorkbookKey,requestId:string,input:{revision:number;actionId:string}){
     const old=this.read(key),digest=hash(['undo',input]);const replay=this.replay(old,requestId,digest);if(replay)return replay

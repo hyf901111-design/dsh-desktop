@@ -1,14 +1,16 @@
-import {address,parseRange,safeFormula,sheetName,label,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook} from '../../shared/spreadsheet/workbook'
+import {address,parseRange,safeFormula,sheetName,label,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart} from '../../shared/spreadsheet/workbook'
+import {cartesianChartSvg} from '../../../packages/dsh-research-task-runtime/cartesian-chart-artifact.js'
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetEngine} from './engine'
 import {sheetIcon as icon} from './icons'
+import {browserIcons} from '../browser/icons'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
 type Selection={sheetId:string;range:string}
 type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;subscribe(event:'changed'|'flush'|'identity',callback:(value:any)=>void):()=>void}
 type Menu={key:string;anchor:HTMLElement}
-type Item={label:string;action:string;value?:string;detail?:string;icon?:string;disabled?:boolean}
+type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean}
 type Ribbon='文件'|'开始'|'插入'|'数据'|'公式'|'视图'
 const ribbons:Ribbon[]=['文件','开始','插入','数据','公式','视图']
 const text=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
@@ -53,6 +55,9 @@ class SpreadsheetView{
  private count=1
  private findQuery=''
  private findIndex=0
+ private activeChart?:string
+ private chartSource?:Selection
+ private chartMarkup=''
  private headerActions?:HTMLElement
  private readonly root:HTMLElement
  private readonly doc:Document
@@ -60,7 +65,7 @@ class SpreadsheetView{
  constructor(private host:HTMLElement,private sessionId:string,private bridge:Bridge){
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div>'
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div>'
   this.root.addEventListener('click',this.click)
   this.root.addEventListener('input',this.input)
   this.root.addEventListener('keydown',this.key)
@@ -84,6 +89,7 @@ class SpreadsheetView{
  private get foot(){return this.root.querySelector<HTMLElement>('.ew-sheet-foot')!}
  private get pop(){return this.root.querySelector<HTMLElement>('.ew-sheet-menu')!}
  private get modal(){return this.root.querySelector<HTMLElement>('.ew-sheet-dialog')!}
+ private get charts(){return this.root.querySelector<HTMLElement>('.ew-sheet-charts')!}
  private current(){return this.engine?.model.getActiveSheet()}
  private selected(){return this.current()?.getActiveRange()??this.current()?.getRange('A1')}
  private nativeCell(){return this.current()?.getRange(this.active)}
@@ -146,7 +152,7 @@ class SpreadsheetView{
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
    return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
-  }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span></div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
+  }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span>'+(book.charts?.length?button('menu','图表 '+book.charts.length,{glyph:'chart',value:'charts',label:'查看工作簿图表'}):'')+'</div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
   this.refreshFields()
  }
  private toolbar(){
@@ -156,7 +162,7 @@ class SpreadsheetView{
   const end='<div class="ew-sheet-toolbar-spacer"></div><div class="ew-sheet-ribbon-end">'+edit('menu','Σ',{value:'functions',label:'插入函数'})+button('search','',{glyph:'search',label:'查找'})+button('focus','',{glyph:'focus',label:'专注表格'})+'</div>'
   switch(this.ribbon){
    case '文件':return edit('new','新建',{glyph:'plus'})+edit('rename-book','重命名')+end
-   case '插入':return edit('add-sheet','工作表',{glyph:'plus'})+edit('row','插入行')+edit('column','插入列')+edit('merge','合并单元格')+button('chart','图表预览',{glyph:'chart'})+end
+   case '插入':return edit('add-sheet','工作表',{glyph:'plus'})+edit('row','插入行')+edit('column','插入列')+edit('merge','合并单元格')+edit('chart','创建图表',{glyph:'chart'})+end
    case '数据':return edit('filter','筛选',{glyph:'filter'})+menu('sort','排序','sort',!this.editable)+edit('duplicates','去重')+end
    case '公式':return menu('functions','插入函数',undefined,!this.editable)+button('recalc','重新计算')+end
    case '视图':return menu('freeze','冻结','freeze',!this.editable)+edit('gridlines','网格线')+menu('zoom','缩放')+end
@@ -199,6 +205,11 @@ class SpreadsheetView{
   if(this.disposed)return
   this.closeMenu()
   const same=this.record.workbook?.id===record.workbook?.id
+  if(!same)this.clearSelectionPreview()
+  const oldCharts=new Set(this.record.workbook?.charts?.map(chart=>chart.chartId))
+  const added=record.workbook?.charts?.find(chart=>!oldCharts.has(chart.chartId))
+  if(!same)this.activeChart=undefined
+  if(added&&this.record.workbook)this.activeChart=added.chartId
   const previous=same?this.selection:undefined
   let viewport
   // A canvas may still be mounting when a second revision arrives.
@@ -208,6 +219,7 @@ class SpreadsheetView{
   this.record=record;this.dirty=false;this.calculationDirty=false;this.formulaDirty=false
   this.selection=undefined;this.summary='';this.active='A1';this.formula='';this.zoom=100;this.count=1
   this.paint()
+  this.renderChart()
   if(!record.workbook)return
   try{
    const {createSheetEngine}=await import('./engine')
@@ -223,7 +235,7 @@ class SpreadsheetView{
      try{sheet.scrollToCell(scroll.sheetViewStartRow,scroll.sheetViewStartColumn)}catch{}
     })
    }
-   this.paint();this.readSelection()
+   this.paint();this.readSelection();this.renderChart()
   }catch(error){this.say('表格引擎无法启动：'+errorMessage(error),true)}
  }
  private readSelection(){
@@ -250,12 +262,15 @@ class SpreadsheetView{
   this.refreshFields()
  }
  private selectionSignature(){return this.selection?this.selection.sheetId+'!'+this.selection.range:''}
+ private clearSelectionPreview(){
+  this.win.dispatchEvent(new CustomEvent('sherlock:spreadsheet-range-clear',{detail:{sessionId:this.sessionId}}))
+ }
  private referenceSelection(explicit=false){
   const selection=this.selection,workbook=this.record.workbook,sheet=this.current()
   if(!selection||!workbook||!sheet||sheet.getSheetId()!==selection.sheetId||!this.host.isConnected)return
   try{
    const bounds=parseRange(selection.range)
-   if(!explicit&&bounds.r0===bounds.r1&&bounds.c0===bounds.c1)return
+   if(!explicit&&bounds.r0===bounds.r1&&bounds.c0===bounds.c1){this.clearSelectionPreview();return}
    if(bounds.r1>=sheet.getMaxRows()||bounds.c1>=sheet.getMaxColumns())return
   }catch(error){if(explicit)this.say(errorMessage(error),true);return}
   this.win.dispatchEvent(new CustomEvent('sherlock:spreadsheet-range',{detail:{sessionId:this.sessionId,bookId:workbook.id,sheetName:sheet.getSheetName(),...selection,explicit}}))
@@ -296,7 +311,7 @@ class SpreadsheetView{
   this.win.clearTimeout(this.timer)
   this.timer=this.win.setTimeout(()=>void this.flush(false).catch(()=>{}),140)
   if(this.updateTimer)return
-  this.updateTimer=this.win.setTimeout(()=>{this.updateTimer=0;this.readSelection()},32)
+  this.updateTimer=this.win.setTimeout(()=>{this.updateTimer=0;this.readSelection();this.renderChart()},32)
  }
  async flush(commit=true,settleFormulas=false){
   const enqueue=async()=>{
@@ -381,19 +396,21 @@ class SpreadsheetView{
   const sheet=this.current()
   switch(key){
    case 'export':return [
-    {label:'Excel 工作簿 (.xlsx)',detail:'全部 '+this.record.workbook!.sheetOrder.length+' 个工作表 · 保留公式与常用格式',action:'export-format',value:'xlsx',icon:'grid'},
-    {label:'CSV 文件 (.csv)',detail:'仅当前工作表 · 不包含公式与格式',action:'export-format',value:'csv',icon:'grid'}
+    {label:'Excel 工作簿 (.xlsx)',detail:'全部 '+this.record.workbook!.sheetOrder.length+' 个工作表 · 保留公式与常用格式',action:'export-format',value:'xlsx',browserIcon:'file'},
+    {label:'CSV 文件 (.csv)',detail:'仅当前工作表 · 不包含公式与格式',action:'export-format',value:'csv',browserIcon:'file'}
    ]
    case 'book':return [
-    {label:'导入 Excel / CSV…',action:'import',icon:'upload',disabled:!this.editable||this.busy},
-    {label:'导出工作簿',action:'menu',value:'export',icon:'download',disabled:this.busy},
-    {label:'重命名工作簿',action:'rename-book',disabled:!this.editable},{label:'新建空白工作簿',action:'new',disabled:!this.editable},
-    ...this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',disabled:!this.editable}]:[],
-    ...this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',disabled:!this.editable}]:[],
-    ...this.incoming?[{label:'载入最新版本',action:'load-incoming'}]:[],
-    {label:'打开最近工作簿',action:'menu',value:'workbooks'}
+    {label:'导入 Excel / CSV…',action:'import',browserIcon:'external',disabled:!this.editable||this.busy},
+    {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:this.busy},
+    {label:'新建空白工作簿',action:'new',browserIcon:'plus',divider:true,disabled:!this.editable},
+    {label:'重命名工作簿',action:'rename-book',browserIcon:'file',disabled:!this.editable},
+    {label:'打开最近工作簿',action:'menu',value:'workbooks',browserIcon:'history'},
+    ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const}]:[]),
+    ...(this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',browserIcon:'forward' as const,divider:true,disabled:!this.editable}]:[]),
+    ...(this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',browserIcon:'back' as const,divider:!this.record.canRedoAI,disabled:!this.editable}]:[])
    ]
-   case 'workbooks':return [{label:'重命名工作簿',action:'rename-book',disabled:!this.editable},...this.recent.map(b=>({label:b.name,action:'activate',value:b.id,icon:'grid',disabled:!this.editable||this.record.workbook?.id===b.id}))]
+   case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart'}))
+   case 'workbooks':return this.recent.map(b=>({label:b.name,action:'activate',value:b.id,browserIcon:'file',disabled:!this.editable||this.record.workbook?.id===b.id}))
    case 'sheets':return this.record.workbook!.sheetOrder.map(id=>({label:this.record.workbook!.sheets[id]!.name,action:'sheet',value:id,icon:'grid'}))
    case 'sheet':return [{label:'重命名工作表',action:'rename-sheet',disabled:!this.editable},{label:'删除工作表…',action:'delete-sheet',disabled:!this.editable||this.record.workbook!.sheetOrder.length===1}]
    case 'font':return [{label:'默认字体',action:'font',value:'Arial'},...items(['Arial','Menlo','Georgia','PingFang SC','Microsoft YaHei'],'font')]
@@ -420,7 +437,10 @@ class SpreadsheetView{
   this.pop.dataset.menu=key
   this.pop.setAttribute('role','menu')
   this.pop.setAttribute('aria-label',key==='export'?'导出工作簿':anchor.getAttribute('aria-label')||anchor.textContent||'表格菜单')
-  this.pop.innerHTML=(key==='export'?'<div class="ew-sheet-menu-title">导出工作簿</div>':'')+options.map(item=>'<button role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+(item.icon?icon(item.icon):'')+'<span>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>').join('')+(key==='export'?'<p>导出到本机后，可直接在 Excel 中继续编辑。</p>':'')
+  this.pop.innerHTML=(key==='export'?'<div class="ew-sheet-menu-title">导出工作簿</div>':'')+options.map(item=>{
+   const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
+   return (item.divider?'<div role="separator"></div>':'')+'<button role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+glyph+'<span>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>'
+  }).join('')+(key==='export'?'<p>导出到本机后，可直接在 Excel 中继续编辑。</p>':'')
   this.place()
   if(this.headerActions?.contains(anchor))this.pop.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({preventScroll:true})
  }
@@ -446,16 +466,45 @@ class SpreadsheetView{
  }
  private closeDialog(){this.modal.hidden=true;this.modal.replaceChildren()}
  private chart(){
-  const range=this.selected()
-  if(!range)return
-  if((range.getLastRow()-range.getRow()+1)*(range.getLastColumn()-range.getColumn()+1)>500)throw Error('请选中不超过 500 格的图表数据。')
-  const values=range.getValues().flatMap((row,i)=>{
-   const number=[...row].reverse().find(v=>typeof v==='number')
-   return typeof number==='number'?[{label:typeof row[0]==='string'?row[0]:String(range.getRow()+i+1),number}]:[]
-  }).slice(0,24)
-  if(!values.length)throw Error('请选中包含数值的区域。')
-  const scale=Math.max(...values.map(v=>Math.abs(v.number)),1)
-  this.dialog('选区图表预览','<p>数据来源：'+text(this.current()!.getSheetName()+'!'+range.getA1Notation())+'</p><div class="ew-sheet-chart">'+values.map(v=>'<div><span>'+text(v.label)+'</span><i style="width:'+Math.max(1,Math.round(Math.abs(v.number)/scale*100))+'%;--bar:'+(v.number<0?'#df7376':'#82aaff')+'"></i><strong>'+text(v.number)+'</strong></div>').join('')+'</div>','close-dialog','完成')
+  const range=this.selected(),sheet=this.current()
+  if(!range||!sheet)return
+  if(range.getLastColumn()-range.getColumn()<1||range.getLastColumn()-range.getColumn()>6||range.getLastRow()-range.getRow()>60)
+   throw Error('请框选分类列和 1–6 个数值系列，最多 60 行数据。')
+  this.chartSource={sheetId:sheet.getSheetId(),range:range.getA1Notation()}
+  const values=range.getRawValues()
+  const hasHeader=values[0]?.slice(1).every(value=>typeof value==='string'&&value!=='')&&values.slice(1).some(row=>row.slice(1).some(value=>typeof value==='number'))
+  this.dialog('创建图表','<p>数据来源 '+text(sheet.getSheetName()+'!'+range.getA1Notation())+'</p><label>名称<input aria-label="图表名称" value="选区图表" maxlength="120"></label><label>类型<select aria-label="图表类型"><option value="bar">柱状图</option><option value="line">折线图</option></select></label><label class="ew-sheet-chart-header"><input type="checkbox"'+(hasHeader?' checked':'')+'> 首行是表头</label>','create-chart','创建')
+ }
+ private chartData(chart:WorkbookChart){
+  const sheet=this.engine?.model.getSheetBySheetId(chart.sheetId)
+  const range=sheet?.getRange(chart.range),rows=range?.getRawValues()
+  if(!sheet||!range||!rows?.length)return
+  const headers=chart.headers?rows[0]:undefined
+  const displayed=range.getDisplayValues()
+  const values=rows.flatMap((row,index)=>index<(chart.headers?1:0)||!row.some(value=>value!==null&&value!==undefined&&value!=='')?[]:[{raw:row,display:displayed[index]??[]}])
+  if(!values.length||values.some(({raw})=>raw[0]===null||raw[0]===undefined||raw[0]===''||raw.slice(1).some(value=>typeof value!=='number'||!Number.isFinite(value))))return
+  const series=values[0]!.raw.slice(1).map((_,i)=>({
+   name:String(headers?.[i+1]||address(0,range.getColumn()+i+1).slice(0,-1)+' 列'),
+   values:values.map(row=>Number(row.raw[i+1]))
+  }))
+  return {variant:chart.kind,source:sheet.getSheetName()+'!'+chart.range,labels:values.map(row=>row.display[0]||String(row.raw[0])),series,
+   displayedValues:values.map(row=>row.raw.slice(1).map((value,i)=>row.display[i+1]||String(value)))}
+ }
+ private renderChart(){
+  const chart=this.record.workbook?.charts?.find(item=>item.chartId===this.activeChart)
+  this.charts.hidden=!chart
+  if(!chart){this.chartMarkup='';this.charts.replaceChildren();return}
+  const data=this.chartData(chart)
+  const geometry=data&&cartesianChartSvg(data,540)
+  const markup='<header><strong>'+text(chart.title)+'</strong>'+button('close-chart','',{glyph:'close',label:'关闭图表'})+'</header><p>'+text(data?.source??chart.range)+'</p>'+
+   (data&&geometry?'<svg role="img" aria-label="'+text(chart.title)+'" viewBox="0 0 '+geometry.width+' '+geometry.height+'">'+geometry.markup+'</svg><ul>'+data.series.map((series,i)=>'<li style="--chart-key:var(--sherlock-chart-'+(i+1)+')">'+text(series.name)+'</li>').join('')+'</ul><details><summary>图表数据</summary><table><thead><tr><th>分类</th>'+data.series.map(series=>'<th>'+text(series.name)+'</th>').join('')+'</tr></thead><tbody>'+data.labels.map((label,i)=>'<tr><th>'+text(label)+'</th>'+data.displayedValues[i]!.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table></details>':'<p role="status">选区需要分类和完整的数值系列。请检查空格或公式错误。</p>')+
+   (this.editable?'<footer>'+button('remove-chart','删除图表',{value:chart.chartId})+'</footer>':'')
+  if(this.chartMarkup===markup)return
+  const expanded=this.charts.querySelector('details')?.open??false
+  this.chartMarkup=markup
+  this.charts.innerHTML=markup
+  const details=this.charts.querySelector('details')
+  if(details)details.open=expanded
  }
  private search(){
   const sheet=this.current();if(!sheet)return
@@ -486,7 +535,7 @@ class SpreadsheetView{
    case 'undo-ai':if(this.record.lastAction)await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改');return
    case 'load-incoming':if(this.incoming){this.dialog('载入最新版本','<p>当前还未保存的编辑会丢失。</p>','accept-incoming','载入');}return
    case 'accept-incoming':if(this.incoming){const row=this.incoming;this.incoming=undefined;this.closeDialog();await this.install(row);this.say('已载入最新版本')}return
-   case 'sheet':if(this.formulaDirty)this.commitFormula();model?.setActiveSheet(value);this.readSelection();this.paint();return
+   case 'sheet':if(this.formulaDirty)this.commitFormula();this.clearSelectionPreview();model?.setActiveSheet(value);this.readSelection();this.paint();return
    case 'jump':this.jump(value);return
    case 'address-dialog':this.dialog('前往单元格','<input aria-label="地址" value="'+text(this.active)+'" placeholder="例如 A1 或 A1:D8">','address-apply','前往');return
    case 'address-apply':this.jump(this.modal.querySelector('input')?.value??'',true);this.closeDialog();return
@@ -494,6 +543,16 @@ class SpreadsheetView{
    case 'search':this.dialog('查找','<input aria-label="搜索内容" placeholder="在当前工作表中查找"><p class="ew-sheet-find-result" role="status"></p>','find-next','查找下一个');return
    case 'find-next':this.search();return
    case 'chart':this.chart();return
+   case 'create-chart':{
+    const name=this.modal.querySelector<HTMLInputElement>('[aria-label="图表名称"]'),kind=this.modal.querySelector<HTMLSelectElement>('select')
+    const headers=this.modal.querySelector<HTMLInputElement>('[type=checkbox]')?.checked??false
+    if(!this.chartSource||!name||!kind)return
+    const title=label(name.value)
+    this.closeDialog();await this.run('add-chart',{...this.chartSource,title,kind:kind.value,headers},'图表已创建');return
+   }
+   case 'show-chart':this.activeChart=value;this.renderChart();return
+   case 'close-chart':this.activeChart=undefined;this.renderChart();return
+   case 'remove-chart':await this.run('remove-chart',{chartId:value},'图表已删除');return
    case 'close-dialog':this.closeDialog();return
    case 'focus':this.doc.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')?.click();return
    case 'zoom-minus':case 'zoom-plus':case 'zoom-reset':case 'zoom':{
@@ -639,6 +698,7 @@ class SpreadsheetView{
  belongs(value:{owner?:string;sessionId?:string}){return !this.disposed&&this.ready&&value.owner===this.owner&&value.sessionId===this.sessionId}
  dispose(){
   if(this.disposed)return
+  this.clearSelectionPreview()
   this.disposed=true;this.win.clearTimeout(this.timer);this.win.clearTimeout(this.updateTimer)
   this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.win.removeEventListener('resize',this.place)
   this.win.removeEventListener('pointerup',this.selectionEnd,true);this.win.removeEventListener('pointercancel',this.selectionCancel,true)

@@ -21,18 +21,28 @@ export function collectSpreadsheetReferences(state){
 export function installSpreadsheetReferences({win,doc,sessions,getInput}){
  const selector='[data-research-composer-host] textarea[data-odyssey-file-reference-session]'
  const pendingCarets=new WeakMap()
- const onRange=event=>{
-  const d=event.detail
+ let pending
+ const clear=()=>{
+  if(!pending)return
+  const preview=pending
+  pending=undefined
+  preview.node.remove()
+  preview.unsubscribe?.()
+ }
+ const active=d=>{
   if(!d||sessions.list.getSnapshot().current!==d.sessionId||doc.body.dataset.eworkSpreadsheetSession!==d.sessionId)return
   const input=[...doc.querySelectorAll(selector)].find(el=>el.dataset.odysseyFileReferenceSession===d.sessionId&&
    !el.disabled&&!el.readOnly&&el.getClientRects().length&&!el.closest('[hidden],[aria-hidden="true"],[data-odyssey-subagent-panel]'))
   const shell=getInput(d.sessionId),before=shell?.snapshot
   if(!input||!before||shell.disposed||before.phase!=='plain'||before.researchContextPreparing)return
+  return {input,shell,before}
+ }
+ const insert=(d,{input,shell,before})=>{
   const ranges=before.occurrences.filter(o=>o.source==='spreadsheet-range')
   if(ranges.length>=24){shell.notify('error','一条消息最多引用 24 个表格选区。');return}
   if(!d.explicit&&ranges.some(o=>{try{const r=JSON.parse(o.ref);return r.bookId===d.bookId&&r.sheetId===d.sheetId&&r.range===d.range}catch{return false}}))return
-  const pending=pendingCarets.get(input)
-  const offset=pending?.revision===before.draftRev?pending.offset:
+  const caretHint=pendingCarets.get(input)
+  const offset=caretHint?.revision===before.draftRev?caretHint.offset:
    input.value.length===before.draft.length?Math.min(input.selectionEnd,before.draft.length):before.draft.length
   const {sessionId,bookId,sheetId,sheetName,range}=d
   const id=win.crypto.randomUUID().replaceAll('-','').slice(0,12)
@@ -46,8 +56,52 @@ export function installSpreadsheetReferences({win,doc,sessions,getInput}){
    pendingCarets.delete(input)
   })
  }
+ const onRange=event=>{
+  const d=event.detail,state=active(d)
+  if(!state)return
+  clear()
+  if(d.explicit){insert(d,state);return}
+  if(state.before.occurrences.some(o=>{try{if(o.source!=='spreadsheet-range')return false;const r=JSON.parse(o.ref);return r.bookId===d.bookId&&r.sheetId===d.sheetId&&r.range===d.range}catch{return false}}))return
+  const backdrop=state.input.parentElement?.querySelector('[data-input-backdrop]')
+  if(!backdrop)return
+  const node=doc.createElement('span')
+  node.className='ew-sheet-pending-reference'
+  node.dataset.provisional='true'
+  node.dataset.referenceSource='spreadsheet-range'
+  node.textContent=d.sheetName+'!'+d.range
+  backdrop.append(node)
+  const preview={detail:d,input:state.input,node,unsubscribe:undefined}
+  pending=preview
+  preview.unsubscribe=state.shell.state?.subscribe(()=>{if(state.shell.snapshot.draftRev!==state.before.draftRev||state.shell.snapshot.phase!=='plain')clear()})
+ }
+ const confirm=event=>{
+  const preview=pending
+  if(!preview||!event.isTrusted||!preview.input.parentElement?.contains(event.target))return
+  win.queueMicrotask(()=>{
+   if(pending!==preview||doc.activeElement!==preview.input)return
+   const state=active(preview.detail)
+   clear()
+   if(state)insert(preview.detail,state)
+  })
+ }
+ const onClear=event=>{if(pending?.detail.sessionId===event.detail?.sessionId)clear()}
+ const cancel=event=>{if(event.key==='Escape')clear()}
+ const unsubscribe=sessions.list.subscribe(()=>{if(pending&&sessions.list.getSnapshot().current!==pending.detail.sessionId)clear()})
+ const observer=new win.MutationObserver(()=>{
+  if(pending&&!active(pending.detail))clear()
+ })
+ observer.observe(doc.body,{attributes:true,attributeFilter:['data-ework-spreadsheet-session','data-ework-spreadsheet-mode','data-odyssey-global-right-open']})
  win.addEventListener('sherlock:spreadsheet-range',onRange)
- return()=>win.removeEventListener('sherlock:spreadsheet-range',onRange)
+ win.addEventListener('sherlock:spreadsheet-range-clear',onClear)
+ doc.addEventListener('click',confirm,true)
+ doc.addEventListener('keydown',cancel,true)
+ return()=>{
+  clear();unsubscribe();observer.disconnect()
+  win.removeEventListener('sherlock:spreadsheet-range',onRange)
+  win.removeEventListener('sherlock:spreadsheet-range-clear',onClear)
+  doc.removeEventListener('click',confirm,true)
+  doc.removeEventListener('keydown',cancel,true)
+ }
 }
 
 export function spreadsheetMessageParts(text){

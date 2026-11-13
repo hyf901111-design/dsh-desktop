@@ -25,7 +25,7 @@ const sheetRevision={type:'integer',minimum:0}
 const sheetColor={type:'string',pattern:'^#[0-9a-fA-F]{6}$'}
 const sheetFormat={...object({bold:{type:'boolean'},italic:{type:'boolean'},color:sheetColor,background:sheetColor,numberFormat:{type:'string',minLength:1,maxLength:128},fontFamily:{type:'string',minLength:1,maxLength:80},fontSize:{type:'integer',minimum:8,maximum:72},align:{enum:['left','center','right']},border:{type:'boolean'}}),minProperties:1}
 const sheetScalar={anyOf:[{type:'string',maxLength:32767},{type:'number'},{type:'boolean'},{type:'null'}]}
-const sheetCell={oneOf:[object({value:sheetScalar},['value']),object({formula:{type:'string',minLength:2,maxLength:8192}},['formula'])]}
+const sheetCell={oneOf:[sheetScalar,object({value:sheetScalar},['value']),object({formula:{type:'string',minLength:2,maxLength:8192}},['formula'])]}
 const sheetTarget={sheetId,range:sheetRange}
 const referenceIndex={type:'integer',minimum:1,maximum:24}
 const sheetOperations={type:'array',maxItems:64,items:{oneOf:[
@@ -35,11 +35,13 @@ const sheetOperations={type:'array',maxItems:64,items:{oneOf:[
  object({op:{const:'setColumnWidth'},...sheetTarget,width:{type:'integer',minimum:24,maximum:640}},['op','sheetId','range','width']),
  object({op:{const:'addSheet'},sheetId,name:sheetName},['op','sheetId','name']),
  object({op:{const:'renameSheet'},sheetId,name:sheetName},['op','sheetId','name']),
- object({op:{const:'renameWorkbook'},name:sheetName},['op','name'])
+ object({op:{const:'renameWorkbook'},name:sheetName},['op','name']),
+ object({op:{const:'addChart'},...sheetTarget,chartId:sheetId,title:sheetName,kind:{enum:['bar','line']},headers:{type:'boolean'}},['op','sheetId','range','chartId','title','kind']),
+ object({op:{const:'removeChart'},chartId:sheetId},['op','chartId'])
 ]}}
 const definitions=[
  {id:'spreadsheet.inspect',description:'读取当前客户端表格。scope=workbook 返回版本、真实工作表标识、已用行列及本轮按文字位置排序的 references（含对应内联 marker）；scope=reference 与从 1 起的 referenceIndex 读取指定引用；scope=selected 仅在本轮只有一个引用时可用；scope=range 使用真实 sheetId 和 A1 区域。每次最多 500 格。返回值、公式和格式，修改前先读；空工作区返回新工作簿首张工作表标识。',parameters:{...object({scope:{enum:['workbook','selected','range','reference']},...sheetTarget,referenceIndex},['scope']),oneOf:[object({scope:{enum:['workbook','selected']}},['scope']),object({scope:{const:'range'},...sheetTarget},['scope','sheetId','range']),object({scope:{const:'reference'},referenceIndex},['scope','referenceIndex'])]},handler:'inspectSpreadsheet',sheet:true},
- {id:'spreadsheet.apply',description:'在当前工作簿原子应用一个有序操作批次，必须用实际读取的最新 revision。write 的 cells 是与 A1 区域同形的二维数组，每格只用 {value:数字/文字/布尔/null} 或 {formula:"=..."}，不以文本模拟公式；format 只改指定格式（金融指标用可读的金额、倍数或百分比格式）；setColumnWidth 用一行地址如 B1:E1 和像素宽度调整整列，避免表头截断。空工作区才能用 createName 创建，其默认 sheetId 为 sheet-1。addSheet 由你提供新的合法 sheetId 供本批后续操作引用。不要覆盖未要求修改的区域；演示数据须明确标示。仅在 saved=true 后确认写入。',parameters:object({revision:sheetRevision,createName:sheetName,operations:sheetOperations},['revision','operations']),handler:'applySpreadsheet',sheet:true,write:true,maxCallBytes:1500000},
+ {id:'spreadsheet.apply',description:'在当前工作簿原子执行操作，revision 必填，使用最新读取值。空工作簿可用 arguments={revision:0,createName:"估值",operations:[]} 先创建，再分批写入；首张 sheetId 为 sheet-1。write 用与 A1 区域同形的二维数组，例如 [["公司","倍数"],["甲",{formula:"=180/30"}]]，标量含 null 可直接写，公式必须用 {formula:"=..."}。format 只改指定格式；setColumnWidth 用一行地址和像素宽度。addChart 绑定真实工作表中连续区域，首列为分类，其余列为数值系列；headers 默认 true，kind 为 bar 或 line，chartId 由调用者给定。列不相邻时可用引用原表的公式创建连续辅助数据区后绘图。不要覆盖未要求修改的数据。仅在 saved=true 后确认保存。',parameters:object({revision:sheetRevision,createName:sheetName,operations:sheetOperations},['revision','operations']),handler:'applySpreadsheet',sheet:true,write:true,maxCallBytes:1500000},
  {id:'spreadsheet.undo',description:'撤销当前工作簿最近一次尚可撤销的 AI 修改，必须使用实际保存回执的 actionId 及当前 revision；期间有人工修改则拒绝。',parameters:object({revision:sheetRevision,actionId:nativeId},['revision','actionId']),handler:'undoSpreadsheet',sheet:true,write:true},
  {id:'notes.blocks.read',description:'读取当前可见笔记授权范围内的原生段落、表格、列表和代码块，返回真实块ID、父级、顺序、revision，以及本范围内当前有效AI评论的具体问题、原文锚点与已有依据。scope=note读取当前笔记授权范围，scope=selected只读取当前选区；ids只能来自当前授权范围。修改或撤销前先读取，不猜测其他笔记目标。',parameters:object({scope:{type:'string',enum:['note','selected']},ids:nativeIds},['scope']),handler:'readNoteBlocks',notes:true,maxCallBytes:1500000},
  {id:'notes.blocks.apply',description:'使用notes.blocks.read的真实revision，在当前笔记提交原生insert/update/move/remove批次。宿主按本次入口准备待确认预览或实际应用；pendingPreview表示尚未写入或保存。普通正文、表格、列表和代码优先使用此能力；研究组件、附件及任意HTML不通过此能力创建。insert须指定真实anchor与before/after；consumeEmpty仅消费仍为空的同一锚点。update只更新指定块，move保留内容并移动真实blockIds，remove仅删除明确目标。失效范围、锚点、Yjs身份或修订必须重新读取，不改成文末。仅按宿主真实applied/saved回执说明结果。',parameters:object({revision:nativeId,operations:nativeOperations},['revision','operations']),handler:'applyNoteBlocks',notes:true,write:true,maxCallBytes:1500000},

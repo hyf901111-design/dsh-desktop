@@ -58,6 +58,10 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
    case 'admit':service.admit(key,input.instruction,input.bookId,input.references);return true
    case 'refresh-calculations':return store.refreshCalculations(key,input.revision,input.workbook as Workbook)
    case 'save':return store.save(key,input.revision,input.workbook as Workbook)
+   case 'add-chart':{
+    return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{op:'addChart',chartId:randomUUID(),sheetId:input.sheetId,range:input.range,title:input.title,kind:input.kind,headers:input.headers}]})
+   }
+   case 'remove-chart':return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{op:'removeChart',chartId:input.chartId}]})
    case 'create':return store.create(key,input.revision,blankWorkbook(randomUUID(),input.name))
    case 'activate':if(safeId(input.id))return store.activate(key,input.revision,input.id);break
    case 'redo':return store.redo(key,input.revision)

@@ -18,9 +18,10 @@ export type Sheet = {
   freeze?: {xSplit:number;ySplit:number;startRow:number;startColumn:number}
   showGridlines?: number; zoomRatio?: number; [key: string]: unknown
 }
-export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; [key:string]:unknown }
+export type WorkbookChart = {chartId:string;sheetId:string;range:string;title:string;kind:'bar'|'line';headers:boolean}
+export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; [key:string]:unknown }
 export type Range = { r0:number; c0:number; r1:number; c1:number }
-export type InputCell = {value:Scalar} | {formula:string}
+export type InputCell = Scalar | {value:Scalar} | {formula:string}
 export type Operation =
   | {op:'write';sheetId:string;range:string;cells:InputCell[][]}
   | {op:'clear';sheetId:string;range:string}
@@ -29,6 +30,8 @@ export type Operation =
   | {op:'addSheet';sheetId:string;name:string}
   | {op:'renameWorkbook';name:string}
   | {op:'renameSheet';sheetId:string;name:string}
+  | ({op:'addChart'} & Omit<WorkbookChart,'headers'> & {headers?:boolean})
+  | {op:'removeChart';chartId:string}
 
 export function safeId(value:unknown): value is string {
   return typeof value==='string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value) && !['constructor','prototype'].includes(value)
@@ -84,6 +87,16 @@ export function sheetRange(workbook:Workbook,sheetId:string,range:string) {
   if(bounds.r1>=sheet.rowCount||bounds.c1>=sheet.columnCount)throw Error('区域超出当前工作表。')
   return {sheet,bounds}
 }
+function validatedChart(book:Workbook,value:unknown):WorkbookChart {
+  keys(value,['chartId','sheetId','range','title','kind','headers'])
+  const {chartId,sheetId,range,title,kind,headers=true}=value as Record<string,any>
+  if(!safeId(chartId)||!['bar','line'].includes(kind)||typeof headers!=='boolean')throw Error('图表设置无效。')
+  const {bounds}=sheetRange(book,sheetId,range)
+  const points=bounds.r1-bounds.r0+(headers?0:1)
+  if(points<1||points>60||
+    bounds.c1-bounds.c0<1||bounds.c1-bounds.c0>6)throw Error('请选择包含分类列和 1–6 个数值系列的区域，最多 60 行数据。')
+  return {chartId,sheetId,range:rangeAddress(bounds),title:label(title),kind,headers}
+}
 export function styleOf(book:Workbook,cell?:Cell) {
   return typeof cell?.s==='string'?own(book.styles,cell.s)??{}:object(cell?.s)?cell.s:{}
 }
@@ -129,6 +142,11 @@ export function validateWorkbook(value:unknown): asserts value is Workbook {
       }
     }
   }
+  if(value.charts!==undefined){
+    if(!Array.isArray(value.charts)||value.charts.length>24)throw Error('每个工作簿最多保存 24 张图表。')
+    const charts=value.charts.map(chart=>validatedChart(value as Workbook,chart))
+    if(new Set(charts.map(chart=>chart.chartId)).size!==charts.length)throw Error('图表标识已存在。')
+  }
   if(new TextEncoder().encode(JSON.stringify(value)).byteLength>MAX_BOOK_BYTES)throw Error('工作簿超过本地编辑容量。')
 }
 export function inspectWorkbook(book:Workbook,sheetId:string,range:string) {
@@ -154,9 +172,33 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
   for(const o of operations){
     if(!object(o))throw Error('操作无效。')
     if(o.op==='renameWorkbook'){keys(o,['op','name']);book.name=label(o.name);continue}
+    if(o.op==='addChart'){
+      const {op,...input}=o
+      const chart=validatedChart(book,input)
+      const {sheet,bounds}=sheetRange(book,chart.sheetId,chart.range)
+      let dataRows=0
+      for(let row=bounds.r0+(chart.headers?1:0);row<=bounds.r1;row++){
+        const cells=Array.from({length:bounds.c1-bounds.c0+1},(_,i)=>sheet.cellData[row]?.[bounds.c0+i])
+        if(cells.every(cell=>!cell?.f&&(cell?.v==null||cell.v==='')))continue
+        if((!cells[0]?.f&&(cells[0]?.v==null||cells[0].v===''))||cells.slice(1).some(cell=>!cell?.f&&(typeof cell?.v!=='number'||cell.t===3)))
+          throw Error('图表源区域需要分类和完整的数值系列，请检查空值和文本。')
+        dataRows++
+      }
+      if(!dataRows)throw Error('图表源区域没有数据。')
+      const charts=book.charts??=[]
+      if(charts.some(item=>item.chartId===chart.chartId)||charts.length>=24)throw Error('图表标识重复或图表数量已达上限。')
+      charts.push(chart);continue
+    }
+    if(o.op==='removeChart'){
+      keys(o,['op','chartId'])
+      if(!book.charts?.some(item=>item.chartId===o.chartId))throw Error('图表不存在。')
+      book.charts=book.charts.filter(item=>item.chartId!==o.chartId);continue
+    }
     if(o.op==='addSheet'){
       keys(o,['op','sheetId','name'])
-      if(!safeId(o.sheetId)||own(book.sheets,o.sheetId)||book.sheetOrder.length>=MAX_SHEETS)throw Error('工作表标识无效或数量已达上限。')
+      if(!safeId(o.sheetId))throw Error('请为新工作表提供由字母、数字、连字符或下划线组成的 sheetId。')
+      if(own(book.sheets,o.sheetId))throw Error('工作表标识 '+o.sheetId+' 已存在。请用新的 sheetId，修改已有工作表名称请用 renameSheet。')
+      if(book.sheetOrder.length>=MAX_SHEETS)throw Error('工作表数量已达上限。')
       book.sheets[o.sheetId]=blankSheet(o.sheetId,setSheetName(book,o.name));book.sheetOrder.push(o.sheetId);continue
     }
     if(o.op==='renameSheet'){
@@ -184,7 +226,8 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
     const {sheet,bounds:a}=sheetRange(book,o.sheetId,o.range)
     const rows=a.r1-a.r0+1,cols=a.c1-a.c0+1
     if((touched+=rows*cols)>MAX_RANGE_CELLS)throw Error('批次单元格数量超过上限。')
-    if(o.op==='write'&&(!Array.isArray(o.cells)||o.cells.length!==rows||o.cells.some((row:unknown)=>!Array.isArray(row)||row.length!==cols)))throw Error('数据行列数与目标区域不一致。')
+    if(o.op==='write'&&(!Array.isArray(o.cells)||o.cells.length!==rows||o.cells.some((row:unknown)=>!Array.isArray(row)||row.length!==cols)))
+      throw Error(o.range+' 需要 '+rows+' 行 × '+cols+' 列数据。请使 cells 的每一行长度与区域一致，空白格用 null。')
     const format=o.op==='format'?nativeFormat(o.format):undefined
     for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){
       const r=a.r0+i,c=a.c0+j,prev=sheet.cellData[r]?.[c],next:Cell={...prev}
@@ -192,7 +235,8 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
       else{
         delete next.v;delete next.f;delete next.t;delete next.p;delete next.si
         if(o.op==='write'){
-          const item=o.cells[i][j]
+          const entry=o.cells[i][j]
+          const item=scalar(entry)?{value:entry}:entry
           keys(item,['value','formula'])
           if(Object.keys(item).length!==1)throw Error('单元格必须指定值或公式其中之一。')
           if(Object.hasOwn(item,'formula'))next.f=safeFormula(item.formula)

@@ -69,7 +69,7 @@ export class SpreadsheetService{
    inspectSpreadsheet:async(args,_context,signal)=>{
     const {revision,workbook}=await latest(signal)
     if(!workbook)return receipt({revision,workbook:null,newWorkbookSheetId:'sheet-1'})
-    const meta={revision,workbook:{name:workbook.name,sheets:workbook.sheetOrder.map(id=>{const s=workbook.sheets[id]!;const rows=Object.keys(s.cellData).map(Number);let lastColumn=-1;for(const row of Object.values(s.cellData))for(const col of Object.keys(row))lastColumn=Math.max(lastColumn,Number(col));return {sheetId:id,name:s.name,rowCount:s.rowCount,columnCount:s.columnCount,lastUsedRow:rows.reduce((n,r)=>Math.max(n,r+1),0),lastUsedColumn:lastColumn+1}})},selection:selection?{sheetId:selection.sheetId,range:selection.range}:null,references:listReferences()}
+    const meta={revision,workbook:{name:workbook.name,charts:workbook.charts??[],sheets:workbook.sheetOrder.map(id=>{const s=workbook.sheets[id]!;const rows=Object.keys(s.cellData).map(Number);let lastColumn=-1;for(const row of Object.values(s.cellData))for(const col of Object.keys(row))lastColumn=Math.max(lastColumn,Number(col));return {sheetId:id,name:s.name,rowCount:s.rowCount,columnCount:s.columnCount,lastUsedRow:rows.reduce((n,r)=>Math.max(n,r+1),0),lastUsedColumn:lastColumn+1}})},selection:selection?{sheetId:selection.sheetId,range:selection.range}:null,references:listReferences()}
     if(args.scope==='workbook')return receipt(meta)
     if(args.scope==='selected'&&!selection)throw Error(references.length?'本次指令包含多个引用，请用 scope=reference 和 referenceIndex 指定。':'本次指令没有引用选区，请明确指定工作表和区域。')
     const target=args.scope==='range'?args:args.scope==='reference'?references[args.referenceIndex-1]:selection

@@ -82,7 +82,7 @@ export function registerConversationComponentsPolicy(ctx){
   if(!session||session.header?.origin==='subagent'||(session.header?.delegationDepth??0)>0)return ''
   if(documentOnly(session))return '【文件交付】本轮制作或修订的是文件，文件中的图表、表格和版式属于该交付件。沿用户指定技能和原有文件读取、代码执行、渲染检查、保存与文件交付流程完成；保留原任务预算，不将内部图表替换为独立界面组件或新研究画布。'
   const request=componentCreationRequest(session),mode=latestClientModeForAuthority(session)
-  if(mode==='spreadsheet')return '【当前表格】用户要求查看、创建或编辑当前工作簿时，用 spreadsheet.inspect 读取真实范围和 revision，再按请求调用 spreadsheet.apply 或 spreadsheet.undo。表格选区标记嵌在用户原话中，按标记前后的文字判断输入区、目标区等；用 scope=workbook 获得按顺序排列的 references，再用 scope=reference、referenceIndex 读取对应引用；只有一个引用时可以用 scope=selected。普通光标位置不是引用。不要输出 Markdown 表格来代替写入，也不要新建研究画布。'
+  if(mode==='spreadsheet')return '【当前表格】用户要求查看、创建、编辑或绘图时，先用 spreadsheet.inspect 读取工作簿、真实区域和 revision。每次 spreadsheet.apply 的 arguments 都必须带 revision，创建时还需 createName。复杂任务可先创建，再按工作表分批写入。write 的 cells 示例：[["公司","估值"],["甲",{formula:"=180/30"}]]；标量可直接写，公式使用对象。若要求生成工作簿内图表，使用 spreadsheet.apply 的 addChart，系列数据来自真实单元格。选区标记随用户原话传递，用 scope=workbook 获取 references，用 scope=reference 与 referenceIndex 读取；只有一个引用时可以用 scope=selected。不要用 Markdown 表格或研究画布代替写入。'
   if(!mode&&/表格|工作簿|工作表|单元格|选区|公式|xlsx|spreadsheet/i.test(planningHumanRequest(session)?.text??''))return '本轮涉及表格或单元格；先查询 client_capabilities 确认客户端模式。spreadsheet 模式用 spreadsheet.inspect、spreadsheet.apply 或 spreadsheet.undo，其它模式遵循本轮目录。'
   if(request?.target==='workbench')return ''
   if(request?.target==='component'){

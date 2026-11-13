@@ -27,6 +27,19 @@ describe('spreadsheet workbook protocol', () => {
     expect(original.sheets.income!.columnData[2]!.w).toBe(104)
     expect(()=>applyOperations(original,[{op:'setColumnWidth',sheetId:'income',range:'C1:D1',width:0}])).toThrow()
   })
+  it('accepts plain cells with explicit formula cells and keeps a validated chart bound to the range',()=>{
+    const original=blankWorkbook('work','估值')
+    const chart={op:'addChart',chartId:'multiple',sheetId:'sheet-1',range:'A1:B3',title:'估值倍数',kind:'bar'}
+    const book=applyOperations(original,[
+      {op:'write',sheetId:'sheet-1',range:'A1:B3',cells:[['公司','倍数'],['甲',{formula:'=180/30'}],['乙',7]]},
+      chart
+    ])
+    expect(inspectWorkbook(book,'sheet-1','A2:B3').cells.map(row=>row.map(c=>c.formula??c.value))).toEqual([['甲','=180/30'],['乙',7]])
+    expect(book.charts).toEqual([{chartId:'multiple',sheetId:'sheet-1',range:'A1:B3',title:'估值倍数',kind:'bar',headers:true}])
+    expect(()=>applyOperations(book,[chart])).toThrow(/重复/)
+    expect(()=>applyOperations(original,[{...chart,range:'A1:A3'}])).toThrow(/系列/)
+    expect(applyOperations(book,[{op:'removeChart',chartId:'multiple'}]).charts).toEqual([])
+  })
   it('rejects a whole batch if a cell targets a missing sheet or contains an external formula', () => {
     const work = blankWorkbook('work','工作簿','income')
     const write = {op:'write',sheetId:'income',range:'A1',cells:[[{value:120}]]} as const

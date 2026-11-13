@@ -9,9 +9,9 @@ import coreEn from '@univerjs/preset-sheets-core/locales/en-US'
 import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
 import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,type IWorkbookData} from '@univerjs/core'
-import {ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT} from '@univerjs/sheets'
+import {ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
-import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService} from '@univerjs/sheets-ui'
+import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService} from '@univerjs/sheets-ui'
 import coreCss from '@univerjs/preset-sheets-core/lib/index.css?raw'
 import filterCss from '@univerjs/preset-sheets-filter/lib/index.css?raw'
 import sortCss from '@univerjs/preset-sheets-sort/lib/index.css?raw'
@@ -51,7 +51,11 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  })
  let disposed=false
  try{
- const model=api.createWorkbook(structuredClone(workbook) as unknown as IWorkbookData)
+ // Incremental scrolling swaps in a private buffer that can lack the
+ // per-canvas palette. Set the grid color at the worksheet render source.
+ const renderWorkbook=structuredClone(workbook) as unknown as IWorkbookData
+ for(const sheet of Object.values(renderWorkbook.sheets))sheet.gridlinesColor=palette().grid
+ const model=api.createWorkbook(renderWorkbook)
  if(!editable)model.setEditable(false)
  const injector=univer.__getInjector()
  const renders=injector.get(IRenderManagerService)
@@ -113,10 +117,16 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  const applyTheme=()=>{
   if(disposed)return
   const colors=palette()
+  for(const sheet of model.getSheets())sheet.getSheet().getConfig().gridlinesColor=colors.grid
   injector.get(ThemeService).setTheme(theme())
   api.toggleDarkMode(dark())
   const render=renders.getRenderUnitById(model.getId())
   if(!render?.components.has(SHEET_VIEW_KEY.COLUMN)||!render.components.has(SHEET_VIEW_KEY.ROW))return
+  const skeletons=render.with(SheetSkeletonManagerService)
+  for(const sheet of model.getSheets()){
+   const param=skeletons.getSkeletonParam(sheet.getSheetId())
+   if(param){skeletons.makeDirty({sheetId:sheet.getSheetId()},true);skeletons.reCalculate(param)}
+  }
   model.customizeColumnHeader({headerStyle:{backgroundColor:colors.header,borderColor:colors.grid,fontColor:colors.text}})
   model.customizeRowHeader({headerStyle:{backgroundColor:colors.header,borderColor:colors.grid,fontColor:colors.text}})
   const corner=render.components.get(SHEET_VIEW_KEY.LEFT_TOP)
@@ -153,6 +163,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    }catch(error){event.cancel=true;host.dispatchEvent(new CustomEvent('ew-sheet-engine-error',{detail:(error as Error).message}))}
   }),
   api.addEvent(api.Event.CommandExecuted,event=>{
+   if(event.id===InsertSheetMutation.id)applyTheme()
    if(event.options?.fromFormula===true||event.options?.applyFormulaCalculationResult===true){if(event.id==='sheet.mutation.set-range-values')change(true)}
    else if(event.id.startsWith('sheet.')&&(event.type===CommandType.MUTATION||/zoom|hide-grid|freeze/.test(event.id)))change()
    if(/selection|activate-sheet|range-values|numfmt/.test(event.id))selection()
@@ -160,7 +171,15 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   api.addEvent(api.Event.SelectionChanged,selection),
  ]
  requestAnimationFrame(()=>{if(!disposed){applyTheme();selection()}})
- return {api,model,capturePasteTarget:()=>injector.get(ISheetClipboardService).capturePasteTarget(),pasteText:(textContent:string,target:ReturnType<ISheetClipboardService['capturePasteTarget']>)=>api.executeCommand(SheetPasteShortKeyCommand.id,{textContent,target}),clearFill:()=>api.executeCommand(ResetBackgroundColorCommand.id),align:(value:string)=>api.executeCommand(SetHorizontalTextAlignCommand.id,{value:{left:1,center:2,right:3}[value]}),snapshot:()=>structuredClone(model.save()) as unknown as Workbook,dispose:()=>{
+ return {api,model,capturePasteTarget:()=>injector.get(ISheetClipboardService).capturePasteTarget(),pasteText:(textContent:string,target:ReturnType<ISheetClipboardService['capturePasteTarget']>)=>api.executeCommand(SheetPasteShortKeyCommand.id,{textContent,target}),clearFill:()=>api.executeCommand(ResetBackgroundColorCommand.id),align:(value:string)=>api.executeCommand(SetHorizontalTextAlignCommand.id,{value:{left:1,center:2,right:3}[value]}),snapshot:()=>{
+  const result=structuredClone(model.save()) as unknown as Workbook
+  for(const sheet of Object.values(result.sheets)){
+   const original=workbook.sheets[sheet.id]?.gridlinesColor
+   if(original===undefined)delete sheet.gridlinesColor;else sheet.gridlinesColor=original
+  }
+  if(workbook.charts)result.charts=workbook.charts.filter(chart=>!!result.sheets[chart.sheetId])
+  return result
+ },dispose:()=>{
   if(disposed)return
   disposed=true
   observer.disconnect();resize.disconnect();renderSub.unsubscribe();styleInterceptor.dispose();for(const subs of watched.values())subs.forEach(s=>s.unsubscribe());subs.forEach(s=>s.dispose())
