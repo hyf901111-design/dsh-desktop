@@ -8,7 +8,7 @@ export function createNoteComponentViewStore(doc){
   const host=doc.getElementById(value.hostId),header=doc.getElementById(value.headerId)
   if(value.surface==='spreadsheet'){
    if(!host?.matches('.ew-sheet-component-host')||host.dataset.sheetComponent!==value.node?.id||host.dataset.sheetSession!==value.sessionId||
-      !header?.closest('.ew-sheet-components')?.contains(host)||host.closest('[data-ework-spreadsheet-view]')?.dataset.eworkSpreadsheetView!==value.sessionId)return
+      !header?.parentElement?.matches('.ew-sheet-component-card')||header.parentElement!==host.parentElement||host.closest('[data-ework-spreadsheet-view]')?.dataset.eworkSpreadsheetView!==value.sessionId)return
   }else if(!host?.matches('.en-native-component-host')||host.dataset.noteComponent!==value.node?.id||host.dataset.noteSession!==value.sessionId||!header?.closest('.en-research')?.contains(host)||!host.closest('.en-root'))return
   entries.set(value.instanceId,{...value,host,header});notify()
  }
@@ -70,8 +70,8 @@ export function EWorkNoteComponentView({entry,officePreview}){
  react.useLayoutEffect(()=>{sharedBridge.observe(node.config?.sharedComponentState)},[sharedBridge,node.config?.sharedComponentState])
  react.useEffect(()=>()=>sharedBridge.dispose(),[sharedBridge])
  const refresh=async()=>{if(refreshing||entry.readOnly)return;setRefreshBusy(true);try{await generationAction('refresh');setRefreshError('')}catch(e){setRefreshError(e.message)}finally{setRefreshBusy(false)}}
- if(entry.mode==='generation'&&!node.containerSpec)return react_dom.createPortal(react.createElement(ResearchGenerationProcess,{node,sessionId:entry.sessionId,onCancel:entry.readOnly?undefined:()=>generationAction('generation-stop'),onRetry:entry.readOnly?undefined:()=>{void generationAction('generation-retry').catch(error=>setError(error.message))},detailOverride:error||undefined}),entry.host,entry.instanceId)
- const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save}):react.createElement(ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{
+ if(entry.mode==='generation'&&!node.containerSpec)return react_dom.createPortal(react.createElement(ResearchGenerationProcess,{node,sessionId:entry.sessionId,onCancel:entry.readOnly?undefined:()=>generationAction('generation-stop'),onRetry:entry.readOnly?undefined:()=>{void generationAction('generation-retry').catch(error=>setError(error.message))},phaseOverride:entry.phase?workbenchText(entry.phase):undefined,detailOverride:error||(entry.detail?workbenchText(entry.detail):undefined)}),entry.host,entry.instanceId)
+ const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save}):react.createElement(spreadsheet?ResearchContainerContent:ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{
   // ResearchHtmlArtifact reports outer-card height. Notes stores the content
   // host height, then renders its own chrome around that host.
   const frame=entry.host.querySelector('iframe.rScV5Q_webFrame'),card=entry.host.closest('[data-research-node-id]')
@@ -80,7 +80,29 @@ export function EWorkNoteComponentView({entry,officePreview}){
   if(contentHeight<1)return false
   action('size',{height:contentHeight})
  }})
- const title=['quote','announcements'].includes(spec.widget)?react.createElement(react.Fragment,null,react.createElement(WorkbenchTitle,{title:node.displayName||node.title||node.name||workbenchText('组件'),systemTitle:!node.displayName&&node.title===financialWidgetDefaults(spec.widget)?.title}),react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save})):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save,surface:'notes'}):spreadsheet&&spec.widget==='indices'?react.createElement(react.Fragment,null,react.createElement('strong',null,node.title),react.createElement('button',{type:'button',className:'ew-sheet-button',onClick:()=>setIndices(true),disabled:entry.readOnly},workbenchText('配置指数'))):react.createElement('strong',null,node.title)
+ if(spreadsheet){
+  const run=name=>()=>action(name)
+  const buttons=[
+   {name:entry.floating?'sheet-dock':'sheet-float',label:workbenchText(entry.floating?'收回侧边':'自由摆放'),run:run('placement'),disabled:entry.readOnly},
+   {name:'close',label:workbenchText(entry.floating?'移除组件':'关闭组件'),run:run(entry.floating?'remove':'close'),disabled:entry.floating&&entry.readOnly}
+  ]
+  const reload=refreshState&&typeof entry.host.querySelector==='function'?async()=>{
+   const widget=entry.host.querySelector('[data-financial-widget]')
+   if(spec.type==='financial-widget')return widget?.__eworkRefreshFinancial?.()??{error:workbenchText('组件暂未就绪')}
+   await generationAction('refresh')
+  }:undefined
+  const titleExtra=spec.widget==='indices'?react.createElement('button',{type:'button','aria-label':workbenchText('配置指数'),title:workbenchText('配置指数'),onPointerDown:event=>event.stopPropagation(),onClick:()=>setIndices(true),disabled:entry.readOnly},react.createElement(WorkbenchIcon,{name:'settings'})):null
+  return react.createElement(react.Fragment,null,
+   react_dom.createPortal(react.createElement(WorkbenchChrome,{node,sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra,onReload:reload,
+    surfaceActions:{surface:'notes',onSpecChange:save,buttons},
+    onAsk:run('ask'),onMore:(_node,event)=>action('more',{anchor:event.currentTarget})}),entry.header),
+   react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},
+    error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),
+    react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true}},body),
+    indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:!!entry.readOnly,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
+  )
+ }
+ const title=['quote','announcements'].includes(spec.widget)?react.createElement(react.Fragment,null,react.createElement(WorkbenchTitle,{title:node.displayName||node.title||node.name||workbenchText('组件'),systemTitle:!node.displayName&&node.title===financialWidgetDefaults(spec.widget)?.title}),react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save})):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save,surface:'notes'}):react.createElement('strong',null,node.title)
  return react.createElement(react.Fragment,null,
   dataSettings&&react.createElement(ComponentDataSettingsPanel,{title:node.displayName||node.title,binding:dataRecord,error:dataError,busy:dataBusy,loading:dataBusy&&!dataRecord,onChange:entry.readOnly?undefined:settings=>dataAction('data-configure',{settings}),onRefresh:entry.readOnly?undefined:()=>dataAction('data-refresh'),onClose:()=>setDataSettings(false),theme:entry.dark?'dark':'light',readOnly:!!entry.readOnly,surface:'notes'}),
   react_dom.createPortal(react.createElement('div',{className:'en-native-component-heading'},refreshState&&react.createElement('span',{className:'ew-grid-refresh'},react.createElement('button',{type:'button',className:'en-component-refresh','aria-label':workbenchText('刷新组件'),disabled:entry.readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,'data-refresh-state':refreshState.state,'data-busy':refreshing||undefined,onPointerDown:e=>e.stopPropagation(),onClick:refresh},react.createElement(WorkbenchIcon,{name:refreshState.icon}))),title),entry.header),

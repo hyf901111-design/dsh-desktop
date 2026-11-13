@@ -3,7 +3,7 @@ import {open,rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
 import {clipboard,dialog,type BrowserWindow,type IpcMain} from 'electron'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
-import {blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,validatedChartLayout,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
+import {blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,validatedChartLayout,validatedComponentPlacement,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
 import type {ComponentLibraryStore} from '../state/component-library'
@@ -111,20 +111,35 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
        if(controller.signal.aborted)return
        try{guard(true)}catch{controller.abort();return}
        const win=getWindow()
-       if(win&&!win.isDestroyed())win.webContents.send('spreadsheet:component-progress',{owner:key.owner,sessionId:key.sessionId,requestId:input.requestId,stage:progress.stage})
+       if(win&&!win.isDestroyed())win.webContents.send('spreadsheet:component-progress',{owner:key.owner,sessionId:key.sessionId,requestId:input.requestId,stage:progress.stage,componentTask:progress.componentTask})
       })
+      controller.signal.throwIfAborted()
       if(result?.kind!=='component'||!result.node)throw Error('组件生成未返回有效内容，请重试。')
       node=result.node
+     }catch(error){
+      if(controller.signal.aborted)throw Error('已停止生成')
+      throw error
      }finally{generations.delete(generationKey)}
     }
     const parsed=noteLibrarySpec(node.containerSpec)
     const spec=parsed?.type==='financial-widget'?financialWidgetSpec({...parsed,linkedWatchlistId:undefined,linkedSourceId:undefined}):parsed
     if(!spec||spec.type==='calendar-tool')throw Error('该组件暂不能插入表格。')
     guard(true)
-    const componentId=randomUUID(),component:WorkbookComponent={componentId,sheetId:sheet.id,range,node:{id:componentId,kind:'generated-container',title:String(node.displayName||node.title||spec.title).slice(0,256),containerSpec:spec,generationStatus:'completed'}}
+    const componentId=randomUUID(),component:WorkbookComponent={componentId,sheetId:sheet.id,range,node:{id:componentId,kind:'generated-container',title:String(node.displayName||node.title||spec.title).trim().slice(0,256)||spec.title,containerSpec:spec,generationStatus:'completed',...(action==='component-generate'?{generationCompletedAt:Date.now()}:{})}}
     return store.save(key,input.revision,{...book,components:[...book.components??[],component]})
    }
-   case 'component-stop':return generations.get(JSON.stringify([key.owner,key.sessionId,input.requestId]))?.abort()
+   case 'component-stop':{
+    const controller=generations.get(JSON.stringify([key.owner,key.sessionId,input.requestId]))
+    controller?.abort()
+    return Boolean(controller)
+   }
+   case 'component-placement':{
+    const book=store.load(key).workbook
+    if(!book?.components?.some(component=>component.componentId===input.componentId))throw Error('组件已不存在。')
+    const placement=validatedComponentPlacement(input.placement)
+    const components=book.components.map(component=>component.componentId===input.componentId?{...component,placement}:component)
+    return store.save(key,input.revision,{...book,components})
+   }
    case 'component-configure':case 'component-remove':{
     const current=store.load(key),book=current.workbook
     const component=book?.components?.find(item=>item.componentId===input.componentId)

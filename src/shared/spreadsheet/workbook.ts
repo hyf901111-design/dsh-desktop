@@ -29,7 +29,8 @@ export type WorkbookChart = {
   palette?:WorkbookChartPalette;showTitle?:boolean;axisX?:string;axisY?:string
   layout?:WorkbookChartLayout
 }
-export type WorkbookComponent = {componentId:string;sheetId:string;range:string;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
+export type WorkbookComponentPlacement = {mode:'docked'|'floating';layout:WorkbookChartLayout}
+export type WorkbookComponent = {componentId:string;sheetId:string;range:string;placement?:WorkbookComponentPlacement;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
 export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; components?:WorkbookComponent[]; [key:string]:unknown }
 export type Range = { r0:number; c0:number; r1:number; c1:number }
 export type InputCell = Scalar | {value:Scalar} | {formula:string}
@@ -139,6 +140,13 @@ export function validatedChartLayout(value:unknown):WorkbookChartLayout {
   return {x,y,width,height}
 }
 
+export function validatedComponentPlacement(value:unknown):WorkbookComponentPlacement {
+  keys(value,['mode','layout'])
+  const {mode,layout}=value as WorkbookComponentPlacement
+  if(mode!=='docked'&&mode!=='floating')throw Error('组件摆放方式无效。')
+  return {mode,layout:validatedChartLayout(layout)}
+}
+
 export function chartSourceRows<T>(chart:WorkbookChart,bounds:Range,read:(row:number,col:number)=>T){
   const axes=chartAxes(chart,bounds)
   const length=axes.byRows?bounds.c1-bounds.c0+1:bounds.r1-bounds.r0+1
@@ -200,11 +208,12 @@ export function validateWorkbook(value:unknown): asserts value is Workbook {
     if(!Array.isArray(value.components)||value.components.length>24)throw Error('每个工作簿最多保存 24 个组件。')
     const ids=new Set<string>()
     for(const component of value.components){
-      keys(component,['componentId','sheetId','range','node'])
+      keys(component,['componentId','sheetId','range','node','placement'])
       if(!safeId(component.componentId)||ids.has(component.componentId)||!object(component.node)||component.node.id!==component.componentId||
         component.node.kind!=='generated-container'||typeof component.node.title!=='string'||!component.node.title.trim()||component.node.title.length>256||
         !object(component.node.containerSpec)||JSON.stringify(component.node).length>1048576)throw Error('组件内容格式无效。')
       sheetRange(value as Workbook,component.sheetId,component.range)
+      if(component.placement!==undefined)validatedComponentPlacement(component.placement)
       ids.add(component.componentId)
     }
   }
