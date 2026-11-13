@@ -36,11 +36,9 @@ const source = await build({
         if(path !== '/v1/hosted-ai/catalog' && path !== '/v1/hosted-ai/quota'){
           return Response.json({error:{code:'HOSTED_AI_FIXTURE_READ_ONLY'}},{status:403});
         }
-        const owner=await env.ACCOUNTS_DB.prepare('SELECT id FROM users WHERE username=?').bind(${JSON.stringify(hostedUsername)}).first();
         return hostedAi.fetch(request,{
           ...env,
           ARK_HOSTED_MODE:'authorized-agent-plan',
-          ARK_AUTHORIZED_ACCOUNT_IDS:owner?.id ?? '',
           ARK_AGENT_PLAN_KEY:'synthetic-fixture-marker'
         });
       }

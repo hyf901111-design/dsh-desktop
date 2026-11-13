@@ -14,15 +14,14 @@
 
 使用 `services/hosted-ai/wrangler.jsonc`。与管理后台共用 `sherlock-accounts` D1 及其 0005 迁移（取自管理台 c253f6c93，未经改写）。与公开更新和既有搜索、数据源 Worker 使用不同路由。默认只开放已登录用户的个人额度查询；目录为空，模型、图片和记忆关闭。不要在 Worker vars、本地设置或 Git 中保存密钥。
 
-仅在火山明确授权目标应用、网关及使用账号之后，方可为该授权范围写入：
+启用企业套餐网关后，已登录、未停用且未暂停 AI 额度的账号可以看到内置模型。调用文本和生图时，网关按当前账号预留与结算用量，并检查个人与共享窗口及月度总池。
 
 | Secret / 配置 | 用途 |
 | --- | --- |
 | `ARK_HOSTED_MODE=authorized-agent-plan` | 显式开启获准的推理路线 |
-| `ARK_AUTHORIZED_ACCOUNT_IDS` | 逗号分隔的已授权 EWork 账号 ID，登录不等同于加入名单 |
 | `ARK_AGENT_PLAN_KEY` | 获准用于该代理及账号范围的 Agent Plan 专属 Key |
 | `ARK_ENABLE_SEEDREAM=true` | 文生图与改图获准后单独开启 |
-| `ARK_ENABLE_OPENVIKING=true` 与 `OPENVIKING_USER_KEYS` | 获准后开启云记忆；后者为账号 ID 到独立 User Key 的 Secret JSON，拒绝跨账号复用同一 Key |
+| `ARK_ENABLE_OPENVIKING=true`、`ARK_AUTHORIZED_ACCOUNT_IDS` 与 `OPENVIKING_USER_KEYS` | 云记忆需同时启用、列入逗号分隔的账号名单并配置独立 User Key。Key 使用账号 ID 到凭据的 Secret JSON，拒绝跨账号复用同一 Key |
 
 上线推理前，核对项目席位范围、关闭超额后付费、当前 AFP 系数、图片大小计费、D1 池限额和供应商账单。缺少可信完成用量或上游执行结果不明时保留预留，未自动重试；对账后由后台处理。模型接入及费用依据：[企业版兼容接口](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-other-tools?lang=zh)、[企业版抵扣规则](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-afp-credits-billing-rules?lang=zh)、[订阅套餐条款](https://docs.volcengine.com/docs/ark/subscription-package-service-terms-conditions?lang=zh)、[Seedream 接口](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-visual-models?lang=zh)、[OpenViking 用户隔离](https://docs.volcengine.com/docs/vector_database_vikingdb/Databasesspaceandusers?lang=en)。
 
@@ -30,4 +29,4 @@ Seedream Pro 从第二张参考图起的扣减按企业版专门计费页的 6.5
 
 聚焦验证：`node scripts/test-hosted-ai-worker.mjs` 运行本地 workerd + D1，模拟方舟与 OpenViking。客户端浏览器夹具加载现有探索模块并模拟 5 小时、周用量，签名客户端和真实供应商调用另行验收。
 
-按本地构建手册启动签名测试包后，可运行 `node scripts/start-native-acceptance-services.mjs --hosted-ai`，将隔离客户端连接到脚本输出的本地服务。使用 `fixture.json` 里的「验收所有者」查看 11 个模型和 29% 的初始 5 小时余量，再用未开通的验收账号和退出状态核对模型菜单。这套服务使用真实登录与额度处理器、本地 D1 和合成数据，实际供应商调用需在线单独验收。
+按本地构建手册启动签名测试包后，可运行 `node scripts/start-native-acceptance-services.mjs --hosted-ai`，将隔离客户端连接到脚本输出的本地服务。使用 `fixture.json` 里的「验收所有者」查看 11 个模型和 29% 的初始 5 小时余量，再切换到另一验收账号确认同样能选模型，退出后确认模型消失。这套服务使用真实登录与额度处理器、本地 D1 和合成数据，实际供应商调用需在线单独验收。

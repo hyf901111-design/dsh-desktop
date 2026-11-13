@@ -187,14 +187,14 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
     try {
       const user = await authenticate(request, env)
       if (!user) return fail('LOGIN_REQUIRED', 401, '请先登录 EWork。')
-      const allow = (env.ARK_AUTHORIZED_ACCOUNT_IDS ?? '').split(',').map(s => s.trim()).filter(Boolean)
-      const active = env.ARK_HOSTED_MODE === 'authorized-agent-plan' && nonempty(env.ARK_AGENT_PLAN_KEY) && allow.includes(user.id)
+      const active = env.ARK_HOSTED_MODE === 'authorized-agent-plan' && nonempty(env.ARK_AGENT_PLAN_KEY)
       const ledger = ledgerFor(env.ACCOUNTS_DB)
       if (action === 'quota') {
         const { fiveHour, week, paused, monthResetAt } = await ledger.user(user.id)
         return json({ quota: { fiveHour, week, paused, monthResetAt, unit: 'AFP' } })
       }
-      const memoryKey = allow.includes(user.id) && openVikingKey(env, user.id)
+      const memoryAccounts = (env.ARK_AUTHORIZED_ACCOUNT_IDS ?? '').split(',').map(id => id.trim())
+      const memoryKey = memoryAccounts.includes(user.id) && openVikingKey(env, user.id)
       if (action === 'catalog') {
         if ((!active && !memoryKey) || !(await ledger.user(user.id)).eligible) return json({ models: [], image: false })
         return json({ models: active ? ARK_TEXT_MODELS.map(({ unitsPerToken, ...model }) => model) : [],

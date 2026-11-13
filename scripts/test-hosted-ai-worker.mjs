@@ -102,8 +102,10 @@ try {
   for (const path of ['catalog','quota','chat/completions','images','memory']) {
     assert.equal((await send(path, undefined, ['catalog','quota'].includes(path) ? undefined : chat())).status,401)
   }
-  assert.deepEqual(await (await send('catalog',other)).json(), { models: [], image: false })
-  assert.equal((await send('chat/completions',other,chat())).status,403)
+  const otherCatalog = await (await send('catalog',other)).json()
+  assert.equal(otherCatalog.models.length,11,'An eligible account outside the trial list can choose hosted models')
+  assert.equal(otherCatalog.image,true)
+  assert.equal(otherCatalog.memory,undefined)
   assert.equal(calls,0)
   const catalog = await (await send('catalog',token)).json()
   assert.equal(catalog.models.length,11)
@@ -207,6 +209,11 @@ try {
   const outboundBefore = calls
   assert.equal((await send('chat/completions',token,chat([{type:'image_url',image_url:{url:'https://untrusted.invalid/image.png'}}]))).status,400)
   assert.equal(calls,outboundBefore)
+  const otherChat = await send('chat/completions',other,chat(),'one')
+  assert.equal(otherChat.status,200)
+  assert.match(await otherChat.text(),/你好[\s\S]*\[DONE\]/)
+  assert.equal((await admin.user('bob')).fiveHour.used,.0015)
+  assert.equal((await admin.user('alice')).fiveHour.used,(billedUnits+3000)/1_000_000)
   // Upgrading a live window keeps the same history and deadlines, but replaces the
   // time-prorated allocation with the configured pool ceilings.
   const beforeUpgrade = (await (await send('quota',token)).json()).quota
@@ -228,6 +235,17 @@ try {
     .bind('alice',200000000,300000000,0,1).run()
   const capped = (await (await send('quota',token)).json()).quota
   assert.equal(capped.fiveHour.limit,200)
+  await db.prepare('INSERT INTO ai_quota_user_settings(user_id,paused,version) VALUES(?,1,1)').bind('bob').run()
+  assert.deepEqual(await (await send('catalog',other)).json(),{ models: [], image: false })
+  for (const [path, body] of [
+    ['chat/completions', chat()],
+    ['images', { model: 'doubao-seedream-5.0-flash', prompt: '测试', size: 'auto' }]
+  ]) {
+    const response = await send(path,other,body,'paused-' + path.replace('/', '-'))
+    assert.equal(response.status,403)
+    assert.equal((await response.json()).error.code,'AI_QUOTA_INELIGIBLE')
+  }
+  assert.equal(calls,outboundBefore+1)
   assert.equal(capped.week.limit,300)
   await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
   assert.equal((await admin.user('alice')).fiveHour.remaining,0)
