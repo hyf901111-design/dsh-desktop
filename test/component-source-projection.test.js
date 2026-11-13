@@ -10,7 +10,7 @@ import {apply as applySpill} from '@deepseek-ai/dsh-spill-policy'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from '../packages/dsh-research-task-runtime/component-source-projection.js'
 import {componentSourceCollector,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {registerWorkbenchExecutionPolicy} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
-import {captureWorkbenchObservedSources} from '../packages/dsh-research-task-runtime/workbench-observed-sources.js'
+import {captureWorkbenchObservedSources,restoreWorkbenchObservedSources} from '../packages/dsh-research-task-runtime/workbench-observed-sources.js'
 
 const response={retCode:1,retMsg:'Success',data:Array.from({length:60},(_,i)=>({secID:'600027.XSHG',ticker:'600027',exchangeCD:'XSHG',publishDate:i<30?'2026-08-28':'2026-07-25',endDate:'2026-06-30',fiscalPeriod:6,source:'公司已披露公告',itemName:'真实指标'+i,value:i===0?0:i%2?-i:i,unit:i%2?'万千瓦':'亿千瓦时',content:(i<30?'半年报经营说明。':'上半年发电量公告。').repeat(80),unusualMetric:{active:false,detail:null,list:[i,'未知字段保留']},...(i%3?{}:{optional:null})}))}
 const payload={content:[{type:'text',text:JSON.stringify(response)}],executionOnlySecret:'not-for-model-content'}
@@ -64,6 +64,64 @@ it('projects only an accepted Tushare root call belonging to the current authore
    agent.session.events.push({type:'user/message',data:{...human,id:'next',content:[{type:'text',text:'解释上一张图。'}]}})
    return original
   })).toBe(original)
+ }finally{stop()}
+})
+
+it('saves computed NAV metrics with the complete observed source and restores them after reopening', async () => {
+ const hooks=new Map(),turn=1,signal=new AbortController().signal
+ const tool='ework__t_tushare_test',schemas=[{name:tool},{name:'ework__untrusted'}]
+ const trusted={[Symbol.for('ework.builtin-tushare.read')]:true}
+ const ctx={
+  tools:{get:name=>name===tool?trusted:undefined,schemas:()=>schemas},
+  systemPrompt:{context:()=>()=>{}},on:(name,fn)=>{hooks.set(name,fn);return ()=>hooks.delete(name)}
+ }
+ const stop=registerWorkbenchExecutionPolicy(ctx)
+ const human={id:'funds',role:'user',source:{kind:'user'},content:[{type:'text',text:'创建纯债基金比较工作台。至少比较3只中长期纯债基金的近一年收益、近半年最大回撤、年化波动率、最新净值、规模和管理人。'}]}
+ const agent={session:{events:[{type:'user/message',data:human}]}}
+ let sequence=0
+ async function record(name,api,params,rows,offset=0,nextOffset=null){
+  const args={api_name:api,params,offset},callId=String(++sequence)
+  const raw={source:'Tushare',api,records:rows,pagination:{offset,returned:rows.length,possiblyMore:nextOffset!==null,nextOffset},
+    sourceUrl:api==='fund_nav'?'https://tushare.pro/document/2?doc_id=119':'https://tushare.pro/document/2?doc_id=19'}
+  const content=[{type:'text',text:JSON.stringify(raw)}]
+  agent.session.events.push({type:'tool/call',data:{name,arguments:args,turn,callId}})
+  const result=await hooks.get('tools/post-execute')({agent,name,callId,arguments:args,signal},{content},async()=>({kind:'accept'}))
+  const rendered=result.content??content
+  agent.session.events.push({type:'tool/result',data:{message:{source:{kind:'tool',callId},content:[{type:'tool-result',toolCallId:callId,content:rendered}]}}})
+  return {raw,rendered:JSON.parse(rendered[0].text)}
+ }
+ try{
+  await hooks.get('agent/request-context')({agent,turn,signal},async()=>({system:'base',messages:[human],tools:[{name:'research_workbench_create'},...schemas]}))
+  let last
+  for(let fund=1;fund<=3;fund++){
+   const code=String(fund).padStart(6,'0')+'.OF'
+   const params={ts_code:code,start_date:'20250101',end_date:'20260101'}
+   const records=Array.from({length:366},(_,i)=>({ts_code:code,nav_date:new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10).replaceAll('-',''),
+    unit_nav:1+i/4000,adj_nav:1+i*fund/4000,net_asset:2e8,ann_date:null}))
+   await record(tool,'fund_basic',{ts_code:code},[{ts_code:code,name:'基金'+fund,management:'管理人'}])
+   await record(tool,'fund_nav',params,records.slice(0,75),0,75)
+   expect((await record('ework__untrusted','fund_nav',params,records.slice(75),75)).rendered.workbenchCalculation).toBeUndefined()
+   last=await record(tool,'fund_nav',params,records.slice(75),75)
+   if(fund<3)expect(last.rendered.workbenchCalculation).toBeUndefined()
+   else {
+    const calculation=last.rendered.workbenchCalculation
+    expect(last.rendered.records[0]).toBeInstanceOf(Array)
+    expect(calculation).toMatchObject({start:'20250101',end:'20260101',basis:{navField:'adj_nav',annualizationPeriods:252},missing:{scale:0,annDate:3}})
+    expect(calculation.rows.map(row=>row.gain)).toEqual([27.375,18.25,9.125])
+    expect(calculation.rows.every(row=>row.annDate===null)).toBe(true)
+    const tampered=structuredClone(last.rendered)
+    tampered.workbenchCalculation.rows[0].gain=99
+    expect(()=>expandBusinessEvidence(tampered)).toThrow(/无损/)
+    // A retry replaces this source by its exact arguments in the durable collector.
+    last=await record(tool,'fund_nav',params,records.slice(75),75)
+    expect(last.rendered.workbenchCalculation).toEqual(calculation)
+   }
+  }
+  const reopened=JSON.parse(JSON.stringify(agent.session))
+  const saved=captureWorkbenchObservedSources({session:reopened,messageId:human.id,schemas:[{name:tool}]})
+  const restored=restoreWorkbenchObservedSources(JSON.parse(JSON.stringify(saved)))
+  expect(restored).toHaveLength(9)
+  expect(restored.at(-1).response).toEqual({...last.raw,workbenchCalculation:last.rendered.workbenchCalculation})
  }finally{stop()}
 })
 
