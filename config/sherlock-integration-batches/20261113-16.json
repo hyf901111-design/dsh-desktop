@@ -115,6 +115,52 @@
           "切走会话会撤销可见客户端写入授权，AI 工作簿场景须逐个进行"
         ],
         "generatedAt": "2026-11-13T14:42:49.006Z"
+      },
+      "merged": {
+        "mergeCommit": "56f2e469d2932f4213f5296dd08bb63dfe520fe8",
+        "verificationCommit": "56f2e469d2932f4213f5296dd08bb63dfe520fe8",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "56f2e469d2932f4213f5296dd08bb63dfe520fe8",
+            "completedAt": "2026-11-13T14:42:54.697Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-store.test.ts",
+              "test/spreadsheet-files.test.ts",
+              "test/spreadsheet-inline-references.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
+            "verifiedCommit": "56f2e469d2932f4213f5296dd08bb63dfe520fe8",
+            "completedAt": "2026-11-13T14:42:54.697Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-spreadsheet-live.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
+            "verifiedCommit": "56f2e469d2932f4213f5296dd08bb63dfe520fe8",
+            "completedAt": "2026-11-13T14:42:54.697Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T14:42:54.697Z"
       }
     }
   ],
