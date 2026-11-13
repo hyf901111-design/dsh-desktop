@@ -9,23 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "飞书式级联菜单与图表及组件侧栏",
+        "featureName": "表格研究组件卡片与自由摆放",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
-        "tipCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
+        "baseCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
+        "tipCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
         "commits": [
           {
-            "commit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
+            "commit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
             "parents": [
-              "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9"
+              "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761"
             ],
-            "subject": "改用悬停级联菜单并重做表格图表和组件插入交互"
+            "subject": "复用研究组件卡片并支持表格内自由摆放和单击插入"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
@@ -34,18 +42,6 @@
           {
             "status": "M",
             "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/chart.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/engine.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/icons.ts"
           },
           {
             "status": "M",
@@ -73,9 +69,9 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
-            "completedAt": "2026-11-13T20:16:34.397Z",
-            "timeoutMs": 120000
+            "verifiedCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
+            "completedAt": "2026-11-13T23:08:12.598Z",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -83,16 +79,15 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-service.test.ts",
               "test/spreadsheet-store.test.ts",
-              "test/client-capabilities.test.js",
-              "test/notes-native-components.test.js"
+              "test/notes-native-components.test.js",
+              "test/notes-component-library.test.ts"
             ],
             "outcome": "passed",
-            "summary": "43 项表格协议和组件复用检查通过",
-            "verifiedCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
-            "completedAt": "2026-11-13T20:16:34.397Z",
-            "timeoutMs": 120000
+            "summary": "22 项工作簿与研究组件聚焦验证通过",
+            "verifiedCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
+            "completedAt": "2026-11-13T23:08:12.598Z",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -100,70 +95,23 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "45 项 Electron 表格聚焦检查通过",
-            "verifiedCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
-            "completedAt": "2026-11-13T20:16:34.397Z",
-            "timeoutMs": 120000
+            "summary": "45 项隔离 Electron 表格聚焦验证通过",
+            "verifiedCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
+            "completedAt": "2026-11-13T23:08:12.598Z",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "验证无点击悬停展开、键盘切换、图表侧栏与实时预览、复制删除、组件库插入确认、智能组件重新框选及中英文。"
+          "summary": "组件库一键插入、选区生成和停靠状态通过 Electron 验证，集成包验收随后执行。"
         },
         "acceptanceCriteria": [
-          "分类菜单悬停打开二级、三级，保留键盘返回",
-          "图表作为工作表对象保存，侧栏可配置数据和样式",
-          "右键及工具栏可打开组件库、智能组件侧栏",
-          "组件库先选后插入，智能组件确认范围后生成"
+          "智能组件使用研究看板生成与成品卡片",
+          "组件可以在工作表自由摆放并收回侧边",
+          "组件库显示实际图标并单击插入"
         ],
         "risks": [],
-        "generatedAt": "2026-11-13T20:16:34.397Z"
-      },
-      "merged": {
-        "mergeCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
-        "verificationCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
-            "completedAt": "2026-11-13T20:16:39.203Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
-            "completedAt": "2026-11-13T20:16:39.203Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
-            "completedAt": "2026-11-13T20:16:39.203Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T20:16:39.203Z"
+        "generatedAt": "2026-11-13T23:08:12.598Z"
       }
     }
   ],
