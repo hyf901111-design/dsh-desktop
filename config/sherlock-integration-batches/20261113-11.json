@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-11",
+  "branch": "codex/integration/20261113-11",
+  "baseMainCommit": "ce2402309d89564aab3624684c0b1a3279c4cfd3",
+  "expectedMainCommit": "ce2402309d89564aab3624684c0b1a3279c4cfd3",
+  "createdAt": "2026-11-13T05:13:56.156Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "在基金样本概览底栏显示实际数据来源",
+        "branch": "codex/feat/workbench-kpi-source-20261113",
+        "baseCommit": "ce2402309d89564aab3624684c0b1a3279c4cfd3",
+        "tipCommit": "f2c2db474599c9caa83a60de4c293148232f241b",
+        "commits": [
+          {
+            "commit": "f2c2db474599c9caa83a60de4c293148232f241b",
+            "parents": [
+              "ce2402309d89564aab3624684c0b1a3279c4cfd3"
+            ],
+            "subject": "在基金样本概览底栏显示实际数据来源"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-fund-comparison.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-acquisition-fallback.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "2 个聚焦测试文件 12 项通过",
+            "verifiedCommit": "f2c2db474599c9caa83a60de4c293148232f241b",
+            "completedAt": "2026-11-13T05:13:54.553Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "构建后的真实卡片检查在集成后执行。"
+        },
+        "acceptanceCriteria": [
+          "同批基金的已核验来源显示在指标卡底栏"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-13T05:13:54.553Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-acquisition-fallback.test.js",
+        "test/workbench-fund-comparison.test.js"
+      ],
+      "timeoutMs": 90000
+    }
+  ],
+  "mainSynchronizations": []
+}
