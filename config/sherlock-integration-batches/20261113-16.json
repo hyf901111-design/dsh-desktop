@@ -9,35 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格研究组件卡片与自由摆放",
+        "featureName": "表格快捷用例写入当前工作簿",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
-        "tipCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
+        "baseCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
+        "tipCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
         "commits": [
           {
-            "commit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
+            "commit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
             "parents": [
-              "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761"
+              "bc241fe9c31fd13bff0785e0d7971e9e542fe46c"
             ],
-            "subject": "复用研究组件卡片并支持表格内自由摆放和单击插入"
+            "subject": "让表格快捷用例直接写入当前工作簿并定位结果"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/notes-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-spreadsheet-live.mjs"
+            "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
             "status": "M",
@@ -45,11 +41,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/ui-copy.ts"
+            "path": "src/main/spreadsheet/service.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
+            "path": "src/main/spreadsheet/store.ts"
           },
           {
             "status": "M",
@@ -57,7 +53,11 @@
           },
           {
             "status": "M",
-            "path": "src/shared/spreadsheet/workbook.ts"
+            "path": "test/conversation-components-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/spreadsheet-service.test.ts"
           }
         ],
         "checks": [
@@ -69,8 +69,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
-            "completedAt": "2026-11-13T23:08:12.598Z",
+            "verifiedCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
+            "completedAt": "2026-11-13T23:16:15.888Z",
             "timeoutMs": 180000
           },
           {
@@ -78,86 +78,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/notes-native-components.test.js",
-              "test/notes-component-library.test.ts"
+              "test/spreadsheet-service.test.ts",
+              "test/conversation-components-policy.test.js",
+              "test/client-capabilities.test.js",
+              "test/conversation-component-receipt-recovery.test.js"
             ],
             "outcome": "passed",
-            "summary": "22 项工作簿与研究组件聚焦验证通过",
-            "verifiedCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
-            "completedAt": "2026-11-13T23:08:12.598Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "45 项隔离 Electron 表格聚焦验证通过",
-            "verifiedCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
-            "completedAt": "2026-11-13T23:08:12.598Z",
+            "summary": "212 项路由、工作簿回执及能力验证通过",
+            "verifiedCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
+            "completedAt": "2026-11-13T23:16:15.888Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "组件库一键插入、选区生成和停靠状态通过 Electron 验证，集成包验收随后执行。"
+          "summary": "已通过聚焦验证，包含真实工作簿写入和目标区域回执。集成应用继续验收。"
         },
         "acceptanceCriteria": [
-          "智能组件使用研究看板生成与成品卡片",
-          "组件可以在工作表自由摆放并收回侧边",
-          "组件库显示实际图标并单击插入"
+          "现金流和可比估值快捷用例优先走当前工作簿",
+          "没有真实单元格写入回执时在同轮补做一次",
+          "写入后定位目标工作表及区域",
+          "去重用例保留附件读取"
         ],
         "risks": [],
-        "generatedAt": "2026-11-13T23:08:12.598Z"
-      },
-      "merged": {
-        "mergeCommit": "a0b74c0c99fb84009adac8dd2a9ddc88465cea6d",
-        "verificationCommit": "a0b74c0c99fb84009adac8dd2a9ddc88465cea6d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a0b74c0c99fb84009adac8dd2a9ddc88465cea6d",
-            "completedAt": "2026-11-13T23:10:14.833Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "a0b74c0c99fb84009adac8dd2a9ddc88465cea6d",
-            "completedAt": "2026-11-13T23:10:14.833Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "a0b74c0c99fb84009adac8dd2a9ddc88465cea6d",
-            "completedAt": "2026-11-13T23:10:14.833Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T23:10:14.833Z"
+        "generatedAt": "2026-11-13T23:16:15.888Z"
       }
     }
   ],
