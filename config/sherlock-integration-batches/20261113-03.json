@@ -81,6 +81,44 @@
           "真实模型和数据权限需要通过本地客户端验证"
         ],
         "generatedAt": "2026-11-13T01:56:46.579Z"
+      },
+      "merged": {
+        "mergeCommit": "96f91581fb3c8912a70bc53f356dd6f34d1a4591",
+        "verificationCommit": "96f91581fb3c8912a70bc53f356dd6f34d1a4591",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "96f91581fb3c8912a70bc53f356dd6f34d1a4591",
+            "completedAt": "2026-11-13T01:57:29.051Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-source-projection.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/workbench-observed-sources.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-acquisition-fallback.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-source-projection.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-execution-policy.test.js test/workbench-acquisition-fallback.test.js",
+            "verifiedCommit": "96f91581fb3c8912a70bc53f356dd6f34d1a4591",
+            "completedAt": "2026-11-13T01:57:29.051Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T01:57:29.051Z"
       }
     }
   ],
