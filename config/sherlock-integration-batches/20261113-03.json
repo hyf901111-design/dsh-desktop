@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-03",
+  "branch": "codex/integration/20261113-03",
+  "baseMainCommit": "c5475df8e305ee33bec247f268b4b535a5ad23b1",
+  "expectedMainCommit": "c5475df8e305ee33bec247f268b4b535a5ad23b1",
+  "createdAt": "2026-11-13T01:57:18.964Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台净值来源保存",
+        "branch": "codex/feat/workbench-nav-evidence-20261113",
+        "baseCommit": "c5475df8e305ee33bec247f268b4b535a5ad23b1",
+        "tipCommit": "0927544e666956061665bc83f3f28a2e95ce6fbb",
+        "commits": [
+          {
+            "commit": "0927544e666956061665bc83f3f28a2e95ce6fbb",
+            "parents": [
+              "c5475df8e305ee33bec247f268b4b535a5ad23b1"
+            ],
+            "subject": "修复工作台净值计算随原始来源持久保存"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-fund-comparison.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-projection.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "0927544e666956061665bc83f3f28a2e95ce6fbb",
+            "completedAt": "2026-11-13T01:56:46.579Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-source-projection.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/workbench-observed-sources.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-acquisition-fallback.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "68 项聚焦测试通过",
+            "verifiedCommit": "0927544e666956061665bc83f3f28a2e95ce6fbb",
+            "completedAt": "2026-11-13T01:56:46.579Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "修复位于来源保存层，聚焦测试覆盖重新读取与原始记录和计算结果还原"
+        },
+        "acceptanceCriteria": [
+          "净值计算结果与原始净值和来源一并通过完整性校验并可恢复",
+          "保留当前已验收的开源结合版组件生成策略"
+        ],
+        "risks": [
+          "真实模型和数据权限需要通过本地客户端验证"
+        ],
+        "generatedAt": "2026-11-13T01:56:46.579Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/component-source-projection.test.js",
+        "test/workbench-fund-comparison.test.js",
+        "test/workbench-observed-sources.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-acquisition-fallback.test.js"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
