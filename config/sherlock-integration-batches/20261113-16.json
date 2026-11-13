@@ -11,65 +11,25 @@
         "schemaVersion": 1,
         "featureName": "客户端表格模式、右侧 AI 编辑与交互修复",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
-        "tipCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
+        "baseCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
+        "tipCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
         "commits": [
           {
-            "commit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
+            "commit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
             "parents": [
-              "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b"
+              "53eaba0c21929cdd8435dc1268bc90d032d8f445"
             ],
-            "subject": "完善表格编辑与实时尺寸调整并统一顶栏按钮"
+            "subject": "修复研究顶栏菜单未跟随客户端主题"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/pending-conversation-panel.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-spreadsheet-live.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/engine.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/spreadsheet/header-resize.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/spreadsheet/ui-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/ui-localization.ts"
+            "path": "src/preload/research-board-dialogs.ts"
           }
         ],
         "checks": [
@@ -81,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
-            "completedAt": "2026-11-13T13:56:57.147Z",
+            "verifiedCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
+            "completedAt": "2026-11-13T14:02:33.993Z",
             "timeoutMs": 120000
           },
           {
@@ -90,32 +50,19 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
+              "test/research-preview-header.test.ts",
+              "test/notes-header-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "15 项表格聚焦测试及额外 32 项顶栏测试通过",
-            "verifiedCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
-            "completedAt": "2026-11-13T13:56:57.147Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "undefined 项 Electron 表格操作和样式验证通过",
-            "verifiedCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
-            "completedAt": "2026-11-13T13:56:57.147Z",
+            "summary": "32 项研究和笔记顶栏聚焦测试通过",
+            "verifiedCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
+            "completedAt": "2026-11-13T14:02:33.993Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离 Electron 中实测实时行列预览、撤销、中文组字及英文语言切换。证据 /tmp/ework-sheet-followup/report.json"
+          "summary": "真实窗口中研究菜单的背景、文本、禁用项、缩放控件边框及悬停效果跟随深浅主题。"
         },
         "acceptanceCriteria": [
           "点选单元格可直接输入中文，确认后写入表格。",
@@ -123,58 +70,13 @@
           "去重、图表、查找和重命名弹窗的反馈留在弹窗内，工作区不变暗。",
           "行高和列宽拖动时实时更新，完成拖动后一次撤销恢复。",
           "英文模式下表格工具栏、菜单和弹窗随客户端语言切换。",
-          "表格右侧使用与研究及笔记一致的底部面板入口。"
+          "表格右侧使用与研究及笔记一致的底部面板入口。",
+          "研究顶栏菜单在两种主题中与客户端菜单样式一致。"
         ],
         "risks": [
           "表格分支与最新 main 共同修改前端运行时补丁链，联测前需保留两侧补丁。"
         ],
-        "generatedAt": "2026-11-13T13:56:57.147Z"
-      },
-      "merged": {
-        "mergeCommit": "18d8fd1898c3447c40cbc27eb44e1fb5c3a1c4fb",
-        "verificationCommit": "18d8fd1898c3447c40cbc27eb44e1fb5c3a1c4fb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "18d8fd1898c3447c40cbc27eb44e1fb5c3a1c4fb",
-            "completedAt": "2026-11-13T13:57:11.623Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "18d8fd1898c3447c40cbc27eb44e1fb5c3a1c4fb",
-            "completedAt": "2026-11-13T13:57:11.623Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "18d8fd1898c3447c40cbc27eb44e1fb5c3a1c4fb",
-            "completedAt": "2026-11-13T13:57:11.623Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T13:57:11.623Z"
+        "generatedAt": "2026-11-13T14:02:33.993Z"
       }
     }
   ],
