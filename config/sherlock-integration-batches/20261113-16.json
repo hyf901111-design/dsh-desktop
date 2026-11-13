@@ -142,6 +142,123 @@
         ],
         "recordedAt": "2026-11-13T23:44:06.083Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "降低托管模型目录与用量页的 D1 读取",
+        "branch": "codex/feat/hosted-ai-d1-20261114",
+        "baseCommit": "f30de3f17aca5022db6009fd342cad50aeba88f4",
+        "tipCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+        "commits": [
+          {
+            "commit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+            "parents": [
+              "f30de3f17aca5022db6009fd342cad50aeba88f4"
+            ],
+            "subject": "减少托管模型目录的 D1 读取与后台轮询"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-hosted-ai.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-hosted-ai-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/accounts/ai-quota.js"
+          },
+          {
+            "status": "M",
+            "path": "services/hosted-ai/worker.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-quota-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/hosted-ark-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=4",
+              "--testTimeout=15000",
+              "test/account-service.test.ts",
+              "test/hosted-ark-runtime.test.js",
+              "test/explore-quota-browser.test.ts",
+              "test/hosted-quota-notice.test.js",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "48 个聚焦用例通过",
+            "verifiedCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+            "completedAt": "2026-11-13T23:42:46.544Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "本地 workerd 和 D1 验证目录不读取账本，暂停账号仍受限制",
+            "verifiedCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+            "completedAt": "2026-11-13T23:42:46.544Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+            "completedAt": "2026-11-13T23:42:46.544Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "浏览器夹具验证前台用量页每分钟刷新及结算后即时刷新。签名客户端待验收。"
+        },
+        "acceptanceCriteria": [
+          "目录和云记忆仅按账号查询开通状态",
+          "减少客户端目录和前台用量页的常规刷新",
+          "文本与生图仍进行实时额度预留和结算"
+        ],
+        "risks": [
+          "桌面轮询改动待新客户端交付，线上 D1 用量需观察完整配额周期"
+        ],
+        "generatedAt": "2026-11-13T23:42:46.544Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -169,6 +286,28 @@
       "argv": [
         "node",
         "scripts/verify-spreadsheet-live.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "--maxWorkers=4",
+        "--testTimeout=15000",
+        "test/account-service.test.ts",
+        "test/hosted-ark-runtime.test.js",
+        "test/explore-quota-browser.test.ts",
+        "test/hosted-quota-notice.test.js",
+        "test/image-generation-tool.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/test-hosted-ai-worker.mjs"
       ],
       "timeoutMs": 120000
     }
