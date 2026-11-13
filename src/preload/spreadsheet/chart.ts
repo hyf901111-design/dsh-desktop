@@ -68,5 +68,10 @@ export function spreadsheetChartSvg(chart:WorkbookChart,data:ChartData,width=540
    return ['<text class="ew-sheet-chart-label" x="'+(x+(horizontal?3:0))+'" y="'+(y+(horizontal?4:-5))+'" text-anchor="'+(horizontal?'start':'middle')+'">'+escapeSheetText(value)+'</text>']
   })
  }).join(''):''
- return '<svg data-ui-preserve role="img" aria-label="'+escapeSheetText(chart.title)+'" viewBox="0 0 '+geometry.width+' '+geometry.height+'">'+markup+pointLabels+'</svg>'
+ const hasAxes=chart.kind!=='pie'&&chart.kind!=='donut'
+ const xTitle=hasAxes&&chart.axisX?'<text class="ew-sheet-chart-axis-title" x="'+geometry.width/2+'" y="'+(geometry.height+11)+'" text-anchor="middle">'+escapeSheetText(chart.axisX)+'</text>':''
+ const yTitle=hasAxes&&chart.axisY?'<text class="ew-sheet-chart-axis-title" transform="translate(-6 '+geometry.height/2+') rotate(-90)" text-anchor="middle">'+escapeSheetText(chart.axisY)+'</text>':''
+ const left=yTitle?-19:0
+ const height=geometry.height+(xTitle?18:0)
+ return '<svg data-ui-preserve role="img" aria-label="'+escapeSheetText(chart.title)+'" viewBox="'+left+' 0 '+(geometry.width-left)+' '+height+'">'+markup+pointLabels+xTitle+yTitle+'</svg>'
 }

@@ -311,6 +311,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    return api.executeCommand(OpenFilterPanelOperation.id,{unitId,subUnitId,col})
   },
   closeFilter:()=>api.executeCommand(CloseFilterPanelOperation.id),
+  copySelection:(cut:boolean)=>{const clipboard=injector.get(ISheetClipboardService);return cut?clipboard.cut():clipboard.copy()},
   capturePasteTarget:()=>injector.get(ISheetClipboardService).capturePasteTarget(),pasteText:(textContent:string,target:ReturnType<ISheetClipboardService['capturePasteTarget']>)=>api.executeCommand(SheetPasteShortKeyCommand.id,{textContent,target}),clearFill:()=>api.executeCommand(ResetBackgroundColorCommand.id),align:(value:string)=>api.executeCommand(SetHorizontalTextAlignCommand.id,{value:{left:1,center:2,right:3}[value]}),snapshot:()=>{
   const capture=()=>structuredClone(model.save()) as unknown as Workbook
   const result=headerResize?headerResize.snapshot(capture):capture()
