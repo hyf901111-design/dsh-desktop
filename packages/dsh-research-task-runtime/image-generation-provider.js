@@ -8,7 +8,7 @@ export function validateGeneratedImage(data,maxBytes){
  return data
 }
 
-async function boundedJson(response,maxBytes){
+export async function boundedImageJson(response,maxBytes){
  if(Number(response.headers.get('content-length'))>maxBytes)fail('图片响应过大，请降低尺寸或质量后重试。')
  const reader=response.body?.getReader();if(!reader)fail('图片模型返回了空响应。')
  const chunks=[];let total=0
@@ -37,7 +37,7 @@ export function createOpenAIImageProvider(ctx,{fetch:request=globalThis.fetch}={
    // Credential origin is fixed; never follow a redirect or retry a billed POST.
    const response=await request('https://api.openai.com/v1/images/'+(editing?'edits':'generations'),{method:'POST',redirect:'error',signal,headers:{authorization:`Bearer ${key}`,...editing?{}:{'content-type':'application/json'}},body})
    if(!response.ok){await response.body?.cancel().catch(()=>{});fail(response.status===401?'OpenAI 密钥无效，请检查模型设置。':response.status===403?'当前 OpenAI 项目尚无此图片模型权限。':response.status===429?'图片生成额度不足或请求过于频繁，请检查额度后重试。':response.status===400?'图片请求未通过模型校验，请调整描述或参数后重试。':'图片服务暂时不可用，请稍后重试。')}
-   const result=await boundedJson(response,Math.ceil(maxBytes*4/3)+64*1024)
+   const result=await boundedImageJson(response,Math.ceil(maxBytes*4/3)+64*1024)
    if(!Array.isArray(result?.data)||result.data.length!==1)fail('图片模型未返回图片。')
    const encoded=result.data[0]?.b64_json
    if(typeof encoded!=='string'||!encoded.length||encoded.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))fail('图片模型返回了无效的图片数据。')

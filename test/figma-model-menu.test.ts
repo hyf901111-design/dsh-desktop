@@ -87,6 +87,10 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
       await win.happyDOM.whenAsyncComplete()
     })
     await toggleLogin(true)
+    await react.act(async()=>win.dispatchEvent(new win.CustomEvent('sherlock:ai-catalog-status',{detail:{status:'unavailable'}})))
+    expect(modelMenu().querySelector('[role=status]')?.textContent).toContain('hosted.unavailable')
+    await react.act(async()=>win.dispatchEvent(new win.CustomEvent('sherlock:ai-catalog-status',{detail:{status:'ready'}})))
+    expect(modelMenu().querySelector('[role=status]')).toBeNull()
     const groups = [...win.document.querySelectorAll('[role=menu] [role=group]')]
     const headings = groups.map(group => win.document.getElementById(group.getAttribute('aria-labelledby')!))
     expect(headings.map(heading => heading?.textContent)).toEqual(['Doubao','Kimi','DeepSeek','GLM','自定义模型'])

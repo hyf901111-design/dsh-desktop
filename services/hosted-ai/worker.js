@@ -17,6 +17,7 @@ const inlineImage = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/
 const arkImageHost = 'ark-acg-cn-beijing.tos-cn-beijing.volces.com'
 const maxImageBytes = 10_000_000
 const pngSignature = Buffer.from('89504e470d0a1a0a', 'hex')
+const pngEnd = Buffer.from('0000000049454e44ae426082', 'hex')
 
 async function readBounded(message, maxBytes, signal) {
   if (!message.body) throw Error('body')
@@ -52,14 +53,26 @@ async function downloadArkImage(send, response, signal) {
   if (url.protocol !== 'https:' || url.hostname !== arkImageHost || url.port || url.username || url.password || url.hash) {
     throw Error('unexpected image origin')
   }
-  const download = await send(url.href, { redirect: 'manual', signal })
-  if (!download.ok) {
-    await download.body?.cancel()
-    throw Error('image download failed')
+  // The signed GET is safe to retry. The paid generation POST is sent only once.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let png
+    try {
+      const download = await send(url.href, { redirect: 'manual', signal })
+      if (!download.ok) {
+        await download.body?.cancel()
+        if (attempt === 0 && [408, 429, 500, 502, 503, 504].includes(download.status)) continue
+        break
+      }
+      png = await readBounded(download, maxImageBytes, signal)
+    } catch (error) {
+      if (attempt === 0 && !signal.aborted && error instanceof TypeError) continue
+      throw error
+    }
+    if (png.length < 45 || !png.subarray(0, pngSignature.length).equals(pngSignature) ||
+        !png.subarray(-pngEnd.length).equals(pngEnd)) throw Error('invalid PNG')
+    return png.toString('base64')
   }
-  const png = await readBounded(download, maxImageBytes, signal)
-  if (!png.subarray(0, pngSignature.length).equals(pngSignature)) throw Error('invalid PNG')
-  return png.toString('base64')
+  throw Error('image download failed')
 }
 
 function chatInput(input) {
@@ -153,7 +166,7 @@ const trustedUsage = usage => object(usage) && validCount(usage.prompt_tokens) &
   usage.total_tokens === usage.prompt_tokens + usage.completion_tokens
 
 // Emit only successful protocol events. Do not relay upstream errors or headers.
-function chatStream(body, settle, estimate) {
+function chatStream(body, settle, estimate, interruptedLog, requestId) {
   let buffer = '', billed = false, done = false
   const decoder = new TextDecoder()
   async function drain(controller) {
@@ -189,7 +202,8 @@ function chatStream(body, settle, estimate) {
   const interrupted = controller => {
     if (done) return
     done = true
-    controller.enqueue(encoder.encode('data: ' + JSON.stringify({error:{message:'方舟输出中断，未自动重试。',type:'server_error',code:'HOSTED_AI_STREAM_INTERRUPTED'}}) + '\n\n'))
+    interruptedLog(billed)
+    controller.enqueue(encoder.encode('data: ' + JSON.stringify({error:{message:'方舟输出中断，未自动重试。',type:'server_error',code:'HOSTED_AI_STREAM_INTERRUPTED',requestId}}) + '\n\n'))
   }
   return body.pipeThrough(new TransformStream({
     async transform(chunk, controller) {
@@ -212,23 +226,37 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
     if (url.search || !url.pathname.startsWith(ROOT) || !['catalog','quota','chat/completions','images','memory'].includes(action)) return fail('NOT_FOUND', 404)
     const readOnly = action === 'catalog' || action === 'quota'
     if (request.method !== (readOnly ? 'GET' : 'POST')) return fail('METHOD_NOT_ALLOWED', 405)
+    const suppliedId = request.headers.get('x-ework-request-id')
+    if (suppliedId && !/^[-a-zA-Z0-9_]{1,128}$/.test(suppliedId)) return fail('INVALID_REQUEST', 400)
+    const requestId = suppliedId || crypto.randomUUID()
+    const requestHeaders = { ...headers, 'x-ework-request-id': requestId }
+    const requestFailure = (code, status, message) =>
+      Response.json({ error: { code, message, requestId } }, { status, headers: requestHeaders })
+    let stage = 'authenticate'
+    const started = Date.now()
+    const diagnostic = (code, detail = {}) => console.warn({
+      event: 'hosted_ai_failure', action, stage, requestId, code, elapsedMs: Date.now() - started, ...detail
+    })
     try {
       const user = await authenticate(request, env)
       if (!user) return fail('LOGIN_REQUIRED', 401, '请先登录 EWork。')
       const active = env.ARK_HOSTED_MODE === 'authorized-agent-plan' && nonempty(env.ARK_AGENT_PLAN_KEY)
       const ledger = ledgerFor(env.ACCOUNTS_DB)
       if (action === 'quota') {
+        stage = 'quota'
         const { fiveHour, week, paused, monthResetAt } = await ledger.user(user.id)
         return json({ quota: { fiveHour, week, paused, monthResetAt, unit: 'AFP' } })
       }
       const memoryAccounts = (env.ARK_AUTHORIZED_ACCOUNT_IDS ?? '').split(',').map(id => id.trim())
       const memoryKey = memoryAccounts.includes(user.id) && openVikingKey(env, user.id)
       if (action === 'catalog') {
+        stage = 'catalog'
         if ((!active && !memoryKey) || !(await ledger.user(user.id)).eligible) return json({ models: [], image: false })
         return json({ models: active ? ARK_TEXT_MODELS.map(({ unitsPerToken, ...model }) => model) : [],
           image: active && env.ARK_ENABLE_SEEDREAM === 'true', ...(memoryKey ? { memory: true } : {}) })
       }
       if (action === 'memory') {
+        stage = 'memory'
         if (!memoryKey || !(await ledger.user(user.id)).eligible) return fail('HOSTED_AI_NOT_ENABLED', 403)
         if (!env.ARK_LIMITER || !(await env.ARK_LIMITER.limit({ key: 'memory:' + user.id })).success) return fail('HOSTED_AI_BUSY', 429)
         return json(await vikingMemory(send, request, memoryKey, user.id, await readJson(request, 8000), readJson))
@@ -239,15 +267,19 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       let input
       try { input = (image ? imageInput : chatInput)(await readJson(request, 12_000_000)) }
       catch { return fail('INVALID_REQUEST', 400, '方舟请求参数无效或超出大小限制。') }
-      const requestId = request.headers.get('x-ework-request-id') || crypto.randomUUID()
       const key = { userId: user.id, requestId }
+      stage = 'reserve'
       const { duplicate } = await ledger.reserve({ ...key, amountUnits: input.amountUnits })
-      if (duplicate) return fail('HOSTED_AI_DUPLICATE', 409, '请求已受理，请勿重复提交。')
-      const settle = actualUnits => ledger.settle({ ...key, actualUnits })
+      if (duplicate) return requestFailure('HOSTED_AI_DUPLICATE', 409, '请求已受理，请勿重复提交。')
+      const settle = actualUnits => {
+        stage = 'settle'
+        return ledger.settle({ ...key, actualUnits })
+      }
       if (request.signal.aborted) {
         await settle(0)
         return fail('HOSTED_AI_CANCELLED', 499)
       }
+      stage = 'upstream'
       const response = await send(ARK_PLAN_BASE + (image ? '/images/generations' : '/chat/completions'), {
         method: 'POST', redirect: 'manual',
         signal: image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(300000),
@@ -255,32 +287,46 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         body: input.wire
       })
       if (!response.ok) {
+        diagnostic('HOSTED_AI_UPSTREAM', { upstreamStatus: response.status })
         await response.body?.cancel()
         // On a definitive validation/auth/rate-limit rejection no generation occurred.
         if ([400, 401, 403, 404, 422, 429].includes(response.status)) await settle(0)
-        return fail('HOSTED_AI_UPSTREAM', response.status === 429 ? 429 : 502, '方舟暂时未能完成请求。')
+        return requestFailure('HOSTED_AI_UPSTREAM', response.status === 429 ? 429 : 502, '方舟暂时未能完成请求。')
       }
       if (!image) {
-        if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) return fail('HOSTED_AI_UPSTREAM', 502)
-        const stream = chatStream(response.body, settle, input)
-        if (!ctx) return new Response(stream, { headers: { ...headers, 'content-type': 'text/event-stream' } })
+        stage = 'stream'
+        if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
+          await response.body?.cancel()
+          diagnostic('HOSTED_AI_STREAM_FORMAT')
+          return requestFailure('HOSTED_AI_UPSTREAM', 502, '方舟模型返回了无效的输出流。')
+        }
+        const stream = chatStream(response.body, async units => {
+          await settle(units)
+          stage = 'stream'
+        }, input, billed => diagnostic('HOSTED_AI_STREAM_INTERRUPTED', { billed }), requestId)
+        const streamHeaders = { ...requestHeaders, 'content-type': 'text/event-stream' }
+        if (!ctx) return new Response(stream, { headers: streamHeaders })
         const [client, accounting] = stream.tee()
         // A client can close after the last token and before the provider's usage event.
         ctx.waitUntil(accounting.pipeTo(new WritableStream()).catch(() => {}))
-        return new Response(client, { headers: { ...headers, 'content-type': 'text/event-stream' } })
+        return new Response(client, { headers: streamHeaders })
       }
       let b64
+      stage = 'image-delivery'
       try {
         b64 = await downloadArkImage(send, response, AbortSignal.any([request.signal, AbortSignal.timeout(60000)]))
       } catch {
         if (request.signal.aborted) return fail('HOSTED_AI_CANCELLED', 499)
-        return fail('HOSTED_AI_IMAGE_DELIVERY', 502, 'Seedream 图片传输失败，请稍后重试。')
+        diagnostic('HOSTED_AI_IMAGE_DELIVERY')
+        return requestFailure('HOSTED_AI_IMAGE_DELIVERY', 502, 'Seedream 图片传输失败，请稍后重试。')
       }
       await settle(input.amountUnits)
-      return json({ data: b64 })
+      return Response.json({ data: b64 }, { headers: requestHeaders })
     } catch (error) {
       if (error instanceof AiQuotaError) return fail(error.code, error.status, error.message)
-      return fail('HOSTED_AI_UNAVAILABLE', 503, '云端 AI 暂时不可用。')
+      if (request.signal.aborted) return fail('HOSTED_AI_CANCELLED', 499)
+      diagnostic('HOSTED_AI_UNAVAILABLE')
+      return requestFailure('HOSTED_AI_UNAVAILABLE', 503, '云端 AI 暂时不可用。')
     }
   }
 }

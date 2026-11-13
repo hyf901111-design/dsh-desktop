@@ -10,13 +10,15 @@ import { AFP_UNITS, AiQuotaLedger } from '../services/accounts/ai-quota.js'
 
 const resume = process.argv.find(value => value.startsWith('--resume='))?.slice('--resume='.length)
 const hostedAi = process.argv.includes('--hosted-ai')
+const port = Number(process.argv.find(value => value.startsWith('--port='))?.slice('--port='.length) ?? 8773)
+if (!Number.isInteger(port) || port < 1024 || port > 65535) throw Error('Invalid native acceptance port')
 const hostedUsername = '验收所有者'
 const directory = resume ? resolve(resume) : await mkdtemp(join(tmpdir(), 'ework-native-acceptance-'))
 if (resume) {
   const suffix = relative(resolve(tmpdir()), directory)
   if (!suffix || suffix.startsWith('..') || isAbsolute(suffix)) throw Error('Resume directory must stay inside the system temporary directory')
   const fixture = JSON.parse(await readFile(join(directory, 'fixture.json'), 'utf8'))
-  if (fixture.directory !== directory || fixture.origin !== 'http://127.0.0.1:8773') throw Error('Not a native acceptance fixture')
+  if (fixture.directory !== directory || fixture.origin !== 'http://127.0.0.1:' + port) throw Error('Not a native acceptance fixture')
   if (Boolean(fixture.hostedAi) !== hostedAi) throw Error('Resume must use the original hosted AI mode')
 }
 const source = await build({
@@ -33,12 +35,10 @@ const source = await build({
       }
       ${hostedAi ? `
       if(path.startsWith('/v1/hosted-ai/')){
-        if(path !== '/v1/hosted-ai/catalog' && path !== '/v1/hosted-ai/quota'){
-          return Response.json({error:{code:'HOSTED_AI_FIXTURE_READ_ONLY'}},{status:403});
-        }
         return hostedAi.fetch(request,{
           ...env,
           ARK_HOSTED_MODE:'authorized-agent-plan',
+          ARK_ENABLE_SEEDREAM:'true',
           ARK_AGENT_PLAN_KEY:'synthetic-fixture-marker'
         });
       }
@@ -48,13 +48,45 @@ const source = await build({
   bundle: true, write: false, format: 'esm', platform: 'neutral', external: ['cloudflare:*', 'node:*']
 })
 const mf = new Miniflare(convertV4MiniflareOptions({
-  host: '127.0.0.1', port: 8773, resourcePersistencePath: join(directory, 'service'),
+  host: '127.0.0.1', port, resourcePersistencePath: join(directory, 'service'),
   workers: [{ modules: true, script: source.outputFiles[0].text,
     compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
     d1Databases: { ACCOUNTS_DB: 'native-acceptance' },
     durableObjects: { RESEARCH_ROOMS: { className: 'ResearchBoardRoom', useSQLite: true }, RESEARCH_NOTIFICATIONS: { className: 'ResearchNotifications', useSQLite: true } },
     r2Buckets: ['RESEARCH_ASSETS'],
-    outboundService: () => { throw Error('Native acceptance must not contact external services') }
+    ...(hostedAi ? { ratelimits: { ARK_LIMITER: { namespace_id: '2026111202', simple: { limit: 60, period: 60 } } } } : {}),
+    outboundService: async request => {
+      const ark = 'https://ark.cn-beijing.volces.com/api/plan/v3'
+      const imageUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/fixture.png'
+      const png = 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAO0lEQVRIiWNQNfOlKWIYtcBsNIh8R1OR6mhG8x0tKlRHS1Oz0QpHdbTKNBttVfiONrzMRpuOvoO6dQ0AWtagH8h3CaQAAAAASUVORK5CYII='
+      if (hostedAi && request.method === 'GET' && request.url === imageUrl && !request.headers.has('authorization'))
+        return new Response(Buffer.from(png, 'base64'), { headers: { 'content-type': 'image/png' } })
+      if (hostedAi && request.method === 'POST' && request.headers.get('authorization') === 'Bearer synthetic-fixture-marker') {
+        if (request.url === ark + '/images/generations') return Response.json({ data: [{ url: imageUrl }] })
+        if (request.url === ark + '/chat/completions') {
+          const input = await request.json()
+          const frame = (choices, usage) => ({ id: 'native-acceptance', object: 'chat.completion.chunk', created: 1, model: input.model, choices, usage })
+          const toolNames = input.tools?.map(tool => tool.function?.name) ?? []
+          const promptIndex = input.messages.findLastIndex(message => message.role === 'user' && message.content === '验收生成图片')
+          const callId = 'fixture-image-' + promptIndex
+          const wantsImage = promptIndex >= 0 && !input.messages.slice(promptIndex + 1).some(message => message.tool_call_id === callId)
+          const tool = !wantsImage ? undefined : toolNames.includes('image_generate')
+            ? { name: 'image_generate', arguments: JSON.stringify({ prompt: '验收图片' }) }
+            : toolNames.includes('run_code') ? { name: 'run_code', arguments: JSON.stringify({
+              code: 'return await tools.image_generate({prompt:"验收图片"});', description: '验收生成图片'
+            }) } : undefined
+          const delta = tool ? { role: 'assistant', tool_calls: [{ index: 0, id: callId, type: 'function',
+            function: tool }] }
+            : { role: 'assistant', content: '套餐文本调用验证成功。' }
+          const frames = [frame([{ index: 0, delta, finish_reason: null }]),
+            frame([{ index: 0, delta: {}, finish_reason: tool ? 'tool_calls' : 'stop' }]),
+            frame([], { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 })]
+          return new Response(frames.map(value => 'data: ' + JSON.stringify(value) + '\n\n').join('') + 'data: [DONE]\n\n',
+            { headers: { 'content-type': 'text/event-stream' } })
+        }
+      }
+      throw Error('Native acceptance must not contact external services')
+    }
   }]
 }))
 const origin = (await mf.ready).origin

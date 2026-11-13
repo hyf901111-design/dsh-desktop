@@ -1,16 +1,17 @@
 import {createServer} from 'node:http'
-import {test,expect} from 'vitest'
+import {test,expect,vi} from 'vitest'
 import {registerHostedAi,HOSTED_ARK_PROVIDER} from '../packages/dsh-research-task-runtime/hosted-ai.js'
 
 test('the real model adapter only registers entitled chat models and uses its captured loopback generation',async()=>{
   const token='a'.repeat(64), requests=[]
   const model={id:'doubao-seed-2.1-lite',name:'Doubao Seed 2.1 Lite',contextWindow:1024000}
   let catalog={models:[],image:false}
+  let catalogStatus=200
   const image = (id,bytes) => ({type:'image',attachment:{attachmentId:String(id),bytes,mediaType:'image/png'}})
   const server=createServer(async(req,res)=>{
     if(req.url==='/hosted-ai/catalog'){
       expect(req.headers.authorization).toBe('Bearer '+token)
-      res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify(catalog));return
+      res.writeHead(catalogStatus,{'content-type':'application/json'}).end(JSON.stringify(catalog));return
     }
     const chunks=[]
     for await(const chunk of req)chunks.push(chunk)
@@ -67,11 +68,64 @@ test('the real model adapter only registers entitled chat models and uses its ca
       type:'finish',reason:{kind:'error',failure:{code:'AI_QUOTA_FIVE_HOUR',message:'5 小时剩余额度不足以开始本次模型调用。'}}
     })
     const oldGenerate=service.image.capture()
+    const lastCatalog=catalog
+    catalogStatus=502
+    catalog={error:{code:'BAD_GATEWAY'}}
+    await service.refresh()
+    expect(route.get(HOSTED_ARK_PROVIDER)).toBe(visionAdapter)
+    expect(service.image.available()).toBe(true)
+    catalogStatus=503
+    catalog={generation:8,status:'unavailable'}
+    await service.refresh()
+    expect(route.size).toBe(0)
+    expect(service.image.available()).toBe(false)
+    expect(service.image.unavailable()).toBe(true)
+    await expect(oldGenerate({},{signal:new AbortController().signal,maxBytes:100})).rejects.toThrow('账号已切换')
+    catalogStatus=200
+    catalog={...lastCatalog,generation:8}
+    await service.refresh()
+    expect(service.image.available()).toBe(true)
     catalog={models:[],image:false}
     await service.refresh()
     expect(route.size).toBe(0)
     expect(service.image.available()).toBe(false)
+    expect(service.image.unavailable()).toBe(false)
     await expect(oldGenerate({},{signal:new AbortController().signal,maxBytes:100})).rejects.toThrow('账号已切换')
     expect(requests).toHaveLength(3)
   }finally{service.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
+})
+
+test('a Seedream response completed after the account changes is discarded', async () => {
+  const token = 'a'.repeat(64)
+  const model = { id: 'glm-5.3-flash', name: 'GLM 5.3 Flash', contextWindow: 200000 }
+  let generation = 1
+  let complete
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XQAAAAASUVORK5CYII='
+  const response = new Response(new ReadableStream({
+    start(controller) {
+      complete = () => {
+        controller.enqueue(Buffer.from(JSON.stringify({ data: png })))
+        controller.close()
+      }
+    }
+  }))
+  const request = vi.fn(async path => path.endsWith('/catalog')
+    ? Response.json({ models: [model], image: true, generation }) : response)
+  const service = registerHostedAi({ llm: { registerAdapter: () => () => {} } }, {
+    bridge: JSON.stringify({ url: 'http://127.0.0.1:6789/fund-research', token }),
+    request, pollMs: 60000
+  })
+  try {
+    await service.refresh()
+    const pending = service.image.capture()({ model: 'doubao-seedream-5.0-flash', references: [] }, {
+      signal: new AbortController().signal, maxBytes: 100, requestId: 'f'.repeat(64)
+    })
+    const rejected = expect(pending).rejects.toThrow('账号已切换')
+    await vi.waitFor(() => expect(response.body.locked).toBe(true))
+    expect(request.mock.lastCall[1].headers).toMatchObject({ 'x-ework-request-id': 'f'.repeat(64) })
+    generation++
+    await service.refresh()
+    complete()
+    await rejected
+  } finally { service.dispose() }
 })

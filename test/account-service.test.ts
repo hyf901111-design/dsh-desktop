@@ -447,7 +447,9 @@ it('rejects old hosted-AI bridge generations before contacting Cloudflare',async
   vi.stubGlobal('fetch',provider)
   const base=new URL('/hosted-ai/',endpoint.url)
   const catalog=()=>local(new URL('catalog',base),{headers:{authorization:'Bearer '+endpoint.token}})
-  const send=(generation:number)=>local(new URL('chat/completions',base),{method:'POST',body:'{}',headers:{authorization:'Bearer '+endpoint.token+'.'+generation}})
+  const send=(generation:number, path = 'chat/completions', requestId?: string)=>local(new URL(path,base),{method:'POST',body:'{}',headers:{
+    authorization:'Bearer '+endpoint.token+'.'+generation, ...(requestId ? {'x-ework-request-id':requestId} : {})
+  }})
   expect(await (await catalog()).json()).toEqual({models:[],image:false})
   expect(await service.invoke('ai-quota',undefined)).toEqual({user:null})
   expect((await send(service.generation)).status).toBe(401)
@@ -458,12 +460,58 @@ it('rejects old hosted-AI bridge generations before contacting Cloudflare',async
   expect(await service.invoke('ai-quota',undefined)).toMatchObject({quota:{fiveHour:{remaining:29}}})
   expect(await (await send(generation)).text()).toBe('data: [DONE]\n\n')
   await expect.poll(() => onHostedQuotaChanged.mock.calls.length).toBe(1)
+  const imageId = 'f'.repeat(64)
+  await (await send(generation,'images',imageId)).text()
+  expect(provider.mock.lastCall?.[1]?.headers).toMatchObject({'x-ework-request-id':imageId})
+  await expect.poll(() => onHostedQuotaChanged.mock.calls.length).toBe(2)
   await service.invoke('logout',{})
   await service.invoke('login',{})
   const calls=provider.mock.calls.length
   expect((await send(generation)).status).toBe(401)
   expect(provider).toHaveBeenCalledTimes(calls)
-  expect(onHostedQuotaChanged).toHaveBeenCalledTimes(1)
+  expect(onHostedQuotaChanged).toHaveBeenCalledTimes(2)
+})
+
+it('distinguishes a temporary catalog failure from an empty catalog and isolates stale results by login', async () => {
+  const { service, endpoint } = await setup()
+  const local = globalThis.fetch
+  const catalog = () => local(new URL('/hosted-ai/catalog', endpoint.url), { headers: { authorization: 'Bearer ' + endpoint.token } })
+  const delayed = deferred<Response>()
+  const models = [{ id: 'doubao-seed-2.1-lite' }]
+  const originFetch = vi.fn()
+    .mockResolvedValueOnce(Response.json({ user: { id: 'a' }, token: 'a'.repeat(64) }))
+    .mockResolvedValueOnce(Response.json({ models, image: true, memory: true }))
+    .mockResolvedValueOnce(new Response('', { status: 503 }))
+    .mockResolvedValueOnce(Response.json({ models: [], image: false }))
+    .mockImplementationOnce(() => delayed.promise)
+    .mockResolvedValueOnce(Response.json({ user: { id: 'b' }, token: 'b'.repeat(64) }))
+    .mockResolvedValueOnce(new Response('', { status: 503 }))
+  vi.stubGlobal('fetch', originFetch)
+  const now = vi.spyOn(Date, 'now')
+  const start = Date.now()
+  try {
+    await service.invoke('login', {})
+    const generation = service.generation
+    expect(await (await catalog()).json()).toMatchObject({ models, image: true, generation })
+    now.mockReturnValue(start + 16_000)
+    expect(await (await catalog()).json()).toMatchObject({ models, image: true, generation, status: 'stale' })
+    expect(await service.invoke('ai-catalog-status', undefined)).toEqual({ catalogStatus: 'stale' })
+    expect(originFetch).toHaveBeenCalledTimes(3)
+    now.mockReturnValue(start + 19_000)
+    expect(await (await catalog()).json()).toEqual({ models: [], image: false, generation })
+    now.mockReturnValue(start + 35_000)
+    const previous = catalog()
+    await expect.poll(() => originFetch.mock.calls.length).toBe(5)
+    await service.invoke('login', {})
+    const unavailable = await catalog()
+    expect(unavailable.status).toBe(503)
+    expect(await unavailable.json()).toEqual({ generation: service.generation, status: 'unavailable' })
+    expect(await service.invoke('ai-catalog-status', undefined)).toEqual({ catalogStatus: 'unavailable' })
+    delayed.resolve(Response.json({ models, image: true }))
+    const superseded = await previous
+    expect(superseded.status).toBe(409)
+    expect(await superseded.json()).toEqual({ generation: service.generation, status: 'session-changed' })
+  } finally { now.mockRestore() }
 })
 
 it('does not sign out an account until the account service confirms a quota-gateway 401',async()=>{
