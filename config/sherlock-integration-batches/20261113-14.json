@@ -163,6 +163,25 @@
           "生图路由使用本地替身验证，未请求线上 Seedream。正式签名构建仍待独立验收。"
         ],
         "generatedAt": "2026-11-13T11:26:39.253Z"
+      },
+      "merged": {
+        "mergeCommit": "f96cfbc40ce9b0ab436bcd420c28e27ec2130991",
+        "verificationCommit": "f96cfbc40ce9b0ab436bcd420c28e27ec2130991",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f96cfbc40ce9b0ab436bcd420c28e27ec2130991",
+            "completedAt": "2026-11-13T11:31:00.268Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T11:31:00.268Z"
       }
     }
   ],
