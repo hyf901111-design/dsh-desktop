@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图表样式、空值与工作区布局",
+        "featureName": "飞书式级联菜单与图表及组件侧栏",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
-        "tipCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
+        "baseCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
+        "tipCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
         "commits": [
           {
-            "commit": "99745e3b596bddcd32bc6414eebdcf7a859d9283",
+            "commit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
             "parents": [
-              "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345"
+              "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9"
             ],
-            "subject": "补充图表空值策略、数值标签和样式预览"
-          },
-          {
-            "commit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
-            "parents": [
-              "99745e3b596bddcd32bc6414eebdcf7a859d9283"
-            ],
-            "subject": "支持图表实时拖动缩放并记住布局"
+            "subject": "改用悬停级联菜单并重做表格图表和组件插入交互"
           }
         ],
         "files": [
@@ -69,10 +62,6 @@
           {
             "status": "M",
             "path": "src/shared/spreadsheet/workbook.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/spreadsheet-workbook.test.ts"
           }
         ],
         "checks": [
@@ -84,8 +73,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
-            "completedAt": "2026-11-13T15:54:29.700Z",
+            "verifiedCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
+            "completedAt": "2026-11-13T20:16:34.397Z",
             "timeoutMs": 120000
           },
           {
@@ -101,8 +90,8 @@
             ],
             "outcome": "passed",
             "summary": "43 项表格协议和组件复用检查通过",
-            "verifiedCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
-            "completedAt": "2026-11-13T15:54:29.700Z",
+            "verifiedCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
+            "completedAt": "2026-11-13T20:16:34.397Z",
             "timeoutMs": 120000
           },
           {
@@ -111,70 +100,24 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "43 项 Electron 表格聚焦检查通过",
-            "verifiedCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
-            "completedAt": "2026-11-13T15:54:29.700Z",
+            "summary": "45 项 Electron 表格聚焦检查通过",
+            "verifiedCommit": "6e0a2257fd9eb525d1e14e1ef0a3d1053ce62761",
+            "completedAt": "2026-11-13T20:16:34.397Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已验证图表数值标签、空值配置、拖动与缩放实时反馈、键盘微调及重开恢复位置与尺寸。"
+          "summary": "验证无点击悬停展开、键盘切换、图表侧栏与实时预览、复制删除、组件库插入确认、智能组件重新框选及中英文。"
         },
         "acceptanceCriteria": [
-          "空值策略可选",
-          "常用直角坐标图可显示数值标签",
-          "图表样式保存后可重新编辑",
-          "图表位置和尺寸实时变化并持久化，修改同一工作表的图表配置后仍保留布局"
+          "分类菜单悬停打开二级、三级，保留键盘返回",
+          "图表作为工作表对象保存，侧栏可配置数据和样式",
+          "右键及工具栏可打开组件库、智能组件侧栏",
+          "组件库先选后插入，智能组件确认范围后生成"
         ],
         "risks": [],
-        "generatedAt": "2026-11-13T15:54:29.700Z"
-      },
-      "merged": {
-        "mergeCommit": "f1b0aa087b652faaee022503ea93d3e5a0c64ac8",
-        "verificationCommit": "f1b0aa087b652faaee022503ea93d3e5a0c64ac8",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f1b0aa087b652faaee022503ea93d3e5a0c64ac8",
-            "completedAt": "2026-11-13T15:54:42.653Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "f1b0aa087b652faaee022503ea93d3e5a0c64ac8",
-            "completedAt": "2026-11-13T15:54:42.653Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "f1b0aa087b652faaee022503ea93d3e5a0c64ac8",
-            "completedAt": "2026-11-13T15:54:42.653Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T15:54:42.653Z"
+        "generatedAt": "2026-11-13T20:16:34.397Z"
       }
     }
   ],
