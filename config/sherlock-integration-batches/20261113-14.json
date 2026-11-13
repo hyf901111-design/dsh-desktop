@@ -84,6 +84,25 @@
           "生产失败时保留原账本待对账，不根据推测释放已预留额度。"
         ],
         "generatedAt": "2026-11-13T12:32:11.816Z"
+      },
+      "merged": {
+        "mergeCommit": "71f6b986ae5a1119ce53d5ea5446333e670aa2ee",
+        "verificationCommit": "71f6b986ae5a1119ce53d5ea5446333e670aa2ee",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "71f6b986ae5a1119ce53d5ea5446333e670aa2ee",
+            "completedAt": "2026-11-13T12:33:00.820Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T12:33:00.820Z"
       }
     }
   ],
