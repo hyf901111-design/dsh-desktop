@@ -1,3 +1,4 @@
+import {prepareWorkbenchPomodoro} from './workbench-pomodoro.js';
 import {resolveWorkbenchLibraryPanel,validateWorkbenchLinks} from './workbench-library.js';
 import {validateWorkbenchTabs} from './workbench-tabs.js';
 import {comparisonWindowInstruction} from './workbench-comparison-window.js';
@@ -31,7 +32,7 @@ import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
 import {authoredPrototypeEvidence} from './workbench-prototype-evidence.js';
 import {compileComponentContent} from './component-content.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
-import {applyAuthoredFinanceLedger,authoredFinanceLedger,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
+import {applyAuthoredFinanceLedger,authoredFinanceLedger, applyInlineFinanceLedger,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
 import {marketPanelSchema} from './market-artifact.js';
 import {verifiedAggregateRecordCount,verifiedChartRecordCount,verifiedKpiRecordCount} from './dataset-aggregate.js';
 import {resolvePastedWorkbenchPlan} from './workbench-pasted-tables.js';
@@ -606,7 +607,11 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     const compilePanel = candidate => {
         if(candidate?.content!==undefined&&candidate.library!==undefined)throw Error('已取得的content不能与组件库取数配置混用。');
         let p=expandMappedWorkbenchChart(applyAuthoredFinanceLedger(resolveWorkbenchLibraryPanel(candidate,value.originalRequest),ledger,value.originalRequest));
-        if(!deferred&&!parallel)p=prepareAuthoredLocalForm(p,value.originalRequest);
+        if(!deferred&&!parallel){
+            p=prepareAuthoredLocalForm(p,value.originalRequest);
+            p=prepareWorkbenchPomodoro(p,value.originalRequest);
+            if(!datasets)p=applyInlineFinanceLedger(p,value.originalRequest);
+        }
         p=labelRequestedReportSeries(p,value.originalRequest);
         p=normalizeSharedChart(resolveWorkbenchPanelLabels(p,datasets),datasets,value.originalRequest);
         p=normalizeSharedKpi(p,datasets,value.originalRequest);

@@ -22,7 +22,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
-import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt, workbenchQuantityDeclarations, workbenchQuoteSourceRequests, workbenchScopeDeficits, WORKBENCH_PANEL_TYPES as types} from './workbench-plan.js';
+import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt, workbenchQuantityDeclarations, workbenchQuoteSourceRequests, workbenchScopeDeficits, MAX_WORKBENCH_PANELS, WORKBENCH_PANEL_TYPES as types} from './workbench-plan.js';
 import {preparedReleaseCohortIssue} from './observed-dated-feed.js';
 import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
 import {LIVE_WORKBENCH_PRESETS} from './live-workbench-presets.js';
@@ -30,7 +30,7 @@ import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
 import { PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 import {DATASET_HIERARCHY_SCHEMA,DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA,assertWorkbenchViewSources} from './dataset-view-contract.js';
-import {acquireFundComparison,fundComparisonArtifacts,fundComparisonCount,fundComparisonReader,prepareFundComparisonOverview} from './workbench-fund-comparison.js';
+import {acquireFundComparison,fundComparisonArtifacts,fundComparisonCount,fundComparisonReader,includeFundComparisonOverview,prepareFundComparisonPanel} from './workbench-fund-comparison.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 export function listWorkbenchObservedSources(session,messageId,schemas) {
     return observedSourceViews(captureWorkbenchObservedSources({session,messageId,schemas,onRejected:()=>{}}));
@@ -320,7 +320,12 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             await assertPrivateResearchSession(parentSessionId);
             const sources=await resolveSourceTables(args);
             const resolved=await resolveWorkbenchPrototypeTables(sources,ctx,exec,originalRequest);
-            const {input:submitted,scopeDeficits:submittedDeficits} = validateWorkbenchDelivery(resolved, validationOptions);
+            const fundScope = fundCount && !args.preset && args.dataMode !== 'simulated' && !resolved.sharedDatasets;
+            const fundReader = fundScope && !observedSources?.length &&
+                Array.isArray(resolved.panels) && resolved.panels.some(panel=>panel&&!panel.artifact&&!panel.publicData) &&
+                fundComparisonReader(ctx,exec.agent);
+            const candidate = fundReader ? includeFundComparisonOverview(resolved,originalRequest,MAX_WORKBENCH_PANELS) : resolved;
+            const {input:submitted,scopeDeficits:submittedDeficits} = validateWorkbenchDelivery(candidate, validationOptions);
             let input = submitted;
             let scopeDeficits = submittedDeficits;
             let preparedWordEvidence;
@@ -374,7 +379,6 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     }
                 }
             }
-            const fundReader = fundCount && !args.preset && args.dataMode !== 'simulated' && input.panels.some(panel=>!panel.artifact&&!panel.publicData) && !input.sharedDatasets && !observedSources?.length && fundComparisonReader(ctx, exec.agent);
             // Resolve before queuing so ambiguous human restrictions remain explicit.
             const contexts = new Map(originalRequest ? input.panels.filter(p => !p.publicData).map(panel => {
                 const authored=args.panels?.find(value=>value?.title?.trim()===panel.title);
@@ -448,12 +452,10 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 try {
                     const data=await acquireFundComparison({count:fundCount,query:(request,signal)=>fundReader(request,exec,signal),signal:exec.signal});
                     exec.signal?.throwIfAborted();
-                    // Acquisition optimizations supply facts, never replace the user's
-                    // plan or dictate the number and shape of the final components.
-                    const evidence = fundComparisonArtifacts(data)[0];
-                    sharedEvidence = JSON.stringify(evidence);
+                    const artifacts = fundComparisonArtifacts(data);
+                    sharedEvidence = JSON.stringify(artifacts[0]);
                     for (const panel of plan.panels) {
-                        const artifact = prepareFundComparisonOverview(panel,data,evidence);
+                        const artifact = prepareFundComparisonPanel(panel,data,artifacts);
                         if (artifact) panel.artifact = artifact;
                     }
                 } catch (error) {

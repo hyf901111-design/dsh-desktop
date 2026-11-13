@@ -251,8 +251,12 @@ export function completeWordOrganizationPanels(panels,documents,request=''){
  const groups=documentOutlineGroups(document);
  const index=panels.findIndex(panel=>{
   const artifact=panel.artifact;
-  if(artifact?.type!=='mind-map'||!orgScope.test(panel.title)||!JSON.stringify(artifact.source).includes(document.name))return false;
-  return derivedOutline(artifact.content)?.children.every(child=>blockId.test(child.label.trim()));
+  if(artifact?.type!=='mind-map'||!orgScope.test(panel.title))return false;
+  const outline=derivedOutline(artifact.content);
+  if(!outline)return false;
+  const cited=JSON.stringify(artifact.source).includes(document.name)&&/\[(?:P|T)\d+\]/u.test(artifact.source?.text??'');
+  const onlyIdentifiers=outline.children.every(child=>blockId.test(child.label.trim()));
+  return !cited||onlyIdentifiers;
  });
  if(index<0)return panels;
  const title=chapters.map(({heading})=>shortOrganization(heading)).join('与')+'组织关系';

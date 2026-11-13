@@ -88,6 +88,24 @@ async function siblingPrototypeSources(ctx,exec,path,section,revision,cache){
  return note.length<=4000?note:undefined;
 }
 
+async function verifiedChannelWindow(ctx,exec,path,section,index,revision){
+ // The prototype associates DYN.ours and EV's channel group in its report.
+ // Restrict the mapping to that explicit source shape and one unambiguous date pair.
+ if(section!=='DYN.ours'||!index?.data?.some(entry=>entry.name==='EV'&&
+    entry.keys?.some(key=>key.name==='ev5'&&key.kind==='object')))return;
+ const source=await readPrototypeSection(ctx,exec,path,'EV.ev5');
+ if(source.sourceRevision!==revision)throw Error('同一原型文件在读取渠道统计区间时发生变化。');
+ const metadata=source.value;
+ if(!/渠道.*(?:归因|拆解)/u.test(metadata?.t??'')||!Array.isArray(metadata.rows))return;
+ const windows=metadata.rows.filter(row=>Array.isArray(row)&&/^(?:窗口|统计区间)$/u.test(row[0]));
+ if(windows.length!==1||typeof windows[0][1]!=='string')return;
+ const range=windows[0][1].match(/^(\d{4}-\d{2}-\d{2})\s*(?:→|至|～)\s*(\d{4}-\d{2}-\d{2})$/u);
+ if(range&&range[1]<=range[2]&&range[2]===metadata.as_of&&range.slice(1).every(date=>{
+  const timestamp=Date.parse(date);
+  return Number.isFinite(timestamp)&&new Date(timestamp).toISOString().startsWith(date);
+ }))return {asOf:'渠道统计区间 '+range[1]+' 至 '+range[2],citation:'渠道区间来源：'+source.section+' · '+metadata.t};
+}
+
 async function verifyRelatedProductSnapshots(datasets,snapshots,ctx,exec,cache){
  const market=snapshots.find(source=>source.section.endsWith('.prods'));
  if(!market)return;
@@ -130,6 +148,7 @@ async function verifyRelatedProductSnapshots(datasets,snapshots,ctx,exec,cache){
    channelRows.set(key,{name:row.n,pct,amt});
   }
  }
+ const period=own.window;
  for(const [index,dataset] of datasets.entries()){
   if(typeof dataset.note!=='string'||!dataset.note.includes(own.section)||!Array.isArray(dataset.records)||
      dataset.records.length!==channelRows.size||!dataset.fields?.some(field=>field.key==='channel'))continue;
@@ -138,7 +157,7 @@ async function verifyRelatedProductSnapshots(datasets,snapshots,ctx,exec,cache){
      !['name','pct','amt'].every(key=>Object.hasOwn(dataset.records[i],key))))continue;
   const records=dataset.records.map((row,i)=>({...row,...channelRows.get(ids[i])}));
   const note=`${basename(own.path)} · ${own.section}.pct / ${own.section}.amt，原型静态快照\n${dataset.note}`;
-  datasets[index]={...dataset,records,note};
+  datasets[index]={...dataset,records,note:period?note+'\n'+period.citation:note,...(period?{asOf:period.asOf}:{})};
  }
 }
 
@@ -226,11 +245,13 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
   if(paths.length!==1)throw Error('原型表格必须唯一引用本轮附件中的文件名。');
   const path=paths[0],mode=prototypeTable.mode??'rows';
   const {rows,revision,presentation}=await readRows(path,prototypeTable.section,mode);
-  snapshots.push({id,path,section:prototypeTable.section,rows,revision,presentation});
   if(revisions.has(path)&&revisions.get(path)!==revision)throw Error('同一原型文件在读取多个数据段期间发生变化，请重新读取完整快照。');
   revisions.set(path,revision);
   const sourceIndex=mode==='rows'?await readIndex(path):undefined;
   if(sourceIndex&&sourceIndex.sourceRevision!==revision)throw Error('同一原型文件在读取单位时发生变化。');
+  const channelFields=fields.some(({key})=>/^(?:pct|amt)\./u.test(key));
+  const window=channelFields?await verifiedChannelWindow(ctx,exec,path,prototypeTable.section,sourceIndex,revision):undefined;
+  snapshots.push({id,path,section:prototypeTable.section,rows,revision,presentation,window});
   const units=new Map();
   verifiedUnits.set(id,units);
   const identity=mode==='entries'?'key':prototypeTable.identity;
@@ -277,8 +298,8 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
    aliases.get(field.key)??field.key,prototypeFieldValue(row,field.key)??null]))}));
   const source=`${prototypeTable.document} · ${prototypeTable.section}，原型静态快照`;
   const provenance=mode==='rows'?await siblingPrototypeSources(ctx,exec,path,prototypeTable.section,revision,indexes):undefined;
-  const sourceNote=[source,provenance,note===undefined?undefined:'规划备注：'+note.trim()].filter(Boolean).join('\n');
-  sharedDatasets.push({id,label,fields:columns,records,asOf:'用户提供的原型静态快照',note:sourceNote});
+  const sourceNote=[source,provenance,window?.citation,note===undefined?undefined:'规划备注：'+note.trim()].filter(Boolean).join('\n');
+  sharedDatasets.push({id,label,fields:columns,records,asOf:window?.asOf??'用户提供的原型静态快照',note:sourceNote});
  }
  await verifyRelatedProductSnapshots(sharedDatasets,snapshots,ctx,exec,indexes);
  const resolve=(id,key)=>fieldAliases.get(id)?.get(key)??key;

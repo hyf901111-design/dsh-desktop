@@ -1,3 +1,4 @@
+import {addDecimal,decimalNumber,decimalParts} from './workbench-decimal.js';
 import { chartDataIssue,chartFieldUnit,normalizeChartMetadata,orderDatedChartRows,requestedChartVariant } from './chart-template-contract.js';
 import { kpiDataIssue } from './kpi-template-contract.js';
 import { nativeProvenance } from './component-provenance.js';
@@ -81,6 +82,59 @@ export function authoredFinanceLedger(request = '') {
         current.rows.push([cells[0],...cells.slice(1).map(Number)]);
     }
     return tables;
+}
+
+// Inline ledger clauses are direct evidence when every entry parses in full.
+export function applyInlineFinanceLedger(panel, request = '') {
+    if (!panel?.title || panel.library || panel.publicData || panel.profile || panel.requests ||
+        !/(?:禁止|不要|不用|不)\s*联网/u.test(request) || !/模拟[^。；\n]{0,30}(?:账簿|台账)|模拟(?:账簿|台账)/u.test(request)) return panel;
+    const title = panel.title.split(/[（(]/u)[0].trim();
+    const clause = [...request.matchAll(/「([^」\n]+)」([^「。；\n]*)/gu)].find(match=>match[1]===title)?.[2];
+    if (!clause) return panel;
+    const kind = explicitPresentation(clause);
+    const number = '([+−-]?(?:0|[1-9]\\d{0,12})(?:\\.\\d{1,8})?)';
+    const unit = '(万元|亿元|元)';
+    const tokens = body => body.split(/[、，]/u).map(value=>value.trim());
+    const unique = rows => rows.length > 0 && rows.length <= 30 &&
+        rows.every(Boolean) && new Set(rows.map(row=>row.label)).size===rows.length;
+    const amounts = (body,units,{signed=false}={}) => tokens(body).map(token=>{
+        const match = new RegExp('^([^0-9+−-]{1,50}?)\\s*'+number+'\\s*'+unit+'?$','u').exec(token);
+        if (!match || match[3] && match[3]!==units || signed && !/^[+−-]/u.test(match[2])) return;
+        const label=match[1].trim(),raw=match[2].replace('−','-');
+        const value=Number(raw);
+        return label && Number.isFinite(value) ? {label,value,raw} : undefined;
+    });
+    const base = {version:1,type:'market',title,asOf:'用户提供的模拟账簿期末（未注明日期）',sources:[{label:'用户提供的模拟账簿'}],note:'来源：用户提供的模拟账簿'};
+    let artifact;
+    if (kind === 'market.waterfall') {
+        const match = new RegExp('期初\\s*'+number+'\\s*'+unit+'[、，](.+?)[、，]\\s*(?:明确)?期末\\s*'+number+'\\s*'+unit+'\\s*$','u').exec(clause);
+        if (!match || match[2]!==match[5]) return panel;
+        const [,start,units,body,end]=match;
+        const changes=amounts(body,units,{signed:true});
+        if (!unique(changes)) return panel;
+        const normalized = value => value.replace('−','-');
+        const total=changes.reduce((sum,{raw})=>addDecimal(sum,decimalParts(raw)),decimalParts(normalized(start)));
+        if (decimalNumber(total)!==Number(normalized(end))) throw Error('瀑布图的期末金额与期初金额加各项增减额不一致，请核对账簿。');
+        artifact={...base,variant:'waterfall',unit:units,start:Number(normalized(start)),changes:changes.map(({label,value})=>({label,value}))};
+    } else if (kind === 'market.allocation-donut') {
+        const body = /(?:环形图|环图)[，、：:]\s*(.*?)(?:[，、](?:图例|标注|显示|保留).*)?$/u.exec(clause)?.[1];
+        const units=body?.match(/(?:万元|亿元|元)\s*$/u)?.[0].trim();
+        if (!units) return panel;
+        const items=amounts(body,units);
+        if (!unique(items)||items.some(item=>item.value<0)) return panel;
+        artifact={...base,variant:'allocation-donut',unit:units,items:items.map(({label,value})=>({label,value}))};
+    } else if (kind === 'market.risk-matrix') {
+        const body=/(?:1\s*(?:到|至|[-–])\s*5\s*档)?[：:]\s*(.+)$/u.exec(clause)?.[1];
+        const items=body?.split(/[、，](?!\s*[1-5]\s*[）)])/u).map(token=>{
+            const match=/^([^（(]{1,50}?)\s*[（(]\s*([1-5])\s*[,，]\s*([1-5])\s*[）)]$/u.exec(token.trim());
+            return match ? {label:match[1].trim(),probability:Number(match[2]),impact:Number(match[3])} : undefined;
+        });
+        if (!items || !unique(items)) return panel;
+        artifact={...base,variant:'risk-matrix',items};
+    }
+    if (!artifact) return panel;
+    const {content,view,artifact:previous,...planned}=panel;
+    return {...planned,type:'market',artifact};
 }
 
 export function applyAuthoredFinanceLedger(panel, tables, request) {

@@ -25,6 +25,9 @@ function fixture({missing,overflow=false}={}){
 describe('same-cohort bond-fund workbench',()=>{
  it('routes only supported direct-source comparison and parses a non-executable directory',()=>{
   expect(fundComparisonCount(original)).toBe(8)
+ const followup=original+' 请额外做一张原生 KPI 卡「样本概览指标」，计算近一年收益率中位数。'
+ expect(fundComparisonCount(followup)).toBe(8)
+ expect(fundComparisonCount(followup+'不要联网。')).toBeNull()
   for(const prefix of ['禁止联网，','只用附件，','用Tushare，','做个演示，'])expect(fundComparisonCount(prefix+original)).toBeNull()
   const row=(code,name,category)=>[code,'',name,category,'']
   expect(parseFundComparisonCatalog('var r = '+JSON.stringify([

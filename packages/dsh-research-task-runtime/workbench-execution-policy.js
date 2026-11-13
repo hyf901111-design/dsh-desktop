@@ -1,3 +1,4 @@
+import {workbenchPomodoroSettings} from './workbench-pomodoro.js';
 import { isDeepStrictEqual } from 'node:util'
 import {WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
 import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
@@ -393,7 +394,8 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence, li
       !offline && !availableSources.length && fundComparisonCount(human.text) && fundComparisonReader(ctx,agent) && '【中长期纯债基金共同取数】本题命中宿主的同批基金比较取数能力。直接提交完整面板规划，省略 preset、publicData 和未取得的 artifact。宿主取得可比基金样本、净值与管理人后交给各卡复用。',
       offline && !state.evidenceTargets.required.length && '【离线工作台】直接调用 research_workbench_create 交付整套卡。题中现成记录随同一调用提交，保留零、负数、原单位、台账来源与计算口径。交互工具从明确的字段和操作开始，不虚构提交记录。',
       hasPastedTable && '【直接复用消息原表】本轮有 '+pastedBlocks.length+' 个按竖线分隔的表段。用 sharedDatasets:[{id,label,fields:[{key,label,unit?}],pastedTable:{block:1,header?:true,identity?:编号键,numericFields:[原数值键],derive?:[{key,label,op:"subtract|percent",left:原列键,right:原列键,unit?,digits?}]}}]。fields 与原表各列同序；只有首行是表头才填 header:true，不抄 records、asOf、note，不用样例替换。subtract 为左减右，percent 为左除右的百分比。图表、明细、排程共用完整表；子集用 view.where:[{field,op:"gt|ne",value:0}]。同日、同渠道按 aggregate 分组 sum，全表总计 groupBy:[]，总体百分比引用本次汇总的分子和分母。原生指标卡引用单条总计，原生时间线引用发生日期，图表用原数值单位。',
-      /表单|番茄钟|倒计时|日程管理|准备待办/u.test(human.text) && '【本地交互卡】文本、日期、数值范围、下拉和本地提交记录优先使用 form 原生组件，artifact 提供 fields 与 mode:local；待办用 tasks 和 mode:local。个人日程使用组件库日历。番茄钟属于可操作的离线 HTML，使用真实截止时刻计算剩余时间，开始、暂停、继续、复位和阶段切换用 window.sherlockShared 状态保存，不能使用 localStorage、外部网络或空控件。',
+      /表单|番茄钟|倒计时|日程管理|准备待办/u.test(human.text) && '【本地交互卡】文本、日期、数值范围、下拉和本地提交记录优先使用 form 原生组件，artifact 提供 fields 与 mode:local；待办用 tasks 和 mode:local。个人日程使用组件库日历。自定义计时器使用真实截止时刻与 window.sherlockShared 状态保存。',
+      workbenchPomodoroSettings(human.text) && '【标准番茄钟】提交番茄钟面板的 title、prompt、type:"html"，省略 artifact。宿主从本轮需求配置专注、休息、开始、暂停、继续、重置、切换阶段和完成轮次。',
       '【呈现与回报】用户明确指定的卡名、张数、原生类型和图形逐一保留。柱图、横向条形图和折线图用 chart.bar、chart.horizontal、chart.line 或等效原生图；百分比是单位，普通柱图仍是 chart.bar。指标卡用 kpi，时间线用 timeline（每条提供唯一 id、title、time，只有日期时填写原 YYYY-MM-DD）。表格使用 table 或含明细及分类筛选的 view。来源、数值和联动以实际交付为准。仅报告新增结果、重要缺失或必要操作，不公开接口目录、来源选择原则或内部任务分工。'].filter(Boolean).join('\n'), tools }
   })
   return () => {

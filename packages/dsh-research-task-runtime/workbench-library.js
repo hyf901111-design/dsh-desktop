@@ -9,7 +9,7 @@ export const WORKBENCH_LIBRARY_GUIDANCE=[
  '【组件库基础能力】实时行情、K线及可搜索的实时新闻先评估组件库覆盖，再规划其余取数与呈现。原生组件直接用 panel.library:{id,options?}，无需预取数据，不混用 artifact、publicData、requests 或 profile。金融组件 type:"financial-widget"，个人日历 type:"calendar-tool"。',
  'builtin-quote 是交互行情面板，支持标的搜索、周期、MA/VOL/MACD 和来源配置；证券可选支持的复权。Kraken（kraken）和 Bitfinex（bitfinex）支持 BTC/USD、ETH/USD、SOL/USD 现货和 1m、1h、1d、1w，每对独立一张。示例 library:{id:"builtin-quote",options:{symbols:[{code:"BTC/USD",market:"CRYPTO",name:"比特币"}],dataSource:"kraken",period:"1m",adjustment:"none"}}。A股等证券保留已确认的代码和市场；A股可按来源能力使用 tushare 或 datapro。无标的可用 symbols:[] 保留搜索。',
  'builtin-news 是支持搜索与来源选择的实时新闻列表。独立列表使用 options.query 保留主题；加密货币、国际或其他专题搜索优先选择已配置的 dataSource:"doubao"，全市场财经新闻可用默认来源。按用户指定的可用来源填 doubao（豆包）、eastmoney（东方财富）或 sina（新浪财经）。区间内逐条整理公告或新闻使用 market.table；实时证券公告可用 builtin-announcements。',
- 'builtin-watchlist 用于自选的搜索、增删、排序和选股，builtin-indices 用于市场指数总览，builtin-calendar 用于个人日历和手动日程。options 仅填配置，如 symbols:[{code,market,name}]、query、period、adjustment、indicators、visibleBars、refreshMinutes、refreshEnabled、dataSource。quote/announcements 最多一个标的，自选和指数可多个。选中标的用 selectedSymbol:"SH:688981"。',
+ 'builtin-watchlist 用于自选的搜索、增删、排序和选股，builtin-indices 用于市场指数总览，builtin-calendar 用于个人日历和手动日程。options 仅填配置，如 symbols:[{code,market,name}]、query、period、adjustment、indicators、visibleBars、refreshMinutes、refreshEnabled、dataSource。quote/announcements 最多一个标的，自选和指数可多个。多个大盘指数的盘中报价使用 builtin-indices，60 秒自动刷新填写 refreshMinutes:1 与 refreshEnabled:true。证券代码与交易所拆为 code:"600519"、market:"SH"，不把 .SH/.SZ 写入 code。选中标的用 selectedSymbol:"SH:688981"。',
  '联动用根级 links:[{sourcePanel:0,targetPanel:1}]，panels 从零计数。允许自选→行情/新闻/公告、行情→新闻/公告，每个目标至多一个来源，联动新闻随上游标的变化。按实体或主题分页用根级 tabs。',
  '工作台可同时包含库组件和独立数据卡。自定义量价图、组合对比、估值、经营、风险、指定历史区间及库组件无法覆盖的来源、周期或筛选沿用用户要求和实际数据。原生配置挂载后由客户端取数，报价来源、时点和刷新状态以实际返回为准。'
 ].join('\n')
@@ -28,17 +28,33 @@ export function resolveWorkbenchLibraryPanel(panel, originalRequest=''){
  const {library,...rest}=panel
  if(!library||typeof library!=='object'||Array.isArray(library)||Object.keys(library).some(k=>!['id','options'].includes(k))||!WORKBENCH_LIBRARY_IDS.includes(library.id))throw Error('组件库ID无效，请使用已列出的内置组件。')
  if(panel.artifact!=null||panel.publicData!==undefined||panel.requests!==undefined||panel.profile!==undefined)throw Error('组件库配置与数据快照/取数配置不能同时覆盖同一张卡；请拆分互补展示。')
- const options=library.options??{}
+ let options=library.options??{}
  if(!options||typeof options!=='object'||Array.isArray(options)||JSON.stringify(options).length>16000)throw Error('组件库配置无效或过长。')
+ if(Array.isArray(options.symbols)){
+  const symbols=options.symbols.map(symbol=>{
+   const suffix=typeof symbol?.code==='string'&&/^(\d{6})\.(SH|SZ|BJ)$/iu.exec(symbol.code);
+   if(!suffix||symbol.market&&symbol.market.toUpperCase?.()!==suffix[2].toUpperCase())return symbol;
+   return {...symbol,code:suffix[1],market:suffix[2].toUpperCase()};
+  });
+  options={...options,symbols};
+ }
  const requested=componentLibraryBuiltins().find(item=>item.id===library.id).widget
  const content=(panel.title??'')+' '+(panel.prompt??'')
- const indexCatalog=requested==='quote'&&Array.isArray(options.symbols)&&options.symbols.length>1?financialIndexCatalog():[]
+ const quotesOnly=requested==='quote'||requested==='watchlist'&&
+  /(?:盘中|实时).{0,8}报价|指数行情/u.test(content)&&
+  !/自选|增删|联动/u.test(originalRequest);
+ const indexCatalog=quotesOnly&&Array.isArray(options.symbols)&&options.symbols.length>1?financialIndexCatalog():[]
  const missingFinancialFields=requested==='quote'&&/市盈率|市净率|\bPE\b|\bPB\b|研发费用率|毛利率|净利率|营业收入|财务报表/iu.test(content)
  const aggregateQuote=indexCatalog.length&&!missingFinancialFields&&/指数/u.test(content)&&
   options.symbols.every(symbol=>indexCatalog.some(({symbol:index})=>index.code===symbol?.code&&index.market===symbol.market))&&
-  !/K\s*线|蜡烛图|分时|日线|周线|月线|成交量|复权|均线|\b(?:MA|MACD|VOL)\b/iu.test(content)&&
+  !/K\s*线|蜡烛图|分时图|日线|周线|月线|复权|均线|\b(?:MA|MACD|VOL)\b/iu.test(content)&&
   (options.adjustment===undefined||options.adjustment==='none')&&!options.indicators?.length&&options.visibleBars===undefined&&options.selectedSymbol===undefined
  const widget=aggregateQuote?'indices':requested
+ const seconds=/\b(\d+)\s*秒(?:钟)?(?:自动)?刷新/u.exec(originalRequest)?.[1];
+ if(widget==='indices'&&seconds&&Number(seconds)%60===0&&Number(seconds)>=60&&Number(seconds)<=86400&&
+    /自动刷新/u.test(content)&&!/(?:不要|禁止|不使用)自动刷新/u.test(originalRequest)){
+  options={...options,refreshMinutes:Number(seconds)/60,refreshEnabled:true};
+ }
  if(widget==='calendar'){
   if(Object.keys(options).length)throw Error('日历工具复用已有日历，不接受生成的事件或提醒；经济事件请使用数据日历卡。')
   return {...rest,type:'calendar-tool',artifact:{version:1,type:'calendar-tool',title:panel.title}}

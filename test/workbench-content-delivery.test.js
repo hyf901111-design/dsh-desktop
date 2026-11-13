@@ -455,6 +455,20 @@ it('does not require four dataset rows for a four-action countdown control',()=>
  expect(deficits('保留至少4条完整专注记录。')).toContainEqual(expect.objectContaining({expected:4,actual:null}));
 });
 
+it('uses a host countdown for a requested pomodoro whose proposed script returns an action from tick',async()=>{
+ const f=await setup({request:'搭一个晨会准备工作台。「番茄钟」专注25分钟、休息5分钟，可开始、暂停、继续、重置，记录已完成专注轮次。'})
+ try{
+  const result=await f.tool.execute({requestId:'native-pomodoro',title:'晨会准备',panels:[
+   {title:'番茄钟',type:'html',prompt:'专注与休息倒计时',artifact:{version:1,type:'html',title:'番茄钟',
+    html:'<button>开始</button><script>const timer=window.sherlockShared.register({initialState:{},reduce:s=>s,render:()=>{},tick:()=>({type:"TICK"}),tickMs:500});</script>'}}
+  ]},f.exec)
+  expect(result.status).toBe('prepared')
+  const [task]=f.runtime.tasks.values()
+  expect(JSON.parse(task.finalOutput).html).toContain('data-workbench-pomodoro')
+  expect(f.adapter.start).not.toHaveBeenCalled()
+ }finally{await f.close()}
+})
+
 it('materializes the complete static prototype array through the registered file reader and keeps native search',async()=>{
  const rows=Array.from({length:244},(_,i)=>({code:String(i).padStart(5,'0'),name:'产品'+i,group:i%2?'固收':'权益',ret:i===12?-0.0085:i/10000,channel:{直销:i/10},note:'原始说明'.repeat(90)}))
  const source=`<script>const original={products:${JSON.stringify(rows)}}; throw new Error('must never execute source');</script>`
@@ -759,3 +773,25 @@ it('uses original monetary units throughout a prototype board and restores an om
   expect(f.runtime.tasks.size).toBe(5);
  }finally{await f.close()}
 });
+
+it('recovers omitted cash flow cards from all original days and derives the plotted series',()=>{
+ const originalRequest='用模拟产品日报搭一个申赎工作台。做「申赎趋势」原生折线图，按日期展示净申购额（申购减赎回）；「申赎日报」表，保留日期、申购、赎回和净申购，可按日期排序；「本期资金流」指标卡，展示申购、赎回、净申购的期间合计。单位万元，来源模拟产品日报，采用以下数据，不联网。\n2026-11-02｜8｜5\n2026-11-03｜4｜7'
+ const draft={requestId:'authored-flow',title:'申赎台',dataMode:'simulated',originalRequest,panels:[{title:'探测',type:'table',prompt:'检查样例'}]}
+ const result=validateWorkbench(draft)
+ expect(result.panels.map(p=>p.title)).toEqual(['申赎趋势（模拟）','申赎日报（模拟）','本期资金流（模拟）'])
+ expect(result.panels[0].artifact.series).toEqual([{name:'净申购',values:[3,-3]}])
+ expect(result.panels[2].artifact.items.map(item=>item.value)).toEqual([12,12,0])
+ expect(validateWorkbench(result)).toEqual(result)
+})
+
+it('uses authored inline values for native waterfall, allocation and risk cards',()=>{
+ const originalRequest='搭一个模拟归因工作台，只用模拟账簿，禁止联网。做「桥」瀑布图，期初100万元、利息+4、费用-1，明确期末103万元；「配置」环形图，债券70、现金33万元，图例能看到各项；「风险」概率×影响风险矩阵，采用1到5档：信用下调(2,5)、大额赎回(4,4)。'
+ const draft={requestId:'inline-ledger',title:'归因',dataMode:'simulated',originalRequest,panels:['桥','配置','风险'].map(title=>({title,type:'market',prompt:'保留原账簿数据'}))}
+ const result=validateWorkbench(draft)
+ const [bridge,allocation,risk]=result.panels.map(panel=>panel.artifact)
+ expect(bridge).toMatchObject({variant:'waterfall',start:100,unit:'万元',changes:[{label:'利息',value:4},{label:'费用',value:-1}]})
+ expect(allocation).toMatchObject({variant:'allocation-donut',unit:'万元',items:[{label:'债券',value:70},{label:'现金',value:33}]})
+ expect(risk).toMatchObject({variant:'risk-matrix',items:[{label:'信用下调',probability:2,impact:5},{label:'大额赎回',probability:4,impact:4}]})
+ expect(()=>validateWorkbench({...draft,originalRequest:originalRequest.replace('期末103','期末102')})).toThrow(/期末金额/)
+ expect(validateWorkbench(result)).toEqual(result)
+})

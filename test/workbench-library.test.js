@@ -122,3 +122,12 @@ it('uses the exact index names in a panel instead of mounting an empty list',()=
  expect(result.panels[0].artifact.symbols.map(s=>s.code).sort()).toEqual(['000001','000300','399001'])
  expect(validateWorkbench({requestId:'generic-indices',title:'指数工作台',panels:[native('indices')]}).panels[0].artifact.symbols).toEqual([])
 })
+
+it('decodes exchange-suffixed A-share symbols and preserves a sixty-second index refresh',()=>{
+ const symbols=[{code:'000001.SH',name:'上证指数'},{code:'000300.SH',name:'沪深300'}];
+ const result=validateWorkbench({requestId:'suffix-indices',title:'行情工作台',
+  originalRequest:'用组件库跟踪上证指数和沪深300的盘中报价，60秒自动刷新。',
+  panels:[{...native('watchlist',{symbols,refreshMinutes:60}),title:'盘中报价',prompt:'指数盘中报价，自动刷新。'}]});
+ expect(result.panels[0].artifact).toMatchObject({widget:'indices',refreshMinutes:1,refreshEnabled:true,
+  symbols:[{code:'000001',market:'SH',name:'上证指数'},{code:'000300',market:'SH',name:'沪深300'}]});
+});
