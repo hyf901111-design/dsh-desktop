@@ -142,7 +142,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=fa
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
     workbenchSmartCreateTarget(node)&&react_jsx_runtime.jsx(WorkbenchSmartCreateFooter,{node,readOnly,createSourceCount}),
-    react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
+    react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,'data-workbench-spreadsheet-header':surfaceActions?.surface==='spreadsheet'||undefined,children:[
       refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':refreshing||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
       titleExtra,

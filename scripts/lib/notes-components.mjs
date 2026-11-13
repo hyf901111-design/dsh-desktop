@@ -5,12 +5,13 @@ export function createNoteComponentViewStore(doc){
  const notify=()=>{snapshot=[...entries.values()];for(const listener of listeners)listener()}
  const update=event=>{const value=event.detail;if(typeof value?.instanceId!=='string')return
   if(value.remove){entries.delete(value.instanceId);notify();return}
-  const host=doc.getElementById(value.hostId),header=doc.getElementById(value.headerId)
+  const host=doc.getElementById(value.hostId),header=doc.getElementById(value.headerId),footer=value.footerId?doc.getElementById(value.footerId):null
   if(value.surface==='spreadsheet'){
    if(!host?.matches('.ew-sheet-component-host')||host.dataset.sheetComponent!==value.node?.id||host.dataset.sheetSession!==value.sessionId||
-      !header?.parentElement?.matches('.ew-sheet-component-card')||header.parentElement!==host.parentElement||host.closest('[data-ework-spreadsheet-view]')?.dataset.eworkSpreadsheetView!==value.sessionId)return
+      !header?.parentElement?.matches('.ew-sheet-component-card')||header.parentElement!==host.parentElement||
+      footer&&!host.parentElement.contains(footer)||host.closest('[data-ework-spreadsheet-view]')?.dataset.eworkSpreadsheetView!==value.sessionId)return
   }else if(!host?.matches('.en-native-component-host')||host.dataset.noteComponent!==value.node?.id||host.dataset.noteSession!==value.sessionId||!header?.closest('.en-research')?.contains(host)||!host.closest('.en-root'))return
-  entries.set(value.instanceId,{...value,host,header});notify()
+  entries.set(value.instanceId,{...value,host,header,footer});notify()
  }
  const reset=()=>{entries.clear();notify()}
  doc?.addEventListener('sherlock:notes-component-view',update);doc?.addEventListener('sherlock:notes-reset',reset)
@@ -74,7 +75,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
  react.useEffect(()=>()=>sharedBridge.dispose(),[sharedBridge])
  const refresh=async()=>{if(refreshing||entry.readOnly)return;setRefreshBusy(true);try{await generationAction('refresh');setRefreshError('')}catch(e){setRefreshError(e.message)}finally{setRefreshBusy(false)}}
  if(entry.mode==='generation'&&!node.containerSpec)return react_dom.createPortal(react.createElement(ResearchGenerationProcess,{node,sessionId:entry.sessionId,onCancel:entry.readOnly?undefined:()=>generationAction('generation-stop'),onRetry:entry.readOnly?undefined:()=>{void generationAction('generation-retry').catch(error=>setError(error.message))},phaseOverride:entry.phase?workbenchText(entry.phase):undefined,detailOverride:error||(entry.detail?workbenchText(entry.detail):undefined)}),entry.host,entry.instanceId)
- const sourceButton=spreadsheet?react.createElement('button',{type:'button',className:'ew-sheet-native-source','aria-label':workbenchText('定位选区'),title:entry.source,onClick:()=>{void generationAction('source').catch(error=>setError(error.message))}},react.createElement(WorkbenchIcon,{name:'branch'})):null
+ const sourceButton=spreadsheet&&entry.source?react.createElement('button',{type:'button',className:'ew-sheet-native-source','aria-label':workbenchText('定位选区')+' '+entry.source,title:entry.source,onClick:()=>{void generationAction('source').catch(error=>setError(error.message))}},react.createElement(WorkbenchIcon,{name:'branch'}),react.createElement('span',{'data-ui-preserve':true},entry.source)):null
  const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save,footerExtra:sourceButton}):react.createElement(spreadsheet?ResearchContainerContent:ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{
   // ResearchHtmlArtifact reports outer-card height. Notes stores the content
   // host height, then renders its own chrome around that host.
@@ -96,15 +97,22 @@ export function EWorkNoteComponentView({entry,officePreview}){
    await generationAction('refresh')
   }:undefined
   const titleExtra=spec.widget==='indices'?react.createElement('button',{type:'button','aria-label':workbenchText('配置指数'),title:workbenchText('配置指数'),onPointerDown:event=>event.stopPropagation(),onClick:()=>setIndices(true),disabled:entry.readOnly},react.createElement(WorkbenchIcon,{name:'settings'})):null
+  const sourceDetailsTitle=workbenchText('查看来源信息')
+  const openSheetSourceDetails=trigger=>{
+   const info=getComponentSourceInfo(node)
+   openComponentSource(entry.sessionId,node,'details',trigger,{...info,range:entry.source||info.range})
+  }
   const menuActions=[
    {id:'source',icon:'branch',label:workbenchText('定位选区'),run:()=>generationAction('source')},
+   {id:'source-details',icon:'data',label:sourceDetailsTitle,run:()=>openSheetSourceDetails(sheetMenu)},
    {id:'export',icon:'download',label:workbenchText('导出'),children:['svg','png','jpg'].map(format=>({id:format,label:format.toUpperCase(),run:()=>exportWorkbenchContent(rootRef.current,node,format,{body:entry.host})}))},
    {id:'remove',icon:'remove',label:workbenchText('移除组件'),run:run('remove'),disabled:entry.readOnly}
   ]
   return react.createElement(react.Fragment,null,
    react_dom.createPortal(react.createElement(WorkbenchChrome,{node,sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra,onReload:reload,
-    surfaceActions:{surface:'notes',onSpecChange:save,buttons,menuOpen:!!sheetMenu},
+    surfaceActions:{surface:'spreadsheet',onSpecChange:save,buttons,menuOpen:!!sheetMenu},
     onAsk:run('ask'),onMore:(_node,event)=>{const trigger=event.currentTarget;setSheetMenu(previous=>previous?null:trigger)}}),entry.header),
+   entry.footer&&spec.type!=='financial-widget'&&react_dom.createPortal(react.createElement('button',{type:'button',className:'ew-sheet-source-details',title:sourceDetailsTitle,'aria-label':sourceDetailsTitle,onClick:event=>openSheetSourceDetails(event.currentTarget)},react.createElement(WorkbenchIcon,{name:'data'})),entry.footer),
    sheetMenu&&react.createElement(eworkComponentSurfaceUi.Menu,{surface:'spreadsheet',trigger:sheetMenu,actions:menuActions,onClose:()=>setSheetMenu(null)}),
    react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},
     error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),

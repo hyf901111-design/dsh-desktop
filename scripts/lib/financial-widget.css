@@ -230,7 +230,7 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body .ew-announcement-list .ew-announcement-year{font-size:10px;color:var(--fw-muted);opacity:.8}
  body .ew-announcement-list .ew-news-source{margin-top:3px}
  @container financial-chrome (max-width:340px){
-  body .ew-grid-header:has(.ew-financial-header-selector)>:is(.ew-grid-title,[data-workbench-ask]),body .ew-grid-header:has(.ew-financial-header-selector) .en-native-component-heading>.ew-grid-title{display:none!important}
+  body .ew-grid-header:not([data-workbench-spreadsheet-header]):has(.ew-financial-header-selector)>:is(.ew-grid-title,[data-workbench-ask]),body .ew-grid-header:has(.ew-financial-header-selector) .en-native-component-heading>.ew-grid-title{display:none!important}
   body .ew-financial-header-selector{width:auto;max-width:none;flex:1;margin-right:4px}
  }
  @container(max-width:520px){body .ew-quote-price-line>.ew-quote-change{min-width:0;flex:none}body .ew-quote-price-line>small{display:none}body .ew-chart-legend{grid-template-columns:80px repeat(4,minmax(0,1fr));font-size:10px}body .ew-quote-controls{display:grid;grid-template-columns:1fr auto;gap:4px 12px;min-height:64px;padding-top:4px;padding-bottom:4px;box-sizing:border-box}body .ew-quote-periods{grid-column:1/-1}body .ew-quote-controls>select{grid-column:2;grid-row:2}}
