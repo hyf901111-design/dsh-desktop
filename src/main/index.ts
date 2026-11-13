@@ -1420,7 +1420,7 @@ async function bootstrap(): Promise<void> {
   const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
-    search: (query, maxResults, signal) => accountService!.doubaoSearch(query, maxResults, signal),
+    searchHosted: (query, maxResults, signal) => accountService!.searchHosted(query, maxResults, signal),
     readPage: readBrowserPage,
     browserUse: (input,signal)=>routeBrowserUse(input,signal,browserApp,(value,abort)=>conversationBrowser.run(value,abort)),
     computerUse: (input, signal) => {

@@ -405,6 +405,33 @@ it('uses only the EWork session token for the professional dataset and Doubao se
   }
 })
 
+it('skips cloud search when signed out, quota is empty or paused, and falls back after upstream rate limiting', async () => {
+  const { service } = await setup()
+  const signal = new AbortController().signal
+  const quota = (fiveHour: number, week: number, paused = false) =>
+    Response.json({ quota: { paused, fiveHour: { remaining: fiveHour }, week: { remaining: week } } })
+  const remote = vi.fn()
+    .mockResolvedValueOnce(Response.json({ user: { id: 'owner-a' }, token: 'd'.repeat(64) }))
+    .mockResolvedValueOnce(quota(0, 10))
+    .mockResolvedValueOnce(quota(10, 0))
+    .mockResolvedValueOnce(quota(10, 10, true))
+    .mockResolvedValueOnce(quota(10, 10))
+    .mockResolvedValueOnce(Response.json({ error: { code: 'VOLCENGINE_UPSTREAM_RATE_LIMITED' } }, { status: 429 }))
+    .mockResolvedValueOnce(quota(10, 10))
+    .mockResolvedValueOnce(Response.json({ provider: 'doubao', sources: [], status: 'no_results', truncated: false }))
+  vi.stubGlobal('fetch', remote)
+  await expect(service.searchHosted('public query', 2, signal)).resolves.toBeUndefined()
+  expect(remote).not.toHaveBeenCalled()
+  await service.invoke('login', {})
+  for (const reason of ['5h empty', 'week empty', 'paused', 'rate limited'])
+    await expect(service.searchHosted(reason, 2, signal)).resolves.toBeUndefined()
+  await expect(service.searchHosted('no matches', 2, signal)).resolves.toMatchObject({ provider: 'doubao', status: 'no_results' })
+  expect(remote.mock.calls.slice(1).map(([url]) => new URL(url).pathname)).toEqual([
+    '/v1/hosted-ai/quota', '/v1/hosted-ai/quota', '/v1/hosted-ai/quota',
+    '/v1/hosted-ai/quota', '/v1/doubao/search', '/v1/hosted-ai/quota', '/v1/doubao/search'
+  ])
+})
+
 it('rejects old hosted-AI bridge generations before contacting Cloudflare',async()=>{
   const onHostedQuotaChanged = vi.fn()
   const {service,endpoint}=await setup({ onHostedQuotaChanged })
