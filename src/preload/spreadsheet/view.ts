@@ -74,6 +74,7 @@ class SpreadsheetView{
   this.root.addEventListener('keydown',this.key)
   this.root.addEventListener('focusout',this.blur)
   this.doc.addEventListener('keydown',this.gridPaste,true)
+  this.doc.addEventListener('keydown',this.gridHistory,true)
   this.grid.addEventListener('pointerdown',this.selectionStart,true)
   this.win.addEventListener('pointerup',this.selectionEnd,true)
   this.win.addEventListener('pointercancel',this.selectionCancel,true)
@@ -440,8 +441,8 @@ class SpreadsheetView{
    if(this.disposed||row.revision<this.record.revision)return
    await this.install(row)
    if(message)this.say(message)
-  }catch(error){this.say(errorMessage(error),true)}
-  finally{this.busy=false;this.refreshFields();if(!this.record.workbook)this.paint()}
+   return true
+  }finally{this.busy=false;this.refreshFields();if(!this.record.workbook)this.paint()}
  }
  private jump(value:string,reference=false){
   const sheet=this.current();if(!sheet)return
@@ -558,22 +559,30 @@ class SpreadsheetView{
  }
  private closeMenu(){this.menu?.anchor.setAttribute('aria-expanded','false');this.menu=undefined;this.pop.hidden=true}
  private outside=(event:PointerEvent)=>{if(this.menu&&!this.pop.contains(event.target as Node)&&!this.menu.anchor.contains(event.target as Node))this.closeMenu()}
- private dialog(title:string,body:string,action:string,copy='确定'){
+ private dialog(title:string,body:string,action:string|null,copy='确定'){
   this.closeMenu()
   this.modal.hidden=false
-  this.modal.innerHTML='<section role="dialog" aria-modal="true" aria-label="'+text(title)+'"><header><h2>'+text(title)+'</h2>'+button('close-dialog','',{glyph:'close',label:'关闭'})+'</header><div class="ew-sheet-dialog-body">'+body+'</div><footer>'+button('close-dialog','取消',{className:'outlined'})+button(action,copy,{className:'primary'})+'</footer></section>'
+  this.modal.innerHTML='<section role="dialog" aria-modal="true" aria-label="'+text(title)+'"><header><h2>'+text(title)+'</h2>'+button('close-dialog','',{glyph:'close',label:'关闭'})+'</header><div class="ew-sheet-dialog-body">'+body+'</div><p class="ew-sheet-dialog-feedback" role="status"></p><footer>'+button('close-dialog',action?'取消':'关闭',{className:'outlined'})+(action?button(action,copy,{className:'primary'}):'')+'</footer></section>'
   const input=this.modal.querySelector('input');if(input){input.focus();input.select()}else this.modal.querySelector('button')?.focus()
  }
  private closeDialog(){this.modal.hidden=true;this.modal.replaceChildren()}
+ private dialogFeedback(copy:string,error=false){
+  const feedback=this.modal.querySelector<HTMLElement>('.ew-sheet-dialog-feedback')
+  if(feedback){feedback.dataset.error=String(error);feedback.textContent=copy}
+ }
  private chart(){
   const range=this.selected(),sheet=this.current()
   if(!range||!sheet)return
-  if(range.getLastColumn()-range.getColumn()<1||range.getLastColumn()-range.getColumn()>6||range.getLastRow()-range.getRow()>60)
-   throw Error('请框选分类列和 1–6 个数值系列，最多 60 行数据。')
+  const source='<p>数据来源 '+text(sheet.getSheetName()+'!'+range.getA1Notation())+'</p>'
+  if(range.getLastColumn()-range.getColumn()<1||range.getLastColumn()-range.getColumn()>6||range.getLastRow()-range.getRow()>60){
+   this.dialog('创建图表',source,null)
+   this.dialogFeedback('请框选分类列和 1–6 个数值系列，最多 60 行数据。',true)
+   return
+  }
   this.chartSource={sheetId:sheet.getSheetId(),range:range.getA1Notation()}
   const values=range.getRawValues()
   const hasHeader=values[0]?.slice(1).every(value=>typeof value==='string'&&value!=='')&&values.slice(1).some(row=>row.slice(1).some(value=>typeof value==='number'))
-  this.dialog('创建图表','<p>数据来源 '+text(sheet.getSheetName()+'!'+range.getA1Notation())+'</p><label>名称<input aria-label="图表名称" value="选区图表" maxlength="120"></label><label>类型<select aria-label="图表类型"><option value="bar">柱状图</option><option value="line">折线图</option></select></label><label class="ew-sheet-chart-header"><input type="checkbox"'+(hasHeader?' checked':'')+'> 首行是表头</label>','create-chart','创建')
+  this.dialog('创建图表',source+'<label>名称<input aria-label="图表名称" value="选区图表" maxlength="120"></label><label>类型<select aria-label="图表类型"><option value="bar">柱状图</option><option value="line">折线图</option></select></label><label class="ew-sheet-chart-header"><input type="checkbox"'+(hasHeader?' checked':'')+'> 首行是表头</label>','create-chart','创建')
  }
  private chartData(chart:WorkbookChart){
   const sheet=this.engine?.model.getSheetBySheetId(chart.sheetId)
@@ -609,15 +618,14 @@ class SpreadsheetView{
  private search(){
   const sheet=this.current();if(!sheet)return
   const query=(this.modal.querySelector<HTMLInputElement>('input')?.value||'').trim().toLocaleLowerCase()
-  if(!query)return
+  if(!query){this.dialogFeedback('请输入要查找的内容。',true);return}
   if(this.findQuery!==query){this.findQuery=query;this.findIndex=0}
   const data=this.engine?.snapshot().sheets[sheet.getSheetId()]?.cellData??{}
   const matches=Object.entries(data).flatMap(([r,row])=>Object.entries(row).filter(([,c])=>String(c.v??'').toLocaleLowerCase().includes(query)||c.f?.toLocaleLowerCase().includes(query)).map(([c])=>address(Number(r),Number(c))))
-  const result=this.modal.querySelector('.ew-sheet-find-result')
-  if(!matches.length){if(result)result.textContent='没有找到匹配内容';return}
+  if(!matches.length){this.dialogFeedback('没有找到匹配内容');return}
   const index=this.findIndex++%matches.length
   this.jump(matches[index]!)
-  if(result)result.textContent=matches[index]+' · '+(index+1)+' / '+matches.length
+  this.dialogFeedback(matches[index]+' · '+(index+1)+' / '+matches.length)
  }
  private filterRange(){
   const sheet=this.current()!,selection=this.selected()!
@@ -661,7 +669,7 @@ class SpreadsheetView{
    case 'address-dialog':this.dialog('前往单元格','<input aria-label="地址" value="'+text(this.active)+'" placeholder="例如 A1 或 A1:D8">','address-apply','前往');return
    case 'address-apply':this.jump(this.modal.querySelector('input')?.value??'',true);this.closeDialog();return
    case 'reference-selection':this.referenceSelection(true);return
-   case 'search':this.dialog('查找','<input aria-label="搜索内容" placeholder="在当前工作表中查找"><p class="ew-sheet-find-result" role="status"></p>','find-next','查找下一个');return
+   case 'search':this.dialog('查找','<input aria-label="搜索内容" placeholder="在当前工作表中查找">','find-next','查找下一个');return
    case 'find-next':this.search();return
    case 'chart':this.chart();return
    case 'create-chart':{
@@ -669,7 +677,10 @@ class SpreadsheetView{
     const headers=this.modal.querySelector<HTMLInputElement>('[type=checkbox]')?.checked??false
     if(!this.chartSource||!name||!kind)return
     const title=label(name.value)
-    this.closeDialog();await this.run('add-chart',{...this.chartSource,title,kind:kind.value,headers},'图表已创建');return
+    const dialog=this.modal.firstElementChild
+    const created=await this.run('add-chart',{...this.chartSource,title,kind:kind.value,headers},'图表已创建')
+    if(created&&this.modal.firstElementChild===dialog)this.closeDialog()
+    return
    }
    case 'show-chart':this.activeChart=value;this.renderChart();return
    case 'close-chart':this.activeChart=undefined;this.renderChart();return
@@ -691,7 +702,10 @@ class SpreadsheetView{
     sheet.setName(name);this.closeDialog();break
    }
    case 'delete-sheet':this.dialog('删除工作表','<p>删除「'+text(sheet.getSheetName())+'」及其中的单元格？</p>','delete-sheet-apply','删除');return
-   case 'delete-sheet-apply':if(model.getSheets().length>1)model.deleteSheet(sheet);this.closeDialog();break
+   case 'delete-sheet-apply':
+    if(model.getSheets().length<=1)throw Error('请至少保留一张工作表。')
+    if(!model.deleteSheet(sheet))throw Error('无法删除当前工作表。')
+    this.closeDialog();break
    case 'add-sheet':{
     if(model.getSheets().length>=MAX_SHEETS)throw Error('工作表数量已达上限。')
     const names=new Set(model.getSheets().map(s=>s.getSheetName().toLowerCase()));let i=1;while(names.has('sheet'+i))i++
@@ -749,14 +763,15 @@ class SpreadsheetView{
    }
    case 'duplicates':this.dialog('去除重复行','<p>在选区中逐行比较单元格值和公式，保留第一次出现的行。请先选中不含表头的数据。</p>','dedupe-apply','去重');return
    case 'dedupe-apply':{
+    const rows=range.getLastRow()-range.getRow()+1,columns=range.getLastColumn()-range.getColumn()+1
+    if(rows<2||columns*rows>10000)throw Error('请选择 2 行以上且不超过 10000 格的数据。')
     const data=range.getCellDatas()
-    if(data.length<2||(range.getLastColumn()-range.getColumn()+1)*data.length>10000)throw Error('请选择 2 行以上且不超过 10000 格的数据。')
     const seen=new Set<string>(),unique=data.filter(row=>{const key=JSON.stringify(row.map(cell=>[cell?.f??'',cell?.v??null]));if(seen.has(key))return false;seen.add(key);return true})
     const removed=data.length-unique.length
-    this.closeDialog()
-    if(!removed){this.say('选区没有重复行');return}
-    const blank=Array.from({length:(range.getLastColumn()-range.getColumn()+1)},()=>({v:null,f:null,t:null,p:null}))
+    if(!removed){this.dialogFeedback('选区没有重复行');return}
+    const blank=Array.from({length:columns},()=>({v:null,f:null,t:null,p:null}))
     range.setValues([...unique.map(row=>row.map(c=>c??{v:null,f:null,t:null,p:null})),...Array.from({length:removed},()=>blank)])
+    this.closeDialog()
     this.say('已去除 '+removed+' 行重复数据');break
    }
    case 'function':{
@@ -774,12 +789,26 @@ class SpreadsheetView{
  private click=(event:Event)=>{
   const trigger=(event.target as HTMLElement).closest<HTMLElement>('[data-action]')
   if(!trigger||!this.root.contains(trigger)&&!this.headerActions?.contains(trigger))return
-  void this.handle(trigger.dataset.action!,trigger.dataset.value??'',trigger).catch(error=>this.say(errorMessage(error),true))
+  const dialog=this.modal.contains(trigger)?this.modal.firstElementChild:null
+  void this.handle(trigger.dataset.action!,trigger.dataset.value??'',trigger).catch(error=>{
+   if(!dialog)this.say(errorMessage(error),true)
+   else if(this.modal.firstElementChild===dialog)this.dialogFeedback(errorMessage(error),true)
+  })
  }
  private input=(event:Event)=>{if((event.target as HTMLElement).dataset.field==='formula')this.formulaDirty=true}
  private blur=(event:FocusEvent)=>{
   if((event.target as HTMLElement).dataset.field!=='formula'||!this.formulaDirty)return
   try{this.commitFormula()}catch(error){this.say(errorMessage(error),true)}
+ }
+ private gridHistory=(event:KeyboardEvent)=>{
+  const target=event.target as HTMLElement,engine=this.engine
+  if(!engine||!this.editable||!this.modal.hidden||!this.grid.contains(target)||engine.model.isCellEditing()||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return
+  if(target.closest('input,textarea,select,button,[role=menu]'))return
+  const key=event.key.toLowerCase()
+  if(key!=='z'&&(key!=='y'||event.shiftKey))return
+  event.preventDefault();event.stopImmediatePropagation()
+  if(event.repeat)return
+  void this.handle(key==='y'||event.shiftKey?'redo':'undo','',this.grid).catch(error=>this.say(errorMessage(error),true))
  }
  private gridPaste=(event:KeyboardEvent)=>{
   const control=event.target as HTMLElement,engine=this.engine
@@ -837,6 +866,7 @@ class SpreadsheetView{
   this.clearSelectionPreview()
   this.disposed=true;this.win.clearTimeout(this.timer);this.win.clearTimeout(this.updateTimer)
   this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.ribbonObserver.disconnect()
+  this.doc.removeEventListener('keydown',this.gridHistory,true)
   this.win.removeEventListener('pointerup',this.selectionEnd,true);this.win.removeEventListener('pointercancel',this.selectionCancel,true)
   this.win.removeEventListener('blur',this.selectionReset)
   this.doc.removeEventListener('keydown',this.selectionKeyDown,true);this.doc.removeEventListener('keyup',this.selectionKeyUp,true)

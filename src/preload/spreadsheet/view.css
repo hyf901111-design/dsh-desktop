@@ -118,7 +118,7 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-menu button span{display:flex;flex-direction:column;min-width:0}
 .ew-sheet-menu button[aria-haspopup=menu] svg:last-child{margin-inline-start:auto}
 .ew-sheet-menu button small{font-size:11px;color:var(--ss-muted);margin-top:3px}
-.ew-sheet-dialog{position:absolute;inset:0;z-index:16;background:#0006;display:grid;place-items:center;padding:16px;overflow:auto}
+.ew-sheet-dialog{position:absolute;inset:0;z-index:16;display:grid;place-items:center;padding:16px;overflow:auto}
 .ew-sheet-dialog section{width:min(100%,400px);padding:16px;border-radius:10px;background:var(--ss-menu);border:1px solid var(--ss-border);box-shadow:0 12px 38px #0005}
 .ew-sheet-dialog :is(header,footer){display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ew-sheet-dialog header h2{font-weight:600;font-size:16px;margin:0}
@@ -126,6 +126,9 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-dialog footer button{min-width:68px}
 .ew-sheet-dialog-body{margin-top:12px;color:var(--ss-muted)}
 .ew-sheet-dialog-body p{margin:4px 0}
+.ew-sheet-dialog-feedback{margin:10px 0 0;color:var(--ss-muted);line-height:1.5}
+.ew-sheet-dialog-feedback:empty{margin:0}
+.ew-sheet-dialog-feedback[data-error=true]{color:var(--ss-danger)}
 .ew-sheet .ew-sheet-dialog input{width:100%;background:var(--ss-bg);border:1px solid var(--ss-border);padding:7px 9px;border-radius:6px;color:var(--ss-text)}
 .ew-sheet-dialog-body>label{display:block;margin-top:10px}
 .ew-sheet-dialog-body>label :is(input,select){display:block;margin-top:4px}
@@ -153,9 +156,9 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-welcome .ew-sheet-welcome-actions button{width:100%;min-height:40px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ss-border);border-radius:6px;padding:7px 10px;text-align:center}
 .ew-sheet-welcome .ew-sheet-welcome-actions button:hover{background:var(--ss-hover)}
 @media(max-height:720px){.ew-sheet-welcome{padding-top:42px}}
-/* Keep the input anchor for keyboard/IME without including neighboring cells
-   in Univer's editor hit test. */
+/* Chromium needs a layout box on Univer's editable node even when it is empty. */
 .ew-sheet-grid [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"]{width:1px;height:1px}
+.ew-sheet-grid [data-u-comp=editor][contenteditable=true]{min-width:1px;min-height:1px}
 body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"],
 body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"] *{pointer-events:none!important}
 /* Native slot shells use display:contents and Chat's scroll sizing. Give the
