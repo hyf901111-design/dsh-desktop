@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格组件主题、底栏与更多菜单",
+        "featureName": "表格组件窄版顶栏与底栏信息",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "6883303eacf63de25f24f5212de5520eed2d6eb8",
-        "tipCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
+        "baseCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
+        "tipCommit": "94aa8853111b1dbf1bce9f8c4589f0f76c6b6948",
         "commits": [
           {
-            "commit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
+            "commit": "94aa8853111b1dbf1bce9f8c4589f0f76c6b6948",
             "parents": [
-              "6883303eacf63de25f24f5212de5520eed2d6eb8"
+              "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce"
             ],
-            "subject": "统一表格组件主题和底栏并复用组件操作菜单"
+            "subject": "补齐表格组件窄版顶栏和底栏来源信息"
           }
         ],
         "files": [
@@ -29,11 +29,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-surface-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/financial-widget-client.mjs"
+            "path": "scripts/lib/financial-widget.css"
           },
           {
             "status": "M",
@@ -65,8 +61,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
-            "completedAt": "2026-11-13T23:42:44.110Z",
+            "verifiedCommit": "94aa8853111b1dbf1bce9f8c4589f0f76c6b6948",
+            "completedAt": "2026-11-13T23:59:35.738Z",
             "timeoutMs": 180000
           },
           {
@@ -75,72 +71,27 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/spreadsheet-service.test.ts",
-              "test/conversation-components-policy.test.js",
+              "test/component-source-info-browser.test.js",
+              "test/component-menu-presentation.test.ts",
               "test/notes-native-components.test.js"
             ],
             "outcome": "passed",
-            "summary": "191 项组件和表格聚焦验证通过",
-            "verifiedCommit": "a9b910818ba5c8aa2d29d21c5beeabd3813d62ce",
-            "completedAt": "2026-11-13T23:42:44.110Z",
+            "summary": "20 项组件和表格聚焦验证通过",
+            "verifiedCommit": "94aa8853111b1dbf1bce9f8c4589f0f76c6b6948",
+            "completedAt": "2026-11-13T23:59:35.738Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端已复现主题不一致和双底栏，已接入共享组件主题和菜单。"
+          "summary": "已对照真实客户端复现窄版标题消失和选区坐标不可见，增加组件回归检查。"
         },
         "acceptanceCriteria": [
-          "单层组件底栏和完整的顶栏按钮",
-          "共享更多菜单可定位选区、导出和移除组件"
+          "窄版标题和常用操作保留，搜索栏完整显示",
+          "底栏显示实际选区并能打开来源信息"
         ],
         "risks": [],
-        "generatedAt": "2026-11-13T23:42:44.110Z"
-      },
-      "merged": {
-        "mergeCommit": "b13253a3e52d361f46f2cc3b8e6a132a478d5d99",
-        "verificationCommit": "b13253a3e52d361f46f2cc3b8e6a132a478d5d99",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b13253a3e52d361f46f2cc3b8e6a132a478d5d99",
-            "completedAt": "2026-11-13T23:44:06.083Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "b13253a3e52d361f46f2cc3b8e6a132a478d5d99",
-            "completedAt": "2026-11-13T23:44:06.083Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "b13253a3e52d361f46f2cc3b8e6a132a478d5d99",
-            "completedAt": "2026-11-13T23:44:06.083Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T23:44:06.083Z"
+        "generatedAt": "2026-11-13T23:59:35.738Z"
       }
     },
     {
