@@ -40,6 +40,21 @@ describe('spreadsheet workbook protocol', () => {
     expect(()=>applyOperations(original,[{...chart,range:'A1:A3'}])).toThrow(/系列/)
     expect(applyOperations(book,[{op:'removeChart',chartId:'multiple'}]).charts).toEqual([])
   })
+  it('updates chart configuration in place and selects transposed source fields',()=>{
+    const original=blankWorkbook('book')
+    const chart={op:'addChart',chartId:'risk',sheetId:'sheet-1',range:'A1:D3',title:'风险收益',kind:'scatter',seriesBy:'rows',category:0,series:[2]}
+    const book=applyOperations(original,[
+      {op:'write',sheetId:'sheet-1',range:'A1:D3',cells:[['波动率',1,3,7],['未绘制','不适用','不适用','不适用'],['收益率',2,4,9]]},chart
+    ])
+    expect(book.charts?.[0]).toMatchObject({kind:'scatter',seriesBy:'rows',category:0,series:[2]})
+    const updated=applyOperations(book,[{...chart,op:'updateChart',kind:'line',legend:false,gridlines:false}])
+    expect(updated.charts).toHaveLength(1)
+    expect(updated.charts?.[0]).toMatchObject({chartId:'risk',kind:'line',legend:false,gridlines:false})
+    expect(book.charts?.[0]?.kind).toBe('scatter')
+    expect(()=>applyOperations(book,[{...chart,op:'updateChart',chartId:'missing'}])).toThrow(/不存在/)
+    expect(()=>applyOperations(book,[{...chart,op:'updateChart',series:[0]}])).toThrow(/分类和不同/)
+    expect(()=>applyOperations(book,[{...chart,op:'updateChart',kind:'scatter',headers:false}])).toThrow(/横轴必须是数值/)
+  })
   it('rejects a whole batch if a cell targets a missing sheet or contains an external formula', () => {
     const work = blankWorkbook('work','工作簿','income')
     const write = {op:'write',sheetId:'income',range:'A1',cells:[[{value:120}]]} as const

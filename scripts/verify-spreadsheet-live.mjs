@@ -36,6 +36,7 @@ await build({stdin:{resolveDir:root,contents:`
  import {assertTrustedMainWindowEvent} from './src/main/ipc-trust'
  import {installSpreadsheet} from './src/main/spreadsheet/ipc'
  import {ClientCapabilityService} from './src/main/state/client-capability-service'
+ import {ComponentLibraryStore} from './src/main/state/component-library'
  import {readWorkbookFile} from './src/main/spreadsheet/files'
  import {readFileSync,writeFileSync} from 'node:fs'
  import {join} from 'node:path'
@@ -91,15 +92,28 @@ await build({stdin:{resolveDir:root,contents:`
    win.webContents.on('console-message',details=>{if(details.level==='error')errors.push(details.message)})
    let visibleMode=mode
    capability=new ClientCapabilityService({owner:()=>profile.owner,windowIdentity:()=>win,canRead:()=>true,canWrite:()=>true,scheduled:()=>false,send:()=>{},canvasAvailable:()=>false,canvas:async()=>null,window:async()=>null,get spreadsheet(){return service}})
-   service=installSpreadsheet({ipcMain,getWindow:()=>win,visible:()=>capability.currentVisibleContext(),canWrite:()=>true,dataPath:app.getPath('userData')})
+   const library=new ComponentLibraryStore(join(dir,'component-library.json'))
+   let runtimeUrl
+   service=installSpreadsheet({ipcMain,getWindow:()=>win,visible:()=>capability.currentVisibleContext(),canWrite:()=>true,dataPath:app.getPath('userData'),library:()=>library,runtimeUrl:()=>runtimeUrl})
    const bind=()=>capability.bind({sessionId:profile.sessionId,mode:visibleMode,active:true})
    bind()
    const xlsxPath=join(dir,'导出.xlsx'),csvPath=join(dir,'导出.csv')
    dialog.showOpenDialog=async()=>({canceled:!configuredImport,filePaths:configuredImport?[configuredImport]:[]})
    dialog.showSaveDialog=async(_window,options)=>{exportPaths.push(options.defaultPath);return {canceled:false,filePath:options.defaultPath.endsWith('.csv')?csvPath:xlsxPath}}
-   const server=createServer((_request,response)=>{response.setHeader('Content-Type','text/html;charset=utf-8');response.end(html)})
+   let generatedInput
+   const server=createServer(async(request,response)=>{
+    if(request.url==='/sherlock/notes/generate'){
+     let raw='';for await(const chunk of request)raw+=chunk
+     generatedInput=JSON.parse(raw)
+     response.setHeader('Content-Type','application/x-ndjson')
+     response.end(JSON.stringify({type:'progress',stage:'thinking',reasoning:'',outputChars:0})+'\\n'+JSON.stringify({type:'result',result:{kind:'component',node:{title:'估值摘要组件',containerSpec:{version:1,type:'table',title:'估值摘要组件',columns:['公司','倍数'],rows:[['甲',6],['乙',7]]}}}})+'\\n')
+     return
+    }
+    response.setHeader('Content-Type','text/html;charset=utf-8');response.end(html)
+   })
    await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
-   await win.loadURL('http://127.0.0.1:'+server.address().port)
+   runtimeUrl='http://127.0.0.1:'+server.address().port
+   await win.loadURL(runtimeUrl)
 
    win.focus();win.webContents.focus()
    await until(()=>js('document.body.dataset.eworkSpreadsheetSession==="demo-session"'),'preload/IPC ready')
@@ -367,7 +381,7 @@ await build({stdin:{resolveDir:root,contents:`
    assert.match(await dialogFeedback(),/选区没有重复行/)
    press('Escape')
    await select('A1');await openCommands('insert');await click(menuItem('chart'))
-   assert.match(await dialogFeedback(),/请框选分类列/)
+   assert.match(await js('document.querySelector(".ew-sheet-chart-preview").textContent'),/请选择分类/)
    press('Escape')
    await select('D10:E11');await click(button('chart'));await transparentDialog()
    await field('.ew-sheet-dialog [aria-label="图表名称"]','空区域图表',false)
@@ -383,9 +397,64 @@ await build({stdin:{resolveDir:root,contents:`
    assert.equal(snapshot().charts[0].range,'D3:E4')
    await select('E3');await formula('24')
    await until(()=>js('document.querySelector(".ew-sheet-charts table").textContent.includes("24")'),'chart updates after editing its source')
+   await click(button('edit-chart'))
+   await js('(()=>{const kind=document.querySelector("[data-chart-field=kind]");kind.value="donut";kind.dispatchEvent(new Event("change",{bubbles:true}));return true})()')
+   await until(()=>js('!!document.querySelector(".ew-sheet-chart-preview svg path")'),'doughnut preview')
+   await click(button('update-chart'))
+   await until(()=>snapshot().charts[0]?.kind==='donut','edit chart type in place')
+   assert.equal(snapshot().charts.length,1)
+   await until(()=>js('document.querySelector(".ew-sheet-dialog").hidden'),'saved chart editor closes')
+   await click(button('edit-chart'))
+   assert.equal(await js('document.querySelector("[data-chart-field=kind]").value'),'donut')
+   await screenshot('chart-editor-donut')
+   await click(button('chart-pick-range'))
+   assert.equal(await js('getComputedStyle(document.querySelector(".ew-sheet-dialog")).pointerEvents'),'none')
+   await select('D3:E4')
+   await click(button('chart-pick-apply'))
+   assert.equal(await js('document.querySelector("[data-chart-field=range]").value'),'D3:E4')
+   press('Escape');await wait(80)
    await select('E3');await formula('22')
    await click(button('close-chart'))
-   report.push('manual chart saved with actual selected values')
+   report.push('manual chart saved, follows cell edits and supports changing chart type in place')
+   await select('D3:E4')
+   const contextPoint=await js('(()=>{const r=document.querySelector(".ew-sheet-grid").getBoundingClientRect();return {x:Math.round(r.x+90),y:Math.round(r.y+100)}})()')
+   win.webContents.sendInputEvent({type:'mouseDown',button:'right',clickCount:1,...contextPoint})
+   win.webContents.sendInputEvent({type:'mouseUp',button:'right',clickCount:1,...contextPoint})
+   const findNativeMenu=copy=>js('(()=>{const n=[...document.querySelectorAll("[data-u-context-menu-submenu] button,[data-u-context-menu-submenu] [role=menuitem],.univer-popup button,.univer-popup [role=menuitem]")].find(e=>e.getClientRects().length&&getComputedStyle(e).visibility==="visible"&&e.textContent.trim()==='+JSON.stringify(copy)+');if(!n)return null;const r=n.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),width:r.width}})()')
+   const insertPoint=await until(()=>findNativeMenu('插入'),'native right-click Insert submenu')
+   const enterMenu=copy=>js('(()=>{const n=[...document.querySelectorAll(".univer-popup button,.univer-popup [role=menuitem]")].find(e=>e.textContent.trim()==='+JSON.stringify(copy)+');n?.focus();return document.activeElement===n})()')
+   assert.ok(await enterMenu('插入'))
+   press('Right')
+   await wait(250)
+   await screenshot('cell-insert-menu')
+   const libraryPoint=await until(()=>findNativeMenu('组件库'),'native right-click library command')
+   await js('(()=>{const n=[...document.querySelectorAll("[data-u-context-menu-submenu] button,[data-u-context-menu-submenu] [role=menuitem]")].find(e=>e.textContent.trim()==="组件库");n?.focus();return true})()')
+   assert.ok(libraryPoint.width>0)
+   press('Enter')
+   await field('[data-field=component-search]','builtin-quote',false)
+   await click(button('component-add','builtin-quote'))
+   await until(()=>snapshot().components?.length===1,'inserted a real native library component')
+   assert.equal(snapshot().components[0].node.containerSpec.type,'financial-widget')
+   await until(()=>clickable(button('component-close')),'inserted component opens from selection')
+   await click(button('component-close'))
+   const savedLibraryId=snapshot().components[0].componentId
+   await click(button('menu','components'));await click(button('component-show',savedLibraryId))
+   await until(()=>clickable(button('component-source')),'saved component can reopen')
+   await click(button('component-source'))
+   assert.equal(await js('document.querySelector(".ew-sheet-components").hidden'),true)
+   assert.equal(await address(),'D3')
+   await select('D3:E4');await openCommands('insert');await click(menuItem('smart'))
+   await field('[data-field=component-prompt]','用当前演示选区生成估值摘要组件',false)
+   await click(button('component-generate'))
+   await until(()=>snapshot().components?.length===2,'smart component saved')
+   assert.match(generatedInput.selection,/D3:E4/)
+   assert.ok(generatedInput.selection.includes('"address":"D3"'))
+   assert.equal(generatedInput.entryPoint,'component')
+   await until(()=>clickable(button('component-remove',snapshot().components[1].componentId)),'smart component card opens')
+   await click(button('component-remove',snapshot().components[1].componentId))
+   await until(()=>snapshot().components?.length===1,'component removed without deleting its source')
+   assert.equal(currentCell(2,4)?.v,22)
+   report.push('cell context menu inserts a library component and smart generation receives only the selected cells')
    await select('A1')
    await click(button('search'));await click(button('find-next'))
    assert.match(await dialogFeedback(),/请输入要查找的内容/)

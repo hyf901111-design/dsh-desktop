@@ -13,18 +13,26 @@ import {AFTER_CELL_EDIT,BEFORE_CELL_EDIT,ResetBackgroundColorCommand,SetHorizont
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
 import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
 import {OpenFilterPanelOperation,CloseFilterPanelOperation} from '@univerjs/sheets-filter-ui'
-import {DISABLE_AUTO_FOCUS_KEY} from '@univerjs/ui'
+import {DISABLE_AUTO_FOCUS_KEY,ContextMenuGroup,ContextMenuPosition,IconManager} from '@univerjs/ui'
 import coreCss from '@univerjs/preset-sheets-core/lib/index.css?raw'
 import filterCss from '@univerjs/preset-sheets-filter/lib/index.css?raw'
 import sortCss from '@univerjs/preset-sheets-sort/lib/index.css?raw'
 import {safeFormula,SHEET_ROW_HEADER_WIDTH,SHEET_COLUMN_HEADER_HEIGHT,type Workbook} from '../../shared/spreadsheet/workbook'
 import {bindHeaderResize} from './header-resize'
+import {createElement} from 'react'
+import {sheetIcon} from './icons'
 
 const editorStyles=[coreCss,filterCss,sortCss].map(css=>css.replace(/^\*\s*\{\s*scrollbar-color: initial;\s*scrollbar-width: initial;\s*\}/m,'')).join('\n')
 const legacyDarkInputColor='#1b1b1b'
 const legacyLightInputColor=defaultTheme.gray[900]
 
-export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void){
+export const sheetContextCopy={
+ chart:['创建图表','Create chart'],library:['组件库','Component library'],smart:['智能组件','Smart component'],
+ reference:['引用当前选区到对话','Reference selection in chat']
+} as const
+export type SheetContextCommand=keyof typeof sheetContextCopy
+
+export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void,contextCommand?:(command:SheetContextCommand)=>void){
  const doc=host.ownerDocument,win=doc.defaultView!
  const style=doc.createElement('style');style.textContent=editorStyles;doc.head.append(style)
  const originalDark=doc.documentElement.classList.contains('univer-dark')
@@ -67,9 +75,10 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   }
  }
  Inject(Injector)(SpreadsheetCanvasColors,undefined,1)
+ const contextLocale=(index:0|1)=>({eworkSheetContext:Object.fromEntries(Object.entries(sheetContextCopy).map(([key,copy])=>[key,copy[index]]))})
  const {univer,univerAPI:api}=createUniver({
   locale:doc.documentElement.dataset.odysseyLocale==='en'?LocaleType.EN_US:LocaleType.ZH_CN,
-  locales:{[LocaleType.ZH_CN]:mergeLocales(coreZh,filterZh,sortZh),[LocaleType.EN_US]:mergeLocales(coreEn,filterEn,sortEn)},
+  locales:{[LocaleType.ZH_CN]:mergeLocales(coreZh,filterZh,sortZh,contextLocale(0)),[LocaleType.EN_US]:mergeLocales(coreEn,filterEn,sortEn,contextLocale(1))},
   darkMode:dark(),theme:theme(),plugins:[SpreadsheetCanvasColors],
   presets:[UniverSheetsCorePreset({container:host,header:false,toolbar:false,formulaBar:false,footer:false,contextMenu:true,disableAutoFocus:true,sheets:{freezeSync:true,scrollConfig:scroll()}}),UniverSheetsFilterPreset(),UniverSheetsSortPreset()]
  })
@@ -77,7 +86,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  try{
  // Incremental scrolling swaps in a private buffer that can lack the
  // per-canvas palette. Set the grid color at the worksheet render source.
- const renderWorkbook=structuredClone(workbook) as unknown as IWorkbookData
+ const {charts:_,components:__,...nativeWorkbook}=workbook
+ const renderWorkbook=structuredClone(nativeWorkbook) as unknown as IWorkbookData
  for(const sheet of Object.values(renderWorkbook.sheets)){
   sheet.gridlinesColor=palette().grid
   // Older sheets added in the editor used Univer's 46 × 20 header defaults.
@@ -87,6 +97,21 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  const model=api.createWorkbook(renderWorkbook)
  if(!editable)model.setEditable(false)
  const injector=univer.__getInjector()
+ if(contextCommand){
+  const icons={chart:'chart',library:'grid',smart:'sparkles',reference:'link'}
+  const iconManager=injector.get(IconManager)
+  const makeMenu=(name:SheetContextCommand)=>{
+   const id='ework.spreadsheet.context.'+name,icon=id+'.icon'
+   iconManager.register(icon,()=>createElement('span',{className:'ew-sheet-native-menu-icon','aria-hidden':true,dangerouslySetInnerHTML:{__html:sheetIcon(icons[name],16)}}))
+   return api.createMenu({id,title:'eworkSheetContext.'+name,icon,order:20,action:()=>contextCommand(name)})
+  }
+  if(editable){
+   const insertPath=[ContextMenuPosition.MAIN_AREA,ContextMenuGroup.LAYOUT,'sheet.menu.cell-insert']
+   for(const command of ['chart','library','smart'] as const)makeMenu(command).appendTo(insertPath)
+  }
+  makeMenu('reference').appendTo([ContextMenuPosition.MAIN_AREA,ContextMenuGroup.OTHERS])
+ }
+ let components=workbook.components
  const renders=injector.get(IRenderManagerService)
  const watched=new Map<string,{unsubscribe():void}[]>()
  const freezeObjects=[
@@ -293,8 +318,9 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    if(original===undefined)delete sheet.gridlinesColor;else sheet.gridlinesColor=original
   }
   if(workbook.charts)result.charts=workbook.charts.filter(chart=>!!result.sheets[chart.sheetId])
+  if(components)result.components=components.filter(component=>!!result.sheets[component.sheetId])
   return result
- },dispose:()=>{
+ },syncComponents:(next:Workbook['components'])=>{components=next},dispose:()=>{
   if(disposed)return
   disposed=true
   doc.removeEventListener('focusin',updateEditorFocus,true)

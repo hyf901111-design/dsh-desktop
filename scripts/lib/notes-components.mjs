@@ -6,7 +6,10 @@ export function createNoteComponentViewStore(doc){
  const update=event=>{const value=event.detail;if(typeof value?.instanceId!=='string')return
   if(value.remove){entries.delete(value.instanceId);notify();return}
   const host=doc.getElementById(value.hostId),header=doc.getElementById(value.headerId)
-  if(!host?.matches('.en-native-component-host')||host.dataset.noteComponent!==value.node?.id||host.dataset.noteSession!==value.sessionId||!header?.closest('.en-research')?.contains(host)||!host.closest('.en-root'))return
+  if(value.surface==='spreadsheet'){
+   if(!host?.matches('.ew-sheet-component-host')||host.dataset.sheetComponent!==value.node?.id||host.dataset.sheetSession!==value.sessionId||
+      !header?.closest('.ew-sheet-components')?.contains(host)||host.closest('[data-ework-spreadsheet-view]')?.dataset.eworkSpreadsheetView!==value.sessionId)return
+  }else if(!host?.matches('.en-native-component-host')||host.dataset.noteComponent!==value.node?.id||host.dataset.noteSession!==value.sessionId||!header?.closest('.en-research')?.contains(host)||!host.closest('.en-root'))return
   entries.set(value.instanceId,{...value,host,header});notify()
  }
  const reset=()=>{entries.clear();notify()}
@@ -16,7 +19,8 @@ export function createNoteComponentViewStore(doc){
 export function EWorkNoteComponentView({entry,officePreview}){
  const rootRef=react.useRef(entry.host.closest('[data-research-node-id]')),[indices,setIndices]=react.useState(false),[error,setError]=react.useState(''),pending=react.useRef(new Map()),sequence=react.useRef(0),generationPending=react.useRef(new Map()),node=entry.node,spec=node.containerSpec||{type:'assistant-result'}
  const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
- const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(entry.sessionId,node.id,fn,'notes'),[entry.sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(entry.sessionId,node.id,'notes'),[entry.sessionId,node.id]))
+ const spreadsheet=entry.surface==='spreadsheet'
+ const binding=react.useSyncExternalStore(react.useCallback(fn=>spreadsheet?()=>{}:componentDataStatusStore.subscribe(entry.sessionId,node.id,fn,'notes'),[spreadsheet,entry.sessionId,node.id]),react.useCallback(()=>spreadsheet?undefined:componentDataStatusStore.read(entry.sessionId,node.id,'notes'),[spreadsheet,entry.sessionId,node.id]))
  const [refreshBusy,setRefreshBusy]=react.useState(false),[refreshError,setRefreshError]=react.useState('')
  const [dataSettings,setDataSettings]=react.useState(false),[dataRecord,setDataRecord]=react.useState(null),[dataBusy,setDataBusy]=react.useState(false),[dataError,setDataError]=react.useState('')
  react.useEffect(()=>{if(['success','unchanged'].includes(binding?.status))setRefreshError('')},[binding?.status,binding?.lastSuccess,binding?.successSequence])
@@ -76,16 +80,17 @@ export function EWorkNoteComponentView({entry,officePreview}){
   if(contentHeight<1)return false
   action('size',{height:contentHeight})
  }})
- const title=['quote','announcements'].includes(spec.widget)?react.createElement(react.Fragment,null,react.createElement(WorkbenchTitle,{title:node.displayName||node.title||node.name||workbenchText('组件'),systemTitle:!node.displayName&&node.title===financialWidgetDefaults(spec.widget)?.title}),react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save})):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save,surface:'notes'}):react.createElement('strong',null,node.title)
+ const title=['quote','announcements'].includes(spec.widget)?react.createElement(react.Fragment,null,react.createElement(WorkbenchTitle,{title:node.displayName||node.title||node.name||workbenchText('组件'),systemTitle:!node.displayName&&node.title===financialWidgetDefaults(spec.widget)?.title}),react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save})):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:!!entry.readOnly,onSpecChange:save,surface:'notes'}):spreadsheet&&spec.widget==='indices'?react.createElement(react.Fragment,null,react.createElement('strong',null,node.title),react.createElement('button',{type:'button',className:'ew-sheet-button',onClick:()=>setIndices(true),disabled:entry.readOnly},workbenchText('配置指数'))):react.createElement('strong',null,node.title)
  return react.createElement(react.Fragment,null,
   dataSettings&&react.createElement(ComponentDataSettingsPanel,{title:node.displayName||node.title,binding:dataRecord,error:dataError,busy:dataBusy,loading:dataBusy&&!dataRecord,onChange:entry.readOnly?undefined:settings=>dataAction('data-configure',{settings}),onRefresh:entry.readOnly?undefined:()=>dataAction('data-refresh'),onClose:()=>setDataSettings(false),theme:entry.dark?'dark':'light',readOnly:!!entry.readOnly,surface:'notes'}),
   react_dom.createPortal(react.createElement('div',{className:'en-native-component-heading'},refreshState&&react.createElement('span',{className:'ew-grid-refresh'},react.createElement('button',{type:'button',className:'en-component-refresh','aria-label':workbenchText('刷新组件'),disabled:entry.readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,'data-refresh-state':refreshState.state,'data-busy':refreshing||undefined,onPointerDown:e=>e.stopPropagation(),onClick:refresh},react.createElement(WorkbenchIcon,{name:refreshState.icon}))),title),entry.header),
   react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:!!entry.readOnly}},body),indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:!!entry.readOnly,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
  )
 }
-export function EWorkNoteComponentViews({sessionId,active}){
- const entries=react.useSyncExternalStore(eworkNoteComponentViews.subscribe,eworkNoteComponentViews.snapshot),instances=entries.filter(entry=>entry.sessionId===sessionId&&entry.host.isConnected).map(entry=>entry.instanceId).sort().join(','),officePreview=react.useSyncExternalStore(eworkNoteOfficePreview.subscribe,eworkNoteOfficePreview.getSnapshot)
+export function EWorkNoteComponentViews({sessionId,active,spreadsheet=false}){
+ const entries=react.useSyncExternalStore(eworkNoteComponentViews.subscribe,eworkNoteComponentViews.snapshot),visible=entries.filter(entry=>entry.sessionId===sessionId&&entry.host.isConnected&&(entry.surface==='spreadsheet')===spreadsheet),instances=visible.map(entry=>entry.instanceId).sort().join(','),officePreview=react.useSyncExternalStore(eworkNoteOfficePreview.subscribe,eworkNoteOfficePreview.getSnapshot)
  react.useEffect(()=>{if(active)document.dispatchEvent(new CustomEvent('sherlock:notes-components-sync-request',{detail:{sessionId}}))},[sessionId,active])
+ react.useEffect(()=>{if(spreadsheet)document.dispatchEvent(new CustomEvent('sherlock:spreadsheet-component-reload'))},[sessionId,spreadsheet])
  react.useEffect(()=>{
   const bridge=window.dshDesktop?.componentData;if(!active||typeof bridge?.request!=='function')return
   let live=true,pushed=false;const publish=event=>{if(live&&event?.sessionId===sessionId&&Array.isArray(event.rows)){pushed=true;componentDataStatusStore.publish(sessionId,event.rows,'notes')}}
@@ -94,7 +99,7 @@ export function EWorkNoteComponentViews({sessionId,active}){
   Promise.resolve(bridge.request(sessionId,{action:'list',surface:'notes'})).then(rows=>{if(live&&!pushed&&Array.isArray(rows))componentDataStatusStore.publish(sessionId,rows,'notes')}).catch(()=>{})
   return()=>{live=false;off?.();document.removeEventListener('sherlock:notes-reset',reset);reset()}
  },[sessionId,active,instances])
- return active?react.createElement(react.Fragment,null,entries.filter(entry=>entry.sessionId===sessionId&&entry.host.isConnected).map(entry=>react.createElement(EWorkNoteComponentView,{key:entry.instanceId,entry,officePreview}))):null
+ return active||spreadsheet?react.createElement(react.Fragment,null,visible.map(entry=>react.createElement(EWorkNoteComponentView,{key:entry.instanceId,entry,officePreview}))):null
 }
 export function noteComponentClientHelpers(){return 'const eworkNoteHtmlInteractionContext=react.createContext(null);\n'+createNoteHtmlInteractionBridge.toString()+'\n'+createNoteHtmlSharedStateBridge.toString()+'\nconst eworkCreateNoteHtmlInteraction=createNoteHtmlInteractionBridge;const eworkCreateNoteHtmlSharedState=createNoteHtmlSharedStateBridge;\n'+[createNoteComponentViewStore,EWorkNoteComponentView,EWorkNoteComponentViews].map(fn=>fn.toString()).join('\n')+"\nconst eworkNoteComponentViews=createNoteComponentViewStore(typeof document==='undefined'?undefined:document);\n"}
 export function patchNotesComponents(source){
