@@ -1,5 +1,6 @@
 import {describe,it,expect,vi} from 'vitest'
 import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {SPREADSHEET_QUICK_PROMPTS} from '../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
 import {PANEL_COLOR_INSTRUCTION,designPolicyIssue} from '../packages/dsh-research-task-runtime/design-policy.js'
 const policy=await import('../packages/dsh-research-task-runtime/conversation-components-policy.js').catch(()=>null)
 const session=text=>({id:'s',header:{},events:[{type:'turn/start',data:{turn:'1'}},{type:'user/message',seq:2,data:{id:'human',source:{kind:'user'},content:[{type:'text',text}]}}]})
@@ -7,11 +8,11 @@ const catalog=(s,mode,{callId='catalog-1',error=false,resultCallId=callId}={})=>
 const schemas=[{name:'research_workbench_create',parameters:{type:'object',properties:{panels:{type:'array'}},required:['panels']}},{name:'client_capabilities'},{name:'client_action'},{name:'public_data_query',parameters:{properties:{operation:{enum:['catalog','query']}}}},{name:'financial_query',parameters:{properties:{intent:{enum:['resolve','catalog','research']}}}},{name:'run_code'},{name:'read_file'},{name:'Bash'}]
 function harness(s){
  expect(policy,'conversation policy 尚未实现').not.toBeNull()
- const prompts=[],hooks=new Map(),guards=[],startSubagent=vi.fn(),agent={session:s}
+ const prompts=[],hooks=new Map(),guards=[],startSubagent=vi.fn(),agent={session:s,steer:vi.fn()}
  const ctx={tools:{schemas:()=>schemas,guard:fn=>{guards.push(fn);return()=>{}}},systemPrompt:{context:v=>{prompts.push(v);return()=>{}}},llm:{resolveModelInfo:vi.fn(async()=>({reasoning:{efforts:[{id:'low'},{id:'high'}]},defaultMaxTokens:16000}))},on:(name,fn)=>{hooks.set(name,[...(hooks.get(name)||[]),fn]);return()=>{}},startSubagent}
  const disposeWorkbench=registerWorkbenchExecutionPolicy(ctx),disposeConversation=policy.registerConversationComponentsPolicy(ctx)
  const invoke=async(name,value)=>{const run=(hooks.get(name)||[]).reduceRight((next,fn)=>()=>fn({agent},next),async()=>value);return run()}
- return{agent,ctx,guards,startSubagent,prompt:()=>prompts.map(v=>v.text({agent})).filter(Boolean).join('\n'),config:()=>invoke('agent/request',{provider:'zai',model:'test',reasoningEffort:'high',maxTokens:16000}),wire:()=>invoke('agent/request-context',{system:'base',tools:schemas}),dispose:()=>{disposeConversation();disposeWorkbench()}}
+ return{agent,ctx,guards,startSubagent,stop:()=>hooks.get('agent/turn-stopping').forEach(fn=>fn({agent,turn:1})),prompt:()=>prompts.map(v=>v.text({agent})).filter(Boolean).join('\n'),config:()=>invoke('agent/request',{provider:'zai',model:'test',reasoningEffort:'high',maxTokens:16000}),wire:()=>invoke('agent/request-context',{system:'base',tools:schemas}),dispose:()=>{disposeConversation();disposeWorkbench()}}
 }
 describe('direct conversation component routing',()=>{
  it.each(['给一个6人团队做新品上线协作工作台，用模拟数据。只要三张卡，跨卡用同一批12项任务。','请做跨部门交付看板','为客服团队做工单分析工作台'])('preserves the selected budget and creation path for a natural unquantified build request: %s',async text=>{
@@ -273,4 +274,39 @@ it('retains an active creation goal across reference steering without reviving c
   const copy=structuredClone(original);copy.events.push({type:'user/message',data:{id:'stop',source:{kind:'user'},content:[{type:'text',text}]}});expect(policy.componentCreationRequest(copy)).toBeNull()
  }
  original.events.push({type:'turn/end',data:{turn:1}});expect(policy.componentCreationRequest(original)).toBeNull()
+})
+
+
+it('routes the right-side cash-flow preset to the workbook before file tools are exposed',async()=>{
+ const s=session(SPREADSHEET_QUICK_PROMPTS.zh[2]),h=harness(s)
+ try{
+  expect((await h.wire()).tools.map(tool=>tool.name)).toEqual(['client_capabilities'])
+  catalog(s,'spreadsheet')
+  expect((await h.wire()).tools.map(tool=>tool.name)).toEqual(['client_capabilities','client_action'])
+  s.events.push({type:'assistant/chunk',data:{chunk:{type:'finish',reason:{kind:'stop'}}}})
+  h.stop();h.stop()
+  expect(h.agent.steer).toHaveBeenCalledTimes(1)
+  expect(h.agent.steer.mock.calls[0][0].content[0].text).toContain('当前工作簿尚未收到单元格写入回执')
+ }finally{h.dispose()}
+})
+
+it('accepts a matching workbook write receipt and preserves other input modes and attachment processing',async()=>{
+ const s=session(SPREADSHEET_QUICK_PROMPTS.zh[2]),h=harness(s)
+ try{
+  catalog(s,'spreadsheet')
+  s.events.push({type:'tool/call',data:{name:'client_action',callId:'saved',arguments:JSON.stringify({requestId:'cashflow',capability:'spreadsheet.apply'})}},
+   {type:'tool/result',data:{message:{source:{kind:'tool',callId:'saved'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({status:'succeeded',capability:'spreadsheet.apply',requestId:'cashflow',data:{saved:true,changed:true,affected:[{sheetId:'cashflow',range:'A1:F10'}]}})}]}]}}},
+   {type:'assistant/chunk',data:{chunk:{type:'finish',reason:{kind:'stop'}}}})
+  h.stop();expect(h.agent.steer).not.toHaveBeenCalled()
+ }finally{h.dispose()}
+ const attachment=session(SPREADSHEET_QUICK_PROMPTS.en[1]),r=harness(attachment)
+ try{
+  catalog(attachment,'spreadsheet')
+  expect((await r.wire()).tools.map(tool=>tool.name)).toContain('read_file')
+ }finally{r.dispose()}
+ const conversation=session(SPREADSHEET_QUICK_PROMPTS.en[2]),c=harness(conversation)
+ try{
+  catalog(conversation,'conversation')
+  expect((await c.wire()).tools.map(tool=>tool.name)).toContain('run_code')
+ }finally{c.dispose()}
 })

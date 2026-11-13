@@ -365,7 +365,7 @@ class SpreadsheetView{
   if(this.record.workbook)this.refreshFields()
   else this.paint()
  }
- private async install(record:WorkbookRecord){
+ private async install(record:WorkbookRecord,position?:Selection){
   if(this.disposed)return
   this.closeMenu()
   const same=this.record.workbook?.id===record.workbook?.id
@@ -391,7 +391,7 @@ class SpreadsheetView{
    if(this.disposed||token!==this.modeToken)return
    this.engine=createSheetEngine(this.grid,record.workbook,this.editable,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction)
    const book=this.engine.model
-   if(previous&&book.getSheetBySheetId(previous.sheetId)){
+   if(!position&&previous&&book.getSheetBySheetId(previous.sheetId)){
     const sheet=book.setActiveSheet(previous.sheetId)
     try{sheet.getRange(previous.range).activate()}catch{}
     const scroll=viewport
@@ -401,6 +401,10 @@ class SpreadsheetView{
     })
    }
    if(added&&previous?.sheetId!==added.sheetId&&book.getSheetBySheetId(added.sheetId))book.setActiveSheet(added.sheetId)
+   if(position&&book.getSheetBySheetId(position.sheetId)){
+    book.setActiveSheet(position.sheetId)
+    try{const {r0,c0}=parseRange(position.range);this.jump(address(r0,c0))}catch{}
+   }
    this.paint();this.readSelection();this.renderChart();this.renderComponent()
   }catch(error){this.say('表格引擎无法启动：'+errorMessage(error),true)}
  }
@@ -511,7 +515,7 @@ class SpreadsheetView{
   this.task=job
   await job
  }
- async external(row:WorkbookRecord){
+ async external(row:WorkbookRecord,position?:Selection){
   if(this.disposed||row.revision<=this.record.revision)return
   if(this.dirty||this.writingUser||this.formulaDirty||this.engine?.model.isCellEditing()){
    this.incoming=row
@@ -519,7 +523,7 @@ class SpreadsheetView{
    return
   }
   const refresh=row.workbook?.id!==this.record.workbook?.id||row.workbook?.name!==this.record.workbook?.name
-  await this.install(row)
+  await this.install(row,position)
   if(refresh){await this.refreshRecent();if(!this.record.workbook)this.paint()}
   if(!this.disposed&&this.record.revision===row.revision)this.say(row.lastAction?'AI 修改已保存':'工作簿已更新')
  }
@@ -1747,7 +1751,7 @@ export function mountSpreadsheet(doc:Document,bridge:Bridge){
  const observer=new MutationObserver(schedule)
  observer.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-odyssey-page','data-workspace-surface','data-ework-spreadsheet-view']})
  const off=[
-  bridge.subscribe('changed',value=>{if(view?.belongs(value))void view.external(value.record)}),
+  bridge.subscribe('changed',value=>{if(view?.belongs(value))void view.external(value.record,value.position)}),
   bridge.subscribe('flush',value=>{const current=view;if(!current?.belongs(value))return;void current.flush(true,true).then(()=>bridge.flushResult({...value,ok:true}),()=>bridge.flushResult({...value,ok:false})).catch(()=>{})}),
   bridge.subscribe('identity',()=>{view?.dispose();view=undefined;anchor=undefined;schedule()})
  ]

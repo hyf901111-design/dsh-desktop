@@ -11,7 +11,7 @@ it('uses the visible native client capability route and does not retarget select
  try{
   const store=new SpreadsheetStore(dir),changes:unknown[]=[]
   let writable=true,flush=async()=>{}
-  const spreadsheet=new SpreadsheetService(store,{flush:(..._args)=>flush(),changed:(_,record)=>changes.push(record)})
+  const spreadsheet=new SpreadsheetService(store,{flush:(..._args)=>flush(),changed:(_,record,position)=>changes.push({record,position})})
   const client=new ClientCapabilityService({owner:()=> 'test',windowIdentity:()=>1,canRead:()=>true,canWrite:()=>writable,scheduled:()=>false,send:()=>{},canvasAvailable:()=>false,canvas:async()=>null,window:async()=>null,spreadsheet})
   const key={owner:'test',sessionId:'session'}
   client.bind({sessionId:key.sessionId,mode:'spreadsheet',active:true})
@@ -29,7 +29,7 @@ it('uses the visible native client capability route and does not retarget select
   flush=async()=>{ const current=store.load(key);current.workbook!.name='手动改名';store.save(key,current.revision,current.workbook!) }
   expect(await call('spreadsheet.apply',{revision:1,operations:[{op:'clear',sheetId:'sheet-1',range:'B2'}]},'race')).toMatchObject({status:'failed'})
   expect(store.load(key).workbook).toMatchObject({name:'手动改名',sheets:{'sheet-1':{cellData:{1:{1:{v:42}}}}}})
-  expect(changes).toHaveLength(1)
+  expect(changes).toMatchObject([{record:{revision:1},position:{sheetId:'sheet-1',range:'B2'}}])
   flush=async()=>{writable=false}
   expect(await call('spreadsheet.apply',{revision:2,operations:[{op:'clear',sheetId:'sheet-1',range:'B2'}]},'revoked')).toMatchObject({status:'failed'})
   expect(store.load(key).revision).toBe(2)

@@ -44,7 +44,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     try{win.webContents.send('spreadsheet:flush',{id,sessionId:key.sessionId,owner:key.owner})}catch{finish(Error('表格窗口不可用。'))}
    })
   },
-  changed:(key,record)=>{const win=getWindow();if(win&&!win.isDestroyed())win.webContents.send('spreadsheet:changed',{...key,record})},
+  changed:(key,record,position)=>{const win=getWindow();if(win&&!win.isDestroyed())win.webContents.send('spreadsheet:changed',{...key,record,position})},
  })
  registerTrustedMainWindowHandler(ipcMain,'spreadsheet:flush-result',getWindow,(_event,input:any)=>{
   const value=pending.get(input?.id);if(!value)return
