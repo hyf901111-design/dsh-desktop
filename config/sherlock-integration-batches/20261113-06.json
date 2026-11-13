@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-06",
+  "branch": "codex/integration/20261113-06",
+  "baseMainCommit": "085c05ca9d9d493e0f95bcd90ac0c6b2196a8dac",
+  "expectedMainCommit": "085c05ca9d9d493e0f95bcd90ac0c6b2196a8dac",
+  "createdAt": "2026-11-13T03:36:53.845Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "探索额度圆环顶部起点",
+        "branch": "codex/feat/explore-quota-top-20261113",
+        "baseCommit": "085c05ca9d9d493e0f95bcd90ac0c6b2196a8dac",
+        "tipCommit": "4eeaceda029b9e80ec7c4408999153964034e465",
+        "commits": [
+          {
+            "commit": "4eeaceda029b9e80ec7c4408999153964034e465",
+            "parents": [
+              "085c05ca9d9d493e0f95bcd90ac0c6b2196a8dac"
+            ],
+            "subject": "将探索额度圆环生长起点移到正上方"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-quota-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-quota-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "圆环方向、重置状态和额度刷新 3 项通过",
+            "verifiedCommit": "4eeaceda029b9e80ec7c4408999153964034e465",
+            "completedAt": "2026-11-13T03:36:51.989266+00:00",
+            "timeoutMs": 60000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "浏览器实测几何起点和顺时针方向，截图保留。"
+        },
+        "acceptanceCriteria": [
+          "环的起点位于12点，顺时针生长"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-13T03:36:51.989266+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/explore-quota-browser.test.ts"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
