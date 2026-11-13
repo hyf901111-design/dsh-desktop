@@ -16,6 +16,7 @@ import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, Formattin
 import * as Y from 'yjs'
 import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult, type NoteInsertionAnchor } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
+import { NoteViewMode } from './view-mode'
 import { NoteAiSelection } from './selection'
 import { replaceNoteSelection, noteRangeHasOnlyText } from './replace-selection'
 import { SuggestionPanel } from './suggestion-panel'
@@ -241,6 +242,8 @@ export function NotesApp(props: Props) {
 }
 
 function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: NoteLoad['draft']; recovering: boolean; onRecovery(restore: boolean): void; onReload(): void }) {
+  const [viewPreview, setViewPreview] = useState(false)
+  const readOnly = viewPreview || !!props.recovery || props.active === false
   const [title, setTitle] = useState(props.initial.title), [status, setStatus] = useState(props.recovery ? '发现本地草稿' : '已保存'), [error, setError] = useState(''), [outline, setOutline] = useState<any[]>([]), [active, setActive] = useState(''), [preview, setPreview] = useState<NoteSuggestionPreview & {requestId:string}>(), [compare, setCompare] = useState(false)
   const client = useRef((props.initial as any).clientId || crypto.randomUUID()), revision = useRef(props.initial.revision), titleRef = useRef(title), scroll = useRef<HTMLDivElement>(null), saveTimer = useRef<ReturnType<typeof setTimeout>>(), saveQueue = useRef(Promise.resolve()), disposed = useRef(false), request = useRef(''), epoch = useRef(0), selection = useRef({ text: '', from: 0, to: 0, cursor: '' }), lastWritten = useRef(''), latest = useRef<NoteContent>(props.initial)
   titleRef.current = title
@@ -537,12 +540,12 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
   const paste = async (event?: React.ClipboardEvent) => {
-    if (props.recovery||!editorActive()) return
+    if (!editor.isEditable||!editorActive()) return
     if (event) { if (!event.clipboardData.getData('text/html').includes('sherlock-research-clipboard')) return; event.preventDefault() }
-    try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components') { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify({...node,id:'note-component-'+crypto.randomUUID()}) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
+    try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components'&&editor.isEditable&&editorActive()) { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify({...node,id:'note-component-'+crypto.randomUUID()}) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
   }
   const [fileDrag,setFileDrag]=useState(false)
-  const ownsFiles=(event:React.DragEvent|DragEvent)=>editorActive()&&!props.recovery&&Array.from(event.dataTransfer!.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
+  const ownsFiles=(event:React.DragEvent|DragEvent)=>editorActive()&&editor.isEditable&&Array.from(event.dataTransfer!.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
   const dropFiles=async(event:DragEvent)=>{
     setFileDrag(false);if(!ownsFiles(event))return
     event.preventDefault();event.stopPropagation()
@@ -570,10 +573,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       finally{importing.current.delete(block.id)}
     }
   }
-  useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly:!!props.recovery||props.active===false,dropFiles,finish:()=>setFileDrag(false)})
-  useNoteReplyInsertion({editor,sessionId:props.sessionId,root:scroll,readOnly:!!props.recovery||props.active===false})
+  useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly,dropFiles,finish:()=>setFileDrag(false)})
+  useNoteReplyInsertion({editor,sessionId:props.sessionId,root:scroll,readOnly})
   const nativeCurrent=()=>!props.guide||!!props.guide.native&&document.documentElement.dataset.homeGuidePointerRun===props.guide.native.runId
-  const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(nativeCurrent()&&editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}
+  const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(nativeCurrent()&&editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:editor.isEditable,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}
   const setNativeDraft = (text?: string, focus=false) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))}
   const commitNativeDraft = (admission?:ComposerAdmission) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))}
   const rollbackNativeDraft = (admission?:ComposerAdmission) => {if(nativeCurrent())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))}
@@ -591,7 +594,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     }catch{return}
   }
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission, retry?:typeof lastRequest.current, targetDraft?:string, inlineTarget?:NoteInsertionAnchor) => {
-    if ((!prompt.trim() && !images.length) || request.current || externalCapabilities.current?.pending() || props.recovery||!editorActive()||!nativeCurrent()) return
+    if ((!prompt.trim() && !images.length) || request.current || externalCapabilities.current?.pending() || !editor.isEditable||!editorActive()||!nativeCurrent()) return
     if(inlineTarget)noteInlineAnchorBlock(editor,inlineTarget,client.current)
     externalCapabilities.current?.revoke()
     if(!inlineTarget){setInlineDraft(undefined);reviewedProposal.current=undefined}
@@ -826,7 +829,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   reviewActions.current={show:showProposal,confirm:id=>{automaticSettlements.current=automaticSettlements.current.catch(()=>{}).then(async()=>{await settlementTask.current.catch(()=>{});if(!disposed.current)await settleInlineProposal(false,id,true)}).catch(error=>{if(!disposed.current&&editorActive())setError((error as Error).message)})}}
   useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key!=='Escape'||event.defaultPrevented||event.isComposing||request.current||!inlineDraftRef.current?.review||!scroll.current?.contains(event.target as Node))return;event.preventDefault();setInlineDraft(undefined)};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape)},[])
   const apply = async (replace: boolean) => {
-    if (!preview||!nativeCurrent()||!editorActive()||props.recovery||request.current) return
+    if (!preview||!nativeCurrent()||!editorActive()||!editor.isEditable||request.current) return
     if(JSON.stringify(editor.document)!==preview.fingerprint){setError(t('笔记已变化，请重新生成建议，较新内容已保留。'));return}
     if(guideSummary.current?.requestId===preview.requestId&&!guideSummary.current.lease()){setError(t('笔记末尾光标已变化，已保留用户当前操作。'));return}
     const native=composerPreview.current?.requestId===preview.requestId?composerPreview.current:undefined
@@ -885,7 +888,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       updateSystemComponent(active.blockId,next);active.expected=JSON.stringify(next)
     }
     document.addEventListener('sherlock:notes-generation-progress',progress)
-    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!nativeCurrent()||!editorActive()||detail?.sessionId!==props.sessionId||props.recovery||request.current||externalCapabilities.current?.pending()||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
+    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!nativeCurrent()||!editorActive()||detail?.sessionId!==props.sessionId||!editor.isEditable||request.current||externalCapabilities.current?.pending()||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const exportRequested=(event:Event)=>{if(editorActive()&&(event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.exportNote((event as CustomEvent).detail.format)}
     document.addEventListener('sherlock:notes-export',exportRequested)
     const cancel=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId===props.sessionId&&(detail.requestId===undefined||!!request.current&&detail.requestId===request.current))commands.current.stop()}
@@ -893,7 +896,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const state=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)publishComposer({})}
     document.addEventListener('sherlock:notes-submit',submit);document.addEventListener('sherlock:notes-stop',cancel);document.addEventListener('sherlock:notes-session-error',sessionError);document.addEventListener('sherlock:notes-composer-request-state',state);publishComposer({running:false})
     return()=>{document.removeEventListener('sherlock:notes-generation-progress',progress);document.removeEventListener('sherlock:notes-export',exportRequested);document.removeEventListener('sherlock:notes-submit',submit);document.removeEventListener('sherlock:notes-stop',cancel);document.removeEventListener('sherlock:notes-session-error',sessionError);document.removeEventListener('sherlock:notes-composer-request-state',state);publishComposer({ready:false,running:false})}
-  },[props.sessionId,props.recovery,props.active])
+  },[props.sessionId,props.recovery,props.active,viewPreview])
   const exportNote = async (format='md') => {
     if(exportPending.current||externalCapabilities.current?.pending()||disposed.current)return
     exportPending.current=true;setExporting(true);setError('')
@@ -938,7 +941,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     return filterSuggestionItems([...choices,library],query)
   }, [editor,props.bridge,props.sessionId,document.documentElement.dataset.odysseyLocale])
   const [challengeMarginAvailable,setChallengeMarginAvailable]=useState(false)
-  const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing||externalBusy,isBusy:()=>!!request.current||!!externalCapabilities.current?.pending(),recovery:!!props.recovery,active:props.active,activityId:props.activityId,replacementSettleMs:props.guide?0:undefined,persist:changed,persistConfirmed})
+  const challenge=useNoteChallenge({editor,doc,bridge:props.bridge,sessionId:props.sessionId,title,scroll,busy:writing||externalBusy,isBusy:()=>!!request.current||!!externalCapabilities.current?.pending(),recovery:!!props.recovery,active:!readOnly,activityId:props.activityId,replacementSettleMs:props.guide?0:undefined,persist:changed,persistConfirmed})
   challengeController.current=challenge
   challengeScheduleSync.current=challenge.syncScheduling
   // The guide is an explicit prop, never a global event channel that can control a user's editor.
@@ -1021,24 +1024,28 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       </SuggestionPanel></div> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    {props.active!==false?<ChallengeToolbar controller={challenge} sessionId={props.sessionId} dark={props.dark} marginAvailable={challengeMarginAvailable} disabled={!!props.recovery}/>:null}
+    {!props.guide&&props.active!==false?<NoteViewMode sessionId={props.sessionId} preview={viewPreview} disabled={!!props.recovery||writing||externalBusy||challenge.running||!!challenge.busyId||!!importing.current.size} onToggle={()=>{
+      if(composing.current||request.current||settlingProposal.current||externalCapabilities.current?.pending()||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)))return
+      setViewPreview(value=>!value)
+    }}/>:null}
+    {props.active!==false?<ChallengeToolbar controller={challenge} sessionId={props.sessionId} dark={props.dark} marginAvailable={challengeMarginAvailable} disabled={readOnly}/>:null}
     <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onCompositionStartCapture={startBodyComposition} onCompositionEndCapture={()=>{composing.current=false}} onKeyDownCapture={event=>{const target=event.target as HTMLElement;if(composing.current||props.recovery||request.current||settlingProposal.current||!editorActive()||!target.isContentEditable||target.closest('input,textarea,button,select,[contenteditable="false"]')||!target.closest('.bn-editor'))return;const blockId=noteInlineAiTrigger(editor,event.nativeEvent);if(!blockId)return;event.preventDefault();event.stopPropagation();clearSelection(true);setPreview(undefined);setInlineDraft({anchor:captureNoteInlineAnchor(editor,client.current,blockId),prompt:inlinePrompt.current})}} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant,.en-research')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document" data-note-document-id={client.current}>
         {props.recovery ? <div className="en-recovery"><strong>{t("发现未保存的本地草稿")}</strong><span>{t("上次编辑内容已保留，可对比后恢复。")}</span><div><button onClick={() => setCompare(true)}>{t("对比草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>{t("保留已保存版本")}</button></div></div> : null}
-        <input className="en-title" aria-label={t("笔记标题")} placeholder={t("无标题文档")} value={title} readOnly={!!props.recovery||props.active===false} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
+        <input className="en-title" aria-label={t("笔记标题")} placeholder={t("无标题文档")} value={title} readOnly={readOnly} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
         {editedDate?<time className="en-edit-date" dateTime={editedDate.calendar}>{editedDate.label}</time>:null}
-        <BlockNoteView key={document.documentElement.dataset.odysseyLocale} editor={editor} editable={!props.recovery&&props.active!==false} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false} comments={false} tableHandles={false}>
-          <NativeTableControls active={!props.recovery&&props.active!==false} sessionId={props.sessionId}/><FloatingComposerController/><ManualNoteThreads/>
-          <SuggestionMenuController getItems={slashItems} triggerCharacter="/" suggestionMenuComponent={slashMenu} portalElement={document.body} floatingUIOptions={{useFloatingOptions:{strategy:'fixed'},elementProps:{className:'en-note-menu-layer',style:{zIndex:110}}}} />
-          <FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: t("正文"), type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: t("标题 ") + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><NoteListButtons/><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft(t("改写选中文字，保留原意并让表达更清晰。"), true) }}/></NoteFormattingToolbar>} />
-          <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const base=reference.getBoundingClientRect(),component=reference.querySelector<HTMLElement>('.en-research,.en-note-file');if(component)return{y:y+component.getBoundingClientRect().top-base.top};const box=content.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
+        <BlockNoteView key={document.documentElement.dataset.odysseyLocale} editor={editor} editable={!readOnly} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false} comments={false} tableHandles={false}>
+          <NativeTableControls active={!readOnly} sessionId={props.sessionId}/>{!viewPreview?<><FloatingComposerController/><ManualNoteThreads/></>:null}
+          {!viewPreview?<SuggestionMenuController getItems={slashItems} triggerCharacter="/" suggestionMenuComponent={slashMenu} portalElement={document.body} floatingUIOptions={{useFloatingOptions:{strategy:'fixed'},elementProps:{className:'en-note-menu-layer',style:{zIndex:110}}}} />:null}
+          {!viewPreview?<><FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: t("正文"), type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: t("标题 ") + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><NoteListButtons/><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft(t("改写选中文字，保留原意并让表达更清晰。"), true) }}/></NoteFormattingToolbar>} />
+          <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const base=reference.getBoundingClientRect(),component=reference.querySelector<HTMLElement>('.en-research,.en-note-file');if(component)return{y:y+component.getBoundingClientRect().top-base.top};const box=content.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} /></>:null}
         </BlockNoteView>
-        {inlineDraft?<NoteInlineAiComposer draft={inlineDraft} editor={editor} scroll={scroll} running={writing&&!!inlineRequest.current} disabled={!!request.current&&!inlineRequest.current||externalBusy||!editor.isEditable||!!props.recovery} onChange={prompt=>{inlinePrompt.current=prompt;setInlineDraft(value=>value?{...value,prompt,error:undefined,reply:undefined}:value)}} onSubmit={submitInlineAi} onConfirm={()=>settleInlineProposal(false)} onUndo={()=>settleInlineProposal(true)} onCancel={cancelInlineAi} onDismiss={dismissInlineAi} onStop={stopInlineAi}/>:null}
+        {!viewPreview&&inlineDraft?<NoteInlineAiComposer draft={inlineDraft} editor={editor} scroll={scroll} running={writing&&!!inlineRequest.current} disabled={!!request.current&&!inlineRequest.current||externalBusy||!editor.isEditable||!!props.recovery} onChange={prompt=>{inlinePrompt.current=prompt;setInlineDraft(value=>value?{...value,prompt,error:undefined,reply:undefined}:value)}} onSubmit={submitInlineAi} onConfirm={()=>settleInlineProposal(false)} onUndo={()=>settleInlineProposal(true)} onCancel={cancelInlineAi} onDismiss={dismissInlineAi} onStop={stopInlineAi}/>:null}
       </div>
     </div>
-    <NoteReplacementPopover controller={challenge.replacementReviews} scroll={scroll}/>
+    {!viewPreview?<><NoteReplacementPopover controller={challenge.replacementReviews} scroll={scroll}/>
     <ChallengeComments controller={challenge} editor={editor} scroll={scroll} onMarginAvailableChange={setChallengeMarginAvailable}/>
-    {assistantVisible ? createPortal(suggestion,assistantHost) : <div className="en-composer-area">{suggestion}</div>}</main>
+    {assistantVisible ? createPortal(suggestion,assistantHost) : <div className="en-composer-area">{suggestion}</div>}</>:null}</main>
     {compare && props.recovery ? <div className="en-dialog-backdrop" onClick={() => setCompare(false)}><section role="dialog" aria-modal="true" aria-label={t("本地草稿对比")} className="en-compare" onClick={e => e.stopPropagation()}><header><strong>{t("本地草稿对比")}</strong><button onClick={() => setCompare(false)}>{t("关闭")}</button></header><div><section><h3>{t("已保存版本")}</h3><pre>{plain(props.initial)}</pre></section><section><h3>{t("本地草稿")}</h3><pre>{plain(props.recovery)}</pre></section></div><footer><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button onClick={() => setCompare(false)}>{t("稍后处理")}</button></footer></section></div> : null}
   </div></Context.Provider>
 }

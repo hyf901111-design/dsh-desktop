@@ -8,10 +8,11 @@ import sortZh from '@univerjs/preset-sheets-sort/locales/zh-CN'
 import coreEn from '@univerjs/preset-sheets-core/locales/en-US'
 import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
-import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,type IWorkbookData} from '@univerjs/core'
+import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,IContextService,type IWorkbookData} from '@univerjs/core'
 import {ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
 import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService} from '@univerjs/sheets-ui'
+import {DISABLE_AUTO_FOCUS_KEY} from '@univerjs/ui'
 import coreCss from '@univerjs/preset-sheets-core/lib/index.css?raw'
 import filterCss from '@univerjs/preset-sheets-filter/lib/index.css?raw'
 import sortCss from '@univerjs/preset-sheets-sort/lib/index.css?raw'
@@ -75,15 +76,18 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   ['ySplit','__SpreadsheetFreezeRowHeaderName__','__SpreadsheetFreezeRowMainName__'],
   ['xSplit','__SpreadsheetFreezeColumnHeaderName__','__SpreadsheetFreezeColumnMainName__']
  ] as const
- // Univer's clipboard rectangle starts white and its fill handle uses the
- // theme's white endpoint. Keep these transient guides distinct from borders.
+ const selectionEdges = /^__SpreadsheetSelection(?:ShapeLeft|ShapeRight|Top|Bottom)Control__/
+ // Keep the selection hit area without painting Univer's white buffer around it.
+ // These guides are separate from the workbook's cell borders.
  const guideColors=(render:IRender)=>{
   for(const object of render.scene.getObjectsByLayer(1)){
    if(!object.oKey.startsWith('__SpreadsheetSelectionShape__'))continue
    for(const shape of object.getObjects()){
     if(!('setProps' in shape)||typeof shape.setProps!=='function')continue
-    const stroke=shape.oKey.startsWith('__SpreadsheetDragDashControl__')?'#7898c8':
-     shape.oKey.startsWith('__SpreadsheetSelectionFillControl__')?palette().canvas:undefined
+    let stroke:string|undefined
+    if(selectionEdges.test(shape.oKey))stroke='transparent'
+    else if(shape.oKey.startsWith('__SpreadsheetDragDashControl__'))stroke='#7898c8'
+    else if(shape.oKey.startsWith('__SpreadsheetSelectionFillControl__'))stroke=palette().canvas
     if(stroke&&(!('stroke' in shape)||shape.stroke!==stroke))shape.setProps({stroke})
    }
   }
@@ -181,6 +185,16 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   }),
   api.addEvent(api.Event.SelectionChanged,selection),
  ]
+ const context=injector.get(IContextService)
+ // Univer also gates typing into a selected cell on its auto-focus flag.
+ // Enable that path after the user enters the grid, leaving the chat and toolbar independent.
+ const updateEditorFocus=(event:Event)=>{
+  const inside=host.contains(event.target as Node)
+  const disableAutoFocus=!inside||!editable
+  if(context.getContextValue(DISABLE_AUTO_FOCUS_KEY)!==disableAutoFocus)context.setContextValue(DISABLE_AUTO_FOCUS_KEY,disableAutoFocus)
+ }
+ doc.addEventListener('focusin',updateEditorFocus,true)
+ doc.addEventListener('pointerdown',updateEditorFocus,true)
  requestAnimationFrame(()=>{if(!disposed){applyTheme();selection()}})
  return {api,model,capturePasteTarget:()=>injector.get(ISheetClipboardService).capturePasteTarget(),pasteText:(textContent:string,target:ReturnType<ISheetClipboardService['capturePasteTarget']>)=>api.executeCommand(SheetPasteShortKeyCommand.id,{textContent,target}),clearFill:()=>api.executeCommand(ResetBackgroundColorCommand.id),align:(value:string)=>api.executeCommand(SetHorizontalTextAlignCommand.id,{value:{left:1,center:2,right:3}[value]}),snapshot:()=>{
   const result=structuredClone(model.save()) as unknown as Workbook
@@ -193,6 +207,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  },dispose:()=>{
   if(disposed)return
   disposed=true
+  doc.removeEventListener('focusin',updateEditorFocus,true)
+  doc.removeEventListener('pointerdown',updateEditorFocus,true)
   observer.disconnect();resize.disconnect();renderSub.unsubscribe();styleInterceptor.dispose();for(const subs of watched.values())subs.forEach(s=>s.unsubscribe());subs.forEach(s=>s.dispose())
   try{univer.dispose()}finally{style.remove();doc.documentElement.classList.toggle('univer-dark',originalDark)}
  }}

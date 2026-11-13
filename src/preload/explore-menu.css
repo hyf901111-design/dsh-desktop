@@ -88,6 +88,7 @@ body:not([data-ds-dark-theme]) .odyssey-explore-tool>img,body:not([data-ds-dark-
 .odyssey-explore-account{display:flex;align-items:center;gap:10px;height:48px;max-width:220px;border-radius:12px!important;padding:10px!important}
 .odyssey-explore-account:hover{background:var(--explore-tool)!important}.odyssey-explore-account>span{font-size:14px;line-height:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .odyssey-explore-account .sherlock-account-avatar{width:28px;height:28px;flex:none}
+.odyssey-explore-account .sherlock-account-avatar>svg{overflow:visible}
 /* The popover remains in Explore's dialog top layer and inherits the live
    client menu palette; its compact R7 geometry and blur stay local. */
 .odyssey-explore .sherlock-account-menu[data-explore-account-menu]{--odyssey-menu-shadow:0 8px 12px rgb(0 0 0/.32);--odyssey-menu-blur:blur(18px);overflow:visible;box-sizing:border-box;width:224px;padding:7px;border-radius:16px;background:var(--odyssey-menu);color:var(--odyssey-text);border:1px solid var(--odyssey-menu-border);box-shadow:var(--odyssey-menu-shadow);backdrop-filter:var(--odyssey-menu-blur);-webkit-backdrop-filter:var(--odyssey-menu-blur);font:400 13px/20px "Noto Sans SC","PingFang SC",sans-serif}

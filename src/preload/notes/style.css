@@ -42,7 +42,9 @@ body:has(.VOzbGW_overlay:not([hidden])) [data-ework-notes-session]{visibility:hi
 @media(prefers-reduced-motion:reduce){.en-inline-assistant,.en-root .bn-suggestion-menu{animation:none}.en-ai-spinner{animation-duration:2s}}
 
 .en-root{--en-muted:var(--odyssey-menu-muted,#858585)}.en-root[data-dark=true]{--en-muted:var(--odyssey-menu-muted,#999)}.en-title::placeholder{color:var(--en-muted);opacity:1}
-.en-toc-trigger{width:32px;height:32px;padding:0}.en-toc-trigger svg{display:block;flex:none}.en-toc-trigger[aria-expanded=true]{background:var(--odyssey-menu-row,var(--en-control));color:var(--en-ink)!important}
+.en-editor-host .en-toc-trigger{width:30px;height:30px;padding:0;border-radius:7px;color:var(--en-ink)!important;background:var(--odyssey-header-icon-bg,var(--en-control))}
+.en-toc-trigger svg{display:block;flex:none}
+.en-editor-host .en-toc-trigger:is(:hover,:focus-visible,[aria-expanded=true]):not(:disabled){background:var(--odyssey-header-icon-hover,var(--en-control))}
 
 .en-ai-position-note{margin:0 0 8px;font-size:12px;line-height:20px;color:var(--en-muted)}
 

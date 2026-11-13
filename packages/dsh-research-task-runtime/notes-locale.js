@@ -160,6 +160,8 @@ export const NOTE_ENGLISH = {
   "文档目录": "Document outline",
   "展开目录": "Show outline",
   "收起目录": "Hide outline",
+  "切换到编辑模式": "Switch to editing mode",
+  "切换到预览模式": "Switch to preview mode",
   "笔记标题": "Note title",
   "移除笔记中的组件": "Remove component from note",
   "移除笔记中的文件": "Remove file from note",
