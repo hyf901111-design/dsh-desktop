@@ -26,10 +26,10 @@ it('renders the account quota, grows the hover arc, and clears it at sign-out',a
         quarterX: quarter.x - center.x, quarterY: quarter.y - center.y }
     })
     expect(ring.radius).toBe(13)
-    expect(ring.startX).toBeGreaterThan(0)
-    expect(ring.startY).toBeLessThan(0)
+    expect(ring.startX).toBeCloseTo(0, 3)
+    expect(ring.startY).toBeLessThan(-1)
     expect(ring.quarterX).toBeGreaterThan(0)
-    expect(ring.quarterY).toBeGreaterThan(0)
+    expect(ring.quarterY).toBeCloseTo(0, 3)
     await trigger.screenshot({path:ui.evidence+'/explore-ring.png',scale:'device'})
     await page.mouse.move(300,150)
     await expect.poll(()=>arc.evaluate((el:Element)=>parseFloat(getComputedStyle(el).strokeDashoffset))).toBe(100)
