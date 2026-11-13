@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-05",
+  "branch": "codex/integration/20261113-05",
+  "baseMainCommit": "e87eee692deb097108d9a0b1fce975e7cfb03a79",
+  "expectedMainCommit": "e87eee692deb097108d9a0b1fce975e7cfb03a79",
+  "createdAt": "2026-11-13T03:12:18.820Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台来源核验及探索额度展示",
+        "branch": "codex/feat/workbench-verified-metrics-20261113",
+        "baseCommit": "e87eee692deb097108d9a0b1fce975e7cfb03a79",
+        "tipCommit": "84e041f189a62adf0eb0f92362dfb4fde023b84f",
+        "commits": [
+          {
+            "commit": "7d0ae133e14d9ad86abf557c3100d97b8f4f3427",
+            "parents": [
+              "e87eee692deb097108d9a0b1fce975e7cfb03a79"
+            ],
+            "subject": "修正工作台原型金额单位、对账明细和基金统计"
+          },
+          {
+            "commit": "84e041f189a62adf0eb0f92362dfb4fde023b84f",
+            "parents": [
+              "7d0ae133e14d9ad86abf557c3100d97b8f4f3427"
+            ],
+            "subject": "校正探索额度圆环方向并说明计时起点"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/prototype-source-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-fund-comparison.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-tables.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-units.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-quota.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-quota-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-acquisition-fallback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-content-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/component-source-projection.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/explore-quota-browser.test.ts",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "8 个聚焦测试文件，145 项通过",
+            "verifiedCommit": "84e041f189a62adf0eb0f92362dfb4fde023b84f",
+            "completedAt": "2026-11-13T03:12:08.335538+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "此阶段完成源码和聚焦检查，正式身份本地包构建后实测。"
+        },
+        "acceptanceCriteria": [
+          "保持开源结合版生成链路",
+          "核对原型单位、全部对账行和基金收益率中位数",
+          "额度圆环从顶部右侧顺时针生长，说明 5 小时起点"
+        ],
+        "risks": [
+          "已在未改动的 main 复现既有原型所有权测试单项失败，独立于本次变更",
+          "24 工作台模型实测在本地打包后执行"
+        ],
+        "generatedAt": "2026-11-13T03:12:08.335538+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-content-delivery.test.js",
+        "test/workbench-acquisition-fallback.test.js",
+        "test/workbench-fund-comparison.test.js",
+        "test/component-source-projection.test.js",
+        "test/workbench-prototype-evidence.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/explore-quota-browser.test.ts",
+        "test/account-service.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
