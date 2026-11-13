@@ -63,7 +63,7 @@ ${welcomeAnchor}`,'right pane welcome component')
   if(nativeTitle.split(before).length===2)change(before,after,'spreadsheet blank title '+before)
  }
  const utilities=`children: [active?.id === 'notes' && (0,react_jsx_runtime.jsx)(EWorkNoteExportMenu,{sessionId}), renderSlot("conversation.session.header.utilities", {})]`
- change(utilities,utilities.replace('children: [', "children: [active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId}),"),'spreadsheet top bar actions')
+ change(utilities,utilities.replace('children: [', "children: [active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId,'data-ework-spreadsheet-title':explicitSessionTitle?.trim()||(!blankResearchTitle&&ancestry.at(-1)?.displayTitle)||(document.documentElement.dataset.odysseyLocale==='en'?'New Spreadsheet':'新表格')}),"),'spreadsheet top bar actions')
  const binding="const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';"
  change(binding,binding.replace(":'conversation'",":active.id==='spreadsheet'?'spreadsheet':'conversation'"),'tool mode')
  const select='const selectView = (0, react.useCallback)((viewId) => {'

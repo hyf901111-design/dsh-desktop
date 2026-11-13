@@ -9,6 +9,12 @@ import {SpreadsheetService} from './service'
 import {SpreadsheetStore,type WorkbookKey} from './store'
 import type {ConversationComponentVisibleContext} from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
 
+function exportStem(value:unknown){
+ return typeof value==='string'
+  ?value.slice(0,120).replace(/[\u0000-\u001f\u007f\\/:*?"<>|]/g,'-').trim().replace(/\.(xlsx|csv)$/i,'').replace(/^[ .]+|[ .]+$/g,'')
+  :''
+}
+
 export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string}){
  const {ipcMain,getWindow}=options
  const store=new SpreadsheetStore(options.dataPath)
@@ -62,7 +68,11 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{op:'addChart',chartId:randomUUID(),sheetId:input.sheetId,range:input.range,title:input.title,kind:input.kind,headers:input.headers}]})
    }
    case 'remove-chart':return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{op:'removeChart',chartId:input.chartId}]})
-   case 'create':return store.create(key,input.revision,blankWorkbook(randomUUID(),input.name))
+   case 'create':{
+    if(store.load(key).workbook)throw Error('当前会话已有工作簿。请新建表格会话。')
+    const name=typeof input.name==='string'?input.name.replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,120):''
+    return store.create(key,input.revision,blankWorkbook(randomUUID(),name||undefined))
+   }
    case 'activate':if(safeId(input.id))return store.activate(key,input.revision,input.id);break
    case 'redo':return store.redo(key,input.revision)
    case 'undo':return store.undo(key,randomUUID(),{revision:input.revision,actionId:input.actionId})
@@ -89,7 +99,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     if(!['xlsx','csv'].includes(input.format)||!safeId(input.sheetId))break
     const format=input.format as 'xlsx'|'csv',record=store.load(key)
     if(!record.workbook||record.revision!==input.revision)throw Error('工作簿已变化，请重新导出。')
-    const title=record.workbook.name.replace(/\.(xlsx|csv)$/i,'').replace(/[\\/:*?"<>|]/g,'-')
+    const title=exportStem(input.sessionTitle)||exportStem(record.workbook.name)||'工作簿'
     const result=await dialog.showSaveDialog(getWindow()!,{title:'导出工作簿',defaultPath:title+'.'+format,filters:[{name:format==='xlsx'?'Excel 工作簿':'CSV 文件',extensions:[format]}]})
     if(result.canceled||!result.filePath)return null
     guard(false)

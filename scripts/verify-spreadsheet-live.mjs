@@ -46,6 +46,7 @@ await build({stdin:{resolveDir:root,contents:`
  const profile={owner:'demo',sessionId:'demo-session'},mode='spreadsheet'
  const report=[],errors=[]
  let win,service,capability,turn=0,configuredImport
+ const exportPaths=[]
  const button=(action,value)=>':is([data-ework-spreadsheet-actions],.ew-sheet) [data-action="'+action+'"]'+(value===undefined?'':'[data-value='+JSON.stringify(value)+']')
  const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms))
  const js=(code)=>win.webContents.executeJavaScript(code,true)
@@ -53,8 +54,9 @@ await build({stdin:{resolveDir:root,contents:`
  const clickable=selector=>js('(()=>{const el=document.querySelector('+JSON.stringify(selector)+');if(!el||el.disabled||!el.getClientRects().length)return null;const r=el.getBoundingClientRect();const x=Math.round(r.x+r.width/2),y=Math.round(r.y+r.height/2);return {x,y,hit:document.elementFromPoint(x,y)?.outerHTML.slice(0,180),expected:el.outerHTML.slice(0,150)}})()')
  const click=async(selector)=>{
   const point=await until(()=>clickable(selector),selector)
-  win.webContents.sendInputEvent({type:'mouseMove',x:point.x,y:point.y});win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,x:point.x,y:point.y})
-  win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:point.x,y:point.y})
+  const scale=win.webContents.getZoomFactor(),x=Math.round(point.x*scale),y=Math.round(point.y*scale)
+  win.webContents.sendInputEvent({type:'mouseMove',x,y});win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,x,y})
+  win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x,y})
   await wait(80);return point
  }
  const press=(keyCode,modifiers=[])=>{win.webContents.sendInputEvent({type:'keyDown',keyCode,modifiers});win.webContents.sendInputEvent({type:'keyUp',keyCode,modifiers})}
@@ -79,7 +81,7 @@ await build({stdin:{resolveDir:root,contents:`
  const screenshot=async(name)=>{await wait(220);const image=await win.webContents.capturePage();writeFileSync(join(evidence,name+'.png'),image.toPNG())}
  const style=(r,c)=>{const book=snapshot(),cell=currentCell(r,c);return typeof cell?.s==='string'?book.styles[cell.s]:cell?.s}
  const saveCheck=async(check,name)=>{await until(async()=>{await save();return check()},name);report.push(name)}
- const html='<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#121313;width:100%;height:100%;font:13px system-ui;color:#e4e4e4}body{display:flex;box-sizing:border-box;padding:10px;gap:10px}aside{width:330px;background:#242424;border-radius:14px;padding:12px;position:relative}aside textarea{position:absolute;bottom:14px;left:14px;right:14px;height:95px;background:#292929;border:0;border-radius:9px;color:#eee;padding:10px;resize:none}article{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:14px;background:#1e1e1e;overflow:hidden}header.shell{height:47px;display:flex;align-items:center;padding:0 16px;gap:20px;flex:none}header.shell span{background:#303030;border-radius:5px;padding:5px 14px}#chat{display:inline-block;background:#303030;padding:5px 9px;border-radius:6px}body.hide aside{display:none}[data-odyssey-panel-entry=right]{position:absolute;top:16px;right:20px;border:0;background:#303030;color:#eee;border-radius:5px;padding:5px 8px}</style><body data-ds-dark-theme><article data-odyssey-page="spreadsheet"><header class="shell" data-srb-session-header>消费行业周报　　对话　　研究　　笔记 <span>表格</span><div data-ework-spreadsheet-actions="demo-session" style="margin-left:auto"></div></header><div data-conversation-scroll><div data-ework-spreadsheet-view="demo-session"></div></div></article><aside><span id="chat">◌ 对话</span><textarea placeholder="给智能体发消息"></textarea></aside><button data-odyssey-panel-entry="right" aria-label="右侧屏" onclick="document.body.classList.toggle(&quot;hide&quot;)">◧</button><button data-odyssey-panel-entry="bottom">下方</button>'
+ const html='<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#121313;width:100%;height:100%;font:13px system-ui;color:#e4e4e4}body{display:flex;box-sizing:border-box;padding:10px;gap:10px}aside{width:330px;background:#242424;border-radius:14px;padding:12px;position:relative}aside textarea{position:absolute;bottom:14px;left:14px;right:14px;height:95px;background:#292929;border:0;border-radius:9px;color:#eee;padding:10px;resize:none}article{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:14px;background:#1e1e1e;overflow:hidden}header.shell{height:47px;display:flex;align-items:center;padding:0 16px;gap:20px;flex:none}header.shell span{background:#303030;border-radius:5px;padding:5px 14px}#chat{display:inline-block;background:#303030;padding:5px 9px;border-radius:6px}body.hide aside{display:none}[data-odyssey-panel-entry=right]{position:absolute;top:16px;right:20px;border:0;background:#303030;color:#eee;border-radius:5px;padding:5px 8px}</style><body data-ds-dark-theme><div data-dsh-sidebar-root data-dsh-sidebar-wide="true"><button class="hHd-Xa_toggle" onclick="this.parentElement.dataset.dshSidebarWide=String(this.parentElement.dataset.dshSidebarWide!==&quot;true&quot;)">左栏</button></div><article data-odyssey-page="spreadsheet"><header class="shell" data-srb-session-header>消费行业周报　　对话　　研究　　笔记 <span>表格</span><div data-ework-spreadsheet-actions="demo-session" data-ework-spreadsheet-title="消费行业周报" style="margin-left:auto"></div></header><div data-conversation-scroll><div data-ework-spreadsheet-view="demo-session"></div></div></article><aside><span id="chat">◌ 对话</span><textarea placeholder="给智能体发消息"></textarea></aside><button data-odyssey-panel-entry="right" aria-label="右侧屏" aria-expanded="true" onclick="this.setAttribute(&quot;aria-expanded&quot;,String(!document.body.classList.toggle(&quot;hide&quot;)))">◧</button><button data-odyssey-panel-entry="bottom">下方</button>'
  app.whenReady().then(async()=>{
   try{
    win=new BrowserWindow({width:1440,height:960,show:true,webPreferences:{contextIsolation:true,sandbox:true,preload}})
@@ -92,7 +94,7 @@ await build({stdin:{resolveDir:root,contents:`
    bind()
    const xlsxPath=join(dir,'导出.xlsx'),csvPath=join(dir,'导出.csv')
    dialog.showOpenDialog=async()=>({canceled:!configuredImport,filePaths:configuredImport?[configuredImport]:[]})
-   dialog.showSaveDialog=async(_window,options)=>({canceled:false,filePath:options.defaultPath.endsWith('.csv')?csvPath:xlsxPath})
+   dialog.showSaveDialog=async(_window,options)=>{exportPaths.push(options.defaultPath);return {canceled:false,filePath:options.defaultPath.endsWith('.csv')?csvPath:xlsxPath}}
    const server=createServer((_request,response)=>{response.setHeader('Content-Type','text/html;charset=utf-8');response.end(html)})
    await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
    await win.loadURL('http://127.0.0.1:'+server.address().port)
@@ -121,6 +123,8 @@ await build({stdin:{resolveDir:root,contents:`
    report.push('dark grid stays uniform through incremental vertical and horizontal scroll')
    assert.equal(await js('document.querySelector(".ew-sheet-title")'),null)
    assert.equal(await js('document.querySelectorAll("[data-srb-session-header] [data-ework-spreadsheet-actions] button").length'),1)
+   assert.equal(snapshot().name,'消费行业周报')
+   assert.equal(await js('!!document.querySelector(".ew-sheet-ribbon-tabs [data-value=文件]")'),false)
    const toolbarGap=await js('document.querySelector(".ew-sheet-ribbon-tabs").getBoundingClientRect().top-document.querySelector("[data-srb-session-header]").getBoundingClientRect().bottom')
    assert.ok(Math.abs(toolbarGap)<2,toolbarGap)
    report.push('new workbook / native canvas / header actions without duplicate row')
@@ -196,35 +200,67 @@ await build({stdin:{resolveDir:root,contents:`
    report.push('find result and jump')
    await click(button('focus'))
    assert.equal(await js('document.body.classList.contains("hide")'),true)
-   await click('[data-odyssey-panel-entry=right]')
+   assert.equal(await js('document.querySelector("[data-dsh-sidebar-root]").dataset.dshSidebarWide'),'false')
+   await click(button('focus'))
+   assert.equal(await js('document.body.classList.contains("hide")'),false)
+   assert.equal(await js('document.querySelector("[data-dsh-sidebar-root]").dataset.dshSidebarWide'),'true')
    assert.equal(await js('getComputedStyle(document.querySelector("[data-odyssey-panel-entry=bottom]")).display'),'none')
-   report.push('right-only conversation and focus')
+   report.push('focus collapses both panels and restores them on exit')
+   win.webContents.setZoomFactor(1.5)
+   await until(()=>clickable(button('menu','overflow')),'ribbon overflows at 150% zoom')
+   assert.ok(await clickable(button('search')))
+   assert.ok(await clickable(button('focus')))
+   await click(button('menu','overflow'))
+   await until(()=>clickable('.ew-sheet-menu [data-value=functions]'),'functions is available under More tools')
+   await click('.ew-sheet-menu [data-value=functions]')
+   assert.ok(await clickable('.ew-sheet-menu [data-action=function][data-value=NPV]'))
+   await click(button('menu-back'))
+   assert.equal(await js('document.querySelector(".ew-sheet-menu").dataset.menu'),'overflow')
+   await screenshot('02-zoom-overflow')
+   press('Escape');win.webContents.setZoomFactor(1)
+   await until(async()=>!(await clickable(button('menu','overflow'))),'ribbon restores controls when zoom resets')
+   report.push('150% zoom keeps actions reachable and overflow supports submenus')
    const more='[data-ework-spreadsheet-actions] [data-value=book]'
    const openExport=async()=>{await click(more);await click(button('menu','export'))}
    await click(more)
    const moreMenu=await js('Array.from(document.querySelectorAll(".ew-sheet-menu[data-menu=book] button")).slice(0,2).map(b=>b.textContent)')
    assert.deepEqual(moreMenu,['导入 Excel / CSV…','导出工作簿'])
+   assert.equal(await js('!!document.querySelector(".ew-sheet-menu :is([data-action=new],[data-action=rename-book])")'),false)
    assert.ok(await js('document.querySelectorAll(".ew-sheet-menu[data-menu=book] [role=separator]").length')>=1)
    assert.ok(await js('[...document.querySelectorAll(".ew-sheet-menu[data-menu=book] [role=menuitem]")].every(b=>getComputedStyle(b.querySelector("i")).maskImage!=="none")'))
    assert.deepEqual(await js('Array.from(document.querySelectorAll("[data-ework-spreadsheet-actions] svg circle")).map(c=>[c.getAttribute("cx"),c.getAttribute("cy"),c.getAttribute("r")])'),[['4','10','1.65'],['10','10','1.65'],['16','10','1.65']])
    await screenshot('02-more')
    press('Down');press('Right')
    await until(()=>js('document.querySelector(".ew-sheet-menu[data-menu=export]:not([hidden])")?.offsetHeight'),'keyboard opens export formats')
-   const bounds=await js('(()=>{const m=document.querySelector(".ew-sheet-menu"),b=document.querySelector("[data-ework-spreadsheet-actions] [data-value=book]"),r=m.getBoundingClientRect(),a=b.getBoundingClientRect(),s=getComputedStyle(m);return {width:r.width,height:r.height,gap:r.top-a.bottom,right:r.right-a.right,padding:s.padding,option:m.querySelector("button").getBoundingClientRect().height}})()')
+   const bounds=await js('(()=>{const m=document.querySelector(".ew-sheet-menu"),b=document.querySelector("[data-ework-spreadsheet-actions] [data-value=book]"),r=m.getBoundingClientRect(),a=b.getBoundingClientRect(),s=getComputedStyle(m);return {width:r.width,height:r.height,gap:r.top-a.bottom,right:r.right-a.right,padding:s.padding,option:m.querySelector("[data-action=export-format]").getBoundingClientRect().height}})()')
    assert.equal(bounds.width,304);assert.equal(bounds.option,58);assert.ok(bounds.gap>=8&&bounds.gap<=16,JSON.stringify(bounds));assert.ok(Math.abs(bounds.right)<2);assert.ok(bounds.height<=205)
    report.push({name:'export popover geometry',bounds})
    await screenshot('02-export')
+   await click(button('menu-back'))
+   assert.equal(await js('document.activeElement.dataset.value'),'export')
+   press('Right')
    await click(button('export-format','xlsx'))
    await until(()=>{try{return readFileSync(xlsxPath).length>0}catch{return false}},'xlsx export')
    const xlsx=await readWorkbookFile(readFileSync(xlsxPath),'导出.xlsx','verify')
    assert.equal(xlsx.sheets['sheet-1'].cellData[0][2].f,'=B1/A1')
+   await js('document.querySelector("[data-ework-spreadsheet-actions]").dataset.eworkSpreadsheetTitle="投委会：现金流 / 预测"')
    await openExport();await click(button('export-format','csv'))
    await until(()=>{try{return readFileSync(csvPath,'utf8').includes('100,25,0.25')}catch{return false}},'CSV computed values export')
-   report.push('Excel and CSV export through native dialog IPC')
+   assert.deepEqual(exportPaths,['消费行业周报.xlsx','投委会：现金流 - 预测.csv'])
+   report.push('Excel and CSV export with the latest session title')
+   const oldId=snapshot().id
    configuredImport=xlsxPath
    await click(more);await click('.ew-sheet-menu[data-menu=book] [data-action=import]')
    await until(()=>snapshot().name==='导出.xlsx','import through native dialog IPC')
    await until(()=>js('!!document.querySelector(".ew-sheet-grid canvas")'),'reopen imported canvas')
+   const importedId=snapshot().id
+   await click(more);await click('.ew-sheet-menu [data-value=workbooks]')
+   await click('.ew-sheet-menu [data-action=activate][data-value="'+oldId+'"]')
+   await until(()=>snapshot().id===oldId&&currentCell(0,2)?.f==='=B1/A1','previous workbook remains available')
+   await click(more);await click('.ew-sheet-menu [data-value=workbooks]')
+   await click('.ew-sheet-menu [data-action=activate][data-value="'+importedId+'"]')
+   await until(()=>snapshot().id===importedId,'return to imported workbook')
+   report.push('recent workbooks preserve previously opened workbook and formulas')
    const prompt='把〔表格选区 "Sheet1"!C1 #0123456789ab〕改成 50%'
    const refs=[{sessionId:profile.sessionId,bookId:snapshot().id,sheetId:snapshot().sheetOrder[0],sheetName:'Sheet1',range:'C1',id:'0123456789ab'}]
    await select('C1');await js('spreadsheetFixture.admit('+JSON.stringify(prompt)+','+JSON.stringify(refs)+')');await select('B1')

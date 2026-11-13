@@ -37,9 +37,20 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   static override pluginName='ework-spreadsheet-canvas-colors'
   constructor(_config:undefined,protected override _injector:Injector){super()}
   override onStarting(){
-   const native=new CanvasColorService(this._injector.get(ThemeService))
+   const themeService=this._injector.get(ThemeService)
+   const native=new CanvasColorService(themeService)
    this.disposeWithMe(native)
-   this._injector.replace([ICanvasColorService,{useValue:{getRenderColor:(color:string)=>renderingSheet?color:native.getRenderColor(color)}}])
+   this._injector.replace([ICanvasColorService,{useValue:{getRenderColor:(color:string)=>{
+    if(!renderingSheet)return native.getRenderColor(color)
+    // Header controls use theme tokens; cell fills and borders use literal colors.
+    if(!/^[a-z][a-z0-9-]*\.\d+$/i.test(color))return color
+    if(dark()){
+     if(color==='gray.900')return '#c3c6cb'
+     if(color==='gray.200')return '#41454b'
+     if(color==='gray.50')return palette().header
+    }
+    return themeService.getColorFromTheme(color)??color
+   }}}])
   }
  }
  Inject(Injector)(SpreadsheetCanvasColors,undefined,1)

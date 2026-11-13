@@ -9,15 +9,15 @@ import css from './view.css?raw'
 type Recent={id:string;name:string;sheetCount:number}
 type Selection={sheetId:string;range:string}
 type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;subscribe(event:'changed'|'flush'|'identity',callback:(value:any)=>void):()=>void}
-type Menu={key:string;anchor:HTMLElement}
+type Menu={key:string;label:string;anchor:HTMLElement;parents:{key:string;label:string;value:string}[]}
 type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean}
-type Ribbon='文件'|'开始'|'插入'|'数据'|'公式'|'视图'
-const ribbons:Ribbon[]=['文件','开始','插入','数据','公式','视图']
+type Ribbon='开始'|'插入'|'数据'|'公式'|'视图'
+const ribbons:Ribbon[]=['开始','插入','数据','公式','视图']
 const text=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const errorMessage=(e:unknown)=>String((e as Error)?.message??e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'')
 const button=(action:string,copy:string,options:{glyph?:string;label?:string;value?:string;className?:string;disabled?:boolean;pressed?:boolean}={})=>{
  const {glyph,label=copy,value,className='',disabled,pressed}=options
- return '<button type="button" class="ew-sheet-button '+className+'" data-action="'+action+'"'+(value!==undefined?' data-value="'+text(value)+'"':'')+' aria-label="'+text(label)+'" title="'+text(label)+'"'+(action==='menu'?' aria-haspopup="menu" aria-expanded="false"':'')+(disabled?' disabled':'')+(pressed!==undefined?' aria-pressed="'+pressed+'"':'')+'>'+(glyph?icon(glyph):'')+text(copy)+'</button>'
+ return '<button type="button" class="ew-sheet-button '+className+'" data-action="'+action+'"'+(value!==undefined?' data-value="'+text(value)+'"':'')+(glyph?' data-glyph="'+glyph+'"':'')+' aria-label="'+text(label)+'" title="'+text(label)+'"'+(action==='menu'?' aria-haspopup="menu" aria-expanded="false"':'')+(disabled?' disabled':'')+(pressed!==undefined?' aria-pressed="'+pressed+'"':'')+'>'+(glyph?icon(glyph):'')+text(copy)+'</button>'
 }
 const numeric=(s:string)=>/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(s)&&Number.isFinite(Number(s))?Number(s):s
 
@@ -59,6 +59,8 @@ class SpreadsheetView{
  private chartSource?:Selection
  private chartMarkup=''
  private headerActions?:HTMLElement
+ private focusLayout?:{left:boolean;right:boolean}
+ private readonly ribbonObserver:ResizeObserver
  private readonly root:HTMLElement
  private readonly doc:Document
  private readonly win:Window
@@ -79,7 +81,8 @@ class SpreadsheetView{
   this.doc.addEventListener('keyup',this.selectionKeyUp,true)
   this.root.addEventListener('ew-sheet-engine-error',event=>this.say((event as CustomEvent).detail,true))
   this.doc.addEventListener('pointerdown',this.outside,true)
-  this.win.addEventListener('resize',this.place)
+  this.ribbonObserver=new ResizeObserver(this.resize)
+  this.ribbonObserver.observe(this.root)
   this.paint()
   void this.load()
  }
@@ -135,6 +138,7 @@ class SpreadsheetView{
   if(!this.record.workbook){header.replaceChildren();return}
   if(header.childElementCount===0)header.innerHTML=button('menu','',{glyph:'more',label:'更多表格操作',value:'book'})
  }
+ private sessionTitle(){return this.headerActions?.dataset.eworkSpreadsheetTitle?.trim()||undefined}
  private paint(){
   if(this.disposed)return
   this.syncHeader();this.paintHeader()
@@ -148,27 +152,79 @@ class SpreadsheetView{
    return
   }
   const current=this.current()
-  this.chrome.innerHTML='<div class="ew-sheet-ribbon-tabs" role="tablist" aria-label="表格工具栏">'+ribbons.map(r=>'<button role="tab" aria-selected="'+(r===this.ribbon)+'" data-action="ribbon" data-value="'+r+'">'+r+'</button>').join('')+'</div><div class="ew-sheet-ribbon" role="toolbar" aria-label="'+this.ribbon+'">'+this.toolbar()+'</div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
+  this.chrome.innerHTML='<div class="ew-sheet-ribbon-tabs" role="tablist" aria-label="表格工具栏">'+ribbons.map(r=>'<button role="tab" aria-selected="'+(r===this.ribbon)+'" data-action="ribbon" data-value="'+r+'">'+r+'</button>').join('')+'</div><div class="ew-sheet-ribbon" role="toolbar" aria-label="'+this.ribbon+'"><div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+this.focusButton()+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
    return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
   }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span>'+(book.charts?.length?button('menu','图表 '+book.charts.length,{glyph:'chart',value:'charts',label:'查看工作簿图表'}):'')+'</div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
   this.refreshFields()
+  this.resize()
  }
  private toolbar(){
   const edit=(action:string,copy:string,opts:Parameters<typeof button>[2]={})=>button(action,copy,{...opts,disabled:!this.editable})
-  const menu=(key:string,copy:string,glyph?:string,disabled=false)=>button('menu',copy,{value:key,glyph,disabled,className:'dropdown'})
+  const menu=(key:string,copy:string,glyph?:string,disabled=false,label=copy)=>button('menu',copy,{value:key,glyph,disabled,label,className:'dropdown'})
   const divider='<span class="ew-sheet-toolbar-divider" aria-hidden="true"></span>'
-  const end='<div class="ew-sheet-toolbar-spacer"></div><div class="ew-sheet-ribbon-end">'+edit('menu','Σ',{value:'functions',label:'插入函数'})+button('search','',{glyph:'search',label:'查找'})+button('focus','',{glyph:'focus',label:'专注表格'})+'</div>'
+  const sum=edit('menu','',{glyph:'sum',value:'functions',label:'插入函数'})
   switch(this.ribbon){
-   case '文件':return edit('new','新建',{glyph:'plus'})+edit('rename-book','重命名')+end
-   case '插入':return edit('add-sheet','工作表',{glyph:'plus'})+edit('row','插入行')+edit('column','插入列')+edit('merge','合并单元格')+edit('chart','创建图表',{glyph:'chart'})+end
-   case '数据':return edit('filter','筛选',{glyph:'filter'})+menu('sort','排序','sort',!this.editable)+edit('duplicates','去重')+end
-   case '公式':return menu('functions','插入函数',undefined,!this.editable)+button('recalc','重新计算')+end
-   case '视图':return menu('freeze','冻结','freeze',!this.editable)+edit('gridlines','网格线')+menu('zoom','缩放')+end
-   default:return edit('undo','',{glyph:'undo',label:'撤销'})+edit('redo','',{glyph:'redo',label:'重做'})+divider+menu('font','默认字体',undefined,!this.editable)+menu('font-size','11',undefined,!this.editable)+divider+
-    edit('bold','B',{label:'加粗',className:'bold'})+edit('italic','I',{label:'斜体',className:'italic'})+menu('color','A',undefined,!this.editable)+menu('border','','border',!this.editable)+menu('align','','align',!this.editable)+divider+
-    menu('number','常规',undefined,!this.editable)+edit('number-format','¥',{label:'人民币',value:'"¥"#,##0.00'})+edit('number-format','%',{label:'百分比',value:'0.00%'})+edit('number-format','.00',{label:'两位小数',value:'#,##0.00'})+divider+edit('filter','筛选',{glyph:'filter'})+menu('freeze','冻结','freeze',!this.editable)+end
+   case '插入':return edit('add-sheet','工作表',{glyph:'plus',label:'新增工作表'})+edit('row','插入行')+edit('column','插入列')+edit('merge','合并单元格')+edit('chart','创建图表',{glyph:'chart'})
+   case '数据':return edit('filter','筛选',{glyph:'filter'})+menu('sort','排序','sort',!this.editable)+edit('duplicates','去重')
+   case '公式':return menu('functions','插入函数','sum',!this.editable)+button('recalc','重新计算')
+   case '视图':return menu('freeze','冻结','freeze',!this.editable)+edit('gridlines','网格线')+menu('zoom','缩放')
+   default:return edit('undo','',{glyph:'undo',label:'撤销'})+edit('redo','',{glyph:'redo',label:'重做'})+divider+menu('font','默认字体',undefined,!this.editable,'字体')+menu('font-size','11',undefined,!this.editable,'字号')+divider+
+    edit('bold','',{glyph:'bold',label:'加粗'})+edit('italic','',{glyph:'italic',label:'斜体'})+menu('color','','color',!this.editable,'颜色')+menu('border','','border',!this.editable,'边框')+menu('align','','align',!this.editable,'对齐')+divider+
+    menu('number','常规',undefined,!this.editable,'数字格式')+edit('number-format','',{glyph:'currency',label:'人民币',value:'"¥"#,##0.00'})+edit('number-format','',{glyph:'percent',label:'百分比',value:'0.00%'})+edit('number-format','',{glyph:'decimals',label:'两位小数',value:'#,##0.00'})+divider+edit('filter','筛选',{glyph:'filter'})+menu('freeze','冻结','freeze',!this.editable)+sum
+  }
+ }
+ private resize=()=>{this.fitRibbon();this.place()}
+ private fitRibbon(){
+  const tools=this.chrome.querySelector<HTMLElement>('.ew-sheet-ribbon-tools')
+  const more=this.chrome.querySelector<HTMLButtonElement>('[data-value=overflow]')
+  if(!tools||!more||!tools.getClientRects().length)return
+  const controls=Array.from(tools.children) as HTMLElement[]
+  const previous=controls.map(node=>node.hidden)
+  const focused=this.doc.activeElement
+  const moreWasHidden=more.hidden
+  for(const node of controls)node.hidden=false
+  more.hidden=false
+  const limit=tools.getBoundingClientRect().right
+  const end=controls.at(-1)?.getBoundingClientRect().right??limit
+  const search=more.nextElementSibling!.getBoundingClientRect()
+  more.hidden=end<=limit+search.left-more.getBoundingClientRect().left+.25
+  let count=more.hidden?-1:controls.findIndex(node=>node.getBoundingClientRect().right>limit+.25)
+  if(count<0)count=controls.length
+  while(count>0&&controls[count-1]!.tagName!=='BUTTON')count--
+  controls.forEach((node,i)=>{node.hidden=i>=count})
+  const moved=controls.some((node,i)=>node.hidden!==previous[i])
+  if(this.menu&&(this.menu.anchor.hidden||!this.menu.anchor.isConnected)){
+   const restore=this.pop.contains(focused)||this.menu.anchor===focused
+   this.closeMenu()
+   if(restore)(more.hidden?this.chrome.querySelector<HTMLElement>('[data-action=search]'):more)?.focus({preventScroll:true})
+  }else if(moved&&this.menu?.key==='overflow'){
+   const value=(focused as HTMLElement|null)?.dataset.value
+   const action=(focused as HTMLElement|null)?.dataset.action
+   this.renderMenu({action,value})
+  }else if((!moreWasHidden&&more.hidden&&focused===more)||controls.some(node=>node===focused&&node.hidden)){
+   (more.hidden?this.chrome.querySelector<HTMLElement>('[data-action=search]'):more)?.focus({preventScroll:true})
+  }
+ }
+ private focusButton(){
+  return button('focus','',{glyph:this.focusLayout?'exit-focus':'focus',label:this.focusLayout?'退出专注表格':'专注表格',pressed:!!this.focusLayout})
+ }
+ private toggleFocus(){
+  const root=this.doc.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
+  const left=root?.querySelector<HTMLButtonElement>('.hHd-Xa_toggle')
+  const right=this.doc.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')
+  const leftOpen=root?.dataset.dshSidebarWide==='true',rightOpen=right?.getAttribute('aria-expanded')==='true'
+  const target=this.focusLayout??{left:false,right:false}
+  this.focusLayout=this.focusLayout?undefined:{left:leftOpen,right:rightOpen}
+  if(leftOpen!==target.left)left?.click()
+  if(rightOpen!==target.right)right?.click()
+  const control=this.chrome.querySelector<HTMLButtonElement>('[data-action=focus]')
+  if(control){
+   control.innerHTML=icon(this.focusLayout?'exit-focus':'focus')
+   control.title=this.focusLayout?'退出专注表格':'专注表格'
+   control.setAttribute('aria-label',control.title)
+   control.setAttribute('aria-pressed',String(!!this.focusLayout))
   }
  }
  private refreshFields(){
@@ -188,13 +244,15 @@ class SpreadsheetView{
  private refreshRibbonValues(){
   const cell=this.nativeCell()
   if(!cell||this.ribbon!=='开始')return
-  const set=(id:string,value:string)=>{const node=this.chrome.querySelector('[data-value="'+id+'"]');if(node&&node.textContent!==value)node.textContent=value}
+  let layoutChanged=false
+  const set=(id:string,value:string)=>{const node=this.chrome.querySelector('[data-value="'+id+'"]');if(node&&node.textContent!==value){node.textContent=value;layoutChanged=true}}
   const style=cell.getCellStyleData()
   const font=style?.ff
   set('font',font||'默认字体');set('font-size',String(style?.fs??11))
   const pattern=cell.getNumberFormat()
   set('number',pattern==='0.00%'?'百分比':pattern?.includes('¥')?'货币':pattern&&pattern!=='General'?'数值':'常规')
   for(const [action,pressed] of [['bold',style?.bl===1],['italic',style?.it===1]] as const)this.chrome.querySelector('[data-action='+action+']')?.setAttribute('aria-pressed',String(pressed))
+  if(layoutChanged)this.resize()
  }
  private say(copy:string,error=false){
   this.notice=copy;this.error=error
@@ -349,8 +407,13 @@ class SpreadsheetView{
    this.say('工作簿有新版本，当前编辑仍保留。可通过工作簿选项载入最新版本。',true)
    return
   }
+  const refresh=row.workbook?.id!==this.record.workbook?.id||row.workbook?.name!==this.record.workbook?.name
   await this.install(row)
-  this.say(row.lastAction?'AI 修改已保存':'工作簿已更新')
+  if(refresh){await this.refreshRecent();if(!this.record.workbook)this.paint()}
+  if(!this.disposed&&this.record.revision===row.revision)this.say(row.lastAction?'AI 修改已保存':'工作簿已更新')
+ }
+ private async refreshRecent(){
+  try{const recent=await this.request('recent') as Recent[];if(!this.disposed)this.recent=recent}catch{}
  }
  private async run(action:string,fields:Record<string,unknown>={},message?:string){
   if(this.busy)return
@@ -361,7 +424,8 @@ class SpreadsheetView{
    const row=await this.request(action,{revision:this.record.revision,...fields})
    if(this.disposed||!row)return
    if(action==='export'){this.say('已导出 '+row.name);return}
-   this.recent=await this.request('recent')
+   await this.refreshRecent()
+   if(this.disposed||row.revision<this.record.revision)return
    await this.install(row)
    if(message)this.say(message)
   }catch(error){this.say(errorMessage(error),true)}
@@ -402,15 +466,18 @@ class SpreadsheetView{
    case 'book':return [
     {label:'导入 Excel / CSV…',action:'import',browserIcon:'external',disabled:!this.editable||this.busy},
     {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:this.busy},
-    {label:'新建空白工作簿',action:'new',browserIcon:'plus',divider:true,disabled:!this.editable},
-    {label:'重命名工作簿',action:'rename-book',browserIcon:'file',disabled:!this.editable},
-    {label:'打开最近工作簿',action:'menu',value:'workbooks',browserIcon:'history'},
+    {label:'打开最近工作簿',action:'menu',value:'workbooks',browserIcon:'history',divider:true,disabled:!this.editable||!this.recent.some(book=>book.id!==this.record.workbook?.id)},
     ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const}]:[]),
     ...(this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',browserIcon:'forward' as const,divider:true,disabled:!this.editable}]:[]),
     ...(this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',browserIcon:'back' as const,divider:!this.record.canRedoAI,disabled:!this.editable}]:[])
    ]
    case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart'}))
-   case 'workbooks':return this.recent.map(b=>({label:b.name,action:'activate',value:b.id,browserIcon:'file',disabled:!this.editable||this.record.workbook?.id===b.id}))
+   case 'workbooks':return this.recent.filter(b=>this.record.workbook?.id!==b.id).map(b=>({label:b.name,detail:b.sheetCount+' 个工作表',action:'activate',value:b.id,browserIcon:'file',disabled:!this.editable}))
+   case 'overflow':return Array.from(this.chrome.querySelectorAll<HTMLButtonElement>('.ew-sheet-ribbon-tools button[hidden]')).map(b=>({
+    label:b.getAttribute('aria-label')||b.textContent||'',detail:b.dataset.glyph?undefined:b.dataset.action==='menu'?b.textContent||undefined:undefined,
+    action:b.dataset.action!,value:b.dataset.value,icon:b.dataset.glyph,disabled:b.disabled,
+    divider:b.previousElementSibling?.classList.contains('ew-sheet-toolbar-divider')&&!!b.previousElementSibling.previousElementSibling?.hasAttribute('hidden')
+   }))
    case 'sheets':return this.record.workbook!.sheetOrder.map(id=>({label:this.record.workbook!.sheets[id]!.name,action:'sheet',value:id,icon:'grid'}))
    case 'sheet':return [{label:'重命名工作表',action:'rename-sheet',disabled:!this.editable},{label:'删除工作表…',action:'delete-sheet',disabled:!this.editable||this.record.workbook!.sheetOrder.length===1}]
    case 'font':return [{label:'默认字体',action:'font',value:'Arial'},...items(['Arial','Menlo','Georgia','PingFang SC','Microsoft YaHei'],'font')]
@@ -427,30 +494,45 @@ class SpreadsheetView{
   }
   return []
  }
- private openMenu(key:string,anchor:HTMLElement){
+ private openMenu(key:string,anchor:HTMLElement,trigger?:HTMLElement){
   if(this.menu?.key===key&&this.menu.anchor===anchor){this.closeMenu();return}
+  const label=trigger?.querySelector('span')?.firstChild?.textContent||anchor.getAttribute('aria-label')||anchor.textContent||'表格菜单'
+  const parents=this.menu&&trigger?[...this.menu.parents,{key:this.menu.key,label:this.menu.label,value:key}]:[]
   this.menu?.anchor.setAttribute('aria-expanded','false')
+  this.menu={key,label,anchor,parents}
+  this.renderMenu()
+ }
+ private renderMenu(focus?:{action?:string;value?:string}){
+  if(!this.menu)return
+  const {key,anchor,label,parents}=this.menu
   const options=this.items(key)
-  this.menu={key,anchor}
   anchor.setAttribute('aria-expanded','true')
   this.pop.hidden=false
   this.pop.dataset.menu=key
   this.pop.setAttribute('role','menu')
-  this.pop.setAttribute('aria-label',key==='export'?'导出工作簿':anchor.getAttribute('aria-label')||anchor.textContent||'表格菜单')
-  this.pop.innerHTML=(key==='export'?'<div class="ew-sheet-menu-title">导出工作簿</div>':'')+options.map(item=>{
+  this.pop.setAttribute('aria-label',label)
+  this.pop.innerHTML=(parents.length?'<div class="ew-sheet-menu-title"><button type="button" role="menuitem" data-action="menu-back" aria-label="返回上一级" title="返回上一级">'+icon('left',16)+'</button><span>'+text(label)+'</span></div>':'')+options.map((item,index)=>{
    const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
-   return (item.divider?'<div role="separator"></div>':'')+'<button role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+glyph+'<span>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>'
+   return (index>0&&item.divider?'<div role="separator"></div>':'')+'<button type="button" role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+glyph+'<span>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>'
   }).join('')+(key==='export'?'<p>导出到本机后，可直接在 Excel 中继续编辑。</p>':'')
   this.place()
-  if(this.headerActions?.contains(anchor))this.pop.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({preventScroll:true})
+  const enabled=Array.from(this.pop.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
+  const target=focus&&enabled.find(b=>b.dataset.action===focus.action&&b.dataset.value===focus.value)
+  ;(target||enabled.find(b=>b.dataset.action!=='menu-back')||enabled[0])?.focus({preventScroll:true})
+ }
+ private backMenu(){
+  const menu=this.menu,parent=menu?.parents.at(-1)
+  if(!menu||!parent)return
+  this.menu={key:parent.key,label:parent.label,anchor:menu.anchor,parents:menu.parents.slice(0,-1)}
+  this.renderMenu({action:'menu',value:parent.value})
  }
  private place=()=>{
   if(!this.menu)return
-  const {anchor,key}=this.menu
-  if(!anchor.isConnected){this.closeMenu();return}
+  const {anchor}=this.menu
+  if(!anchor.isConnected||!anchor.getClientRects().length){this.closeMenu();return}
   const parent=this.root.getBoundingClientRect(),ref=anchor.getBoundingClientRect(),width=this.pop.offsetWidth,height=this.pop.offsetHeight
   const fromHeader=this.headerActions?.contains(anchor)
-  const preferred=fromHeader||key==='export'?ref.right-parent.left-width:ref.left-parent.left
+  const preferred=fromHeader||anchor.dataset.value==='overflow'?ref.right-parent.left-width:ref.left-parent.left
   const left=Math.max(10,Math.min(preferred,parent.width-width-10))
   const below=Math.max(fromHeader?4:0,ref.bottom-parent.top+8)
   const top=below+height>parent.height-8?Math.max(8,ref.top-parent.top-height-8):below
@@ -522,15 +604,20 @@ class SpreadsheetView{
  private async handle(action:string,value:string,trigger:HTMLElement){
   if(this.busy&&['undo','redo','undo-ai','redo-ai'].includes(action))return
   const sheet=this.current(),range=this.selected(),api=this.engine?.api,model=this.engine?.model
-  if(action==='menu'){this.openMenu(value,trigger.closest('.ew-sheet-menu')?this.menu?.anchor??trigger:trigger);return}
+  if(action==='menu-back'){this.backMenu();return}
+  if(action==='menu'){
+   if(this.menu&&this.pop.contains(trigger))this.openMenu(value,this.menu.anchor,trigger)
+   else this.openMenu(value,trigger)
+   return
+  }
   this.closeMenu()
   switch(action){
    case 'reload':await this.load();return
    case 'ribbon':if(this.formulaDirty)this.commitFormula();this.ribbon=value as Ribbon;this.paint();return
-   case 'new':await this.run('create',{},'空白工作簿已创建');return
+   case 'new':if(!this.record.workbook)await this.run('create',{name:this.sessionTitle()},'空白工作簿已创建');return
    case 'import':await this.run('import',{},'工作簿已导入');return
    case 'activate':await this.run('activate',{id:value});return
-   case 'export-format':if(sheet){if(api){const calculated=api.getFormula().onCalculationResultApplied(1200).catch(()=>{});api.getFormula().executeCalculation();await calculated}await this.run('export',{format:value,sheetId:sheet.getSheetId()})}return
+   case 'export-format':if(sheet){if(api){const calculated=api.getFormula().onCalculationResultApplied(1200).catch(()=>{});api.getFormula().executeCalculation();await calculated}await this.run('export',{format:value,sheetId:sheet.getSheetId(),sessionTitle:this.sessionTitle()})}return
    case 'redo-ai':if(this.record.canRedoAI)await this.run('redo',{},'已重新应用 AI 修改');return
    case 'undo-ai':if(this.record.lastAction)await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改');return
    case 'load-incoming':if(this.incoming){this.dialog('载入最新版本','<p>当前还未保存的编辑会丢失。</p>','accept-incoming','载入');}return
@@ -554,7 +641,7 @@ class SpreadsheetView{
    case 'close-chart':this.activeChart=undefined;this.renderChart();return
    case 'remove-chart':await this.run('remove-chart',{chartId:value},'图表已删除');return
    case 'close-dialog':this.closeDialog();return
-   case 'focus':this.doc.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')?.click();return
+   case 'focus':this.toggleFocus();return
    case 'zoom-minus':case 'zoom-plus':case 'zoom-reset':case 'zoom':{
     const value2=action==='zoom-reset'?100:action==='zoom'?Number(value.replace('%','')):this.zoom+(action==='zoom-plus'?10:-10)
     this.zoom=Math.min(200,Math.max(50,value2));sheet?.zoom(this.zoom/100);this.refreshFields();return
@@ -563,8 +650,6 @@ class SpreadsheetView{
   }
   if(!model||!sheet||!range||!this.editable)return
   switch(action){
-   case 'rename-book':this.dialog('重命名工作簿','<input aria-label="工作簿名" maxlength="120" value="'+text(this.record.workbook?.name)+'">','rename-book-apply','保存');return
-   case 'rename-book-apply':model.setName(label(this.modal.querySelector('input')?.value));this.closeDialog();break
    case 'rename-sheet':this.dialog('重命名工作表','<input aria-label="工作表名" maxlength="31" value="'+text(sheet.getSheetName())+'">','rename-sheet-apply','保存');return
    case 'rename-sheet-apply':{
     const name=sheetName(this.modal.querySelector('input')?.value)
@@ -633,7 +718,7 @@ class SpreadsheetView{
    default:return
   }
   this.changed()
-  if(['rename-book-apply','rename-sheet-apply','delete-sheet-apply','add-sheet'].includes(action)){
+  if(['rename-sheet-apply','delete-sheet-apply','add-sheet'].includes(action)){
    this.record={...this.record,workbook:this.engine!.snapshot()};this.paint()
   }
   this.readSelection()
@@ -668,19 +753,22 @@ class SpreadsheetView{
   }
   try{
    if(event.key==='Escape'){
-    if(this.menu){const anchor=this.menu.anchor;this.closeMenu();anchor.focus();event.stopPropagation()}
+    if(this.menu){
+     if(this.menu.parents.length)this.backMenu()
+     else {const anchor=this.menu.anchor;this.closeMenu();anchor.focus({preventScroll:true})}
+     event.preventDefault();event.stopPropagation()
+    }
     else if(!this.modal.hidden){this.closeDialog();event.stopPropagation()}
     else if(field==='formula'){this.formulaDirty=false;(event.target as HTMLInputElement).value=this.formula}
     return
    }
-   if(this.headerActions?.contains(control)&&control.dataset.value==='book'&&['ArrowDown','ArrowUp'].includes(event.key)&&!this.menu){
-    event.preventDefault();this.openMenu('book',control);return
+   if(control.dataset.action==='menu'&&control.dataset.value&&['ArrowDown','ArrowUp'].includes(event.key)&&!this.menu){
+    event.preventDefault();this.openMenu(control.dataset.value,control);return
    }
-   if(this.menu&&event.key==='ArrowLeft'&&this.menu.key==='export'&&this.headerActions?.contains(this.menu.anchor)){
-    event.preventDefault();this.openMenu('book',this.menu.anchor)
-    this.pop.querySelector<HTMLButtonElement>('[data-value=export]')?.focus({preventScroll:true});return
+   if(this.menu?.parents.length&&event.key==='ArrowLeft'&&this.pop.contains(control)){
+    event.preventDefault();this.backMenu();return
    }
-   if(this.menu?.key==='book'&&event.key==='ArrowRight'&&control.dataset.action==='menu'&&this.pop.contains(control)){
+   if(this.menu&&event.key==='ArrowRight'&&control.dataset.action==='menu'&&this.pop.contains(control)){
     event.preventDefault();control.click();return
    }
    if(this.menu&&['ArrowDown','ArrowUp'].includes(event.key)&&((event.target as Node)===this.menu.anchor||this.pop.contains(event.target as Node))){
@@ -700,7 +788,7 @@ class SpreadsheetView{
   if(this.disposed)return
   this.clearSelectionPreview()
   this.disposed=true;this.win.clearTimeout(this.timer);this.win.clearTimeout(this.updateTimer)
-  this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.win.removeEventListener('resize',this.place)
+  this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.ribbonObserver.disconnect()
   this.win.removeEventListener('pointerup',this.selectionEnd,true);this.win.removeEventListener('pointercancel',this.selectionCancel,true)
   this.win.removeEventListener('blur',this.selectionReset)
   this.doc.removeEventListener('keydown',this.selectionKeyDown,true);this.doc.removeEventListener('keyup',this.selectionKeyUp,true)
