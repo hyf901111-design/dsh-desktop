@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-10",
+  "branch": "codex/integration/20261113-10",
+  "baseMainCommit": "d2b511121ea6060a4ecd74a2863b9afd92b881a4",
+  "expectedMainCommit": "d2b511121ea6060a4ecd74a2863b9afd92b881a4",
+  "createdAt": "2026-11-13T05:09:11.734Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "完善工作台同批范围校验及附件与本地操作交付",
+        "branch": "codex/feat/workbench-real-qa-finish-20261113",
+        "baseCommit": "d2b511121ea6060a4ecd74a2863b9afd92b881a4",
+        "tipCommit": "48642ad59932d40235ce9f206411a3e7a1675cce",
+        "commits": [
+          {
+            "commit": "48642ad59932d40235ce9f206411a3e7a1675cce",
+            "parents": [
+              "d2b511121ea6060a4ecd74a2863b9afd92b881a4"
+            ],
+            "subject": "完善工作台同批范围校验及附件与本地操作交付"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-fund-comparison.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-native-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pomodoro.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-word-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-shared-state-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-content-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/component-shared-state-browser.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-library.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "相关回归原通过项保持，修订后 Word 原文回放和验收通过",
+            "verifiedCommit": "48642ad59932d40235ce9f206411a3e7a1675cce",
+            "completedAt": "2026-11-13T05:09:10.134Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "本地客户端已实点验证番茄钟开始、暂停、续接、切页保持、阶段切换与重置。"
+        },
+        "acceptanceCriteria": [
+          "同批中位数校验通过时不标记部分交付",
+          "番茄钟工作台并排日历和待办正常挂载",
+          "保留 PDF 和 Word 原文名称与数据"
+        ],
+        "risks": [
+          "完整 24/72 已在上一阶段构建进行，本构建对变更用例做追加验证"
+        ],
+        "generatedAt": "2026-11-13T05:09:10.134Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-content-delivery.test.js",
+        "test/workbench-acquisition-fallback.test.js",
+        "test/workbench-fund-comparison.test.js",
+        "test/component-shared-state-browser.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-library.test.js"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
