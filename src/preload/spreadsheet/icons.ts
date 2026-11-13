@@ -2,6 +2,13 @@ import { headerMoreIcon } from '../header-more-icon'
 
 const paths:Record<string,string>={
  grid:'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+ menu:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 9h8m-8 3h8m-8 3h8',
+ edit:'m4 16-.5 4.5L8 20 20 8l-4-4L4 16Zm10-10 4 4',
+ view:'M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Zm11.5 0a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z',
+ 'insert-row':'M3 5h18v7H3zM12 5v7m0 3v6m-3-3h6',
+ 'insert-column':'M5 3h7v18H5zM5 12h7m3 0h6m-3-3v6',
+ merge:'M3 5h18v14H3zM12 5v3m0 8v3M5.5 12h4m-2-2 2 2-2 2m11-2h-4m2-2-2 2 2 2',
+ duplicates:'M16 5H5v11m3-8h11v11H8zm3 5h5m-5 3h5',
  down:'m6 9 6 6 6-6',right:'m9 6 6 6-6 6',left:'m15 6-6 6 6 6',plus:'M12 5v14M5 12h14',minus:'M5 12h14',
  upload:'M12 16V4m-5 5 5-5 5 5M4 15v5h16v-5',
  download:'M12 4v12m-5-5 5 5 5-5M4 15v5h16v-5',
