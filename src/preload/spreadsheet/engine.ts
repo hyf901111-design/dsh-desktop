@@ -87,6 +87,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  // Incremental scrolling swaps in a private buffer that can lack the
  // per-canvas palette. Set the grid color at the worksheet render source.
  const {charts:_,components:__,...nativeWorkbook}=workbook
+ let charts=workbook.charts
  const renderWorkbook=structuredClone(nativeWorkbook) as unknown as IWorkbookData
  for(const sheet of Object.values(renderWorkbook.sheets)){
   sheet.gridlinesColor=palette().grid
@@ -317,10 +318,10 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    const original=workbook.sheets[sheet.id]?.gridlinesColor
    if(original===undefined)delete sheet.gridlinesColor;else sheet.gridlinesColor=original
   }
-  if(workbook.charts)result.charts=workbook.charts.filter(chart=>!!result.sheets[chart.sheetId])
+  if(charts)result.charts=charts.filter(chart=>!!result.sheets[chart.sheetId])
   if(components)result.components=components.filter(component=>!!result.sheets[component.sheetId])
   return result
- },syncComponents:(next:Workbook['components'])=>{components=next},dispose:()=>{
+ },syncCharts:(next:Workbook['charts'])=>{charts=next},syncComponents:(next:Workbook['components'])=>{components=next},dispose:()=>{
   if(disposed)return
   disposed=true
   doc.removeEventListener('focusin',updateEditorFocus,true)

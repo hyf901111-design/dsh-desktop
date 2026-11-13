@@ -20,9 +20,11 @@ export type Sheet = {
 }
 export const workbookChartKinds=['bar','horizontal','stackedBar','line','step','area','combo','pie','donut','scatter'] as const
 export type WorkbookChartKind=(typeof workbookChartKinds)[number]
+export type WorkbookChartLayout = {x:number;y:number;width:number;height:number}
 export type WorkbookChart = {
   chartId:string;sheetId:string;range:string;title:string;kind:WorkbookChartKind;headers:boolean
   seriesBy?:'columns'|'rows';category?:number;series?:number[];legend?:boolean;gridlines?:boolean;emptyValues?:'skip'|'zero';labels?:boolean
+  layout?:WorkbookChartLayout
 }
 export type WorkbookComponent = {componentId:string;sheetId:string;range:string;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
 export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; components?:WorkbookComponent[]; [key:string]:unknown }
@@ -36,7 +38,7 @@ export type Operation =
   | {op:'addSheet';sheetId:string;name:string}
   | {op:'renameWorkbook';name:string}
   | {op:'renameSheet';sheetId:string;name:string}
-  | ({op:'addChart'|'updateChart'} & Omit<WorkbookChart,'headers'> & {headers?:boolean})
+  | ({op:'addChart'|'updateChart'} & Omit<WorkbookChart,'headers'|'layout'> & {headers?:boolean})
   | {op:'removeChart';chartId:string}
 
 export function safeId(value:unknown): value is string {
@@ -108,8 +110,8 @@ export function chartAxes(chart:WorkbookChart,bounds:Range){
   return {category,series,byRows,composition}
 }
 export function validatedChart(book:Workbook,value:unknown):WorkbookChart {
-  keys(value,['chartId','sheetId','range','title','kind','headers','seriesBy','category','series','legend','gridlines','emptyValues','labels'])
-  const {chartId,sheetId,range,title,kind,headers=true,seriesBy,category,series,legend,gridlines,emptyValues,labels}=value as Record<string,any>
+  keys(value,['chartId','sheetId','range','title','kind','headers','seriesBy','category','series','legend','gridlines','emptyValues','labels','layout'])
+  const {chartId,sheetId,range,title,kind,headers=true,seriesBy,category,series,legend,gridlines,emptyValues,labels,layout}=value as Record<string,any>
   if(!safeId(chartId)||!workbookChartKinds.includes(kind)||typeof headers!=='boolean'||
     seriesBy!==undefined&&!['columns','rows'].includes(seriesBy)||category!==undefined&&!Number.isInteger(category)||
     series!==undefined&&(!Array.isArray(series)||!series.every(Number.isInteger))||
@@ -118,9 +120,17 @@ export function validatedChart(book:Workbook,value:unknown):WorkbookChart {
   const {bounds}=sheetRange(book,sheetId,range)
   const chart:WorkbookChart={chartId,sheetId,range:rangeAddress(bounds),title:label(title),kind,headers,
     ...(seriesBy===undefined?{}:{seriesBy}),...(category===undefined?{}:{category}),...(series===undefined?{}:{series}),
-    ...(legend===undefined?{}:{legend}),...(gridlines===undefined?{}:{gridlines}),...(emptyValues===undefined?{}:{emptyValues}),...(labels===undefined?{}:{labels})}
+    ...(legend===undefined?{}:{legend}),...(gridlines===undefined?{}:{gridlines}),...(emptyValues===undefined?{}:{emptyValues}),...(labels===undefined?{}:{labels}),
+    ...(layout===undefined?{}:{layout:validatedChartLayout(layout)})}
   chartAxes(chart,bounds)
   return chart
+}
+
+export function validatedChartLayout(value:unknown):WorkbookChartLayout {
+  keys(value,['x','y','width','height'])
+  const {x,y,width,height}=value as WorkbookChartLayout
+  if(![x,y,width,height].every(Number.isInteger)||x<0||y<0||width<1||height<1||Math.max(x,y,width,height)>8192)throw Error('图表位置或尺寸无效。')
+  return {x,y,width,height}
 }
 
 export function chartSourceRows<T>(chart:WorkbookChart,bounds:Range,read:(row:number,col:number)=>T){
@@ -218,6 +228,7 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
     if(!object(o))throw Error('操作无效。')
     if(o.op==='renameWorkbook'){keys(o,['op','name']);book.name=label(o.name);continue}
     if(o.op==='addChart'||o.op==='updateChart'){
+      if('layout' in o)throw Error('图表位置请通过表格编辑器调整。')
       const {op,...input}=o
       const chart=validatedChart(book,input)
       const {sheet,bounds}=sheetRange(book,chart.sheetId,chart.range)
@@ -237,7 +248,8 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
       const index=charts.findIndex(item=>item.chartId===chart.chartId)
       if(op==='updateChart'){
         if(index<0)throw Error('图表不存在。')
-        charts[index]=chart
+        const previous=charts[index]!
+        charts[index]=previous.layout&&previous.sheetId===chart.sheetId?{...chart,layout:previous.layout}:chart
       }else{
         if(index>=0||charts.length>=24)throw Error('图表标识重复或图表数量已达上限。')
         charts.push(chart)

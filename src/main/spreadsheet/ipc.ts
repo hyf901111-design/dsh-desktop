@@ -3,7 +3,7 @@ import {open,rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
 import {clipboard,dialog,type BrowserWindow,type IpcMain} from 'electron'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
-import {blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
+import {blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,validatedChartLayout,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
 import type {ComponentLibraryStore} from '../state/component-library'
@@ -140,6 +140,13 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
      op:action==='add-chart'?'addChart':'updateChart',chartId:action==='add-chart'?randomUUID():chartId,
      sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels
     }]})
+   }
+   case 'chart-layout':{
+    const book=store.load(key).workbook
+    if(!book?.charts?.some(chart=>chart.chartId===input.chartId))throw Error('图表不存在。')
+    const layout=validatedChartLayout(input.layout)
+    const charts=book.charts.map(chart=>chart.chartId===input.chartId?{...chart,layout}:chart)
+    return store.save(key,input.revision,{...book,charts})
    }
    case 'remove-chart':return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{op:'removeChart',chartId:input.chartId}]})
    case 'create':{
