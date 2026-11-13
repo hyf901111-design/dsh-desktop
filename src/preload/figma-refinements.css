@@ -714,9 +714,12 @@ body .JObwrW_trigger{box-sizing:border-box!important;display:flex!important;alig
 body .JObwrW_trigger>svg{display:block!important;width:14px!important;height:14px!important;margin:0!important;transform:none!important;flex:none}
 body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-menu-row)!important}
 
-/* Notes actions live in the existing shared header and research conversation pane. */
-.en-header-export{height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--odyssey-menu-muted);font-family:inherit;font-size:12px!important;line-height:20px!important;font-weight:400;white-space:nowrap;cursor:pointer;-webkit-app-region:no-drag}
-.en-header-export:hover{background:var(--odyssey-menu-row);color:var(--odyssey-menu-text)}
+/* Shared icon actions on the research, notes and spreadsheet session headers. */
+body{--odyssey-header-icon-bg:#fafafa;--odyssey-header-icon-hover:#fff}
+body[data-ds-dark-theme]{--odyssey-header-icon-bg:#292929;--odyssey-header-icon-hover:#3a3a3a}
+body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,[data-ework-spreadsheet-actions]>button){background:var(--odyssey-header-icon-bg)}
+body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,[data-ework-spreadsheet-actions]>button):not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]){background:var(--odyssey-header-icon-hover)}
+.en-header-export{width:30px;height:30px;flex:none;display:inline-grid;place-items:center;padding:0;border:0;border-radius:7px;color:var(--dsw-alias-label-primary);cursor:pointer;-webkit-app-region:no-drag}
 .en-task-history{padding:8px 0 24px}.en-task{min-width:0;display:flex;flex-direction:column;gap:12px}.en-task .Md3f7G_executionGroup{margin-top:2px}
 .en-task-feedback{min-width:0;font-size:14px;line-height:24px}.en-task-feedback>p{margin:0 0 6px}.en-task-feedback-progress{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--odyssey-menu-muted,#8b8b8b);font-size:12px;line-height:20px}
 .en-note-conversation-flow{height:100%;overflow:auto;min-height:0}.en-note-conversation-flow :is(.wSkVaW_scrollBody,.Md3f7G_scroll){height:auto;overflow:visible;flex:none}.en-note-conversation-flow .en-task-history{padding-top:16px}

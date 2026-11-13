@@ -460,19 +460,17 @@ class SpreadsheetView{
   const sheet=this.current()
   switch(key){
    case 'export':return [
-    {label:'Excel 工作簿 (.xlsx)',detail:'全部 '+this.record.workbook!.sheetOrder.length+' 个工作表 · 保留公式与常用格式',action:'export-format',value:'xlsx',browserIcon:'file'},
-    {label:'CSV 文件 (.csv)',detail:'仅当前工作表 · 不包含公式与格式',action:'export-format',value:'csv',browserIcon:'file'}
+    {label:'Excel 工作簿 (.xlsx)',action:'export-format',value:'xlsx',browserIcon:'file'},
+    {label:'CSV 文件 (.csv)',action:'export-format',value:'csv',browserIcon:'file'}
    ]
    case 'book':return [
     {label:'导入 Excel / CSV…',action:'import',browserIcon:'external',disabled:!this.editable||this.busy},
     {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:this.busy},
-    {label:'打开最近工作簿',action:'menu',value:'workbooks',browserIcon:'history',divider:true,disabled:!this.editable||!this.recent.some(book=>book.id!==this.record.workbook?.id)},
-    ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const}]:[]),
+    ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const,divider:true}]:[]),
     ...(this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',browserIcon:'forward' as const,divider:true,disabled:!this.editable}]:[]),
     ...(this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',browserIcon:'back' as const,divider:!this.record.canRedoAI,disabled:!this.editable}]:[])
    ]
    case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart'}))
-   case 'workbooks':return this.recent.filter(b=>this.record.workbook?.id!==b.id).map(b=>({label:b.name,detail:b.sheetCount+' 个工作表',action:'activate',value:b.id,browserIcon:'file',disabled:!this.editable}))
    case 'overflow':return Array.from(this.chrome.querySelectorAll<HTMLButtonElement>('.ew-sheet-ribbon-tools button[hidden]')).map(b=>({
     label:b.getAttribute('aria-label')||b.textContent||'',detail:b.dataset.glyph?undefined:b.dataset.action==='menu'?b.textContent||undefined:undefined,
     action:b.dataset.action!,value:b.dataset.value,icon:b.dataset.glyph,disabled:b.disabled,
@@ -514,7 +512,7 @@ class SpreadsheetView{
   this.pop.innerHTML=(parents.length?'<div class="ew-sheet-menu-title"><button type="button" role="menuitem" data-action="menu-back" aria-label="返回上一级" title="返回上一级">'+icon('left',16)+'</button><span>'+text(label)+'</span></div>':'')+options.map((item,index)=>{
    const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
    return (index>0&&item.divider?'<div role="separator"></div>':'')+'<button type="button" role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+glyph+'<span>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>'
-  }).join('')+(key==='export'?'<p>导出到本机后，可直接在 Excel 中继续编辑。</p>':'')
+  }).join('')
   this.place()
   const enabled=Array.from(this.pop.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
   const target=focus&&enabled.find(b=>b.dataset.action===focus.action&&b.dataset.value===focus.value)
