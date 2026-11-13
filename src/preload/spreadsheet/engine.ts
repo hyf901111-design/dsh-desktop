@@ -37,6 +37,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  }
  const theme=()=>({...defaultTheme,primary:{...defaultTheme.primary,500:'#7faaf8',600:'#5c8eeb'},gray:{...defaultTheme.gray,...dark()?{300:'#525a67',400:'#aaaaaa',800:'#242424',900:legacyDarkInputColor}:{}}})
  let renderingSheet=false
+ let filterButtonHasCriteria:boolean|undefined
  class SpreadsheetCanvasColors extends Plugin {
   static override pluginName='ework-spreadsheet-canvas-colors'
   constructor(_config:undefined,protected override _injector:Injector){super()}
@@ -45,6 +46,13 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    const native=new CanvasColorService(themeService)
    this.disposeWithMe(native)
    this._injector.replace([ICanvasColorService,{useValue:{getRenderColor:(color:string)=>{
+    if(filterButtonHasCriteria!==undefined){
+     if(color===themeService.getColorFromTheme('primary.600')){
+      return filterButtonHasCriteria?palette().text:dark()?'#929292':'#737373'
+     }
+     if(color==='rgba(255, 255, 255, 1.0)')return 'transparent'
+     if(color===themeService.getColorFromTheme('gray.50'))return dark()?'rgba(255, 255, 255, .1)':'rgba(0, 0, 0, .07)'
+    }
     if(!renderingSheet)return native.getRenderColor(color)
     // Header controls use theme tokens; cell fills and borders use literal colors.
     if(!/^[a-z][a-z0-9-]*\.\d+$/i.test(color))return color
@@ -85,6 +93,22 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   ['xSplit','__SpreadsheetFreezeColumnHeaderName__','__SpreadsheetFreezeColumnMainName__']
  ] as const
  const selectionEdges = /^__SpreadsheetSelection(?:ShapeLeft|ShapeRight|Top|Bottom)Control__/
+ const themedFilterButtons=new WeakSet<object>()
+ const themeFilterButtons=(render:IRender)=>{
+  // The filter plugin rebuilds these canvas shapes as the active sheet changes.
+  // Scope the palette to their own drawing so the cell formatting stays intact.
+  for(const shape of render.scene.getObjectsByLayer(1)){
+   const match=/^sheets-filter-button-(\d+)$/.exec(shape.oKey)
+   if(!match||themedFilterButtons.has(shape))continue
+   const column=Number(match[1])
+   const draw=shape.render
+   shape.render=(...args)=>{
+    filterButtonHasCriteria=!!model.getActiveSheet()?.getFilter()?.getColumnFilterCriteria(column)
+    try{return draw.apply(shape,args)}finally{filterButtonHasCriteria=undefined}
+   }
+   themedFilterButtons.add(shape)
+  }
+ }
  // Keep the selection hit area without painting Univer's white buffer around it.
  // These guides are separate from the workbook's cell borders.
  const guideColors=(render:IRender)=>{
@@ -108,6 +132,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    renderingSheet=spreadsheet
    if(!spreadsheet)return
    guideColors(render)
+   themeFilterButtons(render)
    const freeze=model.getActiveSheet()?.getFreeze()
    for(const [axis,...names] of freezeObjects)if(!freeze?.[axis])for(const name of names){
     const handle=render.scene.getObject(name)
