@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-15",
+  "branch": "codex/integration/20261113-15",
+  "baseMainCommit": "d94ac2973acf5e414f9a5a29619a8d836826295a",
+  "expectedMainCommit": "d94ac2973acf5e414f9a5a29619a8d836826295a",
+  "createdAt": "2026-11-13T13:03:17.709Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "套餐模型目录与生图网关故障恢复",
+        "branch": "codex/feat/hosted-ai-resilience-20261113",
+        "baseCommit": "d94ac2973acf5e414f9a5a29619a8d836826295a",
+        "tipCommit": "47db0b5a30da985be363c95bf6eaa6e78cb8f615",
+        "commits": [
+          {
+            "commit": "47db0b5a30da985be363c95bf6eaa6e78cb8f615",
+            "parents": [
+              "d94ac2973acf5e414f9a5a29619a8d836826295a"
+            ],
+            "subject": "增强套餐模型目录与生图网关的故障恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-hosted-ai.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-provider.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-model-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/model-select-restored.txt"
+          },
+          {
+            "status": "M",
+            "path": "scripts/start-native-acceptance-services.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-hosted-ai-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/hosted-ai/worker.js"
+          },
+          {
+            "status": "M",
+            "path": "services/hosted-ai/wrangler.jsonc"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/account-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-model-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/hosted-ark-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=4",
+              "--testTimeout=15000",
+              "test/account-service.test.ts",
+              "test/hosted-ark-runtime.test.js",
+              "test/figma-model-menu.test.ts",
+              "test/figma-auth-errors.test.js",
+              "test/image-generation-tool.test.js",
+              "test/image-generation-client.test.js",
+              "test/image-generation-flow.test.js",
+              "test/image-generation-ui.test.js",
+              "test/profile-runtime-patches.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "70 个聚焦用例通过。",
+            "verifiedCommit": "47db0b5a30da985be363c95bf6eaa6e78cb8f615",
+            "completedAt": "2026-11-13T13:01:12.130Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "本地 Workerd、D1 与下载重试通过。",
+            "verifiedCommit": "47db0b5a30da985be363c95bf6eaa6e78cb8f615",
+            "completedAt": "2026-11-13T13:01:12.130Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "47db0b5a30da985be363c95bf6eaa6e78cb8f615",
+            "completedAt": "2026-11-13T13:01:12.130Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "模型菜单组件的暂不可用和恢复状态测试通过。既有签名客户端连接新本地验收服务，普通账号完成文本、生图和退出。更新后的客户端待构建。"
+        },
+        "acceptanceCriteria": [
+          "同账号临时目录故障短时保留已确认目录，失效及切换账号撤销旧目录。",
+          "生图在目录故障时不切换供应商，下载重试只调用一次生成。",
+          "请求编号可关联错误阶段和账本。"
+        ],
+        "risks": [
+          "上游停服、额度不足、长时间断网与异常预留仍依赖运行时反馈及供应商对账。线上部署与更新后的签名包尚未验证。"
+        ],
+        "generatedAt": "2026-11-13T13:01:12.130Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/test-hosted-ai-worker.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "--maxWorkers=4",
+        "--testTimeout=15000",
+        "test/account-service.test.ts",
+        "test/hosted-ark-runtime.test.js",
+        "test/figma-model-menu.test.ts",
+        "test/figma-auth-errors.test.js",
+        "test/image-generation-tool.test.js",
+        "test/image-generation-client.test.js",
+        "test/image-generation-flow.test.js",
+        "test/image-generation-ui.test.js",
+        "test/profile-runtime-patches.test.js"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
