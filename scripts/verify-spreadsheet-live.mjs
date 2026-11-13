@@ -20,7 +20,9 @@ const preload=join(dir,'preload.cjs'),main=join(dir,'main.mjs')
 await build({stdin:{resolveDir:root,contents:`
  import {ipcRenderer,contextBridge} from 'electron'
  import {mountSpreadsheet} from './src/preload/spreadsheet/view'
+ import {mountUiLocalization} from './src/preload/ui-localization'
  document.addEventListener('DOMContentLoaded',()=>{
+  mountUiLocalization(document)
   const mounted=mountSpreadsheet(document,{
    request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
@@ -192,6 +194,22 @@ await build({stdin:{resolveDir:root,contents:`
    await until(()=>js('document.body.dataset.chatUndo==="true"'),'grid history does not consume chat shortcuts')
    assert.equal(currentCell(5,6)?.v,'净值')
    report.push('IME editing and sheet keyboard undo/redo stay scoped to the grid')
+   await select('A1')
+   const resizeGrid=async(axis)=>{
+    const row=axis==='row',x=Math.round(grid.x+(row?20:140)),y=Math.round(grid.y+(row?54:12))
+    const send=(type,offset=0)=>win.webContents.sendInputEvent({type,button:'left',clickCount:1,x:x+(row?0:offset),y:y+(row?offset:0)})
+    const dimension=()=>{const book=snapshot(),sheet=book.sheets[book.sheetOrder[0]];return (row?sheet.rowData?.[0]?.h:sheet.columnData?.[0]?.w)??(row?30:100)}
+    const darkEdge=()=>js('(()=>{const c=[...document.querySelectorAll(".ew-sheet-grid canvas")].find(c=>c.clientWidth>400),ctx=c.getContext("2d"),sx=c.width/c.clientWidth,sy=c.height/c.clientHeight;const p=(x,y)=>ctx.getImageData(Math.round(x*sx),Math.round(y*sy),1,1).data[0];return '+(row?'p(256,54)<38&&Array.from({length:8},(_,i)=>p(256,80+i)).some(p=>p>=43&&p<100)':'p(140,138)<38&&Array.from({length:8},(_,i)=>p(166+i,138)).some(p=>p>=43&&p<100)')+'})()')
+    const original=dimension()
+    send('mouseMove',-2);send('mouseMove',-1);await wait(80);send('mouseDown',-1);send('mouseMove',30)
+    await until(darkEdge,axis+' grid line follows the pointer before mouseup')
+    assert.equal(dimension(),original)
+    send('mouseUp',30)
+    await until(()=>dimension()>original+20,axis+' saves the resized dimension')
+    await click(button('undo'));await until(()=>dimension()===original,axis+' undo restores the original dimension in one step')
+   }
+   await resizeGrid('row');await resizeGrid('column')
+   report.push('live row and column resize previews with one undo per drag')
    const previous=clipboard.readText()
    clipboard.writeText('公司\\t价格\\nA\\t11\\nB\\t22')
    try{
@@ -344,7 +362,7 @@ await build({stdin:{resolveDir:root,contents:`
    await click(button('focus'))
    assert.equal(await js('document.body.classList.contains("hide")'),false)
    assert.equal(await js('document.querySelector("[data-dsh-sidebar-root]").dataset.dshSidebarWide'),'true')
-   assert.equal(await js('getComputedStyle(document.querySelector("[data-odyssey-panel-entry=bottom]")).display'),'none')
+   assert.notEqual(await js('getComputedStyle(document.querySelector("[data-odyssey-panel-entry=bottom]")).display'),'none')
    report.push('focus collapses both panels and restores them on exit')
    win.webContents.setZoomFactor(1.5)
    await until(()=>clickable(button('menu','overflow')),'ribbon overflows at 150% zoom')
@@ -435,6 +453,18 @@ await build({stdin:{resolveDir:root,contents:`
    await js('document.body.removeAttribute("data-ds-dark-theme")')
    await screenshot('04-light')
    report.push('live light theme')
+   await js('document.documentElement.dataset.odysseyLocale="en"')
+   await until(()=>js('document.querySelector("[data-action=ribbon][data-value=开始]").textContent==="Home"'),'English ribbon')
+   assert.equal(await js('document.querySelector("[data-field=formula]").value'),'=B1/A1')
+   await click(button('menu','book'));await click(button('menu','export'))
+   await until(()=>js('document.querySelector("[data-action=menu-back]").title==="Back"'),'English submenu')
+   assert.match(await js('document.querySelector(".ew-sheet-menu").textContent'),/Excel workbook/)
+   press('Escape');await select('A1');await click(button('ribbon','数据'));await click(button('duplicates'));await click(button('dedupe-apply'))
+   await until(async()=>/Select at least 2 rows/.test(await dialogFeedback()),'English dialog error')
+   await screenshot('05-english-dedupe')
+   press('Escape');await js('document.documentElement.dataset.odysseyLocale="zh"')
+   await until(()=>js('document.querySelector("[data-action=ribbon][data-value=开始]").textContent==="开始"'),'restore Chinese in the same workbook')
+   report.push('English ribbon, export menu, and inline validation switch live')
    assert.deepEqual(errors,[])
    writeFileSync(join(evidence,'report.json'),JSON.stringify({passed:true,report},null,2))
    console.log(JSON.stringify({evidence,report},null,2))

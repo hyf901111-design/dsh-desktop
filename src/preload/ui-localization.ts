@@ -1,13 +1,15 @@
 import { englishUiCopy } from './ui-copy'
 import { integrationUiCopy } from './integration-ui-copy'
+import { translateSpreadsheetCopy } from './spreadsheet/ui-copy'
 
 // Preload UI and portaled plugin controls share the application's selected locale,
 // rather than navigator.language. Never replace elements or translate user content.
-const surfaces = '.odyssey-data-settings,.ig-root,.ig-overlay,.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description],.ew-financial-widget,.ew-financial-connections,.ew-grid-menu,.ew-financial-suggestions,[data-ui-system-title]'
+const spreadsheetSurface = '.ew-sheet,.ew-sheet-welcome,[data-ework-spreadsheet-actions]'
+const surfaces = spreadsheetSurface + ',.odyssey-data-settings,.ig-root,.ig-overlay,.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description],.ew-financial-widget,.ew-financial-connections,.ew-grid-menu,.ew-financial-suggestions,[data-ui-system-title]'
 const financialContent = '.ew-watch-name,.ew-news-title,.ew-news-summary,.ew-news-source,.ew-financial-suggestions [role="option"]'
 const preserved = '.ig-market-card h2,.ig-market-card>p,.ig-detail-identity h2,.ig-capability strong,.ig-capability span,.ig-preview,.ig-skill-preview>h2,.ig-skill-preview>p,.ig-skill-preview li,.ig-api-tool strong,.ig-api-tool p,.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_previewPlaceholder,.ew-financial-widget)),'+financialContent
 export function translateUiCopy(value: string, context?: Element): string {
- const key=value.trim(), translated=(context?.closest('.ig-root,.ig-overlay')?integrationUiCopy[key]:undefined)??englishUiCopy[key]
+ const key=value.trim(), translated=(context?.closest(spreadsheetSurface)?translateSpreadsheetCopy(key):undefined)??(context?.closest('.ig-root,.ig-overlay')?integrationUiCopy[key]:undefined)??englishUiCopy[key]
  if(translated)return value.replace(key,translated)
  if(key.endsWith(' · 备用'))return value.replace(key,translateUiCopy(key.slice(0,-' · 备用'.length),context)+' · Backup')
  if(key.includes(' / ')&&/(?:腾讯财经|新浪财经|东方财富)/.test(key))return value.replace(key,key.split(' / ').map(part=>translateUiCopy(part,context)).join(' / '))

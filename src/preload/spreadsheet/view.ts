@@ -150,7 +150,7 @@ class SpreadsheetView{
    const recent=this.recent.slice(0,6)
    this.empty.innerHTML=!this.ready?
     '<div class="ew-sheet-empty-inner"><p role="status">'+text(this.notice||'正在打开表格…')+'</p>'+(this.error?button('reload','重试'):'')+'</div>':
-    '<div class="ew-sheet-empty-inner"><div class="ew-sheet-empty-icon">'+icon('grid',36)+'</div><h1>把分析，放进表格。</h1><p>从 Excel 继续工作，或让 AI 帮你搭起第一张分析表。</p><div class="ew-sheet-empty-actions">'+button('new','新建空白工作簿',{glyph:'plus',className:'primary',withLabel:true,disabled:!this.editable||this.busy})+button('import','导入 Excel / CSV',{glyph:'upload',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>'+(this.record.canRedoAI?'<div class="ew-sheet-empty-actions">'+button('redo-ai','重新应用 AI 修改',{glyph:'redo',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>':'')+(recent.length?'<div class="ew-sheet-recent"><div>最近在此会话中使用</div>'+recent.map(b=>'<button data-action="activate" data-value="'+text(b.id)+'"'+(!this.editable||this.busy?' disabled':'')+'>'+icon('grid')+'<span><strong>'+text(b.name)+'</strong><small>'+b.sheetCount+' 个工作表</small></span>'+icon('link',14)+'</button>').join('')+'</div>':'')+'<p class="ew-sheet-empty-notice" role="status" data-error="'+this.error+'">'+text(this.notice)+'</p></div>'
+    '<div class="ew-sheet-empty-inner"><div class="ew-sheet-empty-icon">'+icon('grid',36)+'</div><h1>把分析，放进表格。</h1><p>从 Excel 继续工作，或让 AI 帮你搭起第一张分析表。</p><div class="ew-sheet-empty-actions">'+button('new','新建空白工作簿',{glyph:'plus',className:'primary',withLabel:true,disabled:!this.editable||this.busy})+button('import','导入 Excel / CSV',{glyph:'upload',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>'+(this.record.canRedoAI?'<div class="ew-sheet-empty-actions">'+button('redo-ai','重新应用 AI 修改',{glyph:'redo',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>':'')+(recent.length?'<div class="ew-sheet-recent"><div>最近在此会话中使用</div>'+recent.map(b=>'<button data-action="activate" data-value="'+text(b.id)+'"'+(!this.editable||this.busy?' disabled':'')+'>'+icon('grid')+'<span><strong data-ui-preserve>'+text(b.name)+'</strong><small>'+b.sheetCount+' 个工作表</small></span>'+icon('link',14)+'</button>').join('')+'</div>':'')+'<p class="ew-sheet-empty-notice" role="status" data-error="'+this.error+'">'+text(this.notice)+'</p></div>'
    return
   }
   const current=this.current()
@@ -158,7 +158,7 @@ class SpreadsheetView{
   this.chrome.innerHTML='<div class="ew-sheet-ribbon-tabs" role="tablist" aria-label="表格工具栏">'+ribbons.map(r=>'<button role="tab" aria-selected="'+(r===this.ribbon)+'" data-action="ribbon" data-value="'+r+'">'+r+'</button>').join('')+'</div><div class="ew-sheet-ribbon" role="toolbar" aria-label="'+this.ribbon+'"><div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+this.focusButton()+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
-   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
+   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" data-ui-preserve title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
   }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span>'+(book.charts?.length?button('menu','图表 '+book.charts.length,{glyph:'chart',value:'charts',label:'查看工作簿图表'}):'')+'</div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
   const tabList=this.foot.querySelector<HTMLElement>('.ew-sheet-tab-list')!
   tabList.scrollLeft=tabScroll
@@ -532,7 +532,7 @@ class SpreadsheetView{
   this.pop.setAttribute('aria-label',label)
   this.pop.innerHTML=(parents.length?'<div class="ew-sheet-menu-title"><button type="button" role="menuitem" data-action="menu-back" aria-label="返回上一级" title="返回上一级">'+icon('left',16)+'</button><span>'+text(label)+'</span></div>':'')+options.map((item,index)=>{
    const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
-   return (index>0&&item.divider?'<div role="separator"></div>':'')+'<button type="button" role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+glyph+'<span>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>'
+   return (index>0&&item.divider?'<div role="separator"></div>':'')+'<button type="button" role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu"':'')+'>'+glyph+'<span'+(['sheets','charts'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):'')+'</button>'
   }).join('')
   this.place()
   const enabled=Array.from(this.pop.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
@@ -582,7 +582,7 @@ class SpreadsheetView{
   this.chartSource={sheetId:sheet.getSheetId(),range:range.getA1Notation()}
   const values=range.getRawValues()
   const hasHeader=values[0]?.slice(1).every(value=>typeof value==='string'&&value!=='')&&values.slice(1).some(row=>row.slice(1).some(value=>typeof value==='number'))
-  this.dialog('创建图表',source+'<label>名称<input aria-label="图表名称" value="选区图表" maxlength="120"></label><label>类型<select aria-label="图表类型"><option value="bar">柱状图</option><option value="line">折线图</option></select></label><label class="ew-sheet-chart-header"><input type="checkbox"'+(hasHeader?' checked':'')+'> 首行是表头</label>','create-chart','创建')
+  this.dialog('创建图表',source+'<label>名称<input data-field="chart-title" aria-label="图表名称" value="'+(this.doc.documentElement.dataset.odysseyLocale==='en'?'Selection chart':'选区图表')+'" maxlength="120"></label><label>类型<select aria-label="图表类型"><option value="bar">柱状图</option><option value="line">折线图</option></select></label><label class="ew-sheet-chart-header"><input type="checkbox"'+(hasHeader?' checked':'')+'> 首行是表头</label>','create-chart','创建')
  }
  private chartData(chart:WorkbookChart){
   const sheet=this.engine?.model.getSheetBySheetId(chart.sheetId)
@@ -594,6 +594,7 @@ class SpreadsheetView{
   if(!values.length||values.some(({raw})=>raw[0]===null||raw[0]===undefined||raw[0]===''||raw.slice(1).some(value=>typeof value!=='number'||!Number.isFinite(value))))return
   const series=values[0]!.raw.slice(1).map((_,i)=>({
    name:String(headers?.[i+1]||address(0,range.getColumn()+i+1).slice(0,-1)+' 列'),
+   hasName:Boolean(headers?.[i+1]),
    values:values.map(row=>Number(row.raw[i+1]))
   }))
   return {variant:chart.kind,source:sheet.getSheetName()+'!'+chart.range,labels:values.map(row=>row.display[0]||String(row.raw[0])),series,
@@ -605,8 +606,8 @@ class SpreadsheetView{
   if(!chart){this.chartMarkup='';this.charts.replaceChildren();return}
   const data=this.chartData(chart)
   const geometry=data&&cartesianChartSvg(data,540)
-  const markup='<header><strong>'+text(chart.title)+'</strong>'+button('close-chart','',{glyph:'close',label:'关闭图表'})+'</header><p>'+text(data?.source??chart.range)+'</p>'+
-   (data&&geometry?'<svg role="img" aria-label="'+text(chart.title)+'" viewBox="0 0 '+geometry.width+' '+geometry.height+'">'+geometry.markup+'</svg><ul>'+data.series.map((series,i)=>'<li style="--chart-key:var(--sherlock-chart-'+(i+1)+')">'+text(series.name)+'</li>').join('')+'</ul><details><summary>图表数据</summary><table><thead><tr><th>分类</th>'+data.series.map(series=>'<th>'+text(series.name)+'</th>').join('')+'</tr></thead><tbody>'+data.labels.map((label,i)=>'<tr><th>'+text(label)+'</th>'+data.displayedValues[i]!.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table></details>':'<p role="status">选区需要分类和完整的数值系列。请检查空格或公式错误。</p>')+
+  const markup='<header><strong data-ui-preserve>'+text(chart.title)+'</strong>'+button('close-chart','',{glyph:'close',label:'关闭图表'})+'</header><p data-ui-preserve>'+text(data?.source??chart.range)+'</p>'+
+   (data&&geometry?'<svg data-ui-preserve role="img" aria-label="'+text(chart.title)+'" viewBox="0 0 '+geometry.width+' '+geometry.height+'">'+geometry.markup+'</svg><ul>'+data.series.map((series,i)=>'<li'+(series.hasName?' data-ui-preserve':'')+' style="--chart-key:var(--sherlock-chart-'+(i+1)+')">'+text(series.name)+'</li>').join('')+'</ul><details><summary>图表数据</summary><table><thead><tr><th>分类</th>'+data.series.map(series=>'<th'+(series.hasName?' data-ui-preserve':'')+'>'+text(series.name)+'</th>').join('')+'</tr></thead><tbody data-ui-preserve>'+data.labels.map((label,i)=>'<tr><th>'+text(label)+'</th>'+data.displayedValues[i]!.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table></details>':'<p role="status">选区需要分类和完整的数值系列。请检查空格或公式错误。</p>')+
    (this.editable?'<footer>'+button('remove-chart','删除图表',{value:chart.chartId})+'</footer>':'')
   if(this.chartMarkup===markup)return
   const expanded=this.charts.querySelector('details')?.open??false
@@ -673,7 +674,7 @@ class SpreadsheetView{
    case 'find-next':this.search();return
    case 'chart':this.chart();return
    case 'create-chart':{
-    const name=this.modal.querySelector<HTMLInputElement>('[aria-label="图表名称"]'),kind=this.modal.querySelector<HTMLSelectElement>('select')
+    const name=this.modal.querySelector<HTMLInputElement>('[data-field=chart-title]'),kind=this.modal.querySelector<HTMLSelectElement>('select')
     const headers=this.modal.querySelector<HTMLInputElement>('[type=checkbox]')?.checked??false
     if(!this.chartSource||!name||!kind)return
     const title=label(name.value)
@@ -888,7 +889,6 @@ export function mountSpreadsheet(doc:Document,bridge:Bridge){
   view?.dispose();anchor=next
   view=next?.dataset.eworkSpreadsheetView?new SpreadsheetView(next,next.dataset.eworkSpreadsheetView,bridge):undefined
   if(view)doc.body.dataset.eworkSpreadsheetMode='true';else delete doc.body.dataset.eworkSpreadsheetMode
-  doc.defaultView?.dispatchEvent(new CustomEvent('sherlock:spreadsheet-mode',{detail:{active:!!view}}))
  }
  const schedule=()=>{if(!queued){queued=true;queueMicrotask(scan)}}
  const observer=new MutationObserver(schedule)
