@@ -30,7 +30,7 @@ import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
 import { PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 import {DATASET_HIERARCHY_SCHEMA,DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA,assertWorkbenchViewSources} from './dataset-view-contract.js';
-import {acquireFundComparison,fundComparisonArtifacts,fundComparisonCount,fundComparisonReader} from './workbench-fund-comparison.js';
+import {acquireFundComparison,fundComparisonArtifacts,fundComparisonCount,fundComparisonReader,prepareFundComparisonOverview} from './workbench-fund-comparison.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 export function listWorkbenchObservedSources(session,messageId,schemas) {
     return observedSourceViews(captureWorkbenchObservedSources({session,messageId,schemas,onRejected:()=>{}}));
@@ -450,7 +450,12 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     exec.signal?.throwIfAborted();
                     // Acquisition optimizations supply facts, never replace the user's
                     // plan or dictate the number and shape of the final components.
-                    sharedEvidence=JSON.stringify(fundComparisonArtifacts(data)[0]);
+                    const evidence = fundComparisonArtifacts(data)[0];
+                    sharedEvidence = JSON.stringify(evidence);
+                    for (const panel of plan.panels) {
+                        const artifact = prepareFundComparisonOverview(panel,data,evidence);
+                        if (artifact) panel.artifact = artifact;
+                    }
                 } catch (error) {
                     if (exec.signal?.aborted) {
                         for (const panel of plan.panels) panel.error = '面板生成已取消，尚未启动。';
