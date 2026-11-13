@@ -48,6 +48,7 @@ class SpreadsheetView{
  private task:Promise<void>=Promise.resolve()
  private timer=0
  private updateTimer=0
+ private componentThemeObserver:MutationObserver
  private engine?:SheetEngine
  private incoming?:WorkbookRecord
  private menu?:Menu
@@ -127,6 +128,8 @@ class SpreadsheetView{
   this.componentLayer.addEventListener('lostpointercapture',event=>this.finishComponentGesture(event,false))
   this.doc.addEventListener('sherlock:notes-component-action',this.componentAction)
   this.doc.addEventListener('sherlock:spreadsheet-component-reload',this.componentReload)
+  this.componentThemeObserver=new MutationObserver(this.componentReload)
+  this.componentThemeObserver.observe(this.doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']})
   this.releaseComponentProgress=this.bridge.subscribe('component-progress',value=>{
    if(!this.componentRequest||!this.belongs(value)||value.requestId!==this.componentRequest)return
    const job=this.componentJob
@@ -629,14 +632,6 @@ class SpreadsheetView{
     {label:'删除图表',action:'confirm-remove-chart',value:this.activeChart,icon:'close',divider:true,disabled:!this.editable}
    ]
    case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart'}))
-   case 'component-actions':{
-    const id=this.menu?.anchor.closest<HTMLElement>('[data-research-node-id]')?.dataset.researchNodeId
-    return [
-     {label:'定位选区',action:'component-source',value:id,icon:'search'},
-     {label:'导出为图片',action:'component-export',value:id,icon:'download'},
-     {label:'移除组件',action:'component-confirm-remove',value:id,icon:'close',divider:true,disabled:!this.editable}
-    ]
-   }
    case 'components':return (this.record.workbook?.components??[]).map(component=>({label:component.node.title,action:'component-show',value:component.componentId,icon:'grid'}))
    case 'overflow':return Array.from(this.chrome.querySelectorAll<HTMLButtonElement>('.ew-sheet-ribbon-tools button[hidden]')).map(b=>({
     label:b.getAttribute('aria-label')||b.textContent||'',detail:b.dataset.glyph?undefined:b.dataset.action==='menu'?b.textContent||undefined:undefined,
@@ -1188,11 +1183,14 @@ class SpreadsheetView{
   this.resize()
  }
  private publishCard(card:ComponentCard,node:Record<string,unknown>,extras:Record<string,unknown>){
+  const dark=this.doc.body.hasAttribute('data-ds-dark-theme')
+  card.element.dataset.financialTheme=dark?'dark':'light'
   this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{surface:'spreadsheet',instanceId:card.instance,hostId:card.instance,
-   headerId:card.instance+'-title',sessionId:this.sessionId,node,dark:this.doc.body.hasAttribute('data-ds-dark-theme'),refresh:card.refresh,readOnly:!this.editable,...extras}}))
+   headerId:card.instance+'-title',sessionId:this.sessionId,node,dark,refresh:card.refresh,readOnly:!this.editable,...extras}}))
  }
  private publishComponent(card:ComponentCard,component:WorkbookComponent){
-  this.publishCard(card,component.node,{mode:'component',floating:component.placement?.mode==='floating'})
+  const source=(this.record.workbook?.sheets[component.sheetId]?.name??'')+'!'+component.range
+  this.publishCard(card,component.node,{mode:'component',source,floating:component.placement?.mode==='floating'})
  }
  private publishGeneration(){
   const job=this.componentJob
@@ -1233,11 +1231,7 @@ class SpreadsheetView{
   switch(value.action){
    case 'spec':if(this.editable)perform(this.run('component-configure',{componentId,expected:value.expected,spec:value.next},'组件已更新').then(Boolean));return
    case 'placement':if(this.editable)perform(this.toggleComponentPlacement(component));return
-   case 'more':{
-    const anchor=card.element.querySelector<HTMLElement>('[data-workbench-more]')
-    if(anchor)this.openMenu('component-actions',anchor)
-    return
-   }
+   case 'source':perform(this.locateComponent(component));return
    case 'close':this.activeComponent=undefined;this.renderComponent();return
    case 'remove':if(this.editable)this.confirmComponentRemoval(componentId);return
    case 'ask':perform(this.locateComponent(component,true));return
@@ -1489,19 +1483,10 @@ class SpreadsheetView{
     }else {this.activeComponent=value;this.renderComponent()}
     return
    }
-   case 'component-confirm-remove':this.confirmComponentRemoval(value);return
    case 'component-remove':if(await this.run('component-remove',{componentId:value},'组件已移除'))this.closeDialog();return
    case 'component-source':{
     const component=this.record.workbook?.components?.find(item=>item.componentId===value)
     if(component){this.closeMenu();await this.locateComponent(component)}
-    return
-   }
-   case 'component-export':{
-    const card=this.componentCards.get(value)
-    if(card){
-     this.closeMenu()
-     this.doc.dispatchEvent(new CustomEvent('sherlock:spreadsheet-component-export',{detail:{sessionId:this.sessionId,instanceId:card.instance}}))
-    }
     return
    }
    case 'close-dialog':this.cancelComponentRequest();this.closeDialog();return
@@ -1724,6 +1709,7 @@ class SpreadsheetView{
   this.componentCards.clear()
   this.doc.removeEventListener('sherlock:notes-component-action',this.componentAction)
   this.doc.removeEventListener('sherlock:spreadsheet-component-reload',this.componentReload)
+  this.componentThemeObserver.disconnect()
   this.clearSelectionPreview()
   this.disposed=true;this.clearMenuHover();this.win.clearTimeout(this.timer);this.win.clearTimeout(this.updateTimer)
   this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.ribbonObserver.disconnect();this.toolbarCopyObserver.disconnect()

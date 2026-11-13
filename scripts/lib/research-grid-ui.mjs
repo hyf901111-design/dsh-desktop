@@ -149,7 +149,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=fa
       node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly,onSpecChange:surfaceActions?.onSpecChange}),
       node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly,onSpecChange:surfaceActions?.onSpecChange,surface:surfaceActions?.surface}),
       onAsk&&button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
-      button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
+      button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu','aria-expanded':surfaceActions?.menuOpen}),
       ...((surfaceActions?.buttons??[]).map(({name,label,run,disabled})=>button(name,label,run,{key:name,title:label,disabled}))),
       onRemove&&(!previewMode||expanded)&&button('close',expanded?'关闭阅读':'移除组件',()=>onRemove(node),{disabled:expanded?false:readOnly})
     ]}),
