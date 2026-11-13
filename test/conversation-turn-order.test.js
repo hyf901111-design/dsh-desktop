@@ -14,7 +14,7 @@ const evidence=process.env.SHERLOCK_TURN_ORDER_EVIDENCE||'/tmp/sherlock-chat-tur
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup()})
 function fixture(){
  const window=new Window({url:'https://turn-order.test'}),descriptors=[];cleanups.push(()=>window.happyDOM.abort());window.__ModuleLoader__={load:value=>descriptors.push(value)}
- const context=vm.createContext({window,document:window.document,console,setTimeout,clearTimeout,queueMicrotask,AbortController,requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout})
+ const context=vm.createContext({window,document:window.document,console,setTimeout,clearTimeout,setInterval:window.setInterval.bind(window),clearInterval:window.clearInterval.bind(window),queueMicrotask,AbortController,requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout})
  vm.runInContext(runtime,context);vm.runInContext(source.replace('exports.apply = apply;','exports.apply = apply;exports.__register=registerConversationNodes;exports.__flow=compactConversationFlow;'),context)
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const modules=id=>id==='react'?require('react'):id==='react/jsx-runtime'?require('react/jsx-runtime'):id==='react-dom'?require('react-dom'):id==='@deepseek-ai/cordis'?{Service:class{constructor(ctx){this.ctx=ctx}}}:fake
@@ -41,6 +41,47 @@ it('keeps a real SDK file-context preparation and every subsequent reply below t
  f.install(g.log);const flow=f.flow(),chat=f.session.getSnapshot().chat
  mkdirSync(evidence,{recursive:true});writeFileSync(evidence+(baseline?'/baseline-red.json':'/fixed-green.json'),JSON.stringify({events:g.log.map(({seq,type,data})=>({seq,type,turn:data.turn,source:data.source?.kind})),nodes:chat.order.map(key=>({key,kind:chat.nodes.get(key).kind,seq:chat.nodes.get(key).anchorSeq,turn:chat.nodes.get(key).location?.turn?.turn})),flow},null,2))
  expectHumansBeforeOwnActivity(f,flow);expect(keys(flow)[0]).toBe(humanKeys(chat)[0]);expect(flow.filter(entry=>entry.kind==='execution')).toHaveLength(1)
+})
+it('keeps the first message ahead of execution details after a permission change, including on reopen',()=>{
+ const f=fixture(),g=logFixture()
+ g.append('command/run',{commandId:'permission',name:'permission',args:'workspace-write'})
+ g.append('command/done',{commandId:'permission',kind:'success',text:'preset workspace-write'})
+ f.install(g.log)
+ const firstTurn=g.log.length
+ g.append('turn/start',{turn:1})
+ g.append('step/start',{turn:1,step:1})
+ g.append('user/message',{id:'policy',role:'user',source:{kind:'plugin',plugin:'user-approval'},content:[{type:'text',text:'The approval policy changed from "never" to "ask" (changed by the user).'}]},{surfaceOp:'append'})
+ g.human('first','请生成一张图片。')
+ for(const event of g.log.slice(firstTurn))f.session.acceptLiveEvent(event)
+ const assertFlow=()=>{
+  const chat=f.session.getSnapshot().chat,flow=f.flow(1)
+  expect(chat.order.map(key=>chat.nodes.get(key).kind)).toEqual(['command','context','user'])
+  expect(flow[0]).toMatchObject({kind:'node',key:humanKeys(chat)[0]})
+  expect(flow.filter(entry=>entry.kind==='execution')).toEqual([
+   {kind:'execution',key:'execution:1',turn:1,nodeKeys:[],running:true}
+  ])
+ }
+ assertFlow()
+ f.install(g.log)
+ assertFlow()
+})
+it('keeps permission errors, explicit status queries and real turn context in execution details',()=>{
+ const f=fixture(),g=logFixture()
+ g.append('command/run',{commandId:'denied',name:'permission',args:'invalid'})
+ g.append('command/done',{commandId:'denied',kind:'error',text:'unknown preset'})
+ g.append('command/run',{commandId:'status',name:'permission'})
+ g.append('command/done',{commandId:'status',kind:'success',text:'current preset workspace-write'})
+ g.append('turn/start',{turn:1})
+ g.append('step/start',{turn:1,step:1})
+ g.prep()
+ g.human('first','请处理附件。')
+ f.install(g.log)
+ const chat=f.session.getSnapshot().chat,flow=f.flow(1)
+ const execution=flow.filter(entry=>entry.kind==='execution')
+ expect(execution.map(entry=>entry.nodeKeys.map(key=>chat.nodes.get(key).data.commandId??chat.nodes.get(key).data.source.plugin))).toEqual([
+  ['denied','status'],['fixture-file-context']
+ ])
+ expectHumansBeforeOwnActivity(f,flow)
 })
 it('keeps the user first for an actual Host pre-step injection and persisted history without rewriting the journal',async()=>{
  const host=await presentationHostFixture(),f=fixture()
