@@ -12,7 +12,9 @@ const { outputFiles: [built] } = await build({
 })
 const token = '1'.repeat(64), other = '2'.repeat(64), key = 'synthetic-provider-secret'
 const pngFixture = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XQAAAAASUVORK5CYII='
-let calls = 0, memoryCalls = 0
+const imageUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/generated.png?signature=fixture'
+const redirectUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/redirect.png?signature=fixture'
+let calls = 0, memoryCalls = 0, downloads = 0
 const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
   modules: true, script: built.text, compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
   d1Databases: { ACCOUNTS_DB: 'hosted-test' },
@@ -21,6 +23,15 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     ARK_AGENT_PLAN_KEY: key, ARK_ENABLE_SEEDREAM: 'true', ARK_ENABLE_OPENVIKING: 'true',
     OPENVIKING_USER_KEYS: JSON.stringify({alice:'synthetic-viking-user-key'}) },
   outboundService: async request => {
+    if (request.url === imageUrl) {
+      downloads++
+      assert.equal(request.headers.get('authorization'), null)
+      return new Response(Buffer.from(pngFixture, 'base64'), { headers: { 'content-type': 'image/png' } })
+    }
+    if (request.url === redirectUrl) {
+      downloads++
+      return Response.redirect('https://untrusted.invalid/generated.png')
+    }
     if(request.url.startsWith('https://api.vikingdb.cn-beijing.volces.com/openviking/')) {
       memoryCalls++
       assert.equal(request.headers.get('authorization'),'Bearer synthetic-viking-user-key')
@@ -40,9 +51,11 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     if (request.url === ARK_PLAN_BASE + '/images/generations') {
       if (input.model === 'doubao-seedream-5-0-pro') assert.equal(input.image.length, 2)
       else assert.equal(input.model, 'doubao-seedream-5.0-flash')
-      assert.equal(input.response_format, 'b64_json')
+      assert.equal(input.response_format, 'url')
       assert.equal(Object.hasOwn(input, 'sequential_image_generation'), false)
-      return Response.json({ data: [{ b64_json: pngFixture }] })
+      const url = input.prompt === '不可信下载地址' ? 'https://untrusted.invalid/generated.png'
+        : input.prompt === '下载地址重定向' ? redirectUrl : imageUrl
+      return Response.json({ data: [{ url }] })
     }
     assert.equal(request.url, ARK_PLAN_BASE + '/chat/completions')
     assert.equal(input.stream_options.include_usage, true)
@@ -147,6 +160,7 @@ try {
     assert.equal(period.used, 146.5015)
     assert.equal(period.reserved, 0)
   }
+  assert.equal(downloads, 2)
   const cut = await send('chat/completions',token,chat('cut'),'four')
   const broken = await cut.text()
   assert.match(broken, /HOSTED_AI_STREAM_INTERRUPTED/)
@@ -247,6 +261,21 @@ try {
   }
   assert.equal(calls,outboundBefore+1)
   assert.equal(capped.week.limit,300)
+  await db.prepare('UPDATE ai_quota_user_settings SET five_hour_limit_units=?,weekly_limit_units=?,version=version+1 WHERE user_id=?')
+    .bind(1_000_000_000, 1_000_000_000, 'alice').run()
+  const beforeDelivery = (await (await send('quota',token)).json()).quota.fiveHour
+  const beforeDownloads = downloads
+  for (const [requestId, prompt] of [['image-other-origin', '不可信下载地址'], ['image-redirect', '下载地址重定向']]) {
+    const input = { model: 'doubao-seedream-5.0-flash', prompt, size: 'auto' }
+    const response = await send('images', token, input, requestId)
+    assert.equal(response.status, 502)
+    assert.equal((await response.json()).error.code, 'HOSTED_AI_IMAGE_DELIVERY')
+    assert.equal((await send('images', token, input, requestId)).status, 409)
+  }
+  assert.equal(downloads - beforeDownloads, 1)
+  const afterDelivery = (await (await send('quota',token)).json()).quota.fiveHour
+  assert.equal(afterDelivery.used, beforeDelivery.used)
+  assert.equal(afterDelivery.reserved - beforeDelivery.reserved, 80)
   await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
   assert.equal((await admin.user('alice')).fiveHour.remaining,0)
   await assert.rejects(admin.reserve({userId:'alice',requestId:'month-hard-limit',amountUnits:1}),{code:'AI_QUOTA_MONTH'})
