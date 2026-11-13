@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-09",
+  "branch": "codex/integration/20261113-09",
+  "baseMainCommit": "519ab6d577e5235198a9d1d47b5511bac027b7bf",
+  "expectedMainCommit": "519ab6d577e5235198a9d1d47b5511bac027b7bf",
+  "createdAt": "2026-11-13T04:47:18.262Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复工作台倒计时与同源指标交付",
+        "branch": "codex/feat/workbench-real-qa-20261113",
+        "baseCommit": "519ab6d577e5235198a9d1d47b5511bac027b7bf",
+        "tipCommit": "b0c7d7835aba6237a97dd29b068152d1fff37f1d",
+        "commits": [
+          {
+            "commit": "b0c7d7835aba6237a97dd29b068152d1fff37f1d",
+            "parents": [
+              "519ab6d577e5235198a9d1d47b5511bac027b7bf"
+            ],
+            "subject": "修复工作台倒计时与同源指标交付"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-fund-comparison.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-library.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-native-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-pomodoro.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-word-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-shared-state-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-acquisition-fallback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-content-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-fund-comparison.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-library.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/component-shared-state-browser.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-library.test.js",
+              "test/workbench-prototype-evidence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "7 个聚焦测试文件，114 项通过，另复核基金范围守卫",
+            "verifiedCommit": "b0c7d7835aba6237a97dd29b068152d1fff37f1d",
+            "completedAt": "2026-11-13T04:47:10.379Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "交接阶段通过浏览器内嵌组件的交互验收，打包客户端将在合并后复测。"
+        },
+        "acceptanceCriteria": [
+          "番茄钟倒计时、暂停继续、重开恢复和轮次累计",
+          "基金样本概览与原生收益风险图使用同一批净值及来源",
+          "离线财务结果遵循用户提供的完整记录、单位和计算关系"
+        ],
+        "risks": [
+          "24 个真实模型用例将在新本地客户端构建后按原评分复测"
+        ],
+        "generatedAt": "2026-11-13T04:47:10.378Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-content-delivery.test.js",
+        "test/workbench-acquisition-fallback.test.js",
+        "test/workbench-fund-comparison.test.js",
+        "test/component-shared-state-browser.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-library.test.js",
+        "test/workbench-prototype-evidence.test.js"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
