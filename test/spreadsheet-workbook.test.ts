@@ -55,6 +55,16 @@ describe('spreadsheet workbook protocol', () => {
     expect(()=>applyOperations(book,[{...chart,op:'updateChart',series:[0]}])).toThrow(/分类和不同/)
     expect(()=>applyOperations(book,[{...chart,op:'updateChart',kind:'scatter',headers:false}])).toThrow(/横轴必须是数值/)
   })
+  it('handles chart blanks explicitly while preserving source cells',()=>{
+    const original=applyOperations(blankWorkbook('book'),[{op:'write',sheetId:'sheet-1',range:'A1:B3',cells:[['公司','倍数'],['甲',null],['乙',7]]}])
+    const chart={op:'addChart',chartId:'multiple',sheetId:'sheet-1',range:'A1:B3',title:'估值',kind:'bar'}
+    expect(()=>applyOperations(original,[chart])).toThrow(/空值/)
+    for(const emptyValues of ['skip','zero']){
+      const book=applyOperations(original,[{...chart,emptyValues,labels:true}])
+      expect(book.charts?.[0]).toMatchObject({emptyValues,labels:true})
+      expect(book.sheets).toEqual(original.sheets)
+    }
+  })
   it('rejects a whole batch if a cell targets a missing sheet or contains an external formula', () => {
     const work = blankWorkbook('work','工作簿','income')
     const write = {op:'write',sheetId:'income',range:'A1',cells:[[{value:120}]]} as const

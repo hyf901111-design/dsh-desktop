@@ -25,7 +25,11 @@ export function spreadsheetChartData(engine:SheetEngine|undefined,chart:Workbook
   return {raw:raw[y]?.[x],label:display[y]?.[x]}
  })
  const headers=chart.headers?projected.rows[0]:undefined
- const values=projected.rows.slice(chart.headers?1:0).filter(row=>row.some(value=>!isEmpty(value.raw)))
+ const values=projected.rows.slice(chart.headers?1:0).flatMap(row=>{
+  if(row.every(cell=>isEmpty(cell.raw))||chart.emptyValues==='skip'&&row.some(cell=>isEmpty(cell.raw)))return []
+  if(chart.emptyValues!=='zero')return [row]
+  return [row.map((cell,index)=>index>0&&isEmpty(cell.raw)?{raw:0,label:'0'}:cell)]
+ })
  if(!values.length||values.some(row=>isEmpty(row[0]?.raw)||row.slice(1).some(cell=>!isNumber(cell.raw))))return
  if(chart.kind==='scatter'&&values.some(row=>!isNumber(row[0]?.raw)))return
  if(projected.composition&&(values.some(row=>Number(row[1]?.raw)<0)||!values.some(row=>Number(row[1]?.raw)>0)))return
@@ -51,5 +55,18 @@ export function spreadsheetChartSvg(chart:WorkbookChart,data:ChartData,width=540
  }
  const elements=geometry.elements as ChartGeometryNode[]
  const markup=elements.filter(node=>typeof node==='string'||chart.gridlines!==false||node.attributes.class!=='grid').map(svgNode).join('')
- return '<svg data-ui-preserve role="img" aria-label="'+escapeSheetText(chart.title)+'" viewBox="0 0 '+geometry.width+' '+geometry.height+'">'+markup+'</svg>'
+ const pointLabels=chart.labels?elements.flatMap(node=>{
+  if(typeof node==='string'||node.attributes['data-series']===undefined)return []
+  const series=Number(node.attributes['data-series'])
+  return node.children.flatMap(child=>{
+   if(typeof child==='string'||child.attributes['data-point']===undefined||!['rect','circle'].includes(child.tag))return []
+   const a=child.attributes,index=Number(a['data-point']),value=data.displayedValues[index]?.[series]
+   if(!value)return []
+   const horizontal=chart.kind==='horizontal'
+   const x=child.tag==='circle'?Number(a.cx):Number(a.x)+Number(a.width)*(horizontal?1:.5)
+   const y=child.tag==='circle'?Number(a.cy):Number(a.y)+Number(a.height)*(horizontal?.5:0)
+   return ['<text class="ew-sheet-chart-label" x="'+(x+(horizontal?3:0))+'" y="'+(y+(horizontal?4:-5))+'" text-anchor="'+(horizontal?'start':'middle')+'">'+escapeSheetText(value)+'</text>']
+  })
+ }).join(''):''
+ return '<svg data-ui-preserve role="img" aria-label="'+escapeSheetText(chart.title)+'" viewBox="0 0 '+geometry.width+' '+geometry.height+'">'+markup+pointLabels+'</svg>'
 }

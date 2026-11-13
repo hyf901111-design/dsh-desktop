@@ -669,7 +669,8 @@ class SpreadsheetView{
    '<label>系列方向<select data-chart-field="direction" aria-label="系列方向">'+option('columns','按列',value.seriesBy!=='rows')+option('rows','按行',value.seriesBy==='rows')+'</select></label>'+
    checkbox('headers','首个数据行或列是表头',value.headers)+
    '<label>分类<select data-chart-field="category" aria-label="图表分类"></select></label><fieldset data-chart-series><legend>数值系列</legend><div></div></fieldset>'+
-   '<h3>图表样式</h3>'+checkbox('legend','显示图例',value.legend!==false)+checkbox('gridlines','显示网格线',value.gridlines!==false)+
+   '<label>空值处理<select data-chart-field="empty" aria-label="空值处理">'+option('strict','提示缺失值',!value.emptyValues)+option('skip','跳过不完整数据点',value.emptyValues==='skip')+option('zero','空数值按 0 处理',value.emptyValues==='zero')+'</select></label>'+
+   '<h3>图表样式</h3>'+checkbox('legend','显示图例',value.legend!==false)+checkbox('gridlines','显示网格线',value.gridlines!==false)+checkbox('labels','显示数值标签',value.labels===true)+
    '</div></div><div class="ew-sheet-chart-pick" hidden><span>在工作表中框选数据区域</span>'+button('chart-pick-cancel','取消',{className:'outlined'})+button('chart-pick-apply','使用选区',{className:'primary'})+'</div>',existing?'update-chart':'create-chart',existing?'保存':'创建')
   this.modal.dataset.chartEditor='true'
   this.refreshChartFields(value.category,value.series)
@@ -709,6 +710,7 @@ class SpreadsheetView{
   select.innerHTML=fields.map((name,i)=>'<option data-ui-preserve value="'+i+'"'+(i===index?' selected':'')+'>'+text(name)+'</option>').join('')
   const choices=fields.map((name,i)=>({name,i})).filter(field=>field.i!==index)
   const single=['pie','donut'].includes(this.chartField('kind').value)
+  this.chartField('labels').disabled=single||this.chartField('kind').value==='scatter'
   const chosen=choices.filter(field=>!series||series.includes(field.i)).slice(0,single?1:6)
   const enabled=(chosen.length||series?.length===0?chosen:choices.slice(0,1)).map(field=>field.i)
   seriesList.innerHTML=choices.map(({name,i})=>'<label><input type="'+(single?'radio':'checkbox')+'" name="ew-sheet-chart-series" value="'+i+'"'+(enabled.includes(i)?' checked':'')+'><span data-ui-preserve>'+text(name)+'</span></label>').join('')
@@ -722,7 +724,8 @@ class SpreadsheetView{
    sheetId:this.chartField('sheet').value,range:this.chartField('range').value.trim(),kind:this.chartField('kind').value,
    seriesBy:this.chartField('direction').value,headers:checked('headers'),category:Number(this.chartField('category').value),
    series:Array.from(this.modal.querySelectorAll<HTMLInputElement>('[data-chart-series] input:checked'),input=>Number(input.value)),
-   legend:checked('legend'),gridlines:checked('gridlines')}
+   legend:checked('legend'),gridlines:checked('gridlines'),labels:!this.chartField('labels').disabled&&checked('labels'),
+   emptyValues:this.chartField('empty').value==='strict'?undefined:this.chartField('empty').value}
   return validatedChart(book,input)
  }
  private previewChart(){
