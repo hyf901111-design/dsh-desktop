@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-13",
+  "branch": "codex/integration/20261113-13",
+  "baseMainCommit": "0641b52186d99e4a0ba15f97a607030acf96938e",
+  "expectedMainCommit": "0641b52186d99e4a0ba15f97a607030acf96938e",
+  "createdAt": "2026-11-13T10:26:17.659Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "切换账号后的订阅模型目录修复",
+        "branch": "codex/feat/hosted-model-account-access-20261113",
+        "baseCommit": "0641b52186d99e4a0ba15f97a607030acf96938e",
+        "tipCommit": "44ca052fe356aca571a259f540b5ca4c2c1ba54d",
+        "commits": [
+          {
+            "commit": "44ca052fe356aca571a259f540b5ca4c2c1ba54d",
+            "parents": [
+              "0641b52186d99e4a0ba15f97a607030acf96938e"
+            ],
+            "subject": "修复切换账号后订阅模型缺失"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-hosted-ai.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/start-native-acceptance-services.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-hosted-ai-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/hosted-ai/worker.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "真实 workerd 与 D1 复现试运行名单限制，并验证两账号目录、调用与扣费隔离及暂停拦截",
+            "verifiedCommit": "44ca052fe356aca571a259f540b5ca4c2c1ba54d",
+            "completedAt": "2026-11-13T10:18:45.208Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/hosted-ark-runtime.test.js",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "23 项账号桥接与托管模型运行时检查通过",
+            "verifiedCommit": "44ca052fe356aca571a259f540b5ca4c2c1ba54d",
+            "completedAt": "2026-11-13T10:18:45.208Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/start-native-acceptance-services.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "本地客户端验收服务语法通过",
+            "verifiedCommit": "44ca052fe356aca571a259f540b5ca4c2c1ba54d",
+            "completedAt": "2026-11-13T10:18:45.208Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "公开 1.5.5 签名客户端连接生产网关。hyf90 和 hyf901111 切换登录后各显示 11 个托管模型，两次退出均清空托管模型。"
+        },
+        "acceptanceCriteria": [
+          "有额度资格的登录账号显示并可调用企业套餐模型",
+          "游客和停用账号不能调用，额度暂停继续生效",
+          "用量只计入发起请求的账号"
+        ],
+        "risks": [
+          "服务已部署；后续部署应包含本提交以保留修复。"
+        ],
+        "generatedAt": "2026-11-13T10:18:45.208Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/test-hosted-ai-worker.mjs"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/hosted-ark-runtime.test.js",
+        "test/account-service.test.ts"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "node",
+        "--check",
+        "scripts/start-native-acceptance-services.mjs"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
