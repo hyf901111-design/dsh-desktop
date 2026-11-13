@@ -9,27 +9,55 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "客户端表格模式、右侧 AI 编辑与交互修复",
+        "featureName": "表格文字对比度与右侧分析写入",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
-        "tipCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
+        "baseCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
+        "tipCommit": "6190dbf135b476206de34a42a114a69a2ae2ec67",
         "commits": [
           {
-            "commit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
+            "commit": "6190dbf135b476206de34a42a114a69a2ae2ec67",
             "parents": [
-              "53eaba0c21929cdd8435dc1268bc90d032d8f445"
+              "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7"
             ],
-            "subject": "修复研究顶栏菜单未跟随客户端主题"
+            "subject": "修复表格编辑后文字对比度并提高分析任务写入容错"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-spreadsheet-live.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/engine.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/spreadsheet/workbook.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/spreadsheet-workbook.test.ts"
           }
         ],
         "checks": [
@@ -41,57 +69,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
-            "completedAt": "2026-11-13T14:02:33.993Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-preview-header.test.ts",
-              "test/notes-header-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "32 项研究和笔记顶栏聚焦测试通过",
-            "verifiedCommit": "056ec49d9d56b4a20ba3de944e5ab1db50ce6ca7",
-            "completedAt": "2026-11-13T14:02:33.993Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实窗口中研究菜单的背景、文本、禁用项、缩放控件边框及悬停效果跟随深浅主题。"
-        },
-        "acceptanceCriteria": [
-          "点选单元格可直接输入中文，确认后写入表格。",
-          "表格快捷键可撤销和重做，侧栏输入保有自身键盘操作。",
-          "去重、图表、查找和重命名弹窗的反馈留在弹窗内，工作区不变暗。",
-          "行高和列宽拖动时实时更新，完成拖动后一次撤销恢复。",
-          "英文模式下表格工具栏、菜单和弹窗随客户端语言切换。",
-          "表格右侧使用与研究及笔记一致的底部面板入口。",
-          "研究顶栏菜单在两种主题中与客户端菜单样式一致。"
-        ],
-        "risks": [
-          "表格分支与最新 main 共同修改前端运行时补丁链，联测前需保留两侧补丁。"
-        ],
-        "generatedAt": "2026-11-13T14:02:33.993Z"
-      },
-      "merged": {
-        "mergeCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
-        "verificationCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
-            "completedAt": "2026-11-13T14:04:14.771Z",
+            "verifiedCommit": "6190dbf135b476206de34a42a114a69a2ae2ec67",
+            "completedAt": "2026-11-13T14:42:49.006Z",
             "timeoutMs": 120000
           },
           {
@@ -100,14 +79,15 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-service.test.ts",
               "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
-            "completedAt": "2026-11-13T14:04:14.771Z",
+            "summary": "221 项表格数据、工具协议和路由聚焦测试通过",
+            "verifiedCommit": "6190dbf135b476206de34a42a114a69a2ae2ec67",
+            "completedAt": "2026-11-13T14:42:49.006Z",
             "timeoutMs": 120000
           },
           {
@@ -116,13 +96,25 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
-            "completedAt": "2026-11-13T14:04:14.771Z",
+            "summary": "Electron 表格交互、拉高行编辑与深浅主题回归通过",
+            "verifiedCommit": "6190dbf135b476206de34a42a114a69a2ae2ec67",
+            "completedAt": "2026-11-13T14:42:49.006Z",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-11-13T14:04:14.771Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离 Electron 回归确认拉高行内文字保存后在深浅主题均可读。真实打包客户端已观察搜狗组字及候选框。"
+        },
+        "acceptanceCriteria": [
+          "提交编辑后网格中的文字在两种主题中可见",
+          "模型提交含标题短行和空行的工作表时保留未指定单元格",
+          "空参数读取默认返回工作簿元数据"
+        ],
+        "risks": [
+          "切走会话会撤销可见客户端写入授权，AI 工作簿场景须逐个进行"
+        ],
+        "generatedAt": "2026-11-13T14:42:49.006Z"
       }
     }
   ],
