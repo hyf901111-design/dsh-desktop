@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-12",
+  "branch": "codex/integration/20261113-12",
+  "baseMainCommit": "e15d264e495df01cc49d9cc19455296eca88d977",
+  "expectedMainCommit": "e15d264e495df01cc49d9cc19455296eca88d977",
+  "createdAt": "2026-11-13T05:20:01.242Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "兼容原型收益字段并核对导图机构覆盖",
+        "branch": "codex/feat/workbench-prototype-fields-20261113",
+        "baseCommit": "e15d264e495df01cc49d9cc19455296eca88d977",
+        "tipCommit": "e6bc6ed824d72e31a41771f879758564de9da3f3",
+        "commits": [
+          {
+            "commit": "e6bc6ed824d72e31a41771f879758564de9da3f3",
+            "parents": [
+              "e15d264e495df01cc49d9cc19455296eca88d977"
+            ],
+            "subject": "兼容原型收益字段并核对导图机构覆盖"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-word-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-content-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "-t",
+              "uses original monetary units|recovers the two requested organizations"
+            ],
+            "outcome": "passed",
+            "summary": "两项定向回归和真实原型回放通过",
+            "verifiedCommit": "e6bc6ed824d72e31a41771f879758564de9da3f3",
+            "completedAt": "2026-11-13T05:19:59.594Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "构建后在真实客户端对同一用例复核。"
+        },
+        "acceptanceCriteria": [
+          "原型周收益别名解析保留源值及空值",
+          "组织导图以实际引用章节核验机构数"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-13T05:19:59.594Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-content-delivery.test.js",
+        "-t",
+        "uses original monetary units|recovers the two requested organizations"
+      ],
+      "timeoutMs": 90000
+    }
+  ],
+  "mainSynchronizations": []
+}
