@@ -40,10 +40,19 @@ it('ships patched runtime into the independent plugin profile and verifies parit
    await writeFile(path.join(target,'package.json'),JSON.stringify({version:piVersion}))
    await writeFile(path.join(target,piEntry),'unpatched provider')
   }
+  const adapterName='@deepseek-ai/dsh-llm-pi-ai',adapterEntry='lib/index.js'
+  const adapterVersion=JSON.parse(await readFile(`node_modules/${adapterName}/package.json`,'utf8')).version
+  const adapterTargets=[path.join(root,'node_modules',adapterName),path.join(root,'node_modules/.pnpm',`@deepseek-ai+dsh-llm-pi-ai@${adapterVersion}_peer`,'node_modules',adapterName)]
+  for(const target of adapterTargets){
+   await mkdir(path.join(target,'lib'),{recursive:true})
+   await writeFile(path.join(target,'package.json'),JSON.stringify({version:adapterVersion}))
+   await writeFile(path.join(target,adapterEntry),'unpatched GLM model adapter')
+  }
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow()
   const digest=await syncProfileRuntimePatches(process.cwd(),root)
   const expectedProvider=patchOpenAIResponsesToolOptionals(await readFile(`node_modules/${piName}/${piEntry}`,'utf8'))
   for(const target of piTargets)expect(await readFile(path.join(target,piEntry),'utf8')).toBe(expectedProvider)
+  for(const target of adapterTargets)expect(await readFile(path.join(target,adapterEntry),'utf8')).toContain('SHERLOCK_GLM_53_REASONING_V2')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-subagent/lib/index.js'),'utf8')).toContain('CANVAS_TASK_OWNED_SETTLEMENT')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js'),'utf8')).toContain('ework:note-feedback-target:v1')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-skill/lib/index.js'),'utf8')).toContain('registerCandidatePolicy(policy)')
@@ -70,6 +79,9 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   await writeFile(path.join(nestedPlan,'package.json'),JSON.stringify({version:'99'}))
   await expect(syncProfileRuntimePatches(process.cwd(),root)).rejects.toThrow(/version/)
   await writeFile(path.join(nestedPlan,'package.json'),JSON.stringify({version:'0.1.0-rc.7'}))
+  await writeFile(path.join(adapterTargets[1],adapterEntry),'GLM capability patch was dropped')
+  await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow(/parity.*dsh-llm-pi-ai/)
+  await syncProfileRuntimePatches(process.cwd(),root)
   await writeFile(path.join(piTargets[1],piEntry),'provider patch was dropped')
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow(/parity/)
   await syncProfileRuntimePatches(process.cwd(),root)
