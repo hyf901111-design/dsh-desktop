@@ -1,4 +1,4 @@
-import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookChartKinds,workbookChartPalettes,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout} from '../../shared/spreadsheet/workbook'
+import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookChartKinds,workbookChartPalettes,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout,type WorkbookComponent,type WorkbookComponentPlacement} from '../../shared/spreadsheet/workbook'
 import {chartKindLabels,escapeSheetText as text,spreadsheetChartData,spreadsheetChartSvg} from './chart'
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetContextCommand,SheetEngine} from './engine'
@@ -10,7 +10,10 @@ import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
 type Selection={sheetId:string;range:string}
-type LibraryItem={id:string;title:string;group:string}
+type LibraryItem={id:string;title:string;group:string;icon:string}
+type ComponentCard={instance:string;element:HTMLElement;refresh:number}
+type ComponentJob={card:ComponentCard;node:Record<string,unknown>;stage?:string;detail?:string}
+type ComponentGesture={card:ComponentCard;id:string;pointerId:number;startX:number;startY:number;resize:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
 type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;subscribe(event:'changed'|'flush'|'identity'|'component-progress',callback:(value:any)=>void):()=>void}
 type Menu={key:string;label:string;anchor:HTMLElement;parents:{key:string;label:string;value:string}[]}
 type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean;shortcut?:string}
@@ -65,11 +68,12 @@ class SpreadsheetView{
  private chartGesture?:ChartGesture
  private chartLayoutPending?:{chartId:string;layout:WorkbookChartLayout}
  private activeComponent?:string
- private componentInstance?:string
+ private readonly componentCards=new Map<string,ComponentCard>()
+ private componentJob?:ComponentJob
+ private componentGesture?:ComponentGesture
  private componentTarget?:Selection
  private componentRequest?:string
  private libraryItems:LibraryItem[]=[]
- private libraryChoice?:string
  private componentPicking=false
  private readonly releaseComponentProgress:()=>void
  private headerActions?:HTMLElement
@@ -82,7 +86,7 @@ class SpreadsheetView{
  constructor(private host:HTMLElement,private sessionId:string,private bridge:Bridge){
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-components" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-component-layer"></div><div class="ew-sheet-components" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
   this.root.addEventListener('click',this.click)
   this.root.addEventListener('pointerover',this.hoverMenu)
   this.root.addEventListener('pointerout',event=>{
@@ -117,12 +121,23 @@ class SpreadsheetView{
   this.charts.addEventListener('keydown',this.chartLayoutKey)
   this.root.addEventListener('keydown',this.key)
   this.root.addEventListener('focusout',this.blur)
+  this.componentLayer.addEventListener('pointerdown',this.startComponentGesture)
+  this.componentLayer.addEventListener('pointermove',this.moveComponentGesture)
+  this.componentLayer.addEventListener('pointerup',event=>this.finishComponentGesture(event,true))
+  this.componentLayer.addEventListener('lostpointercapture',event=>this.finishComponentGesture(event,false))
   this.doc.addEventListener('sherlock:notes-component-action',this.componentAction)
   this.doc.addEventListener('sherlock:spreadsheet-component-reload',this.componentReload)
   this.releaseComponentProgress=this.bridge.subscribe('component-progress',value=>{
    if(!this.componentRequest||!this.belongs(value)||value.requestId!==this.componentRequest)return
+   const job=this.componentJob
+   if(!job)return
+   const task=value.componentTask
    const stages:Record<string,string>={model:'正在连接模型…',thinking:'正在分析选区…',writing:'正在生成组件…',validating:'正在验证组件…'}
-   this.dialogFeedback(stages[value.stage]??'正在生成组件…')
+   job.stage=task?undefined:stages[value.stage]
+   job.detail=task?.detail
+   if(task)Object.assign(job.node,{generationTaskId:task.generationTaskId,generationChildSessionId:task.childSessionId,
+    generationStartedAt:task.generationStartedAt??job.node.generationStartedAt,generationEvents:task.generationEvents,generationPartialText:task.generationPartialText})
+   this.publishGeneration()
   })
   this.doc.addEventListener('keydown',this.gridPaste,true)
   this.doc.addEventListener('keydown',this.gridHistory,true)
@@ -148,6 +163,7 @@ class SpreadsheetView{
  private get pop(){return this.root.querySelector<HTMLElement>('.ew-sheet-menu')!}
  private get modal(){return this.root.querySelector<HTMLElement>('.ew-sheet-dialog')!}
  private get charts(){return this.root.querySelector<HTMLElement>('.ew-sheet-charts')!}
+ private get componentLayer(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-layer')!}
  private get components(){return this.root.querySelector<HTMLElement>('.ew-sheet-components')!}
  private current(){return this.engine?.model.getActiveSheet()}
  private selected(){return this.current()?.getActiveRange()??this.current()?.getRange('A1')}
@@ -260,7 +276,7 @@ class SpreadsheetView{
    className:tool.action==='menu'?'dropdown':'',withLabel:tool.toolbarCopy!==undefined
   })).join('')).join(toolbarDivider)
  }
- private resize=()=>{this.fitRibbon();this.place();this.positionChart();this.renderChartObjects()}
+ private resize=()=>{this.fitRibbon();this.place();this.positionChart();this.renderChartObjects();this.positionComponents()}
  private fitRibbon=()=>{
   const tools=this.chrome.querySelector<HTMLElement>('.ew-sheet-ribbon-tools')
   const more=this.chrome.querySelector<HTMLButtonElement>('[data-value=overflow]')
@@ -385,7 +401,7 @@ class SpreadsheetView{
     })
    }
    if(added&&previous?.sheetId!==added.sheetId&&book.getSheetBySheetId(added.sheetId))book.setActiveSheet(added.sheetId)
-   this.paint();this.readSelection();this.renderChart()
+   this.paint();this.readSelection();this.renderChart();this.renderComponent()
   }catch(error){this.say('表格引擎无法启动：'+errorMessage(error),true)}
  }
  private readSelection(){
@@ -514,7 +530,7 @@ class SpreadsheetView{
   if(this.busy)return
   this.busy=true;this.say('')
   try{
-   await this.flush(true)
+   await this.flush(true,action==='component-generate')
    if(this.disposed||stillOpen&&!stillOpen())return
    const row=await this.request(action,{revision:this.record.revision,...fields})
    if(this.disposed||!row)return
@@ -609,6 +625,14 @@ class SpreadsheetView{
     {label:'删除图表',action:'confirm-remove-chart',value:this.activeChart,icon:'close',divider:true,disabled:!this.editable}
    ]
    case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart'}))
+   case 'component-actions':{
+    const id=this.menu?.anchor.closest<HTMLElement>('[data-research-node-id]')?.dataset.researchNodeId
+    return [
+     {label:'定位选区',action:'component-source',value:id,icon:'search'},
+     {label:'导出为图片',action:'component-export',value:id,icon:'download'},
+     {label:'移除组件',action:'component-confirm-remove',value:id,icon:'close',divider:true,disabled:!this.editable}
+    ]
+   }
    case 'components':return (this.record.workbook?.components??[]).map(component=>({label:component.node.title,action:'component-show',value:component.componentId,icon:'grid'}))
    case 'overflow':return Array.from(this.chrome.querySelectorAll<HTMLButtonElement>('.ew-sheet-ribbon-tools button[hidden]')).map(b=>({
     label:b.getAttribute('aria-label')||b.textContent||'',detail:b.dataset.glyph?undefined:b.dataset.action==='menu'?b.textContent||undefined:undefined,
@@ -763,7 +787,7 @@ class SpreadsheetView{
   this.resize()
  }
  private syncInspector(){this.root.toggleAttribute('data-sheet-inspector',!!this.modal.dataset.docked||!this.components.hidden)}
- private closeDialog(){this.chartEditor=undefined;this.componentPicking=false;this.componentTarget=undefined;this.libraryChoice=undefined;delete this.modal.dataset.chartEditor;delete this.modal.dataset.rangePicking;delete this.modal.dataset.docked;delete this.modal.dataset.busy;this.root.querySelector<HTMLElement>('.ew-sheet-chart-preview')!.hidden=true;this.modal.hidden=true;this.syncInspector();this.modal.replaceChildren();this.resize()}
+ private closeDialog(){this.chartEditor=undefined;this.componentPicking=false;this.componentTarget=undefined;this.clearComponentJob();delete this.modal.dataset.chartEditor;delete this.modal.dataset.rangePicking;delete this.modal.dataset.docked;this.root.querySelector<HTMLElement>('.ew-sheet-chart-preview')!.hidden=true;this.modal.hidden=true;this.syncInspector();this.modal.replaceChildren();this.resize()}
  private dialogFeedback(copy:string,error=false){
   const feedback=this.modal.querySelector<HTMLElement>('.ew-sheet-dialog-feedback')
   if(feedback){feedback.dataset.error=String(error);feedback.textContent=copy}
@@ -773,7 +797,7 @@ class SpreadsheetView{
   if(!selection||!sheet||!book||!this.editable)return
   this.cancelComponentRequest()
   this.activeComponent=undefined;this.renderComponent()
-  this.closeDialog()
+  this.cancelComponentRequest();this.closeDialog()
   const single=selection.getLastRow()===selection.getRow()&&selection.getLastColumn()===selection.getColumn()
   const range=single&&!isNullCell(sheet.getSheet().getCellMatrix().getValue(selection.getRow(),selection.getColumn()))?selection.getDataRegion():selection
   const value=existing??{
@@ -1022,10 +1046,10 @@ class SpreadsheetView{
   const target=this.currentSelection()
   if(!target||!this.editable)return
   this.activeComponent=undefined;this.renderComponent()
-  this.closeDialog()
+  this.cancelComponentRequest();this.closeDialog()
   this.componentTarget=target
-  this.dialog('组件库','<div class="ew-sheet-insert-content"><input data-field="component-search" type="search" aria-label="搜索组件" placeholder="搜索组件"><div class="ew-sheet-component-library" role="list"><p role="status">正在读取组件…</p></div></div>', 'component-add','插入组件','library')
-  this.updateComponentSubmit()
+  this.dialog('组件库','<div class="ew-sheet-insert-content"><input data-field="component-search" type="search" aria-label="搜索组件" placeholder="搜索组件"><div class="ew-sheet-component-library" role="list"><p role="status">正在读取组件…</p></div></div>',null,undefined,'library')
+  this.libraryItems=[]
   const dialog=this.modal.firstElementChild
   try{
    const items=await this.request('component-library') as LibraryItem[]
@@ -1044,30 +1068,25 @@ class SpreadsheetView{
    const group=groups.get(item.group)??[]
    group.push(item);groups.set(item.group,group)
   }
-  const presentation:Record<string,[string,string]>={
-   'builtin-watchlist':['grid','跟踪自选证券的报价和涨跌'],
-   'builtin-quote':['chart','查看单只证券的报价和走势'],
-   'builtin-indices':['chart','跟踪多个市场指数'],
-   'builtin-news':['search','按关键词筛选市场资讯'],
-   'builtin-announcements':['grid','查看证券公告和披露']
+  const presentation:Record<string,string>={
+   'builtin-watchlist':'跟踪自选证券的报价和涨跌',
+   'builtin-quote':'查看单只证券的报价和走势',
+   'builtin-indices':'跟踪多个市场指数',
+   'builtin-news':'按关键词筛选市场资讯',
+   'builtin-announcements':'查看证券公告和披露'
   }
   list.innerHTML=[...groups].map(([group,items])=>'<h3>'+text(group)+'</h3>'+items.map(item=>{
-   const [glyph,detail]=presentation[item.id]??['grid','从组件库插入已保存的组件']
-   return '<div role="listitem"><button type="button" class="ew-sheet-library-card" data-action="component-select" data-value="'+text(item.id)+'" aria-pressed="'+String(item.id===this.libraryChoice)+'">'+icon(glyph,21)+
-    '<span><strong'+(item.id.startsWith('builtin-')?'':' data-ui-preserve')+'>'+text(item.title)+'</strong><small>'+detail+'</small></span>'+icon('check',16)+'</button></div>'
+   const detail=presentation[item.id]??'从组件库插入已保存的组件'
+   return '<div role="listitem"><button type="button" class="ew-sheet-library-card" data-action="component-add" data-value="'+text(item.id)+'"'+(this.busy?' disabled':'')+'>'+
+    '<span aria-hidden="true" class="ew-financial-icon" data-financial-icon="'+text(item.icon)+'"></span>'+
+    '<span><strong'+(item.id.startsWith('builtin-')?'':' data-ui-preserve')+'>'+text(item.title)+'</strong><small>'+detail+'</small></span>'+icon('plus',16)+'</button></div>'
   }).join('')).join('')||'<p>没有匹配的组件</p>'
- }
- private selectLibrary(value:string){
-  if(!this.libraryItems.some(item=>item.id===value))return
-  this.libraryChoice=value
-  this.modal.querySelectorAll<HTMLElement>('[data-action=component-select]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value===value)))
-  this.updateComponentSubmit()
  }
  private openSmart(){
   const target=this.currentSelection()
   if(!target||!this.editable)return
   this.activeComponent=undefined;this.renderComponent()
-  this.closeDialog()
+  this.cancelComponentRequest();this.closeDialog()
   this.componentTarget=target
   this.dialog('智能组件','<div class="ew-sheet-insert-content">'+
    '<div class="ew-sheet-component-source"><div><span>数据区域</span><strong data-ui-preserve data-component-range>'+this.selectionDescription(target)+'</strong></div>'+button('component-pick','更改',{glyph:'grid'})+'</div>'+
@@ -1080,8 +1099,6 @@ class SpreadsheetView{
   this.updateComponentSubmit()
  }
  private updateComponentSubmit(){
-  const add=this.modal.querySelector<HTMLButtonElement>('footer [data-action=component-add]')
-  if(add)add.disabled=!this.libraryChoice||this.busy
   const generate=this.modal.querySelector<HTMLButtonElement>('footer [data-action=component-generate]')
   if(generate)generate.disabled=this.componentPicking||!!this.componentRequest||!this.modal.querySelector<HTMLTextAreaElement>('[data-field=component-prompt]')?.value.trim()
  }
@@ -1117,76 +1134,231 @@ class SpreadsheetView{
   input.focus()
   this.updateComponentSubmit()
  }
+ private createComponentCard(id:string,loading=false):ComponentCard{
+  const instance=crypto.randomUUID(),element=this.doc.createElement('section')
+  element.className='ew-sheet-component-card en-native-component'
+  element.dataset.researchNodeId=id
+  element.setAttribute('data-research-compact-chrome','')
+  element.setAttribute('data-research-artifact-card','')
+  if(loading){element.dataset.sheetComponentGeneration='';element.dataset.researchGenerationState='running'}
+  element.innerHTML='<div id="'+instance+'-title" class="ew-sheet-component-header"></div>'+
+   '<div id="'+instance+'" class="ew-sheet-component-host" data-research-preview-body data-sheet-component="'+text(id)+'" data-sheet-session="'+text(this.sessionId)+'"></div>'+
+   '<footer class="ew-sheet-component-footer odyssey-data-stamp"></footer>'
+  return {instance,element,refresh:0}
+ }
  private renderComponent(){
-  const component=this.record.workbook?.components?.find(item=>item.componentId===this.activeComponent)
-  if(component&&this.componentInstance&&this.components.querySelector('.ew-sheet-component-host')?.getAttribute('data-sheet-component')===component.componentId){this.publishComponent();return}
-  this.releaseComponent()
-  this.components.hidden=!component
+  const ids=new Set<string>(),book=this.record.workbook
+  const sheetId=this.current()?.getSheetId()??book?.sheetOrder[0]
+  let docked=false
+  for(const component of book?.components??[]){
+   const {componentId,placement}=component,floating=placement?.mode==='floating'
+   if(floating?component.sheetId!==sheetId:componentId!==this.activeComponent)continue
+   ids.add(componentId)
+   let card=this.componentCards.get(componentId)
+   if(!card){card=this.createComponentCard(componentId);this.componentCards.set(componentId,card)}
+   const parent=floating?this.componentLayer:this.components
+   if(card.element.parentElement!==parent){
+    const container=parent as HTMLElement&{moveBefore?(node:Node,child:Node|null):void}
+    if(card.element.isConnected&&container.moveBefore)container.moveBefore(card.element,null)
+    else parent.append(card.element)
+   }
+   card.element.toggleAttribute('data-sheet-component-floating',floating)
+   const footer=card.element.querySelector('footer')!
+   const source=this.selectionDescription(component)
+   const at=component.node.generationCompletedAt
+   const time=typeof at==='number'&&Number.isFinite(at)?new Date(at):null
+   const locale=this.doc.documentElement.dataset.odysseyLocale==='en'?'en':'zh-CN'
+   footer.innerHTML='<span data-ui-preserve title="'+source+'">'+source+'</span><div class="ew-source-actions">'+
+    (time&&!Number.isNaN(time.valueOf())?'<time datetime="'+time.toISOString()+'" title="'+text(time.toLocaleString(locale))+'">'+text(time.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'}))+'</time>':'')+
+    button('component-source','',{glyph:'search',label:'定位选区',value:componentId})+'</div>'
+   const grip=card.element.querySelector('[data-component-resize]')
+   if(floating&&this.editable&&!grip)card.element.insertAdjacentHTML('beforeend',
+    '<button type="button" data-component-resize aria-label="调整组件大小" title="调整组件大小">'+icon('resize',14)+'</button>')
+   else if(!floating)grip?.remove()
+   this.publishComponent(card,component)
+   docked||=!floating
+  }
+  for(const [id,card] of this.componentCards)if(!ids.has(id)){this.releaseComponentCard(card);this.componentCards.delete(id)}
+  this.components.hidden=!docked
   this.syncInspector()
-  this.components.replaceChildren()
-  if(!component){this.resize();return}
-  const instance=this.componentInstance=crypto.randomUUID()
-  this.components.innerHTML='<section data-research-node-id="'+text(component.componentId)+'"><header><div id="'+instance+'-title" class="ew-sheet-component-title"><strong data-ui-preserve>'+text(component.node.title)+'</strong></div>'+
-   button('component-close','',{glyph:'close',label:'关闭组件'})+'</header><p data-ui-preserve>'+this.selectionDescription(component)+'</p><div id="'+instance+'" class="ew-sheet-component-host" data-sheet-component="'+text(component.componentId)+'" data-sheet-session="'+text(this.sessionId)+'"></div><footer>'+
-   button('component-source','定位选区',{glyph:'search'})+(this.editable?button('component-remove','移除组件',{value:component.componentId}):'')+'</footer></section>'
-  this.publishComponent()
   this.resize()
  }
- private publishComponent(){
-  const instance=this.componentInstance,component=this.record.workbook?.components?.find(item=>item.componentId===this.activeComponent)
-  if(!instance||!component)return
-  this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{surface:'spreadsheet',instanceId:instance,hostId:instance,headerId:instance+'-title',sessionId:this.sessionId,node:component.node,dark:this.doc.body.hasAttribute('data-ds-dark-theme'),refresh:0,mode:'component',readOnly:!this.editable}}))
+ private publishCard(card:ComponentCard,node:Record<string,unknown>,extras:Record<string,unknown>){
+  this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{surface:'spreadsheet',instanceId:card.instance,hostId:card.instance,
+   headerId:card.instance+'-title',sessionId:this.sessionId,node,dark:this.doc.body.hasAttribute('data-ds-dark-theme'),refresh:card.refresh,readOnly:!this.editable,...extras}}))
  }
- private componentReload=()=>this.publishComponent()
- private releaseComponent(){
-  if(!this.componentInstance)return
-  this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:this.componentInstance,remove:true}}))
-  this.componentInstance=undefined
+ private publishComponent(card:ComponentCard,component:WorkbookComponent){
+  this.publishCard(card,component.node,{mode:'component',floating:component.placement?.mode==='floating'})
+ }
+ private publishGeneration(){
+  const job=this.componentJob
+  if(!job)return
+  this.publishCard(job.card,{...job.node},{mode:'generation',phase:job.stage,detail:job.detail})
+ }
+ private componentReload=()=>{
+  for(const component of this.record.workbook?.components??[]){
+   const card=this.componentCards.get(component.componentId)
+   if(card)this.publishComponent(card,component)
+  }
+  this.publishGeneration()
+ }
+ private releaseComponentCard(card:ComponentCard){
+  this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:card.instance,remove:true}}))
+  card.element.remove()
+ }
+ private clearComponentJob(){
+  if(this.componentJob)this.releaseComponentCard(this.componentJob.card)
+  this.componentJob=undefined
+  delete this.modal.dataset.componentGeneration
  }
  private componentAction=(event:Event)=>{
   const value=(event as CustomEvent).detail
-  if(!this.componentInstance||value?.instanceId!==this.componentInstance||value.sessionId!==this.sessionId)return
+  if(value?.sessionId!==this.sessionId)return
   const ack=(ok:boolean,message?:string)=>this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:value.instanceId,sessionId:this.sessionId,requestId:value.requestId,ok,message}}))
-  if(value.action==='spec'&&this.editable){
-   void this.run('component-configure',{componentId:this.activeComponent,expected:value.expected,spec:value.next},'组件已更新')
-    .then(saved=>ack(!!saved),error=>ack(false,errorMessage(error)))
-  }else if(value.action==='refresh'){ack(true);this.releaseComponent();this.renderComponent()}
-  else if(value.requestId)ack(false,'此组件操作当前不可用。')
+  if(this.componentJob?.card.instance===value.instanceId){
+   if(value.action==='generation-stop'&&this.componentRequest)
+    void this.request('component-stop',{requestId:this.componentRequest}).then(stopped=>ack(!!stopped),error=>ack(false,errorMessage(error)))
+   else if(value.action==='generation-retry'&&!this.componentRequest&&!this.busy){ack(true);void this.addComponent('component-generate','')}
+   else ack(false)
+   return
+  }
+  const component=this.record.workbook?.components?.find(item=>this.componentCards.get(item.componentId)?.instance===value.instanceId)
+  if(!component)return
+  const {componentId}=component,card=this.componentCards.get(componentId)!
+  const perform=(promise:Promise<unknown>)=>void promise.then(result=>ack(result!==false),error=>{ack(false,errorMessage(error));this.say(errorMessage(error),true)})
+  switch(value.action){
+   case 'spec':if(this.editable)perform(this.run('component-configure',{componentId,expected:value.expected,spec:value.next},'组件已更新').then(Boolean));return
+   case 'placement':if(this.editable)perform(this.toggleComponentPlacement(component));return
+   case 'more':{
+    const anchor=value.anchor
+    if(anchor instanceof HTMLElement&&card.element.contains(anchor))this.openMenu('component-actions',anchor)
+    return
+   }
+   case 'close':this.activeComponent=undefined;this.renderComponent();return
+   case 'remove':if(this.editable)this.confirmComponentRemoval(componentId);return
+   case 'ask':perform(this.locateComponent(component,true));return
+   case 'refresh':card.refresh++;this.publishComponent(card,component);ack(true);return
+   default:if(value.requestId)ack(false,'此组件操作当前不可用。')
+  }
+ }
+ private confirmComponentRemoval(componentId:string){
+  this.dialog('移除组件','<p>移除组件后，工作表中的源数据仍会保留。</p>',null)
+  const footer=this.modal.querySelector('footer')!
+  footer.innerHTML=button('close-dialog','取消',{className:'outlined'})+
+   button('component-remove','移除组件',{value:componentId,className:'primary'})
+ }
+ private async locateComponent(component:WorkbookComponent,ask=false){
+  if(this.current()?.getSheetId()!==component.sheetId)await this.handle('sheet',component.sheetId,this.grid)
+  if(this.disposed||this.current()?.getSheetId()!==component.sheetId)return false
+  this.jump(component.range)
+  if(ask){
+   const open=this.doc.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')
+   if(open?.getAttribute('aria-expanded')==='false')open.click()
+   this.win.requestAnimationFrame(()=>{
+    if(this.disposed||this.selection?.sheetId!==component.sheetId||this.selection.range!==component.range)return
+    this.referenceSelection(true)
+    this.doc.querySelector<HTMLTextAreaElement>('[data-research-composer-host] textarea')?.focus({preventScroll:true})
+   })
+  }
+  return true
+ }
+ private async saveComponentPlacement(componentId:string,placement:WorkbookComponentPlacement){
+  try{return Boolean(await this.run('component-placement',{componentId,placement}))}
+  finally{this.positionComponents()}
+ }
+ private async toggleComponentPlacement(component:WorkbookComponent){
+  if(this.busy)return false
+  const wasFloating=component.placement?.mode==='floating'
+  const layout=component.placement?.layout??{x:28,y:24,width:520,height:370}
+  const previous=this.activeComponent
+  this.activeComponent=wasFloating?component.componentId:undefined
+  try{
+   const saved=await this.saveComponentPlacement(component.componentId,{mode:wasFloating?'docked':'floating',layout})
+   if(saved)return true
+  }catch(error){this.activeComponent=previous;this.renderComponent();throw error}
+  this.activeComponent=previous;this.renderComponent();return false
+ }
+ private positionComponents(){
+  for(const component of this.record.workbook?.components??[]){
+   if(component.placement?.mode!=='floating')continue
+   const card=this.componentCards.get(component.componentId)
+   if(!card)continue
+   const layout=this.componentGesture?.id===component.componentId?this.componentGesture.preview:component.placement.layout
+   const {x,y,width,height}=this.boundChartLayout(layout)
+   Object.assign(card.element.style,{left:x+8+'px',top:this.grid.offsetTop+y+8+'px',width:width+'px',height:height+'px'})
+  }
+ }
+ private raiseComponent(element:HTMLElement){
+  this.componentLayer.querySelector('[data-sheet-component-raised]')?.removeAttribute('data-sheet-component-raised')
+  element.dataset.sheetComponentRaised=''
+ }
+ private startComponentGesture=(event:PointerEvent)=>{
+  if(event.button!==0||!this.editable||this.busy||this.componentGesture)return
+  const target=event.target as HTMLElement,element=target.closest<HTMLElement>('[data-sheet-component-floating]')
+  if(!element)return
+  this.raiseComponent(element)
+  const resize=Boolean(target.closest('[data-component-resize]'))
+  if(!resize&&(!target.closest('[data-workbench-drag-handle]')||target.closest('button,input,select,textarea')))return
+  const id=element.dataset.researchNodeId!,card=this.componentCards.get(id)
+  const layout=this.record.workbook?.components?.find(item=>item.componentId===id)?.placement?.layout
+  if(!card||!layout)return
+  event.preventDefault()
+  element.setPointerCapture(event.pointerId)
+  const start=this.boundChartLayout(layout)
+  this.componentGesture={card,id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,resize,start,preview:start}
+  element.dataset.dragging=''
+ }
+ private moveComponentGesture=(event:PointerEvent)=>{
+  const gesture=this.componentGesture
+  if(!gesture||gesture.pointerId!==event.pointerId)return
+  const {start,startX,startY,resize}=gesture
+  const scale=this.grid.getBoundingClientRect().width/(this.grid.offsetWidth||1)||1
+  const x=Math.round((event.clientX-startX)/scale),y=Math.round((event.clientY-startY)/scale)
+  const next=resize?{...start,width:Math.min(this.grid.clientWidth-start.x-16,start.width+x),height:Math.min(this.grid.clientHeight-start.y-16,start.height+y)}:{...start,x:start.x+x,y:start.y+y}
+  gesture.preview=this.boundChartLayout(next)
+  this.positionComponents()
+ }
+ private finishComponentGesture(event:PointerEvent,save:boolean){
+  const gesture=this.componentGesture
+  if(!gesture||gesture.pointerId!==event.pointerId)return
+  this.componentGesture=undefined
+  delete gesture.card.element.dataset.dragging
+  if(!save||JSON.stringify(gesture.start)===JSON.stringify(gesture.preview)){this.positionComponents();return}
+  void this.saveComponentPlacement(gesture.id,{mode:'floating',layout:gesture.preview}).catch(error=>this.say(errorMessage(error),true))
  }
  private async addComponent(action:string,value:string){
   const target=this.componentTarget,dialog=this.modal.firstElementChild
   if(!target||!dialog||!this.editable||this.busy)return
   const library=action==='component-add'
   const prompt=this.modal.querySelector<HTMLTextAreaElement>('[data-field=component-prompt]')?.value.trim()
-  if(library?!value:!prompt)return
+  if(library?!this.libraryItems.some(item=>item.id===value):!prompt)return
   const requestId=library?undefined:crypto.randomUUID()
   this.componentRequest=requestId
   if(requestId){
-   this.modal.dataset.busy='true'
-   this.modal.querySelector<HTMLTextAreaElement>('[data-field=component-prompt]')!.readOnly=true
-   const stop=this.modal.querySelector<HTMLButtonElement>('footer [data-action=close-dialog]')
-   if(stop){stop.dataset.action='component-stop';stop.textContent='停止';stop.setAttribute('aria-label','停止生成');stop.title='停止生成'}
+   const card=this.componentJob?.card??this.createComponentCard(requestId,true)
+   const id=card.element.dataset.researchNodeId
+   this.componentJob={card,node:{id,title:'智能组件',kind:'generated-container',generationStatus:'running',
+    generationTaskId:requestId,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:'',containerPrompt:prompt}}
+   dialog.append(card.element)
+   this.modal.dataset.componentGeneration=''
+   this.publishGeneration()
   }
   const known=new Set(this.record.workbook?.components?.map(item=>item.componentId))
-  const submit=this.modal.querySelector<HTMLButtonElement>(library?'[data-action=component-add][data-value="'+CSS.escape(value)+'"]':'[data-action=component-generate]')
-  if(submit)submit.disabled=true
-  this.dialogFeedback(library?'正在插入组件…':'正在生成组件…')
+  if(library){this.modal.querySelectorAll<HTMLButtonElement>('[data-action=component-add]').forEach(button=>button.disabled=true);this.dialogFeedback('正在插入组件…')}
   try{
    const saved=await this.run(action,{...target,...library?{libraryId:value}:{requestId,prompt}},'组件已插入',()=>this.modal.firstElementChild===dialog)
    if(!saved||this.modal.firstElementChild!==dialog)return
    const inserted=this.record.workbook?.components?.find(item=>!known.has(item.componentId))
    this.closeDialog()
    if(inserted){this.activeComponent=inserted.componentId;this.renderComponent()}
+  }catch(error){
+   if(this.modal.firstElementChild!==dialog)return
+   const job=this.componentJob,message=errorMessage(error)
+   if(job){job.stage=undefined;job.detail=undefined;Object.assign(job.node,{generationStatus:message==='已停止生成'?'cancelled':'failed',generationError:message,generationCompletedAt:Date.now()});this.publishGeneration()}
+   else this.dialogFeedback(message,true)
   }finally{
    if(this.componentRequest===requestId)this.componentRequest=undefined
-   if(submit?.isConnected){
-    delete this.modal.dataset.busy
-    const input=this.modal.querySelector<HTMLTextAreaElement>('[data-field=component-prompt]')
-    if(input)input.readOnly=false
-    const stop=this.modal.querySelector<HTMLButtonElement>('footer [data-action=component-stop]')
-    if(stop){stop.dataset.action='close-dialog';stop.textContent='取消';stop.setAttribute('aria-label','取消');stop.title='取消'}
-    submit.disabled=false;this.updateComponentSubmit()
-   }
+   if(this.modal.firstElementChild===dialog&&library)this.renderLibrary()
   }
  }
  private search(){
@@ -1237,7 +1409,7 @@ class SpreadsheetView{
    case 'undo-ai':if(this.record.lastAction)await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改');return
    case 'load-incoming':if(this.incoming){this.dialog('载入最新版本','<p>当前还未保存的编辑会丢失。</p>','accept-incoming','载入');}return
    case 'accept-incoming':if(this.incoming){const row=this.incoming;this.incoming=undefined;this.closeDialog();await this.install(row);this.say('已载入最新版本')}return
-   case 'sheet':if(this.formulaDirty)this.commitFormula();if(this.engine)await this.engine.closeFilter();this.clearSelectionPreview();model?.setActiveSheet(value);this.readSelection();this.paint();this.renderChart();return
+   case 'sheet':if(this.formulaDirty)this.commitFormula();if(this.engine)await this.engine.closeFilter();this.clearSelectionPreview();model?.setActiveSheet(value);this.readSelection();this.paint();this.renderChart();this.renderComponent();return
    case 'jump':this.jump(value);return
    case 'address-dialog':this.dialog('前往单元格','<input aria-label="地址" value="'+text(this.active)+'" placeholder="例如 A1 或 A1:D8">','address-apply','前往');return
    case 'address-apply':this.jump(this.modal.querySelector('input')?.value??'',true);this.closeDialog();return
@@ -1296,25 +1468,35 @@ class SpreadsheetView{
    case 'remove-chart':if(await this.run('remove-chart',{chartId:value},'图表已删除'))this.closeDialog();return
    case 'library':await this.openLibrary();return
    case 'smart':this.openSmart();return
-   case 'component-select':this.selectLibrary(value);return
    case 'component-pick':this.pickComponentRange(true);return
    case 'component-pick-cancel':this.pickComponentRange(false);return
    case 'component-pick-apply':this.pickComponentRange(false,true);return
    case 'component-example':this.componentExample(value);return
-   case 'component-add':case 'component-generate':await this.addComponent(action,action==='component-add'?this.libraryChoice??'':value);return
-   case 'component-show':this.cancelComponentRequest();this.closeDialog();this.activeComponent=value;this.renderComponent();return
-   case 'component-close':this.activeComponent=undefined;this.renderComponent();return
-   case 'component-remove':await this.run('component-remove',{componentId:value},'组件已移除');return
-   case 'component-source':{
-    const target=this.record.workbook?.components?.find(item=>item.componentId===this.activeComponent)
-    if(!target)return
-    if(sheet?.getSheetId()!==target.sheetId)await this.handle('sheet',target.sheetId,this.grid)
-    this.activeComponent=undefined;this.renderComponent()
-    this.win.requestAnimationFrame(()=>{if(!this.disposed&&this.current()?.getSheetId()===target.sheetId)this.jump(target.range)})
+   case 'component-add':case 'component-generate':await this.addComponent(action,value);return
+   case 'component-show':{
+    const component=this.record.workbook?.components?.find(item=>item.componentId===value)
+    if(!component)return
+    this.cancelComponentRequest();this.closeDialog()
+    if(component.placement?.mode==='floating'){
+     if(sheet?.getSheetId()!==component.sheetId)await this.handle('sheet',component.sheetId,this.grid)
+     const card=this.componentCards.get(value)
+     if(card){this.raiseComponent(card.element);card.element.querySelector<HTMLElement>('.ew-grid-title')?.focus({preventScroll:true})}
+    }else {this.activeComponent=value;this.renderComponent()}
     return
    }
-   case 'component-stop':
-    this.cancelComponentRequest();this.dialogFeedback('正在停止生成…');return
+   case 'component-confirm-remove':this.confirmComponentRemoval(value);return
+   case 'component-remove':if(await this.run('component-remove',{componentId:value},'组件已移除'))this.closeDialog();return
+   case 'component-source':{
+    const component=this.record.workbook?.components?.find(item=>item.componentId===value)
+    if(component){this.closeMenu();await this.locateComponent(component)}
+    return
+   }
+   case 'component-export':{
+    const card=this.componentCards.get(value)
+    const adapter=(card?.element as (HTMLElement&{__eworkNoteMenu?:{exportContent(format:string):Promise<void>}})|undefined)?.__eworkNoteMenu
+    if(adapter){this.closeMenu();await adapter.exportContent('png')}
+    return
+   }
    case 'close-dialog':this.cancelComponentRequest();this.closeDialog();return
    case 'focus':this.toggleFocus();return
    case 'zoom-minus':case 'zoom-plus':case 'zoom-reset':case 'zoom':{
@@ -1415,7 +1597,7 @@ class SpreadsheetView{
   }
   this.changed()
   if(['rename-sheet-apply','delete-sheet-apply','add-sheet'].includes(action)){
-   this.record={...this.record,workbook:this.engine!.snapshot()};this.paint()
+   this.record={...this.record,workbook:this.engine!.snapshot()};this.paint();this.renderComponent()
   }
   this.readSelection()
  }
@@ -1530,7 +1712,9 @@ class SpreadsheetView{
  }
  dispose(){
   if(this.disposed)return
-  this.cancelComponentRequest();this.releaseComponent();this.releaseComponentProgress()
+  this.cancelComponentRequest();this.clearComponentJob();this.releaseComponentProgress()
+  for(const card of this.componentCards.values())this.releaseComponentCard(card)
+  this.componentCards.clear()
   this.doc.removeEventListener('sherlock:notes-component-action',this.componentAction)
   this.doc.removeEventListener('sherlock:spreadsheet-component-reload',this.componentReload)
   this.clearSelectionPreview()

@@ -98,7 +98,7 @@ export function WorkbenchTitle({title,systemTitle=false}){
   const ref=react.useRef(null);react.useEffect(()=>installWorkbenchTitle(ref.current),[title]);
   return react_jsx_runtime.jsx('span',{ref,className:'ew-grid-title',title,tabIndex:0,'data-ui-system-title':systemTitle||undefined,'data-ui-preserve':systemTitle?undefined:true,children:react_jsx_runtime.jsx('span',{className:'ew-grid-title-copy',children:title})});
 }
-export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=false,expanded=false,onAsk,onMore,onRemove,onExpand,onReload,titleExtra,createSourceCount=0}) {
+export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=false,expanded=false,onAsk,onMore,onRemove,onExpand,onReload,titleExtra,createSourceCount=0,surfaceActions}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
   // A later automatic success also clears a previous header-click failure.
@@ -146,11 +146,12 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=fa
       refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':refreshing||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
       titleExtra,
-      node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly}),
-      node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly}),
+      node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly,onSpecChange:surfaceActions?.onSpecChange}),
+      node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly,onSpecChange:surfaceActions?.onSpecChange,surface:surfaceActions?.surface}),
       onAsk&&button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
-      (!previewMode||expanded)&&button('close',expanded?'关闭阅读':'移除组件',()=>onRemove(node),{disabled:expanded?false:readOnly})
+      ...((surfaceActions?.buttons??[]).map(({name,label,run,disabled})=>button(name,label,run,{key:name,title:label,disabled}))),
+      onRemove&&(!previewMode||expanded)&&button('close',expanded?'关闭阅读':'移除组件',()=>onRemove(node),{disabled:expanded?false:readOnly})
     ]}),
     selected&&react_jsx_runtime.jsx('span',{className:'ew-grid-selection-ring','aria-hidden':true}),
     tip&&react_dom.createPortal(react_jsx_runtime.jsxs('span',{role:'tooltip',className:'ew-grid-tooltip',style:{display:'flex',left:Math.max(8,tip.left),top:tip.top},children:tip.kind==='refresh'?[react_jsx_runtime.jsx('span',{children:error||time.relative}),react_jsx_runtime.jsx('time',{children:time.absolute})]:[react_jsx_runtime.jsx('span',{children:'将组件加入右侧会话上下文，基于其内容进行问答'})]}),document.body)
