@@ -1,4 +1,5 @@
 import { authenticate } from '../accounts/auth.js'
+import { Buffer } from 'node:buffer'
 import { AiQuotaError, AiQuotaLedger } from '../accounts/ai-quota.js'
 import { openVikingKey, vikingMemory } from './openviking.js'
 import { ARK_TEXT_MODELS, ARK_IMAGE_MODELS, ARK_PLAN_BASE } from './ark-catalog.js'
@@ -13,25 +14,52 @@ const nonempty = x => typeof x === 'string' && x.trim().length > 0
 const modelMap = new Map(ARK_TEXT_MODELS.map(model => [model.id, model]))
 const encoder = new TextEncoder()
 const inlineImage = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/
+const arkImageHost = 'ark-acg-cn-beijing.tos-cn-beijing.volces.com'
+const maxImageBytes = 10_000_000
+const pngSignature = Buffer.from('89504e470d0a1a0a', 'hex')
 
-async function readJson(request, maxBytes) {
-  if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json') || !request.body) throw Error('body')
-  const decoder = new TextDecoder('utf-8', { fatal: true })
-  const reader = request.body.getReader()
-  const signal = AbortSignal.timeout(10000)
+async function readBounded(message, maxBytes, signal) {
+  if (!message.body) throw Error('body')
+  const reader = message.body.getReader()
   const cancel = () => void reader.cancel().catch(() => {})
   signal.addEventListener('abort', cancel, { once: true })
   try {
-    let input = '', size = 0
+    const chunks = []
+    let size = 0
+    signal.throwIfAborted()
     for (;;) {
       const { value, done } = await reader.read()
       signal.throwIfAborted()
       if (done) break
       if ((size += value.byteLength) > maxBytes) throw Error('limit')
-      input += decoder.decode(value, { stream: true })
+      chunks.push(value)
     }
-    return JSON.parse(input + decoder.decode())
+    return Buffer.concat(chunks, size)
   } finally { signal.removeEventListener('abort', cancel); cancel() }
+}
+
+async function readJson(message, maxBytes) {
+  if (!message.headers.get('content-type')?.toLowerCase().startsWith('application/json')) throw Error('content-type')
+  const body = await readBounded(message, maxBytes, AbortSignal.timeout(10000))
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body))
+}
+
+async function downloadArkImage(send, response, signal) {
+  const result = await readJson(response, 64_000)
+  const href = result?.data?.length === 1 ? result.data[0]?.url : undefined
+  if (typeof href !== 'string') throw Error('missing generated image')
+  const url = new URL(href)
+  if (url.protocol !== 'https:' || url.hostname !== arkImageHost || url.port || url.username || url.password || url.hash) {
+    throw Error('unexpected image origin')
+  }
+  const download = await send(url.href, { redirect: 'manual', signal })
+  if (!download.ok) {
+    await download.body?.cancel()
+    throw Error('image download failed')
+  }
+  const png = await readBounded(download, maxImageBytes, signal)
+  if (!png.subarray(0, pngSignature.length).equals(pngSignature)) throw Error('invalid PNG')
+  return png.toString('base64')
 }
 
 function chatInput(input) {
@@ -114,7 +142,7 @@ function imageInput(input) {
   const { units } = ARK_IMAGE_MODELS.get(input.model)
   const refUnits = input.model === 'doubao-seedream-5-0-pro' ? Math.max(0, refs.length - 1) * 6_500_000 : 0
   return { wire: JSON.stringify({ model: input.model, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
-    size: '1K', output_format: 'png', response_format: 'b64_json',
+    size: '1K', output_format: 'png', response_format: 'url',
     // Seedream 5.0 Pro and Flash generate a single image by default.
     stream: false, watermark: true,
     ...(refs.length ? { image: refs.length === 1 ? refs[0] : refs } : {})
@@ -241,9 +269,13 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         ctx.waitUntil(accounting.pipeTo(new WritableStream()).catch(() => {}))
         return new Response(client, { headers: { ...headers, 'content-type': 'text/event-stream' } })
       }
-      const result = await readJson(response, 14_000_000)
-      const b64 = result?.data?.length === 1 ? result.data[0]?.b64_json : undefined
-      if (typeof b64 !== 'string' || !/^iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(b64)) return fail('HOSTED_AI_UPSTREAM', 502)
+      let b64
+      try {
+        b64 = await downloadArkImage(send, response, AbortSignal.any([request.signal, AbortSignal.timeout(60000)]))
+      } catch {
+        if (request.signal.aborted) return fail('HOSTED_AI_CANCELLED', 499)
+        return fail('HOSTED_AI_IMAGE_DELIVERY', 502, 'Seedream 图片传输失败，请稍后重试。')
+      }
       await settle(input.amountUnits)
       return json({ data: b64 })
     } catch (error) {
