@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-04",
+  "branch": "codex/integration/20261113-04",
+  "baseMainCommit": "81c0f31f17f81adf249184907257a466311d111d",
+  "expectedMainCommit": "81c0f31f17f81adf249184907257a466311d111d",
+  "createdAt": "2026-11-13T02:09:13.392Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "自定义 GLM 推理档位打包修复",
+        "branch": "codex/feat/glm-packaged-reasoning-20261113",
+        "baseCommit": "81c0f31f17f81adf249184907257a466311d111d",
+        "tipCommit": "18f04777707f9cf9f1881183a1f02d7224faa3fc",
+        "commits": [
+          {
+            "commit": "18f04777707f9cf9f1881183a1f02d7224faa3fc",
+            "parents": [
+              "81c0f31f17f81adf249184907257a466311d111d"
+            ],
+            "subject": "修复客户端安装包遗漏自定义 GLM 推理兼容补丁"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/profile-runtime-patches.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/profile-runtime-patches.test.js",
+              "test/packaged-runtime-patches.test.js",
+              "test/goal-profile-runtime-patches.test.js",
+              "test/workbench-execution-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "28 项打包和模型路由聚焦测试通过",
+            "verifiedCommit": "18f04777707f9cf9f1881183a1f02d7224faa3fc",
+            "completedAt": "2026-11-13T02:09:11.653Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "缺陷位于打包，修复后的实包复验待构建"
+        },
+        "acceptanceCriteria": [
+          "两个独立运行环境及嵌套副本保留已支持的 GLM 推理档位",
+          "打包验收发现补丁遗漏时失败"
+        ],
+        "risks": [
+          "真实端点需用同一模型复跑"
+        ],
+        "generatedAt": "2026-11-13T02:09:11.653Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/profile-runtime-patches.test.js",
+        "test/packaged-runtime-patches.test.js",
+        "test/goal-profile-runtime-patches.test.js",
+        "test/workbench-execution-policy.test.js"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
