@@ -9,23 +9,63 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "单行表格工具栏",
+        "featureName": "表格图表编辑和通用组件",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "6190dbf135b476206de34a42a114a69a2ae2ec67",
-        "tipCommit": "307956cd0bf763abff3525fea00099d27b5b4198",
+        "baseCommit": "307956cd0bf763abff3525fea00099d27b5b4198",
+        "tipCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
         "commits": [
           {
-            "commit": "307956cd0bf763abff3525fea00099d27b5b4198",
+            "commit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
             "parents": [
-              "6190dbf135b476206de34a42a114a69a2ae2ec67"
+              "307956cd0bf763abff3525fea00099d27b5b4198"
             ],
-            "subject": "将表格工具栏改为单行并集中分类命令"
+            "subject": "完善表格图表编辑并支持右键插入通用组件"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/advanced-chart-view.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/advanced-chart-view.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/special-chart-view.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
+          },
+          {
             "status": "M",
             "path": "scripts/verify-spreadsheet-live.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/spreadsheet/chart.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/engine.ts"
           },
           {
             "status": "M",
@@ -42,6 +82,18 @@
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/spreadsheet/workbook.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/spreadsheet-workbook.test.ts"
           }
         ],
         "checks": [
@@ -53,48 +105,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "307956cd0bf763abff3525fea00099d27b5b4198",
-            "completedAt": "2026-11-13T15:04:21.925Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "41 项 Electron 表格聚焦检查通过",
-            "verifiedCommit": "307956cd0bf763abff3525fea00099d27b5b4198",
-            "completedAt": "2026-11-13T15:04:21.925Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "Electron 验证单行布局、分类菜单、键盘交互、150% 溢出与中英文切换。"
-        },
-        "acceptanceCriteria": [
-          "菜单位于工具栏最左端",
-          "分类命令可访问",
-          "放大后隐藏按钮可从更多访问"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-13T15:04:21.925Z"
-      },
-      "merged": {
-        "mergeCommit": "3746afddb82ead2218b9c5dbb8f7497dd0361bb1",
-        "verificationCommit": "3746afddb82ead2218b9c5dbb8f7497dd0361bb1",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3746afddb82ead2218b9c5dbb8f7497dd0361bb1",
-            "completedAt": "2026-11-13T15:04:27.102Z",
+            "verifiedCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
+            "completedAt": "2026-11-13T15:34:05.057Z",
             "timeoutMs": 120000
           },
           {
@@ -103,14 +115,15 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-service.test.ts",
               "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
+              "test/client-capabilities.test.js",
+              "test/notes-native-components.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "3746afddb82ead2218b9c5dbb8f7497dd0361bb1",
-            "completedAt": "2026-11-13T15:04:27.102Z",
+            "summary": "42 项表格协议和组件复用检查通过",
+            "verifiedCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
+            "completedAt": "2026-11-13T15:34:05.057Z",
             "timeoutMs": 120000
           },
           {
@@ -119,13 +132,25 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "3746afddb82ead2218b9c5dbb8f7497dd0361bb1",
-            "completedAt": "2026-11-13T15:04:27.102Z",
+            "summary": "42 项 Electron 表格聚焦检查通过",
+            "verifiedCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
+            "completedAt": "2026-11-13T15:34:05.057Z",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-11-13T15:04:27.102Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "验证图表编辑、选区重选、组件菜单、选区范围、持久化及导航。真实模型及原生打包组件渲染验收另行记录。"
+        },
+        "acceptanceCriteria": [
+          "图表可改类型、数据区域、分类和系列",
+          "单元格右键可进入组件库和智能组件",
+          "组件绑定到当前工作簿和选区"
+        ],
+        "risks": [
+          "工作簿应用内对象未进入 Excel/CSV 文件导出。"
+        ],
+        "generatedAt": "2026-11-13T15:34:05.057Z"
       }
     }
   ],
