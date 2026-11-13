@@ -118,6 +118,52 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-13T20:16:34.397Z"
+      },
+      "merged": {
+        "mergeCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
+        "verificationCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
+            "completedAt": "2026-11-13T20:16:39.203Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-store.test.ts",
+              "test/spreadsheet-files.test.ts",
+              "test/spreadsheet-inline-references.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
+            "verifiedCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
+            "completedAt": "2026-11-13T20:16:39.203Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-spreadsheet-live.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
+            "verifiedCommit": "70e2005353e2ac58acf7f481882d9a3514d41bc8",
+            "completedAt": "2026-11-13T20:16:39.203Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T20:16:39.203Z"
       }
     }
   ],
