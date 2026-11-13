@@ -720,6 +720,8 @@ body{--odyssey-header-icon-bg:#fafafa;--odyssey-header-icon-hover:#fff}
 body[data-ds-dark-theme]{--odyssey-header-icon-bg:#292929;--odyssey-header-icon-hover:#3a3a3a}
 body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,[data-ework-spreadsheet-actions]>button){background:var(--odyssey-header-icon-bg)}
 body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,[data-ework-spreadsheet-actions]>button):not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]){background:var(--odyssey-header-icon-hover)}
+body:has([data-srb-session-header]:not([aria-hidden=true])) [data-dsh-panel-host][data-odyssey-panel-right=closed] [data-odyssey-panel-entry=right]{background:var(--odyssey-header-icon-bg)!important}
+body:has([data-srb-session-header]:not([aria-hidden=true])) [data-dsh-panel-host][data-odyssey-panel-right=closed] [data-odyssey-panel-entry=right]:is(:hover,:focus-visible){background:var(--odyssey-header-icon-hover)!important}
 .en-header-icon-group{display:inline-flex;align-items:center;gap:4px;flex:none;-webkit-app-region:no-drag}
 .en-header-icon-group>[data-en-view-mode-host]{display:contents}
 :is(.en-header-export,.en-header-view-mode){width:30px;height:30px;flex:none;display:inline-grid;place-items:center;padding:0;border:0;border-radius:7px;color:var(--dsw-alias-label-primary);cursor:pointer;-webkit-app-region:no-drag}

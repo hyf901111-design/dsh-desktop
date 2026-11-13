@@ -15,7 +15,7 @@ function exportStem(value:unknown){
   :''
 }
 
-export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string}){
+export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en'}){
  const {ipcMain,getWindow}=options
  const store=new SpreadsheetStore(options.dataPath)
  const visible=(sessionId:unknown,write=false)=>{
@@ -78,7 +78,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
    case 'undo':return store.undo(key,randomUUID(),{revision:input.revision,actionId:input.actionId})
    case 'import':{
     const win=getWindow()!
-    const chosen=await dialog.showOpenDialog(win,{title:'导入工作簿',properties:['openFile'],filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}]})
+    const chosen=await dialog.showOpenDialog(win,{title:options.locale?.()==='en'?'Import workbook':'导入工作簿',properties:['openFile'],filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}]})
     if(chosen.canceled)return null
     guard(true)
     const file=chosen.filePaths[0];if(!file)return null
@@ -99,8 +99,9 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     if(!['xlsx','csv'].includes(input.format)||!safeId(input.sheetId))break
     const format=input.format as 'xlsx'|'csv',record=store.load(key)
     if(!record.workbook||record.revision!==input.revision)throw Error('工作簿已变化，请重新导出。')
-    const title=exportStem(input.sessionTitle)||exportStem(record.workbook.name)||'工作簿'
-    const result=await dialog.showSaveDialog(getWindow()!,{title:'导出工作簿',defaultPath:title+'.'+format,filters:[{name:format==='xlsx'?'Excel 工作簿':'CSV 文件',extensions:[format]}]})
+    const english=options.locale?.()==='en'
+    const title=exportStem(input.sessionTitle)||exportStem(record.workbook.name)||(english?'Workbook':'工作簿')
+    const result=await dialog.showSaveDialog(getWindow()!,{title:english?'Export workbook':'导出工作簿',defaultPath:title+'.'+format,filters:[{name:format==='xlsx'?(english?'Excel workbook':'Excel 工作簿'):(english?'CSV file':'CSV 文件'),extensions:[format]}]})
     if(result.canceled||!result.filePath)return null
     guard(false)
     if(store.load(key).revision!==record.revision)throw Error('工作簿已变化，请重新导出。')

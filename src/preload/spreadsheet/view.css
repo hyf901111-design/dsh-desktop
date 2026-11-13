@@ -1,8 +1,5 @@
 /* The native session header, workspace rail and global conversation are retained. */
-body:has([data-odyssey-page=spreadsheet]) [data-odyssey-panel-entry=bottom],
-body:has([data-odyssey-page=spreadsheet]) #odyssey-bottom-workspace-panel{display:none!important}
-body:not([data-workspace-surface]):has([data-odyssey-page=spreadsheet]){--dsh-sidebar-height:0px!important;--odyssey-bottom-occupancy:0px!important}
-[data-odyssey-page=spreadsheet]{min-height:0;--dsh-sidebar-height:0px}
+[data-odyssey-page=spreadsheet]{min-height:0}
 [data-odyssey-page=spreadsheet]>[data-conversation-scroll]{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden;padding:0!important;max-width:none!important}
 [data-odyssey-page=spreadsheet] [data-odyssey-reading-status],
 [data-odyssey-page=spreadsheet] [data-odyssey-center-composer]{display:none!important}
@@ -159,6 +156,8 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 /* Chromium needs a layout box on Univer's editable node even when it is empty. */
 .ew-sheet-grid [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"]{width:1px;height:1px}
 .ew-sheet-grid [data-u-comp=editor][contenteditable=true]{min-width:1px;min-height:1px}
+/* The system IME uses this hidden caret, while Univer paints the visible text. */
+.ew-sheet-grid #univer-doc-selection-container-__INTERNAL_EDITOR__DOCS_NORMAL{transform:translateY(14px)}
 body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"],
 body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"] *{pointer-events:none!important}
 /* Native slot shells use display:contents and Chat's scroll sizing. Give the

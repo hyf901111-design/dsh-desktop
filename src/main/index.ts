@@ -1327,7 +1327,7 @@ async function bootstrap(): Promise<void> {
   let conversationComponentsService:ReturnType<typeof createConversationComponentService>|undefined
   let conversationComponentsReady=false
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
-  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData')})
+  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale})
   const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
