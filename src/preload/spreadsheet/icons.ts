@@ -3,6 +3,7 @@ import { headerMoreIcon } from '../header-more-icon'
 const paths:Record<string,string>={
  grid:'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
  menu:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 9h8m-8 3h8m-8 3h8',
+ sparkles:'M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z',
  edit:'m4 16-.5 4.5L8 20 20 8l-4-4L4 16Zm10-10 4 4',
  view:'M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Zm11.5 0a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z',
  'insert-row':'M3 5h18v7H3zM12 5v7m0 3v6m-3-3h6',

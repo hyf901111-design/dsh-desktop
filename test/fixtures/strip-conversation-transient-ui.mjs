@@ -15,6 +15,8 @@ export const stripConversationOuterUi=source=>stripSidebarNewNoteConversation(st
 // These outer restore records must be removed before guide/presentation and
 // grid refreshes, in the same order as patch-web-frontend-loading.mjs.
 export function stripConversationGridOverlays(source){
+ source=require('../../scripts/lib/spreadsheet-client.mjs').stripSpreadsheetClient(source)
+ source=require('../../scripts/lib/research-board-header-client.mjs').stripResearchBoardHeaderClient(source)
  source=require('../../scripts/lib/browser-app-native.mjs').stripBrowserAppNative(source)
  source=stripConversationLiveUi(source)
  for(const [file,strip] of [['board-tabs-client','stripBoardTabsClient'],['conversation-history-page','stripConversationHistoryClient'],['conversation-submission','stripConversationSubmission'],['conversation-response-progress','stripConversationResponseProgress'],['plain-slash-input','stripPlainSlashInput'],['sidebar-new-note','stripSidebarNewNoteConversation'],['pptx-annotation-message','stripPptxAnnotationMessages'],['pptx-annotation-native','stripPptxAnnotationInput']])source=require('../../scripts/lib/'+file+'.mjs')[strip](source)

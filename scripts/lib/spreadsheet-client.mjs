@@ -23,7 +23,7 @@ export function patchSpreadsheetClient(source){
  change(register,register+`
 ${marker}
 function EWorkSpreadsheetView({sessionId}){
- return react.createElement('div',{'data-ework-spreadsheet-view':sessionId});
+ return react.createElement(react.Fragment,null,react.createElement('div',{'data-ework-spreadsheet-view':sessionId}),react.createElement(EWorkNoteComponentViews,{sessionId,active:false,spreadsheet:true}));
 }
 slots.register({name:'conversation.view',id:'spreadsheet',order:10,label:()=>document.documentElement.dataset.odysseyLocale==='en'?'Spreadsheet':'表格',inject:sessionId=>({sessionId})},EWorkSpreadsheetView);
 ctx.effect(()=>{

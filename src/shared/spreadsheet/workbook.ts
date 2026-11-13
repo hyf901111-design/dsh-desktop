@@ -18,8 +18,14 @@ export type Sheet = {
   freeze?: {xSplit:number;ySplit:number;startRow:number;startColumn:number}
   showGridlines?: number; zoomRatio?: number; [key: string]: unknown
 }
-export type WorkbookChart = {chartId:string;sheetId:string;range:string;title:string;kind:'bar'|'line';headers:boolean}
-export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; [key:string]:unknown }
+export const workbookChartKinds=['bar','horizontal','stackedBar','line','step','area','combo','pie','donut','scatter'] as const
+export type WorkbookChartKind=(typeof workbookChartKinds)[number]
+export type WorkbookChart = {
+  chartId:string;sheetId:string;range:string;title:string;kind:WorkbookChartKind;headers:boolean
+  seriesBy?:'columns'|'rows';category?:number;series?:number[];legend?:boolean;gridlines?:boolean
+}
+export type WorkbookComponent = {componentId:string;sheetId:string;range:string;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
+export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; components?:WorkbookComponent[]; [key:string]:unknown }
 export type Range = { r0:number; c0:number; r1:number; c1:number }
 export type InputCell = Scalar | {value:Scalar} | {formula:string}
 export type Operation =
@@ -30,7 +36,7 @@ export type Operation =
   | {op:'addSheet';sheetId:string;name:string}
   | {op:'renameWorkbook';name:string}
   | {op:'renameSheet';sheetId:string;name:string}
-  | ({op:'addChart'} & Omit<WorkbookChart,'headers'> & {headers?:boolean})
+  | ({op:'addChart'|'updateChart'} & Omit<WorkbookChart,'headers'> & {headers?:boolean})
   | {op:'removeChart';chartId:string}
 
 export function safeId(value:unknown): value is string {
@@ -89,15 +95,39 @@ export function sheetRange(workbook:Workbook,sheetId:string,range:string) {
   if(bounds.r1>=sheet.rowCount||bounds.c1>=sheet.columnCount)throw Error('区域超出当前工作表。')
   return {sheet,bounds}
 }
-function validatedChart(book:Workbook,value:unknown):WorkbookChart {
-  keys(value,['chartId','sheetId','range','title','kind','headers'])
-  const {chartId,sheetId,range,title,kind,headers=true}=value as Record<string,any>
-  if(!safeId(chartId)||!['bar','line'].includes(kind)||typeof headers!=='boolean')throw Error('图表设置无效。')
+export function chartAxes(chart:WorkbookChart,bounds:Range){
+  const byRows=chart.seriesBy==='rows'
+  const fields=byRows?bounds.r1-bounds.r0+1:bounds.c1-bounds.c0+1
+  const points=(byRows?bounds.c1-bounds.c0+1:bounds.r1-bounds.r0+1)-(chart.headers?1:0)
+  const category=chart.category??0
+  const composition=chart.kind==='pie'||chart.kind==='donut'
+  if(points<1||points>120||!chart.series&&!composition&&fields>7)throw Error('图表最多支持 120 个数据点和 6 个系列。饼图和环形图只支持一个系列。')
+  const series=chart.series??(composition?[category===0?1:0]:Array.from({length:fields},(_,index)=>index).filter(index=>index!==category))
+  if(category<0||category>=fields||!series.length||series.some(index=>index<0||index>=fields||index===category)||new Set(series).size!==series.length)throw Error('请选择分类和不同的数值系列。')
+  if(series.length>6||composition&&series.length!==1)throw Error('图表最多支持 120 个数据点和 6 个系列。饼图和环形图只支持一个系列。')
+  return {category,series,byRows,composition}
+}
+export function validatedChart(book:Workbook,value:unknown):WorkbookChart {
+  keys(value,['chartId','sheetId','range','title','kind','headers','seriesBy','category','series','legend','gridlines'])
+  const {chartId,sheetId,range,title,kind,headers=true,seriesBy,category,series,legend,gridlines}=value as Record<string,any>
+  if(!safeId(chartId)||!workbookChartKinds.includes(kind)||typeof headers!=='boolean'||
+    seriesBy!==undefined&&!['columns','rows'].includes(seriesBy)||category!==undefined&&!Number.isInteger(category)||
+    series!==undefined&&(!Array.isArray(series)||!series.every(Number.isInteger))||
+    legend!==undefined&&typeof legend!=='boolean'||gridlines!==undefined&&typeof gridlines!=='boolean')throw Error('图表设置无效。')
   const {bounds}=sheetRange(book,sheetId,range)
-  const points=bounds.r1-bounds.r0+(headers?0:1)
-  if(points<1||points>60||
-    bounds.c1-bounds.c0<1||bounds.c1-bounds.c0>6)throw Error('请选择包含分类列和 1–6 个数值系列的区域，最多 60 行数据。')
-  return {chartId,sheetId,range:rangeAddress(bounds),title:label(title),kind,headers}
+  const chart:WorkbookChart={chartId,sheetId,range:rangeAddress(bounds),title:label(title),kind,headers,
+    ...(seriesBy===undefined?{}:{seriesBy}),...(category===undefined?{}:{category}),...(series===undefined?{}:{series}),
+    ...(legend===undefined?{}:{legend}),...(gridlines===undefined?{}:{gridlines})}
+  chartAxes(chart,bounds)
+  return chart
+}
+
+export function chartSourceRows<T>(chart:WorkbookChart,bounds:Range,read:(row:number,col:number)=>T){
+  const axes=chartAxes(chart,bounds)
+  const length=axes.byRows?bounds.c1-bounds.c0+1:bounds.r1-bounds.r0+1
+  const rows=Array.from({length},(_,index)=>[axes.category,...axes.series].map(field=>axes.byRows
+    ?read(bounds.r0+field,bounds.c0+index):read(bounds.r0+index,bounds.c0+field)))
+  return {...axes,rows}
 }
 export function styleOf(book:Workbook,cell?:Cell) {
   return typeof cell?.s==='string'?own(book.styles,cell.s)??{}:object(cell?.s)?cell.s:{}
@@ -149,6 +179,18 @@ export function validateWorkbook(value:unknown): asserts value is Workbook {
     const charts=value.charts.map(chart=>validatedChart(value as Workbook,chart))
     if(new Set(charts.map(chart=>chart.chartId)).size!==charts.length)throw Error('图表标识已存在。')
   }
+  if(value.components!==undefined){
+    if(!Array.isArray(value.components)||value.components.length>24)throw Error('每个工作簿最多保存 24 个组件。')
+    const ids=new Set<string>()
+    for(const component of value.components){
+      keys(component,['componentId','sheetId','range','node'])
+      if(!safeId(component.componentId)||ids.has(component.componentId)||!object(component.node)||component.node.id!==component.componentId||
+        component.node.kind!=='generated-container'||typeof component.node.title!=='string'||!component.node.title.trim()||component.node.title.length>256||
+        !object(component.node.containerSpec)||JSON.stringify(component.node).length>1048576)throw Error('组件内容格式无效。')
+      sheetRange(value as Workbook,component.sheetId,component.range)
+      ids.add(component.componentId)
+    }
+  }
   if(new TextEncoder().encode(JSON.stringify(value)).byteLength>MAX_BOOK_BYTES)throw Error('工作簿超过本地编辑容量。')
 }
 export function inspectWorkbook(book:Workbook,sheetId:string,range:string) {
@@ -174,22 +216,31 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
   for(const o of operations){
     if(!object(o))throw Error('操作无效。')
     if(o.op==='renameWorkbook'){keys(o,['op','name']);book.name=label(o.name);continue}
-    if(o.op==='addChart'){
+    if(o.op==='addChart'||o.op==='updateChart'){
       const {op,...input}=o
       const chart=validatedChart(book,input)
       const {sheet,bounds}=sheetRange(book,chart.sheetId,chart.range)
+      const {rows,composition}=chartSourceRows(chart,bounds,(row,col)=>sheet.cellData[row]?.[col])
       let dataRows=0
-      for(let row=bounds.r0+(chart.headers?1:0);row<=bounds.r1;row++){
-        const cells=Array.from({length:bounds.c1-bounds.c0+1},(_,i)=>sheet.cellData[row]?.[bounds.c0+i])
+      for(const cells of rows.slice(chart.headers?1:0)){
         if(cells.every(cell=>!cell?.f&&(cell?.v==null||cell.v==='')))continue
+        if(chart.kind==='scatter'&&!cells[0]?.f&&(typeof cells[0]?.v!=='number'||cells[0]?.t===3))throw Error('散点图的横轴必须是数值。')
         if((!cells[0]?.f&&(cells[0]?.v==null||cells[0].v===''))||cells.slice(1).some(cell=>!cell?.f&&(typeof cell?.v!=='number'||cell.t===3)))
           throw Error('图表源区域需要分类和完整的数值系列，请检查空值和文本。')
+        if(composition&&!cells[1]?.f&&Number(cells[1]?.v)<0)throw Error('饼图和环形图的数值不能为负。')
         dataRows++
       }
       if(!dataRows)throw Error('图表源区域没有数据。')
       const charts=book.charts??=[]
-      if(charts.some(item=>item.chartId===chart.chartId)||charts.length>=24)throw Error('图表标识重复或图表数量已达上限。')
-      charts.push(chart);continue
+      const index=charts.findIndex(item=>item.chartId===chart.chartId)
+      if(op==='updateChart'){
+        if(index<0)throw Error('图表不存在。')
+        charts[index]=chart
+      }else{
+        if(index>=0||charts.length>=24)throw Error('图表标识重复或图表数量已达上限。')
+        charts.push(chart)
+      }
+      continue
     }
     if(o.op==='removeChart'){
       keys(o,['op','chartId'])

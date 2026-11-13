@@ -70,7 +70,8 @@ export function advancedChartView(spec,width=624,options={}){
   const x=v=>left+(v-xd[0])/(xd[1]-xd[0])*(right-left),y=yGrid(...yd,left,right,top,bottom),max=kind==='bubble'?Math.max(...spec.points.map(p=>p.size)):1;
   const xRaw=(xd[1]-xd[0])/4,xPower=10**Math.floor(Math.log10(xRaw)),xStep=([1,2,2.5,5,10].find(n=>n>=xRaw/xPower)??10)*xPower;
   for(let k=Math.ceil(xd[0]/xStep);k*xStep<=xd[1];k++){const v=k*xStep;elements.push(text(x(v),bottom+17,fmt(v),{'text-anchor':'middle'}));}
-  elements.push(text(left,12,short(spec.yAxis.label,14)+' / '+spec.yAxis.unit),text(right,bottom+33,short(spec.xAxis.label,14)+' / '+spec.xAxis.unit,{'text-anchor':'end'}));
+  const axisLabel=axis=>short(axis.label,14)+(axis.unit?' / '+axis.unit:'');
+  elements.push(text(left,12,axisLabel(spec.yAxis)),text(right,bottom+33,axisLabel(spec.xAxis),{'text-anchor':'end'}));
   metrics.points=[];metrics.xDomain=xd;metrics.yDomain=yd;
   const radiusMax=Math.min(22,(bottom-top)*.16),visiblePoints=spec.points.filter(p=>options.visible?.[groups.indexOf(p.group??'样本')]!==false);
   visiblePoints.forEach(p=>{
