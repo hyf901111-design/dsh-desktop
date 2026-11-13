@@ -94,7 +94,7 @@ export function mountExploreMenu(doc:Document,options:Options){
   function syncQuotaRefresh() {
     const visible = opened && tab === 'usage' && !searching && !!accountOwner && !doc.hidden
     if (visible && quotaRefreshTimer === undefined) {
-      quotaRefreshTimer = win.setInterval(requestUsage, 15000)
+      quotaRefreshTimer = win.setInterval(requestUsage, 60_000)
     } else if (!visible && quotaRefreshTimer !== undefined) {
       win.clearInterval(quotaRefreshTimer)
       quotaRefreshTimer = undefined

@@ -251,13 +251,13 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       const memoryKey = memoryAccounts.includes(user.id) && openVikingKey(env, user.id)
       if (action === 'catalog') {
         stage = 'catalog'
-        if ((!active && !memoryKey) || !(await ledger.user(user.id)).eligible) return json({ models: [], image: false })
+        if ((!active && !memoryKey) || !(await ledger.eligible(user.id))) return json({ models: [], image: false })
         return json({ models: active ? ARK_TEXT_MODELS.map(({ unitsPerToken, ...model }) => model) : [],
           image: active && env.ARK_ENABLE_SEEDREAM === 'true', ...(memoryKey ? { memory: true } : {}) })
       }
       if (action === 'memory') {
         stage = 'memory'
-        if (!memoryKey || !(await ledger.user(user.id)).eligible) return fail('HOSTED_AI_NOT_ENABLED', 403)
+        if (!memoryKey || !(await ledger.eligible(user.id))) return fail('HOSTED_AI_NOT_ENABLED', 403)
         if (!env.ARK_LIMITER || !(await env.ARK_LIMITER.limit({ key: 'memory:' + user.id })).success) return fail('HOSTED_AI_BUSY', 429)
         return json(await vikingMemory(send, request, memoryKey, user.id, await readJson(request, 8000), readJson))
       }

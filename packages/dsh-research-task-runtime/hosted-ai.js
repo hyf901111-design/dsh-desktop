@@ -92,7 +92,7 @@ function adapterFor(ctx, base, apiKey, models) {
 }
 
 /** The only credential Pi sees is a loopback capability tied to one account generation. */
-export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = process.env.SHERLOCK_ACCOUNT_BRIDGE, pollMs = 2000 } = {}) {
+export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = process.env.SHERLOCK_ACCOUNT_BRIDGE, pollMs = 10_000 } = {}) {
   const config = bridgeOptions(bridge)
   if (!config) return undefined
   const { base, token } = config
