@@ -442,6 +442,11 @@ it('recovers the two requested organizations from source chapters when a plan on
   expect(map.content).toContain('    - 深圳证券监管专员办事处 [P3]');
   expect(map.content).not.toContain('三 核查说明');
   expect(f.adapter.start).not.toHaveBeenCalled();
+  const pending=await f.tool.execute({requestId:'pending-word-org',title:'监管速查',dataMode:'source',panels:[
+   {title,type:'mind-map',prompt:'展示机关职能部门2个+机关党委、3个证监局、2个专员办。'}
+  ]},f.exec);
+  expect(pending).toMatchObject({status:'prepared'});
+  expect([...f.runtime.tasks.values()]).toHaveLength(2);
  }finally{await f.close();}
 });
 
@@ -794,4 +799,44 @@ it('uses authored inline values for native waterfall, allocation and risk cards'
  expect(risk).toMatchObject({variant:'risk-matrix',items:[{label:'信用下调',probability:2,impact:5},{label:'大额赎回',probability:4,impact:4}]})
  expect(()=>validateWorkbench({...draft,originalRequest:originalRequest.replace('期末103','期末102')})).toThrow(/期末金额/)
  expect(validateWorkbench(result)).toEqual(result)
+})
+
+it('prepares the authored calendar and local todo cards even when the planner uses unsupported keys',()=>{
+ const originalRequest='给研究组助理搭晨会工作台。「番茄钟」专注25分钟、休息5分钟；「晨会日程」用客户端原生日历；「准备待办」能勾选完成、撤销、添加自己的事项，初始三项是整理风险清单、核对行情来源、准备晨会纪要。'
+ const result=validateWorkbench({requestId:'companion',title:'晨会',originalRequest,panels:[
+  {title:'番茄钟',type:'html',prompt:'实际倒计时'},
+  {title:'晨会日程',type:'calendar-tool',prompt:'原生日历'},
+  {title:'准备待办',type:'tasks',prompt:'本地待办',artifact:{version:1,title:'准备待办',type:'tasks',fields:[{key:'title'}]}}
+ ]})
+ expect(result.panels[0].artifact.html).toContain('data-workbench-pomodoro')
+ expect(result.panels[1].artifact).toMatchObject({type:'calendar-tool'})
+ expect(result.panels[2].artifact.items.map(({title,completed})=>[title,completed])).toEqual([
+  ['整理风险清单',false],['核对行情来源',false],['准备晨会纪要',false]
+ ])
+ expect(validateWorkbench(result)).toEqual(result)
+})
+
+it('keeps verified cohort scope on a median KPI without treating its metrics as individual fund rows',()=>{
+ const originalRequest='比较至少8只中长期纯债基金，保留同一批基金近一年收益率和半年回撤中位数。'
+ const sources=[{label:'Tushare',url:'https://tushare.pro/'}]
+ const asOf='同一批基金净值区间'
+ const sharedEvidence=JSON.stringify({asOf,sources,columns:['代码','近一年收益（%）','近半年最大回撤（%）'],
+  rows:Array.from({length:8},(_,index)=>[String(index+1).padStart(6,'0')+'.OF',index+1,-1-index])})
+ const artifact={version:1,title:'样本概览',type:'kpi',asOf,items:[
+  {label:'样本基金数量',value:8,unit:'只'},{label:'近一年收益率中位数',value:4.5,unit:'%',...{url:sources[0].url}},
+  {label:'近半年最大回撤中位数',value:-4.5,unit:'%',...{url:sources[0].url}}
+ ]}
+ const scope={originalRequest,sharedEvidence,panels:[{title:artifact.title,type:'kpi',prompt:'同一批基金样本数及收益回撤中位数',artifact}]}
+ expect(workbenchScopeDeficits(scope)).toEqual([])
+ artifact.items[1].value=5
+ expect(workbenchScopeDeficits(scope)).not.toEqual([])
+})
+
+it('renders source-backed report shorthand with the explicitly requested business metric names',()=>{
+ const artifact={version:1,type:'chart',variant:'line',title:'营业收入与归母净利润',unit:'亿元',labels:['2025A','2026E'],
+  series:[{name:'rev',values:[10,11]},{name:'np',values:[2,3]}],sources:[{label:'研报 第1页'}]}
+ const plan=validateWorkbench({requestId:'report-abbreviations',title:'研报',originalRequest:'用研报原始数据画营业收入与归母净利润。',
+  panels:[{title:artifact.title,type:'chart',prompt:'画营业收入与归母净利润',artifact}]})
+ expect(plan.panels[0].artifact.series).toEqual([{name:'营业收入',values:[10,11]},{name:'归母净利润',values:[2,3]}])
+ expect(plan.panels[0].artifact.sources).toEqual(artifact.sources)
 })

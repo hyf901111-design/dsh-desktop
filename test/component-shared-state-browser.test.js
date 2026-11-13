@@ -73,7 +73,10 @@ it('counts down, resumes a persisted deadline and completes exactly one focus ro
   await page.waitForTimeout(1000)
   expect(await time()).toBe(paused)
   await button('start').click()
-  const saved=(await page.evaluate(()=>window.checkEvents)).filter(e=>e.message?.op==='localCommit').at(-1).message
+  const lastCommit=async()=>(await page.evaluate(()=>window.checkEvents))
+   .filter(e=>e.message?.op==='localCommit').at(-1)?.message
+  await expect.poll(async()=>Number.isSafeInteger((await lastCommit())?.state?.deadline)).toBe(true)
+  const saved=await lastCommit()
   const reopened=await open({state:saved.state,revision:saved.revision},artifact.html,'[data-action="reset"]')
   try{
    const phase=()=>reopened.frame.locator('[data-phase]').textContent()

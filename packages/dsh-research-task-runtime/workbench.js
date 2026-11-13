@@ -337,7 +337,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 input = old.input;
             } else if (!old) {
                 assertWorkbenchViewSources(input);
-                if(documentExclusive&&input.panels.some(panel=>['mind-map','markdown'].includes(panel.artifact?.type))){
+                if(documentExclusive&&input.panels.some(panel=>panel.type==='mind-map'||panel.artifact?.type==='markdown')){
                     const documents=preparedWordEvidence=await getDocuments();
                     const normalized=input.panels.map(panel=>completeWordReadingPanel(panel,documents,originalRequest));
                     const panels=completeWordOrganizationPanels(normalized,documents,originalRequest);
