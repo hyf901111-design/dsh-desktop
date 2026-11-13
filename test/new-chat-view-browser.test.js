@@ -77,6 +77,24 @@ it('fails closed to native fresh creation for an asynchronous reuse predicate',a
   expect(state.current).toMatch(/^fresh-/);expect(state.creates).toHaveLength(1);expect(state.creates[0].create.workspaceId).toBe('active');expect(state.oldView).toBe('research');await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=home]').count()).toBe(1);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+it('opens a fresh Chat when existing blank sessions use a different default permission',async()=>{
+ const {page,errors}=await fixture({warm:true})
+ try {
+  await page.evaluate(()=>{
+   window[Symbol.for('sherlock:conversation-permission-default')]={
+    prepareReuse:async()=>async id=>{window.newChatFixture.events.push({checkedPermission:id});return false}
+   }
+  })
+  await page.getByRole('button',{name:'新建对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot().current)).toMatch(/^fresh-/)
+  await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=home]').count()).toBe(1)
+  const events=await page.evaluate(()=>window.newChatFixture.events)
+  expect(events).toContainEqual({checkedPermission:'target'})
+  expect(events).toContainEqual({create:{workspaceId:'active'}})
+  expect(events).not.toContainEqual({open:'target'})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
 it('keeps the current input and selection when the owned reuse predicate rejects with an error',async()=>{
  const {page,errors}=await fixture({warm:true});try{
   const warnings=[];page.on('console',message=>{if(message.type()==='warning')warnings.push(message.text())});const draft=await page.evaluate(()=>JSON.stringify(window.newChatFixture.shellFor('current').snapshot))

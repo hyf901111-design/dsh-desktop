@@ -1,16 +1,23 @@
 import { createHomeFlowField } from './home-flow'
 
-/** The Quiet Departure field, with faster, broader local movement for image loading. */
+/** Low-contrast motion within each image placeholder. */
 export function mountImageGenerationFlow(doc: Document = document): () => void {
   const win = doc.defaultView
   if (!win) return () => {}
-  const field = createHomeFlowField({ speed: 8.5, strength: 4.5 })
+  const field = createHomeFlowField({ speed: 3.2, strength: 2.5 })
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
   type Surface = { context: CanvasRenderingContext2D; pixels: ImageData; visible: boolean }
   const surfaces = new Map<HTMLCanvasElement, Surface>()
   let frame = 0, previous = 0, elapsed = 0, disposed = false
   const paint = (canvas: HTMLCanvasElement, surface: Surface) => {
-    field.paint(surface.pixels, elapsed, doc.body.hasAttribute('data-ds-dark-theme'))
+    const dark = doc.body.hasAttribute('data-ds-dark-theme')
+    field.paint(surface.pixels, elapsed, dark)
+    const pixels = surface.pixels.data
+    const base = dark ? 32 : 236
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      const tone = base + (pixels[offset]! - base) * 0.4
+      pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = tone
+    }
     surface.context.putImageData(surface.pixels, 0, 0)
     canvas.dataset.flowState = doc.hidden || reduced.matches || !surface.visible ? 'paused' : 'running'
   }

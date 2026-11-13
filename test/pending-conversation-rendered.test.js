@@ -6,10 +6,12 @@ import {pathToFileURL} from 'node:url'
 import {EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 import {patchPendingConversationPanel} from '../scripts/lib/pending-conversation-panel.mjs'
 import {patchBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
+import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
 let browser,script,input,css
 const base='node_modules/@deepseek-ai/',expose=(source,names)=>source.replace('exports.apply = apply;',`exports.apply = apply;${names.map(name=>`exports.__test${name}=${name};`).join('')}`)
 beforeAll(async()=>{
- const raw=patchBrowserAppNative(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
+ const installed=await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')
+ const raw=patchBrowserAppNative(stripConversationPermissionDefault(installed)),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8'),['WorkspacePicker'])}
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
  const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')

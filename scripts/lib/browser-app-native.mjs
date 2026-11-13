@@ -156,7 +156,26 @@ export function patchBrowserAppNative(input){
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');
-ctx.effect(()=>{const preferences=(${createPendingComposerPreferences.toString()})({api:ctx.get('connection').api,applyModel:(id,selection)=>{const models=ctx.get('modelDirectories');if(!models)throw Error('模型目录尚未就绪，请重新选择模型。');return models.directoryFor(id).select(selection)},permissionOptions:view=>{const forms=require('@deepseek-ai/dsh-client-schema-form'),node=forms.nodeAtPath(forms.rehydrateSchema(view.schema),['defaultPreset']);return (node?.type==='union'?node.list:[node]).flatMap(choice=>choice?.type==='const'&&typeof choice.value==='string'?[{value:choice.value,name:choice.meta?.description||choice.value}]:[])},applyPermission:async(id,preset)=>{const result=await ctx.get('remote').commands.execute(id,'/permission '+preset);if(!result.ok||result.value?.result?.kind!=='success')throw Error(result.error?.message||result.value?.result?.message||'权限设置未能应用，输入已保留。')}});const pending=(${createPendingConversation.toString()})({makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),sessions,workspaces,getInput:id=>inputHub.shell(id),onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id)},prepareContext:async()=>document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined,releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}});preferences.model.load().catch(()=>{});pending.preferences=preferences;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;return()=>{if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}},'Pending first-message conversation');
+ctx.effect(()=>{
+ const preferences=(${createPendingComposerPreferences.toString()})({
+  api:ctx.get('connection').api,
+  applyModel:(id,selection)=>{const models=ctx.get('modelDirectories');if(!models)throw Error('模型目录尚未就绪，请重新选择模型。');return models.directoryFor(id).select(selection)},
+  permissionOptions:view=>{const forms=require('@deepseek-ai/dsh-client-schema-form'),node=forms.nodeAtPath(forms.rehydrateSchema(view.schema),['defaultPreset']);return (node?.type==='union'?node.list:[node]).flatMap(choice=>choice?.type==='const'&&typeof choice.value==='string'?[{value:choice.value,name:choice.meta?.description||choice.value}]:[])},
+  savePermission:preset=>permissionPreferences.select(undefined,preset)
+ });
+ const pending=(${createPendingConversation.toString()})({
+  makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),
+  sessions,workspaces,getInput:id=>inputHub.shell(id),
+  onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},
+  prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id)},
+  prepareContext:async()=>{await permissionPreferences.ready();return document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined},
+  releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}
+ });
+ const refresh=()=>preferences.model.load().catch(()=>{});
+ const offSettings=ctx.get('remote').$on('settings/document-updated',ns=>{if(ns==='permission')void refresh()});
+ void refresh();pending.preferences=preferences;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;
+ return()=>{offSettings();if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}
+},'Pending first-message conversation');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
  const committing='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  replace(committing,`window[Symbol.for('sherlock:browser-question')]?.admitting(shell,attempt.draftState,attempt.imageIds);\n\t\t\t\t`+committing)

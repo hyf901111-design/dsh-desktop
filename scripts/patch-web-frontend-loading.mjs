@@ -77,6 +77,7 @@ import {patchConversationResponseProgress,stripConversationResponseProgress} fro
 import {patchConversationTurnOrder} from './lib/conversation-turn-order.mjs'
 import {patchConversationHistoryRuntime,stripConversationHistoryRuntime,patchConversationHistoryClient,stripConversationHistoryClient} from './lib/conversation-history-page.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
+import { patchConversationPermissionDefault, stripConversationPermissionDefault } from './lib/conversation-permission-default.mjs'
 import { patchBrowserHoverCard, patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
 import { patchFigmaContainerMenu } from './lib/figma-container-menu.mjs'
@@ -207,7 +208,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-writeFileSync(gridConversationPath,stripBrowserAppNative(stripResearchBoardHeaderClient(readFileSync(gridConversationPath,'utf8'))))
+writeFileSync(gridConversationPath,stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(readFileSync(gridConversationPath,'utf8')))))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
@@ -404,4 +405,4 @@ writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationP
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
-writeFileSync(conversationPath,patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8'))))
+writeFileSync(conversationPath,patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8')))))

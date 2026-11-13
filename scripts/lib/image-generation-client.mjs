@@ -13,7 +13,7 @@ export function imageGenerationCalls(nodes,running){
    const errorText=(root.content??[]).filter(b=>b.type==='text').map(b=>b.text).join(' ')
    const stopped=root.error?.code==='interrupted'||root.isError&&/已取消|cancelled|canceled/i.test(errorText)
    const state=stopped?'cancelled':root.isError?'failed':image?'completed':'kind'in root?'failed':running?'running':'interrupted'
-   const ratio=state==='completed'&&image.width>0&&image.height>0?`${image.width} / ${image.height}`:args.size==='1536x1024'?'3 / 2':args.size==='1024x1536'?'2 / 3':'1 / 1'
+   const ratio=state==='completed'&&image.width>0&&image.height>0?`${image.width} / ${image.height}`:state==='running'?'2 / 3':args.size==='1536x1024'?'3 / 2':args.size==='1024x1536'?'2 / 3':'1 / 1'
    calls.set(root.callId,{id:root.callId,state,ratio,...state==='completed'?{image}:{}})
   }
   for(const child of root.subCalls??[])visit(child)
@@ -28,22 +28,25 @@ export const IMAGE_GENERATION_CSS=`
 .odyssey-image-generation[data-state=completed]{width:min(440px,100%)}
 .odyssey-image-generation-stage{position:relative;aspect-ratio:var(--image-ratio,1);overflow:hidden;border-radius:14px;isolation:isolate;background:#ececec;display:grid;place-items:center;border:1px solid color-mix(in srgb,currentColor 7%,transparent)}
 .odyssey-image-generation-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.odyssey-image-generation[data-state=running] .odyssey-image-generation-stage::after{content:'';position:absolute;inset:45% 0 0;background:linear-gradient(to bottom,transparent,#ecececaa);pointer-events:none}
 .odyssey-image-generation-status{display:flex;align-items:center;gap:7px;position:absolute;left:14px;bottom:12px;max-width:calc(100% - 28px);color:#424242;font:500 13px/20px var(--odyssey-font-ui,system-ui,sans-serif);text-shadow:0 1px 8px #ffffff66}
 .odyssey-image-generation-status svg{width:16px;height:16px;flex:none;transform-origin:center}
-.odyssey-image-generation[data-state=running] .odyssey-image-generation-status svg{animation:odyssey-image-breathe 1.8s ease-in-out infinite}
+.odyssey-image-generation[data-state=running] .odyssey-image-generation-status{z-index:1}
+.odyssey-image-generation[data-state=running] .odyssey-image-generation-status svg{animation:odyssey-image-breathe 3s ease-in-out infinite}
 .odyssey-image-generation[data-state=failed] .odyssey-image-generation-stage,.odyssey-image-generation[data-state=cancelled] .odyssey-image-generation-stage,.odyssey-image-generation[data-state=interrupted] .odyssey-image-generation-stage{background:var(--dsw-alias-bg-l1,#f4f4f6)}
 .odyssey-image-generation-result{border-radius:18px;overflow:hidden;max-width:100%}
 .odyssey-image-generation-result [data-align]{display:block;width:100%}
 .odyssey-image-generation-result button[data-variant=single]{width:100%!important;height:auto!important;aspect-ratio:var(--image-ratio,1);max-width:none;max-height:none;border-radius:18px}
 .odyssey-image-generation-result img{display:block;width:100%;max-width:100%;height:100%;object-fit:contain}
 body[data-ds-dark-theme] .odyssey-image-generation-stage{background:#202020}
+body[data-ds-dark-theme] .odyssey-image-generation[data-state=running] .odyssey-image-generation-stage::after{background:linear-gradient(to bottom,transparent,#202020b3)}
 body[data-ds-dark-theme] .odyssey-image-generation-status{color:#fff;text-shadow:0 1px 8px #0009}
 /* The shared Menu still renders an anchor span when anchor=null. A body-level
    span after the full-height app would add a line box and a viewport scrollbar. */
 body .odyssey-image-menu-anchor{position:fixed;top:0;left:0;width:0;height:0}
 body [role=menu]:has([data-odyssey-image-action]){z-index:2147483001}
 .odyssey-image-action-notice{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2147483002;padding:10px 16px;border-radius:10px;background:var(--odyssey-menu,#333);color:var(--odyssey-text,#fff);box-shadow:var(--odyssey-menu-shadow);font:400 13px/20px var(--odyssey-font-ui,system-ui,sans-serif);pointer-events:none}
-@keyframes odyssey-image-breathe{0%,100%{opacity:.45;transform:scale(.82)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes odyssey-image-breathe{0%,100%{opacity:.66;transform:scale(.93)}50%{opacity:1;transform:scale(1.02)}}
 @media(prefers-reduced-motion:reduce){.odyssey-image-generation-status svg{animation:none!important}}
 `
 
