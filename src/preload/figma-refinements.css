@@ -11,9 +11,11 @@ body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-m
 body { background-color:#f2f2f2!important; }
 body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { background-color:#1f1f1f!important; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
+  --odyssey-header-action-inset:calc((var(--odyssey-workspace-header-height,44px) - 30px) / 2);
+  --odyssey-header-action-end:var(--odyssey-header-action-inset);
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:var(--odyssey-workspace-header-height,44px)!important; min-height:var(--odyssey-workspace-header-height,44px)!important; flex:0 0 var(--odyssey-workspace-header-height,44px)!important;
-  padding:0 20px; grid-template-rows:none!important; overflow:visible;
+  padding:0 var(--odyssey-header-action-end) 0 20px; grid-template-rows:none!important; overflow:visible;
   background:transparent; backdrop-filter:blur(32px); border:0; box-shadow:none;
 }
 /* The compact workspace header floats over the research canvas. The
@@ -92,7 +94,7 @@ body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaborat
 body .wSkVaW_header .srb-actions .srb-favorite-button[aria-pressed=true] { color:var(--odyssey-muted); }
 .srb-board-add-icon { display:block; width:16px; height:16px; background:currentColor; mask:var(--odyssey-board-add-icon) center/contain no-repeat; }
 body .wSkVaW_header[data-odyssey-header-layout=compact] .wSkVaW_crumbs { max-width:96px; }
-body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; padding-left:16px!important; padding-right:20px!important; }
+body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; padding-left:16px!important; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_headerActions { gap:8px; margin-right:-4px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_crumbs { flex:1 1 80px; max-width:80px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_tab { min-width:48px; width:48px; }
@@ -374,10 +376,9 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-presence>:not(.odyssey-members-compact) { display:none!important; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-members-compact { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:6px; border-radius:7px; }
 
-/* The detached panel entry remains at the window corner when the pane is closed.
-   Reserve its 28 px target plus 8 px gap, including compact windows. */
-body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) { padding-right:56px; }
-body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=narrow]:not([aria-hidden=true]) { padding-right:56px!important; }
+/* Leave 4 px between header actions and the detached 28 px panel entry,
+   which sits 8 px from the content edge when the pane is closed. */
+body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) { --odyssey-header-action-end:40px; }
 
 /* Home navigation is resident; the composer owns mode selection until a turn starts. */
 body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; }

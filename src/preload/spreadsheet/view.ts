@@ -1,7 +1,8 @@
-import {address,parseRange,safeFormula,sheetName,label,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart} from '../../shared/spreadsheet/workbook'
+import {address,blankSheet,parseRange,safeFormula,sheetName,label,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart} from '../../shared/spreadsheet/workbook'
 import {cartesianChartSvg} from '../../../packages/dsh-research-task-runtime/cartesian-chart-artifact.js'
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetEngine} from './engine'
+import {isNullCell} from '@univerjs/core'
 import {sheetIcon as icon} from './icons'
 import {browserIcons} from '../browser/icons'
 import css from './view.css?raw'
@@ -15,9 +16,9 @@ type Ribbon='开始'|'插入'|'数据'|'公式'|'视图'
 const ribbons:Ribbon[]=['开始','插入','数据','公式','视图']
 const text=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const errorMessage=(e:unknown)=>String((e as Error)?.message??e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'')
-const button=(action:string,copy:string,options:{glyph?:string;label?:string;value?:string;className?:string;disabled?:boolean;pressed?:boolean}={})=>{
- const {glyph,label=copy,value,className='',disabled,pressed}=options
- return '<button type="button" class="ew-sheet-button '+className+'" data-action="'+action+'"'+(value!==undefined?' data-value="'+text(value)+'"':'')+(glyph?' data-glyph="'+glyph+'"':'')+' aria-label="'+text(label)+'" title="'+text(label)+'"'+(action==='menu'?' aria-haspopup="menu" aria-expanded="false"':'')+(disabled?' disabled':'')+(pressed!==undefined?' aria-pressed="'+pressed+'"':'')+'>'+(glyph?icon(glyph):'')+text(copy)+'</button>'
+const button=(action:string,copy:string,options:{glyph?:string;label?:string;value?:string;className?:string;disabled?:boolean;pressed?:boolean;withLabel?:boolean}={})=>{
+ const {glyph,label=copy,value,className='',disabled,pressed,withLabel}=options
+ return '<button type="button" class="ew-sheet-button '+className+'" data-action="'+action+'"'+(value!==undefined?' data-value="'+text(value)+'"':'')+(glyph?' data-glyph="'+glyph+'"':'')+' aria-label="'+text(label)+'" title="'+text(label)+'"'+(action==='menu'?' aria-haspopup="menu" aria-expanded="false"':'')+(disabled?' disabled':'')+(pressed!==undefined?' aria-pressed="'+pressed+'"':'')+'>'+(glyph?icon(glyph):'')+(withLabel?'<span>'+text(copy)+'</span>':text(copy))+'</button>'
 }
 const numeric=(s:string)=>/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(s)&&Number.isFinite(Number(s))?Number(s):s
 
@@ -148,15 +149,24 @@ class SpreadsheetView{
    const recent=this.recent.slice(0,6)
    this.empty.innerHTML=!this.ready?
     '<div class="ew-sheet-empty-inner"><p role="status">'+text(this.notice||'正在打开表格…')+'</p>'+(this.error?button('reload','重试'):'')+'</div>':
-    '<div class="ew-sheet-empty-inner"><div class="ew-sheet-empty-icon">'+icon('grid',36)+'</div><h1>把分析，放进表格。</h1><p>从 Excel 继续工作，或让 AI 帮你搭起第一张分析表。</p><div class="ew-sheet-empty-actions">'+button('new','新建空白工作簿',{glyph:'plus',className:'primary',disabled:!this.editable||this.busy})+button('import','导入 Excel / CSV',{glyph:'upload',className:'outlined',disabled:!this.editable||this.busy})+'</div>'+(this.record.canRedoAI?'<div class="ew-sheet-empty-actions">'+button('redo-ai','重新应用 AI 修改',{glyph:'redo',className:'outlined',disabled:!this.editable||this.busy})+'</div>':'')+(recent.length?'<div class="ew-sheet-recent"><div>最近在此会话中使用</div>'+recent.map(b=>'<button data-action="activate" data-value="'+text(b.id)+'"'+(!this.editable||this.busy?' disabled':'')+'>'+icon('grid')+'<span><strong>'+text(b.name)+'</strong><small>'+b.sheetCount+' 个工作表</small></span>'+icon('link',14)+'</button>').join('')+'</div>':'')+'<p class="ew-sheet-empty-notice" role="status" data-error="'+this.error+'">'+text(this.notice)+'</p></div>'
+    '<div class="ew-sheet-empty-inner"><div class="ew-sheet-empty-icon">'+icon('grid',36)+'</div><h1>把分析，放进表格。</h1><p>从 Excel 继续工作，或让 AI 帮你搭起第一张分析表。</p><div class="ew-sheet-empty-actions">'+button('new','新建空白工作簿',{glyph:'plus',className:'primary',withLabel:true,disabled:!this.editable||this.busy})+button('import','导入 Excel / CSV',{glyph:'upload',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>'+(this.record.canRedoAI?'<div class="ew-sheet-empty-actions">'+button('redo-ai','重新应用 AI 修改',{glyph:'redo',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>':'')+(recent.length?'<div class="ew-sheet-recent"><div>最近在此会话中使用</div>'+recent.map(b=>'<button data-action="activate" data-value="'+text(b.id)+'"'+(!this.editable||this.busy?' disabled':'')+'>'+icon('grid')+'<span><strong>'+text(b.name)+'</strong><small>'+b.sheetCount+' 个工作表</small></span>'+icon('link',14)+'</button>').join('')+'</div>':'')+'<p class="ew-sheet-empty-notice" role="status" data-error="'+this.error+'">'+text(this.notice)+'</p></div>'
    return
   }
   const current=this.current()
+  const tabScroll=this.foot.querySelector('.ew-sheet-tab-list')?.scrollLeft??0
   this.chrome.innerHTML='<div class="ew-sheet-ribbon-tabs" role="tablist" aria-label="表格工具栏">'+ribbons.map(r=>'<button role="tab" aria-selected="'+(r===this.ribbon)+'" data-action="ribbon" data-value="'+r+'">'+r+'</button>').join('')+'</div><div class="ew-sheet-ribbon" role="toolbar" aria-label="'+this.ribbon+'"><div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+this.focusButton()+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
-   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
+   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
   }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span>'+(book.charts?.length?button('menu','图表 '+book.charts.length,{glyph:'chart',value:'charts',label:'查看工作簿图表'}):'')+'</div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
+  const tabList=this.foot.querySelector<HTMLElement>('.ew-sheet-tab-list')!
+  tabList.scrollLeft=tabScroll
+  const selected=tabList.querySelector('.ew-sheet-tab[data-current=true]')?.getBoundingClientRect()
+  if(selected){
+   const list=tabList.getBoundingClientRect()
+   if(selected.right>list.right)tabList.scrollLeft+=selected.right-list.right
+   else if(selected.left<list.left)tabList.scrollLeft+=selected.left-list.left
+  }
   this.refreshFields()
   this.resize()
  }
@@ -165,14 +175,15 @@ class SpreadsheetView{
   const menu=(key:string,copy:string,glyph?:string,disabled=false,label=copy)=>button('menu',copy,{value:key,glyph,disabled,label,className:'dropdown'})
   const divider='<span class="ew-sheet-toolbar-divider" aria-hidden="true"></span>'
   const sum=edit('menu','',{glyph:'sum',value:'functions',label:'插入函数'})
+  const filter=button('menu','筛选',{value:'filter',glyph:'filter',className:'dropdown',pressed:!!this.current()?.getFilter(),disabled:!this.editable})
   switch(this.ribbon){
    case '插入':return edit('add-sheet','工作表',{glyph:'plus',label:'新增工作表'})+edit('row','插入行')+edit('column','插入列')+edit('merge','合并单元格')+edit('chart','创建图表',{glyph:'chart'})
-   case '数据':return edit('filter','筛选',{glyph:'filter'})+menu('sort','排序','sort',!this.editable)+edit('duplicates','去重')
+   case '数据':return filter+menu('sort','排序','sort',!this.editable)+edit('duplicates','去重')
    case '公式':return menu('functions','插入函数','sum',!this.editable)+button('recalc','重新计算')
    case '视图':return menu('freeze','冻结','freeze',!this.editable)+edit('gridlines','网格线')+menu('zoom','缩放')
    default:return edit('undo','',{glyph:'undo',label:'撤销'})+edit('redo','',{glyph:'redo',label:'重做'})+divider+menu('font','默认字体',undefined,!this.editable,'字体')+menu('font-size','11',undefined,!this.editable,'字号')+divider+
     edit('bold','',{glyph:'bold',label:'加粗'})+edit('italic','',{glyph:'italic',label:'斜体'})+menu('color','','color',!this.editable,'颜色')+menu('border','','border',!this.editable,'边框')+menu('align','','align',!this.editable,'对齐')+divider+
-    menu('number','常规',undefined,!this.editable,'数字格式')+edit('number-format','',{glyph:'currency',label:'人民币',value:'"¥"#,##0.00'})+edit('number-format','',{glyph:'percent',label:'百分比',value:'0.00%'})+edit('number-format','',{glyph:'decimals',label:'两位小数',value:'#,##0.00'})+divider+edit('filter','筛选',{glyph:'filter'})+menu('freeze','冻结','freeze',!this.editable)+sum
+    menu('number','常规',undefined,!this.editable,'数字格式')+edit('number-format','',{glyph:'currency',label:'人民币',value:'"¥"#,##0.00'})+edit('number-format','',{glyph:'percent',label:'百分比',value:'0.00%'})+edit('number-format','',{glyph:'decimals',label:'两位小数',value:'#,##0.00'})+divider+filter+menu('freeze','冻结','freeze',!this.editable)+sum
   }
  }
  private resize=()=>{this.fitRibbon();this.place()}
@@ -242,6 +253,7 @@ class SpreadsheetView{
   this.refreshRibbonValues()
  }
  private refreshRibbonValues(){
+  this.chrome.querySelector('[data-value=filter]')?.setAttribute('aria-pressed',String(!!this.current()?.getFilter()))
   const cell=this.nativeCell()
   if(!cell||this.ribbon!=='开始')return
   let layoutChanged=false
@@ -485,6 +497,14 @@ class SpreadsheetView{
    case 'align':return [{label:'左对齐',action:'align',value:'left'},{label:'居中',action:'align',value:'center'},{label:'右对齐',action:'align',value:'right'}]
    case 'number':return [{label:'常规',action:'number-format',value:'General'},{label:'数值 · 1,234.00',action:'number-format',value:'#,##0.00'},{label:'人民币 · ¥1,234.00',action:'number-format',value:'"¥"#,##0.00'},{label:'百分比 · 12.34%',action:'number-format',value:'0.00%'},{label:'日期 · 年-月-日',action:'number-format',value:'yyyy-mm-dd'}]
    case 'freeze':return [{label:'冻结首行',action:'freeze',value:'row'},{label:'冻结首列',action:'freeze',value:'col'},{label:'冻结选区上方及左侧',action:'freeze',value:'selection'},{label:'取消冻结',action:'freeze',value:'none'}]
+   case 'filter':{
+    const existing=sheet?.getFilter(),range=existing?.getRange()
+    return range?[
+     {label:'筛选当前列',detail:range.getA1Notation(),action:'filter-open',icon:'filter'},
+     {label:'清除筛选条件',action:'filter-clear',icon:'undo'},
+     {label:'移除筛选',action:'filter-remove',icon:'close',divider:true}
+    ]:[{label:'启用筛选',action:'filter-enable',icon:'filter'}]
+   }
    case 'sort':return [{label:'按选区首列升序',action:'sort',value:'asc'},{label:'按选区首列降序',action:'sort',value:'desc'}]
    case 'functions':return items(['SUM','AVERAGE','MIN','MAX','COUNT','IF','IFERROR','NPV','IRR','XIRR'],'function')
    case 'zoom':return items(['50%','75%','100%','125%','150%','200%'],'zoom')
@@ -599,6 +619,22 @@ class SpreadsheetView{
   this.jump(matches[index]!)
   if(result)result.textContent=matches[index]+' · '+(index+1)+' / '+matches.length
  }
+ private filterRange(){
+  const sheet=this.current()!,selection=this.selected()!
+  const selected=selection.getRange()
+  const single=selected.startRow===selected.endRow&&selected.startColumn===selected.endColumn
+  const matrix=sheet.getSheet().getCellMatrix()
+  if(single&&isNullCell(matrix.getValue(selected.startRow,selected.startColumn)))throw Error('请先选择表头和数据行，或点击数据区域内的单元格。')
+  const bounds=single?selection.getDataRegion().getRange():selected
+  let firstRow=Infinity,lastRow=-1,firstCol=Infinity,lastCol=-1
+  matrix.forValue((row,col,cell)=>{
+   if(row<bounds.startRow||row>bounds.endRow||col<bounds.startColumn||col>bounds.endColumn||isNullCell(cell))return
+   firstRow=Math.min(firstRow,row);lastRow=Math.max(lastRow,row)
+   firstCol=Math.min(firstCol,col);lastCol=Math.max(lastCol,col)
+  })
+  if(firstRow>=lastRow)throw Error('筛选需要至少一行表头和一行数据。')
+  return sheet.getRange(firstRow,firstCol,lastRow-firstRow+1,lastCol-firstCol+1)
+ }
  private async handle(action:string,value:string,trigger:HTMLElement){
   if(this.busy&&['undo','redo','undo-ai','redo-ai'].includes(action))return
   const sheet=this.current(),range=this.selected(),api=this.engine?.api,model=this.engine?.model
@@ -620,7 +656,7 @@ class SpreadsheetView{
    case 'undo-ai':if(this.record.lastAction)await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改');return
    case 'load-incoming':if(this.incoming){this.dialog('载入最新版本','<p>当前还未保存的编辑会丢失。</p>','accept-incoming','载入');}return
    case 'accept-incoming':if(this.incoming){const row=this.incoming;this.incoming=undefined;this.closeDialog();await this.install(row);this.say('已载入最新版本')}return
-   case 'sheet':if(this.formulaDirty)this.commitFormula();this.clearSelectionPreview();model?.setActiveSheet(value);this.readSelection();this.paint();return
+   case 'sheet':if(this.formulaDirty)this.commitFormula();if(this.engine)await this.engine.closeFilter();this.clearSelectionPreview();model?.setActiveSheet(value);this.readSelection();this.paint();return
    case 'jump':this.jump(value);return
    case 'address-dialog':this.dialog('前往单元格','<input aria-label="地址" value="'+text(this.active)+'" placeholder="例如 A1 或 A1:D8">','address-apply','前往');return
    case 'address-apply':this.jump(this.modal.querySelector('input')?.value??'',true);this.closeDialog();return
@@ -659,7 +695,8 @@ class SpreadsheetView{
    case 'add-sheet':{
     if(model.getSheets().length>=MAX_SHEETS)throw Error('工作表数量已达上限。')
     const names=new Set(model.getSheets().map(s=>s.getSheetName().toLowerCase()));let i=1;while(names.has('sheet'+i))i++
-    const next=model.insertSheet('Sheet'+i,{sheet:{rowCount:1000,columnCount:50,defaultRowHeight:30,defaultColumnWidth:100}})
+    const name='Sheet'+i
+    const next=model.insertSheet(name,{sheet:blankSheet(crypto.randomUUID(),name)})
     if(next)model.setActiveSheet(next);break
    }
    case 'undo':if(this.record.lastAction&&!this.dirty&&!this.writingUser){await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改');return}await api!.undo();break
@@ -677,11 +714,24 @@ class SpreadsheetView{
     if(type)range.setBorder(type,api!.Enum.BorderStyleTypes.THIN,'#7a8799')
     break
    }
-   case 'filter':{
-    const existing=sheet.getFilter()
-    if(existing)existing.remove()
-    else if((range.getLastRow()-range.getRow()+1)>1)range.createFilter()
-    else throw Error('请选中包含表头和数据行的区域。')
+   case 'filter-enable':{
+    const target=this.filterRange()
+    if(!target.createFilter())throw Error('无法启用筛选。')
+    this.say('已启用筛选 · '+target.getA1Notation())
+    break
+   }
+   case 'filter-open':{
+    const bounds=sheet.getFilter()?.getRange().getRange()
+    if(!bounds)return
+    const active=range.getColumn()
+    const col=active>=bounds.startColumn&&active<=bounds.endColumn?active:bounds.startColumn
+    await this.engine!.openFilter(sheet.getSheetId(),bounds.startRow,col)
+    return
+   }
+   case 'filter-clear':sheet.getFilter()?.removeFilterCriteria();this.say('已清除筛选条件');break
+   case 'filter-remove':{
+    if(!sheet.getFilter()?.remove())throw Error('无法移除筛选。')
+    this.say('已移除筛选')
     break
    }
    case 'sort':if((range.getLastRow()-range.getRow()+1)<2)throw Error('请选中至少两行数据。');else range.sort({column:0,ascending:value==='asc'});break

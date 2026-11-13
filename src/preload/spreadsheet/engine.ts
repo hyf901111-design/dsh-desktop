@@ -9,16 +9,19 @@ import coreEn from '@univerjs/preset-sheets-core/locales/en-US'
 import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
 import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,IContextService,type IWorkbookData} from '@univerjs/core'
-import {ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation} from '@univerjs/sheets'
+import {AFTER_CELL_EDIT,ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
-import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService} from '@univerjs/sheets-ui'
+import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
+import {OpenFilterPanelOperation,CloseFilterPanelOperation} from '@univerjs/sheets-filter-ui'
 import {DISABLE_AUTO_FOCUS_KEY} from '@univerjs/ui'
 import coreCss from '@univerjs/preset-sheets-core/lib/index.css?raw'
 import filterCss from '@univerjs/preset-sheets-filter/lib/index.css?raw'
 import sortCss from '@univerjs/preset-sheets-sort/lib/index.css?raw'
-import {safeFormula,type Workbook} from '../../shared/spreadsheet/workbook'
+import {safeFormula,SHEET_ROW_HEADER_WIDTH,SHEET_COLUMN_HEADER_HEIGHT,type Workbook} from '../../shared/spreadsheet/workbook'
 
 const editorStyles=[coreCss,filterCss,sortCss].map(css=>css.replace(/^\*\s*\{\s*scrollbar-color: initial;\s*scrollbar-width: initial;\s*\}/m,'')).join('\n')
+const legacyDarkInputColor='#1b1b1b'
+const legacyLightInputColor=defaultTheme.gray[900]
 
 export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void){
  const doc=host.ownerDocument,win=doc.defaultView!
@@ -32,7 +35,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    thumbBackgroundColor:dark()?'#595b60':'#b1b4ba',thumbHoverBackgroundColor:dark()?'#767981':'#92969f',
    thumbActiveBackgroundColor:dark()?'#9397a0':'#777c86'}
  }
- const theme=()=>({...defaultTheme,primary:{...defaultTheme.primary,500:'#7faaf8',600:'#5c8eeb'},gray:{...defaultTheme.gray,...dark()?{300:'#525a67',400:'#aaaaaa',800:'#242424',900:'#1b1b1b'}:{}}})
+ const theme=()=>({...defaultTheme,primary:{...defaultTheme.primary,500:'#7faaf8',600:'#5c8eeb'},gray:{...defaultTheme.gray,...dark()?{300:'#525a67',400:'#aaaaaa',800:'#242424',900:legacyDarkInputColor}:{}}})
  let renderingSheet=false
  class SpreadsheetCanvasColors extends Plugin {
   static override pluginName='ework-spreadsheet-canvas-colors'
@@ -66,7 +69,12 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  // Incremental scrolling swaps in a private buffer that can lack the
  // per-canvas palette. Set the grid color at the worksheet render source.
  const renderWorkbook=structuredClone(workbook) as unknown as IWorkbookData
- for(const sheet of Object.values(renderWorkbook.sheets))sheet.gridlinesColor=palette().grid
+ for(const sheet of Object.values(renderWorkbook.sheets)){
+  sheet.gridlinesColor=palette().grid
+  // Older sheets added in the editor used Univer's 46 × 20 header defaults.
+  if(sheet.rowHeader?.width==null||sheet.rowHeader.width===46)sheet.rowHeader={...sheet.rowHeader,width:SHEET_ROW_HEADER_WIDTH}
+  if(sheet.columnHeader?.height==null||sheet.columnHeader.height===20)sheet.columnHeader={...sheet.columnHeader,height:SHEET_COLUMN_HEADER_HEIGHT}
+ }
  const model=api.createWorkbook(renderWorkbook)
  if(!editable)model.setEditable(false)
  const injector=univer.__getInjector()
@@ -109,7 +117,9 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   }),render.scene.afterRender$.subscribe(()=>{renderingSheet=false})]
   watched.set(render.unitId,on)
  }
- const styleInterceptor=injector.get(SheetInterceptorService).intercept(INTERCEPTOR_POINT.CELL_CONTENT,{
+ const isLegacyInputColor=(rgb:string|null|void)=>rgb===legacyDarkInputColor||rgb===legacyLightInputColor
+ const sheetInterceptors=injector.get(SheetInterceptorService)
+ const styleInterceptor=sheetInterceptors.intercept(INTERCEPTOR_POINT.CELL_CONTENT,{
   effect:InterceptorEffectEnum.Style,priority:0,
   handler(cell,position,next){
    if(!cell)return next(cell)
@@ -117,7 +127,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    const inherited=worksheet.getComposedCellStyleByCellData(row,col,cell)
    const own=position.workbook.getStyles().getStyleByCell(cell)??{}
    const s={...own}
-   if(!inherited.cl&&!inherited.bg&&!cell.p)s.cl={rgb:palette().text}
+   if(!inherited.bg&&!cell.p&&(!inherited.cl||isLegacyInputColor(own.cl?.rgb)))s.cl={rgb:palette().text}
    if(!inherited.ht&&cell.t===1&&!cell.f)s.ht=HorizontalAlign.LEFT
    if(!inherited.vt){
     const merge=worksheet.getCellInfoInMergeData(row,col)
@@ -126,6 +136,20 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
     s.vt=actual>defaultHeight+1||(merge.isMerged&&merge.endRow>merge.startRow)?VerticalAlign.TOP:VerticalAlign.MIDDLE
    }
    return next({...cell,s})
+  }
+ })
+ // The in-cell editor includes its theme foreground in every text run. Keep
+ // automatic color out of the saved cell so it can follow the next theme.
+ const editInterceptor=sheetInterceptors.writeCellInterceptor.intercept(AFTER_CELL_EDIT,{
+  handler(cell,{workbook,worksheet,row,col},next){
+   if(!cell||typeof cell.v!=='string')return next(cell)
+   const styles=workbook.getStyles()
+   const style=styles.getStyleByCell(cell)
+   const rgb=style?.cl?.rgb
+   if(!style||!rgb||(!isLegacyInputColor(rgb)&&rgb!==palette().text))return next(cell)
+   const previous=worksheet.getComposedCellStyleByCellData(row,col,worksheet.getCellRaw(row,col))
+   if(previous.cl&&(!isLegacyInputColor(previous.cl.rgb)||previous.bg))return next(cell)
+   return next({...cell,s:{...style,cl:null}})
   }
  })
 
@@ -196,7 +220,16 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  doc.addEventListener('focusin',updateEditorFocus,true)
  doc.addEventListener('pointerdown',updateEditorFocus,true)
  requestAnimationFrame(()=>{if(!disposed){applyTheme();selection()}})
- return {api,model,capturePasteTarget:()=>injector.get(ISheetClipboardService).capturePasteTarget(),pasteText:(textContent:string,target:ReturnType<ISheetClipboardService['capturePasteTarget']>)=>api.executeCommand(SheetPasteShortKeyCommand.id,{textContent,target}),clearFill:()=>api.executeCommand(ResetBackgroundColorCommand.id),align:(value:string)=>api.executeCommand(SetHorizontalTextAlignCommand.id,{value:{left:1,center:2,right:3}[value]}),snapshot:()=>{
+ return {api,model,
+  openFilter:async(subUnitId:string,row:number,col:number)=>{
+   const unitId=model.getId()
+   await api.executeCommand(ScrollToRangeOperation.id,{unitId,range:{startRow:row,endRow:row,startColumn:col,endColumn:col}})
+   await new Promise<void>(resolve=>win.requestAnimationFrame(()=>resolve()))
+   if(disposed||model.getActiveSheet()?.getSheetId()!==subUnitId)return false
+   return api.executeCommand(OpenFilterPanelOperation.id,{unitId,subUnitId,col})
+  },
+  closeFilter:()=>api.executeCommand(CloseFilterPanelOperation.id),
+  capturePasteTarget:()=>injector.get(ISheetClipboardService).capturePasteTarget(),pasteText:(textContent:string,target:ReturnType<ISheetClipboardService['capturePasteTarget']>)=>api.executeCommand(SheetPasteShortKeyCommand.id,{textContent,target}),clearFill:()=>api.executeCommand(ResetBackgroundColorCommand.id),align:(value:string)=>api.executeCommand(SetHorizontalTextAlignCommand.id,{value:{left:1,center:2,right:3}[value]}),snapshot:()=>{
   const result=structuredClone(model.save()) as unknown as Workbook
   for(const sheet of Object.values(result.sheets)){
    const original=workbook.sheets[sheet.id]?.gridlinesColor
@@ -209,7 +242,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   disposed=true
   doc.removeEventListener('focusin',updateEditorFocus,true)
   doc.removeEventListener('pointerdown',updateEditorFocus,true)
-  observer.disconnect();resize.disconnect();renderSub.unsubscribe();styleInterceptor.dispose();for(const subs of watched.values())subs.forEach(s=>s.unsubscribe());subs.forEach(s=>s.dispose())
+  observer.disconnect();resize.disconnect();renderSub.unsubscribe();styleInterceptor.dispose();editInterceptor();for(const subs of watched.values())subs.forEach(s=>s.unsubscribe());subs.forEach(s=>s.dispose())
   try{univer.dispose()}finally{style.remove();doc.documentElement.classList.toggle('univer-dark',originalDark)}
  }}
  }catch(error){univer.dispose();style.remove();throw error}

@@ -62,8 +62,10 @@ export function rangeAddress(a:Range) {
   const first=address(a.r0,a.c0),last=address(a.r1,a.c1)
   return first===last?first:first+':'+last
 }
+export const SHEET_ROW_HEADER_WIDTH = 40
+export const SHEET_COLUMN_HEADER_HEIGHT = 24
 export function blankSheet(id:string,name:string):Sheet {
-  return {id,name,rowCount:1000,columnCount:50,cellData:{},showGridlines:1,defaultRowHeight:30,defaultColumnWidth:100,rowHeader:{width:40},columnHeader:{height:24}}
+  return {id,name,rowCount:1000,columnCount:50,cellData:{},showGridlines:1,defaultRowHeight:30,defaultColumnWidth:100,rowHeader:{width:SHEET_ROW_HEADER_WIDTH},columnHeader:{height:SHEET_COLUMN_HEADER_HEIGHT}}
 }
 export function blankWorkbook(id:string,name='未命名工作簿',sheetId='sheet-1'):Workbook {
   if(!safeId(id)||!safeId(sheetId))throw Error('工作簿标识无效。')
