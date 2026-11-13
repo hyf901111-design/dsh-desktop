@@ -118,6 +118,32 @@
           "24 个真实模型用例将在新本地客户端构建后按原评分复测"
         ],
         "generatedAt": "2026-11-13T04:47:10.378Z"
+      },
+      "merged": {
+        "mergeCommit": "ff18438ca124e0ca84a63bb31653c92d58ff5265",
+        "verificationCommit": "ff18438ca124e0ca84a63bb31653c92d58ff5265",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/component-shared-state-browser.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-library.test.js",
+              "test/workbench-prototype-evidence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-content-delivery.test.js test/workbench-acquisition-fallback.test.js test/workbench-fund-comparison.test.js test/component-shared-state-browser.test.js test/workbench-execution-policy.test.js test/workbench-library.test.js test/workbench-prototype-evidence.test.js",
+            "verifiedCommit": "ff18438ca124e0ca84a63bb31653c92d58ff5265",
+            "completedAt": "2026-11-13T04:47:21.200Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-13T04:47:21.200Z"
       }
     }
   ],
