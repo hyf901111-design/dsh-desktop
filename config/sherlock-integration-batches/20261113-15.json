@@ -149,6 +149,59 @@
           "上游停服、额度不足、长时间断网与异常预留仍依赖运行时反馈及供应商对账。线上部署与更新后的签名包尚未验证。"
         ],
         "generatedAt": "2026-11-13T13:01:12.130Z"
+      },
+      "merged": {
+        "mergeCommit": "98e8cb191e801a82115f73d58f7df5f58408384f",
+        "verificationCommit": "98e8cb191e801a82115f73d58f7df5f58408384f",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "98e8cb191e801a82115f73d58f7df5f58408384f",
+            "completedAt": "2026-11-13T13:03:34.095Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
+            "verifiedCommit": "98e8cb191e801a82115f73d58f7df5f58408384f",
+            "completedAt": "2026-11-13T13:03:34.095Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=4",
+              "--testTimeout=15000",
+              "test/account-service.test.ts",
+              "test/hosted-ark-runtime.test.js",
+              "test/figma-model-menu.test.ts",
+              "test/figma-auth-errors.test.js",
+              "test/image-generation-tool.test.js",
+              "test/image-generation-client.test.js",
+              "test/image-generation-flow.test.js",
+              "test/image-generation-ui.test.js",
+              "test/profile-runtime-patches.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/figma-model-menu.test.ts test/figma-auth-errors.test.js test/image-generation-tool.test.js test/image-generation-client.test.js test/image-generation-flow.test.js test/image-generation-ui.test.js test/profile-runtime-patches.test.js",
+            "verifiedCommit": "98e8cb191e801a82115f73d58f7df5f58408384f",
+            "completedAt": "2026-11-13T13:03:34.095Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T13:03:34.095Z"
       }
     }
   ],
