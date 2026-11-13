@@ -63,6 +63,28 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-13T05:19:59.594Z"
+      },
+      "merged": {
+        "mergeCommit": "9986b75581ec2af2cf6759ea022dfccd23495fca",
+        "verificationCommit": "9986b75581ec2af2cf6759ea022dfccd23495fca",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "-t",
+              "uses original monetary units|recovers the two requested organizations"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-content-delivery.test.js -t uses original monetary units|recovers the two requested organizations",
+            "verifiedCommit": "9986b75581ec2af2cf6759ea022dfccd23495fca",
+            "completedAt": "2026-11-13T05:20:04.404Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-13T05:20:04.404Z"
       }
     }
   ],
