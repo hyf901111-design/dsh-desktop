@@ -88,6 +88,30 @@
           "线上账号额度边界用隔离测试验证"
         ],
         "generatedAt": "2026-11-13T04:13:28.282875+00:00"
+      },
+      "merged": {
+        "mergeCommit": "758c1bc632576d7f344631a6e5a20ca6c0968cc7",
+        "verificationCommit": "758c1bc632576d7f344631a6e5a20ca6c0968cc7",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/local-search-runtime.test.ts",
+              "test/local-search-bridge.test.ts",
+              "test/session-model-web-search.test.js",
+              "test/account-service.test.ts",
+              "test/volcengine-search-gateway.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/local-search-runtime.test.ts test/local-search-bridge.test.ts test/session-model-web-search.test.js test/account-service.test.ts test/volcengine-search-gateway.test.js",
+            "verifiedCommit": "758c1bc632576d7f344631a6e5a20ca6c0968cc7",
+            "completedAt": "2026-11-13T04:13:33.246Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-13T04:13:33.246Z"
       }
     }
   ],
