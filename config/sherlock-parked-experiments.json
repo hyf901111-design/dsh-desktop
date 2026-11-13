@@ -147,6 +147,12 @@
       "reason": "独立管理后台的用户排序与额度分配开发，保留待单独验收，排除于 1.5.5 桌面客户端。"
     },
     {
+      "branch": "codex/feat/ework-oss-component-pilot-20261111",
+      "tip": "85a325a93ff67d00eca0ebe5f660bb7ee34b6984",
+      "decision": "docs/releases/sherlock-1.5.5.md",
+      "reason": "保留开源组件试验分支的独立行情接入与原型工作台后续实验，发布已在 main 验收的实现。"
+    },
+    {
       "branch": "codex/feat/board-folder-icons-20261109",
       "tip": "be23c48938f41a8e69ef617ca63770bbd09f2e91",
       "decision": "docs/releases/sherlock-1.5.5.md",
