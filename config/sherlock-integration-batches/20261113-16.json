@@ -11,372 +11,65 @@
         "schemaVersion": 1,
         "featureName": "客户端表格模式、右侧 AI 编辑与交互修复",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "0641b52186d99e4a0ba15f97a607030acf96938e",
-        "tipCommit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
+        "baseCommit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
+        "tipCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
         "commits": [
           {
-            "commit": "495a5a07b081f0af481a29114046827b9781a7a7",
+            "commit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
             "parents": [
-              "0641b52186d99e4a0ba15f97a607030acf96938e"
+              "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b"
             ],
-            "subject": "功能：新增客户端表格模式与右侧 AI 编辑"
-          },
-          {
-            "commit": "994b43c26b86dc7e9b1053be1f3e5f9d100a1366",
-            "parents": [
-              "495a5a07b081f0af481a29114046827b9781a7a7"
-            ],
-            "subject": "优化表格顶栏与网格显示，支持对话内联选区引用"
-          },
-          {
-            "commit": "e4b3759315bfbe66fa8d043235adebbfed4cff6a",
-            "parents": [
-              "994b43c26b86dc7e9b1053be1f3e5f9d100a1366"
-            ],
-            "subject": "完善表格新建入口、会话自动命名与顶栏更多菜单"
-          },
-          {
-            "commit": "f1522a1b03ad1b08c2d6fed5f270970a1abe8df2",
-            "parents": [
-              "e4b3759315bfbe66fa8d043235adebbfed4cff6a"
-            ],
-            "subject": "完善表格图表、框选确认和暗色网格并修复模型写入"
-          },
-          {
-            "commit": "f726c3a82c9f169e4447c83e17d4fe18ec4ac71c",
-            "parents": [
-              "f1522a1b03ad1b08c2d6fed5f270970a1abe8df2"
-            ],
-            "subject": "优化表格工具栏、顶栏菜单和对话选区标签"
-          },
-          {
-            "commit": "932eb229481f91d0e9a4f6cbf4ed4039c70ad698",
-            "parents": [
-              "f726c3a82c9f169e4447c83e17d4fe18ec4ac71c"
-            ],
-            "subject": "统一浅色顶栏按钮并精简表格和笔记导出"
-          },
-          {
-            "commit": "a557f5302ed868d3b0763ddb51d44416487b6296",
-            "parents": [
-              "932eb229481f91d0e9a4f6cbf4ed4039c70ad698"
-            ],
-            "subject": "修复表格单元格编辑和选区显示并统一笔记图标"
-          },
-          {
-            "commit": "8323c828f0eb807dc2f2676719e831e59257ace3",
-            "parents": [
-              "a557f5302ed868d3b0763ddb51d44416487b6296"
-            ],
-            "subject": "统一表格菜单和顶栏样式并修复筛选与工作表切换"
-          },
-          {
-            "commit": "5a0234cef09db86f81ea6d7e49adabaa59f5280a",
-            "parents": [
-              "8323c828f0eb807dc2f2676719e831e59257ace3"
-            ],
-            "subject": "弱化表头筛选按钮的底色和图标"
-          },
-          {
-            "commit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
-            "parents": [
-              "5a0234cef09db86f81ea6d7e49adabaa59f5280a"
-            ],
-            "subject": "修复表格输入与弹窗反馈并支持撤销重做快捷键"
+            "subject": "完善表格编辑与实时尺寸调整并统一顶栏按钮"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-11-13-spreadsheet-mode.md"
-          },
-          {
-            "status": "M",
-            "path": "package-lock.json"
-          },
-          {
-            "status": "M",
-            "path": "package.json"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-locale.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/spreadsheet-sessions.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-inline-references-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-export-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-session.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/pending-conversation-panel.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/session-title-subject.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/session-view-preferences.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/spreadsheet-finance-qa.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/spreadsheet-inline-references.mjs"
-          },
-          {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/verify-spreadsheet-live.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/verify-spreadsheet-model-fixture.mjs"
           },
           {
             "status": "M",
             "path": "src/main/index.ts"
           },
           {
-            "status": "A",
-            "path": "src/main/spreadsheet/files.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/spreadsheet/service.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/spreadsheet/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/client-capability-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/client-capabilities.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/explore-menu.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-b-icons.css"
           },
           {
             "status": "M",
             "path": "src/preload/figma-refinements.css"
           },
           {
-            "status": "A",
-            "path": "src/preload/header-more-icon.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/header-view-mode-icon.tsx"
-          },
-          {
             "status": "M",
-            "path": "src/preload/home-app-shortcuts.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-app-shortcuts.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-guide-entry-native.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/outline.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/style.css"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/notes/view-mode.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-header-menu.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/icons.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-new-note.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/spreadsheet/assets-grid-add.svg"
-          },
-          {
-            "status": "A",
             "path": "src/preload/spreadsheet/engine.ts"
           },
           {
             "status": "A",
-            "path": "src/preload/spreadsheet/icons.ts"
+            "path": "src/preload/spreadsheet/header-resize.ts"
           },
           {
             "status": "A",
+            "path": "src/preload/spreadsheet/ui-copy.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/spreadsheet/view.css"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
           },
           {
-            "status": "A",
-            "path": "src/shared/spreadsheet/workbook.ts"
-          },
-          {
             "status": "M",
-            "path": "test/client-capabilities.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/client-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-home-entry-spacing.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-inline-references-patch.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/sidebar-new-note-browser.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-header-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/session-title-subject.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-install.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/spreadsheet-files.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/spreadsheet-inline-references.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/spreadsheet-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/spreadsheet-store.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/spreadsheet-workbook.test.ts"
+            "path": "src/preload/ui-localization.ts"
           }
         ],
         "checks": [
@@ -388,8 +81,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
-            "completedAt": "2026-11-13T13:19:13.744Z",
+            "verifiedCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
+            "completedAt": "2026-11-13T13:56:57.147Z",
             "timeoutMs": 120000
           },
           {
@@ -403,9 +96,9 @@
               "test/spreadsheet-inline-references.test.js"
             ],
             "outcome": "passed",
-            "summary": "15 项表格聚焦测试通过",
-            "verifiedCommit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
-            "completedAt": "2026-11-13T13:19:13.744Z",
+            "summary": "15 项表格聚焦测试及额外 32 项顶栏测试通过",
+            "verifiedCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
+            "completedAt": "2026-11-13T13:56:57.147Z",
             "timeoutMs": 120000
           },
           {
@@ -414,71 +107,28 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 表格交互与中文输入、撤销重做、弹窗回归验证通过",
-            "verifiedCommit": "f334c5f0ef5ae3267a757e65e6f72720c63f0d3b",
-            "completedAt": "2026-11-13T13:19:13.744Z",
+            "summary": "undefined 项 Electron 表格操作和样式验证通过",
+            "verifiedCommit": "53eaba0c21929cdd8435dc1268bc90d032d8f445",
+            "completedAt": "2026-11-13T13:56:57.147Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离 Electron 中实测点选后直接中文组字、持久化、撤销重做与弹窗内反馈。证据 /Users/heyafeng/.codex/visualizations/2026/11/10/01a1c324-adbc-7e01-aa1a-74a5d7edb7ee/sheet-dialog-qa/report.json"
+          "summary": "隔离 Electron 中实测实时行列预览、撤销、中文组字及英文语言切换。证据 /tmp/ework-sheet-followup/report.json"
         },
         "acceptanceCriteria": [
           "点选单元格可直接输入中文，确认后写入表格。",
           "表格快捷键可撤销和重做，侧栏输入保有自身键盘操作。",
-          "去重、图表、查找和重命名弹窗的反馈留在弹窗内，工作区不变暗。"
+          "去重、图表、查找和重命名弹窗的反馈留在弹窗内，工作区不变暗。",
+          "行高和列宽拖动时实时更新，完成拖动后一次撤销恢复。",
+          "英文模式下表格工具栏、菜单和弹窗随客户端语言切换。",
+          "表格右侧使用与研究及笔记一致的底部面板入口。"
         ],
         "risks": [
           "表格分支与最新 main 共同修改前端运行时补丁链，联测前需保留两侧补丁。"
         ],
-        "generatedAt": "2026-11-13T13:19:13.744Z"
-      },
-      "merged": {
-        "mergeCommit": "4a9de72e0b68fe9aced2384ae32128f35132245f",
-        "verificationCommit": "4a9de72e0b68fe9aced2384ae32128f35132245f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4a9de72e0b68fe9aced2384ae32128f35132245f",
-            "completedAt": "2026-11-13T13:23:26.379Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "4a9de72e0b68fe9aced2384ae32128f35132245f",
-            "completedAt": "2026-11-13T13:23:26.379Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "4a9de72e0b68fe9aced2384ae32128f35132245f",
-            "completedAt": "2026-11-13T13:23:26.379Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T13:23:26.379Z"
+        "generatedAt": "2026-11-13T13:56:57.147Z"
       }
     }
   ],
