@@ -36,10 +36,11 @@ export function mapWorkbenchPanelFields(panel,resolveField){
 
 export function resolveWorkbenchPanelLabels(panel,datasets){
  const requested=panel?.view?.type;
- if(requested===panel?.type||panel?.type==='view'&&['chart','kpi','timeline'].includes(requested)){
+ const recordsView=panel?.type==='view'&&requested==='table';
+ if(recordsView||requested===panel?.type||panel?.type==='view'&&['chart','kpi','timeline'].includes(requested)){
   if(requested!==undefined){
    const {type,...view}=panel.view;
-   panel={...panel,type,view};
+   panel={...panel,type:recordsView?'view':type,view};
   }
  }
  const declared=panel?.view;

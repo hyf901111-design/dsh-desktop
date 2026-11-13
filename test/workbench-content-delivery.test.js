@@ -737,8 +737,8 @@ it('uses original monetary units throughout a prototype board and restores an om
   {id:'products',label:'产品明细',prototypeTable:{document:'指数原型.html',section:'DYN.prods',identity:'c'},fields:[{key:'n',label:'名称'},{key:'flow',label:'净流入（亿元）',unit:'亿元'},{key:'scale',label:'规模',unit:'亿元'},{key:'chg',label:'规模变化',unit:'%'}]},
   {id:'totals',label:'市场汇总',aggregate:{dataset:'products',groupBy:[],measures:[{key:'flow',label:'流入合计',op:'sum',field:'flow',unit:'亿元'}]}}
  ],panels:[
-  {type:'view',title:'全市场明细',prompt:'保留原表',view:view('products',['n','flow','scale','chg'])},
-  {type:'chart',title:'资金流向',prompt:'保留原表',view:{...view('products',['flow'],'n'),unit:'亿元',variant:'horizontal'}},
+  {type:'view',title:'全市场明细',prompt:'保留原表',view:{...view('products',['n','flow','scale','chg']),type:'table'}},
+  {type:'chart',title:'资金流向',prompt:'保留原表',view:{...view('products',['n','flow']),unit:'亿元',variant:'horizontal'}},
   {type:'kpi',title:'市场概览',prompt:'汇总原表',view:view('totals',['flow'])},
   {type:'markdown',title:'口径',prompt:'保留说明',content:{body:'原型数据为合成快照。'}}
  ]};

@@ -153,7 +153,7 @@ async function addMissingReconciliation(plan,files,readIndex,readRows,request) {
     plan.sharedDatasets!==undefined&&!Array.isArray(plan.sharedDatasets)||
     !/指数.{0,12}(?:运营|看板|工作台)/u.test(request)||
     /(?:不要|不需要|排除|不含|[仅只](?:做|看|保留|展示))[^。；\n]{0,18}(?:对账|告警|明细|市场|我司|竞品|渠道)/u.test(request))return plan;
- const tab=plan.tabs.find(item=>/对账|数据质量|来源|核验/u.test(item.name))??plan.tabs.find(item=>/渠道/u.test(item.name));
+ const tab=plan.tabs.find(item=>/对账|数据质量|数据.{0,3}口径|来源|核验/u.test(item.name))??plan.tabs.find(item=>/渠道/u.test(item.name));
  if(!tab||!Array.isArray(tab.panelIndexes))return plan;
  const document=basename(files[0]);
  const indexes=await readIndex(files[0]);
@@ -312,8 +312,11 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
   if((mapped.type==='chart'||mapped.view?.variant)&&sourceUnits?.size&&mapped.view.unit!==undefined){
    const section=mapped.view.sections?.[0];
    const plotted=Array.isArray(section?.fields)?section.fields.filter(key=>key!==section.label):[];
-   const unit=plotted?.length?sourceUnits.get(plotted[0]):undefined;
-   if(unit)mapped={...mapped,view:{...mapped.view,unit}};
+   const units=new Set(plotted.map(key=>sourceUnits.get(key)).filter(Boolean));
+   if(units.size===1){
+    const [unit]=units;
+    mapped={...mapped,view:{...mapped.view,unit}};
+   }
   }
   const fields=prototypeFields.get(mapped?.view?.dataset);
   if(!fields)return mapped;
