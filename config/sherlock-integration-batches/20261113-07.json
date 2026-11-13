@@ -67,6 +67,30 @@
           "原 24 工作台的模型统计维持首轮口径，回放证据单列"
         ],
         "generatedAt": "2026-11-13T03:48:23.066482+00:00"
+      },
+      "merged": {
+        "mergeCommit": "85626807c4e3e547db83fe2682ed519bc69ead73",
+        "verificationCommit": "85626807c4e3e547db83fe2682ed519bc69ead73",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/component-source-projection.test.js",
+              "test/workbench-prototype-evidence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-content-delivery.test.js test/workbench-acquisition-fallback.test.js test/workbench-execution-policy.test.js test/component-source-projection.test.js test/workbench-prototype-evidence.test.js",
+            "verifiedCommit": "85626807c4e3e547db83fe2682ed519bc69ead73",
+            "completedAt": "2026-11-13T03:48:27.638Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-13T03:48:27.638Z"
       }
     }
   ],
