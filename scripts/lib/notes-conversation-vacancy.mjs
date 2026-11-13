@@ -1,6 +1,7 @@
-/** A settled no-history compact is a management receipt, not a conversation. */
+/** Management receipts and approval context do not activate an empty Chat. */
 export function isHomeConversationContentNode(node){
  if(node?.kind==='command')return false
+ if(node?.kind==='context'&&node.data?.source?.kind==='plugin'&&node.data.source.plugin==='user-approval')return false
  const command=node?.data?.command,outcome=command?.outcome
  return !(node?.kind==='manual-compaction'&&node.visibility==='visible'&&command?.name==='compact'&&outcome?.kind==='success'&&outcome.text==='No compactable history yet.'&&outcome.sourceEventSeq===undefined&&node.data.compaction===null)
 }
@@ -8,7 +9,8 @@ export function isHomeConversationContentNode(node){
 /** Retaining an edited note is persistence activity, not a visible conversation. */
 export function noteConversationVacant(session,rows=[],tasks=[],researchPending=false){
  const chat=session?.chat,visible=(chat?.order||[]).some(key=>isHomeConversationContentNode(chat.nodes?.get?.(key)))
- return !visible&&!session?.running&&!(session?.pending?.length)&&!(session?.queue?.length)&&!(session?.runningCalls?.length)&&!session?.partial&&!(session?.turnTimings?.size)&&!(session?.turnEnds?.size)&&session?.composerPhase!=='engaging'&&!session?.promptError&&rows.length===0&&tasks.length===0&&!researchPending
+ const queued=(session?.queue||[]).some(message=>isHomeConversationContentNode({kind:'context',data:message}))
+ return !visible&&!session?.running&&!(session?.pending?.length)&&!queued&&!(session?.runningCalls?.length)&&!session?.partial&&!(session?.turnTimings?.size)&&!(session?.turnEnds?.size)&&session?.composerPhase!=='engaging'&&!session?.promptError&&rows.length===0&&tasks.length===0&&!researchPending
 }
 
 /** Refresh installed runtimes too: phase and native header use this predicate. */

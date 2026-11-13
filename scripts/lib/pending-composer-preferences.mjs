@@ -1,6 +1,6 @@
 /** Session-independent data adapter for the existing native composer controls. */
-export function createPendingComposerPreferences({api,applyModel,applyPermission,permissionOptions}){
- const listeners=new Set();let staged,permission,loading,revision=0;
+export function createPendingComposerPreferences({api,applyModel,savePermission,permissionOptions}){
+ const listeners=new Set();let staged,loading,revision=0;
  let snapshot={current:null,routable:null,groups:[],failures:[],status:'idle',error:null};
  const publish=patch=>{snapshot={...snapshot,...patch};for(const fn of listeners)fn()};
  const store={subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},getSnapshot:()=>snapshot};
@@ -10,13 +10,17 @@ export function createPendingComposerPreferences({api,applyModel,applyPermission
   try{const [catalog,settings]=await Promise.all([api.llm.models({}).then(value),api.settings.describe({}).then(value)]);
    const current=staged??settings.namespaces.find(item=>item.ns==='agent-default-model')?.value??null;
    const view=settings.namespaces.find(item=>item.ns==='permission'),options=view&&permissionOptions?.(view);
-   const permissions=options?.length?{currentValue:permission??view.value.defaultPreset,options}:undefined;
+   const permissions=options?.length?{currentValue:view.value.defaultPreset,options}:undefined;
    publish({groups:catalog.groups,failures:catalog.failures,current:revision===before?current:staged,permissions,status:'ready',error:null});return snapshot;
   }catch(error){publish({status:'error',error:error.message});throw error}finally{loading=undefined}
  })(),select:async selection=>{if(!selection||typeof selection.provider!=='string'||typeof selection.model!=='string')throw Error('模型选择无效');staged={...selection};revision++;publish({current:staged,status:'ready',error:null});return true}};
- return{model,setPermission:value=>{if(!snapshot.permissions?.options.some(item=>item.value===value))throw Error('权限选项已变化，请重新选择');permission=value;publish({permissions:{...snapshot.permissions,currentValue:value}})},async apply(sessionId){
+ return{model,async setPermission(value){
+  if(!snapshot.permissions?.options.some(item=>item.value===value))throw Error('权限选项已变化，请重新选择');
+  await savePermission(value);
+  if(loading)await loading.catch(()=>{});
+  await model.load();
+ },async apply(sessionId){
   if(staged){if(applyModel)await applyModel(sessionId,staged);else{const result=await api.sessions.selectModel({sessionId,...staged});if(!result?.result?.ok)throw Error(result?.result?.error?.message||'模型设置未能应用，请重新选择模型。')}}
-  if(permission)await applyPermission?.(sessionId,permission);
  }};
 }
 

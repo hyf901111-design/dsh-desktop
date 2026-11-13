@@ -24,23 +24,10 @@ async function loadConversationBundle(): Promise<ClientBundle> {
     'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
     'utf8'
   )
-  const requireModule = createRequire(import.meta.url)
-  let descriptor: BundleDescriptor | undefined
-  runInNewContext(source, {
-    window: {
-      __ModuleLoader__: {
-        load(value: BundleDescriptor) {
-          descriptor = value
-        }
-      }
-    }
-  })
-  if (descriptor === undefined) throw new Error('conversation bundle did not register')
-  return descriptor.factory((id) => {
-    if (id === 'react') return requireModule('react')
-    if (id === 'react/jsx-runtime') return requireModule('react/jsx-runtime')
-    return fakeModule()
-  })
+  const start = source.indexOf('function displayName(name) {')
+  const end = source.indexOf('/* odyssey:permission-menu-description:', start)
+  if (start < 0 || end < start) throw new Error('permission localization functions not found')
+  return runInNewContext(source.slice(start, end) + '\n({ permissionOptionLabel })', { FULL_ACCESS: 'danger-full-access' })
 }
 
 async function loadPermissionPresetBundle(
@@ -61,7 +48,7 @@ async function loadPermissionPresetBundle(
       }
     }
   })
-  if (descriptor === undefined) throw new Error('permission preset bundle did not register')
+  if (descriptor === undefined) throw new Error('conversation bundle did not register')
   return descriptor.factory((id) => {
     if (id === 'react') return requireModule('react')
     if (id === 'react/jsx-runtime') return requireModule('react/jsx-runtime')

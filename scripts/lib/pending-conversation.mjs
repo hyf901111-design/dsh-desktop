@@ -52,7 +52,12 @@ export function EWorkPendingInputBar(props){
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
  return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,variant:'composer',disabled:!state.workspaceId||state.busy,
-  command:async line=>{const match=/^\/permission ([^\s]+)$/.exec(line);if(!match)throw Error('请选择权限选项');pending.preferences.setPermission(match[1]);return true},
+  command:async line=>{
+   const match=/^\/permission ([^\s]+)$/.exec(line);
+   if(!match)return false;
+   try{await pending.preferences.setPermission(match[1]);return true}
+   catch(error){shell.notify('error',error.message);return false}
+  },
   useProjection:(key,select)=>{const original=props.useProjection(key,value=>value),value=key==='permissions'?preferences?.permissions:original;return typeof select==='function'?select(value):value},
   useInput:select=>{props.useInput(value=>value);return select(input)},inputActions:shell.actions,keyboard:shell,
   useNotices:select=>{props.useNotices(value=>value);return select(notice)},useLexicon:select=>{props.useLexicon(value=>value);return select(new Map())},

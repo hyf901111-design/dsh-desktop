@@ -27,6 +27,7 @@ const uiContext={sessions,workspaces,layout:{toggleSidebar(){}},locale:{register
 sidebar.apply(uiContext);workspaceUi.apply(uiContext)
 const registry=new native.ResearchWorkspaceRegistry(w.dshDesktop.researchCanvasStorage),right=document.createElement('aside'),history=document.createElement('div'),composer=document.createElement('div');right.id='right';right.append(history,composer);document.body.append(right)
 const researchSidebar=new native.ResearchSidebarCoordinator();researchSidebar.setConversationHost('target',history);researchSidebar.setComposerHost('target',composer)
+researchSidebar.sessions=sessions
 researchSidebar.service={getSnapshot:()=>({sessionId:sessions.list.getSnapshot().current,state:{panelOpen:false,width:320,activePane:'main',splits:{kind:'leaf',id:'main',tabs:[],active:null}}}),openTab(){},activateTab(){},updateTab(){},setPanelState(){},closeTab(){}}
 const t=(module:any)=>(key:string,params:any={})=>String(module.__testzh[key]??key).replace(/\{(\w+)\}/g,(_all,name)=>String(params[name]??'{'+name+'}')),views={subscribe:()=>()=>{},version:()=>0,list:()=>['chat','research','notes','trajectory'].map(id=>({id,label:({chat:'对话',research:'研究',notes:'笔记',trajectory:'轨迹'} as Record<string,string>)[id]}))}
 const workspaceStore=workspaceUi.__testcreateWorkspaceViewStore().create(),root=createRoot(document.getElementById('app')!)

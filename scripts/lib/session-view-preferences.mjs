@@ -60,11 +60,32 @@ export function patchNewChatSessionRuntime(source) {
     ['this.connectWorkspace(target).then((sessionId) => {\n\t\t\t\t\tbeforeOpen?.(sessionId);', 'this.connectWorkspace(target, typeof beforeOpen?.canReuse === "function" ? beforeOpen.canReuse : void 0).then((sessionId) => {\n\t\t\t\t\tbeforeOpen?.(sessionId);']
   ]
   const marker='/* ework:new-chat-reuse-filter:'
-  if(source.includes(marker)) {
-    if(source.split(marker).length!==2 || changes.some(([,next])=>source.split(next).length!==2))throw Error('New Chat runtime reuse hook drifted')
+  const permissionMarker='/* ework:new-chat-permission-reuse:v1 */'
+  const permissionChanges = [
+    [changes[0][1], changes[0][1].replace('workspaceId, canReuse)', 'workspaceId, canReuse, permissionAllowsReuse)') + ' ' + permissionMarker],
+    ['const attempt = this.sessions.create({ workspaceId }).finally(() => {',
+      'const pendingCreate = this.connecting.get(workspaceId);\n\t\t\t\tif (pendingCreate !== void 0) return pendingCreate;\n\t\t\t\tconst attempt = this.sessions.create({ workspaceId }).finally(() => {'],
+    [changes[1][1], changes[1][1].replace('=== true))', '=== true) && (!permissionAllowsReuse || await permissionAllowsReuse(summary.id)))')],
+    [changes[2][1], 'const canReuse = typeof beforeOpen?.canReuse === "function" ? beforeOpen.canReuse : void 0;\n'
+      + '\t\t\t\tconst preferences = canReuse && window[Symbol.for("sherlock:conversation-permission-default")];\n'
+      + '\t\t\t\tconst connect = preferences ? preferences.prepareReuse().then(allows => {\n'
+      + '\t\t\t\t\tif (this.sessions.list.getSnapshot().current !== current) return;\n'
+      + '\t\t\t\t\treturn this.connectWorkspace(target, canReuse, allows);\n'
+      + '\t\t\t\t}) : this.connectWorkspace(target, canReuse);\n'
+      + '\t\t\t\tconnect.then((sessionId) => {\n'
+      + '\t\t\t\t\tif (sessionId === void 0 || preferences && this.sessions.list.getSnapshot().current !== current) return;\n'
+      + '\t\t\t\t\tbeforeOpen?.(sessionId);']
+  ]
+  if (source.includes(permissionMarker)) {
+    if (source.split(marker).length!==2 || permissionChanges.some(([,next])=>source.split(next).length!==2))throw Error('New Chat runtime reuse hook drifted')
     return source
   }
-  for(const [before,next] of changes){if(source.split(before).length!==2)throw Error('New Chat runtime reuse anchor drifted');source=source.replace(before,next)}
+  if(source.includes(marker)) {
+    if(source.split(marker).length!==2 || changes.some(([,next])=>source.split(next).length!==2))throw Error('New Chat runtime reuse hook drifted')
+  } else {
+    for(const [before,next] of changes){if(source.split(before).length!==2)throw Error('New Chat runtime reuse anchor drifted');source=source.replace(before,next)}
+  }
+  for (const [before, next] of permissionChanges) source=source.replace(before,next)
   return source
 }
 
