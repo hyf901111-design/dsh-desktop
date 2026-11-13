@@ -7,7 +7,7 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{"pattern": "updates.evanarts.com/v1/hosted-ai/*", "zone_id": "6f467b786713bdf33ed46e8a89d780d9"}],
-  "observability": {"enabled": false},
+  "observability": {"logs": {"enabled": true, "invocation_logs": false}},
   "ratelimits": [{"name": "ARK_LIMITER", "namespace_id": "2026111202", "simple": {"limit": 24, "period": 60}}],
   "d1_databases": [{"binding": "ACCOUNTS_DB", "database_name": "sherlock-accounts", "database_id": "1a60b58b-7926-4287-b6ff-c6e84e12827d", "migrations_dir": "../accounts/migrations"}]
 }

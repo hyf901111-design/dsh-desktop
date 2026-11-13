@@ -106,7 +106,7 @@ it('uses Seedream for stale OpenAI model arguments when hosted image generation 
  const result=await f.call({model:'gpt-image-2.6-sunburst'})
  expect(result.model).toBe('seedream-flash')
  expect(await f.call()).toEqual(result)
- expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({model:'seedream-flash',references:[expect.objectContaining({data:png})]}),expect.anything())
+ expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({model:'seedream-flash',references:[expect.objectContaining({data:png})]}),expect.objectContaining({requestId:expect.stringMatching(/^[0-9a-f]{64}$/)}))
  expect((await f.call({model:'seedream-pro'})).model).toBe('seedream-pro')
  expect(f.prompts[0].text({agent:f.agent})).not.toContain('gpt-image')
  expect(f.credentials.resolve).not.toHaveBeenCalled()
@@ -114,6 +114,33 @@ it('uses Seedream for stale OpenAI model arguments when hosted image generation 
  available=false
  expect((await f.call({model:'gpt-image-2.6-sunburst'})).model).toBe('gpt-image-2.6-sunburst')
  expect(f.request).toHaveBeenCalledOnce()
+})
+it('keeps image requests on the hosted route while the account catalog is unavailable', async () => {
+ const generate = vi.fn()
+ const f = fixture({hosted:{
+  available:()=>false, unavailable:()=>true, models:[{id:'seedream-flash',name:'Seedream Flash'}], generate
+ }})
+ await expect(f.call({model:'gpt-image-2.6-sunburst'})).rejects.toThrow('套餐生图服务暂时不可用')
+ expect(f.prompts[0].text({agent:f.agent})).not.toContain('gpt-image')
+ expect(f.credentials.resolve).not.toHaveBeenCalled()
+ expect(f.request).not.toHaveBeenCalled()
+ expect(generate).not.toHaveBeenCalled()
+})
+it('waits for initial hosted discovery before choosing the image provider', async () => {
+ let ready, available = false
+ const pending = new Promise(resolve => { ready = resolve })
+ const generate = vi.fn(async () => ({ data: png, mediaType: 'image/png' }))
+ const f = fixture({hosted:{
+  ready:()=>pending, available:()=>available, models:[{id:'seedream-flash',name:'Seedream Flash'}], generate
+ }})
+ const image = f.call()
+ await Promise.resolve()
+ expect(f.request).not.toHaveBeenCalled()
+ available = true
+ ready()
+ expect(await image).toMatchObject({model:'seedream-flash'})
+ expect(generate).toHaveBeenCalledOnce()
+ expect(f.request).not.toHaveBeenCalled()
 })
 it('recovers code-mode image receipts after restart and permits editing them in the next turn',async()=>{
  const f=fixture(),result=await f.call(),content=f.tools.get('image_generate').output.render({},result)

@@ -24,6 +24,7 @@ import { MIN_NEW_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../../services/acc
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   quota?: unknown
+  catalogStatus?: 'ready' | 'stale' | 'unavailable' | 'inactive'
   user?: Account | null
   error?: { code: string }
   usage?: { capability: string; requests: number; succeeded: number }[]
@@ -205,9 +206,18 @@ export function mountAccountUi(
   }
   const refreshQuota = () => requestQuota()
   const refreshSettledQuota = () => requestQuota(true)
+  let catalogRequest = 0
+  const refreshCatalogStatus = async () => {
+    if (!user || quotaDisposed) return
+    const owner = user, request = ++catalogRequest
+    const reply = await invoke('ai-catalog-status').catch(() => null)
+    if (quotaDisposed || owner !== user || request !== catalogRequest) return
+    dispatch('sherlock:ai-catalog-status', {status: reply?.catalogStatus ?? 'unavailable'})
+  }
   function publishAccountState(){dispatch('sherlock:account-state',{accountId:user?.id??null,username:user?.username??'登录',authenticated:!!user,avatar:createAvatar()})}
   function updateTrigger() {
     document.documentElement.toggleAttribute('data-odyssey-hosted-account', !!user)
+    if (quotaOwner !== user) dispatch('sherlock:ai-catalog-status', {status: 'inactive'})
     if (!trigger) return
     trigger.replaceChildren()
     const avatar=createAvatar(),label=document.createElement('span')
@@ -878,6 +888,7 @@ export function mountAccountUi(
   document.defaultView?.addEventListener('sherlock:account-menu-request',exploreAccount)
   document.defaultView?.addEventListener('sherlock:account-state-request',publishAccountState)
   document.defaultView?.addEventListener('sherlock:ai-quota-request',refreshQuota)
+  document.defaultView?.addEventListener('sherlock:ai-catalog-request',refreshCatalogStatus)
   document.defaultView?.addEventListener('sherlock:ai-quota-changed',refreshSettledQuota)
   document.defaultView?.addEventListener('sherlock:account-menu-close',exploreClose)
   document.defaultView?.addEventListener('sherlock:settings-open',exploreSettings)
@@ -924,6 +935,7 @@ export function mountAccountUi(
     document.defaultView?.removeEventListener('sherlock:account-menu-request',exploreAccount)
     document.defaultView?.removeEventListener('sherlock:account-state-request',publishAccountState)
     document.defaultView?.removeEventListener('sherlock:ai-quota-request',refreshQuota)
+    document.defaultView?.removeEventListener('sherlock:ai-catalog-request',refreshCatalogStatus)
     document.defaultView?.removeEventListener('sherlock:ai-quota-changed',refreshSettledQuota)
     document.defaultView?.removeEventListener('sherlock:account-menu-close',exploreClose)
     document.defaultView?.removeEventListener('sherlock:settings-open',exploreSettings)

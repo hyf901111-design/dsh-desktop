@@ -17,6 +17,12 @@ import type { BrowserSearchResult } from './search/browser-search-controller'
 
 type AccountProfile = { id: string; username: string; createdAt: number }
 type AccountIdentity = { id: string; profile?: AccountProfile }
+type HostedCatalog = { models: unknown[]; image: boolean; memory?: boolean }
+type HostedCatalogResult = HostedCatalog & { status?: 'stale' }
+const emptyHostedCatalog: HostedCatalog = { models: [], image: false }
+const hostedCatalogTtlMs = 15_000
+const hostedCatalogRetryMs = 2_000
+const hostedCatalogStaleMs = 60_000
 
 function readAccountIdentity(value: unknown): AccountIdentity | undefined {
   const { id, username, createdAt } = (value ?? {}) as Partial<AccountProfile>
@@ -39,7 +45,12 @@ export class AccountService {
   private sessionGeneration = 0
   private suspended = false
   private sessionAbort = new AbortController()
-  private hostedCatalog?: { generation: number; expires: number; pending: Promise<unknown> }
+  private hostedCatalog?: {
+    expires: number
+    confirmed?: { value: HostedCatalog; at: number }
+    result?: HostedCatalogResult
+    pending?: Promise<HostedCatalogResult | undefined>
+  }
   private readonly listeners = new Set<() => void>()
   constructor(
     private directory: string,
@@ -168,6 +179,7 @@ export class AccountService {
   }
   private changed() {
     this.sessionGeneration++
+    this.hostedCatalog = undefined
     this.sessionAbort.abort()
     this.sessionAbort = new AbortController()
     for (const listener of this.listeners) {
@@ -272,37 +284,68 @@ export class AccountService {
       )
     }
   }
-  private async hostedRequest(path: string, signal: AbortSignal, body?: Buffer): Promise<Response> {
+  private async hostedRequest(path: string, signal: AbortSignal, body?: Buffer, requestId?: string): Promise<Response> {
     if (!this.authenticated) return Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 })
     const response = await (this.collaborationOptions.fetch ?? fetch)(this.origin + '/v1/hosted-ai/' + path, {
       method: body === undefined ? 'GET' : 'POST', redirect: 'error', body: body as Uint8Array<ArrayBuffer> | undefined,
-      headers: { authorization: 'Bearer ' + this.token, 'content-type': 'application/json' },
+      headers: {
+        authorization: 'Bearer ' + this.token, 'content-type': 'application/json',
+        ...(requestId ? { 'x-ework-request-id': requestId } : {})
+      },
       signal: AbortSignal.any([signal, this.sessionAbort.signal, AbortSignal.timeout(body === undefined ? 8000 : 310000)])
     })
     return response
   }
-  private async readHostedCatalog(): Promise<{ models?: unknown; image?: boolean; memory?: boolean }> {
-    const empty = { models: [], image: false }
-    if (!this.authenticated || !this.accountId) return empty
+  private async readHostedCatalog(): Promise<HostedCatalogResult | undefined> {
+    if (!this.authenticated || !this.accountId) return emptyHostedCatalog
     const generation = this.generation
-    let cached = this.hostedCatalog
-    if (!cached || cached.generation !== generation || cached.expires <= Date.now()) {
-      const pending = this.hostedRequest('catalog', this.sessionAbort.signal).then(async response => {
-        if (response.ok) return await response.json()
-        await response.body?.cancel()
-        return empty
-      }).catch(() => empty)
-      cached = this.hostedCatalog = { generation, expires: Date.now() + 15000, pending }
+    const cache = this.hostedCatalog ??= { expires: 0 }
+    if (!cache.pending && Date.now() >= cache.expires) {
+      cache.pending = this.refreshHostedCatalog(cache, generation).finally(() => { cache.pending = undefined })
     }
-    const result = await cached.pending
-    return generation === this.generation && result && typeof result === 'object' ? result : empty
+    return cache.pending ?? cache.result
+  }
+  private async refreshHostedCatalog(cache: NonNullable<AccountService['hostedCatalog']>, generation: number): Promise<HostedCatalogResult | undefined> {
+    let value: HostedCatalog | undefined
+    try {
+      const response = await this.hostedRequest('catalog', this.sessionAbort.signal)
+      if (response.ok) {
+        const result = await response.json()
+        if (Array.isArray(result?.models) && typeof result.image === 'boolean') {
+          value = { models: result.models, image: result.image, ...(result.memory === true ? { memory: true } : {}) }
+        }
+      } else {
+        await response.body?.cancel()
+        if (response.status === 401 || response.status === 403) {
+          // Revoke this catalog immediately, and let the account endpoint confirm sign-out.
+          cache.confirmed = undefined
+          if (response.status === 401) await this.revalidateSession(generation)
+          else value = emptyHostedCatalog
+        }
+      }
+    } catch {}
+    if (generation !== this.generation) return undefined
+    const now = Date.now()
+    if (value) {
+      cache.confirmed = { value, at: now }
+      cache.expires = now + hostedCatalogTtlMs
+      return cache.result = value
+    }
+    const last = cache.confirmed
+    const staleUntil = last ? last.at + hostedCatalogStaleMs : 0
+    if (last && now < staleUntil) {
+      cache.expires = Math.min(now + hostedCatalogRetryMs, staleUntil)
+      return cache.result = { ...last.value, status: 'stale' }
+    }
+    cache.expires = now + hostedCatalogRetryMs
+    return cache.result = undefined
   }
   async openVikingMemory(owner: string, query: string, remember: boolean): Promise<string[]> {
     if (!this.authenticated || this.accountId !== owner) return []
     const generation = this.generation
     try {
       const catalog = await this.readHostedCatalog()
-      if (!catalog.memory || generation !== this.generation) return []
+      if (!catalog?.memory || catalog.status === 'stale' || generation !== this.generation) return []
       const response = await this.hostedRequest('memory', AbortSignal.timeout(4000), Buffer.from(JSON.stringify({query,remember})))
       if (!response.ok) { await response.body?.cancel(); return [] }
       const result = await response.json()
@@ -318,12 +361,15 @@ export class AccountService {
       return supplied.length === expected.length && timingSafeEqual(supplied, expected)
     }
     if (path === 'catalog' && req.method === 'GET' && equal(secret)) {
-      const empty = { models: [], image: false }
-      if (!this.authenticated || !this.accountId) { res.setHeader('content-type','application/json'); res.end(JSON.stringify(empty)); return }
+      if (!this.authenticated || !this.accountId) { res.setHeader('content-type','application/json'); res.end(JSON.stringify(emptyHostedCatalog)); return }
       const result = await this.readHostedCatalog()
       res.setHeader('content-type','application/json')
       res.setHeader('cache-control','no-store')
-      res.end(JSON.stringify(generation === this.generation ? { ...result as object, generation } : empty))
+      if (generation !== this.generation) {
+        // Tell the runtime which login superseded this request without returning its catalog.
+        res.writeHead(409).end(JSON.stringify({ generation: this.generation, status: 'session-changed' }))
+      } else if (result) res.end(JSON.stringify({ ...result, generation }))
+      else res.writeHead(503).end(JSON.stringify({ generation, status: 'unavailable' }))
       return
     }
     if (!['chat/completions', 'images'].includes(path ?? '') || req.method !== 'POST' || !equal(secret + '.' + generation) || !this.authenticated) {
@@ -346,11 +392,24 @@ export class AccountService {
     }
     if (generation !== this.generation || signal.signal.aborted) { res.writeHead(401).end(); return }
     try {
-      const response = await this.hostedRequest(path!, signal.signal, Buffer.concat(chunks))
+      const suppliedId = req.headers['x-ework-request-id']
+      const requestId = path === 'images' && typeof suppliedId === 'string' && /^[0-9a-f]{64}$/.test(suppliedId)
+        ? suppliedId : undefined
+      const response = await this.hostedRequest(path!, signal.signal, Buffer.concat(chunks), requestId)
       if (generation !== this.generation || signal.signal.aborted) { await response.body?.cancel(); res.writeHead(401).end(); return }
-      res.writeHead(response.status, { 'content-type': response.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store' })
+      const responseId = response.headers.get('x-ework-request-id')
+      res.writeHead(response.status, {
+        'content-type': response.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store',
+        ...(responseId && /^[-a-zA-Z0-9_]{1,128}$/.test(responseId) ? { 'x-ework-request-id': responseId } : {})
+      })
       if (response.body) await pipeline(Readable.from(response.body as unknown as AsyncIterable<Uint8Array>), res)
       else res.end()
+    } catch {
+      if (res.destroyed) return
+      if (res.headersSent) { res.destroy(); return }
+      res.writeHead(503, { 'content-type': 'application/json' }).end(JSON.stringify({
+        error: { code: 'HOSTED_AI_UNAVAILABLE', message: '暂时无法连接云端模型服务，请稍后重试。' }
+      }))
     } finally {
       if (generation === this.generation && this.authenticated) this.collaborationOptions.onHostedQuotaChanged?.()
     }
@@ -369,6 +428,13 @@ export class AccountService {
       }
       return result
     } catch { return { error: { code: 'HOSTED_AI_UNAVAILABLE' } } }
+  }
+  private async hostedCatalogStatus(): Promise<{ catalogStatus: 'ready' | 'stale' | 'unavailable' | 'inactive' }> {
+    const generation = this.generation
+    if (!this.authenticated || !this.accountId) return { catalogStatus: 'inactive' }
+    const result = await this.readHostedCatalog()
+    if (generation !== this.generation) return { catalogStatus: 'inactive' }
+    return { catalogStatus: !result ? 'unavailable' : result.status ?? (result.models.length ? 'ready' : 'inactive') }
   }
   async start() {
     try {
@@ -467,6 +533,7 @@ export class AccountService {
   }
   invoke(action: string, input: unknown) {
     if (action === 'ai-quota') return this.hostedQuota()
+    if (action === 'ai-catalog-status') return this.hostedCatalogStatus()
     return this.serialize(() => this.perform(action, input))
   }
   private serialize<T>(operation: () => Promise<T>): Promise<T> {

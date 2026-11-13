@@ -10,6 +10,27 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			const itemRefs = (0, react.useRef)([]);
 			const id = (0, react.useId)();
 			const [hostedAccount, setHostedAccount] = (0, react.useState)(() => document.documentElement.hasAttribute("data-odyssey-hosted-account"));
+			const [catalogStatus, setCatalogStatus] = (0, react.useState)("inactive");
+			const catalogStatusRef = (0, react.useRef)("inactive");
+			const requestCatalogStatus = () => window.dispatchEvent(new Event("sherlock:ai-catalog-request"));
+			(0, react.useEffect)(() => {
+				if (!open || !hostedAccount) return;
+				const update = event => {
+					const status = event.detail?.status ?? "inactive";
+					if (catalogStatusRef.current === status) return;
+					catalogStatusRef.current = status;
+					setCatalogStatus(status);
+					lastActionRef.current = "load";
+					load();
+				};
+				window.addEventListener("sherlock:ai-catalog-status", update);
+				requestCatalogStatus();
+				const timer = setInterval(requestCatalogStatus, 5000);
+				return () => {
+					clearInterval(timer);
+					window.removeEventListener("sherlock:ai-catalog-status", update);
+				};
+			}, [open, hostedAccount, load]);
 			(0, react.useEffect)(() => {
 				const root = document.documentElement;
 				const sync = () => setHostedAccount(root.hasAttribute("data-odyssey-hosted-account"));
@@ -54,6 +75,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			const reload = () => {
 				lastActionRef.current = "load";
 				load();
+				if (hostedAccount) requestCatalogStatus();
 			};
 			(0, react.useEffect)(() => {
 				if (available) {
@@ -241,6 +263,16 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								]
 							})] }),
 							pane === "model" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+								hostedAccount && (catalogStatus === "stale" || catalogStatus === "unavailable") && (0, react_jsx_runtime.jsxs)("div", {
+									className: ModelSelect_module_css_default.warning,
+									role: "status",
+									children: [(0, react_jsx_runtime.jsx)("span", { children: t("hosted." + catalogStatus) }), (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: ModelSelect_module_css_default.retry,
+										onClick: reload,
+										children: t("retry")
+									})]
+								}),
 								state.status === "loading" && (0, react_jsx_runtime.jsx)("div", {
 									className: ModelSelect_module_css_default.status,
 									children: t("status.loading")

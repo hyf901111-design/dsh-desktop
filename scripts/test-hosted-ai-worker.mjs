@@ -14,7 +14,10 @@ const token = '1'.repeat(64), other = '2'.repeat(64), key = 'synthetic-provider-
 const pngFixture = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XQAAAAASUVORK5CYII='
 const imageUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/generated.png?signature=fixture'
 const redirectUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/redirect.png?signature=fixture'
+const retryUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/retry.png?signature=fixture'
+const truncatedUrl = 'https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/truncated.png?signature=fixture'
 let calls = 0, memoryCalls = 0, downloads = 0
+let retryDownloads = 0
 const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
   modules: true, script: built.text, compatibilityDate: '2026-08-27', compatibilityFlags: ['nodejs_compat'],
   d1Databases: { ACCOUNTS_DB: 'hosted-test' },
@@ -31,6 +34,15 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     if (request.url === redirectUrl) {
       downloads++
       return Response.redirect('https://untrusted.invalid/generated.png')
+    }
+    if (request.url === retryUrl) {
+      retryDownloads++
+      if (retryDownloads === 1) return new Response('', { status: 503 })
+      return new Response(Buffer.from(pngFixture, 'base64'), { headers: { 'content-type': 'image/png' } })
+    }
+    if (request.url === truncatedUrl) {
+      downloads++
+      return new Response(Buffer.from(pngFixture, 'base64').subarray(0, -12), { headers: { 'content-type': 'image/png' } })
     }
     if(request.url.startsWith('https://api.vikingdb.cn-beijing.volces.com/openviking/')) {
       memoryCalls++
@@ -54,7 +66,9 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
       assert.equal(input.response_format, 'url')
       assert.equal(Object.hasOwn(input, 'sequential_image_generation'), false)
       const url = input.prompt === '不可信下载地址' ? 'https://untrusted.invalid/generated.png'
-        : input.prompt === '下载地址重定向' ? redirectUrl : imageUrl
+        : input.prompt === '下载地址重定向' ? redirectUrl
+        : input.prompt === '下载暂时不可用' ? retryUrl
+        : input.prompt === '下载返回不完整的 PNG' ? truncatedUrl : imageUrl
       return Response.json({ data: [{ url }] })
     }
     assert.equal(request.url, ARK_PLAN_BASE + '/chat/completions')
@@ -265,17 +279,33 @@ try {
     .bind(1_000_000_000, 1_000_000_000, 'alice').run()
   const beforeDelivery = (await (await send('quota',token)).json()).quota.fiveHour
   const beforeDownloads = downloads
-  for (const [requestId, prompt] of [['image-other-origin', '不可信下载地址'], ['image-redirect', '下载地址重定向']]) {
+  for (const [requestId, prompt] of [
+    ['image-other-origin', '不可信下载地址'],
+    ['image-redirect', '下载地址重定向'],
+    ['image-truncated', '下载返回不完整的 PNG']
+  ]) {
     const input = { model: 'doubao-seedream-5.0-flash', prompt, size: 'auto' }
     const response = await send('images', token, input, requestId)
     assert.equal(response.status, 502)
-    assert.equal((await response.json()).error.code, 'HOSTED_AI_IMAGE_DELIVERY')
+    assert.equal(response.headers.get('x-ework-request-id'), requestId)
+    assert.deepEqual((await response.json()).error, {
+      code: 'HOSTED_AI_IMAGE_DELIVERY', message: 'Seedream 图片传输失败，请稍后重试。', requestId
+    })
     assert.equal((await send('images', token, input, requestId)).status, 409)
   }
-  assert.equal(downloads - beforeDownloads, 1)
+  assert.equal(downloads - beforeDownloads, 2)
   const afterDelivery = (await (await send('quota',token)).json()).quota.fiveHour
   assert.equal(afterDelivery.used, beforeDelivery.used)
-  assert.equal(afterDelivery.reserved - beforeDelivery.reserved, 80)
+  assert.equal(afterDelivery.reserved - beforeDelivery.reserved, 120)
+  const beforeRetry = calls
+  const recovered = await send('images', token, { model: 'doubao-seedream-5.0-flash', prompt: '下载暂时不可用', size: 'auto' }, 'image-download-retry')
+  assert.equal(recovered.status, 200)
+  assert.equal(recovered.headers.get('x-ework-request-id'), 'image-download-retry')
+  assert.equal((await recovered.json()).data, pngFixture)
+  assert.equal(retryDownloads, 2)
+  assert.equal(calls - beforeRetry, 1)
+  assert.deepEqual(await db.prepare('SELECT held_units,billed_units FROM ai_quota_requests WHERE request_id=?')
+    .bind('image-download-retry').first(), { held_units: 40_000_000, billed_units: 40_000_000 })
   await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
   assert.equal((await admin.user('alice')).fiveHour.remaining,0)
   await assert.rejects(admin.reserve({userId:'alice',requestId:'month-hard-limit',amountUnits:1}),{code:'AI_QUOTA_MONTH'})

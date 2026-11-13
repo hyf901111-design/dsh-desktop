@@ -1,8 +1,8 @@
-import { LlmError, resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
+import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import { createProvider } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
-import { ImageGenerationError, validateGeneratedImage } from './image-generation-provider.js'
+import { boundedImageJson, ImageGenerationError, validateGeneratedImage } from './image-generation-provider.js'
 
 export const HOSTED_ARK_PROVIDER = 'ework-ark'
 const displayName = 'EWork'
@@ -97,15 +97,19 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
   if (!config) return undefined
   const { base, token } = config
   let registration, state, fingerprint, pending, disposed = false
+  let catalogUnavailable = false, retainUntil = 0
   const lifetime = new AbortController()
   const apply = value => {
+    if (disposed) return
     const models = (Array.isArray(value?.models) ? value.models : []).filter(model =>
       model && /^[a-z0-9.-]{1,80}$/.test(model.id) && typeof model.name === 'string' &&
       Number.isSafeInteger(model.contextWindow) && model.contextWindow >= 8192 && model.contextWindow <= 2048000)
     const generation = value?.generation
     const active = Number.isSafeInteger(generation) && generation >= 0 && models.length > 0
+    catalogUnavailable = false
+    if (value?.status !== 'stale') retainUntil = active ? Date.now() + 60000 : 0
     const next = JSON.stringify(active ? [generation, models, value.image === true] : null)
-    if (next === fingerprint || disposed) return
+    if (next === fingerprint) return
     fingerprint = next
     registration?.()
     registration = undefined
@@ -117,13 +121,24 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
       state = { key, image: value.image === true }
     }
   }
+  const unavailable = (clear = false) => {
+    if (clear || Date.now() >= retainUntil) apply(undefined)
+    catalogUnavailable = true
+  }
   const refresh = () => pending ??= (async () => {
     try {
       const response = await request(base + '/catalog', { redirect: 'error', headers: { authorization: 'Bearer ' + token },
         signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(10000)]) })
-      if (response.ok) apply(await response.json())
-      else { await response.body?.cancel(); apply(undefined) }
-    } catch { apply(undefined) }
+      if (disposed) { await response.body?.cancel(); return }
+      if (response.ok) {
+        const value = await response.json()
+        if (Array.isArray(value?.models) && typeof value.image === 'boolean') apply(value)
+        else unavailable()
+      } else {
+        const value = await response.json().catch(() => undefined)
+        unavailable(value?.status === 'session-changed' || value?.status === 'unavailable')
+      }
+    } catch { if (!disposed) unavailable() }
   })().finally(() => { pending = undefined })
   void refresh()
   const timer = setInterval(() => void refresh(), pollMs)
@@ -134,25 +149,39 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
       { id: 'doubao-seedream-5-0-pro', name: 'Seedream 5.0 Pro', description: '复杂构图与精细生成' }
     ],
     available: () => state?.image === true,
+    ready: () => pending,
+    unavailable: () => catalogUnavailable,
     capture() {
       const access = state
       if (!access?.image) throw new ImageGenerationError('当前账号未开通 Seedream。')
-      return async (input, { signal, maxBytes, assertCurrent }) => {
-        if (access !== state || lifetime.signal.aborted) throw new ImageGenerationError('账号已切换，请重新发起生图。')
+      return async (input, { signal, maxBytes, requestId, assertCurrent }) => {
+        const assertAccess = () => {
+          if (access.key !== state?.key || !state.image || lifetime.signal.aborted)
+            throw new ImageGenerationError('账号已切换或套餐权限已更新，请重新发起生图。')
+        }
+        assertAccess()
         if (input.background === 'transparent') throw new ImageGenerationError('Seedream 暂不支持透明背景，请改用普通背景。')
         assertCurrent?.()
         const references = input.references.map(image => 'data:' + image.mediaType + ';base64,' + Buffer.from(image.data).toString('base64'))
         const body = JSON.stringify({ model: input.model, prompt: input.prompt, size: input.size, references })
         if (Buffer.byteLength(body) > hostedRequestBytes) throw new ImageGenerationError('参考图过大，请压缩后重试。')
         const response = await request(base + '/images', { method: 'POST', redirect: 'error',
-          headers: { 'content-type': 'application/json', authorization: 'Bearer ' + access.key }, body,
+          headers: {
+            'content-type': 'application/json', authorization: 'Bearer ' + access.key,
+            ...(requestId ? { 'x-ework-request-id': requestId } : {})
+          }, body,
           signal: AbortSignal.any([signal, lifetime.signal]) })
         if (!response.ok) {
           const error = await response.json().catch(() => null)
-          throw new ImageGenerationError(error?.error?.message ?? 'Seedream 暂时不可用，请稍后重试。')
+          const responseId = response.headers.get('x-ework-request-id')
+          const detail = responseId && /^[-a-zA-Z0-9_]{1,128}$/.test(responseId) ? ' 请求编号 ' + responseId : ''
+          throw new ImageGenerationError((error?.error?.message ?? 'Seedream 暂时不可用，请稍后重试。') + detail)
         }
-        if (access !== state) throw new LlmError('账号已切换', 'ABORTED')
-        const data = Buffer.from((await response.json()).data ?? '', 'base64')
+        assertAccess()
+        const result = await boundedImageJson(response, Math.ceil(maxBytes * 4 / 3) + 64 * 1024)
+        assertAccess()
+        if (typeof result?.data !== 'string') throw new ImageGenerationError('Seedream 未返回有效图片。')
+        const data = Buffer.from(result.data, 'base64')
         return { data: validateGeneratedImage(data, maxBytes), mediaType: 'image/png' }
       }
     }
