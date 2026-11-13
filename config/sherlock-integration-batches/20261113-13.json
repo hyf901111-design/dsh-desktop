@@ -92,6 +92,50 @@
           "服务已部署；后续部署应包含本提交以保留修复。"
         ],
         "generatedAt": "2026-11-13T10:18:45.208Z"
+      },
+      "merged": {
+        "mergeCommit": "ac0fd924606373fa8c7bc09d1ae5df147c47a232",
+        "verificationCommit": "ac0fd924606373fa8c7bc09d1ae5df147c47a232",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
+            "verifiedCommit": "ac0fd924606373fa8c7bc09d1ae5df147c47a232",
+            "completedAt": "2026-11-13T10:26:48.310Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/hosted-ark-runtime.test.js",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/hosted-ark-runtime.test.js test/account-service.test.ts",
+            "verifiedCommit": "ac0fd924606373fa8c7bc09d1ae5df147c47a232",
+            "completedAt": "2026-11-13T10:26:48.310Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "node",
+              "--check",
+              "scripts/start-native-acceptance-services.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node --check scripts/start-native-acceptance-services.mjs",
+            "verifiedCommit": "ac0fd924606373fa8c7bc09d1ae5df147c47a232",
+            "completedAt": "2026-11-13T10:26:48.310Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-11-13T10:26:48.310Z"
       }
     }
   ],
