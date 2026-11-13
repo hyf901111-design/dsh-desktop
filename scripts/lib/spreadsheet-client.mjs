@@ -58,6 +58,10 @@ ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:docu
 ${welcomeAnchor}`,'right pane welcome component')
  const portal='pendingRight ? researchConversationView : activeView === \'notes\' && document.body.dataset.workspaceSurface!==\'browser\' ?'
  change(portal,portal.replace(' : activeView', " : activeView==='spreadsheet'&&!browserAppActive ? (conversationVacant ? react.createElement(EWorkSpreadsheetWelcome,{sessionId}) : sessionPresentation.conversationView) : activeView"),'right pane welcome')
+ for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',trajectory:"]]){
+  const nativeTitle=source.split('/* browser-app-native:v1 */')[0]
+  if(nativeTitle.split(before).length===2)change(before,after,'spreadsheet blank title '+before)
+ }
  const utilities=`children: [active?.id === 'notes' && (0,react_jsx_runtime.jsx)(EWorkNoteExportMenu,{sessionId}), renderSlot("conversation.session.header.utilities", {})]`
  change(utilities,utilities.replace('children: [', "children: [active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId}),"),'spreadsheet top bar actions')
  const binding="const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';"

@@ -132,6 +132,11 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
             throw error
           }
           if(savedReceipt(result))return rememberSaved(result)
+          if(call?.capability==='spreadsheet.apply'&&result?.capability===call.capability&&result.requestId===call.requestId&&
+            result.status==='succeeded'&&result.data?.saved===true&&result.data.changed===true&&identity.authoritySeq!==undefined){
+            try{ctx.sessionTitle?.scheduleSpreadsheetTitle?.(exec.agent.session,identity.authoritySeq)}
+            catch(error){ctx.logger?.warn?.('Spreadsheet title generation could not start: '+String(error))}
+          }
           controller.signal.throwIfAborted()
           return JSON.stringify(result)
         }finally{clearTimeout(timer);controllers.delete(controller);exec.signal?.removeEventListener('abort',abort)}

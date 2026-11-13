@@ -27,6 +27,7 @@ beforeAll(async () => {
       window.mountShortcuts = () => mountHomeAppShortcuts(document, () => {})
     `, resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
+    loader: { '.svg': 'dataurl' },
     plugins: [{ name: 'raw-css', setup(b) {
       b.onResolve({ filter: /\.css\?raw$/ }, a => ({ path: a.path.startsWith('.') ? resolve(a.resolveDir, a.path.slice(0, -4)) : require.resolve(a.path.slice(0, -4)), namespace: 'raw' }))
       b.onLoad({ filter: /.*/, namespace: 'raw' }, async a => ({ contents: 'export default ' + JSON.stringify(await readFile(a.path, 'utf8')), loader: 'js' }))
@@ -140,8 +141,9 @@ it('keeps each shortcut painted on first hover while new icon requests are pendi
       }
       return count
     }
+    expect(await nav.locator('[data-home-app]').evaluateAll(buttons => buttons.map(button => button.dataset.homeApp))).toEqual([...apps, 'spreadsheet'])
     holdRequests = true
-    for (const app of apps) {
+    for (const app of [...apps, 'spreadsheet']) {
       const button = nav.locator(`[data-home-app="${app}"]`)
       const icon = button.locator('.home-app-shortcut-icon')
       const restingPixels = await brightPixels(icon)

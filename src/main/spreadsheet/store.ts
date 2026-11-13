@@ -1,12 +1,21 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
 import { join, dirname } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import { applyOperations, MAX_BOOK_BYTES, validateWorkbook, type Workbook } from '../../shared/spreadsheet/workbook'
 
 export type WorkbookKey = { owner: string; sessionId: string }
 export type WorkbookRecord = { revision: number; workbook: Workbook | null; lastAction?: string; canRedoAI?:boolean }
 type Stored = WorkbookRecord & { undo?: { actionId: string; revision: number; before: Workbook | null }; redo?:{revision:number;after:Workbook;actionId:string}; replay?: { actionId: string; digest: string }; recent?: string[] }
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex')
+
+function withoutFormulaCache(workbook:Workbook){
+  const snapshot=structuredClone(workbook)
+  for(const sheet of Object.values(snapshot.sheets))for(const row of Object.values(sheet.cellData))for(const cell of Object.values(row)){
+    if(cell.f){delete cell.v;delete cell.t}
+  }
+  return snapshot
+}
 
 /** One synchronous revision compare and atomic rename per commit. Pending
  * imports/conversions and model calls never hold the write boundary. */
@@ -109,7 +118,14 @@ export class SpreadsheetStore {
     if(old.workbook&&!input.operations.length)throw Error('请指定要修改的单元格或工作表。')
     const book=old.workbook??input.create?.()
     if(!book)throw Error('请先创建工作簿，或提供 createName。')
-    return this.commit(key,old,input.operations.length?applyOperations(book,input.operations):book,{actionId,digest,undo:true})
+    const next=input.operations.length?applyOperations(book,input.operations):book
+    if(old.workbook){
+      // Applying an identical formula can invalidate its computed cache. That
+      // does not represent a user-visible edit or justify a new undo entry.
+      const unchanged=isDeepStrictEqual(old.workbook,next)||isDeepStrictEqual(withoutFormulaCache(old.workbook),withoutFormulaCache(next))
+      if(unchanged)return this.public(old)
+    }
+    return this.commit(key,old,next,{actionId,digest,undo:true})
   }
   undo(key:WorkbookKey,requestId:string,input:{revision:number;actionId:string}){
     const old=this.read(key),digest=hash(['undo',input]);const replay=this.replay(old,requestId,digest);if(replay)return replay

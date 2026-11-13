@@ -86,9 +86,11 @@ export class SpreadsheetService{
     const id=action('apply',requestId)
     const row=this.store.apply(key,id,{...args,create:args.createName!==undefined?()=>blankWorkbook(randomUUID(),args.createName):undefined})
     bookId=row.workbook?.id??null
+    const changed=row.revision!==current.revision
+    if(!changed)return receipt({saved:true,changed:false,revision:row.revision},'工作簿内容未变化。')
     this.options.changed(key,row)
     const affected=args.operations.filter((item:any)=>item.range).map((item:any)=>({sheetId:item.sheetId,range:item.range}))
-    return receipt({saved:true,revision:row.revision,actionId:id,workbook:row.workbook?.name,affected},'工作簿修改已保存。')
+    return receipt({saved:true,changed:true,revision:row.revision,actionId:id,workbook:row.workbook?.name,affected},'工作簿修改已保存。')
    },
    undoSpreadsheet:async(args,_context,signal,requestId)=>{
     await latest(signal,true)

@@ -53,3 +53,55 @@ it('keeps the existing model title route, request budget and nonblocking service
 it('omits spreadsheet markers and their internal ids from generated titles',()=>{
  expect(sessionTitleSubject('读取〔表格选区 "行情"!B2:B5 #0123456789ab〕计算收益率').text).toBe('读取 计算收益率')
 })
+
+it('titles a new spreadsheet from its saved edit and pins every explicit rename',async()=>{
+ const {SessionTitleService}=await core()
+ const session={id:'sheet',events:[],append(type,data){this.events.push({seq:this.events.length,type,data,time:0})}}
+ const service=Object.create(SessionTitleService.prototype)
+ service.config={fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256}
+ service.serviceActive=()=>true
+ service.work=new Map()
+ service.ctx={sessions:{get:()=>session}}
+ const placeholder=service.rename(session,'新表格')
+ session.append('workspace-spreadsheet/created',{titleSeq:placeholder.eventSeq})
+ const human=text=>{session.append('user/message',{source:{kind:'user'},content:[{type:'text',text}]});return session.events.at(-1)}
+ const question=human('表格可以导出吗')
+ service.onUserMessage(session,question)
+ expect(service.get(session).title).toBe('新表格')
+ const edit=human('请计算行业估值')
+ service.scheduleSpreadsheetTitle(session,edit.seq)
+ expect(service.get(session)).toMatchObject({title:'计算行业估值',messageSeqs:[edit.seq],source:{kind:'fallback'}})
+ service.rename(session,'我的原样标题')
+ service.scheduleSpreadsheetTitle(session,edit.seq)
+ expect(service.get(session).title).toBe('我的原样标题')
+})
+
+it('passes the exact edit to the title model and discards a completion after a manual rename',async()=>{
+ const {SessionTitleService}=await core()
+ const session={id:'sheet',events:[],requestHeader:()=>({config:{provider:'finance',model:'test'}}),append(type,data){this.events.push({seq:this.events.length,type,data,time:0})}}
+ const service=Object.create(SessionTitleService.prototype)
+ service.config={fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256}
+ service.serviceActive=()=>true
+ service.work=new Map()
+ service.inFlight=new Set()
+ service.lifetime=new AbortController()
+ service.ctx={sessions:{get:()=>session}}
+ let start,finish
+ const started=new Promise(resolve=>{start=resolve})
+ service.registration={active:new Set(),closing:false,provider:{id:'test',generate:request=>{
+  start(request)
+  return new Promise(resolve=>{finish=resolve})
+ }}}
+ const placeholder=service.rename(session,'新表格')
+ session.append('workspace-spreadsheet/created',{titleSeq:placeholder.eventSeq})
+ for(const text of ['支持导出吗','计算现金流折现'])session.append('user/message',{source:{kind:'user'},content:[{type:'text',text}]})
+ service.scheduleSpreadsheetTitle(session,3)
+ const request=await started
+ expect(request.messages).toEqual([{seq:3,text:'计算现金流折现'}])
+ expect(request.route).toEqual({provider:'finance',model:'test'})
+ service.rename(session,'投委会现金流模型')
+ finish({title:'现金流折现',messageSeqs:[3]})
+ await service.drain(service.inFlight)
+ expect(request.signal.aborted).toBe(true)
+ expect(service.get(session)).toMatchObject({title:'投委会现金流模型',source:{kind:'user'}})
+})

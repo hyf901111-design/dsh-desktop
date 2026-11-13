@@ -55,3 +55,14 @@ it('retains the AI undo and revision when Univer later refreshes formula caches'
  expect(undone).toMatchObject({workbook:base.workbook,canRedoAI:true})
  expect(store.redo(key,undone.revision)).toMatchObject({lastAction:'new-formula',workbook:updated.workbook})
 })
+
+it('keeps the revision when a tool writes the same calculated formula',()=>{
+ const {store}=open(),key={owner:'a',sessionId:'no-op'}
+ const book=blankWorkbook('book')
+ book.sheets['sheet-1']!.cellData[0]={0:{f:'=1+2',v:3,t:2}}
+ const original=store.create(key,0,book)
+ const result=store.apply(key,'same',{revision:original.revision,operations:[
+  {op:'write',sheetId:'sheet-1',range:'A1',cells:[[{formula:'=1+2'}]]}
+ ]})
+ expect(result).toEqual(original)
+})

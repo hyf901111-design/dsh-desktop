@@ -8,6 +8,10 @@ export const scheduledStyles = `
 [data-dsh-sidebar-root] .hHd-Xa_newSession::before{content:'';width:16px;height:16px;flex:none;background:currentColor;mask:url('${icons.chat}') center/contain no-repeat}
 [data-dsh-sidebar-root] .hHd-Xa_newSession:nth-child(2)::before{mask-image:url('${icons.research}')}
 [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{mask-image:url('${icons.note.replaceAll("'",'%27')}')}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession[data-sidebar-new-spreadsheet]::before{width:20px!important;height:20px!important;mask-image:url('${icons.spreadsheet.replaceAll("'",'%27')}')!important}
+@media(max-height:740px){
+ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is(.hHd-Xa_logoRow,.hHd-Xa_newSessionGroup,.qDHVXG_rail){gap:4px!important}
+}
 .st-menu[data-sidebar-more] .st-icon{width:18px;height:18px}
 .st-menu[data-sidebar-more] button{gap:10px!important}
 .st-new-note-error{padding:12px;font-size:13px;line-height:1.5}
