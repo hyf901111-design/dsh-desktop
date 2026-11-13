@@ -51,6 +51,17 @@ export function EWorkNoteComponentView({entry,officePreview}){
   root.__eworkNoteMenu=adapter
   return()=>{if(root.__eworkNoteMenu===adapter)delete root.__eworkNoteMenu}
  },[entry.instanceId,entry.host,node,entry.readOnly])
+ react.useEffect(()=>{
+  if(!spreadsheet||entry.mode!=='component')return
+  const exportImage=event=>{
+   const value=event.detail
+   if(value?.sessionId!==entry.sessionId||value.instanceId!==entry.instanceId||!entry.host.isConnected)return
+   const root=rootRef.current
+   void exportWorkbenchContent(root,node,'png').catch(error=>action('error',{message:error.message}))
+  }
+  document.addEventListener('sherlock:spreadsheet-component-export',exportImage)
+  return()=>document.removeEventListener('sherlock:spreadsheet-component-export',exportImage)
+ },[spreadsheet,entry.instanceId,entry.mode,entry.sessionId,entry.host,node])
  const interactionBridge=react.useMemo(()=>eworkCreateNoteHtmlInteraction(node.config?.interactionState,async(version,event)=>{
   const result=await new Promise((resolve,reject)=>{
    const requestId=entry.instanceId+':interaction:'+(++sequence.current),timer=setTimeout(()=>{generationPending.current.delete(requestId);reject(Error('笔记交互保存未确认，请重试。'))},6000)
@@ -95,7 +106,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
   return react.createElement(react.Fragment,null,
    react_dom.createPortal(react.createElement(WorkbenchChrome,{node,sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra,onReload:reload,
     surfaceActions:{surface:'notes',onSpecChange:save,buttons},
-    onAsk:run('ask'),onMore:(_node,event)=>action('more',{anchor:event.currentTarget})}),entry.header),
+    onAsk:run('ask'),onMore:run('more')}),entry.header),
    react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},
     error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),
     react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true}},body),
