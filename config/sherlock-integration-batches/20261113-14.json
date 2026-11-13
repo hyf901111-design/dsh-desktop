@@ -9,49 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复权限切换回执出现在首条消息之前",
+        "featureName": "修复套餐 Seedream 生图网关图片传输",
         "branch": "codex/feat/conversation-permission-home-20261113",
-        "baseCommit": "3c9b71040da148c62a62deff4327010311d6b1aa",
-        "tipCommit": "4459b99e1bd12981bbf66cb437de2e828348e568",
+        "baseCommit": "4459b99e1bd12981bbf66cb437de2e828348e568",
+        "tipCommit": "db44819d2b2f751f1858b28a9768fd0821fdbb54",
         "commits": [
           {
-            "commit": "4459b99e1bd12981bbf66cb437de2e828348e568",
+            "commit": "db44819d2b2f751f1858b28a9768fd0821fdbb54",
             "parents": [
-              "3c9b71040da148c62a62deff4327010311d6b1aa"
+              "4459b99e1bd12981bbf66cb437de2e828348e568"
             ],
-            "subject": "隐藏权限切换遗留的对话执行过程"
+            "subject": "修复套餐生图网关的图片传输"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/conversation-turn-order.mjs"
+            "path": "scripts/test-hosted-ai-worker.mjs"
           },
           {
             "status": "M",
-            "path": "test/conversation-turn-order.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+            "path": "services/hosted-ai/worker.js"
           }
         ],
         "checks": [
           {
             "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "网关本地 D1 和签名下载回归通过。",
+            "verifiedCommit": "db44819d2b2f751f1858b28a9768fd0821fdbb54",
+            "completedAt": "2026-11-13T12:32:11.816Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
               "npm",
               "test",
               "--",
-              "test/conversation-turn-order.test.js",
-              "test/blank-compaction-home.test.js",
-              "test/conversation-permission-default.test.js",
-              "test/conversation-response-history.test.js",
-              "test/research-workbench-feedback.test.js"
+              "test/hosted-ark-runtime.test.js",
+              "test/image-generation-tool.test.js",
+              "test/account-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "5 个聚焦测试文件、44 个用例通过。",
-            "verifiedCommit": "4459b99e1bd12981bbf66cb437de2e828348e568",
-            "completedAt": "2026-11-13T12:10:21.102Z",
+            "summary": "37 个聚焦用例通过。",
+            "verifiedCommit": "db44819d2b2f751f1858b28a9768fd0821fdbb54",
+            "completedAt": "2026-11-13T12:32:11.816Z",
             "timeoutMs": 120000
           },
           {
@@ -62,42 +67,23 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "4459b99e1bd12981bbf66cb437de2e828348e568",
-            "completedAt": "2026-11-13T12:10:21.102Z",
+            "verifiedCommit": "db44819d2b2f751f1858b28a9768fd0821fdbb54",
+            "completedAt": "2026-11-13T12:32:11.816Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "原生会话组装器验证实时和重开顺序，Chromium 验证权限切换保留对话首页。"
+          "outcome": "not-applicable",
+          "summary": "仅修改服务端 Worker，桌面接口保持既有 PNG 格式。"
         },
         "acceptanceCriteria": [
-          "切换权限后发送首条消息，消息上方没有权限切换产生的执行过程。",
-          "正常的执行详情、显式权限查询和命令失败提示仍可查看。"
+          "套餐文生图和参考图编辑通过方舟企业版图片接口。",
+          "网关只获取方舟已验证的图片源，完整 PNG 返回后按原规则结算。"
         ],
         "risks": [
-          "额外的两个测试文件有 7 个既有失败，已在旧集成版本复现相同失败。"
+          "生产失败时保留原账本待对账，不根据推测释放已预留额度。"
         ],
-        "generatedAt": "2026-11-13T12:10:21.102Z"
-      },
-      "merged": {
-        "mergeCommit": "4c2a8d37d1b7ae1e45fe92fff10c3039fcaf9450",
-        "verificationCommit": "4c2a8d37d1b7ae1e45fe92fff10c3039fcaf9450",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4c2a8d37d1b7ae1e45fe92fff10c3039fcaf9450",
-            "completedAt": "2026-11-13T12:10:24.582Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T12:10:24.582Z"
+        "generatedAt": "2026-11-13T12:32:11.816Z"
       }
     }
   ],
