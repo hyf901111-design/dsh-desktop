@@ -23,9 +23,12 @@ beforeAll(async () => {
       };`, resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
     plugins: [{ name: 'real-auth-assets', setup(b) {
-      b.onResolve({ filter: /\?(raw|url)/ }, a => ({ path: resolve(a.resolveDir, a.path.split('?')[0]), namespace: a.path.includes('raw') ? 'raw' : 'image' }))
+      b.onResolve({ filter: /\?(raw|url|inline)/ }, a => ({ path: resolve(a.resolveDir, a.path.split('?')[0]), namespace: a.path.includes('raw') ? 'raw' : 'image' }))
       b.onLoad({ filter: /.*/, namespace: 'raw' }, async a => ({ contents: 'export default ' + JSON.stringify(await readFile(a.path, 'utf8')), loader: 'js' }))
-      b.onLoad({ filter: /.*/, namespace: 'image' }, async a => ({ contents: 'export default ' + JSON.stringify('data:image/png;base64,' + (await readFile(a.path)).toString('base64')), loader: 'js' }))
+      b.onLoad({ filter: /.*/, namespace: 'image' }, async a => {
+        const mime = a.path.endsWith('.svg') ? 'image/svg+xml' : 'image/png'
+        return { contents: 'export default ' + JSON.stringify('data:' + mime + ';base64,' + (await readFile(a.path)).toString('base64')), loader: 'js' }
+      })
     } }]
   })
   script = result.outputFiles[0].text
@@ -59,7 +62,7 @@ async function measurements() {
     fields: [...document.querySelectorAll('form input')].map(input => {
       const rect = input.getBoundingClientRect(), style = getComputedStyle(input)
       const error = document.getElementById(input.getAttribute('aria-describedby'))
-      return { name: input.name, width: rect.width, height: rect.height, radius: style.borderRadius,
+      return { name: input.name, width: rect.width, height: rect.height, radius: style.borderRadius, letterSpacing: style.letterSpacing,
         value: input.value, invalid: input.getAttribute('aria-invalid'), shadow: style.boxShadow,
         error: error.textContent, errorColor: getComputedStyle(error).color, live: error.getAttribute('aria-live'), errorVisible: getComputedStyle(error).display !== 'none',
         afterInput: input.nextElementSibling === error, belowInput: error.getBoundingClientRect().top >= rect.bottom,
@@ -131,6 +134,8 @@ describe('auth field errors in the real form and browser layout', () => {
     expect(before.cardHeight).toBe(normalHeight)
     expect(before.fields).toHaveLength(register ? 4 : 2)
     for (const field of before.fields) expect(field).toMatchObject({ width: 344, height: 44, radius: '9px', labelHeight: 70, errorVisible: false, live: 'polite' })
+    expect(before.fields.filter(field => ['password', 'confirmPassword'].includes(field.name)).map(field => field.letterSpacing))
+      .toEqual(register ? ['-1px', '-1px'] : ['-1px'])
     await page.locator('button[type=submit]').click()
     const invalid = await measurements()
     expect(invalid.cardHeight).toBeGreaterThan(before.cardHeight)
@@ -171,13 +176,26 @@ describe('auth field errors in the real form and browser layout', () => {
     await page.locator('input[name=username]').fill('验收_local')
     await page.locator('input[name=password]').fill('short')
     await page.locator('button[type=submit]').click()
-    expect((await measurements()).fields[1]).toMatchObject({ value: 'short', error: '至少 10 位', afterInput: true })
+    await page.locator('#sherlock-field-error-password').getByText('用户名或密码不正确。').waitFor()
+    expect(await page.evaluate(() => window.accountCalls.filter(call => call.action === 'login').length)).toBe(1)
     await page.locator('input[name=password]').fill('fixture-password-only')
     expect((await measurements()).fields[1]).toMatchObject({ invalid: null, errorVisible: false })
     await page.locator('button[type=submit]').click()
     await page.locator('#sherlock-field-error-password').getByText('用户名或密码不正确。').waitFor()
     expect((await measurements()).fields.map(field => field.value)).toEqual(['验收_local', 'fixture-password-only'])
     expect((await measurements()).fields[1]).toMatchObject({ afterInput: true, belowInput: true, invalid: 'true' })
+  })
+  it('rejects a seven-character registration password and submits a matching eight-character password', async () => {
+    await open({ register: true })
+    await page.locator('input[name=username]').fill('验收_local')
+    await page.locator('input[name=invite]').fill('fixture-invitation-code')
+    for (const field of ['password', 'confirmPassword']) await page.locator(`input[name=${field}]`).fill('T3st7xy')
+    await page.locator('button[type=submit]').click()
+    expect((await measurements()).fields[1]).toMatchObject({ error: '至少 8 位', afterInput: true })
+    expect(await page.evaluate(() => window.accountCalls.filter(call => call.action === 'register').length)).toBe(0)
+    for (const field of ['password', 'confirmPassword']) await page.locator(`input[name=${field}]`).fill('T3st8xyz')
+    await page.locator('button[type=submit]').click()
+    await expect.poll(() => page.evaluate(() => window.accountCalls.filter(call => call.action === 'register').length)).toBe(1)
   })
   it('allows the expanded registration errors to scroll to submit, switch and close at 840×640', async () => {
     await open({ dark: true, register: true, short: true })

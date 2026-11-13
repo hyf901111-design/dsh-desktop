@@ -4,6 +4,7 @@ import {
   timingSafeEqual,
   createHash
 } from 'node:crypto'
+import { MIN_NEW_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from './password-policy.js'
 const now = () => Math.floor(Date.now() / 1000)
 export const hash = (value) => createHash('sha256').update(value).digest('hex')
 const json = (body, status = 200) =>
@@ -97,6 +98,7 @@ export async function handleAccountRequest(request, env) {
   if (!db) return authError('ACCOUNT_SERVICE_UNAVAILABLE', 503)
   try {
     if (path === '/v1/account/login' || path === '/v1/account/register') {
+      const registering = path === '/v1/account/register'
       if (request.method !== 'POST') return authError('METHOD_NOT_ALLOWED', 405)
       const ip = request.headers.get('cf-connecting-ip')
       if (!ip) return authError('ACCOUNT_SERVICE_UNAVAILABLE', 503)
@@ -107,13 +109,13 @@ export async function handleAccountRequest(request, env) {
         typeof input.username !== 'string' ||
         !/^[\p{L}\p{N}_-]{3,32}$/u.test(input.username) ||
         typeof input.password !== 'string' ||
-        input.password.length < 10 ||
-        input.password.length > 128
+        input.password.length < (registering ? MIN_NEW_PASSWORD_LENGTH : 1) ||
+        input.password.length > MAX_PASSWORD_LENGTH
       )
         return authError('INVALID_CREDENTIAL_FORMAT', 400)
       if (await limited(db, `user:${hash(input.username.toLowerCase())}`))
         return authError('TOO_MANY_ATTEMPTS', 429)
-      if (path.endsWith('/register')) {
+      if (registering) {
         if (
           typeof input.invite !== 'string' ||
           !/^[-a-zA-Z0-9]{16,128}$/.test(input.invite)
@@ -177,10 +179,11 @@ export async function handleAccountRequest(request, env) {
       const input = await body(request)
       if (
         typeof input.currentPassword !== 'string' ||
-        input.currentPassword.length > 128 ||
+        input.currentPassword.length < 1 ||
+        input.currentPassword.length > MAX_PASSWORD_LENGTH ||
         typeof input.password !== 'string' ||
-        input.password.length < 10 ||
-        input.password.length > 128
+        input.password.length < MIN_NEW_PASSWORD_LENGTH ||
+        input.password.length > MAX_PASSWORD_LENGTH
       )
         return authError('INVALID_CREDENTIAL_FORMAT', 400)
       const current = await db

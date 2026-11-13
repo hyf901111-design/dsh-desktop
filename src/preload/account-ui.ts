@@ -20,6 +20,7 @@ import authCss from './figma-auth.css?raw'
 import authClose from './figma-settings-assets/auth-close.svg?raw'
 import authSceneMask from './figma-settings-assets/auth-scene-mask.svg?raw'
 import { createSettingsBackgroundController } from './settings-background'
+import { MIN_NEW_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from '../../services/accounts/password-policy.js'
 type Account = { id: string; username: string; createdAt: number }
 type Reply = {
   quota?: unknown
@@ -99,7 +100,7 @@ export function mountAccountUi(
     INVALID_INVITE: '邀请码无效、已过期或已用完。',
     REGISTRATION_REJECTED: '注册未完成，请检查用户名和邀请码。',
     INVALID_CREDENTIAL_FORMAT:
-      '用户名需为 3–32 位文字、数字、下划线或短横线；密码需为 10–128 位。',
+      '请检查用户名和密码格式。',
     TOO_MANY_ATTEMPTS: '尝试次数较多，请稍后再试。',
     SECURE_STORAGE_UNAVAILABLE: '系统安全存储不可用，请检查系统钥匙串。',
     ACCOUNT_SERVICE_UNAVAILABLE: '账户服务暂时不可用，请稍后重试。'
@@ -408,7 +409,7 @@ export function mountAccountUi(
       i.type = type
       i.autocomplete = autocomplete as AutoFill
       i.required = true
-      if (!user) i.placeholder = name === 'username' ? (register ? '3–32 位文字、数字、下划线或短横线' : '请输入用户名') : name === 'password' ? (register ? '设置 10–128 位密码' : '请输入密码') : name === 'confirmPassword' ? '再次输入密码' : '请输入邀请码'
+      if (!user) i.placeholder = name === 'username' ? (register ? '3–32 位文字、数字、下划线或短横线' : '请输入用户名') : name === 'password' ? (register ? `设置至少 ${MIN_NEW_PASSWORD_LENGTH} 位密码` : '请输入密码') : name === 'confirmPassword' ? '再次输入密码' : '请输入邀请码'
       i.setAttribute('aria-label', label)
       i.setAttribute('aria-describedby', error.id)
       i.addEventListener('input', () => {
@@ -417,8 +418,8 @@ export function mountAccountUi(
         status.textContent = ''
       })
       fields.push({ input: i, error, label })
-      i.maxLength = type === 'password' ? 128 : name === 'username' ? 32 : 128
-      if (type === 'password') i.minLength = 10
+      i.maxLength = type === 'password' ? MAX_PASSWORD_LENGTH : name === 'username' ? 32 : 128
+      if (name === 'password' && autocomplete === 'new-password') i.minLength = MIN_NEW_PASSWORD_LENGTH
       l.append(i)
       if (!user) l.append(error)
       form.append(l)
@@ -540,8 +541,8 @@ export function mountAccountUi(
       for (const entry of fields) {
         const value = entry.input.value
         let message = !value ? `请输入${entry.label}` : ''
-        if (!message && entry.input.type === 'password' && value.length < 10)
-          message = '至少 10 位'
+        if (!message && entry.input.minLength > 0 && value.length < entry.input.minLength)
+          message = `至少 ${entry.input.minLength} 位`
         if (
           !message &&
           entry.input.name === 'username' &&
@@ -596,8 +597,9 @@ export function mountAccountUi(
               entry.input.setAttribute('aria-invalid', 'true')
               entry.input.focus()
             } else
-              status.textContent =
-                errors[reply.error.code] ?? '操作未完成，请稍后重试。'
+              status.textContent = reply.error.code === 'INVALID_CREDENTIAL_FORMAT' && action !== 'login'
+                ? `密码需为 ${MIN_NEW_PASSWORD_LENGTH}–${MAX_PASSWORD_LENGTH} 位。`
+                : errors[reply.error.code] ?? '操作未完成，请稍后重试。'
             return
           }
           if (action === 'password') {

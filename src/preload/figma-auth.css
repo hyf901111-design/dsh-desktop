@@ -29,6 +29,8 @@
 .sherlock-auth-dialog .sherlock-field-error{font:400 11px/18px 'Noto Sans SC',sans-serif;color:#bc574f}
 .sherlock-auth-dialog .sherlock-account-page input{box-sizing:border-box;height:44px;width:100%;border:0;border-radius:9px;padding:0 14px;background:rgba(0,0,0,.05);font:400 13px/22px 'Noto Sans SC',sans-serif;color:#252525}
 .sherlock-auth-dialog .sherlock-account-page input::placeholder{color:#737373}
+.sherlock-auth-dialog .sherlock-account-page input[type=password]{letter-spacing:-1px}
+.sherlock-auth-dialog .sherlock-account-page input[type=password]::placeholder{letter-spacing:normal}
 .sherlock-auth-dialog .sherlock-account-page button[type=submit]{box-sizing:border-box;height:44px;margin-top:8px;padding:0 14px;border:0;border-radius:10px;background:#272727;color:#fff;font:500 14px/22px 'Noto Sans SC',sans-serif}
 .sherlock-auth-dialog .sherlock-auth-switch{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;flex:none;height:58px;min-height:58px;width:calc(100% + 64px);margin:20px -32px 0;padding:0 16px;border:0;border-top:1px solid rgba(0,0,0,.1);border-radius:0 0 20px 20px;background:rgba(0,0,0,.03);color:#737373;font:400 12px/20px 'Noto Sans SC',sans-serif;text-align:center}
 .sherlock-auth-switch strong{font-weight:500;color:#252525}
