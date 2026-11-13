@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
+import { patchHostModelCatalog, patchModelCatalogSchema } from '../scripts/lib/figma-model-menu.mjs'
 
 type ClientBundle = {
   AbstractApiClient: new () => {
@@ -30,7 +32,7 @@ async function loadClientBundle(): Promise<ClientBundle> {
   )
   let descriptor: BundleDescriptor | undefined
 
-  runInNewContext(source, {
+  runInNewContext(patchModelCatalogSchema(source), {
     window: {
       __ModuleLoader__: {
         load(value: BundleDescriptor) {
@@ -58,6 +60,28 @@ async function loadClientBundle(): Promise<ClientBundle> {
 
 describe('first-run model picker', () => {
   it('loads the available model groups when the session has no current selection yet', async () => {
+    const host = patchModelCatalogSchema(patchHostModelCatalog(
+      await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js', 'utf8')
+    ))
+    const schemaStart = host.indexOf('const modelCatalogModelSchema =')
+    const schemaEnd = host.indexOf('/** One successfully loaded provider group', schemaStart)
+    const modelSchema = runInNewContext(host.slice(schemaStart, schemaEnd) + '\nmodelCatalogModelSchema', {
+      z$1: z,
+      modelReasoningSchema: z.unknown()
+    })
+    const start = host.indexOf('async function buildModelCatalog(')
+    const end = host.indexOf('/** Wrap an error result', start)
+    const buildCatalog = runInNewContext(host.slice(start, end) + '\nbuildModelCatalog')
+    const catalog = await buildCatalog({
+      llm: {
+        listProviders: () => [{ id: 'custom', name: 'Configured models' }],
+        listModels: async () => [{ id: 'photo', name: 'Photo model' }, { id: 'text', name: 'Text model' }],
+        resolveModelInfo: async (_provider: string, model: string) => ({
+          inputModalities: model === 'photo' ? ['text', 'image'] : ['text']
+        })
+      }
+    })
+    catalog.groups[0].models = catalog.groups[0].models.map((model: unknown) => modelSchema.parse(model))
     const clientBundle = await loadClientBundle()
     const BaseClient = clientBundle.AbstractApiClient
     class FirstRunClient extends BaseClient {
@@ -72,14 +96,7 @@ describe('first-run model picker', () => {
               value: {
                 current: null,
                 routable: false,
-                groups: [
-                  {
-                    id: 'kimi-coding',
-                    name: 'Kimi Coding',
-                    models: [{ id: 'kimi-k3', name: 'Kimi K3' }]
-                  }
-                ],
-                failures: []
+                ...catalog
               }
             }
           }),
@@ -97,9 +114,12 @@ describe('first-run model picker', () => {
         routable: false,
         groups: [
           {
-            id: 'kimi-coding',
-            name: 'Kimi Coding',
-            models: [{ id: 'kimi-k3', name: 'Kimi K3' }]
+            id: 'custom',
+            name: 'Configured models',
+            models: [
+              { id: 'photo', name: 'Photo model', supportsImageInput: true },
+              { id: 'text', name: 'Text model' }
+            ]
           }
         ],
         failures: []

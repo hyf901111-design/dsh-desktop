@@ -81,11 +81,14 @@ for (const redirectUpstream of [false, true]) {
     const auth=async(action,body,token)=>mf.dispatchFetch(`https://fund.local/v1/account/${action}`,{method:body?'POST':'GET',headers:{'content-type':'application/json','cf-connecting-ip':'192.0.2.40',...(token?{authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})})
     const anon=await mf.dispatchFetch('https://fund.local/v1/fund-research/query',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})
     assert.equal(anon.status,401)
-    const registered=await auth('register',{username:'tester',password:'synthetic-password-123',invite})
+    const password = 'T3st8xyz'
+    assert.equal((await auth('register',{username:'tester',password:'T3st7xy',invite})).status,400)
+    const registered=await auth('register',{username:'tester',password,invite})
     assert.equal(registered.status,200,await registered.clone().text())
     const {token,user}=await registered.json()
-    assert.equal((await auth('register',{username:'tester2',password:'synthetic-password-123',invite})).status,400)
-    assert.equal((await auth('login',{username:'tester',password:'incorrect-password'})).status,401)
+    assert.equal((await auth('register',{username:'tester2',password,invite})).status,400)
+    assert.equal((await auth('login',{username:'tester',password:'T3st7xy'})).status,401)
+    assert.equal((await auth('login',{username:'tester',password})).status,200)
     assert.equal((await auth('me',null,token)).status,200)
     const provider = createHostedFundProvider({
       fetch: async (url, init) => {
@@ -134,10 +137,12 @@ for (const redirectUpstream of [false, true]) {
     }
     const usage=await (await auth('usage',null,token)).json()
     assert.ok(usage.usage[0].requests>=1)
-    assert.equal((await auth('password',{currentPassword:'synthetic-password-123',password:'new-synthetic-password'},token)).status,200)
+    const newPassword = 'N3w8xyz!'
+    assert.equal((await auth('password',{currentPassword:password,password:'N3w7xyz'},token)).status,400)
+    assert.equal((await auth('password',{currentPassword:password,password:newPassword},token)).status,200)
     assert.equal((await auth('me',null,token)).status,401)
-    assert.equal((await auth('login',{username:'tester',password:'synthetic-password-123'})).status,401)
-    const login=await auth('login',{username:'tester',password:'new-synthetic-password'})
+    assert.equal((await auth('login',{username:'tester',password})).status,401)
+    const login=await auth('login',{username:'tester',password:newPassword})
     assert.equal(login.status,200)
     const renewed=await login.json()
     assert.equal((await auth('logout',{},renewed.token)).status,200)

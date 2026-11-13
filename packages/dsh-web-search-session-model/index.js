@@ -396,7 +396,7 @@ export async function searchLocalBrowser(
       isRecord(parsed) && nonEmptyString(parsed.error)
         ? parsed.error
         : '本地搜索暂未完成，请稍后重试。',
-      'WEB_LOCAL_SEARCH_FAILED',
+      response.status === 401 ? 'WEB_LOGIN_REQUIRED' : 'WEB_LOCAL_SEARCH_FAILED',
       { status: response.status }
     )
   }
@@ -469,12 +469,15 @@ export class SessionModelSearchProvider {
     }
     if (signal?.aborted) throw abortWebError(signal)
 
+    let loginRequired
     if (mode === 'auto' && this.dependencies.searchDefault) {
       try {
         return boundedResult(await this.dependencies.searchDefault(request, signal), request.maxResults)
       } catch (error) {
         if (aborted(signal, error)) throw abortWebError(signal, error)
-        throw error
+        // Anonymous use can fall back to the user's own Responses credentials.
+        if (error?.code !== 'WEB_LOGIN_REQUIRED') throw error
+        loginRequired = error
       }
     }
 
@@ -502,6 +505,8 @@ export class SessionModelSearchProvider {
         'WEB_MODEL_SEARCH_UNSUPPORTED'
       )
     }
+
+    if (loginRequired) throw route?.nativeKind === 'openai-responses' ? nativeFailure : loginRequired
 
     if (mode === 'native-only') {
       throw new WebError(

@@ -12,4 +12,5 @@ export function buildResearchHtmlPreview(html: string, title?: string, initialTh
 
 export const RESEARCH_COMPONENT_PALETTES: Readonly<Record<'light' | 'dark', Readonly<Record<string, string>>>>
 export const RESEARCH_COMPONENT_THEME_CSS: string
+export const RESEARCH_COMPONENT_DIN_FACES: string
 export function researchComponentTypographyCss(scope: string): string

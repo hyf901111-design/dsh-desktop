@@ -1382,7 +1382,12 @@ async function bootstrap(): Promise<void> {
       request
     )
   )
-  accountService = new AccountService(join(app.getPath('userData'), 'accounts'), { origin: acceptanceOrigin })
+  accountService = new AccountService(join(app.getPath('userData'), 'accounts'), {
+    origin: acceptanceOrigin,
+    onHostedQuotaChanged: () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('account:quota-changed')
+    }
+  })
   const accountEndpoint = await accountService.start()
   const collaborationClient=new CollaborationClient(accountService, { origin: acceptanceOrigin })
   const boardsToken=randomUUID()
@@ -1432,6 +1437,7 @@ async function bootstrap(): Promise<void> {
     memoryService = await MemoryService.open({
       root: join(app.getPath('userData'), 'memory'), encryption: safeStorage,
       owner: () => integrationOwner() || 'local',
+      cloudMemory: (owner,query,remember) => accountService!.openVikingMemory(owner,query,remember),
       isShared: id => researchBoardsService?.isSharedSession(id) === true,
       workspaceRoot: id => new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),
       legacyRoot: join(dshHome, 'memories'),

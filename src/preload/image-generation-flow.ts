@@ -4,7 +4,7 @@ import { createHomeFlowField } from './home-flow'
 export function mountImageGenerationFlow(doc: Document = document): () => void {
   const win = doc.defaultView
   if (!win) return () => {}
-  const field = createHomeFlowField({ speed: 4.5, strength: 2.2 })
+  const field = createHomeFlowField({ speed: 8.5, strength: 4.5 })
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
   type Surface = { context: CanvasRenderingContext2D; pixels: ImageData; visible: boolean }
   const surfaces = new Map<HTMLCanvasElement, Surface>()

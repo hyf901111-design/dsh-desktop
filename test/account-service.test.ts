@@ -19,10 +19,10 @@ afterEach(async () => {
   for (const path of directories.splice(0))
     await rm(path, { recursive: true, force: true })
 })
-async function setup() {
+async function setup(options?: ConstructorParameters<typeof AccountService>[1]) {
   const dir = await mkdtemp(join(tmpdir(), 'sherlock-account-test-'))
   directories.push(dir)
-  const service = new AccountService(dir)
+  const service = new AccountService(dir, options)
   services.push(service)
   return { service, dir, endpoint: await service.start() }
 }
@@ -403,4 +403,59 @@ it('uses only the EWork session token for the professional dataset and Doubao se
       headers: { 'content-type': 'application/json', accept: 'application/json', authorization: 'Bearer ' + token }
     })
   }
+})
+
+it('rejects old hosted-AI bridge generations before contacting Cloudflare',async()=>{
+  const onHostedQuotaChanged = vi.fn()
+  const {service,endpoint}=await setup({ onHostedQuotaChanged })
+  const local=globalThis.fetch, provider=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+    const path=new URL(String(input)).pathname
+    if(path.endsWith('/login'))return Response.json({user:{id:'owner-a'},token:'a'.repeat(64)})
+    if(path.endsWith('/logout'))return Response.json({ok:true})
+    expect(init?.headers).toMatchObject({authorization:'Bearer '+'a'.repeat(64)})
+    if(path.endsWith('/catalog'))return Response.json({models:[{id:'doubao-seed-2.1-lite'}],image:true})
+    if(path.endsWith('/quota'))return Response.json({quota:{fiveHour:{limit:100,remaining:29,resetAt:null}}})
+    return new Response('data: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}})
+  })
+  vi.stubGlobal('fetch',provider)
+  const base=new URL('/hosted-ai/',endpoint.url)
+  const catalog=()=>local(new URL('catalog',base),{headers:{authorization:'Bearer '+endpoint.token}})
+  const send=(generation:number)=>local(new URL('chat/completions',base),{method:'POST',body:'{}',headers:{authorization:'Bearer '+endpoint.token+'.'+generation}})
+  expect(await (await catalog()).json()).toEqual({models:[],image:false})
+  expect(await service.invoke('ai-quota',undefined)).toEqual({user:null})
+  expect((await send(service.generation)).status).toBe(401)
+  expect(provider).not.toHaveBeenCalled()
+  await service.invoke('login',{})
+  const generation=service.generation
+  expect(await (await catalog()).json()).toMatchObject({generation,image:true})
+  expect(await service.invoke('ai-quota',undefined)).toMatchObject({quota:{fiveHour:{remaining:29}}})
+  expect(await (await send(generation)).text()).toBe('data: [DONE]\n\n')
+  await expect.poll(() => onHostedQuotaChanged.mock.calls.length).toBe(1)
+  await service.invoke('logout',{})
+  await service.invoke('login',{})
+  const calls=provider.mock.calls.length
+  expect((await send(generation)).status).toBe(401)
+  expect(provider).toHaveBeenCalledTimes(calls)
+  expect(onHostedQuotaChanged).toHaveBeenCalledTimes(1)
+})
+
+it('does not sign out an account until the account service confirms a quota-gateway 401',async()=>{
+  const {service}=await setup()
+  const user={id:'owner-a',username:'tester',createdAt:1}
+  const rejected=()=>Response.json({error:{code:'LOGIN_REQUIRED'}},{status:401})
+  const remote=vi.fn()
+    .mockResolvedValueOnce(Response.json({user,token:'a'.repeat(64)}))
+    .mockResolvedValueOnce(rejected())
+    .mockResolvedValueOnce(Response.json({user}))
+    .mockResolvedValueOnce(rejected())
+    .mockResolvedValueOnce(rejected())
+  vi.stubGlobal('fetch',remote)
+  await service.invoke('login',{})
+  expect(await service.invoke('ai-quota',undefined)).toEqual({error:{code:'HOSTED_AI_UNAVAILABLE'}})
+  expect(service.authenticated).toBe(true)
+  expect(await service.invoke('ai-quota',undefined)).toEqual({error:{code:'LOGIN_REQUIRED'}})
+  expect(service.authenticated).toBe(false)
+  expect(remote.mock.calls.map(([url])=>new URL(String(url)).pathname)).toEqual([
+    '/v1/account/login','/v1/hosted-ai/quota','/v1/account/me','/v1/hosted-ai/quota','/v1/account/me'
+  ])
 })

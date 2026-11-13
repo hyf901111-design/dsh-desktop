@@ -18,9 +18,9 @@ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .srb-account-controls:
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .srb-account-controls:has([data-explore-trigger])>[data-research-board-bell-host]>.srb-bell{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;margin:0!important;padding:10px!important;box-sizing:border-box!important;border-radius:10px!important}
 .odyssey-explore{--explore-ink:#26313a;--explore-muted:#626d79;--explore-tool:rgb(255 255 255/.32);--explore-tool-hover:rgb(255 255 255/.52);--explore-result:rgb(245 247 249/.82);--explore-row:rgb(255 255 255/.48);position:fixed;inset:0;margin:0;padding:64px 48px 48px;width:100vw;height:100dvh;max-width:none;max-height:none;box-sizing:border-box;border:0;background:transparent;color:var(--explore-ink);font-family:"Noto Sans SC","PingFang SC",sans-serif;overflow:hidden;-webkit-app-region:no-drag}
 .odyssey-explore[open]{display:flex;align-items:center;justify-content:center}
-.odyssey-explore::backdrop{background:rgb(219 225 233/.44);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:odyssey-explore-veil 280ms ease-out both}
+.odyssey-explore::backdrop{background:rgb(219 225 233/.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:odyssey-explore-veil 280ms ease-out both}
 [data-ds-dark-theme] .odyssey-explore{--explore-ink:#e3e8ef;--explore-muted:#94a0b1;--explore-tool:rgb(255 255 255/.075);--explore-tool-hover:rgb(255 255 255/.15);--explore-result:rgb(54 54 54/.8);--explore-row:rgb(255 255 255/.14)}
-[data-ds-dark-theme] .odyssey-explore::backdrop{background:rgb(16 21 36/.48)}
+[data-ds-dark-theme] .odyssey-explore::backdrop{background:rgb(16 21 36/.86)}
 .odyssey-explore *, .odyssey-explore *:before,.odyssey-explore *:after{box-sizing:border-box}
 .odyssey-explore button,.odyssey-explore input{font-family:inherit;color:inherit;-webkit-app-region:no-drag}
 .odyssey-explore button:not(.odyssey-operations-quick-card){appearance:none;border:0;cursor:pointer;background:transparent;padding:0}
@@ -163,3 +163,34 @@ html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .
 html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-trend{margin-top:6px}
 html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-quick-label{max-width:calc(100% - 26px);height:auto;white-space:normal;overflow-wrap:break-word;line-height:18px}
 html[data-odyssey-locale="en"] .odyssey-explore [data-odyssey-operations-deck] .odyssey-operations-description{width:calc(100% - 46px);white-space:normal;line-height:1.35}
+
+/* R8 usage: preserve the original orb at rest, grow the actual remaining arc once. */
+[data-explore-trigger]{transition:background-color 120ms ease}
+.odyssey-quota-ring{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0;transform:rotate(-90deg) scaleY(-1);transition:opacity 120ms ease}
+.odyssey-quota-ring circle{fill:none;stroke-width:2;stroke-linecap:round}
+.odyssey-quota-track{stroke:rgb(235 241 249/.24)}
+.odyssey-quota-value{stroke:#e3e8ef;stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset 0ms 120ms}
+[data-explore-trigger][data-quota-available]:is(:hover,:focus-visible) .odyssey-quota-ring{opacity:1}
+[data-explore-trigger][data-quota-available]:is(:hover,:focus-visible) .odyssey-quota-value{stroke-dashoffset:var(--odyssey-quota-offset);transition:stroke-dashoffset 440ms 120ms cubic-bezier(.22,.61,.36,1)}
+[data-explore-trigger][data-quota-low] .odyssey-quota-value{stroke:#f5767e}
+[data-explore-trigger][data-quota-empty] .odyssey-quota-value{visibility:hidden}
+[data-explore-trigger][data-quota-available] .odyssey-explore-orb img{filter:brightness(1);transition:filter 120ms}
+[data-explore-trigger][data-quota-available]:is(:hover,:focus-visible) .odyssey-explore-orb img{filter:brightness(.58)}
+@media(prefers-reduced-motion:reduce){.odyssey-quota-ring,.odyssey-quota-value,[data-explore-trigger] .odyssey-explore-orb img{transition:none!important}}
+
+.odyssey-explore-quota{position:absolute;inset:0;display:grid;place-items:center;padding:0 clamp(0px,2.25vw,22px);overflow:auto}
+.odyssey-explore-quota-card{width:100%;border-radius:16px;background:var(--explore-tool);backdrop-filter:blur(20px);padding:0 22px}
+.odyssey-explore-quota-plan{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;padding:16px 0;border-bottom:1px solid var(--explore-row);color:var(--explore-muted);font-size:13px;line-height:20px}
+.odyssey-explore-quota-plan strong{color:var(--explore-ink);font-weight:550}
+.odyssey-explore-quota-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(84px,12%);gap:22px;align-items:center;padding:24px 0}
+.odyssey-explore-quota-row+.odyssey-explore-quota-row{border-top:1px solid var(--explore-row)}
+.odyssey-explore-quota-heading{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin-bottom:11px}
+.odyssey-explore-quota-heading strong{font-size:15px;font-weight:500}
+.odyssey-explore-quota-heading small{font-size:11px;line-height:20px;padding:0 8px;border-radius:7px;background:var(--explore-tool-hover);white-space:nowrap}
+.odyssey-explore-quota-track{height:7px;border-radius:100px;background:var(--explore-row);overflow:hidden}
+.odyssey-explore-quota-track i{display:block;height:100%;border-radius:inherit;background:var(--explore-ink)}
+.odyssey-explore-quota-track i[data-low]{background:#e36670}
+.odyssey-explore-quota-balance{text-align:center;display:grid;gap:2px}
+.odyssey-explore-quota-balance strong{font-family:"EWork DIN Pro",var(--odyssey-font-ui,sans-serif);font-size:clamp(26px,4vw,36px);font-weight:520;line-height:1.1;font-variant-numeric:tabular-nums}
+.odyssey-explore-quota-balance span,.odyssey-explore-quota-status{font-size:12px;color:var(--explore-muted)}
+@media(max-width:460px){.odyssey-explore-quota-row{gap:10px;grid-template-columns:minmax(0,1fr) 65px}.odyssey-explore-quota-card{padding:0 16px}}

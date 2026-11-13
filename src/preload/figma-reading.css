@@ -59,6 +59,21 @@ body .lXshSW_root { background:var(--odyssey-composer-solid); border:0; border-r
 body[data-ds-dark-theme] .lXshSW_root { background:var(--odyssey-composer-solid); box-shadow:inset 0 0 0 1px rgba(255,255,255,.09); }
 body .sRp_composer .lXshSW_root { width:100%; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] .lXshSW_root { width:calc(100% - 32px); }
+body .odyssey-hosted-quota-notice {
+  box-sizing:border-box; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
+  width:calc(100% - 2 * var(--dsh-composer-side-clearance, 0px));
+  max-width:var(--dsh-composer-card-max-width, 100%); margin-inline:auto;
+  padding:10px 12px; border:1px solid var(--odyssey-reading-border); border-radius:12px;
+  background:var(--odyssey-composer-solid); color:var(--odyssey-text); font:400 13px/20px var(--odyssey-font-ui);
+}
+body .odyssey-hosted-quota-notice > div { flex:1 1 220px; }
+body .odyssey-hosted-quota-notice strong { font-weight:600; }
+body .odyssey-hosted-quota-notice p { margin:2px 0 0; color:var(--odyssey-muted); }
+body .odyssey-hosted-quota-notice button {
+  border:0; border-radius:6px; padding:4px 6px; background:none; color:inherit; font:inherit; cursor:pointer;
+}
+body .odyssey-hosted-quota-notice button:hover { background:var(--odyssey-menu-row); }
+body .odyssey-conversation-failure { margin:0; color:var(--odyssey-text); font:400 15px/26px var(--odyssey-font-ui); }
 body .lXshSW_body { padding:0; gap:0; }
 body .lXshSW_root:has([data-task-continuation]) { max-height:252px; }
 body [data-task-continuation] { box-sizing:border-box; display:flex; justify-content:flex-end; min-width:0; padding:0 12px 8px; }
@@ -185,6 +200,18 @@ body .Md3f7G_executionGroup > .Md3f7G_executionTrigger:not(:disabled):hover {
 body .Md3f7G_executionTrigger > .Md3f7G_executionLeading {
   width:14px;
   justify-items:start;
+}
+body [data-chat-flow-kind=execution][data-response-progress=total][data-state].Md3f7G_executionGroup > .Md3f7G_executionTrigger {
+  box-sizing:border-box;
+  min-height:32px;
+  padding-block-end:6px;
+}
+
+/* Reserve the same compact space for message actions before and during hover. */
+body [data-chat-flow] > [data-chat-flow-kind=user] .gdEzaW_userRow { gap:2px; }
+body [data-chat-flow] > [data-chat-flow-kind=user] .gdEzaW_userRow > .p-xYUq_actions { height:24px; }
+body [data-chat-flow] > [data-chat-flow-kind=user] + :is([data-chat-flow-kind=execution], [data-chat-flow-kind=assistant-step], [data-chat-flow-kind=conversation-component]) {
+  margin-block-start:-8px;
 }
 
 /* Short messages hug their text on the right; long messages can use the full

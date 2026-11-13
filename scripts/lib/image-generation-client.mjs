@@ -24,11 +24,12 @@ export function imageGenerationCalls(nodes,running){
 
 export const IMAGE_GENERATION_CSS=`
 .odyssey-image-generations{display:flex;flex-direction:column;align-items:flex-start;gap:16px;margin:12px 0 4px;max-width:100%}
-.odyssey-image-generation{width:min(440px,100%);margin:0;color:var(--dsw-alias-label-primary,#25272d)}
-.odyssey-image-generation-stage{position:relative;aspect-ratio:var(--image-ratio,1);overflow:hidden;border-radius:18px;isolation:isolate;background:#ececec;display:grid;place-items:center;border:1px solid color-mix(in srgb,currentColor 7%,transparent)}
+.odyssey-image-generation{width:min(220px,100%);margin:0;color:var(--dsw-alias-label-primary,#25272d)}
+.odyssey-image-generation[data-state=completed]{width:min(440px,100%)}
+.odyssey-image-generation-stage{position:relative;aspect-ratio:var(--image-ratio,1);overflow:hidden;border-radius:14px;isolation:isolate;background:#ececec;display:grid;place-items:center;border:1px solid color-mix(in srgb,currentColor 7%,transparent)}
 .odyssey-image-generation-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.odyssey-image-generation-status{display:flex;align-items:center;gap:9px;position:absolute;left:20px;bottom:20px;max-width:calc(100% - 40px);color:#424242;font:500 13px/20px var(--odyssey-font-ui,system-ui,sans-serif);text-shadow:0 1px 8px #ffffff66}
-.odyssey-image-generation-status svg{width:18px;height:18px;flex:none;transform-origin:center}
+.odyssey-image-generation-status{display:flex;align-items:center;gap:7px;position:absolute;left:14px;bottom:12px;max-width:calc(100% - 28px);color:#424242;font:500 13px/20px var(--odyssey-font-ui,system-ui,sans-serif);text-shadow:0 1px 8px #ffffff66}
+.odyssey-image-generation-status svg{width:16px;height:16px;flex:none;transform-origin:center}
 .odyssey-image-generation[data-state=running] .odyssey-image-generation-status svg{animation:odyssey-image-breathe 1.8s ease-in-out infinite}
 .odyssey-image-generation[data-state=failed] .odyssey-image-generation-stage,.odyssey-image-generation[data-state=cancelled] .odyssey-image-generation-stage,.odyssey-image-generation[data-state=interrupted] .odyssey-image-generation-stage{background:var(--dsw-alias-bg-l1,#f4f4f6)}
 .odyssey-image-generation-result{border-radius:18px;overflow:hidden;max-width:100%}
@@ -66,9 +67,14 @@ function ImageGenerationOutputs({nodes,running,loadImage,t}){
 
 export function patchImageGenerationClient(source){
  const marker='/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V4 */'
- if(source.includes(marker))return source
  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Image generation client anchor drifted: '+before.slice(0,90));source=source.replace(before,()=>after)}
  const functions=`${marker}\n${imageGenerationCalls.toString()}\n${GeneratedConversationImage.toString()}\n${ImageGenerationOutputs.toString()}\n${mountImageContextMenu.toString()}\nif(typeof document!=='undefined'&&!document.getElementById('odyssey-image-generation-style')){const style=document.createElement('style');style.id='odyssey-image-generation-style';style.textContent=${JSON.stringify(IMAGE_GENERATION_CSS)};document.head.append(style)}\n`
+ const current=source.indexOf(marker)
+ if(current>=0){
+  const end=source.indexOf('function ToolImageOutputs(',current)
+  if(end<0)throw Error('Image generation boundary drifted')
+  return source.slice(0,current)+functions+source.slice(end)
+ }
  const registration='ctx.effect(() => ctx.locale.register(NS, {'
  replace(registration,'ctx.effect(() => mountImageContextMenu({jsx:react_jsx_runtime.jsx,Menu:_deepseek_ai_dsh_client_ui_primitives.Menu,createRoot:require("react-dom/client").createRoot,createPortal:react_dom.createPortal}));\n\t\t\t'+registration)
  const previous=source.search(/\/\* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V[123] \*\//)

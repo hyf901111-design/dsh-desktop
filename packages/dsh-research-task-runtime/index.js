@@ -6,6 +6,7 @@ import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
 import { SOURCE_SELECTION_GUIDANCE } from './data-source-policy.js'
 import {registerImageGenerationTool} from './image-generation-tool.js'
+import {registerHostedAi} from './hosted-ai.js'
 import { registerHomePresentationRuntime } from './home-presentation-runtime.js'
 import { registerHomeReportRuntime } from './home-report-runtime.js'
 import { registerHomeNotesRuntime } from './home-notes-runtime.js'
@@ -3654,7 +3655,8 @@ export async function apply(ctx) {
     const disposeClientTools = registerClientTools(ctx)
     const disposeResearchReportTool = registerResearchReportTool(ctx)
     const disposePresentationFiles = registerPresentationFiles(ctx)
-    const disposeImageGenerationTool = registerImageGenerationTool(ctx)
+    const hostedAi = registerHostedAi(ctx)
+    const disposeImageGenerationTool = registerImageGenerationTool(ctx, {hosted: hostedAi?.image})
     let context
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
@@ -3668,6 +3670,7 @@ export async function apply(ctx) {
       void disposeResearchReportTool()
       disposePresentationFiles()
       disposeImageGenerationTool()
+      hostedAi?.dispose()
       disposeRoutes()
       disposeScheduledTitle()
       disposeBrowserTranslation()
@@ -3697,6 +3700,7 @@ export async function apply(ctx) {
       await disposeResearchReportTool()
       disposePresentationFiles()
       disposeImageGenerationTool()
+      hostedAi?.dispose()
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()
