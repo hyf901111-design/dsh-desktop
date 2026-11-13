@@ -110,6 +110,27 @@ export class AccountService {
   async dataproMcpRequest(body: string, signal: AbortSignal): Promise<Response> {
     return this.volcengineRequest('/v1/datapro/mcp', body, signal, '火山方舟专业数据集', 50_000)
   }
+  async searchHosted(query: string, maxResults: number, signal: AbortSignal): Promise<BrowserSearchResult | undefined> {
+    signal.throwIfAborted()
+    if (!this.authenticated || Array.from(query.trim()).length > 100) return
+    const generation = this.generation
+    try {
+      const response = await this.hostedRequest('quota', signal)
+      if (!response.ok) {
+        await response.body?.cancel()
+        return
+      }
+      const { quota } = await response.json()
+      if (generation !== this.generation || quota?.paused !== false ||
+          ![quota.fiveHour?.remaining, quota.week?.remaining].every(value => Number.isFinite(value) && value > 0)) return
+      signal.throwIfAborted()
+      const result = await this.doubaoSearch(query, maxResults, signal)
+      if (generation === this.generation) return result
+    } catch {
+      signal.throwIfAborted()
+      // Missing quota, invalid sessions and provider errors leave the original search path available.
+    }
+  }
   async doubaoSearch(query: string, maxResults: number, signal: AbortSignal): Promise<BrowserSearchResult> {
     if (Array.from(query.trim()).length > 100)
       throw new IntegrationError('INVALID_CONFIG', '豆包搜索查询最多 100 个字符，请缩短关键词后重试。')

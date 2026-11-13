@@ -353,13 +353,14 @@ function localSources(body) {
 export async function searchLocalBrowser(
   request,
   signal,
-  endpoint = localEndpointFromEnvironment()
+  endpoint = localEndpointFromEnvironment(),
+  hosted = false
 ) {
   if (signal?.aborted) throw abortWebError(signal)
   const local = validateLocalEndpoint(endpoint)
   let response
   try {
-    response = await fetch(`${local.url}/search`, {
+    response = await fetch(`${local.url}/search${hosted ? '/hosted' : ''}`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${local.token}`,
@@ -380,6 +381,7 @@ export async function searchLocalBrowser(
       { cause: error }
     )
   }
+  if (hosted && response.status === 204) return
   let parsed
   try {
     parsed = await response.json()
@@ -469,15 +471,13 @@ export class SessionModelSearchProvider {
     }
     if (signal?.aborted) throw abortWebError(signal)
 
-    let loginRequired
     if (mode === 'auto' && this.dependencies.searchDefault) {
       try {
-        return boundedResult(await this.dependencies.searchDefault(request, signal), request.maxResults)
+        const result = await this.dependencies.searchDefault(request, signal)
+        if (result) return boundedResult(result, request.maxResults)
       } catch (error) {
         if (aborted(signal, error)) throw abortWebError(signal, error)
-        // Anonymous use can fall back to the user's own Responses credentials.
-        if (error?.code !== 'WEB_LOGIN_REQUIRED') throw error
-        loginRequired = error
+        throw error
       }
     }
 
@@ -505,8 +505,6 @@ export class SessionModelSearchProvider {
         'WEB_MODEL_SEARCH_UNSUPPORTED'
       )
     }
-
-    if (loginRequired) throw route?.nativeKind === 'openai-responses' ? nativeFailure : loginRequired
 
     if (mode === 'native-only') {
       throw new WebError(
@@ -557,7 +555,9 @@ export function apply(ctx, config = { mode: 'auto' }) {
       resolveRoute: () => resolveSessionSearchRoute(ctx),
       resolveNativeOptions: () => resolveSessionSearchOptions(ctx),
       searchLocal: searchLocalBrowser,
-      searchDefault: process.env[LOCAL_SEARCH_URL_ENV] ? searchLocalBrowser : undefined
+      searchDefault: process.env[LOCAL_SEARCH_URL_ENV]
+        ? (request, signal) => searchLocalBrowser(request, signal, undefined, true)
+        : undefined
     })
   )
 }

@@ -473,17 +473,14 @@ it('routes desktop auto mode directly to Doubao even with a model-native search 
   expect(resolveRoute).not.toHaveBeenCalled()
 })
 
-it('after an anonymous cloud rejection, considers the user-configured search route without retrying Cloudflare',async()=>{
-  const url=await listen((_request,response)=>{
-    response.writeHead(401,{'content-type':'application/json'}).end(JSON.stringify({error:'请登录'}))
-  })
+it('when hosted search is unavailable, tries the user model and then the old browser search',async()=>{
   const resolveRoute=vi.fn(async()=>({nativeKind:'openai-responses'}))
   const resolveNativeOptions=vi.fn(async()=>{throw Error('self-configured credentials are missing')})
-  const searchDefault=vi.fn((request,signal)=>searchLocalBrowser(request,signal,{url,token:'test'}))
-  const searchLocal=vi.fn()
+  const searchDefault=vi.fn(async()=>undefined)
+  const searchLocal=vi.fn(async()=>({sources:[{url:'https://example.org'}],truncated:false}))
   const provider=new SessionModelSearchProvider({mode:()=> 'auto',resolveRoute,resolveNativeOptions,searchDefault,searchLocal})
-  await expect(provider.search({query:'testing search',maxResults:2})).rejects.toThrow('self-configured credentials are missing')
+  await expect(provider.search({query:'testing search',maxResults:2})).resolves.toMatchObject({sources:[{url:'https://example.org'}]})
   expect(searchDefault).toHaveBeenCalledTimes(1)
   expect(resolveNativeOptions).toHaveBeenCalledTimes(1)
-  expect(searchLocal).not.toHaveBeenCalled()
+  expect(searchLocal).toHaveBeenCalledTimes(1)
 })

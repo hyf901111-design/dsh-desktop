@@ -91,3 +91,21 @@ it('uses the account-backed Doubao search and retains its source label', async (
     await runtime.stop()
   }
 })
+
+it('offers a separate hosted route and keeps browser search independent', async () => {
+  const runtime = await startLocalSearchRuntime({
+    createWindow: fakeWindow,
+    searchHosted: async query => query === 'available'
+      ? { provider: 'doubao', truncated: false, sources: [{ url: 'https://example.org/' }] }
+      : undefined
+  })
+  try {
+    const search = (query: string, hosted: boolean) =>
+      searchLocalBrowser({ query, maxResults: 2 }, undefined, runtime.endpoint, hosted)
+    await expect(search('available', true)).resolves.toMatchObject({ content: expect.stringContaining('豆包搜索') })
+    await expect(search('unavailable', true)).resolves.toBeUndefined()
+    await expect(search('unavailable', false)).resolves.toMatchObject({ content: expect.stringContaining('DuckDuckGo') })
+  } finally {
+    await runtime.stop()
+  }
+})

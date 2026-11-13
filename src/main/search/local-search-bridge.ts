@@ -17,6 +17,7 @@ export interface LocalSearchBridgeOptions {
     maxResults: number,
     signal: AbortSignal
   ): Promise<BrowserSearchResult>
+  searchHosted?(query: string, maxResults: number, signal: AbortSignal): Promise<BrowserSearchResult | undefined>
 }
 
 export interface LocalSearchEndpoint {
@@ -73,7 +74,8 @@ export class LocalSearchBridge {
       return
     }
     const requestUrl = new URL(request.url ?? '/', 'http://127.0.0.1')
-    if (requestUrl.pathname !== '/search' && !(requestUrl.pathname === '/fetch' && this.options.readPage) && !(requestUrl.pathname === '/browser' && this.options.browserUse) && !(requestUrl.pathname === '/computer' && this.options.computerUse)) {
+    const isHostedSearch = requestUrl.pathname === '/search/hosted'
+    if (requestUrl.pathname !== '/search' && !isHostedSearch && !(requestUrl.pathname === '/fetch' && this.options.readPage) && !(requestUrl.pathname === '/browser' && this.options.browserUse) && !(requestUrl.pathname === '/computer' && this.options.computerUse)) {
       sendJson(response, 404, { error: 'Not found.' })
       return
     }
@@ -129,8 +131,13 @@ export class LocalSearchBridge {
         ? await this.options.browserUse!(parsed, controller.signal)
         : isFetch
         ? await this.options.readPage!(typeof parsed.url === 'string' ? parsed.url : '', controller.signal)
-        : await this.options.search(query, maxResults, controller.signal)
-      if (!response.destroyed) sendJson(response, 200, result)
+        : isHostedSearch
+          ? await this.options.searchHosted?.(query, maxResults, controller.signal)
+          : await this.options.search(query, maxResults, controller.signal)
+      if (!response.destroyed) {
+        if (isHostedSearch && result === undefined) response.writeHead(204, { 'cache-control': 'no-store' }).end()
+        else sendJson(response, 200, result)
+      }
     } catch (error) {
       if (!controller.signal.aborted && !response.destroyed) {
         const authRequired = !isFetch && !isBrowser && !isComputer && error instanceof IntegrationError && error.code === 'AUTH_REQUIRED'
