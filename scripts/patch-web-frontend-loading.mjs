@@ -1,3 +1,4 @@
+import {patchSpreadsheetClient,stripSpreadsheetClient,hideTrajectoryTab} from './lib/spreadsheet-client.mjs'
 import {patchPendingPresetClient} from './lib/pending-composer-preferences.mjs'
 import {patchBrowserAppNative,stripBrowserAppNative} from './lib/browser-app-native.mjs'
 import {patchImageGenerationClient} from './lib/image-generation-client.mjs'
@@ -207,7 +208,7 @@ patchStyles(asset('.css'))
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
-writeFileSync(gridConversationPath,stripBrowserAppNative(stripResearchBoardHeaderClient(readFileSync(gridConversationPath,'utf8'))))
+writeFileSync(gridConversationPath,stripBrowserAppNative(stripResearchBoardHeaderClient(stripSpreadsheetClient(readFileSync(gridConversationPath,'utf8')))))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
 const submittedConversationSource=stripConversationResponseProgress(stripConversationSubmission(stripConversationHistoryClient(unTabbedConversationSource)))
 writeFileSync(gridConversationPath,stripSidebarNewNoteConversation(stripPlainSlashInput(submittedConversationSource)))
@@ -220,7 +221,7 @@ const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-clie
 writeFileSync(conversationPath, patchResearchNativeWeb(patchCanvasCreationTools(patchFigmaRefinementConversation(patchFigmaCanvasGestures(patchConversationFileReference(patchFigmaInlineReferences(patchFigmaUpdateWorkspace(readFileSync(conversationPath, 'utf8')))))))))
 
 const trajectoryPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-trajectory/lib/client.js')
-writeFileSync(trajectoryPath, patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8')))
+writeFileSync(trajectoryPath, hideTrajectoryTab(patchFigmaTrajectory(readFileSync(trajectoryPath, 'utf8'))))
 
 const layoutPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js')
 writeFileSync(layoutPath, patchFigmaFinalLayout(readFileSync(layoutPath, 'utf8')))
@@ -404,4 +405,4 @@ writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationP
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
-writeFileSync(conversationPath,patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8'))))
+writeFileSync(conversationPath,patchSpreadsheetClient(patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8')))))

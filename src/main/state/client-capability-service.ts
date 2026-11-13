@@ -6,14 +6,15 @@ import type {ClientCapabilityContext} from '../../../packages/dsh-research-task-
 import type {NoteDocumentAdapter,NoteDocumentLease} from '../notes/document-capability-adapter'
 import {registerTrustedMainWindowHandler,type TrustedWindow} from '../ipc-trust'
 const validId=(v:any)=>typeof v==='string'&&v.length>0&&v.length<=256
-const modes=['conversation','research','notes']
+import type {SpreadsheetService} from '../spreadsheet/service'
+const modes=['conversation','research','notes','spreadsheet']
 type Binding={sessionId:string;mode:ClientCapabilityContext['mode'];owner:string;generation:string;expires:number;controller:AbortController;windowIdentity:unknown}
-type Options={conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
+type Options={spreadsheet?:SpreadsheetService;conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
 /** A fresh visible-header binding is distinct from the long-lived canvas data
  * binding. A background task or child can never borrow a visible parent lease. */
 export class ClientCapabilityService{
  private binding?:Binding
- private turns=new Map<string,{generation:string;authorityId?:string;authoritySeq?:number;catalogRequired?:boolean;canvasAvailable:boolean;editable:boolean;context:ClientCapabilityContext;conversationIdentity?:ConversationComponentExecutionIdentity;notesIdentity?:string;notes?:NoteDocumentLease;host:ReturnType<typeof createClientCapabilityHost>;receipts:Map<string,{fingerprint:string;promise:Promise<any>;identity?:ConversationComponentExecutionIdentity;authority:string}>}>()
+ private turns=new Map<string,{generation:string;authorityId?:string;authoritySeq?:number;catalogRequired?:boolean;canvasAvailable:boolean;editable:boolean;context:ClientCapabilityContext;conversationIdentity?:ConversationComponentExecutionIdentity;sheet?:Awaited<ReturnType<SpreadsheetService['acquire']>>;notesIdentity?:string;notes?:NoteDocumentLease;host:ReturnType<typeof createClientCapabilityHost>;receipts:Map<string,{fingerprint:string;promise:Promise<any>;identity?:ConversationComponentExecutionIdentity;authority:string}>}>()
  private authorities=new Map<string,{id?:string;sequence:number;instruction:string}>()
  private callers=new WeakMap<AbortSignal,AbortSignal|undefined>()
  private now:()=>number
@@ -55,12 +56,16 @@ export class ClientCapabilityService{
    turn.notes?.dispose();turn.notes=undefined;turn.authorityId=authorityId;turn.authoritySeq=sequence;turn.catalogRequired=true
   }
   if(input.method==='catalog'){
+   const sheetService=binding.mode==='spreadsheet'?this.options.spreadsheet:undefined
+   const sheetKey={owner:binding.owner,sessionId:binding.sessionId}
+   const sheetIdentity=sheetService?.identity(sheetKey)
    const adapter=binding.mode==='notes'?this.options.notes?.():undefined,notesIdentity=adapter?.identity(binding.sessionId)
-   if(!turn||turn.catalogRequired||turn.generation!==binding.generation||turn.canvasAvailable!==(binding.mode==='research'&&this.options.canvasAvailable(binding.sessionId))||turn.editable!==(this.options.canWrite?.(binding.sessionId)??true)||turn.notesIdentity!==notesIdentity||binding.mode==='notes'&&!!adapter&&!turn.notes){
+   if(!turn||turn.catalogRequired||turn.generation!==binding.generation||turn.canvasAvailable!==(binding.mode==='research'&&this.options.canvasAvailable(binding.sessionId))||turn.editable!==(this.options.canWrite?.(binding.sessionId)??true)||turn.sheet?.identity!==sheetIdentity||turn.notesIdentity!==notesIdentity||binding.mode==='notes'&&!!adapter&&!turn.notes){
     if(this.turns.size>=100&&!turn)throw Error('客户端操作历史已达上限，请重启客户端后继续。')
     turn?.notes?.dispose()
     const leaseCurrent=()=>this.current(binding.sessionId)?.generation===binding.generation&&authorityCurrent()
     const notes=adapter?await adapter.acquire({sessionId:binding.sessionId,turnId:input.turnId,sourceInstruction:input.sourceInstruction??'',current:leaseCurrent,signal:signal??new AbortController().signal}):undefined
+    const sheet=await sheetService?.acquire({key:sheetKey,turnId:input.turnId,authorityId,instruction,current:leaseCurrent,canWrite:()=>this.options.canWrite?.(binding.sessionId)??true,signal})
     if(!leaseCurrent()){notes?.dispose();throw Error('客户端请求已被较新用户输入替代，请重新读取能力目录。')}
     const context:ClientCapabilityContext={owner:binding.owner,sessionId:binding.sessionId,documentId:binding.generation,mode:binding.mode,editable:this.options.canWrite?.(binding.sessionId)??true,selectedBlockIds:[],canvasAvailable:binding.mode==='research'&&this.options.canvasAvailable(binding.sessionId),...notes?.context}
     const current=()=>leaseCurrent()&&(!notes||notes.current())?context:undefined
@@ -70,7 +75,7 @@ export class ClientCapabilityService{
      ...(authorityId?{authorityId,authoritySeq:sequence}:{}),windowGeneration:binding.generation,
      current:()=>!!current()&&(this.options.canWrite?.(binding.sessionId)??true)
     }:undefined
-    const host=createClientCapabilityHost({current,handlers:{...notes?.handlers,...conversationIdentity&&conversationComponents?{
+    const host=createClientCapabilityHost({current,handlers:{...sheet?.handlers,...notes?.handlers,...conversationIdentity&&conversationComponents?{
      createConversationComponent:async(args,_context,signal,requestId)=>{
       if(!signal||!requestId||!conversationIdentity.current())throw Error('当前对话组件操作身份已失效。')
       signal.throwIfAborted();return conversationComponents.create(args,conversationIdentity,signal,requestId)
@@ -85,9 +90,9 @@ export class ClientCapabilityService{
       while(Date.now()<deadline){if(signal&&this.callers.get(signal)?.aborted)throw Error('视图切换请求已发出；后续操作已取消，请查看当前视图。');const actual=this.current(binding.sessionId);if(actual?.mode===mode)return{mode};if(this.options.owner()!==binding.owner||this.binding&&this.binding.sessionId!==binding.sessionId)throw Error('当前会话已变化。');await new Promise(r=>setTimeout(r,20))}
       throw Error('会话视图切换未确认，请查看当前界面。')
      }})
-    turn={generation:binding.generation,authorityId,authoritySeq:sequence,catalogRequired:false,context,conversationIdentity,notes,notesIdentity:notes?.context.documentId,canvasAvailable:context.canvasAvailable===true,editable:context.editable,host,receipts:turn?.receipts??new Map()};this.turns.set(key,turn)
+    turn={generation:binding.generation,authorityId,authoritySeq:sequence,catalogRequired:false,context,conversationIdentity,sheet,notes,notesIdentity:notes?.context.documentId,canvasAvailable:context.canvasAvailable===true,editable:context.editable,host,receipts:turn?.receipts??new Map()};this.turns.set(key,turn)
    }
-   return{mode:binding.mode,capabilities:turn.host.registry.catalog(turn.context),guidance:'切换视图后重新读取目录；只有available:true的能力可执行。笔记能力使用当下可见编辑器捕获的文档与选区，较新输入或其它请求占用时拒绝旧操作。'}
+   return{mode:binding.mode,capabilities:turn.host.registry.catalog(turn.context),guidance:binding.mode==='spreadsheet'?'表格能力只作用于当前工作簿。先 spreadsheet.inspect 获取版本、工作表和目标范围，明确修改才 spreadsheet.apply。只依据已保存回执确认，禁止用对话表格或研究画布代替。':'切换视图后重新读取目录；只有available:true的能力可执行。笔记能力使用当下可见编辑器捕获的文档与选区，较新输入或其它请求占用时拒绝旧操作。'}
   }
   if(!turn||turn.catalogRequired||turn.generation!==binding.generation)throw Error('请先重新读取当前客户端能力目录。')
   const call=input.call

@@ -1,3 +1,4 @@
+import { mountSpreadsheet } from './spreadsheet/view'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
 import {NativeBrowserMenuProjection} from './browser/native-menus'
@@ -74,6 +75,7 @@ import { createResearchCanvasExportBridge } from './research-canvas-export'
 import { createResearchClipboardBridge } from './research-canvas-clipboard'
 
 if (process.isMainFrame) {
+let spreadsheetView:ReturnType<typeof mountSpreadsheet>|undefined
 let notesComponentDataAccess:{request:(method:string,input:any)=>Promise<any>;owns:(sessionId:string,owner:string)=>boolean}|undefined
 
 const DEVELOPER_MODE_STYLE_ID = 'sherlock-developer-mode-style'
@@ -296,6 +298,12 @@ function initializeUi(): void {
     draft: async input => {try{await ipcRenderer.invoke('notes:request', 'draft', { ...input, owner: noteOwners.get(input.sessionId) })}catch(error){if(error instanceof Error){const message=noteUiError(error.message);if(message!==error.message)error.message=message}throw error}}
   }
   notesComponentDataAccess={request:notesBridge.request,owns:(sessionId,owner)=>owner===noteOwners.get(sessionId)}
+  spreadsheetView=mountSpreadsheet(document,{
+    request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
+    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
+    subscribe:(name,callback)=>{const channel=name==='identity'?'integrations:identity-changed':'spreadsheet:'+name;const receive=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on(channel,receive);return()=>ipcRenderer.removeListener(channel,receive)}
+  })
+  window.addEventListener('unload',()=>spreadsheetView?.dispose(),{once:true})
   const notes = mountNotes(document, notesBridge, workspaceSurfaceHost)
   const sidebarNewNote=createSidebarNewNoteAction(document,()=>notes.flushCurrent())
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
@@ -382,6 +390,8 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    spreadsheetAdmission:(sessionId:string,prompt:string)=>spreadsheetView?.admit(sessionId,prompt),
+    spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
     browserApp: Object.freeze({
       context: ()=>ipcRenderer.invoke('browser-app:request','context'),
       openSource: (value:{sessionId?:string;url:string})=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-request-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve(d):reject(Error(d.message||'浏览器未能打开。'))};const timer=setTimeout(()=>{cleanup();reject(Error('浏览器入口尚未就绪。'))},8000);window.addEventListener('sherlock:browser-request-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-request',{detail:{...value,requestId}}))})

@@ -8,7 +8,7 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   // a detached store or retrying writes. A same-view acknowledgement is benign.
   const view=id=>{
     if(!id)return null
-    const key='ework.session.view.v1:'+id,valid=value=>['chat','research','notes','trajectory'].includes(value)
+    const key='ework.session.view.v1:'+id,valid=value=>['chat','research','notes','trajectory','spreadsheet'].includes(value)
     const durable=window.dshDesktop?.researchCanvasStorage?.getItem(key)??null,local=window.localStorage.getItem(key),raw=window.localStorage.getItem(key+'.pending-native')
     let pending=null
     try{const value=raw&&raw.length<256?JSON.parse(raw):null;if(value&&(valid(value.view)||value.view==='')&&(value.previous===null||value.previous===''||valid(value.previous)))pending=value}catch{}

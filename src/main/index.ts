@@ -63,6 +63,7 @@ import {
   ResearchBoardsService,
   registerResearchBoardsHandlers
 } from './research-boards-service'
+import { installSpreadsheet } from './spreadsheet/ipc'
 import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
 import { homedir, tmpdir } from 'node:os'
@@ -1325,7 +1326,9 @@ async function bootstrap(): Promise<void> {
   let notesDocumentAdapter:import('./notes/document-capability-adapter').NoteDocumentAdapter|undefined
   let conversationComponentsService:ReturnType<typeof createConversationComponentService>|undefined
   let conversationComponentsReady=false
-  const clientCapabilities=new ClientCapabilityService({get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:sessionId=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}},canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
+  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData')})
+  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
   const researchPdfRenderer = new ResearchPdfRenderer()

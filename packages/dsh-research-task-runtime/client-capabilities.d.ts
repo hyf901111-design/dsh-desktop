@@ -1,5 +1,5 @@
 import type {ConversationComponentCreateArguments,ConversationComponentCreateReceipt} from './conversation-component-contract.js'
-export type ClientCapabilityContext={owner:string;sessionId:string;documentId:string;mode:'notes'|'research'|'conversation';editable:boolean;selectedBlockIds:string[];componentBlockIds?:string[];selectedParagraphIds?:string[];selectedNativeBlockIds?:string[];canvasAvailable?:boolean}
+export type ClientCapabilityContext={owner:string;sessionId:string;documentId:string;mode:'notes'|'research'|'conversation'|'spreadsheet';editable:boolean;selectedBlockIds:string[];componentBlockIds?:string[];selectedParagraphIds?:string[];selectedNativeBlockIds?:string[];canvasAvailable?:boolean}
 /** Native payloads receive full type/content validation in the visible Notes editor. */
 export type CapabilityNativeBlock={id?:string;type?:string;props?:Record<string,unknown>;content?:string|unknown[]|Record<string,unknown>;children?:CapabilityNativeBlock[]}
 export type CapabilityNativeBlockAnchor={blockId:string;placement:'before'|'after'}
@@ -22,13 +22,16 @@ export type ClientCapabilityArguments={
  'notes.components.apply':{blockId:string;revision:string;containerSpec:Record<string,any>}
  'notes.challenge.configure':{level?:0|1|2|3|4;commentsExpanded?:boolean}
  'notes.components.data':{action:'inspect'|'configure'|'refresh';revision?:number;settings?:{enabled?:boolean;intervalMinutes?:number}}
+ 'spreadsheet.inspect':{scope:'workbook'|'selected'}|{scope:'range';sheetId:string;range:string}
+ 'spreadsheet.apply':{revision:number;createName?:string;operations:Record<string,any>[]}
+ 'spreadsheet.undo':{revision:number;actionId:string}
  'canvas.inspect':{ids?:string[]}
  'canvas.apply':{revision:string;operations:Array<{op:'remove'|'update'|'arrange'|'presentation';id?:string;ids?:string[];fields?:Record<string,any>}>}
  'canvas.undo':{revision:string;actionId:string}
  'ui.zoom.in':Record<string,never>
  'ui.zoom.out':Record<string,never>
  'ui.fullscreen.set':{enabled:boolean}
- 'ui.mode.set':{mode:'conversation'|'research'|'notes'}
+ 'ui.mode.set':{mode:'conversation'|'research'|'notes'|'spreadsheet'}
  'ui.zoom.reset':Record<string,never>
 }
 export type ClientCapabilityId=keyof ClientCapabilityArguments
@@ -43,7 +46,7 @@ export type CapabilityNativeBlocksEffect={kind:'native-blocks';state:'applied'|'
 export type CapabilityEffect=CapabilityNativeBlocksEffect|CapabilityDataEffect|CapabilityStyleEffect|CapabilityExportEffect|CapabilityCreateEffect|CapabilityChallengeEffect
 export type CapabilityReceipt={requestId?:string;capability?:string;status:'succeeded'|'pending'|'cancelled'|'failed'|'unavailable';message?:string;effect?:CapabilityEffect|ConversationComponentCreateReceipt['effect'];path?:string;changedBlockIds?:string[];blockId?:string;data?:unknown}
 export type CapabilityHandler<K extends ClientCapabilityId=ClientCapabilityId>=(args:ClientCapabilityArguments[K],context:ClientCapabilityContext,signal?:AbortSignal,requestId?:string)=>Promise<CapabilityReceipt>
-export function createClientCapabilityRegistry(handlers:{readNoteBlocks?:CapabilityHandler<'notes.blocks.read'>;applyNoteBlocks?:CapabilityHandler<'notes.blocks.apply'>;undoNoteBlocks?:CapabilityHandler<'notes.blocks.undo'>;createConversationComponent?:CapabilityHandler<'conversation.components.create'>;createComponent?:CapabilityHandler<'notes.components.create'>;exportNote?:CapabilityHandler<'notes.export'>;styleComponents?:CapabilityHandler<'notes.components.style'>;layoutComponents?:CapabilityHandler<'notes.components.layout'>;alignBlocks?:CapabilityHandler<'notes.blocks.align'>;inspectNoteComponent?:CapabilityHandler<'notes.components.inspect'>;applyNoteComponent?:CapabilityHandler<'notes.components.apply'>;configureChallenge?:CapabilityHandler<'notes.challenge.configure'>;componentData?:CapabilityHandler<'notes.components.data'>;inspectCanvas?:CapabilityHandler<'canvas.inspect'>;applyCanvas?:CapabilityHandler<'canvas.apply'>;undoCanvas?:CapabilityHandler<'canvas.undo'>;zoomIn?:CapabilityHandler<'ui.zoom.in'>;zoomOut?:CapabilityHandler<'ui.zoom.out'>;setFullscreen?:CapabilityHandler<'ui.fullscreen.set'>;setMode?:CapabilityHandler<'ui.mode.set'>;resetZoom?:CapabilityHandler<'ui.zoom.reset'>}):{catalog(context:ClientCapabilityContext):Array<{id:string;description:string;parameters:any;available:boolean}>;get(id:string):any;execute(call:CapabilityCall,context:ClientCapabilityContext,signal?:AbortSignal):Promise<CapabilityReceipt>}
+export function createClientCapabilityRegistry(handlers:{inspectSpreadsheet?:CapabilityHandler<'spreadsheet.inspect'>;applySpreadsheet?:CapabilityHandler<'spreadsheet.apply'>;undoSpreadsheet?:CapabilityHandler<'spreadsheet.undo'>;readNoteBlocks?:CapabilityHandler<'notes.blocks.read'>;applyNoteBlocks?:CapabilityHandler<'notes.blocks.apply'>;undoNoteBlocks?:CapabilityHandler<'notes.blocks.undo'>;createConversationComponent?:CapabilityHandler<'conversation.components.create'>;createComponent?:CapabilityHandler<'notes.components.create'>;exportNote?:CapabilityHandler<'notes.export'>;styleComponents?:CapabilityHandler<'notes.components.style'>;layoutComponents?:CapabilityHandler<'notes.components.layout'>;alignBlocks?:CapabilityHandler<'notes.blocks.align'>;inspectNoteComponent?:CapabilityHandler<'notes.components.inspect'>;applyNoteComponent?:CapabilityHandler<'notes.components.apply'>;configureChallenge?:CapabilityHandler<'notes.challenge.configure'>;componentData?:CapabilityHandler<'notes.components.data'>;inspectCanvas?:CapabilityHandler<'canvas.inspect'>;applyCanvas?:CapabilityHandler<'canvas.apply'>;undoCanvas?:CapabilityHandler<'canvas.undo'>;zoomIn?:CapabilityHandler<'ui.zoom.in'>;zoomOut?:CapabilityHandler<'ui.zoom.out'>;setFullscreen?:CapabilityHandler<'ui.fullscreen.set'>;setMode?:CapabilityHandler<'ui.mode.set'>;resetZoom?:CapabilityHandler<'ui.zoom.reset'>}):{catalog(context:ClientCapabilityContext):Array<{id:string;description:string;parameters:any;available:boolean}>;get(id:string):any;execute(call:CapabilityCall,context:ClientCapabilityContext,signal?:AbortSignal):Promise<CapabilityReceipt>}
 export function createCapabilityExecutor(registry:ReturnType<typeof createClientCapabilityRegistry>,current:()=>ClientCapabilityContext|undefined):{execute(call:CapabilityCall,context:ClientCapabilityContext,signal?:AbortSignal):Promise<CapabilityReceipt>}
 export function noteCapabilityReceiptMessage(receipt:CapabilityReceipt,locale?:string):string|undefined
 export function capabilityReceiptText(receipts:CapabilityReceipt[],locale?:string):string
