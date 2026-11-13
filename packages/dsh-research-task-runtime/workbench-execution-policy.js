@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util'
 import {WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
 import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
 import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
@@ -7,7 +8,8 @@ import {MAX_PROTOTYPE_WINDOWS,planningPrototypeEvidence,prototypeEvidenceCall,pr
 import { DOCUMENT_WORKBENCH_PLANNING, workbenchDocumentInputs, workbenchDocumentScope, workbenchDocumentPrompt } from './workbench-document-evidence.js'
 import {compactBusinessEvidence} from './component-source-projection.js'
 import { OBSERVED_SOURCE_GUIDANCE, OBSERVED_SOURCES_TOOL } from './workbench-source-views.js'
-import { fundComparisonCount, fundComparisonReader } from './workbench-fund-comparison.js'
+import { fundComparisonCount, fundComparisonReader, observedFundComparison } from './workbench-fund-comparison.js'
+import { captureWorkbenchObservedSources } from './workbench-observed-sources.js'
 import {isWorkbenchPrototypeTableRead} from './prototype-source-authority.js'
 import {pastedWorkbenchBlocks} from './workbench-pasted-tables.js'
 import {newsRecordTableGuidance} from './news-source-scope.js'
@@ -197,9 +199,41 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence, li
     try {
       const data = JSON.parse(content[0].text)
       if (data?.api !== api) return decision
-      const projected=compactBusinessEvidence(data,{tushareRecords:true})
+      let metrics
+      if (state.fundComparisonCount && (api === 'fund_basic' || api === 'fund_nav')) {
+        const schemas = (ctx.tools.schemas?.(exec.agent) ?? []).filter(tool =>
+          state.allowedTools.has(tool.name) && ctx.tools.get(tool.name, exec.agent)?.[builtinTushareRead] === true)
+        const records = captureWorkbenchObservedSources({
+          session: state.session, messageId: state.messageId, schemas, onRejected: () => {}
+        })
+        metrics = observedFundComparison({
+          count: state.fundComparisonCount,
+          trustedTools: schemas.map(tool => tool.name),
+          records: [...(records ?? []), { tool: exec.name, args: exec.arguments, response: data }]
+        })
+      }
       // The registry keeps the canonical tool value. Durable session evidence
       // is re-expanded and verified by the existing observed-source collector.
+      const fingerprint = metrics && JSON.stringify(metrics)
+      const source = state.fundComparisonSource
+      const replacesSource = source?.tool === exec.name && isDeepStrictEqual(source.args, exec.arguments)
+      if (fingerprint && (fingerprint !== state.fundComparisonFingerprint || replacesSource)) {
+        const delivery = {
+          ...data,
+          workbenchCalculation: {
+            method: '已按本轮取得的复权净值计算候选基金指标。可复用统计区间、数值与缺项，基金类别以来源为准。',
+            ...metrics
+          }
+        }
+        // Include the calculation before computing the integrity checksum.
+        const encoded = JSON.stringify(compactBusinessEvidence(delivery, { tushareRecords: true }) ?? delivery)
+        if (Buffer.byteLength(JSON.stringify([{ type: 'text', text: encoded }])) <= 2_000_000) {
+          state.fundComparisonFingerprint = fingerprint
+          state.fundComparisonSource = { tool: exec.name, args: structuredClone(exec.arguments) }
+          return { ...decision, content: [{ type: 'text', text: encoded }] }
+        }
+      }
+      const projected=compactBusinessEvidence(data,{tushareRecords:true})
       if (projected) return {...decision,content:[{type:'text',text:JSON.stringify(projected)}]}
     } catch {}
     return decision
@@ -332,6 +366,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence, li
     ) : ''
     state.restrictEvidence = Boolean(documentExclusive || state.evidenceTargets.required.length || offline)
     state.projectSources = Boolean(claimed?.id===human.messageId && !simulation && !state.restrictEvidence)
+    state.fundComparisonCount = state.projectSources ? fundComparisonCount(human.text) : null
     state.allowedTools = new Set()
     const tools = request.tools.flatMap(tool => {
       if (tool.name === CREATE_TOOL) return [{ ...tool, description: documentPaths ? DOCUMENT_WORKBENCH_PLANNING : observedSourceGuidance+'优先评估组件库原生能力，已覆盖的面板用library:{id,options}直接挂载，其余按实际数据生成；links关联兼容节点，tabs组织真实页签，具体能力与配置见本轮系统说明。'+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),

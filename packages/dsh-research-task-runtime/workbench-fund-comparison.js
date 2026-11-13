@@ -104,7 +104,7 @@ function offsetMonths(date,count){
  return d
 }
 
-export function fundComparisonRows(entries,requestedEnd,count){
+function compareFundRows(entries,requestedEnd,count,{ observed = false } = {}){
  if(!validDate(requestedEnd))throw Error('统计截止日期无效。')
  const dates=[...new Set(entries.flatMap(e=>e.nav.map(r=>r.nav_date)).filter(d=>validDate(d)&&d<=requestedEnd&&utc(d)>=utc(requestedEnd)-10*day))].sort().reverse()
  for(const end of dates){
@@ -114,17 +114,90 @@ export function fundComparisonRows(entries,requestedEnd,count){
    const series=item.nav.filter(r=>r.nav_date>=start&&r.nav_date<=end)
    const half=series.filter(r=>r.nav_date>=halfStart)
    const latest=series.at(-1)
-   const scale=series.findLast(r=>finitePositive(r.net_asset)&&validDate(r.ann_date)&&r.ann_date<=requestedEnd)
-   if(!scale||series.length<200||half.length<95||latest?.nav_date!==end||!finitePositive(latest.unit_nav)||
+   const disclosedScale=series.findLast(r=>finitePositive(r.net_asset)&&validDate(r.ann_date)&&r.ann_date<=requestedEnd)
+   const scale=disclosedScale??(observed?series.findLast(r=>finitePositive(r.net_asset)&&r.ann_date==null):undefined)
+   if((!scale&&!observed)||series.length<200||half.length<95||latest?.nav_date!==end||!finitePositive(latest.unit_nav)||
       utc(series[0].nav_date)-utc(start)>10*day||utc(half[0].nav_date)-utc(halfStart)>10*day||
       series.some((r,i)=>!finitePositive(r.adj_nav)||i&&utc(r.nav_date)-utc(series[i-1].nav_date)>14*day))continue
+   const current=observed?item.nav.findLast(r=>r.nav_date<=requestedEnd&&finitePositive(r.unit_nav)):latest
    rows.push({code:item.code,name:item.name,manager:item.manager,first:series[0].nav_date,halfFirst:half[0].nav_date,
     gain:round(reduceSourceValues('pctChange',series.map(r=>r.adj_nav))),
     drawdown:round(reduceSourceValues('maxDrawdown',half.map(r=>r.adj_nav))),
     volatility:round(reduceSourceValues('returnStdDev',series.map(r=>r.adj_nav))*Math.sqrt(252)),
-    nav:latest.unit_nav,navDate:latest.nav_date,scale:round(scale.net_asset/1e8),scaleDate:scale.nav_date,annDate:scale.ann_date})
+    nav:current.unit_nav,navDate:current.nav_date,scale:scale?round(scale.net_asset/1e8):null,
+    scaleDate:scale?.nav_date??null,annDate:disclosedScale?.ann_date??null})
   }
   if(rows.length>=count)return {rows:rows.slice(0,count).sort((a,b)=>b.gain-a.gain||a.code.localeCompare(b.code)),start,halfStart,end}
+ }
+ return null
+}
+
+export function fundComparisonRows(entries,requestedEnd,count){
+ return compareFundRows(entries,requestedEnd,count)
+}
+
+const observedDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/u.test(value)?value.replaceAll('-',''):value
+const observedFundCode=value=>typeof value==='string'&&/^\d{6}\.OF$/u.test(value)
+
+function completeObservedNav({code,start,end,pages}){
+ const rows=new Map()
+ let offset=0
+ for(let page=0;page<pages.size;page++){
+  const response=pages.get(offset)
+  if(!response)return
+  for(const row of response.records){
+   const date=observedDate(row?.nav_date)
+   if(row?.ts_code!==code||!validDate(date)||date<start||date>end)return
+   const prior=rows.get(date)
+   if(prior&&(prior.adj_nav!==row.adj_nav||prior.unit_nav!==row.unit_nav))return
+   if(!prior||!finitePositive(prior.net_asset)&&finitePositive(row.net_asset)){
+    rows.set(date,{...row,nav_date:date,ann_date:observedDate(row.ann_date)})
+   }
+  }
+  const {possiblyMore,nextOffset}=response.pagination
+  if(possiblyMore===false&&nextOffset==null)return [...rows.values()].sort((a,b)=>a.nav_date.localeCompare(b.nav_date))
+  if(possiblyMore!==true||!response.records.length||nextOffset!==offset+response.records.length)return
+  offset=nextOffset
+ }
+}
+
+// Input is the current authored request's captured responses. The host must
+// supply the actual allowed managed-tool names, never names claimed in a row.
+export function observedFundComparison({records,count,trustedTools}){
+ if(!Array.isArray(records)||!Number.isSafeInteger(count)||count<1||count>12)return null
+ const tools=new Set(trustedTools),basics=new Map(),windows=new Map()
+ for(const {tool,args,response} of records){
+  if(!tools.has(tool)||response?.source!=='Tushare'||response.api!==args?.api_name||response.success===false||response.error||
+     !Array.isArray(response.records)||response.pagination?.returned!==response.records.length)continue
+  const code=args.params?.ts_code
+  if(!observedFundCode(code))continue
+  if(response.api==='fund_basic'){
+   const [row]=response.records,name=text(row?.name),manager=text(row?.management)
+   if(response.records.length===1&&row?.ts_code===code&&name&&manager)basics.set(code,{code:code.slice(0,6),name,manager})
+   continue
+  }
+  if(response.api!=='fund_nav')continue
+  const start=observedDate(args.params.start_date),end=observedDate(args.params.end_date)
+  const offset=args.offset??0
+  if(!validDate(start)||!validDate(end)||start>end||!Number.isSafeInteger(offset)||offset<0||response.pagination.offset!==offset)continue
+  const key=JSON.stringify([code,start,end])
+  if(!windows.has(key))windows.set(key,{code,start,end,pages:new Map()})
+  windows.get(key).pages.set(offset,response)
+ }
+ const byEnd=new Map()
+ for(const window of windows.values()){
+  const basic=basics.get(window.code),nav=basic&&completeObservedNav(window)
+  if(!nav?.length)continue
+  if(!byEnd.has(window.end))byEnd.set(window.end,new Map())
+  const funds=byEnd.get(window.end)
+  if(!funds.has(window.code)||funds.get(window.code).nav[0].nav_date>nav[0].nav_date)funds.set(window.code,{...basic,nav})
+ }
+ for(const end of [...byEnd.keys()].sort().reverse()){
+  const funds=byEnd.get(end)
+  if(funds.size<count)continue
+  const result=compareFundRows([...funds.values()],end,count,{observed:true})
+  if(result)return {...result,basis:{navField:'adj_nav',annualizationPeriods:252},missing:{
+   scale:result.rows.filter(row=>row.scale===null).length,annDate:result.rows.filter(row=>row.annDate===null).length}}
  }
  return null
 }
