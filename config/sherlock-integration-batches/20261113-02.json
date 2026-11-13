@@ -470,6 +470,80 @@
           "线上 8 位密码注册依赖账户 Worker 部署。"
         ],
         "generatedAt": "2026-11-13T01:05:24.588Z"
+      },
+      "merged": {
+        "mergeCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+        "verificationCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/test-fund-data-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-fund-data-worker.mjs",
+            "verifiedCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+            "completedAt": "2026-11-13T01:35:32.163Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+            "completedAt": "2026-11-13T01:35:32.163Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-auth-errors.test.js",
+              "test/figma-auth-layout.test.ts",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/figma-auth-errors.test.js test/figma-auth-layout.test.ts test/account-service.test.ts",
+            "verifiedCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+            "completedAt": "2026-11-13T01:35:32.163Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
+            "verifiedCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+            "completedAt": "2026-11-13T01:35:32.163Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/hosted-ark-runtime.test.js",
+              "test/figma-model-menu.test.ts",
+              "test/explore-quota-browser.test.ts",
+              "test/model-settings-actions-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/hosted-ark-runtime.test.js test/figma-model-menu.test.ts test/explore-quota-browser.test.ts test/model-settings-actions-browser.test.js",
+            "verifiedCommit": "9c4c59768eb2127835626e1a136320ed74494381",
+            "completedAt": "2026-11-13T01:35:32.163Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-13T01:35:32.163Z"
       }
     }
   ],
