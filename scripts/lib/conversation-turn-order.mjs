@@ -24,12 +24,22 @@ const edits = [
                     } else if (node?.kind === "steering") {`]
 ]
 const marker = '/* ework:conversation-turn-boundary:v1 */'
+const activityAnchor = 'if (!isExecutionDetailNode(node, closingSeqByTurn, promotedAssistantKeys)) {'
+const activityMarker = '/* ework:conversation-permission-activity:v1 */'
+const activityFilter = `${activityMarker}
+                // Preset changes and approval notifications belong to the session log, not the Chat flow.
+                if (node?.kind === "command" && node.data?.name === "permission" && node.data.args?.trim() &&
+                    (node.data.outcome == null || node.data.outcome.kind === "success")) continue;
+                if (node?.kind === "context" && node.data?.source?.kind === "plugin" &&
+                    node.data.source.plugin === "user-approval") continue;
+                ${activityAnchor}`
 const count = (source, value) => source.split(value).length - 1
 function change(source, inverse) {
   const start = source.indexOf('function compactConversationFlow('), end = source.indexOf('\n\t\t}', start)
   if (start < 0 || end < start || count(source, 'function compactConversationFlow(') !== 1) throw Error('Conversation turn boundary scope drifted')
   let scope = source.slice(start, end)
-  for (const [before, after] of inverse ? [...edits].reverse() : edits) {
+  const changes = inverse && !scope.includes(activityMarker) ? edits : [...edits, [activityAnchor, activityFilter]]
+  for (const [before, after] of inverse ? [...changes].reverse() : changes) {
     const from = inverse ? after : before, to = inverse ? before : after
     if (count(scope, from) !== 1) throw Error('Conversation turn boundary anchor drifted')
     scope = scope.replace(from, to)
@@ -38,7 +48,7 @@ function change(source, inverse) {
 }
 export function stripConversationTurnOrder(source) {
   if (!source.includes(marker)) {
-    if (source.includes('ework:conversation-turn-boundary:') || source.includes('const directUserTurns = new Set();')) throw Error('Conversation turn boundary orphaned')
+    if (source.includes('ework:conversation-turn-boundary:') || source.includes('const directUserTurns = new Set();') || source.includes(activityMarker)) throw Error('Conversation turn boundary orphaned')
     return source
   }
   if (count(source, marker) !== 1) throw Error('Conversation turn boundary duplicated')
