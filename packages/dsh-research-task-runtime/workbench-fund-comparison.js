@@ -17,9 +17,11 @@ const text=(value,max=128)=>typeof value==='string'&&value.trim()&&value.length<
 const fundCode=s=>typeof s==='string'&&/^\d{6}$/u.test(s)
 
 export function fundComparisonCount(request){
- if(typeof request!=='string'||!/(?:纯债基金|纯债型基金)/u.test(request)||!/(?:比较|对比)/u.test(request)||!/中长期/u.test(request)||
+ if(typeof request!=='string')return null
+ const comparisonRequest=request.replace(/(?:请)?额外(?:做|加|添加)(?:一|1)张(?=[^。；\n]{0,120}中位数)/gu,'')
+ if(!/(?:纯债基金|纯债型基金)/u.test(request)||!/(?:比较|对比)/u.test(request)||!/中长期/u.test(request)||
     !/近一年收益/u.test(request)||!/近半年最大回撤/u.test(request)||!request.includes('年化波动率')||!request.includes('最新净值')||!request.includes('规模')||!request.includes('管理人')||
-    /模拟|演示|附件|禁止联网|不(?:要|用|能|得)联网|离线|(?:只|仅)(?:用|使用|依赖)|指定|Tushare|天天基金|东方财富|通联|Wind|Choice|财汇|聚源|MCP|每.{0,8}刷新|实时|自动更新|额外|页签|\d{6}|\d+\s*张|不含|排除|优先|重点/iu.test(request))return null
+    /模拟|演示|附件|禁止联网|不(?:要|用|能|得)联网|离线|(?:只|仅)(?:用|使用|依赖)|指定|Tushare|天天基金|东方财富|通联|Wind|Choice|财汇|聚源|MCP|每.{0,8}刷新|实时|自动更新|额外|页签|\d{6}|\d+\s*张|不含|排除|优先|重点/iu.test(comparisonRequest))return null
  const count=Number(request.match(/至少\s*(?:比较|对比)?\s*(\d+)\s*只/u)?.[1])
  return Number.isSafeInteger(count)&&count>=3&&count<=12?count:null
 }
@@ -276,9 +278,36 @@ export function fundComparisonArtifacts({rows,start,halfStart,end}){
  return [table,rank,risk]
 }
 
+const overviewTitle = /中位数|(?:样本|基金|收益|风险).{0,10}(?:概览|总览|摘要)|(?:概览|总览).{0,10}(?:样本|基金)/u;
+const overviewPanel = panel => panel?.type === 'kpi' && (overviewTitle.test(panel.title) || /中位数/u.test(panel.prompt));
+
+export function includeFundComparisonOverview(plan, request, limit) {
+ if (!Array.isArray(plan.panels) || !plan.panels.length || plan.panels.length>=limit ||
+     plan.panels.some(overviewPanel) || plan.tabs ||
+     /(?:无需|不要|不需要|不生成|禁止|不显示).{0,8}(?:中位数|概览)|(?:只|仅)(?:生成|做|保留|展示)|(?:^|[，。；])\s*(?:一|两|三|四|五|[1-9])张/u.test(request)) return plan;
+ const title = request.match(/「([^」]{1,80})」[^。；\n]{0,55}中位数/u)?.[1] ?? '样本概览指标';
+ if (plan.panels.some(panel=>panel?.title===title)) return plan;
+ return {...plan,panels:[...plan.panels,{title,type:'kpi',
+  prompt:'用同一批基金展示样本数量、近一年收益率中位数、近半年最大回撤中位数、规模合计及其来源。'}]};
+}
+
+export function prepareFundComparisonPanel(panel, comparison, artifacts) {
+ const [evidence,rank,risk] = artifacts;
+ if (overviewPanel(panel)) return prepareFundComparisonOverview(panel,comparison,evidence);
+ if (panel.artifact || panel.type !== 'chart' || !rank || !risk) return;
+ const title = panel.title;
+ const drawdown = /回撤/u.test(title), volatility = /波动/u.test(title);
+ if (!drawdown && !volatility && /(?:近|过去)?一年.{0,6}收益|收益排名/u.test(title)) return {...rank,title};
+ if (drawdown && volatility) return {...risk,title};
+ if (drawdown || volatility) {
+  const index = drawdown ? 0 : 1;
+  const identityAndValue = row => [...row.slice(0,3),row[3+index]];
+  return {...risk,title,series:[risk.series[index]],
+   detailColumns:identityAndValue(risk.detailColumns),detailRows:risk.detailRows.map(identityAndValue)};
+ }
+}
+
 export function prepareFundComparisonOverview(panel, comparison, evidence) {
- if (panel.type !== 'kpi' || panel.artifact ||
-     !/(?:样本|基金|收益|风险).{0,10}(?:概览|总览|摘要)|(?:概览|总览).{0,10}(?:样本|基金)/u.test(panel.title)) return;
  const {rows} = comparison;
  if (!Array.isArray(rows) || !rows.length || !rows.every(row =>
    Number.isFinite(row.gain) && Number.isFinite(row.drawdown))) return;

@@ -55,44 +55,57 @@ function referencesCompletePastedRows(dataset,rows,header){
 
 function completeNamedCalculationPlan(plan,blocks,source){
  const request=plan.originalRequest;
- if(plan.sharedDatasets!==undefined||plan.generationMode!==undefined&&plan.generationMode!=='deferred'||!source||!/模拟/u.test(request)||
-    blocks.length!==1||!Array.isArray(plan.panels)||plan.panels.length!==3)return plan;
- const rows=blocks[0], labels=rows.map(row=>row[0]);
- if(rows.length>500||new Set(labels).size!==rows.length||!rows.every(row=>row.length===3&&row[0]&&row.slice(1).every(value=>rawDecimal.test(value))))return plan;
+ if(!source||!/模拟/u.test(request)||blocks.length!==1||!Array.isArray(plan.panels)||
+    plan.tabs||plan.links||plan.panels.some(panel=>panel?.library||panel?.publicData||panel?.profile||panel?.requests)||
+    Array.isArray(plan.sharedDatasets)&&plan.sharedDatasets.some(dataset=>dataset?.id==='authored-calculation'))return plan;
+ const rows=blocks[0],labels=rows.map(row=>row[0]);
  const clauses=[...request.matchAll(/[「“『]([^」”』\n]+)[」”』]([^「“『。；;\n]*)/gu)];
- const viewFor=panel=>clauses.find(([,title])=>title===panel?.title?.split(/[（(]/u)[0].trim())?.[2];
- const views=plan.panels.map(viewFor);
- if(views.some(clause=>!clause)||plan.panels.some(panel=>panel.library||panel.publicData||panel.profile||panel.requests))return plan;
- const chart=views.findIndex(clause=>/原生(?:折线图|横向条形图|横条图)/u.test(clause));
- const records=views.findIndex(clause=>/^\s*(?:可排序)?表(?:格)?[，、\s]/u.test(clause));
- const summary=views.findIndex(clause=>/指标卡|期间合计|总体达成率/u.test(clause));
- if(new Set([chart,records,summary]).size!==3||[chart,records,summary].includes(-1))return plan;
  const unit=/(?:金额|单位)(?:均?为|[：:]\s*)?\s*(万元|亿元|元)/u.exec(request)?.[1];
- if(!unit)return plan;
+ if(!unit||clauses.length!==3||new Set(clauses.map(([,title])=>title)).size!==3||
+    rows.length>500||new Set(labels).size!==rows.length)return plan;
  const flow=labels.every(label=>/^\d{4}-\d{2}-\d{2}$/u.test(label))&&
-  /净申购(?:额)?[（(]\s*申购\s*[减−-]\s*赎回/u.test(request)&&/期间合计/u.test(views[summary])&&/折线图/u.test(views[chart]);
+  /净申购(?:额)?[（(]\s*申购\s*[减−-]\s*赎回/u.test(request);
  const target=labels.every(label=>!/^\d/u.test(label))&&/目标、实际、达成率/u.test(request)&&
-  /总体达成率.{0,14}(?:用总额计算|总实际.{0,6}总目标)/u.test(views[summary])&&/横向条形图|横条图/u.test(views[chart]);
- if(!flow&&!target)return plan;
- const [dimension,left,right,metric]=flow?['日期','申购','赎回','净申购']:['渠道','目标','实际','达成率'];
- const [leftKey,rightKey]=flow?['purchase','redeem']:['target','actual'];
- const metricKey=flow?'net':'completion',metricUnit=flow?unit:'%',ledger='authored-calculation',totals='authored-calculation-totals';
- const fields=[{key:'id',label:dimension},{key:leftKey,label:left,unit},{key:rightKey,label:right,unit}];
+  /总体达成率.{0,14}(?:用总额计算|总实际.{0,6}总目标)/u.test(request);
+ const reconcile=/账面(?:额)?\s*[减−-]\s*托管/u.test(request)&&/保留零和负数/u.test(request)&&/批次/u.test(request);
+ if(Number(flow)+Number(target)+Number(reconcile)!==1||
+    !rows.every(row=>row.length===(reconcile?4:3)&&row[0]&&
+      (!reconcile||row[1])&&row.slice(-2).every(value=>rawDecimal.test(value))))return plan;
+ const roles=clauses.map(([,title,clause])=>{
+  if(/原生(?:折线图|横向条形图|横条图)/u.test(clause))return 'chart';
+  if(reconcile&&/仅.{0,24}(?:不同|差异)/u.test(clause))return 'exceptions';
+  if(!reconcile&&/指标卡|期间合计|总体达成率/u.test(clause))return 'summary';
+  if(/表/u.test(clause.slice(0,16)))return 'records';
+ });
+ if(new Set(roles).size!==3||roles.includes(undefined)||
+    !roles.includes('records')||!roles.includes('chart')||
+    !roles.includes(reconcile?'exceptions':'summary'))return plan;
+ const [dimension,left,right,metric]=flow?['日期','申购','赎回','净申购']:
+  target?['渠道','目标','实际','达成率']:['批次','账面额','托管额','差额'];
+ const [leftKey,rightKey]=flow?['purchase','redeem']:target?['target','actual']:['book','custody'];
+ const metricKey=flow?'net':target?'completion':'difference',metricUnit=target?'%':unit;
+ const ledger='authored-calculation',totals='authored-calculation-totals';
+ const fields=[{key:'id',label:dimension},...(reconcile?[{key:'category',label:'资产类别'}]:[]),
+  {key:leftKey,label:left,unit},{key:rightKey,label:right,unit}];
  const measures=[{key:leftKey,label:flow?'申购合计':'总目标',op:'sum',field:leftKey,unit},
   {key:rightKey,label:flow?'赎回合计':'总实际',op:'sum',field:rightKey,unit},
   flow?{key:metricKey,label:'净申购合计',op:'sum',field:metricKey,unit}
    :{key:metricKey,label:'总体达成率',op:'percent',numerator:rightKey,denominator:leftKey,unit:metricUnit}];
  const sharedDatasets=[
   {id:ledger,label:source,fields,pastedTable:{block:1,identity:'id',numericFields:[leftKey,rightKey],
-   derive:[{key:metricKey,label:metric,op:flow?'subtract':'percent',left:flow?leftKey:rightKey,right:flow?rightKey:leftKey,unit:metricUnit}]}},
-  {id:totals,label:'合计',aggregate:{dataset:ledger,groupBy:[],measures}},
+   derive:[{key:metricKey,label:metric,op:target?'percent':'subtract',left:target?rightKey:leftKey,right:target?leftKey:rightKey,unit:metricUnit}]}},
+  ...(!reconcile?[{id:totals,label:'合计',aggregate:{dataset:ledger,groupBy:[],measures}}]:[]),
  ];
- const panels=plan.panels.map((panel,i)=>{
-  const {artifact,content,view,...layout}=panel;
-  if(i===chart)return {...layout,type:'chart',view:{dataset:ledger,variant:flow?'line':'horizontal',unit:metricUnit,
+ const panels=clauses.map(([,title,clause],i)=>{
+  const submitted=plan.panels.find(panel=>typeof panel?.title==='string'&&panel.title.split(/[（(]/u)[0].trim()===title);
+  const {size,layout}=submitted??{};
+  const panel={title,prompt:submitted?.prompt||clause.trim(),...(size?{size}:{}),...(layout?{layout}:{})};
+  const role=roles[i];
+  if(role==='chart')return {...panel,type:'chart',view:{dataset:ledger,variant:flow?'line':'horizontal',unit:metricUnit,
    sections:[{kind:'records',label:'id',fields:[metricKey]}]}};
-  return {...layout,type:i===records?'view':'kpi',view:{dataset:i===records?ledger:totals,
-   sections:[{kind:'records',fields:i===records?['id',leftKey,rightKey,metricKey]:[leftKey,rightKey,metricKey]}]}};
+  if(role==='summary')return {...panel,type:'kpi',view:{dataset:totals,sections:[{kind:'records',fields:[leftKey,rightKey,metricKey]}]}};
+  return {...panel,type:'view',view:{dataset:ledger,...(role==='exceptions'?{where:[{field:metricKey,op:'ne',value:0}]}:{}),
+   sections:[{kind:'records',fields:[...fields.map(field=>field.key),metricKey]}]}};
  });
  const {generationMode,...prepared}=plan;
  return {...prepared,sharedDatasets,panels};
