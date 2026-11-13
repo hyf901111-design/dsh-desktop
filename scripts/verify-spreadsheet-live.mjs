@@ -26,7 +26,7 @@ await build({stdin:{resolveDir:root,contents:`
    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
    subscribe:(name,callback)=>{const channel='spreadsheet:'+name;const f=(_,value)=>callback(value);ipcRenderer.on(channel,f);return()=>ipcRenderer.removeListener(channel,f)}
   })
-  contextBridge.exposeInMainWorld('spreadsheetFixture',{admit:(prompt)=>mounted.admit('demo-session',prompt),flush:()=>mounted.flush('demo-session')})
+  contextBridge.exposeInMainWorld('spreadsheetFixture',{admit:(prompt,refs)=>mounted.admit('demo-session',prompt,refs),flush:()=>mounted.flush('demo-session')})
  })
 `},bundle:true,platform:'browser',format:'cjs',target:'chrome140',define:{'process.env.NODE_ENV':'"production"'},external:['electron'],plugins:[inline],outfile:preload,logLevel:'warning'})
 await build({stdin:{resolveDir:root,contents:`
@@ -46,7 +46,7 @@ await build({stdin:{resolveDir:root,contents:`
  const profile={owner:'demo',sessionId:'demo-session'},mode='spreadsheet'
  const report=[],errors=[]
  let win,service,capability,turn=0,configuredImport
- const button=(action,value)=>'.ew-sheet [data-action="'+action+'"]'+(value===undefined?'':'[data-value='+JSON.stringify(value)+']')
+ const button=(action,value)=>':is([data-ework-spreadsheet-actions],.ew-sheet) [data-action="'+action+'"]'+(value===undefined?'':'[data-value='+JSON.stringify(value)+']')
  const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms))
  const js=(code)=>win.webContents.executeJavaScript(code,true)
  const until=async(check,name)=>{for(let i=0;i<140;i++){const value=await check();if(value)return value;await wait(50)}throw Error('Timed out: '+name+' '+await js('document.querySelector(".ew-sheet")?.innerText').catch(()=>''))}
@@ -79,7 +79,7 @@ await build({stdin:{resolveDir:root,contents:`
  const screenshot=async(name)=>{await wait(220);const image=await win.webContents.capturePage();writeFileSync(join(evidence,name+'.png'),image.toPNG())}
  const style=(r,c)=>{const book=snapshot(),cell=currentCell(r,c);return typeof cell?.s==='string'?book.styles[cell.s]:cell?.s}
  const saveCheck=async(check,name)=>{await until(async()=>{await save();return check()},name);report.push(name)}
- const html='<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#121313;width:100%;height:100%;font:13px system-ui;color:#e4e4e4}body{display:flex;box-sizing:border-box;padding:10px;gap:10px}aside{width:330px;background:#242424;border-radius:14px;padding:12px;position:relative}aside textarea{position:absolute;bottom:14px;left:14px;right:14px;height:95px;background:#292929;border:0;border-radius:9px;color:#eee;padding:10px;resize:none}article{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:14px;background:#1e1e1e;overflow:hidden}header.shell{height:47px;display:flex;align-items:center;padding:0 16px;gap:20px;flex:none}header.shell span{background:#303030;border-radius:5px;padding:5px 14px}#chat{display:inline-block;background:#303030;padding:5px 9px;border-radius:6px}body.hide aside{display:none}[data-odyssey-panel-entry=right]{position:absolute;top:16px;right:20px;border:0;background:#303030;color:#eee;border-radius:5px;padding:5px 8px}</style><body data-ds-dark-theme><article data-odyssey-page="spreadsheet"><header class="shell">消费行业周报　　对话　　研究　　笔记 <span>表格</span></header><div data-conversation-scroll><div data-ework-spreadsheet-view="demo-session"></div></div></article><aside><span id="chat">◌ 对话</span><textarea placeholder="给智能体发消息"></textarea></aside><button data-odyssey-panel-entry="right" aria-label="右侧屏" onclick="document.body.classList.toggle(&quot;hide&quot;)">◧</button><button data-odyssey-panel-entry="bottom">下方</button>'
+ const html='<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#121313;width:100%;height:100%;font:13px system-ui;color:#e4e4e4}body{display:flex;box-sizing:border-box;padding:10px;gap:10px}aside{width:330px;background:#242424;border-radius:14px;padding:12px;position:relative}aside textarea{position:absolute;bottom:14px;left:14px;right:14px;height:95px;background:#292929;border:0;border-radius:9px;color:#eee;padding:10px;resize:none}article{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:14px;background:#1e1e1e;overflow:hidden}header.shell{height:47px;display:flex;align-items:center;padding:0 16px;gap:20px;flex:none}header.shell span{background:#303030;border-radius:5px;padding:5px 14px}#chat{display:inline-block;background:#303030;padding:5px 9px;border-radius:6px}body.hide aside{display:none}[data-odyssey-panel-entry=right]{position:absolute;top:16px;right:20px;border:0;background:#303030;color:#eee;border-radius:5px;padding:5px 8px}</style><body data-ds-dark-theme><article data-odyssey-page="spreadsheet"><header class="shell" data-srb-session-header>消费行业周报　　对话　　研究　　笔记 <span>表格</span><div data-ework-spreadsheet-actions="demo-session" style="margin-left:auto"></div></header><div data-conversation-scroll><div data-ework-spreadsheet-view="demo-session"></div></div></article><aside><span id="chat">◌ 对话</span><textarea placeholder="给智能体发消息"></textarea></aside><button data-odyssey-panel-entry="right" aria-label="右侧屏" onclick="document.body.classList.toggle(&quot;hide&quot;)">◧</button><button data-odyssey-panel-entry="bottom">下方</button>'
  app.whenReady().then(async()=>{
   try{
    win=new BrowserWindow({width:1440,height:960,show:true,webPreferences:{contextIsolation:true,sandbox:true,preload}})
@@ -103,7 +103,17 @@ await build({stdin:{resolveDir:root,contents:`
    await click(button('new'))
    await until(()=>js('!!document.querySelector(".ew-sheet-grid canvas")'),'Univer canvas mount')
    await until(()=>js('[...document.querySelectorAll(".ew-sheet-grid canvas")].some(c=>c.getBoundingClientRect().width>400)'),'canvas size')
-   report.push('new workbook / native canvas')
+   // Canvas screenshot samples, not DOM colors: freeze handles used to be
+   // bright at the corner; old tracks were black at the right and bottom.
+   const gridColors=await js('(()=>{const c=[...document.querySelectorAll(".ew-sheet-grid canvas")].find(c=>c.clientWidth>400); const ctx=c.getContext("2d"),sx=c.width/c.clientWidth,sy=c.height/c.clientHeight; const sample=(x,y)=>Array.from(ctx.getImageData(Math.round(x*sx),Math.round(y*sy),1,1).data);return {right:sample(c.clientWidth-4,160),bottom:sample(250,c.clientHeight-4),corner:sample(38,21)}})()')
+   for(const side of ['right','bottom'])assert.ok(gridColors[side].slice(0,3).every(v=>v>=29&&v<75),JSON.stringify(gridColors))
+   assert.ok(gridColors.corner.slice(0,3).every(v=>v<95),JSON.stringify(gridColors))
+   report.push({name:'native dark canvas edge and freeze handle colors',gridColors})
+   assert.equal(await js('document.querySelector(".ew-sheet-title")'),null)
+   assert.equal(await js('document.querySelectorAll("[data-srb-session-header] [data-ework-spreadsheet-actions] button").length'),3)
+   const toolbarGap=await js('document.querySelector(".ew-sheet-ribbon-tabs").getBoundingClientRect().top-document.querySelector("[data-srb-session-header]").getBoundingClientRect().bottom')
+   assert.ok(Math.abs(toolbarGap)<2,toolbarGap)
+   report.push('new workbook / native canvas / header actions without duplicate row')
    const grid=await js('(()=>{const r=document.querySelector(".ew-sheet-grid").getBoundingClientRect();return {x:r.x,y:r.y}})()')
    const hit=async(col,row,count=1)=>{
     const point={x:Math.round(grid.x+40+col*100+45),y:Math.round(grid.y+24+row*30+13)}
@@ -151,6 +161,17 @@ await build({stdin:{resolveDir:root,contents:`
    await select('A1:B2');await click(button('filter'))
    await saveCheck(()=>snapshot().resources?.some(x=>x.name.includes('Filter')||x.name.includes('FILTER')),'filter range')
    await click(button('filter'));await save()
+   await click(button('ribbon','数据'))
+   await select('D3:E4');await click(button('menu','sort'));await click(button('sort','desc'))
+   await saveCheck(()=>currentCell(2,3)?.v==='B'&&currentCell(2,4)?.v===22&&currentCell(3,3)?.v==='A'&&currentCell(3,4)?.v===11,'sort a range outside column A and preserve row data')
+   await select('E5');await formula('22');await select('D5');await formula('B')
+   await select('D3:E5');await click(button('duplicates'));await click(button('dedupe-apply'))
+   await saveCheck(()=>currentCell(4,4)?.v==null&&currentCell(2,4)?.v===22&&currentCell(3,4)?.v===11,'deduplicate matching rows')
+   await click(button('ribbon','插入'));await select('D3:E4');await click(button('chart'))
+   assert.match(await js('document.querySelector(".ew-sheet-chart").innerText'),/22/)
+   await click('.ew-sheet-dialog footer button:last-child')
+   report.push('chart preview uses actual selected values')
+   await click(button('ribbon','开始'))
    await select('A1')
    await click(button('search'));await field('.ew-sheet-dialog input','25')
    assert.match(await js('document.querySelector(".ew-sheet-find-result").textContent'),/B1/)
@@ -163,7 +184,7 @@ await build({stdin:{resolveDir:root,contents:`
    report.push('right-only conversation and focus')
    await click(button('menu','export'))
    const bounds=await js('(()=>{const m=document.querySelector(".ew-sheet-menu"),b=document.querySelector("[data-value=export]"),r=m.getBoundingClientRect(),a=b.getBoundingClientRect(),s=getComputedStyle(m);return {width:r.width,height:r.height,gap:r.top-a.bottom,right:r.right-a.right,padding:s.padding,option:m.querySelector("button").getBoundingClientRect().height}})()')
-   assert.equal(bounds.width,304);assert.equal(bounds.option,58);assert.equal(bounds.gap,8);assert.ok(Math.abs(bounds.right)<2);assert.ok(bounds.height<=205)
+   assert.equal(bounds.width,304);assert.equal(bounds.option,58);assert.ok(bounds.gap>=8&&bounds.gap<=12,JSON.stringify(bounds));assert.ok(Math.abs(bounds.right)<2);assert.ok(bounds.height<=205)
    report.push({name:'export popover geometry',bounds})
    await screenshot('02-export')
    await click(button('export-format','xlsx'))
@@ -174,14 +195,16 @@ await build({stdin:{resolveDir:root,contents:`
    await until(()=>{try{return readFileSync(csvPath,'utf8').includes('100,25,0.25')}catch{return false}},'CSV computed values export')
    report.push('Excel and CSV export through native dialog IPC')
    configuredImport=xlsxPath
-   await click('.ew-sheet-title [data-action=import]')
+   await click('[data-ework-spreadsheet-actions] [data-action=import]')
    await until(()=>snapshot().name==='导出.xlsx','import through native dialog IPC')
    await until(()=>js('!!document.querySelector(".ew-sheet-grid canvas")'),'reopen imported canvas')
-   await select('C1');await js('spreadsheetFixture.admit("把选区改成 50%")');await select('B1')
+   const prompt='把〔表格选区 "Sheet1"!C1 #0123456789ab〕改成 50%'
+   const refs=[{sessionId:profile.sessionId,bookId:snapshot().id,sheetId:snapshot().sheetOrder[0],sheetName:'Sheet1',range:'C1',id:'0123456789ab'}]
+   await select('C1');await js('spreadsheetFixture.admit('+JSON.stringify(prompt)+','+JSON.stringify(refs)+')');await select('B1')
    const tools={}
    const transport=async(_url,opts)=>{try{return new Response(JSON.stringify(await capability.request(JSON.parse(opts.body))),{status:200})}catch(error){return new Response(JSON.stringify({error:error.message}),{status:400})}}
    registerClientTools({tools:{register(tool){tools[tool.name]=tool;return ()=>{}}}},{env:{SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'test'},fetch:transport})
-   const execution={signal:new AbortController().signal,token:Symbol(),agent:{session:{id:profile.sessionId,header:{},events:[{type:'turn/start',data:{turn:++turn}},{type:'user/message',seq:1,data:{id:'manual-1',source:{kind:'user'},content:[{type:'text',text:'把选区改成 50%'}]}}]}}}
+   const execution={signal:new AbortController().signal,token:Symbol(),agent:{session:{id:profile.sessionId,header:{},events:[{type:'turn/start',data:{turn:++turn}},{type:'user/message',seq:1,data:{id:'manual-1',source:{kind:'user'},content:[{type:'text',text:prompt}]}}]}}}
    const tool=async(capability,args,requestId)=>JSON.parse(await tools.client_action.execute({requestId,capability,arguments:args},execution))
    const catalog=JSON.parse(await tools.client_capabilities.execute({},execution))
    assert.equal(catalog.mode,'spreadsheet');assert.equal(catalog.capabilities.find(c=>c.id==='spreadsheet.apply').available,true)
@@ -199,6 +222,7 @@ await build({stdin:{resolveDir:root,contents:`
    await until(()=>js('!!document.querySelector(".ew-sheet-grid canvas")'),'AI undo grid')
    await click(button('redo'))
    await until(()=>currentCell(0,2)?.v===0.5&&!currentCell(0,2)?.f,'AI redo')
+   await until(()=>js('document.querySelector(".ew-sheet-status-text")?.textContent==="已重新应用 AI 修改"'),'AI redo visible')
    await click(button('undo'))
    await until(()=>currentCell(0,2)?.f==='=B1/A1','undo restored AI redo')
    report.push('right chat tool route / send-time range / live update / undo and redo')

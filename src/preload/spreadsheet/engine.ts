@@ -8,7 +8,7 @@ import sortZh from '@univerjs/preset-sheets-sort/locales/zh-CN'
 import coreEn from '@univerjs/preset-sheets-core/locales/en-US'
 import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
-import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,type IWorkbookData} from '@univerjs/core'
+import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,type IWorkbookData} from '@univerjs/core'
 import {ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
 import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService} from '@univerjs/sheets-ui'
@@ -25,7 +25,13 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  const originalDark=doc.documentElement.classList.contains('univer-dark')
  const dark=()=>doc.body.hasAttribute('data-ds-dark-theme')
  const palette=()=>dark()?{text:'#dedede',header:'#242424',grid:'#303030',canvas:'#1b1b1b'}:{text:'#333438',header:'#f4f5f6',grid:'#e4e5e8',canvas:'#fff'}
- const theme=()=>({...defaultTheme,primary:{...defaultTheme.primary,500:'#7faaf8',600:'#5c8eeb'},gray:{...defaultTheme.gray,...dark()?{300:'#d0d0d0',400:'#aaaaaa',800:'#242424',900:'#1b1b1b'}:{}}})
+ const scroll=()=>{
+  const track=palette().header
+  return {barSize:9,barBorder:0,thumbMargin:2,trackBackgroundColor:track,trackBorderColor:track,
+   thumbBackgroundColor:dark()?'#595b60':'#b1b4ba',thumbHoverBackgroundColor:dark()?'#767981':'#92969f',
+   thumbActiveBackgroundColor:dark()?'#9397a0':'#777c86'}
+ }
+ const theme=()=>({...defaultTheme,primary:{...defaultTheme.primary,500:'#7faaf8',600:'#5c8eeb'},gray:{...defaultTheme.gray,...dark()?{300:'#525a67',400:'#aaaaaa',800:'#242424',900:'#1b1b1b'}:{}}})
  let renderingSheet=false
  class SpreadsheetCanvasColors extends Plugin {
   static override pluginName='ework-spreadsheet-canvas-colors'
@@ -41,7 +47,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   locale:doc.documentElement.dataset.odysseyLocale==='en'?LocaleType.EN_US:LocaleType.ZH_CN,
   locales:{[LocaleType.ZH_CN]:mergeLocales(coreZh,filterZh,sortZh),[LocaleType.EN_US]:mergeLocales(coreEn,filterEn,sortEn)},
   darkMode:dark(),theme:theme(),plugins:[SpreadsheetCanvasColors],
-  presets:[UniverSheetsCorePreset({container:host,header:false,toolbar:false,formulaBar:false,footer:false,contextMenu:true,disableAutoFocus:true,sheets:{freezeSync:true}}),UniverSheetsFilterPreset(),UniverSheetsSortPreset()]
+  presets:[UniverSheetsCorePreset({container:host,header:false,toolbar:false,formulaBar:false,footer:false,contextMenu:true,disableAutoFocus:true,sheets:{freezeSync:true,scrollConfig:scroll()}}),UniverSheetsFilterPreset(),UniverSheetsSortPreset()]
  })
  let disposed=false
  try{
@@ -50,6 +56,23 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  const injector=univer.__getInjector()
  const renders=injector.get(IRenderManagerService)
  const watched=new Map<string,{unsubscribe():void}[]>()
+ const freezeObjects=[
+  ['ySplit','__SpreadsheetFreezeRowHeaderName__','__SpreadsheetFreezeRowMainName__'],
+  ['xSplit','__SpreadsheetFreezeColumnHeaderName__','__SpreadsheetFreezeColumnMainName__']
+ ] as const
+ // Univer's clipboard rectangle starts white and its fill handle uses the
+ // theme's white endpoint. Keep these transient guides distinct from borders.
+ const guideColors=(render:IRender)=>{
+  for(const object of render.scene.getObjectsByLayer(1)){
+   if(!object.oKey.startsWith('__SpreadsheetSelectionShape__'))continue
+   for(const shape of object.getObjects()){
+    if(!('setProps' in shape)||typeof shape.setProps!=='function')continue
+    const stroke=shape.oKey.startsWith('__SpreadsheetDragDashControl__')?'#7898c8':
+     shape.oKey.startsWith('__SpreadsheetSelectionFillControl__')?palette().canvas:undefined
+    if(stroke&&(!('stroke' in shape)||shape.stroke!==stroke))shape.setProps({stroke})
+   }
+  }
+ }
  const bindRender=(render:IRender)=>{
   if(watched.has(render.unitId))return
   const spreadsheet=render.unitId===model.getId()
@@ -57,6 +80,12 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    if(!canvas)return
    renderingSheet=spreadsheet
    if(!spreadsheet)return
+   guideColors(render)
+   const freeze=model.getActiveSheet()?.getFreeze()
+   for(const [axis,...names] of freezeObjects)if(!freeze?.[axis])for(const name of names){
+    const handle=render.scene.getObject(name)
+    if(handle?.visible){handle.hide();handle.evented=false}
+   }
    for(const item of [canvas,...render.scene.getViewports().map(view=>view.canvas)])if(item)Object.assign(item.getContext().renderConfig,{gridlinesColor:palette().grid})
   }),render.scene.afterRender$.subscribe(()=>{renderingSheet=false})]
   watched.set(render.unitId,on)
@@ -65,9 +94,19 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   effect:InterceptorEffectEnum.Style,priority:0,
   handler(cell,position,next){
    if(!cell)return next(cell)
-   const s=position.workbook.getStyles().getStyleByCell(cell)||{}
-   if(s.cl||s.bg||cell.p)return next(cell)
-   return next({...cell,s:{...s,cl:{rgb:palette().text}}})
+   const {worksheet,row,col}=position
+   const inherited=worksheet.getComposedCellStyleByCellData(row,col,cell)
+   const own=position.workbook.getStyles().getStyleByCell(cell)??{}
+   const s={...own}
+   if(!inherited.cl&&!inherited.bg&&!cell.p)s.cl={rgb:palette().text}
+   if(!inherited.ht&&cell.t===1&&!cell.f)s.ht=HorizontalAlign.LEFT
+   if(!inherited.vt){
+    const merge=worksheet.getCellInfoInMergeData(row,col)
+    const defaultHeight=worksheet.getConfig().defaultRowHeight
+    const actual=worksheet.getRowHeight(row)
+    s.vt=actual>defaultHeight+1||(merge.isMerged&&merge.endRow>merge.startRow)?VerticalAlign.TOP:VerticalAlign.MIDDLE
+   }
+   return next({...cell,s})
   }
  })
 
@@ -82,6 +121,14 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   model.customizeRowHeader({headerStyle:{backgroundColor:colors.header,borderColor:colors.grid,fontColor:colors.text}})
   const corner=render.components.get(SHEET_VIEW_KEY.LEFT_TOP)
   if(corner&&'setProps' in corner&&typeof corner.setProps==='function')corner.setProps({fill:colors.header,stroke:colors.grid})
+  for(const viewport of render.scene.getViewports()){
+   const bar=viewport.getScrollBar()
+   if(!bar)continue
+   const props=scroll()
+   bar.setProps(props)
+   for(const track of [bar.horizonScrollTrack,bar.verticalScrollTrack,bar.placeholderBarRect])track?.setProps({fill:props.trackBackgroundColor,stroke:props.trackBorderColor})
+   for(const thumb of [bar.horizonThumbRect,bar.verticalThumbRect])thumb?.setProps({fill:props.thumbBackgroundColor})
+  }
   const canvas=render.engine.getCanvasElement()
   if(canvas.parentElement)canvas.parentElement.style.background=colors.canvas
   model.getActiveSheet()?.refreshCanvas()
@@ -96,6 +143,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  })
  resize.observe(host)
  const subs=[
+  api.getFormula().calculationResultApplied(()=>{if(!disposed)change(true)}),
   api.addEvent(api.Event.BeforeCommandExecute,event=>{
    if(event.id!=='sheet.mutation.set-range-values')return
    const values=(event.params as {cellValue?:unknown})?.cellValue

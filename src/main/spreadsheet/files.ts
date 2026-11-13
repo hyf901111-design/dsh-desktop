@@ -124,6 +124,8 @@ export async function readWorkbookFile(data:Buffer,name:string,id:string):Promis
      if(cell.numFmt&&cell.numFmt!=='General')s.n={pattern:cell.numFmt}
      const align=cell.alignment?.horizontal
      if(align==='left'||align==='center'||align==='right')s.ht={left:1,center:2,right:3}[align]
+     const vertical=cell.alignment?.vertical
+     if(vertical==='top'||vertical==='middle'||vertical==='bottom')s.vt={top:1,middle:2,bottom:3}[vertical]
      if(cell.border)for(const [from,to] of [['top','t'],['bottom','b'],['left','l'],['right','r']] as const){
       const edge=cell.border[from];if(edge?.style)(s.bd??={})[to]={s:1,cl:excelColor(edge.color?.argb)??{rgb:'#7a8799'}}
      }
@@ -174,7 +176,8 @@ export async function writeWorkbookFile(book:Workbook,format:'xlsx'|'csv',sheetI
    if(style.bold||style.italic||style.color||style.fontFamily||style.fontSize)target.font={bold:style.bold,italic:style.italic,color:nativeColor(raw.cl),name:style.fontFamily,size:style.fontSize}
    const fill=nativeColor(raw.bg);if(fill)target.fill={type:'pattern',pattern:'solid',fgColor:fill}
    if(style.numberFormat)target.numFmt=style.numberFormat
-   if(style.align)target.alignment={horizontal:style.align}
+   const vertical=({1:'top',2:'middle',3:'bottom'} as const)[raw.vt as 1|2|3]
+   if(style.align||vertical)target.alignment={horizontal:style.align,vertical}
    if(raw.bd)for(const [from,to] of [['t','top'],['b','bottom'],['l','left'],['r','right']] as const)if(raw.bd[from])target.border={...target.border,[to]:{style:'thin',color:nativeColor(raw.bd[from].cl)}}
   }
   for(const merge of sheet.mergeData??[]){

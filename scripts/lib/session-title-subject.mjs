@@ -11,6 +11,7 @@ export function sessionTitleSubject(input) {
   if(name&&!/\d{7,}|^[a-f\d-]{24,}$|^(?:events?|sessions?|image|screenshot|clipboard)[ _-]/i.test(name)&&!files.includes(name))files.push(name)
   return ' '
  }
+ text=text.replace(/〔表格选区 "(?:[^"\\\n]|\\.)*"!\$?[A-Z]{1,3}\$?[1-9]\d{0,5}(?::\$?[A-Z]{1,3}\$?[1-9]\d{0,5})? #[a-f0-9]{12}〕/g,' ')
  text=text.replace(/(?:📎\s*)?(?:文件|附件|file|attachment)\s*[:：]\s*/gi,' ')
  text=text.replace(/file:\/\/\/[^\s<>"'`]+/gi,file)
  text=text.replace(/["'`]((?:\/(?:Users|home|tmp|var|private|Volumes)|[A-Za-z]:[\\/])[^"'`\n]+)["'`]/g,(_,path)=>file(path))

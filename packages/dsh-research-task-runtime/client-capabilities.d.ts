@@ -22,7 +22,7 @@ export type ClientCapabilityArguments={
  'notes.components.apply':{blockId:string;revision:string;containerSpec:Record<string,any>}
  'notes.challenge.configure':{level?:0|1|2|3|4;commentsExpanded?:boolean}
  'notes.components.data':{action:'inspect'|'configure'|'refresh';revision?:number;settings?:{enabled?:boolean;intervalMinutes?:number}}
- 'spreadsheet.inspect':{scope:'workbook'|'selected'}|{scope:'range';sheetId:string;range:string}
+ 'spreadsheet.inspect':{scope:'workbook'|'selected'}|{scope:'range';sheetId:string;range:string}|{scope:'reference';referenceIndex:number}
  'spreadsheet.apply':{revision:number;createName?:string;operations:Record<string,any>[]}
  'spreadsheet.undo':{revision:number;actionId:string}
  'canvas.inspect':{ids?:string[]}

@@ -1,4 +1,5 @@
-const marker='/* ework:spreadsheet-client:v1 */'
+import {spreadsheetRangeCodec,collectSpreadsheetReferences,installSpreadsheetReferences,spreadsheetMessageParts} from './spreadsheet-inline-references.mjs'
+const marker='/* ework:spreadsheet-client:v2 */'
 const restore='/* ework:spreadsheet-client:restore '
 function replace(source,before,after,label){
  const actual=source.split('/* browser-app-native:v1 */')[0]
@@ -10,7 +11,7 @@ export function stripSpreadsheetClient(source){
  const end=source.indexOf(' */',at)
  if(end<0)throw Error('Spreadsheet restore record missing')
  const entries=JSON.parse(source.slice(at+restore.length,end))
- source=source.slice(0,at)+source.slice(end+3)
+ source=source.slice(0,source[at-1]==='\n'?at-1:at)+source.slice(end+3)
  for(const [before,after,label] of entries.reverse())source=replace(source,after,before,label)
  return source
 }
@@ -39,7 +40,9 @@ ctx.effect(()=>{
  };
  window.addEventListener('sherlock:spreadsheet-quick-prompt',fill);
  return()=>window.removeEventListener('sherlock:spreadsheet-quick-prompt',fill);
-},'Spreadsheet shared composer shortcuts');`,'registration')
+},'Spreadsheet shared composer shortcuts');
+ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${spreadsheetRangeCodec.toString()})()),'Spreadsheet range codec'));
+ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:document,sessions,getInput:id=>inputHub.shell(id)}),'Spreadsheet range insertion');`,'registration')
  const mode="const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);"
  change(mode,mode.replace("research || activeView==='notes'","research || activeView==='notes' || !subagentPanel&&activeView==='spreadsheet'").replace('||homeGuideSidebar||browserAppActive','||homeGuideSidebar||activeView===\'spreadsheet\'||browserAppActive'),'shared conversation')
  const page='"data-phase": phase,\n\t\t\t\t"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
@@ -55,6 +58,8 @@ ctx.effect(()=>{
 ${welcomeAnchor}`,'right pane welcome component')
  const portal='pendingRight ? researchConversationView : activeView === \'notes\' && document.body.dataset.workspaceSurface!==\'browser\' ?'
  change(portal,portal.replace(' : activeView', " : activeView==='spreadsheet'&&!browserAppActive ? (conversationVacant ? react.createElement(EWorkSpreadsheetWelcome,{sessionId}) : sessionPresentation.conversationView) : activeView"),'right pane welcome')
+ const utilities=`children: [active?.id === 'notes' && (0,react_jsx_runtime.jsx)(EWorkNoteExportMenu,{sessionId}), renderSlot("conversation.session.header.utilities", {})]`
+ change(utilities,utilities.replace('children: [', "children: [active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId}),"),'spreadsheet top bar actions')
  const binding="const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';"
  change(binding,binding.replace(":'conversation'",":active.id==='spreadsheet'?'spreadsheet':'conversation'"),'tool mode')
  const select='const selectView = (0, react.useCallback)((viewId) => {'
@@ -70,10 +75,30 @@ ${welcomeAnchor}`,'right pane welcome component')
  `,'flush before leaving')
  const selectEnd='}, [actions, sessionId]);\n\t\t\tconst ancestry ='
  change(selectEnd,selectEnd.replace('[actions, sessionId]','[actions, sessionId, active?.id]'),'view lifecycle')
+ const chip='children: [chip.source === "pptx-annotation" && renderPptxAnnotationPin'
+ const gridIcon=`react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('rect',{x:4,y:4,width:16,height:16,rx:2}),react.createElement('path',{d:'M4 9h16M4 14h16M10 4v16'}))`
+ change(chip,chip.replace('children: [',`children: [chip.source==='spreadsheet-range' && ${gridIcon}, `),'range chip icon')
+ const remove='(researchReference !== null || chip.source === "pptx-annotation") && selectedResearchOccurrenceId'
+ change(remove,remove.replace('|| chip.source', '|| chip.source === "spreadsheet-range" || chip.source'),'range chip removal')
+ const history='function projectUserText(text, openFile) {'
+ change(history,history+`
+ const sheetParts=(${spreadsheetMessageParts.toString()})(text)
+ if(sheetParts)return react.createElement(react.Fragment,null,sheetParts.map((part,i)=>part.label?
+  react.createElement('span',{key:i,className:MessageItem_module_css_default.refChip,'data-ref-chip':'spreadsheet-range',title:part.label},${gridIcon},part.label):
+  react.createElement(react.Fragment,{key:i},projectUserText(part.text,openFile))))
+ `,'sent range chip')
  const commit='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  change(commit,`if(document.body.dataset.eworkSpreadsheetSession===session.sessionId){
-                  try{await window.dshDesktop?.spreadsheetAdmission?.(session.sessionId,attempt.text)}
-                  catch(error){shell?.notify("error",error?.message??"表格尚未同步，草稿已保留。");return}
+                  try{
+                    const sheetRefs=(${collectSpreadsheetReferences.toString()})(attempt.draftState);
+                    if(!window.dshDesktop?.spreadsheetAdmission)throw Error('表格尚未就绪，草稿已保留。');
+                    await window.dshDesktop.spreadsheetAdmission(session.sessionId,attempt.text,sheetRefs);
+                    if(shell?.disposed||this.researchSendAttempts.get(session.sessionId)!==sendAttempt||
+                       shell&&shell.snapshot.draftRev!==shellSnapshot?.draftRev||
+                       document.body.dataset.eworkSpreadsheetSession!==session.sessionId)return;
+                  }catch(error){shell?.notify("error",error?.message??"表格尚未同步，草稿已保留。");return}
+                } else if(attempt.draftState.occurrences.some(o=>o.source==='spreadsheet-range')){
+                  shell?.notify("error","请回到表格发送选区引用，或先移除选区。");return;
                 }
                 `+commit,'capture before composer commits')
  return source+'\n'+restore+JSON.stringify(entries).replaceAll('*/','*\\/')+' */'

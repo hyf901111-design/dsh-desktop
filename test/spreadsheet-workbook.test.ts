@@ -19,6 +19,14 @@ describe('spreadsheet workbook protocol', () => {
     expect(inspectWorkbook(work, 'rates', 'A1').cells[0]![0]!).toMatchObject({formula:"='Sheet1'!B2/'Sheet1'!A2",format:{numberFormat:'0.00%',bold:true}})
     expect(inspectWorkbook(work,'income','B2').cells[0]![0]!.value).toBe(30)
   })
+  it('allows the agent to size the analysis columns without changing neighboring metadata', () => {
+    const original=blankWorkbook('work','估值','income')
+    original.sheets.income!.columnData={2:{w:104,hd:1},5:{w:80}}
+    const work=applyOperations(original,[{op:'setColumnWidth',sheetId:'income',range:'C1:D1',width:176}])
+    expect(work.sheets.income!.columnData).toEqual({2:{w:176,hd:1},3:{w:176},5:{w:80}})
+    expect(original.sheets.income!.columnData[2]!.w).toBe(104)
+    expect(()=>applyOperations(original,[{op:'setColumnWidth',sheetId:'income',range:'C1:D1',width:0}])).toThrow()
+  })
   it('rejects a whole batch if a cell targets a missing sheet or contains an external formula', () => {
     const work = blankWorkbook('work','工作簿','income')
     const write = {op:'write',sheetId:'income',range:'A1',cells:[[{value:120}]]} as const

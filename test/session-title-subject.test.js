@@ -49,3 +49,7 @@ it('keeps the existing model title route, request budget and nonblocking service
  const original=await readFile('node_modules/@deepseek-ai/dsh-session-title-llm/lib/index.js','utf8')
  expect(source.slice(source.indexOf('async function generateSessionTitleWithLlm'))).toBe(original.slice(original.indexOf('async function generateSessionTitleWithLlm')))
 })
+
+it('omits spreadsheet markers and their internal ids from generated titles',()=>{
+ expect(sessionTitleSubject('读取〔表格选区 "行情"!B2:B5 #0123456789ab〕计算收益率').text).toBe('读取 计算收益率')
+})

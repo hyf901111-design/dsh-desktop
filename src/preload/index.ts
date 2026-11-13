@@ -390,7 +390,7 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
-    spreadsheetAdmission:(sessionId:string,prompt:string)=>spreadsheetView?.admit(sessionId,prompt),
+    spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references)},
     spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
     browserApp: Object.freeze({
       context: ()=>ipcRenderer.invoke('browser-app:request','context'),

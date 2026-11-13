@@ -35,21 +35,11 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet :is(button,input):focus-visible,.ew-sheet-welcome button:focus-visible{outline:1px solid var(--ss-blue);outline-offset:-2px}
 .ew-sheet button svg,.ew-sheet-welcome button svg{flex:none;color:var(--ss-icon);vertical-align:middle;overflow:visible;display:block}
 .ew-sheet .ew-sheet-button{display:inline-flex;min-width:30px;height:30px;gap:6px;flex:none;align-items:center;justify-content:center;white-space:nowrap;border-radius:6px;padding:0 7px;text-align:center}
-.ew-sheet :is(.ew-sheet-button,.ew-sheet-filename,.ew-sheet-ribbon-tabs button,.ew-sheet-tab button):is(:hover,:focus-visible,[aria-expanded=true]):not(:disabled){background:var(--ss-hover)}
+.ew-sheet :is(.ew-sheet-button,.ew-sheet-ribbon-tabs button,.ew-sheet-tab button):is(:hover,:focus-visible,[aria-expanded=true]):not(:disabled){background:var(--ss-hover)}
 .ew-sheet .ew-sheet-button.outlined{border:1px solid var(--ss-border);padding-inline:13px}
 .ew-sheet .ew-sheet-button.primary{background:var(--ss-primary);color:var(--ss-primary-text)}
 .ew-sheet .ew-sheet-button.primary:hover:not(:disabled){background:var(--ss-primary);filter:brightness(.90)}
 .ew-sheet .ew-sheet-button.primary svg{color:currentColor}
-.ew-sheet-title{height:47px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;gap:12px}
-.ew-sheet-title-left,.ew-sheet-title-right{display:flex;gap:10px;align-items:center;min-width:0}
-.ew-sheet-title-left{flex:1;gap:6px}
-.ew-sheet-title-right{flex:none}
-.ew-sheet-title .ew-sheet-button{height:32px}
-.ew-sheet-title .ew-sheet-button.outlined{min-width:76px}
-.ew-sheet-title-icon{color:var(--ss-blue);display:grid;place-items:center;flex:none}
-.ew-sheet .ew-sheet-filename{padding:4px;border-radius:5px;display:inline-flex;align-items:center;gap:8px;max-width:min(100%,550px);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block;text-align:left;font-size:14px;font-weight:500}
-.ew-sheet-chevron{display:inline-flex;align-items:center;justify-content:center;width:12px;margin-left:7px;vertical-align:middle}
-.ew-sheet-save{font-size:11px;white-space:nowrap;color:var(--ss-muted);flex:none}
 .ew-sheet-ribbon-tabs{height:32px;padding:0 13px;display:flex;gap:10px;align-items:center}
 .ew-sheet .ew-sheet-ribbon-tabs button{border-radius:5px;min-width:38px;text-align:center;padding:4px 5px;color:var(--ss-muted)}
 .ew-sheet .ew-sheet-ribbon-tabs [aria-selected=true]{color:var(--ss-text);font-weight:600}
@@ -134,7 +124,6 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-welcome .ew-sheet-welcome-actions button{width:100%;min-height:40px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ss-border);border-radius:6px;padding:7px 10px;text-align:center}
 .ew-sheet-welcome .ew-sheet-welcome-actions button:hover{background:var(--ss-hover)}
 @media(max-height:720px){.ew-sheet-welcome{padding-top:42px}}
-@container(max-width:420px){.ew-sheet-title-right{gap:4px}.ew-sheet-title{padding-inline:9px}.ew-sheet-title .ew-sheet-button.outlined{min-width:0;padding-inline:7px}}
 /* Univer's invisible contenteditable must remain keyboard-focusable without
    intercepting clicks on the address, formula or native chat controls. */
 body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"],
@@ -149,14 +138,23 @@ body[data-ework-spreadsheet-mode] .ew-sheet-welcome{padding-inline:8px}
 .ew-sheet{container-type:inline-size}
 .ew-sheet-ribbon-end{display:flex;align-items:center;gap:4px;position:sticky;right:0;flex:none;background:var(--ss-ribbon);padding-left:5px}
 .ew-sheet-ribbon-end::before{content:'';position:absolute;right:100%;inset-block:0;width:5px;background:linear-gradient(to right,transparent,var(--ss-ribbon));pointer-events:none}
-.ew-sheet-selection-chip{width:max-content;max-width:calc(100% - 32px);display:flex;align-items:center;gap:6px;margin:0 16px 6px;padding:2px 4px 2px 7px;border:1px solid var(--dsw-alias-border-l2);border-radius:5px;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:18px}
-.ew-sheet-selection-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ew-sheet-selection-chip button{display:grid;place-items:center;width:18px;height:18px;border:0;border-radius:4px;padding:0;background:none;color:inherit;cursor:pointer}
-.ew-sheet-selection-chip button:hover,.ew-sheet-selection-chip button:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}
-.ew-sheet-selection-chip button svg{width:11px;height:11px}
 .ew-sheet-ribbon-end{box-shadow:-5px 0 0 var(--ss-ribbon)}
 @container(max-width:825px){
  .ew-sheet-ribbon{padding-right:7px}
  .ew-sheet-ribbon-end{position:absolute;right:0;padding:0 7px 0 5px;height:42px;z-index:2}
  .ew-sheet-ribbon:after{content:'';width:108px;flex:none}
+}
+
+[data-reference-source="spreadsheet-range"] .uV2eYG_chipLabelText{font-variant-numeric:tabular-nums}
+[data-ref-chip="spreadsheet-range"] svg{vertical-align:-2px;margin-inline-end:4px}
+
+[data-odyssey-page=spreadsheet] [data-srb-session-header]{container-type:inline-size}
+[data-odyssey-page=spreadsheet] [data-srb-tabs]{min-width:0}
+[data-ework-spreadsheet-actions]{display:flex;align-items:center;gap:6px;flex:none;-webkit-app-region:no-drag}
+[data-ework-spreadsheet-actions][hidden]{display:none}
+[data-ework-spreadsheet-actions] button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:28px;height:28px;padding:0 7px;color:var(--dsw-alias-label-secondary);background:none;border:0;border-radius:6px;white-space:nowrap;font:inherit;font-size:12px;cursor:pointer}
+[data-ework-spreadsheet-actions] button:not(:disabled):is(:hover,[aria-expanded=true]){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
+[data-ework-spreadsheet-actions] button:disabled{opacity:.45;cursor:default}
+@container(max-width:660px){
+ [data-ework-spreadsheet-actions] button{width:28px;padding:0;font-size:0;gap:0}
 }

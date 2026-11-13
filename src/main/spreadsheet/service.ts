@@ -1,31 +1,45 @@
 import {createHash,randomUUID} from 'node:crypto'
-import {blankWorkbook,inspectWorkbook,parseRange,safeId,sheetRange} from '../../shared/spreadsheet/workbook'
+import {blankWorkbook,inspectWorkbook,safeId,sheetRange} from '../../shared/spreadsheet/workbook'
 import {SpreadsheetStore,type WorkbookKey,type WorkbookRecord} from './store'
 import type {CapabilityHandler} from '../../../packages/dsh-research-task-runtime/client-capabilities'
 
 type Selection={sheetId:string;range:string}
-type Scope={bookId:string;selection:Selection}
+type Reference=Selection&{index:number;offset:number;label:string;marker:string}
+type Admission={bookId:string|null;references:Reference[];time:number}
 const index=(key:WorkbookKey)=>JSON.stringify([key.owner,key.sessionId])
 const receipt=(data:unknown,message?:string)=>({status:'succeeded' as const,data,...message?{message}:{}})
 export class SpreadsheetService{
- private selected=new Map<string,Scope>()
- private admitted=new Map<string,{instruction:string;bookId:string|null;selection?:Selection;time:number}>()
+ private admitted=new Map<string,Map<string,Admission>>()
  constructor(readonly store:SpreadsheetStore,private options:{flush(key:WorkbookKey,signal?:AbortSignal):Promise<void>;changed(key:WorkbookKey,value:WorkbookRecord):void}){}
- select(key:WorkbookKey,bookId:unknown,selection:unknown){
+ admit(key:WorkbookKey,instruction:unknown,bookId:unknown,input:unknown){
+  if(typeof instruction!=='string'||!Array.isArray(input)||input.length>24)throw Error('表格消息引用无效。')
+  if(instruction.length>8000){
+   if(input.length)throw Error('含表格选区的消息最多支持 8000 字符，请缩短后发送。')
+   return
+  }
+  const workbook=this.store.load(key).workbook
+  if((workbook?.id??null)!==bookId)throw Error('当前工作簿已切换，请重新发送。')
+  let cursor=0
+  const references=input.map((ref,i):Reference=>{
+   if(!workbook||!ref||ref.sessionId!==key.sessionId||ref.bookId!==bookId)throw Error('引用的工作簿已切换，请移除旧标签后重新选择。')
+   if(typeof ref.sheetName!=='string'||typeof ref.id!=='string'||!(/^[a-f0-9]{12}$/).test(ref.id)||
+      !safeId(ref.sheetId)||typeof ref.range!=='string'||!(/^[A-Z]{1,3}[1-9]\d{0,5}(?::[A-Z]{1,3}[1-9]\d{0,5})?$/).test(ref.range))throw Error('表格选区引用无效。')
+   const {sheet}=sheetRange(workbook,ref.sheetId,ref.range)
+   if(sheet.name!==ref.sheetName)throw Error('引用的工作表已改名，请移除旧标签后重新选择。')
+   const marker='〔表格选区 '+JSON.stringify(ref.sheetName)+'!'+ref.range+' #'+ref.id+'〕'
+   const offset=instruction.trim().indexOf(marker,cursor)
+   if(offset<0)throw Error('表格选区与当前草稿不一致，请重新发送。')
+   cursor=offset+marker.length
+   return {index:i+1,offset,label:sheet.name+'!'+ref.range,marker,sheetId:ref.sheetId,range:ref.range}
+  })
   const id=index(key)
-  if(!safeId(bookId)||!selection||typeof selection!=='object'){this.selected.delete(id);return}
-  const {sheetId,range}=selection as Selection
-  if(!safeId(sheetId)||typeof range!=='string')return
-  parseRange(range)
-  if(this.selected.size>=64&&!this.selected.has(id))this.selected.delete(this.selected.keys().next().value!)
-  this.selected.set(id,{bookId,selection:{sheetId,range}})
- }
- admit(key:WorkbookKey,instruction:unknown,bookId:unknown,selection:unknown){
-  if(typeof instruction!=='string'||!instruction||instruction.length>8000)return
-  if(bookId!==null)this.select(key,bookId,selection)
-  const current=this.selected.get(index(key))
-  if(this.admitted.size>=32&&!this.admitted.has(index(key)))this.admitted.delete(this.admitted.keys().next().value!)
-  this.admitted.set(index(key),{instruction,bookId:safeId(bookId)?bookId:null,selection:current?.bookId===bookId?current?.selection:undefined,time:Date.now()})
+  if(this.admitted.size>=32&&!this.admitted.has(id))this.admitted.delete(this.admitted.keys().next().value!)
+  const history=this.admitted.get(id)??new Map<string,Admission>()
+  const prompt=instruction.trim()
+  history.delete(prompt)
+  if(history.size>=16)history.delete(history.keys().next().value!)
+  history.set(prompt,{bookId:workbook?.id??null,references,time:Date.now()})
+  this.admitted.set(id,history)
  }
  identity(key:WorkbookKey){return this.store.load(key).workbook?.id??'empty'}
  async acquire(input:{key:WorkbookKey;turnId:string;authorityId?:string;instruction?:string;current():boolean;canWrite():boolean;signal?:AbortSignal}){
@@ -34,10 +48,12 @@ export class SpreadsheetService{
   if(!input.current())throw Error('当前表格视图已切换。')
   const first=this.store.load(key)
   let bookId=first.workbook?.id??null
-  const scope=this.selected.get(index(key)),admitted=this.admitted.get(index(key))
-  const matches=admitted&&input.instruction?.trim()===admitted.instruction.trim()&&Date.now()-admitted.time<30*60_000
-  if(matches&&admitted.bookId!==bookId)throw Error('发出指令后的工作簿已切换，请在目标工作簿重新发送。')
-  const selection=matches?admitted.selection:scope&&scope.bookId===bookId?scope.selection:undefined
+  const candidate=this.admitted.get(index(key))?.get(input.instruction?.trim()??'')
+  const admitted=candidate&&Date.now()-candidate.time<30*60_000?candidate:undefined
+  if(admitted&&admitted.bookId!==bookId)throw Error('发出指令后的工作簿已切换，请在目标工作簿重新发送。')
+  const references=admitted?.references??[]
+  const selection=references.length===1?references[0]:undefined
+  const listReferences=()=>references.map(({index,offset,label,marker,sheetId,range})=>({index,offset,label,marker,sheetId,range}))
   const latest=async(signal?:AbortSignal,write=false)=>{
    signal?.throwIfAborted()
    if(!input.current())throw Error('当前表格视图已切换。')
@@ -53,11 +69,11 @@ export class SpreadsheetService{
    inspectSpreadsheet:async(args,_context,signal)=>{
     const {revision,workbook}=await latest(signal)
     if(!workbook)return receipt({revision,workbook:null,newWorkbookSheetId:'sheet-1'})
-    const selected=selection??{sheetId:workbook.sheetOrder[0]!,range:'A1'}
-    const meta={revision,workbook:{name:workbook.name,sheets:workbook.sheetOrder.map(id=>{const s=workbook.sheets[id]!;const rows=Object.keys(s.cellData).map(Number);let lastColumn=-1;for(const row of Object.values(s.cellData))for(const col of Object.keys(row))lastColumn=Math.max(lastColumn,Number(col));return {sheetId:id,name:s.name,rowCount:s.rowCount,columnCount:s.columnCount,lastUsedRow:rows.reduce((n,r)=>Math.max(n,r+1),0),lastUsedColumn:lastColumn+1}})},selection:selected}
+    const meta={revision,workbook:{name:workbook.name,sheets:workbook.sheetOrder.map(id=>{const s=workbook.sheets[id]!;const rows=Object.keys(s.cellData).map(Number);let lastColumn=-1;for(const row of Object.values(s.cellData))for(const col of Object.keys(row))lastColumn=Math.max(lastColumn,Number(col));return {sheetId:id,name:s.name,rowCount:s.rowCount,columnCount:s.columnCount,lastUsedRow:rows.reduce((n,r)=>Math.max(n,r+1),0),lastUsedColumn:lastColumn+1}})},selection:selection?{sheetId:selection.sheetId,range:selection.range}:null,references:listReferences()}
     if(args.scope==='workbook')return receipt(meta)
-    if(args.scope==='selected'&&matches&&!selection)throw Error('本次指令没有引用选区，请明确指定工作表和区域。')
-    const target='sheetId' in args?args:selected
+    if(args.scope==='selected'&&!selection)throw Error(references.length?'本次指令包含多个引用，请用 scope=reference 和 referenceIndex 指定。':'本次指令没有引用选区，请明确指定工作表和区域。')
+    const target=args.scope==='range'?args:args.scope==='reference'?references[args.referenceIndex-1]:selection
+    if(!target)throw Error('本次指令没有该表格引用，请读取工作簿和引用目录。')
     const {bounds}=sheetRange(workbook,target.sheetId,target.range)
     if((bounds.r1-bounds.r0+1)*(bounds.c1-bounds.c0+1)>500)throw Error('每次最多读取 500 格，请把范围拆小。')
     const result=inspectWorkbook(workbook,target.sheetId,target.range)

@@ -41,7 +41,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
   if(input.ok===true)value.resolve();else value.reject(Error('当前工作簿有未保存的编辑，请先处理保存状态。'))
  })
  registerTrustedMainWindowHandler(ipcMain,'spreadsheet:request',getWindow,async(_event,action:unknown,input:any)=>{
-  const key=visible(input?.sessionId,!['load','recent','select','admit','export'].includes(String(action)))
+  const key=visible(input?.sessionId,!['load','recent','admit','export'].includes(String(action)))
   if(action!=='load'&&(input.owner!==key.owner||input.generation!==key.generation))throw Error('账号或表格视图已变化。')
   const guard=(write:boolean)=>{
    const next=visible(key.sessionId,write)
@@ -55,8 +55,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     if(Buffer.byteLength(text)>2*1024*1024)throw Error('剪贴板内容过大，请使用 Excel 或 CSV 导入。')
     return text
    }
-   case 'select':service.select(key,input.bookId,input.selection);return true
-   case 'admit':service.admit(key,input.instruction,input.bookId,input.selection);return true
+   case 'admit':service.admit(key,input.instruction,input.bookId,input.references);return true
    case 'refresh-calculations':return store.refreshCalculations(key,input.revision,input.workbook as Workbook)
    case 'save':return store.save(key,input.revision,input.workbook as Workbook)
    case 'create':return store.create(key,input.revision,blankWorkbook(randomUUID(),input.name))

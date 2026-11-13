@@ -25,6 +25,7 @@ export type Operation =
   | {op:'write';sheetId:string;range:string;cells:InputCell[][]}
   | {op:'clear';sheetId:string;range:string}
   | {op:'format';sheetId:string;range:string;format:CellFormat}
+  | {op:'setColumnWidth';sheetId:string;range:string;width:number}
   | {op:'addSheet';sheetId:string;name:string}
   | {op:'renameWorkbook';name:string}
   | {op:'renameSheet';sheetId:string;name:string}
@@ -168,6 +169,14 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
         for(const target of Object.values(book.sheets))for(const row of Object.values(target.cellData))for(const cell of Object.values(row))if(cell.f)cell.f=cell.f.split(/("(?:[^"]|"")*")/g).map((part,i)=>i%2?part:part.replace(single,(_,prefix)=>prefix+"'"+name.replace(/'/g,"''")+"'!")).join('')
         sheet.name=name
       }
+      continue
+    }
+    if(o.op==='setColumnWidth'){
+      keys(o,['op','sheetId','range','width'])
+      const {sheet,bounds}=sheetRange(book,o.sheetId,o.range)
+      if(bounds.r0!==bounds.r1||bounds.c1-bounds.c0>=256||!Number.isInteger(o.width)||o.width<24||o.width>640)throw Error('请使用一行地址（如 B1:E1）指定不超过 256 列，列宽为 24 至 640 像素。')
+      const columns=sheet.columnData??={}
+      for(let c=bounds.c0;c<=bounds.c1;c++)columns[c]={...columns[c],w:o.width}
       continue
     }
     if(!['write','clear','format'].includes(o.op))throw Error('不支持该表格操作。')

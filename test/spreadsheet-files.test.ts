@@ -9,10 +9,12 @@ describe('spreadsheet interchange',()=>{
    {op:'write',sheetId:'forecast',range:'A1:C1',cells:[[{value:'=literal'},{value:125.25},{formula:'=B1/1000'}]]},
    {op:'format',sheetId:'forecast',range:'C1',format:{numberFormat:'0.00%',bold:true,color:'#92bcff'}}
   ])
+  const textCell=book.sheets.forecast!.cellData[0]![0]!
+  textCell.s={vt:3,ht:2}
   const file=await writeWorkbookFile(book,'xlsx','forecast')
   const imported=await readWorkbookFile(file,'valuation.xlsx','restored')
   expect(imported.sheetOrder.map(id=>imported.sheets[id]!.name)).toEqual(['Sheet1','盈利预测'])
-  expect(imported.sheets[imported.sheetOrder[1]!]!.cellData[0]!).toMatchObject({0:{v:'=literal'},1:{v:125.25},2:{f:'=B1/1000',s:{n:{pattern:'0.00%'},bl:1,cl:{rgb:'#92bcff'}}}})
+  expect(imported.sheets[imported.sheetOrder[1]!]!.cellData[0]!).toMatchObject({0:{v:'=literal',s:{vt:3,ht:2}},1:{v:125.25},2:{f:'=B1/1000',s:{n:{pattern:'0.00%'},bl:1,cl:{rgb:'#92bcff'}}}})
  })
  it('preserves quoted CSV records and neutralizes executable CSV text on export',async()=>{
   const book=await readWorkbookFile(Buffer.from('\uFEFF证券代码,名称,价格\r\n000001,"名称,一\n二",12.5\r\n=SUM(A1),"""引号""",3\r\n'),'test.csv','csv')
