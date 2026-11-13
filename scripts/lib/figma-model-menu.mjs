@@ -65,6 +65,11 @@ export function patchFigmaModelMenu(source) {
       .replace('"menu.model": "模型",', '"menu.model": "模型",\n\t\t\t"option.vision": "视觉",')
       .replace('"menu.model": "Model",', '"menu.model": "Model",\n\t\t\t"option.vision": "Vision",')
   }
+  if (!source.includes('"action.addCustomModel":')) {
+    source = source
+      .replace('"option.vision": "视觉",', '"option.vision": "视觉",\n\t\t\t"group.custom": "自定义模型",\n\t\t\t"action.addCustomModel": "添加自定义模型",')
+      .replace('"option.vision": "Vision",', '"option.vision": "Vision",\n\t\t\t"group.custom": "Custom models",\n\t\t\t"action.addCustomModel": "Add custom model",')
+  }
   const anchor='const directory = models.directoryFor(sessionId);',patched=`if(sessionId===undefined){const model=window[Symbol.for('sherlock:pending-conversation')]?.preferences.model;if(!model)throw Error('新对话模型尚未就绪');return {available:true,directory:model.store,load:()=>model.load().catch(()=>{}),select:selection=>model.select(selection).then(()=>true,()=>false)}}\n                        `+anchor;
   if(!source.includes("新对话模型尚未就绪")){const start=source.indexOf('name: "conversation.input.model"'),at=source.indexOf(anchor,start);if(start<0||at<0)throw Error('Pending model injection anchor drift');source=source.slice(0,at)+patched+source.slice(at+anchor.length)}
   return source

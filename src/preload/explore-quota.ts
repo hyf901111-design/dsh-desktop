@@ -60,7 +60,12 @@ export function renderExploreQuota(panel: HTMLElement, quota: ExploreQuota | und
   }
   const card = doc.createElement('div')
   card.className = 'odyssey-explore-quota-card'
-  const formatAfp = new Intl.NumberFormat(english ? 'en' : 'zh-CN', { maximumFractionDigits: 2 })
+  const plan = doc.createElement('div'), planLabel = doc.createElement('span'), planName = doc.createElement('strong')
+  plan.className = 'odyssey-explore-quota-plan'
+  planLabel.textContent = word('当前订阅等级', 'Current subscription')
+  planName.textContent = 'Mini trial subscription'
+  plan.append(planLabel, planName)
+  card.append(plan)
   for (const [label, entry] of [[word('5 小时用量','5-hour usage'), quota.fiveHour], [word('周用量','Weekly usage'), quota.week]] as const) {
     const ratio = quotaRatio(entry), percent = quotaPercent(ratio)
     const row = doc.createElement('section'), body = doc.createElement('div'), heading = doc.createElement('div')
@@ -85,15 +90,6 @@ export function renderExploreQuota(panel: HTMLElement, quota: ExploreQuota | und
     progress.style.width = `${100 * ratio}%`
     progress.toggleAttribute('data-low', ratio > 0 && ratio < .1)
     track.append(progress);body.append(heading,track)
-    if (typeof entry.used === 'number' && Number.isFinite(entry.used) && entry.used >= 0 &&
-        typeof entry.reserved === 'number' && Number.isFinite(entry.reserved) && entry.reserved >= 0) {
-      const breakdown = doc.createElement('div')
-      breakdown.className = 'odyssey-explore-quota-breakdown'
-      const used = formatAfp.format(entry.used), reserved = formatAfp.format(entry.reserved)
-      breakdown.textContent = word(`已用 ${used} AFP · 预留 ${reserved} AFP`, `Used ${used} AFP · Reserved ${reserved} AFP`)
-      breakdown.title = word('预留用量来自进行中或尚未结算的请求。', 'Reserved usage includes in-progress and unsettled requests.')
-      body.append(breakdown)
-    }
     const balance = doc.createElement('div'), number = doc.createElement('strong'), remaining = doc.createElement('span')
     balance.className = 'odyssey-explore-quota-balance'
     number.textContent = percent + '%';remaining.textContent = word('剩余用量','Remaining')

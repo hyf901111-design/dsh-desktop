@@ -12,7 +12,7 @@ async function setup(user: {id:string;username:string;createdAt:number} | null =
   const document = window.document
   document.body.innerHTML = '<button class="VOzbGW_trigger">设置</button>'
   if (user) document.body.insertAdjacentHTML('beforeend', '<div class="VOzbGW_overlay"><div class="VOzbGW_panel"><nav class="VOzbGW_nav"><div class="VOzbGW_navList"></div></nav><div class="VOzbGW_content"></div></div></div>')
-  const invoke = vi.fn(async (action: string) => action === 'me' ? {user} : action === 'usage' ? {usage:[{capability:'fund-research',requests:50,succeeded:49}]} : {error:{code:'INVALID_CREDENTIALS'}})
+  const invoke = vi.fn(async (action: string) => action === 'me' ? {user} : action === 'usage' ? {usage:[{capability:'fund-research',requests:50,succeeded:49}]} : action === 'ai-quota' ? {} : {error:{code:'INVALID_CREDENTIALS'}})
   const boards = { getSnapshot: vi.fn(async () => ({account:{user:{userId:user?.id, publicId:'1234567890'}}})) }
   dispose = mountAccountUi(document as unknown as Document, invoke, boards as never, {explore:options.explore})
   await window.happyDOM.waitUntilComplete()
@@ -40,7 +40,7 @@ describe('real account auth rendering', () => {
     expect(events.filter(event=>event.name==='sherlock:explore-close')).toMatchObject([{ownRealm:true,detail:{restoreFocus:false}}])
     if(user)expect(document.querySelector('.sherlock-account-profile')?.textContent).toContain(user.username)
     else expect(document.querySelector('.sherlock-auth-dialog h1')?.textContent).toBe('欢迎回来')
-    expect(invoke.mock.calls.every(call=>['me','usage'].includes(call[0]))).toBe(true)
+    expect(invoke.mock.calls.every(call=>(user?['me','usage','ai-quota']:['me']).includes(call[0]))).toBe(true)
     expect(errors).toEqual([])
   })
   it('opens the existing models settings section from the model picker', async () => {
@@ -55,6 +55,19 @@ describe('real account auth rendering', () => {
     expect(select).toHaveBeenCalledTimes(1)
     expect(document.querySelector('.sherlock-account-page')).toBeNull()
     expect(document.activeElement).toBe(target)
+  })
+  it('opens models settings for a signed-out user without showing authentication', async () => {
+    const {window,document,invoke} = await setup(null,{explore:true,open:false})
+    const select = vi.fn()
+    document.querySelector<HappyButton>('.VOzbGW_trigger')!.addEventListener('click', () => {
+      document.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_panel"><nav><div class="VOzbGW_navList"><button data-settings-section-id="models">模型</button></div></nav><div class="VOzbGW_content"></div></div>')
+      document.querySelector('[data-settings-section-id="models"]')!.addEventListener('click',select)
+    })
+    window.dispatchEvent(new window.CustomEvent('sherlock:model-settings-open'))
+    await window.happyDOM.waitUntilComplete()
+    expect(select).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.sherlock-auth-dialog')).toBeNull()
+    expect(invoke.mock.calls.map(([action])=>action)).toEqual(['me'])
   })
   it('shows the public invitation ID with copy alongside existing account controls', async () => {
     const { window, document, invoke } = await setup({id:'account',username:'hyf90',createdAt:1})

@@ -18,29 +18,25 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 				sync();
 				return () => observer.disconnect();
 			}, []);
-			const groups = (0, react.useMemo)(() => state.groups.flatMap((group) => {
-				if (group.id !== "ework-ark") return [group];
-				if (!hostedAccount) return [];
+			const groups = (0, react.useMemo)(() => {
 				const brands = new Map([["doubao", "Doubao"], ["kimi", "Kimi"], ["deepseek", "DeepSeek"], ["glm", "GLM"]]);
 				const modelsByBrand = new Map([...brands.values(), "EWork"].map((brand) => [brand, []]));
-				for (const model of group.models) {
-					const prefix = model.id.split("-", 1)[0];
-					modelsByBrand.get(brands.get(prefix) ?? "EWork").push(model);
+				const custom = [];
+				for (const group of state.groups) {
+					const hosted = group.id === "ework-ark";
+					if (hosted && !hostedAccount) continue;
+					for (const model of group.models) {
+						const row = { provider: group.id, model };
+						if (hosted) modelsByBrand.get(brands.get(model.id.split("-", 1)[0]) ?? "EWork").push(row);
+						else custom.push(row);
+					}
 				}
-				return Array.from(modelsByBrand, ([name, models]) => ({
-					id: group.id, key: `${group.id}-${name}`, name, models
-				})).filter((section) => section.models.length > 0);
-			}), [state.groups, hostedAccount]);
-			const choices = (0, react.useMemo)(() => groups.flatMap((group) => group.models.map((model) => ({
-				group,
-				model,
-				selection: {
-					provider: group.id,
-					model: model.id,
-					...model.reasoning?.defaultEffort === void 0 ? {} : { reasoningEffort: model.reasoning.defaultEffort }
-				}
-			}))), [groups]);
-			const currentChoice = choices[state.current === null ? -1 : choices.findIndex((c) => c.selection.provider === state.current?.provider && c.selection.model === state.current.model)];
+				const sections = Array.from(modelsByBrand, ([name, models]) => ({ key: `hosted-${name}`, name, models }));
+				if (custom.length) sections.push({ key: "custom", name: t("group.custom"), models: custom });
+				return sections.filter((section) => section.models.length > 0);
+			}, [state.groups, hostedAccount, t]);
+			const currentChoice = groups.flatMap((group) => group.models)
+				.find(({ provider, model }) => provider === state.current?.provider && model.id === state.current.model);
 			const reasoning = currentChoice?.model.reasoning;
 			const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort;
 			const effortLabel = reasoning === void 0 ? void 0 : effectiveEffort === void 0 ? t("effort.providerDefault") : reasoning.efforts.find((level) => level.id === effectiveEffort)?.name ?? effectiveEffort;
@@ -273,8 +269,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								(0, react_jsx_runtime.jsx)("div", {
 									className: clsx(ModelSelect_module_css_default.groups, "scrollable"),
 									children: groups.map((group) => {
-										const groupKey = group.key ?? group.id;
-									const headingId = `${id}-${groupKey}`;
+										const headingId = `${id}-${group.key}`;
 										return (0, react_jsx_runtime.jsxs)("section", {
 											role: "group",
 											"aria-labelledby": headingId,
@@ -283,8 +278,8 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 												className: ModelSelect_module_css_default.groupTitle,
 												id: headingId,
 												children: group.name
-											}), group.models.map((model) => {
-												const selected = state.current?.provider === group.id && state.current.model === model.id;
+											}), group.models.map(({ provider, model }) => {
+												const selected = state.current?.provider === provider && state.current.model === model.id;
 												return (0, react_jsx_runtime.jsxs)("button", {
 													ref: itemRef(),
 													type: "button",
@@ -295,7 +290,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 													disabled: busy,
 													onClick: () => {
 														choose({
-															provider: group.id,
+															provider,
 															model: model.id
 														});
 													},
@@ -315,14 +310,31 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 														className: ModelSelect_module_css_default.check,
 														children: selected ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {}) : null
 													})]
-												}, model.id);
+												}, JSON.stringify([provider, model.id]));
 											})]
-										}, groupKey);
+										}, group.key);
 									})
 								}),
-								state.status === "ready" && choices.length === 0 && (0, react_jsx_runtime.jsx)("div", {
+								state.status === "ready" && groups.length === 0 && (0, react_jsx_runtime.jsx)("div", {
 									className: ModelSelect_module_css_default.empty,
 									children: t("empty.models")
+								}),
+								(0, react_jsx_runtime.jsx)("div", {
+									className: "odyssey-model-menu-footer",
+									children: (0, react_jsx_runtime.jsxs)("button", {
+										ref: itemRef(),
+										type: "button",
+										role: "menuitem",
+										className: ModelSelect_module_css_default.cell,
+										onClick: () => {
+											close();
+											window.dispatchEvent(new CustomEvent("sherlock:model-settings-open"));
+										},
+										children: [
+											(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { "aria-hidden": true }),
+											t("action.addCustomModel")
+										]
+									})
 								})
 							] }),
 							pane === "effort" && (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [state.error !== null && lastActionRef.current === "load" && (0, react_jsx_runtime.jsxs)("div", {

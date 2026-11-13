@@ -1,6 +1,7 @@
 import styles from './explore-menu.css?raw'
 import {createExploreOrb} from './explore-orb'
 import {readExploreQuota,renderExploreQuota,type ExploreQuota} from './explore-quota'
+import {RESEARCH_COMPONENT_DIN_FACES} from '../../packages/dsh-research-task-runtime/html-artifact.js'
 import {createHomeOperationsDeck,HOME_OPERATIONS_COPY,type HomeOperationCard,type HomeOperationExample,type HomeOperationActionContext} from './home-operations'
 import {createHomeThemeGallery} from './home-theme-gallery'
 import type {HomeThemeController} from './home-theme-controls'
@@ -24,7 +25,7 @@ const homeAppearanceIcon=(dark:boolean)=>dark?sunIcon:moonIcon
 export function mountExploreMenu(doc:Document,options:Options){
   if(mounted.has(doc))return mounted.get(doc)!
   const win=doc.defaultView!,reduced=win.matchMedia('(prefers-reduced-motion: reduce)')
-  const style=doc.createElement('style');style.dataset.exploreStyle='';style.textContent=styles;doc.head.append(style)
+  const style=doc.createElement('style');style.dataset.exploreStyle='';style.textContent=RESEARCH_COMPONENT_DIN_FACES+styles;doc.head.append(style)
   const dialog=doc.createElement('dialog');dialog.className='odyssey-explore';dialog.dataset.exploreMenu='';dialog.setAttribute('aria-label','探索')
   const edge=doc.createElement('div');edge.className='odyssey-explore-edge';edge.setAttribute('aria-hidden','true')
   const windowDrag=doc.createElement('div');windowDrag.className='odyssey-explore-window-drag';windowDrag.dataset.exploreWindowDrag='';windowDrag.setAttribute('aria-hidden','true')
