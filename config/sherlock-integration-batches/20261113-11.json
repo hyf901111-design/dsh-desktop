@@ -57,6 +57,27 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-13T05:13:54.553Z"
+      },
+      "merged": {
+        "mergeCommit": "8fb40bf839b2d009dc9f304f4ea1f07e065ff995",
+        "verificationCommit": "8fb40bf839b2d009dc9f304f4ea1f07e065ff995",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-acquisition-fallback.test.js test/workbench-fund-comparison.test.js",
+            "verifiedCommit": "8fb40bf839b2d009dc9f304f4ea1f07e065ff995",
+            "completedAt": "2026-11-13T05:13:59.547Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-13T05:13:59.547Z"
       }
     }
   ],
