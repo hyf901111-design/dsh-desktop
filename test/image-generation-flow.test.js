@@ -40,7 +40,7 @@ it("animates the shared grayscale field, pauses hidden/reduced surfaces, and rel
     last = new Uint8ClampedArray(pixels.data);
   });
   vi.spyOn(win.HTMLCanvasElement.prototype, "getContext").mockReturnValue({ createImageData: (width, height) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }), putImageData: put });
-  vi.spyOn(win.HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 440, height: 440 });
+  vi.spyOn(win.HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 220, height: 330 });
   Object.defineProperty(doc, "hidden", { configurable: true, value: false });
   const stop = mountImageGenerationFlow(doc), canvas = doc.querySelector("canvas");
   intersection([{ target: canvas, isIntersecting: true }]);
@@ -50,9 +50,12 @@ it("animates the shared grayscale field, pauses hidden/reduced surfaces, and rel
     frames.clear();
     pending.forEach((fn) => fn(now));
   }
-  expect(last.some((value, index) => index % 4 === 0 && Math.abs(value - before[index]) > 20)).toBe(true);
+  expect(last.some((value, index) => index % 4 === 0 && Math.abs(value - before[index]) > 8)).toBe(true);
+  const gray = last.filter((_, index) => index % 4 === 0);
+  expect(Math.max(...gray) - Math.min(...gray)).toBeLessThan(95);
   expect(last.every((value, index) => index % 4 > 1 || value === last[index - index % 4])).toBe(true);
   expect(canvas.width).toBeLessThanOrEqual(256);
+  expect(canvas.height).toBeGreaterThan(canvas.width);
   reduced.matches = true;
   motion();
   expect(frames.size).toBe(0);

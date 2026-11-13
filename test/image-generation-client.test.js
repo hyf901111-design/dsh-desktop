@@ -6,8 +6,8 @@ const node=root=>({kind:'tool-call',data:{root}})
 const pending={name:'image_generate',callId:'one',argsRaw:'{"size":"1536x1024"}',subCalls:[]}
 const done={kind:'tool-result',call:{name:'image_generate',argsRaw:pending.argsRaw},callId:'one',subCalls:[],content:[{type:'text',text:JSON.stringify({kind:'odyssey-image-generation',ok:true,model:'gpt-image-2.6-flare',image})},{type:'image',attachment:image}]}
 it('renders live image generation outside folded tool details and settles in the same keyed card',()=>{
- expect(imageGenerationCalls([node(pending)],true)).toMatchObject([{id:'one',state:'running',ratio:'3 / 2'}])
- expect(imageGenerationCalls([node(done)],true)).toMatchObject([{id:'one',state:'completed',image}])
+ expect(imageGenerationCalls([node(pending)],true)).toMatchObject([{id:'one',state:'running',ratio:'2 / 3'}])
+ expect(imageGenerationCalls([node(done)],true)).toMatchObject([{id:'one',state:'completed',image,ratio:'1536 / 1024'}])
 })
 it('does not animate cancelled, failed or historical interrupted calls',()=>{
  expect(imageGenerationCalls([node(pending)],false)[0].state).toBe('interrupted')

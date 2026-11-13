@@ -98,6 +98,23 @@ it('supports a future built-in provider without changing the tool or image UI',a
  const f=fixture({providers:[{models:[{id:'builtin-art',name:'内置生图'}],generate}],defaultModel:'builtin-art'})
  const result=await f.call();expect(result.model).toBe('builtin-art');expect(generate).toHaveBeenCalledOnce();expect(f.request).not.toHaveBeenCalled()
 })
+it('uses Seedream for stale OpenAI model arguments when hosted image generation is available',async()=>{
+ const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
+ let available=true
+ const hosted={available:()=>available,models:[{id:'seedream-flash',name:'Seedream Flash'},{id:'seedream-pro',name:'Seedream Pro'}],generate}
+ const f=fixture({uploaded:true,hosted})
+ const result=await f.call({model:'gpt-image-2.6-sunburst'})
+ expect(result.model).toBe('seedream-flash')
+ expect(await f.call()).toEqual(result)
+ expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({model:'seedream-flash',references:[expect.objectContaining({data:png})]}),expect.anything())
+ expect((await f.call({model:'seedream-pro'})).model).toBe('seedream-pro')
+ expect(f.prompts[0].text({agent:f.agent})).not.toContain('gpt-image')
+ expect(f.credentials.resolve).not.toHaveBeenCalled()
+ expect(f.request).not.toHaveBeenCalled()
+ available=false
+ expect((await f.call({model:'gpt-image-2.6-sunburst'})).model).toBe('gpt-image-2.6-sunburst')
+ expect(f.request).toHaveBeenCalledOnce()
+})
 it('recovers code-mode image receipts after restart and permits editing them in the next turn',async()=>{
  const f=fixture(),result=await f.call(),content=f.tools.get('image_generate').output.render({},result)
  const events=[...f.agent.session.events,{type:'tool/code-dispatch',data:{name:'image_generate',isError:false,content}},{type:'user/message',data:{source:{kind:'plugin',plugin:'tools-code-mode'},content}}]
