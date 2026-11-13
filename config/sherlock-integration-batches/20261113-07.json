@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-07",
+  "branch": "codex/integration/20261113-07",
+  "baseMainCommit": "198aceaa3ed1c9e06d9c5166e72c436aa7fd11eb",
+  "expectedMainCommit": "198aceaa3ed1c9e06d9c5166e72c436aa7fd11eb",
+  "createdAt": "2026-11-13T03:48:24.699Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台实测原型规划兼容",
+        "branch": "codex/feat/workbench-prototype-plan-20261113",
+        "baseCommit": "198aceaa3ed1c9e06d9c5166e72c436aa7fd11eb",
+        "tipCommit": "3b7e9f0d58d27dcb9a86d1b6b69bc067d194b31f",
+        "commits": [
+          {
+            "commit": "3b7e9f0d58d27dcb9a86d1b6b69bc067d194b31f",
+            "parents": [
+              "198aceaa3ed1c9e06d9c5166e72c436aa7fd11eb"
+            ],
+            "subject": "兼容实测原型明细声明并按数值列核对单位"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-content-delivery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/component-source-projection.test.js",
+              "test/workbench-prototype-evidence.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "5 个聚焦测试文件，115 项通过",
+            "verifiedCommit": "3b7e9f0d58d27dcb9a86d1b6b69bc067d194b31f",
+            "completedAt": "2026-11-13T03:48:23.066482+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实模型草稿回放通过；客户端打包后查看。"
+        },
+        "acceptanceCriteria": [
+          "识别真实模型提交的表格视图声明",
+          "从图表数值字段确定单位"
+        ],
+        "risks": [
+          "原 24 工作台的模型统计维持首轮口径，回放证据单列"
+        ],
+        "generatedAt": "2026-11-13T03:48:23.066482+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-content-delivery.test.js",
+        "test/workbench-acquisition-fallback.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/component-source-projection.test.js",
+        "test/workbench-prototype-evidence.test.js"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
