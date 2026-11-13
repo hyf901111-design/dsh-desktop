@@ -151,6 +151,52 @@
           "工作簿应用内对象未进入 Excel/CSV 文件导出。"
         ],
         "generatedAt": "2026-11-13T15:34:05.057Z"
+      },
+      "merged": {
+        "mergeCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
+        "verificationCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
+            "completedAt": "2026-11-13T15:36:12.508Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-store.test.ts",
+              "test/spreadsheet-files.test.ts",
+              "test/spreadsheet-inline-references.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
+            "verifiedCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
+            "completedAt": "2026-11-13T15:36:12.508Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-spreadsheet-live.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
+            "verifiedCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
+            "completedAt": "2026-11-13T15:36:12.508Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T15:36:12.508Z"
       }
     }
   ],
