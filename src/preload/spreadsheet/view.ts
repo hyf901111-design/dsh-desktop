@@ -1234,14 +1234,15 @@ class SpreadsheetView{
    case 'spec':if(this.editable)perform(this.run('component-configure',{componentId,expected:value.expected,spec:value.next},'组件已更新').then(Boolean));return
    case 'placement':if(this.editable)perform(this.toggleComponentPlacement(component));return
    case 'more':{
-    const anchor=value.anchor
-    if(anchor instanceof HTMLElement&&card.element.contains(anchor))this.openMenu('component-actions',anchor)
+    const anchor=card.element.querySelector<HTMLElement>('[data-workbench-more]')
+    if(anchor)this.openMenu('component-actions',anchor)
     return
    }
    case 'close':this.activeComponent=undefined;this.renderComponent();return
    case 'remove':if(this.editable)this.confirmComponentRemoval(componentId);return
    case 'ask':perform(this.locateComponent(component,true));return
    case 'refresh':card.refresh++;this.publishComponent(card,component);ack(true);return
+   case 'error':if(typeof value.message==='string')this.say(value.message,true);return
    default:if(value.requestId)ack(false,'此组件操作当前不可用。')
   }
  }
@@ -1497,8 +1498,10 @@ class SpreadsheetView{
    }
    case 'component-export':{
     const card=this.componentCards.get(value)
-    const adapter=(card?.element as (HTMLElement&{__eworkNoteMenu?:{exportContent(format:string):Promise<void>}})|undefined)?.__eworkNoteMenu
-    if(adapter){this.closeMenu();await adapter.exportContent('png')}
+    if(card){
+     this.closeMenu()
+     this.doc.dispatchEvent(new CustomEvent('sherlock:spreadsheet-component-export',{detail:{sessionId:this.sessionId,instanceId:card.instance}}))
+    }
     return
    }
    case 'close-dialog':this.cancelComponentRequest();this.closeDialog();return
