@@ -13,15 +13,16 @@ const clean=[]
 beforeEach(()=>{acquisition.run.mockReset()})
 afterEach(async()=>{for(const dispose of clean.splice(0).reverse())await dispose()})
 const request='给固收投委会搭个纯债基金比较工作台。至少比较8只中长期纯债基金的近一年收益、近半年最大回撤、年化波动率、最新净值和规模，保留管理人、统计区间及来源，便于筛选和排序。'
-async function fixture(){
+async function fixture(extraPanels=[]){
  const directory=await mkdtemp(join(tmpdir(),'workbench-fallback-'));clean.push(()=>rm(directory,{recursive:true,force:true}))
  const filePath=join(directory,'plans.json');let tool
- const runtime={startBatch:vi.fn(async({panels})=>panels.map((_,i)=>({taskId:'task-'+i})))}
+ const runtime={startPreparedBatch:vi.fn(async({panels})=>panels.map((_,i)=>({taskId:'prepared-'+i}))),startBatch:vi.fn(async({panels})=>panels.map((_,i)=>({taskId:'task-'+i})))}
  const ctx={agents:{get:()=>({})},tools:{register:value=>{tool=value;return()=>{}}},webServer:{register:()=>()=>{}}}
  clean.push(await registerWorkbench(ctx,runtime,{filePath}))
  const controller=new AbortController()
  const exec={signal:controller.signal,agent:{session:{id:'fallback-parent',events:[{type:'user/message',data:{id:'request',source:{kind:'user'},content:[{type:'text',text:request}]}}]}}}
  const panels=[['比较明细','table'],['收益分布','chart'],['风险对照','chart'],['净值与规模','table']].map(([title,type])=>({title,type,size:'medium',prompt:title+'，保留共同对象与来源'}))
+ panels.push(...extraPanels);
  return {runtime,controller,exec,panels,run:()=>tool.execute({title:'比较工作台',requestId:'comparison',panels},exec),plans:async()=>JSON.parse(await readFile(filePath,'utf8'))}
 }
 it('keeps the user plan and gives all panels the same acquired evidence',async()=>{
@@ -67,3 +68,17 @@ it('finishes cancelled preparation without leaving phantom running panels',async
  expect(plan.panels.every(p=>p.error&&!p.taskId)).toBe(true)
  expect(f.runtime.startBatch).not.toHaveBeenCalled()
 })
+
+it('prepares the fund sample overview from the same NAV cohort before dispatching children',async()=>{
+ const gains=[3.07817,3.04455,2.84428,2.82659,2.78382,2.71596,2.65968,2.00944];
+ const rows=gains.map((gain,index)=>({code:String(index),gain,drawdown:-.2-index/100,scale:10+index,scaleDate:'20260630'}));
+ acquisition.run.mockResolvedValue({rows,start:'20251106',halfStart:'20260506',end:'20261106'});
+ const f=await fixture([{title:'样本概览指标',type:'kpi',prompt:'展示基金数量、近一年收益率中位数、近半年最大回撤中位数和规模合计。'}]);
+ await f.run();
+ const [plan]=await f.plans();
+ const artifact=f.runtime.startPreparedBatch.mock.calls[0]?.[0].panels[0].artifact;
+ expect(artifact?.items.find(item=>item.label==='近一年收益率中位数')).toMatchObject({value:2.805205,unit:'%'});
+ expect(artifact?.items.find(item=>item.label==='规模合计')).toMatchObject({value:108,unit:'亿元'});
+ expect(plan.panels.at(-1).taskId).toBe('prepared-0');
+ expect(f.runtime.startBatch.mock.calls[0][0].panels).toHaveLength(4);
+});

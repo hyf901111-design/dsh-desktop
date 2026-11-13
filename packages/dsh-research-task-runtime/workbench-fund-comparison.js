@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto'
 import {reduceSourceValues} from './component-derived-values.js'
+import {addDecimal,decimalNumber,decimalParts} from './workbench-decimal.js'
 
 export const FUND_CATALOG_URL='https://fund.eastmoney.com/js/fundcode_search.js'
 const BASIC_URL='https://tushare.pro/document/2?doc_id=19'
@@ -273,4 +274,32 @@ export function fundComparisonArtifacts({rows,start,halfStart,end}){
  const rank={...graph,variant:'horizontal',title:'近一年收益排名',series:[{name:'近一年收益',values:rows.map(r=>r.gain)}],detailColumns:[...identity,'近一年收益（%）'],detailRows:rowsFor('gain')}
  const risk={...graph,variant:'groupedBar',title:'半年回撤与年化波动率',series:[{name:'近半年最大回撤',values:rows.map(r=>r.drawdown)},{name:'近一年年化波动率',values:rows.map(r=>r.volatility)}],detailColumns:[...identity,'近半年最大回撤（%）','近一年年化波动率（%）'],detailRows:rowsFor('drawdown','volatility')}
  return [table,rank,risk]
+}
+
+export function prepareFundComparisonOverview(panel, comparison, evidence) {
+ if (panel.type !== 'kpi' || panel.artifact ||
+     !/(?:样本|基金|收益|风险).{0,10}(?:概览|总览|摘要)|(?:概览|总览).{0,10}(?:样本|基金)/u.test(panel.title)) return;
+ const {rows} = comparison;
+ if (!Array.isArray(rows) || !rows.length || !rows.every(row =>
+   Number.isFinite(row.gain) && Number.isFinite(row.drawdown))) return;
+ const median = field => {
+  const values = rows.map(row => row[field]).sort((a,b) => a-b);
+  const upper = Math.floor(values.length/2);
+  if (values.length % 2) return values[upper];
+  const {coefficient,scale} = addDecimal(decimalParts(values[upper-1]),decimalParts(values[upper]));
+  return decimalNumber({coefficient:coefficient*5n,scale:scale+1});
+ };
+ const source = evidence.sources?.[0] ? {source:evidence.sources[0].label,url:evidence.sources[0].url} : {};
+ const scaleDates = new Set(rows.map(row => row.scaleDate));
+ const scalesComplete = rows.every(row => Number.isFinite(row.scale) && validDate(row.scaleDate));
+ const assets = scalesComplete ? decimalNumber(rows.reduce((sum,row) => addDecimal(sum,decimalParts(row.scale)),null)) : null;
+ const items = [
+  {label:'样本基金数量',value:rows.length,unit:'只'},
+  {label:'近一年收益率中位数',value:median('gain'),unit:'%',...source},
+  {label:'近半年最大回撤中位数',value:median('drawdown'),unit:'%',...source},
+  {label:'规模合计',value:assets,unit:'亿元',...source,...(assets===null?
+   {missing:'部分基金缺少可核对的规模或规模日期'}:
+   {detail:scaleDates.size===1?'规模数据日 '+iso(rows[0].scaleDate):'按各基金各自规模数据日加总，详见比较明细'})}
+ ];
+ return {version:1,type:'kpi',title:panel.title,asOf:evidence.asOf,note:evidence.note,items};
 }

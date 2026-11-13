@@ -3,7 +3,8 @@ import {basename} from 'node:path';
 import {decodeDataResponse} from './component-data-refresh.js';
 import {prototypeReadCapability,withWorkbenchPrototypeRead} from './prototype-source-authority.js';
 import {authoredPrototypeEvidence} from './workbench-prototype-evidence.js';
-import {mapWorkbenchPanelFields} from './dataset-view-contract.js';
+import {mapWorkbenchPanelFields,WORKBENCH_DATASET_LIMITS} from './dataset-view-contract.js';
+import {prototypeMonetaryUnit,withPrototypeUnit} from './workbench-prototype-units.js';
 
 const toolName='read_prototype';
 const staticSection=/^[\p{L}_$][\p{L}\p{N}_$]*(?:\.[\p{L}_$][\p{L}\p{N}_$]*)*$/u;
@@ -141,15 +142,69 @@ async function verifyRelatedProductSnapshots(datasets,snapshots,ctx,exec,cache){
  }
 }
 
+const reconColumns = [
+ {key:'c',label:'代码'}, {key:'n',label:'名称'}, {key:'cc',label:'CCASS'},
+ {key:'sv',label:'份额法'}, {key:'bs',label:'底稿'}, {key:'d',label:'偏差'}, {key:'m',label:'告警标记'}
+];
+
+async function addMissingReconciliation(plan,files,readIndex,readRows,request) {
+ if(files.length!==1||!Array.isArray(plan.panels)||plan.panels.length>=30||
+    !Array.isArray(plan.tabs)||plan.tabs.length<2||
+    plan.sharedDatasets!==undefined&&!Array.isArray(plan.sharedDatasets)||
+    !/指数.{0,12}(?:运营|看板|工作台)/u.test(request)||
+    /(?:不要|不需要|排除|不含|[仅只](?:做|看|保留|展示))[^。；\n]{0,18}(?:对账|告警|明细|市场|我司|竞品|渠道)/u.test(request))return plan;
+ const tab=plan.tabs.find(item=>/对账|数据质量|来源|核验/u.test(item.name))??plan.tabs.find(item=>/渠道/u.test(item.name));
+ if(!tab||!Array.isArray(tab.panelIndexes))return plan;
+ const document=basename(files[0]);
+ const indexes=await readIndex(files[0]);
+ const definition=indexes.data?.find(entry=>entry.name==='PROV'&&entry.kind==='object')?.keys
+   ?.find(key=>key.name==='recon_rows'&&key.kind==='array'&&key.length>0&&key.length<=500);
+ if(!definition)return plan;
+ const snapshot=await readRows(files[0],'PROV.recon_rows','rows');
+ if(snapshot.revision!==indexes.sourceRevision)throw Error('同一原型文件在读取对账数据期间发生变化。');
+ if(!reconColumns.every(({key})=>snapshot.rows.some(row=>row&&Object.hasOwn(row,key))))return plan;
+ const datasets=plan.sharedDatasets??[];
+ const existing=datasets.find(dataset=>dataset?.prototypeTable?.document===document&&dataset.prototypeTable.section==='PROV.recon_rows');
+ const existingPanel=Array.isArray(existing?.fields)&&plan.panels.find(panel=>panel?.view?.dataset===existing.id&&
+   ['table','view'].includes(panel.type)&&!panel.view.where?.length);
+ if(existingPanel){
+  const fields=[...new Map([...reconColumns,...existing.fields].map(field=>[field.key,field])).values()];
+  if(fields.length>23)return plan;
+  return {...plan,sharedDatasets:datasets.map(dataset=>dataset===existing?{...dataset,fields}:dataset),
+   panels:plan.panels.map(panel=>panel===existingPanel?{...panel,view:{...panel.view,sections:[{kind:'records',fields:fields.map(field=>field.key)}]}}:panel)};
+ }
+ if(datasets.length>=WORKBENCH_DATASET_LIMITS.datasets)return plan;
+ const knownIds=new Set(datasets.map(dataset=>dataset.id));
+ let id='prototype-reconciliation';
+ while(knownIds.has(id))id+='-rows';
+ return {...plan,
+  sharedDatasets:[...datasets,{id,label:'对账告警明细',prototypeTable:{document,section:'PROV.recon_rows'},fields:reconColumns}],
+  panels:[...plan.panels,{type:'view',title:'对账告警明细',prompt:'保留原型全部对账告警行与来源。',size:'large',
+   view:{dataset:id,filters:['m'],sections:[{kind:'records',fields:reconColumns.map(field=>field.key)}]}}],
+  tabs:plan.tabs.map(item=>item===tab?{...item,panelIndexes:[...item.panelIndexes,plan.panels.length]}:item)};
+}
+
 export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
- if(!Array.isArray(plan.sharedDatasets)||!plan.sharedDatasets.some(dataset=>dataset?.prototypeTable!==undefined))return plan;
  const files=authoredPrototypeEvidence(request).files.filter(path=>/\.html?$/iu.test(path));
- if(plan.dataMode==='simulated'||!files.length)throw Error('原型表格必须引用本轮附件中的 HTML 原文件。');
  const reads=new Map();
  const indexes=new Map();
+ const readIndex=async path=>{
+  if(!indexes.has(path))indexes.set(path,await readPrototypeSection(ctx,exec,path,'index'));
+  return indexes.get(path);
+ };
+ const readRows=async(path,section,mode)=>{
+  const key=JSON.stringify([path,section,mode]);
+  if(!reads.has(key))reads.set(key,await readPrototypeRows(ctx,exec,path,section,mode));
+  return reads.get(key);
+ };
+ if(plan.dataMode!=='simulated'&&files.length&&ctx.tools.get?.(toolName,exec.agent)?.[prototypeReadCapability]===true)
+  plan=await addMissingReconciliation(plan,files,readIndex,readRows,request);
+ if(!Array.isArray(plan.sharedDatasets)||!plan.sharedDatasets.some(dataset=>dataset?.prototypeTable!==undefined))return plan;
+ if(plan.dataMode==='simulated'||!files.length)throw Error('原型表格必须引用本轮附件中的 HTML 原文件。');
  const revisions=new Map();
  const fieldAliases=new Map();
  const prototypeFields=new Map();
+ const verifiedUnits=new Map();
  const sharedDatasets=[];
  const snapshots=[];
  for(const draft of plan.sharedDatasets){
@@ -169,12 +224,15 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
    throw Error('原型表格使用 document、section、identity 和显示字段，不能提交重抄的记录。');
   const paths=files.filter(path=>basename(path)===prototypeTable.document);
   if(paths.length!==1)throw Error('原型表格必须唯一引用本轮附件中的文件名。');
-  const path=paths[0],mode=prototypeTable.mode??'rows',key=JSON.stringify([path,prototypeTable.section,mode]);
-  if(!reads.has(key))reads.set(key,await readPrototypeRows(ctx,exec,path,prototypeTable.section,mode));
-  const {rows,revision,presentation}=reads.get(key);
+  const path=paths[0],mode=prototypeTable.mode??'rows';
+  const {rows,revision,presentation}=await readRows(path,prototypeTable.section,mode);
   snapshots.push({id,path,section:prototypeTable.section,rows,revision,presentation});
   if(revisions.has(path)&&revisions.get(path)!==revision)throw Error('同一原型文件在读取多个数据段期间发生变化，请重新读取完整快照。');
   revisions.set(path,revision);
+  const sourceIndex=mode==='rows'?await readIndex(path):undefined;
+  if(sourceIndex&&sourceIndex.sourceRevision!==revision)throw Error('同一原型文件在读取单位时发生变化。');
+  const units=new Map();
+  verifiedUnits.set(id,units);
   const identity=mode==='entries'?'key':prototypeTable.identity;
   if(!rows.every(row=>row&&typeof row==='object'&&!Array.isArray(row)&&(identity===undefined||typeof prototypeFieldValue(row,identity)==='string'))||
      !fields.every(field=>field.key==='id'||rows.some(row=>prototypeFieldValue(row,field.key)!==undefined)))
@@ -196,12 +254,15 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
   const projected=mode==='entries'?fields.filter(field=>field.key!=='key'):fields;
   const description=(plan.panels??[]).filter(panel=>panel?.view?.dataset===id).map(panel=>panel.prompt).join('\n');
   const columns=projected.map((original,index)=>{
-   const unit=original.unit??(/收益$/u.test(original.label??'')&&description.includes(original.label+'（比例）')?'比例':undefined);
-   const field=unit==='比例'&&/收益$/u.test(original.label??'')?{...original,unit,label:original.label+'率'}:original;
-   if(datasetKey.test(field.key))return field;
+   const verifiedUnit=prototypeMonetaryUnit(sourceIndex,prototypeTable.section,original.key,original.label,presentation);
+   const sourceField=withPrototypeUnit(original,verifiedUnit);
+   const unit=sourceField.unit??(/收益$/u.test(original.label??'')&&description.includes(original.label+'（比例）')?'比例':undefined);
+   const field=unit==='比例'&&/收益$/u.test(original.label??'')?{...sourceField,unit,label:original.label+'率'}:sourceField;
+   if(datasetKey.test(field.key)){if(verifiedUnit)units.set(field.key,verifiedUnit);return field;}
    let key='sourceField'+(index+1);
    while(used.has(key))key+='-';
    used.add(key);aliases.set(field.key,key);
+   if(verifiedUnit)units.set(key,verifiedUnit);
    return {...field,key};
   });
   fieldAliases.set(id,aliases);
@@ -221,8 +282,40 @@ export async function resolveWorkbenchPrototypeTables(plan,ctx,exec,request){
  }
  await verifyRelatedProductSnapshots(sharedDatasets,snapshots,ctx,exec,indexes);
  const resolve=(id,key)=>fieldAliases.get(id)?.get(key)??key;
+ // Summing raw values preserves the source unit. Resolve aliases before
+ // materializing the aggregate, including aggregates of another aggregate.
+ for(let pass=0;pass<sharedDatasets.length;pass++){
+  let added=false;
+  for(const [index,dataset] of sharedDatasets.entries()){
+   const aggregate=dataset.aggregate;
+   const sourceUnits=verifiedUnits.get(aggregate?.dataset);
+   if(!sourceUnits?.size||!Array.isArray(aggregate.measures)||verifiedUnits.has(dataset.id))continue;
+   const units=new Map();
+   const measures=aggregate.measures.map(measure=>{
+    const field=resolve(aggregate.dataset,measure.field);
+    const unit=measure.op==='sum'?sourceUnits.get(field):undefined;
+    if(!unit)return measure;
+    units.set(measure.key,unit);
+    return withPrototypeUnit({...measure,field},unit);
+   });
+   if(!units.size)continue;
+   verifiedUnits.set(dataset.id,units);
+   sharedDatasets[index]={...dataset,aggregate:{...aggregate,measures}};
+   added=true;
+  }
+  if(!added)break;
+ }
+
  const panels=Array.isArray(plan.panels)?plan.panels.map(panel=>{
-  const mapped=mapWorkbenchPanelFields(panel,resolve),fields=prototypeFields.get(mapped?.view?.dataset);
+  let mapped=mapWorkbenchPanelFields(panel,resolve);
+  const sourceUnits=verifiedUnits.get(mapped?.view?.dataset);
+  if((mapped.type==='chart'||mapped.view?.variant)&&sourceUnits?.size&&mapped.view.unit!==undefined){
+   const section=mapped.view.sections?.[0];
+   const plotted=Array.isArray(section?.fields)?section.fields.filter(key=>key!==section.label):[];
+   const unit=plotted?.length?sourceUnits.get(plotted[0]):undefined;
+   if(unit)mapped={...mapped,view:{...mapped.view,unit}};
+  }
+  const fields=prototypeFields.get(mapped?.view?.dataset);
   if(!fields)return mapped;
   const source=sharedDatasets.find(dataset=>dataset.id===mapped.view.dataset);
   const {unit,...layout}=mapped.view;

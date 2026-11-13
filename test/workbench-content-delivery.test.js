@@ -727,3 +727,35 @@ it('keeps verified DOCX siblings and regenerates only the view containing an out
   expect((await f.tool.execute(input,f.exec)).planId).toBe(receipt.planId);expect(f.runtime.tasks.size).toBe(2)
  }finally{await f.close()}
 })
+
+it('uses original monetary units throughout a prototype board and restores an omitted reconciliation table',async()=>{
+ const rows=Array.from({length:30},(_,i)=>({c:'P'+(i+1),n:'产品'+(i+1),cc:i+.25,sv:i,bs:i-.25,d:'0.5%',m:'待核'}));
+ const source='<p>金额以百万元计，占比和收益以百分数计。</p><script>const BOARD_TABS=[["market","市场面"],["channel","渠道"]];const DYN={prods:[{c:"A",n:"甲",flow:2,scale:12,chg:3},{c:"B",n:"乙",flow:-1,scale:20,chg:-2}]};const PROV={sources:{底稿:"原表",口径:"三方对账"},recon_rows:'+JSON.stringify(rows)+'};</script>';
+ const f=await setup({request:'📎 文件：`/workspace/指数原型.html`\n依照原型生成指数运营工作台，保留所有业务页。',prototype:source});
+ const view=(dataset,fields,label)=>({dataset,sections:[{kind:'records',fields,...(label?{label}:{})}]});
+ const input={title:'指数运营工作台',tabs:[{name:'市场面',panelIndexes:[0,1,2]},{name:'渠道',panelIndexes:[3]}],sharedDatasets:[
+  {id:'products',label:'产品明细',prototypeTable:{document:'指数原型.html',section:'DYN.prods',identity:'c'},fields:[{key:'n',label:'名称'},{key:'flow',label:'净流入（亿元）',unit:'亿元'},{key:'scale',label:'规模',unit:'亿元'},{key:'chg',label:'规模变化',unit:'%'}]},
+  {id:'totals',label:'市场汇总',aggregate:{dataset:'products',groupBy:[],measures:[{key:'flow',label:'流入合计',op:'sum',field:'flow',unit:'亿元'}]}}
+ ],panels:[
+  {type:'view',title:'全市场明细',prompt:'保留原表',view:view('products',['n','flow','scale','chg'])},
+  {type:'chart',title:'资金流向',prompt:'保留原表',view:{...view('products',['flow'],'n'),unit:'亿元',variant:'horizontal'}},
+  {type:'kpi',title:'市场概览',prompt:'汇总原表',view:view('totals',['flow'])},
+  {type:'markdown',title:'口径',prompt:'保留说明',content:{body:'原型数据为合成快照。'}}
+ ]};
+ try{
+  const first=await f.tool.execute(input,f.exec);
+  expect(first.status).toBe('prepared');
+  const [saved]=JSON.parse(await readFile(f.filePath,'utf8'));
+  const [table,chart,kpi,,recon]=saved.panels.map(panel=>panel.artifact);
+  expect(table.dataset.fields.filter(field=>['flow','scale','chg'].includes(field.key)).map(field=>[field.label,field.unit])).toEqual([['净流入','百万元'],['规模','百万元'],['规模变化','百万元']]);
+  expect(table.dataset.records.map(row=>row.flow)).toEqual([2,-1]);
+  expect(chart).toMatchObject({unit:'百万元',series:[{values:[2,-1]}]});
+  expect(kpi.items[0]).toMatchObject({unit:'百万元',value:1});
+  expect(saved.tabs.find(tab=>tab.name==='渠道').panelIndexes).toEqual([3,4]);
+  expect(recon.dataset.records).toHaveLength(30);
+  expect(recon.dataset.records.at(-1)).toMatchObject(rows.at(-1));
+  expect(recon.dataset.note).toContain('底稿：原表');
+  expect((await f.tool.execute(input,f.exec)).planId).toBe(first.planId);
+  expect(f.runtime.tasks.size).toBe(5);
+ }finally{await f.close()}
+});
