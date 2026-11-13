@@ -21,9 +21,12 @@ export type Sheet = {
 export const workbookChartKinds=['bar','horizontal','stackedBar','line','step','area','combo','pie','donut','scatter'] as const
 export type WorkbookChartKind=(typeof workbookChartKinds)[number]
 export type WorkbookChartLayout = {x:number;y:number;width:number;height:number}
+export const workbookChartPalettes=['classic','ocean','warm','mono'] as const
+export type WorkbookChartPalette=(typeof workbookChartPalettes)[number]
 export type WorkbookChart = {
   chartId:string;sheetId:string;range:string;title:string;kind:WorkbookChartKind;headers:boolean
   seriesBy?:'columns'|'rows';category?:number;series?:number[];legend?:boolean;gridlines?:boolean;emptyValues?:'skip'|'zero';labels?:boolean
+  palette?:WorkbookChartPalette;showTitle?:boolean;axisX?:string;axisY?:string
   layout?:WorkbookChartLayout
 }
 export type WorkbookComponent = {componentId:string;sheetId:string;range:string;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
@@ -110,17 +113,20 @@ export function chartAxes(chart:WorkbookChart,bounds:Range){
   return {category,series,byRows,composition}
 }
 export function validatedChart(book:Workbook,value:unknown):WorkbookChart {
-  keys(value,['chartId','sheetId','range','title','kind','headers','seriesBy','category','series','legend','gridlines','emptyValues','labels','layout'])
-  const {chartId,sheetId,range,title,kind,headers=true,seriesBy,category,series,legend,gridlines,emptyValues,labels,layout}=value as Record<string,any>
+  keys(value,['chartId','sheetId','range','title','kind','headers','seriesBy','category','series','legend','gridlines','emptyValues','labels','palette','showTitle','axisX','axisY','layout'])
+  const {chartId,sheetId,range,title,kind,headers=true,seriesBy,category,series,legend,gridlines,emptyValues,labels,palette,showTitle,axisX,axisY,layout}=value as Record<string,any>
   if(!safeId(chartId)||!workbookChartKinds.includes(kind)||typeof headers!=='boolean'||
     seriesBy!==undefined&&!['columns','rows'].includes(seriesBy)||category!==undefined&&!Number.isInteger(category)||
     series!==undefined&&(!Array.isArray(series)||!series.every(Number.isInteger))||
     legend!==undefined&&typeof legend!=='boolean'||gridlines!==undefined&&typeof gridlines!=='boolean'||labels!==undefined&&typeof labels!=='boolean'||
-    emptyValues!==undefined&&!['skip','zero'].includes(emptyValues))throw Error('图表设置无效。')
+    emptyValues!==undefined&&!['skip','zero'].includes(emptyValues)||palette!==undefined&&!workbookChartPalettes.includes(palette)||
+    showTitle!==undefined&&typeof showTitle!=='boolean')throw Error('图表设置无效。')
   const {bounds}=sheetRange(book,sheetId,range)
   const chart:WorkbookChart={chartId,sheetId,range:rangeAddress(bounds),title:label(title),kind,headers,
     ...(seriesBy===undefined?{}:{seriesBy}),...(category===undefined?{}:{category}),...(series===undefined?{}:{series}),
     ...(legend===undefined?{}:{legend}),...(gridlines===undefined?{}:{gridlines}),...(emptyValues===undefined?{}:{emptyValues}),...(labels===undefined?{}:{labels}),
+    ...(palette===undefined?{}:{palette}),...(showTitle===undefined?{}:{showTitle}),
+    ...(axisX===undefined?{}:{axisX:axisX===''?'':label(axisX,80)}),...(axisY===undefined?{}:{axisY:axisY===''?'':label(axisY,80)}),
     ...(layout===undefined?{}:{layout:validatedChartLayout(layout)})}
   chartAxes(chart,bounds)
   return chart

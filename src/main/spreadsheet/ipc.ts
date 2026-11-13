@@ -135,10 +135,10 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     return store.save(key,input.revision,{...book,components})
    }
    case 'add-chart':case 'update-chart':{
-    const {chartId,sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels}=input
+    const {chartId,sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels,palette,showTitle,axisX,axisY}=input
     return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{
      op:action==='add-chart'?'addChart':'updateChart',chartId:action==='add-chart'?randomUUID():chartId,
-     sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels
+     sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels,palette,showTitle,axisX,axisY
     }]})
    }
    case 'chart-layout':{

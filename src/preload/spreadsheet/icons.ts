@@ -25,6 +25,8 @@ const paths:Record<string,string>={
  currency:'m6 5 6 7 6-7M7 12h10m-10 4h10m-5-4v8',
  percent:'M5 19 19 5M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm10 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z',
  decimals:'M3 16h.1M11 8H8v8h3zm7 0h-3v8h3z',sum:'M17 4H6l7 8-7 8h11',
+ cut:'M6 6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm0 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm2-3 12 8m-12-3L20 6',
+ paste:'M9 5H5v16h14V5h-4m-6-2h6v5H9zm-1 9h8m-8 4h8',
  close:'m6 6 12 12M18 6 6 18',
  move:'M12 3v18M3 12h18m-12-6 3-3 3 3m-6 12 3 3 3-3m-9-9-3 3 3 3m12-6 3 3-3 3',
  resize:'M5 19 19 5m-8 14 8-8m-2 8 2-2',
