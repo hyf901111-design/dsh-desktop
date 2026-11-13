@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261113-08",
+  "branch": "codex/integration/20261113-08",
+  "baseMainCommit": "d642972cf229ff6c4c3e62d68df3e9b6d172f38b",
+  "expectedMainCommit": "d642972cf229ff6c4c3e62d68df3e9b6d172f38b",
+  "createdAt": "2026-11-13T04:13:30.100Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "豆包搜索与本地默认回退",
+        "branch": "codex/feat/doubao-search-fallback-20261113",
+        "baseCommit": "d642972cf229ff6c4c3e62d68df3e9b6d172f38b",
+        "tipCommit": "fe26b503fdfb06426a17f0d1b9321f8c0eddd4de",
+        "commits": [
+          {
+            "commit": "fe26b503fdfb06426a17f0d1b9321f8c0eddd4de",
+            "parents": [
+              "d642972cf229ff6c4c3e62d68df3e9b6d172f38b"
+            ],
+            "subject": "豆包搜索额度不足或未登录时恢复默认联网搜索"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-web-search-session-model/index.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/local-search-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/local-search-runtime.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/session-model-web-search.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/local-search-runtime.test.ts",
+              "test/local-search-bridge.test.ts",
+              "test/session-model-web-search.test.js",
+              "test/account-service.test.ts",
+              "test/volcengine-search-gateway.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "5 个聚焦测试文件，54 项通过",
+            "verifiedCommit": "fe26b503fdfb06426a17f0d1b9321f8c0eddd4de",
+            "completedAt": "2026-11-13T04:13:28.282875+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "客户端包构建后测试真实搜索。"
+        },
+        "acceptanceCriteria": [
+          "有额度时优先豆包",
+          "未登录不发云端请求",
+          "额度不足或限流时恢复原默认路径"
+        ],
+        "risks": [
+          "线上账号额度边界用隔离测试验证"
+        ],
+        "generatedAt": "2026-11-13T04:13:28.282875+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/local-search-runtime.test.ts",
+        "test/local-search-bridge.test.ts",
+        "test/session-model-web-search.test.js",
+        "test/account-service.test.ts",
+        "test/volcengine-search-gateway.test.js"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
