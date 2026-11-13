@@ -93,6 +93,31 @@
           "完整 24/72 已在上一阶段构建进行，本构建对变更用例做追加验证"
         ],
         "generatedAt": "2026-11-13T05:09:10.134Z"
+      },
+      "merged": {
+        "mergeCommit": "c4c996b394ac2ca762f96dc2fb5d5a86caa79099",
+        "verificationCommit": "c4c996b394ac2ca762f96dc2fb5d5a86caa79099",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/component-shared-state-browser.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-library.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-content-delivery.test.js test/workbench-acquisition-fallback.test.js test/workbench-fund-comparison.test.js test/component-shared-state-browser.test.js test/workbench-execution-policy.test.js test/workbench-library.test.js",
+            "verifiedCommit": "c4c996b394ac2ca762f96dc2fb5d5a86caa79099",
+            "completedAt": "2026-11-13T05:09:14.589Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-13T05:09:14.589Z"
       }
     }
   ],
