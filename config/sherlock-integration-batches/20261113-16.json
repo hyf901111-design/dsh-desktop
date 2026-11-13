@@ -77,6 +77,52 @@
           "表格分支与最新 main 共同修改前端运行时补丁链，联测前需保留两侧补丁。"
         ],
         "generatedAt": "2026-11-13T14:02:33.993Z"
+      },
+      "merged": {
+        "mergeCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
+        "verificationCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
+            "completedAt": "2026-11-13T14:04:14.771Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-store.test.ts",
+              "test/spreadsheet-files.test.ts",
+              "test/spreadsheet-inline-references.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
+            "verifiedCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
+            "completedAt": "2026-11-13T14:04:14.771Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-spreadsheet-live.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
+            "verifiedCommit": "affe8661f9982a2abf67832c3f9c4ed47339616f",
+            "completedAt": "2026-11-13T14:04:14.771Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-13T14:04:14.771Z"
       }
     }
   ],
