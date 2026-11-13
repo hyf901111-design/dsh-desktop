@@ -9,55 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格快捷用例写入当前工作簿",
+        "featureName": "表格组件菜单与图片导出桥接",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "bc241fe9c31fd13bff0785e0d7971e9e542fe46c",
-        "tipCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
+        "baseCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
+        "tipCommit": "197bfa9bebea092a43e609f38a36bc32620b634b",
         "commits": [
           {
-            "commit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
+            "commit": "197bfa9bebea092a43e609f38a36bc32620b634b",
             "parents": [
-              "bc241fe9c31fd13bff0785e0d7971e9e542fe46c"
+              "bb6353df055f8ac6304dc487029f7aba9266a80d"
             ],
-            "subject": "让表格快捷用例直接写入当前工作簿并定位结果"
+            "subject": "修复表格组件菜单和图片导出的跨进程桥接"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/store.ts"
+            "path": "scripts/lib/notes-components.mjs"
           },
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-components-policy.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/spreadsheet-service.test.ts"
           }
         ],
         "checks": [
@@ -69,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
-            "completedAt": "2026-11-13T23:16:15.888Z",
+            "verifiedCommit": "197bfa9bebea092a43e609f38a36bc32620b634b",
+            "completedAt": "2026-11-13T23:23:55.728Z",
             "timeoutMs": 180000
           },
           {
@@ -80,74 +52,25 @@
               "run",
               "test/spreadsheet-service.test.ts",
               "test/conversation-components-policy.test.js",
-              "test/client-capabilities.test.js",
-              "test/conversation-component-receipt-recovery.test.js"
+              "test/notes-native-components.test.js"
             ],
             "outcome": "passed",
-            "summary": "212 项路由、工作簿回执及能力验证通过",
-            "verifiedCommit": "bb6353df055f8ac6304dc487029f7aba9266a80d",
-            "completedAt": "2026-11-13T23:16:15.888Z",
+            "summary": "190 项组件和表格聚焦验证通过",
+            "verifiedCommit": "197bfa9bebea092a43e609f38a36bc32620b634b",
+            "completedAt": "2026-11-13T23:23:55.728Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已通过聚焦验证，包含真实工作簿写入和目标区域回执。集成应用继续验收。"
+          "summary": "从真实客户端发现的组件菜单跨隔离环境定位问题已修复，集成应用继续验收。"
         },
         "acceptanceCriteria": [
-          "现金流和可比估值快捷用例优先走当前工作簿",
-          "没有真实单元格写入回执时在同轮补做一次",
-          "写入后定位目标工作表及区域",
-          "去重用例保留附件读取"
+          "定位正确组件的更多菜单",
+          "通过同一组件实例桥接原生图片导出"
         ],
         "risks": [],
-        "generatedAt": "2026-11-13T23:16:15.888Z"
-      },
-      "merged": {
-        "mergeCommit": "3407e8e208cc24a4dfa0443e29b54c2277a15cf5",
-        "verificationCommit": "3407e8e208cc24a4dfa0443e29b54c2277a15cf5",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3407e8e208cc24a4dfa0443e29b54c2277a15cf5",
-            "completedAt": "2026-11-13T23:17:03.245Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "3407e8e208cc24a4dfa0443e29b54c2277a15cf5",
-            "completedAt": "2026-11-13T23:17:03.245Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "3407e8e208cc24a4dfa0443e29b54c2277a15cf5",
-            "completedAt": "2026-11-13T23:17:03.245Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T23:17:03.245Z"
+        "generatedAt": "2026-11-13T23:23:55.728Z"
       }
     }
   ],
