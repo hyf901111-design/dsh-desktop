@@ -26,6 +26,8 @@ const paths:Record<string,string>={
  percent:'M5 19 19 5M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm10 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z',
  decimals:'M3 16h.1M11 8H8v8h3zm7 0h-3v8h3z',sum:'M17 4H6l7 8-7 8h11',
  close:'m6 6 12 12M18 6 6 18',
+ move:'M12 3v18M3 12h18m-12-6 3-3 3 3m-6 12 3 3 3-3m-9-9-3 3 3 3m12-6 3 3-3 3',
+ resize:'M5 19 19 5m-8 14 8-8m-2 8 2-2',
  chart:'M4 4v16h16M8 16v-4m5 4V8m5 8V5',sort:'M5 7h9m-9 5h7m-7 5h4m8-12v14m-3-3 3 3 3-3',
  link:'M5 12h14m-5-5 5 5-5 5',check:'m5 12 4 4L19 6'
 }
