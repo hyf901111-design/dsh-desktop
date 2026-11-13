@@ -5,11 +5,30 @@ import {CLIENT_TOOL_NAMES,registerClientTools} from '../packages/dsh-research-ta
 
 const env={SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'test-token'}
 const execution=(events=[{type:'turn/start',data:{turn:7}}],header={})=>({agent:{session:{id:'chat-session',header,events}},signal:new AbortController().signal})
-function fixture(options={}){
+function fixture(options={}, context={}){
   const tools=new Map(),calls=[]
-  const dispose=registerClientTools({tools:{register:tool=>{tools.set(tool.name,tool);return()=>tools.delete(tool.name)}}},{env,fetch:async(url,init)=>{calls.push({url,...init,body:JSON.parse(init.body)});return new Response(JSON.stringify({capabilities:[{id:'canvas.inspect',available:false}]}))},...options})
+  const dispose=registerClientTools({tools:{register:tool=>{tools.set(tool.name,tool);return()=>tools.delete(tool.name)}},...context},{env,fetch:async(url,init)=>{calls.push({url,...init,body:JSON.parse(init.body)});return new Response(JSON.stringify({capabilities:[{id:'canvas.inspect',available:false}]}))},...options})
   return {tools,calls,dispose}
 }
+
+it('starts spreadsheet titling only for a saved content change in the current human turn',async()=>{
+  const scheduleSpreadsheetTitle=vi.fn()
+  let response
+  const f=fixture({fetch:async()=>Response.json(response)},{sessionTitle:{scheduleSpreadsheetTitle}})
+  const exec=execution([{type:'turn/start',data:{turn:7}},{seq:13,type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'计算毛利率'}]}}])
+  const apply={requestId:'apply',capability:'spreadsheet.apply',arguments:{revision:0,operations:[]}}
+  const receipt={requestId:apply.requestId,capability:apply.capability,status:'succeeded',data:{saved:true,changed:true}}
+  try{
+    for(const result of [{...receipt,status:'failed'},{...receipt,data:{saved:true,changed:false}},{...receipt,requestId:'wrong'}]){
+      response=result
+      await f.tools.get('client_action').execute(apply,exec)
+    }
+    expect(scheduleSpreadsheetTitle).not.toHaveBeenCalled()
+    response=receipt
+    await f.tools.get('client_action').execute(apply,exec)
+    expect(scheduleSpreadsheetTitle).toHaveBeenCalledExactlyOnceWith(exec.agent.session,13)
+  }finally{f.dispose()}
+})
 
 it('derives the original parent session and live turn from the execution, preserving host availability',async()=>{
   const f=fixture()

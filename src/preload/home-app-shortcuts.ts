@@ -1,10 +1,11 @@
+import spreadsheetAdd from './spreadsheet/assets-grid-add.svg?inline'
 import styles from './home-app-shortcuts.css?raw'
 
-export type HomeAppShortcut = 'browser' | 'plugin' | 'scheduled' | 'research' | 'note'
-const apps: readonly HomeAppShortcut[] = ['browser', 'plugin', 'scheduled', 'research', 'note']
+export type HomeAppShortcut = 'browser' | 'plugin' | 'scheduled' | 'research' | 'note' | 'spreadsheet'
+const apps: readonly HomeAppShortcut[] = ['browser', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet']
 const labels = {
-  zh: ['浏览器', '插件', '定时任务', '研究看板', '笔记'],
-  en: ['Browser', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes']
+  zh: ['浏览器', '插件', '定时任务', '研究看板', '笔记', '新建表格'],
+  en: ['Browser', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'New spreadsheet']
 }
 const mounted = new WeakMap<Document, () => void>()
 
@@ -27,6 +28,7 @@ export function mountHomeAppShortcuts(doc: Document, open: (app: HomeAppShortcut
     const button = doc.createElement('button')
     button.type = 'button'
     button.dataset.homeApp = app
+    if(app==='spreadsheet')button.style.setProperty('--home-app-icon','url("'+spreadsheetAdd.replaceAll('"','%22')+'")')
     const icon = doc.createElement('span')
     icon.className = 'home-app-shortcut-icon'
     icon.setAttribute('aria-hidden', 'true')

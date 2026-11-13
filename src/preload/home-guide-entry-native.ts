@@ -159,6 +159,7 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
  }
  const note=(event:Event)=>{
   const d=(event as CustomEvent).detail
+  if(d?.kind==='spreadsheet')return
   let run=activeNote
   if(d?.phase!=='prepare')run=[...runs.values()].find(value=>value.noteToken===d?.token)
   if(!run&&closedNotes.has(d?.token)){event.stopImmediatePropagation();win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,ok:false,cancelled:true}}));return}

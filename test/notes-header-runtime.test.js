@@ -13,6 +13,7 @@ const activityLocaleHelpers=execFileSync(process.execPath,['--input-type=module'
 // remain nested here, exactly as in the shipped conversation module.
 const nativeSource = `
 function ConversationSessionHeader({sessionId, blank, composerPhase, active}) {
+ const selectView = () => {};
  const homeHeader = blank && composerPhase === "blank" && active?.id === "chat";
  return react.createElement('header',{"data-srb-session-header":"", children:[react.createElement('nav',{key:'tabs'},'Chat Research Notes Trajectory'),react.createElement('div',{key:'utilities',children: renderSlot("conversation.session.header.utilities", {})})]});
 }
@@ -63,7 +64,9 @@ it('keeps the native export menu usable after mode and live language switches',a
    for(const view of ['notes','research','notes','chat','notes','trajectory','notes']){
     await page.getByRole('button',{name:view,exact:true}).click()
     if(view!=='notes')continue
-    const button=page.getByRole('button',{name:locale==='en'?'Export note':'导出笔记',exact:true});await button.click()
+    const button=page.getByRole('button',{name:locale==='en'?'Export note':'导出笔记',exact:true})
+    expect(await button.textContent()).toBe('')
+    await button.click()
     expect(await page.getByRole('menuitem').allTextContents()).toEqual(['Word','PDF','Markdown'])
     await page.getByRole('menuitem',{name:'PDF',exact:true}).click()
     expect((await page.evaluate(()=>window.exports)).at(-1)).toEqual({sessionId:'note',format:'pdf'})

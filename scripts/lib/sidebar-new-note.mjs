@@ -2,13 +2,13 @@
 // this exact owner, flushes its Note, then commits the same ticket.
 export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput}) {
   const tickets=new Map(),requests=new Map();let disposed=false,epoch=0,creating=false
-  const abort=()=>new DOMException('当前会话已变化，请重新新建笔记。','AbortError')
+  const abort=()=>new DOMException('当前会话已变化，请重新新建。','AbortError')
   const fingerprint=shell=>{const s=shell?.snapshot;return s?JSON.stringify([s.draft,s.draftRev,s.imageIds,s.occurrences,s.phase,s.researchContextPreparing,s.composing,s.isComposing,s.compositionActive]):null}
   // Read the same effective preference as the native wrapper, without creating
   // a detached store or retrying writes. A same-view acknowledgement is benign.
   const view=id=>{
     if(!id)return null
-    const key='ework.session.view.v1:'+id,valid=value=>['chat','research','notes','trajectory'].includes(value)
+    const key='ework.session.view.v1:'+id,valid=value=>['chat','research','notes','trajectory','spreadsheet'].includes(value)
     const durable=window.dshDesktop?.researchCanvasStorage?.getItem(key)??null,local=window.localStorage.getItem(key),raw=window.localStorage.getItem(key+'.pending-native')
     let pending=null
     try{const value=raw&&raw.length<256?JSON.parse(raw):null;if(value&&(valid(value.view)||value.view==='')&&(value.previous===null||value.previous===''||valid(value.previous)))pending=value}catch{}
@@ -16,45 +16,55 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
     if(valid(saved)||saved==='')return saved||null
     try{return JSON.parse(window.localStorage.getItem('dsh.conversation.chat.'+id)||'null')?.view??null}catch{return null}
   }
-  const workspace=()=>{const state=workspaces.list.getSnapshot(),current=sessions.list.getSnapshot().current;const id=state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??state.recentWorkspaceId;return state.items.find(item=>item.workspaceId===id)}
+  const workspace=()=>{const state=workspaces.list.getSnapshot(),current=sessions.list.getSnapshot().current;const id=state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??state.items.find(item=>item.path===sessions.list.getSnapshot().byId[current]?.cwd)?.workspaceId??state.recentWorkspaceId;return state.items.find(item=>item.workspaceId===id)}
   const valid=ticket=>!disposed&&!ticket.cancelled&&ticket.epoch===epoch&&sessions.list.getSnapshot().current===ticket.current&&workspace()?.workspaceId===ticket.workspaceId&&workspace()?.path===ticket.path&&document.body.dataset.workspaceSurface===ticket.surface&&(!ticket.current||getInput(ticket.current)===ticket.shell)&&!ticket.shell?.disposed&&view(ticket.current)===ticket.view&&fingerprint(ticket.shell)===ticket.fingerprint&&Date.now()<ticket.expires
   const drop=token=>{const ticket=tickets.get(token);if(ticket)ticket.cancelled=true;tickets.delete(token)}
   const invalidate=()=>{epoch++;for(const token of tickets.keys())drop(token)}
   const unsubscribe=sessions.list.subscribe(()=>{for(const ticket of tickets.values())if(sessions.list.getSnapshot().current!==ticket.current){invalidate();break}})
   const edited=event=>{if([...tickets.values()].some(ticket=>event.detail?.sessionId===ticket.current))invalidate()}
-  const navigation=event=>{if(event.target?.closest?.('[data-conversation-view-id],.hHd-Xa_newSession:not([data-sidebar-new-note]),.VOzbGW_trigger,[data-sidebar-session-search]'))invalidate()}
+  const navigation=event=>{if(event.target?.closest?.('[data-conversation-view-id],.hHd-Xa_newSession:not([data-sidebar-new-note],[data-sidebar-new-spreadsheet]),.VOzbGW_trigger,[data-sidebar-session-search]'))invalidate()}
   const reply=(requestId,value)=>window.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId,...value}}))
   const handle=async detail=>{
     if(disposed)throw abort()
-    if(detail.phase==='cancel'){drop(detail.token);return {}}
+    const spreadsheet=detail.kind==='spreadsheet',noun=spreadsheet?'表格':'笔记'
+    if(detail.phase==='cancel'){if(tickets.get(detail.token)?.spreadsheet===spreadsheet)drop(detail.token);return {}}
     if(detail.phase==='prepare'){
-      const target=workspace();if(!target)throw Error('请先选择工作区，再新建笔记。')
+      const target=workspace();if(!target)throw Error('请先选择工作区，再新建'+noun+'。')
       const current=sessions.list.getSnapshot().current,shell=current?getInput(current):null,token=crypto.randomUUID()
       if(current&&!shell)throw Error('当前输入正在读取，请稍后重试。')
-      const ticket={current,shell,fingerprint:fingerprint(shell),workspaceId:target.workspaceId,path:target.path,epoch,expires:Date.now()+30_000,ids:new Set(sessions.list.getSnapshot().ids),surface:document.body.dataset.workspaceSurface,view:view(current)}
+      const ticket={spreadsheet,current,shell,fingerprint:fingerprint(shell),workspaceId:target.workspaceId,path:target.path,epoch,expires:Date.now()+30_000,ids:new Set(sessions.list.getSnapshot().ids),surface:document.body.dataset.workspaceSurface,view:view(current)}
       tickets.set(token,ticket)
       return {token}
     }
     const ticket=tickets.get(detail.token)
-    if(!ticket||!valid(ticket))throw abort()
-    if(creating)throw Error('正在新建笔记，请稍候。')
+    if(!ticket||ticket.spreadsheet!==spreadsheet||!valid(ticket))throw abort()
+    if(creating)throw Error('正在新建，请稍候。')
     creating=true
     try{
-      // Unlike connectWorkspace, a new Note must never reuse a blank chat that
-      // already contains a saved Note or a user draft.
+      // Create a separate session so an existing draft remains with its owner.
       const id=await sessions.create({workspaceId:ticket.workspaceId})
       if(!valid(ticket))throw abort()
-      if(typeof id!=='string'||!id||ticket.ids.has(id)||!sessions.list.getSnapshot().ids.includes(id))throw Error('新笔记会话未能创建。')
+      if(typeof id!=='string'||!id||ticket.ids.has(id)||!sessions.list.getSnapshot().ids.includes(id))throw Error('新'+noun+'会话未能创建。')
       const binding=sessions.binding(id)
-      if(!binding||binding.state==='removed'||binding.kind==='subagent')throw Error('新笔记会话不可用。')
-      chatStore.create(id).actions.setView('notes')
+      if(!binding||binding.state==='removed'||binding.kind==='subagent')throw Error('新'+noun+'会话不可用。')
+      if(spreadsheet){
+        const response=await fetch('/sherlock/spreadsheet/session',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sessionId:id,locale:document.documentElement.dataset.odysseyLocale==='en'?'en':'zh'})
+        })
+        const result=await response.json()
+        if(!response.ok||result.ok!==true)throw Error(result.error||'新表格未能保存。')
+        if(!valid(ticket))throw abort()
+        sessions.retainSpreadsheetSession(id)
+      }
+      chatStore.create(id).actions.setView(spreadsheet?'spreadsheet':'notes')
       sessions.open(id)
       return {sessionId:id}
     }finally{creating=false;drop(detail.token)}
   }
   const listener=event=>{
     const d=event.detail
-    if(!d||typeof d.requestId!=='string'||d.requestId.length>100||!['prepare','create','cancel'].includes(d.phase)||Object.keys(d).some(key=>!['requestId','phase','token'].includes(key))||(d.phase!=='prepare'&&typeof d.token!=='string'))return
+    if(!d||typeof d.requestId!=='string'||d.requestId.length>100||!['prepare','create','cancel'].includes(d.phase)||d.kind!==undefined&&d.kind!=='spreadsheet'||Object.keys(d).some(key=>!['requestId','phase','token','kind'].includes(key))||(d.phase!=='prepare'&&typeof d.token!=='string'))return
     let request=requests.get(d.requestId)
     if(!request){request=handle(d).then(value=>({ok:true,...value}),error=>({ok:false,cancelled:error?.name==='AbortError',message:error?.message||'新笔记未能创建。'}));requests.set(d.requestId,request);if(requests.size>64)requests.delete(requests.keys().next().value)}
     void request.then(value=>{if(!disposed)reply(d.requestId,value)})
@@ -102,14 +112,15 @@ export function patchSidebarNewNoteShell(input){
   const group=source.slice(start,stop),last=group.lastIndexOf('})]')
 
   const note='(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("session.newNote.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-new-note":"","aria-label":t("session.newNote.label"),onClick:()=>window.dispatchEvent(new CustomEvent("sherlock:sidebar-new-note")),children:void 0})})'
-  const controls=group.slice(0,last)+'}), !wide && '+note+']'+group.slice(last+3)
+  const spreadsheet=note.replaceAll('newNote.label','newSpreadsheet.label').replaceAll('sidebar-new-note','sidebar-new-spreadsheet')
+  const controls=group.slice(0,last)+'}), !wide && '+note+', !wide && '+spreadsheet+']'+group.slice(last+3)
   const root='\t\t\treturn (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tref: column,'
   const foot='(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.footArea,'
   return apply(source,'shell',[
     [group,'wide && newSessionControls'],
     [root,'\t\t\tconst newSessionControls = '+controls+';\n'+root],
     [foot,'!wide && newSessionControls,\n'+foot],
-    ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"session.newNote.label":"新建笔记",'],
-    ['"session.newResearch.label": "New research",','"session.newResearch.label": "New research",\n"session.newNote.label":"New note",'],
+    ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"session.newNote.label":"新建笔记",\n"session.newSpreadsheet.label":"新建表格",'],
+    ['"session.newResearch.label": "New research",','"session.newResearch.label": "New research",\n"session.newNote.label":"New note",\n"session.newSpreadsheet.label":"New spreadsheet",'],
   ])
 }

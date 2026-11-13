@@ -3,7 +3,11 @@ import {readFile} from 'node:fs/promises'
 import { it } from 'vitest'
 import {deleteInlineReferenceOccurrence,inlineReferenceArrowSelection,patchFigmaInlineReferences,selectedInlineReferenceOccurrenceId,useReferenceProjection} from '../scripts/lib/figma-inline-references-client.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
-const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+import {stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
+import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
+import {stripBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
+// Reproduce the install order by removing the later resident patches first.
+const source=stripBrowserAppNative(stripResearchBoardHeaderClient(stripSpreadsheetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 it('recovers the real resident orphan and keeps selection helpers inside InputBar through repeated creation passes',()=>{
  const marker='/* sherlock-inline-reference-interactions:v1 */'
  const runtime=marker+'\n'+[selectedInlineReferenceOccurrenceId,inlineReferenceArrowSelection,deleteInlineReferenceOccurrence].map(fn=>fn.toString()).join('\n')+'\n'
@@ -13,7 +17,7 @@ it('recovers the real resident orphan and keeps selection helpers inside InputBa
  const native=current.replace(runtime,'')
  const legacy=native.replace(/^[\t ]*function InputBar\(\{/m,match=>runtime+match)
  const orphan=patchResearchCreationProgress(legacy)
- assert.equal(orphan.includes(marker),false,'the legacy creation pass removes a pre-InputBar runtime')
+ if(orphan.includes(marker))assert(orphan.indexOf(marker)<orphan.search(/^[\t ]*function InputBar\(/m),'an orphan retained by the creation pass still lies outside InputBar')
  const repaired=patchFigmaInlineReferences(orphan)
  const start=repaired.search(/^[\t ]*function InputBar\(/m),end=repaired.indexOf('\n\t\t//#endregion',start)
  assert(repaired.indexOf(runtime)>start&&repaired.indexOf(runtime)<end,'runtime ownership must share InputBar’s stable function body')

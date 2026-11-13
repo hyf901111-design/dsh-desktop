@@ -1,5 +1,5 @@
 export function isSessionViewId(value) {
-  return ['chat', 'research', 'notes', 'trajectory'].includes(value)
+  return ['chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(value)
 }
 
 export function hasSessionViewPreference(sessionId, view) {
@@ -116,7 +116,7 @@ export function useInitialChatSessionView(sessionId, storedView, actions) {
     actions.setView('chat')
     explicitHomeViewSessions.delete(sessionId)
   }, [sessionId, requested, actions])
-  return requested ? 'chat' : storedView
+  return requested ? 'chat' : storedView === 'trajectory' ? 'spreadsheet' : storedView
 }
 
 /** Keep the native per-session store/drafts; persist only the navigation preference. */
@@ -186,11 +186,12 @@ export function withSessionViewPreferences(handle) {
       // A failed write may be newer than disk. Do not overwrite a later choice
       // made by another page after that failed write.
       const retryPending = pending && (durable === null || durable === pending.previous)
-      const saved = retryPending ? pending.view : durable ?? read(origin())
+      const legacy = retryPending ? pending.view : durable ?? read(origin())
+      const saved = legacy === 'trajectory' ? 'spreadsheet' : legacy
       if (pending && !retryPending) clearPending()
       if (isSessionViewId(saved)) instance.actions.setView(saved)
       else if (saved === '') instance.actions.setView(null)
-      if (retryPending) save(saved)
+      if (retryPending || legacy === 'trajectory') save(saved)
       else if (durable === null && (isSessionViewId(saved) || saved === '')) save(saved)
       // Non-default native views are explicit. A legacy Chat snapshot alone
       // cannot distinguish a choice from the old default, so do not promote it.
@@ -200,6 +201,7 @@ export function withSessionViewPreferences(handle) {
         actions: {
           ...instance.actions,
           setView(view) {
+            if (view === 'trajectory') view = 'spreadsheet'
             instance.actions.setView(view)
             if (isSessionViewId(view)) {
               // Keep the first durable baseline when rapid clicks coalesce.

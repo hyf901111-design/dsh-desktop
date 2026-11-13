@@ -30,6 +30,13 @@ var SidebarStore = class {
  const pendingChat=current===undefined;
  react.useEffect(()=>{const created=event=>store.adoptPending(event.detail?.sessionId);window.addEventListener('sherlock:pending-conversation-created',created);return()=>window.removeEventListener('sherlock:pending-conversation-created',created)},[store]);`);
  part=exact(part,'if (state === void 0 || (!scheduledPanel.active && !workspacePanel.active && sessionId === void 0))','if (state === void 0)');
+ // The spreadsheet keeps the same right conversation state, with the bottom
+ // placement suppressed for that view only. Do not modify saved preferences.
+ const native=' : nativeSnapshot;'
+ part=exact(part,'const pendingChat=current===undefined;',`const pendingChat=current===undefined;
+ const spreadsheetOnly=react.useSyncExternalStore(callback=>{window.addEventListener('sherlock:spreadsheet-mode',callback);return()=>window.removeEventListener('sherlock:spreadsheet-mode',callback)},()=>document.body.dataset.eworkSpreadsheetMode==='true',()=>false);`);
+ part=exact(part,native,' : spreadsheetOnly&&nativeSnapshot.state ? {...nativeSnapshot,state:{...nativeSnapshot.state,bottomOpen:false}} : nativeSnapshot;');
+ part=exact(part,'const showBottomToggle = !scheduledPanel.active && !workspacePanel.active && !narrow','const showBottomToggle = !scheduledPanel.active && !workspacePanel.active && !spreadsheetOnly && !narrow');
  part=exact(part,'const collapsed = state === void 0 || !state.panelOpen;',`const collapsed = state === void 0 || !state.panelOpen;
  react.useLayoutEffect(()=>{const publish=()=>window.dispatchEvent(new Event('sherlock:global-right-panel-state'));document.body.dataset.odysseyGlobalRightOpen=String(!collapsed);publish();return()=>{delete document.body.dataset.odysseyGlobalRightOpen;publish()}},[collapsed]);`);
 

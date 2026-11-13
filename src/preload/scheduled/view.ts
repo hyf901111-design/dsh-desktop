@@ -91,7 +91,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>},
+    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -119,7 +119,8 @@ export class ScheduledTaskView {
     this.document.addEventListener('click', this.navigateAway, true)
     this.document.addEventListener('sherlock:search-session-opened', () => this.close())
     this.document.defaultView?.addEventListener('resize', this.position)
-    this.document.defaultView?.addEventListener('sherlock:sidebar-new-note', () => void this.createNewNote())
+    this.document.defaultView?.addEventListener('sherlock:sidebar-new-note', () => void this.createDocument('note'))
+    this.document.defaultView?.addEventListener('sherlock:sidebar-new-spreadsheet', () => void this.createDocument('spreadsheet'))
     this.document.defaultView?.addEventListener('sherlock:scheduled-panel-toggle', ((event: CustomEvent<{open: boolean}>) => {
       if (!this.root && !this.componentMode) return
       this.detailOpen = event.detail.open
@@ -225,7 +226,11 @@ export class ScheduledTaskView {
       if(this.menu){this.closeMenu();return}
       const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
       this.showMenu(more, [
-            ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newNoteBusy,run:()=>void this.createNewNote()}]:[]),
+            ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('note')}]:[]),
+            ...(wide&&this.sidebarActions?.newSpreadsheet?[{
+              label:this.document.documentElement.dataset.odysseyLocale==='en'?'New spreadsheet':'新建表格',
+              icon:'spreadsheet' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('spreadsheet')
+            }]:[]),
             ...(wide&&this.surfaceHost?[{label:'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
@@ -260,19 +265,20 @@ export class ScheduledTaskView {
   private placeMore(group: Element, zone: HTMLElement) {
     if(zone.parentElement!==group||group.lastElementChild!==zone)group.append(zone)
   }
-  private newNoteBusy=false
+  private newDocumentBusy=false
   private newNoteNotice?:HTMLElement
   private newNoteTimer?:number
-  private async createNewNote(){
-    if(this.newNoteBusy||!this.sidebarActions)return
-    this.newNoteBusy=true;this.newNoteNotice?.remove()
-    try{await this.sidebarActions.newNote()}
+  private async createDocument(kind:'note'|'spreadsheet'){
+    const action=kind==='note'?this.sidebarActions?.newNote:this.sidebarActions?.newSpreadsheet
+    if(this.newDocumentBusy||!action)return
+    this.newDocumentBusy=true;this.newNoteNotice?.remove()
+    try{await action()}
     catch(error){if(error instanceof Error&&error.name==='AbortError')return
-      const notice=this.document.createElement('div');notice.className='st-menu st-new-note-error';notice.dataset.dark=String(this.dark());notice.role='alert';notice.textContent=error instanceof Error?error.message:'新笔记未能创建。'
+      const notice=this.document.createElement('div');notice.className='st-menu st-new-note-error';notice.dataset.dark=String(this.dark());notice.role='alert';notice.textContent=error instanceof Error?error.message:kind==='note'?'新笔记未能创建。':'新表格未能创建。'
       const rect=this.more?.getBoundingClientRect();notice.style.left=Math.max(8,Math.min((rect?.left??8),this.document.documentElement.clientWidth-248))+'px';notice.style.top=(rect?.bottom??40)+6+'px'
       this.document.body.append(notice);this.newNoteNotice=notice
       this.newNoteTimer=this.document.defaultView?.setTimeout(()=>notice.remove(),6000)
-    }finally{this.newNoteBusy=false}
+    }finally{this.newDocumentBusy=false}
   }
   private position = () => {
     if (!this.root && !this.componentMode) return

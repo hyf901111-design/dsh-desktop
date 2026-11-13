@@ -1,4 +1,5 @@
 import { ResearchBoardHeaderMenu } from './research-board-header-menu'
+import { HeaderViewModeIcon } from './header-view-mode-icon'
 import { mergeSharedCanvas } from './shared-board-canvas-merge'
 import { sharedCanvasContent, withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 export { useResearchBoardCanvasHeader } from './research-board-header-menu'
@@ -2006,11 +2007,7 @@ function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;se
     'aria-label':preview?'切换到编辑模式':'切换到预览模式','aria-pressed':preview,
     title:locked?'工作台演示进行中，结束后可切换模式':'当前为'+currentMode+'，点击切换到'+targetMode,disabled:locked,
     onClick:()=>{try{workspace.setPreviewMode(!workspace.getPreviewMode())}catch(error){page.showError(error)}}
-  },h('svg',{'aria-hidden':true,'data-research-preview-icon':preview?'preview':'edit','data-research-preview-glyph':preview?'eye':'pencil-line',width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.4,strokeLinecap:'round',strokeLinejoin:'round'},
-    preview
-      ?h(React.Fragment,null,h('path',{d:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'}),h('circle',{cx:12,cy:12,r:3}))
-      :h(React.Fragment,null,h('path',{d:'M16 3a2.12 2.12 0 0 1 3 3L8 17l-4 1 1-4Z'}),h('path',{d:'m14 5 3 3M12 20h8'}))
-  ))
+  },h(HeaderViewModeIcon,{preview,'data-research-preview-icon':preview?'preview':'edit','data-research-preview-glyph':preview?'eye':'pencil-line'}))
 }
 export function ResearchBoardHeader({
   page,

@@ -18,7 +18,31 @@ const nativeOperations={type:'array',minItems:1,maxItems:1000,items:{oneOf:[
  object({op:{const:'remove'},blockIds:nativeIds},['op','blockIds'])
 ]}}
 const nativeCapabilities=new Set(['notes.blocks.read','notes.blocks.apply','notes.blocks.undo'])
+const sheetId={type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$'}
+const sheetRange={type:'string',minLength:2,maxLength:32}
+const sheetName={type:'string',minLength:1,maxLength:120}
+const sheetRevision={type:'integer',minimum:0}
+const sheetColor={type:'string',pattern:'^#[0-9a-fA-F]{6}$'}
+const sheetFormat={...object({bold:{type:'boolean'},italic:{type:'boolean'},color:sheetColor,background:sheetColor,numberFormat:{type:'string',minLength:1,maxLength:128},fontFamily:{type:'string',minLength:1,maxLength:80},fontSize:{type:'integer',minimum:8,maximum:72},align:{enum:['left','center','right']},border:{type:'boolean'}}),minProperties:1}
+const sheetScalar={anyOf:[{type:'string',maxLength:32767},{type:'number'},{type:'boolean'},{type:'null'}]}
+const sheetCell={oneOf:[sheetScalar,object({value:sheetScalar},['value']),object({formula:{type:'string',minLength:2,maxLength:8192}},['formula'])]}
+const sheetTarget={sheetId,range:sheetRange}
+const referenceIndex={type:'integer',minimum:1,maximum:24}
+const sheetOperations={type:'array',maxItems:64,items:{oneOf:[
+ object({op:{const:'write'},...sheetTarget,cells:{type:'array',minItems:1,maxItems:10000,items:{type:'array',minItems:1,maxItems:10000,items:sheetCell}}},['op','sheetId','range','cells']),
+ object({op:{const:'clear'},...sheetTarget},['op','sheetId','range']),
+ object({op:{const:'format'},...sheetTarget,format:sheetFormat},['op','sheetId','range','format']),
+ object({op:{const:'setColumnWidth'},...sheetTarget,width:{type:'integer',minimum:24,maximum:640}},['op','sheetId','range','width']),
+ object({op:{const:'addSheet'},sheetId,name:sheetName},['op','sheetId','name']),
+ object({op:{const:'renameSheet'},sheetId,name:sheetName},['op','sheetId','name']),
+ object({op:{const:'renameWorkbook'},name:sheetName},['op','name']),
+ object({op:{const:'addChart'},...sheetTarget,chartId:sheetId,title:sheetName,kind:{enum:['bar','line']},headers:{type:'boolean'}},['op','sheetId','range','chartId','title','kind']),
+ object({op:{const:'removeChart'},chartId:sheetId},['op','chartId'])
+]}}
 const definitions=[
+ {id:'spreadsheet.inspect',description:'读取当前客户端表格。scope=workbook 返回版本、真实工作表标识、已用行列及本轮按文字位置排序的 references（含对应内联 marker）；scope=reference 与从 1 起的 referenceIndex 读取指定引用；scope=selected 仅在本轮只有一个引用时可用；scope=range 使用真实 sheetId 和 A1 区域。每次最多 500 格。返回值、公式和格式，修改前先读；空工作区返回新工作簿首张工作表标识。',parameters:{...object({scope:{enum:['workbook','selected','range','reference']},...sheetTarget,referenceIndex},['scope']),oneOf:[object({scope:{enum:['workbook','selected']}},['scope']),object({scope:{const:'range'},...sheetTarget},['scope','sheetId','range']),object({scope:{const:'reference'},referenceIndex},['scope','referenceIndex'])]},handler:'inspectSpreadsheet',sheet:true},
+ {id:'spreadsheet.apply',description:'在当前工作簿原子执行操作，revision 必填，使用最新读取值。空工作簿可用 arguments={revision:0,createName:"估值",operations:[]} 先创建，再分批写入；首张 sheetId 为 sheet-1。write 用与 A1 区域同形的二维数组，例如 [["公司","倍数"],["甲",{formula:"=180/30"}]]，标量含 null 可直接写，公式必须用 {formula:"=..."}。format 只改指定格式；setColumnWidth 用一行地址和像素宽度。addChart 绑定真实工作表中连续区域，首列为分类，其余列为数值系列；headers 默认 true，kind 为 bar 或 line，chartId 由调用者给定。列不相邻时可用引用原表的公式创建连续辅助数据区后绘图。不要覆盖未要求修改的数据。仅在 saved=true 后确认保存。',parameters:object({revision:sheetRevision,createName:sheetName,operations:sheetOperations},['revision','operations']),handler:'applySpreadsheet',sheet:true,write:true,maxCallBytes:1500000},
+ {id:'spreadsheet.undo',description:'撤销当前工作簿最近一次尚可撤销的 AI 修改，必须使用实际保存回执的 actionId 及当前 revision；期间有人工修改则拒绝。',parameters:object({revision:sheetRevision,actionId:nativeId},['revision','actionId']),handler:'undoSpreadsheet',sheet:true,write:true},
  {id:'notes.blocks.read',description:'读取当前可见笔记授权范围内的原生段落、表格、列表和代码块，返回真实块ID、父级、顺序、revision，以及本范围内当前有效AI评论的具体问题、原文锚点与已有依据。scope=note读取当前笔记授权范围，scope=selected只读取当前选区；ids只能来自当前授权范围。修改或撤销前先读取，不猜测其他笔记目标。',parameters:object({scope:{type:'string',enum:['note','selected']},ids:nativeIds},['scope']),handler:'readNoteBlocks',notes:true,maxCallBytes:1500000},
  {id:'notes.blocks.apply',description:'使用notes.blocks.read的真实revision，在当前笔记提交原生insert/update/move/remove批次。宿主按本次入口准备待确认预览或实际应用；pendingPreview表示尚未写入或保存。普通正文、表格、列表和代码优先使用此能力；研究组件、附件及任意HTML不通过此能力创建。insert须指定真实anchor与before/after；consumeEmpty仅消费仍为空的同一锚点。update只更新指定块，move保留内容并移动真实blockIds，remove仅删除明确目标。失效范围、锚点、Yjs身份或修订必须重新读取，不改成文末。仅按宿主真实applied/saved回执说明结果。',parameters:object({revision:nativeId,operations:nativeOperations},['revision','operations']),handler:'applyNoteBlocks',notes:true,write:true,maxCallBytes:1500000},
  {id:'notes.blocks.undo',description:'使用当前notes.blocks.read的revision及原生apply真实回执actionId，提交精确撤销该次仍归属本操作的修改、插入、移动或删除。宿主按本次入口准备待确认预览或实际应用；只按真实回执说明应用与保存，pendingPreview不表示已撤销。保留后续人工编辑，不以全局键盘撤销替代，不猜测actionId。',parameters:object({revision:nativeId,actionId:nativeId},['revision','actionId']),handler:'undoNoteBlocks',notes:true,write:true,maxCallBytes:1500000},
@@ -38,7 +62,7 @@ const definitions=[
  {id:'ui.zoom.in',description:'放大当前客户端窗口，与窗口菜单共享处理器；回执报告实际缩放。',parameters:object({}),handler:'zoomIn'},
  {id:'ui.zoom.out',description:'缩小当前客户端窗口，与窗口菜单共享处理器；回执报告实际缩放。',parameters:object({}),handler:'zoomOut'},
  {id:'ui.fullscreen.set',description:'设置当前客户端窗口是否全屏，复用窗口菜单处理器，重复相同设置不反向切换。',parameters:object({enabled:{type:'boolean'}},['enabled']),handler:'setFullscreen'},
- {id:'ui.mode.set',description:'切换本轮当前会话的对话/研究/笔记视图，复用原生会话标签处理器；不能指定其他sessionId。完成后重新读取目录以捕获新模式上下文，旧目录不授权其他文档。切换视图仅确认导航，不代表笔记已导出或校验完成。',parameters:object({mode:{enum:['conversation','research','notes']}},['mode']),handler:'setMode'},
+ {id:'ui.mode.set',description:'切换本轮当前会话的对话/研究/笔记/表格视图，复用原生会话标签处理器；不能指定其他sessionId。完成后重新读取目录以捕获新模式上下文，旧目录不授权其他文档。切换视图仅确认导航，不代表笔记已导出或校验完成。',parameters:object({mode:{enum:['conversation','research','notes','spreadsheet']}},['mode']),handler:'setMode'},
  {id:'ui.zoom.reset',description:'恢复当前客户端窗口的默认缩放，与菜单恢复默认缩放共享处理器。',parameters:object({}),handler:'resetZoom'},
 ]
 // Keep host validation independent of Harness plugin imports and their startup side effects.
@@ -48,7 +72,7 @@ const validators=new Map(definitions.map(d=>[d.id,validator.compile(d.parameters
 /** Registry owns semantic schemas; transports never become model-callable names. */
 export function createClientCapabilityRegistry(handlers={}){
  const entries=new Map(definitions.map(d=>[d.id,d]))
- const available=(d,c)=>!!handlers[d.handler]&&!!c?.sessionId&&!!c?.owner&&(!d.notes||c.mode==='notes')&&(!d.conversation||c.mode==='conversation')&&(!d.canvas||c.mode!=='conversation'&&c.canvasAvailable!==false)&&(!d.research||c.mode==='research')&&(!d.write||c.editable===true)&&(!d.selected||c.selectedBlockIds?.length===1)
+ const available=(d,c)=>!!handlers[d.handler]&&!!c?.sessionId&&!!c?.owner&&(!d.notes||c.mode==='notes')&&(!d.sheet||c.mode==='spreadsheet')&&(!d.conversation||c.mode==='conversation')&&(!d.canvas||c.mode!=='conversation'&&c.canvasAvailable!==false)&&(!d.research||c.mode==='research')&&(!d.write||c.editable===true)&&(!d.selected||c.selectedBlockIds?.length===1)
  return {
   catalog(context){return [...entries.values()].map(d=>({id:d.id,description:d.description,parameters:d.parameters,available:available(d,context)}))},
   get(id){return entries.get(id)},

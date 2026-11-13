@@ -101,7 +101,7 @@ export type ResolveConversationComponentReferenceInput = {
 };
 export type ConversationComponentVisibleContext = {
   ownerAccountId:string; sessionId:string;
-  mode:'conversation'|'research'|'notes'; generation:string;
+  mode:'conversation'|'research'|'notes'|'spreadsheet'; generation:string;
   readOnly?:boolean;
 };
 

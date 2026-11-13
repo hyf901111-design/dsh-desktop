@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { headerMoreIcon } from './header-more-icon'
 
 type CanvasAction = 'refresh' | 'arrange' | 'select-all'
 type CanvasActions = Partial<Record<CanvasAction, () => void>>
@@ -180,8 +181,8 @@ export function ResearchBoardHeaderMenu({ workspace, sessionId, collaboration, m
           event.preventDefault(); setOpen(true)
         }
       }
-    }, h('svg', { width: 16, height: 16, viewBox: '0 0 20 20', fill: 'currentColor', 'aria-hidden': true },
-      [4, 10, 16].map(x => h('circle', { key: x, cx: x, cy: 10, r: 1.65 })))),
+    }, h('svg', { width: headerMoreIcon.size, height: headerMoreIcon.size, viewBox: headerMoreIcon.viewBox, fill: 'currentColor', 'aria-hidden': true },
+      headerMoreIcon.centers.map(x => h('circle', { key: x, cx: x, cy: headerMoreIcon.centerY, r: headerMoreIcon.radius })))),
     open && h('div', {
       ref: popup, id, role: 'menu', 'aria-label': '看板操作', className: 'srb-header-menu',
       onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {

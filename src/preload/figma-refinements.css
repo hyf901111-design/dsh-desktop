@@ -11,9 +11,11 @@ body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-m
 body { background-color:#f2f2f2!important; }
 body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { background-color:#1f1f1f!important; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
+  --odyssey-header-action-inset:calc((var(--odyssey-workspace-header-height,44px) - 30px) / 2);
+  --odyssey-header-action-end:var(--odyssey-header-action-inset);
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:var(--odyssey-workspace-header-height,44px)!important; min-height:var(--odyssey-workspace-header-height,44px)!important; flex:0 0 var(--odyssey-workspace-header-height,44px)!important;
-  padding:0 20px; grid-template-rows:none!important; overflow:visible;
+  padding:0 var(--odyssey-header-action-end) 0 20px; grid-template-rows:none!important; overflow:visible;
   background:transparent; backdrop-filter:blur(32px); border:0; box-shadow:none;
 }
 /* The compact workspace header floats over the research canvas. The
@@ -92,7 +94,7 @@ body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaborat
 body .wSkVaW_header .srb-actions .srb-favorite-button[aria-pressed=true] { color:var(--odyssey-muted); }
 .srb-board-add-icon { display:block; width:16px; height:16px; background:currentColor; mask:var(--odyssey-board-add-icon) center/contain no-repeat; }
 body .wSkVaW_header[data-odyssey-header-layout=compact] .wSkVaW_crumbs { max-width:96px; }
-body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; padding-left:16px!important; padding-right:20px!important; }
+body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; padding-left:16px!important; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_headerActions { gap:8px; margin-right:-4px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_crumbs { flex:1 1 80px; max-width:80px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_tab { min-width:48px; width:48px; }
@@ -374,10 +376,9 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .srb-presence>:not(.odyssey-members-compact) { display:none!important; }
 body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header-layout=narrow]) .odyssey-members-compact { display:flex; align-items:center; justify-content:center; width:28px; height:28px; padding:6px; border-radius:7px; }
 
-/* The detached panel entry remains at the window corner when the pane is closed.
-   Reserve its 28 px target plus 8 px gap, including compact windows. */
-body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) { padding-right:56px; }
-body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header][data-odyssey-header-layout=narrow]:not([aria-hidden=true]) { padding-right:56px!important; }
+/* Leave 4 px between header actions and the detached 28 px panel entry,
+   which sits 8 px from the content edge when the pane is closed. */
+body:has([data-odyssey-panel-right=closed]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) { --odyssey-header-action-end:40px; }
 
 /* Home navigation is resident; the composer owns mode selection until a turn starts. */
 body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; }
@@ -714,9 +715,15 @@ body .JObwrW_trigger{box-sizing:border-box!important;display:flex!important;alig
 body .JObwrW_trigger>svg{display:block!important;width:14px!important;height:14px!important;margin:0!important;transform:none!important;flex:none}
 body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-menu-row)!important}
 
-/* Notes actions live in the existing shared header and research conversation pane. */
-.en-header-export{height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--odyssey-menu-muted);font-family:inherit;font-size:12px!important;line-height:20px!important;font-weight:400;white-space:nowrap;cursor:pointer;-webkit-app-region:no-drag}
-.en-header-export:hover{background:var(--odyssey-menu-row);color:var(--odyssey-menu-text)}
+/* Shared icon actions on the research, notes and spreadsheet session headers. */
+body{--odyssey-header-icon-bg:#fafafa;--odyssey-header-icon-hover:#fff}
+body[data-ds-dark-theme]{--odyssey-header-icon-bg:#292929;--odyssey-header-icon-hover:#3a3a3a}
+body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,[data-ework-spreadsheet-actions]>button){background:var(--odyssey-header-icon-bg)}
+body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,[data-ework-spreadsheet-actions]>button):not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]){background:var(--odyssey-header-icon-hover)}
+.en-header-icon-group{display:inline-flex;align-items:center;gap:4px;flex:none;-webkit-app-region:no-drag}
+.en-header-icon-group>[data-en-view-mode-host]{display:contents}
+:is(.en-header-export,.en-header-view-mode){width:30px;height:30px;flex:none;display:inline-grid;place-items:center;padding:0;border:0;border-radius:7px;color:var(--dsw-alias-label-primary);cursor:pointer;-webkit-app-region:no-drag}
+.en-header-view-mode:disabled{opacity:.5;cursor:default}
 .en-task-history{padding:8px 0 24px}.en-task{min-width:0;display:flex;flex-direction:column;gap:12px}.en-task .Md3f7G_executionGroup{margin-top:2px}
 .en-task-feedback{min-width:0;font-size:14px;line-height:24px}.en-task-feedback>p{margin:0 0 6px}.en-task-feedback-progress{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--odyssey-menu-muted,#8b8b8b);font-size:12px;line-height:20px}
 .en-note-conversation-flow{height:100%;overflow:auto;min-height:0}.en-note-conversation-flow :is(.wSkVaW_scrollBody,.Md3f7G_scroll){height:auto;overflow:visible;flex:none}.en-note-conversation-flow .en-task-history{padding-top:16px}

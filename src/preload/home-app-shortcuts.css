@@ -2,10 +2,10 @@
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHero:has(> [data-home-app-shortcuts]) { position:relative; }
 [data-home-app-shortcuts] {
   position:absolute;
-  inset:calc(100% + 4px - var(--odyssey-home-composer-bottom-padding, 0px)) 0 auto;
+  inset:calc(100% + 4px - var(--odyssey-home-composer-bottom-padding, 0px)) 8px auto;
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:clamp(4px, 1.2%, 10px);
   height:95px;
   color:#15181b;
   pointer-events:none;
@@ -19,7 +19,7 @@
   align-items:center;
   justify-content:center;
   flex:0 1 56px;
-  min-width:40px;
+  min-width:32px;
   height:48px;
   padding:0;
   border:0;

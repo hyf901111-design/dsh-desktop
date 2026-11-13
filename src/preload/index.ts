@@ -1,3 +1,4 @@
+import { mountSpreadsheet } from './spreadsheet/view'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
 import {NativeBrowserMenuProjection} from './browser/native-menus'
@@ -74,6 +75,7 @@ import { createResearchCanvasExportBridge } from './research-canvas-export'
 import { createResearchClipboardBridge } from './research-canvas-clipboard'
 
 if (process.isMainFrame) {
+let spreadsheetView:ReturnType<typeof mountSpreadsheet>|undefined
 let notesComponentDataAccess:{request:(method:string,input:any)=>Promise<any>;owns:(sessionId:string,owner:string)=>boolean}|undefined
 
 const DEVELOPER_MODE_STYLE_ID = 'sherlock-developer-mode-style'
@@ -296,8 +298,20 @@ function initializeUi(): void {
     draft: async input => {try{await ipcRenderer.invoke('notes:request', 'draft', { ...input, owner: noteOwners.get(input.sessionId) })}catch(error){if(error instanceof Error){const message=noteUiError(error.message);if(message!==error.message)error.message=message}throw error}}
   }
   notesComponentDataAccess={request:notesBridge.request,owns:(sessionId,owner)=>owner===noteOwners.get(sessionId)}
+  spreadsheetView=mountSpreadsheet(document,{
+    request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
+    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
+    subscribe:(name,callback)=>{const channel=name==='identity'?'integrations:identity-changed':'spreadsheet:'+name;const receive=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on(channel,receive);return()=>ipcRenderer.removeListener(channel,receive)}
+  })
+  window.addEventListener('unload',()=>spreadsheetView?.dispose(),{once:true})
   const notes = mountNotes(document, notesBridge, workspaceSurfaceHost)
-  const sidebarNewNote=createSidebarNewNoteAction(document,()=>notes.flushCurrent())
+  const flushBeforeCreate=async()=>{
+    await notes.flushCurrent()
+    const id=document.body.dataset.eworkSpreadsheetSession
+    if(id)await spreadsheetView?.flush(id)
+  }
+  const sidebarNewNote=createSidebarNewNoteAction(document,flushBeforeCreate)
+  const sidebarNewSpreadsheet=createSidebarNewNoteAction(document,flushBeforeCreate,'spreadsheet')
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
@@ -312,9 +326,10 @@ function initializeUi(): void {
     workspaces: () => ipcRenderer.invoke('scheduled-tasks:request', 'workspaces'),
     save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
-  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create})
+  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create})
   scheduledView.mount()
   const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, async (app, signal) => {
+    if (app === 'spreadsheet') { await sidebarNewSpreadsheet.create(signal); return }
     if (app === 'research' || app === 'note') {
       await homeActions.run(app === 'research' ? 'board' : 'note', { signal, revealComposer: async () => {} })
       return
@@ -326,10 +341,10 @@ function initializeUi(): void {
     else await scheduledView.open()
   })
   window.addEventListener('unload', disposeHomeAppShortcuts, { once: true })
-  const resetIntegrationIdentity = () => { window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { sidebarNewNote.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
@@ -382,6 +397,8 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references)},
+    spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
     browserApp: Object.freeze({
       context: ()=>ipcRenderer.invoke('browser-app:request','context'),
       openSource: (value:{sessionId?:string;url:string})=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-request-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve(d):reject(Error(d.message||'浏览器未能打开。'))};const timer=setTimeout(()=>{cleanup();reject(Error('浏览器入口尚未就绪。'))},8000);window.addEventListener('sherlock:browser-request-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-request',{detail:{...value,requestId}}))})

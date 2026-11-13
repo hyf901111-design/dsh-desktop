@@ -25,10 +25,18 @@ export function patchNoteSessionClient(source) {
 export function patchNoteSessionRuntime(source) {
   source = patchHomeConversationRuntime(source)
   const marker = '/* ework:retain-edited-note:v1 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) {
+    if(source.includes('retainSpreadsheetSession(sessionId)'))return source
+    return source.replace(marker,marker+`
+      retainSpreadsheetSession(sessionId) {
+        this.retainNoteSession(sessionId);
+      }
+    `)
+  }
   const anchor = 'noteAgentPreset(sessionId, agentPreset) {\n\t\t\t\tthis.manager.noteAgentPreset(sessionId, agentPreset);'
   if (source.split(anchor).length !== 2) throw Error('笔记无法定位会话列表同步。')
   return source.replace(anchor, `${marker}
+      retainSpreadsheetSession(sessionId) { this.retainNoteSession(sessionId); }
       retainNoteSession(sessionId) {
         if (!this.list.getSnapshot().byId[sessionId]) return;
         this.manager.get(sessionId).handleBlank(false);
@@ -39,18 +47,26 @@ export function patchNoteSessionRuntime(source) {
 
 export function patchNoteSessionHost(source) {
   const marker='/* ework:note-participation:v1 */'
-  if(source.includes(marker))return source
+  if(source.includes(marker)){
+    if(source.includes('"workspace-spreadsheet/created"'))return source
+    return source.replace('event.type === "workspace-note/edited");','event.type === "workspace-note/edited" || event.type === "workspace-spreadsheet/created");')
+      .replace('event.type !== "workspace-note/edited";','event.type !== "workspace-note/edited" && event.type !== "workspace-spreadsheet/created";')
+  }
   const predicate='return !session.events.some((event) => event.type === "turn/start");'
   const projection='const blank = state.blank && event.type !== "turn/start";'
   if(source.split(predicate).length!==2||source.split(projection).length!==2)throw Error('笔记无法定位服务端会话参与判定。')
-  return source.replace(predicate,marker+'\nreturn !session.events.some((event) => event.type === "turn/start" || event.type === "workspace-note/edited");').replace(projection,'const blank = state.blank && event.type !== "turn/start" && event.type !== "workspace-note/edited";')
+  return source.replace(predicate,marker+'\nreturn !session.events.some((event) => event.type === "turn/start" || event.type === "workspace-note/edited" || event.type === "workspace-spreadsheet/created");').replace(projection,'const blank = state.blank && event.type !== "turn/start" && event.type !== "workspace-note/edited" && event.type !== "workspace-spreadsheet/created";')
 }
 
 /** Register the EWork event in both bundled and unbundled native readers. */
 export function patchNoteSessionCatalog(source) {
   const marker = '/* ework:note-event-catalog:v1 */'
-  if (source.includes(marker)) return source.includes('"workspace-note/conversation",')?source:source.replace(marker,marker+'\n"workspace-note/conversation",')
+  const events = ['"workspace-note/conversation",','"workspace-spreadsheet/created",']
+  if (source.includes(marker)) {
+    const missing = events.filter(event=>!source.includes(event))
+    return missing.length ? source.replace(marker, marker+'\n'+missing.join('\n')) : source
+  }
   const anchor = /((?:export )?const KNOWN_SESSION_EVENT_TYPES = new Set\(\[)/g
   if ([...source.matchAll(anchor)].length !== 1) throw Error('笔记无法定位原生持久化事件目录。')
-  return source.replace(anchor, '$1\n' + marker + '\n"workspace-note/edited",\n"workspace-note/conversation",')
+  return source.replace(anchor, '$1\n' + marker + '\n"workspace-note/edited",\n' + events.join('\n'))
 }

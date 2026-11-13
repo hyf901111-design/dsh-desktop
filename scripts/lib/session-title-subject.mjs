@@ -11,6 +11,7 @@ export function sessionTitleSubject(input) {
   if(name&&!/\d{7,}|^[a-f\d-]{24,}$|^(?:events?|sessions?|image|screenshot|clipboard)[ _-]/i.test(name)&&!files.includes(name))files.push(name)
   return ' '
  }
+ text=text.replace(/〔表格选区 "(?:[^"\\\n]|\\.)*"!\$?[A-Z]{1,3}\$?[1-9]\d{0,5}(?::\$?[A-Z]{1,3}\$?[1-9]\d{0,5})? #[a-f0-9]{12}〕/g,' ')
  text=text.replace(/(?:📎\s*)?(?:文件|附件|file|attachment)\s*[:：]\s*/gi,' ')
  text=text.replace(/file:\/\/\/[^\s<>"'`]+/gi,file)
  text=text.replace(/["'`]((?:\/(?:Users|home|tmp|var|private|Volumes)|[A-Za-z]:[\\/])[^"'`\n]+)["'`]/g,(_,path)=>file(path))
@@ -58,10 +59,47 @@ function once(source,before,after){if(source.split(before).length!==2)throw Erro
 function refresh(source,block){const a=source.indexOf(START),b=source.indexOf(END,a);if(a<0)return null;if(b<a||source.split(START).length!==2)throw Error('Title subject owner drifted');return source.slice(0,a)+block+source.slice(b+END.length)}
 export function patchSessionTitleSubject(source){
  const block=START+'\n'+sessionTitleSubject.toString()+'\n'+sessionTitleFallbackSubject.toString()+'\n'+END
- const refreshed=refresh(source,block);if(refreshed!==null)return refreshed
- source=once(source,'truncateTitleUtf8(cleanTitleText(input).split(" ")','truncateTitleUtf8(cleanTitleText(sessionTitleFallbackSubject(input)).split(" ")')
- return once(source,'function fallbackSessionTitle(',block+'\nfunction fallbackSessionTitle(')
+ const refreshed=refresh(source,block)
+ if(refreshed!==null)source=refreshed
+ else {
+  source=once(source,'truncateTitleUtf8(cleanTitleText(input).split(" ")','truncateTitleUtf8(cleanTitleText(sessionTitleFallbackSubject(input)).split(" ")')
+  source=once(source,'function fallbackSessionTitle(',block+'\nfunction fallbackSessionTitle(')
+ }
+ if(source.includes('scheduleSpreadsheetTitle(session, messageSeq)'))return source
+ const messages='const messages = collectSessionTitleMessages(session.events, work.throughSeq);'
+ source=once(source,messages,'const collected = collectSessionTitleMessages(session.events, work.throughSeq);\n\t\t\tconst messages = work.spreadsheetMessageSeq === void 0 ? collected : collected.filter(message => message.seq === work.spreadsheetMessageSeq);')
+ const anchor='/** Schedule fallback creation and any provider cadence for one eligible event. */'
+ return once(source,anchor,`/** Use the saved edit message as the title source, until the user renames. */
+ scheduleSpreadsheetTitle(session, messageSeq) {
+  if (!this.serviceActive() || this.ctx.sessions.get(session.id) !== session) return;
+  const created = session.events.find(event => event.type === 'workspace-spreadsheet/created');
+  const current = this.get(session);
+  if (!created || current?.eventSeq !== created.data.titleSeq) return;
+  const message = collectSessionTitleMessages(session.events, messageSeq).find(message => message.seq === messageSeq);
+  if (!message) return;
+  const registration = this.registration;
+  const state = this.stateFor(session);
+  if (state.active) return;
+  const revision = this.supersede(state, 'first saved spreadsheet edit');
+  if (!registration || registration.closing) {
+   this.appendFallback(session, message);
+   return;
+  }
+  const work = this.activate({registration, revision, throughSeq:messageSeq, spreadsheetMessageSeq:messageSeq}, state);
+  const config = session.requestHeader()?.config;
+  this.defer(async () => {
+   try {
+    await this.startProvider(session, work, config && {provider:config.provider, model:config.model});
+   } catch (error) {
+    if (work.signal.aborted || !this.serviceActive() || this.get(session)?.eventSeq !== created.data.titleSeq) return;
+    this.appendFallback(session, message);
+    this.ctx.logger.warn('Spreadsheet title generation failed: ' + String(error));
+   }
+  });
+ }
+ `+anchor)
 }
+
 export function patchSessionTitleLlmSubject(source){
  const block=START+'\n'+[sessionTitleSubject,sessionTitlePrompt,sessionTitleFramedMessages].map(fn=>fn.toString()).join('\n')+'\n'+END
  const refreshed=refresh(source,block);if(refreshed!==null)return refreshed

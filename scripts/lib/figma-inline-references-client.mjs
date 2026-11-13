@@ -94,7 +94,12 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
   const committed = react.useRef(null)
   const pendingSelection = react.useRef(null)
   const marker = composition.current?.marker ?? referenceMarkerForDraft(draft)
-  const skillKey = JSON.stringify([...new Map(occurrences.filter(item => (item.source === 'ework-managed-skill' || item.source === 'pptx-annotation') && typeof item.label === 'string').map(item => {const value=item.source==='pptx-annotation'?{label:item.label,source:item.source,selected:item.occurrenceId===selectedId}:item.label;return[JSON.stringify(value),value]})).values()].sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))
+  const measuredSources = ['ework-managed-skill', 'pptx-annotation', 'spreadsheet-range']
+  const measuredLabel = item => item.source === 'ework-managed-skill' ? item.label : {label:item.label,source:item.source,selected:item.occurrenceId===selectedId}
+  const skillKey = JSON.stringify([...new Map(occurrences.filter(item => measuredSources.includes(item.source) && typeof item.label === 'string').map(item => {
+    const value=measuredLabel(item)
+    return [JSON.stringify(value),value]
+  })).values()].sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))
   const literals = [...new Set([...draft].filter(char => char >= '\uE000' && char <= '\uF8FF'))].sort().join('')
   const fontRef = react.useRef(null)
   const fontCache = react.useRef(new Map())
@@ -132,12 +137,13 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
           const used = new Set([...literals, marker])
           let code = 0xe000
           for (const entry of labels) {
-            const label=typeof entry==='string'?entry:entry.label,ppt=typeof entry==='object'&&entry.source==='pptx-annotation'
+            const label=typeof entry==='string'?entry:entry.label,reference=typeof entry==='object'?entry:undefined
             while (code <= 0xf8ff && used.has(String.fromCharCode(code))) code++
             if (code > 0xf8ff) break
             const cell = String.fromCharCode(code++)
             used.add(cell)
-            skillCells.push({label,...(ppt?{source:entry.source,selected:entry.selected}:{}),marker:cell,width:Math.min(available,Math.ceil(context.measureText(label).width+(ppt?35+(entry.selected?19:0):12)))})
+            const padding=reference?35+(reference.selected?19:0):12
+            skillCells.push({label,...(reference?{source:reference.source,selected:reference.selected}:{}),marker:cell,width:Math.min(available,Math.ceil(context.measureText(label).width+padding))})
           }
         }
       }
@@ -183,7 +189,8 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
   }, [marker, fontData, skillKey, literals])
   const ready = font !== null && font.marker === marker && font.skillKey === skillKey && font.literals === literals
   const skillCells = ready ? occurrences.flatMap(item => {
-    const cell = ['ework-managed-skill','pptx-annotation'].includes(item.source) && font.skillCells.find(cell => cell.label === item.label && (item.source==='pptx-annotation'?cell.source===item.source&&cell.selected===(item.occurrenceId===selectedId):!cell.source))
+    const cell = measuredSources.includes(item.source) && font.skillCells.find(cell => cell.label === item.label &&
+      (item.source==='ework-managed-skill'?!cell.source:cell.source===item.source&&cell.selected===(item.occurrenceId===selectedId)))
     return cell ? [{...cell, offset: item.offset}] : []
   }) : []
   const projection = composition.current ?? projectReferenceDraft(draft, occurrences, selectedId, ready, skillCells)
