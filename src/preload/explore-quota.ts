@@ -74,7 +74,7 @@ export function renderExploreQuota(panel: HTMLElement, quota: ExploreQuota | und
     name.textContent = label
     const minutes = entry.resetAt === null ? null : Math.max(0, Math.ceil((entry.resetAt * 1000 - Date.now()) / 60000))
     if (quota.paused) reset.textContent = word('额度已暂停','Quota paused')
-    else if (minutes === null) reset.textContent = word('首次使用后开始计时','Starts on first use')
+    else if (minutes === null) reset.textContent = word('本轮首笔托管请求受理后开始计时','Starts with the first admitted hosted request')
     else if (minutes === 0) reset.textContent = word('即将重置','Resets shortly')
     else {
       const days = Math.floor(minutes / 1440), hours = Math.floor(minutes % 1440 / 60)
