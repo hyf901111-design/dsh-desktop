@@ -9,43 +9,30 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格图表编辑和通用组件",
+        "featureName": "图表样式、空值与工作区布局",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "307956cd0bf763abff3525fea00099d27b5b4198",
-        "tipCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
+        "baseCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
+        "tipCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
         "commits": [
           {
-            "commit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
+            "commit": "99745e3b596bddcd32bc6414eebdcf7a859d9283",
             "parents": [
-              "307956cd0bf763abff3525fea00099d27b5b4198"
+              "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345"
             ],
-            "subject": "完善表格图表编辑并支持右键插入通用组件"
+            "subject": "补充图表空值策略、数值标签和样式预览"
+          },
+          {
+            "commit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
+            "parents": [
+              "99745e3b596bddcd32bc6414eebdcf7a859d9283"
+            ],
+            "subject": "支持图表实时拖动缩放并记住布局"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/advanced-chart-view.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/advanced-chart-view.js"
-          },
-          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/client-capabilities.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/special-chart-view.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
             "status": "M",
@@ -53,14 +40,10 @@
           },
           {
             "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
             "path": "src/main/spreadsheet/ipc.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/spreadsheet/chart.ts"
           },
           {
@@ -89,10 +72,6 @@
           },
           {
             "status": "M",
-            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
-          },
-          {
-            "status": "M",
             "path": "test/spreadsheet-workbook.test.ts"
           }
         ],
@@ -105,8 +84,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
-            "completedAt": "2026-11-13T15:34:05.057Z",
+            "verifiedCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
+            "completedAt": "2026-11-13T15:54:29.700Z",
             "timeoutMs": 120000
           },
           {
@@ -121,9 +100,9 @@
               "test/notes-native-components.test.js"
             ],
             "outcome": "passed",
-            "summary": "42 项表格协议和组件复用检查通过",
-            "verifiedCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
-            "completedAt": "2026-11-13T15:34:05.057Z",
+            "summary": "43 项表格协议和组件复用检查通过",
+            "verifiedCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
+            "completedAt": "2026-11-13T15:54:29.700Z",
             "timeoutMs": 120000
           },
           {
@@ -132,71 +111,24 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "42 项 Electron 表格聚焦检查通过",
-            "verifiedCommit": "073387d6bbc0a3f266b78ba28e40e2f1e7cd0345",
-            "completedAt": "2026-11-13T15:34:05.057Z",
+            "summary": "43 项 Electron 表格聚焦检查通过",
+            "verifiedCommit": "43b08bb3517c52c3df42070bb7a4ee31fe59e5d9",
+            "completedAt": "2026-11-13T15:54:29.700Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "验证图表编辑、选区重选、组件菜单、选区范围、持久化及导航。真实模型及原生打包组件渲染验收另行记录。"
+          "summary": "已验证图表数值标签、空值配置、拖动与缩放实时反馈、键盘微调及重开恢复位置与尺寸。"
         },
         "acceptanceCriteria": [
-          "图表可改类型、数据区域、分类和系列",
-          "单元格右键可进入组件库和智能组件",
-          "组件绑定到当前工作簿和选区"
+          "空值策略可选",
+          "常用直角坐标图可显示数值标签",
+          "图表样式保存后可重新编辑",
+          "图表位置和尺寸实时变化并持久化，修改同一工作表的图表配置后仍保留布局"
         ],
-        "risks": [
-          "工作簿应用内对象未进入 Excel/CSV 文件导出。"
-        ],
-        "generatedAt": "2026-11-13T15:34:05.057Z"
-      },
-      "merged": {
-        "mergeCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
-        "verificationCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
-            "completedAt": "2026-11-13T15:36:12.508Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
-            "completedAt": "2026-11-13T15:36:12.508Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "e632628f817514815cf4f0a4a3198f84d1d6e8a2",
-            "completedAt": "2026-11-13T15:36:12.508Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T15:36:12.508Z"
+        "risks": [],
+        "generatedAt": "2026-11-13T15:54:29.700Z"
       }
     }
   ],
