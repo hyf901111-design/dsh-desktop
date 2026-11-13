@@ -61,6 +61,15 @@ describe('spreadsheet workbook protocol', () => {
     ])
     expect(inspectWorkbook(work,'income','A1').cells[0]![0]!).toMatchObject({value:null,format:{bold:true}})
   })
+  it('keeps omitted trailing cells and blank rows while applying explicit nulls', () => {
+    const target={op:'write',sheetId:'sheet-1',range:'A1:C3'}
+    const original=applyOperations(blankWorkbook('work'),[{...target,cells:[[1,2,3],[4,5,6],[7,8,9]]}])
+    const result=applyOperations(original,[{...target,cells:[['Title'],[],[null,10]]}])
+    expect(inspectWorkbook(result,'sheet-1','A1:C3').cells.map(row=>row.map(cell=>cell.value))).toEqual([
+      ['Title',2,3],[4,5,6],[null,10,9]
+    ])
+    expect(()=>applyOperations(result,[{...target,cells:[[1,2,3,4],[],[]]}])).toThrow(/最多 3 列/)
+  })
   it('does not accept prototype keys or bounds that exceed the worksheet', () => {
     const work: Workbook = blankWorkbook('work','账','income')
     expect(() => applyOperations(work,[{op:'addSheet',sheetId:'__proto__',name:'污染'}])).toThrow()
