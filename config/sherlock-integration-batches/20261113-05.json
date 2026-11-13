@@ -107,6 +107,33 @@
           "24 工作台模型实测在本地打包后执行"
         ],
         "generatedAt": "2026-11-13T03:12:08.335538+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2ff3a4090885d37b9812174bbac33dba5141df0e",
+        "verificationCommit": "2ff3a4090885d37b9812174bbac33dba5141df0e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-acquisition-fallback.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/component-source-projection.test.js",
+              "test/workbench-prototype-evidence.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/explore-quota-browser.test.ts",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-content-delivery.test.js test/workbench-acquisition-fallback.test.js test/workbench-fund-comparison.test.js test/component-source-projection.test.js test/workbench-prototype-evidence.test.js test/workbench-execution-policy.test.js test/explore-quota-browser.test.ts test/account-service.test.ts",
+            "verifiedCommit": "2ff3a4090885d37b9812174bbac33dba5141df0e",
+            "completedAt": "2026-11-13T03:12:21.743Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-13T03:12:21.743Z"
       }
     }
   ],
