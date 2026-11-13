@@ -148,9 +148,9 @@
     },
     {
       "branch": "codex/feat/board-folder-icons-20261109",
-      "tip": "3c4da955fb53acf4caa28553fc25539fcfb4d3e1",
-      "decision": "docs/releases/sherlock-1.5.2.md",
-      "reason": "独立研究看板开发仍待验收，保留精确 tip，排除于 1.5.2。"
+      "tip": "be23c48938f41a8e69ef617ca63770bbd09f2e91",
+      "decision": "docs/releases/sherlock-1.5.5.md",
+      "reason": "保留未验收的另一套工作台生成策略；净值与来源持久化修复已单独适配并集成。"
     },
     {
       "branch": "codex/feat/research-swarm-cursors-20261109",
