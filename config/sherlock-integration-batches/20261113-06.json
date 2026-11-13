@@ -56,6 +56,26 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-13T03:36:51.989266+00:00"
+      },
+      "merged": {
+        "mergeCommit": "575fae179eaa6f0436f80d4da4733d5ff17d84a4",
+        "verificationCommit": "575fae179eaa6f0436f80d4da4733d5ff17d84a4",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-quota-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-quota-browser.test.ts",
+            "verifiedCommit": "575fae179eaa6f0436f80d4da4733d5ff17d84a4",
+            "completedAt": "2026-11-13T03:36:56.954Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-11-13T03:36:56.954Z"
       }
     }
   ],
