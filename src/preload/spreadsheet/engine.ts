@@ -8,7 +8,7 @@ import sortZh from '@univerjs/preset-sheets-sort/locales/zh-CN'
 import coreEn from '@univerjs/preset-sheets-core/locales/en-US'
 import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
-import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,IContextService,type IWorkbookData,type Worksheet} from '@univerjs/core'
+import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,IContextService,type IRange,type IWorkbookData,type Worksheet} from '@univerjs/core'
 import {AFTER_CELL_EDIT,BEFORE_CELL_EDIT,ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation,SheetsSelectionsService} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
 import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
@@ -169,8 +169,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   }
  })
  const editorAlignment=sheetInterceptors.writeCellInterceptor.intercept(BEFORE_CELL_EDIT,{
-  handler(cell,{workbook,worksheet,row,col},next){
-   const inherited=worksheet.getComposedCellStyleByCellData(row,col,cell)
+  handler(cell,{workbook,worksheet,row,col,origin},next){
+   const inherited=worksheet.getComposedCellStyleByCellData(row,col,origin)
    const own=workbook.getStyles().getStyleByCell(cell)??{}
    return next({...cell,s:{...own,vt:inherited.vt||defaultVerticalAlign(worksheet,row,col),pd:inherited.pd??cellPadding}})
   }
@@ -244,6 +244,21 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   }),
   api.addEvent(api.Event.CommandExecuted,event=>{
    if(event.id===InsertSheetMutation.id)applyTheme()
+   if(event.id==='sheet.mutation.set-range-values'){
+    const params=event.params as {unitId?:string;subUnitId?:string;cellValue?:Record<string,Record<string,unknown>>}
+    if(params.unitId===model.getId()&&params.subUnitId&&params.cellValue){
+     const skeleton=renders.getRenderUnitById(model.getId())?.with(SheetSkeletonManagerService)?.getSkeleton(params.subUnitId)
+     if(skeleton){
+      const ranges:IRange[]=[]
+      for(const [r,row] of Object.entries(params.cellValue))if(row)for(const c of Object.keys(row)){
+       ranges.push({startRow:Number(r),endRow:Number(r),startColumn:Number(c),endColumn:Number(c)})
+      }
+      // Univer can reuse the edit-time font cache after the value changes.
+      // Rebuild affected cells from the worksheet's current display styles.
+      skeleton.resetRangeCache(ranges)
+     }
+    }
+   }
    if(event.options?.fromFormula===true||event.options?.applyFormulaCalculationResult===true){if(event.id==='sheet.mutation.set-range-values')change(true)}
    else if(event.id.startsWith('sheet.')&&(event.type===CommandType.MUTATION||/zoom|hide-grid|freeze/.test(event.id)))change()
    if(/selection|activate-sheet|range-values|numfmt/.test(event.id))selection()

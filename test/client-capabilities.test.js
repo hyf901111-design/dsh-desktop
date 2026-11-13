@@ -8,6 +8,16 @@ it('registers bounded semantic handlers with schemas instead of accepting arbitr
 })
 const context={owner:'alice',sessionId:'note',documentId:'doc',mode:'notes',editable:true,selectedBlockIds:[],componentBlockIds:['one','two']}
 const run=async()=>{expect(module).not.toBeNull();return module}
+it('accepts a workbook inspection without scope and spreadsheet writes with blank rows',async()=>{
+ const context={owner:'alice',sessionId:'sheet',mode:'spreadsheet',editable:true}
+ const inspect=async()=>({status:'succeeded'})
+ const registry=module.createClientCapabilityRegistry({inspectSpreadsheet:inspect,applySpreadsheet:inspect})
+ await expect(registry.execute({capability:'spreadsheet.inspect',arguments:{}},context)).resolves.toEqual({status:'succeeded'})
+ const write={op:'write',sheetId:'sheet-1',range:'A1:B3',cells:[['Title'],[],['Value',25]]}
+ const call={capability:'spreadsheet.apply',arguments:{revision:0,createName:'Example',operations:[write]}}
+ await expect(registry.execute(call,context)).resolves.toEqual({status:'succeeded'})
+ await expect(registry.execute({...call,arguments:{revision:0,operations:[{...write,cells:'invalid'}]}},context)).rejects.toThrow(/\/operations\/0\/cells/)
+})
 it('executes whole-note style and export in order, caches exact repeats and rejects changed identities or arguments',async()=>{
  const m=await run(),effects=[],registry=m.createClientCapabilityRegistry({styleComponents:async(args)=>{effects.push(args);return{status:'succeeded',changedBlockIds:['one','two']}},exportNote:async()=>{effects.push('pdf');return{status:'succeeded',path:'/tmp/report.pdf'}}}),controller=m.createCapabilityExecutor(registry,()=>context)
  const first={requestId:'a',capability:'notes.components.style',arguments:{scope:'note',theme:'enterprise',titleBar:false,frame:false}}

@@ -228,10 +228,11 @@ export function applyOperations(original:Workbook, operations:readonly unknown[]
     const {sheet,bounds:a}=sheetRange(book,o.sheetId,o.range)
     const rows=a.r1-a.r0+1,cols=a.c1-a.c0+1
     if((touched+=rows*cols)>MAX_RANGE_CELLS)throw Error('批次单元格数量超过上限。')
-    if(o.op==='write'&&(!Array.isArray(o.cells)||o.cells.length!==rows||o.cells.some((row:unknown)=>!Array.isArray(row)||row.length!==cols)))
-      throw Error(o.range+' 需要 '+rows+' 行 × '+cols+' 列数据。请使 cells 的每一行长度与区域一致，空白格用 null。')
+    if(o.op==='write'&&(!Array.isArray(o.cells)||o.cells.length!==rows||o.cells.some((row:unknown)=>!Array.isArray(row)||row.length>cols)))
+      throw Error(o.range+' 需要 '+rows+' 行，每行最多 '+cols+' 列。留空的位置用 null 清除，省略行尾单元格则保留原值。')
     const format=o.op==='format'?nativeFormat(o.format):undefined
     for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){
+      if(o.op==='write'&&j>=o.cells[i].length)continue
       const r=a.r0+i,c=a.c0+j,prev=sheet.cellData[r]?.[c],next:Cell={...prev}
       if(format){next.s={...styleOf(book,prev),...format};if(format.bd===null)delete (next.s as Record<string,unknown>).bd}
       else{

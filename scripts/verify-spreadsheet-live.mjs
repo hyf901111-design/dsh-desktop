@@ -210,6 +210,25 @@ await build({stdin:{resolveDir:root,contents:`
    }
    await resizeGrid('row');await resizeGrid('column')
    report.push('live row and column resize previews with one undo per drag')
+   const tallRow={x:Math.round(grid.x+20),y:Math.round(grid.y+54)}
+   for(const [type,offset] of [['mouseMove',0],['mouseDown',0],['mouseMove',60],['mouseUp',60]]){
+    win.webContents.sendInputEvent({type,button:'left',clickCount:1,x:tallRow.x,y:tallRow.y+offset})
+    await wait(85)
+   }
+   await hit(1,0)
+   press('F2')
+   await win.webContents.insertText('文本可见')
+   await until(editing,'editing the resized row')
+   press('Enter')
+   await saveCheck(()=>currentCell(0,1)?.v==='文本可见','tall-row edit persisted')
+   const tallRowInk=dark=>js('(()=>{const c=[...document.querySelectorAll(".ew-sheet-grid canvas")].find(c=>c.clientWidth>400),sx=c.width/c.clientWidth,sy=c.height/c.clientHeight;const pixels=c.getContext("2d").getImageData(Math.round(145*sx),Math.round(26*sy),Math.round(82*sx),Math.round(24*sy)).data;let count=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>180&&'+(dark?'pixels[i]>160':'pixels[i]<115')+')count++;return count})()')
+   await until(async()=>await tallRowInk(true)>20,'tall-row text remains visible near the top in dark mode')
+   await js('document.body.removeAttribute("data-ds-dark-theme")')
+   await until(async()=>await tallRowInk(false)>20,'tall-row text switches to a readable color in light mode')
+   await js('document.body.setAttribute("data-ds-dark-theme","")')
+   await click(button('undo'));await click(button('undo'))
+   await until(()=>currentCell(0,1)?.v==null,'revert tall-row test edit')
+   report.push('tall-row text stays visible across theme changes')
    const previous=clipboard.readText()
    clipboard.writeText('公司\\t价格\\nA\\t11\\nB\\t22')
    try{
