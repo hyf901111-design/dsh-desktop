@@ -11,7 +11,7 @@ import css from './panel.css?raw'
 
 type PanelBridge = {
   snapshot(): Promise<KnowledgeSnapshot>
-  received(): Promise<KnowledgeDocument[]>
+  received(refresh?: boolean): Promise<KnowledgeDocument[]>
   preview(id: string): Promise<KnowledgePreview>
   markdown(id: string): Promise<{ text: string; revision: string }>
   saveMarkdown(id: string, revision: string, text: string): Promise<{ document: KnowledgeDocument; revision: string }>
@@ -85,12 +85,14 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
     }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     document.addEventListener('sherlock:knowledge-changed', load)
+    if (/^[a-f0-9]{32}$/u.test(id)) document.addEventListener('sherlock:knowledge-shared-access-changed', load)
     load()
     return () => {
       current = false
       epoch.current++
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
       document.removeEventListener('sherlock:knowledge-changed', load)
+      document.removeEventListener('sherlock:knowledge-shared-access-changed', load)
     }
   }, [id, bridge, document])
   if (!file && !draft) return <p className="knowledge-panel-state" role={error ? 'alert' : 'status'}>{error || '正在打开文件…'}</p>
@@ -162,10 +164,10 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const filterTrigger = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     let revision = 0
-    const load = () => {
+    const load = (force = false) => {
       const current = ++revision
       const local = bridge.snapshot()
-      const source = category === 'received' ? Promise.all([local, bridge.received()])
+      const source = category === 'received' ? Promise.all([local, bridge.received(force)])
         .then(([local, documents]) => ({ ...local, documents })) : local
       void source.then(rows => {
         if (current === revision) { setSnapshot(rows); setState({ ready: true, error: '' }) }
@@ -187,12 +189,16 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       else revision++
     }
     load()
+    const changed = () => load()
+    const sharedAccessChanged = () => { if (category === 'received') load(true) }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
-    document.addEventListener('sherlock:knowledge-changed', load)
+    document.addEventListener('sherlock:knowledge-changed', changed)
+    document.addEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
     return () => {
       revision++
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
-      document.removeEventListener('sherlock:knowledge-changed', load)
+      document.removeEventListener('sherlock:knowledge-changed', changed)
+      document.removeEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
     }
   }, [bridge, document, category])
   useEffect(() => {

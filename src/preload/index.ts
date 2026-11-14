@@ -282,7 +282,7 @@ function initializeUi(): void {
   window.addEventListener('unload', disposeKnowledge, { once: true })
   const disposeKnowledgePanels = mountKnowledgePanels(document, {
     snapshot: () => ipcRenderer.invoke('knowledge:request', 'snapshot'),
-    received: () => ipcRenderer.invoke('knowledge:request', 'received'),
+    received: refresh => ipcRenderer.invoke('knowledge:request', 'received', { refresh }),
     preview: id => ipcRenderer.invoke('knowledge:request', 'preview', { id }),
     markdown: id => ipcRenderer.invoke('knowledge:request', 'markdown', { id }),
     saveMarkdown: (id, revision, text) => ipcRenderer.invoke('knowledge:request', 'save-markdown', { id, revision, text }),

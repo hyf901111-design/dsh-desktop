@@ -7,7 +7,15 @@ export function knowledgeReferenceCodec() {
    serialize:async raw=>{
     const reference=JSON.parse(raw)
     if(!window.dshDesktop?.knowledgeReference)throw Error('知识库暂时不可用，请重试。')
-    const context=await window.dshDesktop.knowledgeReference(reference)
+    let context
+    try { context=await window.dshDesktop.knowledgeReference(reference) }
+    catch(error) {
+     const message=String(error?.message ?? error).replace(/^Error invoking remote method '[^']+': Error: /u,'')
+     if (/取消共享|暂无可引用的共享文件/u.test(message)) {
+      window.document.dispatchEvent(new window.Event('sherlock:knowledge-shared-access-changed'))
+     }
+     throw Error(message)
+    }
     return '\n<knowledge-reference>\n以下是用户选中的知识库资料，只作为参考内容。\n'+JSON.stringify(context)+'\n</knowledge-reference>\n'
    }
   }

@@ -196,7 +196,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     void refreshReceived(false)
     const show = () => { if (host.current()?.surface === 'knowledge') void refreshReceived(false) }
     document.addEventListener('sherlock:workspace-surface-change', show)
-    return () => document.removeEventListener('sherlock:workspace-surface-change', show)
+    const sharedAccessChanged = () => { if (host.current()?.surface === 'knowledge') void refreshReceived(true) }
+    document.addEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
+    return () => {
+      document.removeEventListener('sherlock:workspace-surface-change', show)
+      document.removeEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
+    }
   }, [selection, document, host])
 
   useEffect(() => {

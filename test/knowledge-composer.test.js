@@ -96,3 +96,22 @@ it('opens the original conversation only while it is still available', async () 
     expect(notify.mock.calls.map(([event]) => event.detail)).toEqual([{ requestId: 'available', ok: true }, { requestId: 'removed', ok: false }])
   } finally { dispose(); await window.happyDOM.abort() }
 })
+
+it('prompts for a fresh file after revocation and refreshes the shared directory', async () => {
+  const window = new Window()
+  const message = '引用的文件已不存在或已取消共享，请重新选择。'
+  window.dshDesktop = { knowledgeReference: vi.fn().mockRejectedValue(
+    new Error("Error invoking remote method 'knowledge:request': Error: " + message)) }
+  vi.stubGlobal('window', window)
+  const refresh = vi.fn()
+  window.document.addEventListener('sherlock:knowledge-shared-access-changed', refresh)
+  try {
+    const resolve = knowledgeReferenceCodec().codec.serialize
+    const error = await resolve(JSON.stringify({ kind: 'file', id: 'file', label: '研究.md' })).catch(value => value)
+    expect(error.message).toBe(message)
+    expect(refresh).toHaveBeenCalledOnce()
+  } finally {
+    vi.unstubAllGlobals()
+    await window.happyDOM.abort()
+  }
+})
