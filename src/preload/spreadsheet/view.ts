@@ -426,8 +426,11 @@ class SpreadsheetView{
   if(!same)this.clearSelectionPreview()
   const oldCharts=new Set(this.record.workbook?.charts?.map(chart=>chart.chartId))
   const added=record.workbook?.charts?.find(chart=>!oldCharts.has(chart.chartId))
-  if(!same){this.activeChart=undefined;this.activeComponent=undefined;this.chartDefaults.clear()}
-  if(added&&this.record.workbook){this.activeChart=added.chartId;this.activeComponent=undefined}
+  if(!same){
+   this.selectChart();this.activeComponent=undefined;this.chartDefaults.clear()
+   this.chartOrder.clear();this.componentOrder.clear();this.nextObjectOrder=0
+  }
+  if(added&&same)this.activeComponent=undefined
   const previous=same?this.selection:undefined
   let viewport
   // A canvas may still be mounting when a second revision arrives.
@@ -460,6 +463,7 @@ class SpreadsheetView{
     try{const {r0,c0}=parseRange(position.range);this.jump(address(r0,c0))}catch{}
    }
    this.paint();this.readSelection();this.renderChart();this.renderComponent()
+   if(added&&same&&this.chartCards.has(added.chartId))this.selectChart(added.chartId)
   }catch(error){this.say('表格引擎无法启动：'+errorMessage(error),true)}
  }
  private readSelection(){
@@ -950,7 +954,7 @@ class SpreadsheetView{
   const sheets=book.sheetOrder.map(id=>option(id,book.sheets[id]!.name,value.sheetId===id,true)).join('')
   const options=workbookChartKinds.map(kind=>option(kind,chartKindLabels[kind],value.kind===kind)).join('')
   const checkbox=(field:string,copy:string,checked:boolean)=>'<label class="ew-sheet-chart-header"><input type="checkbox" data-chart-field="'+field+'"'+(checked?' checked':'')+'> '+copy+'</label>'
-  if(existing)this.activeChart=existing.chartId
+  if(existing)this.selectChart(existing.chartId)
   this.chartEditor={draftId:value.chartId}
   this.dialog(existing?'编辑图表':'创建图表',
    '<div class="ew-sheet-inspector-tabs" role="tablist" aria-label="图表设置">'+
@@ -1282,7 +1286,7 @@ class SpreadsheetView{
    }
    this.positionChart(id)
   }
-  if(this.activeChart&&!this.chartCards.has(this.activeChart))this.activeChart=undefined
+  if(sheetId&&this.activeChart&&!this.chartCards.has(this.activeChart))this.activeChart=undefined
   this.positionSheetObjects()
  }
  private chartCardMarkup(chart:WorkbookChart,showData:boolean){
