@@ -192,6 +192,7 @@ export const spreadsheetUiCopy: Record<string, string> = {
   '空数值按 0 处理': 'Treat empty values as zero',
   '图表设置无效。': 'Invalid chart settings.',
   '请选择分类和不同的数值系列。': 'Select a category and distinct data series.',
+  '所选区域未找到可用的数值系列。': 'No numeric data series found in the selected range.',
   '图表最多支持 120 个数据点和 6 个系列。饼图和环形图只支持一个系列。': 'Charts support up to 120 data points and 6 series. Pie and doughnut charts use one series.',
   '散点图的横轴必须是数值。': 'A scatter chart requires numeric X values.',
   '饼图和环形图的数值不能为负。': 'Pie and doughnut charts require nonnegative values.',
