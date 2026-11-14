@@ -8,7 +8,8 @@ import { describe, expect, it, vi } from 'vitest'
 const patchBetterSidebarClient=(source:string)=>execFileSync(process.execPath,['--input-type=module','-e',"import fs from 'node:fs';import{patchBetterSidebarClient}from'./scripts/lib/patch-sherlock-better-sidebar.mjs';process.stdout.write(patchBetterSidebarClient(fs.readFileSync(0,'utf8')))"],{input:source,encoding:'utf8',maxBuffer:24*1024*1024})
 
 const source = await readFile(process.env.SHERLOCK_SIDEBAR_CLIENT_SOURCE ?? new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
-const patched = patchBetterSidebarClient(source)
+// A prepared plugin already contains the production transform and the file preview patch.
+const patched = source.includes('/* sherlock:native-knowledge-editor:v1 */') ? source : patchBetterSidebarClient(source)
 const start = patched.indexOf('function systemTabTitle(')
 const end = patched.indexOf('\n\t\t//#endregion', start)
 
