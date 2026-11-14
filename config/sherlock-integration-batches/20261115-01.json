@@ -11,29 +11,25 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
-        "tipCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
+        "baseCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
+        "tipCommit": "f99e1f2f6737f79caaf5aad4cbb1ff94a2f164ff",
         "commits": [
           {
-            "commit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
+            "commit": "f99e1f2f6737f79caaf5aad4cbb1ff94a2f164ff",
             "parents": [
-              "4ca7327823e814a54813282858d483890d2ca2f2"
+              "1bfd39b7ae45095bb0af9e641215cca23a8d3c31"
             ],
-            "subject": "测试：校准知识库动效、悬停与能力清单回归"
+            "subject": "优化：批量引用共享资料时复用目录并逐份校验权限"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "test/client-capabilities-bundle.test.js"
+            "path": "src/main/knowledge/references.ts"
           },
           {
             "status": "M",
-            "path": "test/client-capabilities.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/knowledge-sharing-worker.test.js"
           }
         ],
         "checks": [
@@ -45,46 +41,30 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
-            "completedAt": "2026-11-14T16:46:32Z",
+            "verifiedCommit": "f99e1f2f6737f79caaf5aad4cbb1ff94a2f164ff",
+            "completedAt": "2026-11-14T16:55:04Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npx",
               "vitest",
               "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
               "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
               "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts",
-              "test/figma-home-entry-spacing.test.js",
-              "test/command-popup-position-browser.test.js",
-              "test/client-capabilities.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "test/skill-command-menu.test.ts",
-              "test/deliverable-cards.test.js",
-              "test/browser-app-native.test.js"
+              "test/knowledge-library.test.ts",
+              "test/knowledge-composer.test.js"
             ],
             "outcome": "passed",
-            "summary": "17 个直接相关测试文件的 107 项检查通过，涵盖默认动效及系统减少动态效果。",
-            "verifiedCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
-            "completedAt": "2026-11-14T16:46:32Z",
+            "summary": "4 个聚焦文件的 11 项检查通过，共享目录仅读取一次，期间撤销的文件立即不可读取。",
+            "verifiedCommit": "f99e1f2f6737f79caaf5aad4cbb1ff94a2f164ff",
+            "completedAt": "2026-11-14T16:55:04Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "签名隔离包 79bdf7d3e 通过原生共享预览和双侧栏目录下钻。已验证右侧对话筛选、斜杠菜单、收藏与来源会话跳转、经验记忆保存重开。本次交接仅修改测试，产品源码与签名实包一致。"
+          "summary": "签名候选包验证右侧对话连续筛选、撤销以及普通对话中共享正文检索与行内文件引用。后续主进程优化通过本地双账号服务回归。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -99,51 +79,7 @@
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T16:46:32Z"
-      },
-      "merged": {
-        "mergeCommit": "e1e507e59ec34bf1f7850df3d667b29eedaf1602",
-        "verificationCommit": "e1e507e59ec34bf1f7850df3d667b29eedaf1602",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e1e507e59ec34bf1f7850df3d667b29eedaf1602",
-            "completedAt": "2026-11-14T16:47:04.861Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "e1e507e59ec34bf1f7850df3d667b29eedaf1602",
-            "completedAt": "2026-11-14T16:47:04.861Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T16:47:04.861Z"
+        "generatedAt": "2026-11-14T16:55:04Z"
       }
     }
   ],
