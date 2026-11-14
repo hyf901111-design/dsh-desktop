@@ -156,15 +156,17 @@ export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: Know
       switch (operation) {
         case 'rename':
           if (name === undefined) throw Error('请提供文件新名称。')
-          await store.edit({ type: 'rename', id, name }, () => check(signal))
+          await store.edit({ type: 'rename', id, name }, {
+            guard: () => check(signal), renameShare: (id, newName) => sharing.rename(id, newName)
+          })
           break
         case 'move':
-          await store.edit({ type: 'move', id, folderId: folderId ?? undefined }, () => check(signal))
+          await store.edit({ type: 'move', id, folderId: folderId ?? undefined }, { guard: () => check(signal) })
           break
         case 'star':
         case 'save':
           if (typeof value !== 'boolean') throw Error('请指定启用或取消。')
-          await store.edit({ type: operation, id, value }, () => check(signal))
+          await store.edit({ type: operation, id, value }, { guard: () => check(signal) })
           break
       }
       return { status: 'succeeded', data: { id, operation, saved: true }, message: '文件属性已保存到知识库。' }
