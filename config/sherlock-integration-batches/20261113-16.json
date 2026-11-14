@@ -11,29 +11,21 @@
         "schemaVersion": 1,
         "featureName": "表格组件拖动和图表数据识别",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "cd09553acfdf8de9c1e18508e519238dc87ee728",
-        "tipCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
+        "baseCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
+        "tipCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
         "commits": [
           {
-            "commit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
+            "commit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
             "parents": [
-              "cd09553acfdf8de9c1e18508e519238dc87ee728"
+              "58ca61ba61fdeb25753f6d1407e228ec17ac117a"
             ],
-            "subject": "修复表格组件拖动与选中反馈，改进图表选区识别"
+            "subject": "恢复浮动组件尺寸并防止内嵌内容打断拖动"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "scripts/verify-spreadsheet-live.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/chart.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/ui-copy.ts"
           },
           {
             "status": "M",
@@ -53,25 +45,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
-            "completedAt": "2026-11-14T03:17:46.853Z",
+            "verifiedCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
+            "completedAt": "2026-11-14T03:34:32.985Z",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "node",
-              "scripts/verify-spreadsheet-live.mjs"
+              "/var/folders/rm/jy4dz49s171fl1dxd9qr3hh80000gp/T//ework-sheet-drag-check.P5O5lI/focused.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 工作表聚焦验收通过",
-            "verifiedCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
-            "completedAt": "2026-11-14T03:17:46.853Z",
+            "summary": "Electron 图表与组件聚焦验收，覆盖跨 Sheet 恢复和跨 iframe 拖动",
+            "verifiedCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
+            "completedAt": "2026-11-14T03:34:32.985Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在隔离 Electron 中验证文本和数值混合选区预览、图表悬停不变、组件选中和图表编辑遮挡。"
+          "summary": "在隔离 Electron 中验证混合选区、统一描边及图表编辑遮挡。切换工作表后检查浮动组件尺寸，用带内嵌框的组件验证跨内容区域拖动并实际保存。"
         },
         "acceptanceCriteria": [
           "浮动组件支持标题区拖动和统一的选中描边",
@@ -79,83 +71,7 @@
           "含多文本字段的选区可以生成图表，图表编辑器不受浮动对象遮挡"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T03:17:46.853Z"
-      },
-      "merged": {
-        "mergeCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-        "verificationCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-            "completedAt": "2026-11-14T03:17:54.676Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-            "completedAt": "2026-11-14T03:17:54.676Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-            "completedAt": "2026-11-14T03:17:54.676Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
-            "verifiedCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-            "completedAt": "2026-11-14T03:17:54.676Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
-            "verifiedCommit": "8179bcdbcfa4890943c4afe1469afde1a6f63d36",
-            "completedAt": "2026-11-14T03:17:54.676Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T03:17:54.676Z"
+        "generatedAt": "2026-11-14T03:34:32.985Z"
       }
     },
     {
