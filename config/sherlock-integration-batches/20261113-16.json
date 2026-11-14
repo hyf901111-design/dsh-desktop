@@ -148,55 +148,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "降低托管模型目录与用量页的 D1 读取",
+        "featureName": "切换账号后立即刷新套餐模型",
         "branch": "codex/feat/hosted-ai-d1-20261114",
-        "baseCommit": "f30de3f17aca5022db6009fd342cad50aeba88f4",
-        "tipCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+        "baseCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+        "tipCommit": "6695040c6a490976788eeef5c36130c6187fd4a2",
         "commits": [
           {
-            "commit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
+            "commit": "6695040c6a490976788eeef5c36130c6187fd4a2",
             "parents": [
-              "f30de3f17aca5022db6009fd342cad50aeba88f4"
+              "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074"
             ],
-            "subject": "减少托管模型目录的 D1 读取与后台轮询"
+            "subject": "同步账户切换后的套餐模型运行时状态"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/sherlock-hosted-ai.md"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/hosted-ai.js"
           },
           {
             "status": "M",
-            "path": "scripts/test-hosted-ai-worker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "services/accounts/ai-quota.js"
-          },
-          {
-            "status": "M",
-            "path": "services/hosted-ai/worker.js"
-          },
-          {
-            "status": "M",
-            "path": "src/main/account-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/explore-menu.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/account-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/explore-quota-browser.test.ts"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
@@ -207,135 +179,41 @@
           {
             "argv": [
               "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "48 个聚焦用例通过",
-            "verifiedCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
-            "completedAt": "2026-11-13T23:42:46.544Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "本地 workerd 和 D1 验证目录不读取账本，暂停账号仍受限制",
-            "verifiedCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
-            "completedAt": "2026-11-13T23:42:46.544Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
               "run",
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "aaca84a0d5347eaaca600aa78cc1bcc4ac00e074",
-            "completedAt": "2026-11-13T23:42:46.544Z",
-            "timeoutMs": 120000
+            "summary": "桌面类型检查",
+            "verifiedCommit": "6695040c6a490976788eeef5c36130c6187fd4a2",
+            "completedAt": "2026-11-14T07:46:55.764Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/hosted-ark-runtime.test.js",
+              "test/account-service.test.ts",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "账户桥接、模型目录和生图测试",
+            "verifiedCommit": "6695040c6a490976788eeef5c36130c6187fd4a2",
+            "completedAt": "2026-11-14T07:46:55.764Z",
+            "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "浏览器夹具验证前台用量页每分钟刷新及结算后即时刷新。签名客户端待验收。"
+          "outcome": "not-applicable",
+          "summary": "本提交仅修改主进程与模型桥接。客户端端到端验证在共享签名包完成。"
         },
         "acceptanceCriteria": [
-          "目录和云记忆仅按账号查询开通状态",
-          "减少客户端目录和前台用量页的常规刷新",
-          "文本与生图仍进行实时额度预留和结算"
+          "账户 A、B 切换后第一条消息即可调用套餐模型",
+          "退出后清除上一账户的套餐模型"
         ],
-        "risks": [
-          "桌面轮询改动待新客户端交付，线上 D1 用量需观察完整配额周期"
-        ],
-        "generatedAt": "2026-11-13T23:42:46.544Z"
-      },
-      "merged": {
-        "mergeCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-        "verificationCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-            "completedAt": "2026-11-13T23:53:44.545Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-            "completedAt": "2026-11-13T23:53:44.545Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-            "completedAt": "2026-11-13T23:53:44.545Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
-            "verifiedCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-            "completedAt": "2026-11-13T23:53:44.545Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
-            "verifiedCommit": "19dce5881ca387bd33498cd8498da8b91bf30cfb",
-            "completedAt": "2026-11-13T23:53:44.545Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-13T23:53:44.545Z"
+        "risks": [],
+        "generatedAt": "2026-11-14T07:46:55.764Z"
       }
     }
   ],
