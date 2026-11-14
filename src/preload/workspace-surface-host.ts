@@ -14,6 +14,17 @@ export class WorkspaceSurfaceHost {
     private expanded = false;
     private positionFrame = 0;
     constructor(private document: Document) {
+        if (!document.getElementById('sherlock-workspace-surface-style')) {
+            const style = document.createElement('style');
+            style.id = 'sherlock-workspace-surface-style';
+            // Body portals owned by the resident workspace need the same visibility
+            // boundary as its center pane. The active surface owns its own overlays.
+            style.textContent = `
+                [data-workspace-surface-hidden=true] { visibility: hidden !important; }
+                body[data-workspace-surface] :is([data-workspace-background-portal], [data-ework-toolbar-owner]) { display: none !important; }
+            `;
+            document.head.append(style);
+        }
         document.addEventListener('sherlock:search-session-opened', this.onSessionOpened);
         document.addEventListener('click', this.onNavigate, true);
         document.defaultView?.addEventListener('resize', this.schedulePosition);

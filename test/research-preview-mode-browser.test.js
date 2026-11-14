@@ -47,7 +47,7 @@ afterAll(async()=>browser?.close())
 async function fixture({header=false}={}){
  const context=await browser.newContext({viewport:{width:1200,height:850},reducedMotion:'reduce'}),page=await context.newPage(),errors=[]
  page.setDefaultTimeout(5000);page.on('pageerror',error=>errors.push(error.message))
- await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\n[data-workspace-surface-hidden=true]{visibility:hidden!important}html,body{margin:0}#host{height:${header?784:800}px;width:100vw;--odyssey-workspace-header-height:44px}${header?'':'[data-research-canvas]{height:740px!important}'}#preview-toggle{position:fixed;bottom:0;right:0;z-index:10000}</style>${header?'<div id="header" style="position:fixed;top:12px;right:30px;z-index:1000"></div>':''}<div class="pI_x6G_frame"><div class="pI_x6G_centerCol"><div id="host"></div></div></div><button id="preview-toggle">fixture preview toggle</button>`}))
+ await page.route('https://research-preview.test/',route=>route.fulfill({contentType:'text/html',body:`<style>${canvasCss}\nhtml,body{margin:0}#host{height:${header?784:800}px;width:100vw;--odyssey-workspace-header-height:44px}${header?'':'[data-research-canvas]{height:740px!important}'}#preview-toggle{position:fixed;bottom:0;right:0;z-index:10000}</style>${header?'<div id="header" style="position:fixed;top:12px;right:30px;z-index:1000"></div>':''}<div class="pI_x6G_frame"><div class="pI_x6G_centerCol"><div id="host"></div></div></div><button id="preview-toggle">fixture preview toggle</button>`}))
  await page.goto('https://research-preview.test/');await page.addScriptTag({content:script});await page.waitForSelector('[data-ework-toolbar]').catch(error=>{throw Error(error.message+'; page errors: '+JSON.stringify(errors))})
  return {page,errors,close:()=>context.close()}
 }
@@ -57,6 +57,47 @@ async function preview(page){
  expect(await page.evaluate(()=>window.fixture.workspace().getPreviewMode())).toBe(true)
 }
 const content=page=>page.evaluate(()=>{const s=window.fixture.workspace().getSnapshot();return JSON.stringify([s.files,s.artifacts])})
+
+it('hides the retained board toolbar and its popups on every workspace surface',async()=>{
+ const {page,close,errors}=await fixture()
+ try{
+  await page.evaluate(()=>window.fixture.workspace().setArtifacts([window.fixture.text('retained')]))
+  const toolbar=page.locator('[data-ework-toolbar]')
+  const canvas=page.locator('[data-research-canvas]')
+  const boardBefore=await content(page)
+  const board=await canvas.elementHandle()
+  for(const [surface,menu] of [['browser','library'],['notes','style'],['scheduled','arrange'],['integrations','context']]){
+   if(menu==='library')await toolbar.locator('[data-financial-library]').click()
+   if(menu==='style')await toolbar.locator('[data-workbench-theme-toggle]').click()
+   if(menu==='arrange')await toolbar.locator('[data-workbench-arrange-toggle]').click()
+   if(menu==='context')await canvas.locator('[data-research-node-id="retained"] [data-workbench-more]').click()
+   const popup=page.locator({library:'.ew-financial-library',style:'[data-workbench-theme-menu]',arrange:'[data-workbench-arrange-menu]',context:'[role=menu][aria-label="组件更多操作"]'}[menu])
+   await popup.waitFor()
+   await page.evaluate(surface=>{
+    const pane=document.createElement('section')
+    pane.innerHTML='<button type="button">当前页面工具</button>'
+    window.fixture.surfaceHost.register(surface,pane)
+    window.fixture.surfaceHost.open(surface)
+   },surface)
+   expect(await toolbar.isVisible()).toBe(false)
+   expect(await popup.isVisible()).toBe(false)
+   expect(await canvas.isVisible()).toBe(false)
+   await popup.waitFor({state:'detached'})
+   if(surface==='browser'){
+    await canvas.evaluate(node=>node.dispatchEvent(new Event('ework:manual-resize-overridden')))
+    const notice=page.locator('[data-workbench-auto-resize-notice]')
+    await notice.waitFor({state:'attached'})
+    expect(await notice.isVisible()).toBe(false)
+   }
+   await page.getByRole('button',{name:'当前页面工具'}).click()
+   await page.evaluate(()=>window.fixture.surfaceHost.back())
+   await toolbar.waitFor()
+   expect(await board.evaluate(node=>node===document.querySelector('[data-research-canvas]'))).toBe(true)
+   expect(await content(page)).toBe(boardBefore)
+  }
+  expect(errors).toEqual([])
+ }finally{await close()}
+},20000)
 
 it('defaults to edit and persists each board preview preference across switching and reload',async()=>{
  const {page,close,errors}=await fixture()

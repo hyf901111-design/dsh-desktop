@@ -108,9 +108,11 @@ export function WorkbenchStylePicker({workspace}) {
   const doc=groupRef.current.ownerDocument,view=doc.defaultView,menu=menuRef.current
   const place=()=>{const r=triggerRef.current.getBoundingClientRect(),size=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.left,view.innerWidth-size.width-8))+'px';menu.style.top=Math.max(8,r.top-size.height-8)+'px'}
   const outside=e=>{if(!groupRef.current?.contains(e.target)&&!menu.contains(e.target))setOpen(false)}
+  const dismiss=()=>setOpen(false)
   place();menu.querySelector('[aria-checked="true"]')?.focus({preventScroll:true})
   doc.addEventListener('pointerdown',outside,true);view.addEventListener('resize',place);doc.addEventListener('scroll',place,true)
-  return()=>{doc.removeEventListener('pointerdown',outside,true);view.removeEventListener('resize',place);doc.removeEventListener('scroll',place,true)}
+  doc.addEventListener('sherlock:workspace-surface-change',dismiss)
+  return()=>{doc.removeEventListener('pointerdown',outside,true);view.removeEventListener('resize',place);doc.removeEventListener('scroll',place,true);doc.removeEventListener('sherlock:workspace-surface-change',dismiss)}
  },[open,workspace])
  const close=()=>{setOpen(false);triggerRef.current?.focus({preventScroll:true})}
  const keyDown=e=>{
