@@ -1,11 +1,13 @@
 import {readFile} from 'node:fs/promises'
 import {runInNewContext} from 'node:vm'
+import {Window} from 'happy-dom'
 import {expect,it} from 'vitest'
 import {createPptxAnnotationCoordinator} from '../scripts/lib/pptx-annotation-coordinator.mjs'
 
 async function fixture(){
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
- const load=async(name,deps={})=>{let descriptor;runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>descriptor=value}},AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
+ const window=new Window({url:'https://native.local'})
+ const load=async(name,deps={})=>{let descriptor;window.__ModuleLoader__={load:value=>descriptor=value};runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window,document:window.document,AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
  const rt=await load('dsh-client-runtime'),native=await load('dsh-client-ui-conversation',{'@deepseek-ai/dsh-client-runtime/client':rt})
  const sent=[],calls=[],observers=new Set(),states=new Map(),removed=new Map();let actual='central',ordinary=true,prepareGate,resolvePrepare,mutationGate,resolveMutation,deferResponse=false,completion='pending',serialized='原附件快照',serializations=0,actualInput
  const emit=value=>{for(const fn of observers)fn([value])},ok=value=>({ok:true,value})

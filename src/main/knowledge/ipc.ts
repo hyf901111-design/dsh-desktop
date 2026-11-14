@@ -1,8 +1,10 @@
 import type { KnowledgeContent } from './content'
+import type { KnowledgeFilePreview } from './file-preview'
 import { knowledgeReferenceOptions, resolveKnowledgeReference } from './references'
 import { dialog, ipcMain, shell, type BrowserWindow, type WebContents } from 'electron'
-import { realpath } from 'node:fs/promises'
-import { isAbsolute, relative, sep } from 'node:path'
+import { randomUUID } from 'node:crypto'
+import { copyFile, realpath, rename, rm } from 'node:fs/promises'
+import { dirname, isAbsolute, join, relative, sep } from 'node:path'
 import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
@@ -18,12 +20,26 @@ function identityMatches(a: { owner: string; generation: number }, b: typeof a) 
   return a.owner === b.owner && a.generation === b.generation
 }
 
+function previewId(value: unknown): string {
+  return typeof value === 'string' && /^[a-f0-9]{32}$/u.test(value) ? value : id(value)
+}
+
+async function copyKnowledgeFile(source: string, target: string, check: () => void) {
+  const temporary = join(dirname(target), '.ework-save-' + randomUUID())
+  try {
+    await copyFile(source, temporary)
+    check()
+    await rename(temporary, target)
+  } finally { await rm(temporary, { force: true }).catch(() => {}) }
+}
+
 export function installKnowledgeIpc({
-  store, window, identity, generatedWorkspace, sharing, content
+  store, window, identity, generatedWorkspace, sharing, content, filePreview
 }: {
   store: KnowledgeStore
   sharing: KnowledgeSharing
   content: KnowledgeContent
+  filePreview: KnowledgeFilePreview
   window: () => BrowserWindow | undefined
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
@@ -172,18 +188,35 @@ export function installKnowledgeIpc({
           return { document: file.document, previewError: error instanceof Error ? error.message : '文件正文无法预览。' }
         }
       }
+      case 'file-preview': {
+        if (typeof args.sessionId !== 'string' || args.sessionId.length > 256 || /[\u0000-\u001f]/u.test(args.sessionId)) {
+          throw Error('文件预览会话无效。')
+        }
+        return filePreview.open(previewId(args.id), args.sessionId)
+      }
+      case 'file-preview-status': return filePreview.status(previewId(args.id), args.updatedAt)
       case 'download': {
-        if (typeof args.id !== 'string' || !/^[a-f0-9]{32}$/u.test(args.id)) throw Error('共享文件标识无效。')
+        const id = previewId(args.id)
         const parent = window()
         if (!parent) return false
-        const row = (await sharing.received()).find(document => document.id === args.id)
+        const received = id.length === 32
+        const row = received
+          ? (await sharing.received()).find(document => document.id === id)
+          : (await store.file(id)).document
         if (!row) throw Error('该文件已取消共享或不可用。')
-        const target = await dialog.showSaveDialog(parent, { title: '下载共享文件', defaultPath: row.name })
+        const target = await dialog.showSaveDialog(parent, { title: '保存文件副本', defaultPath: row.name })
         if (target.canceled || !target.filePath) return false
         check()
-        const { data } = await sharing.read(row.id)
-        check()
-        await atomicWrite(target.filePath, data)
+        if (received) {
+          const { data } = await sharing.read(row.id)
+          check()
+          await atomicWrite(target.filePath, data)
+        } else {
+          const file = await store.file(id)
+          check()
+          if (target.filePath === file.path) return true
+          await copyKnowledgeFile(file.path, target.filePath, check)
+        }
         return true
       }
       case 'open':

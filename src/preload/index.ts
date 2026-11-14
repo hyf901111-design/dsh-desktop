@@ -297,10 +297,13 @@ function initializeUi(): void {
     download: id => ipcRenderer.invoke('knowledge:request', 'download', { id })
   })
   const knowledgeChanged = () => document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+  const knowledgeAccountChanged = () => document.dispatchEvent(new Event('sherlock:knowledge-account-changed'))
   ipcRenderer.on('knowledge:changed', knowledgeChanged)
+  ipcRenderer.on('knowledge:account-changed', knowledgeAccountChanged)
   window.addEventListener('unload', () => {
     disposeKnowledgePanels()
     ipcRenderer.removeListener('knowledge:changed', knowledgeChanged)
+    ipcRenderer.removeListener('knowledge:account-changed', knowledgeAccountChanged)
   }, { once: true })
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
@@ -465,6 +468,11 @@ contextBridge.exposeInMainWorld(
     closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
     knowledgeOptions: () => ipcRenderer.invoke('knowledge:request', 'reference-options'),
     knowledgeReference: (reference: Record<string, unknown>) => ipcRenderer.invoke('knowledge:request', 'reference', reference),
+    knowledgeFilePreview: (id: string, sessionId: string) => ipcRenderer.invoke('knowledge:request', 'file-preview', { id, sessionId }),
+    knowledgeFilePreviewStatus: (id: string, updatedAt: number) => ipcRenderer.invoke('knowledge:request', 'file-preview-status', { id, updatedAt }),
+    knowledgeFileDownload: (id: string) => ipcRenderer.invoke('knowledge:request', 'download', { id }),
+    knowledgeFileSaveMarkdown: (id: string, revision: string, text: string) =>
+      ipcRenderer.invoke('knowledge:request', 'save-markdown', { id, revision, text }),
     collectKnowledgeFile: (sessionId: string, path: string, saved: boolean, sessionTitle?: string): Promise<import('../shared/knowledge-library').KnowledgeDocument | undefined> =>
       ipcRenderer.invoke('knowledge:request', 'generated', { sessionId, path, saved, sessionTitle }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>

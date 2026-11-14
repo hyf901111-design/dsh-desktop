@@ -16,10 +16,11 @@ export function createPptxAnnotationRevealController(deps){
   if(value?.status!=='ready')throw Error(value?.error||'此标注暂不可定位，请重新打开原文件。')
   const ref=deps.parseReference(value.reference)
   if(JSON.stringify(ref)!==JSON.stringify(reference)||value.fileVersion!==reference.fileVersion||value.source?.sessionId!==reference.sessionId||value.mark?.id!==reference.markId||typeof value.path!=='string'||!value.path||typeof value.name!=='string'||!value.name)throw Error('原文件身份或版本已变化，请重新打开后定位。')
-  if(!['workspace','research','note-file'].includes(value.source?.source?.kind)||(value.source.source.kind!=='workspace'&&!/^sherlock-preview:\/\/[A-Za-z0-9_-]+\/$/.test(value.sourceUrl??'')))throw Error('原文件只读预览授权不可用。')
+  if(!['workspace','research','note-file','knowledge-file'].includes(value.source?.source?.kind)||(value.source.source.kind!=='workspace'&&!/^sherlock-preview:\/\/[A-Za-z0-9_-]+\/$/.test(value.sourceUrl??'')))throw Error('原文件只读预览授权不可用。')
   return value
  }
- const matching=value=>[...viewers].filter(viewer=>(viewer.canonicalPath??viewer.path)===value.path&&sourceKey(viewer.source)===sourceKey(value.source))
+ const matching=value=>[...viewers].filter(viewer=>sourceKey(viewer.source)===sourceKey(value.source)&&
+  (value.source.source.kind==='knowledge-file'||(viewer.canonicalPath??viewer.path)===value.path))
  const find=value=>matching(value).filter(viewer=>viewer.isAvailable?.()===true)
  const waitViewer=(value,job)=>awaiting(new Promise((resolve,reject)=>{
   let timer;const signal=job.controller.signal
@@ -62,6 +63,12 @@ export function openPptxAnnotationPreview(sidebar,identity,value,options={}){
  }
  const before=service.getSnapshot()
  if(before.sessionId!==identity.sessionId)throw Error('右侧预览的实际会话已变化。')
+ if(value.source.source.kind==='knowledge-file'){
+  const id=value.source.source.nodeId
+  service.openTab({type:'editor',id:'knowledge-file:'+id,path:'knowledge/'+id+'/'+value.name,title:value.name,meta:{fileId:id,sherlockPanel:'right',treeOpen:false}},scope)
+  service.setPanelState({open:true},scope)
+  return
+ }
  const existing=tabsOf(before)
  if(existing.length>1)throw Error('发现多个原文件预览，请关闭重复窗口后重试。')
  const prior=existing[0]?.meta?.sherlockPptAnnotationPreview,sourceKey=value=>JSON.stringify([value?.sessionId,value?.source?.kind,value?.source?.relativePath,value?.source?.authorizationId,value?.source?.nodeId])

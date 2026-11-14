@@ -3,6 +3,7 @@ import { researchPdfModules } from './research/research-pdf-navigation'
 import { KnowledgeSharing } from './knowledge/sharing'
 import { KnowledgeViewBridge } from './knowledge/view-bridge'
 import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from './knowledge/capabilities'
+import { KnowledgeFilePreview } from './knowledge/file-preview'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import {routeBrowserUse} from './browser/route'
@@ -78,7 +79,7 @@ import { localAcceptanceOrigin } from './local-acceptance-services'
 import { dirname, isAbsolute, join, normalize, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
-import { stat } from 'node:fs/promises'
+import { mkdtemp, rm, stat } from 'node:fs/promises'
 import { parse } from 'yaml'
 import {
   app,
@@ -1300,11 +1301,20 @@ async function bootstrap(): Promise<void> {
   })
   registerHomeGuideAssetHandlers({ ipcMain, getMainWindow: () => mainWindow, service: homeGuideAssets })
   app.once('before-quit', () => homeGuideAssets.dispose())
+  let knowledgeFilePreview: KnowledgeFilePreview | undefined
   registerPptxEditorHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxEditorService({
     resolveWorkspace: id => new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),
-    resolveCapability: url => homeGuideAssets.resolveEditableCapability(url),
-    resolveEditIdentity: identity => homeGuideAssets.resolveEditableIdentity(identity),
-    refreshPreview: async identity => (await researchFilePreviewRegistry!.restore(identity))?.url ?? null
+    resolveCapability: url => knowledgeFilePreview?.registry.ownsUrl(url)
+      ? knowledgeFilePreview.resolveCapability(url) : homeGuideAssets.resolveEditableCapability(url),
+    resolveEditIdentity: identity => identity.sessionId.startsWith('knowledge-preview:')
+      ? knowledgeFilePreview?.editSource(identity) ?? Promise.resolve(null) : homeGuideAssets.resolveEditableIdentity(identity),
+    refreshPreview: async identity => {
+      const registry = identity.sessionId.startsWith('knowledge-preview:')
+        ? knowledgeFilePreview?.registry : researchFilePreviewRegistry
+      return (await registry?.restore(identity))?.url ?? null
+    },
+    commitManaged: async (identity, path, version, bytes) => identity.sessionId.startsWith('knowledge-preview:')
+      ? knowledgeFilePreview?.savePresentation(identity, path, version, bytes) ?? false : undefined
   }) })
   const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
   const canvasActions = new CanvasActionBridge({
@@ -1401,7 +1411,7 @@ async function bootstrap(): Promise<void> {
   protocol.handle(
     RESEARCH_PREVIEW_SCHEME,
     (request) => handleResearchFilePreviewProtocolRequest(
-      researchFilePreviewRegistry!,
+      knowledgeFilePreview?.registry.ownsUrl(request.url) ? knowledgeFilePreview.registry : researchFilePreviewRegistry!,
       () => mainWindow,
       request
     )
@@ -1415,6 +1425,13 @@ async function bootstrap(): Promise<void> {
   const accountEndpoint = await accountService.start()
   const collaborationClient=new CollaborationClient(accountService, { origin: acceptanceOrigin })
   knowledgeShared = new KnowledgeSharing({ client: collaborationClient, authenticated: () => accountService?.authenticated === true })
+  const knowledgePreviewCache = await mkdtemp(join(tmpdir(), 'ework-knowledge-preview-'))
+  knowledgeFilePreview = new KnowledgeFilePreview(knowledgePreviewCache, knowledgeIdentity, knowledge, knowledgeShared)
+  accountService.subscribeSessionChanged(() => {
+    knowledgeFilePreview?.reset()
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:account-changed')
+  })
+  app.once('will-quit', () => { void rm(knowledgePreviewCache, { recursive: true, force: true }).catch(() => {}) })
   const boardsToken=randomUUID()
   researchBoardIntegration=new ResearchBoardIntegration({root:join(app.getPath('userData'),'research-board-runtime'),storage:researchCanvasStorage,registry:researchFilePreviewRegistry,clipboard:()=>researchClipboardService,client:collaborationClient,service:()=>researchBoardsService!,runtimeUrl:()=>runtime?.snapshot().url,runtimeToken:boardsToken,revealFile:target=>shell.showItemInFolder(target),invalidate:id=>researchContextBridge?.invalidateSession(id)})
   researchBoardsService = new ResearchBoardsService({
@@ -1476,7 +1493,8 @@ async function bootstrap(): Promise<void> {
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
   installKnowledgeIpc({
-    store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow, identity: knowledgeIdentity,
+    store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow,
+    identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
     generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
       ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)
   })
@@ -1526,6 +1544,7 @@ async function bootstrap(): Promise<void> {
     resolveWorkspace: sessionId => canReadNoteSession(sessionId) ? new HarnessWorkspaceFileResolver(dshHome).resolveRoot(sessionId) : Promise.resolve(null),
     resolveAuthorizedSource: async (sessionId, source) => {
       if (!canReadNoteSession(sessionId)) return null
+      if (source.kind === 'knowledge-file') return knowledgeFilePreview?.annotationSource(source.nodeId) ?? null
       if (source.kind === 'note-file') {
         const file = await noteFiles.reference(integrationOwner() || 'local', sessionId, { nodeId: source.nodeId, authorizationId: source.authorizationId })
         return { path: file.path, root: dirname(file.path) }
@@ -1534,6 +1553,12 @@ async function bootstrap(): Promise<void> {
     },
     previewSource: async (sessionId, source) => {
       if (!canReadNoteSession(sessionId)) return null
+      if (source.kind === 'knowledge-file') {
+        const result = await knowledgeFilePreview?.open(source.nodeId, sessionId)
+        const file = await knowledgeFilePreview?.annotationSource(source.nodeId)
+        return file && result?.kind === 'media' && result.editablePresentation
+          ? { url: result.url, path: file.path } : null
+      }
       const previewSessionId = source.kind === 'note-file'
         ? (await noteFiles.bind(integrationOwner() || 'local', sessionId, source)).previewSessionId
         : sessionId

@@ -59,7 +59,7 @@ export function createPptxAnnotationCoordinator(deps){
  const select=(record,markId)=>{current(record.identity);if(markId!==null)requireMark(record,markId);record.selectedId=markId;record.revealSeq++;publish(record)}
  const open=async(input,options={})=>{
   if(disposed||options.signal?.aborted)throw new DOMException('标注已关闭。','AbortError')
-  const identity=await deps.resolveInput({switchToChat:true,signal:options.signal});current(identity)
+  const identity=await deps.resolveInput({switchToChat:true,signal:options.signal,knowledge:input?.source?.kind==='knowledge-file'});current(identity)
   if(input?.sessionId&&input.sessionId!==identity.sessionId&&input?.source?.kind==='workspace')throw Error('文件来源与实际会话不一致。')
   const source=structuredClone(input?.source??input),value=unwrap(await deps.bridge.open({sessionId:identity.sessionId,source}));current(identity)
   if(options.signal?.aborted)throw new DOMException('标注已关闭。','AbortError')

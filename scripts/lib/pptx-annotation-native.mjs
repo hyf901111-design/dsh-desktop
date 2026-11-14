@@ -30,27 +30,32 @@ export function createPptxAnnotationNativeRuntime(options){
  const changed=()=>new DOMException('当前会话或可见输入已变化。','AbortError')
  const entry=()=>{const id=options.sessions.list.getSnapshot().current,root=roots.get(id);if(stopped||!id||!root||root.subagentPanel||options.sessions.subagentAddress?.(id)!==undefined)throw changed();if(doc.documentElement.dataset.homeGuidePointerRun)throw Error('请先结束演示，再使用普通 PPT 标注。');return root}
  const inputFor=root=>{
+  if(doc.body.dataset.workspaceSurface==='knowledge'){
+   const right=[...doc.querySelectorAll('#odyssey-right-workspace-panel textarea[data-odyssey-file-reference-session]')].filter(node=>node.dataset.odysseyFileReferenceSession===root.sessionId&&annotationTargetVisible(node,win))
+   if(right.length===1)return right[0]
+  }
   const headers=[...doc.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].filter(node=>node.dataset.eworkNotesSession===root.sessionId&&!node.closest('[data-odyssey-subagent-panel]'))
   if(headers.length!==1)return null
   const center=headers[0].closest('.pI_x6G_centerCol'),inputs=[...(center?.querySelectorAll('.uV2eYG_root textarea')??[])].filter(node=>!node.closest('[data-odyssey-subagent-panel]')&&annotationTargetVisible(node,win))
   return inputs.length===1?inputs[0]:null
  }
- const valid=identity=>{try{const root=entry(),shell=options.inputHub.shell(root.sessionId);return !doc.hidden&&identity.epoch===epoch&&root.sessionId===identity.sessionId&&root.view==='chat'&&!options.inputHub.researchActiveSessions?.has(root.sessionId)&&shell===identity.shell&&!shell.disposed&&(!options.activeInput||options.activeInput(root.sessionId,shell)===shell)&&inputFor(root)===identity.input}catch{return false}}
- const resolveInput=async({switchToChat,signal}={})=>{
+ const valid=identity=>{try{const root=entry(),shell=options.inputHub.shell(root.sessionId);return !doc.hidden&&identity.epoch===epoch&&root.sessionId===identity.sessionId&&root.view==='chat'&&!options.inputHub.researchActiveSessions?.has(root.sessionId)&&shell===identity.shell&&!shell.disposed&&(!options.activeInput||options.activeInput(root.sessionId,shell)===shell)&&(identity.knowledge&&doc.body.dataset.workspaceSurface==='knowledge'||inputFor(root)===identity.input)}catch{return false}}
+ const resolveInput=async({switchToChat,signal,knowledge}={})=>{
   let root=entry();const sessionId=root.sessionId,startEpoch=epoch
   if(root.view!=='chat'){if(!switchToChat||!['notes','research'].includes(root.view)||typeof root.actions?.setView!=='function')throw changed();root.actions.setView('chat')}
   const deadline=win.performance.now()+1800
   for(;;){if(signal?.aborted||stopped||startEpoch!==epoch)throw changed();root=entry();if(root.sessionId!==sessionId)throw changed()
    const shell=options.inputHub.shell(sessionId),input=inputFor(root)
-   if(root.view==='chat'&&!options.inputHub.researchActiveSessions?.has(sessionId)&&input&&shell&&!shell.disposed&&(!options.activeInput||options.activeInput(sessionId,shell)===shell))return{sessionId,shell,input,ordinary:true,epoch:startEpoch}
+   const backgroundKnowledge=knowledge===true&&doc.body.dataset.workspaceSurface==='knowledge'
+   if(root.view==='chat'&&!options.inputHub.researchActiveSessions?.has(sessionId)&&(input||backgroundKnowledge)&&shell&&!shell.disposed&&(!options.activeInput||options.activeInput(sessionId,shell)===shell))return{sessionId,shell,input,ordinary:true,knowledge:backgroundKnowledge,epoch:startEpoch}
    if(win.performance.now()>=deadline)throw Error('请在当前会话的可见对话输入框中继续标注。')
    await new Promise(resolve=>win.setTimeout(resolve,16))
   }
  }
  const bridge=options.bridge??win.sherlockPptAnnotations
  const coordinator=createPptxAnnotationCoordinator({bridge,resolveInput,isCurrent:valid,subscribeEnvelopes:notify=>options.api.subscribeEnvelopes(notify),
-  getSelection:identity=>doc.activeElement===identity.input&&identity.input.value.length===identity.shell.snapshot.draft.length?{start:identity.input.selectionStart,end:identity.input.selectionEnd}:undefined,
-  isComposing:identity=>composing.has(identity.input),
+  getSelection:identity=>{const input=identity.knowledge?inputFor({sessionId:identity.sessionId}):identity.input;return input&&doc.activeElement===input&&input.value.length===identity.shell.snapshot.draft.length?{start:input.selectionStart,end:input.selectionEnd}:undefined},
+  isComposing:identity=>composing.has(identity.knowledge?inputFor({sessionId:identity.sessionId}):identity.input),
   validateRetry:async(identity,before,parts)=>{for(const occurrence of before.occurrences)if(occurrence.source==='ework-managed-skill'){
    const check=()=>{if(!valid(identity))throw changed()},reference=JSON.parse(occurrence.ref),result=await annotationSkillRequest(win,'resolve',{reference},check,controller.signal)
    if('/'+result.invocationName!==parts.find(value=>value.offset===occurrence.offset)?.text)throw Error('原技能已变化，请重新确认修改请求。')
@@ -61,7 +66,7 @@ export function createPptxAnnotationNativeRuntime(options){
   }})
  const reveal=createPptxAnnotationRevealController({bridge,resolveInput,isCurrent:valid,parseReference:parsePptxAnnotationLocator,openPreview:(identity,value,options)=>{if(!valid(identity))throw changed();return openPptxAnnotationPreview(entry().researchSidebar,identity,value,options)}})
  const captureSelection=event=>{try{const root=entry(),input=inputFor(root),shell=options.inputHub.shell(root.sessionId);if(event.target===input&&input.value.length===shell.snapshot.draft.length)coordinator.getShellBinding(shell)?.setSelection({start:input.selectionStart,end:input.selectionEnd})}catch{}}
- const compositionStart=event=>{if(event.target?.matches?.('.uV2eYG_root textarea')){captureSelection(event);composing.add(event.target)}}
+ const compositionStart=event=>{if(event.target?.matches?.('.uV2eYG_root textarea, #odyssey-right-workspace-panel textarea[data-odyssey-file-reference-session]')){captureSelection(event);composing.add(event.target)}}
  const compositionEnd=event=>{composing.delete(event.target);win.setTimeout(()=>{if(stopped)return;try{const root=entry();if(inputFor(root)===event.target)coordinator.getShellBinding(options.inputHub.shell(root.sessionId))?.flush()}catch{}},0)}
  const refresh=()=>win.queueMicrotask(()=>{if(stopped)return;coordinator.refreshIdentity();try{const root=entry(),shell=options.inputHub.shell(root.sessionId),identity={sessionId:root.sessionId,shell,input:inputFor(root),ordinary:true,epoch};if(valid(identity)){coordinator.adoptInput(identity);coordinator.getShellBinding(shell)?.flush()}}catch{}}),offSessions=options.sessions.list.subscribe?.(refresh)??(()=>{})
  const reset=()=>{epoch++;refresh()},pagehide=()=>runtime.dispose()
@@ -104,7 +109,7 @@ export function stripPptxAnnotationInput(source){
  if(!source.includes('sherlock:pptx-annotation-input:'))return source
  if(LEGACY_BLOCK===BLOCK||LEGACY_BLOCK.includes('submissionNotices'))throw Error('PPT annotation legacy notice adapter drifted')
  const start=source.indexOf('\n'+START),finish=source.indexOf(END,start),installed=start>=0&&finish>=0?source.slice(start,finish+END.length+1):''
- const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd','4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b','8608bedd8a8e505c9bd7f54c89530e5aa75a91f2e09400172ed61d25f6c1540d','5fb255a72243b72715a0d686c878e7236606cd41fa21e52b538b254de1e18cd7','6cdea5bd6d2e13d65143f832a2ad9a62cc9eae948742e9af73778f9f74394adc'].includes(createHash('sha256').update(installed).digest('hex'))
+ const knownPrior=['1449ab328137c2250b31a4dc36105cab365330a4a29d8187a95ade22d1d7a701','e29163c847d85ba75b4a41f079acf92ce7325323cd3640491739e40b6dbb1dcd','4aeef32cf0bb0c909e8a9d8a85c877211d5d1873b290c36781d2b9ae0b981a2b','8608bedd8a8e505c9bd7f54c89530e5aa75a91f2e09400172ed61d25f6c1540d','5fb255a72243b72715a0d686c878e7236606cd41fa21e52b538b254de1e18cd7','6cdea5bd6d2e13d65143f832a2ad9a62cc9eae948742e9af73778f9f74394adc','3a71771b75bb118954299101c9a6f8c7673aa5124f0972236844defec4578235'].includes(createHash('sha256').update(installed).digest('hex'))
  const block=source.includes(BLOCK)?BLOCK:source.includes(LEGACY_BLOCK)?LEGACY_BLOCK:knownPrior?installed:null
  if(source.split(START).length!==2||source.split(END).length!==2||!block)throw Error('PPT annotation installed source drifted')
  let result=source.replace(block,'');for(const[from,to]of TRANSACTIONS)result=exactly(result,to,from)

@@ -16,6 +16,7 @@ function fixture() {
   const writes: Array<{ text: string; resolve(): void; reject(error: Error): void }> = []
   const save = runInNewContext(source.slice(start, end) + '\nsave', {
     viewRef, savingRef, scope: { sessionId: 'session-a' }, path: 'a.md',
+    props: {},
     setDraft: (value: string | null) => { state.draft = value },
     setDirty: (value: boolean) => { state.dirty = value },
     setSaveState: (value: string) => { state.saveState = value },
