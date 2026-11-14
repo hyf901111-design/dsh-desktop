@@ -1417,7 +1417,8 @@ class SpreadsheetView{
    let card=this.componentCards.get(componentId)
    if(!card){card=this.createComponentCard(componentId);this.componentCards.set(componentId,card)}
    card.element.toggleAttribute('data-sheet-component-floating',floating)
-   if(!floating){
+   if(floating)Object.assign(card.element.style,this.objectBox(this.componentGesture?.id===componentId?this.componentGesture.preview:placement.layout))
+   else{
     for(const property of ['left','top','width','height'])card.element.style.removeProperty(property)
     card.element.removeAttribute('data-sheet-component-raised')
    }
@@ -1613,12 +1614,14 @@ class SpreadsheetView{
   if(!card||!layout)return
   const start=this.sheetLayout(layout)
   this.componentGesture={card,id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,resize,started:false,start,preview:start}
+  this.root.dataset.sheetComponentDragging=''
   // Keep pointer-up on the original target so a double-click can rename the title.
   target.setPointerCapture(event.pointerId)
  }
  private moveComponentGesture=(event:PointerEvent)=>{
   const gesture=this.componentGesture
   if(!gesture||gesture.pointerId!==event.pointerId)return
+  if(!event.buttons){this.finishComponentGesture(event,false);return}
   const {start,startX,startY,resize}=gesture
   const x=event.clientX-startX,y=event.clientY-startY
   if(!gesture.started){
@@ -1636,6 +1639,7 @@ class SpreadsheetView{
   const gesture=this.componentGesture
   if(!gesture||gesture.pointerId!==event.pointerId)return
   this.componentGesture=undefined
+  delete this.root.dataset.sheetComponentDragging
   delete gesture.card.element.dataset.dragging
   if(!save||!gesture.started||JSON.stringify(gesture.start)===JSON.stringify(gesture.preview)){this.positionComponents();return}
   void this.saveComponentPlacement(gesture.id,{mode:'floating',layout:gesture.preview}).catch(error=>this.say(errorMessage(error),true))

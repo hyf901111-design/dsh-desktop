@@ -682,6 +682,29 @@ await build({stdin:{resolveDir:root,contents:`
    assert.equal(await js('getComputedStyle(document.querySelector(".ew-sheet-component-layer")).display'),'none')
    press('Escape')
    await until(()=>js('getComputedStyle(document.querySelector(".ew-sheet-component-layer")).display!=="none"'),'floating components return when the chart inspector closes')
+   await click(button('sheet',snapshot().sheetOrder[1]))
+   assert.equal(await js('!!document.querySelector("[data-sheet-component-floating]")'),false)
+   await click(button('sheet',snapshot().sheetOrder[0]))
+   await until(async()=>Math.abs((await componentBounds()).width-panelPosition.width)<1,'floating component dimensions restore after changing sheets')
+   await click(button('menu','components'));await click(button('component-show',savedLibraryId))
+   await wait(500)
+   // The renderer fixture has no Workbench portal. Reproduce its full-width
+   // title and an iframe to exercise the native drag path across the card body.
+   await js('(()=>{const card=document.querySelector("[data-sheet-component-floating]"),header=card.querySelector(".ew-sheet-component-header"),host=card.querySelector(".ew-sheet-component-host");header.innerHTML="<header data-workbench-drag-handle><span class=ew-grid-title style=display:block;height:32px>组件标题</span></header>";host.innerHTML="<iframe title=组件内容 style=width:100%;height:100%></iframe>"})()')
+   const componentTitlePoint=await clickable('[data-sheet-component-floating] .ew-grid-title')
+   const beforeComponentMove=await componentBounds()
+   const beforePlacement=snapshot().components[0].placement.layout
+   const componentPointer=win.webContents.debugger
+   componentPointer.attach('1.3')
+   try{
+    const {x,y}=componentTitlePoint
+    await componentPointer.sendCommand('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',buttons:1,clickCount:1,x,y})
+    await until(()=>js('getComputedStyle(document.querySelector("[data-sheet-component-floating] iframe")).pointerEvents==="none"'),'component iframe cannot intercept the drag start')
+    await componentPointer.sendCommand('Input.dispatchMouseEvent',{type:'mouseMoved',buttons:1,x:x+34,y:y+50})
+    await until(async()=>(await componentBounds()).y>beforeComponentMove.y+24,'floating component moves before release across its iframe')
+    await componentPointer.sendCommand('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',buttons:0,clickCount:1,x:x+34,y:y+50})
+   }finally{componentPointer.detach()}
+   await until(()=>snapshot().components[0].placement.layout.y>beforePlacement.y+24&&js('getComputedStyle(document.querySelector("[data-sheet-component-floating] iframe")).pointerEvents==="auto"'),'component position saves and iframe becomes interactive again after release')
    await sendComponentAction(savedLibraryId,'placement')
    await until(()=>snapshot().components[0].placement?.mode==='docked','component saves docked placement')
    await until(async()=> (await sidebarBounds()).side===resizedSidebar.side,'docking restores the preferred sidebar width')
