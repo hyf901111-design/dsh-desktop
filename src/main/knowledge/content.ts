@@ -5,6 +5,7 @@ import { Worker } from 'node:worker_threads'
 import { DOMParser } from '@xmldom/xmldom'
 import { unzipSync } from 'fflate'
 import type { ResearchPdfModules } from '../research/research-pdf-navigation'
+import { listPptxSlideParts } from '../pptx/content'
 import { validOfficePackage } from '../state/research-file-preview'
 import type { KnowledgeDocument } from '../../shared/knowledge-library'
 
@@ -35,7 +36,7 @@ function officeText(data: Uint8Array, format: Office): KnowledgeText {
   let truncated = false
   const files = unzipSync(data, { filter: entry => {
     const allowed = format === 'docx' ? /^word\/(document|footnotes|endnotes)\.xml$/u.test(entry.name)
-      : format === 'pptx' ? /^ppt\/slides\/slide\d+\.xml$/u.test(entry.name)
+      : format === 'pptx' ? /^ppt\/(?:slides\/[^/]+\.xml|presentation\.xml|_rels\/presentation\.xml\.rels)$/u.test(entry.name)
       : /^xl\/(sharedStrings|worksheets\/sheet\d+)\.xml$/u.test(entry.name)
     if (!allowed) return false
     if (entry.originalSize > budget) { truncated = true; return false }
@@ -50,10 +51,16 @@ function officeText(data: Uint8Array, format: Office): KnowledgeText {
   const shared = files['xl/sharedStrings.xml'] ? elements(parse(files['xl/sharedStrings.xml']), 'si').map(textOf) : []
   const parts: string[] = []
   let count = 0
-  for (const name of Object.keys(files).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))) {
-    if (name === 'xl/sharedStrings.xml') continue
-    const xml = parse(files[name]!)
-    const heading = format === 'pptx' ? `幻灯片 ${/\d+/u.exec(name)?.[0] ?? ''}` :
+  const entries = format === 'pptx' ? listPptxSlideParts(name => {
+    const bytes = files[name]
+    if (!bytes) throw Error('无法读取演示文稿的幻灯片顺序。')
+    return Buffer.from(bytes)
+  }) : Object.keys(files).filter(name => name !== 'xl/sharedStrings.xml').sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
+  for (const [index, name] of entries.entries()) {
+    const bytes = files[name]
+    if (!bytes) { truncated = true; continue }
+    const xml = parse(bytes)
+    const heading = format === 'pptx' ? `幻灯片 ${index + 1}` :
       format === 'xlsx' ? `工作表 ${/\d+/u.exec(name)?.[0] ?? ''}` : ''
     if (heading) parts.push(heading)
     const rows = format === 'xlsx' ? elements(xml, 'row').map(row => elements(row, 'c').map(cell => {

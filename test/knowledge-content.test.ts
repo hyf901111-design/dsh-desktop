@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest'
+import { readFile } from 'node:fs/promises'
 import { zipSync, strToU8 } from 'fflate'
 import { Document, Packer, Paragraph } from 'docx'
 import ExcelJS from 'exceljs'
@@ -44,3 +45,12 @@ it('reads selectable PDF text in the isolated worker and marks bounded results',
   const data = Buffer.from(pdf)
   expect(await content.read(row('原始资料.pdf', data), data)).toEqual({ text: '第 1 页\nKnowledge source', truncated: false })
 }, 15000)
+
+it('extracts PowerPoint text in the actual slide order with one-based page numbers', async () => {
+  const bytes = await readFile(new URL('../packages/dsh-research-task-runtime/assets/home-presentation/company-research-briefing.pptx', import.meta.url))
+  const preview = await content.read(row('演示文稿.pptx', bytes), bytes)
+  const headings = [...(preview?.text ?? '').matchAll(/^幻灯片 (\d+)$/gmu)].map(match => Number(match[1]))
+  expect(headings.length).toBeGreaterThan(10)
+  expect(headings).toEqual(Array.from({ length: headings.length }, (_, index) => index + 1))
+  expect(preview?.text.startsWith('幻灯片 1\n人工智能周期与资产配置')).toBe(true)
+})
