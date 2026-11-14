@@ -3,7 +3,7 @@ import type { MemoryBridge, MemorySnapshot } from '../../shared/memory'
 import { openMemoryDocumentEditor } from '../memory/document-editor'
 import { KnowledgeFileIcon } from './icons'
 
-export function KnowledgeMemory({ document, bridge }: { document: Document; bridge: MemoryBridge }) {
+export function KnowledgeMemory({ document, bridge, compact = false }: { document: Document; bridge: MemoryBridge; compact?: boolean }) {
   const [snapshot, setSnapshot] = useState<MemorySnapshot>()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -76,8 +76,8 @@ export function KnowledgeMemory({ document, bridge }: { document: Document; brid
     }
   }
 
-  return <main className="knowledge-memory" aria-label="经验记忆">
-    <h2>经验记忆</h2>
+  return <section className="knowledge-memory" aria-label="经验记忆">
+    {!compact && <h2>经验记忆</h2>}
     {error && <p role="alert">{error} <button type="button" onClick={() => setReload(value => value + 1)}>重试</button></p>}
     {notice && <p role="status">{notice}</p>}
     {!snapshot && !error && <p role="status">正在读取记忆…</p>}
@@ -94,5 +94,5 @@ export function KnowledgeMemory({ document, bridge }: { document: Document; brid
       </div>
       {snapshot.document?.error && <p role="alert">{snapshot.document.error}</p>}
     </>}
-  </main>
+  </section>
 }

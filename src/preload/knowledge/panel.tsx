@@ -4,12 +4,15 @@ import {
   knowledgeCategories, knowledgeFormat, listKnowledgeDocuments, maxEditableKnowledgeBytes,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeFilter, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
+import type { MemoryBridge } from '../../shared/memory'
+import { KnowledgeMemory } from './memory'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './panel.css?raw'
 
 type PanelBridge = {
+  memory?: MemoryBridge
   snapshot(): Promise<KnowledgeSnapshot>
   received(refresh?: boolean): Promise<KnowledgeDocument[]>
   preview(id: string): Promise<KnowledgePreview>
@@ -52,8 +55,29 @@ export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
 }
 
 function KnowledgePanel({ id, document, bridge }: PanelProps) {
+  const [section, setSection] = useState<'files' | 'memory'>('files')
+  const showFiles = section === 'files'
+  useEffect(() => {
+    const reset = () => setSection('files')
+    document.addEventListener('sherlock:knowledge-identity-changed', reset)
+    return () => document.removeEventListener('sherlock:knowledge-identity-changed', reset)
+  }, [document])
   return <section className="knowledge-panel" aria-label={id ? '知识库文件预览' : '知识库资料'}>
-    {id ? <FilePreview id={id} bridge={bridge} document={document} /> : <FilePicker document={document} bridge={bridge} />}
+    {id ? <FilePreview id={id} bridge={bridge} document={document} /> : <>
+      <header className="knowledge-panel-heading">
+        <div className="knowledge-panel-sections" role="group" aria-label="知识库页签">
+          <button type="button" aria-pressed={showFiles} onClick={() => setSection('files')}>文件资料</button>
+          {bridge.memory && <button type="button" aria-pressed={!showFiles} onClick={() => setSection('memory')}>经验记忆</button>}
+        </div>
+        <button type="button" onClick={() => document.defaultView?.dispatchEvent(
+          new CustomEvent('sherlock:knowledge-open', { detail: { section } })
+        )}>打开完整知识库</button>
+      </header>
+      <div className="knowledge-panel-files" hidden={!showFiles}>
+        <FilePicker document={document} bridge={bridge} />
+      </div>
+      {!showFiles && bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} compact />}
+    </>}
   </section>
 }
 
@@ -252,10 +276,6 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     }))
   }
   return <>
-    <header className="knowledge-panel-heading">
-      <strong>文件资料</strong>
-      <button type="button" onClick={() => document.defaultView!.dispatchEvent(new Event('sherlock:knowledge-open'))}>打开完整知识库</button>
-    </header>
     <label className="knowledge-panel-search"><KnowledgeIcon name="search" />
       <input type="search" aria-label="搜索知识库文件" placeholder="搜索文件…" value={query} onChange={event => setQuery(event.target.value)} />
     </label>

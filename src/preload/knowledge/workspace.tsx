@@ -75,7 +75,13 @@ export function mountKnowledgeWorkspace(document: Document, host: WorkspaceSurfa
   const app = createRoot(root)
   host.register('knowledge', root)
   app.render(<KnowledgeWorkspace bridge={bridge} host={host} document={document} />)
-  const open = () => host.open('knowledge')
+  const open = (event: Event) => {
+    const section = (event as CustomEvent).detail?.section
+    if (section === 'memory' || section === 'files') {
+      document.dispatchEvent(new CustomEvent('sherlock:knowledge-show-section', { detail: section }))
+    }
+    host.open('knowledge')
+  }
   document.defaultView?.addEventListener(knowledgeOpenEvent, open)
   return () => {
     document.defaultView?.removeEventListener(knowledgeOpenEvent, open)
@@ -210,6 +216,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setImports(items => items.map(item => item.id === progress.id ? { ...item, ...progress } : item))
     })
     const off = bridge.subscribe(() => { if (host.current()?.surface === 'knowledge') void load() })
+    const showSection = (event: Event) => {
+      const section = (event as CustomEvent).detail
+      if (section === 'memory' || section === 'files') setTab(section)
+    }
+    document.addEventListener('sherlock:knowledge-show-section', showSection)
     document.addEventListener('sherlock:workspace-surface-change', surface)
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     surface()
@@ -220,6 +231,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       previewRequest.current++
       off()
       offImports?.()
+      document.removeEventListener('sherlock:knowledge-show-section', showSection)
       document.removeEventListener('sherlock:workspace-surface-change', surface)
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
