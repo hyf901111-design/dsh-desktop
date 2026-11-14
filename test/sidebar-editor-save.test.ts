@@ -3,7 +3,8 @@ import { runInNewContext, Script } from 'node:vm'
 import { describe, expect, it } from 'vitest'
 import { patchBetterSidebarEditor as patch } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 
-const original = readFileSync('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client-editor.js', 'utf8')
+const original = readFileSync(process.env.SHERLOCK_SIDEBAR_EDITOR_SOURCE ??
+  'build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client-editor.js', 'utf8')
 const source = patch(original)
 const start = source.indexOf('const save = () => {'), end = source.indexOf('\n\t\tconst markdown =', start)
 if (start < 0 || end < start) throw Error('Real TextEditor save boundary missing')
@@ -79,5 +80,19 @@ describe('Files TextEditor save and preview', () => {
     expect(destroyed).toBe(true)
     expect(f.viewRef.current).toBeNull()
     expect(f.savingRef.current).toBe(false)
+  })
+
+  it('uses the latest saved body for a clean editor and holds an active draft to its original revision', () => {
+    const begin = source.indexOf('const managed = props.managedFile && viewerId === "markdown";')
+    const end = source.indexOf('const [saveState, setSaveState]', begin)
+    const definitions = source.slice(begin, end)
+    const context = {
+      props: { managedFile: true, managedRevision: 'revision-2' },
+      savedContent: '正文新版', draftBase: { text: '正文旧版', revision: 'revision-1' },
+      currentSave: { current: null }, viewerId: 'markdown'
+    }
+    const current = (dirty: boolean) => runInNewContext(definitions + '\n({ content, conflict })', { ...context, dirty })
+    expect(current(true)).toEqual({ content: '正文旧版', conflict: true })
+    expect(current(false)).toEqual({ content: '正文新版', conflict: false })
   })
 })

@@ -1,6 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
 import { afterEach, expect, it, vi } from 'vitest'
 import { KnowledgeFilePreview } from '../src/main/knowledge/file-preview'
 import { KnowledgeStore } from '../src/main/knowledge/store'
@@ -34,6 +36,33 @@ it('preserves the actionable preview error without the Electron transport prefix
   const message = '该文件已取消共享或不可用。'
   expect(knowledgeRequestError(Error("Error invoking remote method 'knowledge:request': Error: " + message))).toBe(message)
   expect(knowledgeRequestError({ message: '请先登录。' })).toBe('请先登录。')
+})
+
+it('reloads an already open Markdown preview when knowledge changes its saved body', async () => {
+  const script = readFileSync('scripts/lib/sidebar-knowledge-preview.mjs', 'utf8')
+  const hook = script.slice(0, script.indexOf('function nativeKnowledgeViewer'))
+  const records = vi.fn()
+  const cleanup: Array<() => void> = []
+  const id = 'c78b58b7-24ae-4f36-ac82-d8e540116d29'
+  const row = { id, name: '报告.md', updatedAt: 1 }
+  let result = { kind: 'text', document: row, revision: 'initial', text: '原版正文' }
+  const bridge = { knowledgeFilePreview: vi.fn(async () => result), knowledgeFilePreviewStatus: async () => result.document }
+  const document = new EventTarget()
+  runInNewContext(hook + '\nuseKnowledgeEditorSource(fileId, { sessionId: "one" }, { id: fileId }, {})', {
+    react: {
+      useState: () => [null, records],
+      useRef: (value: unknown) => ({ current: value }),
+      useEffect: (run: () => (() => void) | undefined) => { const dispose = run(); if (dispose) cleanup.push(dispose) },
+      useCallback: (callback: unknown) => callback
+    },
+    document, window: Object.assign(new EventTarget(), { dshDesktop: bridge }), fileId: id
+  })
+  try {
+    await vi.waitFor(() => expect(records).toHaveBeenLastCalledWith(expect.objectContaining({ source: result })))
+    result = { ...result, document: { ...row, updatedAt: 2 }, revision: 'next', text: '对话保存的新版' }
+    document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+    await vi.waitFor(() => expect(records).toHaveBeenLastCalledWith(expect.objectContaining({ source: result })))
+  } finally { for (const dispose of cleanup) dispose() }
 })
 
 it('uses exact-file preview for supported formats and denies a previous account', async () => {
