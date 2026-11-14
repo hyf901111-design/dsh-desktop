@@ -11,25 +11,57 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "9be14c6489f81dc4e31fa5f286fb75802b90ee94",
-        "tipCommit": "ae0618921725a173e280784c24eb8789bdd44b7f",
+        "baseCommit": "ae0618921725a173e280784c24eb8789bdd44b7f",
+        "tipCommit": "0ab7c8bc4fc1006dda87aeae908e2bee2bdbc320",
         "commits": [
           {
-            "commit": "ae0618921725a173e280784c24eb8789bdd44b7f",
+            "commit": "0ab7c8bc4fc1006dda87aeae908e2bee2bdbc320",
             "parents": [
-              "9be14c6489f81dc4e31fa5f286fb75802b90ee94"
+              "ae0618921725a173e280784c24eb8789bdd44b7f"
             ],
-            "subject": "修复：共享目录与已打开预览同步更新"
+            "subject": "优化：统一知识库交互动效与斜杠菜单目录样式"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-motion.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/icons.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.css"
+          },
           {
             "status": "M",
             "path": "src/preload/knowledge/panel.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/knowledge-directory-icons.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/knowledge-directory-icons.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/command-popup-position-browser.test.js"
           },
           {
             "status": "M",
@@ -45,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "ae0618921725a173e280784c24eb8789bdd44b7f",
-            "completedAt": "2026-11-14T18:47:50Z",
+            "verifiedCommit": "0ab7c8bc4fc1006dda87aeae908e2bee2bdbc320",
+            "completedAt": "2026-11-14T19:09:05.058Z",
             "timeoutMs": 120000
           },
           {
@@ -57,22 +89,27 @@
               "npx",
               "vitest",
               "run",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
+              "test/command-popup-position-browser.test.js",
+              "test/command-popup-position.test.js",
+              "test/skill-command-patch.test.js",
               "test/knowledge-composer.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "test/figma-motion-controller.test.ts",
+              "test/workspace-bottom-panel-layout.test.js",
+              "test/workspace-narrow-layout.test.js",
               "--maxWorkers=2",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "19 项聚焦检查通过，含自动复核与手动刷新同步更新中间列表、右侧目录和预览。",
-            "verifiedCommit": "ae0618921725a173e280784c24eb8789bdd44b7f",
-            "completedAt": "2026-11-14T18:47:50Z",
+            "summary": "56 项聚焦检查通过，覆盖真实客户端的命令菜单模块、常规及减少动态效果、目录下钻和交互几何。",
+            "verifiedCommit": "0ab7c8bc4fc1006dda87aeae908e2bee2bdbc320",
+            "completedAt": "2026-11-14T19:09:05.058Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "前一签名包复现撤销后预览更新但列表仍残留；本次渲染回归确认手动刷新和预览复核都会同步更新两处列表。"
+          "summary": "浏览器渲染加载实际预加载工作区及打补丁的原生菜单模块，验证共享目录分组、搜索展开、返回及两种动效设置。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -87,58 +124,16 @@
           "右侧知识库切换文件资料与经验记忆，沿用同一启用开关和记忆 Markdown 编辑器。",
           "右侧文件行在文件大小和 @文件 之间立即切换，文件名位置稳定。拖放、预览和上传完成使用短淡入并尊重减少动态效果。",
           "PowerPoint 正文的引用页码遵循演示文稿播放顺序。",
-          "共享目录从手动刷新或预览定期复核取得结果后，文件列表、页签目录和预览同步更新。"
+          "共享目录从手动刷新或预览定期复核取得结果后，文件列表、页签目录和预览同步更新。",
+          "知识库弹出菜单、筛选反馈、共享目录和行尾引用应用短动效；减少动态效果时静态呈现，保留键盘和侧栏原生行为。",
+          "斜杠知识库以分类与文件夹分组显示，沿用知识库图标和共享二级返回；搜索后可直接展开共享目录。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T18:47:50Z"
-      },
-      "merged": {
-        "mergeCommit": "6b825588b07a2f9016b3f91e2bcc3b92499de982",
-        "verificationCommit": "6b825588b07a2f9016b3f91e2bcc3b92499de982",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6b825588b07a2f9016b3f91e2bcc3b92499de982",
-            "completedAt": "2026-11-14T18:48:05.517Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "6b825588b07a2f9016b3f91e2bcc3b92499de982",
-            "completedAt": "2026-11-14T18:48:05.517Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T18:48:05.517Z"
+        "generatedAt": "2026-11-14T19:09:05.058Z"
       }
     }
   ],
