@@ -26,6 +26,7 @@ import { mountAccountUi } from './account-ui'
 import { createResearchBoardsBridge } from './research-boards'
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron'
 import type { UpdateStatus } from '../shared/contracts'
+import { knowledgeRequestError } from '../shared/knowledge-library'
 import type { PptxAnnotationBridge } from '../shared/pptx-annotations'
 import { developerModeEnabledFromArguments } from '../shared/developer-mode'
 import { appVersionFromArguments } from '../shared/app-info'
@@ -83,6 +84,12 @@ let notesComponentDataAccess:{request:(method:string,input:any)=>Promise<any>;ow
 const DEVELOPER_MODE_STYLE_ID = 'sherlock-developer-mode-style'
 const DEVELOPER_MODE_NOTICE_ID = 'sherlock-developer-mode-notice'
 const locale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+
+function requestKnowledgePreview(method: 'file-preview' | 'file-preview-status' | 'download' | 'save-markdown', args: object) {
+  return ipcRenderer.invoke('knowledge:request', method, args).catch((error: unknown) => {
+    throw Error(knowledgeRequestError(error) || '知识库文件操作失败，请重试。')
+  })
+}
 
 const initialDeveloperMode = developerModeEnabledFromArguments(process.argv)
 const developerMode = new DeveloperModeController({
@@ -468,11 +475,11 @@ contextBridge.exposeInMainWorld(
     closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
     knowledgeOptions: () => ipcRenderer.invoke('knowledge:request', 'reference-options'),
     knowledgeReference: (reference: Record<string, unknown>) => ipcRenderer.invoke('knowledge:request', 'reference', reference),
-    knowledgeFilePreview: (id: string, sessionId: string) => ipcRenderer.invoke('knowledge:request', 'file-preview', { id, sessionId }),
-    knowledgeFilePreviewStatus: (id: string, updatedAt: number) => ipcRenderer.invoke('knowledge:request', 'file-preview-status', { id, updatedAt }),
-    knowledgeFileDownload: (id: string) => ipcRenderer.invoke('knowledge:request', 'download', { id }),
+    knowledgeFilePreview: (id: string, sessionId: string) => requestKnowledgePreview('file-preview', { id, sessionId }),
+    knowledgeFilePreviewStatus: (id: string, updatedAt: number) => requestKnowledgePreview('file-preview-status', { id, updatedAt }),
+    knowledgeFileDownload: (id: string) => requestKnowledgePreview('download', { id }),
     knowledgeFileSaveMarkdown: (id: string, revision: string, text: string) =>
-      ipcRenderer.invoke('knowledge:request', 'save-markdown', { id, revision, text }),
+      requestKnowledgePreview('save-markdown', { id, revision, text }),
     collectKnowledgeFile: (sessionId: string, path: string, saved: boolean, sessionTitle?: string): Promise<import('../shared/knowledge-library').KnowledgeDocument | undefined> =>
       ipcRenderer.invoke('knowledge:request', 'generated', { sessionId, path, saved, sessionTitle }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
