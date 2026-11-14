@@ -145,7 +145,10 @@ body [role="menu"]:has([data-odyssey-file-menu-label]) [role="menuitem"]:active:
 }
 
 [data-odyssey-tab-overflow-menu],
-body [role="menu"]:has([data-odyssey-file-menu-label]) {
+body [role="menu"]:has([data-odyssey-file-menu-label]),
+[data-ework-command-menu-selection],
+[data-ework-command-surface],
+[data-knowledge-cascading-options] {
   animation: odyssey-panel-menu-enter var(--odyssey-motion-menu-duration) ease-out both;
 }
 
@@ -211,7 +214,10 @@ body[data-dsh-sidebar-dragging] :is(
   }
 
   [data-odyssey-tab-overflow-menu],
-  body [role="menu"]:has([data-odyssey-file-menu-label]) {
+  body [role="menu"]:has([data-odyssey-file-menu-label]),
+  [data-ework-command-menu-selection],
+  [data-ework-command-surface],
+  [data-knowledge-cascading-options] {
     animation: none;
   }
 }

@@ -706,7 +706,7 @@ body[data-workspace-surface=integrations] [data-dsh-panel-host]{position:fixed;i
 body[data-workspace-surface=integrations] [data-dsh-panel-host] .t8lSSG_toggleCluster{pointer-events:auto;visibility:visible}
 
 /* Native composer slash menu shares the client neutral palette in every view. */
-._3e4SsG_menu{background:var(--odyssey-menu)!important;border:1px solid var(--odyssey-menu-border)!important;border-radius:10px!important;box-shadow:var(--odyssey-menu-shadow)!important;animation:odyssey-menu-enter 150ms cubic-bezier(.16,1,.3,1)}
+._3e4SsG_menu{background:var(--odyssey-menu)!important;border:1px solid var(--odyssey-menu-border)!important;border-radius:10px!important;box-shadow:var(--odyssey-menu-shadow)!important}
 ._3e4SsG_menu ._3e4SsG_item:is(:hover,._3e4SsG_active,[aria-selected=true]){background:var(--odyssey-menu-row)!important;color:inherit!important}._3e4SsG_menu ._3e4SsG_itemIcon{color:inherit!important;background:var(--odyssey-menu-row)!important}
 
 /* Center the context ring in the same 30 px target as adjacent composer tools. */

@@ -253,8 +253,9 @@ it('rechecks an open shared preview on focus, list refresh and a visible timer',
   } finally { await page.close() }
 })
 
-it('preserves PDF filtering when drilling into shared files, going back and browsing local folders', async () => {
-  const page = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'no-preference' })
+it.each(['no-preference', 'reduce'])('preserves PDF filtering through drill-down and hover with %s motion', async reducedMotion => {
+  const animate = reducedMotion === 'no-preference'
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
@@ -266,16 +267,26 @@ it('preserves PDF filtering when drilling into shared files, going back and brow
     expect(await pane.locator('.knowledge-panel-menu').evaluate(el => {
       const css = getComputedStyle(el)
       return [css.animationName, css.animationDuration]
-    })).toEqual(['knowledge-popup-in', '0.12s'])
+    })).toEqual(animate ? ['knowledge-popup-in', '0.14s'] : ['none', '0s'])
     await pane.getByRole('button', { name: '他人共享', exact: true }).click()
     await pane.getByRole('button', { name: /数据分析/ }).waitFor()
     await pane.getByRole('button', { name: '筛选', exact: true }).click()
     await pane.getByRole('checkbox', { name: 'PDF', exact: true }).check()
     await pane.getByRole('button', { name: '完成' }).click()
     await expect.poll(() => pane.getByRole('button', { name: /数据分析/ }).count()).toBe(0)
+    expect(await pane.locator('.knowledge-filter-count').evaluate(el => getComputedStyle(el).animationName))
+      .toBe(animate ? 'knowledge-feedback-in' : 'none')
     await pane.getByRole('button', { name: /行业研究/ }).click()
     const file = pane.getByRole('button', { name: /共享行业资料.pdf 共享人/ })
     await file.waitFor()
+    const view = pane.locator('.knowledge-panel-rows')
+    expect(await view.evaluate(el => getComputedStyle(el).animationName))
+      .toBe(animate ? 'knowledge-state-in' : 'none')
+    const currentView = await view.elementHandle()
+    const search = pane.getByRole('searchbox')
+    await search.fill('共享行业')
+    expect(await view.evaluate((el, current) => el === current, currentView)).toBe(true)
+    await search.clear()
     await page.mouse.move(1050, 750)
     const row = file.locator('..')
     const actionState = () => row.locator('.knowledge-panel-action').evaluate(action => {
@@ -286,14 +297,16 @@ it('preserves PDF filtering when drilling into shared files, going back and brow
     const before = await file.boundingBox()
     expect(await actionState()).toEqual(['1', '0', 'none'])
     await file.hover()
-    expect(await actionState()).toEqual(['0', '1', 'auto'])
+    const action = row.getByRole('button', { name: '引用文件 共享行业资料.pdf' })
+    expect(await action.evaluate(el => getComputedStyle(el).animationName))
+      .toBe(animate ? 'knowledge-state-in' : 'none')
+    await expect.poll(actionState).toEqual(['0', '1', 'auto'])
     expect(await file.boundingBox()).toEqual(before)
     await page.mouse.move(1050, 750)
     await file.focus()
     await page.keyboard.press('Tab')
-    expect(await row.getByRole('button', { name: '引用文件 共享行业资料.pdf' }).evaluate(el =>
-      el === document.activeElement)).toBe(true)
-    expect(await actionState()).toEqual(['0', '1', 'auto'])
+    expect(await action.evaluate(el => el === document.activeElement)).toBe(true)
+    await expect.poll(actionState).toEqual(['0', '1', 'auto'])
     await pane.getByRole('button', { name: '返回上级' }).click()
     await pane.getByRole('button', { name: /行业研究/ }).waitFor()
     await pane.getByRole('button', { name: '他人共享', exact: true }).click()
