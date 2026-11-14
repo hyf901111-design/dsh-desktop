@@ -11,45 +11,21 @@
         "schemaVersion": 1,
         "featureName": "表格快捷键与组件交互",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
-        "tipCommit": "f2d31757896cad67496cbeae4806319a47575216",
+        "baseCommit": "f2d31757896cad67496cbeae4806319a47575216",
+        "tipCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
         "commits": [
           {
-            "commit": "f2d31757896cad67496cbeae4806319a47575216",
+            "commit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
             "parents": [
-              "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86"
+              "f2d31757896cad67496cbeae4806319a47575216"
             ],
-            "subject": "修复表格撤销重做和组件交互，支持保存至组件库"
+            "subject": "统一表格组件和图表层级，修复快捷键重复撤销"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-html-interaction.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/verify-spreadsheet-live.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/engine.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/ui-copy.ts"
           },
           {
             "status": "M",
@@ -58,10 +34,6 @@
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-interaction-state.test.js"
           }
         ],
         "checks": [
@@ -73,19 +45,19 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "f2d31757896cad67496cbeae4806319a47575216",
-            "completedAt": "2026-11-14T04:57:19.551Z",
+            "verifiedCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
+            "completedAt": "2026-11-14T05:17:25.671Z",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "node",
-              "/var/folders/rm/jy4dz49s171fl1dxd9qr3hh80000gp/T//ework-sheet-history-focused.0MG6Ya/focused.mjs"
+              "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 聚焦检查撤销重做与组件入库",
-            "verifiedCommit": "f2d31757896cad67496cbeae4806319a47575216",
-            "completedAt": "2026-11-14T04:57:19.551Z",
+            "summary": "Electron 聚焦检查逐步撤销重做及混合卡片层级",
+            "verifiedCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
+            "completedAt": "2026-11-14T05:17:25.671Z",
             "timeoutMs": 180000
           },
           {
@@ -101,22 +73,22 @@
             ],
             "outcome": "passed",
             "summary": "只读数据展开检查",
-            "verifiedCommit": "f2d31757896cad67496cbeae4806319a47575216",
-            "completedAt": "2026-11-14T04:57:19.551Z",
+            "verifiedCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
+            "completedAt": "2026-11-14T05:17:25.671Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Electron 窗口实测输入法后的表格撤销重做和组件入库。"
+          "summary": "Electron 窗口实测多步撤销重做，以及图表和组件交替置顶。"
         },
         "acceptanceCriteria": [
           "表格键盘撤销和重做",
           "展开智能组件数据",
-          "表格生成组件保存至组件库及重叠层级"
+          "图表和组件共享重叠层级"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T04:57:19.551Z"
+        "generatedAt": "2026-11-14T05:17:25.671Z"
       }
     },
     {
