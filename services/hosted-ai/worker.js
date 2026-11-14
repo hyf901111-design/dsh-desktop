@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer'
 import { AiQuotaError, AiQuotaLedger } from '../accounts/ai-quota.js'
 import { openVikingKey, vikingMemory } from './openviking.js'
 import { ARK_TEXT_MODELS, ARK_IMAGE_MODELS, ARK_PLAN_BASE } from './ark-catalog.js'
+import { hostedChatUpstreamTimeoutMs } from '../../packages/dsh-research-task-runtime/hosted-ai-timeouts.js'
 
 const ROOT = '/v1/hosted-ai/'
 const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
@@ -165,30 +166,34 @@ function imageInput(input) {
 const trustedUsage = usage => object(usage) && validCount(usage.prompt_tokens) && validCount(usage.completion_tokens) &&
   usage.total_tokens === usage.prompt_tokens + usage.completion_tokens
 
-// Emit only successful protocol events. Do not relay upstream errors or headers.
+// Forward model events and report failures without passing upstream error bodies through.
 function chatStream(body, settle, estimate, interruptedLog, requestId) {
-  let buffer = '', billed = false, done = false
+  let buffer = '', billed = false, finished = false, done = false
   const decoder = new TextDecoder()
+  const reader = body.getReader()
+  const complete = controller => {
+    done = true
+    controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+  }
   async function drain(controller) {
-    for (;;) {
+    while (!done) {
       const next = buffer.indexOf('\n')
       if (next < 0) break
       const line = buffer.slice(0, next).trimEnd()
       buffer = buffer.slice(next + 1)
       if (!line.startsWith('data:')) continue
       const data = line.slice(5).trim()
-      if (done) continue
       if (data === '[DONE]') {
-        if (!billed) throw Error('Hosted AI ended without usage')
-        done = true
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-        continue
+        if (!finished || !billed) throw Error('Hosted AI ended without a settled completion')
+        complete(controller)
+        return
       }
       const frame = JSON.parse(data)
       if (!object(frame) || frame.error || !Array.isArray(frame.choices)) throw Error('Hosted AI stream failed')
       const hasUsage = trustedUsage(frame.usage)
+      const terminal = frame.choices.some(choice => nonempty(choice.finish_reason))
       // Ark sends the final total either in a separate usage event or alongside a finish reason.
-      if (!billed && hasUsage && (frame.choices.length === 0 || frame.choices.some(choice => choice.finish_reason != null))) {
+      if (!billed && hasUsage && (frame.choices.length === 0 || terminal)) {
         await settle(estimate.billed(frame.usage))
         billed = true
       }
@@ -196,27 +201,43 @@ function chatStream(body, settle, estimate, interruptedLog, requestId) {
         choices: frame.choices.map(choice => ({ index: choice.index, delta: choice.delta, finish_reason: choice.finish_reason })),
         ...(hasUsage ? { usage: frame.usage } : {}) }
       controller.enqueue(encoder.encode('data: ' + JSON.stringify(event) + '\n\n'))
+      if (terminal) finished = true
     }
-    if (buffer.length > 2_000_000) throw Error('Hosted AI frame too large')
+    if (!done && buffer.length > 2_000_000) throw Error('Hosted AI frame too large')
   }
-  const interrupted = controller => {
-    if (done) return
+  const interrupted = (controller, reason) => {
     done = true
-    interruptedLog(billed)
+    interruptedLog({ billed, finished, reason })
     controller.enqueue(encoder.encode('data: ' + JSON.stringify({error:{message:'方舟输出中断，未自动重试。',type:'server_error',code:'HOSTED_AI_STREAM_INTERRUPTED',requestId}}) + '\n\n'))
   }
-  return body.pipeThrough(new TransformStream({
-    async transform(chunk, controller) {
-      if (done) return
-      try { buffer += decoder.decode(chunk, { stream: true }); await drain(controller) }
-      catch { interrupted(controller) }
+  const finish = (controller, reason) => {
+    // A terminal choice and successfully settled usage establish completion
+    // even if Ark closes before sending its final SSE marker.
+    if (finished && billed) complete(controller)
+    else interrupted(controller, reason)
+  }
+  return new ReadableStream({
+    async pull(controller) {
+      while (!done && controller.desiredSize > 0) {
+        let chunk
+        try { chunk = await reader.read() }
+        catch { if (!done) finish(controller, 'upstream-read'); break }
+        if (done) return
+        try {
+          buffer += chunk.done ? decoder.decode() + '\n' : decoder.decode(chunk.value, { stream: true })
+          await drain(controller)
+          if (chunk.done && !done) finish(controller, 'upstream-eof')
+        } catch {
+          if (!done) interrupted(controller, 'invalid-frame-or-settlement')
+        }
+      }
+      if (done && controller.desiredSize !== null) {
+        controller.close()
+        void reader.cancel().catch(() => {})
+      }
     },
-    async flush(controller) {
-      if (done) return
-      try { buffer += decoder.decode() + '\n'; await drain(controller) }
-      finally { interrupted(controller) }
-    }
-  }))
+    cancel(reason) { done = true; return reader.cancel(reason) }
+  })
 }
 
 export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQuotaLedger(db) } = {}) {
@@ -282,7 +303,7 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
       stage = 'upstream'
       const response = await send(ARK_PLAN_BASE + (image ? '/images/generations' : '/chat/completions'), {
         method: 'POST', redirect: 'manual',
-        signal: image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(300000),
+        signal: image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(hostedChatUpstreamTimeoutMs),
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.ARK_AGENT_PLAN_KEY },
         body: input.wire
       })
@@ -303,7 +324,7 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         const stream = chatStream(response.body, async units => {
           await settle(units)
           stage = 'stream'
-        }, input, billed => diagnostic('HOSTED_AI_STREAM_INTERRUPTED', { billed }), requestId)
+        }, input, detail => diagnostic('HOSTED_AI_STREAM_INTERRUPTED', detail), requestId)
         const streamHeaders = { ...requestHeaders, 'content-type': 'text/event-stream' }
         if (!ctx) return new Response(stream, { headers: streamHeaders })
         const [client, accounting] = stream.tee()

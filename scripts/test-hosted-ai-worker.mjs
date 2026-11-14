@@ -85,12 +85,14 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     if (input.messages[0].content === 'reject') return Response.json({ error: key }, { status: 400 })
     const frames = [
       { id: 'chat', created: 123, model: input.model, choices: [{ index: 0, delta: { content: '你好' }, finish_reason: null }] },
+      { id: 'chat', created: 123, model: input.model, choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
       { id: 'chat', created: 123, model: input.model, choices: [], usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 } }
     ]
-    if (input.messages[0].content === 'cut') frames.pop()
+    if (input.messages[0].content === 'cut') frames.splice(1)
     if (input.messages[0].content === 'cut-after-finish') {
       frames[0].choices[0].finish_reason = 'stop'
       frames[0].usage = frames.pop().usage
+      frames.pop()
     }
     if (input.messages[0].content === 'client-closed') {
       const wire = frame => new TextEncoder().encode('data: ' + JSON.stringify(frame) + '\n\n')
@@ -99,6 +101,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
           controller.enqueue(wire(frames[0]))
           await new Promise(resolve => setTimeout(resolve, 100))
           controller.enqueue(wire(frames[1]))
+          controller.enqueue(wire(frames[2]))
           controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'))
           controller.close()
         }
@@ -235,7 +238,9 @@ try {
     }
   }
   const interruptedAfterFinish = await send('chat/completions',token,chat('cut-after-finish'),'cut-after-finish')
-  assert.match(await interruptedAfterFinish.text(), /HOSTED_AI_STREAM_INTERRUPTED/)
+  const completedWithoutMarker = await interruptedAfterFinish.text()
+  assert.match(completedWithoutMarker, /"finish_reason":"stop"[\s\S]*\[DONE\]/)
+  assert.doesNotMatch(completedWithoutMarker, /HOSTED_AI_STREAM_INTERRUPTED/)
   const billedAfterFinish = (await (await send('quota',token)).json()).quota
   assert.equal(billedAfterFinish.fiveHour.used,(billedUnits+1500)/1_000_000)
   assert.equal(billedAfterFinish.fiveHour.reserved,beforeMatrix.fiveHour.reserved)

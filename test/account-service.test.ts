@@ -458,7 +458,9 @@ it('rejects old hosted-AI bridge generations before contacting Cloudflare',async
   const generation=service.generation
   expect(await (await catalog()).json()).toMatchObject({generation,image:true})
   expect(await service.invoke('ai-quota',undefined)).toMatchObject({quota:{fiveHour:{remaining:29}}})
-  expect(await (await send(generation)).text()).toBe('data: [DONE]\n\n')
+  const chatId = '01234567-89ab-4cde-8fed-9876543210ab'
+  expect(await (await send(generation,'chat/completions',chatId)).text()).toBe('data: [DONE]\n\n')
+  expect(provider.mock.lastCall?.[1]?.headers).toMatchObject({'x-ework-request-id':chatId})
   await expect.poll(() => onHostedQuotaChanged.mock.calls.length).toBe(1)
   const imageId = 'f'.repeat(64)
   await (await send(generation,'images',imageId)).text()
