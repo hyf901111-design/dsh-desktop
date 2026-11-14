@@ -138,7 +138,7 @@ it('edits a Markdown preview and preserves a draft on revision conflicts', async
 })
 
 it('preserves PDF filtering when drilling into shared files, going back and browsing local folders', async () => {
-  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'no-preference' })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
@@ -147,6 +147,10 @@ it('preserves PDF filtering when drilling into shared files, going back and brow
     await page.addScriptTag({ content: bundle })
     const pane = page.getByRole('region', { name: '知识库资料' })
     await pane.getByRole('button', { name: '所有文件', exact: true }).click()
+    expect(await pane.locator('.knowledge-panel-menu').evaluate(el => {
+      const css = getComputedStyle(el)
+      return [css.animationName, css.animationDuration]
+    })).toEqual(['knowledge-popup-in', '0.12s'])
     await pane.getByRole('button', { name: '他人共享', exact: true }).click()
     await pane.getByRole('button', { name: /数据分析/ }).waitFor()
     await pane.getByRole('button', { name: '筛选', exact: true }).click()
@@ -156,6 +160,7 @@ it('preserves PDF filtering when drilling into shared files, going back and brow
     await pane.getByRole('button', { name: /行业研究/ }).click()
     const file = pane.getByRole('button', { name: /共享行业资料.pdf 共享人/ })
     await file.waitFor()
+    await page.mouse.move(1050, 750)
     await expect.poll(() => pane.locator('.knowledge-panel-action small').evaluate(el => getComputedStyle(el).opacity)).toBe('1')
     await file.hover()
     await expect.poll(() => pane.getByRole('button', { name: '引用文件 共享行业资料.pdf' }).evaluate(el => getComputedStyle(el).opacity)).toBe('1')
@@ -246,6 +251,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     }
     const filter = library.getByRole('button', { name: '筛选', exact: true })
     await filter.click()
+    expect(await library.locator('.knowledge-filter-menu').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
     await library.getByRole('checkbox', { name: 'Markdown', exact: true }).check()
     await library.getByRole('button', { name: '完成' }).click()
     expect(await filter.evaluate(button => {
