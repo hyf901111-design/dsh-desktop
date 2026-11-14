@@ -439,7 +439,7 @@ body[data-ework-spreadsheet-mode] :is(.univer-popup>section>div.univer-overscrol
 .ew-sheet-component-card[data-sheet-component-floating]::after{content:'';position:absolute;inset:0;z-index:2;border:1px solid var(--ss-border);border-radius:inherit;pointer-events:none}
 .ew-sheet-component-card[data-sheet-component-raised]::after{border-color:var(--ss-blue)}
 .ew-sheet-component-card[data-dragging]{user-select:none}
-.ew-sheet-component-card[data-dragging] iframe{pointer-events:none}
+.ew-sheet[data-sheet-component-dragging] .ew-sheet-component-layer iframe{pointer-events:none}
 .ew-sheet-component-header{flex:none;min-width:0}
 .ew-sheet .ew-sheet-component-card .ew-grid-header{gap:4px;padding-inline:8px;cursor:default}
 .ew-sheet-component-card .ew-grid-header:has(.ew-financial-header-selector)>.ew-grid-title{flex:0 1 auto}
