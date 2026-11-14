@@ -1,7 +1,10 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, expect, it } from 'vitest'
+import { KnowledgeContent } from '../src/main/knowledge/content'
+import { resolveKnowledgeReference } from '../src/main/knowledge/references'
+import type { KnowledgeSharing } from '../src/main/knowledge/sharing'
 import { KnowledgeStore } from '../src/main/knowledge/store'
 import { listKnowledgeDocuments } from '../src/shared/knowledge-library'
 
@@ -22,7 +25,15 @@ async function fixture() {
     await writeFile(path, value)
     return path
   }
-  return { open, file, switchAccount: () => { identity = { owner: 'second', generation: 2 } } }
+  return { root, open, file, owner: () => identity, switchAccount: () => { identity = { owner: 'second', generation: 2 } } }
+}
+
+async function withoutSourceVersion(root: string) {
+  const [account] = await readdir(join(root, 'library'))
+  const path = join(root, 'library', account!, 'catalog.json')
+  const state = JSON.parse(await readFile(path, 'utf8'))
+  delete state.documents[0].sourceVersion
+  await writeFile(path, JSON.stringify(state))
 }
 
 it('keeps uploaded bytes and document organization through reopen and account switches', async () => {
@@ -71,6 +82,78 @@ it('collects a generated deliverable once, excludes process scripts, and honors 
   expect(await store.collectGenerated(report, origin)).toBeUndefined()
   expect((await store.snapshot()).documents).toHaveLength(0)
   expect((await store.collectGenerated(report, { ...origin, saved: true }))?.saved).toBe(true)
+})
+
+it.each([false, true])('refreshes a regenerated file in place for preview and Agent references (legacy=%s)', async legacy => {
+  const { root, file, open, owner } = await fixture()
+  let store = open()
+  const origin = { sessionId: 'report-session', sessionTitle: '行业周报' }
+  const path = await file('周报.md', '# 版本甲')
+  const original = (await store.collectGenerated(path, origin))!
+  await store.edit({ type: 'create-folder', name: '研究资料' })
+  const folderId = (await store.snapshot()).folders[0]!.id
+  await store.edit({ type: 'move', id: original.id, folderId })
+  await store.edit({ type: 'rename', id: original.id, name: '已整理的周报.md' })
+  await store.edit({ type: 'star', id: original.id, value: true })
+  if (legacy) {
+    await withoutSourceVersion(root)
+    store = open()
+    expect(await store.collectGenerated(path, origin)).toMatchObject({ updatedAt: original.updatedAt })
+    await withoutSourceVersion(root)
+    store = open()
+  }
+  const previous = await store.file(original.id)
+  await rename(await file('重生成.md', '# 版本乙'), path)
+  const [refreshed, saved] = await Promise.all([
+    store.collectGenerated(path, origin), store.collectGenerated(path, { ...origin, saved: true })
+  ])
+  expect(refreshed?.id).toBe(original.id)
+  expect(saved).toMatchObject({ id: original.id, name: '已整理的周报.md', folderId, saved: true, starred: true })
+  const reopened = open()
+  expect((await reopened.snapshot()).documents).toEqual([saved])
+  expect(await reopened.collectGenerated(path, origin)).toEqual(saved)
+  const content = new KnowledgeContent(() => { throw Error('Markdown should not load PDF modules') })
+  const current = await reopened.file(original.id)
+  expect(await content.read(current.document, current.path)).toMatchObject({ text: '# 版本乙' })
+  expect(current.document.updatedAt).toBeGreaterThan(original.updatedAt)
+  expect(await readFile(previous.path, 'utf8')).toBe('# 版本甲')
+  const reference = await resolveKnowledgeReference({ kind: 'file', id: original.id }, {
+    store: reopened, owner, content, sharing: {} as KnowledgeSharing
+  })
+  expect(reference.documents).toMatchObject([{ id: original.id, name: '已整理的周报.md', text: '# 版本乙' }])
+})
+
+it.each([false, true])('keeps in-library Markdown edits on recollection (legacy=%s)', async legacy => {
+  const { root, file, open } = await fixture()
+  const origin = { sessionId: 'report-session' }
+  const path = await file('周报.md', '# 原稿')
+  let store = open()
+  const { id } = (await store.collectGenerated(path, origin))!
+  const markdown = await store.markdown(id)
+  await store.saveMarkdown(id, markdown.revision, '# 用户整理的正文')
+  if (legacy) {
+    await withoutSourceVersion(root)
+    store = open()
+  }
+  await file('周报.md', '# 后续重生成的正文')
+  expect(await store.collectGenerated(path, { ...origin, saved: true })).toMatchObject({ id, saved: true })
+  expect(await store.markdown(id)).toMatchObject({ text: '# 用户整理的正文' })
+})
+
+it('preserves shared bytes until unshared, then recollects the changed source', async () => {
+  const { file, open } = await fixture()
+  const store = open()
+  const origin = { sessionId: 'report-session' }
+  const path = await file('周报.md', '# 初次共享')
+  const { id } = (await store.collectGenerated(path, origin))!
+  const share = { id: '0123456789abcdef'.repeat(2), category: '行业研究' }
+  await store.setSharing(id, async () => share)
+  await file('周报.md', '# 待审阅的新稿')
+  expect(await store.collectGenerated(path, origin)).toMatchObject({ id, share })
+  expect(await readFile((await store.file(id)).path, 'utf8')).toBe('# 初次共享')
+  await store.setSharing(id, async () => undefined)
+  await store.collectGenerated(path, origin)
+  expect(await store.markdown(id)).toMatchObject({ text: '# 待审阅的新稿' })
 })
 
 it('saves Markdown with a revision guard and keeps the original imported source intact', async () => {
