@@ -12,6 +12,7 @@ type Options = {
  resolveCapability(value: string): Promise<EditSource | null>
  resolveEditIdentity?(value: PptxEditIdentity): Promise<EditSource | null>
  refreshPreview?(value: PptxEditIdentity): Promise<string | null>
+ commitManaged?(identity: PptxEditIdentity, target: string, version: string, bytes: Buffer): Promise<boolean | undefined>
 }
 export type PptxDocument = PptxScene & { id: string; name: string; version: string; editToken?: string; basisToken?: string; previewUrl?: string }
 type Result = { ok: true; document: PptxDocument } | { ok: false; code: string; error: string }
@@ -111,6 +112,14 @@ export class PptxEditorService {
     if(hash(current)!==input.version)return conflict()
     const base=this.basis(input,target),text=editPptxContent(base?.bytes??current,input.edits as PptxEdit[]), result=Buffer.from(editPptxScene(text,(input.objects??[]) as PptxNodeChange[])),document=this.basisDocument(target,result,base,resolved.editToken)
     if(result.equals(current))return this.result(document,resolved.identity)
+    if (resolved.identity && this.options.commitManaged) {
+     const saved = await this.options.commitManaged(resolved.identity, target, input.version as string, result)
+     if (saved !== undefined) {
+      if (!saved) return conflict()
+      if (base) base.version = document.version
+      return this.result(document, resolved.identity)
+     }
+    }
     const before=await stat(target),temporary=path.join(path.dirname(target),`.${path.basename(target)}.${randomUUID()}.tmp`)
     try{
      const file=await open(temporary,'wx',before.mode&0o777)

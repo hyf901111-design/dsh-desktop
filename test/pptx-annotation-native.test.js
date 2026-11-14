@@ -5,10 +5,11 @@ import {expect,it} from 'vitest'
 import {createPptxAnnotationNativeRuntime,annotationTargetVisible} from '../scripts/lib/pptx-annotation-native.mjs'
 
 async function fixture(options={}){
- const win=new Window({url:'https://native.local'}),doc=win.document;doc.body.innerHTML='<div class="pI_x6G_centerCol"><header data-srb-session-header data-ework-notes-session="central"></header><div class="uV2eYG_root"><textarea></textarea></div></div>'
- let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const load=async(name,deps={})=>{let descriptor;runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>descriptor=value}},AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
+ const win=new Window({url:'https://native.local',width:1100,height:800}),doc=win.document;doc.body.innerHTML='<div class="pI_x6G_centerCol"><header data-srb-session-header data-ework-notes-session="central"></header><div class="uV2eYG_root"><textarea></textarea></div></div>'
+ let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});const load=async(name,deps={})=>{let descriptor;runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>descriptor=value}},document:doc,AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
  const rt=await load('dsh-client-runtime'),native=await load('dsh-client-ui-conversation',{'@deepseek-ai/dsh-client-runtime/client':rt}),shell=new native.SessionInputShell({actx:{},defaultSink(){}});shell.setDraft('原整体要求')
  const input=doc.querySelector('textarea');input.value=shell.snapshot.draft;input.getBoundingClientRect=()=>({left:10,top:10,right:310,bottom:100,width:300,height:90});const off=shell.state.subscribe(()=>input.value=shell.snapshot.draft)
+ doc.querySelector('.pI_x6G_centerCol').getBoundingClientRect=()=>({left:0,top:0,right:800,bottom:700,width:800,height:700})
  let current='central',view=options.view??'notes',active=shell;const calls=[],listeners=new Set(),bridge={open:async value=>{calls.push(value);return{ok:true,value:{documentId:'a'.repeat(64),version:'b'.repeat(64),name:'源.pptx',slideSize:{width:960,height:540},slides:[],state:{revision:0,nextOrdinal:1,marks:[]}}}},...options.bridge}
  const runtime=createPptxAnnotationNativeRuntime({window:win,document:doc,sessions:{list:{getSnapshot:()=>({current})},subagentAddress:()=>undefined},inputHub:{shell:()=>shell},activeInput:()=>active,bridge,api:{subscribeEnvelopes:fn=>{listeners.add(fn);return()=>listeners.delete(fn)}}})
  let release=runtime.registerView({sessionId:'central',view,subagentPanel:false,researchSidebar:options.sidebar,actions:{setView(value){view=value;release();release=runtime.registerView({sessionId:'central',view,actions:{},researchSidebar:options.sidebar})}}})
@@ -16,6 +17,21 @@ async function fixture(options={}){
 }
 it('switches the same actual Notes session using its native action and opens Main with ordinary identity',async()=>{
  const f=await fixture();try{const handle=await f.runtime.open({sessionId:'note-files-fake',source:{kind:'note-file',authorizationId:'auth',nodeId:'file'}},{viewerKey:'v'});expect(f.calls).toEqual([{sessionId:'central',source:{kind:'note-file',authorizationId:'auth',nodeId:'file'}}]);expect(handle.getSnapshot().basis.sessionId).toBe('central');expect(f.shell.snapshot.draft).toBe('原整体要求')}finally{f.dispose()}
+})
+
+it('opens knowledge file markings with the same session draft while the right pane is displaying the file', async () => {
+ const f=await fixture({view:'chat'}), nodeId='60088dae-e7fe-4b33-ab36-c9dcf069aa58'
+ try{
+  f.doc.body.dataset.workspaceSurface='knowledge'
+  f.input.parentElement.style.visibility='hidden'
+  const handle=await f.runtime.open({sessionId:'central',source:{kind:'knowledge-file',nodeId}})
+  expect(handle.getSnapshot().active).toBe(true)
+  expect(f.calls).toEqual([{sessionId:'central',source:{kind:'knowledge-file',nodeId}}])
+  expect(f.shell.snapshot.draft).toBe('原整体要求')
+  f.setCurrent('other')
+  expect(handle.getSnapshot().active).toBe(false)
+  handle.dispose()
+ }finally{f.dispose()}
 })
 it('rejects hidden input, wrong central session and special Notes shell without a Main read',async()=>{
  const f=await fixture();try{f.input.parentElement.style.display='none';await expect(f.runtime.open({source:{kind:'workspace',relativePath:'x.pptx'}},{viewerKey:'v'})).rejects.toThrow();expect(f.calls).toEqual([]);f.input.parentElement.style.display='';f.setCurrent('other');await expect(f.runtime.open({source:{kind:'workspace',relativePath:'x.pptx'}},{viewerKey:'v'})).rejects.toThrow();f.setCurrent('central');f.setActive({});await expect(f.runtime.open({source:{kind:'workspace',relativePath:'x.pptx'}},{viewerKey:'v'})).rejects.toThrow();expect(f.calls).toEqual([])}finally{f.dispose()}

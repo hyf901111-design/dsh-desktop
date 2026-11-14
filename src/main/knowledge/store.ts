@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { mkdir, open, readFile, realpath, rm, stat } from 'node:fs/promises'
+import { link, mkdir, open, readFile, realpath, rename, rm, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join } from 'node:path'
 import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportProgress, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
 import { atomicWrite } from '../integrations/store'
@@ -159,6 +159,35 @@ export class KnowledgeStore {
       const bytes = await this.readMarkdown(join(directory, 'files', row.id, row.storageName))
       current()
       return { text: bytes.toString('utf8'), revision: hashBytes(bytes) }
+    })
+  }
+
+  savePresentation(id: string, path: string, version: string, bytes: Buffer, guard: () => void) {
+    return this.run(async (state, directory, identityCurrent) => {
+      const current = () => { identityCurrent(); guard() }
+      const row = state.documents.find(document => document.id === id)
+      if (!row || row.share || extname(row.name).toLowerCase() !== '.pptx' ||
+          await realpath(join(directory, 'files', row.id, row.storageName)) !== path) {
+        throw Error('PPT 文件已变化或已共享，请重新打开。')
+      }
+      if (await hashFile(path) !== version) return false
+      const backup = path + '.previous-' + randomUUID()
+      const updated = { ...row, size: bytes.length, updatedAt: Math.max(Date.now(), row.updatedAt + 1),
+        sourceVersion: row.origin ? null : undefined }
+      await link(path, backup)
+      try {
+        current()
+        await atomicWrite(path, bytes)
+        try {
+          await this.persist(state, {
+            ...state, documents: state.documents.map(item => item === row ? updated : item)
+          }, directory, current)
+        } catch (error) {
+          await rename(backup, path)
+          throw error
+        }
+        return true
+      } finally { await rm(backup, { force: true }).catch(() => {}) }
     })
   }
 

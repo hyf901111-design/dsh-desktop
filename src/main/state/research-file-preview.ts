@@ -110,6 +110,7 @@ export interface ResearchPreviewFileSystem {
 
 export interface ResearchFilePreviewRegistryOptions {
   canReadAuthorization?(record:ResearchPreviewAuthorizationRecord):boolean
+  authorizeManagedFile?(record: ResearchPreviewAuthorizationRecord): Promise<boolean>
   storage: ResearchPreviewAuthorizationStorage
   workspaceResolver?: ResearchPreviewWorkspaceResolver
   fileSystem?: ResearchPreviewFileSystem
@@ -944,6 +945,29 @@ export class ResearchFilePreviewRegistry {
     }
   }
 
+  // This route is for files already resolved by the owning main-process service.
+  async admitManaged(value: FinderAdmission): Promise<ResearchFilePreviewDescriptor | null> {
+    if (!this.options.authorizeManagedFile || !this.validFinderAdmission(value)) return null
+    const revocation = this.beginAdmissionRevocation(value.sessionId, value.nodeId)
+    try {
+      return await this.admit({
+        source: 'finder',
+        targetPath: value.path,
+        authorizedRoot: path.dirname(value.path),
+        sessionId: value.sessionId,
+        nodeId: value.nodeId,
+        exactFile: true
+      }, revocation)
+    } finally {
+      this.inFlightAdmissionRevocations.delete(revocation)
+    }
+  }
+
+  ownsUrl(url: string): boolean {
+    const resource = requestResource(url)
+    return Boolean(resource && this.capabilities.has(resource.token))
+  }
+
   // Main-process consumers may validate app-owned bytes without issuing a grant.
   // This is deliberately not exposed as a renderer IPC operation.
   async inspectFile(targetPath: string): Promise<{ contentType: string } | null> {
@@ -1135,6 +1159,10 @@ export class ResearchFilePreviewRegistry {
     }
 
     try {
+      const managed = this.options.authorizeManagedFile
+      if (managed && (!await managed(authorization) || this.capabilities.get(resource.token) !== capability)) {
+        return fail(403, 'Preview capability denied.')
+      }
       const root = await this.fileSystem.realpath(authorization.root)
       const authorizedTarget = await this.fileSystem.realpath(authorization.path)
       if (!isContained(root, authorizedTarget)) return fail(403, 'Preview path denied.')
@@ -1154,7 +1182,8 @@ export class ResearchFilePreviewRegistry {
       const file = await this.fileSystem.stat(candidate)
       if (!file.isFile()) return fail(404, 'Preview file not found.')
       const rootPreview = resource.relativePath === '' && !authorization.allowSubresources
-      const kind = rootPreview && !capability.mediaContentType ? rootKindForPath(candidate) : kindForPath(candidate)
+      const kind = rootPreview && !capability.mediaContentType
+        ? this.previewKind(candidate, Boolean(managed)) : kindForPath(candidate)
       if (!kind || (capability.mediaContentType ? kind.contentType !== capability.mediaContentType : !authorization.allowSubresources && kind.contentType !== authorization.contentType)) {
         return fail(415, 'Unsupported preview type.')
       }
@@ -1165,7 +1194,7 @@ export class ResearchFilePreviewRegistry {
           !await validatesPreviewKind(this.fileSystem, candidate, file.size, kind, rootPreview))) {
         return fail(415, 'Preview type mismatch.')
       }
-      if (capability.mediaContentType && (this.capabilities.get(resource.token) !== capability ||
+      if ((capability.mediaContentType || managed) && (this.capabilities.get(resource.token) !== capability ||
           this.authorizations.get(capability.authorizationId) !== authorization || capability.expiresAt <= this.now() || !canReadCapability(capability))) return fail(403, 'Preview capability denied.')
 
       const htmlCapability = authorization.allowSubresources &&
@@ -1206,6 +1235,7 @@ export class ResearchFilePreviewRegistry {
     authorizedRoot: string
     sessionId: string
     nodeId: string
+    exactFile?: boolean
   }, revocation: { revoked: boolean }): Promise<ResearchFilePreviewDescriptor | null> {
     const result = this.admissionQueue.then(() => this.performAdmission(input, revocation))
     this.admissionQueue = result.then(() => undefined, () => undefined)
@@ -1219,6 +1249,7 @@ export class ResearchFilePreviewRegistry {
     authorizedRoot: string
     sessionId: string
     nodeId: string
+    exactFile?: boolean
   }, revocation: { revoked: boolean }): Promise<ResearchFilePreviewDescriptor | null> {
     try {
       const root = await this.fileSystem.realpath(input.authorizedRoot)
@@ -1226,7 +1257,7 @@ export class ResearchFilePreviewRegistry {
       if (!isContained(root, target)) return null
       const file = await this.fileSystem.stat(target)
       if (!file.isFile()) return null
-      const kind = rootKindForPath(target)
+      const kind = this.previewKind(target, input.exactFile === true)
       const previewable = isRootPreviewKind(kind) && await validatesPreviewKind(this.fileSystem, target, file.size, kind, true)
       if (!previewable && !input.exportFallback) return null
       const replaced = new Set<string>()
@@ -1247,7 +1278,7 @@ export class ResearchFilePreviewRegistry {
         contentType: previewable ? kind!.contentType : 'application/octet-stream',
         ...(!previewable ? { exportOnly: true } : {}),
         name: path.basename(target),
-        allowSubresources: previewable && kind!.contentType === 'text/html; charset=utf-8',
+        allowSubresources: !input.exactFile && previewable && kind!.contentType === 'text/html; charset=utf-8',
         createdAt: this.now()
       }
       const retained = [...this.authorizations.values()].filter(
@@ -1267,18 +1298,29 @@ export class ResearchFilePreviewRegistry {
   private async verifyRecord(record: ResearchPreviewAuthorizationRecord): Promise<boolean> {
     if(this.options.canReadAuthorization?.(record)===false)return false
     try {
+      if (this.options.authorizeManagedFile && !await this.options.authorizeManagedFile(record)) return false
       const root = await this.fileSystem.realpath(record.root)
       const target = await this.fileSystem.realpath(record.path)
       if (!isContained(root, target)) return false
       const file = await this.fileSystem.stat(target)
       if (!file.isFile()) return false
       if (record.exportOnly === true) return true
-      const kind = rootKindForPath(target)
+      const kind = this.previewKind(target, Boolean(this.options.authorizeManagedFile))
       if (!isRootPreviewKind(kind) || kind.contentType !== record.contentType) return false
       return validatesPreviewKind(this.fileSystem, target, file.size, kind, true)
     } catch {
       return false
     }
+  }
+
+  private previewKind(target: string, managed: boolean): PreviewKind | undefined {
+    if (!managed) return rootKindForPath(target)
+    const kind = kindForPath(target)
+    if (kind?.contentType.startsWith('audio/') || kind?.contentType.startsWith('video/')) {
+      return { ...kind, rootPreview: true }
+    }
+    if (kind?.contentType === 'text/html; charset=utf-8') return nativeTextKind()
+    return rootKindForPath(target)
   }
 
   private issue(record: ResearchPreviewAuthorizationRecord): ResearchFilePreviewDescriptor {

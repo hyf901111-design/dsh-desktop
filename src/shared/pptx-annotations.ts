@@ -4,6 +4,7 @@ export type PptxAnnotationSource =
   | { kind: 'workspace'; relativePath: string }
   | { kind: 'research'; authorizationId: string; nodeId: string }
   | { kind: 'note-file'; authorizationId: string; nodeId: string }
+  | { kind: 'knowledge-file'; nodeId: string }
 
 export type PptxAnnotationReference = {
   version: 1; sessionId: string; documentId: string; fileVersion: string; markId: string
@@ -132,6 +133,10 @@ export function parsePptxAnnotationSource(value: unknown): PptxAnnotationSource 
     const relativePath = text(item.relativePath, 4096)
     if (Object.keys(item).length !== 2 || /^(?:[\\/]|[A-Za-z]:)/.test(relativePath) || relativePath.split(/[\\/]/).some(part => part === '..' || !part)) throw new Error('无效的工作区路径')
     return { kind: 'workspace', relativePath }
+  }
+  if (item.kind === 'knowledge-file' && Object.keys(item).length === 2 && typeof item.nodeId === 'string' &&
+      /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(item.nodeId)) {
+    return { kind: item.kind, nodeId: item.nodeId }
   }
   if ((item.kind !== 'research' && item.kind !== 'note-file') || Object.keys(item).length !== 3) throw new Error('无效的文件授权')
   return { kind: item.kind, authorizationId: text(item.authorizationId), nodeId: text(item.nodeId) }

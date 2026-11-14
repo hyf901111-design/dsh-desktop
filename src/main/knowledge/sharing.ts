@@ -97,6 +97,21 @@ export class KnowledgeSharing {
     return this.readListed(document, signal)
   }
 
+  async canReadVersion(document: KnowledgeDocument, signal?: AbortSignal): Promise<boolean> {
+    if (!this.options.authenticated()) return false
+    const generation = this.options.client.generation()
+    try {
+      const response = await this.options.client.request<Response>({ kind: 'knowledge.file', id: document.id }, signal)
+      await response.body?.cancel()
+      return generation === this.options.client.generation() &&
+        Number(response.headers.get('content-length')) === document.size &&
+        Number(response.headers.get('x-knowledge-updated-at')) === document.updatedAt
+    } catch {
+      this.cache = undefined
+      return false
+    }
+  }
+
   // Only callers holding an authorized catalog row can skip the catalog lookup.
   // The server still checks the current share before returning any bytes.
   async readListed(document: KnowledgeDocument, signal?: AbortSignal) {

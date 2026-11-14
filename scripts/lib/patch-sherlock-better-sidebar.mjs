@@ -11,6 +11,7 @@ import path from 'node:path'
 import { patchSidebarPdfPreview } from './sidebar-pdf-preview.mjs'
 import { patchSidebarFileReference } from './sidebar-file-reference.mjs'
 import { patchSidebarPptxToolbar } from './sidebar-pptx-toolbar.mjs'
+import { patchSidebarKnowledgePreview } from './sidebar-knowledge-preview.mjs'
 
 const PATCH_MARKER = '/* sherlock:pinned-sidebar-tabs:v1 */'
 const RECONCILE_PATCH_MARKER = '/* sherlock:pinned-sidebar-reconcile:v1 */'
@@ -1416,7 +1417,8 @@ export async function patchBetterSidebarPackage(packageRoot) {
   if (serverPatched !== serverSource) await writeFile(serverPath, serverPatched, 'utf8')
   const clientPath = path.join(packageRoot, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
-  const patched = patchBetterSidebarClient(source)
+  const patched = source.includes('/* sherlock:native-knowledge-editor:v1 */')
+    ? source : patchSidebarKnowledgePreview(patchBetterSidebarClient(source))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
   const terminalPath = path.join(packageRoot, 'lib', 'client-terminal.js')
   const terminal = await readFile(terminalPath, 'utf8')
@@ -1432,8 +1434,7 @@ export async function patchBetterSidebarPackage(packageRoot) {
  * EditorHost's content prop remains the initial fsRead snapshot until reopen. */
 export function patchBetterSidebarEditor(source) {
   const marker = '/* sherlock:files-saved-preview:v1 */'
-  if (source.includes(marker)) return source
-  let next = replaceExact(source,
+  let next = source.includes(marker) ? source : replaceExact(source,
     'api.fsWrite(scope, path, view.state.doc.toString()).then(() => {\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tsetDraft(null);\n\t\t\t\tsetDirty(false);\n\t\t\t\tsetSaveState("saved");\n\t\t\t}).catch(() => {\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tsetSaveState("failed");\n\t\t\t});',
     `${marker}
             const savedText = view.state.doc.toString();
@@ -1450,10 +1451,26 @@ export function patchBetterSidebarEditor(source) {
                 setSaveState("failed");
             });`,
     'Files saved preview and in-flight edits')
-  next = replaceExact(next,
+  if (!source.includes(marker)) next = replaceExact(next,
     'view.destroy();\n\t\t\t\tviewRef.current = null;',
     'view.destroy();\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tviewRef.current = null;',
     'Files replacement editor save lock')
+  const managedMarker = '/* sherlock:managed-text-editor:v1 */'
+  if (next.includes(managedMarker)) return next
+  const start = next.indexOf('function TextEditor(props) {')
+  if (start < 0) throw Error('Native text editor source drifted')
+  let editor = next.slice(start)
+  const replace = (from, to) => { editor = replaceExact(editor, from, to, 'Knowledge library text editor') }
+  replace('const editable = content !== void 0;', managedMarker + '\n\t\tconst editable = content !== void 0 && !props.readOnly;')
+  replace('EditorState.tabSize.of(2),', 'EditorState.tabSize.of(2), EditorState.readOnly.of(Boolean(props.readOnly)), EditorView.editable.of(!props.readOnly),')
+  replace('}, [content, path]);', '}, [content, path, props.readOnly]);')
+  replace('if (view === null || savingRef.current) return;', 'if (view === null || savingRef.current || props.readOnly) return;')
+  replace('api.fsWrite(scope, path, savedText).then(() => {', '(props.managedFile ? props.writeManagedText(savedText) : api.fsWrite(scope, path, savedText)).then(() => {')
+  replace('...viewerId === "code" || viewerId === "markdown" ? [EditorView.updateListener', '...!props.managedFile && (viewerId === "code" || viewerId === "markdown") ? [EditorView.updateListener')
+  replace('onMouseUp: handlePreviewMouseUp,', 'onMouseUp: props.managedFile ? undefined : handlePreviewMouseUp,')
+  replace('}, [hostToolbar]);', '}, [hostToolbar, props.readOnly, props.writeManagedText]);')
+  replace('editable && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children:', 'content !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children:')
+  next = next.slice(0, start) + editor
   return next
 }
 
