@@ -11,25 +11,53 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "cd7a5175504c0ca4a43f5a50069d05e1ae23743a",
-        "tipCommit": "aac3141858b0fb43be3af91a6d773e96de17dc20",
+        "baseCommit": "aac3141858b0fb43be3af91a6d773e96de17dc20",
+        "tipCommit": "076d87f8179ac9545d1a544032d5bfdaf2517a07",
         "commits": [
           {
-            "commit": "aac3141858b0fb43be3af91a6d773e96de17dc20",
+            "commit": "076d87f8179ac9545d1a544032d5bfdaf2517a07",
             "parents": [
-              "cd7a5175504c0ca4a43f5a50069d05e1ae23743a"
+              "aac3141858b0fb43be3af91a6d773e96de17dc20"
             ],
-            "subject": "修复：知识库对话从实际文件列表确认筛选结果"
+            "subject": "功能：知识库文件复用原生右侧预览与演示文稿标注"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/knowledge/capabilities.ts"
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-coordinator.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-reveal.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/sidebar-knowledge-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/file-preview.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/ipc.ts"
           },
           {
             "status": "M",
@@ -37,19 +65,39 @@
           },
           {
             "status": "M",
-            "path": "src/main/knowledge/view-bridge.ts"
+            "path": "src/main/knowledge/store.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
+            "path": "src/main/pptx/service.ts"
           },
           {
             "status": "M",
-            "path": "test/knowledge-sharing-worker.test.js"
+            "path": "src/main/state/research-file-preview.ts"
           },
           {
             "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/pptx-annotations.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-native-preview.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-coordinator.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-annotation-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-editor-save.test.ts"
           }
         ],
         "checks": [
@@ -60,9 +108,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "aac3141858b0fb43be3af91a6d773e96de17dc20",
-            "completedAt": "2026-11-14T20:52:45.393Z",
+            "summary": "主进程、预加载和共享类型检查通过。",
+            "verifiedCommit": "076d87f8179ac9545d1a544032d5bfdaf2517a07",
+            "completedAt": "2026-11-14T21:28:37.152Z",
             "timeoutMs": 120000
           },
           {
@@ -70,29 +118,34 @@
               "env",
               "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
               "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
+              "npm",
+              "test",
+              "--",
+              "test/knowledge-native-preview.test.ts",
               "test/knowledge-library.test.ts",
+              "test/knowledge-content.test.ts",
+              "test/knowledge-sharing-worker.test.js",
               "test/knowledge-composer.test.js",
-              "test/client-capability-header.test.ts",
-              "test/client-capability-service.test.ts",
-              "--maxWorkers=2",
-              "--reporter=dot",
-              "--silent"
+              "test/knowledge-workspace-rendered.test.js",
+              "test/research-file-preview.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-annotations-contract.test.ts",
+              "test/pptx-annotation-native.test.js",
+              "test/pptx-annotation-coordinator.test.js",
+              "test/pptx-annotation-reveal.test.js",
+              "test/sidebar-editor-save.test.ts",
+              "test/pptx-annotation-sidebar-source.test.js"
             ],
             "outcome": "passed",
-            "summary": "58 项聚焦检查通过，覆盖浏览器渲染回执、共享目录加载、离开工作区、取消执行、能力绑定和存储回归。",
-            "verifiedCommit": "aac3141858b0fb43be3af91a6d773e96de17dc20",
-            "completedAt": "2026-11-14T20:52:45.393Z",
+            "summary": "使用已构建查看器夹具，172 项针对性检查通过，覆盖原生文件授权、PPTX 保存和标注输入、知识库目录和共享撤销。",
+            "verifiedCommit": "076d87f8179ac9545d1a544032d5bfdaf2517a07",
+            "completedAt": "2026-11-14T21:28:37.152Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在 Chromium 中核对收到回执时的行内容、减少动态效果、异步共享目录和返回工作区。"
+          "summary": "Chromium 中已核对知识库文件路由和既有交互；原生签名桌面候选验证待完成。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -115,59 +168,17 @@
           "共享文件改名更新两端目录、检索和已有文件引用，保持共享标识和正文，撤销后禁止改名恢复。",
           "知识库列表随分类、确认筛选、排序和对话撤销短暂淡入，切换右侧目录和插入输入框引用时有反馈，支持减少动态效果。",
           "同会话重新生成同一路径文件时，自动收录和手动收藏更新已有条目的正文与引用并保留整理状态；已共享正文与库内人工 Markdown 编辑受保护。",
-          "右侧对话在文件列表渲染后才确认筛选、排序和撤销，使用同一列表快照；查看经验记忆时只读命令保留页签，离开工作区或取消操作使等待加载的旧请求失效。"
+          "右侧对话在文件列表渲染后才确认筛选、排序和撤销，使用同一列表快照；查看经验记忆时只读命令保留页签，离开工作区或取消操作使等待加载的旧请求失效。",
+          "知识库文件在原生右侧文件页签中按类型预览；本人未共享 PPTX 可编辑保存、标注并引用。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
-          "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
+          "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
+          "桌面签名候选仍需从知识库点击真实文件验证各观看器和标注。"
         ],
-        "generatedAt": "2026-11-14T20:52:45.393Z"
-      },
-      "merged": {
-        "mergeCommit": "bf39d46467041b08581b348e25ed0b17db3e5155",
-        "verificationCommit": "bf39d46467041b08581b348e25ed0b17db3e5155",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bf39d46467041b08581b348e25ed0b17db3e5155",
-            "completedAt": "2026-11-14T20:53:00.178Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "bf39d46467041b08581b348e25ed0b17db3e5155",
-            "completedAt": "2026-11-14T20:53:00.178Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T20:53:00.178Z"
+        "generatedAt": "2026-11-14T21:28:37.152Z"
       }
     }
   ],
