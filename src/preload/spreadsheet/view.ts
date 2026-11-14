@@ -1142,7 +1142,8 @@ class SpreadsheetView{
   if(loading){element.dataset.sheetComponentGeneration='';element.dataset.researchGenerationState='running'}
   element.innerHTML='<div id="'+instance+'-title" class="ew-sheet-component-header"></div>'+
    '<div id="'+instance+'" class="ew-sheet-component-host" data-research-preview-body data-sheet-component="'+text(id)+'" data-sheet-session="'+text(this.sessionId)+'"></div>'+
-   '<footer class="ew-sheet-component-footer odyssey-data-stamp"></footer>'
+   '<footer class="ew-sheet-component-footer odyssey-data-stamp"><span data-component-footer-range data-ui-preserve></span><div class="ew-source-actions"><time></time><span id="'+instance+'-source-details"></span>'+
+   button('component-source','',{glyph:'search',label:'定位选区',value:id})+'</div></footer>'
   return {instance,element,refresh:0}
  }
  private renderComponent(){
@@ -1162,14 +1163,21 @@ class SpreadsheetView{
     else parent.append(card.element)
    }
    card.element.toggleAttribute('data-sheet-component-floating',floating)
-   const footer=card.element.querySelector('footer')!
-   const source=this.selectionDescription(component)
+   const footer=card.element.querySelector<HTMLElement>('.ew-sheet-component-footer')!
+   const range=footer.querySelector<HTMLElement>('[data-component-footer-range]')!
+   const source=this.componentSourceRange(component)
+   range.textContent=source
+   range.title=source
    const at=component.node.generationCompletedAt
    const time=typeof at==='number'&&Number.isFinite(at)?new Date(at):null
    const locale=this.doc.documentElement.dataset.odysseyLocale==='en'?'en':'zh-CN'
-   footer.innerHTML='<span data-ui-preserve title="'+source+'">'+source+'</span><div class="ew-source-actions">'+
-    (time&&!Number.isNaN(time.valueOf())?'<time datetime="'+time.toISOString()+'" title="'+text(time.toLocaleString(locale))+'">'+text(time.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'}))+'</time>':'')+
-    button('component-source','',{glyph:'search',label:'定位选区',value:componentId})+'</div>'
+   const stamp=footer.querySelector('time')!
+   stamp.hidden=!time||Number.isNaN(time.valueOf())
+   if(!stamp.hidden&&time){
+    stamp.dateTime=time.toISOString()
+    stamp.title=time.toLocaleString(locale)
+    stamp.textContent=time.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'})
+   }
    const grip=card.element.querySelector('[data-component-resize]')
    if(floating&&this.editable&&!grip)card.element.insertAdjacentHTML('beforeend',
     '<button type="button" data-component-resize aria-label="调整组件大小" title="调整组件大小">'+icon('resize',14)+'</button>')
@@ -1186,11 +1194,13 @@ class SpreadsheetView{
   const dark=this.doc.body.hasAttribute('data-ds-dark-theme')
   card.element.dataset.financialTheme=dark?'dark':'light'
   this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{surface:'spreadsheet',instanceId:card.instance,hostId:card.instance,
-   headerId:card.instance+'-title',sessionId:this.sessionId,node,dark,refresh:card.refresh,readOnly:!this.editable,...extras}}))
+   headerId:card.instance+'-title',footerId:card.instance+'-source-details',sessionId:this.sessionId,node,dark,refresh:card.refresh,readOnly:!this.editable,...extras}}))
+ }
+ private componentSourceRange(component:WorkbookComponent){
+  return (this.record.workbook?.sheets[component.sheetId]?.name??'')+'!'+component.range
  }
  private publishComponent(card:ComponentCard,component:WorkbookComponent){
-  const source=(this.record.workbook?.sheets[component.sheetId]?.name??'')+'!'+component.range
-  this.publishCard(card,component.node,{mode:'component',source,floating:component.placement?.mode==='floating'})
+  this.publishCard(card,component.node,{mode:'component',source:this.componentSourceRange(component),floating:component.placement?.mode==='floating'})
  }
  private publishGeneration(){
   const job=this.componentJob
