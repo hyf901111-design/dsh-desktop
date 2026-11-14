@@ -18,6 +18,14 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.6.0",
+      "date": "2026-11-14",
+      "items": [
+        "修复从研究看板切换到浏览器、笔记等页面时，看板底部工具栏或已打开的菜单残留的问题。",
+        "改善套餐模型运行多步骤表格等长任务时的连接稳定性，减少等待过早超时以及生成完成后误报连接中断的情况。"
+      ]
+    },
+    {
       "version": "1.5.6",
       "date": "2026-11-14",
       "items": [
@@ -620,6 +628,14 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.6.0",
+      "date": "2026-11-14",
+      "items": [
+        "Fix a research board toolbar or open menu remaining visible after switching to Browser, Notes, or another page.",
+        "Improve connection reliability for subscription models during long tasks such as multi-step spreadsheet work. Reduce premature timeouts and false interruption messages after a response completes."
+      ]
+    },
     {
       "version": "1.5.6",
       "date": "2026-11-14",
