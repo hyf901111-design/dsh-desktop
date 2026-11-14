@@ -29,7 +29,9 @@ const paths:Record<string,string>={
  cut:'M6 6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm0 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm2-3 12 8m-12-3L20 6',
  paste:'M9 5H5v16h14V5h-4m-6-2h6v5H9zm-1 9h8m-8 4h8',
  close:'m6 6 12 12M18 6 6 18',
- move:'M12 3v18M3 12h18m-12-6 3-3 3 3m-6 12 3 3 3-3m-9-9-3 3 3 3m12-6 3 3-3 3',
+ rename:'M4 7h8M4 12h5m4 5-.5 3.5L16 20l5-5-3-3-5 5Zm3.5-3.5 3 3',
+ trash:'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7',
+ pin:'M16 3l5 5-3 1-3 3v4l-1 1-7-7 1-1h4l3-3 1-3zM10 14l-6 6',
  resize:'M5 19 19 5m-8 14 8-8m-2 8 2-2',
  chart:'M4 4v16h16M8 16v-4m5 4V8m5 8V5',sort:'M5 7h9m-9 5h7m-7 5h4m8-12v14m-3-3 3 3 3-3',
  link:'M5 12h14m-5-5 5 5-5 5',check:'m5 12 4 4L19 6'

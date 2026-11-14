@@ -20,25 +20,29 @@ const preload=join(dir,'preload.cjs'),main=join(dir,'main.mjs')
 await build({stdin:{resolveDir:root,contents:`
  import {ipcRenderer,contextBridge} from 'electron'
  import {mountSpreadsheet} from './src/preload/spreadsheet/view'
+ import {createResearchCanvasExportBridge} from './src/preload/research-canvas-export'
  import {mountUiLocalization} from './src/preload/ui-localization'
  document.addEventListener('DOMContentLoaded',()=>{
   mountUiLocalization(document)
   const mounted=mountSpreadsheet(document,{
    request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
+   saveImage:createResearchCanvasExportBridge((channel,value)=>ipcRenderer.invoke(channel,value)).save,
    subscribe:(name,callback)=>{const channel='spreadsheet:'+name;const f=(_,value)=>callback(value);ipcRenderer.on(channel,f);return()=>ipcRenderer.removeListener(channel,f)}
   })
   contextBridge.exposeInMainWorld('spreadsheetFixture',{admit:(prompt,refs)=>mounted.admit('demo-session',prompt,refs),flush:()=>mounted.flush('demo-session')})
  })
 `},bundle:true,platform:'browser',format:'cjs',target:'chrome140',define:{'process.env.NODE_ENV':'"production"'},loader:{'.svg':'dataurl'},external:['electron'],plugins:[inline],outfile:preload,logLevel:'warning'})
 await build({stdin:{resolveDir:root,contents:`
- import {app,BrowserWindow,clipboard,dialog,ipcMain} from 'electron'
+ import {app,BrowserWindow,clipboard,dialog,ipcMain,nativeImage} from 'electron'
  import {assertTrustedMainWindowEvent} from './src/main/ipc-trust'
  import {installSpreadsheet} from './src/main/spreadsheet/ipc'
+ import {registerResearchCanvasExportHandlers} from './src/main/state/research-canvas-export'
  import {ClientCapabilityService} from './src/main/state/client-capability-service'
  import {ComponentLibraryStore} from './src/main/state/component-library'
  import {readWorkbookFile} from './src/main/spreadsheet/files'
- import {readFileSync,writeFileSync} from 'node:fs'
+ import {existsSync,readFileSync,writeFileSync} from 'node:fs'
+ import {copyFile,writeFile} from 'node:fs/promises'
  import {join} from 'node:path'
  import {createServer} from 'node:http'
  import assert from 'node:assert/strict'
@@ -97,6 +101,11 @@ await build({stdin:{resolveDir:root,contents:`
    service=installSpreadsheet({ipcMain,getWindow:()=>win,visible:()=>capability.currentVisibleContext(),canWrite:()=>true,dataPath:app.getPath('userData'),library:()=>library,runtimeUrl:()=>runtimeUrl})
    const bind=()=>capability.bind({sessionId:profile.sessionId,mode:visibleMode,active:true})
    bind()
+   const imagePaths=[]
+   registerResearchCanvasExportHandlers({ipcMain,getMainWindow:()=>win,dependencies:{
+    showSaveDialog:async options=>{imagePaths.push(options.defaultPath);return {canceled:false,filePath:join(dir,options.defaultPath)}},
+    copyFile,writeFile,resolveExportSource:async()=>null
+   }})
    const xlsxPath=join(dir,'导出.xlsx'),csvPath=join(dir,'导出.csv')
    dialog.showOpenDialog=async()=>({canceled:!configuredImport,filePaths:configuredImport?[configuredImport]:[]})
    dialog.showSaveDialog=async(_window,options)=>{exportPaths.push(options.defaultPath);return {canceled:false,filePath:options.defaultPath.endsWith('.csv')?csvPath:xlsxPath}}
@@ -466,15 +475,74 @@ await build({stdin:{resolveDir:root,contents:`
    press('Up',['shift'])
    await until(()=>snapshot().charts[0]?.layout?.y===beforeKeyboard.y-1,'keyboard adjusts the chart by one pixel')
    const chartLayout=snapshot().charts[0].layout
-   await click(button('close-chart'))
-   await click(button('menu','charts'));await click(menuItem('show-chart',snapshot().charts[0].chartId))
+   const chartId=snapshot().charts[0].chartId
+   const card='.ew-sheet-charts[data-chart-id='+JSON.stringify(chartId)+']'
+   const chartControl=(action,value)=>card+' [data-action='+JSON.stringify(action)+'][data-value='+JSON.stringify(value)+']'
+   const showChart=async id=>{await click(button('menu','charts'));await click(menuItem('show-chart',id))}
+   const closeControl=chartControl('confirm-remove-chart',chartId)
+   const chartState=()=>js('(()=>{const card=document.querySelector('+JSON.stringify(card)+'),plot=card.querySelector("svg[role=img]"),style=getComputedStyle(card);return {plot:plot.getBoundingClientRect().toJSON(),title:card.querySelector("[data-chart-title]").textContent,legend:card.querySelector("ul").textContent,active:card.dataset.chartActive,actions:getComputedStyle(card.querySelector(".ew-sheet-chart-action")).visibility,edges:[style.borderTopColor,style.borderRightColor,style.borderBottomColor,style.borderLeftColor]}})()')
+   const focused=await chartState()
+   await click('.ew-sheet [data-field=address]')
+   const unfocused=await chartState()
+   assert.deepEqual(unfocused.plot,focused.plot)
+   assert.equal(unfocused.title,focused.title)
+   assert.equal(unfocused.legend,focused.legend)
+   assert.equal(unfocused.active,'false')
+   assert.equal(unfocused.actions,'hidden')
+   assert.equal(new Set(unfocused.edges).size,1)
+   const chartHeader=await clickable(card+' header')
+   win.webContents.sendInputEvent({type:'mouseMove',x:chartHeader.x,y:chartHeader.y})
+   await until(async()=>{const state=await chartState();return state.actions==='visible'&&state.active==='false'&&state.edges[0]===focused.edges[0]&&new Set(state.edges).size===1},'chart hover reveals controls with a consistent outline')
+   await showChart(chartId)
    await until(async()=>Math.abs((await chartBounds()).x-resized.x)<1,'reopened chart restores position')
    assert.equal((await chartBounds()).y,resized.y-1)
    assert.equal((await chartBounds()).height,resized.height)
+   await click(chartControl('toggle-chart-data',chartId))
+   await until(()=>js('!!document.querySelector(".ew-sheet-charts table").getClientRects().length'),'chart data is visible in the card without scrolling')
+   assert.match(await js('document.querySelector(".ew-sheet-charts table").innerText'),/22/)
+   for(const format of ['svg','png','jpg']){
+    await click(chartControl('menu','chart-actions'))
+    await click(menuItem('menu','chart-export'))
+    await click(menuItem('chart-export-image',format))
+    const path=join(dir,'选区成交数据.'+format)
+    await until(()=>existsSync(path),'export chart as '+format)
+    const bytes=readFileSync(path)
+    if(format==='svg'){
+     assert.match(bytes.toString(),/选区成交数据/)
+     assert.match(bytes.toString(),/<svg[^>]+width=/)
+     assert.doesNotMatch(bytes.toString(),/显示数据|<foreignObject|<button/)
+    }else assert.ok(!nativeImage.createFromBuffer(bytes).isEmpty(),format+' image can be opened')
+   }
+   assert.deepEqual(imagePaths,['选区成交数据.svg','选区成交数据.png','选区成交数据.jpg'])
+   assert.equal(await js('!!document.querySelector(".ew-sheet-charts table").getClientRects().length'),true)
+   await click(chartControl('menu','chart-actions'));await click(menuItem('toggle-chart-data',chartId))
+   assert.equal(await js('!!document.querySelector(".ew-sheet-charts table").getClientRects().length'),false)
+   await click(chartControl('menu','chart-actions'));await click(menuItem('rename-chart',chartId))
+   await field('.ew-sheet-dialog [aria-label="图表名称"]','成交额对比')
+   await until(()=>snapshot().charts[0].title==='成交额对比','rename chart from its menu')
+   const titlePoint=await clickable(card+' [data-chart-title]')
+   for(const clickCount of [1,2]){
+    win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount,x:titlePoint.x,y:titlePoint.y})
+    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount,x:titlePoint.x,y:titlePoint.y})
+   }
+   await field('.ew-sheet-dialog [aria-label="图表名称"]','选区成交数据')
+   await until(()=>snapshot().charts[0].title==='选区成交数据','rename chart by double-clicking its title')
    report.push('chart moves and resizes live and restores the saved geometry on reopen')
    await select('E3');await formula('24')
    await until(()=>js('document.querySelector(".ew-sheet-charts table").textContent.includes("24")'),'chart updates after editing its source')
-   await click(button('edit-chart'))
+   const scrollPositions=async selector=>{
+    await showChart(chartId)
+    await scrollGrid(-35,-53);await wait(200)
+    await js('(()=>{const view=document.querySelector(".ew-sheet-object-viewport"),frames=[];window.chartScrollFrames=frames;const end=performance.now()+530;const record=t=>{frames.push(view.style.getPropertyValue("--sheet-object-y"));if(t<end)requestAnimationFrame(record)};requestAnimationFrame(record)})()')
+    await click(selector)
+    await wait(500)
+    const frames=await js('window.chartScrollFrames')
+    assert.ok(new Set(frames).size>3,JSON.stringify(frames))
+    assert.equal(await address(),'D3')
+   }
+   assert.equal(await js('document.querySelector('+JSON.stringify(chartControl('chart-source',chartId))+').dataset.glyph'),'pin')
+   await scrollPositions(chartControl('chart-source',chartId))
+   await scrollPositions(chartControl('edit-chart',chartId))
    await click(button('chart-tab','style'))
    await js('(()=>{const palette=document.querySelector("[data-chart-field=palette]");palette.value="ocean";palette.dispatchEvent(new Event("change",{bubbles:true}));return true})()')
    await field('[data-chart-field=axis-x]','发行人',false)
@@ -487,6 +555,10 @@ await build({stdin:{resolveDir:root,contents:`
    await until(()=>js('document.querySelector(".ew-sheet-chart-preview .ew-sheet-chart-label")?.textContent==="24"'),'value labels follow formatted data')
    await js('(()=>{const options=document.querySelector("[data-chart-field=gridlines]");options.checked=false;options.dispatchEvent(new Event("change",{bubbles:true}));return true})()')
    assert.equal(await js('document.querySelectorAll(".ew-sheet-chart-preview svg .grid").length'),0)
+   await js('(()=>{for(const [field,value] of [["palette","enterprise"],["kind","pie"]]){const input=document.querySelector("[data-chart-field="+field+"]");input.value=value;input.dispatchEvent(new Event("change",{bubbles:true}))}})()')
+   const sectorAppearance=await js('[...document.querySelectorAll(".ew-sheet-chart-preview .sector-label")].map(label=>{const style=getComputedStyle(label);return [style.fill,style.stroke,style.textShadow]})')
+   assert.deepEqual(sectorAppearance,[['rgb(255, 255, 255)','none','none'],['rgb(0, 0, 0)','none','none']])
+   await js('(()=>{const palette=document.querySelector("[data-chart-field=palette]");palette.value="ocean";palette.dispatchEvent(new Event("change",{bubbles:true}))})()')
    await js('(()=>{const kind=document.querySelector("[data-chart-field=kind]");kind.value="donut";kind.dispatchEvent(new Event("change",{bubbles:true}));return true})()')
    await until(()=>js('!!document.querySelector(".ew-sheet-chart-preview svg path")'),'doughnut preview')
    await click(button('update-chart'))
@@ -496,7 +568,7 @@ await build({stdin:{resolveDir:root,contents:`
    assert.equal(snapshot().charts[0].palette,'ocean')
    assert.deepEqual(snapshot().charts[0].layout,chartLayout)
    await until(()=>js('document.querySelector(".ew-sheet-dialog").hidden'),'saved chart editor closes')
-   await click(button('edit-chart'))
+   await showChart(chartId);await click(chartControl('edit-chart',chartId))
    assert.equal(await js('document.querySelector("[data-chart-field=kind]").value'),'donut')
    await screenshot('chart-editor-donut')
    await click(button('chart-pick-range'))
@@ -506,18 +578,19 @@ await build({stdin:{resolveDir:root,contents:`
    assert.equal(await js('document.querySelector("[data-chart-field=range]").value'),'D3:E4')
    press('Escape');await wait(80)
    await select('E3');await formula('22')
-   await click(button('menu','chart-actions'));await click(menuItem('duplicate-chart'))
+   await showChart(chartId)
+   await click(chartControl('menu','chart-actions'));await click(menuItem('duplicate-chart',chartId))
    await until(()=>snapshot().charts.length===2,'duplicate chart adds a second object')
    assert.equal(snapshot().charts[1].palette,'ocean')
    assert.equal(snapshot().charts[1].range,'D3:E4')
-   await click(button('menu','chart-actions'));await click(menuItem('confirm-remove-chart'))
+   await click('.ew-sheet-charts[data-chart-active=true] header [data-action=confirm-remove-chart]')
    await click(button('remove-chart'))
-   await until(()=>snapshot().charts.length===1,'remove duplicate chart keeps the original')
-   await until(()=>clickable('.ew-sheet-chart-object'),'chart stays visible in the worksheet after deselection')
-   await click('.ew-sheet-chart-object')
-   await until(()=>clickable(button('close-chart')),'floating chart can be selected directly')
-   await click(button('close-chart'))
-   report.push('manual chart updates with source edits, styles persist, and chart objects support selecting, copying and deleting')
+   await until(()=>snapshot().charts.length===1,'chart close button deletes the duplicate')
+   await click(button('menu','charts'));await click(menuItem('confirm-remove-chart',chartId))
+   await click(button('remove-chart'))
+   await until(async()=>!snapshot().charts.length&&!await clickable(closeControl),'chart can also be deleted from the worksheet footer')
+   assert.equal(currentCell(2,4)?.v,22)
+   report.push('chart keeps its title, legend and geometry on blur, supports renaming, scrolls to source data, and deletes from both controls')
    await select('E3');await openCommands('edit');await click(menuItem('sheet-copy'))
    assert.equal(clipboard.readText().trim(),'22')
    await select('A10');await openCommands('edit');await click(menuItem('sheet-paste'))
@@ -602,7 +675,13 @@ await build({stdin:{resolveDir:root,contents:`
    assert.equal(generatedInput.entryPoint,'component')
    const smartId=snapshot().components[1].componentId
    await until(()=>clickable(button('component-source',smartId)),'smart component card opens')
-   await sendComponentAction(smartId,'close')
+   await sendComponentAction(smartId,'rename')
+   await field('.ew-sheet-dialog [aria-label="组件名称"]','成交额研究组件')
+   await until(()=>snapshot().components[1].node.title==='成交额研究组件','component name is saved')
+   await click(button('menu','components'));await click(menuItem('confirm-remove-component',smartId))
+   await click(button('component-remove',smartId))
+   await until(()=>snapshot().components.length===1,'component is deleted from the worksheet footer')
+   assert.equal(snapshot().components[0].componentId,savedLibraryId)
    assert.equal(currentCell(2,4)?.v,22)
    report.push('component library icons, direct insertion, persistent placement and smart generation scoped to the selected cells')
    await select('A1')

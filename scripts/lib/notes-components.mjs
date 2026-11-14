@@ -76,7 +76,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
  react.useEffect(()=>()=>sharedBridge.dispose(),[sharedBridge])
  const refresh=async()=>{if(refreshing||entry.readOnly)return;setRefreshBusy(true);try{await generationAction('refresh');setRefreshError('')}catch(e){setRefreshError(e.message)}finally{setRefreshBusy(false)}}
  if(entry.mode==='generation'&&!node.containerSpec)return react_dom.createPortal(react.createElement(ResearchGenerationProcess,{node,sessionId:entry.sessionId,onCancel:entry.readOnly?undefined:()=>generationAction('generation-stop'),onRetry:entry.readOnly?undefined:()=>{void generationAction('generation-retry').catch(error=>setError(error.message))},phaseOverride:entry.phase?workbenchText(entry.phase):undefined,detailOverride:error||(entry.detail?workbenchText(entry.detail):undefined)}),entry.host,entry.instanceId)
- const sourceButton=spreadsheet&&entry.source?react.createElement('button',{type:'button',className:'ew-sheet-native-source','aria-label':workbenchText('定位选区')+' '+entry.source,title:entry.source,onClick:()=>{void generationAction('source').catch(error=>setError(error.message))}},react.createElement(WorkbenchIcon,{name:'branch'}),react.createElement('span',{'data-ui-preserve':true},entry.source)):null
+ const sourceButton=spreadsheet&&entry.source?react.createElement('button',{type:'button',className:'ew-sheet-native-source','aria-label':workbenchText('定位选区')+' '+entry.source,title:entry.source,onClick:()=>{void generationAction('source').catch(error=>setError(error.message))}},react.createElement(WorkbenchIcon,{name:'sheet-pin'}),react.createElement('span',{'data-ui-preserve':true},entry.source)):null
  const body=node.kind==='web-link'?react.createElement(ResearchCanvasWebFrame,{node,sessionId:entry.sessionId,visible:true,onInspection:(url,inspection)=>action('web-inspection',{url,inspection})}):node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,surface:'notes',hostReadOnly:!!entry.readOnly,onSpecChange:save,footerExtra:sourceButton}):react.createElement(spreadsheet?ResearchContainerContent:ResearchContainerBody,{node:entry.readOnly?{...node,readOnly:true}:node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{
   // ResearchHtmlArtifact reports outer-card height. Notes stores the content
   // host height, then renders its own chrome around that host.
@@ -110,8 +110,9 @@ export function EWorkNoteComponentView({entry,officePreview}){
    for(const item of themeAction.children)item.label=workbenchText(item.label)
   }
   const menuActions=[
-   {id:'source',icon:'branch',label:workbenchText('定位选区'),run:()=>generationAction('source')},
+   {id:'source',icon:'sheet-pin',label:workbenchText('定位选区'),run:()=>generationAction('source')},
    {id:'source-details',icon:'data',label:sourceDetailsTitle,run:()=>openSheetSourceDetails(sheetMenu)},
+   {id:'rename',icon:'edit',label:workbenchText('重命名组件'),run:run('rename'),disabled:entry.readOnly},
    themeAction,
    {id:'export',icon:'download',label:workbenchText('导出'),children:['svg','png','jpg'].map(format=>({id:format,label:format.toUpperCase(),run:()=>exportWorkbenchContent(rootRef.current,node,format,{body:entry.host})}))},
    {id:'remove',icon:'remove',label:workbenchText('移除组件'),run:run('remove'),disabled:entry.readOnly}

@@ -47,6 +47,11 @@ export function spreadsheetChartSvg(chart:WorkbookChart,data:ChartData,width=540
  let geometry
  if(chart.kind==='pie'||chart.kind==='donut'){
   geometry=specialChartView({variant:chart.kind,items:data.labels.map((label,index)=>({label,value:data.series[0]!.values[index]!}))},width)
+  for(const node of geometry.elements){
+   if(typeof node==='string')continue
+   const index=node.attributes['data-inspect']
+   if(index!==undefined)node.attributes.style='--sheet-sector-color:var(--sherlock-chart-'+(Number(index)%6+1)+')'
+  }
  }else if(chart.kind==='scatter'){
   geometry=advancedChartView({variant:'scatter',xAxis:{label:data.categoryName,unit:''},yAxis:{label:data.series.length===1?data.series[0]!.name:'Y',unit:''},points:data.series.flatMap(series=>
    data.xValues.map((x,index)=>({x,y:series.values[index]!,label:data.labels[index]!,group:series.name})))},width)
