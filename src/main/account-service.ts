@@ -14,6 +14,7 @@ import {
 import { ResearchBoardsError } from '../shared/research-boards'
 import {IntegrationError} from '../shared/integrations'
 import type { BrowserSearchResult } from './search/browser-search-controller'
+import { hostedChatBridgeTimeoutMs } from '../../packages/dsh-research-task-runtime/hosted-ai-timeouts.js'
 
 type AccountProfile = { id: string; username: string; createdAt: number }
 type AccountIdentity = { id: string; profile?: AccountProfile }
@@ -286,13 +287,14 @@ export class AccountService {
   }
   private async hostedRequest(path: string, signal: AbortSignal, body?: Buffer, requestId?: string): Promise<Response> {
     if (!this.authenticated) return Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 })
+    const timeout = body === undefined ? 8000 : path === 'chat/completions' ? hostedChatBridgeTimeoutMs : 310000
     const response = await (this.collaborationOptions.fetch ?? fetch)(this.origin + '/v1/hosted-ai/' + path, {
       method: body === undefined ? 'GET' : 'POST', redirect: 'error', body: body as Uint8Array<ArrayBuffer> | undefined,
       headers: {
         authorization: 'Bearer ' + this.token, 'content-type': 'application/json',
         ...(requestId ? { 'x-ework-request-id': requestId } : {})
       },
-      signal: AbortSignal.any([signal, this.sessionAbort.signal, AbortSignal.timeout(body === undefined ? 8000 : 310000)])
+      signal: AbortSignal.any([signal, this.sessionAbort.signal, AbortSignal.timeout(timeout)])
     })
     return response
   }
@@ -393,8 +395,8 @@ export class AccountService {
     if (generation !== this.generation || signal.signal.aborted) { res.writeHead(401).end(); return }
     try {
       const suppliedId = req.headers['x-ework-request-id']
-      const requestId = path === 'images' && typeof suppliedId === 'string' && /^[0-9a-f]{64}$/.test(suppliedId)
-        ? suppliedId : undefined
+      const idPattern = path === 'images' ? /^[0-9a-f]{64}$/ : /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
+      const requestId = typeof suppliedId === 'string' && idPattern.test(suppliedId) ? suppliedId : undefined
       const response = await this.hostedRequest(path!, signal.signal, Buffer.concat(chunks), requestId)
       if (generation !== this.generation || signal.signal.aborted) { await response.body?.cancel(); res.writeHead(401).end(); return }
       const responseId = response.headers.get('x-ework-request-id')

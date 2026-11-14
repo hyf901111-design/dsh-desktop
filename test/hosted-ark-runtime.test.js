@@ -23,6 +23,59 @@ test('background catalog checks wait between requests and stop on disposal', asy
   }
 })
 
+test('hosted chat keeps waiting after two minutes without model output and completes without replay', async () => {
+  const model = { id: 'doubao-seed-2.1-lite', name: 'Doubao Seed 2.1 Lite', contextWindow: 1024000 }
+  let adapter, finish, pending, requestSignal
+  const requested = new Promise(resolve => { pending = resolve })
+  const calls = vi.fn(async (url, options) => {
+    requestSignal = options.signal
+    const body = new ReadableStream({
+      start(controller) {
+        finish = () => {
+          const frame = { id: 'test', model: model.id, choices: [{ index: 0, delta: { content: '完成' }, finish_reason: 'stop' }] }
+          controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify(frame) + '\n\ndata: [DONE]\n\n'))
+          controller.close()
+        }
+        pending()
+      }
+    })
+    return new Response(body, { headers: { 'content-type': 'text/event-stream' } })
+  })
+  vi.useFakeTimers()
+  vi.stubGlobal('fetch', calls)
+  const service = registerHostedAi({ llm: { registerAdapter: (_, value) => { adapter = value; return () => {} } } }, {
+    request: async () => Response.json({ models: [model], image: false, generation: 1 }),
+    bridge: JSON.stringify({ url: 'http://127.0.0.1:6789/fund-research', token: 'a'.repeat(64) })
+  })
+  const abort = new AbortController()
+  try {
+    await service.refresh()
+    const result = (async () => {
+      const events = []
+      try {
+        for await (const event of adapter.stream({
+          provider: HOSTED_ARK_PROVIDER, model: model.id, signal: abort.signal,
+          messages: [{ role: 'user', content: [{ type: 'text', text: '等待较慢的模型' }] }]
+        })) events.push(event)
+        return events.at(-1)
+      } catch (error) { return error }
+    })()
+    await requested
+    await vi.advanceTimersByTimeAsync(121_000)
+    expect(requestSignal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(190_000)
+    expect(requestSignal.aborted).toBe(false)
+    finish()
+    expect(await result).toMatchObject({ type: 'finish', reason: { kind: 'stop' } })
+    expect(calls).toHaveBeenCalledTimes(1)
+  } finally {
+    abort.abort()
+    service.dispose()
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  }
+})
+
 test('the real model adapter only registers entitled chat models and uses its captured loopback generation',async()=>{
   const token='a'.repeat(64), requests=[]
   const model={id:'doubao-seed-2.1-lite',name:'Doubao Seed 2.1 Lite',contextWindow:1024000}
@@ -36,13 +89,18 @@ test('the real model adapter only registers entitled chat models and uses its ca
     }
     const chunks=[]
     for await(const chunk of req)chunks.push(chunk)
-    requests.push({path:req.url,auth:req.headers.authorization,data:JSON.parse(Buffer.concat(chunks))})
+    requests.push({path:req.url,auth:req.headers.authorization,requestId:req.headers['x-ework-request-id'],data:JSON.parse(Buffer.concat(chunks))})
     if (requests.at(-1).data.messages[0].content === 'quota-denied') {
       res.writeHead(429,{'content-type':'application/json'}).end(JSON.stringify({error:{code:'AI_QUOTA_FIVE_HOUR',message:'本 5 小时可用额度不足'}}))
       return
     }
     res.writeHead(200,{'content-type':'text/event-stream'})
     const frame=(choices,usage)=>({id:'test',created:1,model:model.id,object:'chat.completion.chunk',choices,...usage?{usage}:{}})
+    if (requests.at(-1).data.messages[0].content === 'partial-tool') {
+      const partial = frame([{index:0,delta:{tool_calls:[{index:0,id:'call-1',type:'function',function:{name:'write_cells',arguments:'{"value":'}}]},finish_reason:null}])
+      res.end('data: '+JSON.stringify(partial)+'\n\ndata: '+JSON.stringify({error:{code:'HOSTED_AI_STREAM_INTERRUPTED',message:'方舟输出中断，未自动重试。'}})+'\n\n')
+      return
+    }
     const rows=[frame([{index:0,delta:{role:'assistant',content:'你好'},finish_reason:null}]),
       frame([{index:0,delta:{},finish_reason:'stop'}]),frame([],{prompt_tokens:20,completion_tokens:5,total_tokens:25})]
     res.end(rows.map(row=>'data: '+JSON.stringify(row)+'\n\n').join('')+'data: [DONE]\n\n')
@@ -67,6 +125,7 @@ test('the real model adapter only registers entitled chat models and uses its ca
       messages:[{role:'user',content:[{type:'text',text:'说你好'}]}]}))chunks.push(chunk)
     expect(JSON.stringify(chunks)).toContain('你好')
     expect(requests[0]).toMatchObject({path:'/hosted-ai/chat/completions',auth:'Bearer '+token+'.7',data:{model:model.id,stream:true}})
+    expect(requests[0].requestId).toMatch(/^[0-9a-f-]{36}$/)
     expect(service.image.available()).toBe(true)
     catalog={...catalog,models:[{...model,supportsImageInput:true}]}
     await service.refresh()
@@ -87,6 +146,9 @@ test('the real model adapter only registers entitled chat models and uses its ca
     })
     expect(await run([{role:'user',content:[{type:'text',text:'quota-denied'}]}])).toMatchObject({
       type:'finish',reason:{kind:'error',failure:{code:'AI_QUOTA_FIVE_HOUR',message:'5 小时剩余额度不足以开始本次模型调用。'}}
+    })
+    expect(await run([{role:'user',content:[{type:'text',text:'partial-tool'}]}])).toMatchObject({
+      type:'finish',reason:{kind:'error',failure:{code:'TRANSPORT'}}
     })
     const oldGenerate=service.image.capture()
     const lastCatalog=catalog
@@ -112,7 +174,8 @@ test('the real model adapter only registers entitled chat models and uses its ca
     expect(service.image.available()).toBe(false)
     expect(service.image.unavailable()).toBe(false)
     await expect(oldGenerate({},{signal:new AbortController().signal,maxBytes:100})).rejects.toThrow('账号已切换')
-    expect(requests).toHaveLength(3)
+    expect(requests).toHaveLength(4)
+    expect(new Set(requests.map(request=>request.requestId)).size).toBe(4)
   }finally{service.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
 })
 

@@ -1,9 +1,10 @@
-import { timingSafeEqual } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import { createProvider } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
 import { boundedImageJson, ImageGenerationError, validateGeneratedImage } from './image-generation-provider.js'
+import { hostedChatIdleTimeoutMs } from './hosted-ai-timeouts.js'
 
 export const HOSTED_ARK_PROVIDER = 'ework-ark'
 const displayName = 'EWork'
@@ -61,8 +62,10 @@ class HostedPiAiAdapter extends PiAiAdapter {
       } else if (failure.message.includes('HOSTED_AI_PAYLOAD_TOO_LARGE') || failure.message.includes('本次消息和图片过大') ||
                  failure.message.includes('本次发送的图片太多')) {
         visibleFailure = { ...failure, code: 'HOSTED_AI_PAYLOAD_TOO_LARGE', message: '本次消息和图片过大，请压缩图片或缩短消息后重试。' }
-      } else if (failure.message.includes('Stream ended without finish_reason') || failure.message.includes('HOSTED_AI_STREAM_INTERRUPTED')) {
-        visibleFailure = { ...failure, message: '模型输出中断，请重新发起请求。' }
+      } else if (failure.message.includes('Stream ended without finish_reason') ||
+                 failure.message.includes('HOSTED_AI_STREAM_INTERRUPTED') ||
+                 failure.message === '方舟输出中断，未自动重试。') {
+        visibleFailure = { ...failure, code: 'TRANSPORT', message: '模型输出中断，请重新发起请求。' }
       }
       yield { ...event, reason: { ...event.reason, failure: visibleFailure } }
     }
@@ -84,10 +87,14 @@ function adapterFor(ctx, base, apiKey, models) {
     api: {
       ...api,
       streamSimple: (model, context, options) =>
-        api.streamSimple(model, context, { ...options, onPayload: fitHostedChatPayload })
+        api.streamSimple(model, context, {
+          ...options,
+          headers: { ...options?.headers, 'x-ework-request-id': randomUUID() },
+          onPayload: fitHostedChatPayload
+        })
     }
   })
-  const profiles = new Map([[provider, { displayName, piProvider, streamIdleTimeoutMs: 120000,
+  const profiles = new Map([[provider, { displayName, piProvider, streamIdleTimeoutMs: hostedChatIdleTimeoutMs,
     configuredMaxTokens: new Map(models.map(({ id }) => [id, 16384])), retryPolicy }]])
   return new HostedPiAiAdapter({ profiles: () => profiles, resolveApiKey: async () => apiKey, resolveAttachments: () => ctx.get?.('attachments') })
 }
