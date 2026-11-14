@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格组件侧栏页签与属性面板",
+        "featureName": "表格组件页签压缩与更多菜单",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8",
-        "tipCommit": "4b529ad31e97f058d1890c5c30fba08695882416",
+        "baseCommit": "4b529ad31e97f058d1890c5c30fba08695882416",
+        "tipCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
         "commits": [
           {
-            "commit": "4b529ad31e97f058d1890c5c30fba08695882416",
+            "commit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
             "parents": [
-              "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8"
+              "4b529ad31e97f058d1890c5c30fba08695882416"
             ],
-            "subject": "为表格停靠组件添加页签并对齐图表属性字段"
+            "subject": "表格组件页签支持压缩和更多菜单"
           }
         ],
         "files": [
@@ -49,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "4b529ad31e97f058d1890c5c30fba08695882416",
-            "completedAt": "2026-11-14T05:39:30.793Z",
+            "verifiedCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
+            "completedAt": "2026-11-14T06:06:41.889Z",
             "timeoutMs": 180000
           },
           {
@@ -59,43 +59,24 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 聚焦检查图表与组件交互以及侧栏页签",
-            "verifiedCommit": "4b529ad31e97f058d1890c5c30fba08695882416",
-            "completedAt": "2026-11-14T05:39:30.793Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/component-interaction-state.test.js",
-              "-t",
-              "read-only spreadsheet chart data disclosure"
-            ],
-            "outcome": "passed",
-            "summary": "只读数据展开检查",
-            "verifiedCommit": "4b529ad31e97f058d1890c5c30fba08695882416",
-            "completedAt": "2026-11-14T05:39:30.793Z",
+            "summary": "Electron 聚焦检查侧栏页签压缩和更多菜单",
+            "verifiedCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
+            "completedAt": "2026-11-14T06:06:41.889Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Electron 窗口实测多个组件页签、浮动切换、图表字段对齐。"
+          "summary": "Electron 窗口实测拖窄后收纳、没有横向滚动、点选隐藏页签及拉宽恢复。"
         },
         "acceptanceCriteria": [
-          "表格键盘撤销和重做",
-          "展开智能组件数据",
-          "图表和组件共享重叠层级",
-          "图例在卡片底部居中，字号与色标放大",
-          "只有多个停靠组件时显示页签",
-          "图表属性标题共用左边距"
+          "页签标题可省略",
+          "没有横向滚动条",
+          "更多菜单切换隐藏页签",
+          "宽度恢复后显示可容纳的页签"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T05:39:30.793Z"
+        "generatedAt": "2026-11-14T06:06:41.889Z"
       }
     },
     {
