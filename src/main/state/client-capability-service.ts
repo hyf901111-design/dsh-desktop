@@ -9,7 +9,8 @@ const validId=(v:any)=>typeof v==='string'&&v.length>0&&v.length<=256
 import type {SpreadsheetService} from '../spreadsheet/service'
 const modes=['conversation','research','notes','spreadsheet','knowledge']
 type Binding={sessionId:string;mode:ClientCapabilityContext['mode'];owner:string;generation:string;expires:number;controller:AbortController;windowIdentity:unknown}
-type Options={spreadsheet?:SpreadsheetService;knowledge?(current:()=>boolean,sessionId:string):NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>;conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
+type CapabilityHandlers=NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>
+type Options={spreadsheet?:SpreadsheetService;sharedKnowledge?(current:()=>boolean,sessionId:string):CapabilityHandlers;knowledge?(current:()=>boolean,sessionId:string):NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>;conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
 /** A fresh visible-header binding is distinct from the long-lived canvas data
  * binding. A background task or child can never borrow a visible parent lease. */
 export class ClientCapabilityService{
@@ -75,7 +76,7 @@ export class ClientCapabilityService{
      ...(authorityId?{authorityId,authoritySeq:sequence}:{}),windowGeneration:binding.generation,
      current:()=>!!current()&&(this.options.canWrite?.(binding.sessionId)??true)
     }:undefined
-    const host=createClientCapabilityHost({current,handlers:{...sheet?.handlers,...notes?.handlers,...(binding.mode==='knowledge'?this.options.knowledge?.(()=>!!current(),binding.sessionId):undefined),...conversationIdentity&&conversationComponents?{
+    const host=createClientCapabilityHost({current,handlers:{...sheet?.handlers,...notes?.handlers,...this.options.sharedKnowledge?.(()=>!!current(),binding.sessionId),...(binding.mode==='knowledge'?this.options.knowledge?.(()=>!!current(),binding.sessionId):undefined),...conversationIdentity&&conversationComponents?{
      createConversationComponent:async(args,_context,signal,requestId)=>{
       if(!signal||!requestId||!conversationIdentity.current())throw Error('当前对话组件操作身份已失效。')
       signal.throwIfAborted();return conversationComponents.create(args,conversationIdentity,signal,requestId)

@@ -7,11 +7,47 @@ import type { KnowledgeViewBridge } from './view-bridge'
 
 type Handlers = NonNullable<Parameters<typeof createClientCapabilityRegistry>[0]>
 
+export function sharedKnowledgeCapabilityHandlers(sharing: KnowledgeSharing, content: KnowledgeContent, current: () => boolean): Handlers {
+  const check = (signal?: AbortSignal) => {
+    signal?.throwIfAborted()
+    if (!current()) throw Error('会话或账号已变化。')
+  }
+  return {
+    searchSharedKnowledge: async ({ query, category, formats, offset = 0 }, _context, signal) => {
+      check(signal)
+      const documents = await sharing.received(true, signal)
+      check(signal)
+      const matches = listKnowledgeDocuments({ documents, folders: [] },
+        { category: 'received', query, sharedCategory: category, formats })
+      const end = offset + 25
+      return {
+        status: 'succeeded',
+        data: { count: matches.length, documents: matches.slice(offset, end), nextOffset: end < matches.length ? end : null }
+      }
+    },
+    readSharedKnowledge: async ({ id, offset = 0 }, _context, signal) => {
+      check(signal)
+      const { document, data } = await sharing.read(id, signal)
+      check(signal)
+      const result = await content.read(document, data, signal)
+      if (!result) throw Error('该格式的正文暂时无法从此工具读取。')
+      check(signal)
+      const end = offset + 24000
+      return {
+        status: 'succeeded',
+        data: { document, text: result.text.slice(offset, end), offset,
+          nextOffset: end < result.text.length ? end : null, truncated: result.truncated }
+      }
+    }
+  }
+}
+
 export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: KnowledgeSharing, content: KnowledgeContent, view: KnowledgeViewBridge, current: () => boolean): Handlers {
   const check = (signal?: AbortSignal) => {
     signal?.throwIfAborted()
     if (!current()) throw Error('知识库会话或账号已变化。')
   }
+  const shared = sharedKnowledgeCapabilityHandlers(sharing, content, current)
   return {
     inspectKnowledge: async (_args, _context, signal) => {
       check(signal)
@@ -55,14 +91,12 @@ export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: Know
         message: '已恢复上一组筛选条件。'
       }
     },
-    readKnowledgeDocument: async ({ id, offset = 0 }, _context, signal) => {
+    readKnowledgeDocument: async ({ id, offset = 0 }, context, signal) => {
       check(signal)
-      const file = /^[a-f0-9]{32}$/u.test(id)
-        ? await sharing.read(id, signal)
-        : await store.file(id)
-      const { document } = file
+      if (/^[a-f0-9]{32}$/u.test(id)) return shared.readSharedKnowledge!({ id, offset }, context, signal)
+      const { document, path } = await store.file(id)
       check(signal)
-      const result = await content.read(document, 'data' in file ? file.data : file.path, signal)
+      const result = await content.read(document, path, signal)
       if (!result) throw Error('该格式的正文暂时无法从此工具读取。')
       check(signal)
       return {

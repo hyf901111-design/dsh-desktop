@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs'
 import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { hash } from '../services/accounts/auth.js'
+import { KnowledgeContent } from '../src/main/knowledge/content'
+import { KnowledgeSharing } from '../src/main/knowledge/sharing'
+import { sharedKnowledgeCapabilityHandlers } from '../src/main/knowledge/capabilities'
+import { ClientCapabilityService } from '../src/main/state/client-capability-service'
 
 let worker
 const tokens = ['a'.repeat(64), 'b'.repeat(64)]
@@ -61,7 +65,39 @@ it('publishes privately stored bytes to other authenticated users and closes acc
   expect((await request('/' + shared.id, undefined)).status).toBe(401)
   expect(await (await request('/' + shared.id, 1)).text()).toBe(body)
   expect((await request('/' + shared.id, 1, { method: 'DELETE' })).status).toBe(404)
-  expect((await request('/' + shared.id, 0, { method: 'DELETE' })).status).toBe(200)
+  const sharing = new KnowledgeSharing({
+    authenticated: () => true,
+    client: {
+      generation: () => 1,
+      async request(query, signal) {
+        const path = query.kind === 'knowledge.list' ? '' : '/' + query.id
+        const response = await request(path, 1, { signal })
+        if (!response.ok) throw Error('共享文件请求失败 ' + response.status)
+        return query.kind === 'knowledge.list' ? response.json() : response
+      }
+    }
+  })
+  const host = new ClientCapabilityService({
+    sharedKnowledge: current => sharedKnowledgeCapabilityHandlers(sharing, new KnowledgeContent(() => ({})), current),
+    owner: () => 'user1', canRead: () => true, scheduled: () => false,
+    send: () => {}, canvasAvailable: () => false, canvas: async () => {}, window: async () => {}
+  })
+  const sessionId = 'normal-conversation', turnId = 'turn-one'
+  const call = (requestId, capability, args) => host.request({ sessionId, turnId, method: 'execute',
+    call: { requestId, capability, arguments: args } })
+  host.bind({ sessionId, mode: 'conversation', active: true })
+  try {
+    const catalog = await host.request({ sessionId, turnId, method: 'catalog' })
+    expect(catalog.capabilities.filter(row => row.id.startsWith('knowledge.') && row.available).map(row => row.id))
+      .toEqual(['knowledge.shared.search', 'knowledge.shared.read'])
+    const matches = await call('search', 'knowledge.shared.search', { query: '报告', category: '行业研究', formats: ['markdown'] })
+    expect(matches.data).toMatchObject({ count: 1, documents: [{ id: shared.id, name: '报告.md' }], nextOffset: null })
+    expect(await call('inspect', 'knowledge.shared.read', { id: shared.id })).toMatchObject({
+      status: 'succeeded', data: { text: body, document: { received: { owner: 'user0' } } }
+    })
+    expect((await request('/' + shared.id, 0, { method: 'DELETE' })).status).toBe(200)
+    expect(await call('inspect-new', 'knowledge.shared.read', { id: shared.id })).toMatchObject({ status: 'failed' })
+  } finally { host.dispose() }
   expect((await request('/' + shared.id, 1)).status).toBe(404)
   expect((await (await request('', 1)).json()).documents).toEqual([])
   expect((await request(localId, 0, { ...data, headers: { ...data.headers, 'X-Asset-Size': '0' } })).status).toBe(400)

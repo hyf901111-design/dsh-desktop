@@ -92,7 +92,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({
 const origin = (await mf.ready).origin
 const db = await mf.getD1Database('ACCOUNTS_DB')
 if (!resume) {
-  const migrations = ['0001_accounts.sql', '0002_research_boards.sql']
+  const migrations = ['0001_accounts.sql', '0002_research_boards.sql', '0006_knowledge_shares.sql']
   if (hostedAi) migrations.push('0005_ai_quota.sql')
   for (const name of migrations) {
     await db.exec((await readFile('services/accounts/migrations/' + name, 'utf8')).replaceAll('\n', ' '))
