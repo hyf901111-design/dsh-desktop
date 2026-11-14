@@ -635,7 +635,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
             <span>分类</span>
             {filter.sharedCategory && <button type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>全部共享分类</button>}
             {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
-              onClick={() => updateFilter({ sharedCategory: category })}>
+              title={category} onClick={() => updateFilter({ sharedCategory: category })}>
               {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
             </button>)}
           </nav>}
@@ -683,6 +683,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                 ))}
                 {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row => {
                   const completed = completedImports[row.id] !== undefined
+                  const bytes = formatBytes(row.size)
+                  const updatedAt = new Date(row.updatedAt)
+                  const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
                   return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}>
                     <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
                       <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
@@ -692,17 +695,19 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                           {row.starred && <span className="knowledge-tag" data-kind="star">重点</span>}
                           {row.share && <span className="knowledge-tag" data-kind="share">共享</span>}
                         </span>
-                        <small>{[knowledgeSources[row.source], row.sessionTitle,
-                          snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.received ? '' : '未分组')].filter(Boolean).join(' · ')}
-                          {completed && <span role="status"> · 上传完成</span>}</small>
+                        {row.received ? <small className="knowledge-shared-metadata">
+                          <span>{bytes}</span>
+                          <time dateTime={updatedAt.toISOString()}> · {date}</time>
+                          <span className="knowledge-shared-inline-owner" title={row.received.owner}> · {row.received.owner}</span>
+                        </small> : <small>{[knowledgeSources[row.source], row.sessionTitle,
+                          snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? '未分组'].filter(Boolean).join(' · ')}
+                          {completed && <span role="status"> · 上传完成</span>}</small>}
                         {completed && <progress className="knowledge-import-progress" aria-label={`${row.name}的上传进度`}
                           value={row.size || 1} max={row.size || 1} />}
                       </span>
                     </button></td>
-                    <td>{formatBytes(row.size)}</td>
-                    <td><time dateTime={new Date(row.updatedAt).toISOString()}>
-                      {completed ? '刚刚' : new Date(row.updatedAt).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })}
-                    </time></td>
+                    <td>{bytes}</td>
+                    <td><time dateTime={updatedAt.toISOString()}>{date}</time></td>
                     <td title={row.received?.owner}>{row.received ? row.received.owner :
                       <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
                         aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
