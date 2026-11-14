@@ -11,32 +11,21 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "121dc9ac5f688061010fdd23018dd5d42110a8c6",
-        "tipCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
+        "baseCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
+        "tipCommit": "81eaf6ce322243407359a1c564d590425327752f",
         "commits": [
           {
-            "commit": "d5e980a63971334937053846d3c48661d2817a20",
+            "commit": "81eaf6ce322243407359a1c564d590425327752f",
             "parents": [
-              "121dc9ac5f688061010fdd23018dd5d42110a8c6"
+              "dce0987f7913bb2c11de3ee03861fafa8d5b9737"
             ],
-            "subject": "交互：知识库文件行右键复用更多操作菜单"
-          },
-          {
-            "commit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
-            "parents": [
-              "d5e980a63971334937053846d3c48661d2817a20"
-            ],
-            "subject": "修复：右侧知识库加载共享资料后同步主页面计数"
+            "subject": "交互：知识库文件右键由更多操作菜单接管"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/knowledge/panel.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
+            "path": "src/main/context-menu-target.ts"
           },
           {
             "status": "M",
@@ -44,7 +33,7 @@
           },
           {
             "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/context-menu-target.test.js"
           }
         ],
         "checks": [
@@ -56,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
-            "completedAt": "2026-11-14T23:16:07.698Z",
+            "verifiedCommit": "81eaf6ce322243407359a1c564d590425327752f",
+            "completedAt": "2026-11-14T23:18:18.799Z",
             "timeoutMs": 120000
           },
           {
@@ -74,12 +63,14 @@
               "test/knowledge-native-preview.test.ts",
               "test/knowledge-workspace-rendered.test.js",
               "test/knowledge-library.test.ts",
-              "test/sidebar-editor-save.test.ts"
+              "test/sidebar-editor-save.test.ts",
+              "test/context-menu-target.test.js",
+              "test/context-menu-home.test.js"
             ],
             "outcome": "passed",
-            "summary": "54 项知识库和原生文件编辑器聚焦检查通过。",
-            "verifiedCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
-            "completedAt": "2026-11-14T23:16:07.698Z",
+            "summary": "71 项知识库、原生编辑器和右键菜单聚焦检查通过。",
+            "verifiedCommit": "81eaf6ce322243407359a1c564d590425327752f",
+            "completedAt": "2026-11-14T23:18:18.799Z",
             "timeoutMs": 120000
           }
         ],
@@ -121,51 +112,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-14T23:16:07.698Z"
-      },
-      "merged": {
-        "mergeCommit": "85bea12eedf66d0a419499999a9c29dfedb5ba07",
-        "verificationCommit": "85bea12eedf66d0a419499999a9c29dfedb5ba07",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "85bea12eedf66d0a419499999a9c29dfedb5ba07",
-            "completedAt": "2026-11-14T23:16:50.471Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "85bea12eedf66d0a419499999a9c29dfedb5ba07",
-            "completedAt": "2026-11-14T23:16:50.471Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T23:16:50.471Z"
+        "generatedAt": "2026-11-14T23:18:18.799Z"
       }
     }
   ],
