@@ -56,14 +56,15 @@ export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
 
 function KnowledgePanel({ id, document, bridge }: PanelProps) {
   const [section, setSection] = useState<'files' | 'memory'>('files')
+  const panel = useRef<HTMLElement>(null)
   const showFiles = section === 'files'
   useEffect(() => {
     const reset = () => setSection('files')
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     return () => document.removeEventListener('sherlock:knowledge-identity-changed', reset)
   }, [document])
-  return <section className="knowledge-panel" aria-label={id ? '知识库文件预览' : '知识库资料'}>
-    {id ? <FilePreview id={id} bridge={bridge} document={document} /> : <>
+  return <section ref={panel} className="knowledge-panel" aria-label={id ? '知识库文件预览' : '知识库资料'}>
+    {id ? <FilePreview id={id} bridge={bridge} document={document} panel={panel} /> : <>
       <header className="knowledge-panel-heading">
         <div className="knowledge-panel-sections" role="group" aria-label="知识库页签">
           <button type="button" aria-pressed={showFiles} onClick={() => setSection('files')}>文件资料</button>
@@ -81,7 +82,7 @@ function KnowledgePanel({ id, document, bridge }: PanelProps) {
   </section>
 }
 
-function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
+function FilePreview({ id, bridge, document, panel }: PanelProps & { id: string; panel: React.RefObject<HTMLElement> }) {
   const [file, setFile] = useState<KnowledgePreview>()
   const [error, setError] = useState('')
   const [draft, setDraft] = useState<{ text: string; original: string; revision: string }>()
@@ -101,12 +102,12 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
       setFile(undefined)
       setError('账号已变化，请重新打开文件。')
     }
-    const load = async (recheck = false) => {
+    const load = async (recheck = false, catalog?: KnowledgeDocument[]) => {
       if (!current) return
       const request = ++sequence
       const isLatest = () => current && request === sequence
-      if (recheck && loaded) {
-        const rows = await bridge.received(true).catch(() => undefined)
+      if (recheck) {
+        const rows = catalog ?? await bridge.received(true).catch(() => undefined)
         if (!isLatest() || !rows) return
         const entry = rows.find(row => row.id === id)
         if (!entry) {
@@ -115,7 +116,7 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
           setError('该文件已取消共享或不可用。')
           return
         }
-        if (entry.updatedAt === loaded.document.updatedAt && !loaded.previewError) return
+        if (loaded && entry.updatedAt === loaded.document.updatedAt && !loaded.previewError) return
       }
       try {
         const value = await bridge.preview(id)
@@ -131,14 +132,20 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
       }
     }
     const changed = () => { void load(shared) }
-    const focus = () => {
-      if (document.visibilityState !== 'hidden') void load(true)
+    const recheckVisible = () => {
+      const node = panel.current
+      if (document.visibilityState !== 'hidden' && node?.getClientRects().length &&
+          !node.closest('[aria-hidden="true"], [inert]')) void load(true)
     }
+    const catalogChanged = (event: Event) => { void load(true, (event as CustomEvent<KnowledgeDocument[]>).detail) }
+    const win = document.defaultView
+    const timer = shared ? win?.setInterval(recheckVisible, 15_000) : undefined
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     document.addEventListener('sherlock:knowledge-changed', changed)
     if (shared) {
-      document.addEventListener('sherlock:knowledge-shared-access-changed', focus)
-      document.defaultView?.addEventListener('focus', focus)
+      document.addEventListener('sherlock:knowledge-shared-access-changed', recheckVisible)
+      document.addEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
+      win?.addEventListener('focus', recheckVisible)
     }
     void load()
     return () => {
@@ -147,11 +154,13 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
       document.removeEventListener('sherlock:knowledge-changed', changed)
       if (shared) {
-        document.removeEventListener('sherlock:knowledge-shared-access-changed', focus)
-        document.defaultView?.removeEventListener('focus', focus)
+        if (timer !== undefined) win?.clearInterval(timer)
+        document.removeEventListener('sherlock:knowledge-shared-access-changed', recheckVisible)
+        document.removeEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
+        win?.removeEventListener('focus', recheckVisible)
       }
     }
-  }, [id, bridge, document])
+  }, [id, bridge, document, panel])
   if (!file && !draft) return <p className="knowledge-panel-state" role={error ? 'alert' : 'status'}>{error || '正在打开文件…'}</p>
   const canEdit = file && !file.document.received && !file.document.share && knowledgeFormat(file.document.name) === 'markdown' &&
     file.document.size <= maxEditableKnowledgeBytes

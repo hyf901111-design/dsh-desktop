@@ -102,10 +102,13 @@ beforeAll(async () => {
             entry?.reject(Error('cancelled'))
             return
           }
-          if (method === 'received') return [
-            { id: 'shared-layout', name: '渠道调研验收.md', source: 'upload', size: 1024, updatedAt: 1,
-              starred: false, saved: false, received: { owner: '验收所有者', category: '行业研究' } }
-          ]
+          if (method === 'received') {
+            if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) {
+              return window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []
+            }
+            return [{ id: 'shared-layout', name: '渠道调研验收.md', source: 'upload', size: 1024, updatedAt: 1,
+              starred: false, saved: false, received: { owner: '验收所有者', category: '行业研究' } }]
+          }
           if (method === 'preview') return { document: documents.find(d => d.id === args.id), text: '# 研究写作规范' }
           throw new Error('Unexpected bridge method '+method)
         },
@@ -192,16 +195,22 @@ it('edits a Markdown preview and preserves a draft on revision conflicts', async
   } finally { await page.close() }
 })
 
-it('rechecks an open shared preview on focus and only reloads the body when its version changes', async () => {
+it('rechecks an open shared preview on focus, list refresh and a visible timer', async () => {
   const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
   try {
+    await page.clock.install()
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
     const id = 'decafbad'.repeat(4)
-    await page.setContent(`<aside data-knowledge-panel-host data-knowledge-panel-file="${id}" style="width:380px;height:720px"></aside>`)
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 390px 10px 20px"></div>
+      <aside data-knowledge-panel-host data-knowledge-panel-file="${id}" style="position:fixed;right:0;width:380px;height:720px"></aside>`)
     await page.addScriptTag({ content: bundle })
+    const workspace = page.getByRole('region', { name: '知识库', exact: true })
     const preview = page.getByRole('region', { name: '知识库文件预览' })
     await preview.getByRole('heading', { name: '初次共享正文' }).waitFor()
+    await workspace.getByRole('button', { name: /他人共享/ }).click()
+    await workspace.getByRole('button', { name: /可撤销的分享/ }).waitFor()
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
     expect(await page.evaluate(() => window.sharedPreviewReads)).toBe(1)
     await page.evaluate(() => {
@@ -213,17 +222,15 @@ it('rechecks an open shared preview on focus and only reloads the body when its 
     const previous = await page.evaluate(() => {
       const current = window.sharedPreview
       window.sharedPreview = undefined
-      window.dispatchEvent(new Event('focus'))
       return current
     })
+    await workspace.getByRole('button', { name: '刷新共享目录' }).click()
     await expect.poll(() => preview.getByRole('alert').textContent()).toBe('该文件已取消共享或不可用。')
     expect(await preview.getByRole('heading', { name: '更新后的正文' }).count()).toBe(0)
     expect(await preview.getByRole('button', { name: '下载' }).count()).toBe(0)
     expect(await page.evaluate(() => window.sharedPreviewReads)).toBe(2)
-    await page.evaluate(saved => {
-      window.sharedPreview = saved
-      window.dispatchEvent(new Event('focus'))
-    }, previous)
+    await page.evaluate(saved => { window.sharedPreview = saved }, previous)
+    await page.clock.fastForward(15_000)
     await preview.getByRole('heading', { name: '更新后的正文' }).waitFor()
     expect(await preview.getByRole('alert').count()).toBe(0)
   } finally { await page.close() }

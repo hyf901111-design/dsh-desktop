@@ -246,6 +246,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       if (sequence === receivedSequence.current && epoch === currentEpoch.current) {
         setReceived(rows)
         setReceivedStatus({ loading: false })
+        document.dispatchEvent(new CustomEvent('sherlock:knowledge-shared-catalog', { detail: rows }))
       }
     } catch (error) {
       if (sequence === receivedSequence.current && epoch === currentEpoch.current) {
