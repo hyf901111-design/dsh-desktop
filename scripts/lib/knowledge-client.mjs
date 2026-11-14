@@ -113,7 +113,24 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
  })
  const offFile=service.registerTab({
   id:'sherlock-knowledge-file',title:'知识库文件',hidden:true,
-  component:({tab})=>react.createElement('div',{'data-knowledge-panel-host':'','data-knowledge-panel-file':tab.meta?.fileId})
+  component: function KnowledgePreviewTab({tab,scope}) {
+   const host=react.useRef(null)
+   const fileId=tab.meta?.fileId
+   react.useEffect(()=>{
+    const node=host.current
+    const Observer=doc.defaultView?.MutationObserver
+    if(!node||!Observer)return
+    const syncTitle=()=>{
+     const title=node.dataset.knowledgePreviewTitle
+     if(title&&title!==tab.title)service.updateTab(tab.id,{title},scope)
+    }
+    const observer=new Observer(syncTitle)
+    observer.observe(node,{attributes:true,attributeFilter:['data-knowledge-preview-title']})
+    syncTitle()
+    return()=>observer.disconnect()
+   },[tab.id,tab.title,scope.sessionId])
+   return react.createElement('div',{ref:host,'data-knowledge-panel-host':'','data-knowledge-panel-file':fileId})
+  }
  })
  const scope=()=>({sessionId:service.getSnapshot().sessionId})
  const preview=event=>{

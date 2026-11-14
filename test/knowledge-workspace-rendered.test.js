@@ -15,6 +15,9 @@ beforeAll(async () => {
       import { WorkspaceSurfaceHost } from './src/preload/workspace-surface-host'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
+      import { installKnowledgeSidebar } from './scripts/lib/knowledge-client.mjs'
+      import React from 'react'
+      import { createRoot } from 'react-dom/client'
       const host = new WorkspaceSurfaceHost(document)
       const moreFormats = document.body.hasAttribute('data-test-formats')
         ? ['pdf', 'docx', 'xlsx', 'png', 'mp3', 'mp4', 'bin'].map((suffix, index) => ({
@@ -28,6 +31,36 @@ beforeAll(async () => {
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
       window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
       window.markdown = { text: '# 研究写作规范', revision: 'first' }
+      const nativeTabs = document.querySelector('[data-test-knowledge-native-tabs]')
+      if (nativeTabs) {
+        const tabRoot = createRoot(nativeTabs)
+        const registered = new Map()
+        const scope = { sessionId: 'preview-session' }
+        let active
+        const renderTab = () => tabRoot.render(React.createElement(React.Fragment, null,
+          React.createElement('span', { role: 'tab' }, active.title),
+          React.createElement(registered.get(active.type).component, { tab: active, scope })
+        ))
+        globalThis.react = React
+        installKnowledgeSidebar({ document, service: {
+          registerTab(descriptor) {
+            registered.set(descriptor.id, descriptor)
+            return () => registered.delete(descriptor.id)
+          },
+          getSnapshot: () => scope,
+          openTab(tab) { active = tab; renderTab() },
+          updateTab(id, patch, targetScope) {
+            if (id !== active.id || targetScope.sessionId !== scope.sessionId) throw Error('wrong native tab')
+            active = { ...active, ...patch }
+            renderTab()
+          }
+        } })
+        const file = documents.find(row => row.id === 'b')
+        file.id = '60088dae-e7fe-4b33-ab36-c9dcf069aa58'
+        window.openNativeKnowledgePreview = () => document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', {
+          detail: { id: file.id, name: file.name }, cancelable: true
+        }))
+      }
       if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) window.sharedPreview = {
         document: { id: 'decafbad'.repeat(4), name: '可撤销的分享.md', source: 'upload',
           size: 8192, updatedAt: 2, starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
@@ -192,6 +225,28 @@ it('edits a Markdown preview and preserves a draft on revision conflicts', async
     await pane.getByRole('button', { name: '保存' }).click()
     await expect.poll(() => pane.getByRole('alert').textContent()).toContain('文件已被修改')
     expect(await pane.getByRole('textbox', { name: 'Markdown 正文' }).inputValue()).toBe('# 保留用户草稿')
+  } finally { await page.close() }
+})
+
+it('uses the latest file name on the native preview tab and keeps its Markdown draft after a rename', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent('<aside data-test-knowledge-native-tabs style="width:380px;height:720px"></aside>')
+    await page.addScriptTag({ content: bundle })
+    await page.evaluate(() => window.openNativeKnowledgePreview())
+    const pane = page.getByRole('region', { name: '知识库文件预览' })
+    await page.getByRole('tab', { name: '研究写作规范.md', exact: true }).waitFor({ timeout: 1500 })
+    await pane.getByRole('button', { name: '编辑', exact: true }).click()
+    const draft = pane.getByRole('textbox', { name: 'Markdown 正文' })
+    await draft.fill('# 用户正在编辑')
+    await page.evaluate(() => {
+      window.data.documents.find(doc => doc.name === '研究写作规范.md').name = '新版写作规范.md'
+      document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+    })
+    await pane.getByText('新版写作规范.md', { exact: true }).waitFor({ timeout: 1500 })
+    await page.getByRole('tab', { name: '新版写作规范.md', exact: true }).waitFor({ timeout: 1500 })
+    expect(await page.getByRole('tab', { name: '研究写作规范.md', exact: true }).count()).toBe(0)
+    expect(await draft.inputValue()).toBe('# 用户正在编辑')
   } finally { await page.close() }
 })
 
@@ -512,6 +567,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     for (const width of [1720, 1380, 1240, 1100]) {
       const wide = width === 1720
       await page.setViewportSize({ width, height: 900 })
+      await expect.poll(() => library.evaluate(el => Math.round(el.getBoundingClientRect().width))).toBe(width - 640)
       expect(await category.locator('span').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
       expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
       expect(await table.evaluate(el => el.scrollWidth - el.clientWidth), `at ${width}px`).toBeLessThanOrEqual(2)

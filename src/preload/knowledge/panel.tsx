@@ -89,6 +89,13 @@ function FilePreview({ id, bridge, document, panel }: PanelProps & { id: string;
   const [busy, setBusy] = useState(false)
   const [editingMessage, setEditingMessage] = useState('')
   const epoch = useRef(0)
+  const name = file?.document.name
+  useEffect(() => {
+    const host = panel.current?.parentElement
+    if (!host || !name) return
+    host.dataset.knowledgePreviewTitle = name
+    return () => { delete host.dataset.knowledgePreviewTitle }
+  }, [name, panel])
   useEffect(() => {
     let current = true
     let sequence = 0
