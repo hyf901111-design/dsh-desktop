@@ -321,13 +321,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    const columns=skeleton.columnWidthAccumulation,rows=skeleton.rowHeightAccumulation
    return {x:columns[range.startColumn-1]??0,y:rows[range.startRow-1]??0,right:columns[range.endColumn]??0,bottom:rows[range.endRow]??0}
   },
-  revealObject:(x:number,y:number)=>{
-   const sheet=model.getActiveSheet(),render=renders.getRenderUnitById(model.getId())
-   const skeleton=sheet&&render?.with(SheetSkeletonManagerService).getSkeleton(sheet.getSheetId())
-   if(!sheet||!skeleton)return
-   const {row,column}=skeleton.getCellIndexByOffset(x+skeleton.rowHeaderWidth,y+skeleton.columnHeaderHeight,1,1,{x:0,y:0})
-   sheet.scrollToCell(row,column)
-  },
+  revealObject:(x:number,y:number)=>renders.getRenderUnitById(model.getId())?.scene
+   .getViewport(SHEET_VIEWPORT_KEY.VIEW_MAIN)?.scrollToViewportPos({viewportScrollX:x,viewportScrollY:y}),
   openFilter:async(subUnitId:string,row:number,col:number)=>{
    const unitId=model.getId()
    await api.executeCommand(ScrollToRangeOperation.id,{unitId,range:{startRow:row,endRow:row,startColumn:col,endColumn:col}})

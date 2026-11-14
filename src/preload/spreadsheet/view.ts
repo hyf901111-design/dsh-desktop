@@ -1117,10 +1117,18 @@ class SpreadsheetView{
  private revealObject(layout:WorkbookChartLayout){
   const view=this.engine?.objectViewport()
   if(!view)return
-  const {x,y}=this.sheetLayout(layout),{zoom,left,top,scrollX,scrollY,headerX,headerY}=view
-  const gridX=(x+headerX-scrollX)*zoom,gridY=(y+headerY-scrollY)*zoom
-  if(gridX<left||gridY<top||gridX>this.grid.clientWidth-96||gridY>this.grid.clientHeight-64)
-   this.engine?.revealObject(Math.max(0,x-24),Math.max(0,y-24))
+  const {x,y,width,height}=this.sheetLayout(layout),{zoom,left,top,scrollX,scrollY,headerX,headerY}=view
+  const reveal=(start:number,size:number,visibleStart:number,available:number)=>{
+   if(start>=visibleStart&&start+size<=visibleStart+available)return visibleStart
+   if(size>=available)return start+size-available
+   const margin=Math.min(12,Math.max(0,(available-size)/2))
+   return start<visibleStart?start-margin:start+size-available+margin
+  }
+  const viewportX=scrollX+left/zoom-headerX,viewportY=scrollY+top/zoom-headerY
+  const targetX=reveal(x,width,viewportX,(this.grid.clientWidth-left-9)/zoom)
+  const targetY=reveal(y,height,viewportY,(this.grid.clientHeight-top-9)/zoom)
+  if(targetX!==viewportX||targetY!==viewportY)
+   this.engine?.revealObject(Math.max(0,targetX-viewportX+scrollX),Math.max(0,targetY-viewportY+scrollY))
  }
  private positionChart(chartId:string){
   const chart=this.record.workbook?.charts?.find(item=>item.chartId===chartId)
