@@ -142,6 +142,14 @@ it('keeps each shortcut painted on first hover while new icon requests are pendi
       return count
     }
     expect(await nav.locator('[data-home-app]').evaluateAll(buttons => buttons.map(button => button.dataset.homeApp))).toEqual([...apps, 'spreadsheet'])
+    const spreadsheet = page.locator('[data-home-app=spreadsheet]')
+    expect(await spreadsheet.getAttribute('aria-label')).toBe('表格')
+    expect(await spreadsheet.locator('.home-app-shortcut-tooltip').textContent()).toBe('表格')
+    await page.evaluate(() => document.documentElement.dataset.odysseyLocale = 'en')
+    await spreadsheet.getByText('Spreadsheet', { exact: true }).waitFor({ state: 'attached' })
+    expect(await spreadsheet.getAttribute('aria-label')).toBe('Spreadsheet')
+    await page.evaluate(() => document.documentElement.dataset.odysseyLocale = 'zh')
+    await spreadsheet.getByText('表格', { exact: true }).waitFor({ state: 'attached' })
     holdRequests = true
     for (const app of [...apps, 'spreadsheet']) {
       const button = nav.locator(`[data-home-app="${app}"]`)
