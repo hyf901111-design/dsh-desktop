@@ -9,23 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格快捷键与组件交互",
+        "featureName": "表格卡片层级、快捷键和图例",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
-        "tipCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
+        "baseCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
+        "tipCommit": "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8",
         "commits": [
           {
-            "commit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
+            "commit": "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8",
             "parents": [
-              "1c3c80e7af36352c69d6b5db5a490279e2e6709c"
+              "05aba5498ea2cdad0282470f1dfa0da2f8e87cff"
             ],
-            "subject": "在图表编辑和工作簿更新时统一卡片层级"
+            "subject": "放大并居中表格图表卡片的图例"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
+            "path": "scripts/verify-spreadsheet-live.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
           }
         ],
         "checks": [
@@ -37,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
-            "completedAt": "2026-11-14T05:26:03.448Z",
+            "verifiedCommit": "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8",
+            "completedAt": "2026-11-14T05:30:13.816Z",
             "timeoutMs": 180000
           },
           {
@@ -47,9 +51,9 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 聚焦检查逐步撤销重做及混合卡片层级",
-            "verifiedCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
-            "completedAt": "2026-11-14T05:26:03.448Z",
+            "summary": "Electron 聚焦检查逐步撤销重做、混合卡片层级及图例居中",
+            "verifiedCommit": "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8",
+            "completedAt": "2026-11-14T05:30:13.816Z",
             "timeoutMs": 180000
           },
           {
@@ -65,22 +69,23 @@
             ],
             "outcome": "passed",
             "summary": "只读数据展开检查",
-            "verifiedCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
-            "completedAt": "2026-11-14T05:26:03.448Z",
+            "verifiedCommit": "68fe5f9ab2bec4d118d869d62a6ab17d471f7aa8",
+            "completedAt": "2026-11-14T05:30:13.816Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Electron 窗口实测多步撤销重做，以及图表和组件交替置顶。"
+          "summary": "Electron 窗口实测多步撤销重做、图表和组件交替置顶及图例居中。"
         },
         "acceptanceCriteria": [
           "表格键盘撤销和重做",
           "展开智能组件数据",
-          "图表和组件共享重叠层级"
+          "图表和组件共享重叠层级",
+          "图例在卡片底部居中，字号与色标放大"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T05:26:03.448Z"
+        "generatedAt": "2026-11-14T05:30:13.816Z"
       }
     },
     {
