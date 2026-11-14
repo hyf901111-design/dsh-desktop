@@ -154,11 +154,12 @@ const knowledgePatch = '/* ework:knowledge-conversation:restore */'
 const knowledgePatchEnd = '/* ework:knowledge-conversation:end */'
 
 export function stripKnowledgeConversation(source) {
- const start=source.indexOf(knowledgePatch)
- if(start<0)return source
- const end=source.indexOf(knowledgePatchEnd,start)
+ const tag=source.indexOf(knowledgePatch)
+ if(tag<0)return source
+ const start=source.slice(tag-4,tag)==='\n// '?tag-4:tag
+ const end=source.indexOf(knowledgePatchEnd,tag)
  if(end<0)throw Error('Knowledge conversation restore record missing')
- const changes=JSON.parse(source.slice(start+knowledgePatch.length,end))
+ const changes=JSON.parse(source.slice(tag+knowledgePatch.length,end))
  source=source.slice(0,start)+source.slice(end+knowledgePatchEnd.length)
  for(const [before,after] of changes.reverse()){
   const boundary=source.indexOf('/* browser-app-native:v1 */')
@@ -213,5 +214,6 @@ export function patchKnowledgeConversation(input) {
  });
  ctx.inject(['betterSidebar'],scope=>scope.effect(()=>(${installKnowledgeSidebar.toString()})({service:scope.get('betterSidebar')}),'Knowledge Base sidebar tabs'));`)
  }
- return changes.length?input+knowledgePatch+JSON.stringify(changes)+knowledgePatchEnd:input
+ // Store the undo data in one line comment. The anchor strings may contain block comments.
+ return changes.length?input+'\n// '+knowledgePatch+JSON.stringify(changes)+knowledgePatchEnd:input
 }

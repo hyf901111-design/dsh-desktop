@@ -64,6 +64,12 @@ it('composes with the installed native client patch sequence and keeps its resto
   const knowledge = patchKnowledgeConversation(base)
   const patched = patchSpreadsheetClient(patchBrowserAppNative(knowledge))
   expect(() => new Function(patched)).not.toThrow()
+  const loaded = vi.fn()
+  const sandbox = { __ModuleLoader__: { load: loaded } }
+  new Function('window', 'document', patched)(sandbox, undefined)
+  new Function('window', 'document', patchKnowledgeConversation(installed))(sandbox, undefined)
+  expect(loaded).toHaveBeenCalledTimes(2)
+  expect(stripKnowledgeConversation(patchKnowledgeConversation(installed))).toBe(installed)
   expect(stripBrowserAppNative(stripSpreadsheetClient(patched))).toBe(knowledge)
   expect(patchKnowledgeConversation(knowledge)).toBe(knowledge)
   expect(stripKnowledgeConversation(knowledge)).toBe(base)

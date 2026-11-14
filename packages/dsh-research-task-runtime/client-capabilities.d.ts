@@ -10,7 +10,7 @@ export type CapabilityNativeBlockOperation=
  |{op:'move';blockIds:string[];anchor:CapabilityNativeBlockAnchor}
  |{op:'remove';blockIds:string[]}
 export type ClientCapabilityArguments={
- 'knowledge.shared.search':{query?:string;category?:string;formats?:KnowledgeFormat[];offset?:number}
+ 'knowledge.shared.search':{query?:string;category?:string;formats?:KnowledgeFormat[];offset?:number;scope?:'metadata'|'content'}
  'knowledge.shared.read':{id:string;offset?:number}
  'knowledge.inspect':Record<string,never>
  'knowledge.filter':{revision:string;filter:KnowledgeFilter}

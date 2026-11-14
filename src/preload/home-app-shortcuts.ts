@@ -1,11 +1,12 @@
+import knowledgeApp from '../../build/brand/odyssey-knowledge-base.svg?inline'
 import spreadsheetAdd from './spreadsheet/assets-grid-add.svg?inline'
 import styles from './home-app-shortcuts.css?raw'
 
-export type HomeAppShortcut = 'browser' | 'plugin' | 'scheduled' | 'research' | 'note' | 'spreadsheet'
-const apps: readonly HomeAppShortcut[] = ['browser', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet']
+export type HomeAppShortcut = 'browser' | 'knowledge' | 'plugin' | 'scheduled' | 'research' | 'note' | 'spreadsheet'
+const apps: readonly HomeAppShortcut[] = ['browser', 'knowledge', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet']
 const labels = {
-  zh: ['浏览器', '插件', '定时任务', '研究看板', '笔记', '表格'],
-  en: ['Browser', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
+  zh: ['浏览器', '知识库', '插件', '定时任务', '研究看板', '笔记', '表格'],
+  en: ['Browser', 'Knowledge Base', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
 }
 const mounted = new WeakMap<Document, () => void>()
 
@@ -28,7 +29,8 @@ export function mountHomeAppShortcuts(doc: Document, open: (app: HomeAppShortcut
     const button = doc.createElement('button')
     button.type = 'button'
     button.dataset.homeApp = app
-    if(app==='spreadsheet')button.style.setProperty('--home-app-icon','url("'+spreadsheetAdd.replaceAll('"','%22')+'")')
+    const inlineIcon = app === 'knowledge' ? knowledgeApp : app === 'spreadsheet' ? spreadsheetAdd : undefined
+    if (inlineIcon) button.style.setProperty('--home-app-icon', 'url("' + inlineIcon.replaceAll('"', '%22') + '")')
     const icon = doc.createElement('span')
     icon.className = 'home-app-shortcut-icon'
     icon.setAttribute('aria-hidden', 'true')

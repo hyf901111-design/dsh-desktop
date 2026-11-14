@@ -1,5 +1,5 @@
 import { mountKnowledgePanels } from './knowledge/panel'
-import { mountKnowledgeWorkspace } from './knowledge/workspace'
+import { knowledgeOpenEvent, mountKnowledgeWorkspace } from './knowledge/workspace'
 import { mountSpreadsheet } from './spreadsheet/view'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
@@ -374,6 +374,7 @@ function initializeUi(): void {
     await notes.flushCurrent()
     if (signal.aborted) return
     if (app === 'browser') window.dispatchEvent(new CustomEvent('sherlock:browser-request'))
+    else if (app === 'knowledge') window.dispatchEvent(new CustomEvent(knowledgeOpenEvent))
     else if (app === 'plugin') window.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
     else await scheduledView.open()
   })
