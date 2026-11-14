@@ -37,10 +37,13 @@ beforeAll(async () => {
         const tabRoot = createRoot(nativeTabs)
         const registered = new Map()
         const scope = { sessionId: 'preview-session' }
+        const nativeEditor = nativeTabs.hasAttribute('data-test-real-viewer')
+        if (nativeEditor) window.dshDesktop = { knowledgeFilePreview: async () => ({}) }
         let active
         const renderTab = () => tabRoot.render(React.createElement(React.Fragment, null,
           React.createElement('span', { role: 'tab' }, active.title),
-          React.createElement(registered.get(active.type).component, { tab: active, scope })
+          nativeEditor ? React.createElement('output', null, active.type + ' ' + active.path)
+            : React.createElement(registered.get(active.type).component, { tab: active, scope })
         ))
         globalThis.react = React
         installKnowledgeSidebar({ document, service: {
@@ -49,7 +52,15 @@ beforeAll(async () => {
             return () => registered.delete(descriptor.id)
           },
           getSnapshot: () => scope,
-          openTab(tab) { active = tab; renderTab() },
+          openTab(tab) {
+            if (nativeEditor) nativeTabs.dataset.panelOpen = 'true'
+            active = tab
+            renderTab()
+          },
+          setPanelState(patch, targetScope) {
+            if (targetScope !== scope && targetScope.sessionId !== scope.sessionId) throw Error('wrong scope')
+            nativeTabs.dataset.panelOpen = String(patch.open)
+          },
           updateTab(id, patch, targetScope) {
             if (id !== active.id || targetScope.sessionId !== scope.sessionId) throw Error('wrong native tab')
             active = { ...active, ...patch }
@@ -252,6 +263,24 @@ it('uses the latest file name on the native preview tab and keeps its Markdown d
     await page.getByRole('tab', { name: '新版写作规范.md', exact: true }).waitFor({ timeout: 1500 })
     expect(await page.getByRole('tab', { name: '研究写作规范.md', exact: true }).count()).toBe(0)
     expect(await draft.inputValue()).toBe('# 用户正在编辑')
+  } finally { await page.close() }
+})
+
+it('keeps the native right pane open when creating a file tab already opens it', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent('<button data-odyssey-panel-entry="right" aria-expanded="false">右侧屏</button><aside data-test-knowledge-native-tabs data-test-real-viewer></aside>')
+    await page.evaluate(() => document.querySelector('button').addEventListener('click', () => {
+      const pane = document.querySelector('aside')
+      pane.dataset.panelOpen = pane.dataset.panelOpen === 'true' ? 'false' : 'true'
+    }))
+    await page.addScriptTag({ content: bundle })
+    await page.evaluate(() => window.openNativeKnowledgePreview())
+    const pane = page.locator('aside')
+    await expect.poll(() => pane.getAttribute('data-panel-open')).toBe('true')
+    expect(await pane.locator('output').textContent()).toContain('editor knowledge/')
+    await page.evaluate(() => window.openNativeKnowledgePreview())
+    expect(await pane.getAttribute('data-panel-open')).toBe('true')
   } finally { await page.close() }
 })
 

@@ -137,11 +137,15 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
   const detail=event.detail
   if(!detail||!/^([a-f0-9]{32}|[a-f0-9-]{36})$/.test(detail.id))return
   const native=typeof doc.defaultView?.dshDesktop?.knowledgeFilePreview==='function'
+  const target=scope()
   service.openTab({id:'knowledge-file:'+detail.id,type:native?'editor':'sherlock-knowledge-file',title:detail.name,
-   ...(native?{path:'knowledge/'+detail.id+'/'+detail.name}:{}),meta:{fileId:detail.id,sherlockPanel:'right',treeOpen:false}},scope())
+   ...(native?{path:'knowledge/'+detail.id+'/'+detail.name}:{}),meta:{fileId:detail.id,sherlockPanel:'right',treeOpen:false}},target)
   if(native)doc.dispatchEvent(new doc.defaultView.CustomEvent('sherlock:knowledge-preview-reopen',{detail:detail.id}))
-  const toggle=doc.querySelector('[data-odyssey-panel-entry="right"]')
-  if(toggle?.getAttribute('aria-expanded')==='false')toggle.click()
+  if(typeof service.setPanelState==='function')service.setPanelState({open:true},target)
+  else {
+   const toggle=doc.querySelector('[data-odyssey-panel-entry="right"]')
+   if(toggle?.getAttribute('aria-expanded')==='false')toggle.click()
+  }
   event.preventDefault()
  }
  const activate=()=>service.activateTab?.('sherlock-research-conversation',scope())
