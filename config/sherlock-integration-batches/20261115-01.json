@@ -11,21 +11,28 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "ab8845cec818eb12ed076a18ead5f49c143b44b7",
-        "tipCommit": "121dc9ac5f688061010fdd23018dd5d42110a8c6",
+        "baseCommit": "121dc9ac5f688061010fdd23018dd5d42110a8c6",
+        "tipCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
         "commits": [
           {
-            "commit": "121dc9ac5f688061010fdd23018dd5d42110a8c6",
+            "commit": "d5e980a63971334937053846d3c48661d2817a20",
             "parents": [
-              "ab8845cec818eb12ed076a18ead5f49c143b44b7"
+              "121dc9ac5f688061010fdd23018dd5d42110a8c6"
             ],
-            "subject": "优化：对齐知识库筛选弹层并在对话中展示可撤销回执"
+            "subject": "交互：知识库文件行右键复用更多操作菜单"
+          },
+          {
+            "commit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
+            "parents": [
+              "d5e980a63971334937053846d3c48661d2817a20"
+            ],
+            "subject": "修复：右侧知识库加载共享资料后同步主页面计数"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
+            "path": "src/preload/knowledge/panel.tsx"
           },
           {
             "status": "M",
@@ -34,10 +41,6 @@
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-composer.test.js"
           },
           {
             "status": "M",
@@ -53,14 +56,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "121dc9ac5f688061010fdd23018dd5d42110a8c6",
-            "completedAt": "2026-11-14T22:58:52.615Z",
+            "verifiedCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
+            "completedAt": "2026-11-14T23:16:07.698Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "env",
-              "SHERLOCK_SIDEBAR_EDITOR_SOURCE=/private/tmp/ework-kb-live-md.npBVqn/build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client-editor.js",
+              "SHERLOCK_SIDEBAR_EDITOR_SOURCE=/private/tmp/ework-kb-filter-receipt.URwuTY/build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client-editor.js",
               "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
               "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
@@ -74,15 +77,15 @@
               "test/sidebar-editor-save.test.ts"
             ],
             "outcome": "passed",
-            "summary": "52 项知识库和原生文件编辑器聚焦检查通过。",
-            "verifiedCommit": "121dc9ac5f688061010fdd23018dd5d42110a8c6",
-            "completedAt": "2026-11-14T22:58:52.615Z",
+            "summary": "54 项知识库和原生文件编辑器聚焦检查通过。",
+            "verifiedCommit": "dce0987f7913bb2c11de3ee03861fafa8d5b9737",
+            "completedAt": "2026-11-14T23:16:07.698Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "签名客户端完成主列表、右侧对话、斜杠菜单及右侧知识库的现状对照；筛选回执绑定、响应式位置与旧版本拒绝已通过自动检查，修复包客户端复验进行中。"
+          "summary": "当前签名客户端已核验筛选对齐、真实回执、从回执撤销、右侧共享目录和行内引用。新增右键与计数同步通过渲染回归检查，新包继续进行原生验证。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -109,7 +112,8 @@
           "共享检索工具读取正文后可在回复中引用文件和共享人，引用点击打开右侧的原生预览并实时核验当前账号权限。",
           "右侧预览无法打开已撤销文件时保留可读的处理提示，隐藏 Electron 传输前缀。",
           "对话保存 Markdown 后，已打开的原生预览在同一页签显示新版；发生版本冲突时保留草稿，提供预览和载入新版。",
-          "主视图筛选弹层对齐筛选按钮右边缘，受窄窗口约束时保持在文件区内。对话展示真实文件列表回执，只有当前可撤销的筛选提供撤销控制。"
+          "主视图筛选弹层对齐筛选按钮右边缘，受窄窗口约束时保持在文件区内。对话展示真实文件列表回执，只有当前可撤销的筛选提供撤销控制。",
+          "可管理的文件行右键打开更多按钮的同一菜单，菜单靠近光标并避开窗口边缘。右侧先读取共享目录时，知识库主页面共享计数同步更新。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -117,51 +121,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-14T22:58:52.615Z"
-      },
-      "merged": {
-        "mergeCommit": "c9f2456280b9f1b394630a80ab2dc72e5bb0d03d",
-        "verificationCommit": "c9f2456280b9f1b394630a80ab2dc72e5bb0d03d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c9f2456280b9f1b394630a80ab2dc72e5bb0d03d",
-            "completedAt": "2026-11-14T22:59:26.380Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "c9f2456280b9f1b394630a80ab2dc72e5bb0d03d",
-            "completedAt": "2026-11-14T22:59:26.380Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T22:59:26.380Z"
+        "generatedAt": "2026-11-14T23:16:07.698Z"
       }
     }
   ],
