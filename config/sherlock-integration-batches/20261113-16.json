@@ -12,7 +12,7 @@
         "featureName": "表格组件与图表随工作表滚动",
         "branch": "codex/feat/spreadsheet-mode-20261113",
         "baseCommit": "54458ac1ed08647f96b49f6e1de203113bfadc7c",
-        "tipCommit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
+        "tipCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
         "commits": [
           {
             "commit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
@@ -20,6 +20,13 @@
               "54458ac1ed08647f96b49f6e1de203113bfadc7c"
             ],
             "subject": "修复表格组件和图表摆放并优化易方达配色"
+          },
+          {
+            "commit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
+            "parents": [
+              "ece02790c19fd99c2132c2d2bb477ba8f4b82620"
+            ],
+            "subject": "居中表格右侧欢迎内容并简化快捷用例"
           }
         ],
         "files": [
@@ -30,6 +37,10 @@
           {
             "status": "M",
             "path": "scripts/lib/notes-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
             "status": "M",
@@ -77,8 +88,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
-            "completedAt": "2026-11-14T01:22:16.555Z",
+            "verifiedCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
+            "completedAt": "2026-11-14T01:27:10.867Z",
             "timeoutMs": 180000
           },
           {
@@ -88,8 +99,8 @@
             ],
             "outcome": "passed",
             "summary": "Electron 聚焦验收覆盖原生滚动、图表拖动与缩放、边栏复位和配色",
-            "verifiedCommit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
-            "completedAt": "2026-11-14T01:22:16.555Z",
+            "verifiedCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
+            "completedAt": "2026-11-14T01:27:10.867Z",
             "timeoutMs": 180000
           }
         ],
@@ -104,7 +115,7 @@
           "组件生成状态与表格工具栏样式符合反馈"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T01:22:16.555Z"
+        "generatedAt": "2026-11-14T01:27:10.867Z"
       }
     },
     {
