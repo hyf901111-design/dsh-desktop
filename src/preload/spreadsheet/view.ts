@@ -1,5 +1,5 @@
 import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookChartKinds,workbookChartPalettes,DEFAULT_WORKBOOK_CHART_PALETTE,SHEET_ROW_HEADER_WIDTH,SHEET_COLUMN_HEADER_HEIGHT,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout,type WorkbookComponent,type WorkbookComponentPlacement} from '../../shared/spreadsheet/workbook'
-import {chartKindLabels,escapeSheetText as text,spreadsheetChartData,spreadsheetChartSvg} from './chart'
+import {chartKindLabels,escapeSheetText as text,inferChartFields,spreadsheetChartData,spreadsheetChartSvg} from './chart'
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetContextCommand,SheetEngine} from './engine'
 import {HorizontalAlign,isNullCell} from '@univerjs/core'
@@ -16,7 +16,7 @@ type Selection={sheetId:string;range:string}
 type LibraryItem={id:string;title:string;group:string;icon:string}
 type ComponentCard={instance:string;element:HTMLElement;refresh:number}
 type ComponentJob={card:ComponentCard;node:Record<string,unknown>;stage?:string;detail?:string}
-type ComponentGesture={card:ComponentCard;id:string;pointerId:number;startX:number;startY:number;resize:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
+type ComponentGesture={card:ComponentCard;id:string;pointerId:number;startX:number;startY:number;resize:boolean;started:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
 type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;saveImage(input:ResearchCanvasExportRequest):Promise<ResearchCanvasExportResult>;subscribe(event:'changed'|'flush'|'identity'|'component-progress',callback:(value:any)=>void):()=>void}
 type Menu={key:string;label:string;anchor:HTMLElement;parents:{key:string;label:string;value:string}[]}
 type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean;shortcut?:string;checked?:boolean;remove?:{action:string;label:string}}
@@ -137,6 +137,10 @@ class SpreadsheetView{
    this.openMenu('chart-actions',trigger)
   })
   this.chartLayer.addEventListener('pointerdown',this.startChartGesture)
+  this.chartLayer.addEventListener('focusin',event=>{
+   const id=(event.target as HTMLElement).closest<HTMLElement>('[data-chart-id]')?.dataset.chartId
+   if(id)this.selectChart(id)
+  })
   this.grid.addEventListener('pointerdown',this.deselectChart,true)
   this.chartLayer.addEventListener('pointermove',this.moveChartGesture)
   this.win.addEventListener('pointerup',this.endChartGesture,true)
@@ -144,8 +148,10 @@ class SpreadsheetView{
   this.chartLayer.addEventListener('keydown',this.chartLayoutKey)
   this.root.addEventListener('keydown',this.key)
   this.root.addEventListener('focusout',this.blur)
-  this.componentLayer.addEventListener('pointerdown',this.startComponentGesture)
-  this.componentLayer.addEventListener('pointermove',this.moveComponentGesture)
+  this.componentLayer.addEventListener('pointerdown',this.startComponentGesture,true)
+  this.componentLayer.addEventListener('focusin',this.focusComponent)
+  this.win.addEventListener('blur',this.focusComponentFrame)
+  this.win.addEventListener('pointermove',this.moveComponentGesture,true)
   this.win.addEventListener('pointerup',this.endComponentGesture,true)
   this.win.addEventListener('pointercancel',this.cancelComponentGesture,true)
   this.doc.addEventListener('sherlock:notes-component-action',this.componentAction)
@@ -830,10 +836,11 @@ class SpreadsheetView{
   this.menuPanels().slice(1).forEach(panel=>panel.remove())
  }
  private outside=(event:PointerEvent)=>{
-  const target=event.target as Node
+  const target=event.target as Element
   const inMenu=!!this.menu&&(this.menuContains(target)||this.menu.anchor.contains(target))
   if(this.menu&&!inMenu)this.closeMenu()
   if(!inMenu&&!this.chartLayer.contains(target))this.deselectChart()
+  if(!inMenu&&!this.componentLayer.contains(target)&&!target.closest('.ew-grid-menu,.ew-grid-submenu'))this.clearComponentSelection()
  }
  private dialog(title:string,body:string,action:string|null,copy='确定',dock?:'chart'|'library'|'smart'){
   this.closeMenu()
@@ -930,8 +937,8 @@ class SpreadsheetView{
   }
   if(!existing){
    const values=range.getLastRow()-range.getRow()<121&&range.getLastColumn()-range.getColumn()<120?range.getRawValues():[]
-   value.headers=!!values[0]?.slice(1).some(cell=>typeof cell==='string'&&cell!=='')&&
-    values.slice(1).some(row=>row.slice(1).some(cell=>typeof cell==='number'))
+   value.headers=!!values[0]?.some((cell,index)=>typeof cell==='string'&&cell!==''&&
+    values.slice(1).some(row=>typeof row[index]==='number'))
    if(value.headers&&/^(?:日期|时间|月份|年度|季度|date|time|month|year|quarter)$/i.test(String(values[0]?.[0]??'')))value.kind='line'
    if(single&&range.getA1Notation()!==selection.getA1Notation()){range.activate();this.readSelection()}
   }
@@ -964,7 +971,7 @@ class SpreadsheetView{
   this.modal.dataset.chartEditor='true'
   this.root.querySelector<HTMLElement>('.ew-sheet-chart-preview')!.hidden=false
   this.renderChart()
-  this.refreshChartFields(value.category,value.series)
+  this.refreshChartFields(existing?value.category??0:undefined,value.series)
  }
  private pickChartRange(active:boolean,apply=false){
   if(!this.chartEditor)return
@@ -994,31 +1001,41 @@ class SpreadsheetView{
  private chartField(name:string){return this.modal.querySelector<HTMLInputElement|HTMLSelectElement>('[data-chart-field='+name+']')!}
  private refreshChartFields(category?:number,series?:number[]){
   const select=this.chartField('category'),seriesList=this.modal.querySelector<HTMLElement>('[data-chart-series] div')!
-  let fields:string[]=[]
+  let fields:Array<{name:string;numeric:boolean;distinctLabels:number}>=[]
   try{
    const range=parseRange(this.chartField('range').value.trim()),byRows=this.chartField('direction').value==='rows'
    const sheet=this.engine?.model.getSheetBySheetId(this.chartField('sheet').value)
    if(sheet&&range.r1<sheet.getMaxRows()&&range.c1<sheet.getMaxColumns()){
     const size=byRows?range.r1-range.r0+1:range.c1-range.c0+1
     const header=this.chartField('headers') as HTMLInputElement
-    fields=Array.from({length:size},(_,i)=>{
+    const lastRow=byRows?range.r1:Math.min(range.r1,range.r0+120)
+    const lastColumn=byRows?Math.min(range.c1,range.c0+120):range.c1
+    const sample=sheet.getRange(address(range.r0,range.c0)+':'+address(lastRow,lastColumn))
+    const profiles=inferChartFields(sample.getRawValues(),byRows,header.checked,size)
+    const titles=header.checked?sample.getDisplayValues():[]
+    fields=profiles.map((profile,i)=>{
      const row=range.r0+(byRows?i:0),column=range.c0+(byRows?0:i)
-     const title=header.checked?sheet.getRange(address(row,column)).getDisplayValue():''
+     const title=byRows?titles[i]?.[0]:titles[0]?.[i]
      const fallback=byRows?String(row+1):address(0,column).slice(0,-1)
-     return title?fallback+' · '+title:fallback
+     return {...profile,name:title?fallback+' · '+title:fallback}
     })
    }
   }catch{}
-  const index=category!==undefined&&fields[category]!==undefined?category:0
-  select.innerHTML=fields.map((name,i)=>'<option data-ui-preserve value="'+i+'"'+(i===index?' selected':'')+'>'+text(name)+'</option>').join('')
-  const choices=fields.map((name,i)=>({name,i})).filter(field=>field.i!==index)
-  const single=['pie','donut'].includes(this.chartField('kind').value)
-  this.chartField('labels').disabled=single||this.chartField('kind').value==='scatter'
+  const kind=this.chartField('kind').value,scatter=kind==='scatter',single=kind==='pie'||kind==='donut'
+  const candidates=fields.map((field,i)=>({...field,i}))
+  const categories=scatter?candidates.filter(field=>field.numeric):candidates
+  const first=categories[0]
+  const defaultCategory=!first||kind==='line'&&first.numeric?first:categories.reduce((best,field)=>
+   field.distinctLabels>best.distinctLabels?field:best,first)
+  const index=categories.find(field=>field.i===category)?.i??defaultCategory?.i
+  select.innerHTML=categories.map(({name,i})=>'<option data-ui-preserve value="'+i+'"'+(i===index?' selected':'')+'>'+text(name)+'</option>').join('')
+  const choices=candidates.filter(field=>field.i!==index&&(field.numeric||series?.includes(field.i)))
+  this.chartField('labels').disabled=single||scatter
   this.chartField('axis-x').disabled=single
   this.chartField('axis-y').disabled=single
-  const chosen=choices.filter(field=>!series||series.includes(field.i)).slice(0,single?1:6)
-  const enabled=(chosen.length||series?.length===0?chosen:choices.slice(0,1)).map(field=>field.i)
-  seriesList.innerHTML=choices.map(({name,i})=>'<label><input type="'+(single?'radio':'checkbox')+'" name="ew-sheet-chart-series" value="'+i+'"'+(enabled.includes(i)?' checked':'')+'><span data-ui-preserve>'+text(name)+'</span></label>').join('')
+  const preferred=series?choices.filter(field=>series.includes(field.i)):choices
+  const enabled=(preferred.length||series?.length===0?preferred:choices).slice(0,single?1:6).map(field=>field.i)
+  seriesList.innerHTML=choices.length?choices.map(({name,i})=>'<label><input type="'+(single?'radio':'checkbox')+'" name="ew-sheet-chart-series" value="'+i+'"'+(enabled.includes(i)?' checked':'')+'><span data-ui-preserve>'+text(name)+'</span></label>').join(''):'<p>所选区域未找到可用的数值系列。</p>'
   this.previewChart()
  }
  private chartDraft(){
@@ -1157,6 +1174,7 @@ class SpreadsheetView{
   return next
  }
  private selectChart(chartId?:string){
+  if(chartId)this.clearComponentSelection()
   this.activeChart=chartId
   for(const [id,card] of this.chartCards)card.element.dataset.chartActive=String(id===chartId)
  }
@@ -1543,7 +1561,11 @@ class SpreadsheetView{
   this.activeComponent=wasFloating?component.componentId:undefined
   try{
    const saved=await this.saveComponentPlacement(component.componentId,{mode:wasFloating?'docked':'floating',layout})
-   if(saved)return true
+   if(saved){
+    const card=this.componentCards.get(component.componentId)
+    if(!wasFloating&&card)this.raiseComponent(card.element)
+    return true
+   }
   }catch(error){this.activeComponent=previous;this.renderComponent();throw error}
   this.activeComponent=previous;this.renderComponent();return false
  }
@@ -1557,31 +1579,55 @@ class SpreadsheetView{
   }
   this.positionSheetObjects()
  }
- private raiseComponent(element:HTMLElement){
+ private clearComponentSelection(){
   this.componentLayer.querySelector('[data-sheet-component-raised]')?.removeAttribute('data-sheet-component-raised')
+ }
+ private raiseComponent(element:HTMLElement){
+  if(element.hasAttribute('data-sheet-component-raised'))return
+  this.deselectChart()
+  this.clearComponentSelection()
   element.dataset.sheetComponentRaised=''
  }
+ private focusComponent=(event:FocusEvent)=>{
+  const element=(event.target as Element).closest<HTMLElement>('[data-sheet-component-floating]')
+  if(element)this.raiseComponent(element)
+ }
+ private focusComponentFrame=()=>{
+  this.win.requestAnimationFrame(()=>{
+   if(this.disposed)return
+   const frame=this.doc.activeElement
+   const element=frame?.tagName==='IFRAME'?frame.closest<HTMLElement>('[data-sheet-component-floating]'):null
+   if(element&&this.componentLayer.contains(element))this.raiseComponent(element)
+  })
+ }
  private startComponentGesture=(event:PointerEvent)=>{
-  if(event.button!==0||!this.editable||this.busy||this.componentGesture)return
+  if(event.button!==0||this.componentGesture)return
   const target=event.target as HTMLElement,element=target.closest<HTMLElement>('[data-sheet-component-floating]')
   if(!element)return
   this.raiseComponent(element)
+  if(!this.editable||this.busy)return
   const resize=Boolean(target.closest('[data-component-resize]'))
-  if(!resize&&(!target.closest('[data-workbench-drag-handle]')||target.closest('button,input,select,textarea,.ew-grid-title')))return
+  if(!resize&&(!target.closest('[data-workbench-drag-handle]')||target.closest('button,input,select,textarea,a,summary,[contenteditable=true]')))return
   const id=element.dataset.researchNodeId!,card=this.componentCards.get(id)
   const layout=this.record.workbook?.components?.find(item=>item.componentId===id)?.placement?.layout
   if(!card||!layout)return
-  event.preventDefault()
-  element.setPointerCapture(event.pointerId)
   const start=this.sheetLayout(layout)
-  this.componentGesture={card,id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,resize,start,preview:start}
-  element.dataset.dragging=''
+  this.componentGesture={card,id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,resize,started:false,start,preview:start}
+  // Keep pointer-up on the original target so a double-click can rename the title.
+  target.setPointerCapture(event.pointerId)
  }
  private moveComponentGesture=(event:PointerEvent)=>{
   const gesture=this.componentGesture
   if(!gesture||gesture.pointerId!==event.pointerId)return
   const {start,startX,startY,resize}=gesture
-  const {dx,dy}=this.objectDelta(event.clientX-startX,event.clientY-startY)
+  const x=event.clientX-startX,y=event.clientY-startY
+  if(!gesture.started){
+   if(Math.hypot(x,y)<4)return
+   gesture.started=true
+   gesture.card.element.dataset.dragging=''
+  }
+  event.preventDefault()
+  const {dx,dy}=this.objectDelta(x,y)
   const next=resize?{...start,width:start.width+dx,height:start.height+dy}:{...start,x:start.x+dx,y:start.y+dy}
   gesture.preview=this.clampObject(next)
   this.positionComponents()
@@ -1591,7 +1637,7 @@ class SpreadsheetView{
   if(!gesture||gesture.pointerId!==event.pointerId)return
   this.componentGesture=undefined
   delete gesture.card.element.dataset.dragging
-  if(!save||JSON.stringify(gesture.start)===JSON.stringify(gesture.preview)){this.positionComponents();return}
+  if(!save||!gesture.started||JSON.stringify(gesture.start)===JSON.stringify(gesture.preview)){this.positionComponents();return}
   void this.saveComponentPlacement(gesture.id,{mode:'floating',layout:gesture.preview}).catch(error=>this.say(errorMessage(error),true))
  }
  private endComponentGesture=(event:PointerEvent)=>this.finishComponentGesture(event,true)
@@ -1970,7 +2016,7 @@ class SpreadsheetView{
     else if(this.componentPicking){this.pickComponentRange(false);event.stopPropagation()}
     else if(!this.modal.hidden){this.cancelComponentRequest();this.closeDialog();event.stopPropagation()}
     else if(field==='formula'){this.formulaDirty=false;(event.target as HTMLInputElement).value=this.formula}
-    else this.deselectChart()
+    else {this.deselectChart();this.clearComponentSelection()}
     return
    }
    if(control.dataset.action==='chart-tab'&&['ArrowRight','ArrowLeft','Home','End'].includes(event.key)){
@@ -2022,6 +2068,7 @@ class SpreadsheetView{
   this.win.removeEventListener('pointerup',this.selectionEnd,true);this.win.removeEventListener('pointercancel',this.selectionCancel,true)
   this.win.removeEventListener('pointerup',this.endChartGesture,true);this.win.removeEventListener('pointercancel',this.cancelChartGesture,true)
   this.win.removeEventListener('pointerup',this.endComponentGesture,true);this.win.removeEventListener('pointercancel',this.cancelComponentGesture,true)
+  this.win.removeEventListener('pointermove',this.moveComponentGesture,true);this.win.removeEventListener('blur',this.focusComponentFrame)
   this.win.removeEventListener('blur',this.selectionReset)
   this.doc.removeEventListener('keydown',this.selectionKeyDown,true);this.doc.removeEventListener('keyup',this.selectionKeyUp,true)
   this.headerActions?.removeEventListener('click',this.click)

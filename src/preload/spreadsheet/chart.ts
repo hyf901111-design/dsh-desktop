@@ -15,6 +15,19 @@ const svgNode=(node:ChartGeometryNode):string=>typeof node==='string'?escapeShee
  '<'+node.tag+Object.entries(node.attributes).map(([name,value])=>' '+name+'="'+escapeSheetText(value)+'"').join('')+'>'+node.children.map(svgNode).join('')+'</'+node.tag+'>'
 const isEmpty=(value:unknown)=>value===null||value===undefined||value===''
 const isNumber=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)
+
+export function inferChartFields(values:unknown[][],byRows:boolean,headers:boolean,size:number){
+ const length=byRows?(values[0]?.length??0):values.length
+ return Array.from({length:size},(_,field)=>{
+  const cells=Array.from({length:Math.max(0,length-Number(headers))},(_,i)=>{
+   const point=i+Number(headers)
+   return byRows?values[field]?.[point]:values[point]?.[field]
+  }).filter(value=>!isEmpty(value))
+  return {numeric:cells.length>0&&cells.every(isNumber),
+   distinctLabels:new Set(cells.filter(value=>typeof value==='string')).size}
+ })
+}
+
 export function spreadsheetChartData(engine:SheetEngine|undefined,chart:WorkbookChart){
  const sheet=engine?.model.getSheetBySheetId(chart.sheetId)
  if(!sheet)return
