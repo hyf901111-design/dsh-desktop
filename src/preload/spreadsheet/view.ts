@@ -1484,7 +1484,7 @@ class SpreadsheetView{
    const component=components.get(id)!,card=this.componentCards.get(id)!
    const title=text(String(component.node.displayName||component.node.title))
    const active=id===this.activeComponent
-   return '<button type="button" role="tab" id="'+card.instance+'-tab" aria-controls="'+card.instance+'-panel" aria-selected="'+active+'" tabindex="'+(active?0:-1)+'" data-action="component-tab" data-value="'+text(id)+'" data-ui-preserve title="'+title+'">'+title+'</button>'
+   return '<button type="button" role="tab" id="'+card.instance+'-tab" aria-controls="'+card.instance+'-panel" aria-selected="'+active+'" tabindex="'+(active?0:-1)+'" data-action="component-tab" data-value="'+text(id)+'" data-ui-preserve data-odyssey-truncated-tooltip>'+title+'</button>'
   }).join('')
   if(markup===this.componentTabMarkup)return
   this.componentTabMarkup=markup;tabs.innerHTML=markup

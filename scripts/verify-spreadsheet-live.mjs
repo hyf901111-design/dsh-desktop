@@ -22,8 +22,10 @@ await build({stdin:{resolveDir:root,contents:`
  import {mountSpreadsheet} from './src/preload/spreadsheet/view'
  import {createResearchCanvasExportBridge} from './src/preload/research-canvas-export'
  import {mountUiLocalization} from './src/preload/ui-localization'
+ import {mountFloatingSurfaces} from './src/preload/floating-surfaces'
  document.addEventListener('DOMContentLoaded',()=>{
   mountUiLocalization(document)
+  mountFloatingSurfaces(document)
   const mounted=mountSpreadsheet(document,{
    request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
@@ -805,7 +807,7 @@ await build({stdin:{resolveDir:root,contents:`
     additional.push(await until(()=>snapshot().components[additional.length+2]?.componentId,'insert a component for the crowded tabbar'))
     await until(()=>clickable(button('component-source',additional.at(-1))),'inserted card opens in the sidebar')
    }
-   const longTitle='多资产组合交易敞口与基准比较研究组件'
+   const longTitle='多资产组合交易敞口与基准比较研究组件（含行业、信用、流动性与汇率风险归因）'
    await sendComponentAction(additional[1],'rename')
    await field('.ew-sheet-dialog [aria-label="组件名称"]',longTitle)
    await until(()=>snapshot().components[3].node.title===longTitle,'long component name is saved')
@@ -817,13 +819,24 @@ await build({stdin:{resolveDir:root,contents:`
    assert.equal(narrow.scrollWidth,narrow.width)
    assert.equal(narrow.compressed,true)
    assert.ok(narrow.ids.includes(additional[1]))
+   const tooltip='[data-odyssey-floating-tooltip]:popover-open'
+   await hover(tab(additional[1]))
+   await until(()=>js('document.querySelector('+JSON.stringify(tooltip)+')?.textContent==='+JSON.stringify(longTitle)),'hovering a truncated tab shows its complete name')
+   await screenshot('spreadsheet-component-tab-full-title')
+   await hover(tabsMore)
+   await until(async()=>!await js('document.querySelector('+JSON.stringify(tooltip)+')'),'tooltip leaves when the pointer moves away')
    await click(tabsMore)
    assert.deepEqual(await js('[...document.querySelectorAll(".ew-sheet-menu[data-menu=component-tabs] [data-action=component-tab]")].map(row=>row.dataset.value)'),[smartId,additional[0]])
    await screenshot('spreadsheet-component-tab-overflow')
    await click(menuItem('component-tab',smartId))
    assert.ok((await strip()).ids.includes(smartId))
    assert.equal(await js('document.activeElement.dataset.value'),smartId)
-   await click(tabsMore);press('Escape')
+   await click(tabsMore)
+   const nameLayout=await js('(()=>{const row=document.querySelector('+JSON.stringify(menuItem('component-tab',additional[1]))+'),name=row.querySelector("span"),style=getComputedStyle(name);return {title:name.textContent,lines:name.offsetHeight/parseFloat(style.lineHeight),withinRow:name.scrollWidth===name.clientWidth}})()')
+   assert.equal(nameLayout.title,longTitle)
+   assert.ok(nameLayout.lines>=2&&nameLayout.withinRow,JSON.stringify(nameLayout))
+   await screenshot('spreadsheet-component-tab-full-menu')
+   press('Escape')
    assert.equal(await js('document.activeElement.dataset.value'),'component-tabs')
    await click('.ew-sheet-component-divider');press('End')
    await until(async()=>(await strip()).ids.length===4&&!await clickable(tabsMore),'wider sidebar restores all tabs')
