@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 import { mkdir, open, readFile, realpath, rm, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join } from 'node:path'
 import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportProgress, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
@@ -8,6 +9,8 @@ import { copyResearchFile } from '../state/research-owned-files'
 interface StoredDocument extends KnowledgeDocument {
   storageName: string
   origin?: string
+  /** Null when Markdown has been edited in the library. */
+  sourceVersion?: string | null
 }
 
 interface LibraryState {
@@ -23,6 +26,18 @@ const initialState = (): LibraryState => ({ version: 1, documents: [], folders: 
 const digest = (text: string) => createHash('sha256').update(text).digest('hex')
 const hashBytes = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
 
+async function generatedVersion(path: string) {
+  const info = await stat(path)
+  if (!info.isFile()) throw Error('只能收录文件。')
+  return JSON.stringify([info.dev, info.ino, info.size, info.mtimeMs, info.ctimeMs])
+}
+
+async function hashFile(path: string) {
+  const hash = createHash('sha256')
+  for await (const chunk of createReadStream(path)) hash.update(chunk)
+  return hash.digest('hex')
+}
+
 function validatedName(value: unknown): string {
   if (typeof value !== 'string') throw Error('请输入名称。')
   const name = value.trim().normalize()
@@ -32,7 +47,7 @@ function validatedName(value: unknown): string {
   return name
 }
 
-function publicDocument({ storageName: _storage, origin: _origin, ...row }: StoredDocument): KnowledgeDocument {
+function publicDocument({ storageName: _storage, origin: _origin, sourceVersion: _sourceVersion, ...row }: StoredDocument): KnowledgeDocument {
   return row
 }
 
@@ -162,7 +177,8 @@ export class KnowledgeStore {
       if (nextRevision === revision) return { document: publicDocument(row), revision }
       const storageName = randomUUID() + extname(row.storageName)
       const nextPath = join(rowPath, storageName)
-      const updated = { ...row, storageName, size: bytes.length, updatedAt: Date.now() }
+      const updated = { ...row, storageName, size: bytes.length, updatedAt: Math.max(Date.now(), row.updatedAt + 1),
+        sourceVersion: row.origin ? null : undefined }
       try {
         await atomicWrite(nextPath, bytes)
         await this.persist(state, {
@@ -238,40 +254,63 @@ export class KnowledgeStore {
       current()
       if (!isAbsolute(path)) throw Error('文件路径无效。')
       const source = await realpath(path)
+      current()
       const name = basename(path)
       findFolder(state, options.folderId)
       const origin = options.sessionId ? digest(JSON.stringify([options.sessionId, source])) : undefined
-      if (origin) {
-        if (!options.saved && (!canAutomaticallyCollect(name) || state.excludedOrigins.includes(origin))) return
-        const existing = state.documents.find(row => row.origin === origin)
-        if (existing) {
-          if (options.saved && !existing.saved || options.sessionTitle && options.sessionTitle !== existing.sessionTitle) {
-            const updated = { ...existing, saved: existing.saved || options.saved === true,
-              sessionTitle: options.sessionTitle ?? existing.sessionTitle }
-            await this.persist(state, { ...state, documents: state.documents.map(row => row === existing ? updated : row) }, directory, current)
-            return publicDocument(updated)
+      if (origin && !options.saved && (!canAutomaticallyCollect(name) || state.excludedOrigins.includes(origin))) return
+      const existing = origin ? state.documents.find(row => row.origin === origin) : undefined
+      const id = existing?.id ?? randomUUID()
+      const target = join(directory, 'files', id)
+      // Older catalogs used the original basename for collected bytes and a UUID for library edits.
+      const canRefresh = !existing || (!existing.share && (existing.sourceVersion === undefined
+        ? existing.storageName === basename(source) : existing.sourceVersion !== null))
+      const sourceVersion = origin && canRefresh ? await generatedVersion(source) : undefined
+      const saved = existing?.saved || options.saved === true
+      const sessionTitle = options.sessionTitle ?? existing?.sessionTitle
+      if (existing) {
+        let refresh = sourceVersion !== undefined && sourceVersion !== existing.sourceVersion
+        if (refresh && existing.sourceVersion === undefined) {
+          const previousPath = join(target, existing.storageName)
+          const [currentHash, previousHash] = await Promise.all([hashFile(source), hashFile(previousPath)])
+          refresh = currentHash !== previousHash
+          if (!refresh && await generatedVersion(source) !== sourceVersion) {
+            throw Error('文件在收录期间发生变化，请重试。')
           }
-          return publicDocument(existing)
+        }
+        if (!refresh) {
+          current()
+          const metadataChanged = saved !== existing.saved || sessionTitle !== existing.sessionTitle
+          const updated = { ...existing, saved, sessionTitle, sourceVersion: sourceVersion ?? existing.sourceVersion }
+          if (metadataChanged || updated.sourceVersion !== existing.sourceVersion) {
+            await this.persist(state, { ...state, documents: state.documents.map(row => row === existing ? updated : row) },
+              directory, current, metadataChanged)
+          }
+          return publicDocument(updated)
         }
       }
       current()
-      const id = randomUUID()
-      const target = join(directory, 'files', id)
+      let copied: string | undefined
       try {
-        const copied = await copyResearchFile(source, target, options.transfer)
+        copied = await copyResearchFile(source, target, options.transfer)
         const info = await stat(copied)
+        if (sourceVersion !== undefined && await generatedVersion(source) !== sourceVersion) {
+          throw Error('文件在收录期间发生变化，请重试。')
+        }
         const row: StoredDocument = {
-          id, name, storageName: basename(copied), size: info.size, updatedAt: Date.now(),
-          source: options.sessionId ? 'generated' : 'upload', origin, folderId: options.folderId,
-          sessionId: options.sessionId, sessionTitle: options.sessionTitle, saved: options.saved === true, starred: false
+          id, name, source: origin ? 'generated' : 'upload', origin, folderId: options.folderId,
+          sessionId: options.sessionId, starred: false,
+          ...existing, saved, sessionTitle, sourceVersion, storageName: basename(copied), size: info.size,
+          updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1)
         }
         await this.persist(state, {
-          ...state, documents: [...state.documents, row],
+          ...state, documents: existing ? state.documents.map(item => item === existing ? row : item) : [...state.documents, row],
           excludedOrigins: state.excludedOrigins.filter(value => value !== origin)
         }, directory, current)
         return publicDocument(row)
       } catch (error) {
-        await rm(target, { recursive: true, force: true }).catch(() => {})
+        if (!existing) await rm(target, { recursive: true, force: true }).catch(() => {})
+        else if (copied && copied !== source) await rm(copied, { force: true }).catch(() => {})
         throw error
       }
     })
