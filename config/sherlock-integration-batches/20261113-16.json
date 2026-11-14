@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格组件页签压缩与更多菜单",
+        "featureName": "表格组件页签的完整标题",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "4b529ad31e97f058d1890c5c30fba08695882416",
-        "tipCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
+        "baseCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
+        "tipCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
         "commits": [
           {
-            "commit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
+            "commit": "3e5f16571c98c7848437c2f6005be76c36d39079",
             "parents": [
-              "4b529ad31e97f058d1890c5c30fba08695882416"
+              "9c55106e5d913057654f4fdb60d46c45ffa075e2"
             ],
-            "subject": "表格组件页签支持压缩和更多菜单"
+            "subject": "显示截断组件页签和更多菜单中的完整名称"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/ui-copy.ts"
+            "path": "src/preload/floating-surfaces.ts"
           },
           {
             "status": "M",
@@ -49,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
-            "completedAt": "2026-11-14T06:06:41.889Z",
+            "verifiedCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
+            "completedAt": "2026-11-14T07:02:31.968Z",
             "timeoutMs": 180000
           },
           {
@@ -59,24 +59,22 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 聚焦检查侧栏页签压缩和更多菜单",
-            "verifiedCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
-            "completedAt": "2026-11-14T06:06:41.889Z",
+            "summary": "Electron 检查标题悬停提示和菜单换行",
+            "verifiedCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
+            "completedAt": "2026-11-14T07:02:31.968Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Electron 窗口实测拖窄后收纳、没有横向滚动、点选隐藏页签及拉宽恢复。"
+          "summary": "Electron 窗口实测长标题悬停和更多菜单中完整显示。"
         },
         "acceptanceCriteria": [
-          "页签标题可省略",
-          "没有横向滚动条",
-          "更多菜单切换隐藏页签",
-          "宽度恢复后显示可容纳的页签"
+          "截断页签悬停显示完整名称",
+          "更多菜单完整显示长标题"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T06:06:41.889Z"
+        "generatedAt": "2026-11-14T07:02:31.968Z"
       }
     },
     {
