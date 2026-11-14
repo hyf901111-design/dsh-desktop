@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "0ab7c8bc4fc1006dda87aeae908e2bee2bdbc320",
-        "tipCommit": "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64",
+        "baseCommit": "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64",
+        "tipCommit": "7aab140d3a232f9565db747d590eb91884e7050d",
         "commits": [
           {
-            "commit": "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64",
+            "commit": "7aab140d3a232f9565db747d590eb91884e7050d",
             "parents": [
-              "0ab7c8bc4fc1006dda87aeae908e2bee2bdbc320"
+              "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64"
             ],
-            "subject": "修复：双侧栏下保留共享资料的分类与文件信息"
+            "subject": "修复：知识库预览页签同步显示改名后的文件"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
+            "path": "src/preload/knowledge/panel.tsx"
           },
           {
             "status": "M",
@@ -45,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64",
-            "completedAt": "2026-11-14T19:26:46.608Z",
+            "verifiedCommit": "7aab140d3a232f9565db747d590eb91884e7050d",
+            "completedAt": "2026-11-14T19:41:15.059Z",
             "timeoutMs": 120000
           },
           {
@@ -58,21 +58,22 @@
               "vitest",
               "run",
               "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
               "test/knowledge-composer.test.js",
+              "test/knowledge-library.test.ts",
+              "test/client-capability-header.test.ts",
               "--maxWorkers=2",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "20 项聚焦检查通过，含四档窗口宽度、共享检索正文、接收和引用。",
-            "verifiedCommit": "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64",
-            "completedAt": "2026-11-14T19:26:46.608Z",
+            "summary": "25 项聚焦检查通过，新增实际预加载预览和原生页签绑定改名后同步更新且保留草稿测试。",
+            "verifiedCommit": "7aab140d3a232f9565db747d590eb91884e7050d",
+            "completedAt": "2026-11-14T19:41:15.059Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "上一签名候选版中双账号复现共享文件可预览、可加入对话草稿，以及随对话筛选 Markdown → PPT → 撤销在列表中的 1 → 0 → 1。当前提交用真实预加载界面验证四个宽度保留元数据。"
+          "summary": "隔离签名客户端实测对话改名、移动、正文修改和后续读取成功，发现已打开页签标题滞后。当前提交让实际预加载预览同步原生页签，并经浏览器渲染查验。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -90,58 +91,15 @@
           "共享目录从手动刷新或预览定期复核取得结果后，文件列表、页签目录和预览同步更新。",
           "知识库弹出菜单、筛选反馈、共享目录和行尾引用应用短动效；减少动态效果时静态呈现，保留键盘和侧栏原生行为。",
           "斜杠知识库以分类与文件夹分组显示，沿用知识库图标和共享二级返回；搜索后可直接展开共享目录。",
-          "共享列表在双侧栏下保留短分类名称与文件信息，受宽度约束时将隐藏列的大小、日期与共享人放到文件名下方。"
+          "共享列表在双侧栏下保留短分类名称与文件信息，受宽度约束时将隐藏列的大小、日期与共享人放到文件名下方。",
+          "已打开的右侧知识库预览在改名后与文件列表同步显示新标题，保留当前页签及编辑草稿。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T19:26:46.608Z"
-      },
-      "merged": {
-        "mergeCommit": "70a3240e2a3bfdbd2c7e34d6bd52a56539d64b27",
-        "verificationCommit": "70a3240e2a3bfdbd2c7e34d6bd52a56539d64b27",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "70a3240e2a3bfdbd2c7e34d6bd52a56539d64b27",
-            "completedAt": "2026-11-14T19:27:00.859Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "70a3240e2a3bfdbd2c7e34d6bd52a56539d64b27",
-            "completedAt": "2026-11-14T19:27:00.859Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T19:27:00.859Z"
+        "generatedAt": "2026-11-14T19:41:15.059Z"
       }
     }
   ],
