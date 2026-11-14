@@ -357,7 +357,9 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     {!state.ready && <p className="knowledge-panel-state" role="status">正在加载文件…</p>}
     {state.error && <p className="knowledge-panel-state" role="alert">{state.error}</p>}
     {referenceError && <p className="knowledge-panel-state" role="alert">{referenceError}</p>}
-    <div className="knowledge-panel-rows">
+    <div className="knowledge-panel-rows"
+      key={JSON.stringify([category, folder, sharedCategory])}
+      data-shared-view={category === 'received' && state.ready && !state.error}>
       {sharedDirectory ? [...sharedCounts].map(([category, count]) =>
         <button type="button" className="knowledge-panel-directory" key={category} onClick={() => setSharedCategory(category)}>
           <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><KnowledgeIcon name="next" />

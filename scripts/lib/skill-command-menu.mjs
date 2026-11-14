@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs'
 import {patchCommandPopupSurface} from './command-popup-surface.mjs'
 import {patchExpandedCommandMenu} from './expanded-command-menu.mjs'
 import {patchCommandMenuSelection} from './command-menu-selection.mjs'
+import {categoryIcons, knowledgeDirectoryIcons} from '../../src/shared/knowledge-directory-icons.mjs'
 const replace=(source,anchor,next)=>{
  if(source.split(anchor).length!==2)throw Error('Skill command menu anchor missing or ambiguous: '+anchor.slice(0,65))
  return source.replace(anchor,next)
@@ -96,7 +97,7 @@ function patchKnowledgePopup(source){
  const marker='/* ework:knowledge-slash-options */'
  if(source.includes(marker)){
   if(source.includes(oldKnowledgeSharedPosition))source=replace(source,oldKnowledgeSharedPosition,knowledgeSharedPosition)
-  return patchSlashBack(source)
+  return patchKnowledgeDirectory(patchSlashBack(source))
  }
  const ctx='name === "skills" ? {...session, skillCommandSegment:segment} : session'
  source=replace(source,ctx,ctx.replace(': session',': name === "knowledge" ? {...session,knowledgeCommandSegment:segment} : session'))
@@ -143,7 +144,7 @@ ${knowledgeSharedPosition}
  [data-knowledge-cascading-options]>button:is(:hover,:focus-visible){background:var(--dsw-alias-interactive-bg-hover,#8882)}
  ` )+';')
  const close='popup.dismiss({ focusComposer: true });'
- return patchSlashBack(replace(source,close,`if(state.command==="knowledge"&&shared)setShared(false);else `+close))
+ return patchKnowledgeDirectory(patchSlashBack(replace(source,close,`if(state.command==="knowledge"&&shared)setShared(false);else `+close)))
 }
 
 function patchSlashBack(source){
@@ -191,4 +192,76 @@ function patchSlashBack(source){
  if(!css)throw Error('Submenu return styles missing')
  const styles='[data-ework-command-back]{display:flex;width:max-content;align-items:center;min-height:26px;padding:1px 6px;color:var(--dsw-alias-label-secondary);font:inherit;background:none;border:0;border-radius:5px;cursor:pointer}[data-ework-command-back]:is(:hover,:focus-visible),[data-knowledge-cascading-options]>button[data-active=true]{background:var(--dsw-alias-interactive-bg-hover,#8882)}'
  return before.replace(css[0],'const css = '+JSON.stringify(JSON.parse(css[1])+styles)+';')+update
+}
+
+function patchKnowledgeDirectory(source) {
+ const marker = '/* ework:knowledge-slash-directory */'
+ if (source.includes(marker)) return source
+ const anchor = 'const primaryIndices=rows.map((_row,index)=>index).filter(index=>!childIndices.includes(index));'
+ source = replace(source, anchor, anchor + `
+ ${marker}
+ const knowledgeEnglish = isKnowledge && document.documentElement.dataset.odysseyLocale === "en";
+ const directoryIcons = ${JSON.stringify(knowledgeDirectoryIcons)};
+ const categoryIcons = ${JSON.stringify(categoryIcons)};
+ const directoryEntry = option => { try { return JSON.parse(option.id); } catch { return {}; } };
+ const directoryIcon = name => react_jsx_runtime.jsx('svg',{
+  'aria-hidden':true,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',
+  strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round',
+  children:react_jsx_runtime.jsx('path',{d:directoryIcons[name]})
+ });
+ const firstFolder = isKnowledge && !state.search ? rows.findIndex(option=>directoryEntry(option).kind==='folder') : -1;
+ const directoryHeading = text => react_jsx_runtime.jsx('div',{'data-knowledge-slash-group':true,role:'presentation','aria-hidden':true,children:text});
+ const renderDirectoryRow = (index,row) => {
+  if(!isKnowledge || state.search) return row;
+  if(index===0 || index===firstFolder) return react_jsx_runtime.jsxs(react_jsx_runtime.Fragment,{
+   children:[directoryHeading(index===firstFolder ? (knowledgeEnglish?'Folders':'文件夹') : (knowledgeEnglish?'Categories':'分类')),row]
+  },row.key);
+  return row;
+ };
+ `)
+ source = replace(source, 'rows.map((option, index) => (0, react_jsx_runtime.jsxs)("div", {',
+  'rows.map((option, index) => renderDirectoryRow(index,(0, react_jsx_runtime.jsxs)("div", {')
+ source = replace(source, '}, option.id))\n\t\t\t\t\t})', '}, option.id)))\n\t\t\t\t\t})')
+ source = replace(source, `children: [option.label,state.command==="knowledge"&&isSharedOption(option)&&react_jsx_runtime.jsx('span',{'aria-hidden':true,style:{marginInlineStart:8},children:'›'})]`,
+  'children: option.label')
+ const skillArtwork = '&& renderComposerDeliverablePreview(react_jsx_runtime, option.id === "builtin:efund-ppt-maker" ? "ppt" : "report", skillCommandArtworkAssets),'
+ source = replace(source, skillArtwork, skillArtwork + `
+ isKnowledge && directoryIcon(categoryIcons[directoryEntry(option).id] ?? (isSharedOption(option) ? 'received' : 'folder')),`)
+ const check = 'option.active === true && (0, react_jsx_runtime.jsx)("span", {'
+ source = replace(source, check, `isKnowledge && isSharedOption(option) && directoryIcon('next'),\n` + check)
+ source = replace(source, 'option.detail !== void 0 && (0, react_jsx_runtime.jsx)("span", {',
+  '(!isKnowledge || state.search) && option.detail !== void 0 && (0, react_jsx_runtime.jsx)("span", {')
+ const sharedRows = 'children:rows.map((option,index)=>sharedChild(option)&&react_jsx_runtime.jsx(\'button\',{'
+ source = replace(source, sharedRows, `children:[
+  react_jsx_runtime.jsxs('button',{type:'button','data-knowledge-shared-back':true,
+   onClick:goBack,children:[directoryIcon('previous'),knowledgeEnglish?'Shared with me':'他人共享']},'shared-back'),
+  ...rows.map((option,index)=>sharedChild(option)&&react_jsx_runtime.jsxs('button',{`)
+ source = replace(source, "'data-active':index===state.active,children:option.label\n  },option.id))",
+  "'data-active':index===state.active,children:[directoryIcon('folder'),option.label]\n  },option.id))]")
+ source = replace(source,"ev.target.closest?.('[data-ework-command-back]')",
+  "ev.target.closest?.('[data-ework-command-back],[data-knowledge-shared-back]')")
+ source = replace(source, 'const enterShared=()=>{setShared(true);if(childIndices.length)popup.highlight(childIndices[0]);};', `
+ const enterShared=()=>{
+  const firstChild=state.options.findIndex(sharedChild);
+  if(firstChild<0)return;
+  if(state.search)popup.setSearch('');
+  setShared(true);
+  popup.highlight(firstChild);
+ };`)
+ source = replace(source, 'if(isKnowledge&&!state.search&&state.active===sharedIndex)enterShared();else popup.select(state.active);',
+  'if(isKnowledge&&state.active===sharedIndex)enterShared();else popup.select(state.active);')
+ source = replace(source, 'if(isKnowledge&&!state.search&&state.active===sharedIndex&&childIndices.length){ev.preventDefault();enterShared();}',
+  'if(isKnowledge&&state.active===sharedIndex){ev.preventDefault();enterShared();}')
+ source = replace(source, 'if(state.command==="knowledge"&&isSharedOption(option))setShared(true);else popup.select(index);',
+  'if(isKnowledge&&isSharedOption(option))enterShared();else popup.select(index);')
+ const css = /const css = ("[^\n]+");/u.exec(source)
+ if (!css) throw Error('Knowledge directory CSS anchor missing')
+ const styles = `
+ [data-ework-command=knowledge] [data-knowledge-slash-group]{padding:5px 8px 3px;font-size:11px;color:var(--dsw-alias-label-secondary)}
+ [data-ework-command=knowledge] .mufS8W_row+[data-knowledge-slash-group]{margin-top:3px;border-top:1px solid var(--dsw-alias-border-l1,#6666)}
+ [data-ework-command=knowledge] .mufS8W_row>svg,[data-knowledge-cascading-options]>button>svg{width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary)}
+ [data-knowledge-cascading-options]>button{display:flex;align-items:center;gap:7px;min-height:28px}
+ [data-knowledge-cascading-options]>button[data-knowledge-shared-back]{margin-bottom:3px;border-bottom:1px solid var(--dsw-alias-border-l1,#6666);font-weight:500}
+ `
+ return source.replace(css[0], 'const css = ' + JSON.stringify(JSON.parse(css[1]) + styles) + ';')
 }

@@ -56,7 +56,14 @@
 .knowledge-workspace button:active:not(:disabled) { background: var(--knowledge-active); }
 .knowledge-workspace button:disabled { opacity: .45; cursor: default; }
 .knowledge-workspace :focus-visible { outline: 2px solid var(--knowledge-muted); outline-offset: -2px; }
-:is(.knowledge-workspace, .knowledge-panel) button { transition: background-color 130ms ease-out, color 130ms ease-out; }
+:is(.knowledge-workspace, .knowledge-panel) button {
+  transition:
+    background-color var(--odyssey-motion-hover-duration, 120ms) ease-out,
+    color var(--odyssey-motion-hover-duration, 120ms) ease-out;
+}
+:is(.knowledge-workspace, .knowledge-panel) button:active:not(:disabled) {
+  transition-duration: var(--odyssey-motion-press-duration, 80ms);
+}
 .knowledge-icon {
   flex: none;
   display: inline-block;
@@ -217,7 +224,7 @@
 .knowledge-table th button { padding: 4px 8px; }
 .knowledge-table td { height: 56px; font-size: 12px; }
 .knowledge-table tbody tr:first-child td { border-top: 6px solid var(--knowledge-bg); }
-.knowledge-table tbody tr td { transition: background-color 130ms ease-out; }
+.knowledge-table tbody tr td { transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out; }
 .knowledge-table tbody tr:is(:hover, :focus-within) td { background: var(--knowledge-field); }
 .knowledge-table tbody tr[data-selected=true] td { background: var(--knowledge-active); }
 .knowledge-workspace .knowledge-table .knowledge-file-name:hover { background: transparent; }
@@ -236,7 +243,7 @@
   height: 36px;
   border-radius: 7px;
   background: var(--knowledge-icon-tile);
-  transition: background-color 130ms ease-out;
+  transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out;
 }
 .knowledge-file-icon[data-tile=true] .knowledge-icon { width: 20px; height: 20px; }
 .knowledge-table tbody tr:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
@@ -324,7 +331,7 @@
   border-radius: 5px;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 130ms ease-out;
+  transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out;
 }
 .knowledge-filter-menu label:hover { background: var(--knowledge-field); }
 .knowledge-filter-menu footer label { padding-inline: 5px; }
@@ -412,20 +419,29 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes knowledge-state-in {
+  from { opacity: .72; }
+  to { opacity: 1; }
+}
 @media (prefers-reduced-motion: no-preference) {
   :is(.knowledge-popup, .knowledge-panel-menu, .knowledge-dialog) {
-    animation: knowledge-popup-in 120ms ease-out both;
+    animation: knowledge-popup-in var(--odyssey-motion-menu-duration, 140ms)
+      var(--odyssey-motion-panel-ease, ease-out) both;
   }
   :is(.knowledge-workspace, .knowledge-panel) .knowledge-preview-content,
-  .knowledge-drop-zone, .knowledge-notice,
+  .knowledge-drop-zone, .knowledge-notice, .knowledge-filter-summary > .knowledge-tag,
+  .knowledge-filter-count,
   tr[data-import-complete] .knowledge-import-progress {
-    animation: knowledge-feedback-in 150ms ease-out;
+    animation: knowledge-feedback-in var(--odyssey-motion-menu-duration, 140ms) ease-out;
+  }
+  .knowledge-panel-rows[data-shared-view=true],
+  .knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action button {
+    animation: knowledge-state-in var(--odyssey-motion-menu-duration, 140ms) ease-out;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :is(.knowledge-workspace, .knowledge-panel) button,
-  .knowledge-table tbody tr td, .knowledge-file-icon[data-tile=true],
-  .knowledge-filter-menu label, .knowledge-panel-row {
+  :is(.knowledge-workspace, .knowledge-panel) :is(button, label, td, .knowledge-panel-row, .knowledge-file-icon),
+  .knowledge-panel .knowledge-panel-location-label > .knowledge-icon {
     transition: none;
   }
 }
