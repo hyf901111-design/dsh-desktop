@@ -389,3 +389,28 @@ it('closes an existing discovery bubble when About replaces the sidebar footer',
  control.mount()
  expect(panel(document).hidden).toBe(true)
 })
+
+it('aligns the update control in the account row and switches to the ready restart affordance', () => {
+  const {document, control, callbacks} = fixture()
+  const footer = document.querySelector('[data-dsh-sidebar-footer]')!
+  control.render({...available, phase: 'downloading', percent: 70})
+  const button = document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
+  expect(button.parentElement).toBe(footer)
+  const row = document.createElement('div')
+  row.className = 'srb-account-controls'
+  row.innerHTML = '<button data-explore-trigger>探索</button><div data-research-board-bell-host></div>'
+  footer.prepend(row)
+  control.mount()
+  expect(button.parentElement).toBe(row)
+  expect(button.previousElementSibling?.hasAttribute('data-explore-trigger')).toBe(true)
+  expect(button.nextElementSibling?.hasAttribute('data-research-board-bell-host')).toBe(true)
+  expect(button.dataset.action).toBe('progress')
+  expect(button.querySelector('[role=progressbar]')).not.toBeNull()
+
+  control.render({...available, phase: 'downloaded'})
+  expect(button.dataset.action).toBe('install')
+  expect(button.querySelector('[data-notice-icon=restart]')).not.toBeNull()
+  expect(button.getAttribute('aria-label')).toBe('重启更新')
+  expect(panel(document).querySelector('[data-update-install] [data-notice-icon=restart]')).not.toBeNull()
+  expect(callbacks.install).not.toHaveBeenCalled()
+})

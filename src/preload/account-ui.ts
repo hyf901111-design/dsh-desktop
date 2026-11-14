@@ -63,8 +63,6 @@ export function mountAccountUi(
  [data-sidebar-collapsed=true] .sherlock-account-button{width:36px!important;height:36px;padding:0;justify-content:center;gap:0;margin:8px auto 10px;border-radius:50%}
  [data-sidebar-collapsed=true] .sherlock-account-button span{display:none!important}
  .sherlock-account-button .sherlock-account-chevron{flex:none}
- [data-sherlock-update-footer]:has(#sherlock-sidebar-update-button:not([hidden])) .sherlock-account-button{width:calc(100% - 40px)}
- [data-sherlock-update-footer]:has(#sherlock-sidebar-update-button:not([hidden])) .sherlock-account-chevron{display:none}
 
 
  .sherlock-account-avatar{display:grid;place-items:center;background:transparent;color:var(--dsw-alias-label-primary);border-radius:50%;width:23px;height:23px;flex:none;font:11px system-ui}
