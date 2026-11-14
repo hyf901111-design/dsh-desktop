@@ -11,52 +11,18 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "81eaf6ce322243407359a1c564d590425327752f",
-        "tipCommit": "1a95c259c30bfc9589bbbea00754671d067345ac",
+        "baseCommit": "1a95c259c30bfc9589bbbea00754671d067345ac",
+        "tipCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
         "commits": [
           {
-            "commit": "1b229b2039e59b34ee3ecfd2aa3c602e8b60a182",
+            "commit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
             "parents": [
-              "81eaf6ce322243407359a1c564d590425327752f"
+              "1a95c259c30bfc9589bbbea00754671d067345ac"
             ],
-            "subject": "交互：固定各工作区右侧屏的对话页签"
-          },
-          {
-            "commit": "d8ed0dc52d49f8b29d12f3a5b37ef7560e5c1f50",
-            "parents": [
-              "1b229b2039e59b34ee3ecfd2aa3c602e8b60a182"
-            ],
-            "subject": "交互：对齐侧栏更新提示并突出重启按钮"
-          },
-          {
-            "commit": "1a95c259c30bfc9589bbbea00754671d067345ac",
-            "parents": [
-              "d8ed0dc52d49f8b29d12f3a5b37ef7560e5c1f50"
-            ],
-            "subject": "交互：精简知识库顶栏并明确共享分类返回入口"
+            "subject": "交互：对齐文件夹计数并优化长名称显示"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/account-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-notice-assets.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/icons.tsx"
-          },
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.css"
@@ -67,23 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-update-control.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-panel-tab-overflow.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/knowledge-workspace-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-update-control.test.ts"
           }
         ],
         "checks": [
@@ -95,29 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "1a95c259c30bfc9589bbbea00754671d067345ac",
-            "completedAt": "2026-11-14T23:29:41.501Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "SHERLOCK_SIDEBAR_CLIENT_SOURCE=/Users/heyafeng/Library/Application Support/sherlock-desktop/harness/profiles/web/node_modules/dsh-better-sidebar/lib/client.js",
-              "npm",
-              "test",
-              "--",
-              "test/figma-panel-tab-overflow.test.ts",
-              "test/sidebar-update-control.test.ts",
-              "test/update-background-ui.test.ts",
-              "test/update-error-stage.test.ts",
-              "test/update-check-error-routing.test.ts",
-              "test/settings-about.test.ts",
-              "test/update-ui.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "63 项页签与更新提示聚焦检查通过。",
-            "verifiedCommit": "1a95c259c30bfc9589bbbea00754671d067345ac",
-            "completedAt": "2026-11-14T23:29:41.501Z",
+            "verifiedCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
+            "completedAt": "2026-11-14T23:39:24.552Z",
             "timeoutMs": 120000
           },
           {
@@ -131,15 +60,15 @@
               "test/knowledge-workspace-rendered.test.js"
             ],
             "outcome": "passed",
-            "summary": "21 项知识库渲染与交互检查通过。",
-            "verifiedCommit": "1a95c259c30bfc9589bbbea00754671d067345ac",
-            "completedAt": "2026-11-14T23:29:41.501Z",
+            "summary": "22 项知识库渲染检查，包含窄窗口控件、数字对齐、提示气泡和文件夹更多操作。",
+            "verifiedCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
+            "completedAt": "2026-11-14T23:39:24.552Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "检查了知识库共享返回、保留搜索与 Markdown 筛选的渲染交互，已核验更新状态及原生页签变换逻辑，随后打包复验。"
+          "summary": "逐级调整窗口至 820、600、450、340 px 知识库工作区，核验全名气泡、数字与更多操作同轴、筛选搜索和添加文件无遮挡。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -170,7 +99,8 @@
           "可管理的文件行右键打开更多按钮的同一菜单，菜单靠近光标并避开窗口边缘。右侧先读取共享目录时，知识库主页面共享计数同步更新。",
           "笔记、表格、知识库、浏览器和研究复用固定在普通页签之外的对话页签，页签拥挤及来回切换时保持可见。",
           "侧栏更新提示、探索和消息中心处于同一行，准备好更新后显示蓝底向上箭头，继续由用户确认重启。",
-          "知识库保留原生右侧栏入口，移除重复按钮；共享下钻显示返回箭头和返回上级目录并保留搜索与筛选。"
+          "知识库保留原生右侧栏入口，移除重复按钮；共享下钻显示返回箭头和返回上级目录并保留搜索与筛选。",
+          "文件夹计数和分类共列，悬停在同一位置显示更多。长文件夹名与顶栏标题自动省略，悬停显示全名，不挤占筛选、搜索与添加文件。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -178,51 +108,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-14T23:29:41.501Z"
-      },
-      "merged": {
-        "mergeCommit": "4e37a4a4e8981f9ff8bd7031bc7d3242ec75b41e",
-        "verificationCommit": "4e37a4a4e8981f9ff8bd7031bc7d3242ec75b41e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4e37a4a4e8981f9ff8bd7031bc7d3242ec75b41e",
-            "completedAt": "2026-11-14T23:30:36.510Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "4e37a4a4e8981f9ff8bd7031bc7d3242ec75b41e",
-            "completedAt": "2026-11-14T23:30:36.510Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T23:30:36.510Z"
+        "generatedAt": "2026-11-14T23:39:24.552Z"
       }
     }
   ],
