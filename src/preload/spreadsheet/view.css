@@ -195,8 +195,9 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-chart-plot>ul{flex:none;max-height:33%;overflow:auto}
 .ew-sheet-charts .grid{stroke:var(--ss-border)}
 .ew-sheet-charts .chart-cursor{display:none}
-.ew-sheet-charts ul{display:flex;flex-wrap:wrap;gap:2px 9px;list-style:none;padding:0;margin:0;color:var(--ss-text);font-size:11px}
-.ew-sheet-charts li::before{content:'';display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--chart-key);margin-right:5px}
+.ew-sheet-chart-plot>ul{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;list-style:none;padding:2px 4px;margin:0;color:var(--ss-text);font-size:12px;line-height:1.35;text-align:center}
+.ew-sheet-chart-plot>ul>li{max-width:100%;overflow-wrap:anywhere}
+.ew-sheet-chart-plot>ul>li::before{content:'';display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--chart-key);margin-inline-end:6px}
 .ew-sheet-charts:not([data-chart-show-data]) .ew-sheet-chart-data,.ew-sheet-charts[data-chart-show-data] .ew-sheet-chart-plot{display:none}
 .ew-sheet .ew-sheet-charts footer [aria-pressed=true]{background:var(--ss-hover)}
 .ew-sheet-charts table{width:100%;text-align:right;border-collapse:collapse;font-variant-numeric:tabular-nums}
