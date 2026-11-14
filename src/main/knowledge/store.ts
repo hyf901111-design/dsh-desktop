@@ -179,6 +179,18 @@ export class KnowledgeStore {
     })
   }
 
+  setSharing(id: string, publish: (document: KnowledgeDocument, path: string, current: () => void) => Promise<KnowledgeDocument['share']>) {
+    return this.run(async (state, directory, current) => {
+      const row = state.documents.find(document => document.id === id)
+      if (!row) throw Error('文件已不存在。')
+      const path = join(directory, 'files', row.id, row.storageName)
+      const share = await publish(publicDocument(row), path, current)
+      await this.persist(state, {
+        ...state, documents: state.documents.map(item => item.id === id ? { ...item, share } : item)
+      }, directory, current)
+    })
+  }
+
   edit(edit: KnowledgeEdit, guard?: () => void): Promise<void> {
     return this.run(async (state, directory, identityCurrent) => {
       const current = () => { identityCurrent(); guard?.() }

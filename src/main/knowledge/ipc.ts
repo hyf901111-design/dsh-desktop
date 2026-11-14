@@ -1,8 +1,10 @@
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { readFile, realpath } from 'node:fs/promises'
 import { isAbsolute, relative, sep } from 'node:path'
+import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { knowledgeFormat, type KnowledgeEdit } from '../../shared/knowledge-library'
+import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
 
 function id(value: unknown): string {
@@ -15,9 +17,10 @@ function identityMatches(a: { owner: string; generation: number }, b: typeof a) 
 }
 
 export function installKnowledgeIpc({
-  store, window, identity, generatedWorkspace
+  store, window, identity, generatedWorkspace, sharing
 }: {
   store: KnowledgeStore
+  sharing: KnowledgeSharing
   window: () => BrowserWindow | undefined
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
@@ -34,6 +37,21 @@ export function installKnowledgeIpc({
     const folderId = () => args.folderId === undefined ? undefined : id(args.folderId)
     switch (method) {
       case 'snapshot': return store.snapshot()
+      case 'received': return sharing.received(args.refresh === true)
+      case 'share': {
+        const documentId = id(args.id)
+        if (typeof args.category !== 'string') throw Error('请选择共享分类。')
+        const category = args.category
+        await store.setSharing(documentId, (document, path, current) => sharing.publish(document, path, category, current))
+        return store.snapshot()
+      }
+      case 'unshare': {
+        await store.setSharing(id(args.id), async document => {
+          if (document.share) await sharing.revoke(document.share.id)
+          return undefined
+        })
+        return store.snapshot()
+      }
       case 'pick': {
         const parent = window()
         if (!parent) return { added: [], failed: [] }
@@ -85,11 +103,32 @@ export function installKnowledgeIpc({
         return store.snapshot()
       }
       case 'preview': {
+        if (typeof args.id === 'string' && /^[a-f0-9]{32}$/u.test(args.id)) {
+          const { document, data } = await sharing.read(args.id)
+          check()
+          const text = data.byteLength <= 1024 * 1024 && (knowledgeFormat(document.name) === 'markdown' || /\.txt$/iu.test(document.name))
+            ? data.toString('utf8') : undefined
+          return { document, text }
+        }
         const { path, document } = await store.file(id(args.id))
         const text = document.size <= 1024 * 1024 && (knowledgeFormat(document.name) === 'markdown' || /\.txt$/iu.test(document.name))
           ? await readFile(path, 'utf8') : undefined
         check()
         return { document, text }
+      }
+      case 'download': {
+        if (typeof args.id !== 'string' || !/^[a-f0-9]{32}$/u.test(args.id)) throw Error('共享文件标识无效。')
+        const parent = window()
+        if (!parent) return false
+        const row = (await sharing.received()).find(document => document.id === args.id)
+        if (!row) throw Error('该文件已取消共享或不可用。')
+        const target = await dialog.showSaveDialog(parent, { title: '下载共享文件', defaultPath: row.name })
+        if (target.canceled || !target.filePath) return false
+        check()
+        const { data } = await sharing.read(row.id)
+        check()
+        await atomicWrite(target.filePath, data)
+        return true
       }
       case 'open':
       case 'reveal': {

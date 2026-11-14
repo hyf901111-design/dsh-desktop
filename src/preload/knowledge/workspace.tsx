@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
-  knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, listKnowledgeDocuments,
+  knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
   type KnowledgeFormat, type KnowledgeImportResult, type KnowledgeSnapshot, type KnowledgeSource
 } from '../../shared/knowledge-library'
@@ -12,6 +12,9 @@ import { KnowledgeIcon } from './icons'
 import css from './workspace.css?raw'
 
 interface Bridge {
+  request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
+  request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
+  request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
   request(method: 'edit', args: KnowledgeEdit): Promise<KnowledgeSnapshot>
   request(method: 'pick' | 'import', args: Record<string, unknown>): Promise<KnowledgeImportResult>
@@ -26,7 +29,7 @@ interface Bridge {
 type DialogState =
   | { type: 'create-folder' }
   | { type: 'rename-folder' | 'remove-folder'; id: string; name: string }
-  | { type: 'rename' | 'move' | 'remove'; row: KnowledgeDocument }
+  | { type: 'rename' | 'move' | 'remove' | 'share'; row: KnowledgeDocument }
 
 const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
@@ -65,7 +68,10 @@ export function mountKnowledgeWorkspace(document: Document, host: WorkspaceSurfa
 }
 
 function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: WorkspaceSurfaceHost; document: Document }) {
-  const [snapshot, setSnapshot] = useState(empty)
+  const [local, setSnapshot] = useState(empty)
+  const [received, setReceived] = useState<KnowledgeDocument[]>([])
+  const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
+  const snapshot = { ...local, documents: [...local.documents, ...received] }
   const [filter, setFilter] = useState<KnowledgeFilter>(defaultFilter)
   const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter })
   const previousFilter = useRef<KnowledgeFilter>()
@@ -84,6 +90,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [panelOpen, setPanelOpen] = useState(false)
   const currentEpoch = useRef(0)
   const refreshSequence = useRef(0)
+  const receivedSequence = useRef(0)
   const dragDepth = useRef(0)
   const selection = filter.category ?? 'all'
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
@@ -129,7 +136,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     const reset = () => {
       currentEpoch.current++
       previewRequest.current++
+      receivedSequence.current++
       setSnapshot(empty)
+      setReceived([])
+      setReceivedStatus({ loading: false })
       setReady(false)
       filterState.current = { revision: crypto.randomUUID(), filter: defaultFilter }
       previousFilter.current = undefined
@@ -156,6 +166,32 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
   }, [bridge, host, document])
+
+  async function refreshReceived(force: boolean) {
+    const sequence = ++receivedSequence.current
+    const epoch = currentEpoch.current
+    setReceivedStatus({ loading: true })
+    try {
+      const rows = await bridge.request('received', { refresh: force })
+      if (sequence === receivedSequence.current && epoch === currentEpoch.current) {
+        setReceived(rows)
+        setReceivedStatus({ loading: false })
+      }
+    } catch (error) {
+      if (sequence === receivedSequence.current && epoch === currentEpoch.current) {
+        setReceived([])
+        setReceivedStatus({ loading: false, error: message(error) })
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (selection !== 'received') return
+    void refreshReceived(false)
+    const show = () => { if (host.current()?.surface === 'knowledge') void refreshReceived(false) }
+    document.addEventListener('sherlock:workspace-surface-change', show)
+    return () => document.removeEventListener('sherlock:workspace-surface-change', show)
+  }, [selection, document, host])
 
   useEffect(() => {
     const sync = () => setPanelOpen(document.querySelector('#odyssey-right-workspace-panel')?.getAttribute('aria-hidden') === 'false')
@@ -241,7 +277,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   function openDialog(next: DialogState) {
     setMenu(undefined)
     setValue(next.type === 'rename' ? next.row.name.replace(/\.[^.]+$/u, '') :
-      next.type === 'rename-folder' ? next.name : next.type === 'move' ? next.row.folderId ?? '' : '')
+      next.type === 'rename-folder' ? next.name : next.type === 'move' ? next.row.folderId ?? '' :
+      next.type === 'share' ? next.row.share?.category ?? knowledgeSharedCategories[0] : '')
     setNotice(undefined)
     setDialog(next)
   }
@@ -258,6 +295,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       if (input.type === 'remove-folder' && input.id === filter.folderId) updateFilter({ folderId: undefined })
       setDialog(undefined)
       setNotice({ text: '已更新知识库。' })
+    } catch (error) {
+      if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
+    } finally {
+      if (epoch === currentEpoch.current) setBusy(false)
+    }
+  }
+
+  async function share(row: KnowledgeDocument, category?: string) {
+    const epoch = currentEpoch.current
+    setBusy(true)
+    setMenu(undefined)
+    try {
+      const result = await bridge.request(category ? 'share' : 'unshare', { id: row.id, category })
+      if (epoch !== currentEpoch.current) return
+      setSnapshot(result)
+      setDialog(undefined)
+      setNotice({ text: category ? '已共享，其他用户可在知识库中查找此文件。' : '已取消共享。' })
     } catch (error) {
       if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
     } finally {
@@ -321,6 +375,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   function selectCategory(category: KnowledgeCategory, folderId?: string) {
+    if (category === 'received' && selection === 'received') void refreshReceived(true)
     updateFilter({ category, folderId, sharedCategory: undefined })
     setMenu(undefined)
     closePreview()
@@ -338,6 +393,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         void edit({ type: dialog.type, id: dialog.row.id, name: value.trim() + suffix })
         break
       }
+      case 'share': void share(dialog.row, value); break
       case 'move': void edit({ type: dialog.type, id: dialog.row.id, folderId: value || undefined }); break
       case 'remove': void edit({ type: dialog.type, id: dialog.row.id }); break
     }
@@ -398,7 +454,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         else setNotice({ text: '请拖入本地文件。', error: true })
       }}>
         <div className="knowledge-tools">
-          <h2>{title}</h2>
+          <h2>{title}{filter.sharedCategory && selection === 'received' && <span> / {filter.sharedCategory}</span>}</h2>
           <div className="knowledge-toolbar">
             <button ref={filterButton} type="button" data-knowledge-popup-trigger aria-expanded={!!draftFilter}
               data-filtered={narrowed} onClick={() => { setMenu(undefined); setDraftFilter(current => current ? undefined : filter) }}>
@@ -409,6 +465,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               <input aria-label="搜索文件" placeholder={selection === 'received' ? '搜索他人共享…' : '搜索文件…'}
                 value={filter.query ?? ''} onChange={event => updateFilter({ query: event.currentTarget.value })} />
             </label>
+            {selection === 'received' && <button type="button" title="刷新共享目录" aria-label="刷新共享目录"
+              disabled={receivedStatus.loading} onClick={() => void refreshReceived(true)}>刷新</button>}
             {selection !== 'received' && <button type="button" className="knowledge-primary" disabled={busy || !ready} onClick={() => void addFiles()}>
               {buttonIcon('add', busy ? '处理中…' : '添加文件')}
             </button>}
@@ -441,6 +499,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <div className="knowledge-table-area" data-received={selection === 'received'}>
           {selection === 'received' && <nav className="knowledge-shared-folders" aria-label="共享分类">
             <span>分类</span>
+            {filter.sharedCategory && <button type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>全部共享分类</button>}
             {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
               onClick={() => updateFilter({ sharedCategory: category })}>
               {buttonIcon('folder', category)}<KnowledgeIcon name="chevron" />
@@ -487,7 +546,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               </tbody>
             </table>
             {!rows.length && <p className="knowledge-empty">
-              {ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'
+              {selection === 'received' && receivedStatus.loading ? '正在加载他人共享…'
+                : selection === 'received' && receivedStatus.error ? receivedStatus.error
+                : ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'
                 : notice?.error ? '' : '正在加载文件…'}
             </p>}
           </div>
@@ -502,7 +563,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       {preview && <aside className="knowledge-preview" aria-label="文件预览">
         <header><strong title={preview.document.name}>{preview.document.name}</strong>
           <button className="knowledge-square" type="button" aria-label="关闭预览" onClick={closePreview}>×</button></header>
-        {preview.text !== undefined ? <pre>{preview.text}</pre> :
+        {preview.document.received && <button type="button" onClick={() => {
+          void bridge.request('download', { id: preview.document.id }).catch(error => setNotice({ text: message(error), error: true }))
+        }}>下载共享文件</button>}
+        {preview.text !== undefined ? <pre>{preview.text}</pre> : preview.document.received ? null :
           <button type="button" onClick={() => void fileAction('open', preview.document)}>用系统应用打开</button>}
       </aside>}
     </div>
@@ -518,6 +582,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <button type="button" onClick={() => void edit({ type: 'star', id: target.id, value: !target.starred })}>
           {target.starred ? '取消重点' : '设为重点'}
         </button>
+        <button type="button" onClick={() => target.share ? void share(target) : openDialog({ type: 'share', row: target })}>
+          {target.share ? '取消共享' : '设为共享'}
+        </button>
         <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到…</button>
         <button type="button" onClick={() => openDialog({ type: 'rename', row: target })}>重命名</button>
         <hr />
@@ -532,7 +599,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       <form className="knowledge-dialog" role="dialog" aria-modal="true" aria-labelledby="knowledge-dialog-title"
         onSubmit={submitDialog} onKeyDown={event => { if (!busy && event.key === 'Escape') setDialog(undefined) }}>
         <h2 id="knowledge-dialog-title">{dialogTitle(dialog.type)}</h2>
-        {dialog.type === 'move' ? <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
+        {dialog.type === 'share' ? <>
+          <p>共享后，其他已登录用户及其 Agent 可查找和引用此文件。</p>
+          <select autoFocus aria-label="共享分类" value={value} onChange={event => setValue(event.target.value)}>
+            {knowledgeSharedCategories.map(category => <option key={category}>{category}</option>)}
+          </select>
+        </> : dialog.type === 'move' ? <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
           <option value="">未分组</option>
           {snapshot.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
         </select> : dialog.type === 'remove' ? <p>从知识库删除「{dialog.row.name}」？</p>
@@ -556,7 +628,7 @@ function message(error: unknown): string {
 function dialogTitle(type: DialogState['type']) {
   return {
     'create-folder': '新建文件夹', 'rename-folder': '重命名文件夹', 'remove-folder': '删除文件夹',
-    rename: '重命名文件', move: '移动到文件夹', remove: '从知识库删除'
+    rename: '重命名文件', share: '共享至知识库', move: '移动到文件夹', remove: '从知识库删除'
   }[type]
 }
 

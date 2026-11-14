@@ -11,6 +11,8 @@ export const knowledgeFormats = {
   image: '图片', audio: '音频', video: '视频', other: '其他'
 } as const
 
+export const knowledgeSharedCategories = ['行业研究', '产品设计', '业务流程', '写作模板', '技术文档', '数据分析', '其他'] as const
+
 export const knowledgeSources = { generated: '会话生成', upload: '手动上传' } as const
 
 export type KnowledgeCategory = keyof typeof knowledgeCategories

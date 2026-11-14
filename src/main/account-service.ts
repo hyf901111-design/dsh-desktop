@@ -220,7 +220,7 @@ export class AccountService {
           signal: AbortSignal.any([
             this.sessionAbort.signal,
             AbortSignal.timeout(
-              ['asset.stage', 'asset.add', 'asset.get'].includes(endpoint.kind)
+              ['asset.stage', 'asset.add', 'asset.get', 'knowledge.publish', 'knowledge.file'].includes(endpoint.kind)
                 ? 120_000
                 : 25_000
             ),

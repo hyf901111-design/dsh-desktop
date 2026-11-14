@@ -2,6 +2,9 @@ import { ResearchBoardsError } from '../shared/research-boards'
 export const COLLABORATION_ORIGIN = 'https://updates.evanarts.com'
 export type CollaborationEndpoint =
   | { kind: 'me' | 'boards.list' }
+  | { kind: 'knowledge.list'; after?: string; at?: number }
+  | { kind: 'knowledge.file' | 'knowledge.revoke'; id: string }
+  | { kind: 'knowledge.publish'; id: string; name: string; category: string; source: 'generated' | 'upload'; size: number; data: BodyInit }
   | { kind: 'users.lookup'; publicId: string }
   | { kind: 'board.get'; boardId: string }
   | { kind: 'board.create'; body: Record<string, unknown> }
@@ -65,6 +68,32 @@ export function collaborationRequestSpec(
   })
   let spec: RequestSpec
   switch (e.kind) {
+    case 'knowledge.list': {
+      exact(e, ['kind', 'after', 'at'])
+      if (e.after !== undefined && !/^[a-f0-9]{32}$/u.test(e.after) ||
+          e.at !== undefined && (!Number.isSafeInteger(e.at) || e.at < 0)) throw new ResearchBoardsError('INVALID_REQUEST')
+      const cursor = e.after && e.at !== undefined ? `?after=${e.after}&at=${e.at}` : ''
+      spec = { path: '/knowledge' + cursor, method: 'GET' }
+      break
+    }
+    case 'knowledge.file':
+    case 'knowledge.revoke':
+      exact(e, ['kind', 'id'])
+      if (!/^[a-f0-9]{32}$/u.test(e.id)) throw new ResearchBoardsError('INVALID_REQUEST')
+      spec = { path: `/knowledge/${e.id}`, method: e.kind === 'knowledge.file' ? 'GET' : 'DELETE', raw: e.kind === 'knowledge.file' }
+      break
+    case 'knowledge.publish':
+      exact(e, ['kind', 'id', 'name', 'category', 'source', 'size', 'data'])
+      if (!/^[a-f0-9-]{36}$/u.test(e.id) || typeof e.name !== 'string' || !e.name || e.name.length > 255 ||
+          typeof e.category !== 'string' || !e.category.trim() || e.category.length > 80 ||
+          !['upload', 'generated'].includes(e.source) || !Number.isSafeInteger(e.size) || e.size < 0 || e.size > 25 * 1024 * 1024)
+        throw new ResearchBoardsError('INVALID_REQUEST')
+      spec = {
+        path: `/knowledge/${e.id}`, method: 'PUT', body: e.data,
+        headers: { 'content-type': 'application/octet-stream', 'x-asset-name': encodeURIComponent(e.name), 'x-asset-size': String(e.size),
+          'x-knowledge-category': encodeURIComponent(e.category), 'x-knowledge-source': e.source }
+      }
+      break
     case 'me':
     case 'boards.list':
       exact(e, ['kind'])
