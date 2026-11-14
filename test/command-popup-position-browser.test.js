@@ -37,7 +37,18 @@ it('returns to the native slash menu and navigates shared categories without con
   const shared=kb.getByRole('group',{name:'他人共享分类'});
   const input=kb.getByRole('textbox');
   await kb.getByRole('option',{name:'他人共享',exact:false}).hover();
-  await shared.getByRole('button',{name:'行业研究'}).waitFor();
+  const industry = shared.getByRole('button',{name:'行业研究'});
+  await industry.waitFor();
+  const position = await industry.evaluate(button => {
+   const card = button.closest('[data-ework-command=knowledge]').getBoundingClientRect();
+   const target = button.getBoundingClientRect();
+   return {
+    beside: target.left >= card.right - 1,
+    onScreen: target.right <= innerWidth && target.bottom <= innerHeight,
+    clickable: button.contains(document.elementFromPoint(target.left + 8, target.top + target.height / 2))
+   };
+  });
+  expect(position).toEqual({beside:true,onScreen:true,clickable:true});
   await input.press('ArrowLeft');
   await expect.poll(()=>shared.count()).toBe(0);
   await input.press('ArrowRight');
@@ -47,6 +58,12 @@ it('returns to the native slash menu and navigates shared categories without con
   await expect.poll(()=>kb.count()).toBe(0);
   expect(await page.evaluate(()=>window.probe.events)).toEqual(['data']);
   expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe('保留现有草稿');
+  await launcher.click();
+  await slash.getByRole('option',{name:/Knowledge Base options/i}).click();
+  await kb.getByRole('option',{name:'他人共享',exact:false}).hover();
+  await shared.getByRole('button',{name:'行业研究'}).click();
+  await expect.poll(()=>kb.count()).toBe(0);
+  expect(await page.evaluate(()=>window.probe.events)).toEqual(['data','industry']);
   expect(errors).toEqual([]);
  }finally{await page.close()}
 },15000)
