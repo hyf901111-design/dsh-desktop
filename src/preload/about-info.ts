@@ -18,6 +18,16 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.5.6",
+      "date": "2026-11-14",
+      "items": [
+        "新增表格模式。可创建工作簿、导入 Excel 或 CSV，使用公式、筛选、排序和去重，支持键盘撤销与重做。",
+        "表格右侧对话提供可比估值、数据去重和现金流预测快捷用例，结果可直接写入当前工作簿。",
+        "可根据选区创建图表和智能组件。组件可停靠在可调宽的侧栏，也可放在工作表中随页面滚动。图表默认使用易方达配色。",
+        "修复切换账号后首次使用套餐模型时偶发的登录失效提示。切换访问权限后，新对话会继承当前设置。"
+      ]
+    },
+    {
       "version": "1.5.5",
       "date": "2026-11-13",
       "items": [
@@ -610,6 +620,16 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.5.6",
+      "date": "2026-11-14",
+      "items": [
+        "Spreadsheet mode lets you create workbooks, import Excel or CSV files, use formulas, filter and sort data, remove duplicates, and undo or redo changes with keyboard shortcuts.",
+        "Spreadsheet chat offers shortcuts for comparable-company valuation, deduplication, and cash flow forecasts. Results can be written directly to the active workbook.",
+        "Create charts and AI components from selected cells. Dock components in the resizable sidebar or place them on the sheet so they scroll with it. Charts use the E Fund palette by default.",
+        "Fix an intermittent sign-in error on the first request to a hosted model after switching accounts. New conversations inherit the selected access mode."
+      ]
+    },
     {
       "version": "1.5.5",
       "date": "2026-11-13",
