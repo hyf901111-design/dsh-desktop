@@ -87,7 +87,7 @@ await build({stdin:{resolveDir:root,contents:`
  const html='<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#121313;width:100%;height:100%;font:13px system-ui;color:#e4e4e4}body{display:flex;box-sizing:border-box;padding:10px;gap:10px}aside{width:330px;background:#242424;border-radius:14px;padding:12px;position:relative}aside textarea{position:absolute;bottom:14px;left:14px;right:14px;height:95px;background:#292929;border:0;border-radius:9px;color:#eee;padding:10px;resize:none}article{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:14px;background:#1e1e1e;overflow:hidden}header.shell{height:47px;display:flex;align-items:center;padding:0 16px;gap:20px;flex:none}header.shell span{background:#303030;border-radius:5px;padding:5px 14px}#chat{display:inline-block;background:#303030;padding:5px 9px;border-radius:6px}body.hide aside{display:none}[data-odyssey-panel-entry=right]{position:absolute;top:16px;right:20px;border:0;background:#303030;color:#eee;border-radius:5px;padding:5px 8px}</style><body data-ds-dark-theme><div data-dsh-sidebar-root data-dsh-sidebar-wide="true"><button class="hHd-Xa_toggle" onclick="this.parentElement.dataset.dshSidebarWide=String(this.parentElement.dataset.dshSidebarWide!==&quot;true&quot;)">左栏</button></div><article data-odyssey-page="spreadsheet"><header class="shell" data-srb-session-header>消费行业周报　　对话　　研究　　笔记 <span>表格</span><div data-ework-spreadsheet-actions="demo-session" data-ework-spreadsheet-title="消费行业周报" style="margin-left:auto"></div></header><div data-conversation-scroll><div data-ework-spreadsheet-view="demo-session"></div></div></article><aside><span id="chat">◌ 对话</span><textarea placeholder="给智能体发消息"></textarea></aside><button data-odyssey-panel-entry="right" aria-label="右侧屏" aria-expanded="true" onclick="this.setAttribute(&quot;aria-expanded&quot;,String(!document.body.classList.toggle(&quot;hide&quot;)))">◧</button><button data-odyssey-panel-entry="bottom">下方</button>'
  app.whenReady().then(async()=>{
   try{
-   win=new BrowserWindow({width:1440,height:960,show:true,webPreferences:{contextIsolation:true,sandbox:true,preload}})
+   win=new BrowserWindow({width:1440,height:960,show:true,alwaysOnTop:true,webPreferences:{contextIsolation:true,sandbox:true,preload}})
    win.webContents.on('preload-error',(_,file,error)=>errors.push(file+' '+error.stack))
    win.webContents.on('console-message',details=>{if(details.level==='error')errors.push(details.message)})
    let visibleMode=mode
@@ -115,6 +115,8 @@ await build({stdin:{resolveDir:root,contents:`
    })
    await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
    runtimeUrl='http://127.0.0.1:'+server.address().port
+   win.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>
+    callback(contents===win.webContents&&permission==='clipboard-sanitized-write'&&details.isMainFrame&&details.requestingUrl?.startsWith(runtimeUrl+'/')))
    await win.loadURL(runtimeUrl)
 
    win.focus();win.webContents.focus()
@@ -234,7 +236,8 @@ await build({stdin:{resolveDir:root,contents:`
    await hit(6,5)
    // The IME can return focus to the editor's hidden canvas after commit.
    // Focus the selected sheet explicitly so this exercises sheet history.
-   await js('(()=>{const grid=document.querySelector(".ew-sheet-grid");if(!grid.contains(document.activeElement)){grid.tabIndex=-1;grid.focus({preventScroll:true})}})()')
+   await js('(()=>{const grid=document.querySelector(".ew-sheet-grid");grid.tabIndex=-1;grid.focus({preventScroll:true})})()')
+   await until(()=>js('document.hasFocus()&&document.activeElement===document.querySelector(".ew-sheet-grid")'),'worksheet focus before undo')
    const shortcut=process.platform==='darwin'?'meta':'control'
    press('Z',[shortcut]);await until(()=>currentCell(5,6)?.v==null,'keyboard undo restores the prior cell value')
    press('Z',[shortcut,'shift']);await until(()=>currentCell(5,6)?.v==='净值','keyboard redo reapplies the edit')

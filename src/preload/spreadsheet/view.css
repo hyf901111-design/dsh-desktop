@@ -193,13 +193,14 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-charts table{width:100%;text-align:right;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .ew-sheet-charts :is(th,td){padding:4px 6px;border-bottom:1px solid var(--ss-border);white-space:nowrap}
 .ew-sheet-charts :is(th,td):first-child{text-align:left}
-.ew-sheet-welcome{padding:92px 16px 0;min-width:0}
+.sRp_messages:has(.ew-sheet-welcome){display:flex;flex-direction:column}
+.ew-sheet-welcome{display:flex;flex:1 0 auto;min-height:100%;min-width:0;padding:20px 12px}
+.ew-sheet-welcome-content{width:100%;max-width:392px;min-width:0;margin:auto}
 .ew-sheet-welcome h2{margin:0;font-size:21px;font-weight:600;line-height:1.45;letter-spacing:0}
-.ew-sheet-welcome p{margin:14px 0 19px;font-size:13px;line-height:1.6;color:var(--ss-muted)}
-.ew-sheet-welcome-actions{display:flex;flex-direction:column;gap:8px}
-.ew-sheet-welcome .ew-sheet-welcome-actions button{width:100%;min-height:40px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ss-border);border-radius:6px;padding:7px 10px;text-align:center}
-.ew-sheet-welcome .ew-sheet-welcome-actions button:hover{background:var(--ss-hover)}
-@media(max-height:720px){.ew-sheet-welcome{padding-top:42px}}
+.ew-sheet-welcome p{margin:12px 0 15px;font-size:13px;line-height:1.6;color:var(--ss-muted)}
+.ew-sheet-welcome-actions{display:flex;flex-direction:column;gap:2px;margin-inline:-7px}
+.ew-sheet-welcome .ew-sheet-welcome-actions button{width:100%;min-height:36px;display:flex;align-items:center;justify-content:flex-start;gap:8px;border-radius:6px;padding:7px;text-align:start}
+.ew-sheet-welcome .ew-sheet-welcome-actions button:is(:hover,:focus-visible){background:var(--ss-hover)}
 /* Chromium needs a layout box on Univer's editable node even when it is empty. */
 .ew-sheet-grid [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"]{width:1px;height:1px}
 .ew-sheet-grid [data-u-comp=editor][contenteditable=true]{min-width:1px;min-height:1px}
@@ -213,7 +214,6 @@ body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNA
 [data-odyssey-page=spreadsheet] [data-ework-spreadsheet-view]{position:absolute;inset:0;width:auto;height:auto}
 [data-odyssey-page=spreadsheet] .wSkVaW_header::after{display:none!important}
 [data-odyssey-page=spreadsheet]>[data-center-composer-host]{display:none!important}
-body[data-ework-spreadsheet-mode] .ew-sheet-welcome{padding-inline:12px}
 .ew-sheet{container-type:inline-size}
 
 [data-reference-source="spreadsheet-range"] .uV2eYG_chipLabelText{font-variant-numeric:tabular-nums}

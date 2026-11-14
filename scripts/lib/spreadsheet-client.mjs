@@ -51,10 +51,10 @@ ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:docu
  const welcomeAnchor='function HomeGuideNativeOriginalConversationRoot('
  change(welcomeAnchor,`function EWorkSpreadsheetWelcome({sessionId}){
  const prompt=(e)=>window.dispatchEvent(new CustomEvent('sherlock:spreadsheet-quick-prompt',{detail:{sessionId,action:e.currentTarget.dataset.prompt}}));
- return react.createElement('div',{className:'ew-sheet-welcome'},
+ return react.createElement('div',{className:'ew-sheet-welcome'},react.createElement('div',{className:'ew-sheet-welcome-content'},
   react.createElement('h2',null,'从一个问题，',react.createElement('br'),'开始一张表格。'),
   react.createElement('p',null,'导入已有 Excel，或直接描述需要的分析。',react.createElement('br'),'我可以创建工作表、填写公式、整理格式。'),
-  react.createElement('div',{className:'ew-sheet-welcome-actions'},['制作消费行业可比估值表','整理上传的数据并去重','创建现金流预测模型'].map((title,i)=>react.createElement('button',{key:i,type:'button','data-prompt':i,onClick:prompt},react.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinejoin:'round','aria-hidden':true},react.createElement('path',{d:'M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3z'})),title))));
+  react.createElement('div',{className:'ew-sheet-welcome-actions'},['制作消费行业可比估值表','整理上传的数据并去重','创建现金流预测模型'].map((title,i)=>react.createElement('button',{key:i,type:'button','data-prompt':i,onClick:prompt},react.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinejoin:'round','aria-hidden':true},react.createElement('path',{d:'M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3z'})),react.createElement('span',null,title))))));
 }
 ${welcomeAnchor}`,'right pane welcome component')
  const portal='pendingRight ? researchConversationView : activeView === \'notes\' && document.body.dataset.workspaceSurface!==\'browser\' ?'
