@@ -145,6 +145,7 @@ export const spreadsheetUiCopy: Record<string, string> = {
   '自由摆放': 'Place on worksheet',
   '收回侧边': 'Dock to sidebar',
   '调整组件大小': 'Resize component',
+  '调整组件边栏宽度': 'Resize component sidebar',
   '组件摆放方式无效。': 'Invalid component placement.',
   '导出为图片': 'Export as image',
   '定位选区': 'Go to source range',
