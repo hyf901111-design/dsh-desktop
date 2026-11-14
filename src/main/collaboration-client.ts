@@ -4,6 +4,7 @@ export type CollaborationEndpoint =
   | { kind: 'me' | 'boards.list' }
   | { kind: 'knowledge.list'; after?: string; at?: number }
   | { kind: 'knowledge.file' | 'knowledge.revoke'; id: string }
+  | { kind: 'knowledge.rename'; id: string; name: string }
   | { kind: 'knowledge.publish'; id: string; name: string; category: string; source: 'generated' | 'upload'; size: number; data: BodyInit }
   | { kind: 'users.lookup'; publicId: string }
   | { kind: 'board.get'; boardId: string }
@@ -81,6 +82,12 @@ export function collaborationRequestSpec(
       exact(e, ['kind', 'id'])
       if (!/^[a-f0-9]{32}$/u.test(e.id)) throw new ResearchBoardsError('INVALID_REQUEST')
       spec = { path: `/knowledge/${e.id}`, method: e.kind === 'knowledge.file' ? 'GET' : 'DELETE', raw: e.kind === 'knowledge.file' }
+      break
+    case 'knowledge.rename':
+      exact(e, ['kind', 'id', 'name'])
+      if (!/^[a-f0-9]{32}$/u.test(e.id) || typeof e.name !== 'string' || !e.name.trim() || e.name.length > 255)
+        throw new ResearchBoardsError('INVALID_REQUEST')
+      spec = { ...json(`/knowledge/${e.id}`, { name: e.name }), method: 'PATCH' }
       break
     case 'knowledge.publish':
       exact(e, ['kind', 'id', 'name', 'category', 'source', 'size', 'data'])

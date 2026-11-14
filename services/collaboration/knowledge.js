@@ -1,6 +1,6 @@
 import { hash } from '../accounts/auth.js'
 import { limit, sql } from './repository.js'
-import { assetName, bytes, fail, json, requiredString } from './validation.js'
+import { assetName, bytes, fail, json, jsonBody, requiredString } from './validation.js'
 
 const maxBytes = 25 * 1024 * 1024
 const sharePath = /^\/knowledge\/([a-f0-9]{32})$/u
@@ -14,6 +14,12 @@ function header(request, name) {
 function card(row) {
   return { id: row.id, name: row.name, size: row.size, updatedAt: row.updated_at,
     source: row.source, category: row.category, owner: row.username }
+}
+
+function extension(name) {
+  const value = name.trim()
+  const dot = value.lastIndexOf('.')
+  return dot > 0 ? value.slice(dot).toLowerCase() : ''
 }
 
 export async function handleKnowledgeRequest(request, env, user, path) {
@@ -60,6 +66,24 @@ export async function handleKnowledgeRequest(request, env, user, path) {
   }
   const match = sharePath.exec(path)
   if (!match) fail('NOT_FOUND', 404)
+  if (request.method === 'PATCH') {
+    const { name: input } = await jsonBody(request, 4096)
+    const name = assetName(input).trim().normalize()
+    if (!name || name.length > 255 || name === '.' || name === '..' || /\p{Cc}/u.test(name)) fail('INVALID_ASSET_NAME')
+    const row = await sql(env, `
+      SELECT name, object_key FROM knowledge_shares WHERE id=? AND owner_id=? AND revoked_at IS NULL
+    `, match[1], user.id).first()
+    if (!row) fail('NOT_FOUND', 404)
+    if (extension(name) !== extension(row.name)) fail('INVALID_ASSET_NAME')
+    const updated = await sql(env, `
+      UPDATE knowledge_shares
+      SET name=?, updated_at=CASE WHEN name<>? THEN MAX(updated_at + 1, ?) ELSE updated_at END
+      WHERE id=? AND owner_id=? AND object_key=? AND revoked_at IS NULL
+      RETURNING name
+    `, name, name, Date.now(), match[1], user.id, row.object_key).first()
+    if (!updated) fail('NOT_FOUND', 404)
+    return json(updated)
+  }
   if (request.method === 'DELETE') {
     const result = await sql(env, 'UPDATE knowledge_shares SET revoked_at=? WHERE id=? AND owner_id=?', Date.now(), match[1], user.id).run()
     if (!result.meta.changes) fail('NOT_FOUND', 404)
@@ -72,14 +96,15 @@ export async function handleKnowledgeRequest(request, env, user, path) {
     `, match[1]).first()
     if (!row) fail('NOT_FOUND', 404)
     const file = await env.RESEARCH_ASSETS.get(row.object_key)
-    const stillShared = await sql(env, 'SELECT 1 FROM knowledge_shares WHERE id=? AND object_key=? AND revoked_at IS NULL', row.id, row.object_key).first()
+    const stillShared = await sql(env, 'SELECT name, updated_at FROM knowledge_shares WHERE id=? AND object_key=? AND revoked_at IS NULL', row.id, row.object_key).first()
     if (!file || !stillShared) {
       await file?.body.cancel().catch(() => {})
       fail('NOT_FOUND', 404)
     }
     return new Response(file.body, { headers: {
       'content-type': 'application/octet-stream', 'content-length': String(row.size),
-      'content-disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(row.name),
+      'content-disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(stillShared.name),
+      'x-knowledge-updated-at': String(stillShared.updated_at),
       'cache-control': 'no-store', 'x-content-type-options': 'nosniff'
     } })
   }

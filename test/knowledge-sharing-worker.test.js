@@ -1,11 +1,15 @@
 import { afterAll, beforeAll, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { hash } from '../services/accounts/auth.js'
 import { KnowledgeContent } from '../src/main/knowledge/content'
 import { KnowledgeSharing } from '../src/main/knowledge/sharing'
-import { sharedKnowledgeCapabilityHandlers } from '../src/main/knowledge/capabilities'
+import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from '../src/main/knowledge/capabilities'
+import { KnowledgeStore } from '../src/main/knowledge/store'
 import { ClientCapabilityService } from '../src/main/state/client-capability-service'
 import { resolveKnowledgeReference } from '../src/main/knowledge/references'
 import { CollaborationClient, collaborationRequestSpec } from '../src/main/collaboration-client'
@@ -42,6 +46,77 @@ afterAll(async () => { await worker?.dispose() })
 
 const request = (path = '', account, options = {}) => worker.dispatchFetch('https://knowledge.test/v1/collaboration/knowledge' + path, {
   ...options, headers: { ...options.headers, ...account !== undefined && { authorization: 'Bearer ' + tokens[account] } }
+})
+
+it('renames an active share from the knowledge tool without changing its bytes or reviving it', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ework-knowledge-rename-'))
+  const makeClient = account => new CollaborationClient({
+    authenticated: true, generation: 1, subscribeSessionChanged: () => () => {},
+    async collaborationRequest(endpoint, signal) {
+      const spec = collaborationRequestSpec(endpoint)
+      const response = await request(spec.path.slice('/v1/collaboration/knowledge'.length), account,
+        { method: spec.method, headers: spec.headers, body: spec.body, signal })
+      if (!response.ok) throw Object.assign(Error('共享文件请求失败'), { status: response.status })
+      return spec.raw ? response : response.json()
+    }
+  })
+  const owner = makeClient(0), reader = makeClient(1)
+  const sharing = new KnowledgeSharing({ client: owner, authenticated: () => true })
+  const received = new KnowledgeSharing({ client: reader, authenticated: () => true })
+  const content = new KnowledgeContent(() => ({}))
+  const identity = () => ({ owner: 'a0', generation: 1 })
+  const store = new KnowledgeStore(join(root, 'library'), identity, () => {})
+  const edit = knowledgeCapabilityHandlers(store, sharing, content, {}, () => true).editKnowledgeDocument
+  const filePath = join(root, '原文件名.md')
+  const originalText = '# 共享正文保持原样'
+  let sharedId
+  const rename = (id, name) => request('/' + id, 0, {
+    method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name })
+  })
+  try {
+    await writeFile(filePath, originalText)
+    const row = await store.importFile(filePath)
+    await store.setSharing(row.id, (document, path, current) => sharing.publish(document, path, '技术文档', current))
+    const [before] = await received.received(true)
+    sharedId = before.id
+    const storedObject = async () => db.prepare('SELECT object_key FROM knowledge_shares WHERE id=?').bind(sharedId).first('object_key')
+    const objectKey = await storedObject()
+    const denied = await request('/' + sharedId, 1, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: '冒名.md' })
+    })
+    const renamed = '修订后的文件名.md'
+    expect(await edit({ id: row.id, operation: 'rename', name: renamed }, {}, undefined)).toMatchObject({ status: 'succeeded' })
+    expect((await store.snapshot()).documents[0]).toMatchObject({ name: renamed, share: { id: sharedId, category: '技术文档' } })
+    const read = await received.read(sharedId)
+    expect(read.document.name).toBe(renamed)
+    expect(read.data.toString('utf8')).toBe(originalText)
+    const [after] = await received.received(true)
+    expect(after).toMatchObject({ id: sharedId, name: renamed, size: before.size, received: before.received })
+    expect(after.updatedAt).toBeGreaterThan(before.updatedAt)
+    expect((await rename(sharedId, renamed)).status).toBe(200)
+    expect((await received.received(true))[0].updatedAt).toBe(after.updatedAt)
+    expect(denied.status).toBe(404)
+    expect((await rename(sharedId, '扩展名不同.pdf')).status).toBe(400)
+    expect(await storedObject()).toBe(objectKey)
+    expect(await readFile((await store.file(row.id)).path, 'utf8')).toBe(originalText)
+    const search = sharedKnowledgeCapabilityHandlers(received, content, () => true).searchSharedKnowledge
+    expect((await search({ query: renamed }, {}, undefined)).data.documents.map(doc => doc.id)).toEqual([sharedId])
+    expect((await search({ query: before.name }, {}, undefined)).data.documents).toEqual([])
+    expect(await resolveKnowledgeReference({ kind: 'file', id: sharedId, label: before.name }, {
+      sharing: received, content, store: { snapshot: async () => ({ folders: [], documents: [] }) },
+      owner: () => ({ owner: 'a1', generation: 1 })
+    })).toMatchObject({ label: renamed, documents: [{ id: sharedId, name: renamed, text: originalText }] })
+    expect((await request('/' + sharedId, 0, { method: 'DELETE' })).status).toBe(200)
+    expect((await rename(sharedId, '不应恢复.md')).status).toBe(404)
+    await expect(edit({ id: row.id, operation: 'rename', name: '不应恢复.md' }, {}, undefined)).rejects.toThrow()
+    expect((await store.snapshot()).documents[0].name).toBe(renamed)
+    expect(await received.received(true)).toEqual([])
+  } finally {
+    if (sharedId) await request('/' + sharedId, 0, { method: 'DELETE' })
+    owner.stop()
+    reader.stop()
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 it('publishes privately stored bytes to other authenticated users and closes access immediately upon revocation', async () => {

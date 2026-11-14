@@ -83,6 +83,12 @@ export class KnowledgeSharing {
     await this.options.client.request({ kind: 'knowledge.revoke', id })
   }
 
+  async rename(id: string, name: string) {
+    if (!this.options.authenticated()) throw Error('请登录后重命名共享文件。')
+    const result = await this.options.client.request<{ name: string }>({ kind: 'knowledge.rename', id, name })
+    if (result?.name !== name) throw Error('共享服务未确认新文件名。')
+  }
+
   async read(id: string, signal?: AbortSignal) {
     if (!this.options.authenticated()) throw Error('请登录后读取共享文件。')
     let rows = await this.received(false, signal)
@@ -131,6 +137,12 @@ export class KnowledgeSharing {
     }
     if (generation !== this.options.client.generation()) throw Error('当前账号已变化，请重试。')
     if (size !== document.size) throw Error('共享文件尚未完整接收，请重试。')
-    return { document, data: Buffer.concat(chunks, size) }
+    const filename = response.headers.get('content-disposition')?.match(/^attachment; filename\*=UTF-8''(.+)$/iu)?.[1]
+    let name = document.name
+    try { if (filename) name = decodeURIComponent(filename) } catch { /* Keep the catalog name on invalid headers. */ }
+    const stamp = response.headers.get('x-knowledge-updated-at')
+    const updatedAt = stamp && /^\d+$/u.test(stamp) && Number.isSafeInteger(Number(stamp)) ? Number(stamp) : document.updatedAt
+    if (name !== document.name || updatedAt !== document.updatedAt) this.cache = undefined
+    return { document: { ...document, name, updatedAt }, data: Buffer.concat(chunks, size) }
   }
 }

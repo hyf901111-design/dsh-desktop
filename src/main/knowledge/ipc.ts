@@ -156,7 +156,7 @@ export function installKnowledgeIpc({
           case 'remove-folder': edit = { type: args.type, id: id(args.id) }; break
           default: throw Error('未知知识库操作。')
         }
-        await store.edit(edit)
+        await store.edit(edit, { guard: check, renameShare: (id, name) => sharing.rename(id, name) })
         return store.snapshot()
       }
       case 'preview': {

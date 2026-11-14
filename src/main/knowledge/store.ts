@@ -289,9 +289,12 @@ export class KnowledgeStore {
     })
   }
 
-  edit(edit: KnowledgeEdit, guard?: () => void): Promise<void> {
+  edit(edit: KnowledgeEdit, options?: {
+    guard?: () => void
+    renameShare?: (id: string, name: string) => Promise<void>
+  }): Promise<void> {
     return this.run(async (state, directory, identityCurrent) => {
-      const current = () => { identityCurrent(); guard?.() }
+      const current = () => { identityCurrent(); options?.guard?.() }
       current()
       if (edit.type === 'create-folder' || edit.type === 'rename-folder' || edit.type === 'remove-folder') {
         let folders = state.folders
@@ -325,8 +328,13 @@ export class KnowledgeStore {
       switch (edit.type) {
         case 'rename': {
           const name = validatedName(edit.name)
-          const extension = extname(row.name)
+          const extension = extname(row.name.trim())
           if (extname(name).toLowerCase() !== extension.toLowerCase()) throw Error('重命名时请保留原文件扩展名。')
+          if (row.share) {
+            if (!options?.renameShare) throw Error('当前无法更新共享文件名。')
+            current()
+            await options.renameShare(row.share.id, name)
+          }
           updated.name = name
           break
         }
@@ -337,7 +345,10 @@ export class KnowledgeStore {
         case 'save': updated.saved = edit.value; break
         case 'star': updated.starred = edit.value; break
       }
-      await this.persist(state, { ...state, documents: state.documents.map(item => item.id === row.id ? updated : item) }, directory, current)
+      // Once a remote rename commits, finish updating the originating catalog
+      // even if the initiating turn is cancelled while the request is in flight.
+      await this.persist(state, { ...state, documents: state.documents.map(item => item.id === row.id ? updated : item) },
+        directory, edit.type === 'rename' && row.share ? identityCurrent : current)
     })
   }
 }
