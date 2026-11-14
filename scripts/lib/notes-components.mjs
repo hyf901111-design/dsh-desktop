@@ -113,6 +113,11 @@ export function EWorkNoteComponentView({entry,officePreview}){
    {id:'source',icon:'sheet-pin',label:workbenchText('定位选区'),run:()=>generationAction('source')},
    {id:'source-details',icon:'data',label:sourceDetailsTitle,run:()=>openSheetSourceDetails(sheetMenu)},
    {id:'rename',icon:'edit',label:workbenchText('重命名组件'),run:run('rename'),disabled:entry.readOnly},
+   node.generationStatus==='completed'&&spec.type!=='calendar-tool'&&{id:'library',icon:'library-add',label:workbenchText('添加至组件库'),disabled:entry.readOnly,run:async()=>{
+    await generationAction('library-save')
+    window.dispatchEvent(new CustomEvent('ework-component-library-changed'))
+    window.dispatchEvent(new CustomEvent('ework-component-library-saved',{detail:{sessionId:entry.sessionId}}))
+   }},
    themeAction,
    {id:'export',icon:'download',label:workbenchText('导出'),children:['svg','png','jpg'].map(format=>({id:format,label:format.toUpperCase(),run:()=>exportWorkbenchContent(rootRef.current,node,format,{body:entry.host})}))},
    {id:'remove',icon:'remove',label:workbenchText('移除组件'),run:run('remove'),disabled:entry.readOnly}
@@ -125,7 +130,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
    sheetMenu&&react.createElement(eworkComponentSurfaceUi.Menu,{surface:'spreadsheet',trigger:sheetMenu,actions:menuActions,onClose:()=>setSheetMenu(null)}),
    react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},
     error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),
-    react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true}},body),
+    react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{surface:'spreadsheet',bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true}},body),
     indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:!!entry.readOnly,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
   )
  }

@@ -90,6 +90,9 @@ function patchNoteHtmlRenderer(renderer,normalizeFrame=true){
           void bridge.commit(researchInteractionVersion(html),m.revision,m.state).then(reply).catch(()=>reply());return;
         }`)
  }
+ const journalMessage='readOnly:current.readOnly,...(typeof rejectedEventId'
+ const spreadsheetJournalMessage="readOnly:current.readOnly,...(current.noteHtmlInteraction?.surface==='spreadsheet'?{localDisclosures:true}:{}),...(typeof rejectedEventId"
+ if(!renderer.includes(spreadsheetJournalMessage))once(journalMessage,spreadsheetJournalMessage)
  if(normalizeFrame){
   const before='srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }',after="srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0, border: 0, display: 'block', boxSizing: 'border-box', background: 'transparent' }"
   if(renderer.split(before).length+renderer.split(after).length!==3)throw Error('Notes HTML frame style anchor missing or ambiguous')

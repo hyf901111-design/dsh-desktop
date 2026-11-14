@@ -78,6 +78,8 @@ class SpreadsheetView{
  private chartLayoutPending?:{chartId:string;layout:WorkbookChartLayout}
  private activeComponent?:string
  private readonly componentCards=new Map<string,ComponentCard>()
+ private readonly componentOrder=new Map<string,number>()
+ private nextComponentOrder=0
  private componentJob?:ComponentJob
  private componentGesture?:ComponentGesture
  private componentSidebarWidth?:number
@@ -1417,9 +1419,11 @@ class SpreadsheetView{
    let card=this.componentCards.get(componentId)
    if(!card){card=this.createComponentCard(componentId);this.componentCards.set(componentId,card)}
    card.element.toggleAttribute('data-sheet-component-floating',floating)
-   if(floating)Object.assign(card.element.style,this.objectBox(this.componentGesture?.id===componentId?this.componentGesture.preview:placement.layout))
+   if(floating)Object.assign(card.element.style,this.objectBox(this.componentGesture?.id===componentId?this.componentGesture.preview:placement.layout),{
+    zIndex:String(this.componentOrder.get(componentId)??0)
+   })
    else{
-    for(const property of ['left','top','width','height'])card.element.style.removeProperty(property)
+    for(const property of ['left','top','width','height','z-index'])card.element.style.removeProperty(property)
     card.element.removeAttribute('data-sheet-component-raised')
    }
    const parent=floating?this.componentLayer:this.components
@@ -1451,6 +1455,8 @@ class SpreadsheetView{
    docked||=!floating
   }
   for(const [id,card] of this.componentCards)if(!ids.has(id)){this.releaseComponentCard(card);this.componentCards.delete(id)}
+  const existing=new Set(book?.components?.map(component=>component.componentId))
+  for(const id of this.componentOrder.keys())if(!existing.has(id))this.componentOrder.delete(id)
   this.components.hidden=!docked
   this.syncInspector()
   this.resize()
@@ -1512,6 +1518,14 @@ class SpreadsheetView{
    case 'source':perform(this.locateComponent(component));return
    case 'close':this.activeComponent=undefined;this.renderComponent();return
    case 'rename':if(this.editable)this.renameComponent(componentId);return
+   case 'library-save':
+    if(!this.editable){ack(false);return}
+    perform(this.request('component-library-save',{componentId}).then(saved=>{
+     if(!saved?.id)return false
+     if(!this.disposed)this.say('已添加至组件库')
+     return true
+    }))
+    return
    case 'remove':if(this.editable)this.confirmComponentRemoval(componentId);return
    case 'ask':perform(this.locateComponent(component,true));return
    case 'refresh':card.refresh++;this.publishComponent(card,component);ack(true);return
@@ -1585,8 +1599,13 @@ class SpreadsheetView{
  }
  private raiseComponent(element:HTMLElement){
   if(element.hasAttribute('data-sheet-component-raised'))return
+  const id=element.dataset.researchNodeId
+  if(!id)return
   this.deselectChart()
   this.clearComponentSelection()
+  const order=++this.nextComponentOrder
+  this.componentOrder.set(id,order)
+  element.style.zIndex=String(order)
   element.dataset.sheetComponentRaised=''
  }
  private focusComponent=(event:FocusEvent)=>{
@@ -1871,8 +1890,19 @@ class SpreadsheetView{
     const next=model.insertSheet(name,{sheet:blankSheet(crypto.randomUUID(),name)})
     if(next)model.setActiveSheet(next);break
    }
-   case 'undo':if(this.record.lastAction&&!this.dirty&&!this.writingUser){await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改');return}await api!.undo();break
-   case 'redo':if(this.record.canRedoAI&&!this.dirty&&!this.writingUser){await this.run('redo',{},'已重新应用 AI 修改');return}await api!.redo();break
+   case 'undo':case 'redo':{
+    const engine=this.engine!
+    if(engine.model.isCellEditing())await engine.model.endEditingAsync(true)
+    if(this.disposed||this.engine!==engine)return
+    if(engine.historyCount(action)){
+     if(!await engine.history(action))return
+    }else if(!this.dirty&&!this.writingUser){
+     if(action==='undo'&&this.record.lastAction)await this.run('undo',{actionId:this.record.lastAction},'已撤销 AI 修改')
+     else if(action==='redo'&&this.record.canRedoAI)await this.run('redo',{},'已重新应用 AI 修改')
+     return
+    }else return
+    break
+   }
    case 'clear-cells':range.clearContent();break
    case 'remove-rows':sheet.deleteRows(range.getRow(),range.getLastRow()-range.getRow()+1);break
    case 'remove-columns':sheet.deleteColumns(range.getColumn(),range.getLastColumn()-range.getColumn()+1);break
@@ -1985,7 +2015,7 @@ class SpreadsheetView{
   const target=event.target as HTMLElement,engine=this.engine
   if(!engine||!this.editable||(!this.modal.hidden&&!this.modal.dataset.docked)||!this.grid.contains(target)||engine.model.isCellEditing()||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return
   if(target.closest('input,textarea,select,button,[role=menu]'))return
-  const key=event.key.toLowerCase()
+  const key=event.code==='KeyZ'?'z':event.code==='KeyY'?'y':event.key.toLowerCase()
   if(key!=='z'&&(key!=='y'||event.shiftKey))return
   event.preventDefault();event.stopImmediatePropagation()
   if(event.repeat)return

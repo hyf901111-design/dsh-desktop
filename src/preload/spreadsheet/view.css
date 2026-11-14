@@ -434,8 +434,7 @@ body[data-ework-spreadsheet-mode] :is(.univer-popup>section>div.univer-overscrol
 .ew-sheet-component-layer{position:absolute;inset:0;z-index:8;pointer-events:none}
 .ew-sheet-component-card{--grid-card:var(--odyssey-content);--grid-text:var(--odyssey-card-text);--grid-muted:var(--odyssey-card-muted);--grid-accent:var(--odyssey-select);position:relative;box-sizing:border-box;display:flex;flex-direction:column;height:100%;min-width:0;min-height:0;overflow:hidden;pointer-events:auto;background:var(--grid-card);color:var(--grid-text)}
 .ew-sheet-component-card[data-research-compact-chrome]{border-radius:4px!important;container-name:sheet-component}
-.ew-sheet-component-card[data-sheet-component-floating]{position:absolute;box-shadow:none!important}
-.ew-sheet-component-card[data-sheet-component-raised]{z-index:1}
+.ew-sheet-component-card[data-sheet-component-floating]{position:absolute;isolation:isolate;background:var(--grid-card,var(--ss-bg));box-shadow:none!important}
 .ew-sheet-component-card[data-sheet-component-floating]::after{content:'';position:absolute;inset:0;z-index:2;border:1px solid var(--ss-border);border-radius:inherit;pointer-events:none}
 .ew-sheet-component-card[data-sheet-component-raised]::after{border-color:var(--ss-blue)}
 .ew-sheet-component-card[data-dragging]{user-select:none}
