@@ -31,6 +31,18 @@ describe('right-click file ownership', () => {
   it('preserves valid trailing punctuation in exact filenames', () => {
     expect(resolveFinderPath(['/workspace/report (final)'], () => true)).toBe('/workspace/report (final)')
   })
+
+  it('lets actionable knowledge rows own their right-click menu', () => {
+    const dom = new JSDOM('<table><tr data-knowledge-file-context-menu><td><button>own</button></td></tr><tr><td><button>received</button></td></tr></table>')
+    const document = dom.window.document
+    const context = { document, window: dom.window, performance: dom.window.performance, Element: dom.window.Element }
+    const buttons = document.querySelectorAll('button')
+    let index = 0
+    Object.defineProperty(document, 'elementFromPoint', { value: () => buttons[index] })
+    expect(runInNewContext(contextMenuTargetScript(1, 1), context)).toEqual({ values: [], suppressMenu: true })
+    index = 1
+    expect(runInNewContext(contextMenuTargetScript(1, 1), context)).toMatchObject({ values: ['received'] })
+  })
 })
 
 it('keeps the actual event target when coordinate hit testing drifts', () => {
