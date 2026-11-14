@@ -11,26 +11,18 @@
         "schemaVersion": 1,
         "featureName": "表格快捷键与组件交互",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "f2d31757896cad67496cbeae4806319a47575216",
-        "tipCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
+        "baseCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
+        "tipCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
         "commits": [
           {
-            "commit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
+            "commit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
             "parents": [
-              "f2d31757896cad67496cbeae4806319a47575216"
+              "1c3c80e7af36352c69d6b5db5a490279e2e6709c"
             ],
-            "subject": "统一表格组件和图表层级，修复快捷键重复撤销"
+            "subject": "在图表编辑和工作簿更新时统一卡片层级"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/verify-spreadsheet-live.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
-          },
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
@@ -45,8 +37,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
-            "completedAt": "2026-11-14T05:17:25.671Z",
+            "verifiedCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
+            "completedAt": "2026-11-14T05:26:03.448Z",
             "timeoutMs": 180000
           },
           {
@@ -56,8 +48,8 @@
             ],
             "outcome": "passed",
             "summary": "Electron 聚焦检查逐步撤销重做及混合卡片层级",
-            "verifiedCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
-            "completedAt": "2026-11-14T05:17:25.671Z",
+            "verifiedCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
+            "completedAt": "2026-11-14T05:26:03.448Z",
             "timeoutMs": 180000
           },
           {
@@ -73,8 +65,8 @@
             ],
             "outcome": "passed",
             "summary": "只读数据展开检查",
-            "verifiedCommit": "1c3c80e7af36352c69d6b5db5a490279e2e6709c",
-            "completedAt": "2026-11-14T05:17:25.671Z",
+            "verifiedCommit": "05aba5498ea2cdad0282470f1dfa0da2f8e87cff",
+            "completedAt": "2026-11-14T05:26:03.448Z",
             "timeoutMs": 180000
           }
         ],
@@ -88,7 +80,7 @@
           "图表和组件共享重叠层级"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T05:17:25.671Z"
+        "generatedAt": "2026-11-14T05:26:03.448Z"
       }
     },
     {
