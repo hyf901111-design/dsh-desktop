@@ -11,6 +11,7 @@ import { KnowledgeSharing } from '../src/main/knowledge/sharing'
 import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from '../src/main/knowledge/capabilities'
 import { KnowledgeStore } from '../src/main/knowledge/store'
 import { ClientCapabilityService } from '../src/main/state/client-capability-service'
+import { KnowledgeViewBridge } from '../src/main/knowledge/view-bridge'
 import { resolveKnowledgeReference } from '../src/main/knowledge/references'
 import { CollaborationClient, collaborationRequestSpec } from '../src/main/collaboration-client'
 
@@ -46,6 +47,42 @@ afterAll(async () => { await worker?.dispose() })
 
 const request = (path = '', account, options = {}) => worker.dispatchFetch('https://knowledge.test/v1/collaboration/knowledge' + path, {
   ...options, headers: { ...options.headers, ...account !== undefined && { authorization: 'Bearer ' + tokens[account] } }
+})
+
+it('returns the acknowledged renderer results and cancels a view request when the session unbinds', async () => {
+  const commands = []
+  const view = new KnowledgeViewBridge(command => commands.push(command))
+  const snapshot = vi.fn(async () => ({ documents: [], folders: [] }))
+  const host = new ClientCapabilityService({
+    knowledge: current => knowledgeCapabilityHandlers({ snapshot }, {}, {}, view, current),
+    owner: () => 'alice', canRead: () => true, scheduled: () => false,
+    send: () => {}, canvasAvailable: () => false, canvas: async () => {}, window: async () => {}
+  })
+  const sessionId = 'knowledge-session', turnId = 'turn-one'
+  const call = (requestId, capability, args) => host.request({ sessionId, turnId, method: 'execute',
+    call: { requestId, capability, arguments: args } })
+  host.bind({ sessionId, mode: 'knowledge', active: true })
+  try {
+    const catalog = await host.request({ sessionId, turnId, method: 'catalog' })
+    expect(catalog.capabilities).toContainEqual(expect.objectContaining({ id: 'knowledge.filter', available: true }))
+    const read = call('inspect', 'knowledge.inspect', {})
+    await vi.waitFor(() => expect(commands).toHaveLength(1))
+    const [inspect] = commands
+    expect(inspect).toMatchObject({ action: 'inspect' })
+    const acknowledged = { revision: 'visible', filter: {}, section: 'files', count: 1,
+      documents: [{ id: 'visible-file', name: '列表中当前文件.md' }], folders: [] }
+    view.reply({ id: inspect.id, result: acknowledged })
+    expect(await read).toMatchObject({ status: 'succeeded', data: acknowledged })
+    expect(snapshot).not.toHaveBeenCalled()
+    const pending = call('filter', 'knowledge.filter', { revision: 'visible', filter: { category: 'received' } })
+    await vi.waitFor(() => expect(commands).toHaveLength(2))
+    const filter = commands.at(-1)
+    expect(filter).toMatchObject({ action: 'filter', revision: 'visible' })
+    host.bind({ sessionId, mode: 'knowledge', active: false })
+    expect(commands.at(-1)).toEqual({ action: 'cancel', id: filter.id })
+    view.reply({ id: filter.id, result: acknowledged })
+    expect(await pending).toMatchObject({ status: 'cancelled' })
+  } finally { host.dispose() }
 })
 
 it('renames an active share from the knowledge tool without changing its bytes or reviving it', async () => {

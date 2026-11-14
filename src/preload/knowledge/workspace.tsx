@@ -1,11 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import {
   knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
   type KnowledgeImportProgress, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
-import type { KnowledgeViewAction, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
+import type { KnowledgeViewMessage, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
 import type { MemoryBridge } from '../../shared/memory'
@@ -33,7 +34,7 @@ interface Bridge {
   request(method: 'open' | 'reveal', args: { id: string }): Promise<void>
   path(file: File): string
   subscribe(listener: () => void): () => void
-  subscribeAction?(listener: (action: KnowledgeViewAction & { id: string }) => void): () => void
+  subscribeAction?(listener: (action: KnowledgeViewMessage) => void): () => void
   reply?(value: { id: string; result?: KnowledgeViewResult; error?: string }): void
 }
 
@@ -122,6 +123,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const currentEpoch = useRef(0)
   const refreshSequence = useRef(0)
   const receivedSequence = useRef(0)
+  const viewRead = useRef({ snapshot, section: tab, ready, receivedStatus })
+  const pendingViewRequests = useRef(new Set<string>())
+  const appliedSharedCatalog = useRef(false)
   const dragDepth = useRef(0)
   const selection = filter.category ?? 'all'
   const visibleImports = selection === 'all' ? imports.filter(item => !filter.folderId || item.folderId === filter.folderId) : []
@@ -145,6 +149,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     filter.savedOnly, filter.sort, filter.ascending, assistantFilter ? filter.query : undefined
   ])
   const previousResultScope = useRef(resultScope)
+
+  useLayoutEffect(() => {
+    viewRead.current = { snapshot, section: tab, ready, receivedStatus }
+  })
 
   useLayoutEffect(() => {
     if (previousResultScope.current === resultScope) return
@@ -199,8 +207,14 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       }
     }
     refresh.current = () => { void load() }
+    let wasActive = false
     const surface = () => {
-      if (host.current()?.surface === 'knowledge') {
+      const active = host.current()?.surface === 'knowledge'
+      if (active !== wasActive) {
+        filterState.current = { ...filterState.current, revision: crypto.randomUUID() }
+        wasActive = active
+      }
+      if (active) {
         void load()
         loadSearchHistory()
       } else {
@@ -210,6 +224,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     }
     const reset = () => {
       currentEpoch.current++
+      refreshSequence.current++
       previewRequest.current++
       receivedSequence.current++
       setSnapshot(empty)
@@ -287,7 +302,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
 
   useEffect(() => {
     if (selection !== 'received') return
-    void refreshReceived(false)
+    if (!appliedSharedCatalog.current) void refreshReceived(false)
+    appliedSharedCatalog.current = false
     const show = () => { if (host.current()?.surface === 'knowledge') void refreshReceived(false) }
     document.addEventListener('sherlock:workspace-surface-change', show)
     const sharedAccessChanged = () => { if (host.current()?.surface === 'knowledge') void refreshReceived(true) }
@@ -351,32 +367,68 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     return applyFilter(before.filter, before.assistantFilter)
   }
 
-  useEffect(() => bridge.subscribeAction?.(request => {
-    const { id } = request
-    try {
-      if (host.current()?.surface !== 'knowledge' || document.querySelector('.VOzbGW_overlay')) {
-        throw Error('请先回到知识库工作区。')
+  useEffect(() => {
+    const pending = pendingViewRequests.current
+    const off = bridge.subscribeAction?.(request => {
+      const { id } = request
+      if (request.action === 'cancel') { pending.delete(id); return }
+      pending.add(id)
+      const active = () => host.current()?.surface === 'knowledge' && !document.querySelector('.VOzbGW_overlay')
+      const run = async () => {
+        try {
+          if (!active()) throw Error('请先回到知识库工作区。')
+          const current = filterState.current
+          if (request.action !== 'inspect' && request.revision !== current.revision) {
+            throw Error('筛选条件已变化，请先读取当前列表。')
+          }
+          if (!viewRead.current.ready) throw Error('知识库文件列表还未加载，请稍后重试。')
+          const before = request.action === 'undo' ? previousFilter.current : undefined
+          if (request.action === 'undo' && !before) throw Error('没有可撤销的对话筛选。')
+          const next = request.action === 'filter' ? request.filter : before?.filter ?? current.filter
+          const fromShared = current.filter.category === 'received'
+          const toShared = next.category === 'received'
+          const { section, receivedStatus: status } = viewRead.current
+          let catalog: KnowledgeDocument[] | undefined
+          if (toShared && (!fromShared || status.loading || status.error)) {
+            catalog = await bridge.request('received', { refresh: Boolean(status.error) })
+            if (!pending.has(id)) return
+            if (!active() || filterState.current.revision !== current.revision || viewRead.current.section !== section) {
+              throw Error('筛选条件已变化，请先读取当前列表。')
+            }
+          }
+          if (next.folderId && !viewRead.current.snapshot.folders.some(folder => folder.id === next.folderId)) {
+            throw Error('文件夹已不存在。')
+          }
+          // The receipt describes the committed React view, including the loaded sharing catalog.
+          if (request.action !== 'inspect' || catalog) flushSync(() => {
+            if (catalog) {
+              if (!fromShared && toShared) appliedSharedCatalog.current = true
+              document.dispatchEvent(new CustomEvent('sherlock:knowledge-shared-catalog', { detail: catalog }))
+            }
+            if (request.action === 'inspect') return
+            setTab('files')
+            setDraftFilter(undefined)
+            setMenu(undefined)
+            if (request.action === 'undo') undoFilter()
+            else {
+              previousFilter.current = current
+              setUndoAvailable(true)
+              applyFilter(next, true)
+            }
+          })
+          const committed = filterState.current
+          const { snapshot, section: committedSection } = viewRead.current
+          const matches = listKnowledgeDocuments(snapshot, committed.filter)
+          bridge.reply?.({ id, result: { revision: committed.revision, filter: committed.filter, section: committedSection,
+            count: matches.length, documents: matches.slice(0, 40), folders: snapshot.folders } })
+        } catch (error) {
+          if (pending.has(id)) bridge.reply?.({ id, error: message(error) })
+        } finally { pending.delete(id) }
       }
-      const current = filterState.current
-      setTab('files')
-      if (request.action === 'inspect') {
-        bridge.reply?.({ id, result: { revision: current.revision, filter: current.filter } })
-        return
-      }
-      if (request.revision !== current.revision) throw Error('筛选条件已变化，请先读取当前列表。')
-      setDraftFilter(undefined)
-      setMenu(undefined)
-      if (request.action === 'undo') {
-        bridge.reply?.({ id, result: undoFilter() })
-        return
-      }
-      previousFilter.current = current
-      setUndoAvailable(true)
-      bridge.reply?.({ id, result: applyFilter(request.filter, true) })
-    } catch (error) {
-      bridge.reply?.({ id, error: message(error) })
-    }
-  }), [bridge, document, host])
+      void run()
+    })
+    return () => { pending.clear(); off?.() }
+  }, [bridge, document, host])
 
   function openDialog(next: DialogState) {
     setMenu(undefined)

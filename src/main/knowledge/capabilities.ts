@@ -84,43 +84,27 @@ export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: Know
   return {
     inspectKnowledge: async (_args, _context, signal) => {
       check(signal)
-      const [state, snapshot] = await Promise.all([view.run({ action: 'inspect' }, signal), store.snapshot()])
+      const state = await view.run({ action: 'inspect' }, signal)
       check(signal)
-      const data = state.filter.category === 'received' ? await sharing.snapshot(snapshot, false, signal) : snapshot
-      check(signal)
-      const rows = listKnowledgeDocuments(data, state.filter)
-      return {
-        status: 'succeeded',
-        data: { ...state, count: rows.length, documents: rows.slice(0, 40), folders: snapshot.folders }
-      }
+      return { status: 'succeeded', data: state }
     },
     filterKnowledge: async ({ revision, filter }, _context, signal) => {
       check(signal)
-      const snapshot = await store.snapshot()
-      check(signal)
-      if (filter.folderId && !snapshot.folders.some(folder => folder.id === filter.folderId)) throw Error('文件夹已不存在。')
-      const data = filter.category === 'received' ? await sharing.snapshot(snapshot, false, signal) : snapshot
-      check(signal)
       const state = await view.run({ action: 'filter', revision, filter }, signal)
       check(signal)
-      const rows = listKnowledgeDocuments(data, state.filter)
       return {
         status: 'succeeded',
-        data: { ...state, applied: true, count: rows.length, documents: rows.slice(0, 40) },
-        message: `已更新文件列表，找到 ${rows.length} 个文件。`
+        data: { ...state, applied: true },
+        message: `已更新文件列表，找到 ${state.count} 个文件。`
       }
     },
     undoKnowledgeFilter: async ({ revision }, _context, signal) => {
       check(signal)
       const state = await view.run({ action: 'undo', revision }, signal)
       check(signal)
-      const snapshot = await store.snapshot()
-      check(signal)
-      const data = state.filter.category === 'received' ? await sharing.snapshot(snapshot, false, signal) : snapshot
-      check(signal)
       return {
         status: 'succeeded',
-        data: { ...state, count: listKnowledgeDocuments(data, state.filter).length },
+        data: state,
         message: '已恢复上一组筛选条件。'
       }
     },
