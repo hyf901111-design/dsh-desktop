@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "9f960a44985f6a18a2a370e40276bb4d41842abb",
-        "tipCommit": "0daf8eab2a15524dd9890c25134c6343d292dcb4",
+        "baseCommit": "0daf8eab2a15524dd9890c25134c6343d292dcb4",
+        "tipCommit": "8e47cfa83fbfca6b107bb8ba4c73d2b9967a3c8d",
         "commits": [
           {
-            "commit": "0daf8eab2a15524dd9890c25134c6343d292dcb4",
+            "commit": "8e47cfa83fbfca6b107bb8ba4c73d2b9967a3c8d",
             "parents": [
-              "9f960a44985f6a18a2a370e40276bb4d41842abb"
+              "0daf8eab2a15524dd9890c25134c6343d292dcb4"
             ],
-            "subject": "功能：知识库按文件显示上传进度并支持重试和取消"
+            "subject": "功能：补齐知识库最近搜索与上传完成状态"
           }
         ],
         "files": [
@@ -32,12 +32,8 @@
             "path": "src/main/knowledge/store.ts"
           },
           {
-            "status": "M",
-            "path": "src/main/state/research-owned-files.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
+            "status": "A",
+            "path": "src/preload/knowledge/file-search.tsx"
           },
           {
             "status": "M",
@@ -46,10 +42,6 @@
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/knowledge-library.ts"
           },
           {
             "status": "M",
@@ -69,8 +61,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "0daf8eab2a15524dd9890c25134c6343d292dcb4",
-            "completedAt": "2026-11-14T17:19:52Z",
+            "verifiedCommit": "8e47cfa83fbfca6b107bb8ba4c73d2b9967a3c8d",
+            "completedAt": "2026-11-14T17:35:31Z",
             "timeoutMs": 120000
           },
           {
@@ -103,15 +95,15 @@
               "test/research-owned-files.test.ts"
             ],
             "outcome": "passed",
-            "summary": "20 个聚焦文件的 125 项检查通过。覆盖真实前端横向菜单坐标、共享分类引用授权、行内进度、失败重试、取消与保存。",
-            "verifiedCommit": "0daf8eab2a15524dd9890c25134c6343d292dcb4",
-            "completedAt": "2026-11-14T17:19:52Z",
+            "summary": "20 个聚焦文件的 127 项检查通过，新增按账号保留最近搜索、搜索清除位置稳定、上传完成保留操作入口。",
+            "verifiedCommit": "8e47cfa83fbfca6b107bb8ba4c73d2b9967a3c8d",
+            "completedAt": "2026-11-14T17:35:31Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "先前签名包已验证多轮筛选、预览与引用，最新上传改动通过渲染及磁盘复制检查，继续核验原生文件选择器。"
+          "summary": "签名包 f6b887a41 已用原生选择器导入真实文件，看到 512 MB 文件的行内进度与完成后的正常文件行。本次新增最近搜索和正式行内完成状态，聚焦渲染通过。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -120,58 +112,16 @@
           "客户端折叠侧栏中知识库位于浏览器下方，分类和文件图标符合客户端风格，控件支持减少动态效果。",
           "首页快捷入口位于浏览器旁边。普通对话可用正文关键词查找共享文件和匹配片段。",
           "左右栏同时可见时，共享列表保留足够空间显示文件名与共享人。",
-          "手动选择和拖放的文件在知识库列表显示实际复制进度，支持重试和取消，成功后按通常列表条件显示。"
+          "手动选择和拖放的文件在知识库列表显示实际复制进度，支持重试和取消，成功后按通常列表条件显示。",
+          "最近搜索只记录手动输入，按账号保存，选用或清除时保留其他筛选条件。",
+          "上传完成后正式文件行短暂显示完成状态，可立即预览或打开更多操作。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T17:19:52Z"
-      },
-      "merged": {
-        "mergeCommit": "05937d7f9d3299c2fa94f57f830de36a4bc6164d",
-        "verificationCommit": "05937d7f9d3299c2fa94f57f830de36a4bc6164d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "05937d7f9d3299c2fa94f57f830de36a4bc6164d",
-            "completedAt": "2026-11-14T17:20:05.378Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "05937d7f9d3299c2fa94f57f830de36a4bc6164d",
-            "completedAt": "2026-11-14T17:20:05.378Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T17:20:05.378Z"
+        "generatedAt": "2026-11-14T17:35:31Z"
       }
     }
   ],
