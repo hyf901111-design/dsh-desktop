@@ -29,6 +29,8 @@ beforeAll(async () => {
           throw new Error('Unexpected bridge method '+method)
         },
         subscribe: () => () => {},
+        subscribeAction(listener) { window.applyKnowledgeAction = listener; return () => {} },
+        reply(response) { window.knowledgeActionResult = response },
         path: () => ''
       })
       window.dispatchEvent(new Event('sherlock:knowledge-open'))
@@ -54,6 +56,9 @@ afterAll(async () => { await browser?.close() })
 it('preserves filters through return and leaves space around the selected row', async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    page.setDefaultTimeout(2500)
     await page.setContent(`
       <body data-ds-dark-theme>
         <aside data-dsh-sidebar-root style="position:fixed;inset:10px auto 10px 10px;width:230px"></aside>
@@ -78,6 +83,36 @@ it('preserves filters through return and leaves space around the selected row', 
     await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
     await expect.poll(() => library.getByText('找到 1 个文件').isVisible()).toBe(true)
     if (process.env.KNOWLEDGE_QA_SCREENSHOT) await page.screenshot({ path: process.env.KNOWLEDGE_QA_SCREENSHOT })
+  } finally {
+    await page.close()
+  }
+})
+
+it('applies revision-checked commands to the live list and makes them reversible', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    page.setDefaultTimeout(2500)
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库' })
+    await library.getByRole('button', { name: '消费行业周报.md', exact: false }).first().waitFor()
+    const act = request => page.evaluate(request => {
+      window.applyKnowledgeAction({ id: crypto.randomUUID(), ...request })
+      return window.knowledgeActionResult
+    }, request)
+    const { result } = await act({ action: 'inspect' })
+    const applied = await act({
+      action: 'filter', revision: result.revision, filter: { folderId: 'f', sources: ['upload'], formats: ['markdown'] }
+    })
+    expect(applied.result.filter).toEqual({ folderId: 'f', sources: ['upload'], formats: ['markdown'] })
+    await expect.poll(() => library.getByText('找到 1 个文件').isVisible()).toBe(true)
+    expect((await act({ action: 'filter', revision: result.revision, filter: {} })).error).toContain('筛选条件已变化')
+    await library.getByRole('button', { name: '撤销', exact: true }).click()
+    await expect.poll(() => library.getByRole('row').count()).toBe(4)
+    await library.getByRole('button', { name: '返回工作区' }).click()
+    expect((await act({ action: 'inspect' })).error).toContain('请先回到知识库')
   } finally {
     await page.close()
   }

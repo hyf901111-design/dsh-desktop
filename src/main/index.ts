@@ -1,3 +1,5 @@
+import { KnowledgeViewBridge } from './knowledge/view-bridge'
+import { knowledgeCapabilityHandlers } from './knowledge/capabilities'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import {routeBrowserUse} from './browser/route'
@@ -1328,9 +1330,19 @@ async function bootstrap(): Promise<void> {
   let notesDocumentAdapter:import('./notes/document-capability-adapter').NoteDocumentAdapter|undefined
   let conversationComponentsService:ReturnType<typeof createConversationComponentService>|undefined
   let conversationComponentsReady=false
+  const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  const knowledgeIdentity = () => ({ owner: integrationOwner() || 'local', generation: accountService!.generation })
+  const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:changed')
+  })
+  const knowledgeView = new KnowledgeViewBridge(value => {
+    if (!mainWindow || mainWindow.isDestroyed()) throw Error('知识库工作区不可用。')
+    mainWindow.webContents.send('knowledge:view-action', value)
+  })
+  registerTrustedMainWindowHandler(ipcMain, 'knowledge:view-reply', () => mainWindow, (_event, value) => knowledgeView.reply(value))
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
   const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url})
-  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,knowledge:(current,id)=>researchBoardsService?.isSharedSession(id)?{}:knowledgeCapabilityHandlers(knowledge,knowledgeView,current),get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
   const researchPdfRenderer = new ResearchPdfRenderer()
@@ -1454,11 +1466,6 @@ async function bootstrap(): Promise<void> {
   // Integrations are isolated from core startup: a damaged registry must never hide conversations.
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
-  const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
-  const knowledgeIdentity = () => ({ owner: integrationOwner() || 'local', generation: accountService!.generation })
-  const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:changed')
-  })
   const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
   installKnowledgeIpc({
     store: knowledge, window: () => mainWindow, identity: knowledgeIdentity,

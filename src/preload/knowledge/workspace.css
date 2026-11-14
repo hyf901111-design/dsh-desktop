@@ -273,3 +273,5 @@ i.knowledge-icon { background: currentColor; mask: var(--knowledge-icon) center 
   .knowledge-table :is(th, td):last-child { width: 42px; }
   .knowledge-preview { position: absolute; inset: 44px 0 0 26%; background: var(--knowledge-bg); z-index: 4; border-bottom-right-radius: 16px; }
 }
+
+.knowledge-filter-summary-actions { margin-left: auto; display: flex; gap: 4px; }

@@ -179,8 +179,10 @@ export class KnowledgeStore {
     })
   }
 
-  edit(edit: KnowledgeEdit): Promise<void> {
-    return this.run(async (state, directory, current) => {
+  edit(edit: KnowledgeEdit, guard?: () => void): Promise<void> {
+    return this.run(async (state, directory, identityCurrent) => {
+      const current = () => { identityCurrent(); guard?.() }
+      current()
       if (edit.type === 'create-folder' || edit.type === 'rename-folder' || edit.type === 'remove-folder') {
         let folders = state.folders
         let documents = state.documents

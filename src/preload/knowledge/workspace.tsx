@@ -5,6 +5,7 @@ import {
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
   type KnowledgeFormat, type KnowledgeImportResult, type KnowledgeSnapshot, type KnowledgeSource
 } from '../../shared/knowledge-library'
+import type { KnowledgeViewAction, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
 import { KnowledgeIcon } from './icons'
@@ -18,6 +19,8 @@ interface Bridge {
   request(method: 'open' | 'reveal', args: { id: string }): Promise<void>
   path(file: File): string
   subscribe(listener: () => void): () => void
+  subscribeAction?(listener: (action: KnowledgeViewAction & { id: string }) => void): () => void
+  reply?(value: { id: string; result?: KnowledgeViewResult; error?: string }): void
 }
 
 type DialogState =
@@ -64,6 +67,10 @@ export function mountKnowledgeWorkspace(document: Document, host: WorkspaceSurfa
 function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: WorkspaceSurfaceHost; document: Document }) {
   const [snapshot, setSnapshot] = useState(empty)
   const [filter, setFilter] = useState<KnowledgeFilter>(defaultFilter)
+  const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter })
+  const previousFilter = useRef<KnowledgeFilter>()
+  const [undoAvailable, setUndoAvailable] = useState(false)
+  const [assistantFilter, setAssistantFilter] = useState(false)
   const [draftFilter, setDraftFilter] = useState<KnowledgeFilter>()
   const [page, setPage] = useState(1)
   const [ready, setReady] = useState(false)
@@ -124,6 +131,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       previewRequest.current++
       setSnapshot(empty)
       setReady(false)
+      filterState.current = { revision: crypto.randomUUID(), filter: defaultFilter }
+      previousFilter.current = undefined
+      setUndoAvailable(false)
+      setAssistantFilter(false)
       setFilter(defaultFilter)
       setPage(1)
       setBusy(false)
@@ -176,10 +187,56 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     }
   }, [document, draftFilter, menu])
 
-  function updateFilter(change: Partial<KnowledgeFilter>) {
-    setFilter(current => ({ ...current, ...change }))
+  function applyFilter(next: KnowledgeFilter) {
+    const state = { revision: crypto.randomUUID(), filter: next }
+    filterState.current = state
+    setFilter(next)
     setPage(1)
+    return state
   }
+
+  function updateFilter(change: Partial<KnowledgeFilter>) {
+    previousFilter.current = undefined
+    setUndoAvailable(false)
+    setAssistantFilter(false)
+    applyFilter({ ...filterState.current.filter, ...change })
+  }
+
+  function undoFilter() {
+    const before = previousFilter.current
+    if (!before) throw Error('没有可撤销的对话筛选。')
+    previousFilter.current = undefined
+    setUndoAvailable(false)
+    setAssistantFilter(false)
+    return applyFilter(before)
+  }
+
+  useEffect(() => bridge.subscribeAction?.(request => {
+    const { id } = request
+    try {
+      if (host.current()?.surface !== 'knowledge' || document.querySelector('.VOzbGW_overlay')) {
+        throw Error('请先回到知识库工作区。')
+      }
+      const current = filterState.current
+      if (request.action === 'inspect') {
+        bridge.reply?.({ id, result: current })
+        return
+      }
+      if (request.revision !== current.revision) throw Error('筛选条件已变化，请先读取当前列表。')
+      setDraftFilter(undefined)
+      setMenu(undefined)
+      if (request.action === 'undo') {
+        bridge.reply?.({ id, result: undoFilter() })
+        return
+      }
+      previousFilter.current = current.filter
+      setUndoAvailable(true)
+      setAssistantFilter(true)
+      bridge.reply?.({ id, result: applyFilter(request.filter) })
+    } catch (error) {
+      bridge.reply?.({ id, error: message(error) })
+    }
+  }), [bridge, document, host])
 
   function openDialog(next: DialogState) {
     setMenu(undefined)
@@ -364,11 +421,17 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               }} />}
           </div>
         </div>
-        {narrowed && <div className="knowledge-filter-summary">
+        {(narrowed || assistantFilter) && <div className="knowledge-filter-summary">
           <span aria-live="polite">找到 {rows.length} 个文件</span>
-          {[...(filter.sources ?? []).map(source => knowledgeSources[source]), ...(filter.formats ?? []).map(format => knowledgeFormats[format]),
+          {[...(assistantFilter && selectedFolder ? [selectedFolder.name] : []), ...(filter.sources ?? []).map(source => knowledgeSources[source]), ...(filter.formats ?? []).map(format => knowledgeFormats[format]),
             ...(filter.savedOnly ? ['手动收藏'] : [])].map(label => <span key={label} className="knowledge-tag">{label}</span>)}
-          <button type="button" onClick={() => updateFilter({ query: '', sources: [], formats: [], savedOnly: false })}>清除筛选</button>
+          <div className="knowledge-filter-summary-actions">
+            {undoAvailable && <button type="button" onClick={undoFilter}>撤销</button>}
+            <button type="button" onClick={() => updateFilter(assistantFilter ? {
+              category: 'all', folderId: undefined, sharedCategory: undefined,
+              query: '', sources: [], formats: [], savedOnly: false, sort: undefined, ascending: undefined
+            } : { query: '', sources: [], formats: [], savedOnly: false })}>清除筛选</button>
+          </div>
         </div>}
         {notice && !dialog && <div className="knowledge-notice" role={notice.error ? 'alert' : 'status'}>
           <span>{notice.text}</span>

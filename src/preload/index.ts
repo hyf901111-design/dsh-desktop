@@ -263,6 +263,12 @@ function initializeUi(): void {
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
+    subscribeAction: listener => {
+      const handle = (_event: unknown, value: Parameters<typeof listener>[0]) => listener(value)
+      ipcRenderer.on('knowledge:view-action', handle)
+      return () => ipcRenderer.removeListener('knowledge:view-action', handle)
+    },
+    reply: value => { void ipcRenderer.invoke('knowledge:view-reply', value).catch(() => {}) },
     subscribe: listener => {
       ipcRenderer.on('knowledge:changed', listener)
       return () => ipcRenderer.removeListener('knowledge:changed', listener)

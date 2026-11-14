@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import {it,expect,vi} from 'vitest'
-import {readFileSync} from 'node:fs'
+// @ts-expect-error Client patches are JavaScript source-generation helpers.
+import {capabilityHook} from '../scripts/lib/notes-client.mjs'
 import * as React from 'react'
 import {createRoot} from 'react-dom/client'
 import {flushSync} from 'react-dom'
@@ -12,8 +13,7 @@ it('uses the real injected header hook to bind and navigate only its current ses
  const service=new ClientCapabilityService({owner:()=> 'alice',canRead:id=>['s','other'].includes(id),scheduled:()=>false,canvasAvailable:()=>false,canvas:async()=>({}),window:async()=>({}),send:value=>{for(const fn of subscribers)fn({},value)}})
  const ipc={invoke:async(channel:string,value:any)=>{expect(channel).toBe('client-capabilities:bind');bindings.push(value);return service.bind(value)},on:(_channel:string,fn:any)=>subscribers.add(fn),removeListener:(_channel:string,fn:any)=>subscribers.delete(fn)}
  const desktop={clientCapabilities:createClientCapabilitiesBridge(ipc)}
- const source=readFileSync('scripts/lib/notes-client.mjs','utf8'),hook=source.split('/* ework:client-capability-context:v1 */')[1]!.split('`)')[0]!
- const run=new Function('react','window','sessionId','active','selectView',hook)
+ const run=new Function('react','window','sessionId','active','selectView',capabilityHook)
  const rootElement=document.createElement('div');document.body.append(rootElement);const root=createRoot(rootElement)
  function Header({id}:{id:string}){const[mode,setMode]=React.useState('chat');const selectView=React.useCallback((mode:string)=>{navigations.push(mode);setMode(mode)},[]);run(React,{dshDesktop:desktop},id,{id:mode},selectView);return React.createElement('header',null,mode)}
  try{
@@ -21,6 +21,12 @@ it('uses the real injected header hook to bind and navigate only its current ses
   await service.request({sessionId:'s',turnId:'1',method:'catalog'})
   const changed=await service.request({sessionId:'s',turnId:'1',method:'execute',call:{requestId:'m',capability:'ui.mode.set',arguments:{mode:'notes'}}})
   expect(changed.status).toBe('succeeded');expect(navigations).toEqual(['notes']);expect(rootElement.textContent).toBe('notes')
+  document.body.dataset.workspaceSurface='knowledge'
+  document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
+  expect((await service.request({sessionId:'s',turnId:'1',method:'catalog'}) as any).mode).toBe('knowledge')
+  delete document.body.dataset.workspaceSurface
+  document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
+  expect((await service.request({sessionId:'s',turnId:'1',method:'catalog'}) as any).mode).toBe('notes')
   for(const fn of subscribers)fn({}, {sessionId:'foreign',mode:'research'});expect(navigations).toEqual(['notes'])
   for(const fn of subscribers)fn({}, {sessionId:'s',mode:'research',ipc:'bad'});expect(navigations).toEqual(['notes'])
   flushSync(()=>root.render(React.createElement(Header,{id:'other'})));await expect(service.request({sessionId:'s',turnId:'1',method:'catalog'})).rejects.toThrow('绑定')
