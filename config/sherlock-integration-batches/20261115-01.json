@@ -11,21 +11,21 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "f6bbe26dc4cec25efbe2c643e21547add6906abb",
-        "tipCommit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
+        "baseCommit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
+        "tipCommit": "23b8c8008fcbe72228f112a1f2de96f600605b02",
         "commits": [
           {
-            "commit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
+            "commit": "23b8c8008fcbe72228f112a1f2de96f600605b02",
             "parents": [
-              "f6bbe26dc4cec25efbe2c643e21547add6906abb"
+              "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84"
             ],
-            "subject": "修复：对齐知识库记忆文件的图标和标题"
+            "subject": "修复：切回客户端时复核共享文件预览"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
+            "path": "src/preload/knowledge/panel.tsx"
           },
           {
             "status": "M",
@@ -35,6 +35,18 @@
         "checks": [
           {
             "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "主进程、预加载与共享类型检查通过。",
+            "verifiedCommit": "23b8c8008fcbe72228f112a1f2de96f600605b02",
+            "completedAt": "2026-11-14T18:20:54Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
               "env",
               "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
               "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
@@ -42,18 +54,20 @@
               "vitest",
               "run",
               "test/knowledge-workspace-rendered.test.js",
+              "test/knowledge-sharing-worker.test.js",
+              "test/knowledge-composer.test.js",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "12 项知识库实际前端渲染检查通过，包括左右两处记忆文件标题紧贴图标。",
-            "verifiedCommit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
-            "completedAt": "2026-11-14T17:59:12Z",
+            "summary": "19 项聚焦检查通过，含真实前端共享预览重新校验、双账号正文关键词检索和撤销拒绝。",
+            "verifiedCommit": "23b8c8008fcbe72228f112a1f2de96f600605b02",
+            "completedAt": "2026-11-14T18:20:54Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离原生窗口通过最近搜索、上传完成行内状态、右栏切回保留搜索、中间保存记忆并在右侧重开。新间距已通过真实前端渲染。"
+          "summary": "签名候选双账号验证发布、下钻、预览、行内引用、取消共享与保留输入；在同一 UI 复现已打开正文停留，新增真实渲染回归已通过。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -68,58 +82,14 @@
           "右侧知识库切换文件资料与经验记忆，沿用同一启用开关和记忆 Markdown 编辑器。",
           "右侧文件行在文件大小和 @文件 之间立即切换，文件名位置稳定。拖放、预览和上传完成使用短淡入并尊重减少动态效果。",
           "PowerPoint 正文的引用页码遵循演示文稿播放顺序。",
-          "经验记忆文件名与图标按控件间距对齐。"
+          "切回窗口时复核已打开共享文件，撤销时移除旧正文与下载入口，版本变化时读出新版。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T17:59:12Z"
-      },
-      "merged": {
-        "mergeCommit": "45b549dc50352f0981d9e283820d6a4e778bf3aa",
-        "verificationCommit": "45b549dc50352f0981d9e283820d6a4e778bf3aa",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "45b549dc50352f0981d9e283820d6a4e778bf3aa",
-            "completedAt": "2026-11-14T17:59:25.772Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "45b549dc50352f0981d9e283820d6a4e778bf3aa",
-            "completedAt": "2026-11-14T17:59:25.772Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T17:59:25.772Z"
+        "generatedAt": "2026-11-14T18:20:54Z"
       }
     }
   ],
