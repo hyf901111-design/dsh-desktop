@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "ceb20082d5738cd3a352c02a186932c047c84518",
-        "tipCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
+        "baseCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
+        "tipCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
         "commits": [
           {
-            "commit": "4ca7327823e814a54813282858d483890d2ca2f2",
+            "commit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
             "parents": [
-              "ceb20082d5738cd3a352c02a186932c047c84518"
+              "4ca7327823e814a54813282858d483890d2ca2f2"
             ],
-            "subject": "优化：为双侧栏下的共享文件名留出空间"
+            "subject": "测试：校准知识库动效、悬停与能力清单回归"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
+            "path": "test/client-capabilities-bundle.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
+            "path": "test/client-capabilities.test.js"
           },
           {
             "status": "M",
@@ -45,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
-            "completedAt": "2026-11-14T16:30:44Z",
+            "verifiedCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
+            "completedAt": "2026-11-14T16:46:32Z",
             "timeoutMs": 120000
           },
           {
@@ -68,18 +68,23 @@
               "test/research-tab-icons.test.js",
               "test/client-capability-header.test.ts",
               "test/figma-home-entry-spacing.test.js",
-              "test/command-popup-position-browser.test.js"
+              "test/command-popup-position-browser.test.js",
+              "test/client-capabilities.test.js",
+              "test/client-capabilities-bundle.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/deliverable-cards.test.js",
+              "test/browser-app-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "47 项聚焦检查通过。",
-            "verifiedCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
-            "completedAt": "2026-11-14T16:30:44Z",
+            "summary": "17 个直接相关测试文件的 107 项检查通过，涵盖默认动效及系统减少动态效果。",
+            "verifiedCommit": "1bfd39b7ae45095bb0af9e641215cca23a8d3c31",
+            "completedAt": "2026-11-14T16:46:32Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "签名隔离包核验文件列表、右侧对话筛选、共享预览和斜杠菜单。针对双侧栏挤压文件名的修复通过 1380 px 和 1240 px 渲染回归。"
+          "summary": "签名隔离包 79bdf7d3e 通过原生共享预览和双侧栏目录下钻。已验证右侧对话筛选、斜杠菜单、收藏与来源会话跳转、经验记忆保存重开。本次交接仅修改测试，产品源码与签名实包一致。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -94,51 +99,7 @@
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T16:30:44Z"
-      },
-      "merged": {
-        "mergeCommit": "1dcf37d8da4c038c7c154df8b59eb0a1d84edca2",
-        "verificationCommit": "1dcf37d8da4c038c7c154df8b59eb0a1d84edca2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1dcf37d8da4c038c7c154df8b59eb0a1d84edca2",
-            "completedAt": "2026-11-14T16:30:47.411Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "1dcf37d8da4c038c7c154df8b59eb0a1d84edca2",
-            "completedAt": "2026-11-14T16:30:47.411Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T16:30:47.411Z"
+        "generatedAt": "2026-11-14T16:46:32Z"
       }
     }
   ],
