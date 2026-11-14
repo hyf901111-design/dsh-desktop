@@ -220,7 +220,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       const section = (event as CustomEvent).detail
       if (section === 'memory' || section === 'files') setTab(section)
     }
+    const catalogChanged = (event: Event) => {
+      receivedSequence.current++
+      setReceived((event as CustomEvent<KnowledgeDocument[]>).detail)
+      setReceivedStatus({ loading: false })
+    }
     document.addEventListener('sherlock:knowledge-show-section', showSection)
+    document.addEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
     document.addEventListener('sherlock:workspace-surface-change', surface)
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     surface()
@@ -232,6 +238,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       off()
       offImports?.()
       document.removeEventListener('sherlock:knowledge-show-section', showSection)
+      document.removeEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
       document.removeEventListener('sherlock:workspace-surface-change', surface)
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
@@ -244,8 +251,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     try {
       const rows = await bridge.request('received', { refresh: force })
       if (sequence === receivedSequence.current && epoch === currentEpoch.current) {
-        setReceived(rows)
-        setReceivedStatus({ loading: false })
         document.dispatchEvent(new CustomEvent('sherlock:knowledge-shared-catalog', { detail: rows }))
       }
     } catch (error) {
