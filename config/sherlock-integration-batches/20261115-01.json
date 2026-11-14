@@ -11,41 +11,21 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "f7eee7dd991adddb0e06f52c6f94a45a9f5130ab",
-        "tipCommit": "371854b95299c60b32f886b3afcb4b8d46791e41",
+        "baseCommit": "371854b95299c60b32f886b3afcb4b8d46791e41",
+        "tipCommit": "8df526bb7fc5eec844d0e1e5f4fd94e368ef45bf",
         "commits": [
           {
-            "commit": "371854b95299c60b32f886b3afcb4b8d46791e41",
+            "commit": "8df526bb7fc5eec844d0e1e5f4fd94e368ef45bf",
             "parents": [
-              "f7eee7dd991adddb0e06f52c6f94a45a9f5130ab"
+              "371854b95299c60b32f886b3afcb4b8d46791e41"
             ],
-            "subject": "功能：对话中的共享知识库引用可打开右侧预览"
+            "subject": "修复：清理知识库右侧预览的内部报错前缀"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/markdown-file-links.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/sidebar-knowledge-preview.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/capabilities.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/references.ts"
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
@@ -53,11 +33,7 @@
           },
           {
             "status": "M",
-            "path": "test/knowledge-composer.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-sharing-worker.test.js"
+            "path": "test/knowledge-native-preview.test.ts"
           }
         ],
         "checks": [
@@ -69,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "371854b95299c60b32f886b3afcb4b8d46791e41",
-            "completedAt": "2026-11-14T21:58:32.433Z",
+            "verifiedCommit": "8df526bb7fc5eec844d0e1e5f4fd94e368ef45bf",
+            "completedAt": "2026-11-14T22:13:38.137Z",
             "timeoutMs": 120000
           },
           {
@@ -85,18 +61,18 @@
               "test/knowledge-sharing-worker.test.js",
               "test/knowledge-native-preview.test.ts",
               "test/knowledge-workspace-rendered.test.js",
-              "test/default-web-links-client.test.js"
+              "test/knowledge-library.test.ts"
             ],
             "outcome": "passed",
-            "summary": "36 项聚焦检查通过，包括两账号真实服务路由、正文回执、引用链接、预览和取消共享后的拒绝。",
-            "verifiedCommit": "371854b95299c60b32f886b3afcb4b8d46791e41",
-            "completedAt": "2026-11-14T21:58:32.433Z",
+            "summary": "42 项知识库聚焦检查通过，包括源文件预览、双账号正文检索和撤销、错误文案、工作区与对话。",
+            "verifiedCommit": "8df526bb7fc5eec844d0e1e5f4fd94e368ef45bf",
+            "completedAt": "2026-11-14T22:13:38.137Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已执行客户端 Markdown 渲染器链接解析与点击验证，签名客户端联测继续进行。"
+          "summary": "已在签名客户端验证共享资料正文检索、点击右侧原文预览、撤销后旧引用拒绝以及再次检索无结果。预览错误文案变更已通过聚焦回归检查。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -120,7 +96,8 @@
           "知识库列表随分类、确认筛选、排序和对话撤销短暂淡入，切换右侧目录和插入输入框引用时有反馈，支持减少动态效果。",
           "同会话重新生成同一路径文件时，自动收录和手动收藏更新已有条目的正文与引用并保留整理状态；已共享正文与库内人工 Markdown 编辑受保护。",
           "右侧对话在文件列表渲染后才确认筛选、排序和撤销，使用同一列表快照；查看经验记忆时只读命令保留页签，离开工作区或取消操作使等待加载的旧请求失效。",
-          "共享检索工具读取正文后可在回复中引用文件和共享人，引用点击打开右侧的原生预览并实时核验当前账号权限。"
+          "共享检索工具读取正文后可在回复中引用文件和共享人，引用点击打开右侧的原生预览并实时核验当前账号权限。",
+          "右侧预览无法打开已撤销文件时保留可读的处理提示，隐藏 Electron 传输前缀。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -128,51 +105,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-14T21:58:32.433Z"
-      },
-      "merged": {
-        "mergeCommit": "d3d7ddc6842c4a6533186ffc340d05275ea5c7b0",
-        "verificationCommit": "d3d7ddc6842c4a6533186ffc340d05275ea5c7b0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d3d7ddc6842c4a6533186ffc340d05275ea5c7b0",
-            "completedAt": "2026-11-14T21:58:35.351Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "d3d7ddc6842c4a6533186ffc340d05275ea5c7b0",
-            "completedAt": "2026-11-14T21:58:35.351Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T21:58:35.351Z"
+        "generatedAt": "2026-11-14T22:13:38.137Z"
       }
     }
   ],
