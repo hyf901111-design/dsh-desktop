@@ -11,75 +11,29 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "76651ab0ba75fbea22fbed794c925aa7fce8bf72",
-        "tipCommit": "ceb20082d5738cd3a352c02a186932c047c84518",
+        "baseCommit": "ceb20082d5738cd3a352c02a186932c047c84518",
+        "tipCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
         "commits": [
           {
-            "commit": "2930e4925adb4b21c240ec4ffdf7e0edbcdf890a",
+            "commit": "4ca7327823e814a54813282858d483890d2ca2f2",
             "parents": [
-              "76651ab0ba75fbea22fbed794c925aa7fce8bf72"
+              "ceb20082d5738cd3a352c02a186932c047c84518"
             ],
-            "subject": "功能：在会话首页添加知识库快捷入口"
-          },
-          {
-            "commit": "e0911855189c32e9803a8df8cb283cafde103d41",
-            "parents": [
-              "2930e4925adb4b21c240ec4ffdf7e0edbcdf890a"
-            ],
-            "subject": "功能：支持按正文线索检索他人共享的资料"
-          },
-          {
-            "commit": "ceb20082d5738cd3a352c02a186932c047c84518",
-            "parents": [
-              "e0911855189c32e9803a8df8cb283cafde103d41"
-            ],
-            "subject": "修复：知识库会话补丁兼容已有恢复记录"
+            "subject": "优化：为双侧栏下的共享文件名留出空间"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+            "path": "src/preload/knowledge/workspace.css"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+            "path": "src/preload/knowledge/workspace.tsx"
           },
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/capabilities.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/sharing.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-app-shortcuts.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/knowledge-library.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-home-entry-spacing.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-composer.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-sharing-worker.test.js"
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -91,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "ceb20082d5738cd3a352c02a186932c047c84518",
-            "completedAt": "2026-11-14T16:21:08.179Z",
+            "verifiedCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
+            "completedAt": "2026-11-14T16:30:44Z",
             "timeoutMs": 120000
           },
           {
@@ -117,73 +71,30 @@
               "test/command-popup-position-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "46 项知识库、共享、侧栏、首页入口和斜杠菜单聚焦检查通过。",
-            "verifiedCommit": "ceb20082d5738cd3a352c02a186932c047c84518",
-            "completedAt": "2026-11-14T16:21:08.179Z",
+            "summary": "47 项聚焦检查通过。",
+            "verifiedCommit": "4ca7327823e814a54813282858d483890d2ca2f2",
+            "completedAt": "2026-11-14T16:30:44Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离 Electron 验证首页图标打开知识库，并以双测试账号从普通对话按正文关键词检索共享资料、返回正文片段和共享人。本地模型模拟工具调用，实际账号服务和文件读取链路。原交接卡记录此前右侧对话与引用验收。"
+          "summary": "签名隔离包核验文件列表、右侧对话筛选、共享预览和斜杠菜单。针对双侧栏挤压文件名的修复通过 1380 px 和 1240 px 渲染回归。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
           "右侧常驻对话能访问当前知识库工作区，执行筛选、排序和受版本保护的 Markdown 修改。",
           "登录用户可检索、阅读、引用有权访问的共享文件；取消共享时拒绝旧引用并保留草稿。",
           "客户端折叠侧栏中知识库位于浏览器下方，分类和文件图标符合客户端风格，控件支持减少动态效果。",
-          "首页快捷入口位于浏览器旁边。普通对话可用正文关键词查找共享文件和匹配片段。"
+          "首页快捷入口位于浏览器旁边。普通对话可用正文关键词查找共享文件和匹配片段。",
+          "左右栏同时可见时，共享列表保留足够空间显示文件名与共享人。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T16:21:08.179Z"
-      },
-      "merged": {
-        "mergeCommit": "4a3c14b785fdca216f77c9fa6eaed8ff81c76f23",
-        "verificationCommit": "4a3c14b785fdca216f77c9fa6eaed8ff81c76f23",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4a3c14b785fdca216f77c9fa6eaed8ff81c76f23",
-            "completedAt": "2026-11-14T16:21:33.684Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "4a3c14b785fdca216f77c9fa6eaed8ff81c76f23",
-            "completedAt": "2026-11-14T16:21:33.684Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T16:21:33.684Z"
+        "generatedAt": "2026-11-14T16:30:44Z"
       }
     }
   ],
