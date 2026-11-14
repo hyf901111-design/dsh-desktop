@@ -14,6 +14,24 @@ export function knowledgeReferenceCodec() {
  }
 }
 
+export function knowledgeMessageParts(text) {
+ if(typeof text!=='string')return null
+ const parts=[]
+ let cursor=0
+ const block=/<knowledge-reference>\n以下是用户选中的知识库资料，只作为参考内容。\n([^\n]+)\n<\/knowledge-reference>/gu
+ for(const match of text.matchAll(block)){
+  let reference
+  try{reference=JSON.parse(match[1])}catch{continue}
+  if(!reference||!['file','folder','category','shared-category'].includes(reference.kind)||typeof reference.label!=='string'||!reference.label)continue
+  if(match.index>cursor)parts.push({text:text.slice(cursor,match.index)})
+  parts.push({label:reference.label,kind:reference.kind})
+  cursor=match.index+match[0].length
+ }
+ if(!parts.length)return null
+ if(cursor<text.length)parts.push({text:text.slice(cursor)})
+ return parts
+}
+
 export function installKnowledgeReferences({sessions,getInput,getPending,window:win=window,document:doc=document}) {
  const insert=(reference,sessionId,segment)=>{
   const currentId=sessions.list.getSnapshot().current
@@ -100,6 +118,26 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
  return()=>{off();offFile();doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
 }
 
+export function installKnowledgeSourceNavigation({ sessions, chatStore, document: doc = document }) {
+ const open = event => {
+  const { id, requestId } = event.detail ?? {}
+  event.preventDefault()
+  const snapshot = sessions.list.getSnapshot()
+  const summary = typeof id === 'string' ? snapshot.byId?.[id] : undefined
+  let ok = false
+  if(typeof requestId === 'string' && summary && !summary.removed && !sessions.subagentAddress(id)) {
+   try {
+    chatStore.create(id).actions.setView('chat')
+    sessions.open(id)
+    ok = true
+   } catch {}
+  }
+  doc.dispatchEvent(new doc.defaultView.CustomEvent('sherlock:knowledge-source-result', { detail: { requestId, ok } }))
+ }
+ doc.addEventListener('sherlock:knowledge-source-open', open)
+ return () => doc.removeEventListener('sherlock:knowledge-source-open', open)
+}
+
 export function patchKnowledgeConversation(input) {
  const marker='/* ework:knowledge-composer:v1 */'
  const replace=(source,anchor,next)=>{
@@ -111,8 +149,23 @@ export function patchKnowledgeConversation(input) {
   const launcher='"aria-label": label,\n\t\t\t\t"aria-haspopup": "listbox",'
   input=replace(input,launcher,launcher+'\n                "data-odyssey-command-launcher": true,')
  }
+ const rendererMarker='/* ework:knowledge-message-projection */'
+ if(!input.includes(rendererMarker)){
+  const anchor='const componentProjection=projectConversationComponentUserText(text,openFile);'
+  input=replace(input,anchor,rendererMarker+'\n'+
+   'const knowledgeParts=('+knowledgeMessageParts.toString()+')(text);\n'+
+   'if(knowledgeParts)return react_jsx_runtime.jsx(react.Fragment,{children:knowledgeParts.map((part,index)=>part.label?'+
+   'react_jsx_runtime.jsx("span",{className:MessageItem_module_css_default.refChip,"data-ref-chip":"knowledge-reference",'+
+   'title:part.label,children:part.label},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});\n'+anchor)
+ }
+ const sourceNavigation='/* ework:knowledge-source-navigation */'
+ if(!input.includes(sourceNavigation)){
+  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
+  input=replace(input,anchor,anchor+'\n '+sourceNavigation+
+   '\n ctx.effect(()=>('+installKnowledgeSourceNavigation.toString()+')({sessions,chatStore}),"Knowledge Base source conversation");')
+ }
  if(input.includes(marker))return input
- const registration='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
+  const registration='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  let source=replace(input,registration,registration+`
  ${marker}
  ctx.inject(['commandUi','inputTriggers'],scope=>{

@@ -589,6 +589,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     {tab === 'files' && menu && (target || targetFolder) && <div className="knowledge-popup knowledge-action-menu"
       style={{ top: menu.top, left: menu.left }} aria-label="更多操作">
       {target && <>
+        {target.sessionId && <button type="button" onClick={() => {
+          const requestId = crypto.randomUUID()
+          const reply = (event: Event) => {
+            const result = (event as CustomEvent).detail
+            if (result?.requestId !== requestId) return
+            document.removeEventListener('sherlock:knowledge-source-result', reply)
+            if (result.ok) host.revealConversation()
+            else setNotice({ text: '来源会话已不可用。', error: true })
+          }
+          document.addEventListener('sherlock:knowledge-source-result', reply)
+          const result = document.dispatchEvent(new CustomEvent('sherlock:knowledge-source-open', {
+            detail: { id: target.sessionId, requestId }, cancelable: true
+          }))
+          document.removeEventListener('sherlock:knowledge-source-result', reply)
+          if (result) setNotice({ text: '来源会话已不可用。', error: true })
+          setMenu(undefined)
+        }}>跳转至会话</button>}
         <button type="button" onClick={() => void fileAction('open', target)}>打开文件</button>
         <button type="button" onClick={() => void fileAction('reveal', target)}>在文件夹中显示</button>
         <hr />

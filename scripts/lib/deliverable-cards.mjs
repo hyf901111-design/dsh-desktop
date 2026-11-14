@@ -34,7 +34,7 @@ function deliveryFileType(path) {
  return {extension:extension.length<=16?extension.toUpperCase():'FILE',kind}
 }
 
-function DeliveryFileCard({path,sessionId,openFile,openSystemFile,canOpenSystem,localFiles,collect}) {
+function DeliveryFileCard({path,sessionId,sessionTitle,openFile,openSystemFile,canOpenSystem,localFiles,collect}) {
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
  const en=document.documentElement.dataset.odysseyLocale==='en',name=path.split(/[\\/]/).pop(),type=deliveryFileType(path)
  const [menu,setMenu]=react.useState(null),[notice,setNotice]=react.useState(null),[available,setAvailable]=react.useState(undefined),[busy,setBusy]=react.useState(false)
@@ -51,9 +51,9 @@ function DeliveryFileCard({path,sessionId,openFile,openSystemFile,canOpenSystem,
   setCollection(null)
   if(!collect||!collectFile)return
   let active=true
-  collectFile(sessionId,path,false).then(row=>{if(active&&row)setCollection({path,saved:row.saved})}).catch(()=>{})
+  collectFile(sessionId,path,false,sessionTitle).then(row=>{if(active&&row)setCollection({path,saved:row.saved})}).catch(()=>{})
   return()=>{active=false}
- },[path,sessionId,collect,collectFile])
+ },[path,sessionId,sessionTitle,collect,collectFile])
  react.useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
  react.useEffect(()=>{
   if(owner.abort.signal.aborted)owner.abort=new window.AbortController()
@@ -85,7 +85,7 @@ function DeliveryFileCard({path,sessionId,openFile,openSystemFile,canOpenSystem,
   setMenu(null);setNotice(null);const controller=owner.abort,active=()=>current()&&owner.abort===controller,tell=(...args)=>{if(active())report(...args)};owner.busy=true;setBusy(true)
   try {
    if(action==='save-knowledge'){
-    const row=await collectFile(sessionId,path,true)
+    const row=await collectFile(sessionId,path,true,sessionTitle)
     if(active()&&row){setCollection({path,saved:row.saved});tell(en?'Saved to Knowledge Base':'已收藏至知识库')}
     return
    }
@@ -132,13 +132,14 @@ function DeliveryFileCard({path,sessionId,openFile,openSystemFile,canOpenSystem,
  ]}),statusText?jsx('p',{className:'ew-delivery-status',role:annotation.status==='failed'?'alert':'status','data-error':annotation.status==='failed'||undefined,children:statusText}):null,liveNotice?jsx('p',{className:'ew-delivery-status',role:liveNotice.error?'alert':'status','data-error':liveNotice.error||undefined,children:liveNotice.text}):null,pptxAnnotationDeliveryCanRetry(window,annotation,sessionId)?jsx('button',{className:'ew-delivery-options',type:'button',disabled:busy,onClick:retry,children:en?'Resend revision request':'重新发送修改'}):null]})
 }
 
-function ProducedFiles({matched:paths,sessionId,openFile,openSystemFile,isLoopback,useHostDescription,text='',cwd}) {
+function ProducedFiles({matched:paths,sessionId,getSessionTitle,openFile,openSystemFile,isLoopback,useHostDescription,text='',cwd}) {
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs,en=document.documentElement.dataset.odysseyLocale==='en'
  const hostCanOpen=useHostDescription(description=>description?.canOpenPath===true)
+ const sessionTitle=sessionId?getSessionTitle?.(sessionId):undefined
  const [expanded,setExpanded]=react.useState(false)
  const explicit=new Set(deliveryPathsFromFinalText(text,cwd)),main=[],auxiliary=[]
  for(const path of paths)(explicit.has(path)||/\.(?:pdf|pptx?|odp|key|docx?|odt|pages|rtf|xlsx?|csv|tsv|ods|numbers|html?|md|txt|zip|7z|png|jpe?g|webp|svg|gif|mp[34]|wav|mov)$/i.test(path)?main:auxiliary).push(path)
- const cards=(list,collect=false)=>list.map(path=>jsx(DeliveryFileCard,{path,sessionId,openFile,openSystemFile,canOpenSystem:isLoopback&&hostCanOpen,localFiles:isLoopback===true,collect},path))
+ const cards=(list,collect=false)=>list.map(path=>jsx(DeliveryFileCard,{path,sessionId,sessionTitle,openFile,openSystemFile,canOpenSystem:isLoopback&&hostCanOpen,localFiles:isLoopback===true,collect},path))
  return jsxs('section',{className:'ew-delivery','aria-label':en?'Delivered files':'交付文件',children:[
   main.length?jsxs(react_jsx_runtime.Fragment,{children:[jsxs('div',{className:'ew-delivery-heading',children:[en?'Delivered files':'交付文件',jsx('span',{className:'ew-delivery-count',children:main.length})]}),jsx('div',{className:'ew-delivery-list',children:cards(main,true)})]}):null,
   auxiliary.length?jsx('div',{className:'ew-delivery-auxiliary',children:jsxs('details',{onToggle:event=>setExpanded(event.currentTarget.open),children:[jsx('summary',{children:en?'Supporting files ('+auxiliary.length+')':'辅助文件（'+auxiliary.length+'）'}),expanded?jsx('div',{className:'ew-delivery-list',children:cards(auxiliary)}):null]})}):null
@@ -182,10 +183,13 @@ export function deliveryCardsRuntime(){
 export function patchDeliverableCards(source){
  const marker='/* ework:delivery-cards:v1 */'
  const runtime=deliveryCardsRuntime()
+ const injectTitle=code=>code.includes('/* ework:delivery-session-title */')?code:exact(code,
+  'openSystemFile: path=>ctx.get("workspaces").openPath(path),',
+  'openSystemFile: path=>ctx.get("workspaces").openPath(path),\n                    /* ework:delivery-session-title */ getSessionTitle: id=>ctx.get("sessions")?.list.getSnapshot().byId?.[id]?.title,')
  if(source.includes(marker)){
   const start=source.indexOf(marker),end=source.indexOf('\n\t\t//#endregion',start)
   if(end<0||source.indexOf(marker,start+marker.length)!==-1)throw Error('Delivery cards runtime anchor drifted')
-  return patchPresentationCodeDelivery(patchHomeGuideDeliveryAccumulator(source.slice(0,start)+runtime+source.slice(end)))
+  return patchPresentationCodeDelivery(patchHomeGuideDeliveryAccumulator(injectTitle(source.slice(0,start)+runtime+source.slice(end))))
  }
  const start=source.indexOf('\t\tfunction ProducedFiles('),end=source.indexOf('\n\t\t//#endregion',start)
  if(start<0||end<0)throw Error('Delivery cards anchor missing: ProducedFiles')
@@ -194,7 +198,7 @@ export function patchDeliverableCards(source){
  source=exact(source,'const additions = producedPaths(context.state.calls.get(callId) ?? null).map((path) => ({','const additions = [...producedPaths(context.state.calls.get(callId) ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)].map((path) => ({')
  source=exact(source,'"conversationEvents",\n\t\t\t"connection"','"conversationEvents",\n            "workspaces",\n\t\t\t"connection"')
  source=exact(source,'isLoopback: connection.isLoopback,\n','isLoopback: connection.isLoopback,\n                    openSystemFile: path=>ctx.get("workspaces").openPath(path),\n')
- return patchPresentationCodeDelivery(patchHomeGuideDeliveryAccumulator(source))
+ return patchPresentationCodeDelivery(patchHomeGuideDeliveryAccumulator(injectTitle(source)))
 }
 
 export function patchDeliveryConversation(source){

@@ -93,7 +93,10 @@ export function installKnowledgeIpc({
           throw Error('文件不在这个会话的工作区。')
         }
         check()
-        return store.collectGenerated(path, { sessionId: args.sessionId, saved: args.saved })
+        return store.collectGenerated(path, {
+          sessionId: args.sessionId, saved: args.saved,
+          sessionTitle: typeof args.sessionTitle === 'string' ? args.sessionTitle.trim().slice(0, 160) || undefined : undefined
+        })
       }
       case 'edit': {
         const name = () => {

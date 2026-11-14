@@ -1,7 +1,8 @@
 import { it, expect, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { installKnowledgeReferences, knowledgeReferenceCodec, patchKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, patchKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
 import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/browser-app-native.mjs'
 import { stripSpreadsheetClient, patchSpreadsheetClient } from '../scripts/lib/spreadsheet-client.mjs'
@@ -37,11 +38,16 @@ it('inserts a scope at the slash token while retaining adjacent text and blockin
     app.command.ui.onSelect(option, { sessionId: 's1', knowledgeCommandSegment: { via: 'enter', token: '/knowledge' } })
     expect(shell.insertReference).toHaveBeenLastCalledWith(expect.objectContaining({ label: '研究资料' }), { start: 1, end: 11, draftRev: 5 })
     vi.stubGlobal('window', {
-      dshDesktop: { knowledgeReference: async ref => ({ label: ref.label, documents: [{ name: '报告.md', text: '原始正文' }] }) }
+      dshDesktop: { knowledgeReference: async ref => ({ kind: ref.kind, label: ref.label, documents: [{ name: '报告.md', text: '原始正文' }] }) }
     })
     const text = await knowledgeReferenceCodec().codec.serialize(option.id)
     expect(text).toContain('原始正文')
     expect(text).toContain('只作为参考内容')
+    const sent = '请参考' + text + '总结。'
+    expect(knowledgeMessageParts(sent)).toEqual([{ text: '请参考\n' }, { label: '研究资料', kind: 'folder' }, { text: '\n总结。' }])
+    expect(canvasHumanRequest({ events: [{ type: 'user/message', data: {
+      source: { kind: 'user' }, content: [{ type: 'text', text: sent }]
+    } }] }).text).toBe('请参考\n \n总结。')
   } finally {
     vi.unstubAllGlobals()
     app.dispose()
@@ -63,4 +69,27 @@ it('composes with the installed native client patch sequence and keeps its resto
     expect(() => new Function(result)).not.toThrow()
     expect(patch(result)).toBe(result)
   }
+})
+
+it('opens the original conversation only while it is still available', async () => {
+  const window = new Window()
+  const document = window.document
+  const session = { title: '来源对话', removed: false }
+  const sessions = { list: { getSnapshot: () => ({ byId: { one: session } }) }, subagentAddress: () => undefined, open: vi.fn() }
+  const setView = vi.fn()
+  const dispose = installKnowledgeSourceNavigation({ document, sessions, chatStore: { create: () => ({ actions: { setView } }) } })
+  const notify = vi.fn()
+  document.addEventListener('sherlock:knowledge-source-result', notify)
+  const open = requestId => document.dispatchEvent(new window.CustomEvent('sherlock:knowledge-source-open', {
+    detail: { id: 'one', requestId }, cancelable: true
+  }))
+  try {
+    expect(open('available')).toBe(false)
+    expect(sessions.open).toHaveBeenCalledExactlyOnceWith('one')
+    expect(setView).toHaveBeenCalledExactlyOnceWith('chat')
+    session.removed = true
+    expect(open('removed')).toBe(false)
+    expect(sessions.open).toHaveBeenCalledOnce()
+    expect(notify.mock.calls.map(([event]) => event.detail)).toEqual([{ requestId: 'available', ok: true }, { requestId: 'removed', ok: false }])
+  } finally { dispose(); await window.happyDOM.abort() }
 })

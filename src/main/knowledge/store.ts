@@ -208,8 +208,9 @@ export class KnowledgeStore {
         if (!options.saved && (!canAutomaticallyCollect(name) || state.excludedOrigins.includes(origin))) return
         const existing = state.documents.find(row => row.origin === origin)
         if (existing) {
-          if (options.saved && !existing.saved) {
-            const updated = { ...existing, saved: true }
+          if (options.saved && !existing.saved || options.sessionTitle && options.sessionTitle !== existing.sessionTitle) {
+            const updated = { ...existing, saved: existing.saved || options.saved === true,
+              sessionTitle: options.sessionTitle ?? existing.sessionTitle }
             await this.persist(state, { ...state, documents: state.documents.map(row => row === existing ? updated : row) }, directory, current)
             return publicDocument(updated)
           }

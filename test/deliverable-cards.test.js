@@ -215,11 +215,12 @@ it('automatically collects a primary deliverable and offers the explicit Knowled
   collectKnowledgeFile, researchFilesAvailable: async () => [true],
   showFileContextMenu: vi.fn(async () => 'save-knowledge')
  }
- const el = await render({ matched: [report, '/work/outputs/辅助.py'], cwd: '/work', sessionId: 's1' })
- expect(collectKnowledgeFile.mock.calls).toEqual([['s1', report, false]])
+ const el = await render({ matched: [report, '/work/outputs/辅助.py'], cwd: '/work', sessionId: 's1',
+   getSessionTitle: () => '行业研究' })
+ expect(collectKnowledgeFile.mock.calls).toEqual([['s1', report, false, '行业研究']])
  expect(el.textContent).toContain('已自动收录')
  await click(el.querySelector('.ew-delivery-options'))
  expect(window.dshDesktop.showFileContextMenu.mock.calls[0][0]).toContainEqual({ id: 'save-knowledge', label: '收藏至知识库' })
- expect(collectKnowledgeFile).toHaveBeenLastCalledWith('s1', report, true)
+ expect(collectKnowledgeFile).toHaveBeenLastCalledWith('s1', report, true, '行业研究')
  expect(el.textContent).toContain('已收藏至知识库')
 })
