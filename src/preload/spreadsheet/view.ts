@@ -20,6 +20,7 @@ type Item={label:string;action:string;value?:string;detail?:string;icon?:string;
 type Tool=Item & {toolbarCopy?:string;pressed?:boolean}
 type ChartGesture={chartId:string;pointerId:number;x:number;y:number;resize:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
 const toolbarDivider='<span class="ew-sheet-toolbar-divider" aria-hidden="true"></span>'
+const componentWidthKey='sherlock.spreadsheet.component-sidebar-width'
 const errorMessage=(e:unknown)=>String((e as Error)?.message??e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'')
 const button=(action:string,copy:string,options:{glyph?:string;label?:string;value?:string;className?:string;disabled?:boolean;pressed?:boolean;withLabel?:boolean}={})=>{
  const {glyph,label=copy,value,className='',disabled,pressed,withLabel}=options
@@ -72,6 +73,8 @@ class SpreadsheetView{
  private readonly componentCards=new Map<string,ComponentCard>()
  private componentJob?:ComponentJob
  private componentGesture?:ComponentGesture
+ private componentSidebarWidth?:number
+ private componentSidebarDrag?:{pointerId:number;startX:number;width:number;previous?:number}
  private componentTarget?:Selection
  private componentRequest?:string
  private libraryItems:LibraryItem[]=[]
@@ -87,7 +90,18 @@ class SpreadsheetView{
  constructor(private host:HTMLElement,private sessionId:string,private bridge:Bridge){
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-component-layer"></div><div class="ew-sheet-components" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-component-layer"></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  this.componentDivider.setAttribute('aria-controls',this.components.id)
+  try{
+   const width=Number(this.win.localStorage.getItem(componentWidthKey))
+   if(Number.isFinite(width)&&width>0)this.componentSidebarWidth=width
+  }catch{/* The divider works without storage. */}
+  this.componentDivider.addEventListener('pointerdown',this.startComponentSidebarResize)
+  this.componentDivider.addEventListener('pointermove',this.moveComponentSidebarResize)
+  this.componentDivider.addEventListener('pointerup',event=>this.finishComponentSidebarResize(event,true))
+  this.componentDivider.addEventListener('pointercancel',event=>this.finishComponentSidebarResize(event,false))
+  this.componentDivider.addEventListener('lostpointercapture',event=>this.finishComponentSidebarResize(event,false))
+  this.componentDivider.addEventListener('keydown',this.keyComponentSidebarResize)
   this.root.addEventListener('click',this.click)
   this.root.addEventListener('pointerover',this.hoverMenu)
   this.root.addEventListener('pointerout',event=>{
@@ -168,6 +182,7 @@ class SpreadsheetView{
  private get charts(){return this.root.querySelector<HTMLElement>('.ew-sheet-charts')!}
  private get componentLayer(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-layer')!}
  private get components(){return this.root.querySelector<HTMLElement>('.ew-sheet-components')!}
+ private get componentDivider(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-divider')!}
  private current(){return this.engine?.model.getActiveSheet()}
  private selected(){return this.current()?.getActiveRange()??this.current()?.getRange('A1')}
  private nativeCell(){return this.current()?.getRange(this.active)}
@@ -279,7 +294,7 @@ class SpreadsheetView{
    className:tool.action==='menu'?'dropdown':'',withLabel:tool.toolbarCopy!==undefined
   })).join('')).join(toolbarDivider)
  }
- private resize=()=>{this.fitRibbon();this.place();this.positionChart();this.renderChartObjects();this.positionComponents()}
+ private resize=()=>{this.layoutComponentSidebar();this.fitRibbon();this.place();this.positionChart();this.renderChartObjects();this.positionComponents()}
  private fitRibbon=()=>{
   const tools=this.chrome.querySelector<HTMLElement>('.ew-sheet-ribbon-tools')
   const more=this.chrome.querySelector<HTMLButtonElement>('[data-value=overflow]')
@@ -785,7 +800,65 @@ class SpreadsheetView{
   const input=dock?null:this.modal.querySelector('input');if(input){input.focus();input.select()}else this.modal.querySelector<HTMLElement>('header button')?.focus()
   this.resize()
  }
- private syncInspector(){this.root.toggleAttribute('data-sheet-inspector',!!this.modal.dataset.docked||!this.components.hidden)}
+ private syncInspector(){
+  const docked=!this.components.hidden&&!this.modal.dataset.docked
+  this.root.toggleAttribute('data-sheet-inspector',!!this.modal.dataset.docked||docked)
+  this.root.toggleAttribute('data-sheet-component-sidebar',docked)
+  this.componentDivider.hidden=!docked
+ }
+ private componentSidebarBounds(){
+  const available=this.root.clientWidth
+  const min=Math.min(224,Math.floor(available/2))
+  return {min,max:Math.max(min,Math.min(680,available-240))}
+ }
+ private layoutComponentSidebar(){
+  if(this.componentDivider.hidden)return
+  const {min,max}=this.componentSidebarBounds()
+  const defaultWidth=Math.min(340,Math.max(256,this.root.clientWidth*.36))
+  const width=Math.round(Math.min(max,Math.max(min,this.componentSidebarWidth??defaultWidth)))
+  this.root.style.setProperty('--sheet-component-sidebar-width',width+'px')
+  this.componentDivider.setAttribute('aria-valuemin',String(min))
+  this.componentDivider.setAttribute('aria-valuemax',String(max))
+  this.componentDivider.setAttribute('aria-valuenow',String(width))
+ }
+ private startComponentSidebarResize=(event:PointerEvent)=>{
+  if(event.button!==0||this.componentSidebarDrag)return
+  event.preventDefault()
+  this.componentDivider.focus({preventScroll:true})
+  this.componentDivider.setPointerCapture(event.pointerId)
+  this.componentSidebarDrag={pointerId:event.pointerId,startX:event.clientX,width:this.components.offsetWidth,previous:this.componentSidebarWidth}
+  this.root.dataset.sheetComponentResizing=''
+ }
+ private moveComponentSidebarResize=(event:PointerEvent)=>{
+  const drag=this.componentSidebarDrag
+  if(!drag||drag.pointerId!==event.pointerId)return
+  const {min,max}=this.componentSidebarBounds(),scale=this.root.clientWidth/Math.max(1,this.root.getBoundingClientRect().width)
+  this.componentSidebarWidth=Math.round(Math.min(max,Math.max(min,drag.width+(drag.startX-event.clientX)*scale)))
+  this.resize()
+ }
+ private finishComponentSidebarResize(event:PointerEvent,save:boolean){
+  const drag=this.componentSidebarDrag
+  if(!drag||drag.pointerId!==event.pointerId)return
+  this.componentSidebarDrag=undefined
+  delete this.root.dataset.sheetComponentResizing
+  if(save)this.saveComponentSidebarWidth()
+  else {this.componentSidebarWidth=drag.previous;this.resize()}
+ }
+ private keyComponentSidebarResize=(event:KeyboardEvent)=>{
+  const {min,max}=this.componentSidebarBounds(),step=event.shiftKey?48:16,width=this.components.offsetWidth
+  const targets:Record<string,number>={ArrowLeft:width+step,ArrowRight:width-step,Home:min,End:max}
+  if(!Object.hasOwn(targets,event.key))return
+  const target=targets[event.key]!
+  event.preventDefault()
+  event.stopPropagation()
+  this.componentSidebarWidth=Math.min(max,Math.max(min,target))
+  this.resize()
+  this.saveComponentSidebarWidth()
+ }
+ private saveComponentSidebarWidth(){
+  if(this.componentSidebarWidth===undefined)return
+  try{this.win.localStorage.setItem(componentWidthKey,String(this.componentSidebarWidth))}catch{/* The current width is still applied. */}
+ }
  private closeDialog(){this.chartEditor=undefined;this.componentPicking=false;this.componentTarget=undefined;this.clearComponentJob();delete this.modal.dataset.chartEditor;delete this.modal.dataset.rangePicking;delete this.modal.dataset.docked;this.root.querySelector<HTMLElement>('.ew-sheet-chart-preview')!.hidden=true;this.modal.hidden=true;this.syncInspector();this.modal.replaceChildren();this.resize()}
  private dialogFeedback(copy:string,error=false){
   const feedback=this.modal.querySelector<HTMLElement>('.ew-sheet-dialog-feedback')
