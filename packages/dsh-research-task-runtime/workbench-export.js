@@ -1,6 +1,6 @@
 // Serialize the visible content viewport to passive SVG, keeping charts as
 // vectors and reading the current DOM state (filters, values and scroll).
-export function serializeWorkbenchContent(root,width,height) {
+export function serializeWorkbenchContent(root,width,height,includeBackground=false) {
   const doc=root.ownerDocument,view=doc.defaultView,origin=root===doc.body?{left:0,top:0}:root.getBoundingClientRect(),parts=[],clips=[]
   const escape=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]))
   const n=v=>Math.round(v*100)/100,style=el=>view.getComputedStyle(el)
@@ -64,7 +64,23 @@ export function serializeWorkbenchContent(root,width,height) {
     if(clipped)parts.push('</g>')
   }
   walk(root)
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+n(width)+'" height="'+n(height)+'" viewBox="0 0 '+n(width)+' '+n(height)+'"><defs><clipPath id="ework-viewport"><rect width="100%" height="100%"/></clipPath>'+clips.join('')+'</defs><g clip-path="url(#ework-viewport)">'+parts.join('')+'</g></svg>'
+  const backdrop=includeBackground?'<rect width="100%" height="100%" fill="'+escape(background)+'"/>':''
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+n(width)+'" height="'+n(height)+'" viewBox="0 0 '+n(width)+' '+n(height)+'"><defs><clipPath id="ework-viewport"><rect width="100%" height="100%"/></clipPath>'+clips.join('')+'</defs><g clip-path="url(#ework-viewport)">'+backdrop+parts.join('')+'</g></svg>'
+}
+export async function workbenchImageExportRequest(doc,svg,title,format) {
+  const view=doc.defaultView
+  if(!view||!isPassiveWorkbenchSvg(svg,s=>new view.DOMParser().parseFromString(s,'image/svg+xml')))throw Error('组件导出内容无效')
+  const suggestedName=title.slice(0,120)+'.'+format
+  if(format==='svg')return {kind:'text',format,suggestedName,content:svg}
+  const image=new view.Image(),source='data:image/svg+xml;base64,'+view.btoa(unescape(encodeURIComponent(svg)))
+  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('组件图片生成失败'));image.src=source})
+  const canvas=doc.createElement('canvas'),scale=Math.min(2,Math.sqrt(24000000/(image.width*image.height)))
+  if(!Number.isFinite(scale)||image.width<1||image.height<1||image.width>16384||image.height>16384)throw Error('组件导出尺寸过大')
+  canvas.width=Math.floor(image.width*scale);canvas.height=Math.floor(image.height*scale)
+  const context=canvas.getContext('2d');if(!context)throw Error('组件图片生成失败')
+  if(format==='jpg'){context.fillStyle=doc.body.hasAttribute('data-ds-dark-theme')?'#131316':'#ffffff';context.fillRect(0,0,canvas.width,canvas.height)}
+  context.drawImage(image,0,0,canvas.width,canvas.height)
+  return {kind:'binary',format,suggestedName,base64:canvas.toDataURL(format==='jpg'?'image/jpeg':'image/png',.94).split(',')[1]}
 }
 export function isPassiveWorkbenchSvg(value,parse) {
   if(typeof value!=='string'||value.length>8*1024*1024||/<!DOCTYPE|<!ENTITY|<\?(?!xml\s)/i.test(value))return false

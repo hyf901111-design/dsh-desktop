@@ -20,25 +20,29 @@ const preload=join(dir,'preload.cjs'),main=join(dir,'main.mjs')
 await build({stdin:{resolveDir:root,contents:`
  import {ipcRenderer,contextBridge} from 'electron'
  import {mountSpreadsheet} from './src/preload/spreadsheet/view'
+ import {createResearchCanvasExportBridge} from './src/preload/research-canvas-export'
  import {mountUiLocalization} from './src/preload/ui-localization'
  document.addEventListener('DOMContentLoaded',()=>{
   mountUiLocalization(document)
   const mounted=mountSpreadsheet(document,{
    request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
    flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
+   saveImage:createResearchCanvasExportBridge((channel,value)=>ipcRenderer.invoke(channel,value)).save,
    subscribe:(name,callback)=>{const channel='spreadsheet:'+name;const f=(_,value)=>callback(value);ipcRenderer.on(channel,f);return()=>ipcRenderer.removeListener(channel,f)}
   })
   contextBridge.exposeInMainWorld('spreadsheetFixture',{admit:(prompt,refs)=>mounted.admit('demo-session',prompt,refs),flush:()=>mounted.flush('demo-session')})
  })
 `},bundle:true,platform:'browser',format:'cjs',target:'chrome140',define:{'process.env.NODE_ENV':'"production"'},loader:{'.svg':'dataurl'},external:['electron'],plugins:[inline],outfile:preload,logLevel:'warning'})
 await build({stdin:{resolveDir:root,contents:`
- import {app,BrowserWindow,clipboard,dialog,ipcMain} from 'electron'
+ import {app,BrowserWindow,clipboard,dialog,ipcMain,nativeImage} from 'electron'
  import {assertTrustedMainWindowEvent} from './src/main/ipc-trust'
  import {installSpreadsheet} from './src/main/spreadsheet/ipc'
+ import {registerResearchCanvasExportHandlers} from './src/main/state/research-canvas-export'
  import {ClientCapabilityService} from './src/main/state/client-capability-service'
  import {ComponentLibraryStore} from './src/main/state/component-library'
  import {readWorkbookFile} from './src/main/spreadsheet/files'
- import {readFileSync,writeFileSync} from 'node:fs'
+ import {existsSync,readFileSync,writeFileSync} from 'node:fs'
+ import {copyFile,writeFile} from 'node:fs/promises'
  import {join} from 'node:path'
  import {createServer} from 'node:http'
  import assert from 'node:assert/strict'
@@ -97,6 +101,11 @@ await build({stdin:{resolveDir:root,contents:`
    service=installSpreadsheet({ipcMain,getWindow:()=>win,visible:()=>capability.currentVisibleContext(),canWrite:()=>true,dataPath:app.getPath('userData'),library:()=>library,runtimeUrl:()=>runtimeUrl})
    const bind=()=>capability.bind({sessionId:profile.sessionId,mode:visibleMode,active:true})
    bind()
+   const imagePaths=[]
+   registerResearchCanvasExportHandlers({ipcMain,getMainWindow:()=>win,dependencies:{
+    showSaveDialog:async options=>{imagePaths.push(options.defaultPath);return {canceled:false,filePath:join(dir,options.defaultPath)}},
+    copyFile,writeFile,resolveExportSource:async()=>null
+   }})
    const xlsxPath=join(dir,'导出.xlsx'),csvPath=join(dir,'导出.csv')
    dialog.showOpenDialog=async()=>({canceled:!configuredImport,filePaths:configuredImport?[configuredImport]:[]})
    dialog.showSaveDialog=async(_window,options)=>{exportPaths.push(options.defaultPath);return {canceled:false,filePath:options.defaultPath.endsWith('.csv')?csvPath:xlsxPath}}
@@ -491,6 +500,21 @@ await build({stdin:{resolveDir:root,contents:`
    await click(chartControl('toggle-chart-data',chartId))
    await until(()=>js('!!document.querySelector(".ew-sheet-charts table").getClientRects().length'),'chart data is visible in the card without scrolling')
    assert.match(await js('document.querySelector(".ew-sheet-charts table").innerText'),/22/)
+   for(const format of ['svg','png','jpg']){
+    await click(chartControl('menu','chart-actions'))
+    await click(menuItem('menu','chart-export'))
+    await click(menuItem('chart-export-image',format))
+    const path=join(dir,'选区成交数据.'+format)
+    await until(()=>existsSync(path),'export chart as '+format)
+    const bytes=readFileSync(path)
+    if(format==='svg'){
+     assert.match(bytes.toString(),/选区成交数据/)
+     assert.match(bytes.toString(),/<svg[^>]+width=/)
+     assert.doesNotMatch(bytes.toString(),/显示数据|<foreignObject|<button/)
+    }else assert.ok(!nativeImage.createFromBuffer(bytes).isEmpty(),format+' image can be opened')
+   }
+   assert.deepEqual(imagePaths,['选区成交数据.svg','选区成交数据.png','选区成交数据.jpg'])
+   assert.equal(await js('!!document.querySelector(".ew-sheet-charts table").getClientRects().length'),true)
    await click(chartControl('menu','chart-actions'));await click(menuItem('toggle-chart-data',chartId))
    assert.equal(await js('!!document.querySelector(".ew-sheet-charts table").getClientRects().length'),false)
    await click(chartControl('menu','chart-actions'));await click(menuItem('rename-chart',chartId))

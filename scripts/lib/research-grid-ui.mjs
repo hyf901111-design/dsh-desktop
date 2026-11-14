@@ -211,19 +211,7 @@ export async function exportWorkbenchContent(card,node,format,adapters={}) {
     const bounds=body.getBoundingClientRect();if(!(bounds.width>0&&bounds.height>0))throw Error('请等待组件内容显示完成')
     svg=serializeWorkbenchContent(body,bounds.width,bounds.height)
   }
-  // A sandbox may report only passive SVG. Never mount its markup in the host.
-  if(!isPassiveWorkbenchSvg(svg,s=>new view.DOMParser().parseFromString(s,'image/svg+xml')))throw Error('组件导出内容无效')
-  const suggestedName=(node.displayName||node.title||node.name||'组件').slice(0,120)+'.'+format
-  let request={kind:'text',format:'svg',suggestedName,content:svg}
-  if(format!=='svg'){
-    const image=new view.Image(),source='data:image/svg+xml;base64,'+view.btoa(unescape(encodeURIComponent(svg)))
-    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('组件图片生成失败'));image.src=source})
-    const canvas=doc.createElement('canvas'),scale=Math.min(2,Math.sqrt(24000000/(image.width*image.height)));if(!Number.isFinite(scale)||image.width<1||image.height<1||image.width>16384||image.height>16384)throw Error('组件导出尺寸过大');canvas.width=Math.floor(image.width*scale);canvas.height=Math.floor(image.height*scale)
-    const context=canvas.getContext('2d');if(!context)throw Error('组件图片生成失败')
-    if(format==='jpg'){context.fillStyle=doc.body.hasAttribute('data-ds-dark-theme')?'#131316':'#ffffff';context.fillRect(0,0,canvas.width,canvas.height)}
-    context.drawImage(image,0,0,canvas.width,canvas.height)
-    request={kind:'binary',format,suggestedName,base64:canvas.toDataURL(format==='jpg'?'image/jpeg':'image/png',.94).split(',')[1]}
-  }
+  const request=await workbenchImageExportRequest(doc,svg,node.displayName||node.title||node.name||'组件',format)
   const save=adapters.save||view.dshDesktop?.researchCanvasExport?.save;if(!save)throw Error('当前客户端不支持导出')
   const result=await save(request);if(result?.status==='error')throw Error(result.message||'保存失败，请重试')
   return result

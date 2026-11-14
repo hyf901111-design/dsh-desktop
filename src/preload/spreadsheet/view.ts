@@ -7,6 +7,8 @@ import {sheetIcon as icon} from './icons'
 import {translateSpreadsheetCopy} from './ui-copy'
 import {browserIcons} from '../browser/icons'
 import {workbenchStylePalette} from '../../../packages/dsh-research-task-runtime/workbench-style.js'
+import {serializeWorkbenchContent,workbenchImageExportRequest} from '../../../packages/dsh-research-task-runtime/workbench-export.js'
+import type {ResearchCanvasExportRequest,ResearchCanvasExportResult} from '../../main/state/research-canvas-export'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
@@ -15,7 +17,7 @@ type LibraryItem={id:string;title:string;group:string;icon:string}
 type ComponentCard={instance:string;element:HTMLElement;refresh:number}
 type ComponentJob={card:ComponentCard;node:Record<string,unknown>;stage?:string;detail?:string}
 type ComponentGesture={card:ComponentCard;id:string;pointerId:number;startX:number;startY:number;resize:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
-type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;subscribe(event:'changed'|'flush'|'identity'|'component-progress',callback:(value:any)=>void):()=>void}
+type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;saveImage(input:ResearchCanvasExportRequest):Promise<ResearchCanvasExportResult>;subscribe(event:'changed'|'flush'|'identity'|'component-progress',callback:(value:any)=>void):()=>void}
 type Menu={key:string;label:string;anchor:HTMLElement;parents:{key:string;label:string;value:string}[]}
 type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean;shortcut?:string;checked?:boolean;remove?:{action:string;label:string}}
 type Tool=Item & {toolbarCopy?:string;pressed?:boolean}
@@ -23,6 +25,7 @@ type ChartGesture={chartId:string;pointerId:number;x:number;y:number;resize:bool
 type ObjectViewport=NonNullable<ReturnType<SheetEngine['objectViewport']>>
 const toolbarDivider='<span class="ew-sheet-toolbar-divider" aria-hidden="true"></span>'
 const componentWidthKey='sherlock.spreadsheet.component-sidebar-width'
+const chartExportFormats=['svg','png','jpg'] as const
 const enterpriseChartColors=Object.entries(workbenchStylePalette('enterprise')).filter(([key])=>/^chart-[1-8]$/.test(key))
 const errorMessage=(e:unknown)=>String((e as Error)?.message??e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'')
 const button=(action:string,copy:string,options:{glyph?:string;label?:string;value?:string;className?:string;disabled?:boolean;pressed?:boolean;withLabel?:boolean}={})=>{
@@ -675,10 +678,12 @@ class SpreadsheetView{
      {label:'重命名图表',action:'rename-chart',value,icon:'rename'},
      {label:card?.hasAttribute('data-chart-show-data')?'显示图表':'显示数据',action:'toggle-chart-data',value,icon:'grid',disabled:!card?.querySelector('table')},
      {label:'定位选区',action:'chart-source',value,icon:'pin'},
+     {label:'导出图表',action:'menu',value:'chart-export',icon:'download',disabled:!card?.querySelector('table')},
      {label:'复制图表',action:'duplicate-chart',value,icon:'duplicates'},
      {label:'删除图表',action:'confirm-remove-chart',value,icon:'trash',divider:true}
     ]
    }
+   case 'chart-export':return chartExportFormats.map(format=>({label:format.toUpperCase(),action:'chart-export-image',value:format,icon:'download'}))
    case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart',remove:this.editable?{action:'confirm-remove-chart',label:'删除图表'}:undefined}))
    case 'components':return (this.record.workbook?.components??[]).map(component=>({label:String(component.node.displayName||component.node.title),action:'component-show',value:component.componentId,icon:'grid',remove:this.editable?{action:'confirm-remove-component',label:'移除组件'}:undefined}))
    case 'overflow':return Array.from(this.chrome.querySelectorAll<HTMLButtonElement>('.ew-sheet-ribbon-tools button[hidden]')).map(b=>({
@@ -711,7 +716,7 @@ class SpreadsheetView{
   return []
  }
  private get cascadingMenu(){
-  return !!this.menu?.anchor.closest('.ew-sheet-ribbon')&&this.root.clientWidth>=400
+  return !!this.menu?.anchor.closest('.ew-sheet-ribbon,.ew-sheet-charts')&&this.root.clientWidth>=400
  }
  private menuPanels(){return [this.pop,...this.root.querySelectorAll<HTMLElement>('.ew-sheet-menu-cascade')]}
  private menuContains(target:Node){return this.menuPanels().some(panel=>panel.contains(target))}
@@ -1253,6 +1258,29 @@ class SpreadsheetView{
    button('toggle-chart-data','',{glyph:showData?'chart':'grid',label:showData?'显示图表':'显示数据',value:chart.chartId,pressed:showData,disabled:!data})+
    (this.editable?button('edit-chart','',{glyph:'edit',label:'编辑图表',value:chart.chartId})+'<button type="button" class="ew-sheet-button" data-chart-layout="resize" aria-label="调整图表大小" title="调整图表大小">'+icon('resize')+'</button>':'')+'</footer>'
  }
+ private async exportChartImage(chartId:string,format:string){
+  const chosen=chartExportFormats.find(item=>item===format)
+  const card=this.chartCards.get(chartId)?.element
+  const chart=this.record.workbook?.charts?.find(item=>item.chartId===chartId)
+  if(!chosen||!card||!chart||!card.querySelector('.ew-sheet-chart-plot'))return
+  // Export the chart view, including its title and legend, regardless of
+  // which side of the card is currently shown.
+  const content=card.cloneNode(true) as HTMLElement
+  content.removeAttribute('data-chart-show-data')
+  content.querySelectorAll('button,footer,.ew-sheet-chart-data').forEach(node=>node.remove())
+  const {width,height}=card.getBoundingClientRect()
+  Object.assign(content.style,{left:'0',top:'0',width:width+'px',height:height+'px',opacity:'0',pointerEvents:'none'})
+  content.setAttribute('aria-hidden','true')
+  this.chartLayer.append(content)
+  let svg:string
+  try{svg=serializeWorkbenchContent(content,width,height,true)}
+  finally{content.remove()}
+  const request=await workbenchImageExportRequest(this.doc,svg,chart.title,chosen)
+  if(this.disposed)return
+  const result=await this.bridge.saveImage(request)
+  if(result.status==='error')throw Error(result.message)
+  if(result.status==='saved')this.say('已导出 '+request.suggestedName)
+ }
  private contextAction=(command:SheetContextCommand)=>{
   this.readSelection()
   const action=command==='reference'?'reference-selection':command
@@ -1632,6 +1660,7 @@ class SpreadsheetView{
    else this.openMenu(value,trigger)
    return
   }
+  const chartId=action==='chart-export-image'?this.menu?.anchor.closest<HTMLElement>('[data-chart-id]')?.dataset.chartId:undefined
   this.closeMenu()
   switch(action){
    case 'reload':await this.load();return
@@ -1666,6 +1695,7 @@ class SpreadsheetView{
    case 'chart-pick-range':this.pickChartRange(true);return
    case 'chart-pick-cancel':this.pickChartRange(false);return
    case 'chart-pick-apply':this.pickChartRange(false,true);return
+   case 'chart-export-image':if(chartId)await this.exportChartImage(chartId,value);return
    case 'toggle-chart-data':{
     const card=this.chartCards.get(value)?.element
     if(!card?.querySelector('table'))return

@@ -301,6 +301,7 @@ function initializeUi(): void {
   spreadsheetView=mountSpreadsheet(document,{
     request:(method,input)=>ipcRenderer.invoke('spreadsheet:request',method,input),
     flushResult:input=>ipcRenderer.invoke('spreadsheet:flush-result',input),
+    saveImage:createResearchCanvasExportBridge((channel,value)=>ipcRenderer.invoke(channel,value)).save,
     subscribe:(name,callback)=>{const channel=name==='identity'?'integrations:identity-changed':'spreadsheet:'+name;const receive=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on(channel,receive);return()=>ipcRenderer.removeListener(channel,receive)}
   })
   window.addEventListener('unload',()=>spreadsheetView?.dispose(),{once:true})

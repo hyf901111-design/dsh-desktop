@@ -258,6 +258,7 @@ export const spreadsheetUiCopy: Record<string, string> = {
   '图表数据': 'Chart data',
   '显示数据': 'Show data',
   '显示图表': 'Show chart',
+  '导出图表': 'Export chart',
   '分类': 'Category',
   '删除图表': 'Delete chart',
   '图表已创建': 'Chart created',
