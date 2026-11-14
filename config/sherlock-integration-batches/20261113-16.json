@@ -12,7 +12,7 @@
         "featureName": "表格图表与组件交互",
         "branch": "codex/feat/spreadsheet-mode-20261113",
         "baseCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
-        "tipCommit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
+        "tipCommit": "5ffe37745164285d27402a1e63aa1f2c04669ed2",
         "commits": [
           {
             "commit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
@@ -20,9 +20,24 @@
               "c03d41c5c0d67cd402edcc920309ee14490983a2"
             ],
             "subject": "完善表格图表与组件的删除、重命名和定位交互"
+          },
+          {
+            "commit": "5ffe37745164285d27402a1e63aa1f2c04669ed2",
+            "parents": [
+              "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3"
+            ],
+            "subject": "支持从表格图表卡片导出 SVG、PNG 和 JPG"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-export.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-export.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-locale.js"
@@ -33,11 +48,23 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-spreadsheet-live.mjs"
           },
           {
             "status": "M",
             "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
@@ -73,8 +100,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
-            "completedAt": "2026-11-14T02:08:28.428Z",
+            "verifiedCommit": "5ffe37745164285d27402a1e63aa1f2c04669ed2",
+            "completedAt": "2026-11-14T02:14:00.473Z",
             "timeoutMs": 180000
           },
           {
@@ -84,24 +111,25 @@
             ],
             "outcome": "passed",
             "summary": "Electron 交互验证图表外观、数据切换、删除、重命名和平滑定位",
-            "verifiedCommit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
-            "completedAt": "2026-11-14T02:08:28.428Z",
+            "verifiedCommit": "5ffe37745164285d27402a1e63aa1f2c04669ed2",
+            "completedAt": "2026-11-14T02:14:00.473Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在隔离 Electron 中操作真实工作表及图表并验证持久化、动画帧、配色和选中/失焦布局。"
+          "summary": "在隔离 Electron 中操作真实工作表及图表并验证持久化、动画帧、配色和选中/失焦布局。 通过真实 IPC 写出 SVG、PNG 和 JPG，并检查默认文件名和图像有效性。"
         },
         "acceptanceCriteria": [
           "图表和组件可从工作簿底栏删除",
           "图表关闭按钮可删除图表",
           "图表标题和图例在失焦时保留",
           "双击图表、组件标题或使用菜单可改名",
-          "图表数据可切换查看，定位和编辑可平滑滚动"
+          "图表数据可切换查看，定位和编辑可平滑滚动",
+          "图表更多菜单导出 SVG、PNG 和 JPG"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T02:08:28.428Z"
+        "generatedAt": "2026-11-14T02:14:00.473Z"
       }
     },
     {
