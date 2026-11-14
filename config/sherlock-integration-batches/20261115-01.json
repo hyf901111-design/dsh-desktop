@@ -12,7 +12,7 @@
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
         "baseCommit": "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64",
-        "tipCommit": "7aab140d3a232f9565db747d590eb91884e7050d",
+        "tipCommit": "5481dd2e66b9de9840d9016ba8c3f7e0149d60cf",
         "commits": [
           {
             "commit": "7aab140d3a232f9565db747d590eb91884e7050d",
@@ -20,6 +20,13 @@
               "f77dc036ffdc4fdf6699c3a2b88f2d68492c3b64"
             ],
             "subject": "修复：知识库预览页签同步显示改名后的文件"
+          },
+          {
+            "commit": "5481dd2e66b9de9840d9016ba8c3f7e0149d60cf",
+            "parents": [
+              "7aab140d3a232f9565db747d590eb91884e7050d"
+            ],
+            "subject": "测试：等待知识库响应式布局完成再检查栏位"
           }
         ],
         "files": [
@@ -45,8 +52,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "7aab140d3a232f9565db747d590eb91884e7050d",
-            "completedAt": "2026-11-14T19:41:15.059Z",
+            "verifiedCommit": "5481dd2e66b9de9840d9016ba8c3f7e0149d60cf",
+            "completedAt": "2026-11-14T19:42:40.285Z",
             "timeoutMs": 120000
           },
           {
@@ -66,8 +73,8 @@
             ],
             "outcome": "passed",
             "summary": "25 项聚焦检查通过，新增实际预加载预览和原生页签绑定改名后同步更新且保留草稿测试。",
-            "verifiedCommit": "7aab140d3a232f9565db747d590eb91884e7050d",
-            "completedAt": "2026-11-14T19:41:15.059Z",
+            "verifiedCommit": "5481dd2e66b9de9840d9016ba8c3f7e0149d60cf",
+            "completedAt": "2026-11-14T19:42:40.285Z",
             "timeoutMs": 120000
           }
         ],
@@ -99,7 +106,7 @@
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T19:41:15.059Z"
+        "generatedAt": "2026-11-14T19:42:40.285Z"
       }
     }
   ],
