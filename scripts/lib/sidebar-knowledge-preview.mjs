@@ -5,6 +5,7 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
   const record = unreconciled?.key === key ? unreconciled : null
   const title = record?.source?.document.name
   const revision = react.useRef(null)
+  const commit = react.useRef(null)
   react.useEffect(() => {
     if (title && title !== tab.title) sidebar.updateTab(tab.id, { title }, scope)
   }, [title, tab.id, tab.title, scope.sessionId, sidebar])
@@ -13,6 +14,7 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
     let disposed = false
     let request = 0
     let checking = false
+    let checkAgain = false
     let failed = false
     let source
     const shared = fileId.length === 32
@@ -24,41 +26,61 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
       revision.current = null
       setRecord({ key, error: message || errorMessage() })
     }
+    const publish = next => {
+      source = next
+      revision.current = next.revision ? { key, value: next.revision } : null
+      setRecord({ key, source })
+    }
+    const commitSave = (saved, text) => {
+      if (source?.kind !== 'text' || source.document.updatedAt > saved.document.updatedAt) return
+      request++
+      publish({ ...source, ...saved, text })
+      void check()
+    }
     const load = async () => {
       const pending = ++request
       failed = false
       try {
         const next = await bridge.knowledgeFilePreview(fileId, scope.sessionId ?? '')
         if (disposed || pending !== request) return
-        source = next
-        revision.current = next.revision ? { key, value: next.revision } : null
-        setRecord({ key, source })
+        publish(next)
       } catch (error) {
         if (!disposed && pending === request) clear(error.message)
       }
     }
     const check = async () => {
-      if (!source || checking || document.hidden) return
+      if (!source || document.hidden) return
+      if (checking) { checkAgain = true; return }
       const pending = request
       checking = true
       try {
         const current = await bridge.knowledgeFilePreviewStatus(fileId, source.document.updatedAt)
         if (disposed || pending !== request || !source) return
         if (!current) return clear()
-        if (shared && current.updatedAt !== source.document.updatedAt) return load()
+        const sharingChanged = Boolean(current.share) !== Boolean(source.document.share)
+        if ((shared || source.kind === 'text') && (sharingChanged || current.updatedAt !== source.document.updatedAt)) {
+          await load()
+          return
+        }
         if (current.name !== source.document.name || Boolean(current.share) !== Boolean(source.document.share)) {
           source = { ...source, document: current }
           setRecord({ key, source })
         }
       } catch {
         if (!disposed && pending === request) clear()
-      } finally { checking = false }
+      } finally {
+        checking = false
+        if (checkAgain && !disposed) {
+          checkAgain = false
+          void check()
+        }
+      }
     }
     const accountChanged = () => clear('账号已切换，请从知识库重新打开文件。')
     const reopen = event => {
       if (event.detail !== fileId) return
       if (failed) void load()
-      else if (shared) void check()
+      else void check()
     }
     document.addEventListener('sherlock:knowledge-preview-reopen', reopen)
     document.addEventListener('sherlock:knowledge-account-changed', accountChanged)
@@ -67,9 +89,11 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
     document.addEventListener('visibilitychange', check)
     window.addEventListener('focus', check)
     const timer = shared ? window.setInterval(check, 15000) : null
+    commit.current = commitSave
     void load()
     return () => {
       disposed = true
+      if (commit.current === commitSave) commit.current = null
       if (timer !== null) window.clearInterval(timer)
       document.removeEventListener('sherlock:knowledge-preview-reopen', reopen)
       document.removeEventListener('sherlock:knowledge-account-changed', accountChanged)
@@ -79,11 +103,14 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
       window.removeEventListener('focus', check)
     }
   }, [key])
-  const write = react.useCallback(async text => {
+  const write = react.useCallback(async (text, baseRevision) => {
     const current = revision.current
     if (current?.key !== key) throw Error('文件编辑授权已失效。')
-    const result = await bridge.knowledgeFileSaveMarkdown(fileId, current.value, text)
-    if (revision.current === current) revision.current = { key, value: result.revision }
+    if (typeof baseRevision !== 'string') throw Error('文件编辑版本已失效。')
+    const apply = commit.current
+    const result = await bridge.knowledgeFileSaveMarkdown(fileId, baseRevision, text)
+    if (commit.current === apply) apply?.(result, text)
+    return result.revision
   }, [key])
   return { record, write }
 }
@@ -113,13 +140,26 @@ function KnowledgePassiveMedia({ mediaUrl, customData }) {
 }
 
 const marker = '/* sherlock:native-knowledge-editor:v1 */'
+const revisionMarker = '/* sherlock:knowledge-preview-revisions:v1 */'
 const scopedReplace = (source, from, to) => {
   if (source.split(from).length !== 2) throw Error('Native knowledge editor source drifted: ' + from.slice(0, 80))
   return source.replace(from, to)
 }
 
 export function patchSidebarKnowledgePreview(source) {
-  if (source.includes(marker)) return source
+  if (source.includes(revisionMarker)) return source
+  if (source.includes(marker)) {
+    const start = source.indexOf('function useKnowledgeEditorSource(')
+    const end = source.indexOf('function nativeKnowledgeViewer(', start)
+    if (start < 0 || end < 0) throw Error('Native knowledge editor source missing')
+    let rest = scopedReplace(source.slice(end),
+      'managedFile: Boolean(managedId),',
+      'managedFile: Boolean(managedId), managedRevision: managedSource?.revision,')
+    rest = scopedReplace(rest,
+      '!isPptx && (!managedId || managedWritable) && toolbar?.modes === true',
+      '!isPptx && (!managedId || managedWritable || toolbar?.dirty === true) && toolbar?.modes === true')
+    return source.slice(0, start) + revisionMarker + '\n' + useKnowledgeEditorSource.toString() + '\n' + rest
+  }
   const start = source.indexOf('function EditorHost(props) {')
   const end = source.indexOf('function EditorPathInput(props) {', start)
   if (start < 0 || end < 0) throw Error('Native knowledge editor host missing')
@@ -146,16 +186,17 @@ export function patchSidebarKnowledgePreview(source) {
   replace('const managedSource = managed?.source;', 'const managedSource = managed?.source;\n            const [managedDownloadError,setManagedDownloadError]=(0,react.useState)("");')
   replace('/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PptxToolbarAction, {hint:isPptx,label:pptToolbarLabel("folder"),', '!managedId && (0, react_jsx_runtime.jsx)(PptxToolbarAction, {hint:isPptx,label:pptToolbarLabel("folder"),')
   replace('isPptx && (0, react_jsx_runtime.jsx)(PptxToolbarAction, {hint:true,label:pptToolbarLabel("edit"),', 'isPptx && (!managedId || managedWritable) && (0, react_jsx_runtime.jsx)(PptxToolbarAction, {hint:true,label:pptToolbarLabel("edit"),')
-  replace('!isPptx && toolbar?.modes === true', '!isPptx && (!managedId || managedWritable) && toolbar?.modes === true')
+  replace('!isPptx && toolbar?.modes === true', '!isPptx && (!managedId || managedWritable || toolbar?.dirty === true) && toolbar?.modes === true')
   replace('!showEmpty && load.status === "binary" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BinaryDownload, {', `managedId && managedDownloadError && (0,react_jsx_runtime.jsx)("div",{role:"alert",className:sidebar_module_css_default.editorError,children:managedDownloadError}),
                             !showEmpty && load.status === "binary" && (managedId ? (0, react_jsx_runtime.jsx)("div",{className:sidebar_module_css_default.editorBinary,children:t("binaryNoPreview")}) : (0, react_jsx_runtime.jsx)(BinaryDownload, {`)
   replace('path\n\t\t\t\t\t\t\t}),\n\t\t\t\t\t\t\t!showEmpty && load.status === "ready"', 'path\n\t\t\t\t\t\t\t})),\n\t\t\t\t\t\t\t!showEmpty && load.status === "ready"')
   replace('path: annotationPreview?.path ?? path,', `path: managedSource?.url && ['docx','xlsx','pptx'].includes(load.viewer.id) ? managedSource.url : annotationPreview?.path ?? path,
                                 readOnly: managedId ? !managedWritable : undefined,
                                 managedFile: Boolean(managedId),
+                                managedRevision: managedSource?.revision,
                                 writeManagedText: managedId && managedWritable ? writeManagedText : undefined,`)
   replace('annotationSource: annotationPreview?.annotationSource,', `annotationSource: managedId ? (managedWritable && isPptx && scope.sessionId ? {sessionId:scope.sessionId,source:{kind:"knowledge-file",nodeId:managedId}} : undefined) : annotationPreview?.annotationSource,`)
-  const prefix = [marker, useKnowledgeEditorSource.toString(), nativeKnowledgeViewer.toString(), KnowledgePassiveMedia.toString()].join('\n')
+  const prefix = [marker, revisionMarker, useKnowledgeEditorSource.toString(), nativeKnowledgeViewer.toString(), KnowledgePassiveMedia.toString()].join('\n')
   let next = source.slice(0, start) + prefix + '\n' + host + source.slice(end)
   const pdfStart = next.indexOf('function PdfView(props) {')
   const pdfEnd = next.indexOf('function builtinViewers()', pdfStart)

@@ -1417,8 +1417,8 @@ export async function patchBetterSidebarPackage(packageRoot) {
   if (serverPatched !== serverSource) await writeFile(serverPath, serverPatched, 'utf8')
   const clientPath = path.join(packageRoot, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
-  const patched = source.includes('/* sherlock:native-knowledge-editor:v1 */')
-    ? source : patchSidebarKnowledgePreview(patchBetterSidebarClient(source))
+  const patched = patchSidebarKnowledgePreview(source.includes('/* sherlock:native-knowledge-editor:v1 */')
+    ? source : patchBetterSidebarClient(source))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
   const terminalPath = path.join(packageRoot, 'lib', 'client-terminal.js')
   const terminal = await readFile(terminalPath, 'utf8')
@@ -1456,7 +1456,7 @@ export function patchBetterSidebarEditor(source) {
     'view.destroy();\n\t\t\t\tsavingRef.current = false;\n\t\t\t\tviewRef.current = null;',
     'Files replacement editor save lock')
   const managedMarker = '/* sherlock:managed-text-editor:v1 */'
-  if (next.includes(managedMarker)) return next
+  if (next.includes(managedMarker)) return patchManagedMarkdownRevisions(next)
   const start = next.indexOf('function TextEditor(props) {')
   if (start < 0) throw Error('Native text editor source drifted')
   let editor = next.slice(start)
@@ -1471,7 +1471,61 @@ export function patchBetterSidebarEditor(source) {
   replace('}, [hostToolbar]);', '}, [hostToolbar, props.readOnly, props.writeManagedText]);')
   replace('editable && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children:', 'content !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children:')
   next = next.slice(0, start) + editor
-  return next
+  return patchManagedMarkdownRevisions(next)
+}
+
+function patchManagedMarkdownRevisions(source) {
+  const marker = '/* sherlock:managed-text-revisions:v1 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function TextEditor(props) {')
+  let editor = source.slice(start)
+  const replace = (from, to) => { editor = replaceExact(editor, from, to, 'Knowledge Markdown revision') }
+  replace('viewerId, content, truncated } = props;', 'viewerId, content: savedContent, truncated } = props;')
+  replace('const [saveState, setSaveState]', `${marker}
+    const [draftBase, setDraftBase] = (0, react.useState)(null);
+    const currentSave = (0, react.useRef)(null);
+    const managed = props.managedFile && viewerId === "markdown";
+    const latest = managed ? { text: savedContent, revision: props.managedRevision } : null;
+    const conflict = Boolean(latest && dirty && draftBase && draftBase.revision !== latest.revision);
+    const base = latest && draftBase && (dirty || draftBase.revision === latest.revision) ? draftBase : latest;
+    const content = base ? base.text : savedContent;
+    currentSave.current = { base, conflict };
+    const [saveState, setSaveState]`)
+  replace('doc: content,', 'doc: managed && base === draftBase && draft !== null ? draft : content,')
+  replace('if (update.docChanged) {', `if (update.docChanged) {
+        if (managed) setDraftBase(currentSave.current.base);`)
+  replace('if (view === null || savingRef.current || props.readOnly) return;', `const managedSave = props.managedFile ? currentSave.current : null;
+        if (view === null || savingRef.current || props.readOnly || managedSave?.conflict) return;`)
+  replace('props.writeManagedText(savedText)', 'props.writeManagedText(savedText, managedSave.base.revision)')
+  replace('api.fsWrite(scope, path, savedText)).then(() => {', 'api.fsWrite(scope, path, savedText)).then((savedRevision) => {')
+  replace('setDraft(currentText);', `if (managedSave?.base) setDraftBase({ text: managedSave.base.text, revision: savedRevision });
+                setDraft(currentText);`)
+  replace('const mdText = draft ?? content ?? "";', 'const mdText = (conflict ? savedContent : draft ?? content) ?? "";')
+  replace('dirty,\n\t\t\t\teditable,', 'dirty,\n\t\t\t\teditable: editable && !conflict,')
+  replace('children: [truncated === true && mode === "edit"', `children: [conflict && (0, react_jsx_runtime.jsxs)("div", {
+          className: sidebar_module_css_default.editorBanner,
+          role: "status",
+          children: [document.documentElement.dataset.odysseyLocale === 'en'
+            ? "A newer version is saved. Your draft is still in Edit."
+            : "已有新版正文，草稿仍在编辑页。",
+            (0, react_jsx_runtime.jsx)("button", {
+              type: "button",
+              className: sidebar_module_css_default.editorModeButton,
+              style: { marginInlineStart: 8 },
+              onClick: () => {
+                const view = viewRef.current;
+                if (view) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: savedContent ?? "" } });
+                setDraftBase(null);
+                setDraft(null);
+                setDirty(false);
+                setSaveState("idle");
+                setMode("preview");
+              },
+              children: document.documentElement.dataset.odysseyLocale === 'en' ? "Discard draft and reload" : "放弃草稿并载入新版"
+            })
+          ]
+        }), truncated === true && mode === "edit"`)
+  return source.slice(0, start) + editor
 }
 
 export function patchFigmaTerminalSurface(source) {
