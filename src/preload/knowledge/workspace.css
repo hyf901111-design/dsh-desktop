@@ -400,7 +400,7 @@
   padding: 14px 0;
   border-bottom: 1px solid var(--knowledge-line);
 }
-.knowledge-memory-row > span { display: grid; gap: 4px; margin-right: auto; }
+.knowledge-memory-row > span:not(.knowledge-file-icon) { display: grid; gap: 4px; margin-right: auto; }
 .knowledge-memory-row small, .knowledge-memory > p { color: var(--knowledge-muted); }
 .knowledge-memory-row [role=switch] { accent-color: var(--knowledge-accent); width: 18px; height: 18px; }
 

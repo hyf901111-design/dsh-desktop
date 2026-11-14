@@ -508,8 +508,18 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     await expect.poll(() => toggle.isChecked()).toBe(true)
     await pane.getByRole('button', { name: '打开完整知识库' }).click()
     const library = page.getByRole('region', { name: '知识库', exact: true })
-    await library.getByRole('region', { name: '经验记忆' }).waitFor()
+    const fullMemory = library.getByRole('region', { name: '经验记忆' })
+    await fullMemory.waitFor()
     expect(await library.getByRole('switch', { name: /启用记忆/ }).isChecked()).toBe(true)
+    for (const context of [fullMemory, pane.getByRole('region', { name: '经验记忆' })]) {
+      await context.getByText('记忆.md', { exact: true }).waitFor()
+      const spacing = await context.locator('.knowledge-memory-row').last().evaluate(row => {
+        const [icon, title] = row.children
+        return title.getBoundingClientRect().left - icon.getBoundingClientRect().right
+      })
+      expect(spacing).toBeGreaterThanOrEqual(8)
+      expect(spacing).toBeLessThanOrEqual(12)
+    }
     await files.click()
     await pane.getByRole('button', { name: '打开完整知识库' }).click()
     await library.getByRole('textbox', { name: '搜索文件' }).waitFor()
