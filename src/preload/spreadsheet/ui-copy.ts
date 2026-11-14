@@ -16,6 +16,7 @@ export const spreadsheetUiCopy: Record<string, string> = {
   '表格工具栏': 'Spreadsheet toolbar',
   '更多表格操作': 'More spreadsheet actions',
   '更多工具': 'More tools',
+  '更多组件页签': 'More component tabs',
   '表格菜单': 'Spreadsheet menu',
   '返回上一级': 'Back',
   '单元格地址': 'Cell address',

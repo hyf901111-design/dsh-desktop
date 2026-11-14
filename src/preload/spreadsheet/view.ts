@@ -103,7 +103,7 @@ class SpreadsheetView{
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
   for(const [key,value] of enterpriseChartColors)this.root.style.setProperty('--sheet-efund-'+key,value)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden><div class="ew-sheet-component-tabs" role="tablist" aria-label="侧栏组件" hidden></div><div class="ew-sheet-component-panels"></div></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden><div class="ew-sheet-component-tabbar" hidden><div class="ew-sheet-component-tabs" role="tablist" aria-label="侧栏组件"></div>'+button('menu','',{glyph:'more',label:'更多组件页签',value:'component-tabs'})+'</div><div class="ew-sheet-component-panels"></div></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
   this.componentDivider.setAttribute('aria-controls',this.components.id)
   this.modal.id=crypto.randomUUID()
   try{
@@ -317,7 +317,7 @@ class SpreadsheetView{
    className:tool.action==='menu'?'dropdown':'',withLabel:tool.toolbarCopy!==undefined
   })).join('')).join(toolbarDivider)
  }
- private resize=()=>{this.layoutComponentSidebar();this.fitRibbon();this.place();this.positionSheetObjects()}
+ private resize=()=>{this.layoutComponentSidebar();this.fitComponentTabs();this.fitRibbon();this.place();this.positionSheetObjects()}
  private fitRibbon=()=>{
   const tools=this.chrome.querySelector<HTMLElement>('.ew-sheet-ribbon-tools')
   const more=this.chrome.querySelector<HTMLButtonElement>('[data-value=overflow]')
@@ -708,6 +708,9 @@ class SpreadsheetView{
    case 'chart-export':return chartExportFormats.map(format=>({label:format.toUpperCase(),action:'chart-export-image',value:format,icon:'download'}))
    case 'charts':return (this.record.workbook?.charts??[]).map(chart=>({label:chart.title,action:'show-chart',value:chart.chartId,icon:'chart',remove:this.editable?{action:'confirm-remove-chart',label:'删除图表'}:undefined}))
    case 'components':return (this.record.workbook?.components??[]).map(component=>({label:String(component.node.displayName||component.node.title),action:'component-show',value:component.componentId,icon:'grid',remove:this.editable?{action:'confirm-remove-component',label:'移除组件'}:undefined}))
+   case 'component-tabs':return Array.from(this.componentTabs.querySelectorAll<HTMLButtonElement>('[role=tab][hidden]'),tab=>({
+    label:tab.textContent??'',action:'component-tab',value:tab.dataset.value
+   }))
    case 'overflow':return Array.from(this.chrome.querySelectorAll<HTMLButtonElement>('.ew-sheet-ribbon-tools button[hidden]')).map(b=>({
     label:b.getAttribute('aria-label')||b.textContent||'',detail:b.dataset.glyph?undefined:b.dataset.action==='menu'?b.textContent||undefined:undefined,
     action:b.dataset.action!,value:b.dataset.value,icon:b.dataset.glyph,disabled:b.disabled,
@@ -796,7 +799,7 @@ class SpreadsheetView{
    const child=cascade?parents[i]?.value:undefined
    const markup=(back?'<div class="ew-sheet-menu-title"><button type="button" role="menuitem" data-action="menu-back" aria-label="返回上一级" title="返回上一级">'+icon('left',16)+'</button><span>'+text(label)+'</span></div>':'')+this.items(key).map((item,index)=>{
     const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
-    const entry='<button type="button" '+(item.checked!==undefined?'role="menuitemradio" aria-checked="'+item.checked+'"':'role="menuitem"')+' data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu" aria-expanded="'+(!!child&&item.value===child)+'"':'')+'>'+glyph+'<span'+(['sheets','charts','components'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):item.checked?'<i class="ew-sheet-menu-check">'+icon('check',14)+'</i>':item.shortcut?'<kbd>'+text(item.shortcut)+'</kbd>':'')+'</button>'
+    const entry='<button type="button" '+(item.checked!==undefined?'role="menuitemradio" aria-checked="'+item.checked+'"':'role="menuitem"')+' data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu" aria-expanded="'+(!!child&&item.value===child)+'"':'')+'>'+glyph+'<span'+(['sheets','charts','components','component-tabs'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):item.checked?'<i class="ew-sheet-menu-check">'+icon('check',14)+'</i>':item.shortcut?'<kbd>'+text(item.shortcut)+'</kbd>':'')+'</button>'
     const remove=item.remove
     const row=remove?'<div class="ew-sheet-object-menu-row" role="none">'+entry+
      '<button type="button" role="menuitem" class="ew-sheet-menu-remove" data-action="'+remove.action+'" data-value="'+text(item.value)+'" aria-label="'+text(remove.label)+'" title="'+text(remove.label)+'">'+icon('trash')+'</button></div>':entry
@@ -829,7 +832,7 @@ class SpreadsheetView{
   if(!anchor.isConnected||!anchor.getClientRects().length){this.closeMenu();return}
   const parent=this.root.getBoundingClientRect(),ref=anchor.getBoundingClientRect(),width=this.pop.offsetWidth,height=this.pop.offsetHeight
   const fromHeader=this.headerActions?.contains(anchor)
-  const preferred=fromHeader||anchor.dataset.value==='overflow'?ref.right-parent.left-width:ref.left-parent.left
+  const preferred=fromHeader||anchor.dataset.value==='overflow'||anchor.dataset.value==='component-tabs'?ref.right-parent.left-width:ref.left-parent.left
   const left=Math.max(10,Math.min(preferred,parent.width-width-10))
   const below=Math.max(fromHeader?4:0,ref.bottom-parent.top+8)
   const top=below+height>parent.height-8?Math.max(8,ref.top-parent.top-height-8):below
@@ -1443,10 +1446,41 @@ class SpreadsheetView{
  private componentTab(id:string){
   return Array.from(this.componentTabs.querySelectorAll<HTMLButtonElement>('[role=tab]')).find(tab=>tab.dataset.value===id)
  }
+ private fitComponentTabs(){
+  const tabs=this.componentTabs,bar=tabs.parentElement!,more=bar.querySelector<HTMLButtonElement>('[data-value=component-tabs]')!
+  if(bar.hidden||this.components.inert){
+   more.hidden=true
+   if(this.menu?.anchor===more)this.closeMenu()
+   return
+  }
+  const controls=Array.from(tabs.querySelectorAll<HTMLButtonElement>('[role=tab]'))
+  const width=bar.clientWidth,active=controls.find(tab=>tab.dataset.value===this.activeComponent)
+  const focused=this.doc.activeElement
+  const previous=controls.map(tab=>tab.hidden)
+  const style=this.win.getComputedStyle(bar)
+  const minimum=parseFloat(style.getPropertyValue('--sheet-component-tab-width'))
+  const moreWidth=parseFloat(style.getPropertyValue('--sheet-component-tab-more-width'))
+  const gap=parseFloat(style.columnGap)
+  const count=controls.length*minimum+(controls.length-1)*gap<=width?controls.length:
+   Math.max(1,Math.floor((width-moreWidth)/(minimum+gap)))
+  const visible=new Set(active?[active]:[])
+  for(const tab of controls)if(visible.size<count)visible.add(tab)
+  controls.forEach(tab=>{tab.hidden=!visible.has(tab)})
+  more.hidden=controls.length<=count
+  if(this.menu?.anchor===more){
+   if(more.hidden){
+    this.closeMenu()
+    active?.focus({preventScroll:true})
+   }else if(controls.some((tab,index)=>tab.hidden!==previous[index])){
+    this.renderMenu({action:'component-tab',value:(focused as HTMLElement|null)?.dataset.value},this.pop.contains(focused))
+   }
+  }else if(focused===more&&more.hidden)active?.focus({preventScroll:true})
+  else if(controls.some(tab=>tab.hidden&&tab===focused))more.focus({preventScroll:true})
+ }
  private renderComponentTabs(components:Map<string,WorkbookComponent>){
-  const tabs=this.componentTabs
-  tabs.hidden=this.dockedComponents.length<2
-  const markup=tabs.hidden?'':this.dockedComponents.map(id=>{
+  const tabs=this.componentTabs,bar=tabs.parentElement!
+  bar.hidden=this.dockedComponents.length<2
+  const markup=bar.hidden?'':this.dockedComponents.map(id=>{
    const component=components.get(id)!,card=this.componentCards.get(id)!
    const title=text(String(component.node.displayName||component.node.title))
    const active=id===this.activeComponent
@@ -1454,8 +1488,6 @@ class SpreadsheetView{
   }).join('')
   if(markup===this.componentTabMarkup)return
   this.componentTabMarkup=markup;tabs.innerHTML=markup
-  const active=this.activeComponent&&this.componentTab(this.activeComponent)
-  if(active)active.scrollIntoView({block:'nearest',inline:'nearest',container:'nearest'} as ScrollIntoViewOptions)
  }
  private renderComponent(){
   const ids=new Set<string>(),book=this.record.workbook
@@ -1910,7 +1942,7 @@ class SpreadsheetView{
     }else this.selectDockedComponent(value)
     return
    }
-   case 'component-tab':this.selectDockedComponent(value);this.componentTab(value)?.focus({preventScroll:true});return
+   case 'component-tab':if(this.dockedComponents.includes(value)){this.selectDockedComponent(value);this.componentTab(value)?.focus({preventScroll:true})}return
    case 'confirm-remove-component':this.confirmComponentRemoval(value);return
    case 'component-remove':
     if(await this.run('component-remove',{componentId:value},'组件已移除')){
