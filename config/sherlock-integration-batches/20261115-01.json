@@ -11,44 +11,21 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "d7f4ff5dfd0db0febc27263f07e93e5ef3fa8156",
-        "tipCommit": "f6bbe26dc4cec25efbe2c643e21547add6906abb",
+        "baseCommit": "f6bbe26dc4cec25efbe2c643e21547add6906abb",
+        "tipCommit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
         "commits": [
           {
-            "commit": "0b06b7bd795a6fb700112e8e5d5fbcd001aee0c8",
+            "commit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
             "parents": [
-              "d7f4ff5dfd0db0febc27263f07e93e5ef3fa8156"
+              "f6bbe26dc4cec25efbe2c643e21547add6906abb"
             ],
-            "subject": "修复：知识库按照实际播放顺序引用幻灯片"
-          },
-          {
-            "commit": "f6bbe26dc4cec25efbe2c643e21547add6906abb",
-            "parents": [
-              "0b06b7bd795a6fb700112e8e5d5fbcd001aee0c8"
-            ],
-            "subject": "优化：为知识库预览和上传补充轻量动效"
+            "subject": "修复：对齐知识库记忆文件的图标和标题"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/knowledge/content.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/pptx/content.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/knowledge/workspace.css"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-content.test.ts"
           },
           {
             "status": "M",
@@ -58,58 +35,25 @@
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "主进程、预加载与共享类型检查通过。",
-            "verifiedCommit": "f6bbe26dc4cec25efbe2c643e21547add6906abb",
-            "completedAt": "2026-11-14T17:50:30Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
               "env",
               "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
               "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npx",
               "vitest",
               "run",
-              "test/knowledge-composer.test.js",
               "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts",
-              "test/figma-home-entry-spacing.test.js",
-              "test/command-popup-position-browser.test.js",
-              "test/client-capabilities.test.js",
-              "test/client-capabilities-bundle.test.js",
-              "test/skill-command-menu.test.ts",
-              "test/deliverable-cards.test.js",
-              "test/browser-app-native.test.js",
-              "test/command-popup-position.test.js",
-              "test/skill-command-patch.test.js",
-              "test/research-owned-files.test.ts",
-              "test/pptx-content.test.ts",
-              "test/pptx-scene.test.ts",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "22 个聚焦文件的 151 项检查通过，覆盖文件动效、减少动态效果、键盘引用，以及真实 PPTX 的播放顺序。",
-            "verifiedCommit": "f6bbe26dc4cec25efbe2c643e21547add6906abb",
-            "completedAt": "2026-11-14T17:50:30Z",
+            "summary": "12 项知识库实际前端渲染检查通过，包括左右两处记忆文件标题紧贴图标。",
+            "verifiedCommit": "fedb30bc2c145c2b2e2e8dbd271c76e12330ac84",
+            "completedAt": "2026-11-14T17:59:12Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实前端渲染验证暗浅主题、键盘与悬浮引用、减少动态效果、反复拖放和预览；最近搜索在隔离签名客户端验证。"
+          "summary": "隔离原生窗口通过最近搜索、上传完成行内状态、右栏切回保留搜索、中间保存记忆并在右侧重开。新间距已通过真实前端渲染。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -123,58 +67,15 @@
           "上传完成后正式文件行短暂显示完成状态，可立即预览或打开更多操作。",
           "右侧知识库切换文件资料与经验记忆，沿用同一启用开关和记忆 Markdown 编辑器。",
           "右侧文件行在文件大小和 @文件 之间立即切换，文件名位置稳定。拖放、预览和上传完成使用短淡入并尊重减少动态效果。",
-          "PowerPoint 正文的引用页码遵循演示文稿播放顺序。"
+          "PowerPoint 正文的引用页码遵循演示文稿播放顺序。",
+          "经验记忆文件名与图标按控件间距对齐。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。"
         ],
-        "generatedAt": "2026-11-14T17:50:30Z"
-      },
-      "merged": {
-        "mergeCommit": "833a796f3807a15d7e94b53d14b9d6b53a2e2dea",
-        "verificationCommit": "833a796f3807a15d7e94b53d14b9d6b53a2e2dea",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "833a796f3807a15d7e94b53d14b9d6b53a2e2dea",
-            "completedAt": "2026-11-14T17:50:43.435Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "833a796f3807a15d7e94b53d14b9d6b53a2e2dea",
-            "completedAt": "2026-11-14T17:50:43.435Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T17:50:43.435Z"
+        "generatedAt": "2026-11-14T17:59:12Z"
       }
     }
   ],
