@@ -240,6 +240,12 @@
 .knowledge-filter-summary, .knowledge-notice { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 37px; font-size: 12px; }
 .knowledge-filter-summary button, .knowledge-notice button { margin-left: auto; padding: 4px 9px; color: var(--knowledge-muted); }
 .knowledge-notice[role=alert] { color: var(--knowledge-danger); }
+.knowledge-filter-summary > .knowledge-tag {
+  max-width: min(100%, 18em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .knowledge-tag { flex: none; border-radius: 4px; padding: 2px 6px; color: var(--knowledge-muted); background: var(--knowledge-field); font-size: 11px; }
 .knowledge-tag[data-kind=star] { color: light-dark(#775207, #e7c981); background: light-dark(#fff2cc, #3b3221); }
 .knowledge-tag[data-kind=share] { color: var(--knowledge-accent); background: color-mix(in srgb, var(--knowledge-accent) 13%, var(--knowledge-bg)); }

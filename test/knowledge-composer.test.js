@@ -7,8 +7,8 @@ import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
 import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/browser-app-native.mjs'
 import { stripSpreadsheetClient, patchSpreadsheetClient } from '../scripts/lib/spreadsheet-client.mjs'
-import { stripResearchBoardHeaderClient } from '../scripts/lib/research-board-header-client.mjs'
-import { stripConversationPermissionDefault } from '../scripts/lib/conversation-permission-default.mjs'
+import { patchResearchBoardHeaderClient, stripResearchBoardHeaderClient } from '../scripts/lib/research-board-header-client.mjs'
+import { patchConversationPermissionDefault, stripConversationPermissionDefault } from '../scripts/lib/conversation-permission-default.mjs'
 
 it('anchors only a matched native filter receipt after its visible reply', () => {
   const revision = 'cd676d89-2f9b-4b0a-b09f-1ee934b39d66'
@@ -112,17 +112,20 @@ it('renders a verified shared citation as a labeled native button and sends only
 it('composes with the installed native client patch sequence and keeps its restore records valid', () => {
   const source = plugin => readFileSync('node_modules/@deepseek-ai/dsh-client-ui-' + plugin + '/lib/client.js', 'utf8')
   const installed = source('conversation')
-  const base = stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(installed))))
+  const withoutOuterPatches = value =>
+    stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(value))))
+  const base = stripKnowledgeConversation(withoutOuterPatches(installed))
   const knowledge = patchKnowledgeConversation(base)
-  const patched = patchSpreadsheetClient(patchBrowserAppNative(knowledge))
+  const patched = patchSpreadsheetClient(
+    patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(knowledge)))
+  )
   expect(() => new Function(patched)).not.toThrow()
   const loaded = vi.fn()
   const sandbox = { __ModuleLoader__: { load: loaded } }
   new Function('window', 'document', patched)(sandbox, undefined)
   new Function('window', 'document', patchKnowledgeConversation(installed))(sandbox, undefined)
   expect(loaded).toHaveBeenCalledTimes(2)
-  expect(stripKnowledgeConversation(patchKnowledgeConversation(installed))).toBe(installed)
-  expect(stripBrowserAppNative(stripSpreadsheetClient(patched))).toBe(knowledge)
+  expect(withoutOuterPatches(patched)).toBe(knowledge)
   expect(patchKnowledgeConversation(knowledge)).toBe(knowledge)
   expect(stripKnowledgeConversation(knowledge)).toBe(base)
   for (const [id, patch] of [['commands', patchSkillCommandPopup], ['input-trigger', patchSkillCommandLabels]]) {

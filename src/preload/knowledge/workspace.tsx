@@ -722,7 +722,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         {(narrowed || assistantFilter) && <div className="knowledge-filter-summary">
           <span aria-live="polite">找到 {rows.length} 个文件</span>
           {[...(assistantFilter && selectedFolder ? [selectedFolder.name] : []), ...(filter.sources ?? []).map(source => knowledgeSources[source]), ...(filter.formats ?? []).map(format => knowledgeFormats[format]),
-            ...(filter.savedOnly ? ['手动收藏'] : [])].map(label => <span key={label} className="knowledge-tag">{label}</span>)}
+            ...(filter.savedOnly ? ['手动收藏'] : [])].map(label => (
+            <span key={label} className="knowledge-tag" data-odyssey-truncated-tooltip>{label}</span>
+          ))}
           <div className="knowledge-filter-summary-actions">
             {undoAvailable && <button type="button" onClick={undoFilter}>撤销</button>}
             <button type="button" onClick={() => updateFilter(assistantFilter ? {
