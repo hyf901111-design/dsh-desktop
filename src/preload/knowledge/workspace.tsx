@@ -8,11 +8,14 @@ import {
 import type { KnowledgeViewAction, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
+import type { MemoryBridge } from '../../shared/memory'
+import { KnowledgeMemory } from './memory'
 import { KnowledgeIcon } from './icons'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './workspace.css?raw'
 
 interface Bridge {
+  memory?: MemoryBridge
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'download', args: { id: string }): Promise<boolean>
@@ -69,6 +72,7 @@ export function mountKnowledgeWorkspace(document: Document, host: WorkspaceSurfa
 }
 
 function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: WorkspaceSurfaceHost; document: Document }) {
+  const [tab, setTab] = useState<'files' | 'memory'>('files')
   const [local, setSnapshot] = useState(empty)
   const [received, setReceived] = useState<KnowledgeDocument[]>([])
   const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
@@ -255,6 +259,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         throw Error('请先回到知识库工作区。')
       }
       const current = filterState.current
+      setTab('files')
       if (request.action === 'inspect') {
         bridge.reply?.({ id, result: current })
         return
@@ -412,15 +417,19 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       <div className="knowledge-back" onClick={() => host.back()} dangerouslySetInnerHTML={{ __html: workspaceBackButton() }} />
       <strong>知识库</strong>
       <div className="knowledge-header-tabs">
-        <button type="button" aria-current="page">文件资料</button>
-        <button type="button" onClick={() => document.dispatchEvent(new CustomEvent('sherlock:memory-open'))}>经验记忆</button>
+        <button type="button" aria-current={tab === 'files' ? 'page' : undefined} onClick={() => setTab('files')}>文件资料</button>
+        <button type="button" aria-current={tab === 'memory' ? 'page' : undefined} onClick={() => {
+          setMenu(undefined)
+          setDraftFilter(undefined)
+          setTab('memory')
+        }}>经验记忆</button>
       </div>
       <button className="knowledge-panel-toggle" type="button" aria-label={panelOpen ? '收起右侧屏' : '打开右侧屏'}
         aria-expanded={panelOpen} onClick={() => document.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry=right]')?.click()}>
         <KnowledgeIcon name="panel" />
       </button>
     </header>
-    <div className="knowledge-body">
+    {tab === 'memory' ? bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} /> : <div className="knowledge-body">
       <nav className="knowledge-navigation" aria-label="知识库分类">
         {(Object.keys(knowledgeCategories) as KnowledgeCategory[]).map(category => <button key={category} type="button"
           aria-current={!filter.folderId && selection === category ? 'page' : undefined} onClick={() => selectCategory(category)}>
@@ -577,8 +586,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         {!preview.document.received && <button type="button" onClick={() => void fileAction('open', preview.document)}>用系统应用打开</button>}
         <KnowledgePreviewContent file={preview} loading={preview.loading} />
       </aside>}
-    </div>
-    {menu && (target || targetFolder) && <div className="knowledge-popup knowledge-action-menu"
+    </div>}
+    {tab === 'files' && menu && (target || targetFolder) && <div className="knowledge-popup knowledge-action-menu"
       style={{ top: menu.top, left: menu.left }} aria-label="更多操作">
       {target && <>
         <button type="button" onClick={() => void fileAction('open', target)}>打开文件</button>

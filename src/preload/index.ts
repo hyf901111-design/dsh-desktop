@@ -262,6 +262,10 @@ function initializeUi(): void {
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
+    memory: {
+      request: command => ipcRenderer.invoke('memory:request', command),
+      subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) }
+    },
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeAction: listener => {

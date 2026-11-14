@@ -275,3 +275,20 @@ i.knowledge-icon { background: currentColor; mask: var(--knowledge-icon) center 
 }
 
 .knowledge-filter-summary-actions { margin-left: auto; display: flex; gap: 4px; }
+.knowledge-memory {
+  width: min(100%, 830px);
+  margin-inline: auto;
+  overflow: auto;
+  padding: 24px;
+}
+.knowledge-memory h2 { margin: 0 0 16px; font-size: 16px; }
+.knowledge-memory-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--knowledge-line);
+}
+.knowledge-memory-row > span { display: grid; gap: 4px; margin-right: auto; }
+.knowledge-memory-row small, .knowledge-memory > p { color: var(--knowledge-muted); }
+.knowledge-memory-row [role=switch] { accent-color: var(--knowledge-accent); width: 18px; height: 18px; }
