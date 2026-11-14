@@ -9,42 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格组件与图表随工作表滚动",
+        "featureName": "表格图表与组件交互",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "54458ac1ed08647f96b49f6e1de203113bfadc7c",
-        "tipCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
+        "baseCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
+        "tipCommit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
         "commits": [
           {
-            "commit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
+            "commit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
             "parents": [
-              "54458ac1ed08647f96b49f6e1de203113bfadc7c"
+              "c03d41c5c0d67cd402edcc920309ee14490983a2"
             ],
-            "subject": "修复表格组件和图表摆放并优化易方达配色"
-          },
-          {
-            "commit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
-            "parents": [
-              "ece02790c19fd99c2132c2d2bb477ba8f4b82620"
-            ],
-            "subject": "居中表格右侧欢迎内容并简化快捷用例"
+            "subject": "完善表格图表与组件的删除、重命名和定位交互"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
           },
           {
             "status": "M",
             "path": "scripts/lib/notes-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/workbench-style-client.mjs"
           },
           {
             "status": "M",
@@ -53,6 +38,10 @@
           {
             "status": "M",
             "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/chart.ts"
           },
           {
             "status": "M",
@@ -73,10 +62,6 @@
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/spreadsheet/workbook.ts"
           }
         ],
         "checks": [
@@ -88,8 +73,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
-            "completedAt": "2026-11-14T01:27:10.867Z",
+            "verifiedCommit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
+            "completedAt": "2026-11-14T02:08:28.428Z",
             "timeoutMs": 180000
           },
           {
@@ -98,100 +83,25 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 聚焦验收覆盖原生滚动、图表拖动与缩放、边栏复位和配色",
-            "verifiedCommit": "c03d41c5c0d67cd402edcc920309ee14490983a2",
-            "completedAt": "2026-11-14T01:27:10.867Z",
+            "summary": "Electron 交互验证图表外观、数据切换、删除、重命名和平滑定位",
+            "verifiedCommit": "f7cf0bfb84dbf22a7fd47d028e4fb0f17c5328e3",
+            "completedAt": "2026-11-14T02:08:28.428Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离 Electron 中真实操作工作表，验证双向滚动、图表摆放与尺寸持久化、组件停靠以及默认和自定义配色。"
+          "summary": "在隔离 Electron 中操作真实工作表及图表并验证持久化、动画帧、配色和选中/失焦布局。"
         },
         "acceptanceCriteria": [
-          "组件和图表随工作表滚动且支持拖动缩放",
-          "组件可以收回侧边并选择主题",
-          "图表默认易方达配色并保留自定义设置",
-          "组件生成状态与表格工具栏样式符合反馈"
+          "图表和组件可从工作簿底栏删除",
+          "图表关闭按钮可删除图表",
+          "图表标题和图例在失焦时保留",
+          "双击图表、组件标题或使用菜单可改名",
+          "图表数据可切换查看，定位和编辑可平滑滚动"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T01:27:10.867Z"
-      },
-      "merged": {
-        "mergeCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-        "verificationCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-            "completedAt": "2026-11-14T01:27:18.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-            "completedAt": "2026-11-14T01:27:18.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-spreadsheet-live.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-            "completedAt": "2026-11-14T01:27:18.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
-            "verifiedCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-            "completedAt": "2026-11-14T01:27:18.387Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
-            "verifiedCommit": "fb59fb00d930c6ff8cbcc939cab3bbba5ca39765",
-            "completedAt": "2026-11-14T01:27:18.387Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T01:27:18.387Z"
+        "generatedAt": "2026-11-14T02:08:28.428Z"
       }
     },
     {
