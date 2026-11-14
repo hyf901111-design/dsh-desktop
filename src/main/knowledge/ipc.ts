@@ -1,10 +1,11 @@
+import type { KnowledgeContent } from './content'
 import { knowledgeReferenceOptions, resolveKnowledgeReference } from './references'
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
-import { readFile, realpath } from 'node:fs/promises'
+import { realpath } from 'node:fs/promises'
 import { isAbsolute, relative, sep } from 'node:path'
 import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
-import { knowledgeFormat, type KnowledgeEdit } from '../../shared/knowledge-library'
+import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
 
@@ -18,10 +19,11 @@ function identityMatches(a: { owner: string; generation: number }, b: typeof a) 
 }
 
 export function installKnowledgeIpc({
-  store, window, identity, generatedWorkspace, sharing
+  store, window, identity, generatedWorkspace, sharing, content
 }: {
   store: KnowledgeStore
   sharing: KnowledgeSharing
+  content: KnowledgeContent
   window: () => BrowserWindow | undefined
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
@@ -42,7 +44,7 @@ export function installKnowledgeIpc({
         check()
         return options
       }
-      case 'reference': return resolveKnowledgeReference(input, { store, sharing, owner: identity })
+      case 'reference': return resolveKnowledgeReference(input, { store, sharing, content, owner: identity })
       case 'snapshot': return store.snapshot()
       case 'received': return sharing.received(args.refresh === true)
       case 'share': {
@@ -110,18 +112,17 @@ export function installKnowledgeIpc({
         return store.snapshot()
       }
       case 'preview': {
-        if (typeof args.id === 'string' && /^[a-f0-9]{32}$/u.test(args.id)) {
-          const { document, data } = await sharing.read(args.id)
-          check()
-          const text = data.byteLength <= 1024 * 1024 && (knowledgeFormat(document.name) === 'markdown' || /\.txt$/iu.test(document.name))
-            ? data.toString('utf8') : undefined
-          return { document, text }
-        }
-        const { path, document } = await store.file(id(args.id))
-        const text = document.size <= 1024 * 1024 && (knowledgeFormat(document.name) === 'markdown' || /\.txt$/iu.test(document.name))
-          ? await readFile(path, 'utf8') : undefined
+        const received = typeof args.id === 'string' && /^[a-f0-9]{32}$/u.test(args.id)
+        const file = received ? await sharing.read(args.id as string) : await store.file(id(args.id))
         check()
-        return { document, text }
+        try {
+          const preview = await content.read(file.document, 'data' in file ? file.data : file.path)
+          check()
+          return { document: file.document, ...preview }
+        } catch (error) {
+          check()
+          return { document: file.document, previewError: error instanceof Error ? error.message : '文件正文无法预览。' }
+        }
       }
       case 'download': {
         if (typeof args.id !== 'string' || !/^[a-f0-9]{32}$/u.test(args.id)) throw Error('共享文件标识无效。')

@@ -1,6 +1,6 @@
-import { readFile } from 'node:fs/promises'
+import type { KnowledgeContent } from './content'
 import {
-  knowledgeCategories, knowledgeFormat, knowledgeSharedCategories, listKnowledgeDocuments,
+  knowledgeCategories, knowledgeSharedCategories, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument
 } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
@@ -8,11 +8,8 @@ import type { KnowledgeStore } from './store'
 
 type ReferenceKind = 'file' | 'category' | 'folder' | 'shared-category'
 type Reference = { kind: ReferenceKind; id: string; label: string }
-type Options = { store: KnowledgeStore; sharing: KnowledgeSharing; owner: () => { owner: string; generation: number } }
+type Options = { store: KnowledgeStore; sharing: KnowledgeSharing; content: KnowledgeContent; owner: () => { owner: string; generation: number } }
 const isShared = (id: string) => /^[a-f0-9]{32}$/u.test(id)
-const canReadText = (row: KnowledgeDocument) => row.size <= 2 * 1024 * 1024 &&
-  (knowledgeFormat(row.name) === 'markdown' || /\.(txt|csv|tsv)$/iu.test(row.name))
-
 export async function knowledgeReferenceOptions(store: KnowledgeStore, sharing: KnowledgeSharing) {
   const local = await store.snapshot()
   const received = await sharing.received().catch(() => [])
@@ -28,7 +25,7 @@ export async function knowledgeReferenceOptions(store: KnowledgeStore, sharing: 
   ]
 }
 
-export async function resolveKnowledgeReference(input: unknown, { store, sharing, owner }: Options) {
+export async function resolveKnowledgeReference(input: unknown, { store, sharing, content, owner }: Options) {
   const identity = owner()
   const current = () => {
     const actual = owner()
@@ -68,11 +65,16 @@ export async function resolveKnowledgeReference(input: unknown, { store, sharing
     const row: { id: string; name: string; sharer?: string; text?: string; truncated?: boolean } = {
       id: document.id, name: document.name, sharer: document.received?.owner
     }
-    if (budget > 0 && canReadText(document)) {
-      const text = document.received ? (await sharing.read(document.id)).data.toString('utf8') : await readFile((await store.file(document.id)).path, 'utf8')
+    if (budget > 0 && content.supports(document.name)) {
+      const source = document.received ? (await sharing.read(document.id)).data : (await store.file(document.id)).path
+      const preview = await content.read(document, source).catch(error => {
+        if (ref.kind === 'file') throw error
+        return undefined
+      })
+      const text = preview?.text ?? ''
       const limit = Math.min(ref.kind === 'file' ? 28000 : 6000, budget)
       row.text = text.slice(0, limit)
-      row.truncated = text.length > limit
+      row.truncated = preview?.truncated || text.length > limit
       budget -= row.text.length
     }
     rows.push(row)

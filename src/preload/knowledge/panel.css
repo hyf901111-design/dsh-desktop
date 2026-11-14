@@ -36,5 +36,11 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-panel-directory { display: flex; gap: 8px; align-items: center; width: 100%; min-height: 36px; }
 .knowledge-panel-directory small { margin-left: auto; }
 .knowledge-panel-state { color: var(--kb-panel-muted); margin: 10px 2px; font-size: 12px; }
-.knowledge-panel-content { margin: 0; padding: 8px 1px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; font: inherit; }
+.knowledge-preview-content pre { margin: 0; padding: 8px 1px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; font: inherit; }
 .knowledge-panel :focus-visible { outline: 2px solid #6caaf0; outline-offset: -1px; }
+
+.knowledge-preview-content { overflow:auto; overflow-wrap:anywhere; }
+.knowledge-preview-content article { line-height:1.6; }
+.knowledge-preview-content table { border-collapse:collapse; }
+.knowledge-preview-content :is(td,th) { border:1px solid #8885; padding:3px 6px; }
+.knowledge-preview-feedback { color:var(--dsw-alias-label-secondary,#858585); font-size:12px; }

@@ -72,7 +72,7 @@ it('preserves filters through return and leaves space around the selected row', 
     await page.getByRole('button', { name: '完成' }).click()
     await expect.poll(() => page.getByRole('row').count()).toBe(2)
     await library.getByRole('button', { name: '研究写作规范.md', exact: false }).first().click()
-    await expect.poll(() => library.getByRole('complementary', { name: '文件预览' }).textContent()).toContain('# 研究写作规范')
+    await expect.poll(() => library.getByRole('complementary', { name: '文件预览' }).textContent()).toContain('研究写作规范')
     const lines = await library.locator('.knowledge-navigation, .knowledge-body').evaluateAll(nodes =>
       nodes.map(node => node.getBoundingClientRect().bottom))
     expect(lines[0] - lines[1]).toBe(16)

@@ -5,12 +5,13 @@ import {
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
 import { KnowledgeIcon } from './icons'
+import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './panel.css?raw'
 
 type PanelBridge = {
   snapshot(): Promise<KnowledgeSnapshot>
   received(): Promise<KnowledgeDocument[]>
-  preview(id: string): Promise<{ document: KnowledgeDocument; text?: string }>
+  preview(id: string): Promise<KnowledgePreview>
   open(id: string): Promise<void>
   download(id: string): Promise<boolean>
 }
@@ -54,7 +55,7 @@ function KnowledgePanel({ id, document, bridge }: PanelProps) {
 }
 
 function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
-  const [file, setFile] = useState<{ document: KnowledgeDocument; text?: string }>()
+  const [file, setFile] = useState<KnowledgePreview>()
   const [error, setError] = useState('')
   useEffect(() => {
     let current = true
@@ -79,7 +80,7 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
       }}>{file.document.received ? '下载' : '在系统应用中打开'}</button>
     </header>
     {error && <p className="knowledge-panel-state" role="alert">{error}</p>}
-    {file.text !== undefined && <pre className="knowledge-panel-content">{file.text}</pre>}
+    <KnowledgePreviewContent file={file} />
   </>
 }
 

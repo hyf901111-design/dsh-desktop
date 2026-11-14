@@ -9,6 +9,7 @@ import type { KnowledgeViewAction, KnowledgeViewResult } from '../../main/knowle
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
 import { KnowledgeIcon } from './icons'
+import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './workspace.css?raw'
 
 interface Bridge {
@@ -18,7 +19,7 @@ interface Bridge {
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
   request(method: 'edit', args: KnowledgeEdit): Promise<KnowledgeSnapshot>
   request(method: 'pick' | 'import', args: Record<string, unknown>): Promise<KnowledgeImportResult>
-  request(method: 'preview', args: { id: string }): Promise<{ document: KnowledgeDocument; text?: string }>
+  request(method: 'preview', args: { id: string }): Promise<KnowledgePreview>
   request(method: 'open' | 'reveal', args: { id: string }): Promise<void>
   path(file: File): string
   subscribe(listener: () => void): () => void
@@ -85,7 +86,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean }>()
   const [dialog, setDialog] = useState<DialogState>()
   const [value, setValue] = useState('')
-  const [preview, setPreview] = useState<{ document: KnowledgeDocument; text?: string; native?: boolean }>()
+  const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
   const [dragging, setDragging] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const currentEpoch = useRef(0)
@@ -351,7 +352,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setPreview({ document: row, native: true })
       return
     }
-    setPreview({ document: row })
+    setPreview({ document: row, loading: true })
     try {
       const result = await bridge.request('preview', { id: row.id })
       if (request === previewRequest.current) setPreview(result)
@@ -573,8 +574,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         {preview.document.received && <button type="button" onClick={() => {
           void bridge.request('download', { id: preview.document.id }).catch(error => setNotice({ text: message(error), error: true }))
         }}>下载共享文件</button>}
-        {preview.text !== undefined ? <pre>{preview.text}</pre> : preview.document.received ? null :
-          <button type="button" onClick={() => void fileAction('open', preview.document)}>用系统应用打开</button>}
+        {!preview.document.received && <button type="button" onClick={() => void fileAction('open', preview.document)}>用系统应用打开</button>}
+        <KnowledgePreviewContent file={preview} loading={preview.loading} />
       </aside>}
     </div>
     {menu && (target || targetFolder) && <div className="knowledge-popup knowledge-action-menu"

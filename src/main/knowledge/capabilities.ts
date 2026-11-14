@@ -1,13 +1,13 @@
-import { readFile } from 'node:fs/promises'
+import type { KnowledgeContent } from './content'
 import type { createClientCapabilityRegistry } from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
-import { knowledgeFormat, listKnowledgeDocuments } from '../../shared/knowledge-library'
+import { listKnowledgeDocuments } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
 import type { KnowledgeViewBridge } from './view-bridge'
 
 type Handlers = NonNullable<Parameters<typeof createClientCapabilityRegistry>[0]>
 
-export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: KnowledgeSharing, view: KnowledgeViewBridge, current: () => boolean): Handlers {
+export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: KnowledgeSharing, content: KnowledgeContent, view: KnowledgeViewBridge, current: () => boolean): Handlers {
   const check = (signal?: AbortSignal) => {
     signal?.throwIfAborted()
     if (!current()) throw Error('知识库会话或账号已变化。')
@@ -62,14 +62,15 @@ export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: Know
         : await store.file(id)
       const { document } = file
       check(signal)
-      if (document.size > 2 * 1024 * 1024 || !(knowledgeFormat(document.name) === 'markdown' || /\.(txt|csv|tsv)$/iu.test(document.name))) {
-        throw Error('该格式的正文暂时无法从此工具读取。')
-      }
-      const text = 'data' in file ? file.data.toString('utf8') : await readFile(file.path, { encoding: 'utf8', signal })
+      const result = await content.read(document, 'data' in file ? file.data : file.path, signal)
+      if (!result) throw Error('该格式的正文暂时无法从此工具读取。')
       check(signal)
       return {
         status: 'succeeded',
-        data: { document, text: text.slice(offset, offset + 24000), offset, nextOffset: offset + 24000 < text.length ? offset + 24000 : null }
+        data: {
+          document, text: result.text.slice(offset, offset + 24000), offset,
+          nextOffset: offset + 24000 < result.text.length ? offset + 24000 : null, truncated: result.truncated
+        }
       }
     },
     editKnowledgeDocument: async ({ id, operation, name, folderId, value }, _context, signal) => {
