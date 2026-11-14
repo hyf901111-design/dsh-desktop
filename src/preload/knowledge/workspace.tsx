@@ -114,7 +114,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [completedImports, setCompletedImports] = useState<Record<string, number>>({})
   const [recent, setRecent] = useState<string[]>([])
   const searchSequence = useRef(0)
-  const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean }>()
+  const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean; pointer: boolean }>()
   const [dialog, setDialog] = useState<DialogState>()
   const [value, setValue] = useState('')
   const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
@@ -141,6 +141,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const target = menu && snapshot.documents.find(row => row.id === menu.id)
   const targetFolder = menu?.folder && snapshot.folders.find(row => row.id === menu.id)
   const filterButton = useRef<HTMLButtonElement>(null)
+  const actionMenu = useRef<HTMLDivElement>(null)
   const tableRows = useRef<HTMLTableSectionElement>(null)
   const previewRequest = useRef(0)
   const refresh = useRef<() => void>(() => {})
@@ -153,6 +154,25 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   useLayoutEffect(() => {
     viewRead.current = { snapshot, section: tab, ready, receivedStatus }
   })
+
+  useLayoutEffect(() => {
+    const popup = actionMenu.current
+    const view = document.defaultView
+    if (!menu || !popup || !view) return
+    const position = () => {
+      const { width, height } = popup.getBoundingClientRect()
+      const maxLeft = view.innerWidth - width - 8
+      const maxTop = view.innerHeight - height - 8
+      const left = menu.pointer && menu.left <= maxLeft ? menu.left : menu.left - width
+      const top = menu.pointer && menu.top > maxTop ? menu.top - height : menu.top
+      popup.style.left = `${Math.max(8, Math.min(maxLeft, left))}px`
+      popup.style.top = `${Math.max(8, Math.min(maxTop, top))}px`
+    }
+    position()
+    if (menu.pointer) popup.focus({ preventScroll: true })
+    view.addEventListener('resize', position)
+    return () => view.removeEventListener('resize', position)
+  }, [document, menu, target?.sessionId])
 
   useLayoutEffect(() => {
     if (previousResultScope.current === resultScope) return
@@ -592,11 +612,16 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     setPreview(undefined)
   }
 
-  function showMenu(event: React.MouseEvent<HTMLButtonElement>, id: string, folder?: boolean) {
+  function showMenu(event: React.MouseEvent<HTMLElement>, id: string, folder?: boolean) {
+    const pointer = event.type === 'contextmenu'
+    if (pointer) event.preventDefault()
+    if (busy) return
     const bounds = event.currentTarget.getBoundingClientRect()
-    const top = Math.min(bounds.bottom + 4, document.defaultView!.innerHeight - (folder ? 111 : 315))
+    const atCursor = pointer && (event.clientX !== 0 || event.clientY !== 0)
+    const top = atCursor ? event.clientY : bounds.bottom + 4
+    const left = atCursor ? event.clientX : bounds.right
     setDraftFilter(undefined)
-    setMenu(current => current?.id === id ? undefined : { id, top, left: bounds.right, folder })
+    setMenu(current => !pointer && current?.id === id ? undefined : { id, top, left, folder, pointer })
   }
 
   function selectCategory(category: KnowledgeCategory, folderId?: string) {
@@ -779,7 +804,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   const bytes = formatBytes(row.size)
                   const updatedAt = new Date(row.updatedAt)
                   const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
-                  return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}>
+                  return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
+                    onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
                     <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
                       <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
                       <span className="knowledge-file-content">
@@ -834,8 +860,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <KnowledgePreviewContent file={preview} loading={preview.loading} />
       </aside>}
     </div>}
-    {tab === 'files' && menu && (target || targetFolder) && <div className="knowledge-popup knowledge-action-menu"
-      style={{ top: menu.top, left: menu.left }} aria-label="更多操作">
+    {tab === 'files' && menu && (target || targetFolder) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
+      role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
         {target.sessionId && <button type="button" onClick={() => {
           const requestId = crypto.randomUUID()

@@ -235,6 +235,38 @@ it('preserves filters through return and leaves space around the selected row', 
   }
 })
 
+it('opens the same file actions from a row right-click and the more button', async () => {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion: 'reduce' })
+  try {
+    page.setDefaultTimeout(2000)
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库' })
+    const more = page.getByRole('button', { name: '消费行业周报.md的更多操作' })
+    const menu = library.locator('.knowledge-action-menu')
+    await more.click()
+    const actions = await menu.getByRole('button').allTextContents()
+    expect(actions).toContain('重命名')
+    await page.keyboard.press('Escape')
+    const row = library.getByRole('row').filter({ has: more })
+    await row.click({ button: 'right', position: { x: 210, y: 22 } })
+    expect(await menu.getByRole('button').allTextContents()).toEqual(actions)
+    const origin = await row.boundingBox()
+    const opened = await menu.boundingBox()
+    expect(Math.abs(opened.x - origin.x - 210)).toBeLessThan(2)
+    expect(Math.abs(opened.y - origin.y - 22)).toBeLessThan(2)
+    expect(await library.getByRole('complementary', { name: '文件预览' }).count()).toBe(0)
+    await row.click({ button: 'right', position: { x: origin.width - 10, y: 22 } })
+    const nearEdge = await menu.boundingBox()
+    expect(nearEdge.x + nearEdge.width).toBeLessThanOrEqual(1092)
+    expect(await menu.getByRole('button').allTextContents()).toEqual(actions)
+    await menu.getByRole('button', { name: '重命名' }).click()
+    expect(await library.getByRole('dialog', { name: '重命名文件' }).locator('input').inputValue()).toBe('消费行业周报')
+  } finally { await page.close() }
+})
+
 it('edits a Markdown preview and preserves a draft on revision conflicts', async () => {
   const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
   try {
