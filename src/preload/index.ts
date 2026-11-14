@@ -1,3 +1,4 @@
+import { mountKnowledgeWorkspace } from './knowledge/workspace'
 import { mountSpreadsheet } from './spreadsheet/view'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
@@ -259,6 +260,15 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
+    request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
+    path: file => safePathForFile(file, webUtils.getPathForFile),
+    subscribe: listener => {
+      ipcRenderer.on('knowledge:changed', listener)
+      return () => ipcRenderer.removeListener('knowledge:changed', listener)
+    }
+  })
+  window.addEventListener('unload', disposeKnowledge, { once: true })
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
     ...(process.platform==='darwin'||process.platform==='win32'?{
@@ -342,7 +352,7 @@ function initializeUi(): void {
     else await scheduledView.open()
   })
   window.addEventListener('unload', disposeHomeAppShortcuts, { once: true })
-  const resetIntegrationIdentity = () => { window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })

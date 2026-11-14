@@ -1,3 +1,5 @@
+import { KnowledgeStore } from './knowledge/store'
+import { installKnowledgeIpc } from './knowledge/ipc'
 import {routeBrowserUse} from './browser/route'
 import {registerBrowserApp} from './browser/service'
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
@@ -1453,6 +1455,11 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  const knowledgeIdentity = () => ({ owner: integrationOwner() || 'local', generation: accountService!.generation })
+  const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:changed')
+  })
+  installKnowledgeIpc({ store: knowledge, window: () => mainWindow, identity: knowledgeIdentity })
   try {
     memoryService = await MemoryService.open({
       root: join(app.getPath('userData'), 'memory'), encryption: safeStorage,

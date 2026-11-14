@@ -232,6 +232,9 @@ export class ScheduledTaskView {
               icon:'spreadsheet' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('spreadsheet')
             }]:[]),
             ...(wide&&this.surfaceHost?[{label:'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
+            ...(this.surfaceHost?[{label:'知识库',icon:'knowledge' as const,run:()=>{
+              this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:knowledge-open'))
+            }}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
