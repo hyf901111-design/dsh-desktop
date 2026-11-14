@@ -48,6 +48,11 @@ export function installKnowledgeIpc({
       }
       case 'reference': return resolveKnowledgeReference(input, { store, sharing, content, owner: identity })
       case 'snapshot': return store.snapshot()
+      case 'recent-searches': return store.recentSearches()
+      case 'remember-search': {
+        if (typeof args.query !== 'string') throw Error('搜索词无效。')
+        return store.rememberSearch(args.query)
+      }
       case 'received': return sharing.received(args.refresh === true)
       case 'markdown': return store.markdown(id(args.id))
       case 'save-markdown': {

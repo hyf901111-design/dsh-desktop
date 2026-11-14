@@ -112,3 +112,16 @@ it('reports bytes while importing, cancels before publishing, and lets the same 
   expect(completed.at(-1)).toEqual({ copied: 512 * 1024, total: 512 * 1024 })
   expect((await store.snapshot()).documents.map(row => row.id)).toEqual([document.id])
 })
+
+it('persists a bounded and deduplicated recent search history for each account', async () => {
+  const { open, switchAccount } = await fixture()
+  const store = open()
+  expect(await store.recentSearches()).toEqual([])
+  await store.rememberSearch('  周报  ')
+  await store.rememberSearch('合同')
+  expect(await store.rememberSearch('周报')).toEqual(['周报', '合同'])
+  for (let i = 0; i < 10; i++) await store.rememberSearch('检索 ' + i)
+  expect(await open().recentSearches()).toEqual(Array.from({ length: 6 }, (_, i) => '检索 ' + (9 - i)))
+  switchAccount()
+  expect(await store.recentSearches()).toEqual([])
+})

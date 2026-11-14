@@ -15,6 +15,7 @@ interface LibraryState {
   documents: StoredDocument[]
   folders: KnowledgeFolder[]
   excludedOrigins: string[]
+  recentSearches?: string[]
 }
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u
@@ -65,7 +66,8 @@ export class KnowledgeStore {
             row.storageName === '.' || row.storageName === '..' || !row.storageName)) {
         throw Error('invalid knowledge catalog')
       }
-      state = value
+      state = { ...value, recentSearches: Array.isArray(value.recentSearches)
+        ? value.recentSearches.filter(term => typeof term === 'string' && term.length <= 400).slice(0, 6) : [] }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw Error('知识库目录读取失败，原文件已保留。')
       state = initialState()
@@ -91,12 +93,14 @@ export class KnowledgeStore {
     finally { if (this.queues.get(identity.owner) === next) this.queues.delete(identity.owner) }
   }
 
-  private async persist(state: LibraryState, next: LibraryState, directory: string, current: () => void) {
+  private async persist(state: LibraryState, next: LibraryState, directory: string, current: () => void, notify = true) {
     await mkdir(directory, { recursive: true, mode: 0o700 })
     current()
     await atomicWrite(join(directory, 'catalog.json'), JSON.stringify(next))
     Object.assign(state, next)
-    try { this.changed() } catch { /* A closed window cannot roll back a committed catalog. */ }
+    if (notify) {
+      try { this.changed() } catch { /* A closed window cannot roll back a committed catalog. */ }
+    }
   }
 
   snapshot(): Promise<KnowledgeSnapshot> {
@@ -104,6 +108,22 @@ export class KnowledgeStore {
       documents: state.documents.map(publicDocument),
       folders: state.folders.map(folder => ({ ...folder }))
     }))
+  }
+
+  async recentSearches(): Promise<string[]> {
+    return this.run(async state => [...(state.recentSearches ?? [])])
+  }
+
+  async rememberSearch(input: string): Promise<string[]> {
+    const query = input.trim()
+    if (!query || query.length > 400) throw Error('搜索词无效。')
+    const key = (value: string) => value.normalize('NFKC').toLowerCase()
+    return this.run(async (state, directory, current) => {
+      const recent = state.recentSearches ?? []
+      const searches = [query, ...recent.filter(value => key(value) !== key(query))].slice(0, 6)
+      if (recent[0] !== query) await this.persist(state, { ...state, recentSearches: searches }, directory, current, false)
+      return searches
+    })
   }
 
   async file(id: string): Promise<{ document: KnowledgeDocument; path: string }> {
