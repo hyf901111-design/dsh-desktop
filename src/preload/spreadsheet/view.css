@@ -446,8 +446,9 @@ body[data-ework-spreadsheet-mode] :is(.univer-popup>section>div.univer-overscrol
 .ew-sheet-component-footer .ew-source-actions{display:flex;align-items:center;gap:6px;flex:none}
 .ew-sheet .ew-sheet-component-footer :is(.ew-sheet-button,.ew-sheet-source-details){display:grid;place-items:center;width:20px;min-width:20px;height:20px;padding:0;flex:none;border-radius:3px;color:inherit}
 .ew-sheet .ew-sheet-source-details:is(:hover,:focus-visible){background:var(--ss-hover)}
-.ew-sheet .ew-financial-footer:has(>.ew-sheet-native-source){height:auto;min-height:24px;flex-wrap:wrap;gap:1px 6px;padding-block:2px}
-.ew-sheet .ew-financial-footer>.ew-sheet-native-source{display:flex;align-items:center;gap:4px;min-width:48px;max-width:100%;height:20px;margin-inline-start:auto;padding:0 3px;border-radius:3px;color:inherit}
+.ew-sheet .ew-financial-footer:has(>.ew-sheet-native-source){gap:4px}
+.ew-sheet .ew-financial-footer:has(>.ew-sheet-native-source)>.ew-financial-source-details{display:grid;place-items:center;flex:none;width:20px;height:20px;padding:0;border-radius:3px}
+.ew-sheet .ew-financial-footer>.ew-sheet-native-source{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%;height:20px;padding:0 3px;border-radius:3px;color:inherit}
 .ew-sheet .ew-financial-footer>.ew-sheet-native-source:is(:hover,:focus-visible){background:var(--fw-control)}
 .ew-sheet-native-source>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ew-sheet-component-card:has([data-component-resize]) .ew-financial-footer{padding-inline-end:14px}
