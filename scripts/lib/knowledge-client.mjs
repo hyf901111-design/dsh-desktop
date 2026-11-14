@@ -45,6 +45,83 @@ export function knowledgeMessagePreview(text, project = knowledgeMessageParts) {
  return parts ? parts.map(part => part.label ? '[' + part.label + ']' : part.text).join('') : text
 }
 
+export function knowledgeFilterReceiptAnchors(flow, nodes, readTurn) {
+ const turns = new Map()
+ for (const entry of flow) {
+  const seat = entry.kind === 'node' ? nodes.get(entry.key) : undefined
+  const turn = entry.kind === 'execution' ? entry.turn : readTurn(seat)
+  if (turn == null) continue
+  const state = turns.get(turn) ?? {}
+  turns.set(turn, state)
+  if (seat?.kind === 'assistant-step' || seat?.kind === 'turn-tail' && !state.answer && !state.fallback) state.answer = entry.key
+  for (const key of entry.kind === 'execution' ? entry.nodeKeys : entry.kind === 'node' ? [entry.key] : []) {
+   const node = nodes.get(key)
+   if (node?.kind !== 'tool-call') continue
+   const pending = [node.data?.root], seen = new Set()
+   while (pending.length && seen.size < 128) {
+    const result = pending.pop()
+    if (!result || seen.has(result)) continue
+    seen.add(result)
+    if (Array.isArray(result.subCalls)) pending.push(...result.subCalls.slice().reverse())
+    if (result.kind !== 'tool-result' || result.isError || result.error || result.call?.name !== 'client_action') continue
+    if (typeof result.call.argsRaw !== 'string' || result.call.argsRaw.length > 32000) continue
+    let call
+    try { call = JSON.parse(result.call.argsRaw) } catch { continue }
+    if (!['knowledge.filter', 'knowledge.filter.undo'].includes(call?.capability) || typeof call.requestId !== 'string') continue
+    for (const block of result.content ?? []) {
+     if (block.type !== 'text' || typeof block.text !== 'string' || block.text.length > 262144) continue
+     let reply
+     try { reply = JSON.parse(block.text) } catch { continue }
+     const { revision, count, section } = reply?.data ?? {}
+     if (reply?.requestId !== call.requestId || reply.capability !== call.capability || reply.status !== 'succeeded' ||
+         section !== 'files' || !Number.isSafeInteger(count) || count < 0 ||
+         typeof revision !== 'string' || !/^[a-f0-9-]{36}$/u.test(revision)) continue
+     state.receipt = { revision, count, undone: call.capability === 'knowledge.filter.undo' }
+     state.fallback = entry.key
+     state.answer = undefined
+    }
+   }
+  }
+ }
+ return new Map([...turns.values()].flatMap(({ answer, fallback, receipt }) => receipt ? [[answer ?? fallback, receipt]] : []))
+}
+
+function KnowledgeFilterReceipt({ receipt }) {
+ const jsx = react_jsx_runtime.jsx
+ const [undo, setUndo] = react.useState(false)
+ const [undone, setUndone] = react.useState(false)
+ const english = document.documentElement.dataset.odysseyLocale === 'en'
+ react.useEffect(() => {
+  const refresh = () => setUndo(!receipt.undone && document.body.dataset.workspaceSurface === 'knowledge' &&
+   document.querySelector('.knowledge-file-list')?.dataset.knowledgeUndoRevision === receipt.revision)
+  const sidebar = new MutationObserver(refresh)
+  sidebar.observe(document.body, { attributes: true, attributeFilter: ['data-workspace-surface'] })
+  document.addEventListener('sherlock:knowledge-filter-state', refresh)
+  refresh()
+  return () => {
+   sidebar.disconnect()
+   document.removeEventListener('sherlock:knowledge-filter-state', refresh)
+  }
+ }, [receipt.revision, receipt.undone])
+ const undoFilter = () => {
+  const accepted = !document.dispatchEvent(new CustomEvent('sherlock:knowledge-filter-undo', {
+   cancelable: true, detail: { revision: receipt.revision }
+  }))
+  if (accepted) setUndone(true)
+  setUndo(false)
+ }
+ const reverted = undone || receipt.undone
+ return jsx('div', { className: 'ework-knowledge-filter-receipt', role: 'status', children: [
+  jsx('span', { 'aria-hidden': true, children: '✓' }, 'check'),
+  jsx('div', { children: [
+   jsx('strong', { children: reverted ? (english ? 'Filter restored' : '已恢复上一组筛选')
+    : (english ? 'File list updated' : '已更新文件列表') }, 'title'),
+   !undone && jsx('small', { children: english ? receipt.count + (receipt.count === 1 ? ' file' : ' files') : receipt.count + ' 个文件' }, 'count')
+  ] }, 'detail'),
+  undo && !undone && jsx('button', { type: 'button', onClick: undoFilter, children: english ? 'Undo' : '撤销' }, 'undo')
+ ] })
+}
+
 export function sharedKnowledgeCitation(value, doc = document) {
  const match=typeof value==='string'&&/^sherlock-knowledge:\/\/file\/([a-f0-9]{32})$/u.exec(value)
  if(!match)return
@@ -232,6 +309,13 @@ export function patchKnowledgeConversation(input) {
  const queryRailText='const text = parseResearchPrompt(content.text).text.replace(/\\s+/g, " ").trim();'
  const projectQueryText='('+knowledgeMessagePreview.toString()+')(parseResearchPrompt(content.text).text, '+knowledgeMessageParts.toString()+')'
  input=replace(input,queryRailText,'const text = '+projectQueryText+'.replace(/\\s+/g, " ").trim();')
+ const componentFlow='const conversationComponentFlow=react.useMemo(()=>conversationComponentRenderFlow(renderFlow,nodeStore,sessionId,conversationNodeTurn),[renderFlow,nodeStore,sessionId,conversationComponentChat]);'
+ input=replace(input,componentFlow,componentFlow+'\nconst knowledgeReceipts=react.useMemo(()=>('+knowledgeFilterReceiptAnchors.toString()+')(conversationComponentFlow,nodeStore,conversationNodeTurn),[conversationComponentFlow,nodeStore,conversationComponentChat]);')
+ const executionGroup='const ExecutionStatusGroup ='
+ input=replace(input,executionGroup,KnowledgeFilterReceipt.toString()+'\n'+executionGroup)
+ const receiptTail='const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];'
+ input=replace(input,receiptTail,receiptTail.replace('return receiptPlans', 'const workbenchReceipts=receiptPlans')+
+  'const receipt=knowledgeReceipts.get(entry.key);if(receipt)workbenchReceipts.push(react_jsx_runtime.jsx(KnowledgeFilterReceipt,{receipt},"knowledge:"+entry.key+":"+receipt.revision));return workbenchReceipts;')
  const sourceNavigation='/* ework:knowledge-source-navigation */'
  if(!input.includes(sourceNavigation)){
   const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
