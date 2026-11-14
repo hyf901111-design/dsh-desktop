@@ -1415,7 +1415,24 @@ async function bootstrap(): Promise<void> {
   void researchBoardsService.start().catch(error =>
     console.warn('[research-boards] unable to start collaboration', error)
   )
-  registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
+  registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, async (_event, action: string, input: unknown) => {
+    const account = accountService!
+    const generation = account.generation
+    const result = await account.invoke(action, input)
+    const runtimeUrl = runtime?.snapshot().url
+    if (runtimeUrl && generation !== account.generation) {
+      try {
+        const response = await fetch(new URL('/sherlock/hosted-ai/account-changed', runtimeUrl), {
+          method: 'POST', headers: { authorization: 'Bearer ' + accountEndpoint.token },
+          redirect: 'error', signal: AbortSignal.timeout(12_000)
+        })
+        await response.body?.cancel()
+      } catch {
+        // The runtime's catalog poll will recover if its server is restarting.
+      }
+    }
+    return result
+  })
   createWindow()
   desktopComputer = createComputerCandidates()
   const browserApp = registerBrowserApp({

@@ -150,3 +150,45 @@ test('a Seedream response completed after the account changes is discarded', asy
     await rejected
   } finally { service.dispose() }
 })
+
+test('account changes synchronize the catalog before the runtime acknowledges them', async () => {
+  const token = 'a'.repeat(64)
+  const model = { id: 'glm-5.3-flash', name: 'GLM 5.3 Flash', contextWindow: 200000 }
+  let catalog = { models: [model], image: true, generation: 1 }
+  let handler
+  const request = vi.fn(async () => Response.json(catalog))
+  const service = registerHostedAi({
+    llm: { registerAdapter: () => () => {} },
+    webServer: { register: route => { handler = route.handler; return () => { handler = undefined } } }
+  }, {
+    request, bridge: JSON.stringify({ url: 'http://127.0.0.1:6789/fund-research', token }),
+    pollMs: 60000
+  })
+  const notify = async (authorization = 'Bearer ' + token) => {
+    const result = { status: 0 }
+    await handler({
+      method: 'POST', socket: { remoteAddress: '127.0.0.1' },
+      headers: { host: '127.0.0.1:6789', authorization }
+    }, {
+      writeHead(status) { result.status = status; return this },
+      end() {}
+    })
+    return result.status
+  }
+  try {
+    await service.refresh()
+    const oldGenerate = service.image.capture()
+    catalog = { models: [], image: false }
+    expect(await notify('Bearer ' + 'b'.repeat(64))).toBe(403)
+    expect(service.image.available()).toBe(true)
+    expect(await notify()).toBe(204)
+    expect(service.image.available()).toBe(false)
+    await expect(oldGenerate({},{signal:new AbortController().signal,maxBytes:100})).rejects.toThrow('账号已切换')
+
+    catalog = { models: [model], image: true, generation: 3 }
+    expect(await notify()).toBe(204)
+    expect(service.image.available()).toBe(true)
+    expect(request).toHaveBeenCalledTimes(3)
+  } finally { service.dispose() }
+  expect(handler).toBeUndefined()
+})
