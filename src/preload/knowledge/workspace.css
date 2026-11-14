@@ -445,7 +445,7 @@
   tr[data-import-complete] .knowledge-import-progress {
     animation: knowledge-feedback-in var(--odyssey-motion-menu-duration, 140ms) ease-out;
   }
-  .knowledge-panel-rows[data-shared-view=true],
+  .knowledge-panel-rows[data-ready=true],
   .knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action button {
     animation: knowledge-state-in var(--odyssey-motion-menu-duration, 140ms) ease-out;
   }

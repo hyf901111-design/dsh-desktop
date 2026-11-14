@@ -6,12 +6,14 @@ import {patchFigmaInlineReferences} from '../scripts/lib/figma-inline-references
 import {patchSkillCommandPopup} from '../scripts/lib/skill-command-menu.mjs'
 
 let browser,bootstrap
-const conversation=patchFigmaInlineReferences(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).split('\n//# sourceMappingURL=')[0].replace('exports.SessionInputShell = SessionInputShell;','exports.InputBarForTest = InputBar;\nexports.SessionInputShell = SessionInputShell;')
+const installedConversation=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+const conversation=(installedConversation.includes('/* sherlock-figma-inline-reference-v1 */')?installedConversation:patchFigmaInlineReferences(installedConversation)).split('\n//# sourceMappingURL=')[0].replace('exports.SessionInputShell = SessionInputShell;','exports.InputBarForTest = InputBar;\nexports.SessionInputShell = SessionInputShell;')
 const commands=patchSkillCommandPopup(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-commands/lib/client.js','utf8')).replace('exports.PopupSelectController = PopupSelectController;','exports.PopupSelectViewForTest = PopupSelectView;\nexports.PopupSelectController = PopupSelectController;')
 const native=[...conversation.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1])).filter(css=>css.includes('.uV2eYG_chip')).join('\n')
 beforeAll(async()=>{
  bootstrap=(await build({stdin:{resolveDir:process.cwd(),loader:'js',contents:`
  import * as React from 'react';import * as JSX from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';
+ import {installKnowledgeReferences} from './scripts/lib/knowledge-client.mjs';
  const descriptors=[];window.__ModuleLoader__={load:descriptor=>descriptors.push(descriptor)};
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})});
  const store=value=>{const listeners=new Set();return {getSnapshot:()=>value,set:next=>{value=next;for(const listener of listeners)listener()},subscribe:listener=>{listeners.add(listener);return()=>listeners.delete(listener)}}};
@@ -36,7 +38,9 @@ beforeAll(async()=>{
   const useInput=selector=>selector(React.useSyncExternalStore(shell.state.subscribe,shell.state.getSnapshot));
   const useSession=selector=>selector({subagent:null,running:false,removed:false});const useLexicon=selector=>selector(new Map());
   const root=createRoot(document.querySelector('#fixture'));root.render(React.createElement(client.InputBarForTest,{useInput,useSession,inputActions:shell.actions,keyboard:shell,useNotices:selector=>selector(null),useLexicon,useMenuLauncher:selector=>selector(null),useProjection:()=>undefined,sessionId:'current',variant:'hero',renderSlot:()=>null,t:key=>key,resolveSubmitMode:()=> 'queue',researchArtifactReferences:[],eworkNotes:true}));
-  window.fixture={shell,seed,root};
+  const sessions={list:{getSnapshot:()=>({current:'current'})},subagentAddress:()=>undefined};
+  const knowledge=installKnowledgeReferences({sessions,getInput:()=>shell,getPending:()=>null});
+  window.fixture={shell,seed,root,knowledge};
  };
  window.mountPopup=()=>{
   const client=descriptors[1].factory(require),popup=new client.PopupSelectController({consume:()=>{},focusComposer:()=>{}});
@@ -111,6 +115,32 @@ it('uses the current textarea range for deletion even before a stale chip select
   expect(prevented).toBe(false)
   await page.locator('textarea').press('Meta+A');await page.locator('textarea').press('Backspace')
   await expect.poll(()=>page.evaluate(()=>window.fixture.shell.snapshot.draft)).toBe('');expect(await page.locator('[data-decoration=chip]').count()).toBe(0)
+ }finally{await page.close()}
+})
+it.each(['no-preference','reduce'])('acknowledges a new knowledge reference with %s motion and preserves typing',async reducedMotion=>{
+ const {page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion})
+  const input=page.locator('textarea')
+  await input.evaluate(el=>{el.dataset.odysseyFileReferenceSession='current'})
+  await page.evaluate(()=>{
+   const {shell,knowledge}=window.fixture
+   shell.setDraft('请参考 /knowledge 写周报')
+   const start=shell.snapshot.draft.indexOf('/knowledge')
+   knowledge.command.ui.onSelect({id:JSON.stringify({kind:'folder',id:'folder',label:'研究资料'})},{
+    sessionId:'current',knowledgeCommandSegment:{via:'menu',span:{start,end:start+10,draftRev:shell.snapshot.draftRev}}
+   })
+  })
+  const chip=page.locator('[data-reference-source="knowledge-reference"] .uV2eYG_chipLabel')
+  await chip.waitFor()
+  expect(await chip.evaluate(el=>{
+   const css=getComputedStyle(el)
+   return [css.animationName,css.animationDuration,el.textContent]
+  })).toEqual(reducedMotion==='reduce'?['none','0s','研究资料']:['odyssey-knowledge-reference-in','0.14s','研究资料'])
+  await expect.poll(()=>input.evaluate(el=>el===document.activeElement)).toBe(true)
+  await page.keyboard.insertText('帮我')
+  await expect.poll(()=>page.evaluate(()=>window.fixture.shell.snapshot.draft)).toBe('请参考 \uFFFC 帮我写周报')
+  expect(await page.evaluate(()=>window.fixture.shell.snapshot.occurrences.length)).toBe(1)
+  expect(errors).toEqual([])
  }finally{await page.close()}
 })
 it('keeps the actual skill popup geometry stable while its asynchronous selection settles',async()=>{
