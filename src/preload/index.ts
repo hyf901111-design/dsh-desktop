@@ -261,11 +261,12 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  const knowledgeMemory: import('../shared/memory').MemoryBridge = {
+    request: command => ipcRenderer.invoke('memory:request', command),
+    subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) }
+  }
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
-    memory: {
-      request: command => ipcRenderer.invoke('memory:request', command),
-      subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) }
-    },
+    memory: knowledgeMemory,
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeImportProgress: listener => {
@@ -286,6 +287,7 @@ function initializeUi(): void {
   })
   window.addEventListener('unload', disposeKnowledge, { once: true })
   const disposeKnowledgePanels = mountKnowledgePanels(document, {
+    memory: knowledgeMemory,
     snapshot: () => ipcRenderer.invoke('knowledge:request', 'snapshot'),
     received: refresh => ipcRenderer.invoke('knowledge:request', 'received', { refresh }),
     preview: id => ipcRenderer.invoke('knowledge:request', 'preview', { id }),

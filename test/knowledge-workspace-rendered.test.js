@@ -28,7 +28,13 @@ beforeAll(async () => {
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
       window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
       window.markdown = { text: '# 研究写作规范', revision: 'first' }
+      let useMemory = false
+      const memory = { request: async command => {
+        if (command.type === 'settings') useMemory = command.use
+        return { owner: 'test-account', settings: { use: useMemory } }
+      } }
       mountKnowledgePanels(document, {
+        memory,
         snapshot: async () => structuredClone(window.data),
         preview: async id => ({ document: documents.find(row => row.id === id), text: window.markdown.text }),
         markdown: async () => ({ ...window.markdown }),
@@ -58,6 +64,7 @@ beforeAll(async () => {
         entry.resolve(document)
       }
       mountKnowledgeWorkspace(document, host, {
+        memory,
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
           if (method === 'recent-searches') return [...recentSearches]
@@ -421,5 +428,36 @@ it('reuses a manual search without moving the field or losing the format filter'
     await library.getByRole('button', { name: '清除搜索' }).click()
     await field.press('Escape')
     expect(await recent.count()).toBe(0)
+  } finally { await page.close() }
+})
+
+it('switches the right knowledge pane to the shared memory settings and keeps the file search on return', async () => {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<aside data-knowledge-panel-host style="width:340px;height:720px"></aside>')
+    await page.addScriptTag({ content: bundle })
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    const files = pane.getByRole('button', { name: '文件资料', exact: true })
+    const memory = pane.getByRole('button', { name: '经验记忆', exact: true })
+    await pane.getByRole('searchbox', { name: '搜索知识库文件' }).fill('写作')
+    await memory.click({ timeout: 1600 })
+    expect(await pane.getByRole('searchbox', { name: '搜索知识库文件' }).isVisible()).toBe(false)
+    const toggle = pane.getByRole('switch', { name: /启用记忆/ })
+    await toggle.check()
+    expect(await pane.getByText('记忆.md').isVisible()).toBe(true)
+    await files.click()
+    expect(await pane.getByRole('searchbox', { name: '搜索知识库文件' }).inputValue()).toBe('写作')
+    expect(await pane.getByRole('button', { name: /研究写作规范.md/ }).first().isVisible()).toBe(true)
+    await memory.click()
+    await expect.poll(() => toggle.isChecked()).toBe(true)
+    await pane.getByRole('button', { name: '打开完整知识库' }).click()
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('region', { name: '经验记忆' }).waitFor()
+    expect(await library.getByRole('switch', { name: /启用记忆/ }).isChecked()).toBe(true)
+    await files.click()
+    await pane.getByRole('button', { name: '打开完整知识库' }).click()
+    await library.getByRole('textbox', { name: '搜索文件' }).waitFor()
   } finally { await page.close() }
 })

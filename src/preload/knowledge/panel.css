@@ -30,6 +30,15 @@ body[data-ds-dark-theme] .knowledge-panel {
 .knowledge-panel button:disabled { opacity: .45; cursor: default; }
 .knowledge-panel button:is(:hover, :focus-visible):not(:disabled) { background: var(--kb-panel-field); }
 .knowledge-panel-heading, .knowledge-preview-heading { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.knowledge-panel-heading { flex-wrap: wrap; }
+.knowledge-panel-sections { display: flex; gap: 3px; min-width: 0; }
+.knowledge-panel .knowledge-panel-sections [aria-pressed=true] {
+  background: var(--knowledge-field); color: var(--knowledge-ink);
+}
+.knowledge-panel-files:not([hidden]) { display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+.knowledge-panel .knowledge-memory { padding: 0 2px; width: 100%; box-sizing: border-box; }
+.knowledge-panel .knowledge-memory-row { gap: 8px; }
+.knowledge-panel .knowledge-memory-row > button { flex: none; background: var(--knowledge-field); }
 .knowledge-panel-heading button, .knowledge-preview-heading button { flex: none; color: var(--kb-panel-muted); font-size: 12px; }
 .knowledge-preview-heading strong { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .knowledge-markdown-editor {
