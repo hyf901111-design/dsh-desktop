@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { KnowledgeFilter } from '../../shared/knowledge-library'
+import type { KnowledgeDocument, KnowledgeFilter, KnowledgeFolder } from '../../shared/knowledge-library'
 
 export type KnowledgeViewAction =
   | { action: 'inspect' }
@@ -9,7 +9,13 @@ export type KnowledgeViewAction =
 export interface KnowledgeViewResult {
   revision: string
   filter: KnowledgeFilter
+  section: 'files' | 'memory'
+  count: number
+  documents: KnowledgeDocument[]
+  folders: KnowledgeFolder[]
 }
+
+export type KnowledgeViewMessage = (KnowledgeViewAction & { id: string }) | { action: 'cancel'; id: string }
 
 export class KnowledgeViewBridge {
   private readonly pending = new Map<string, {
@@ -17,7 +23,7 @@ export class KnowledgeViewBridge {
     reject(error: Error): void
   }>()
 
-  constructor(private send: (value: KnowledgeViewAction & { id: string }) => void) {}
+  constructor(private send: (value: KnowledgeViewMessage) => void) {}
 
   run(action: KnowledgeViewAction, signal?: AbortSignal): Promise<KnowledgeViewResult> {
     signal?.throwIfAborted()
@@ -29,14 +35,13 @@ export class KnowledgeViewBridge {
         clearTimeout(timer)
         this.pending.delete(id)
       }
-      const cancel = () => {
+      const fail = (message: string) => {
         finish()
-        reject(Error('知识库操作已取消。'))
+        try { this.send({ action: 'cancel', id }) } catch { /* The window has already closed. */ }
+        reject(Error(message))
       }
-      const timer = setTimeout(() => {
-        finish()
-        reject(Error('知识库列表未确认，请查看当前界面后重试。'))
-      }, 4000)
+      const cancel = () => fail('知识库操作已取消。')
+      const timer = setTimeout(() => fail('知识库列表未确认，请查看当前界面后重试。'), 4000)
       this.pending.set(id, {
         resolve(value) { finish(); resolve(value) },
         reject(error) { finish(); reject(error) }
@@ -54,7 +59,9 @@ export class KnowledgeViewBridge {
     const pending = value?.id && this.pending.get(value.id)
     if (!pending) return
     if (typeof value.error === 'string') pending.reject(Error(value.error.slice(0, 600)))
-    else if (typeof value.result?.revision === 'string' && value.result.filter) pending.resolve(value.result)
+    else if (typeof value.result?.revision === 'string' && value.result.filter &&
+      ['files', 'memory'].includes(value.result.section) && Number.isSafeInteger(value.result.count) &&
+      Array.isArray(value.result.documents) && Array.isArray(value.result.folders)) pending.resolve(value.result)
     else pending.reject(Error('知识库未返回有效的列表状态。'))
   }
 }

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import type { CollaborationClient } from '../collaboration-client'
-import { knowledgeSharedCategories, type KnowledgeDocument, type KnowledgeSnapshot } from '../../shared/knowledge-library'
+import { knowledgeSharedCategories, type KnowledgeDocument } from '../../shared/knowledge-library'
 
 const maxBytes = 25 * 1024 * 1024
 
@@ -57,10 +57,6 @@ export class KnowledgeSharing {
       if (this.cache?.promise === promise) this.cache = undefined
       throw error
     }
-  }
-
-  async snapshot(local: KnowledgeSnapshot, force = false, signal?: AbortSignal): Promise<KnowledgeSnapshot> {
-    return { ...local, documents: [...local.documents, ...await this.received(force, signal)] }
   }
 
   async publish(document: KnowledgeDocument, path: string, category: string, current: () => void) {

@@ -19,6 +19,7 @@ beforeAll(async () => {
       import React from 'react'
       import { createRoot } from 'react-dom/client'
       const host = new WorkspaceSurfaceHost(document)
+      window.openLibrarySettings = () => document.dispatchEvent(new CustomEvent('sherlock:knowledge-show-section', { detail: 'memory' }))
       const moreFormats = document.body.hasAttribute('data-test-formats')
         ? ['pdf', 'docx', 'xlsx', 'png', 'mp3', 'mp4', 'bin'].map((suffix, index) => ({
           id: 'f' + index, name: '格式验收.' + suffix, source: 'upload'
@@ -136,6 +137,7 @@ beforeAll(async () => {
             return
           }
           if (method === 'received') {
+            if (window.waitForSharedCatalog) return window.waitForSharedCatalog
             if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) {
               return window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []
             }
@@ -148,7 +150,10 @@ beforeAll(async () => {
         subscribe: () => () => {},
         subscribeImportProgress(listener) { window.emitImportProgress = listener; return () => {} },
         subscribeAction(listener) { window.applyKnowledgeAction = listener; return () => {} },
-        reply(response) { window.knowledgeActionResult = response },
+        reply(response) {
+          window.knowledgeActionResult = response
+          window.rowsAtKnowledgeReply = Array.from(document.querySelectorAll('.knowledge-table tbody .knowledge-file-title')).map(element => element.textContent)
+        },
         path: () => ''
       })
       window.dispatchEvent(new Event('sherlock:knowledge-open'))
@@ -481,6 +486,80 @@ it.each(['no-preference', 'reduce'])('applies reversible list changes with %s mo
   } finally {
     await page.close()
   }
+})
+
+it('acknowledges the rendered list, preserves the memory tab on inspect, and rejects a previous visit', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库' })
+    await library.getByRole('button', { name: /消费行业周报.md/ }).first().waitFor()
+    const act = async request => {
+      const id = await page.evaluate(request => {
+        const id = crypto.randomUUID()
+        window.applyKnowledgeAction({ ...request, id })
+        return id
+      }, request)
+      await expect.poll(() => page.evaluate(() => window.knowledgeActionResult?.id)).toBe(id)
+      return page.evaluate(() => ({ ...window.knowledgeActionResult, rendered: window.rowsAtKnowledgeReply }))
+    }
+    const initial = (await act({ action: 'inspect' })).result
+    await page.evaluate(() => window.openLibrarySettings())
+    await library.getByText('启用记忆', { exact: true }).waitFor()
+    expect(await act({ action: 'inspect' })).toMatchObject({ result: { count: 3, section: 'memory' } })
+    expect(await library.getByText('启用记忆', { exact: true }).isVisible()).toBe(true)
+    await library.getByRole('button', { name: '返回工作区' }).click()
+    await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
+    expect((await act({ action: 'filter', revision: initial.revision, filter: {} })).error).toContain('筛选条件已变化')
+    expect(await library.getByText('启用记忆', { exact: true }).isVisible()).toBe(true)
+    const current = (await act({ action: 'inspect' })).result
+    const response = await act({ action: 'filter', revision: current.revision, filter: { folderId: 'f', formats: ['ppt'] } })
+    expect(response).toMatchObject({ result: { count: 1, section: 'files', documents: [{ name: '演示文稿.pptx' }] }, rendered: ['演示文稿.pptx'] })
+    const undone = await act({ action: 'undo', revision: response.result.revision })
+    expect(undone.result.count).toBe(3)
+    expect(undone.rendered).toHaveLength(3)
+  } finally { await page.close() }
+})
+
+it('waits for a shared directory before reporting results and discards the request if the user navigates away', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库' })
+    await library.getByRole('button', { name: /消费行业周报.md/ }).first().waitFor()
+    const request = () => page.evaluate(() => {
+      window.applyKnowledgeAction({ id: 'inspect', action: 'inspect' })
+      window.waitForSharedCatalog = new Promise(resolve => { window.completeSharedCatalog = resolve })
+      const { revision } = window.knowledgeActionResult.result
+      window.applyKnowledgeAction({ id: 'shared', action: 'filter', revision, filter: { category: 'received', sharedCategory: '行业研究' } })
+    })
+    const resolve = () => page.evaluate(() => window.completeSharedCatalog([{
+      id: 'shared-test', name: '行业梳理.pdf', size: 2048, updatedAt: 3, source: 'upload',
+      saved: false, starred: false, received: { category: '行业研究', owner: '同事' }
+    }]))
+    await request()
+    expect(await page.evaluate(() => window.knowledgeActionResult.id)).toBe('inspect')
+    await library.getByRole('button', { name: '返回工作区' }).click()
+    await resolve()
+    await expect.poll(() => page.evaluate(() => window.knowledgeActionResult.error)).toMatch(/工作区|筛选条件已变化/)
+    await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
+    await library.getByRole('button', { name: /消费行业周报.md/ }).first().waitFor()
+    await request()
+    await page.evaluate(() => window.applyKnowledgeAction({ id: 'shared', action: 'cancel' }))
+    await resolve()
+    expect(await page.evaluate(() => window.knowledgeActionResult.id)).toBe('inspect')
+    expect(await library.getByRole('heading', { name: '所有文件' }).isVisible()).toBe(true)
+    await request()
+    await resolve()
+    await expect.poll(() => page.evaluate(() => window.knowledgeActionResult.result?.count)).toBe(1)
+    expect(await page.evaluate(() => window.rowsAtKnowledgeReply)).toEqual(['行业梳理.pdf'])
+  } finally { await page.close() }
 })
 
 it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s mode', async (theme) => {
