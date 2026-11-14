@@ -1,7 +1,8 @@
 import { it, expect, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, sharedKnowledgeCitation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { patchMarkdownFileLinks } from '../scripts/lib/markdown-file-links.mjs'
 import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
 import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/browser-app-native.mjs'
@@ -55,6 +56,34 @@ it('inserts a scope at the slash token while retaining adjacent text and blockin
     app.dispose()
     await window.happyDOM.abort()
   }
+})
+
+it('renders a verified shared citation as a labeled native button and sends only its file ID to preview', async () => {
+  const window = new Window()
+  const document = window.document
+  const click = vi.fn()
+  document.addEventListener('sherlock:knowledge-preview-file', click)
+  try {
+    const source = patchMarkdownFileLinks(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-primitives/lib/index.js', 'utf8'))
+    const nodeSource = source.slice(source.indexOf('function renderNode('), source.indexOf('function renderCode('))
+    const renderNode = new Function('jsx', 'renderChildren', 'renderAnchor', 'MarkdownText_module_css_default', nodeSource + '\nreturn renderNode')(
+      (type, props) => ({ type, props }), children => children, url => ({ type: 'external', url }), { fileMention: 'mention' }
+    )
+    const id = 'a'.repeat(32)
+    const url = 'sherlock-knowledge://file/' + id
+    const context = { fileMentions: { resolve: value => sharedKnowledgeCitation(value, document) } }
+    const render = url => renderNode({ type: 'link', url, children: ['共享报告.pdf'] }, 0, context)
+    const result = render(url)
+    expect(result).toMatchObject({ type: 'button', props: { children: ['共享报告.pdf'] } })
+    expect(result.props['aria-label']).toBeUndefined()
+    expect(click).not.toHaveBeenCalled()
+    result.props.onClick()
+    expect(click).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ detail: { id, name: '共享资料' } }))
+    for (const invalid of [url + '?other=1', 'sherlock-knowledge://admin/' + id, url + '/extra', 'https://example.com/']) {
+      expect(render(invalid).type).toBe('external')
+    }
+    expect(patchMarkdownFileLinks(source)).toBe(source)
+  } finally { await window.happyDOM.abort() }
 })
 
 it('composes with the installed native client patch sequence and keeps its restore records valid', () => {

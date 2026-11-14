@@ -15,6 +15,7 @@ export const knowledgeSharedCategories = ['行业研究', '产品设计', '业�
 
 export const knowledgeSources = { generated: '会话生成', upload: '手动上传' } as const
 export const maxEditableKnowledgeBytes = 128 * 1024
+export const sharedKnowledgeCitationUrl = (id: string) => 'sherlock-knowledge://file/' + id
 
 export type KnowledgeCategory = keyof typeof knowledgeCategories
 export type KnowledgeFormat = keyof typeof knowledgeFormats

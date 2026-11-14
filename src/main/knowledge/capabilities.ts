@@ -1,6 +1,6 @@
 import type { KnowledgeContent } from './content'
 import type { createClientCapabilityRegistry } from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
-import { listKnowledgeDocuments, type KnowledgeDocument } from '../../shared/knowledge-library'
+import { listKnowledgeDocuments, sharedKnowledgeCitationUrl, type KnowledgeDocument } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
 import type { KnowledgeViewBridge } from './view-bridge'
@@ -68,7 +68,7 @@ export function sharedKnowledgeCapabilityHandlers(sharing: KnowledgeSharing, con
       const end = offset + 24000
       return {
         status: 'succeeded',
-        data: { document, text: result.text.slice(offset, end), offset,
+        data: { document, citation: sharedKnowledgeCitationUrl(document.id), text: result.text.slice(offset, end), offset,
           nextOffset: end < result.text.length ? end : null, truncated: result.truncated }
       }
     }

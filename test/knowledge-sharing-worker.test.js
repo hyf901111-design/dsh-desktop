@@ -10,6 +10,7 @@ import { KnowledgeContent } from '../src/main/knowledge/content'
 import { KnowledgeSharing } from '../src/main/knowledge/sharing'
 import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from '../src/main/knowledge/capabilities'
 import { KnowledgeStore } from '../src/main/knowledge/store'
+import { KnowledgeFilePreview } from '../src/main/knowledge/file-preview'
 import { ClientCapabilityService } from '../src/main/state/client-capability-service'
 import { KnowledgeViewBridge } from '../src/main/knowledge/view-bridge'
 import { resolveKnowledgeReference } from '../src/main/knowledge/references'
@@ -191,6 +192,10 @@ it('publishes privately stored bytes to other authenticated users and closes acc
   })
   const sharing = new KnowledgeSharing({ authenticated: () => true, client: recipient })
   const content = new KnowledgeContent(() => ({}))
+  const previewCache = await mkdtemp(join(tmpdir(), 'knowledge-shared-preview-test-'))
+  const identity = () => ({ owner: 'user1', generation: 1 })
+  const store = new KnowledgeStore(join(previewCache, 'library'), identity, () => {})
+  const preview = new KnowledgeFilePreview(join(previewCache, 'files'), identity, store, sharing)
   const reference = (kind, id) => resolveKnowledgeReference({ kind, id }, {
     sharing, content, store: { snapshot: async () => ({ folders: [], documents: [] }) },
     owner: () => ({ owner: 'user1', generation: 1 })
@@ -219,23 +224,32 @@ it('publishes privately stored bytes to other authenticated users and closes acc
     expect((await call('search-category-name', 'knowledge.shared.search', { query: '行业研究' })).data.count).toBe(1)
     expect((await call('search-no-body', 'knowledge.shared.search', { query: 'Content' })).data.count).toBe(0)
     expect((await call('search-empty-scope', 'knowledge.shared.search', { query: ' ', scope: 'content' })).status).toBe('failed')
-    expect(await call('inspect', 'knowledge.shared.read', { id: shared.id })).toMatchObject({
-      status: 'succeeded', data: { text: body, document: { received: { owner: 'user0' } } }
+    const receipt = await call('inspect', 'knowledge.shared.read', { id: shared.id })
+    expect(receipt).toMatchObject({
+      status: 'succeeded', data: { text: body, citation: 'sherlock-knowledge://file/' + shared.id,
+        document: { received: { owner: 'user0' } } }
     })
+    const citedId = new URL(receipt.data.citation).pathname.slice(1)
+    expect(await preview.open(citedId, sessionId)).toMatchObject({ kind: 'text', text: body, document: { name: '报告.md' } })
     expect(await reference('file', shared.id)).toMatchObject({
-      kind: 'file', label: '报告.md', documents: [{ id: shared.id, text: body, sharer: 'user0' }]
+      kind: 'file', label: '报告.md', documents: [{ id: shared.id, text: body, sharer: 'user0', citation: 'sherlock-knowledge://file/' + shared.id }]
     })
     expect(await reference('shared-category', '行业研究')).toMatchObject({
       count: 1, documents: [{ id: shared.id, text: body, sharer: 'user0' }], unavailableCount: 0
     })
     expect((await request('/' + shared.id, 0, { method: 'DELETE' })).status).toBe(200)
+    await expect(preview.open(citedId, sessionId)).rejects.toThrow('已取消共享')
     expect(await call('inspect-new', 'knowledge.shared.read', { id: shared.id })).toMatchObject({ status: 'failed' })
     expect((await call('search-revoked-body', 'knowledge.shared.search', { query: 'Content', scope: 'content' })).data)
       .toMatchObject({ count: 0, documents: [], nextOffset: null })
     expect((await call('search-new', 'knowledge.shared.search', { query: '报告' })).data).toEqual({ count: 0, documents: [], nextOffset: null })
     await expect(reference('file', shared.id)).rejects.toThrow('已取消共享')
     await expect(reference('shared-category', '行业研究')).rejects.toThrow('暂无可引用')
-  } finally { host.dispose() }
+  } finally {
+    host.dispose()
+    recipient.stop()
+    await rm(previewCache, { recursive: true, force: true })
+  }
   expect((await request('/' + shared.id, 1)).status).toBe(404)
   expect((await (await request('', 1)).json()).documents).toEqual([])
   expect((await request(localId, 0, { ...data, headers: { ...data.headers, 'X-Asset-Size': '0' } })).status).toBe(400)

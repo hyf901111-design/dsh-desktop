@@ -1,6 +1,6 @@
 import type { KnowledgeContent } from './content'
 import {
-  knowledgeCategories, knowledgeSharedCategories, listKnowledgeDocuments,
+  knowledgeCategories, knowledgeSharedCategories, listKnowledgeDocuments, sharedKnowledgeCitationUrl,
   type KnowledgeCategory, type KnowledgeDocument
 } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
@@ -64,8 +64,9 @@ export async function resolveKnowledgeReference(input: unknown, { store, sharing
   const candidates = documents.slice(0, 40)
   for (const document of candidates) {
     current()
-    const row: { id: string; name: string; sharer?: string; text?: string; truncated?: boolean; unavailable?: boolean } = {
-      id: document.id, name: document.name, sharer: document.received?.owner
+    const row: { id: string; name: string; sharer?: string; citation?: string; text?: string; truncated?: boolean; unavailable?: boolean } = {
+      id: document.id, name: document.name, sharer: document.received?.owner,
+      ...(document.received ? { citation: sharedKnowledgeCitationUrl(document.id) } : {})
     }
     if (budget > 0 && content.supports(document.name)) {
       const preview = await (async () => {

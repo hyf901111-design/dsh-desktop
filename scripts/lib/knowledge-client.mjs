@@ -45,6 +45,16 @@ export function knowledgeMessagePreview(text, project = knowledgeMessageParts) {
  return parts ? parts.map(part => part.label ? '[' + part.label + ']' : part.text).join('') : text
 }
 
+export function sharedKnowledgeCitation(value, doc = document) {
+ const match=typeof value==='string'&&/^sherlock-knowledge:\/\/file\/([a-f0-9]{32})$/u.exec(value)
+ if(!match)return
+ return {title:'在右侧打开知识库来源',open:()=>{
+  doc.dispatchEvent(new doc.defaultView.CustomEvent('sherlock:knowledge-preview-file',{
+   cancelable:true,detail:{id:match[1],name:'共享资料'}
+  }))
+ }}
+}
+
 export function installKnowledgeReferences({sessions,getInput,getPending,window:win=window,document:doc=document}) {
  const insert=(reference,sessionId,segment)=>{
   const currentId=sessions.list.getSnapshot().current
@@ -217,6 +227,8 @@ export function patchKnowledgeConversation(input) {
    'react_jsx_runtime.jsx("span",{className:MessageItem_module_css_default.refChip,"data-ref-chip":"knowledge-reference",'+
    'title:part.label,children:part.label},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});\n'+anchor)
  }
+ const sourceResolver='const known=mentions?.resolve(value);if(known)return known;'
+ input=replace(input,sourceResolver,'const citation=('+sharedKnowledgeCitation.toString()+')(value);if(citation)return citation;\n              '+sourceResolver)
  const queryRailText='const text = parseResearchPrompt(content.text).text.replace(/\\s+/g, " ").trim();'
  const projectQueryText='('+knowledgeMessagePreview.toString()+')(parseResearchPrompt(content.text).text, '+knowledgeMessageParts.toString()+')'
  input=replace(input,queryRailText,'const text = '+projectQueryText+'.replace(/\\s+/g, " ").trim();')
