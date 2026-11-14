@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import { createProvider } from '@earendil-works/pi-ai'
@@ -140,6 +141,27 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
       }
     } catch { if (!disposed) unavailable() }
   })().finally(() => { pending = undefined })
+  const unregisterAccountChange = ctx.webServer?.register({
+    kind: 'exact', path: '/sherlock/hosted-ai/account-changed',
+    async handler(req, res) {
+      const authorization = Buffer.from(req.headers.authorization ?? '')
+      const expected = Buffer.from('Bearer ' + token)
+      if (req.method !== 'POST' || req.socket.remoteAddress !== '127.0.0.1' ||
+          !/^127\.0\.0\.1:\d+$/.test(req.headers.host ?? '') || req.headers.origin !== undefined ||
+          authorization.length !== expected.length || !timingSafeEqual(authorization, expected)) {
+        res.writeHead(403).end()
+        return
+      }
+      // An outstanding request may have started under the previous account.
+      await pending
+      if (disposed) {
+        res.writeHead(503).end()
+        return
+      }
+      await refresh()
+      res.writeHead(204).end()
+    }
+  })
   void refresh()
   const timer = setInterval(() => void refresh(), pollMs)
   timer.unref?.()
@@ -187,6 +209,6 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
     }
   }
   return { image, refresh, dispose() {
-    disposed = true; state = undefined; lifetime.abort(); clearInterval(timer); registration?.()
+    disposed = true; state = undefined; lifetime.abort(); clearInterval(timer); unregisterAccountChange?.(); registration?.()
   } }
 }
