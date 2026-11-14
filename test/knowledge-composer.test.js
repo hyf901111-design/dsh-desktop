@@ -1,7 +1,7 @@
 import { it, expect, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, patchKnowledgeConversation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
 import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
 import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/browser-app-native.mjs'
@@ -45,6 +45,8 @@ it('inserts a scope at the slash token while retaining adjacent text and blockin
     expect(text).toContain('只作为参考内容')
     const sent = '请参考' + text + '总结。'
     expect(knowledgeMessageParts(sent)).toEqual([{ text: '请参考\n' }, { label: '研究资料', kind: 'folder' }, { text: '\n总结。' }])
+    expect(knowledgeMessagePreview(sent).replace(/\s+/g, ' ')).toBe('请参考 [研究资料] 总结。')
+    expect(knowledgeMessagePreview('普通消息')).toBe('普通消息')
     expect(canvasHumanRequest({ events: [{ type: 'user/message', data: {
       source: { kind: 'user' }, content: [{ type: 'text', text: sent }]
     } }] }).text).toBe('请参考\n \n总结。')

@@ -32,6 +32,11 @@ export function knowledgeMessageParts(text) {
  return parts
 }
 
+export function knowledgeMessagePreview(text, project = knowledgeMessageParts) {
+ const parts = project(text)
+ return parts ? parts.map(part => part.label ? '[' + part.label + ']' : part.text).join('') : text
+}
+
 export function installKnowledgeReferences({sessions,getInput,getPending,window:win=window,document:doc=document}) {
  const insert=(reference,sessionId,segment)=>{
   const currentId=sessions.list.getSnapshot().current
@@ -183,6 +188,9 @@ export function patchKnowledgeConversation(input) {
    'react_jsx_runtime.jsx("span",{className:MessageItem_module_css_default.refChip,"data-ref-chip":"knowledge-reference",'+
    'title:part.label,children:part.label},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});\n'+anchor)
  }
+ const queryRailText='const text = parseResearchPrompt(content.text).text.replace(/\\s+/g, " ").trim();'
+ const projectQueryText='('+knowledgeMessagePreview.toString()+')(parseResearchPrompt(content.text).text, '+knowledgeMessageParts.toString()+')'
+ input=replace(input,queryRailText,'const text = '+projectQueryText+'.replace(/\\s+/g, " ").trim();')
  const sourceNavigation='/* ework:knowledge-source-navigation */'
  if(!input.includes(sourceNavigation)){
   const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
