@@ -6,6 +6,7 @@ export function researchTabIconKind(tab) {
  if(/subagent|task/.test(type))return 'task'
  if(/terminal/.test(type))return 'terminal'
  if(/browser|web/.test(type))return 'browser'
+ if(type==='sherlock-knowledge-library')return 'knowledge'
  if(/image/.test(type))return 'image'
  if(/diff|git/.test(type))return 'diff'
  if(/editor|folder|explorer/.test(type))return 'folder'
@@ -20,6 +21,7 @@ export function researchTabIcon(tab, jsx) {
  schedule:'M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0ZM8 4v4l3 2',
  task:'M5 2.5H3.5v11h9v-11H11M6 1.5h4v2H6v-2ZM5 6l1 1 2-2M9 6h2M5 10h6',
  terminal:'M2 2.5h12v11H2v-11ZM4 5.5l2.5 2L4 9.5M8 10h3',
+ knowledge:'M8 3.5C6 2.3 4 2.3 1.75 3.5v9.75c2.25-1.2 4.25-1.2 6.25 0 2-1.2 4-1.2 6.25 0V3.5C12 2.3 10 2.3 8 3.5Zm0 0v9.75M4 6h1.75M4 8.5h1.75M10.25 6H12m-1.75 2.5H12',
  browser:'M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0ZM2 8h12M8 2c-4 4-4 8 0 12M8 2c4 4 4 8 0 12',
  image:'M2 2.5h12v11H2v-11ZM2 11l4-4 3 3 2-2 3 3M10 5h.01',
  diff:'M5 2H3v12h10V2h-2M6 5h4M8 3v4M6 10h4',

@@ -64,7 +64,7 @@ await copySubagentAvatarAssets(destinationDirectory)
 await copyFile(path.join(projectRoot, 'build/brand/figma-welcome-illustration.png'), path.join(destinationDirectory, 'figma-welcome-illustration.png'))
 await mkdir(path.join(destinationDirectory, 'fonts'), { recursive: true })
 await copyFile(path.join(projectRoot, 'build/fonts/NotoSansSC.woff2'), path.join(destinationDirectory, 'fonts/NotoSansSC.woff2'))
-for (const name of ['figma-home-headline-light.svg','figma-home-headline-dark.svg','figma-home-mode.svg','figma-sidebar-chevron.svg','figma-sidebar-bell.svg','figma-people.svg','figma-self-avatar.png','figma-check.svg','figma-close.svg','figma-collaboration-plus.svg','figma-favorite.svg','figma-favorite-selected.svg','odyssey-knowledge-base.svg','figma-glass-light-base.png','figma-glass-light-mesh.png','figma-glass-dark-base.png','figma-glass-dark-mesh.png','figma-glass-dark-overlay.png']) {
+for (const name of ['figma-home-headline-light.svg','figma-home-headline-dark.svg','figma-home-mode.svg','figma-sidebar-chevron.svg','figma-sidebar-bell.svg','figma-people.svg','figma-self-avatar.png','figma-check.svg','figma-close.svg','figma-collaboration-plus.svg','figma-favorite.svg','figma-favorite-selected.svg','figma-glass-light-base.png','figma-glass-light-mesh.png','figma-glass-dark-base.png','figma-glass-dark-mesh.png','figma-glass-dark-overlay.png']) {
   await copyFile(path.join(projectRoot, 'build/brand', name), path.join(destinationDirectory, name))
 }
 for (const {file} of JSON.parse(await readFile(path.join(projectRoot,'build/brand/odyssey-b-icons.json'),'utf8')).assets) await copyFile(path.join(projectRoot,'build/brand',file),path.join(destinationDirectory,file))

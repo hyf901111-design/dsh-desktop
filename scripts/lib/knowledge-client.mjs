@@ -107,16 +107,12 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
 }
 
 export function installKnowledgeSidebar({service,document:doc=document}) {
- const icon=(size=16)=>react.createElement('span',{'aria-hidden':true,style:{
-  display:'inline-block',flex:'none',width:size,height:size,backgroundColor:'currentColor',
-  mask:'url(/odyssey-knowledge-base.svg) center / contain no-repeat'
- }})
  const off=service.registerTab({
   id:'sherlock-knowledge-library',title:()=>doc.documentElement.dataset.odysseyLocale==='en'?'Knowledge Base':'知识库',
-  order:15,single:true,icon,component:()=>react.createElement('div',{'data-knowledge-panel-host':''})
+  order:15,single:true,component:()=>react.createElement('div',{'data-knowledge-panel-host':''})
  })
  const offFile=service.registerTab({
-  id:'sherlock-knowledge-file',title:'知识库文件',hidden:true,icon,
+  id:'sherlock-knowledge-file',title:'知识库文件',hidden:true,
   component:({tab})=>react.createElement('div',{'data-knowledge-panel-host':'','data-knowledge-panel-file':tab.meta?.fileId})
  })
  const scope=()=>({sessionId:service.getSnapshot().sessionId})
