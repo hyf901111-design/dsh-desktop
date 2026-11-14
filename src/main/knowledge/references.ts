@@ -69,7 +69,9 @@ export async function resolveKnowledgeReference(input: unknown, { store, sharing
     }
     if (budget > 0 && content.supports(document.name)) {
       const preview = await (async () => {
-        const source = document.received ? (await sharing.read(document.id)).data : (await store.file(document.id)).path
+        const source = document.received
+          ? (await sharing.readListed(document)).data
+          : (await store.file(document.id)).path
         return content.read(document, source)
       })().catch(error => {
         current()

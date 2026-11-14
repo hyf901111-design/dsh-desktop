@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, it } from 'vitest'
+import { afterAll, beforeAll, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
@@ -127,4 +127,64 @@ it('publishes privately stored bytes to other authenticated users and closes acc
   expect((await request('/' + shared.id, 1)).status).toBe(404)
   expect((await (await request('', 1)).json()).documents).toEqual([])
   expect((await request(localId, 0, { ...data, headers: { ...data.headers, 'X-Asset-Size': '0' } })).status).toBe(400)
+})
+
+it('reuses the catalog during a long shared category reference and rechecks each file at read time', async () => {
+  const publish = async (localId, name, body) => {
+    const response = await request('/' + localId, 0, {
+      method: 'PUT', body,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Asset-Name': encodeURIComponent(name),
+        'X-Asset-Size': String(Buffer.byteLength(body)),
+        'X-Knowledge-Category': encodeURIComponent('写作模板'),
+        'X-Knowledge-Source': 'upload'
+      }
+    })
+    expect(response.status).toBe(200)
+    return (await response.json()).id
+  }
+  const revoked = await publish('79d391d1-deb1-4553-aaf0-3cbf4ee15199', 'B.md', 'revoked')
+  const readable = await publish('79d391d1-deb1-4553-aaf0-3cbf4ee15200', 'A.md', 'readable')
+  const now = Date.now()
+  await db.prepare('UPDATE knowledge_shares SET updated_at=? WHERE id=?').bind(now - 10_000, revoked).run()
+  let elapsed = 0
+  let catalogRequests = 0
+  const readRequests = []
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => now + elapsed)
+  const client = new CollaborationClient({
+    authenticated: true, generation: 1, subscribeSessionChanged: () => () => {},
+    async collaborationRequest(endpoint) {
+      if (endpoint.kind === 'knowledge.list') catalogRequests++
+      if (endpoint.kind === 'knowledge.file') {
+        readRequests.push(endpoint.id)
+        if (endpoint.id === readable) {
+          expect((await request('/' + revoked, 0, { method: 'DELETE' })).status).toBe(200)
+          elapsed = 12_000
+        }
+      }
+      const spec = collaborationRequestSpec(endpoint)
+      const response = await request(spec.path.slice('/v1/collaboration/knowledge'.length), 1)
+      if (!response.ok) throw Object.assign(Error('共享文件请求失败'), { status: response.status })
+      return spec.raw ? response : response.json()
+    }
+  })
+  try {
+    const result = await resolveKnowledgeReference({ kind: 'shared-category', id: '写作模板' }, {
+      sharing: new KnowledgeSharing({ authenticated: () => true, client }),
+      content: new KnowledgeContent(() => ({})),
+      store: { snapshot: async () => ({ folders: [], documents: [] }) },
+      owner: () => ({ owner: 'user1', generation: 1 })
+    })
+    expect(result).toMatchObject({
+      count: 2, documents: [{ id: readable, text: 'readable' }], unavailableCount: 1
+    })
+    expect(catalogRequests).toBe(1)
+    expect(readRequests).toEqual([readable, revoked])
+  } finally {
+    clock.mockRestore()
+    client.stop()
+    await request('/' + readable, 0, { method: 'DELETE' })
+    await request('/' + revoked, 0, { method: 'DELETE' })
+  }
 })
