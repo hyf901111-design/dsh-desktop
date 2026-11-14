@@ -1,6 +1,6 @@
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
-import { readFile } from 'node:fs/promises'
-import { isAbsolute } from 'node:path'
+import { readFile, realpath } from 'node:fs/promises'
+import { isAbsolute, relative, sep } from 'node:path'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { knowledgeFormat, type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeStore } from './store'
@@ -15,11 +15,12 @@ function identityMatches(a: { owner: string; generation: number }, b: typeof a) 
 }
 
 export function installKnowledgeIpc({
-  store, window, identity
+  store, window, identity, generatedWorkspace
 }: {
   store: KnowledgeStore
   window: () => BrowserWindow | undefined
   identity: () => { owner: string; generation: number }
+  generatedWorkspace(sessionId: string): Promise<string | null>
 }) {
   registerTrustedMainWindowHandler(ipcMain, 'knowledge:request', window, async (_event, method: unknown, input?: unknown) => {
     if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || JSON.stringify(input).length > 550_000)) {
@@ -45,6 +46,20 @@ export function installKnowledgeIpc({
           throw Error('请拖入本地文件，每次最多 64 个。')
         }
         return store.importFiles(args.paths as string[], folderId(), owner)
+      }
+      case 'generated': {
+        if (typeof args.sessionId !== 'string' || !args.sessionId || args.sessionId.length > 256 ||
+            typeof args.path !== 'string' || args.path.length > 8192 || !isAbsolute(args.path) ||
+            typeof args.saved !== 'boolean') throw Error('会话文件来源无效。')
+        const workspace = await generatedWorkspace(args.sessionId)
+        if (!workspace) throw Error('当前会话无法收录本地文件。')
+        const [root, path] = await Promise.all([realpath(workspace), realpath(args.path)])
+        const fromRoot = relative(root, path)
+        if (!fromRoot || isAbsolute(fromRoot) || fromRoot === '..' || fromRoot.startsWith('..' + sep)) {
+          throw Error('文件不在这个会话的工作区。')
+        }
+        check()
+        return store.collectGenerated(path, { sessionId: args.sessionId, saved: args.saved })
       }
       case 'edit': {
         const name = () => {

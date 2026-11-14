@@ -429,6 +429,8 @@ contextBridge.exposeInMainWorld(
     showComponentContextMenu: (input: unknown): Promise<string | null> => ipcRenderer.invoke('ui:component-context-menu',input),
     componentContextMenuKey: (menuId: string,key: string) => ipcRenderer.invoke('ui:component-context-menu-key',menuId,key),
     closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
+    collectKnowledgeFile: (sessionId: string, path: string, saved: boolean): Promise<import('../shared/knowledge-library').KnowledgeDocument | undefined> =>
+      ipcRenderer.invoke('knowledge:request', 'generated', { sessionId, path, saved }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
     imageAction: (input: unknown) => ipcRenderer.invoke('conversation:image-action', input),

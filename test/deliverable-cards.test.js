@@ -207,3 +207,19 @@ it('upgrades the exact legacy delivery accumulator once and rejects unknown or d
  expect(()=>patchDeliverableCards(patched.replace(marker,marker+marker))).toThrow(/drifted/)
  expect(()=>patchDeliverableCards(patched.replace('name:match.event.data.name','name:"pretend-tool"'))).toThrow(/drifted/)
 })
+
+it('automatically collects a primary deliverable and offers the explicit Knowledge Base favorite action', async () => {
+ const report = '/work/outputs/行业研究.md'
+ const collectKnowledgeFile = vi.fn(async (_sessionId, _path, saved) => ({ id: 'row', saved }))
+ window.dshDesktop = {
+  collectKnowledgeFile, researchFilesAvailable: async () => [true],
+  showFileContextMenu: vi.fn(async () => 'save-knowledge')
+ }
+ const el = await render({ matched: [report, '/work/outputs/辅助.py'], cwd: '/work', sessionId: 's1' })
+ expect(collectKnowledgeFile.mock.calls).toEqual([['s1', report, false]])
+ expect(el.textContent).toContain('已自动收录')
+ await click(el.querySelector('.ew-delivery-options'))
+ expect(window.dshDesktop.showFileContextMenu.mock.calls[0][0]).toContainEqual({ id: 'save-knowledge', label: '收藏至知识库' })
+ expect(collectKnowledgeFile).toHaveBeenLastCalledWith('s1', report, true)
+ expect(el.textContent).toContain('已收藏至知识库')
+})

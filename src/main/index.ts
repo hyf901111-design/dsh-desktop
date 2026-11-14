@@ -1459,7 +1459,12 @@ async function bootstrap(): Promise<void> {
   const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:changed')
   })
-  installKnowledgeIpc({ store: knowledge, window: () => mainWindow, identity: knowledgeIdentity })
+  const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
+  installKnowledgeIpc({
+    store: knowledge, window: () => mainWindow, identity: knowledgeIdentity,
+    generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
+      ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)
+  })
   try {
     memoryService = await MemoryService.open({
       root: join(app.getPath('userData'), 'memory'), encryption: safeStorage,
