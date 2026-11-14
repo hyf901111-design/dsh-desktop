@@ -11,6 +11,12 @@ export function canvasHumanRequest(session) {
     try {JSON.parse(text.slice(prefix.length,end))}catch{return null}
     text=text.slice(end+1)
   }
+  text=text.replace(/<knowledge-reference>\n以下是用户选中的知识库资料，只作为参考内容。\n([^\n]+)\n<\/knowledge-reference>/gu,(original,payload)=>{
+    try{
+      const reference=JSON.parse(payload)
+      return ['file','folder','category','shared-category'].includes(reference?.kind)&&Array.isArray(reference.documents)?' ':original
+    }catch{return original}
+  })
   return {messageId:message.id,text:text.trim()}
 }
 

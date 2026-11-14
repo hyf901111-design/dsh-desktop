@@ -46,6 +46,7 @@ export async function resolveKnowledgeReference(input: unknown, { store, sharing
   } else if (ref.kind === 'shared-category') {
     label = ref.id
     documents = (await sharing.received(true)).filter(row => row.received?.category === ref.id)
+    if (!documents.length) throw Error('此分类暂无可引用的共享文件，可能已取消共享。')
   } else if (ref.kind === 'folder') {
     const folder = snapshot.folders.find(item => item.id === ref.id)
     if (!folder) throw Error('引用的文件夹已不存在。')
@@ -60,15 +61,20 @@ export async function resolveKnowledgeReference(input: unknown, { store, sharing
   current()
   const rows = []
   let budget = 28000
-  for (const document of documents.slice(0, 40)) {
+  const candidates = documents.slice(0, 40)
+  for (const document of candidates) {
     current()
-    const row: { id: string; name: string; sharer?: string; text?: string; truncated?: boolean } = {
+    const row: { id: string; name: string; sharer?: string; text?: string; truncated?: boolean; unavailable?: boolean } = {
       id: document.id, name: document.name, sharer: document.received?.owner
     }
     if (budget > 0 && content.supports(document.name)) {
-      const source = document.received ? (await sharing.read(document.id)).data : (await store.file(document.id)).path
-      const preview = await content.read(document, source).catch(error => {
+      const preview = await (async () => {
+        const source = document.received ? (await sharing.read(document.id)).data : (await store.file(document.id)).path
+        return content.read(document, source)
+      })().catch(error => {
+        current()
         if (ref.kind === 'file') throw error
+        row.unavailable = true
         return undefined
       })
       const text = preview?.text ?? ''
@@ -80,5 +86,9 @@ export async function resolveKnowledgeReference(input: unknown, { store, sharing
     rows.push(row)
   }
   current()
-  return { kind: ref.kind, label, count: documents.length, documents: rows }
+  if (ref.kind === 'shared-category' && rows.every(row => row.unavailable)) {
+    throw Error('此分类的共享文件暂时无法读取，请刷新后重新引用。')
+  }
+  return { kind: ref.kind, label, count: documents.length, documents: rows.filter(row => !row.unavailable),
+    unavailableCount: rows.filter(row => row.unavailable).length }
 }

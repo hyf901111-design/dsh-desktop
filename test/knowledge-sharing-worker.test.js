@@ -7,6 +7,8 @@ import { KnowledgeContent } from '../src/main/knowledge/content'
 import { KnowledgeSharing } from '../src/main/knowledge/sharing'
 import { sharedKnowledgeCapabilityHandlers } from '../src/main/knowledge/capabilities'
 import { ClientCapabilityService } from '../src/main/state/client-capability-service'
+import { resolveKnowledgeReference } from '../src/main/knowledge/references'
+import { CollaborationClient, collaborationRequestSpec } from '../src/main/collaboration-client'
 
 let worker
 const tokens = ['a'.repeat(64), 'b'.repeat(64)]
@@ -65,20 +67,24 @@ it('publishes privately stored bytes to other authenticated users and closes acc
   expect((await request('/' + shared.id, undefined)).status).toBe(401)
   expect(await (await request('/' + shared.id, 1)).text()).toBe(body)
   expect((await request('/' + shared.id, 1, { method: 'DELETE' })).status).toBe(404)
-  const sharing = new KnowledgeSharing({
-    authenticated: () => true,
-    client: {
-      generation: () => 1,
-      async request(query, signal) {
-        const path = query.kind === 'knowledge.list' ? '' : '/' + query.id
-        const response = await request(path, 1, { signal })
-        if (!response.ok) throw Error('共享文件请求失败 ' + response.status)
-        return query.kind === 'knowledge.list' ? response.json() : response
-      }
+  const recipient = new CollaborationClient({
+    authenticated: true, generation: 1, subscribeSessionChanged: () => () => {},
+    async collaborationRequest(endpoint, signal) {
+      const spec = collaborationRequestSpec(endpoint)
+      const response = await request(spec.path.slice('/v1/collaboration/knowledge'.length), 1,
+        { method: spec.method, body: spec.body, headers: spec.headers, signal })
+      if (!response.ok) throw Object.assign(Error('共享文件请求失败'), { status: response.status })
+      return spec.raw ? response : response.json()
     }
   })
+  const sharing = new KnowledgeSharing({ authenticated: () => true, client: recipient })
+  const content = new KnowledgeContent(() => ({}))
+  const reference = (kind, id) => resolveKnowledgeReference({ kind, id }, {
+    sharing, content, store: { snapshot: async () => ({ folders: [], documents: [] }) },
+    owner: () => ({ owner: 'user1', generation: 1 })
+  })
   const host = new ClientCapabilityService({
-    sharedKnowledge: current => sharedKnowledgeCapabilityHandlers(sharing, new KnowledgeContent(() => ({})), current),
+    sharedKnowledge: current => sharedKnowledgeCapabilityHandlers(sharing, content, current),
     owner: () => 'user1', canRead: () => true, scheduled: () => false,
     send: () => {}, canvasAvailable: () => false, canvas: async () => {}, window: async () => {}
   })
@@ -91,12 +97,21 @@ it('publishes privately stored bytes to other authenticated users and closes acc
     expect(catalog.capabilities.filter(row => row.id.startsWith('knowledge.') && row.available).map(row => row.id))
       .toEqual(['knowledge.shared.search', 'knowledge.shared.read'])
     const matches = await call('search', 'knowledge.shared.search', { query: '报告', category: '行业研究', formats: ['markdown'] })
-    expect(matches.data).toMatchObject({ count: 1, documents: [{ id: shared.id, name: '报告.md' }], nextOffset: null })
+    expect(matches, matches.message).toMatchObject({ status: 'succeeded', data: { count: 1, documents: [{ id: shared.id, name: '报告.md' }], nextOffset: null } })
     expect(await call('inspect', 'knowledge.shared.read', { id: shared.id })).toMatchObject({
       status: 'succeeded', data: { text: body, document: { received: { owner: 'user0' } } }
     })
+    expect(await reference('file', shared.id)).toMatchObject({
+      kind: 'file', label: '报告.md', documents: [{ id: shared.id, text: body, sharer: 'user0' }]
+    })
+    expect(await reference('shared-category', '行业研究')).toMatchObject({
+      count: 1, documents: [{ id: shared.id, text: body, sharer: 'user0' }], unavailableCount: 0
+    })
     expect((await request('/' + shared.id, 0, { method: 'DELETE' })).status).toBe(200)
     expect(await call('inspect-new', 'knowledge.shared.read', { id: shared.id })).toMatchObject({ status: 'failed' })
+    expect((await call('search-new', 'knowledge.shared.search', { query: '报告' })).data).toEqual({ count: 0, documents: [], nextOffset: null })
+    await expect(reference('file', shared.id)).rejects.toThrow('已取消共享')
+    await expect(reference('shared-category', '行业研究')).rejects.toThrow('暂无可引用')
   } finally { host.dispose() }
   expect((await request('/' + shared.id, 1)).status).toBe(404)
   expect((await (await request('', 1)).json()).documents).toEqual([])
