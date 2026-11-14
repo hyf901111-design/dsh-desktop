@@ -45,6 +45,7 @@ beforeAll(async () => {
         ]
       })
       const uploads = new Map()
+      const recentSearches = []
       window.addEventListener('sherlock:workspace-surface-change', () => {})
       window.finishImport = (name, error) => {
         const entry = [...uploads.values()].find(upload => upload.name === name)
@@ -59,6 +60,13 @@ beforeAll(async () => {
       mountKnowledgeWorkspace(document, host, {
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
+          if (method === 'recent-searches') return [...recentSearches]
+          if (method === 'remember-search') {
+            const index = recentSearches.indexOf(args.query)
+            if (index >= 0) recentSearches.splice(index, 1)
+            recentSearches.unshift(args.query)
+            return [...recentSearches]
+          }
           if (method === 'pick') return ['/tmp/上传成功.md', '/tmp/上传取消.pdf']
           if (method === 'import-file') {
             const name = args.path.split('/').at(-1)
@@ -374,10 +382,44 @@ it('shows file progress in the selected folder and supports retry and cancellati
     await page.evaluate(() => window.finishImport('上传成功.md', '模拟复制失败'))
     await pending.getByRole('button', { name: '重试 上传成功.md' }).click()
     await page.evaluate(() => window.finishImport('上传成功.md'))
-    await expect.poll(() => library.locator('tbody button.knowledge-file-name').filter({ hasText: '上传成功.md' }).count()).toBe(1)
+    await pending.getByRole('status').filter({ hasText: '上传完成' }).waitFor({ timeout: 2500 })
+    expect(await pending.getByRole('progressbar').getAttribute('value')).toBe('16384')
+    expect(await pending.getByRole('button', { name: '上传成功.md的更多操作' }).count()).toBe(1)
+    expect(await pending.count()).toBe(1)
     const cancelled = library.getByRole('row', { name: /上传取消.pdf/ })
     await cancelled.getByRole('button', { name: '取消 上传取消.pdf' }).click()
     await expect.poll(() => cancelled.count()).toBe(0)
     expect(await page.evaluate(() => window.data.documents.find(file => file.name === '上传成功.md').folderId)).toBe('f')
+  } finally { await page.close() }
+})
+
+it('reuses a manual search without moving the field or losing the format filter', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('button', { name: '筛选', exact: true }).click()
+    await library.getByRole('checkbox', { name: 'Markdown', exact: true }).check()
+    await library.getByRole('button', { name: '完成' }).click()
+    const field = library.getByRole('textbox', { name: '搜索文件' })
+    const idle = await field.boundingBox()
+    await field.fill('周报')
+    expect(await field.boundingBox()).toEqual(idle)
+    await field.press('Enter')
+    await library.getByRole('button', { name: '清除搜索' }).click()
+    expect(await field.inputValue()).toBe('')
+    const recent = library.getByRole('group', { name: '最近搜索' })
+    await field.press('ArrowDown')
+    await recent.getByRole('button', { name: '周报' }).press('Enter')
+    expect(await field.inputValue()).toBe('周报')
+    await library.getByText('找到 1 个文件').waitFor()
+    expect(await library.getByRole('button', { name: /消费行业周报.md/ }).count()).toBe(2)
+    expect(await library.getByText('Markdown', { exact: true }).count()).toBe(1)
+    await library.getByRole('button', { name: '清除搜索' }).click()
+    await field.press('Escape')
+    expect(await recent.count()).toBe(0)
   } finally { await page.close() }
 })

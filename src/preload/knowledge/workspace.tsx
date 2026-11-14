@@ -10,6 +10,7 @@ import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
 import type { MemoryBridge } from '../../shared/memory'
 import { KnowledgeMemory } from './memory'
+import { FileSearch } from './file-search'
 import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
@@ -22,6 +23,8 @@ interface Bridge {
   request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
   request(method: 'edit', args: KnowledgeEdit): Promise<KnowledgeSnapshot>
+  request(method: 'recent-searches', args?: Record<string, never>): Promise<string[]>
+  request(method: 'remember-search', args: { query: string }): Promise<string[]>
   request(method: 'pick', args?: Record<string, never>): Promise<string[]>
   request(method: 'import-file', args: { transferId: string; path: string; folderId?: string }): Promise<KnowledgeDocument>
   request(method: 'cancel-import', args: { transferId: string }): Promise<void>
@@ -101,6 +104,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [busy, setBusy] = useState(false)
   const [choosingFiles, setChoosingFiles] = useState(false)
   const [imports, setImports] = useState<FileImport[]>([])
+  const [completedImports, setCompletedImports] = useState<Record<string, number>>({})
+  const [recent, setRecent] = useState<string[]>([])
+  const searchSequence = useRef(0)
   const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean }>()
   const [dialog, setDialog] = useState<DialogState>()
   const [value, setValue] = useState('')
@@ -128,6 +134,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const previewRequest = useRef(0)
   const refresh = useRef<() => void>(() => {})
 
+  function loadSearchHistory(query?: string) {
+    const sequence = ++searchSequence.current
+    const request = query === undefined ? bridge.request('recent-searches', {}) : bridge.request('remember-search', { query })
+    void request.then(items => {
+      if (sequence === searchSequence.current) setRecent(items)
+    }).catch(() => {})
+  }
+
+  useEffect(() => {
+    const next = Math.min(...Object.values(completedImports))
+    if (!Number.isFinite(next)) return
+    const timer = setTimeout(() => setCompletedImports(items =>
+      Object.fromEntries(Object.entries(items).filter(([, expires]) => expires > Date.now()))
+    ), Math.max(0, next - Date.now()))
+    return () => clearTimeout(timer)
+  }, [completedImports])
+
   useEffect(() => {
     let disposed = false
     const load = async () => {
@@ -149,6 +172,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     const surface = () => {
       if (host.current()?.surface === 'knowledge') {
         void load()
+        loadSearchHistory()
       } else {
         setMenu(undefined)
         setDraftFilter(undefined)
@@ -171,10 +195,16 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setBusy(false)
       setChoosingFiles(false)
       setImports([])
+      setCompletedImports({})
+      setRecent([])
+      searchSequence.current++
       setNotice(undefined)
       setPreview(undefined)
       setDialog(undefined)
-      if (host.current()?.surface === 'knowledge') void load()
+      if (host.current()?.surface === 'knowledge') {
+        void load()
+        loadSearchHistory()
+      }
     }
     const offImports = bridge.subscribeImportProgress?.(progress => {
       setImports(items => items.map(item => item.id === progress.id ? { ...item, ...progress } : item))
@@ -185,6 +215,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     surface()
     return () => {
       disposed = true
+      searchSequence.current++
       currentEpoch.current++
       previewRequest.current++
       off()
@@ -358,8 +389,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setSnapshot(snapshot => snapshot.documents.some(row => row.id === document.id)
         ? snapshot : { ...snapshot, documents: [...snapshot.documents, document] })
       setImports(items => items.filter(row => row.id !== item.id))
+      setCompletedImports(items => ({ ...items, [document.id]: Date.now() + 3600 }))
+      if (!listKnowledgeDocuments({ documents: [document], folders: snapshot.folders }, filterState.current.filter).length) {
+        setNotice({ text: `已添加 ${item.name}，当前筛选未显示该文件。` })
+      }
       refresh.current()
-      setNotice({ text: `已添加 ${item.name}。` })
     } catch (error) {
       if (epoch !== currentEpoch.current) return
       setImports(items => items.flatMap(row => {
@@ -545,11 +579,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               {buttonIcon('filter', '筛选')}
               {filterCount > 0 && <span className="knowledge-filter-count" aria-hidden="true">{filterCount}</span>}
             </button>
-            <label className="knowledge-search">
-              <KnowledgeIcon name="search" />
-              <input aria-label="搜索文件" placeholder={selection === 'received' ? '搜索他人共享…' : '搜索文件…'}
-                value={filter.query ?? ''} onChange={event => updateFilter({ query: event.currentTarget.value })} />
-            </label>
+            <FileSearch query={filter.query ?? ''} shared={selection === 'received'} recent={recent}
+              change={query => updateFilter({ query })} remember={query => loadSearchHistory(query)} />
             {selection === 'received' && <button type="button" title="刷新共享目录" aria-label="刷新共享目录"
               disabled={receivedStatus.loading} onClick={() => void refreshReceived(true)}>刷新</button>}
             {selection !== 'received' && <button type="button" className="knowledge-primary" disabled={busy || choosingFiles || !ready} onClick={() => void addFiles()}>
@@ -632,8 +663,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     <td />
                   </tr>
                 ))}
-                {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row =>
-                  <tr key={row.id} data-selected={preview?.document.id === row.id}>
+                {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row => {
+                  const completed = completedImports[row.id] !== undefined
+                  return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}>
                     <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
                       <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
                       <span className="knowledge-file-content">
@@ -643,18 +675,22 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                           {row.share && <span className="knowledge-tag" data-kind="share">共享</span>}
                         </span>
                         <small>{[knowledgeSources[row.source], row.sessionTitle,
-                          snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.received ? '' : '未分组')].filter(Boolean).join(' · ')}</small>
+                          snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.received ? '' : '未分组')].filter(Boolean).join(' · ')}
+                          {completed && <span role="status"> · 上传完成</span>}</small>
+                        {completed && <progress className="knowledge-import-progress" aria-label={`${row.name}的上传进度`}
+                          value={row.size || 1} max={row.size || 1} />}
                       </span>
                     </button></td>
                     <td>{formatBytes(row.size)}</td>
                     <td><time dateTime={new Date(row.updatedAt).toISOString()}>
-                      {new Date(row.updatedAt).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })}
+                      {completed ? '刚刚' : new Date(row.updatedAt).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })}
                     </time></td>
                     <td title={row.received?.owner}>{row.received ? row.received.owner :
                       <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
                         aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
                         onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>}</td>
-                  </tr>)}
+                  </tr>
+                })}
               </tbody>
             </table>
             {!rows.length && !visibleImports.length && <p className="knowledge-empty">
