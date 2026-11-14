@@ -119,7 +119,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [value, setValue] = useState('')
   const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
   const [dragging, setDragging] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(false)
   const currentEpoch = useRef(0)
   const refreshSequence = useRef(0)
   const receivedSequence = useRef(0)
@@ -333,14 +332,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       document.removeEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
     }
   }, [selection, document, host])
-
-  useEffect(() => {
-    const sync = () => setPanelOpen(document.querySelector('#odyssey-right-workspace-panel')?.getAttribute('aria-hidden') === 'false')
-    const observer = new MutationObserver(sync)
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-panel-right', 'aria-hidden'] })
-    sync()
-    return () => observer.disconnect()
-  }, [document])
 
   useEffect(() => {
     if (!draftFilter && !menu) return
@@ -661,10 +652,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           setTab('memory')
         }}>经验记忆</button>
       </div>
-      <button className="knowledge-panel-toggle" type="button" aria-label={panelOpen ? '收起右侧屏' : '打开右侧屏'}
-        aria-expanded={panelOpen} onClick={() => document.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry=right]')?.click()}>
-        <KnowledgeIcon name="panel" />
-      </button>
     </header>
     {tab === 'memory' ? bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} /> : <div className="knowledge-body">
       <nav className="knowledge-navigation" aria-label="知识库分类">
@@ -751,7 +738,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <div className="knowledge-table-area" data-received={selection === 'received'}>
           {selection === 'received' && <nav className="knowledge-shared-folders" aria-label="共享分类">
             <span>分类</span>
-            {filter.sharedCategory && <button type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>全部共享分类</button>}
+            {filter.sharedCategory && <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
+              {buttonIcon('back', '返回上级目录')}
+            </button>}
             {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
               title={category} onClick={() => updateFilter({ sharedCategory: category })}>
               {buttonIcon('folder', category)}<KnowledgeIcon name="next" />

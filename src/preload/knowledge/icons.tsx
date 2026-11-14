@@ -12,7 +12,6 @@ const uiIcons = {
   close: 'm6 6 12 12M18 6 6 18',
   chevron: 'm7 10 5 5 5-5',
   filter: 'M4 5h16l-6 7v5.5l-4 2v-7.5Z',
-  panel: 'M5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-11A1.5 1.5 0 0 1 5.5 5ZM14.5 5v14'
 }
 
 const fileMarks = {
