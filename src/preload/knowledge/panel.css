@@ -76,17 +76,17 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-panel-row small, .knowledge-panel-directory small { color: var(--kb-panel-muted); font-size: 11px; }
 .knowledge-panel-action { display: grid; justify-items: end; align-items: center; margin-left: auto; }
 .knowledge-panel-action > * { grid-area: 1 / 1; }
-.knowledge-panel-action small { padding-inline: 8px; transition: opacity 100ms ease-out; }
+.knowledge-panel-action small { padding-inline: 8px; pointer-events: none; }
 .knowledge-panel .knowledge-panel-action button {
   opacity: 0;
+  pointer-events: none;
   padding-inline: 8px;
   font-size: 12px;
   white-space: nowrap;
-  transition: background-color 130ms ease-out, opacity 100ms ease-out;
 }
 .knowledge-panel .knowledge-panel-action button:hover { background: var(--knowledge-control-hover); }
 .knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action small { opacity: 0; }
-.knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action button { opacity: 1; }
+.knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action button { opacity: 1; pointer-events: auto; }
 .knowledge-panel-directory { display: flex; gap: 8px; align-items: center; width: 100%; min-height: 36px; }
 .knowledge-panel-directory small { margin-left: auto; }
 .knowledge-panel-state { color: var(--kb-panel-muted); margin: 10px 2px; font-size: 12px; }

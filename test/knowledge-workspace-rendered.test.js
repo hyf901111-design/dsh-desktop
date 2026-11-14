@@ -202,9 +202,23 @@ it('preserves PDF filtering when drilling into shared files, going back and brow
     const file = pane.getByRole('button', { name: /共享行业资料.pdf 共享人/ })
     await file.waitFor()
     await page.mouse.move(1050, 750)
-    await expect.poll(() => pane.locator('.knowledge-panel-action small').evaluate(el => getComputedStyle(el).opacity)).toBe('1')
+    const row = file.locator('..')
+    const actionState = () => row.locator('.knowledge-panel-action').evaluate(action => {
+      const size = getComputedStyle(action.querySelector('small'))
+      const reference = getComputedStyle(action.querySelector('button'))
+      return [size.opacity, reference.opacity, reference.pointerEvents]
+    })
+    const before = await file.boundingBox()
+    expect(await actionState()).toEqual(['1', '0', 'none'])
     await file.hover()
-    await expect.poll(() => pane.getByRole('button', { name: '引用文件 共享行业资料.pdf' }).evaluate(el => getComputedStyle(el).opacity)).toBe('1')
+    expect(await actionState()).toEqual(['0', '1', 'auto'])
+    expect(await file.boundingBox()).toEqual(before)
+    await page.mouse.move(1050, 750)
+    await file.focus()
+    await page.keyboard.press('Tab')
+    expect(await row.getByRole('button', { name: '引用文件 共享行业资料.pdf' }).evaluate(el =>
+      el === document.activeElement)).toBe(true)
+    expect(await actionState()).toEqual(['0', '1', 'auto'])
     await pane.getByRole('button', { name: '返回上级' }).click()
     await pane.getByRole('button', { name: /行业研究/ }).waitFor()
     await pane.getByRole('button', { name: '他人共享', exact: true }).click()
@@ -217,6 +231,44 @@ it('preserves PDF filtering when drilling into shared files, going back and brow
   } finally {
     await page.close()
   }
+})
+
+it.each(['no-preference', 'reduce'])('provides drag and preview feedback with %s motion', async reducedMotion => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 }, reducedMotion })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const list = library.locator('.knowledge-file-list')
+    const file = library.getByRole('button', { name: /研究写作规范.md/ }).first()
+    const animation = reducedMotion === 'reduce' ? 'none' : 'knowledge-feedback-in'
+    await file.waitFor()
+    const before = await file.boundingBox()
+    const transfer = await page.evaluateHandle(() => {
+      const transfer = new DataTransfer()
+      transfer.items.add(new File(['正文'], '拖放测试.md'))
+      return transfer
+    })
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await list.dispatchEvent('dragenter', { dataTransfer: transfer })
+      const overlay = library.getByText('拖放文件到知识库', { exact: true })
+      await overlay.waitFor()
+      expect(await overlay.evaluate(el => getComputedStyle(el).animationName)).toBe(animation)
+      expect(await file.boundingBox()).toEqual(before)
+      await list.dispatchEvent('dragleave', { dataTransfer: transfer })
+      await overlay.waitFor({ state: 'detached' })
+    }
+    await file.click()
+    const preview = library.getByRole('complementary', { name: '文件预览' })
+    const content = preview.locator('.knowledge-preview-content')
+    await content.waitFor()
+    expect(await content.evaluate(el => getComputedStyle(el).animationName)).toBe(animation)
+    await preview.getByRole('button', { name: '关闭预览' }).click()
+    await preview.waitFor({ state: 'detached' })
+    expect(await file.boundingBox()).toEqual(before)
+  } finally { await page.close() }
 })
 
 it('applies revision-checked commands to the live list and makes them reversible', async () => {
@@ -374,7 +426,7 @@ it('keeps shared file names readable with both desktop sidebars visible', async 
 })
 
 it('shows file progress in the selected folder and supports retry and cancellation without duplicate entries', async () => {
-  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 }, reducedMotion: 'no-preference' })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
@@ -386,11 +438,13 @@ it('shows file progress in the selected folder and supports retry and cancellati
     const pending = library.getByRole('row', { name: /上传成功.md/ })
     await expect.poll(() => pending.getByRole('progressbar').getAttribute('value')).toBe('8192')
     expect(await pending.innerText()).toContain('上传中 50%')
+    expect(await pending.getByRole('progressbar').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
     await page.evaluate(() => window.finishImport('上传成功.md', '模拟复制失败'))
     await pending.getByRole('button', { name: '重试 上传成功.md' }).click()
     await page.evaluate(() => window.finishImport('上传成功.md'))
     await pending.getByRole('status').filter({ hasText: '上传完成' }).waitFor({ timeout: 2500 })
     expect(await pending.getByRole('progressbar').getAttribute('value')).toBe('16384')
+    expect(await pending.getByRole('progressbar').evaluate(el => getComputedStyle(el).animationName)).toBe('knowledge-feedback-in')
     expect(await pending.getByRole('button', { name: '上传成功.md的更多操作' }).count()).toBe(1)
     expect(await pending.count()).toBe(1)
     const cancelled = library.getByRole('row', { name: /上传取消.pdf/ })
