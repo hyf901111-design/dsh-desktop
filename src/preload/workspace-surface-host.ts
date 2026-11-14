@@ -1,4 +1,4 @@
-export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes' | 'browser';
+export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes' | 'browser' | 'knowledge';
 type SurfaceLocation = {
     surface: WorkspaceSurface;
     route?: string;
@@ -48,11 +48,11 @@ export class WorkspaceSurfaceHost {
         element.dataset.workspaceSurface = surface;
         // Notes use viewport coordinates from the shared header and pane.
         // The blurred frame creates a fixed-position containing block.
-        (['notes','browser'].includes(surface) ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
+        (['notes','browser','knowledge'].includes(surface) ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
         if (this.current()?.surface === surface) this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
-        if (this.settingsOpen() && !['notes','browser'].includes(surface)) { this.closeAll(); return; }
+        if (this.settingsOpen() && !['notes','browser','knowledge'].includes(surface)) { this.closeAll(); return; }
         const current = this.history.at(-1);
         if (current?.surface !== surface || current.route !== route)
             this.history.push({ surface, route });
@@ -88,7 +88,7 @@ export class WorkspaceSurfaceHost {
             }
             // Notes share the resident native header; hidden conversation
             // content cannot receive focus, while the header stays interactive.
-            if (this.background) this.background.inert = ['notes','browser'].includes(current.surface) ? this.backgroundWasInert : true;
+            if (this.background) this.background.inert = ['notes','browser','knowledge'].includes(current.surface) ? this.backgroundWasInert : true;
             this.document.body.dataset.workspaceSurface = current.surface;
         }
         else {
@@ -108,7 +108,7 @@ export class WorkspaceSurfaceHost {
         if (!this.current()) return;
         // Native settings can also mount through keyboard or programmatic navigation.
         // End the surface session instead of concealing it behind another layer.
-        if (this.current() && !['notes','browser'].includes(this.current()?.surface ?? '') && this.settingsOpen()) { this.closeAll(); return; }
+        if (this.current() && !['notes','browser','knowledge'].includes(this.current()?.surface ?? '') && this.settingsOpen()) { this.closeAll(); return; }
         this.schedulePosition();
     };
     private schedulePosition = () => {
@@ -131,10 +131,25 @@ export class WorkspaceSurfaceHost {
         for (const [name, element] of this.surfaces) {
             if (name !== current.surface) continue;
             element.dataset.settingsOpen = String(this.settingsOpen());
-            if (element.style.left !== left)
+            if (name !== 'knowledge' && element.style.left !== left)
                 element.style.left = left;
             if (element.dataset.dark !== String(dark))
                 element.dataset.dark = String(dark);
+            if (name === 'knowledge') {
+                const center = this.document.querySelector<HTMLElement>('.pI_x6G_centerCol');
+                if (center) {
+                    const box = center.getBoundingClientRect();
+                    const view = this.document.defaultView;
+                    const reserved = Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
+                    const height = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top - reserved);
+                    const bounds = { left: box.left, top: box.top, width: box.width, height };
+                    for (const [property, pixels] of Object.entries(bounds)) {
+                        const next = String(pixels) + 'px';
+                        if (element.style.getPropertyValue(property) !== next) element.style.setProperty(property, next);
+                    }
+                    this.resizeObserver?.observe(center);
+                }
+            }
             if (element.dataset.workspaceSurface === 'notes') {
                 const center = this.document.querySelector<HTMLElement>('.pI_x6G_centerCol');
                 const header = this.document.querySelector<HTMLElement>('[data-ework-notes-session]');
@@ -175,10 +190,10 @@ export class WorkspaceSurfaceHost {
         if (this.current()?.surface === 'notes' && target?.closest?.('[data-srb-tabs] [data-conversation-view-id]:not([data-conversation-view-id="notes"])')) { this.closeAll(); return; }
         // Account/settings entries ultimately click this existing native trigger.
         // Release inert and cancel the active surface before React mounts settings.
-        if (target?.closest?.('.VOzbGW_trigger')) { if (!['notes','browser'].includes(this.current()?.surface ?? '')) this.closeAll(); return; }
+        if (target?.closest?.('.VOzbGW_trigger')) { if (!['notes','browser','knowledge'].includes(this.current()?.surface ?? '')) this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
-        if (this.current()?.surface !== 'notes' && !target?.closest?.('[data-sidebar-browser],.st-more-zone') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
+        if (this.current()?.surface !== 'notes' && !target?.closest?.('[data-sidebar-browser],[data-sidebar-knowledge],.st-more-zone') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
             this.closeAll();
     };
     dispose() {

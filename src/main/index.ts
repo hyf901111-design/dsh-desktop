@@ -1,3 +1,10 @@
+import { KnowledgeContent } from './knowledge/content'
+import { researchPdfModules } from './research/research-pdf-navigation'
+import { KnowledgeSharing } from './knowledge/sharing'
+import { KnowledgeViewBridge } from './knowledge/view-bridge'
+import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from './knowledge/capabilities'
+import { KnowledgeStore } from './knowledge/store'
+import { installKnowledgeIpc } from './knowledge/ipc'
 import {routeBrowserUse} from './browser/route'
 import {registerBrowserApp} from './browser/service'
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
@@ -1326,9 +1333,23 @@ async function bootstrap(): Promise<void> {
   let notesDocumentAdapter:import('./notes/document-capability-adapter').NoteDocumentAdapter|undefined
   let conversationComponentsService:ReturnType<typeof createConversationComponentService>|undefined
   let conversationComponentsReady=false
+  const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  const knowledgeIdentity = () => ({ owner: integrationOwner() || 'local', generation: accountService!.generation })
+  const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:changed')
+  })
+  let knowledgeShared: KnowledgeSharing
+  const knowledgeContent = new KnowledgeContent(() => researchPdfModules({
+    packaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath()
+  }))
+  const knowledgeView = new KnowledgeViewBridge(value => {
+    if (!mainWindow || mainWindow.isDestroyed()) throw Error('知识库工作区不可用。')
+    mainWindow.webContents.send('knowledge:view-action', value)
+  })
+  registerTrustedMainWindowHandler(ipcMain, 'knowledge:view-reply', () => mainWindow, (_event, value) => knowledgeView.reply(value))
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
   const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url})
-  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,sharedKnowledge:(current,id)=>!accountService?.authenticated||researchBoardsService?.isSharedSession(id)?{}:sharedKnowledgeCapabilityHandlers(knowledgeShared,knowledgeContent,current),knowledge:(current,id)=>researchBoardsService?.isSharedSession(id)?{}:knowledgeCapabilityHandlers(knowledge,knowledgeShared,knowledgeContent,knowledgeView,current),get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
   const researchPdfRenderer = new ResearchPdfRenderer()
@@ -1393,6 +1414,7 @@ async function bootstrap(): Promise<void> {
   })
   const accountEndpoint = await accountService.start()
   const collaborationClient=new CollaborationClient(accountService, { origin: acceptanceOrigin })
+  knowledgeShared = new KnowledgeSharing({ client: collaborationClient, authenticated: () => accountService?.authenticated === true })
   const boardsToken=randomUUID()
   researchBoardIntegration=new ResearchBoardIntegration({root:join(app.getPath('userData'),'research-board-runtime'),storage:researchCanvasStorage,registry:researchFilePreviewRegistry,clipboard:()=>researchClipboardService,client:collaborationClient,service:()=>researchBoardsService!,runtimeUrl:()=>runtime?.snapshot().url,runtimeToken:boardsToken,revealFile:target=>shell.showItemInFolder(target),invalidate:id=>researchContextBridge?.invalidateSession(id)})
   researchBoardsService = new ResearchBoardsService({
@@ -1452,7 +1474,12 @@ async function bootstrap(): Promise<void> {
   // Integrations are isolated from core startup: a damaged registry must never hide conversations.
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
-  const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
+  installKnowledgeIpc({
+    store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow, identity: knowledgeIdentity,
+    generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
+      ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)
+  })
   try {
     memoryService = await MemoryService.open({
       root: join(app.getPath('userData'), 'memory'), encryption: safeStorage,

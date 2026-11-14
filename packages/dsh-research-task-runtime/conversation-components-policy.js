@@ -69,7 +69,7 @@ export function latestClientModeForAuthority(session){
    if(result.type!=='tool-result'||result.isError)continue
    for(const block of result.content??[]){
     if(block.type!=='text')continue
-    try{const value=JSON.parse(block.text);if(['conversation','research','notes','spreadsheet'].includes(value?.mode)&&Array.isArray(value.capabilities)&&!value.error)mode=value.mode}catch{}
+    try{const value=JSON.parse(block.text);if(['conversation','research','notes','spreadsheet','knowledge'].includes(value?.mode)&&Array.isArray(value.capabilities)&&!value.error)mode=value.mode}catch{}
    }
   }
  }
@@ -114,6 +114,7 @@ export function registerConversationComponentsPolicy(ctx){
   const session=agent?.session
   if(!session||session.header?.origin==='subagent'||(session.header?.delegationDepth??0)>0)return ''
   const request=componentCreationRequest(session),mode=latestClientModeForAuthority(session)
+  if(mode==='knowledge')return '【当前知识库】利用 knowledge.inspect 获取实际筛选和版本。明确要求筛选、排序或撤销时，用 knowledge.filter 或 knowledge.filter.undo 更新当前文件列表，按真实回执说明结果。查找并引用他人共享资料时，先检索，再按实际文件标识读取正文。'
   const quick=spreadsheetQuickPrompt(planningHumanRequest(session)?.text)
   if(quick>=0&&!documentOnly(session)&&(!mode||mode==='spreadsheet'))return [SHEET_QUICK_GUIDANCE,SHEET_WRITE_GUIDANCE,quick===2?CASH_FLOW_QUICK_GUIDANCE:''].filter(Boolean).join('\n')
   if(documentOnly(session))return '【文件交付】本轮制作或修订的是文件，文件中的图表、表格和版式属于该交付件。沿用户指定技能和原有文件读取、代码执行、渲染检查、保存与文件交付流程完成；保留原任务预算，不将内部图表替换为独立界面组件或新研究画布。'
@@ -140,6 +141,7 @@ export function registerConversationComponentsPolicy(ctx){
   if(mode==='conversation')return '当前对话裸组件应直接提交完整 artifact 给 conversation.components.create；不能写入研究画布。'
   if(mode==='spreadsheet')return '当前工作簿使用 spreadsheet.inspect 和 spreadsheet.apply，不能写入研究画布。'
   if(mode==='notes')return '当前笔记裸组件应使用 notes.components.create 等既有笔记能力，不能写入研究画布。'
+  if(mode==='knowledge')return '当前工作区是知识库。通过知识库能力查找和整理资料。'
  }
  const disposeGuard=ctx.tools?.guard?.(exec=>exec.name==='research_workbench_create'?denial(exec.agent?.session):undefined)
  const disposeWire=ctx.on('agent/request-context',async({agent,signal},next)=>{

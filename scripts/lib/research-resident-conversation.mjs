@@ -24,6 +24,12 @@ export function reconcileResearchConversation(coordinator) {
 }
 export function patchResearchResidentConversation(source) {
   const marker = '/* sherlock:resident-research-conversation:v1 */';
+  const entry = 'service.setPanelState?.({ open: true, width: this.researchWidths.get(sessionId) ?? 340 }, scope);';
+  if (!source.includes('/* ework:knowledge-resident-conversation */') && source.includes(entry)) source = source.replace(entry, `/* ework:knowledge-resident-conversation */ if (document.body.dataset.workspaceSurface === 'knowledge') {
+                  if (this.previous.get(sessionId)?.open === false) {
+                    service.setPanelState?.({ open: false }, scope);
+                  }
+                } else ${entry}`);
   const reconcileStart=source.indexOf('function reconcileResearchConversation(');
   if(reconcileStart>=0) {
     const end=source.indexOf('const defaultResearchSidebar =',reconcileStart);

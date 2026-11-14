@@ -1,3 +1,5 @@
+import { mountKnowledgePanels } from './knowledge/panel'
+import { mountKnowledgeWorkspace } from './knowledge/workspace'
 import { mountSpreadsheet } from './spreadsheet/view'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
@@ -259,6 +261,40 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
+    memory: {
+      request: command => ipcRenderer.invoke('memory:request', command),
+      subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) }
+    },
+    request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
+    path: file => safePathForFile(file, webUtils.getPathForFile),
+    subscribeAction: listener => {
+      const handle = (_event: unknown, value: Parameters<typeof listener>[0]) => listener(value)
+      ipcRenderer.on('knowledge:view-action', handle)
+      return () => ipcRenderer.removeListener('knowledge:view-action', handle)
+    },
+    reply: value => { void ipcRenderer.invoke('knowledge:view-reply', value).catch(() => {}) },
+    subscribe: listener => {
+      ipcRenderer.on('knowledge:changed', listener)
+      return () => ipcRenderer.removeListener('knowledge:changed', listener)
+    }
+  })
+  window.addEventListener('unload', disposeKnowledge, { once: true })
+  const disposeKnowledgePanels = mountKnowledgePanels(document, {
+    snapshot: () => ipcRenderer.invoke('knowledge:request', 'snapshot'),
+    received: refresh => ipcRenderer.invoke('knowledge:request', 'received', { refresh }),
+    preview: id => ipcRenderer.invoke('knowledge:request', 'preview', { id }),
+    markdown: id => ipcRenderer.invoke('knowledge:request', 'markdown', { id }),
+    saveMarkdown: (id, revision, text) => ipcRenderer.invoke('knowledge:request', 'save-markdown', { id, revision, text }),
+    open: id => ipcRenderer.invoke('knowledge:request', 'open', { id }),
+    download: id => ipcRenderer.invoke('knowledge:request', 'download', { id })
+  })
+  const knowledgeChanged = () => document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+  ipcRenderer.on('knowledge:changed', knowledgeChanged)
+  window.addEventListener('unload', () => {
+    disposeKnowledgePanels()
+    ipcRenderer.removeListener('knowledge:changed', knowledgeChanged)
+  }, { once: true })
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
     ...(process.platform==='darwin'||process.platform==='win32'?{
@@ -342,7 +378,7 @@ function initializeUi(): void {
     else await scheduledView.open()
   })
   window.addEventListener('unload', disposeHomeAppShortcuts, { once: true })
-  const resetIntegrationIdentity = () => { window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
@@ -419,6 +455,10 @@ contextBridge.exposeInMainWorld(
     showComponentContextMenu: (input: unknown): Promise<string | null> => ipcRenderer.invoke('ui:component-context-menu',input),
     componentContextMenuKey: (menuId: string,key: string) => ipcRenderer.invoke('ui:component-context-menu-key',menuId,key),
     closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
+    knowledgeOptions: () => ipcRenderer.invoke('knowledge:request', 'reference-options'),
+    knowledgeReference: (reference: Record<string, unknown>) => ipcRenderer.invoke('knowledge:request', 'reference', reference),
+    collectKnowledgeFile: (sessionId: string, path: string, saved: boolean, sessionTitle?: string): Promise<import('../shared/knowledge-library').KnowledgeDocument | undefined> =>
+      ipcRenderer.invoke('knowledge:request', 'generated', { sessionId, path, saved, sessionTitle }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
     imageAction: (input: unknown) => ipcRenderer.invoke('conversation:image-action', input),

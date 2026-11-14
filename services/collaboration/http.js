@@ -1,3 +1,4 @@
+import { cleanupKnowledgeUploads, handleKnowledgeRequest } from './knowledge.js'
 import { authenticate, hash } from '../accounts/auth.js'
 import { LIMITS } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
@@ -50,6 +51,9 @@ export async function handleRequest(request, env, ctx) {
     }
     const user = await authenticate(request, env)
     if (!user) fail('LOGIN_REQUIRED', 401)
+    if (path === '/knowledge' || path.startsWith('/knowledge/')) {
+      return await handleKnowledgeRequest(request, env, user, path)
+    }
     if (path === '/me' && request.method === 'GET')
       return json({ user: await identity(env, user) })
     if (path === '/users/lookup' && request.method === 'POST') {
@@ -261,6 +265,7 @@ function decodeName(value) {
   }
 }
 export async function cleanup(env) {
+  await cleanupKnowledgeUploads(env).catch(() => {})
   await flushOutbox(env)
   const abandoned = (
     await sql(
