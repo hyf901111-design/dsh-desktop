@@ -48,6 +48,10 @@ beforeAll(async () => {
       mountKnowledgeWorkspace(document, host, {
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
+          if (method === 'received') return [
+            { id: 'shared-layout', name: '渠道调研验收.md', source: 'upload', size: 1024, updatedAt: 1,
+              starred: false, saved: false, received: { owner: '验收所有者', category: '行业研究' } }
+          ]
           if (method === 'preview') return { document: documents.find(d => d.id === args.id), text: '# 研究写作规范' }
           throw new Error('Unexpected bridge method '+method)
         },
@@ -298,4 +302,26 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
   } finally {
     await page.close()
   }
+})
+
+it('keeps shared file names readable with both desktop sidebars visible', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 360px 10px 280px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('button', { name: /他人共享/ }).click()
+    await library.getByRole('button', { name: '行业研究', exact: true }).click()
+    const title = library.locator('.knowledge-file-title > span:first-child')
+    await title.waitFor()
+    expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(105)
+    const table = library.locator('.knowledge-table-wrap')
+    expect(await table.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await page.setViewportSize({ width: 1240, height: 900 })
+    expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
+    expect(await table.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    expect(await library.getByText('验收所有者', { exact: true }).isVisible()).toBe(true)
+  } finally { await page.close() }
 })
