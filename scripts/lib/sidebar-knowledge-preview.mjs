@@ -55,10 +55,15 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
       } finally { checking = false }
     }
     const accountChanged = () => clear('账号已切换，请从知识库重新打开文件。')
-    const reopen = event => { if (failed && event.detail === fileId) void load() }
+    const reopen = event => {
+      if (event.detail !== fileId) return
+      if (failed) void load()
+      else if (shared) void check()
+    }
     document.addEventListener('sherlock:knowledge-preview-reopen', reopen)
     document.addEventListener('sherlock:knowledge-account-changed', accountChanged)
     document.addEventListener('sherlock:knowledge-changed', check)
+    if (shared) document.addEventListener('sherlock:knowledge-shared-access-changed', check)
     document.addEventListener('visibilitychange', check)
     window.addEventListener('focus', check)
     const timer = shared ? window.setInterval(check, 15000) : null
@@ -69,6 +74,7 @@ function useKnowledgeEditorSource(fileId, scope, tab, sidebar) {
       document.removeEventListener('sherlock:knowledge-preview-reopen', reopen)
       document.removeEventListener('sherlock:knowledge-account-changed', accountChanged)
       document.removeEventListener('sherlock:knowledge-changed', check)
+      if (shared) document.removeEventListener('sherlock:knowledge-shared-access-changed', check)
       document.removeEventListener('visibilitychange', check)
       window.removeEventListener('focus', check)
     }
