@@ -1038,7 +1038,7 @@ function patchComponentNativeTabSelection(source) {
 
 function patchComponentTabOverflow(source) {
   const marker = '/* sherlock:component-tab-overflow:v1 */'
-  if (source.includes(marker)) return patchConversationTabIcon(source)
+  if (source.includes(marker)) return patchResidentConversationTab(patchConversationTabIcon(source))
   const start = source.indexOf('function TabBar(props) {')
   const end = source.indexOf('\n\t\t//#endregion', start)
   let part = source.slice(start, end)
@@ -1064,7 +1064,48 @@ function patchComponentTabOverflow(source) {
               else onActivate(tab.id);`)
   menu = menu.replace('getTabIcon?.(tab) ?? null', `getTabIcon?.(tab.id === componentTabId ? {...tab,type:'scheduled'} : tab) ?? null`)
   part = part.slice(0, menuStart) + menu
-  return patchConversationTabIcon(source.slice(0, start) + part + source.slice(end))
+  return patchResidentConversationTab(patchConversationTabIcon(source.slice(0, start) + part + source.slice(end)))
+}
+
+function patchResidentConversationTab(source) {
+  const marker = '/* sherlock:resident-conversation-tab:v1 */'
+  if (source.includes(marker)) return source
+  const start = source.indexOf('function TabBar(props) {')
+  const end = source.indexOf('\n\t\t//#endregion', start)
+  if (start < 0 || end < 0) throw new Error('Resident conversation TabBar boundary missing')
+  let bar = source.slice(start, end)
+  const props = 'getTabIcon: nativeGetTabIcon, getTabBadge } = props;'
+  bar = replaceExact(bar, props, props + `
+    ${marker}
+    const residentChat = tabs.find(tab => tab.id === 'sherlock-research-conversation');
+    const scrollingTabs = residentChat ? tabs.filter(tab => tab !== residentChat) : tabs;`, 'resident conversation identity')
+
+  const listStart = '\t\t\t\tchildren: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\tref: listRef,\n\t\t\t\t\tclassName: sidebar_module_css_default.tabList,'
+  const renderStart = 'children: tabs.map((tab) => {'
+  const renderEnd = '}, tab.id); })'
+  const first = bar.indexOf(renderStart)
+  const last = bar.indexOf(renderEnd, first)
+  if (first < 0 || last < 0) throw new Error('Resident conversation tab renderer missing')
+  const renderBody = bar.slice(first + renderStart.length, last) + '}, tab.id);'
+  const barReturn = 'return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tclassName: clsx(sidebar_module_css_default.tabBar,'
+  bar = replaceExact(bar, bar.slice(first, last + renderEnd.length),
+    'children: scrollingTabs.map(tab => renderTab(tab))', 'scrollable document tabs')
+  bar = replaceExact(bar, barReturn, `const renderTab = (tab, fixed = false) => {${renderBody}
+      };
+      ${barReturn}`, 'shared tab renderer')
+  bar = replaceExact(bar, listStart, listStart.replace('children: [', 'children: [residentChat && renderTab(residentChat, true), '), 'resident conversation before scroller')
+  bar = replaceExact(bar, '"data-odyssey-panel-tab": true,', '"data-odyssey-panel-tab": true,\n            "data-odyssey-resident-conversation-tab": fixed || void 0,', 'resident conversation layout hook')
+  bar = replaceExact(bar, 'if (!el || !node) return;', 'if (!el) return;', 'clipping when conversation is active')
+  bar = replaceExact(bar, 'for (const tab of tabNodes.current.values()) {', 'for (const tab of tabNodes.current.values()) {\n        if (!el.contains(tab)) continue;', 'clipping limited to document tabs')
+  bar = replaceExact(bar, `      const left = node.offsetLeft, right = left + node.offsetWidth;
+      if (left < el.scrollLeft) el.scrollLeft = left;
+      else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;`, `      if (node && el.contains(node)) {
+        const left = node.offsetLeft, right = left + node.offsetWidth;
+        if (left < el.scrollLeft) el.scrollLeft = left;
+        else if (right > el.scrollLeft + el.clientWidth) el.scrollLeft = right - el.clientWidth;
+      }`, 'reveal limited to document tabs')
+  bar = replaceExact(bar, 'String(overflowTabs.length)); setHasOverflow', 'String(scrollingTabs.length)); setHasOverflow', 'document tab padding count')
+  return source.slice(0, start) + bar + source.slice(end)
 }
 
 function patchConversationTabIcon(source) {
@@ -1418,7 +1459,7 @@ export async function patchBetterSidebarPackage(packageRoot) {
   const clientPath = path.join(packageRoot, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
   const patched = patchSidebarKnowledgePreview(source.includes('/* sherlock:native-knowledge-editor:v1 */')
-    ? source : patchBetterSidebarClient(source))
+    ? patchResidentConversationTab(source) : patchBetterSidebarClient(source))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
   const terminalPath = path.join(packageRoot, 'lib', 'client-terminal.js')
   const terminal = await readFile(terminalPath, 'utf8')

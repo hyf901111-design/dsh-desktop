@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 // Replay the production Node transform; Vitest formatting changes function.toString().
 const patchBetterSidebarClient=(source:string)=>execFileSync(process.execPath,['--input-type=module','-e',"import fs from 'node:fs';import{patchBetterSidebarClient}from'./scripts/lib/patch-sherlock-better-sidebar.mjs';process.stdout.write(patchBetterSidebarClient(fs.readFileSync(0,'utf8')))"],{input:source,encoding:'utf8',maxBuffer:24*1024*1024})
 
-const source = await readFile(new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
+const source = await readFile(process.env.SHERLOCK_SIDEBAR_CLIENT_SOURCE ?? new URL('../build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js', import.meta.url), 'utf8')
 const patched = patchBetterSidebarClient(source)
 const start = patched.indexOf('function systemTabTitle(')
 const end = patched.indexOf('\n\t\t//#endregion', start)
@@ -115,11 +115,38 @@ describe('Figma panel tab overflow', () => {
           newTabOptions: []
         }))
       })
-      // The pinned research conversation gets the same icon in the strip and switcher.
-      const conversationTabs = [{id:'sherlock-research-conversation',type:'sherlock-research-conversation',title:'对话',meta:{sherlockPinned:true}}, ...tabs]
-      await act(async () => { root.render(createElement(renderTabBar, {paneId:'right',tabs:conversationTabs,active:'sherlock-research-conversation',onActivate,onClose,onNewTab:vi.fn(),onDropTab:vi.fn(),newTabOptions:[]})) })
-      expect(host.querySelector('[data-odyssey-panel-tab-id="sherlock-research-conversation"] [data-conversation-tab-icon]')).not.toBeNull()
-      await act(async () => { root.render(createElement(renderTabBar, {paneId:'right',tabs,active:'gold-md',onActivate,onClose,onNewTab:vi.fn(),onDropTab:vi.fn(),newTabOptions:[]})) })
+      const chatId = 'sherlock-research-conversation'
+      const conversationTabs = [...tabs, {
+        id: chatId, type: chatId, title: '对话', meta: { sherlockPinned: true, sherlockClosable: false }
+      }]
+      const renderTabs = (openTabs: typeof conversationTabs, active: string) =>
+        act(async () => {
+          root.render(createElement(renderTabBar, {
+            paneId: 'right', tabs: openTabs, active, onActivate, onClose,
+            onNewTab: vi.fn(), onDropTab: vi.fn(), newTabOptions: []
+          }))
+        })
+      await renderTabs(conversationTabs, chatId)
+      const chat = host.querySelector(`[data-odyssey-panel-tab-id="${chatId}"]`) as unknown as HTMLElement
+      const scrollable = host.querySelector('.t8lSSG_tabList') as unknown as HTMLElement
+      expect(chat.querySelector('[data-conversation-tab-icon]')).not.toBeNull()
+      expect(chat.parentElement).toBe(scrollable.parentElement)
+      expect(scrollable.contains(chat)).toBe(false)
+      expect(chat.nextElementSibling).toBe(scrollable)
+      expect(chat.textContent).toBe('对话')
+      expect(chat.querySelector('button')).toBeNull()
+      const lastTab = scrollable.querySelector<HTMLElement>('[data-odyssey-panel-tab-id="tasks"]')!
+      Object.defineProperty(lastTab, 'offsetLeft', { value: 280 })
+      Object.defineProperty(lastTab, 'offsetWidth', { configurable: true, value: 50 })
+      Object.defineProperty(scrollable, 'clientWidth', { configurable: true, value: 110 })
+      await renderTabs(conversationTabs, 'tasks')
+      expect(scrollable.scrollLeft).toBe(220)
+      expect(chat.hasAttribute('data-odyssey-tab-clipped')).toBe(false)
+      await act(async () => { chat.click() })
+      expect(onActivate).toHaveBeenCalledWith(chatId)
+      await renderTabs(conversationTabs, chatId)
+      expect(scrollable.scrollLeft).toBe(220)
+      await renderTabs(tabs, 'gold-md')
       expect(host.querySelectorAll('[role=tab][aria-selected=true]')).toHaveLength(1)
       await act(async () => {
         browserWindow.document.body.dataset.scheduledComponent = 'true'
