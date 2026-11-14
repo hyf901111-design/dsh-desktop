@@ -1,7 +1,7 @@
 import { it, expect, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, patchKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, patchKnowledgeConversation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
 import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
 import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/browser-app-native.mjs'
@@ -64,6 +64,7 @@ it('composes with the installed native client patch sequence and keeps its resto
   expect(() => new Function(patched)).not.toThrow()
   expect(stripBrowserAppNative(stripSpreadsheetClient(patched))).toBe(knowledge)
   expect(patchKnowledgeConversation(knowledge)).toBe(knowledge)
+  expect(stripKnowledgeConversation(knowledge)).toBe(base)
   for (const [id, patch] of [['commands', patchSkillCommandPopup], ['input-trigger', patchSkillCommandLabels]]) {
     const result = patch(source(id))
     expect(() => new Function(result)).not.toThrow()

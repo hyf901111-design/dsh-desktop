@@ -138,11 +138,33 @@ export function installKnowledgeSourceNavigation({ sessions, chatStore, document
  return () => doc.removeEventListener('sherlock:knowledge-source-open', open)
 }
 
+const knowledgePatch = '/* ework:knowledge-conversation:restore */'
+const knowledgePatchEnd = '/* ework:knowledge-conversation:end */'
+
+export function stripKnowledgeConversation(source) {
+ const start=source.indexOf(knowledgePatch)
+ if(start<0)return source
+ const end=source.indexOf(knowledgePatchEnd,start)
+ if(end<0)throw Error('Knowledge conversation restore record missing')
+ const changes=JSON.parse(source.slice(start+knowledgePatch.length,end))
+ source=source.slice(0,start)+source.slice(end+knowledgePatchEnd.length)
+ for(const [before,after] of changes.reverse()){
+  const boundary=source.indexOf('/* browser-app-native:v1 */')
+  const body=boundary<0?source:source.slice(0,boundary)
+  if(body.split(after).length!==2)throw Error('Knowledge conversation restore anchor drift: '+before.slice(0,75))
+  source=body.replace(after,()=>before)+(boundary<0?'':source.slice(boundary))
+ }
+ return source
+}
+
 export function patchKnowledgeConversation(input) {
+ if(input.includes(knowledgePatch))return input
+ const changes=[]
  const marker='/* ework:knowledge-composer:v1 */'
  const replace=(source,anchor,next)=>{
   const boundary=source.indexOf('/* browser-app-native:v1 */'),body=boundary<0?source:source.slice(0,boundary)
   if(body.split(anchor).length!==2)throw Error('Knowledge composer anchor drift: '+anchor.slice(0,100))
+  changes.push([anchor,next])
   return body.replace(anchor,()=>next)+(boundary<0?'':source.slice(boundary))
  }
  if(!input.includes('"data-odyssey-command-launcher": true')){
@@ -164,9 +186,9 @@ export function patchKnowledgeConversation(input) {
   input=replace(input,anchor,anchor+'\n '+sourceNavigation+
    '\n ctx.effect(()=>('+installKnowledgeSourceNavigation.toString()+')({sessions,chatStore}),"Knowledge Base source conversation");')
  }
- if(input.includes(marker))return input
+ if(!input.includes(marker)){
   const registration='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
- let source=replace(input,registration,registration+`
+  input=replace(input,registration,registration+`
  ${marker}
  ctx.inject(['commandUi','inputTriggers'],scope=>{
   const references=(${installKnowledgeReferences.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')]});
@@ -175,5 +197,6 @@ export function patchKnowledgeConversation(input) {
   scope.effect(()=>scope.get('inputTriggers').registerSource((${knowledgeReferenceCodec.toString()})()),'Knowledge Base reference codec');
  });
  ctx.inject(['betterSidebar'],scope=>scope.effect(()=>(${installKnowledgeSidebar.toString()})({service:scope.get('betterSidebar')}),'Knowledge Base sidebar tabs'));`)
- return source
+ }
+ return changes.length?input+knowledgePatch+JSON.stringify(changes)+knowledgePatchEnd:input
 }
