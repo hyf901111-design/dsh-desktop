@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "表格组件页签的完整标题",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "9c55106e5d913057654f4fdb60d46c45ffa075e2",
-        "tipCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
+        "baseCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
+        "tipCommit": "eeb8c9c6ee5fc988da9939e623194513cf0a7908",
         "commits": [
           {
-            "commit": "3e5f16571c98c7848437c2f6005be76c36d39079",
+            "commit": "eeb8c9c6ee5fc988da9939e623194513cf0a7908",
             "parents": [
-              "9c55106e5d913057654f4fdb60d46c45ffa075e2"
+              "3e5f16571c98c7848437c2f6005be76c36d39079"
             ],
-            "subject": "显示截断组件页签和更多菜单中的完整名称"
+            "subject": "保持客户端更多菜单的长标题换行宽度"
           }
         ],
         "files": [
@@ -29,15 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/floating-surfaces.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/spreadsheet/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
           }
         ],
         "checks": [
@@ -49,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
-            "completedAt": "2026-11-14T07:02:31.968Z",
+            "verifiedCommit": "eeb8c9c6ee5fc988da9939e623194513cf0a7908",
+            "completedAt": "2026-11-14T07:13:26.097Z",
             "timeoutMs": 180000
           },
           {
@@ -60,8 +52,8 @@
             ],
             "outcome": "passed",
             "summary": "Electron 检查标题悬停提示和菜单换行",
-            "verifiedCommit": "3e5f16571c98c7848437c2f6005be76c36d39079",
-            "completedAt": "2026-11-14T07:02:31.968Z",
+            "verifiedCommit": "eeb8c9c6ee5fc988da9939e623194513cf0a7908",
+            "completedAt": "2026-11-14T07:13:26.097Z",
             "timeoutMs": 180000
           }
         ],
@@ -74,7 +66,7 @@
           "更多菜单完整显示长标题"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T07:02:31.968Z"
+        "generatedAt": "2026-11-14T07:13:26.097Z"
       }
     },
     {
