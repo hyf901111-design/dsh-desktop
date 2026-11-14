@@ -666,11 +666,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         </div>
         {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id} data-selected={filter.folderId === folder.id}>
           <button type="button" aria-current={filter.folderId === folder.id ? 'page' : undefined} onClick={() => selectCategory('all', folder.id)}>
-            {buttonIcon('folder', folder.name)}
+            <KnowledgeIcon name="folder" /><span data-odyssey-truncated-tooltip>{folder.name}</span>
             <small>{listKnowledgeDocuments(snapshot, { folderId: folder.id }).length}</small>
           </button>
           <button type="button" className="knowledge-square knowledge-folder-menu" data-knowledge-popup-trigger
-            aria-label={`${folder.name}的更多操作`} onClick={event => showMenu(event, folder.id, true)}>
+            aria-label={`${folder.name}的更多操作`} aria-expanded={menu?.folder === true && menu.id === folder.id}
+            onClick={event => showMenu(event, folder.id, true)}>
             <KnowledgeIcon name="more" />
           </button>
         </div>)}
@@ -695,7 +696,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         else setNotice({ text: '请拖入本地文件。', error: true })
       }}>
         <div className="knowledge-tools">
-          <h2>{title}{filter.sharedCategory && selection === 'received' && <span> / {filter.sharedCategory}</span>}</h2>
+          <h2 data-odyssey-truncated-tooltip>{title}{filter.sharedCategory && selection === 'received' && <span> / {filter.sharedCategory}</span>}</h2>
           <div className="knowledge-toolbar">
             <button ref={filterButton} type="button" className="knowledge-filter-trigger" aria-label="筛选"
               data-knowledge-popup-trigger aria-expanded={!!draftFilter} data-filtered={filterCount > 0} onClick={() => { setMenu(undefined); setDraftFilter(current => current ? undefined : filter) }}>

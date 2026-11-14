@@ -13,12 +13,15 @@ beforeAll(async () => {
   const output = await build({
     stdin: { resolveDir: process.cwd(), contents: `
       import { WorkspaceSurfaceHost } from './src/preload/workspace-surface-host'
+      import { mountFloatingSurfaces } from './src/preload/floating-surfaces'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
       import { installKnowledgeSidebar } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
       import { createRoot } from 'react-dom/client'
       const host = new WorkspaceSurfaceHost(document)
+      const longFolder = document.body.dataset.testFolderName
+      if (longFolder) mountFloatingSurfaces(document)
       window.openLibrarySettings = () => document.dispatchEvent(new CustomEvent('sherlock:knowledge-show-section', { detail: 'memory' }))
       const moreFormats = document.body.hasAttribute('data-test-formats')
         ? ['pdf', 'docx', 'xlsx', 'png', 'mp3', 'mp4', 'bin'].map((suffix, index) => ({
@@ -30,7 +33,7 @@ beforeAll(async () => {
         { id: 'b', name: '研究写作规范.md', source: 'upload', folderId: 'f', size: 4096 },
         { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f', size: 16384, updatedAt: 1762080000000 }
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
-      window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
+      window.data = { documents, folders: [{ id: 'f', name: longFolder || '研究资料' }] }
       window.markdown = { text: '# 研究写作规范', revision: 'first' }
       const nativeTabs = document.querySelector('[data-test-knowledge-native-tabs]')
       if (nativeTabs) {
@@ -904,5 +907,66 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     await files.click()
     await pane.getByRole('button', { name: '打开完整知识库' }).click()
     await library.getByRole('textbox', { name: '搜索文件' }).waitFor()
+  } finally { await page.close() }
+})
+
+it('aligns folder counts and more actions while keeping long headings clear of the file controls', async () => {
+  const name = '季度渠道库存与重点公司经营数据跟踪方案及历次研究会议材料'.repeat(4)
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`<body data-test-folder-name="${name}"><div class="pI_x6G_centerCol"
+      style="position:fixed;inset:10px 340px 10px 120px"></div></body>`)
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const nav = library.getByRole('navigation', { name: '知识库分类' })
+    const folder = nav.locator('.knowledge-folder')
+    const row = folder.getByRole('button').first()
+    const label = row.locator('[data-odyssey-truncated-tooltip]')
+    const number = folder.locator('small')
+    const category = nav.getByRole('button', { name: /所有文件/ }).locator('small')
+    const menu = folder.locator('.knowledge-folder-menu')
+    const tooltip = page.getByRole('tooltip')
+    const center = async target => {
+      const box = await target.boundingBox()
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    }
+    await row.waitFor()
+    expect(await number.textContent()).toBe('2')
+    expect(await menu.isVisible()).toBe(false)
+    expect((await center(number)).x).toBe((await center(category)).x)
+    await label.hover()
+    await tooltip.waitFor()
+    expect(await tooltip.textContent()).toBe(name)
+    expect(await number.evaluate(el => getComputedStyle(el).opacity)).toBe('0')
+    expect(await center(menu)).toEqual(await center(number))
+    await menu.hover()
+    expect(await center(menu.locator('svg'))).toEqual(await center(menu))
+    expect(await menu.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+    await menu.click()
+    expect(await library.getByRole('button', { name: '重命名文件夹' }).isVisible()).toBe(true)
+    await page.keyboard.press('Escape')
+    await row.click()
+    const heading = library.getByRole('heading', { name })
+    const filter = library.getByRole('button', { name: '筛选', exact: true })
+    const search = library.getByRole('textbox', { name: '搜索文件' })
+    const upload = library.getByRole('button', { name: '添加文件', exact: true })
+    const separated = (left, right) => left.x + left.width <= right.x + 1 || left.y + left.height <= right.y + 1
+    for (const width of [1280, 1060, 910, 800]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect.poll(() => library.evaluate(el => Math.round(el.getBoundingClientRect().width))).toBe(width - 460)
+      const layout = await Promise.all([heading, filter, search, upload].map(target => target.boundingBox()))
+      const [titleBox, filterBox, searchBox, uploadBox] = layout
+      expect(layout.every(box => box && box.width > 0), `at ${width}px`).toBe(true)
+      expect(await heading.evaluate(el => el.scrollWidth > el.clientWidth && getComputedStyle(el).textOverflow === 'ellipsis')).toBe(true)
+      expect(separated(titleBox, filterBox) && separated(filterBox, searchBox) && separated(searchBox, uploadBox)).toBe(true)
+      expect(uploadBox.x + uploadBox.width).toBeLessThanOrEqual(width - 340)
+      expect((await center(number)).x).toBe((await center(category)).x)
+    }
+    await heading.hover()
+    expect(await tooltip.textContent()).toBe(name)
+    expect(await number.evaluate(el => getComputedStyle(el).opacity)).toBe('1')
+    expect(await menu.isVisible()).toBe(false)
   } finally { await page.close() }
 })
