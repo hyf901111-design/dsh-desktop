@@ -3,8 +3,20 @@ const module = await import('../packages/dsh-research-task-runtime/client-capabi
 it('registers bounded semantic handlers with schemas instead of accepting arbitrary IPC',()=>{
  expect(module, 'typed capability registry has not been implemented').not.toBeNull()
  const registry=module.createClientCapabilityRegistry({exportNote:async()=>({status:'succeeded',path:'/tmp/report.pdf'}),styleComponents:async()=>({status:'succeeded'}),inspectCanvas:async()=>({status:'succeeded'}),resetZoom:async()=>({status:'succeeded'})})
- expect(registry.catalog(context).map(x=>x.id)).toEqual(['spreadsheet.inspect','spreadsheet.apply','spreadsheet.undo','notes.blocks.read','notes.blocks.apply','notes.blocks.undo','conversation.components.create','notes.components.create','notes.export','notes.components.style','notes.components.layout','notes.blocks.align','notes.components.inspect','notes.components.apply','notes.challenge.configure','notes.components.data','canvas.inspect','canvas.apply','canvas.undo','ui.zoom.in','ui.zoom.out','ui.fullscreen.set','ui.mode.set','ui.zoom.reset'])
- expect(registry.catalog(context).every(x=>x.parameters.additionalProperties===false)).toBe(true)
+ const catalog = registry.catalog(context)
+ expect(catalog.map(entry => entry.id)).toEqual([
+  'knowledge.shared.search', 'knowledge.shared.read', 'knowledge.inspect', 'knowledge.filter',
+  'knowledge.filter.undo', 'knowledge.file.read', 'knowledge.markdown.inspect',
+  'knowledge.markdown.save', 'knowledge.file.organize',
+  'spreadsheet.inspect', 'spreadsheet.apply', 'spreadsheet.undo',
+  'notes.blocks.read', 'notes.blocks.apply', 'notes.blocks.undo',
+  'conversation.components.create', 'notes.components.create', 'notes.export', 'notes.components.style',
+  'notes.components.layout', 'notes.blocks.align', 'notes.components.inspect', 'notes.components.apply',
+  'notes.challenge.configure', 'notes.components.data', 'canvas.inspect', 'canvas.apply', 'canvas.undo',
+  'ui.zoom.in', 'ui.zoom.out', 'ui.fullscreen.set', 'ui.mode.set', 'ui.zoom.reset',
+ ])
+ expect(catalog.filter(entry => entry.id.startsWith('knowledge.') && entry.available)).toEqual([])
+ expect(catalog.every(entry => entry.parameters.additionalProperties === false)).toBe(true)
 })
 const context={owner:'alice',sessionId:'note',documentId:'doc',mode:'notes',editable:true,selectedBlockIds:[],componentBlockIds:['one','two']}
 const run=async()=>{expect(module).not.toBeNull();return module}

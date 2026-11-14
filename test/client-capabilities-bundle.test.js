@@ -14,7 +14,13 @@ it.each(['client-capabilities','client-capability-host'])('imports %s from a pac
   const main=join(temporary,'out/main/index.mjs'),manifest=JSON.parse(await readFile(join(root,'package.json'),'utf8'))
   await mkdir(join(temporary,'out/main'),{recursive:true})
   await symlink(join(root,'node_modules'),join(temporary,'node_modules'),'dir')
-  await build({entryPoints:[resolve('packages/dsh-research-task-runtime/'+moduleName+'.js')],bundle:true,platform:'node',format:'esm',outfile:main,external:Object.keys(manifest.dependencies),logLevel:'silent'})
+  await build({
+   entryPoints:[resolve('packages/dsh-research-task-runtime/'+moduleName+'.js')],
+   bundle:true,platform:'node',format:'esm',outfile:main,
+   external:Object.keys(manifest.dependencies),logLevel:'silent',
+   // Electron Vite resolves CommonJS imports of Node builtins in its ESM output.
+   banner:{js:'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);'}
+  })
   let result
   try{result=execFileSync(process.execPath,['--input-type=module','-e',`
    const {createClientCapabilityRegistry,createClientCapabilityHost}=await import(${JSON.stringify(pathToFileURL(main).href)});
