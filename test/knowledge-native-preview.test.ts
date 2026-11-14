@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { KnowledgeFilePreview } from '../src/main/knowledge/file-preview'
 import { KnowledgeStore } from '../src/main/knowledge/store'
+import { knowledgeRequestError } from '../src/shared/knowledge-library'
 import type { KnowledgeSharing } from '../src/main/knowledge/sharing'
 import { PptxEditorService } from '../src/main/pptx/service'
 import { readPptxContent } from '../src/main/pptx/content'
@@ -28,6 +29,12 @@ async function setup() {
   }
   return { root, identity, store, sharing, preview, add }
 }
+
+it('preserves the actionable preview error without the Electron transport prefix', () => {
+  const message = '该文件已取消共享或不可用。'
+  expect(knowledgeRequestError(Error("Error invoking remote method 'knowledge:request': Error: " + message))).toBe(message)
+  expect(knowledgeRequestError({ message: '请先登录。' })).toBe('请先登录。')
+})
 
 it('uses exact-file preview for supported formats and denies a previous account', async () => {
   const { preview, identity, add } = await setup()

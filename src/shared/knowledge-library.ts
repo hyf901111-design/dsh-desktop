@@ -17,6 +17,11 @@ export const knowledgeSources = { generated: '会话生成', upload: '手动上�
 export const maxEditableKnowledgeBytes = 128 * 1024
 export const sharedKnowledgeCitationUrl = (id: string) => 'sherlock-knowledge://file/' + id
 
+export function knowledgeRequestError(error: unknown): string {
+  const message = typeof (error as Error)?.message === 'string' ? (error as Error).message : String(error ?? '')
+  return message.replace(/^Error invoking remote method (['"])knowledge:request\1:\s*(?:Error:\s*)?/u, '')
+}
+
 export type KnowledgeCategory = keyof typeof knowledgeCategories
 export type KnowledgeFormat = keyof typeof knowledgeFormats
 export type KnowledgeSource = keyof typeof knowledgeSources
