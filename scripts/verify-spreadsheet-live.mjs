@@ -250,6 +250,24 @@ await build({stdin:{resolveDir:root,contents:`
     await historyKey('Z',true);await until(()=>currentCell(5,6)?.v==='净值','keyboard redo reapplies the edit')
     await historyKey('Z');await until(()=>currentCell(5,6)?.v==null,'keyboard undo a second time')
     await historyKey('Y');await until(()=>currentCell(5,6)?.v==='净值','keyboard redo via Y')
+    for(const value of [124,169]){
+     await hit(7,5)
+     if(value===169){
+      press('F2')
+      await until(editing,'existing numeric cell editor opens')
+      press('A',[process.platform==='darwin'?'meta':'control'])
+     }
+     await win.webContents.insertText(String(value))
+     await until(editing,'numeric cell editor opens')
+     press('Enter')
+     await until(()=>currentCell(5,7)?.v===value,'numeric cell edit is saved')
+    }
+    for(const [redo,col,value] of [[false,7,124],[false,7,null],[false,6,null],[true,6,'净值'],[true,7,124],[true,7,169]]){
+     await historyKey('Z',redo)
+     await until(()=> (currentCell(5,col)?.v??null)===value,'each shortcut restores exactly one edit')
+     await wait(230)
+     assert.equal(currentCell(5,col)?.v??null,value)
+    }
     await click('aside textarea');await win.webContents.insertText('对话草稿')
     await js('document.querySelector("aside textarea").addEventListener("keydown",event=>{document.body.dataset.chatUndo=String(!event.defaultPrevented)},{once:true})')
     await historyKey('Z')
@@ -704,6 +722,32 @@ await build({stdin:{resolveDir:root,contents:`
     await componentPointer.sendCommand('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',buttons:0,clickCount:1,x:x+34,y:y+50})
    }finally{componentPointer.detach()}
    await until(()=>snapshot().components[0].placement.layout.y>beforePlacement.y+24&&js('getComputedStyle(document.querySelector("[data-sheet-component-floating] iframe")).pointerEvents==="auto"'),'component position saves and iframe becomes interactive again after release')
+   await select('D3:E4')
+   await click(button('chart'));await click(button('create-chart'))
+   const overlapChart=await until(()=>snapshot().charts?.[0],'chart created beside the floating component')
+   const overlapCard='.ew-sheet-charts[data-chart-id='+JSON.stringify(overlapChart.chartId)+']'
+   await until(()=>js('document.querySelector(".ew-sheet-dialog").hidden'),'chart creation closes the inspector')
+   const record=await save(),arranged=record.workbook
+   Object.assign(arranged.charts[0].layout,{x:380,y:104})
+   Object.assign(arranged.components[0].placement.layout,{x:230,y:54})
+   const updated=service.store.save(profile,record.revision,arranged)
+   win.webContents.send('spreadsheet:changed',{...profile,record:updated})
+   await until(()=>js('document.querySelector("[data-sheet-component-floating]")?.style.top.includes("54px")'),'overlapping layouts are rendered')
+   await select('A1')
+   await showChart(overlapChart.chartId)
+   const overlapHit=()=>js('(()=>{const component=document.querySelector("[data-sheet-component-floating]"),chart=document.querySelector('+JSON.stringify(overlapCard)+'),a=component.getBoundingClientRect(),b=chart.getBoundingClientRect(),x=Math.max(a.left,b.left)+42,y=Math.max(a.top,b.top)+62;if(x>Math.min(a.right,b.right)||y>Math.min(a.bottom,b.bottom))return "disjoint";const top=document.elementFromPoint(x,y);return top?.closest("[data-chart-id]")?"chart":top?.closest("[data-sheet-component-floating]")?"component":"sheet"})()')
+   await until(async()=>await overlapHit()==='chart','selected chart sits in front of the floating component')
+   await click('[data-sheet-component-floating] .ew-sheet-component-footer')
+   assert.equal(await overlapHit(),'component')
+   await showChart(overlapChart.chartId)
+   assert.equal(await overlapHit(),'chart')
+   await click('.ew-sheet [data-field=address]')
+   assert.equal(await js('document.querySelector('+JSON.stringify(overlapCard)+').dataset.chartActive'),'false')
+   assert.equal(await overlapHit(),'chart')
+   await screenshot('mixed-sheet-object-layer-order')
+   await click(button('menu','charts'));await click(menuItem('confirm-remove-chart',overlapChart.chartId));await click(button('remove-chart'))
+   await until(()=>!snapshot().charts.length,'remove the temporary overlap chart')
+   report.push('last-selected chart or component stays above the other card after deselection')
    await sendComponentAction(savedLibraryId,'placement')
    await until(()=>snapshot().components[0].placement?.mode==='docked','component saves docked placement')
    await until(async()=> (await sidebarBounds()).side===resizedSidebar.side,'docking restores the preferred sidebar width')

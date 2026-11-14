@@ -72,6 +72,7 @@ class SpreadsheetView{
  private chartEditor?:{draftId:string;picking?:boolean}
  private menuHover=0
  private readonly chartCards=new Map<string,{element:HTMLElement;markup:string}>()
+ private readonly chartOrder=new Map<string,number>()
  private objectFrame=''
  private readonly chartDefaults=new Map<string,WorkbookChartLayout>()
  private chartGesture?:ChartGesture
@@ -79,7 +80,7 @@ class SpreadsheetView{
  private activeComponent?:string
  private readonly componentCards=new Map<string,ComponentCard>()
  private readonly componentOrder=new Map<string,number>()
- private nextComponentOrder=0
+ private nextObjectOrder=0
  private componentJob?:ComponentJob
  private componentGesture?:ComponentGesture
  private componentSidebarWidth?:number
@@ -173,7 +174,8 @@ class SpreadsheetView{
    this.publishGeneration()
   })
   this.doc.addEventListener('keydown',this.gridPaste,true)
-  this.doc.addEventListener('keydown',this.gridHistory,true)
+  // Register before Univer mounts its own capture listener on the window.
+  this.win.addEventListener('keydown',this.gridHistory,true)
   this.grid.addEventListener('pointerdown',this.selectionStart,true)
   this.win.addEventListener('pointerup',this.selectionEnd,true)
   this.win.addEventListener('pointercancel',this.selectionCancel,true)
@@ -596,10 +598,10 @@ class SpreadsheetView{
    if(['chart-layout','chart-rename','add-chart','update-chart','remove-chart'].includes(action)&&this.engine){
     this.record=row
     this.engine.syncCharts(row.workbook?.charts)
-    if(action==='add-chart')this.activeChart=row.workbook?.charts?.at(-1)?.chartId
     if(action==='remove-chart'&&this.activeChart===fields.chartId)this.activeChart=undefined
     if(action==='add-chart'||action==='remove-chart')this.paint()
     this.renderChart()
+    if(action==='add-chart')this.selectChart(row.workbook?.charts?.at(-1)?.chartId)
    }else if(action.startsWith('component-')){
     this.record=row
     this.engine?.syncComponents(row.workbook?.components)
@@ -1176,7 +1178,12 @@ class SpreadsheetView{
   return next
  }
  private selectChart(chartId?:string){
-  if(chartId)this.clearComponentSelection()
+  if(this.activeChart===chartId)return
+  if(chartId){
+   this.clearComponentSelection()
+   const card=this.chartCards.get(chartId)?.element
+   if(card)this.raiseSheetObject(card,chartId,this.chartOrder)
+  }
   this.activeChart=chartId
   for(const [id,card] of this.chartCards)card.element.dataset.chartActive=String(id===chartId)
  }
@@ -1246,7 +1253,9 @@ class SpreadsheetView{
    card.element.remove()
    this.chartCards.delete(id)
   }
-  for(const id of this.chartDefaults.keys())if(!chartList.some(chart=>chart.chartId===id))this.chartDefaults.delete(id)
+  const existing=new Set(chartList.map(chart=>chart.chartId))
+  for(const id of this.chartDefaults.keys())if(!existing.has(id))this.chartDefaults.delete(id)
+  for(const id of this.chartOrder.keys())if(!existing.has(id))this.chartOrder.delete(id)
   for(const chart of chartList){
    if(chart.sheetId!==sheetId)continue
    const id=chart.chartId
@@ -1261,6 +1270,8 @@ class SpreadsheetView{
     this.chartCards.set(id,card)
    }
    const {element}=card
+   element.dataset.chartActive=String(id===this.activeChart)
+   element.style.zIndex=String(this.chartOrder.get(id)??0)
    element.dataset.chartPalette=chart.palette??DEFAULT_WORKBOOK_CHART_PALETTE
    if(element.getAttribute('aria-label')!==chart.title)element.setAttribute('aria-label',chart.title)
    const markup=this.chartCardMarkup(chart,element.hasAttribute('data-chart-show-data'))
@@ -1271,7 +1282,7 @@ class SpreadsheetView{
    }
    this.positionChart(id)
   }
-  this.selectChart(this.activeChart)
+  if(this.activeChart&&!this.chartCards.has(this.activeChart))this.activeChart=undefined
   this.positionSheetObjects()
  }
  private chartCardMarkup(chart:WorkbookChart,showData:boolean){
@@ -1597,15 +1608,18 @@ class SpreadsheetView{
  private clearComponentSelection(){
   this.componentLayer.querySelector('[data-sheet-component-raised]')?.removeAttribute('data-sheet-component-raised')
  }
+ private raiseSheetObject(element:HTMLElement,id:string,order:Map<string,number>){
+  const next=++this.nextObjectOrder
+  order.set(id,next)
+  element.style.zIndex=String(next)
+ }
  private raiseComponent(element:HTMLElement){
   if(element.hasAttribute('data-sheet-component-raised'))return
   const id=element.dataset.researchNodeId
   if(!id)return
-  this.deselectChart()
+  this.selectChart()
   this.clearComponentSelection()
-  const order=++this.nextComponentOrder
-  this.componentOrder.set(id,order)
-  element.style.zIndex=String(order)
+  this.raiseSheetObject(element,id,this.componentOrder)
   element.dataset.sheetComponentRaised=''
  }
  private focusComponent=(event:FocusEvent)=>{
@@ -2098,7 +2112,7 @@ class SpreadsheetView{
   this.clearSelectionPreview()
   this.disposed=true;this.clearMenuHover();this.win.clearTimeout(this.timer);this.win.clearTimeout(this.updateTimer)
   this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.ribbonObserver.disconnect();this.toolbarCopyObserver.disconnect()
-  this.doc.removeEventListener('keydown',this.gridHistory,true)
+  this.win.removeEventListener('keydown',this.gridHistory,true)
   this.win.removeEventListener('pointerup',this.selectionEnd,true);this.win.removeEventListener('pointercancel',this.selectionCancel,true)
   this.win.removeEventListener('pointerup',this.endChartGesture,true);this.win.removeEventListener('pointercancel',this.cancelChartGesture,true)
   this.win.removeEventListener('pointerup',this.endComponentGesture,true);this.win.removeEventListener('pointercancel',this.cancelComponentGesture,true)
