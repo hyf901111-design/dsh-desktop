@@ -779,6 +779,23 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     const owner = table.locator('tbody td:last-child')
     const date = table.locator('tbody td > time')
     const size = table.locator('tbody td:nth-child(2)')
+    const assertDividers = () => library.evaluate(el => {
+      const heading = el.querySelector('.knowledge-shared-heading').getBoundingClientRect()
+      const folders = el.querySelector('.knowledge-shared-folders')
+      const split = folders.getBoundingClientRect()
+      const headers = el.querySelector('.knowledge-table thead').getBoundingClientRect()
+      const navigation = el.querySelector('.knowledge-navigation').getBoundingClientRect()
+      return {
+        beginsBelowHeaders: Math.abs(split.top - headers.bottom) < 1 && Math.abs(heading.bottom - headers.bottom) < 1,
+        continuousHeader: Math.abs(heading.right - headers.left) < 1,
+        alignedBottom: Math.abs(split.bottom - navigation.bottom) < 1,
+        selectedInset: split.right - folders.querySelector('[aria-current]').getBoundingClientRect().right,
+        tableInset: headers.left - split.right
+      }
+    })
+    const expectAligned = async () => expect(await assertDividers()).toEqual({
+      beginsBelowHeaders: true, continuousHeader: true, alignedBottom: true, selectedInset: 9, tableInset: 8
+    })
     for (const width of [1720, 1380, 1240, 1100]) {
       const wide = width === 1720
       await page.setViewportSize({ width, height: 900 })
@@ -794,6 +811,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
       expect(await owner.isVisible()).toBe(width >= 1240)
       if (width >= 1240) expect(await owner.evaluate(el => el.scrollWidth - el.clientWidth), `owner at ${width}px`).toBeLessThanOrEqual(0)
       expect(await metadata.locator('.knowledge-shared-inline-owner').isVisible()).toBe(width === 1100)
+      await expectAligned()
     }
     await library.getByRole('button', { name: '筛选', exact: true }).click()
     await library.getByRole('checkbox', { name: 'Markdown', exact: true }).check()
@@ -806,6 +824,22 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     expect(await library.getByPlaceholder('搜索他人共享…').inputValue()).toBe('渠道')
     expect(await library.getByText('Markdown', { exact: true }).isVisible()).toBe(true)
     expect(await title.textContent()).toBe('渠道调研验收.md')
+    await library.getByRole('button', { name: '清除筛选', exact: true }).click()
+    await category.click()
+    await page.evaluate(() => {
+      const catalog = Array.from({ length: 12 }, (_, index) => ({
+        id: `shared-layout-set-${index}`, name: `行业共享验收-${index}.md`,
+        source: 'upload', size: 1024, updatedAt: index,
+        starred: false, saved: false, received: { owner: '验收所有者', category: '行业研究' }
+      }))
+      document.dispatchEvent(new CustomEvent('sherlock:knowledge-shared-catalog', { detail: catalog }))
+    })
+    const pager = library.getByRole('navigation', { name: '文件分页' })
+    await pager.waitFor()
+    await expectAligned()
+    await pager.getByRole('button', { name: '下一页' }).click()
+    expect(await pager.getByText('2 / 2', { exact: true }).isVisible()).toBe(true)
+    await expectAligned()
   } finally { await page.close() }
 })
 
@@ -963,6 +997,8 @@ it('aligns folder counts and more actions while keeping long headings clear of t
       expect(separated(titleBox, filterBox) && separated(filterBox, searchBox) && separated(searchBox, uploadBox)).toBe(true)
       expect(uploadBox.x + uploadBox.width).toBeLessThanOrEqual(width - 340)
       expect((await center(number)).x).toBe((await center(category)).x)
+      expect(await nav.locator(':scope > button > span').evaluateAll(labels =>
+        labels.every(el => el.scrollWidth <= el.clientWidth)), `category labels fit at ${width}px`).toBe(true)
     }
     await heading.hover()
     expect(await tooltip.textContent()).toBe(name)
