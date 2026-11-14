@@ -739,108 +739,112 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <button type="button" aria-label="关闭提示" onClick={() => setNotice(undefined)}>×</button>
         </div>}
         <div className="knowledge-table-area" data-received={selection === 'received'}>
-          {selection === 'received' && <nav className="knowledge-shared-folders" aria-label="共享分类">
-            <span>分类</span>
-            {filter.sharedCategory && <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
-              {buttonIcon('back', '返回上级目录')}
-            </button>}
-            {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
-              title={category} onClick={() => updateFilter({ sharedCategory: category })}>
-              {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
-            </button>)}
-          </nav>}
-          <div className="knowledge-table-wrap">
-            <table className="knowledge-table">
-              <thead><tr>
-                {(['name', 'size', 'updatedAt'] as const).map((sort, index) => {
-                  const active = (filter.sort ?? 'updatedAt') === sort
-                  const ascending = filter.ascending ?? sort === 'name'
-                  return <th key={sort} scope="col" aria-sort={active ? ascending ? 'ascending' : 'descending' : 'none'}>
-                    <button type="button" onClick={() => updateFilter({ sort, ascending: active ? !ascending : sort === 'name' })}>
-                      {['文件名', '文件大小', '更新时间'][index]}{active && (ascending ? ' ↑' : ' ↓')}
-                    </button>
-                  </th>
-                })}
-                <th scope="col">{selection === 'received' ? '共享人' : '操作'}</th>
-              </tr></thead>
-              <tbody ref={tableRows}>
-                {shownPage === 1 && visibleImports.map(item => (
-                  <tr key={item.id} className="knowledge-import-row" data-status={item.status}>
-                    <td>
-                      <div className="knowledge-file-name">
-                        <KnowledgeFileIcon format={knowledgeFormat(item.name)} tile />
-                        <div className="knowledge-file-content">
-                          <span className="knowledge-file-title"><span title={item.name}>{item.name}</span></span>
-                          <div className="knowledge-import-controls">
-                            <small>手动上传 · {snapshot.folders.find(folder => folder.id === item.folderId)?.name ?? '未分组'}</small>
-                            {item.status === 'failed' ? <>
-                              <span className="knowledge-import-error" role="alert" title={item.error}>上传失败</span>
-                              <button type="button" aria-label={`重试 ${item.name}`} onClick={() => retryImport(item)}>重试</button>
-                            </> : <span role="status">{item.status === 'cancelling' ? '正在取消…' : item.total
-                              ? `上传中 ${Math.min(100, Math.floor(100 * item.copied / item.total))}% · ${item.copied ? formatBytes(item.copied) : '0 B'} / ${formatBytes(item.total)}`
-                              : '等待上传…'}</span>}
-                            <button type="button" disabled={item.status === 'cancelling'} aria-label={`取消 ${item.name}`} onClick={() => void cancelImport(item)}>取消</button>
+          {selection === 'received' && <div className="knowledge-shared-column">
+            <span className="knowledge-shared-heading">分类</span>
+            <nav className="knowledge-shared-folders" aria-label="共享分类">
+              {filter.sharedCategory && <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
+                {buttonIcon('back', '返回上级目录')}
+              </button>}
+              {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
+                title={category} onClick={() => updateFilter({ sharedCategory: category })}>
+                {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
+              </button>)}
+            </nav>
+          </div>}
+          <div className="knowledge-table-content">
+            <div className="knowledge-table-wrap">
+              <table className="knowledge-table">
+                <thead><tr>
+                  {(['name', 'size', 'updatedAt'] as const).map((sort, index) => {
+                    const active = (filter.sort ?? 'updatedAt') === sort
+                    const ascending = filter.ascending ?? sort === 'name'
+                    return <th key={sort} scope="col" aria-sort={active ? ascending ? 'ascending' : 'descending' : 'none'}>
+                      <button type="button" onClick={() => updateFilter({ sort, ascending: active ? !ascending : sort === 'name' })}>
+                        {['文件名', '文件大小', '更新时间'][index]}{active && (ascending ? ' ↑' : ' ↓')}
+                      </button>
+                    </th>
+                  })}
+                  <th scope="col">{selection === 'received' ? '共享人' : '操作'}</th>
+                </tr></thead>
+                <tbody ref={tableRows}>
+                  {shownPage === 1 && visibleImports.map(item => (
+                    <tr key={item.id} className="knowledge-import-row" data-status={item.status}>
+                      <td>
+                        <div className="knowledge-file-name">
+                          <KnowledgeFileIcon format={knowledgeFormat(item.name)} tile />
+                          <div className="knowledge-file-content">
+                            <span className="knowledge-file-title"><span title={item.name}>{item.name}</span></span>
+                            <div className="knowledge-import-controls">
+                              <small>手动上传 · {snapshot.folders.find(folder => folder.id === item.folderId)?.name ?? '未分组'}</small>
+                              {item.status === 'failed' ? <>
+                                <span className="knowledge-import-error" role="alert" title={item.error}>上传失败</span>
+                                <button type="button" aria-label={`重试 ${item.name}`} onClick={() => retryImport(item)}>重试</button>
+                              </> : <span role="status">{item.status === 'cancelling' ? '正在取消…' : item.total
+                                ? `上传中 ${Math.min(100, Math.floor(100 * item.copied / item.total))}% · ${item.copied ? formatBytes(item.copied) : '0 B'} / ${formatBytes(item.total)}`
+                                : '等待上传…'}</span>}
+                              <button type="button" disabled={item.status === 'cancelling'} aria-label={`取消 ${item.name}`} onClick={() => void cancelImport(item)}>取消</button>
+                            </div>
+                            <progress className="knowledge-import-progress" aria-label={`${item.name}的上传进度`}
+                              value={item.total ? Math.min(item.total, item.copied) : undefined} max={item.total || 1} />
                           </div>
-                          <progress className="knowledge-import-progress" aria-label={`${item.name}的上传进度`}
-                            value={item.total ? Math.min(item.total, item.copied) : undefined} max={item.total || 1} />
                         </div>
-                      </div>
-                    </td>
-                    <td>{item.total ? formatBytes(item.total) : '—'}</td>
-                    <td>刚刚</td>
-                    <td />
-                  </tr>
-                ))}
-                {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row => {
-                  const completed = completedImports[row.id] !== undefined
-                  const bytes = formatBytes(row.size)
-                  const updatedAt = new Date(row.updatedAt)
-                  const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
-                  return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
-                    data-knowledge-file-context-menu={row.received ? undefined : true}
-                    onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
-                    <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
-                      <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
-                      <span className="knowledge-file-content">
-                        <span className="knowledge-file-title"><span>{row.name}</span>
-                          {row.saved && <span className="knowledge-bookmarked" aria-label="手动收藏"><KnowledgeIcon name="bookmark" /></span>}
-                          {row.starred && <span className="knowledge-tag" data-kind="star">重点</span>}
-                          {row.share && <span className="knowledge-tag" data-kind="share">共享</span>}
+                      </td>
+                      <td>{item.total ? formatBytes(item.total) : '—'}</td>
+                      <td>刚刚</td>
+                      <td />
+                    </tr>
+                  ))}
+                  {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row => {
+                    const completed = completedImports[row.id] !== undefined
+                    const bytes = formatBytes(row.size)
+                    const updatedAt = new Date(row.updatedAt)
+                    const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
+                    return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
+                      data-knowledge-file-context-menu={row.received ? undefined : true}
+                      onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
+                      <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
+                        <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
+                        <span className="knowledge-file-content">
+                          <span className="knowledge-file-title"><span>{row.name}</span>
+                            {row.saved && <span className="knowledge-bookmarked" aria-label="手动收藏"><KnowledgeIcon name="bookmark" /></span>}
+                            {row.starred && <span className="knowledge-tag" data-kind="star">重点</span>}
+                            {row.share && <span className="knowledge-tag" data-kind="share">共享</span>}
+                          </span>
+                          {row.received ? <small className="knowledge-shared-metadata">
+                            <span>{bytes}</span>
+                            <time dateTime={updatedAt.toISOString()}> · {date}</time>
+                            <span className="knowledge-shared-inline-owner" title={row.received.owner}> · {row.received.owner}</span>
+                          </small> : <small>{[knowledgeSources[row.source], row.sessionTitle,
+                            snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? '未分组'].filter(Boolean).join(' · ')}
+                            {completed && <span role="status"> · 上传完成</span>}</small>}
+                          {completed && <progress className="knowledge-import-progress" aria-label={`${row.name}的上传进度`}
+                            value={row.size || 1} max={row.size || 1} />}
                         </span>
-                        {row.received ? <small className="knowledge-shared-metadata">
-                          <span>{bytes}</span>
-                          <time dateTime={updatedAt.toISOString()}> · {date}</time>
-                          <span className="knowledge-shared-inline-owner" title={row.received.owner}> · {row.received.owner}</span>
-                        </small> : <small>{[knowledgeSources[row.source], row.sessionTitle,
-                          snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? '未分组'].filter(Boolean).join(' · ')}
-                          {completed && <span role="status"> · 上传完成</span>}</small>}
-                        {completed && <progress className="knowledge-import-progress" aria-label={`${row.name}的上传进度`}
-                          value={row.size || 1} max={row.size || 1} />}
-                      </span>
-                    </button></td>
-                    <td>{bytes}</td>
-                    <td><time dateTime={updatedAt.toISOString()}>{date}</time></td>
-                    <td title={row.received?.owner}>{row.received ? row.received.owner :
-                      <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
-                        aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
-                        onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>}</td>
-                  </tr>
-                })}
-              </tbody>
-            </table>
-            {!rows.length && !visibleImports.length && <p className="knowledge-empty">
-              {selection === 'received' && receivedStatus.loading ? '正在加载他人共享…'
-                : selection === 'received' && receivedStatus.error ? receivedStatus.error
-                : ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'
-                : notice?.error ? '' : '正在加载文件…'}
-            </p>}
+                      </button></td>
+                      <td>{bytes}</td>
+                      <td><time dateTime={updatedAt.toISOString()}>{date}</time></td>
+                      <td title={row.received?.owner}>{row.received ? row.received.owner :
+                        <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
+                          aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
+                          onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>}</td>
+                    </tr>
+                  })}
+                </tbody>
+              </table>
+              {!rows.length && !visibleImports.length && <p className="knowledge-empty">
+                {selection === 'received' && receivedStatus.loading ? '正在加载他人共享…'
+                  : selection === 'received' && receivedStatus.error ? receivedStatus.error
+                  : ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'
+                  : notice?.error ? '' : '正在加载文件…'}
+              </p>}
+            </div>
+            {pages > 1 && <nav className="knowledge-pagination" aria-label="文件分页">
+              <button type="button" disabled={shownPage === 1} onClick={() => setPage(shownPage - 1)}>上一页</button>
+              <span>{shownPage} / {pages}</span>
+              <button type="button" disabled={shownPage === pages} onClick={() => setPage(shownPage + 1)}>下一页</button>
+            </nav>}
           </div>
         </div>
-        {pages > 1 && <nav className="knowledge-pagination" aria-label="文件分页">
-          <button type="button" disabled={shownPage === 1} onClick={() => setPage(shownPage - 1)}>上一页</button>
-          <span>{shownPage} / {pages}</span>
-          <button type="button" disabled={shownPage === pages} onClick={() => setPage(shownPage + 1)}>下一页</button>
-        </nav>}
         {dragging && <div className="knowledge-drop-zone">拖放文件到知识库</div>}
       </main>
       {preview && !preview.native && <aside className="knowledge-preview" aria-label="文件预览">
