@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261114-01",
+  "branch": "codex/integration/20261114-01",
+  "baseMainCommit": "7384054ad3a278e59ce5161730af2d8a145389b8",
+  "expectedMainCommit": "7384054ad3a278e59ce5161730af2d8a145389b8",
+  "createdAt": "2026-11-14T10:23:57.361Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复研究看板工具栏和浮层跨页面残留",
+        "branch": "codex/feat/research-browser-toolbar-20261114",
+        "baseCommit": "7384054ad3a278e59ce5161730af2d8a145389b8",
+        "tipCommit": "c076a142aa2bf26fc68ff97c2085c65a3bc17f27",
+        "commits": [
+          {
+            "commit": "c076a142aa2bf26fc68ff97c2085c65a3bc17f27",
+            "parents": [
+              "7384054ad3a278e59ce5161730af2d8a145389b8"
+            ],
+            "subject": "修复研究看板工具栏和浮层跨页面残留"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/custom-component-library.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-mode-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查",
+            "verifiedCommit": "c076a142aa2bf26fc68ff97c2085c65a3bc17f27",
+            "completedAt": "2026-11-14T10:23:39.141Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/workspace-surface-host.test.ts",
+              "test/settings-background.test.ts",
+              "test/openterminal-dark-controls.test.js",
+              "test/research-grid-workbench.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "工作区切换、设置、外观切换和看板补丁的 81 项检查通过",
+            "verifiedCommit": "c076a142aa2bf26fc68ff97c2085c65a3bc17f27",
+            "completedAt": "2026-11-14T10:23:39.141Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "retained board toolbar|real surface host|hidden Research calendar"
+            ],
+            "outcome": "passed",
+            "summary": "三个渲染用例覆盖跨页面浮层、返回原看板和同会话笔记交互",
+            "verifiedCommit": "c076a142aa2bf26fc68ff97c2085c65a3bc17f27",
+            "completedAt": "2026-11-14T10:23:39.141Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在 1.5.6 桌面客户端复现。修复后通过 Chromium 渲染验证，使用真实看板和页面切换宿主。"
+        },
+        "acceptanceCriteria": [
+          "研究看板切换到浏览器、笔记、定时任务或插件时，隐藏看板底部工具栏与其提示，关闭看板菜单",
+          "返回同一看板后工具栏可用，画板与组件保留"
+        ],
+        "risks": [
+          "部分行情及看板预览用例在基线和功能分支均失败，已确认相同错误；本次修复路径和直接相关验证通过。"
+        ],
+        "generatedAt": "2026-11-14T10:23:47.321Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/workspace-surface-host.test.ts",
+        "test/settings-background.test.ts",
+        "test/openterminal-dark-controls.test.js",
+        "test/research-grid-workbench.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/research-preview-mode-browser.test.js",
+        "-t",
+        "retained board toolbar|real surface host|hidden Research calendar"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
