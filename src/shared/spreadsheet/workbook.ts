@@ -20,8 +20,10 @@ export type Sheet = {
 }
 export const workbookChartKinds=['bar','horizontal','stackedBar','line','step','area','combo','pie','donut','scatter'] as const
 export type WorkbookChartKind=(typeof workbookChartKinds)[number]
-export type WorkbookChartLayout = {x:number;y:number;width:number;height:number}
-export const workbookChartPalettes=['classic','ocean','warm','mono'] as const
+// Older workbooks store view-relative pixel offsets and omit space.
+export type WorkbookChartLayout = {x:number;y:number;width:number;height:number;space?:'sheet'}
+export const DEFAULT_WORKBOOK_CHART_PALETTE='enterprise'
+export const workbookChartPalettes=[DEFAULT_WORKBOOK_CHART_PALETTE,'classic','ocean','warm','mono'] as const
 export type WorkbookChartPalette=(typeof workbookChartPalettes)[number]
 export type WorkbookChart = {
   chartId:string;sheetId:string;range:string;title:string;kind:WorkbookChartKind;headers:boolean
@@ -30,7 +32,9 @@ export type WorkbookChart = {
   layout?:WorkbookChartLayout
 }
 export type WorkbookComponentPlacement = {mode:'docked'|'floating';layout:WorkbookChartLayout}
-export type WorkbookComponent = {componentId:string;sheetId:string;range:string;placement?:WorkbookComponentPlacement;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
+export const workbookComponentThemes=['light','dark','enterprise','openterminal'] as const
+export type WorkbookComponentTheme=(typeof workbookComponentThemes)[number]
+export type WorkbookComponent = {componentId:string;sheetId:string;range:string;placement?:WorkbookComponentPlacement;theme?:WorkbookComponentTheme;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
 export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; components?:WorkbookComponent[]; [key:string]:unknown }
 export type Range = { r0:number; c0:number; r1:number; c1:number }
 export type InputCell = Scalar | {value:Scalar} | {formula:string}
@@ -134,10 +138,17 @@ export function validatedChart(book:Workbook,value:unknown):WorkbookChart {
 }
 
 export function validatedChartLayout(value:unknown):WorkbookChartLayout {
-  keys(value,['x','y','width','height'])
-  const {x,y,width,height}=value as WorkbookChartLayout
-  if(![x,y,width,height].every(Number.isInteger)||x<0||y<0||width<1||height<1||Math.max(x,y,width,height)>8192)throw Error('图表位置或尺寸无效。')
-  return {x,y,width,height}
+  keys(value,['x','y','width','height','space'])
+  const {x,y,width,height,space}=value as WorkbookChartLayout
+  if(![x,y,width,height].every(Number.isInteger)||x<0||y<0||width<1||height<1||
+     Math.max(width,height)>8192||Math.max(x,y)>(space==='sheet'?100_000_000:8192)||
+     space!==undefined&&space!=='sheet')throw Error('图表位置或尺寸无效。')
+  return {x,y,width,height, ...(space?{space}:{})}
+}
+
+export function validatedComponentTheme(value:unknown):WorkbookComponentTheme {
+  if(!workbookComponentThemes.includes(value as WorkbookComponentTheme))throw Error('组件主题无效。')
+  return value as WorkbookComponentTheme
 }
 
 export function validatedComponentPlacement(value:unknown):WorkbookComponentPlacement {
@@ -208,12 +219,13 @@ export function validateWorkbook(value:unknown): asserts value is Workbook {
     if(!Array.isArray(value.components)||value.components.length>24)throw Error('每个工作簿最多保存 24 个组件。')
     const ids=new Set<string>()
     for(const component of value.components){
-      keys(component,['componentId','sheetId','range','node','placement'])
+      keys(component,['componentId','sheetId','range','node','placement','theme'])
       if(!safeId(component.componentId)||ids.has(component.componentId)||!object(component.node)||component.node.id!==component.componentId||
         component.node.kind!=='generated-container'||typeof component.node.title!=='string'||!component.node.title.trim()||component.node.title.length>256||
         !object(component.node.containerSpec)||JSON.stringify(component.node).length>1048576)throw Error('组件内容格式无效。')
       sheetRange(value as Workbook,component.sheetId,component.range)
       if(component.placement!==undefined)validatedComponentPlacement(component.placement)
+      if(component.theme!==undefined)validatedComponentTheme(component.theme)
       ids.add(component.componentId)
     }
   }
