@@ -805,6 +805,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   const updatedAt = new Date(row.updatedAt)
                   const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
                   return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
+                    data-knowledge-file-context-menu={row.received ? undefined : true}
                     onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
                     <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
                       <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
