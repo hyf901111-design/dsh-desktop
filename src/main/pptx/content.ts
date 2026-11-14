@@ -33,18 +33,23 @@ export function ancestor(element: Element, name: string): Element | undefined {
 function paragraphText(paragraph: Element): string {
  return children(paragraph).map(child => child.namespaceURI !== A ? '' : child.localName === 'br' ? '\n' : ['r','fld'].includes(child.localName ?? '') ? elements(child,A,'t').map(t => t.textContent).join('') : '').join('')
 }
-export function readPptxParts(archive: PptxArchive) {
- const presentation = xml(archive.read('ppt/presentation.xml'))
- const rels = elements(xml(archive.read('ppt/_rels/presentation.xml.rels')), REL, 'Relationship')
+export function listPptxSlideParts(read: (part: string) => Buffer) {
+ const presentation = xml(read('ppt/presentation.xml'))
+ const rels = elements(xml(read('ppt/_rels/presentation.xml.rels')), REL, 'Relationship')
  const relationships = new Map(rels.filter(r => r.getAttribute('Type') === `${R}/slide` && r.getAttribute('TargetMode') !== 'External').map(r => [r.getAttribute('Id'), r.getAttribute('Target')!]))
  const slideIds = elements(presentation, P, 'sldId')
  if (!slideIds.length || slideIds.length > 1000) throw Error('此 PPTX 没有可编辑幻灯片或页数过多。')
- let count = 0
- return slideIds.map((slide, index) => {
+ return slideIds.map(slide => {
   const target = relationships.get(slide.getAttributeNS(R, 'id') ?? '')
   if (!target) throw Error('PPTX 幻灯片关系无效。')
   const part = path.posix.normalize(target.startsWith('/') ? target.slice(1) : `ppt/${target}`)
   if (!/^ppt\/slides\/[^/]+\.xml$/.test(part)) throw Error('PPTX 幻灯片路径无效。')
+  return part
+ })
+}
+export function readPptxParts(archive: PptxArchive) {
+ let count = 0
+ return listPptxSlideParts(part => archive.read(part)).map((part, index) => {
   const document = xml(archive.read(part))
   const fields: Array<PptxField & { paragraph: Element }> = []
   elements(document, A, 'p').forEach((paragraph, paragraphIndex) => {
