@@ -24,7 +24,7 @@ beforeAll(async () => {
       import { mountDesktopShellStyles } from './src/preload/shell-style'
       import { mountHomeAppShortcuts } from './src/preload/home-app-shortcuts'
       mountDesktopShellStyles(document)
-      window.mountShortcuts = () => mountHomeAppShortcuts(document, () => {})
+      window.mountShortcuts = () => mountHomeAppShortcuts(document, app => { window.openedHomeApp = app })
     `, resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
     loader: { '.svg': 'dataurl' },
@@ -141,7 +141,11 @@ it('keeps each shortcut painted on first hover while new icon requests are pendi
       }
       return count
     }
-    expect(await nav.locator('[data-home-app]').evaluateAll(buttons => buttons.map(button => button.dataset.homeApp))).toEqual([...apps, 'spreadsheet'])
+    const order = ['browser', 'knowledge', ...apps.slice(1), 'spreadsheet']
+    expect(await nav.locator('[data-home-app]').evaluateAll(buttons => buttons.map(button => button.dataset.homeApp))).toEqual(order)
+    const knowledge = nav.getByRole('button', { name: '知识库', exact: true })
+    await knowledge.click()
+    expect(await page.evaluate(() => window.openedHomeApp)).toBe('knowledge')
     const spreadsheet = page.locator('[data-home-app=spreadsheet]')
     expect(await spreadsheet.getAttribute('aria-label')).toBe('表格')
     expect(await spreadsheet.locator('.home-app-shortcut-tooltip').textContent()).toBe('表格')
@@ -151,7 +155,7 @@ it('keeps each shortcut painted on first hover while new icon requests are pendi
     await page.evaluate(() => document.documentElement.dataset.odysseyLocale = 'zh')
     await spreadsheet.getByText('表格', { exact: true }).waitFor({ state: 'attached' })
     holdRequests = true
-    for (const app of [...apps, 'spreadsheet']) {
+    for (const app of order) {
       const button = nav.locator(`[data-home-app="${app}"]`)
       const icon = button.locator('.home-app-shortcut-icon')
       const restingPixels = await brightPixels(icon)
