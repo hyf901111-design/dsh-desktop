@@ -491,8 +491,8 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
   }
 })
 
-it('keeps shared file names readable with both desktop sidebars visible', async () => {
-  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+it('keeps shared categories and metadata readable as both desktop sidebars narrow the list', async () => {
+  const page = await browser.newPage({ viewport: { width: 1720, height: 900 } })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
@@ -500,16 +500,29 @@ it('keeps shared file names readable with both desktop sidebars visible', async 
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     await library.getByRole('button', { name: /他人共享/ }).click()
-    await library.getByRole('button', { name: '行业研究', exact: true }).click()
+    const category = library.getByRole('button', { name: '行业研究', exact: true })
+    await category.click()
     const title = library.locator('.knowledge-file-title > span:first-child')
     await title.waitFor()
-    expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(105)
     const table = library.locator('.knowledge-table-wrap')
-    expect(await table.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
-    await page.setViewportSize({ width: 1240, height: 900 })
-    expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
-    expect(await table.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
-    expect(await library.getByText('验收所有者', { exact: true }).isVisible()).toBe(true)
+    const metadata = library.locator('.knowledge-shared-metadata')
+    const owner = table.locator('tbody td:last-child')
+    const date = table.locator('tbody td > time')
+    const size = table.locator('tbody td:nth-child(2)')
+    for (const width of [1720, 1380, 1240, 1100]) {
+      const wide = width === 1720
+      await page.setViewportSize({ width, height: 900 })
+      expect(await category.locator('span').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
+      expect(await table.evaluate(el => el.scrollWidth - el.clientWidth), `at ${width}px`).toBeLessThanOrEqual(2)
+      expect(await size.isVisible()).toBe(wide)
+      expect(await metadata.isVisible()).toBe(!wide)
+      expect(await date.isVisible()).toBe(width >= 1380)
+      expect(await metadata.locator('time').isVisible()).toBe(width < 1380)
+      expect(await owner.isVisible()).toBe(width >= 1240)
+      if (width >= 1240) expect(await owner.evaluate(el => el.scrollWidth - el.clientWidth), `owner at ${width}px`).toBeLessThanOrEqual(0)
+      expect(await metadata.locator('.knowledge-shared-inline-owner').isVisible()).toBe(width === 1100)
+    }
   } finally { await page.close() }
 })
 
