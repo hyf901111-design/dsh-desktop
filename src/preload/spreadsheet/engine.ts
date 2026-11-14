@@ -8,7 +8,7 @@ import sortZh from '@univerjs/preset-sheets-sort/locales/zh-CN'
 import coreEn from '@univerjs/preset-sheets-core/locales/en-US'
 import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
-import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,IContextService,type IRange,type IWorkbookData,type Worksheet} from '@univerjs/core'
+import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,EDITOR_ACTIVATED,IContextService,IUniverInstanceService,IUndoRedoService,type IRange,type IWorkbookData,type Worksheet} from '@univerjs/core'
 import {AFTER_CELL_EDIT,BEFORE_CELL_EDIT,ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation,SheetsSelectionsService} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,SHEET_VIEWPORT_KEY,type IRender} from '@univerjs/engine-render'
 import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
@@ -304,6 +304,17 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  doc.addEventListener('pointerdown',updateEditorFocus,true)
  requestAnimationFrame(()=>{if(!disposed){applyTheme();selection()}})
  return {api,model,
+  historyCount:(action:'undo'|'redo')=>{
+   const status=injector.get(IUndoRedoService).getUndoRedoStatus(model.getId())
+   return action==='undo'?status.undos:status.redos
+  },
+  history:(action:'undo'|'redo')=>{
+   if(model.isCellEditing())return Promise.resolve(false)
+   // The hidden document editor can retain Univer's focus after an IME commit.
+   context.setContextValue(EDITOR_ACTIVATED,false)
+   injector.get(IUniverInstanceService).focusUnit(model.getId())
+   return action==='undo'?api.undo():api.redo()
+  },
   objectViewport:()=>{
    const render=renders.getRenderUnitById(model.getId()),sheet=model.getActiveSheet()
    const view=render?.scene.getViewport(SHEET_VIEWPORT_KEY.VIEW_MAIN)

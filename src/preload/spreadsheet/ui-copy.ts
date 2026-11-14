@@ -153,6 +153,7 @@ export const spreadsheetUiCopy: Record<string, string> = {
   '移除组件后，工作表中的源数据仍会保留。': 'Removing this component keeps its source data in the worksheet.',
   '组件已更新': 'Component updated',
   '组件已插入': 'Component inserted',
+  '已添加至组件库': 'Added to component library',
   '组件已移除': 'Component removed',
   '正在插入组件…': 'Inserting component…',
   '正在生成组件…': 'Generating component…',

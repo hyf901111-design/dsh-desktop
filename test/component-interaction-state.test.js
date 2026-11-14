@@ -12,10 +12,23 @@ function priceVolumeJournalClient(marker='price-volume-v1'){
  w.document.querySelector('details').setAttribute('data-workbench-default-open',marker)
  const parent={postMessage:m=>out.push(m)},runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]
  vm.runInNewContext('('+runtime+')(allowed)',{document:w.document,parent,allowed,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=> 'disclosure-'+(++serial)}})
- const receive=events=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false}}))
+ const receive=(events,extra={})=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false,...extra}}))
  receive({})
- return {w,out,receive,details:w.document.querySelector('details'),click:()=>{const event=new w.MouseEvent('click',{bubbles:true,cancelable:true});allowed.add(event);try{w.document.querySelector('summary span').dispatchEvent(event)}finally{allowed.delete(event)}}}
+ return {w,out,receive,details:w.document.querySelector('details'),click:(target=w.document.querySelector('summary span'))=>{const event=new w.MouseEvent('click',{bubbles:true,cancelable:true});allowed.add(event);try{return target.dispatchEvent(event)}finally{allowed.delete(event)}}}
 }
+it('allows a read-only spreadsheet chart data disclosure without journaling or running click handlers',()=>{
+ const c=priceVolumeJournalClient()
+ try{
+  const summary=c.w.document.querySelector('summary'),button=c.w.document.querySelector('button')
+  let handled=0;summary.onclick=()=>handled++
+  c.receive({},{readOnly:true});expect(c.click(summary)).toBe(false);expect(c.details.open).toBe(true)
+  c.receive({},{readOnly:true,localDisclosures:true});expect(c.click(summary)).toBe(true)
+  button.onclick=()=>handled++
+  expect(c.click()).toBe(true)
+  expect(c.click(button)).toBe(false)
+  expect(handled).toBe(0);expect(c.out).toHaveLength(0)
+ }finally{c.w.happyDOM.abort()}
+})
 it.each(['price-volume-v1','component-details-v1'])('旧折叠日志不反转新的展开默认值，其他交互仍恢复：%s',marker=>{
  const c=priceVolumeJournalClient(marker);let filters=0;c.w.document.querySelector('button').onclick=()=>filters++
  const events={a:{...e('a',1),targetRoute:[0,0,0],tag:'SUMMARY'},b:{...e('b',2),targetRoute:[0,0,0],tag:'SUMMARY'},c:{...e('c',3),targetRoute:[0,0,0],tag:'SUMMARY'},filter:e('filter',4),other:{...e('other',5),targetRoute:[2,0],tag:'SUMMARY'},input:{...e('input',6),targetRoute:[3],tag:'INPUT',type:'input',value:'原筛选'}}

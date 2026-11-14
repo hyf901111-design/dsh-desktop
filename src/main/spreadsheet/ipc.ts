@@ -6,7 +6,7 @@ import {registerTrustedMainWindowHandler} from '../ipc-trust'
 import {applyOperations,blankWorkbook,inspectWorkbook,label,rangeAddress,safeId,sheetRange,validatedChartLayout,validatedComponentPlacement,validatedComponentTheme,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
-import type {ComponentLibraryStore} from '../state/component-library'
+import {canSaveCustomComponent,type ComponentLibraryStore} from '../state/component-library'
 import {MAX_SPREADSHEET_FILE,readWorkbookFile,writeWorkbookFile} from './files'
 import {SpreadsheetService} from './service'
 import {SpreadsheetStore,type WorkbookKey} from './store'
@@ -78,6 +78,22 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     const library=options.library?.()
     if(!library)throw Error('组件库暂不可用，请稍后重试。')
     return noteLibraryItems(library).filter(item=>item.id!=='builtin-calendar')
+   }
+   case 'component-library-save':{
+    const library=options.library?.()
+    if(!library)throw Error('组件库暂不可用，请稍后重试。')
+    const {workbook}=store.load(key)
+    const component=workbook?.components?.find(item=>item.componentId===input.componentId)
+    if(!component||!canSaveCustomComponent(component.node))throw Error('请先完成组件生成，再添加至组件库')
+    const current=()=>{
+     try{
+      guard(true)
+      const book=store.load(key).workbook
+      return !!book&&book.id===workbook?.id&&JSON.stringify(book.components?.find(item=>item.componentId===component.componentId)?.node)===JSON.stringify(component.node)
+     }catch{return false}
+    }
+    const {layout}=component.placement??{}
+    return library.add({...component.node,x:0,y:0,...layout?{width:layout.width,height:layout.height}:{}},undefined,key.owner,current)
    }
    case 'component-add':case 'component-generate':{
     const current=store.load(key),book=current.workbook

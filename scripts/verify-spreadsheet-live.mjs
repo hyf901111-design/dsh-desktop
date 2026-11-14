@@ -241,21 +241,20 @@ await build({stdin:{resolveDir:root,contents:`
     await until(editing,'IME composition opens the selected cell editor')
     press('Enter')
     await until(()=>currentCell(5,6)?.v==='净值','IME text commits in the selected cell')
+    const historyKey=async(letter,shift=false)=>{
+     const args={key:shift?letter:letter.toLowerCase(),code:'Key'+letter,windowsVirtualKeyCode:letter.charCodeAt(0),modifiers:(process.platform==='darwin'?4:2)+(shift?8:0)}
+     await cdp.sendCommand('Input.dispatchKeyEvent',{...args,type:'rawKeyDown'})
+     await cdp.sendCommand('Input.dispatchKeyEvent',{...args,type:'keyUp'})
+    }
+    await historyKey('Z');await until(()=>currentCell(5,6)?.v==null,'keyboard undo restores the prior cell value')
+    await historyKey('Z',true);await until(()=>currentCell(5,6)?.v==='净值','keyboard redo reapplies the edit')
+    await historyKey('Z');await until(()=>currentCell(5,6)?.v==null,'keyboard undo a second time')
+    await historyKey('Y');await until(()=>currentCell(5,6)?.v==='净值','keyboard redo via Y')
+    await click('aside textarea');await win.webContents.insertText('对话草稿')
+    await js('document.querySelector("aside textarea").addEventListener("keydown",event=>{document.body.dataset.chatUndo=String(!event.defaultPrevented)},{once:true})')
+    await historyKey('Z')
+    await until(()=>js('document.body.dataset.chatUndo==="true"'),'grid history does not consume chat shortcuts')
    }finally{cdp.detach()}
-   await hit(6,5)
-   // The IME can return focus to the editor's hidden canvas after commit.
-   // Focus the selected sheet explicitly so this exercises sheet history.
-   await js('(()=>{const grid=document.querySelector(".ew-sheet-grid");grid.tabIndex=-1;grid.focus({preventScroll:true})})()')
-   await until(()=>js('document.hasFocus()&&document.activeElement===document.querySelector(".ew-sheet-grid")'),'worksheet focus before undo')
-   const shortcut=process.platform==='darwin'?'meta':'control'
-   press('Z',[shortcut]);await until(()=>currentCell(5,6)?.v==null,'keyboard undo restores the prior cell value')
-   press('Z',[shortcut,'shift']);await until(()=>currentCell(5,6)?.v==='净值','keyboard redo reapplies the edit')
-   press('Z',[shortcut]);await until(()=>currentCell(5,6)?.v==null,'keyboard undo a second time')
-   press('Y',[shortcut]);await until(()=>currentCell(5,6)?.v==='净值','keyboard redo via Y')
-   await click('aside textarea');await win.webContents.insertText('对话草稿')
-   await js('document.querySelector("aside textarea").addEventListener("keydown",event=>{document.body.dataset.chatUndo=String(!event.defaultPrevented)},{once:true})')
-   press('Z',[shortcut])
-   await until(()=>js('document.body.dataset.chatUndo==="true"'),'grid history does not consume chat shortcuts')
    assert.equal(currentCell(5,6)?.v,'净值')
    report.push('IME editing and sheet keyboard undo/redo stay scoped to the grid')
    await select('A1')
@@ -732,6 +731,9 @@ await build({stdin:{resolveDir:root,contents:`
    await sendComponentAction(smartId,'rename')
    await field('.ew-sheet-dialog [aria-label="组件名称"]','成交额研究组件')
    await until(()=>snapshot().components[1].node.title==='成交额研究组件','component name is saved')
+   await sendComponentAction(smartId,'library-save')
+   await until(()=>library.list().some(item=>item.name==='成交额研究组件'),'generated spreadsheet component is saved to the library')
+   assert.equal(library.read(library.list()[0].id).node.containerSpec.type,'table')
    await click(button('menu','components'));await click(menuItem('confirm-remove-component',smartId))
    await click(button('component-remove',smartId))
    await until(()=>snapshot().components.length===1,'component is deleted from the worksheet footer')

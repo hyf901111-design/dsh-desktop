@@ -820,7 +820,7 @@ export function validResearchInteractionState(s) {
     Object.entries(s.events).every(([id,e])=>validResearchInteractionEvent(e)&&e.id===id) && JSON.stringify(s).length<=256*1024;
 }
 export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime(authorizedEvents = new WeakSet(),semantic) {
-  let initialized=false, replaying=false, readOnly=true, clock=0;
+  let initialized=false, replaying=false, readOnly=true, localDisclosures=false, clock=0;
   let applied=[];
   const pending=new Set();
   const pathOf=el=>{const p=[];while(el&&el!==document.body){const parent=el.parentElement;if(!parent)return null;p.unshift([...parent.children].indexOf(el));el=parent;}return p;};
@@ -861,7 +861,7 @@ export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInt
   addEventListener('message',event=>{
     if(event.source!==parent || event.data?.type!=='sherlock-interaction-state')return;
     if(document.documentElement.hasAttribute('data-sherlock-shared-state')&&!semantic?.notes)return;
-    const data=event.data; readOnly=data.readOnly!==false;
+    const data=event.data; readOnly=data.readOnly!==false;localDisclosures=data.localDisclosures===true;
     const events=Object.values(data.state?.events||{}).sort((a,b)=>a.clock-b.clock||a.id.localeCompare(b.id));
     if(pending.has(data.rejectedEventId)){post('sherlock-interaction-reload');return;}
     for(const e of events)pending.delete(e.id);
@@ -894,7 +894,17 @@ export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInt
       }else if(!check||semantic.activation?.target!==event.target||!['input','change'].includes(type))semantic.activation=undefined;
       setTimeout(()=>{if(semantic.current===event)semantic.current=undefined},0);
     }
-    if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
+    if(!initialized||readOnly){
+      const summary=event.target instanceof Element?event.target.closest('summary'):null;
+      const details=summary?.parentElement;
+      // Native reading controls on spreadsheet components need no saved state.
+      // Preserve the browser default while keeping artifact handlers locked.
+      const disclosure=localDisclosures&&details?.tagName==='DETAILS'&&
+        Array.from(details.children).find(child=>child.tagName==='SUMMARY')===summary&&
+        !event.target.closest('a,button,input,select,textarea,[contenteditable]');
+      if(!disclosure||type!=='click'&&(type!=='keydown'||!['Enter',' '].includes(event.key)))event.preventDefault();
+      event.stopImmediatePropagation();return;
+    }
     let el=event.target;
     if(!(el instanceof Element))return;
     // Opening a native select is transient browser UI; only its value changes persist.
