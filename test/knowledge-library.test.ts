@@ -91,3 +91,24 @@ it('saves Markdown with a revision guard and keeps the original imported source 
   await expect(reopened.markdown(row!.id)).rejects.toThrow('先取消共享')
   await expect(reopened.saveMarkdown(row!.id, saved.revision, '已共享的正文')).rejects.toThrow('先取消共享')
 })
+
+it('reports bytes while importing, cancels before publishing, and lets the same file be retried', async () => {
+  const { file, open } = await fixture()
+  const source = await file('待重试.md', 'x'.repeat(512 * 1024))
+  const store = open()
+  const controller = new AbortController()
+  const progress: Array<{ copied: number; total: number }> = []
+  await expect(store.importFile(source, undefined, {
+    signal: controller.signal,
+    progress: value => {
+      progress.push(value)
+      if (value.copied > 0) controller.abort()
+    }
+  })).rejects.toThrow()
+  expect(progress.some(value => value.copied > 0 && value.copied < value.total)).toBe(true)
+  expect((await store.snapshot()).documents).toEqual([])
+  const completed: Array<{ copied: number; total: number }> = []
+  const document = await store.importFile(source, undefined, { progress: value => completed.push(value) })
+  expect(completed.at(-1)).toEqual({ copied: 512 * 1024, total: 512 * 1024 })
+  expect((await store.snapshot()).documents.map(row => row.id)).toEqual([document.id])
+})

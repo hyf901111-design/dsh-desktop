@@ -44,10 +44,35 @@ beforeAll(async () => {
             starred: false, saved: false, received: { owner: '共享人', category: '数据分析' } }
         ]
       })
+      const uploads = new Map()
       window.addEventListener('sherlock:workspace-surface-change', () => {})
+      window.finishImport = (name, error) => {
+        const entry = [...uploads.values()].find(upload => upload.name === name)
+        if (!entry) throw Error('missing upload '+name)
+        uploads.delete(entry.id)
+        if (error) { entry.reject(Error(error)); return }
+        const document = { id: entry.id, name, folderId: entry.folderId, source: 'upload',
+          size: 16384, updatedAt: Date.now(), saved: false, starred: false }
+        window.data.documents.push(document)
+        entry.resolve(document)
+      }
       mountKnowledgeWorkspace(document, host, {
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
+          if (method === 'pick') return ['/tmp/上传成功.md', '/tmp/上传取消.pdf']
+          if (method === 'import-file') {
+            const name = args.path.split('/').at(-1)
+            queueMicrotask(() => window.emitImportProgress({ id: args.transferId, copied: 8192, total: 16384 }))
+            return new Promise((resolve, reject) => uploads.set(args.transferId, {
+              resolve, reject, id: args.transferId, name, folderId: args.folderId
+            }))
+          }
+          if (method === 'cancel-import') {
+            const entry = uploads.get(args.transferId)
+            uploads.delete(args.transferId)
+            entry?.reject(Error('cancelled'))
+            return
+          }
           if (method === 'received') return [
             { id: 'shared-layout', name: '渠道调研验收.md', source: 'upload', size: 1024, updatedAt: 1,
               starred: false, saved: false, received: { owner: '验收所有者', category: '行业研究' } }
@@ -56,6 +81,7 @@ beforeAll(async () => {
           throw new Error('Unexpected bridge method '+method)
         },
         subscribe: () => () => {},
+        subscribeImportProgress(listener) { window.emitImportProgress = listener; return () => {} },
         subscribeAction(listener) { window.applyKnowledgeAction = listener; return () => {} },
         reply(response) { window.knowledgeActionResult = response },
         path: () => ''
@@ -329,5 +355,29 @@ it('keeps shared file names readable with both desktop sidebars visible', async 
     expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
     expect(await table.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     expect(await library.getByText('验收所有者', { exact: true }).isVisible()).toBe(true)
+  } finally { await page.close() }
+})
+
+it('shows file progress in the selected folder and supports retry and cancellation without duplicate entries', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('button', { name: /研究资料/, exact: false }).first().click()
+    await library.getByRole('button', { name: '添加文件' }).click()
+    const pending = library.getByRole('row', { name: /上传成功.md/ })
+    await expect.poll(() => pending.getByRole('progressbar').getAttribute('value')).toBe('8192')
+    expect(await pending.innerText()).toContain('上传中 50%')
+    await page.evaluate(() => window.finishImport('上传成功.md', '模拟复制失败'))
+    await pending.getByRole('button', { name: '重试 上传成功.md' }).click()
+    await page.evaluate(() => window.finishImport('上传成功.md'))
+    await expect.poll(() => library.locator('tbody button.knowledge-file-name').filter({ hasText: '上传成功.md' }).count()).toBe(1)
+    const cancelled = library.getByRole('row', { name: /上传取消.pdf/ })
+    await cancelled.getByRole('button', { name: '取消 上传取消.pdf' }).click()
+    await expect.poll(() => cancelled.count()).toBe(0)
+    expect(await page.evaluate(() => window.data.documents.find(file => file.name === '上传成功.md').folderId)).toBe('f')
   } finally { await page.close() }
 })
