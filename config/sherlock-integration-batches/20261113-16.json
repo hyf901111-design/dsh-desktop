@@ -9,60 +9,37 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "金融组件窄版单行底栏",
+        "featureName": "表格组件边栏拖动调宽",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "94aa8853111b1dbf1bce9f8c4589f0f76c6b6948",
-        "tipCommit": "ea5132191192318d00857e39ed8f4f0b9cb67507",
+        "baseCommit": "ea5132191192318d00857e39ed8f4f0b9cb67507",
+        "tipCommit": "e640d3ec075439f85273a0afdf3242bc715138d5",
         "commits": [
           {
-            "commit": "ea5132191192318d00857e39ed8f4f0b9cb67507",
+            "commit": "e640d3ec075439f85273a0afdf3242bc715138d5",
             "parents": [
-              "94aa8853111b1dbf1bce9f8c4589f0f76c6b6948"
+              "ea5132191192318d00857e39ed8f4f0b9cb67507"
             ],
-            "subject": "让窄版金融组件底栏保持单行"
+            "subject": "支持实时拖动并记住表格组件边栏宽度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/financial-widget-client.mjs"
+            "path": "scripts/verify-spreadsheet-live.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/ui-copy.ts"
           },
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.css"
-          }
-        ],
-        "checks": [
+          },
           {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-source-info-browser.test.js",
-              "test/component-menu-presentation.test.ts",
-              "test/notes-native-components.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "18 项组件和表格聚焦验证通过",
-            "verifiedCommit": "ea5132191192318d00857e39ed8f4f0b9cb67507",
-            "completedAt": "2026-11-14T00:12:56.889Z",
-            "timeoutMs": 180000
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
           }
         ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实客户端发现 247 像素宽时底栏换行，已收紧来源入口并保留时间和选区。"
-        },
-        "acceptanceCriteria": [
-          "窄版金融组件底栏保持单行",
-          "来源入口和可定位的选区坐标均可见"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-14T00:12:56.889Z"
-      },
-      "merged": {
-        "mergeCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
-        "verificationCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
         "checks": [
           {
             "argv": [
@@ -71,26 +48,10 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
-            "completedAt": "2026-11-14T00:13:04.681Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
-            "completedAt": "2026-11-14T00:13:04.681Z",
-            "timeoutMs": 120000
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "e640d3ec075439f85273a0afdf3242bc715138d5",
+            "completedAt": "2026-11-14T00:23:04.282Z",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -98,43 +59,22 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
-            "completedAt": "2026-11-14T00:13:04.681Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
-            "verifiedCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
-            "completedAt": "2026-11-14T00:13:04.681Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
-            "verifiedCommit": "d5d42df1acb6052e8ab4de769bb12f5f5768e6b5",
-            "completedAt": "2026-11-14T00:13:04.681Z",
-            "timeoutMs": 120000
+            "summary": "Electron 表格验证通过，覆盖实时宽度、保存和重新停靠",
+            "verifiedCommit": "e640d3ec075439f85273a0afdf3242bc715138d5",
+            "completedAt": "2026-11-14T00:23:04.282Z",
+            "timeoutMs": 180000
           }
         ],
-        "recordedAt": "2026-11-14T00:13:04.681Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Electron 验证拖动时组件边栏与表格同时变化，松开保存宽度。"
+        },
+        "acceptanceCriteria": [
+          "拖动分隔柄实时改变组件边栏与表格宽度",
+          "重新停靠时恢复用户设定宽度"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-14T00:23:04.282Z"
       }
     },
     {
