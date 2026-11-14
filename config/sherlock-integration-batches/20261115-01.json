@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "1a95c259c30bfc9589bbbea00754671d067345ac",
-        "tipCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
+        "baseCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
+        "tipCommit": "bf211466d3faba0467b68b127d4da4da7f3eece3",
         "commits": [
           {
-            "commit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
+            "commit": "a5a54081719b6f333ad72746a16af09880bc6caa",
             "parents": [
-              "1a95c259c30bfc9589bbbea00754671d067345ac"
+              "775c90d7fbed01d494e5d3bdcc2d3700c5470621"
             ],
-            "subject": "交互：对齐文件夹计数并优化长名称显示"
+            "subject": "交互：限制知识库筛选摘要中的长文件夹名"
+          },
+          {
+            "commit": "bf211466d3faba0467b68b127d4da4da7f3eece3",
+            "parents": [
+              "a5a54081719b6f333ad72746a16af09880bc6caa"
+            ],
+            "subject": "测试：按客户端实际补丁顺序核验知识库斜杠"
           }
         ],
         "files": [
@@ -30,6 +37,10 @@
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-composer.test.js"
           },
           {
             "status": "M",
@@ -45,8 +56,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
-            "completedAt": "2026-11-14T23:39:24.552Z",
+            "verifiedCommit": "bf211466d3faba0467b68b127d4da4da7f3eece3",
+            "completedAt": "2026-11-14T23:45:04.570Z",
             "timeoutMs": 120000
           },
           {
@@ -57,18 +68,19 @@
               "npm",
               "test",
               "--",
-              "test/knowledge-workspace-rendered.test.js"
+              "test/knowledge-workspace-rendered.test.js",
+              "test/knowledge-composer.test.js"
             ],
             "outcome": "passed",
-            "summary": "22 项知识库渲染检查，包含窄窗口控件、数字对齐、提示气泡和文件夹更多操作。",
-            "verifiedCommit": "775c90d7fbed01d494e5d3bdcc2d3700c5470621",
-            "completedAt": "2026-11-14T23:39:24.552Z",
+            "summary": "28 项知识库渲染和斜杠检查通过，覆盖长目录名、摘要、撤销，以及按实际安装顺序恢复各层客户端补丁。",
+            "verifiedCommit": "bf211466d3faba0467b68b127d4da4da7f3eece3",
+            "completedAt": "2026-11-14T23:45:04.570Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "逐级调整窗口至 820、600、450、340 px 知识库工作区，核验全名气泡、数字与更多操作同轴、筛选搜索和添加文件无遮挡。"
+          "summary": "在 340px 内容宽度验证长文件夹名称对应的筛选摘要完整留在内容区内，全名可读且能撤销。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -100,7 +112,8 @@
           "笔记、表格、知识库、浏览器和研究复用固定在普通页签之外的对话页签，页签拥挤及来回切换时保持可见。",
           "侧栏更新提示、探索和消息中心处于同一行，准备好更新后显示蓝底向上箭头，继续由用户确认重启。",
           "知识库保留原生右侧栏入口，移除重复按钮；共享下钻显示返回箭头和返回上级目录并保留搜索与筛选。",
-          "文件夹计数和分类共列，悬停在同一位置显示更多。长文件夹名与顶栏标题自动省略，悬停显示全名，不挤占筛选、搜索与添加文件。"
+          "文件夹计数和分类共列，悬停在同一位置显示更多。长文件夹名与顶栏标题自动省略，悬停显示全名，不挤占筛选、搜索与添加文件。",
+          "右侧对话筛选到长名称文件夹时，筛选摘要省略过长的目录标签。标签可悬停查看全名，撤销后恢复筛选前的目录和工具栏。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -108,51 +121,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-14T23:39:24.552Z"
-      },
-      "merged": {
-        "mergeCommit": "8dabbe01c37779049c144a7712f95e1d7899b9f1",
-        "verificationCommit": "8dabbe01c37779049c144a7712f95e1d7899b9f1",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8dabbe01c37779049c144a7712f95e1d7899b9f1",
-            "completedAt": "2026-11-14T23:39:43.268Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "8dabbe01c37779049c144a7712f95e1d7899b9f1",
-            "completedAt": "2026-11-14T23:39:43.268Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-14T23:39:43.268Z"
+        "generatedAt": "2026-11-14T23:45:04.570Z"
       }
     }
   ],
