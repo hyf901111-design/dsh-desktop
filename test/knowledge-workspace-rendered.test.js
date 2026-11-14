@@ -968,5 +968,22 @@ it('aligns folder counts and more actions while keeping long headings clear of t
     expect(await tooltip.textContent()).toBe(name)
     expect(await number.evaluate(el => getComputedStyle(el).opacity)).toBe('1')
     expect(await menu.isVisible()).toBe(false)
+
+    await page.evaluate(() => {
+      window.applyKnowledgeAction({ id: 'inspect-folder', action: 'inspect' })
+      window.applyKnowledgeAction({ id: 'filter-long-folder', action: 'filter',
+        revision: window.knowledgeActionResult.result.revision, filter: { folderId: 'f', formats: ['markdown'] } })
+    })
+    const summary = library.locator('.knowledge-filter-summary')
+    const folderTag = summary.getByText(name, { exact: true })
+    await folderTag.waitFor()
+    expect(await folderTag.evaluate(el => el.scrollWidth > el.clientWidth && getComputedStyle(el).textOverflow === 'ellipsis')).toBe(true)
+    expect(await summary.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await folderTag.hover()
+    expect(await tooltip.textContent()).toBe(name)
+    await summary.getByRole('button', { name: '撤销', exact: true }).click()
+    await folderTag.waitFor({ state: 'detached' })
+    expect(await heading.isVisible()).toBe(true)
+    expect(await upload.isVisible()).toBe(true)
   } finally { await page.close() }
 })
