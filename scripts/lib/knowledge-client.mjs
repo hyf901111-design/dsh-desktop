@@ -27,7 +27,7 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
   if(!input||input.disabled||input.readOnly)throw Error('当前对话输入不可用。')
   const add={source:'knowledge-reference',ref:JSON.stringify(reference),label:reference.label,clipboardText:reference.label}
   let span=segment?.via==='menu'?segment.span:undefined
-  if(!span&&segment?.via==='bare-token'){
+  if(!span&&segment?.via==='enter'){
    if(snapshot.draft.trim()!==segment.token)throw Error('草稿已变化，请重新选择。')
    const start=snapshot.draft.indexOf(segment.token)
    span={start,end:start+segment.token.length,draftRev:snapshot.draftRev}
@@ -102,12 +102,16 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
 
 export function patchKnowledgeConversation(input) {
  const marker='/* ework:knowledge-composer:v1 */'
- if(input.includes(marker))return input
  const replace=(source,anchor,next)=>{
   const boundary=source.indexOf('/* browser-app-native:v1 */'),body=boundary<0?source:source.slice(0,boundary)
   if(body.split(anchor).length!==2)throw Error('Knowledge composer anchor drift: '+anchor.slice(0,100))
   return body.replace(anchor,()=>next)+(boundary<0?'':source.slice(boundary))
  }
+ if(!input.includes('"data-odyssey-command-launcher": true')){
+  const launcher='"aria-label": label,\n\t\t\t\t"aria-haspopup": "listbox",'
+  input=replace(input,launcher,launcher+'\n                "data-odyssey-command-launcher": true,')
+ }
+ if(input.includes(marker))return input
  const registration='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  let source=replace(input,registration,registration+`
  ${marker}

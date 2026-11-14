@@ -15,7 +15,14 @@ const events=[],popup=new commands.PopupSelectController({consume:segment=>{even
 const t=key=>({'search.aria':'Search options','search.placeholder':'Search…','overlay.aria':'Command options','listbox.aria':'Choices','input.send':'Send','input.commands':'Commands','hero.headline':'探索更远，洞见更深','placeholder.default':'描述你想要构建的内容'})[key]||key
 const optionsFor=count=>Array.from({length:count},(_,index)=>({id:'choice-'+index,label:['Read Only','Workspace Write','Full access'][index]||'Model '+index,active:index===2}))
 const spec=count=>({kind:'popupSelect',options:async()=>optionsFor(count),onSelect:async option=>events.push(option.id)})
-const source={name:'command',trigger:'/',order:0,candidates:async()=>[{name:'permission',description:'Permission options'},{name:'model',description:'Model options'},{name:'plan',description:'Plan options'}],onPick:({span,item})=>commands.CommandUiRuntime.prototype.openPopup.call({scopeFor:()=>({}),popupFor:()=>popup},item?.name||'permission',spec(3),{sessionId},{via:'menu',span})}
+const knowledgeSpec={kind:'popupSelect',options:async()=>[
+ {id:JSON.stringify({kind:'category',id:'all'}),label:'所有文件'},
+ {id:JSON.stringify({kind:'shared-menu'}),label:'他人共享'},
+ {id:JSON.stringify({kind:'shared-category',id:'industry'}),label:'行业研究'},
+ {id:JSON.stringify({kind:'shared-category',id:'data'}),label:'数据分析'},
+ {id:JSON.stringify({kind:'folder',id:'f'}),label:'研究资料'}
+],onSelect:async option=>events.push(JSON.parse(option.id).id)}
+const source={name:'command',trigger:'/',order:0,candidates:async()=>[{name:'permission',description:'Permission options'},{name:'model',description:'Model options'},{name:'plan',description:'Plan options'},{name:'knowledge',description:'Knowledge Base options'}],onPick:({span,candidate})=>commands.CommandUiRuntime.prototype.openPopup.call({scopeFor:()=>({}),popupFor:()=>popup},candidate?.name||'permission',candidate?.name==='knowledge'?knowledgeSpec:spec(3),{sessionId},{via:'menu',span})}
 trigger=new triggers.InputTriggerController({sessionId,roster:{all:()=>[source],sources:()=>[source]}})
 let setPage,setExtra,requestReflow
 function Composer({renderSlot,renderSlotChain}){

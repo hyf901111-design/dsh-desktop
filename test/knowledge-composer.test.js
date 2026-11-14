@@ -33,6 +33,9 @@ it('inserts a scope at the slash token while retaining adjacent text and blockin
     expect(() => app.command.ui.onSelect(option, context)).toThrow('草稿已变化')
     expect(() => app.command.ui.onSelect(option, { ...context, sessionId: 'other' })).toThrow('当前会话已变化')
     expect(shell.insertReference).toHaveBeenCalledTimes(1)
+    shell.snapshot.draft = ' /knowledge '
+    app.command.ui.onSelect(option, { sessionId: 's1', knowledgeCommandSegment: { via: 'enter', token: '/knowledge' } })
+    expect(shell.insertReference).toHaveBeenLastCalledWith(expect.objectContaining({ label: '研究资料' }), { start: 1, end: 11, draftRev: 5 })
     vi.stubGlobal('window', {
       dshDesktop: { knowledgeReference: async ref => ({ label: ref.label, documents: [{ name: '报告.md', text: '原始正文' }] }) }
     })
