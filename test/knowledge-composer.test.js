@@ -1,7 +1,7 @@
 import { it, expect, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, sharedKnowledgeCitation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeFilterReceiptAnchors, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, sharedKnowledgeCitation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
 import { patchMarkdownFileLinks } from '../scripts/lib/markdown-file-links.mjs'
 import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
@@ -9,6 +9,29 @@ import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/bro
 import { stripSpreadsheetClient, patchSpreadsheetClient } from '../scripts/lib/spreadsheet-client.mjs'
 import { stripResearchBoardHeaderClient } from '../scripts/lib/research-board-header-client.mjs'
 import { stripConversationPermissionDefault } from '../scripts/lib/conversation-permission-default.mjs'
+
+it('anchors only a matched native filter receipt after its visible reply', () => {
+  const revision = 'cd676d89-2f9b-4b0a-b09f-1ee934b39d66'
+  const capability = 'knowledge.filter'
+  const requestId = 'filter-turn-one'
+  const call = { name: 'client_action', argsRaw: JSON.stringify({ capability, requestId }) }
+  const data = { section: 'files', count: 2, revision }
+  const tool = reply => ({
+    kind: 'tool-call', turn: 1,
+    data: { root: { kind: 'tool-result', call, content: [{ type: 'text', text: JSON.stringify(reply) }] } }
+  })
+  const reply = { capability, requestId, data, status: 'succeeded' }
+  const anchors = [{ kind: 'node', key: 'ask' }, { kind: 'execution', key: 'step', turn: 1, nodeKeys: ['tool'] }, { kind: 'node', key: 'answer' }]
+  const nodes = new Map([
+    ['ask', { kind: 'user', turn: 1 }], ['tool', tool(reply)], ['answer', { kind: 'assistant-step', turn: 1 }]
+  ])
+  const read = () => knowledgeFilterReceiptAnchors(anchors, nodes, node => node?.turn)
+  expect(read()).toEqual(new Map([['answer', { revision, count: 2, undone: false }]]))
+  nodes.set('tool', tool({ ...reply, requestId: 'stale' }))
+  expect(read().size).toBe(0)
+  nodes.set('tool', tool({ ...reply, status: 'failed' }))
+  expect(read().size).toBe(0)
+})
 
 it('inserts a scope at the slash token while retaining adjacent text and blocking stale selections', async () => {
   const window = new Window()

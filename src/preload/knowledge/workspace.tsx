@@ -367,6 +367,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     return applyFilter(before.filter, before.assistantFilter)
   }
 
+  useLayoutEffect(() => {
+    document.dispatchEvent(new Event('sherlock:knowledge-filter-state'))
+  }, [document, filter, tab, undoAvailable])
+
+  useEffect(() => {
+    const undo = (event: Event) => {
+      const revision = (event as CustomEvent<{ revision?: string }>).detail?.revision
+      if (!previousFilter.current || revision !== filterState.current.revision || !viewRead.current.ready ||
+          host.current()?.surface !== 'knowledge' || viewRead.current.section !== 'files' ||
+          document.querySelector('.VOzbGW_overlay')) return
+      event.preventDefault()
+      undoFilter()
+    }
+    document.addEventListener('sherlock:knowledge-filter-undo', undo)
+    return () => document.removeEventListener('sherlock:knowledge-filter-undo', undo)
+  }, [document, host])
+
   useEffect(() => {
     const pending = pendingViewRequests.current
     const off = bridge.subscribeAction?.(request => {
@@ -646,7 +663,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           </button>
         </div>)}
       </nav>
-      <main className="knowledge-file-list" onDragEnter={event => {
+      <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
         if (selection === 'received' || !event.dataTransfer.types.includes('Files')) return
         dragDepth.current++
         setDragging(true)

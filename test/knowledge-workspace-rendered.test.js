@@ -201,7 +201,13 @@ it('preserves filters through return and leaves space around the selected row', 
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库' })
     await library.getByRole('navigation', { name: '知识库分类' }).getByRole('button', { name: /研究资料/ }).click()
-    await library.getByRole('button', { name: '筛选', exact: true }).click()
+    const filter = library.getByRole('button', { name: '筛选', exact: true })
+    await filter.click()
+    const popup = library.getByRole('group', { name: '筛选文件' })
+    await expect.poll(async () => {
+      const [buttonBounds, popupBounds] = await Promise.all([filter.boundingBox(), popup.boundingBox()])
+      return Math.abs(buttonBounds.x + buttonBounds.width - popupBounds.x - popupBounds.width)
+    }).toBeLessThan(1)
     await page.getByLabel('Markdown').check()
     await page.getByRole('button', { name: '完成' }).click()
     await expect.poll(() => page.getByRole('row').count()).toBe(2)
@@ -216,6 +222,13 @@ it('preserves filters through return and leaves space around the selected row', 
     await expect.poll(() => library.isVisible()).toBe(false)
     await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
     await expect.poll(() => library.getByText('找到 1 个文件').isVisible()).toBe(true)
+    await library.getByRole('button', { name: '关闭预览' }).click()
+    await page.setViewportSize({ width: 720, height: 800 })
+    await filter.click()
+    await expect.poll(async () => {
+      const [menuBounds, bounds] = await Promise.all([popup.boundingBox(), library.locator('.knowledge-tools').boundingBox()])
+      return menuBounds.x >= bounds.x - 1 && menuBounds.x + menuBounds.width <= bounds.x + bounds.width + 1
+    }).toBe(true)
     if (process.env.KNOWLEDGE_QA_SCREENSHOT) await page.screenshot({ path: process.env.KNOWLEDGE_QA_SCREENSHOT })
   } finally {
     await page.close()
@@ -550,6 +563,14 @@ it('acknowledges the rendered list, preserves the memory tab on inspect, and rej
     const undone = await act({ action: 'undo', revision: response.result.revision })
     expect(undone.result.count).toBe(3)
     expect(undone.rendered).toHaveLength(3)
+    const filteredAgain = (await act({ action: 'filter', revision: undone.result.revision, filter: { formats: ['ppt'] } })).result
+    const undoReceipt = revision => page.evaluate(revision => !document.dispatchEvent(new CustomEvent('sherlock:knowledge-filter-undo',
+      { cancelable: true, detail: { revision } })), revision)
+    await expect.poll(() => library.locator('[data-knowledge-undo-revision]').getAttribute('data-knowledge-undo-revision')).toBe(filteredAgain.revision)
+    expect(await undoReceipt(response.result.revision)).toBe(false)
+    expect(await undoReceipt(filteredAgain.revision)).toBe(true)
+    await expect.poll(() => library.locator('tbody tr').count()).toBe(3)
+    expect(await undoReceipt(filteredAgain.revision)).toBe(false)
   } finally { await page.close() }
 })
 
