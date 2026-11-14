@@ -1,0 +1,486 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261115-01",
+  "branch": "codex/integration/20261115-01",
+  "baseMainCommit": "0b5f1c8b8fe48b5e28d1c751181cc9780f27b83f",
+  "expectedMainCommit": "0b5f1c8b8fe48b5e28d1c751181cc9780f27b83f",
+  "createdAt": "2026-11-14T16:10:34.118Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "知识库应用与右侧对话",
+        "branch": "codex/feat/knowledge-library-20261114",
+        "baseCommit": "498a41b95cecb7882ef91fc6e5845ff579b19c80",
+        "tipCommit": "76651ab0ba75fbea22fbed794c925aa7fce8bf72",
+        "commits": [
+          {
+            "commit": "f6cb629049b6b9f04a3e84aaa39348a07a80a4e9",
+            "parents": [
+              "498a41b95cecb7882ef91fc6e5845ff579b19c80"
+            ],
+            "subject": "功能：接入知识库工作区与本地文件管理"
+          },
+          {
+            "commit": "eb0986066ad2ffa93079a3c8778a6e1058d2ebd5",
+            "parents": [
+              "f6cb629049b6b9f04a3e84aaa39348a07a80a4e9"
+            ],
+            "subject": "功能：收录会话交付文件并接入手动收藏"
+          },
+          {
+            "commit": "154ab4e35a0ea3e0240ee5c00fda0d80e1121287",
+            "parents": [
+              "eb0986066ad2ffa93079a3c8778a6e1058d2ebd5"
+            ],
+            "subject": "功能：连接知识库常驻对话与列表操作协议"
+          },
+          {
+            "commit": "9af8478452dea56e4337f34b472c82f63c5505b1",
+            "parents": [
+              "154ab4e35a0ea3e0240ee5c00fda0d80e1121287"
+            ],
+            "subject": "功能：接入文件共享及他人共享分类"
+          },
+          {
+            "commit": "d736da5a412b5fa519d627be6f831b37834173af",
+            "parents": [
+              "9af8478452dea56e4337f34b472c82f63c5505b1"
+            ],
+            "subject": "功能：加入知识库斜杠命令和右侧文件引用"
+          },
+          {
+            "commit": "59ba8da898d8da85ccad11525e13928a15503dfc",
+            "parents": [
+              "d736da5a412b5fa519d627be6f831b37834173af"
+            ],
+            "subject": "功能：读取常见文档正文并用于预览与知识库引用"
+          },
+          {
+            "commit": "98bf802f46a30f671ac764a129dae172dc0b89cf",
+            "parents": [
+              "59ba8da898d8da85ccad11525e13928a15503dfc"
+            ],
+            "subject": "功能：在知识库内复用经验记忆编辑与设置"
+          },
+          {
+            "commit": "adae145f1311ca31249624ef9c86845cf675332d",
+            "parents": [
+              "98bf802f46a30f671ac764a129dae172dc0b89cf"
+            ],
+            "subject": "修复：撤销知识库对话排序时保留原有筛选反馈"
+          },
+          {
+            "commit": "71036079d42dd33b99e6fcccf4fd42fc2a829c3b",
+            "parents": [
+              "adae145f1311ca31249624ef9c86845cf675332d"
+            ],
+            "subject": "功能：补齐右侧知识库筛选与共享目录下钻"
+          },
+          {
+            "commit": "5cc35c54985109243cfa9962e08a2e73add18cd1",
+            "parents": [
+              "71036079d42dd33b99e6fcccf4fd42fc2a829c3b"
+            ],
+            "subject": "功能：统一斜杠菜单返回与共享分类键盘操作"
+          },
+          {
+            "commit": "c08e292cea90a4fef4917f9504083ba868adef3e",
+            "parents": [
+              "5cc35c54985109243cfa9962e08a2e73add18cd1"
+            ],
+            "subject": "功能：允许普通对话检索和读取他人共享资料"
+          },
+          {
+            "commit": "b3fc116b61d935bf5034a1a77893aecb94f1811d",
+            "parents": [
+              "c08e292cea90a4fef4917f9504083ba868adef3e"
+            ],
+            "subject": "功能：在预览和右侧对话中编辑 Markdown 正文"
+          },
+          {
+            "commit": "882d41d723d7c9ed286e0ab244f75115b5340159",
+            "parents": [
+              "b3fc116b61d935bf5034a1a77893aecb94f1811d"
+            ],
+            "subject": "功能：显示会话交付文件来源并支持跳转原对话"
+          },
+          {
+            "commit": "44b3656546927c2f3a5b7bd641e9e3d5342b99d5",
+            "parents": [
+              "882d41d723d7c9ed286e0ab244f75115b5340159"
+            ],
+            "subject": "修复：核验共享引用权限并隔离资料内容"
+          },
+          {
+            "commit": "3fbd83ae41cfff00568777dc68731d066ee6dffc",
+            "parents": [
+              "44b3656546927c2f3a5b7bd641e9e3d5342b99d5"
+            ],
+            "subject": "修复：重装知识库前端补丁时保留其他原生模块"
+          },
+          {
+            "commit": "02762d316b871bd63d4c2be67bf1c1104f9bf595",
+            "parents": [
+              "3fbd83ae41cfff00568777dc68731d066ee6dffc"
+            ],
+            "subject": "优化：对齐知识库入口图标与文件交互样式"
+          },
+          {
+            "commit": "b207a03f36ac20fafc57ac7f300b7409eba5f8ac",
+            "parents": [
+              "02762d316b871bd63d4c2be67bf1c1104f9bf595"
+            ],
+            "subject": "修复：会话导航用文件名显示知识库引用"
+          },
+          {
+            "commit": "f6b9695c9b3f46d787ed4481b8ef1dfba83f80fa",
+            "parents": [
+              "b207a03f36ac20fafc57ac7f300b7409eba5f8ac"
+            ],
+            "subject": "修复：共享撤销后刷新知识库并保留清晰的引用提示"
+          },
+          {
+            "commit": "76651ab0ba75fbea22fbed794c925aa7fce8bf72",
+            "parents": [
+              "f6b9695c9b3f46d787ed4481b8ef1dfba83f80fa"
+            ],
+            "subject": "优化：知识库右侧页签使用客户端统一线框图标"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-knowledge-base.svg"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/deliverable-cards.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/knowledge-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-resident-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-tab-icons.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/start-native-acceptance-services.mjs"
+          },
+          {
+            "status": "A",
+            "path": "services/accounts/migrations/0006_knowledge_shares.sql"
+          },
+          {
+            "status": "M",
+            "path": "services/collaboration/http.js"
+          },
+          {
+            "status": "A",
+            "path": "services/collaboration/knowledge.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/collaboration-client.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/capabilities.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/content.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/ipc.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/references.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/sharing.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/store.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/knowledge/view-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/native-file-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/filter-menu.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/icons.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/memory.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/panel.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/panel.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/preview.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/knowledge-library.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capability-header.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/command-popup-position-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/deliverable-cards.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/command-popup-position-browser.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-composer.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-content.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-library.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-sharing-worker.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-tab-icons.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "主进程、预加载与共享类型检查通过。",
+            "verifiedCommit": "76651ab0ba75fbea22fbed794c925aa7fce8bf72",
+            "completedAt": "2026-11-14T16:10:00.214Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npx",
+              "vitest",
+              "run",
+              "test/knowledge-composer.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "test/knowledge-sharing-worker.test.js",
+              "test/knowledge-library.test.ts",
+              "test/knowledge-content.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/browser-sidebar-entry-rendered.test.js",
+              "test/sidebar-new-note-browser.test.js",
+              "test/research-tab-icons.test.js",
+              "test/client-capability-header.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "31 项知识库、共享、右侧页签和侧栏入口聚焦检查通过。",
+            "verifiedCommit": "76651ab0ba75fbea22fbed794c925aa7fce8bf72",
+            "completedAt": "2026-11-14T16:10:00.214Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离 Electron 验证右侧对话多轮筛选、排序、撤销、修改 Markdown，及双测试账号的检索、行内引用、撤销共享后的列表刷新和草稿保留。模型使用本地模拟响应。确认深浅色图标、按钮以及右侧页签。"
+        },
+        "acceptanceCriteria": [
+          "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
+          "右侧常驻对话能访问当前知识库工作区，执行筛选、排序和受版本保护的 Markdown 修改。",
+          "登录用户可检索、阅读、引用有权访问的共享文件；取消共享时拒绝旧引用并保留草稿。",
+          "客户端折叠侧栏中知识库位于浏览器下方，分类和文件图标符合客户端风格，控件支持减少动态效果。"
+        ],
+        "risks": [
+          "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
+          "生产服务部署及正式客户端发布需要单独验证。"
+        ],
+        "generatedAt": "2026-11-14T16:10:00.214Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "env",
+        "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+        "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+        "npx",
+        "vitest",
+        "run",
+        "test/knowledge-composer.test.js",
+        "test/knowledge-workspace-rendered.test.js",
+        "test/knowledge-sharing-worker.test.js",
+        "test/knowledge-library.test.ts",
+        "test/knowledge-content.test.ts",
+        "test/browser-sidebar-entry.test.ts",
+        "test/browser-sidebar-entry-rendered.test.js",
+        "test/sidebar-new-note-browser.test.js",
+        "test/research-tab-icons.test.js",
+        "test/client-capability-header.test.ts"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
