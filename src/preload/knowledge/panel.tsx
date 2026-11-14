@@ -107,9 +107,12 @@ function FilePreview({ id, bridge, document, panel }: PanelProps & { id: string;
       const request = ++sequence
       const isLatest = () => current && request === sequence
       if (recheck) {
-        const rows = catalog ?? await bridge.received(true).catch(() => undefined)
-        if (!isLatest() || !rows) return
-        const entry = rows.find(row => row.id === id)
+        if (!catalog) {
+          const rows = await bridge.received(true).catch(() => undefined)
+          if (isLatest() && rows) document.dispatchEvent(new CustomEvent('sherlock:knowledge-shared-catalog', { detail: rows }))
+          return
+        }
+        const entry = catalog.find(row => row.id === id)
         if (!entry) {
           loaded = undefined
           setFile(undefined)
@@ -230,10 +233,10 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const filterTrigger = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     let revision = 0
-    const load = (force = false) => {
+    const load = (force = false, catalog?: KnowledgeDocument[]) => {
       const current = ++revision
       const local = bridge.snapshot()
-      const source = category === 'received' ? Promise.all([local, bridge.received(force)])
+      const source = category === 'received' ? Promise.all([local, catalog ?? bridge.received(force)])
         .then(([local, documents]) => ({ ...local, documents })) : local
       void source.then(rows => {
         if (current === revision) { setSnapshot(rows); setState({ ready: true, error: '' }) }
@@ -257,14 +260,19 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     load()
     const changed = () => load()
     const sharedAccessChanged = () => { if (category === 'received') load(true) }
+    const catalogChanged = (event: Event) => {
+      if (category === 'received') load(false, (event as CustomEvent<KnowledgeDocument[]>).detail)
+    }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     document.addEventListener('sherlock:knowledge-changed', changed)
     document.addEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
+    document.addEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
     return () => {
       revision++
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
       document.removeEventListener('sherlock:knowledge-changed', changed)
       document.removeEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
+      document.removeEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
     }
   }, [bridge, document, category])
   useEffect(() => {
