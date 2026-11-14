@@ -10,7 +10,7 @@ import filterEn from '@univerjs/preset-sheets-filter/locales/en-US'
 import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
 import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,IContextService,type IRange,type IWorkbookData,type Worksheet} from '@univerjs/core'
 import {AFTER_CELL_EDIT,BEFORE_CELL_EDIT,ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation,SheetsSelectionsService} from '@univerjs/sheets'
-import {IRenderManagerService,ICanvasColorService,CanvasColorService,type IRender} from '@univerjs/engine-render'
+import {IRenderManagerService,ICanvasColorService,CanvasColorService,SHEET_VIEWPORT_KEY,type IRender} from '@univerjs/engine-render'
 import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
 import {OpenFilterPanelOperation,CloseFilterPanelOperation} from '@univerjs/sheets-filter-ui'
 import {DISABLE_AUTO_FOCUS_KEY,ContextMenuGroup,ContextMenuPosition,IconManager} from '@univerjs/ui'
@@ -32,7 +32,7 @@ export const sheetContextCopy={
 } as const
 export type SheetContextCommand=keyof typeof sheetContextCopy
 
-export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void,contextCommand?:(command:SheetContextCommand)=>void){
+export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void,contextCommand?:(command:SheetContextCommand)=>void,viewportChanged?:()=>void){
  const doc=host.ownerDocument,win=doc.defaultView!
  const style=doc.createElement('style');style.textContent=editorStyles;doc.head.append(style)
  const originalDark=doc.documentElement.classList.contains('univer-dark')
@@ -168,7 +168,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
     if(handle?.visible){handle.hide();handle.evented=false}
    }
    for(const item of [canvas,...render.scene.getViewports().map(view=>view.canvas)])if(item)Object.assign(item.getContext().renderConfig,{gridlinesColor:palette().grid})
-  }),render.scene.afterRender$.subscribe(()=>{renderingSheet=false})]
+  }),render.scene.afterRender$.subscribe(()=>{renderingSheet=false;if(spreadsheet)viewportChanged?.()})]
   watched.set(render.unitId,on)
  }
  const isLegacyInputColor=(rgb:string|null|void)=>rgb===legacyDarkInputColor||rgb===legacyLightInputColor
@@ -303,6 +303,30 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  doc.addEventListener('pointerdown',updateEditorFocus,true)
  requestAnimationFrame(()=>{if(!disposed){applyTheme();selection()}})
  return {api,model,
+  objectViewport:()=>{
+   const render=renders.getRenderUnitById(model.getId()),sheet=model.getActiveSheet()
+   const view=render?.scene.getViewport(SHEET_VIEWPORT_KEY.VIEW_MAIN)
+   const skeleton=sheet&&render?.with(SheetSkeletonManagerService).getSkeleton(sheet.getSheetId())
+   if(!view||!sheet||!skeleton)return
+   const zoom=sheet.getZoom()
+   return {left:view.left,top:view.top,zoom,scrollX:view.viewportScrollX,scrollY:view.viewportScrollY,
+    headerX:skeleton.rowHeaderWidth,headerY:skeleton.columnHeaderHeight,
+    sheetWidth:skeleton.columnTotalWidth,sheetHeight:skeleton.rowTotalHeight}
+  },
+  objectRange:(range:IRange)=>{
+   const sheet=model.getActiveSheet(),render=renders.getRenderUnitById(model.getId())
+   const skeleton=sheet&&render?.with(SheetSkeletonManagerService).getSkeleton(sheet.getSheetId())
+   if(!skeleton)return
+   const columns=skeleton.columnWidthAccumulation,rows=skeleton.rowHeightAccumulation
+   return {x:columns[range.startColumn-1]??0,y:rows[range.startRow-1]??0,right:columns[range.endColumn]??0,bottom:rows[range.endRow]??0}
+  },
+  revealObject:(x:number,y:number)=>{
+   const sheet=model.getActiveSheet(),render=renders.getRenderUnitById(model.getId())
+   const skeleton=sheet&&render?.with(SheetSkeletonManagerService).getSkeleton(sheet.getSheetId())
+   if(!sheet||!skeleton)return
+   const {row,column}=skeleton.getCellIndexByOffset(x+skeleton.rowHeaderWidth,y+skeleton.columnHeaderHeight,1,1,{x:0,y:0})
+   sheet.scrollToCell(row,column)
+  },
   openFilter:async(subUnitId:string,row:number,col:number)=>{
    const unitId=model.getId()
    await api.executeCommand(ScrollToRangeOperation.id,{unitId,range:{startRow:row,endRow:row,startColumn:col,endColumn:col}})

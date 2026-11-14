@@ -23,7 +23,8 @@ export function EWorkNoteComponentView({entry,officePreview}){
  const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
  const spreadsheet=entry.surface==='spreadsheet'
  const [sheetMenu,setSheetMenu]=react.useState(null)
- eworkComponentSurfaceUi.useComponentTheme(rootRef,entry.dark?'dark':'light',spreadsheet)
+ const sheetTheme=entry.theme??(entry.dark?'dark':'light')
+ eworkComponentSurfaceUi.useComponentTheme(rootRef,sheetTheme,spreadsheet)
  const binding=react.useSyncExternalStore(react.useCallback(fn=>spreadsheet?()=>{}:componentDataStatusStore.subscribe(entry.sessionId,node.id,fn,'notes'),[spreadsheet,entry.sessionId,node.id]),react.useCallback(()=>spreadsheet?undefined:componentDataStatusStore.read(entry.sessionId,node.id,'notes'),[spreadsheet,entry.sessionId,node.id]))
  const [refreshBusy,setRefreshBusy]=react.useState(false),[refreshError,setRefreshError]=react.useState('')
  const [dataSettings,setDataSettings]=react.useState(false),[dataRecord,setDataRecord]=react.useState(null),[dataBusy,setDataBusy]=react.useState(false),[dataError,setDataError]=react.useState('')
@@ -102,9 +103,16 @@ export function EWorkNoteComponentView({entry,officePreview}){
    const info=getComponentSourceInfo(node)
    openComponentSource(entry.sessionId,node,'details',trigger,{...info,range:entry.source||info.range})
   }
+  const themeAction=eworkComponentSurfaceUi.themeAction(sheetTheme,theme=>generationAction('theme',{theme}),entry.readOnly)
+  if(document.documentElement.dataset.odysseyLocale==='en'){
+   themeAction.label='Theme'
+   themeAction.submenuLabel='Component theme'
+   for(const item of themeAction.children)item.label=workbenchText(item.label)
+  }
   const menuActions=[
    {id:'source',icon:'branch',label:workbenchText('定位选区'),run:()=>generationAction('source')},
    {id:'source-details',icon:'data',label:sourceDetailsTitle,run:()=>openSheetSourceDetails(sheetMenu)},
+   themeAction,
    {id:'export',icon:'download',label:workbenchText('导出'),children:['svg','png','jpg'].map(format=>({id:format,label:format.toUpperCase(),run:()=>exportWorkbenchContent(rootRef.current,node,format,{body:entry.host})}))},
    {id:'remove',icon:'remove',label:workbenchText('移除组件'),run:run('remove'),disabled:entry.readOnly}
   ]

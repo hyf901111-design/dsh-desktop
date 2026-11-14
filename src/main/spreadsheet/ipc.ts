@@ -3,7 +3,7 @@ import {open,rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
 import {clipboard,dialog,type BrowserWindow,type IpcMain} from 'electron'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
-import {blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,validatedChartLayout,validatedComponentPlacement,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
+import {applyOperations,blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,validatedChartLayout,validatedComponentPlacement,validatedComponentTheme,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
 import type {ComponentLibraryStore} from '../state/component-library'
@@ -140,10 +140,14 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     const components=book.components.map(component=>component.componentId===input.componentId?{...component,placement}:component)
     return store.save(key,input.revision,{...book,components})
    }
-   case 'component-configure':case 'component-remove':{
+   case 'component-theme':case 'component-configure':case 'component-remove':{
     const current=store.load(key),book=current.workbook
     const component=book?.components?.find(item=>item.componentId===input.componentId)
     if(!book||!component)throw Error('组件已不存在。')
+    if(action==='component-theme'){
+     const theme=validatedComponentTheme(input.theme)
+     return store.save(key,input.revision,{...book,components:book.components!.map(item=>item===component?{...item,theme}:item)})
+    }
     const spec=action==='component-configure'?noteLibrarySpec(input.spec):undefined
     if(action==='component-configure'&&(!spec||spec.type!=='financial-widget'||component.node.containerSpec.type!=='financial-widget'||spec.widget!==component.node.containerSpec.widget||JSON.stringify(component.node.containerSpec)!==JSON.stringify(input.expected)))throw Error('组件配置已变化，请重试。')
     const components=book.components!.flatMap(item=>item!==component?[item]:spec?[{...item,node:{...item.node,containerSpec:spec}}]:[])
@@ -151,10 +155,17 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
    }
    case 'add-chart':case 'update-chart':{
     const {chartId,sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels,palette,showTitle,axisX,axisY}=input
-    return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{
-     op:action==='add-chart'?'addChart':'updateChart',chartId:action==='add-chart'?randomUUID():chartId,
+    const id=action==='add-chart'?randomUUID():chartId
+    const layout=input.layout===undefined?undefined:validatedChartLayout(input.layout)
+    const book=store.load(key).workbook
+    if(!book)throw Error('请先创建工作簿。')
+    const next=applyOperations(book,[{
+     op:action==='add-chart'?'addChart':'updateChart',chartId:id,
      sheetId,range,title,kind,headers,seriesBy,category,series,legend,gridlines,emptyValues,labels,palette,showTitle,axisX,axisY
-    }]})
+    }])
+    const chart=next.charts?.find(chart=>chart.chartId===id)
+    if(layout&&chart)chart.layout=layout
+    return store.save(key,input.revision,next)
    }
    case 'chart-layout':{
     const book=store.load(key).workbook

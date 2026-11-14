@@ -29,7 +29,7 @@ const sheetCell={oneOf:[sheetScalar,object({value:sheetScalar},['value']),object
 const sheetTarget={sheetId,range:sheetRange}
 const referenceIndex={type:'integer',minimum:1,maximum:24}
 const sheetChart={...sheetTarget,chartId:sheetId,title:sheetName,kind:{enum:['bar','horizontal','stackedBar','line','step','area','combo','pie','donut','scatter']},headers:{type:'boolean'},
- seriesBy:{enum:['columns','rows']},category:{type:'integer',minimum:0,maximum:9999},series:{type:'array',minItems:1,maxItems:6,items:{type:'integer',minimum:0,maximum:9999}},legend:{type:'boolean'},gridlines:{type:'boolean'},emptyValues:{enum:['skip','zero']},labels:{type:'boolean'},palette:{enum:['classic','ocean','warm','mono']},showTitle:{type:'boolean'},axisX:{type:'string',maxLength:80},axisY:{type:'string',maxLength:80}}
+ seriesBy:{enum:['columns','rows']},category:{type:'integer',minimum:0,maximum:9999},series:{type:'array',minItems:1,maxItems:6,items:{type:'integer',minimum:0,maximum:9999}},legend:{type:'boolean'},gridlines:{type:'boolean'},emptyValues:{enum:['skip','zero']},labels:{type:'boolean'},palette:{enum:['enterprise','classic','ocean','warm','mono']},showTitle:{type:'boolean'},axisX:{type:'string',maxLength:80},axisY:{type:'string',maxLength:80}}
 const sheetOperations={type:'array',maxItems:64,items:{oneOf:[
  object({op:{const:'write'},...sheetTarget,cells:{type:'array',minItems:1,maxItems:10000,items:{type:'array',maxItems:10000,items:sheetCell}}},['op','sheetId','range','cells']),
  object({op:{const:'clear'},...sheetTarget},['op','sheetId','range']),

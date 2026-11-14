@@ -16,6 +16,7 @@ const paths:Record<string,string>={
  undo:'M8 5 3 10l5 5m-5-5h10a5 5 0 0 1 0 10',
  redo:'m16 5 5 5-5 5m5-5H11a5 5 0 0 0 0 10',
  border:'M3 3h18v18H3zM3 12h18M12 3v18',align:'M4 5h16M4 10h11M4 15h16M4 20h11',
+ 'align-left':'M4 5h16M4 10h11M4 15h16M4 20h11','align-center':'M4 5h16M7 10h10M4 15h16M7 20h10','align-right':'M4 5h16M9 10h11M4 15h16M9 20h11',
  filter:'M3 5h18l-7 8v5l-4 2v-7z',freeze:'M3 4h18v16H3zM3 9h18M9 4v16',
  search:'M15.5 15.5 21 21M17 10.5A6.5 6.5 0 1 1 4 10.5a6.5 6.5 0 0 1 13 0Z',
  focus:'M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5',

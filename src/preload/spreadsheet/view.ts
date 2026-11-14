@@ -1,11 +1,12 @@
-import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookChartKinds,workbookChartPalettes,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout,type WorkbookComponent,type WorkbookComponentPlacement} from '../../shared/spreadsheet/workbook'
+import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookChartKinds,workbookChartPalettes,DEFAULT_WORKBOOK_CHART_PALETTE,SHEET_ROW_HEADER_WIDTH,SHEET_COLUMN_HEADER_HEIGHT,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout,type WorkbookComponent,type WorkbookComponentPlacement} from '../../shared/spreadsheet/workbook'
 import {chartKindLabels,escapeSheetText as text,spreadsheetChartData,spreadsheetChartSvg} from './chart'
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetContextCommand,SheetEngine} from './engine'
-import {isNullCell} from '@univerjs/core'
+import {HorizontalAlign,isNullCell} from '@univerjs/core'
 import {sheetIcon as icon} from './icons'
 import {translateSpreadsheetCopy} from './ui-copy'
 import {browserIcons} from '../browser/icons'
+import {workbenchStylePalette} from '../../../packages/dsh-research-task-runtime/workbench-style.js'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
@@ -16,11 +17,13 @@ type ComponentJob={card:ComponentCard;node:Record<string,unknown>;stage?:string;
 type ComponentGesture={card:ComponentCard;id:string;pointerId:number;startX:number;startY:number;resize:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
 type Bridge={request(method:string,input:Record<string,unknown>):Promise<any>;flushResult(input:Record<string,unknown>):Promise<unknown>;subscribe(event:'changed'|'flush'|'identity'|'component-progress',callback:(value:any)=>void):()=>void}
 type Menu={key:string;label:string;anchor:HTMLElement;parents:{key:string;label:string;value:string}[]}
-type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean;shortcut?:string}
+type Item={label:string;action:string;value?:string;detail?:string;icon?:string;browserIcon?:keyof typeof browserIcons;divider?:boolean;disabled?:boolean;shortcut?:string;checked?:boolean}
 type Tool=Item & {toolbarCopy?:string;pressed?:boolean}
 type ChartGesture={chartId:string;pointerId:number;x:number;y:number;resize:boolean;start:WorkbookChartLayout;preview:WorkbookChartLayout}
+type ObjectViewport=NonNullable<ReturnType<SheetEngine['objectViewport']>>
 const toolbarDivider='<span class="ew-sheet-toolbar-divider" aria-hidden="true"></span>'
 const componentWidthKey='sherlock.spreadsheet.component-sidebar-width'
+const enterpriseChartColors=Object.entries(workbenchStylePalette('enterprise')).filter(([key])=>/^chart-[1-8]$/.test(key))
 const errorMessage=(e:unknown)=>String((e as Error)?.message??e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'')
 const button=(action:string,copy:string,options:{glyph?:string;label?:string;value?:string;className?:string;disabled?:boolean;pressed?:boolean;withLabel?:boolean}={})=>{
  const {glyph,label=copy,value,className='',disabled,pressed,withLabel}=options
@@ -67,6 +70,8 @@ class SpreadsheetView{
  private menuHover=0
  private chartMarkup=''
  private chartObjectsMarkup=''
+ private objectFrame=''
+ private readonly chartDefaults=new Map<string,WorkbookChartLayout>()
  private chartGesture?:ChartGesture
  private chartLayoutPending?:{chartId:string;layout:WorkbookChartLayout}
  private activeComponent?:string
@@ -90,8 +95,10 @@ class SpreadsheetView{
  constructor(private host:HTMLElement,private sessionId:string,private bridge:Bridge){
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-component-layer"></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  for(const [key,value] of enterpriseChartColors)this.root.style.setProperty('--sheet-efund-'+key,value)
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-charts" hidden></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
   this.componentDivider.setAttribute('aria-controls',this.components.id)
+  this.modal.id=crypto.randomUUID()
   try{
    const width=Number(this.win.localStorage.getItem(componentWidthKey))
    if(Number.isFinite(width)&&width>0)this.componentSidebarWidth=width
@@ -131,15 +138,15 @@ class SpreadsheetView{
   this.charts.addEventListener('pointerdown',this.startChartGesture)
   this.grid.addEventListener('pointerdown',this.deselectChart,true)
   this.charts.addEventListener('pointermove',this.moveChartGesture)
-  this.charts.addEventListener('pointerup',this.endChartGesture)
-  this.charts.addEventListener('lostpointercapture',this.cancelChartGesture)
+  this.win.addEventListener('pointerup',this.endChartGesture,true)
+  this.win.addEventListener('pointercancel',this.cancelChartGesture,true)
   this.charts.addEventListener('keydown',this.chartLayoutKey)
   this.root.addEventListener('keydown',this.key)
   this.root.addEventListener('focusout',this.blur)
   this.componentLayer.addEventListener('pointerdown',this.startComponentGesture)
   this.componentLayer.addEventListener('pointermove',this.moveComponentGesture)
-  this.componentLayer.addEventListener('pointerup',event=>this.finishComponentGesture(event,true))
-  this.componentLayer.addEventListener('lostpointercapture',event=>this.finishComponentGesture(event,false))
+  this.win.addEventListener('pointerup',this.endComponentGesture,true)
+  this.win.addEventListener('pointercancel',this.cancelComponentGesture,true)
   this.doc.addEventListener('sherlock:notes-component-action',this.componentAction)
   this.doc.addEventListener('sherlock:spreadsheet-component-reload',this.componentReload)
   this.componentThemeObserver=new MutationObserver(this.componentReload)
@@ -180,6 +187,7 @@ class SpreadsheetView{
  private get pop(){return this.root.querySelector<HTMLElement>('.ew-sheet-menu')!}
  private get modal(){return this.root.querySelector<HTMLElement>('.ew-sheet-dialog')!}
  private get charts(){return this.root.querySelector<HTMLElement>('.ew-sheet-charts')!}
+ private get objectViewport(){return this.root.querySelector<HTMLElement>('.ew-sheet-object-viewport')!}
  private get componentLayer(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-layer')!}
  private get components(){return this.root.querySelector<HTMLElement>('.ew-sheet-components')!}
  private get componentDivider(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-divider')!}
@@ -273,7 +281,7 @@ class SpreadsheetView{
    library:edit('library','组件库','grid'),smart:edit('smart','智能组件','sparkles'),
    font:menu('font','字体',undefined,'默认字体'),fontSize:menu('font-size','字号',undefined,'11'),
    bold:edit('bold','加粗','bold'),italic:edit('italic','斜体','italic'),color:menu('color','颜色','color'),
-   border:menu('border','边框','border'),align:menu('align','对齐','align'),merge:edit('merge','合并单元格','merge'),
+   border:menu('border','边框','border'),align:menu('align','对齐',this.alignmentIcon()),merge:edit('merge','合并单元格','merge'),
    number:menu('number','数字格式',undefined,'常规'),currency:edit('number-format','人民币','currency',{value:'"¥"#,##0.00'}),
    percent:edit('number-format','百分比','percent',{value:'0.00%'}),decimals:edit('number-format','两位小数','decimals',{value:'#,##0.00'}),
    filter:{...menu('filter','筛选','filter','筛选'),pressed:!!this.current()?.getFilter()},sort:menu('sort','排序','sort'),
@@ -294,7 +302,7 @@ class SpreadsheetView{
    className:tool.action==='menu'?'dropdown':'',withLabel:tool.toolbarCopy!==undefined
   })).join('')).join(toolbarDivider)
  }
- private resize=()=>{this.layoutComponentSidebar();this.fitRibbon();this.place();this.positionChart();this.renderChartObjects();this.positionComponents()}
+ private resize=()=>{this.layoutComponentSidebar();this.fitRibbon();this.place();this.positionSheetObjects()}
  private fitRibbon=()=>{
   const tools=this.chrome.querySelector<HTMLElement>('.ew-sheet-ribbon-tools')
   const more=this.chrome.querySelector<HTMLButtonElement>('[data-value=overflow]')
@@ -376,7 +384,24 @@ class SpreadsheetView{
   const pattern=cell.getNumberFormat()
   set('number',pattern==='0.00%'?'百分比':pattern?.includes('¥')?'货币':pattern&&pattern!=='General'?'数值':'常规')
   for(const [action,pressed] of [['bold',style?.bl===1],['italic',style?.it===1]] as const)this.chrome.querySelector('[data-action='+action+']')?.setAttribute('aria-pressed',String(pressed))
+  const align=this.chrome.querySelector<HTMLElement>('[data-value=align]'),glyph=this.alignmentIcon()
+  if(align&&align.dataset.glyph!==glyph){
+   align.dataset.glyph=glyph
+   const old=align.querySelector('svg')
+   old?.insertAdjacentHTML('beforebegin',icon(glyph))
+   old?.remove()
+  }
   if(layoutChanged)this.resize()
+ }
+ private alignment(){
+  const cell=this.nativeCell(),ht=cell?.getCellStyleData()?.ht
+  if(ht===HorizontalAlign.LEFT)return 'left'
+  if(ht===HorizontalAlign.CENTER)return 'center'
+  if(ht===HorizontalAlign.RIGHT)return 'right'
+ }
+ private alignmentIcon(){
+  const align=this.alignment()??(typeof this.nativeCell()?.getRawValue()==='number'?'right':'left')
+  return 'align-'+align
  }
  private say(copy:string,error=false){
   this.notice=copy;this.error=error
@@ -390,7 +415,7 @@ class SpreadsheetView{
   if(!same)this.clearSelectionPreview()
   const oldCharts=new Set(this.record.workbook?.charts?.map(chart=>chart.chartId))
   const added=record.workbook?.charts?.find(chart=>!oldCharts.has(chart.chartId))
-  if(!same){this.activeChart=undefined;this.activeComponent=undefined}
+  if(!same){this.activeChart=undefined;this.activeComponent=undefined;this.chartDefaults.clear()}
   if(added&&this.record.workbook){this.activeChart=added.chartId;this.activeComponent=undefined}
   const previous=same?this.selection:undefined
   let viewport
@@ -407,7 +432,7 @@ class SpreadsheetView{
   try{
    const {createSheetEngine}=await import('./engine')
    if(this.disposed||token!==this.modeToken)return
-   this.engine=createSheetEngine(this.grid,record.workbook,this.editable,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction)
+   this.engine=createSheetEngine(this.grid,record.workbook,this.editable,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction,this.positionSheetObjects)
    const book=this.engine.model
    if(!position&&previous&&book.getSheetBySheetId(previous.sheetId)){
     const sheet=book.setActiveSheet(previous.sheetId)
@@ -559,9 +584,12 @@ class SpreadsheetView{
    if(action==='export'){this.say('已导出 '+row.name);return}
    await this.refreshRecent()
    if(this.disposed||row.revision<this.record.revision)return
-   if(action==='chart-layout'){
+   if(['chart-layout','add-chart','update-chart','remove-chart'].includes(action)&&this.engine){
     this.record=row
-    this.engine?.syncCharts(row.workbook?.charts)
+    this.engine.syncCharts(row.workbook?.charts)
+    if(action==='add-chart')this.activeChart=row.workbook?.charts?.at(-1)?.chartId
+    if(action==='remove-chart'&&this.activeChart===fields.chartId)this.activeChart=undefined
+    if(action!=='chart-layout')this.paint()
     this.renderChart()
    }else if(action.startsWith('component-')){
     this.record=row
@@ -659,7 +687,7 @@ class SpreadsheetView{
    case 'font-size':return items(['9','10','11','12','14','16','18','20','24','32'],'font-size')
    case 'color':return [{label:'默认文字颜色',action:'text-color',value:''},{label:'白色',action:'text-color',value:'#ffffff'},{label:'深灰色',action:'text-color',value:'#27272a'},{label:'蓝色',action:'text-color',value:'#85b3ff'},{label:'红色',action:'text-color',value:'#ef6269'},{label:'绿色',action:'text-color',value:'#3bb878'},{label:'浅灰填充',action:'fill',value:'#343a43'},{label:'清除填充',action:'fill',value:''}]
    case 'border':return [{label:'所有边框',action:'border',value:'all'},{label:'外边框',action:'border',value:'outside'},{label:'下边框',action:'border',value:'bottom'},{label:'清除边框',action:'border',value:'none'}]
-   case 'align':return [{label:'左对齐',action:'align',value:'left'},{label:'居中',action:'align',value:'center'},{label:'右对齐',action:'align',value:'right'}]
+   case 'align':return (['left','center','right'] as const).map((value,i)=>({label:['左对齐','居中','右对齐'][i]!,action:'align',value,icon:'align-'+value,checked:value===this.alignment()}))
    case 'number':return [{label:'常规',action:'number-format',value:'General'},{label:'数值 · 1,234.00',action:'number-format',value:'#,##0.00'},{label:'人民币 · ¥1,234.00',action:'number-format',value:'"¥"#,##0.00'},{label:'百分比 · 12.34%',action:'number-format',value:'0.00%'},{label:'日期 · 年-月-日',action:'number-format',value:'yyyy-mm-dd'}]
    case 'freeze':return [{label:'冻结首行',action:'freeze',value:'row'},{label:'冻结首列',action:'freeze',value:'col'},{label:'冻结选区上方及左侧',action:'freeze',value:'selection'},{label:'取消冻结',action:'freeze',value:'none'}]
    case 'filter':{
@@ -736,7 +764,7 @@ class SpreadsheetView{
    const child=cascade?parents[i]?.value:undefined
    const markup=(back?'<div class="ew-sheet-menu-title"><button type="button" role="menuitem" data-action="menu-back" aria-label="返回上一级" title="返回上一级">'+icon('left',16)+'</button><span>'+text(label)+'</span></div>':'')+this.items(key).map((item,index)=>{
     const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
-    return (index>0&&item.divider?'<div role="separator"></div>':'')+'<button type="button" role="menuitem" data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu" aria-expanded="'+(!!child&&item.value===child)+'"':'')+'>'+glyph+'<span'+(['sheets','charts','components'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):item.shortcut?'<kbd>'+text(item.shortcut)+'</kbd>':'')+'</button>'
+    return (index>0&&item.divider?'<div role="separator"></div>':'')+'<button type="button" '+(item.checked!==undefined?'role="menuitemradio" aria-checked="'+item.checked+'"':'role="menuitem"')+' data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu" aria-expanded="'+(!!child&&item.value===child)+'"':'')+'>'+glyph+'<span'+(['sheets','charts','components'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):item.checked?'<i class="ew-sheet-menu-check">'+icon('check',14)+'</i>':item.shortcut?'<kbd>'+text(item.shortcut)+'</kbd>':'')+'</button>'
    }).join('')
    // Preserve the hovered parent node while opening its child.
    if(panel.dataset.menuContent!==markup.replaceAll(/ aria-expanded="(?:true|false)"/g,'')){
@@ -802,10 +830,15 @@ class SpreadsheetView{
  }
  private syncInspector(){
   const docked=!this.components.hidden&&!this.modal.dataset.docked
+  const chart=this.modal.dataset.docked==='chart'
   this.root.toggleAttribute('data-sheet-inspector',!!this.modal.dataset.docked||docked)
   this.root.toggleAttribute('data-sheet-component-sidebar',docked)
-  this.componentDivider.hidden=!docked
+  this.root.toggleAttribute('data-sheet-chart-inspector',chart)
+  this.componentDivider.hidden=!docked&&!chart
+  this.componentDivider.setAttribute('aria-controls',chart?this.modal.id:this.components.id)
+  this.componentDivider.setAttribute('aria-label',chart?'调整图表设置边栏宽度':'调整组件边栏宽度')
  }
+ private get resizableInspector(){return this.modal.dataset.docked==='chart'?this.modal:this.components}
  private componentSidebarBounds(){
   const available=this.root.clientWidth
   const min=Math.min(224,Math.floor(available/2))
@@ -826,7 +859,7 @@ class SpreadsheetView{
   event.preventDefault()
   this.componentDivider.focus({preventScroll:true})
   this.componentDivider.setPointerCapture(event.pointerId)
-  this.componentSidebarDrag={pointerId:event.pointerId,startX:event.clientX,width:this.components.offsetWidth,previous:this.componentSidebarWidth}
+  this.componentSidebarDrag={pointerId:event.pointerId,startX:event.clientX,width:this.resizableInspector.offsetWidth,previous:this.componentSidebarWidth}
   this.root.dataset.sheetComponentResizing=''
  }
  private moveComponentSidebarResize=(event:PointerEvent)=>{
@@ -845,7 +878,7 @@ class SpreadsheetView{
   else {this.componentSidebarWidth=drag.previous;this.resize()}
  }
  private keyComponentSidebarResize=(event:KeyboardEvent)=>{
-  const {min,max}=this.componentSidebarBounds(),step=event.shiftKey?48:16,width=this.components.offsetWidth
+  const {min,max}=this.componentSidebarBounds(),step=event.shiftKey?48:16,width=this.resizableInspector.offsetWidth
   const targets:Record<string,number>={ArrowLeft:width+step,ArrowRight:width-step,Home:min,End:max}
   if(!Object.hasOwn(targets,event.key))return
   const target=targets[event.key]!
@@ -903,7 +936,7 @@ class SpreadsheetView{
    '<label>空值处理<select data-chart-field="empty" aria-label="空值处理">'+option('strict','提示缺失值',!value.emptyValues)+option('skip','跳过不完整数据点',value.emptyValues==='skip')+option('zero','空数值按 0 处理',value.emptyValues==='zero')+'</select></label>'+
    '</div><div class="ew-sheet-chart-fields" id="ew-sheet-chart-style" data-chart-tab="style" role="tabpanel" aria-labelledby="ew-sheet-chart-style-tab" hidden>'+
    '<label>图表标题<input data-field="chart-title" aria-label="图表名称" value="'+text(value.title)+'" maxlength="120"></label>'+
-   '<label>主题色<select data-chart-field="palette" aria-label="主题色">'+workbookChartPalettes.map((id,i)=>option(id,['经典','海洋','暖色','灰阶'][i]!,id===(value.palette??'classic'))).join('')+'</select></label>'+
+   '<label>主题色<select data-chart-field="palette" aria-label="主题色">'+workbookChartPalettes.map((id,i)=>option(id,['易方达模式','经典','海洋','暖色','灰阶'][i]!,id===(value.palette??DEFAULT_WORKBOOK_CHART_PALETTE))).join('')+'</select></label>'+
    '<div class="ew-sheet-chart-swatches" aria-hidden="true">'+Array.from({length:6},(_,i)=>'<i style="background:var(--sherlock-chart-'+(i+1)+')"></i>').join('')+'</div>'+
    '<label>横轴标题<input data-chart-field="axis-x" maxlength="80" value="'+text(value.axisX)+'"></label>'+
    '<label>纵轴标题<input data-chart-field="axis-y" maxlength="80" value="'+text(value.axisY)+'"></label>'+
@@ -988,7 +1021,7 @@ class SpreadsheetView{
   if(!preview)return
   try{
    const chart=this.chartDraft(),data=spreadsheetChartData(this.engine,chart)
-   preview.dataset.chartPalette=chart.palette??'classic'
+   preview.dataset.chartPalette=chart.palette??DEFAULT_WORKBOOK_CHART_PALETTE
    const swatches=this.modal.querySelector<HTMLElement>('.ew-sheet-chart-swatches')
    if(swatches)swatches.dataset.chartPalette=preview.dataset.chartPalette
    preview.innerHTML=data?(chart.showTitle!==false?'<strong data-ui-preserve>'+text(chart.title)+'</strong>':'')+spreadsheetChartSvg(chart,data)+this.chartLegend(chart,data):'<p>选区需要分类和完整的数值系列。请检查空格或公式错误。</p>'
@@ -999,40 +1032,114 @@ class SpreadsheetView{
   const labels=chart.kind==='pie'||chart.kind==='donut'?data.labels.map(name=>({name,hasName:true})):data.series
   return '<ul>'+labels.map((entry,i)=>'<li'+(entry.hasName?' data-ui-preserve':'')+' style="--chart-key:var(--sherlock-chart-'+(i%6+1)+')">'+text(entry.name)+'</li>').join('')+'</ul>'
  }
- private boundChartLayout(layout:WorkbookChartLayout):WorkbookChartLayout{
-  const margin=8
-  const availableWidth=Math.max(1,this.grid.clientWidth-2*margin)
-  const availableHeight=Math.max(1,this.grid.clientHeight-2*margin)
-  const width=Math.round(Math.min(availableWidth,Math.max(260,layout.width)))
-  const height=Math.round(Math.min(availableHeight,Math.max(180,layout.height)))
-  return {x:Math.round(Math.min(availableWidth-width,Math.max(0,layout.x))),y:Math.round(Math.min(availableHeight-height,Math.max(0,layout.y))),width,height}
+ private sheetLayout(layout:WorkbookChartLayout):WorkbookChartLayout{
+  if(layout.space==='sheet')return layout
+  // Legacy layouts were stored relative to the whole grid, including the headers.
+  return {...layout,x:Math.max(0,layout.x+8-SHEET_ROW_HEADER_WIDTH),y:Math.max(0,layout.y+8-SHEET_COLUMN_HEADER_HEIGHT),space:'sheet'}
+ }
+ private clampObject(layout:WorkbookChartLayout):WorkbookChartLayout{
+  const view=this.engine?.objectViewport()
+  const totalWidth=Math.max(260,view?.sheetWidth||8192),totalHeight=Math.max(180,view?.sheetHeight||8192)
+  const limit=(n:number,min:number,max:number)=>Math.round(Math.max(min,Math.min(n,max)))
+  const width=limit(layout.width,260,Math.min(8192,totalWidth)),height=limit(layout.height,180,Math.min(8192,totalHeight))
+  return {x:limit(layout.x,0,totalWidth-width),y:limit(layout.y,0,totalHeight-height),width,height,space:'sheet'}
+ }
+ private initialObjectLayout(sheetId:string,range:string,width:number,height:number,offset=0){
+  const view=this.engine?.objectViewport()
+  if(!view||this.current()?.getSheetId()!==sheetId){
+   const {r0,c0}=parseRange(range)
+   return {x:c0*100+16+offset,y:r0*30+16+offset,width,height,space:'sheet' as const}
+  }
+  const {zoom,scrollX,scrollY,headerX,headerY,left,top}=view
+  const x0=scrollX+left/zoom-headerX,y0=scrollY+top/zoom-headerY
+  const x1=x0+(this.root.clientWidth-left-10)/zoom,y1=y0+(this.grid.clientHeight-top-10)/zoom
+  const {r0,c0,r1,c1}=parseRange(range)
+  const source=this.engine?.objectRange({startRow:r0,startColumn:c0,endRow:r1,endColumn:c1})
+  const visible=source&&source.right>x0&&source.x<x1&&source.bottom>y0&&source.y<y1
+  width=Math.min(width,Math.max(260,x1-x0-24));height=Math.min(height,Math.max(180,y1-y0-24))
+  const margin=24
+  // Prefer the source's right edge, then its left, below or above. A source
+  // outside the visible sheet should never force the object to the top row.
+  const x=visible&&source.right+width+margin<x1?source.right+margin:visible&&source.x-width-margin>x0?source.x-width-margin:
+   visible?Math.max(x0+margin,Math.min(source.x,x1-width-margin)):(x0+x1-width)/2
+  const beside=visible&&(x>=source.right||x+width<=source.x)
+  const y=beside?Math.max(y0+margin,Math.min(source.y,y1-height-margin)):visible&&source.bottom+height+margin<y1?source.bottom+margin:
+   visible&&source.y-height-margin>y0?source.y-height-margin:(y0+y1-height)/2
+  return this.clampObject({x:x+offset,y:y+offset,width,height,space:'sheet'})
+ }
+ private positionSheetObjects=()=>{
+  if(this.disposed)return
+  const view=this.engine?.objectViewport(),viewport=this.objectViewport
+  const visible=!!view&&!this.grid.hidden&&(this.componentLayer.childElementCount>0||!!this.record.workbook?.charts?.some(item=>item.sheetId===this.current()?.getSheetId()))
+  viewport.hidden=!visible
+  if(!view||!visible){this.objectFrame='';return}
+  const {left,top,zoom,scrollX,scrollY,headerX,headerY}=view
+  const width=Math.max(0,this.grid.clientWidth-left-9),height=Math.max(0,this.grid.clientHeight-top-9)
+  const key=[this.grid.offsetLeft,this.grid.offsetTop,left,top,width,height,zoom,scrollX,scrollY,headerX,headerY].join()
+  if(key!==this.objectFrame){
+   this.objectFrame=key
+   Object.assign(viewport.style,{left:this.grid.offsetLeft+left+'px',top:this.grid.offsetTop+top+'px',width:width+'px',height:height+'px'})
+   viewport.style.setProperty('--sheet-object-x',(headerX-scrollX)*zoom-left+'px')
+   viewport.style.setProperty('--sheet-object-y',(headerY-scrollY)*zoom-top+'px')
+   viewport.style.setProperty('--sheet-object-zoom',String(zoom))
+  }
+ }
+ private objectBox(layout:WorkbookChartLayout){
+  const {x,y,width,height}=this.sheetLayout(layout)
+  return {left:'calc(var(--sheet-object-x) + '+x+'px * var(--sheet-object-zoom))',
+   top:'calc(var(--sheet-object-y) + '+y+'px * var(--sheet-object-zoom))',
+   width:'calc('+width+'px * var(--sheet-object-zoom))',height:'calc('+height+'px * var(--sheet-object-zoom))'}
+ }
+ private objectDelta(dx:number,dy:number){
+  const zoom=this.engine?.objectViewport()?.zoom??1
+  return {dx:dx/zoom*(this.grid.offsetWidth/Math.max(1,this.grid.getBoundingClientRect().width)),
+   dy:dy/zoom*(this.grid.offsetHeight/Math.max(1,this.grid.getBoundingClientRect().height))}
+ }
+ private revealObject(layout:WorkbookChartLayout){
+  const view=this.engine?.objectViewport()
+  if(!view)return
+  const {x,y}=this.sheetLayout(layout),{zoom,left,top,scrollX,scrollY,headerX,headerY}=view
+  const gridX=(x+headerX-scrollX)*zoom,gridY=(y+headerY-scrollY)*zoom
+  if(gridX<left||gridY<top||gridX>this.grid.clientWidth-96||gridY>this.grid.clientHeight-64)
+   this.engine?.revealObject(Math.max(0,x-24),Math.max(0,y-24))
  }
  private positionChart(){
   const chart=this.record.workbook?.charts?.find(item=>item.chartId===this.activeChart)
   const gesture=this.chartGesture,pending=this.chartLayoutPending
   const layout=(gesture?.chartId===this.activeChart?gesture?.preview:undefined)??
    (pending?.chartId===this.activeChart?pending?.layout:undefined)??(chart&&this.defaultChartLayout(chart))
-  const style=this.charts.style
-  if(!chart||!layout){style.removeProperty('--chart-x');style.removeProperty('--chart-y');style.removeProperty('--chart-width');style.removeProperty('--chart-height');return}
-  const {x,y,width,height}=this.boundChartLayout(layout)
-  style.setProperty('--chart-x',x+8+'px');style.setProperty('--chart-y',this.grid.offsetTop+y+8+'px')
-  style.setProperty('--chart-width',width+'px');style.setProperty('--chart-height',height+'px')
+  if(chart&&layout)Object.assign(this.charts.style,this.objectBox(layout))
+  this.positionSheetObjects()
  }
  private defaultChartLayout(chart:WorkbookChart):WorkbookChartLayout{
+  if(chart.layout)return this.sheetLayout(chart.layout)
+  const previous=this.chartDefaults.get(chart.chartId)
+  if(previous)return previous
   const index=this.record.workbook?.charts?.filter(item=>item.sheetId===chart.sheetId).findIndex(item=>item.chartId===chart.chartId)??0
-  const offset=Math.max(0,index)%8*18
-  return chart.layout??{x:Math.max(0,this.grid.clientWidth-460)-offset,y:24+offset,width:400,height:278}
+  const offset=Math.max(0,index)%8*18,{r0,c0,r1,c1}=parseRange(chart.range)
+  const view=this.engine?.objectViewport(),current=this.current()?.getSheetId()===chart.sheetId
+  const source=current&&this.engine?.objectRange({startRow:r0,startColumn:c0,endRow:r1,endColumn:c1})
+  // Agent-created charts have no manual layout. Anchor to their data, so
+  // opening the workbook at a different scroll position cannot move them.
+  const next=source&&view?this.clampObject({
+   x:Math.min(source.right+12,this.grid.clientWidth/view.zoom-view.headerX-416)+offset,
+   y:source.y+12+offset,width:400,height:278,space:'sheet'
+  }):this.initialObjectLayout(chart.sheetId,chart.range,400,278,offset)
+  if(source&&view)this.chartDefaults.set(chart.chartId,next)
+  return next
  }
  private deselectChart=()=>{
   if(this.activeChart&&!this.chartEditor){this.activeChart=undefined;this.renderChart()}
  }
  private visibleChartLayout(){
-  return {x:this.charts.offsetLeft-8,y:this.charts.offsetTop-this.grid.offsetTop-8,width:this.charts.offsetWidth,height:this.charts.offsetHeight}
+  const chart=this.record.workbook?.charts?.find(item=>item.chartId===this.activeChart)
+  return chart&&this.defaultChartLayout(chart)
  }
  private startChartGesture=(event:PointerEvent)=>{
   const target=(event.target as HTMLElement).closest<HTMLElement>('[data-chart-layout]')
   if(!target||event.button!==0||!this.activeChart||this.busy||this.chartGesture)return
   const start=this.visibleChartLayout()
+  if(!start)return
   this.chartGesture={chartId:this.activeChart,pointerId:event.pointerId,x:event.clientX,y:event.clientY,resize:target.dataset.chartLayout==='resize',start,preview:start}
   this.charts.setPointerCapture(event.pointerId)
   event.preventDefault();target.focus({preventScroll:true})
@@ -1040,9 +1147,9 @@ class SpreadsheetView{
  private moveChartGesture=(event:PointerEvent)=>{
   const gesture=this.chartGesture
   if(!gesture||gesture.pointerId!==event.pointerId)return
-  const {start}=gesture,dx=event.clientX-gesture.x,dy=event.clientY-gesture.y
+  const {start}=gesture,{dx,dy}=this.objectDelta(event.clientX-gesture.x,event.clientY-gesture.y)
   if(!dx&&!dy&&gesture.preview===start)return
-  gesture.preview=this.boundChartLayout(gesture.resize?{...start,width:start.width+dx,height:start.height+dy}:{...start,x:start.x+dx,y:start.y+dy})
+  gesture.preview=this.clampObject(gesture.resize?{...start,width:start.width+dx,height:start.height+dy}:{...start,x:start.x+dx,y:start.y+dy})
   this.positionChart()
  }
  private endChartGesture=(event:PointerEvent)=>{
@@ -1051,16 +1158,19 @@ class SpreadsheetView{
   this.chartGesture=undefined
   if(gesture.preview!==gesture.start&&this.activeChart===gesture.chartId)this.saveChartLayout(gesture.chartId,gesture.preview)
  }
- private cancelChartGesture=()=>{if(this.chartGesture){this.chartGesture=undefined;this.positionChart()}}
+ private cancelChartGesture=(event:PointerEvent)=>{
+  if(this.chartGesture?.pointerId===event.pointerId){this.chartGesture=undefined;this.positionChart()}
+ }
  private chartLayoutKey=(event:KeyboardEvent)=>{
   const target=(event.target as HTMLElement).closest<HTMLElement>('[data-chart-layout]')
   if(!target||!this.activeChart||event.metaKey||event.ctrlKey||event.altKey||!event.key.startsWith('Arrow'))return
   event.preventDefault();event.stopPropagation()
   if(this.busy)return
   const start=this.visibleChartLayout(),step=event.shiftKey?1:16
+  if(!start)return
   const dx=event.key==='ArrowLeft'?-step:event.key==='ArrowRight'?step:0
   const dy=event.key==='ArrowUp'?-step:event.key==='ArrowDown'?step:0
-  this.saveChartLayout(this.activeChart,this.boundChartLayout(target.dataset.chartLayout==='resize'?{...start,width:start.width+dx,height:start.height+dy}:{...start,x:start.x+dx,y:start.y+dy}))
+  this.saveChartLayout(this.activeChart,this.clampObject(target.dataset.chartLayout==='resize'?{...start,width:start.width+dx,height:start.height+dy}:{...start,x:start.x+dx,y:start.y+dy}))
  }
  private saveChartLayout(chartId:string,layout:WorkbookChartLayout){
   this.chartLayoutPending={chartId,layout}
@@ -1075,9 +1185,9 @@ class SpreadsheetView{
   const charts=this.record.workbook?.charts?.filter(chart=>chart.sheetId===sheet?.getSheetId()&&chart.chartId!==this.activeChart)??[]
   const markup=charts.map(chart=>{
    const data=spreadsheetChartData(this.engine,chart)
-   const bounds=this.boundChartLayout(this.defaultChartLayout(chart))
-   const palette=chart.palette??'classic'
-   return '<button type="button" class="ew-sheet-chart-object" data-action="show-chart" data-value="'+text(chart.chartId)+'" data-chart-palette="'+palette+'" aria-label="'+text(chart.title)+'" title="'+text(chart.title)+'" style="left:'+(bounds.x+8)+'px;top:'+(this.grid.offsetTop+bounds.y+8)+'px;width:'+bounds.width+'px;height:'+bounds.height+'px">'+
+   const box=Object.entries(this.objectBox(this.defaultChartLayout(chart))).map(([key,value])=>key+':'+value).join(';')
+   const palette=chart.palette??DEFAULT_WORKBOOK_CHART_PALETTE
+   return '<button type="button" class="ew-sheet-chart-object" data-action="show-chart" data-value="'+text(chart.chartId)+'" data-chart-palette="'+palette+'" aria-label="'+text(chart.title)+'" title="'+text(chart.title)+'" style="'+box+'">'+
     (chart.showTitle!==false?'<strong data-ui-preserve>'+text(chart.title)+'</strong>':'')+
     (data?spreadsheetChartSvg(chart,data)+this.chartLegend(chart,data):'<span>选区需要分类和完整的数值系列。请检查空格或公式错误。</span>')+'</button>'
   }).join('')
@@ -1088,13 +1198,14 @@ class SpreadsheetView{
   const chart=this.record.workbook?.charts?.find(item=>item.chartId===this.activeChart)
   this.charts.hidden=!chart||chart.sheetId!==this.current()?.getSheetId()
   this.positionChart()
-  this.charts.dataset.chartPalette=chart?.palette??'classic'
+  this.charts.dataset.chartPalette=chart?.palette??DEFAULT_WORKBOOK_CHART_PALETTE
   if(!chart){this.chartMarkup='';this.charts.replaceChildren();return}
   const data=spreadsheetChartData(this.engine,chart)
   const handle=(kind:string,label:string)=>'<button type="button" class="ew-sheet-button ew-sheet-chart-handle" data-chart-layout="'+kind+'" aria-label="'+label+'" title="'+label+'">'+icon(kind==='move'?'move':'resize')+'</button>'
-  const markup='<header>'+(this.editable?handle('move','移动图表'):'')+'<strong data-ui-preserve>'+text(chart.title)+'</strong>'+(this.editable?button('menu','',{glyph:'more',label:'图表选项',value:'chart-actions'}):'')+button('close-chart','',{glyph:'close',label:'取消选中图表'})+'</header><div class="ew-sheet-chart-body"><p data-ui-preserve>'+text(data?.source??chart.range)+'</p>'+
-   (data?spreadsheetChartSvg(chart,data)+this.chartLegend(chart,data)+'<details><summary>图表数据</summary><table><thead><tr><th>分类</th>'+data.series.map(series=>'<th'+(series.hasName?' data-ui-preserve':'')+'>'+text(series.name)+'</th>').join('')+'</tr></thead><tbody data-ui-preserve>'+data.labels.map((label,i)=>'<tr><th>'+text(label)+'</th>'+data.displayedValues[i]!.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table></details>':'<p role="status">选区需要分类和完整的数值系列。请检查空格或公式错误。</p>')+
-   '</div><footer>'+button('chart-source','定位选区',{glyph:'search',value:chart.chartId})+(this.editable?button('edit-chart','编辑图表',{glyph:'edit',value:chart.chartId})+handle('resize','调整图表大小'):'')+'</footer>'
+  const source=data?.source??chart.range
+  const markup='<header>'+(this.editable?handle('move','移动图表'):'')+'<strong data-ui-preserve>'+text(chart.title)+'</strong>'+(this.editable?button('menu','',{glyph:'more',label:'图表选项',value:'chart-actions'}):'')+button('close-chart','',{glyph:'close',label:'取消选中图表'})+'</header><div class="ew-sheet-chart-body">'+
+   (data?'<div class="ew-sheet-chart-plot">'+spreadsheetChartSvg(chart,data)+this.chartLegend(chart,data)+'</div><details><summary>图表数据</summary><table><thead><tr><th>分类</th>'+data.series.map(series=>'<th'+(series.hasName?' data-ui-preserve':'')+'>'+text(series.name)+'</th>').join('')+'</tr></thead><tbody data-ui-preserve>'+data.labels.map((label,i)=>'<tr><th>'+text(label)+'</th>'+data.displayedValues[i]!.map(value=>'<td>'+text(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table></details>':'<p role="status">选区需要分类和完整的数值系列。请检查空格或公式错误。</p>')+
+   '</div><footer><span data-ui-preserve title="'+text(source)+'">'+text(source)+'</span>'+button('chart-source','',{glyph:'search',label:'定位选区',value:chart.chartId})+(this.editable?button('edit-chart','',{glyph:'edit',label:'编辑图表',value:chart.chartId})+handle('resize','调整图表大小'):'')+'</footer>'
   if(this.chartMarkup===markup)return
   const expanded=this.charts.querySelector('details')?.open??false
   this.chartMarkup=markup
@@ -1163,11 +1274,7 @@ class SpreadsheetView{
   this.dialog('智能组件','<div class="ew-sheet-insert-content">'+
    '<div class="ew-sheet-component-source"><div><span>数据区域</span><strong data-ui-preserve data-component-range>'+this.selectionDescription(target)+'</strong></div>'+button('component-pick','更改',{glyph:'grid'})+'</div>'+
    '<div class="ew-sheet-component-pick" hidden><p>在工作表中框选数据区域</p><strong data-ui-preserve data-component-picked></strong><div>'+button('component-pick-cancel','取消',{className:'outlined'})+button('component-pick-apply','使用选区',{className:'primary'})+'</div></div>'+
-   '<label>组件需求<textarea aria-label="组件需求" data-field="component-prompt" maxlength="4000" rows="5" placeholder="描述你希望生成的组件"></textarea></label>'+
-   '<div class="ew-sheet-component-examples"><span>可用示例</span>'+
-   button('component-example','对比选区中的指标',{value:'compare',glyph:'grid'})+
-   button('component-example','展示指标随时间变化',{value:'trend',glyph:'chart'})+
-   button('component-example','汇总重点指标',{value:'summary',glyph:'sparkles'})+'</div></div>','component-generate','生成组件','smart')
+   '<label>组件需求<textarea aria-label="组件需求" data-field="component-prompt" maxlength="4000" rows="5" placeholder="描述你希望生成的组件"></textarea></label></div>','component-generate','生成组件','smart')
   this.updateComponentSubmit()
  }
  private updateComponentSubmit(){
@@ -1192,20 +1299,6 @@ class SpreadsheetView{
   this.modal.querySelector<HTMLElement>(active?'[data-action=component-pick-apply]':'[data-action=component-pick]')?.focus()
   this.updateComponentSubmit()
  }
- private componentExample(value:string){
-  const examples:Record<string,string>={
-   compare:'用选区数据做一个可排序的指标对比表，保留单位并标出关键差异。',
-   trend:'用选区里的时间和数值制作趋势图，标出变化最大的阶段。',
-   summary:'把选区里的关键指标做成摘要卡，注明统计口径。'
-  }
-  const input=this.modal.querySelector<HTMLTextAreaElement>('[data-field=component-prompt]')
-  const example=examples[value]
-  if(!input||!example)return
-  input.value=translateSpreadsheetCopy(example)??example
-  if(this.doc.documentElement.dataset.odysseyLocale!=='en')input.value=example
-  input.focus()
-  this.updateComponentSubmit()
- }
  private createComponentCard(id:string,loading=false):ComponentCard{
   const instance=crypto.randomUUID(),element=this.doc.createElement('section')
   element.className='ew-sheet-component-card en-native-component'
@@ -1215,7 +1308,7 @@ class SpreadsheetView{
   if(loading){element.dataset.sheetComponentGeneration='';element.dataset.researchGenerationState='running'}
   element.innerHTML='<div id="'+instance+'-title" class="ew-sheet-component-header"></div>'+
    '<div id="'+instance+'" class="ew-sheet-component-host" data-research-preview-body data-sheet-component="'+text(id)+'" data-sheet-session="'+text(this.sessionId)+'"></div>'+
-   '<footer class="ew-sheet-component-footer odyssey-data-stamp"><span data-component-footer-range data-ui-preserve></span><div class="ew-source-actions"><time></time><span id="'+instance+'-source-details"></span>'+
+   '<footer class="ew-sheet-component-footer"><span data-component-footer-range data-ui-preserve></span><div class="ew-source-actions"><time></time><span id="'+instance+'-source-details"></span>'+
    button('component-source','',{glyph:'search',label:'定位选区',value:id})+'</div></footer>'
   return {instance,element,refresh:0}
  }
@@ -1229,13 +1322,17 @@ class SpreadsheetView{
    ids.add(componentId)
    let card=this.componentCards.get(componentId)
    if(!card){card=this.createComponentCard(componentId);this.componentCards.set(componentId,card)}
+   card.element.toggleAttribute('data-sheet-component-floating',floating)
+   if(!floating){
+    for(const property of ['left','top','width','height'])card.element.style.removeProperty(property)
+    card.element.removeAttribute('data-sheet-component-raised')
+   }
    const parent=floating?this.componentLayer:this.components
    if(card.element.parentElement!==parent){
     const container=parent as HTMLElement&{moveBefore?(node:Node,child:Node|null):void}
     if(card.element.isConnected&&container.moveBefore)container.moveBefore(card.element,null)
     else parent.append(card.element)
    }
-   card.element.toggleAttribute('data-sheet-component-floating',floating)
    const footer=card.element.querySelector<HTMLElement>('.ew-sheet-component-footer')!
    const range=footer.querySelector<HTMLElement>('[data-component-footer-range]')!
    const source=this.componentSourceRange(component)
@@ -1265,7 +1362,9 @@ class SpreadsheetView{
  }
  private publishCard(card:ComponentCard,node:Record<string,unknown>,extras:Record<string,unknown>){
   const dark=this.doc.body.hasAttribute('data-ds-dark-theme')
-  card.element.dataset.financialTheme=dark?'dark':'light'
+  const theme=typeof extras.theme==='string'?extras.theme:dark?'dark':'light'
+  card.element.dataset.financialTheme=theme
+  card.element.dataset.workbenchStyle=theme
   this.doc.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{surface:'spreadsheet',instanceId:card.instance,hostId:card.instance,
    headerId:card.instance+'-title',footerId:card.instance+'-source-details',sessionId:this.sessionId,node,dark,refresh:card.refresh,readOnly:!this.editable,...extras}}))
  }
@@ -1273,7 +1372,7 @@ class SpreadsheetView{
   return (this.record.workbook?.sheets[component.sheetId]?.name??'')+'!'+component.range
  }
  private publishComponent(card:ComponentCard,component:WorkbookComponent){
-  this.publishCard(card,component.node,{mode:'component',source:this.componentSourceRange(component),floating:component.placement?.mode==='floating'})
+  this.publishCard(card,component.node,{mode:'component',source:this.componentSourceRange(component),floating:component.placement?.mode==='floating',theme:component.theme})
  }
  private publishGeneration(){
   const job=this.componentJob
@@ -1313,6 +1412,7 @@ class SpreadsheetView{
   const perform=(promise:Promise<unknown>)=>void promise.then(result=>ack(result!==false),error=>{ack(false,errorMessage(error));this.say(errorMessage(error),true)})
   switch(value.action){
    case 'spec':if(this.editable)perform(this.run('component-configure',{componentId,expected:value.expected,spec:value.next},'组件已更新').then(Boolean));return
+   case 'theme':if(this.editable)perform(this.run('component-theme',{componentId,theme:value.theme}).then(Boolean));else ack(false);return
    case 'placement':if(this.editable)perform(this.toggleComponentPlacement(component));return
    case 'source':perform(this.locateComponent(component));return
    case 'close':this.activeComponent=undefined;this.renderComponent();return
@@ -1351,8 +1451,9 @@ class SpreadsheetView{
  private async toggleComponentPlacement(component:WorkbookComponent){
   if(this.busy)return false
   const wasFloating=component.placement?.mode==='floating'
-  const layout=component.placement?.layout??{x:28,y:24,width:520,height:370}
   const previous=this.activeComponent
+  if(!wasFloating&&this.current()?.getSheetId()!==component.sheetId)await this.handle('sheet',component.sheetId,this.grid)
+  const layout=component.placement?this.sheetLayout(component.placement.layout):this.initialObjectLayout(component.sheetId,component.range,520,370)
   this.activeComponent=wasFloating?component.componentId:undefined
   try{
    const saved=await this.saveComponentPlacement(component.componentId,{mode:wasFloating?'docked':'floating',layout})
@@ -1366,9 +1467,9 @@ class SpreadsheetView{
    const card=this.componentCards.get(component.componentId)
    if(!card)continue
    const layout=this.componentGesture?.id===component.componentId?this.componentGesture.preview:component.placement.layout
-   const {x,y,width,height}=this.boundChartLayout(layout)
-   Object.assign(card.element.style,{left:x+8+'px',top:this.grid.offsetTop+y+8+'px',width:width+'px',height:height+'px'})
+   Object.assign(card.element.style,this.objectBox(layout))
   }
+  this.positionSheetObjects()
  }
  private raiseComponent(element:HTMLElement){
   this.componentLayer.querySelector('[data-sheet-component-raised]')?.removeAttribute('data-sheet-component-raised')
@@ -1386,7 +1487,7 @@ class SpreadsheetView{
   if(!card||!layout)return
   event.preventDefault()
   element.setPointerCapture(event.pointerId)
-  const start=this.boundChartLayout(layout)
+  const start=this.sheetLayout(layout)
   this.componentGesture={card,id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,resize,start,preview:start}
   element.dataset.dragging=''
  }
@@ -1394,10 +1495,9 @@ class SpreadsheetView{
   const gesture=this.componentGesture
   if(!gesture||gesture.pointerId!==event.pointerId)return
   const {start,startX,startY,resize}=gesture
-  const scale=this.grid.getBoundingClientRect().width/(this.grid.offsetWidth||1)||1
-  const x=Math.round((event.clientX-startX)/scale),y=Math.round((event.clientY-startY)/scale)
-  const next=resize?{...start,width:Math.min(this.grid.clientWidth-start.x-16,start.width+x),height:Math.min(this.grid.clientHeight-start.y-16,start.height+y)}:{...start,x:start.x+x,y:start.y+y}
-  gesture.preview=this.boundChartLayout(next)
+  const {dx,dy}=this.objectDelta(event.clientX-startX,event.clientY-startY)
+  const next=resize?{...start,width:start.width+dx,height:start.height+dy}:{...start,x:start.x+dx,y:start.y+dy}
+  gesture.preview=this.clampObject(next)
   this.positionComponents()
  }
  private finishComponentGesture(event:PointerEvent,save:boolean){
@@ -1408,6 +1508,8 @@ class SpreadsheetView{
   if(!save||JSON.stringify(gesture.start)===JSON.stringify(gesture.preview)){this.positionComponents();return}
   void this.saveComponentPlacement(gesture.id,{mode:'floating',layout:gesture.preview}).catch(error=>this.say(errorMessage(error),true))
  }
+ private endComponentGesture=(event:PointerEvent)=>this.finishComponentGesture(event,true)
+ private cancelComponentGesture=(event:PointerEvent)=>this.finishComponentGesture(event,false)
  private async addComponent(action:string,value:string){
   const target=this.componentTarget,dialog=this.modal.firstElementChild
   if(!target||!dialog||!this.editable||this.busy)return
@@ -1528,22 +1630,29 @@ class SpreadsheetView{
    case 'create-chart':case 'update-chart':{
     const chart=this.chartDraft(),dialog=this.modal.firstElementChild
     const edited=action==='update-chart'
-    const saved=await this.run(edited?'update-chart':'add-chart',chart,edited?'图表已更新':'图表已创建')
-    if(saved&&this.modal.firstElementChild===dialog)this.closeDialog()
+    const existing=this.record.workbook?.charts?.find(item=>item.chartId===chart.chartId)
+    const layout=existing?.sheetId===chart.sheetId?undefined:this.initialObjectLayout(chart.sheetId,chart.range,400,278)
+    const saved=await this.run(edited?'update-chart':'add-chart',{...chart,layout},edited?'图表已更新':'图表已创建')
+    if(saved&&this.modal.firstElementChild===dialog){
+     this.closeDialog()
+     if(this.current()?.getSheetId()!==chart.sheetId)await this.handle('sheet',chart.sheetId,this.grid)
+    }
     return
    }
    case 'show-chart':{
     const chart=this.record.workbook?.charts?.find(item=>item.chartId===value)
     if(!chart)return
     if(sheet?.getSheetId()!==chart.sheetId)await this.handle('sheet',chart.sheetId,this.grid)
-    this.activeChart=value;this.renderChart();return
+    this.activeChart=value;this.renderChart()
+    if(!trigger.closest('.ew-sheet-chart-objects'))this.revealObject(this.defaultChartLayout(chart))
+    return
    }
    case 'close-chart':this.deselectChart();return
    case 'duplicate-chart':{
     const original=this.record.workbook?.charts?.find(item=>item.chartId===value)
     if(!original)return
-    const {layout:_,...chart}=original
-    await this.run('add-chart',{...chart,title:(chart.title+' '+(this.doc.documentElement.dataset.odysseyLocale==='en'?'copy':'副本')).slice(0,120)},'图表已复制')
+    const base=this.defaultChartLayout(original),layout=this.clampObject({...base,x:base.x+18,y:base.y+18})
+    await this.run('add-chart',{...original,layout,title:(original.title+' '+(this.doc.documentElement.dataset.odysseyLocale==='en'?'copy':'副本')).slice(0,120)},'图表已复制')
     return
    }
    case 'confirm-remove-chart':this.dialog('删除图表','<p>删除图表后，源数据仍保留在工作表中。</p>','remove-chart','删除');this.modal.querySelector<HTMLButtonElement>('[data-action=remove-chart]')!.dataset.value=value;return
@@ -1553,7 +1662,6 @@ class SpreadsheetView{
    case 'component-pick':this.pickComponentRange(true);return
    case 'component-pick-cancel':this.pickComponentRange(false);return
    case 'component-pick-apply':this.pickComponentRange(false,true);return
-   case 'component-example':this.componentExample(value);return
    case 'component-add':case 'component-generate':await this.addComponent(action,value);return
    case 'component-show':{
     const component=this.record.workbook?.components?.find(item=>item.componentId===value)
@@ -1561,6 +1669,7 @@ class SpreadsheetView{
     this.cancelComponentRequest();this.closeDialog()
     if(component.placement?.mode==='floating'){
      if(sheet?.getSheetId()!==component.sheetId)await this.handle('sheet',component.sheetId,this.grid)
+     this.revealObject(component.placement.layout)
      const card=this.componentCards.get(value)
      if(card){this.raiseComponent(card.element);card.element.querySelector<HTMLElement>('.ew-grid-title')?.focus({preventScroll:true})}
     }else {this.activeComponent=value;this.renderComponent()}
@@ -1798,6 +1907,8 @@ class SpreadsheetView{
   this.doc.removeEventListener('keydown',this.gridPaste,true);this.doc.removeEventListener('pointerdown',this.outside,true);this.ribbonObserver.disconnect();this.toolbarCopyObserver.disconnect()
   this.doc.removeEventListener('keydown',this.gridHistory,true)
   this.win.removeEventListener('pointerup',this.selectionEnd,true);this.win.removeEventListener('pointercancel',this.selectionCancel,true)
+  this.win.removeEventListener('pointerup',this.endChartGesture,true);this.win.removeEventListener('pointercancel',this.cancelChartGesture,true)
+  this.win.removeEventListener('pointerup',this.endComponentGesture,true);this.win.removeEventListener('pointercancel',this.cancelComponentGesture,true)
   this.win.removeEventListener('blur',this.selectionReset)
   this.doc.removeEventListener('keydown',this.selectionKeyDown,true);this.doc.removeEventListener('keyup',this.selectionKeyUp,true)
   this.headerActions?.removeEventListener('click',this.click)

@@ -87,7 +87,7 @@ await build({stdin:{resolveDir:root,contents:`
  const html='<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#121313;width:100%;height:100%;font:13px system-ui;color:#e4e4e4}body{display:flex;box-sizing:border-box;padding:10px;gap:10px}aside{width:330px;background:#242424;border-radius:14px;padding:12px;position:relative}aside textarea{position:absolute;bottom:14px;left:14px;right:14px;height:95px;background:#292929;border:0;border-radius:9px;color:#eee;padding:10px;resize:none}article{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;border-radius:14px;background:#1e1e1e;overflow:hidden}header.shell{height:47px;display:flex;align-items:center;padding:0 16px;gap:20px;flex:none}header.shell span{background:#303030;border-radius:5px;padding:5px 14px}#chat{display:inline-block;background:#303030;padding:5px 9px;border-radius:6px}body.hide aside{display:none}[data-odyssey-panel-entry=right]{position:absolute;top:16px;right:20px;border:0;background:#303030;color:#eee;border-radius:5px;padding:5px 8px}</style><body data-ds-dark-theme><div data-dsh-sidebar-root data-dsh-sidebar-wide="true"><button class="hHd-Xa_toggle" onclick="this.parentElement.dataset.dshSidebarWide=String(this.parentElement.dataset.dshSidebarWide!==&quot;true&quot;)">左栏</button></div><article data-odyssey-page="spreadsheet"><header class="shell" data-srb-session-header>消费行业周报　　对话　　研究　　笔记 <span>表格</span><div data-ework-spreadsheet-actions="demo-session" data-ework-spreadsheet-title="消费行业周报" style="margin-left:auto"></div></header><div data-conversation-scroll><div data-ework-spreadsheet-view="demo-session"></div></div></article><aside><span id="chat">◌ 对话</span><textarea placeholder="给智能体发消息"></textarea></aside><button data-odyssey-panel-entry="right" aria-label="右侧屏" aria-expanded="true" onclick="this.setAttribute(&quot;aria-expanded&quot;,String(!document.body.classList.toggle(&quot;hide&quot;)))">◧</button><button data-odyssey-panel-entry="bottom">下方</button>'
  app.whenReady().then(async()=>{
   try{
-   win=new BrowserWindow({width:1440,height:960,show:true,webPreferences:{contextIsolation:true,sandbox:true,preload}})
+   win=new BrowserWindow({width:1440,height:960,show:true,alwaysOnTop:true,webPreferences:{contextIsolation:true,sandbox:true,preload}})
    win.webContents.on('preload-error',(_,file,error)=>errors.push(file+' '+error.stack))
    win.webContents.on('console-message',details=>{if(details.level==='error')errors.push(details.message)})
    let visibleMode=mode
@@ -115,6 +115,8 @@ await build({stdin:{resolveDir:root,contents:`
    })
    await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
    runtimeUrl='http://127.0.0.1:'+server.address().port
+   win.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>
+    callback(contents===win.webContents&&permission==='clipboard-sanitized-write'&&details.isMainFrame&&details.requestingUrl?.startsWith(runtimeUrl+'/')))
    await win.loadURL(runtimeUrl)
 
    win.focus();win.webContents.focus()
@@ -232,6 +234,10 @@ await build({stdin:{resolveDir:root,contents:`
     await until(()=>currentCell(5,6)?.v==='净值','IME text commits in the selected cell')
    }finally{cdp.detach()}
    await hit(6,5)
+   // The IME can return focus to the editor's hidden canvas after commit.
+   // Focus the selected sheet explicitly so this exercises sheet history.
+   await js('(()=>{const grid=document.querySelector(".ew-sheet-grid");grid.tabIndex=-1;grid.focus({preventScroll:true})})()')
+   await until(()=>js('document.hasFocus()&&document.activeElement===document.querySelector(".ew-sheet-grid")'),'worksheet focus before undo')
    const shortcut=process.platform==='darwin'?'meta':'control'
    press('Z',[shortcut]);await until(()=>currentCell(5,6)?.v==null,'keyboard undo restores the prior cell value')
    press('Z',[shortcut,'shift']);await until(()=>currentCell(5,6)?.v==='净值','keyboard redo reapplies the edit')
@@ -298,6 +304,7 @@ await build({stdin:{resolveDir:root,contents:`
    await saveCheck(()=>style(0,2)?.bl===1,'native redo')
    await select('C1');await click(button('menu','align'));await click(button('align','right'))
    await saveCheck(()=>style(0,2)?.ht===3,'right alignment')
+   assert.equal(await js('document.querySelector(".ew-sheet-ribbon [data-value=align]").dataset.glyph'),'align-right')
    await openCommands('view');await click(menuItem('menu','freeze'));await click(button('freeze','row'))
    await saveCheck(()=>snapshot().sheets[snapshot().sheetOrder[0]].freeze?.ySplit===1,'freeze first row')
    await click(button('zoom-plus'))
@@ -408,6 +415,12 @@ await build({stdin:{resolveDir:root,contents:`
    await select('D3:E4');await click(button('chart'))
    assert.equal(await js('document.querySelector(".ew-sheet-dialog section").getAttribute("aria-modal")'),'false')
    assert.equal(await js('document.querySelector(".ew-sheet-dialog").dataset.docked'),'chart')
+   assert.equal(await js('document.querySelector("[data-chart-field=palette]").value'),'enterprise')
+   const inspector=()=>js('document.querySelector(".ew-sheet-dialog").offsetWidth')
+   const initialInspector=await inspector()
+   await js('document.querySelector(".ew-sheet-component-divider").focus()')
+   press('Left',['shift'])
+   await until(async()=>await inspector()>initialInspector,'chart settings sidebar can resize')
    await until(()=>js('!!document.querySelector(".ew-sheet-chart-preview svg")'),'chart preview stays on the worksheet')
    await screenshot('chart-inspector-data')
    await click(button('chart-tab','style'))
@@ -417,9 +430,15 @@ await build({stdin:{resolveDir:root,contents:`
    assert.match(await js('document.querySelector(".ew-sheet-charts table").textContent'),/22/)
    assert.equal(snapshot().charts[0].range,'D3:E4')
    const chartBounds=()=>js('document.querySelector(".ew-sheet-charts").getBoundingClientRect().toJSON()')
+   const scrollGrid=async(deltaX,deltaY)=>{
+    const {x,y}=await js('(()=>{const r=document.querySelector(".ew-sheet-grid").getBoundingClientRect();return {x:Math.round(r.right-16),y:Math.round(r.bottom-16)}})()')
+    win.webContents.sendInputEvent({type:'mouseWheel',deltaX,deltaY,x,y,canScroll:true})
+   }
    const dragChart=async(kind,dx,dy)=>{
     const {x,y}=await js('(()=>{const r=document.querySelector("[data-chart-layout='+kind+']").getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()')
+    win.webContents.sendInputEvent({type:'mouseMove',x,y})
     win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,x,y})
+    await wait(50)
     win.webContents.sendInputEvent({type:'mouseMove',button:'left',x:x+dx,y:y+dy})
     await wait(100)
     const live=await chartBounds()
@@ -427,11 +446,20 @@ await build({stdin:{resolveDir:root,contents:`
     return live
    }
    const initialChart=await chartBounds()
+   assert.ok(initialChart.y>await js('document.querySelector(".ew-sheet-object-viewport").getBoundingClientRect().top')+16)
+   assert.equal(snapshot().charts[0].layout.space,'sheet')
+   assert.equal(await js('getComputedStyle(document.querySelector(".ew-sheet-charts")).getPropertyValue("--sheet-efund-chart-1").trim()'),'#005096')
+   await scrollGrid(-56,-68)
+   await until(async()=>{const b=await chartBounds();return b.x<initialChart.x-10&&b.y<initialChart.y-10},'charts scroll with both worksheet axes')
+   await scrollGrid(56,68)
+   await until(async()=>Math.abs((await chartBounds()).x-initialChart.x)<2&&Math.abs((await chartBounds()).y-initialChart.y)<2,'chart returns to its original cell position')
+   const startChartLayout=snapshot().charts[0].layout
    const moved=await dragChart('move',-82,48)
    assert.ok(moved.x<initialChart.x-40&&moved.y>initialChart.y+20)
-   await until(()=>snapshot().charts[0]?.layout?.y>20,'save chart location after dragging')
+   await until(()=>snapshot().charts[0]?.layout?.x<startChartLayout.x&&snapshot().charts[0]?.layout?.y>startChartLayout.y,'save chart location after dragging '+JSON.stringify({startChartLayout,initialChart,moved}))
+   await wait(120)
    const resized=await dragChart('resize',38,45)
-   assert.ok(resized.width>moved.width+20&&resized.height>moved.height+20)
+   assert.ok(resized.width>moved.width+20&&resized.height>moved.height+20,JSON.stringify({moved,resized}))
    await until(()=>snapshot().charts[0]?.layout?.width===resized.width,'save chart dimensions after resizing')
    const beforeKeyboard=snapshot().charts[0].layout
    await js('document.querySelector("[data-chart-layout=move]").focus()')
@@ -520,8 +548,10 @@ await build({stdin:{resolveDir:root,contents:`
    await until(()=>snapshot().components?.length===1,'inserted a real native library component')
    assert.equal(snapshot().components[0].node.containerSpec.type,'financial-widget')
    const savedLibraryId=snapshot().components[0].componentId
-   const sendComponentAction=(id,action)=>js('(()=>{const node=document.querySelector("[data-sheet-component="+CSS.escape('+JSON.stringify(id)+')+"]");document.dispatchEvent(new CustomEvent("sherlock:notes-component-action",{detail:{instanceId:node.id,sessionId:"demo-session",action:'+JSON.stringify(action)+'}}))})()')
+   const sendComponentAction=(id,action,extra={})=>js('(()=>{const node=document.querySelector("[data-sheet-component="+CSS.escape('+JSON.stringify(id)+')+"]");document.dispatchEvent(new CustomEvent("sherlock:notes-component-action",{detail:{instanceId:node.id,sessionId:"demo-session",...'+JSON.stringify({action,...extra})+'}}))})()')
    await until(()=>clickable(button('component-source',savedLibraryId)),'inserted component opens from selection')
+   await sendComponentAction(savedLibraryId,'theme',{theme:'enterprise'})
+   await until(()=>snapshot().components[0].theme==='enterprise'&&js('document.querySelector(".ew-sheet-component-card").dataset.workbenchStyle==="enterprise"'),'component saves and applies its selected theme')
    await sendComponentAction(savedLibraryId,'close')
    await click(button('menu','components'));await click(button('component-show',savedLibraryId))
    await until(()=>clickable(button('component-source',savedLibraryId)),'saved component can reopen')
@@ -534,14 +564,26 @@ await build({stdin:{resolveDir:root,contents:`
    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:x-76,y})
    const resizedSidebar=await sidebarBounds()
    await until(()=>js('localStorage.getItem("sherlock.spreadsheet.component-sidebar-width")==='+JSON.stringify(String(resizedSidebar.side))),'component sidebar width is saved on release')
+   await select('B20')
+   await scrollGrid(0,-420)
+   await wait(180)
    await sendComponentAction(savedLibraryId,'placement')
    await until(()=>snapshot().components[0].placement?.mode==='floating','component saves floating placement')
    await until(()=>js('!!document.querySelector(".ew-sheet-component-layer > [data-sheet-component-floating]")'),'component floats on worksheet')
    assert.equal(await js('document.querySelector(".ew-sheet").hasAttribute("data-sheet-inspector")'),false)
    assert.ok(await js('document.querySelector(".ew-sheet-component-divider").hidden'))
+   const componentBounds=()=>js('document.querySelector("[data-sheet-component-floating]").getBoundingClientRect().toJSON()')
+   const panelPosition=await componentBounds()
+   assert.equal(snapshot().components[0].placement.layout.space,'sheet')
+   assert.equal(await js('getComputedStyle(document.querySelector("[data-sheet-component-floating]")).boxShadow'),'none')
+   await scrollGrid(0,-108)
+   await until(async()=>(await componentBounds()).y<panelPosition.y-30,'component scrolls with worksheet')
    await sendComponentAction(savedLibraryId,'placement')
    await until(()=>snapshot().components[0].placement?.mode==='docked','component saves docked placement')
    await until(async()=> (await sidebarBounds()).side===resizedSidebar.side,'docking restores the preferred sidebar width')
+   assert.equal(await js('document.querySelector(".ew-sheet-components .ew-sheet-component-card").style.width'),'')
+   assert.ok(await js('(()=>{const side=document.querySelector(".ew-sheet-components").getBoundingClientRect(),card=document.querySelector(".ew-sheet-components .ew-sheet-component-card").getBoundingClientRect();return card.left>side.left&&card.right<side.right&&Math.abs(card.top-side.top)<12})()'))
+   assert.equal(await js('document.querySelector(".ew-sheet-components .ew-sheet-component-card").dataset.financialTheme'),'enterprise')
    await click(button('component-source',savedLibraryId))
    await until(async()=>await address()===snapshot().components[0].range.split(':')[0],'component source selects the persisted range')
    await select('A1');await openCommands('insert');await click(menuItem('smart'))
@@ -549,8 +591,7 @@ await build({stdin:{resolveDir:root,contents:`
    await click(button('component-pick'));await select('D3:E4')
    await until(()=>js('document.querySelector("[data-component-picked]").textContent.endsWith("D3:E4")'),'smart range picker shows the current selected address')
    await click(button('component-pick-apply'))
-   await click(button('component-example','compare'))
-   assert.ok(await js('document.querySelector("[data-field=component-prompt]").value.includes("可排序")'))
+   assert.equal(await js('document.querySelectorAll("[data-action=component-example]").length'),0)
    await screenshot('smart-component-inspector')
    await field('[data-field=component-prompt]','用当前演示选区生成估值摘要组件',false)
    await click(button('component-generate'))
