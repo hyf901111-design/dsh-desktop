@@ -238,12 +238,13 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const location = useRef<HTMLDivElement>(null)
   const directoryTrigger = useRef<HTMLButtonElement>(null)
   const filterTrigger = useRef<HTMLButtonElement>(null)
+  const browsingReceived = category === 'received'
   useEffect(() => {
     let revision = 0
     const load = (force = false, catalog?: KnowledgeDocument[]) => {
       const current = ++revision
       const local = bridge.snapshot()
-      const source = category === 'received' ? Promise.all([local, catalog ?? bridge.received(force)])
+      const source = browsingReceived ? Promise.all([local, catalog ?? bridge.received(force)])
         .then(([local, documents]) => ({ ...local, documents })) : local
       void source.then(rows => {
         if (current === revision) { setSnapshot(rows); setState({ ready: true, error: '' }) }
@@ -261,14 +262,14 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       setFacets({})
       setMenu(undefined)
       setReferenceError('')
-      if (category === 'all') load()
+      if (!browsingReceived) load()
       else revision++
     }
     load()
     const changed = () => load()
-    const sharedAccessChanged = () => { if (category === 'received') load(true) }
+    const sharedAccessChanged = () => { if (browsingReceived) load(true) }
     const catalogChanged = (event: Event) => {
-      if (category === 'received') load(false, (event as CustomEvent<KnowledgeDocument[]>).detail)
+      if (browsingReceived) load(false, (event as CustomEvent<KnowledgeDocument[]>).detail)
     }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     document.addEventListener('sherlock:knowledge-changed', changed)
@@ -281,7 +282,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       document.removeEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
       document.removeEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
     }
-  }, [bridge, document, category])
+  }, [bridge, document, browsingReceived])
   useEffect(() => {
     if (!menu) return
     const outside = (event: PointerEvent) => {
@@ -311,7 +312,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const filterCount = countFileFacets(facets)
   const title = snapshot.folders.find(row => row.id === folder)?.name ?? knowledgeCategories[category]
   const pick = (next: KnowledgeCategory, folderId?: string) => {
-    if (next !== category) setState({ ready: false, error: '' })
+    if ((next === 'received') !== browsingReceived) setState({ ready: false, error: '' })
     if (next === 'received') setFacets(current => ({ ...current, savedOnly: false }))
     setCategory(next)
     setSharedCategory(undefined)
@@ -366,8 +367,8 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     {referenceError && <p className="knowledge-panel-state" role="alert">{referenceError}</p>}
     <div className="knowledge-panel-rows"
       key={JSON.stringify([category, folder, sharedCategory])}
-      data-shared-view={category === 'received' && state.ready && !state.error}>
-      {sharedDirectory ? [...sharedCounts].map(([category, count]) =>
+      data-ready={state.ready && !state.error}>
+      {state.ready && (sharedDirectory ? [...sharedCounts].map(([category, count]) =>
         <button type="button" className="knowledge-panel-directory" key={category} onClick={() => setSharedCategory(category)}>
           <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><KnowledgeIcon name="next" />
         </button>) : rows.map(row =>
@@ -383,7 +384,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
             <small>{size(row.size)}</small>
             <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>
           </div>
-        </div>)}
+        </div>))}
       {state.ready && !state.error && !(sharedDirectory ? sharedCounts.size : rows.length) &&
         <p className="knowledge-panel-state">暂无符合条件的文件。</p>}
     </div>

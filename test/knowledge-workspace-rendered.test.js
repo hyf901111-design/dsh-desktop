@@ -371,6 +371,8 @@ it.each(['no-preference', 'reduce'])('preserves PDF filtering through drill-down
     await pane.getByRole('button', { name: '重置' }).click()
     await pane.getByRole('button', { name: '完成' }).click()
     await pane.getByRole('button', { name: /研究写作规范.md/ }).first().waitFor()
+    expect(await view.evaluate(el => getComputedStyle(el).animationName))
+      .toBe(animate ? 'knowledge-state-in' : 'none')
   } finally {
     await page.close()
   }
@@ -414,8 +416,8 @@ it.each(['no-preference', 'reduce'])('provides drag and preview feedback with %s
   } finally { await page.close() }
 })
 
-it('applies revision-checked commands to the live list and makes them reversible', async () => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+it.each(['no-preference', 'reduce'])('applies reversible list changes with %s motion', async reducedMotion => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
@@ -424,6 +426,21 @@ it('applies revision-checked commands to the live list and makes them reversible
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库' })
     await library.getByRole('button', { name: '消费行业周报.md', exact: false }).first().waitFor()
+    const list = library.locator('tbody')
+    await list.evaluate(el => {
+      const animate = el.animate.bind(el)
+      window.listTransitions = []
+      el.animate = (frames, options) => {
+        const animation = animate(frames, options)
+        window.listTransitions.push({ frames, options, animation })
+        return animation
+      }
+    })
+    const transitions = () => page.evaluate(() => window.listTransitions.length)
+    const search = library.getByLabel('搜索文件', { exact: true })
+    await search.fill('消费')
+    await search.clear()
+    expect(await transitions()).toBe(0)
     const act = request => page.evaluate(request => {
       window.applyKnowledgeAction({ id: crypto.randomUUID(), ...request })
       return window.knowledgeActionResult
@@ -434,11 +451,14 @@ it('applies revision-checked commands to the live list and makes them reversible
     })
     expect(applied.result.filter).toEqual({ folderId: 'f', sources: ['upload'], formats: ['markdown'] })
     await expect.poll(() => library.getByText('找到 1 个文件').isVisible()).toBe(true)
+    expect(await transitions()).toBe(reducedMotion === 'reduce' ? 0 : 1)
     expect((await act({ action: 'filter', revision: result.revision, filter: {} })).error).toContain('筛选条件已变化')
     await library.getByRole('button', { name: '撤销', exact: true }).click()
     await expect.poll(() => library.getByRole('row').count()).toBe(4)
+    expect(await transitions()).toBe(reducedMotion === 'reduce' ? 0 : 2)
     const scoped = await act({ action: 'filter', revision: (await act({ action: 'inspect' })).result.revision,
       filter: { folderId: 'f' } })
+    await expect.poll(() => library.getByText('找到 2 个文件').isVisible()).toBe(true)
     const sorted = await act({ action: 'filter', revision: scoped.result.revision,
       filter: { ...scoped.result.filter, sort: 'size', ascending: true } })
     expect(sorted.result.filter).toEqual({ folderId: 'f', sort: 'size', ascending: true })
@@ -447,6 +467,15 @@ it('applies revision-checked commands to the live list and makes them reversible
     await expect.poll(() => library.getByText('找到 2 个文件').isVisible()).toBe(true)
     await expect.poll(() => library.locator('tbody tr').first().textContent()).toContain('演示文稿.pptx')
     expect((await act({ action: 'inspect' })).result.filter).toEqual({ folderId: 'f' })
+    if (reducedMotion === 'no-preference') {
+      const motion = await page.evaluate(() => window.listTransitions.map(({ frames, options, animation }) =>
+        ({ frames, duration: options.duration, state: animation.playState })))
+      expect(motion).toHaveLength(5)
+      expect(motion.every(item => item.duration === 140 && item.frames.every(frame => Object.keys(frame).join() === 'opacity'))).toBe(true)
+      expect(motion.slice(0, -1).every(item => item.state === 'idle')).toBe(true)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await expect.poll(() => page.evaluate(() => window.listTransitions.at(-1).animation.playState)).toBe('idle')
+    } else expect(await transitions()).toBe(0)
     await library.getByRole('button', { name: '返回工作区' }).click()
     expect((await act({ action: 'inspect' })).error).toContain('请先回到知识库')
   } finally {

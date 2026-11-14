@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, listKnowledgeDocuments,
@@ -137,8 +137,32 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const target = menu && snapshot.documents.find(row => row.id === menu.id)
   const targetFolder = menu?.folder && snapshot.folders.find(row => row.id === menu.id)
   const filterButton = useRef<HTMLButtonElement>(null)
+  const tableRows = useRef<HTMLTableSectionElement>(null)
   const previewRequest = useRef(0)
   const refresh = useRef<() => void>(() => {})
+  const resultScope = JSON.stringify([
+    selection, filter.folderId, filter.sharedCategory, filter.sources, filter.formats,
+    filter.savedOnly, filter.sort, filter.ascending, assistantFilter ? filter.query : undefined
+  ])
+  const previousResultScope = useRef(resultScope)
+
+  useLayoutEffect(() => {
+    if (previousResultScope.current === resultScope) return
+    previousResultScope.current = resultScope
+    const list = tableRows.current
+    const view = document.defaultView
+    if (!list || !view) return
+    const motion = view.matchMedia('(prefers-reduced-motion: reduce)')
+    if (motion.matches) return
+    const duration = parseFloat(view.getComputedStyle(list).getPropertyValue('--odyssey-motion-menu-duration')) || 140
+    const animation = list.animate([{ opacity: .76 }, { opacity: 1 }], { duration, easing: 'ease-out' })
+    const updateMotion = () => { if (motion.matches) animation.cancel() }
+    motion.addEventListener('change', updateMotion)
+    return () => {
+      animation.cancel()
+      motion.removeEventListener('change', updateMotion)
+    }
+  }, [document, resultScope])
 
   function loadSearchHistory(query?: string) {
     const sequence = ++searchSequence.current
@@ -653,7 +677,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                 })}
                 <th scope="col">{selection === 'received' ? '共享人' : '操作'}</th>
               </tr></thead>
-              <tbody>
+              <tbody ref={tableRows}>
                 {shownPage === 1 && visibleImports.map(item => (
                   <tr key={item.id} className="knowledge-import-row" data-status={item.status}>
                     <td>
