@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, readFile, realpath, rm, stat } from 'node:fs/promises'
+import { mkdir, open, readFile, realpath, rm, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join } from 'node:path'
-import { canAutomaticallyCollect, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
+import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
 import { atomicWrite } from '../integrations/store'
 import { copyResearchFile } from '../state/research-owned-files'
 
@@ -20,6 +20,7 @@ interface LibraryState {
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u
 const initialState = (): LibraryState => ({ version: 1, documents: [], folders: [], excludedOrigins: [] })
 const digest = (text: string) => createHash('sha256').update(text).digest('hex')
+const hashBytes = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
 
 function validatedName(value: unknown): string {
   if (typeof value !== 'string') throw Error('请输入名称。')
@@ -95,7 +96,7 @@ export class KnowledgeStore {
     current()
     await atomicWrite(join(directory, 'catalog.json'), JSON.stringify(next))
     Object.assign(state, next)
-    this.changed()
+    try { this.changed() } catch { /* A closed window cannot roll back a committed catalog. */ }
   }
 
   snapshot(): Promise<KnowledgeSnapshot> {
@@ -115,6 +116,65 @@ export class KnowledgeStore {
       if (!info?.isFile()) throw Error('文件内容无法读取。')
       return { document: publicDocument(document), path: file }
     })
+  }
+
+  async markdown(id: string): Promise<{ text: string; revision: string }> {
+    return this.run(async (state, directory, current) => {
+      const row = this.editableMarkdown(state, id)
+      const bytes = await this.readMarkdown(join(directory, 'files', row.id, row.storageName))
+      current()
+      return { text: bytes.toString('utf8'), revision: hashBytes(bytes) }
+    })
+  }
+
+  async saveMarkdown(id: string, revision: string, text: string, guard?: () => void) {
+    const bytes = Buffer.from(text, 'utf8')
+    if (bytes.length > maxEditableKnowledgeBytes) throw Error('Markdown 正文过大，无法保存。')
+    return this.run(async (state, directory, identityCurrent) => {
+      const current = () => { identityCurrent(); guard?.() }
+      current()
+      const row = this.editableMarkdown(state, id)
+      const rowPath = join(directory, 'files', row.id)
+      const oldPath = join(rowPath, row.storageName)
+      const existing = await this.readMarkdown(oldPath)
+      if (hashBytes(existing) !== revision) throw Error('文件已被修改，请重新打开后再保存。')
+      const nextRevision = hashBytes(bytes)
+      if (nextRevision === revision) return { document: publicDocument(row), revision }
+      const storageName = randomUUID() + extname(row.storageName)
+      const nextPath = join(rowPath, storageName)
+      const updated = { ...row, storageName, size: bytes.length, updatedAt: Date.now() }
+      try {
+        await atomicWrite(nextPath, bytes)
+        await this.persist(state, {
+          ...state, documents: state.documents.map(item => item === row ? updated : item)
+        }, directory, current)
+      } catch (error) {
+        await rm(nextPath, { force: true }).catch(() => {})
+        throw error
+      }
+      return { document: publicDocument(updated), revision: nextRevision }
+    })
+  }
+
+  private editableMarkdown(state: LibraryState, id: string) {
+    const row = state.documents.find(document => document.id === id)
+    if (!row) throw Error('文件已不存在。')
+    if (knowledgeFormat(row.name) !== 'markdown') throw Error('此文件格式暂不支持在知识库中编辑。')
+    if (row.share) throw Error('请先取消共享，再编辑文件正文。')
+    return row
+  }
+
+  private async readMarkdown(path: string) {
+    const file = await open(path, 'r')
+    try {
+      const { size, mtimeMs } = await file.stat()
+      if (size > maxEditableKnowledgeBytes) throw Error('Markdown 正文过大，无法在知识库中编辑。')
+      const bytes = Buffer.alloc(size)
+      const { bytesRead } = await file.read({ buffer: bytes })
+      const after = await file.stat()
+      if (bytesRead !== size || after.size !== size || after.mtimeMs !== mtimeMs) throw Error('文件已被修改，请重新打开。')
+      return bytes
+    } finally { await file.close() }
   }
 
   async importFiles(paths: string[], folderId?: string, expected = this.identity()): Promise<KnowledgeImportResult> {

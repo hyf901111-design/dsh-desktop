@@ -14,6 +14,7 @@ export const knowledgeFormats = {
 export const knowledgeSharedCategories = ['行业研究', '产品设计', '业务流程', '写作模板', '技术文档', '数据分析', '其他'] as const
 
 export const knowledgeSources = { generated: '会话生成', upload: '手动上传' } as const
+export const maxEditableKnowledgeBytes = 128 * 1024
 
 export type KnowledgeCategory = keyof typeof knowledgeCategories
 export type KnowledgeFormat = keyof typeof knowledgeFormats

@@ -284,6 +284,8 @@ function initializeUi(): void {
     snapshot: () => ipcRenderer.invoke('knowledge:request', 'snapshot'),
     received: () => ipcRenderer.invoke('knowledge:request', 'received'),
     preview: id => ipcRenderer.invoke('knowledge:request', 'preview', { id }),
+    markdown: id => ipcRenderer.invoke('knowledge:request', 'markdown', { id }),
+    saveMarkdown: (id, revision, text) => ipcRenderer.invoke('knowledge:request', 'save-markdown', { id, revision, text }),
     open: id => ipcRenderer.invoke('knowledge:request', 'open', { id }),
     download: id => ipcRenderer.invoke('knowledge:request', 'download', { id })
   })

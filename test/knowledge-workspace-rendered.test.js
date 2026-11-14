@@ -22,8 +22,16 @@ beforeAll(async () => {
         { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f', size: 16384, updatedAt: 1762080000000 }
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
       window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
+      window.markdown = { text: '# 研究写作规范', revision: 'first' }
       mountKnowledgePanels(document, {
         snapshot: async () => structuredClone(window.data),
+        preview: async id => ({ document: documents.find(row => row.id === id), text: window.markdown.text }),
+        markdown: async () => ({ ...window.markdown }),
+        saveMarkdown: async (id, revision, text) => {
+          if (revision !== window.markdown.revision) throw Error('文件已被修改')
+          window.markdown = { text, revision: 'saved' }
+          return { document: documents.find(row => row.id === id), revision: 'saved' }
+        },
         received: async () => [
           { id: 'r1', name: '共享行业资料.pdf', source: 'upload', size: 1024, updatedAt: 1,
             starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
@@ -96,6 +104,28 @@ it('preserves filters through return and leaves space around the selected row', 
   } finally {
     await page.close()
   }
+})
+
+it('edits a Markdown preview and preserves a draft on revision conflicts', async () => {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    page.setDefaultTimeout(2500)
+    await page.setContent('<aside data-knowledge-panel-host data-knowledge-panel-file="b" style="width:380px;height:720px"></aside>')
+    await page.addScriptTag({ content: bundle })
+    const pane = page.getByRole('region', { name: '知识库文件预览' })
+    await pane.getByRole('button', { name: '编辑', exact: true }).click()
+    await pane.getByRole('textbox', { name: 'Markdown 正文' }).fill('# 已保存正文')
+    await pane.getByRole('button', { name: '保存' }).click()
+    await pane.getByRole('heading', { name: '已保存正文' }).waitFor()
+    await pane.getByRole('button', { name: '编辑', exact: true }).click()
+    await pane.getByRole('textbox', { name: 'Markdown 正文' }).fill('# 保留用户草稿')
+    await page.evaluate(() => { window.markdown.revision = 'newer' })
+    await pane.getByRole('button', { name: '保存' }).click()
+    await expect.poll(() => pane.getByRole('alert').textContent()).toContain('文件已被修改')
+    expect(await pane.getByRole('textbox', { name: 'Markdown 正文' }).inputValue()).toBe('# 保留用户草稿')
+  } finally { await page.close() }
 })
 
 it('preserves PDF filtering when drilling into shared files, going back and browsing local folders', async () => {

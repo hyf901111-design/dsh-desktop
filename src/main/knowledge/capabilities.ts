@@ -107,6 +107,17 @@ export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: Know
         }
       }
     },
+    inspectKnowledgeMarkdown: async ({ id }, _context, signal) => {
+      check(signal)
+      const markdown = await store.markdown(id)
+      check(signal)
+      return { status: 'succeeded', data: markdown }
+    },
+    saveKnowledgeMarkdown: async ({ id, revision, text }, _context, signal) => {
+      check(signal)
+      const saved = await store.saveMarkdown(id, revision, text, () => check(signal))
+      return { status: 'succeeded', data: { ...saved, saved: true }, message: 'Markdown 正文已保存。' }
+    },
     editKnowledgeDocument: async ({ id, operation, name, folderId, value }, _context, signal) => {
       check(signal)
       switch (operation) {

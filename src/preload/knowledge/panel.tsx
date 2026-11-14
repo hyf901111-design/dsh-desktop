@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
-  knowledgeCategories, knowledgeFormat, listKnowledgeDocuments,
+  knowledgeCategories, knowledgeFormat, listKnowledgeDocuments, maxEditableKnowledgeBytes,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeFilter, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
 import { emptyFileFacets, FilterMenu } from './filter-menu'
@@ -13,6 +13,8 @@ type PanelBridge = {
   snapshot(): Promise<KnowledgeSnapshot>
   received(): Promise<KnowledgeDocument[]>
   preview(id: string): Promise<KnowledgePreview>
+  markdown(id: string): Promise<{ text: string; revision: string }>
+  saveMarkdown(id: string, revision: string, text: string): Promise<{ document: KnowledgeDocument; revision: string }>
   open(id: string): Promise<void>
   download(id: string): Promise<boolean>
 }
@@ -59,30 +61,89 @@ function KnowledgePanel({ id, document, bridge }: PanelProps) {
 function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
   const [file, setFile] = useState<KnowledgePreview>()
   const [error, setError] = useState('')
+  const [draft, setDraft] = useState<{ text: string; original: string; revision: string }>()
+  const [busy, setBusy] = useState(false)
+  const [editingMessage, setEditingMessage] = useState('')
+  const epoch = useRef(0)
   useEffect(() => {
     let current = true
-    const reset = () => { current = false; setFile(undefined); setError('账号已变化，请重新打开文件。') }
+    let sequence = 0
+    const reset = () => {
+      current = false
+      epoch.current++
+      setDraft(undefined)
+      setBusy(false)
+      setFile(undefined)
+      setError('账号已变化，请重新打开文件。')
+    }
+    const load = () => {
+      const request = ++sequence
+      void bridge.preview(id).then(value => {
+        if (current && request === sequence) setFile(value)
+      }).catch(error => {
+        if (current && request === sequence) { setFile(undefined); setError(printError(error)) }
+      })
+    }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
-    void bridge.preview(id).then(value => { if (current) setFile(value) }).catch(error => {
-      if (current) setError(printError(error))
-    })
+    document.addEventListener('sherlock:knowledge-changed', load)
+    load()
     return () => {
       current = false
+      epoch.current++
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
+      document.removeEventListener('sherlock:knowledge-changed', load)
     }
   }, [id, bridge, document])
-  if (!file) return <p className="knowledge-panel-state" role={error ? 'alert' : 'status'}>{error || '正在打开文件…'}</p>
+  if (!file && !draft) return <p className="knowledge-panel-state" role={error ? 'alert' : 'status'}>{error || '正在打开文件…'}</p>
+  const canEdit = file && !file.document.received && !file.document.share && knowledgeFormat(file.document.name) === 'markdown' &&
+    file.document.size <= maxEditableKnowledgeBytes
+  const edit = async () => {
+    const version = epoch.current
+    setBusy(true)
+    setError('')
+    setEditingMessage('')
+    try {
+      const markdown = await bridge.markdown(id)
+      if (version === epoch.current) setDraft({ ...markdown, original: markdown.text })
+    } catch (error) {
+      if (version === epoch.current) setError(printError(error))
+    } finally { if (version === epoch.current) setBusy(false) }
+  }
+  const save = async () => {
+    if (!draft || busy || draft.original === draft.text) return
+    const version = epoch.current
+    setBusy(true)
+    setError('')
+    try {
+      const next = await bridge.saveMarkdown(id, draft.revision, draft.text)
+      if (version !== epoch.current) return
+      setFile({ document: next.document, text: draft.text })
+      setDraft(undefined)
+      setEditingMessage('正文已保存。')
+    } catch (error) {
+      if (version === epoch.current) setError(printError(error))
+    } finally { if (version === epoch.current) setBusy(false) }
+  }
   return <>
-    <header className="knowledge-preview-heading">
+    {file && <header className="knowledge-preview-heading">
       <KnowledgeIcon name={knowledgeFormat(file.document.name)} />
       <strong title={file.document.name}>{file.document.name}</strong>
-      <button type="button" onClick={() => {
+      {!draft && canEdit && <button type="button" disabled={busy} onClick={() => void edit()}>编辑</button>}
+      {!draft && <button type="button" disabled={busy} onClick={() => {
         const action = file.document.received ? bridge.download(id) : bridge.open(id)
         void action.catch(error => setError(printError(error)))
-      }}>{file.document.received ? '下载' : '在系统应用中打开'}</button>
-    </header>
+      }}>{file.document.received ? '下载' : '用系统应用打开'}</button>}
+    </header>}
     {error && <p className="knowledge-panel-state" role="alert">{error}</p>}
-    <KnowledgePreviewContent file={file} />
+    {editingMessage && <p className="knowledge-panel-state" role="status">{editingMessage}</p>}
+    {draft ? <>
+      <textarea aria-label="Markdown 正文" className="knowledge-markdown-editor" spellCheck={false} value={draft.text}
+        disabled={busy} autoFocus onChange={event => setDraft({ ...draft, text: event.currentTarget.value })} />
+      <footer className="knowledge-markdown-actions">
+        <button type="button" disabled={busy} onClick={() => { setDraft(undefined); setError('') }}>取消</button>
+        <button type="button" disabled={busy || draft.original === draft.text} onClick={() => void save()}>保存</button>
+      </footer>
+    </> : file && <KnowledgePreviewContent file={file} />}
   </>
 }
 

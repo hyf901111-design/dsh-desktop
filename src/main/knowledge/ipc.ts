@@ -47,6 +47,13 @@ export function installKnowledgeIpc({
       case 'reference': return resolveKnowledgeReference(input, { store, sharing, content, owner: identity })
       case 'snapshot': return store.snapshot()
       case 'received': return sharing.received(args.refresh === true)
+      case 'markdown': return store.markdown(id(args.id))
+      case 'save-markdown': {
+        if (typeof args.revision !== 'string' || !/^[a-f0-9]{64}$/u.test(args.revision) || typeof args.text !== 'string') {
+          throw Error('Markdown 保存参数无效。')
+        }
+        return store.saveMarkdown(id(args.id), args.revision, args.text, check)
+      }
       case 'share': {
         const documentId = id(args.id)
         if (typeof args.category !== 'string') throw Error('请选择共享分类。')
