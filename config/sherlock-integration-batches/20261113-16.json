@@ -9,58 +9,65 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对话首页表格入口文案",
+        "featureName": "表格组件与图表随工作表滚动",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "e640d3ec075439f85273a0afdf3242bc715138d5",
-        "tipCommit": "54458ac1ed08647f96b49f6e1de203113bfadc7c",
+        "baseCommit": "54458ac1ed08647f96b49f6e1de203113bfadc7c",
+        "tipCommit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
         "commits": [
           {
-            "commit": "54458ac1ed08647f96b49f6e1de203113bfadc7c",
+            "commit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
             "parents": [
-              "e640d3ec075439f85273a0afdf3242bc715138d5"
+              "54458ac1ed08647f96b49f6e1de203113bfadc7c"
             ],
-            "subject": "将对话首页表格入口改为表格"
+            "subject": "修复表格组件和图表摆放并优化易方达配色"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-app-shortcuts.ts"
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
           },
           {
             "status": "M",
-            "path": "test/figma-home-entry-spacing.test.js"
-          }
-        ],
-        "checks": [
+            "path": "scripts/lib/notes-components.mjs"
+          },
           {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/figma-home-entry-spacing.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "5 项对话首页聚焦验证通过",
-            "verifiedCommit": "54458ac1ed08647f96b49f6e1de203113bfadc7c",
-            "completedAt": "2026-11-14T00:25:54.305Z",
-            "timeoutMs": 180000
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-spreadsheet-live.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/engine.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/spreadsheet/workbook.ts"
           }
         ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "对话首页提示文案和无障碍名称通过中英文验证。"
-        },
-        "acceptanceCriteria": [
-          "中文对话首页显示表格",
-          "英文对话首页显示 Spreadsheet"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-14T00:25:54.305Z"
-      },
-      "merged": {
-        "mergeCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
-        "verificationCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
         "checks": [
           {
             "argv": [
@@ -69,26 +76,10 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
-            "completedAt": "2026-11-14T00:26:26.589Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
-            "completedAt": "2026-11-14T00:26:26.589Z",
-            "timeoutMs": 120000
+            "summary": "类型检查通过",
+            "verifiedCommit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
+            "completedAt": "2026-11-14T01:22:16.555Z",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -96,43 +87,24 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
-            "completedAt": "2026-11-14T00:26:26.589Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
-            "verifiedCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
-            "completedAt": "2026-11-14T00:26:26.589Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
-            "verifiedCommit": "f7da217b655be0b74e92c2e948526e2ffe88ee49",
-            "completedAt": "2026-11-14T00:26:26.589Z",
-            "timeoutMs": 120000
+            "summary": "Electron 聚焦验收覆盖原生滚动、图表拖动与缩放、边栏复位和配色",
+            "verifiedCommit": "ece02790c19fd99c2132c2d2bb477ba8f4b82620",
+            "completedAt": "2026-11-14T01:22:16.555Z",
+            "timeoutMs": 180000
           }
         ],
-        "recordedAt": "2026-11-14T00:26:26.589Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离 Electron 中真实操作工作表，验证双向滚动、图表摆放与尺寸持久化、组件停靠以及默认和自定义配色。"
+        },
+        "acceptanceCriteria": [
+          "组件和图表随工作表滚动且支持拖动缩放",
+          "组件可以收回侧边并选择主题",
+          "图表默认易方达配色并保留自定义设置",
+          "组件生成状态与表格工具栏样式符合反馈"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-14T01:22:16.555Z"
       }
     },
     {
