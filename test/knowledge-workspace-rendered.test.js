@@ -387,6 +387,25 @@ it('rechecks an open shared preview on focus, list refresh and a visible timer',
   } finally { await page.close() }
 })
 
+it('updates the workspace count when the right knowledge pane loads the shared directory first', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 370px 10px 250px"></div>
+      <aside data-knowledge-panel-host style="position:fixed;right:10px;top:10px;width:340px;height:850px"></aside>
+    `)
+    await page.addScriptTag({ content: bundle })
+    const sharedCount = page.getByRole('navigation', { name: '知识库分类' }).getByRole('button', { name: /他人共享/ }).locator('small')
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    await pane.getByRole('button', { name: '所有文件', exact: true }).click()
+    await pane.getByRole('button', { name: '他人共享', exact: true }).click()
+    await pane.getByRole('button', { name: '行业研究 1' }).waitFor({ timeout: 2000 })
+    await expect.poll(() => sharedCount.textContent()).toBe('2')
+  } finally { await page.close() }
+})
+
 it.each(['no-preference', 'reduce'])('preserves PDF filtering through drill-down and hover with %s motion', async reducedMotion => {
   const animate = reducedMotion === 'no-preference'
   const page = await browser.newPage({ viewport: { width: 1100, height: 800 }, reducedMotion })
