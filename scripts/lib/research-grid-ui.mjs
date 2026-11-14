@@ -273,7 +273,24 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     setDetail({kind,left,top:Math.max(8,Math.min(row.top,window.innerHeight-height-8)),width})
     if(focus)window.requestAnimationFrame(()=>subRef.current?.querySelector('button:not(:disabled)')?.focus())
   }
-  react.useEffect(()=>{const outside=e=>{if(!ref.current?.contains(e.target)&&!subRef.current?.contains(e.target)&&!e.target?.closest?.('[data-workbench-more]'))onClose()};const key=e=>{if(e.key==='Escape'){e.stopPropagation();onClose()}};document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key,true);const scroll=e=>{const scroller=e?.target;if(scroller===window||scroller===document||scroller===document.documentElement||scroller===document.body||scroller===card()?.closest('[data-research-canvas]'))onClose()};window.addEventListener('resize',scroll);document.addEventListener('scroll',scroll,true);return()=>{cancelLeave();document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',key,true);window.removeEventListener('resize',scroll);document.removeEventListener('scroll',scroll,true)}},[onClose])
+  react.useEffect(()=>{
+    const outside=e=>{if(!ref.current?.contains(e.target)&&!subRef.current?.contains(e.target)&&!e.target?.closest?.('[data-workbench-more]'))onClose()}
+    const key=e=>{if(e.key==='Escape'){e.stopPropagation();onClose()}}
+    const scroll=e=>{const scroller=e.target;if(scroller===window||scroller===document||scroller===document.documentElement||scroller===document.body||scroller===card()?.closest('[data-research-canvas]'))onClose()}
+    document.addEventListener('pointerdown',outside,true)
+    document.addEventListener('keydown',key,true)
+    document.addEventListener('scroll',scroll,true)
+    document.addEventListener('sherlock:workspace-surface-change',onClose)
+    window.addEventListener('resize',scroll)
+    return()=>{
+      cancelLeave()
+      document.removeEventListener('pointerdown',outside,true)
+      document.removeEventListener('keydown',key,true)
+      document.removeEventListener('scroll',scroll,true)
+      document.removeEventListener('sherlock:workspace-surface-change',onClose)
+      window.removeEventListener('resize',scroll)
+    }
+  },[onClose])
   const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const choose=action=>{onClose();action?.()}
   const saveLibrary=async()=>{if(saving||readOnly)return;setSaving(true);setSaveError('');try{await customLibraryRequest({action:'save',sessionId:target.sessionId,nodeId:target.node.id});window.dispatchEvent(new CustomEvent('ework-component-library-changed'));window.dispatchEvent(new CustomEvent('ework-component-library-saved',{detail:{sessionId:target.sessionId}}));onClose()}catch(e){setSaveError(customLibraryError(e))}finally{setSaving(false)}}
@@ -297,7 +314,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     measure();const observer=window.ResizeObserver?new window.ResizeObserver(measure):null;observer?.observe(menu);return()=>observer?.disconnect()
   },[target.left,target.top])
   const style={...(menuPlacement||{left:8,top:8}),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
-  return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
+  return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作','data-workspace-background-portal':'',style,onMouseLeave:leave,children:[
     card()?.querySelector('[data-research-container-expand]')&&row('expand',card()?.open?'关闭放大阅读':'放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
     webLink&&row('zoom-out','缩小10%',()=>controlWorkbenchWebZoom(card(),-.1),false,{'data-workbench-web-zoom':'out'}),
     webLink&&row('zoom-in','放大10%',()=>controlWorkbenchWebZoom(card(),.1),false,{'data-workbench-web-zoom':'in'}),
@@ -328,7 +345,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))
-  ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),card()?.open?card():document.body)
+  ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','data-workspace-background-portal':'','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),card()?.open?card():document.body)
 }
 
 export function handleWorkbenchMultiSelect(root,workspace,event) {
@@ -541,9 +558,13 @@ export function WorkbenchContextMenu({canvasRoot,point,onClose,className,style,c
     const doc=canvasRoot.current?.ownerDocument;if(!doc)return
     const outside=e=>{if(!ref.current?.contains(e.target)&&e.target?.closest?.('.ew-grid-download-menu')?.__eworkCanvasRoot!==canvasRoot.current)onClose()}
     doc.addEventListener('pointerdown',outside,true)
-    return()=>doc.removeEventListener('pointerdown',outside,true)
+    doc.addEventListener('sherlock:workspace-surface-change',onClose)
+    return()=>{
+      doc.removeEventListener('pointerdown',outside,true)
+      doc.removeEventListener('sherlock:workspace-surface-change',onClose)
+    }
   },[canvasRoot,onClose])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref,className:className+' ew-grid-context-menu',style:{...style,position:'fixed'},onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref,className:className+' ew-grid-context-menu','data-workspace-background-portal':'',style:{...style,position:'fixed'},onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)
 }
 export function WorkbenchDownloadMenu({canvasRoot,onClose,onMouseEnter,onMouseLeave,className,children,...props}) {
   const anchor=react.useRef(null),popup=react.useRef(null)
@@ -555,7 +576,7 @@ export function WorkbenchDownloadMenu({canvasRoot,onClose,onMouseEnter,onMouseLe
     Object.assign(element.style,{left:left+'px',top:Math.max(8,Math.min(r.top,window.innerHeight-size.height-8))+'px'})
     onMouseEnter?.()
   },[canvasRoot])
-  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx('span',{ref:anchor,'aria-hidden':true,style:{display:'block',height:0}}),react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref:popup,className:className+' ew-grid-download-menu',onMouseEnter,onMouseLeave,onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)]})
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx('span',{ref:anchor,'aria-hidden':true,style:{display:'block',height:0}}),react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref:popup,className:className+' ew-grid-download-menu','data-workspace-background-portal':'',onMouseEnter,onMouseLeave,onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)]})
 }
 export function workbenchPreviewToolbarChildren(children,previewMode) {
  return react.Children.map(children,child=>{
@@ -891,9 +912,11 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
     const doc=rootRef.current.ownerDocument,view=doc.defaultView,menu=menuRef.current
     const place=()=>{const r=groupRef.current.getBoundingClientRect(),size=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.left,view.innerWidth-size.width-8))+'px';menu.style.top=Math.max(8,r.top-size.height-8)+'px'}
     const outside=e=>{if(!groupRef.current?.contains(e.target)&&!menu.contains(e.target))setOpen(false)}
+    const close=()=>setOpen(false)
     place();menu.querySelector('[aria-checked="true"]')?.focus({preventScroll:true})
     doc.addEventListener('pointerdown',outside,true);view.addEventListener('resize',place);doc.addEventListener('scroll',place,true)
-    return()=>{doc.removeEventListener('pointerdown',outside,true);view.removeEventListener('resize',place);doc.removeEventListener('scroll',place,true)}
+    doc.addEventListener('sherlock:workspace-surface-change',close)
+    return()=>{doc.removeEventListener('pointerdown',outside,true);view.removeEventListener('resize',place);doc.removeEventListener('scroll',place,true);doc.removeEventListener('sherlock:workspace-surface-change',close)}
   },[open,rootRef])
   const run=next=>{
     if(disabled||!rootRef.current)return
