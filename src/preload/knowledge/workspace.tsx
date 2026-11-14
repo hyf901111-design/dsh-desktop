@@ -78,8 +78,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
   const snapshot = { ...local, documents: [...local.documents, ...received] }
   const [filter, setFilter] = useState<KnowledgeFilter>(defaultFilter)
-  const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter })
-  const previousFilter = useRef<KnowledgeFilter>()
+  const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter, assistantFilter: false })
+  const previousFilter = useRef<typeof filterState.current>()
   const [undoAvailable, setUndoAvailable] = useState(false)
   const [assistantFilter, setAssistantFilter] = useState(false)
   const [draftFilter, setDraftFilter] = useState<KnowledgeFilter>()
@@ -146,7 +146,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setReceived([])
       setReceivedStatus({ loading: false })
       setReady(false)
-      filterState.current = { revision: crypto.randomUUID(), filter: defaultFilter }
+      filterState.current = { revision: crypto.randomUUID(), filter: defaultFilter, assistantFilter: false }
       previousFilter.current = undefined
       setUndoAvailable(false)
       setAssistantFilter(false)
@@ -228,10 +228,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     }
   }, [document, draftFilter, menu])
 
-  function applyFilter(next: KnowledgeFilter) {
+  function applyFilter(next: KnowledgeFilter, fromAssistant = false) {
     const state = { revision: crypto.randomUUID(), filter: next }
-    filterState.current = state
+    filterState.current = { ...state, assistantFilter: fromAssistant }
     setFilter(next)
+    setAssistantFilter(fromAssistant)
     setPage(1)
     return state
   }
@@ -239,7 +240,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   function updateFilter(change: Partial<KnowledgeFilter>) {
     previousFilter.current = undefined
     setUndoAvailable(false)
-    setAssistantFilter(false)
     applyFilter({ ...filterState.current.filter, ...change })
   }
 
@@ -248,8 +248,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     if (!before) throw Error('没有可撤销的对话筛选。')
     previousFilter.current = undefined
     setUndoAvailable(false)
-    setAssistantFilter(false)
-    return applyFilter(before)
+    return applyFilter(before.filter, before.assistantFilter)
   }
 
   useEffect(() => bridge.subscribeAction?.(request => {
@@ -261,7 +260,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       const current = filterState.current
       setTab('files')
       if (request.action === 'inspect') {
-        bridge.reply?.({ id, result: current })
+        bridge.reply?.({ id, result: { revision: current.revision, filter: current.filter } })
         return
       }
       if (request.revision !== current.revision) throw Error('筛选条件已变化，请先读取当前列表。')
@@ -271,10 +270,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         bridge.reply?.({ id, result: undoFilter() })
         return
       }
-      previousFilter.current = current.filter
+      previousFilter.current = current
       setUndoAvailable(true)
-      setAssistantFilter(true)
-      bridge.reply?.({ id, result: applyFilter(request.filter) })
+      bridge.reply?.({ id, result: applyFilter(request.filter, true) })
     } catch (error) {
       bridge.reply?.({ id, error: message(error) })
     }

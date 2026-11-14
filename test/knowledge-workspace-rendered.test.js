@@ -17,8 +17,8 @@ beforeAll(async () => {
       const host = new WorkspaceSurfaceHost(document)
       const documents = [
         { id: 'a', name: '消费行业周报.md', source: 'generated', saved: true },
-        { id: 'b', name: '研究写作规范.md', source: 'upload', folderId: 'f' },
-        { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f' }
+        { id: 'b', name: '研究写作规范.md', source: 'upload', folderId: 'f', size: 4096 },
+        { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f', size: 16384, updatedAt: 1762080000000 }
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
       window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
       window.addEventListener('sherlock:workspace-surface-change', () => {})
@@ -111,6 +111,16 @@ it('applies revision-checked commands to the live list and makes them reversible
     expect((await act({ action: 'filter', revision: result.revision, filter: {} })).error).toContain('筛选条件已变化')
     await library.getByRole('button', { name: '撤销', exact: true }).click()
     await expect.poll(() => library.getByRole('row').count()).toBe(4)
+    const scoped = await act({ action: 'filter', revision: (await act({ action: 'inspect' })).result.revision,
+      filter: { folderId: 'f' } })
+    const sorted = await act({ action: 'filter', revision: scoped.result.revision,
+      filter: { ...scoped.result.filter, sort: 'size', ascending: true } })
+    expect(sorted.result.filter).toEqual({ folderId: 'f', sort: 'size', ascending: true })
+    await expect.poll(() => library.locator('tbody tr').first().textContent()).toContain('研究写作规范.md')
+    await library.getByRole('button', { name: '撤销', exact: true }).click()
+    await expect.poll(() => library.getByText('找到 2 个文件').isVisible()).toBe(true)
+    await expect.poll(() => library.locator('tbody tr').first().textContent()).toContain('演示文稿.pptx')
+    expect((await act({ action: 'inspect' })).result.filter).toEqual({ folderId: 'f' })
     await library.getByRole('button', { name: '返回工作区' }).click()
     expect((await act({ action: 'inspect' })).error).toContain('请先回到知识库')
   } finally {
