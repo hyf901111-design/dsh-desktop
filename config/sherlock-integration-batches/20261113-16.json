@@ -3,7 +3,7 @@
   "batchId": "20261113-16",
   "branch": "codex/integration/20261113-16",
   "baseMainCommit": "f30de3f17aca5022db6009fd342cad50aeba88f4",
-  "expectedMainCommit": "f30de3f17aca5022db6009fd342cad50aeba88f4",
+  "expectedMainCommit": "f6a0efafde76177403a2cff59b7baa0ba7b0bc57",
   "createdAt": "2026-11-13T13:19:29.284Z",
   "features": [
     {
@@ -314,5 +314,84 @@
       "timeoutMs": 120000
     }
   ],
-  "mainSynchronizations": []
+  "mainSynchronizations": [
+    {
+      "previousMainCommit": "f30de3f17aca5022db6009fd342cad50aeba88f4",
+      "mainCommit": "f6a0efafde76177403a2cff59b7baa0ba7b0bc57",
+      "mergeCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+      "verificationCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+      "checks": [
+        {
+          "argv": [
+            "npm",
+            "run",
+            "typecheck"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：npm run typecheck",
+          "verifiedCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+          "completedAt": "2026-11-14T07:32:53.339Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "test/spreadsheet-workbook.test.ts",
+            "test/spreadsheet-store.test.ts",
+            "test/spreadsheet-files.test.ts",
+            "test/spreadsheet-inline-references.test.js"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
+          "verifiedCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+          "completedAt": "2026-11-14T07:32:53.339Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "node",
+            "scripts/verify-spreadsheet-live.mjs"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
+          "verifiedCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+          "completedAt": "2026-11-14T07:32:53.339Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "npm",
+            "test",
+            "--",
+            "--maxWorkers=4",
+            "--testTimeout=15000",
+            "test/account-service.test.ts",
+            "test/hosted-ark-runtime.test.js",
+            "test/explore-quota-browser.test.ts",
+            "test/hosted-quota-notice.test.js",
+            "test/image-generation-tool.test.js"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
+          "verifiedCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+          "completedAt": "2026-11-14T07:32:53.339Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "node",
+            "scripts/test-hosted-ai-worker.mjs"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
+          "verifiedCommit": "7d4e48ad203128cb9692c17aafb0dca49ee2acca",
+          "completedAt": "2026-11-14T07:32:53.339Z",
+          "timeoutMs": 120000
+        }
+      ],
+      "recordedAt": "2026-11-14T07:32:53.339Z"
+    }
+  ]
 }
