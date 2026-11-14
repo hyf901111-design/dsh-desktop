@@ -76,9 +76,28 @@ function patchKnowledgeLabels(source){
    && react_jsx_runtime.jsx('span',{'aria-hidden':true,'${chevron}':true,style:{marginInlineStart:'auto',opacity:.6,flex:'none'},children:'›'})`)
 }
 
+const oldKnowledgeSharedPosition = `  style:{position:'fixed',inset:'auto',zIndex:10},
+  ref:element=>{if(!element)return;const card=cardRef.current,anchor=card?.querySelector('[data-knowledge-shared-parent=true]');if(!anchor||!card)return;
+   const {right,left}=card.getBoundingClientRect(),{top}=anchor.getBoundingClientRect();element.style.left=(right+188<window.innerWidth?right-1:Math.max(8,left-184))+'px';element.style.top=Math.max(8,Math.min(top,window.innerHeight-240))+'px';},`
+const knowledgeSharedPosition = `  style:{position:'absolute',inset:'auto',zIndex:10},
+  ref:element=>{
+   if(!element)return;
+   const card=cardRef.current??element.closest('[data-ework-command=knowledge]');
+   const anchor=card?.querySelector('[data-knowledge-shared-parent=true]');
+   if(!anchor)return;
+   const box=card.getBoundingClientRect(),width=element.offsetWidth,height=element.offsetHeight;
+   const left=box.right+width-1<=window.innerWidth-8?box.right-1:Math.max(8,box.left-width+1);
+   const top=Math.max(8,Math.min(anchor.getBoundingClientRect().top,window.innerHeight-height-8));
+   element.style.left=(left-box.left-card.clientLeft)+'px';
+   element.style.top=(top-box.top-card.clientTop)+'px';
+  },`
+
 function patchKnowledgePopup(source){
  const marker='/* ework:knowledge-slash-options */'
- if(source.includes(marker))return patchSlashBack(source)
+ if(source.includes(marker)){
+  if(source.includes(oldKnowledgeSharedPosition))source=replace(source,oldKnowledgeSharedPosition,knowledgeSharedPosition)
+  return patchSlashBack(source)
+ }
  const ctx='name === "skills" ? {...session, skillCommandSegment:segment} : session'
  source=replace(source,ctx,ctx.replace(': session',': name === "knowledge" ? {...session,knowledgeCommandSegment:segment} : session'))
  const consume='this.deps.consume(binding.segment);'
@@ -104,9 +123,7 @@ function patchKnowledgePopup(source){
  const sharedPortal=`}), state.command==="knowledge" && shared && !state.search && rows.some(sharedChild) && react_jsx_runtime.jsx('div',{
   role:'group','aria-label':'他人共享分类','data-knowledge-cascading-options':true,
   onPointerDown:event=>event.stopPropagation(),
-  style:{position:'fixed',inset:'auto',zIndex:10},
-  ref:element=>{if(!element)return;const card=cardRef.current,anchor=card?.querySelector('[data-knowledge-shared-parent=true]');if(!anchor||!card)return;
-   const {right,left}=card.getBoundingClientRect(),{top}=anchor.getBoundingClientRect();element.style.left=(right+188<window.innerWidth?right-1:Math.max(8,left-184))+'px';element.style.top=Math.max(8,Math.min(top,window.innerHeight-240))+'px';},
+${knowledgeSharedPosition}
   children:rows.map((option,index)=>sharedChild(option)&&react_jsx_runtime.jsx('button',{
    type:'button',onClick:()=>popup.select(index),onMouseEnter:()=>popup.highlight(index),children:option.label
   },option.id))
