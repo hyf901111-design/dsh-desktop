@@ -1,3 +1,4 @@
+import { knowledgeReferenceOptions, resolveKnowledgeReference } from './references'
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { readFile, realpath } from 'node:fs/promises'
 import { isAbsolute, relative, sep } from 'node:path'
@@ -36,6 +37,12 @@ export function installKnowledgeIpc({
     }
     const folderId = () => args.folderId === undefined ? undefined : id(args.folderId)
     switch (method) {
+      case 'reference-options': {
+        const options = await knowledgeReferenceOptions(store, sharing)
+        check()
+        return options
+      }
+      case 'reference': return resolveKnowledgeReference(input, { store, sharing, owner: identity })
       case 'snapshot': return store.snapshot()
       case 'received': return sharing.received(args.refresh === true)
       case 'share': {

@@ -1,3 +1,4 @@
+import { mountKnowledgePanels } from './knowledge/panel'
 import { mountKnowledgeWorkspace } from './knowledge/workspace'
 import { mountSpreadsheet } from './spreadsheet/view'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
@@ -275,6 +276,19 @@ function initializeUi(): void {
     }
   })
   window.addEventListener('unload', disposeKnowledge, { once: true })
+  const disposeKnowledgePanels = mountKnowledgePanels(document, {
+    snapshot: () => ipcRenderer.invoke('knowledge:request', 'snapshot'),
+    received: () => ipcRenderer.invoke('knowledge:request', 'received'),
+    preview: id => ipcRenderer.invoke('knowledge:request', 'preview', { id }),
+    open: id => ipcRenderer.invoke('knowledge:request', 'open', { id }),
+    download: id => ipcRenderer.invoke('knowledge:request', 'download', { id })
+  })
+  const knowledgeChanged = () => document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+  ipcRenderer.on('knowledge:changed', knowledgeChanged)
+  window.addEventListener('unload', () => {
+    disposeKnowledgePanels()
+    ipcRenderer.removeListener('knowledge:changed', knowledgeChanged)
+  }, { once: true })
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
     ...(process.platform==='darwin'||process.platform==='win32'?{
@@ -435,6 +449,8 @@ contextBridge.exposeInMainWorld(
     showComponentContextMenu: (input: unknown): Promise<string | null> => ipcRenderer.invoke('ui:component-context-menu',input),
     componentContextMenuKey: (menuId: string,key: string) => ipcRenderer.invoke('ui:component-context-menu-key',menuId,key),
     closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
+    knowledgeOptions: () => ipcRenderer.invoke('knowledge:request', 'reference-options'),
+    knowledgeReference: (reference: Record<string, unknown>) => ipcRenderer.invoke('knowledge:request', 'reference', reference),
     collectKnowledgeFile: (sessionId: string, path: string, saved: boolean): Promise<import('../shared/knowledge-library').KnowledgeDocument | undefined> =>
       ipcRenderer.invoke('knowledge:request', 'generated', { sessionId, path, saved }),
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>

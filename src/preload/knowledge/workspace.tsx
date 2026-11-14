@@ -85,7 +85,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean }>()
   const [dialog, setDialog] = useState<DialogState>()
   const [value, setValue] = useState('')
-  const [preview, setPreview] = useState<{ document: KnowledgeDocument; text?: string }>()
+  const [preview, setPreview] = useState<{ document: KnowledgeDocument; text?: string; native?: boolean }>()
   const [dragging, setDragging] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const currentEpoch = useRef(0)
@@ -344,6 +344,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
 
   async function openPreview(row: KnowledgeDocument) {
     const request = ++previewRequest.current
+    const openInPane = new CustomEvent('sherlock:knowledge-preview-file', {
+      detail: { id: row.id, name: row.name }, cancelable: true
+    })
+    if (!document.dispatchEvent(openInPane)) {
+      setPreview({ document: row, native: true })
+      return
+    }
     setPreview({ document: row })
     try {
       const result = await bridge.request('preview', { id: row.id })
@@ -560,7 +567,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         </nav>}
         {dragging && <div className="knowledge-drop-zone">拖放文件到知识库</div>}
       </main>
-      {preview && <aside className="knowledge-preview" aria-label="文件预览">
+      {preview && !preview.native && <aside className="knowledge-preview" aria-label="文件预览">
         <header><strong title={preview.document.name}>{preview.document.name}</strong>
           <button className="knowledge-square" type="button" aria-label="关闭预览" onClick={closePreview}>×</button></header>
         {preview.document.received && <button type="button" onClick={() => {

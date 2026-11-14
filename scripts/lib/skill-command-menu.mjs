@@ -10,7 +10,7 @@ const replace=(source,anchor,next)=>{
 }
 export function patchSkillCommandPopup(source){
  const marker='/* ework:skill-command-popup:v1 */'
- if(source.includes(marker))return patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills'))))
+ if(source.includes(marker))return patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills')))))
  const open='this.popupFor(actx).open(name, ui, session, segment);'
  source=replace(source,open,`${marker}\nthis.popupFor(actx).open(name, ui, name === "skills" ? {...session, skillCommandSegment:segment} : session, segment);`)
  source=replace(source,'"aria-label": t("overlay.aria", { command: String(state.command) }),','"aria-label": t("overlay.aria", { command: String(state.command) }),\n"data-ework-command": state.command,')
@@ -18,7 +18,7 @@ export function patchSkillCommandPopup(source){
  source=replace(source,'className: PopupSelectView_module_css_default.detail,','className: PopupSelectView_module_css_default.detail,\ntitle: state.command === "skills" ? option.detail : undefined,')
  const match=/const css = ("[^\n]+");/u.exec(source)
  if(!match)throw Error('Skill command popup CSS anchor missing')
- return patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source.replace(match[0],'const css = '+JSON.stringify(JSON.parse(match[1])+SKILL_COMMAND_MENU_CSS)+';'),'skills'))))
+ return patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source.replace(match[0],'const css = '+JSON.stringify(JSON.parse(match[1])+SKILL_COMMAND_MENU_CSS)+';'),'skills')))))
 }
 function patchSkillCommandArtwork(source){
  const start='/* ework:skill-command-artwork:v1 */',end='/* ework:skill-command-artwork:end */'
@@ -56,7 +56,69 @@ function patchSkillCommandSettlement(source){
 }
 export function patchSkillCommandLabels(source){
  const marker='/* ework:skill-command-labels:v1 */'
- if(source.includes(marker))return patchCommandMenuSelection(patchExpandedCommandMenu(source,'commands'))
+ if(source.includes(marker))return patchKnowledgeLabels(patchCommandMenuSelection(patchExpandedCommandMenu(source,'commands')))
  source=replace(source,'"command.model.name": "模型",',`${marker}\n"command.skills.name":"技能",\n"command.skills.description":"选择在对话中使用的技能",\n"command.model.name": "模型",`)
- return patchCommandMenuSelection(patchExpandedCommandMenu(replace(source,'"command.model.name": "model",','"command.skills.name":"Skills",\n"command.skills.description":"Choose a skill for this conversation",\n"command.model.name": "model",'),'commands'))
+ return patchKnowledgeLabels(patchCommandMenuSelection(patchExpandedCommandMenu(replace(source,'"command.model.name": "model",','"command.skills.name":"Skills",\n"command.skills.description":"Choose a skill for this conversation",\n"command.model.name": "model",'),'commands')))
+}
+
+function patchKnowledgeLabels(source){
+ const marker='/* ework:knowledge-slash-labels */'
+ if(source.includes(marker))return source
+ source=replace(source,'"command.model.name": "模型",',marker+'\n"command.knowledge.name":"知识库",\n"command.model.name": "模型",')
+ source=replace(source,'"command.model.name": "model",','"command.knowledge.name":"Knowledge Base",\n"command.model.name": "model",')
+ const key='children: commandMenuText(group.source, item, "name", t)'
+ return replace(source,key,`children: [commandMenuText(group.source, item, "name", t), group.source==="command" && ["model","permission","skills","knowledge"].includes(item.name) && react_jsx_runtime.jsx('span',{'aria-hidden':true,style:{marginInlineStart:6,opacity:.6},children:'›'})]`)
+}
+
+function patchKnowledgePopup(source){
+ const marker='/* ework:knowledge-slash-options */'
+ if(source.includes(marker))return source
+ const ctx='name === "skills" ? {...session, skillCommandSegment:segment} : session'
+ source=replace(source,ctx,ctx.replace(': session',': name === "knowledge" ? {...session,knowledgeCommandSegment:segment} : session'))
+ const consume='this.deps.consume(binding.segment);'
+ source=replace(source,consume,marker+'\nif(binding.command!=="knowledge")'+consume)
+ const ref='const searchRef = (0, react.useRef)(null);'
+ source=replace(source,ref,ref+`
+ const [shared,setShared]=react.useState(false);
+ react.useEffect(()=>{if(!state.open||state.command!=="knowledge")setShared(false)},[state.open,state.command]);
+ const isSharedOption=option=>{try{return JSON.parse(option.id).kind==="shared-menu"}catch{return false}};
+ const sharedChild=option=>{try{return JSON.parse(option.id).kind==="shared-category"}catch{return false}};
+ `)
+ const key='popup.select(state.active);'
+ source=replace(source,key,`if(state.command==="knowledge"&&isSharedOption(rows[state.active]||{}))setShared(true);else `+key)
+ const selected='onClick: () => {\n\t\t\t\t\t\t\t\tpopup.select(index);'
+ source=replace(source,selected,selected.replace('popup.select(index);',`if(state.command==="knowledge"&&isSharedOption(option))setShared(true);else popup.select(index);`))
+ const mouse='popup.highlight(index);'
+ source=replace(source,mouse,mouse+`if(state.command==="knowledge")setShared(isSharedOption(option)||sharedChild(option));`)
+ const label='children: option.label'
+ source=replace(source,label,`children: [option.label,state.command==="knowledge"&&isSharedOption(option)&&react_jsx_runtime.jsx('span',{'aria-hidden':true,style:{marginInlineStart:8},children:'›'})]`)
+ const row='role: "option",\n\t\t\t\t\t\t\t"aria-selected": index === state.active,'
+ source=replace(source,row,row+`\n"data-knowledge-shared-option":state.command==="knowledge"&&sharedChild(option)?'true':undefined,
+ style:state.command==="knowledge"&&sharedChild(option)&&!state.search?{display:'none'}:undefined,`)
+ const sharedPortal=`}), state.command==="knowledge" && shared && !state.search && rows.some(sharedChild) && react_jsx_runtime.jsx('div',{
+  role:'group','aria-label':'他人共享分类','data-knowledge-cascading-options':true,
+  onPointerDown:event=>event.stopPropagation(),
+  style:{position:'fixed',inset:'auto',zIndex:10},
+  ref:element=>{if(!element)return;const card=cardRef.current,anchor=card?.querySelector('[data-knowledge-shared-parent=true]');if(!anchor||!card)return;
+   const {right,left}=card.getBoundingClientRect(),{top}=anchor.getBoundingClientRect();element.style.left=(right+188<window.innerWidth?right-1:Math.max(8,left-184))+'px';element.style.top=Math.max(8,Math.min(top,window.innerHeight-240))+'px';},
+  children:rows.map((option,index)=>sharedChild(option)&&react_jsx_runtime.jsx('button',{
+   type:'button',onClick:()=>popup.select(index),onMouseEnter:()=>popup.highlight(index),children:option.label
+  },option.id))
+ }), confirmation !== void 0 &&`
+ // Keep the menu inside the native top-layer popover so outside-click handling
+ // treats moving into the shared categories as part of the same interaction.
+ const within='})\n\t\t\t\t]\n\t\t\t}), confirmation !== void 0 &&'
+ const sharedChildren=sharedPortal.slice('}), '.length,-', confirmation !== void 0 &&'.length)
+ source=replace(source,within,within.replace('\n\t\t\t\t]',' , '+sharedChildren+'\n\t\t\t\t]'))
+ source=replace(source,'"data-knowledge-shared-option":', '"data-knowledge-shared-parent":state.command==="knowledge"&&isSharedOption(option)?true:undefined,\n"data-knowledge-shared-option":')
+ const css=/const css = ("[^\n]+");/u.exec(source)
+ if(!css)throw Error('Knowledge cascading menu styles missing')
+ source=source.replace(css[0],'const css = '+JSON.stringify(JSON.parse(css[1])+`
+ [data-ework-command=knowledge]{overflow:visible!important}
+ [data-knowledge-cascading-options]{display:grid;width:184px;max-height:232px;overflow:auto;padding:4px;border:1px solid var(--dsw-alias-border-l1,#6666);border-radius:8px;background:var(--dsw-alias-bg-base,#fff);box-shadow:0 6px 18px #0003;color:var(--dsw-alias-label-primary,#333)}
+ [data-knowledge-cascading-options]>button{text-align:left;border:0;border-radius:6px;padding:5px 8px;color:inherit;background:transparent;cursor:pointer;font:inherit}
+ [data-knowledge-cascading-options]>button:is(:hover,:focus-visible){background:var(--dsw-alias-interactive-bg-hover,#8882)}
+ ` )+';')
+ const close='popup.dismiss({ focusComposer: true });'
+ return replace(source,close,`if(state.command==="knowledge"&&shared)setShared(false);else `+close)
 }

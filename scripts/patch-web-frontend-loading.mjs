@@ -1,3 +1,4 @@
+import {patchKnowledgeConversation} from './lib/knowledge-client.mjs'
 import {patchSpreadsheetClient,stripSpreadsheetClient,hideTrajectoryTab} from './lib/spreadsheet-client.mjs'
 import {patchPendingPresetClient} from './lib/pending-composer-preferences.mjs'
 import {patchBrowserAppNative,stripBrowserAppNative} from './lib/browser-app-native.mjs'
@@ -406,4 +407,4 @@ writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationP
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
-writeFileSync(conversationPath,patchSpreadsheetClient(patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(readFileSync(conversationPath,'utf8'))))))
+writeFileSync(conversationPath,patchSpreadsheetClient(patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(patchKnowledgeConversation(readFileSync(conversationPath,'utf8')))))))
