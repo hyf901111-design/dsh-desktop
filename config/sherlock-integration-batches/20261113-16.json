@@ -9,23 +9,47 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格组件拖动和图表数据识别",
+        "featureName": "表格快捷键与组件交互",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
-        "tipCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
+        "baseCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
+        "tipCommit": "f2d31757896cad67496cbeae4806319a47575216",
         "commits": [
           {
-            "commit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
+            "commit": "f2d31757896cad67496cbeae4806319a47575216",
             "parents": [
-              "58ca61ba61fdeb25753f6d1407e228ec17ac117a"
+              "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86"
             ],
-            "subject": "恢复浮动组件尺寸并防止内嵌内容打断拖动"
+            "subject": "修复表格撤销重做和组件交互，支持保存至组件库"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-components.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-html-interaction.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-spreadsheet-live.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/engine.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/ui-copy.ts"
           },
           {
             "status": "M",
@@ -34,6 +58,10 @@
           {
             "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-interaction-state.test.js"
           }
         ],
         "checks": [
@@ -44,34 +72,51 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
-            "completedAt": "2026-11-14T03:34:32.985Z",
+            "summary": "类型检查",
+            "verifiedCommit": "f2d31757896cad67496cbeae4806319a47575216",
+            "completedAt": "2026-11-14T04:57:19.551Z",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "node",
-              "/var/folders/rm/jy4dz49s171fl1dxd9qr3hh80000gp/T//ework-sheet-drag-check.P5O5lI/focused.mjs"
+              "/var/folders/rm/jy4dz49s171fl1dxd9qr3hh80000gp/T//ework-sheet-history-focused.0MG6Ya/focused.mjs"
             ],
             "outcome": "passed",
-            "summary": "Electron 图表与组件聚焦验收，覆盖跨 Sheet 恢复和跨 iframe 拖动",
-            "verifiedCommit": "cbb14d1b09a765687b6ceb16feb68ad84b9bcf86",
-            "completedAt": "2026-11-14T03:34:32.985Z",
+            "summary": "Electron 聚焦检查撤销重做与组件入库",
+            "verifiedCommit": "f2d31757896cad67496cbeae4806319a47575216",
+            "completedAt": "2026-11-14T04:57:19.551Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/component-interaction-state.test.js",
+              "-t",
+              "read-only spreadsheet chart data disclosure"
+            ],
+            "outcome": "passed",
+            "summary": "只读数据展开检查",
+            "verifiedCommit": "f2d31757896cad67496cbeae4806319a47575216",
+            "completedAt": "2026-11-14T04:57:19.551Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在隔离 Electron 中验证混合选区、统一描边及图表编辑遮挡。切换工作表后检查浮动组件尺寸，用带内嵌框的组件验证跨内容区域拖动并实际保存。"
+          "summary": "Electron 窗口实测输入法后的表格撤销重做和组件入库。"
         },
         "acceptanceCriteria": [
-          "浮动组件支持标题区拖动和统一的选中描边",
-          "图表卡片悬停不改变外观",
-          "含多文本字段的选区可以生成图表，图表编辑器不受浮动对象遮挡"
+          "表格键盘撤销和重做",
+          "展开智能组件数据",
+          "表格生成组件保存至组件库及重叠层级"
         ],
         "risks": [],
-        "generatedAt": "2026-11-14T03:34:32.985Z"
+        "generatedAt": "2026-11-14T04:57:19.551Z"
       }
     },
     {
