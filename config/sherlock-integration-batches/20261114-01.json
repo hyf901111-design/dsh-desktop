@@ -160,6 +160,110 @@
         ],
         "recordedAt": "2026-11-14T10:24:15.908Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复套餐模型长请求超时和流式收尾误报",
+        "branch": "codex/feat/hosted-chat-stream-20261114",
+        "baseCommit": "7384054ad3a278e59ce5161730af2d8a145389b8",
+        "tipCommit": "6ea14895d6916852584ae1cc0b2bd3cb23ba3dab",
+        "commits": [
+          {
+            "commit": "6ea14895d6916852584ae1cc0b2bd3cb23ba3dab",
+            "parents": [
+              "7384054ad3a278e59ce5161730af2d8a145389b8"
+            ],
+            "subject": "修复套餐模型长请求超时和流式收尾误报"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/hosted-ai-timeouts.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/hosted-ai-timeouts.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-hosted-ai-worker.mjs"
+          },
+          {
+            "status": "M",
+            "path": "services/hosted-ai/worker.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/hosted-ark-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查",
+            "verifiedCommit": "6ea14895d6916852584ae1cc0b2bd3cb23ba3dab",
+            "completedAt": "2026-11-14T10:35:21.435Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/hosted-ark-runtime.test.js",
+              "test/account-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "28 项客户端适配器与账户桥接检查，覆盖长等待、请求编号、部分工具调用中断和登录代际",
+            "verifiedCommit": "6ea14895d6916852584ae1cc0b2bd3cb23ba3dab",
+            "completedAt": "2026-11-14T10:35:21.435Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "本地 workerd 和 D1 验证真实 worker 的流终止、结算、重复调用和错误映射",
+            "verifiedCommit": "6ea14895d6916852584ae1cc0b2bd3cb23ba3dab",
+            "completedAt": "2026-11-14T10:35:21.435Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "变更位于托管调用链，复用既有对话错误展示。"
+        },
+        "acceptanceCriteria": [
+          "同一套餐调用超过旧超时后仍可完成，真正截断的工具调用不可当作成功结束",
+          "有终止帧并已结算时，缺少尾标记可正常完成，悬而未决的输出仍报错",
+          "同一请求编号贯穿桌面桥和网关"
+        ],
+        "risks": [
+          "线上截图的原始请求日志尚未关联。网关验证使用本地模拟。"
+        ],
+        "generatedAt": "2026-11-14T10:35:21.435Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -191,6 +295,23 @@
         "test/research-preview-mode-browser.test.js",
         "-t",
         "retained board toolbar|real surface host|hidden Research calendar"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/hosted-ark-runtime.test.js",
+        "test/account-service.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/test-hosted-ai-worker.mjs"
       ],
       "timeoutMs": 120000
     }
