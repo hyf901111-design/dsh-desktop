@@ -93,7 +93,11 @@ export class SidebarUpdateControl {
       if (this.button) { this.button.hidden = true; this.button.setAttribute('aria-expanded','false') }
       return false
     }
-    if (this.button?.isConnected && this.button.parentElement === footer) {
+    const row = footer.querySelector<HTMLElement>('.srb-account-controls')
+    const anchor = row?.querySelector<HTMLElement>('[data-research-board-bell-host]') ?? null
+    const target = row ?? footer
+    if (this.button?.isConnected) {
+      if (this.button.parentElement !== target || this.button.nextElementSibling !== anchor) target.insertBefore(this.button, anchor)
       if (this.settingsVisible) { this.settingsVisible = false; if (this.status) this.render(this.status) }
       if (this.panel && !this.panel.hidden) positionSidebarNotice(this.document, this.panel)
       return true
@@ -124,14 +128,37 @@ export class SidebarUpdateControl {
     panel.hidden = true
     panel.setAttribute('aria-live', 'polite')
     this.document.body.append(panel)
-    footer.append(button)
+    target.insertBefore(button, anchor)
     this.button = button
     this.panel = panel
     if (!this.document.getElementById('sherlock-sidebar-update-style')) {
       const style = this.document.createElement('style')
       style.id = 'sherlock-sidebar-update-style'
-      style.textContent = `[data-sherlock-update-footer]{display:flex;align-items:center;gap:4px}[data-sidebar-collapsed=true] [data-sherlock-update-footer]{flex-direction:column-reverse}#${BUTTON_ID}{flex:none;appearance:none;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:none}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 32px)}[data-sidebar-collapsed=true] .srb-account-controls .srb-bell{order:0}[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button{order:1}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=preparing]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=preparing],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
-      style.textContent += `#${BUTTON_ID}:focus-visible{outline:1.5px solid var(--dsw-alias-interactive-accent,#3671d9);outline-offset:2px}#${PANEL_ID}{opacity:1;transition:opacity ${DISMISS_DURATION}ms ease}#${PANEL_ID}[data-closing=true]{opacity:0;pointer-events:none}@media(prefers-reduced-motion:reduce){#${PANEL_ID}{transition:none}}`
+      style.textContent = `
+[data-sherlock-update-footer]:has(> #${BUTTON_ID}) { display:flex; align-items:center; gap:4px; }
+[data-sidebar-collapsed=true] [data-sherlock-update-footer]:has(> #${BUTTON_ID}) { flex-direction:column-reverse; }
+[data-sidebar-collapsed=true] .srb-account-controls > #${BUTTON_ID} { order:-2; }
+#${BUTTON_ID} {
+  box-sizing:border-box; flex:none; appearance:none; display:grid; place-items:center;
+  width:28px; height:28px; margin:0; padding:0; border:0; border-radius:6px;
+  background:transparent; color:var(--dsw-alias-label-secondary); cursor:pointer;
+}
+#${BUTTON_ID}[hidden] { display:none!important; }
+#${BUTTON_ID}:hover { background:var(--dsw-alias-interactive-bg-hover); }
+#${BUTTON_ID}:focus-visible { outline:1.5px solid var(--dsw-alias-interactive-accent,#3671d9); outline-offset:2px; }
+#${BUTTON_ID}[data-action=install], #${PANEL_ID} button[data-update-install] {
+  background:#2962c9; color:#fff;
+}
+#${BUTTON_ID}[data-action=install]:hover { background:#2056b4; }
+#${BUTTON_ID} .ework-notice-icon, #${PANEL_ID} [data-update-install] .ework-notice-icon { color:inherit; }
+#${PANEL_ID} button[data-update-install] { display:inline-flex; align-items:center; gap:4px; }
+#${PANEL_ID}[data-collapsed=true] { z-index:1502; }
+body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=preparing]):not([data-phase=downloaded]):not([data-phase=installing]) { visibility:hidden; }
+body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=preparing],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice { visibility:hidden; }
+#${PANEL_ID} { opacity:1; transition:opacity ${DISMISS_DURATION}ms ease; }
+#${PANEL_ID}[data-closing=true] { opacity:0; pointer-events:none; }
+@media (prefers-reduced-motion:reduce) { #${PANEL_ID} { transition:none; } }
+`
       this.document.head.append(style)
     }
     if (!this.observed) {
@@ -178,13 +205,14 @@ export class SidebarUpdateControl {
     const doc = this.document, panel = this.panel, button = this.button
     const action = updateAction(status), zh = this.locale === 'zh'
     const key = phaseKey(status)
+    const restartLabel = zh ? '重启更新' : 'Restart and update'
     const active = ['downloading', 'preparing', 'installing'].includes(status.phase)
     const quiet = !status.manual && status.phase === 'available'
     button.dataset.action = action.kind
     button.replaceChildren(status.phase === 'downloading'
       ? progressRing(doc, status.percent ?? 0, zh ? '下载进度' : 'Download progress')
-      : noticeIcon(doc, active ? 'loading' : 'download'))
-    button.setAttribute('aria-label', updateMessage(status, this.locale) || (zh ? '查看更新' : 'View update'))
+      : noticeIcon(doc, action.kind === 'install' ? 'restart' : active ? 'loading' : 'download'))
+    button.setAttribute('aria-label', action.kind === 'install' ? restartLabel : updateMessage(status, this.locale) || (zh ? '查看更新' : 'View update'))
     button.title = button.getAttribute('aria-label')!
     const collapsed = !!doc.querySelector('[data-sidebar-collapsed=true]') && !doc.querySelector('.VOzbGW_panel')
     // Completion has its own acknowledgement; it is no longer a download action.
@@ -241,7 +269,8 @@ export class SidebarUpdateControl {
       if (completed) {
         actions.append(this.action(zh ? '知道了' : 'Got it', () => { this.dismissed = key; this.render(status) }))
       } else if (ready) {
-        const install = this.action(zh ? '重启更新' : 'Restart and update', () => this.startInstall())
+        const install = this.action(restartLabel, () => this.startInstall())
+        install.prepend(noticeIcon(doc, 'restart'))
         install.dataset.updateInstall = ''
         install.className = 'ework-notice-primary'
         actions.append(install)

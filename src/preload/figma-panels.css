@@ -66,7 +66,6 @@ body:has([data-odyssey-panel-right="closed"]) .wSkVaW_header { padding-right:56p
 /* Figma 66: welcome baseline at 325px inside the 880px pane. */
 .sRp_emptyState { padding-bottom:0; }
 .t8lSSG_panel .t8lSSG_tab { box-sizing:border-box; padding-inline:8px; }
-.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { width:46px; }
 .t8lSSG_panel .t8lSSG_tabTitle { flex:0 1 auto; width:auto; }
 .t8lSSG_panel .t8lSSG_tab[title="Files"]>svg { display:none; }
 .t8lSSG_panel .t8lSSG_tabClose,.t8lSSG_panel .t8lSSG_tabClose>svg { width:12px; height:12px; }
@@ -362,16 +361,12 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 .t8lSSG_panel .t8lSSG_tabList::-webkit-scrollbar { display:none; }
 
 
-/* A non-closable conversation tab has no trailing close affordance to balance. */
-.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { justify-content:center; padding-inline:8px; gap:0; }
-.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] .t8lSSG_tabTitle { flex:none; text-align:center; }
-
 body .wSkVaW_header, body .wSkVaW_titleRow { -webkit-app-region:drag; }
 body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],[contenteditable=true]),
 body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }
 
 /* Keep intrinsic label sizing: inline-size containment would collapse auto-sized tabs. */
-.t8lSSG_panel .t8lSSG_tabList { overflow:hidden; gap:2px; flex:1 1 0; }
+.t8lSSG_panel .t8lSSG_tabList { position:relative; overflow:hidden; gap:2px; flex:1 1 0; }
 .t8lSSG_panel [data-odyssey-panel-tab] {
   container-type:normal;
   flex:1 1 0; min-width:0; max-width:160px;
@@ -382,8 +377,6 @@ body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabClose { display:flex!important; flex-shrink:0; visibility:visible; pointer-events:auto; }
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true] { min-width:36px; }
-.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] { width:auto; }
-.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"] .t8lSSG_tabTitle { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Panel entries are portaled outside the header DOM but overlap its native drag region. */
 body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region:no-drag; }
 
@@ -401,7 +394,12 @@ body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]) .wSkVaW_titleRow{-
 /* Tabs fit their labels; only inactive tabs yield width when the row is crowded. */
 .t8lSSG_panel [data-odyssey-panel-tab]{flex:0 1 auto;min-width:32px;max-width:160px}
 .t8lSSG_panel [data-odyssey-panel-tab][aria-selected=true]{flex:0 0 auto;max-width:min(160px,70%)}
-.t8lSSG_panel .t8lSSG_tab[data-odyssey-panel-tab-id="sherlock-research-conversation"]{gap:4px}
+/* The resident conversation sits outside the document strip, so its label and hit target never compress. */
+.t8lSSG_panel [data-odyssey-panel-tab][data-odyssey-resident-conversation-tab] {
+  flex:none; width:max-content; min-width:0; max-width:none;
+  justify-content:center; padding-inline:8px!important;
+}
+.t8lSSG_panel [data-odyssey-resident-conversation-tab] .t8lSSG_tabTitle { flex:none; }
 
 /* Inactive tabs retain their icon when the available title space runs out. */
 .t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose{display:none!important}
