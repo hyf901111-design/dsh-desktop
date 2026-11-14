@@ -23,6 +23,7 @@ await build({stdin:{resolveDir:root,contents:`
  import {createResearchCanvasExportBridge} from './src/preload/research-canvas-export'
  import {mountUiLocalization} from './src/preload/ui-localization'
  import {mountFloatingSurfaces} from './src/preload/floating-surfaces'
+ import figmaRefinements from './src/preload/figma-refinements.css?raw'
  document.addEventListener('DOMContentLoaded',()=>{
   mountUiLocalization(document)
   mountFloatingSurfaces(document)
@@ -32,6 +33,9 @@ await build({stdin:{resolveDir:root,contents:`
    saveImage:createResearchCanvasExportBridge((channel,value)=>ipcRenderer.invoke(channel,value)).save,
    subscribe:(name,callback)=>{const channel='spreadsheet:'+name;const f=(_,value)=>callback(value);ipcRenderer.on(channel,f);return()=>ipcRenderer.removeListener(channel,f)}
   })
+  const clientStyles=document.createElement('style')
+  clientStyles.textContent=figmaRefinements
+  document.head.append(clientStyles)
   contextBridge.exposeInMainWorld('spreadsheetFixture',{admit:(prompt,refs)=>mounted.admit('demo-session',prompt,refs),flush:()=>mounted.flush('demo-session')})
  })
 `},bundle:true,platform:'browser',format:'cjs',target:'chrome140',define:{'process.env.NODE_ENV':'"production"'},loader:{'.svg':'dataurl'},external:['electron'],plugins:[inline],outfile:preload,logLevel:'warning'})
