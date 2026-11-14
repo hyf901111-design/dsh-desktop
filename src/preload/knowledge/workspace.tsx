@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import {
   knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
-  type KnowledgeFormat, type KnowledgeImportResult, type KnowledgeSnapshot, type KnowledgeSource
+  type KnowledgeImportResult, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
 import type { KnowledgeViewAction, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -11,6 +11,7 @@ import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-to
 import type { MemoryBridge } from '../../shared/memory'
 import { KnowledgeMemory } from './memory'
 import { KnowledgeIcon } from './icons'
+import { emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './workspace.css?raw'
 
@@ -486,7 +487,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               {buttonIcon('add', busy ? '处理中…' : '添加文件')}
             </button>}
             {draftFilter && <FilterMenu draft={draftFilter} change={setDraftFilter}
-              reset={() => setDraftFilter(current => ({ ...current, sources: [], formats: [], savedOnly: false }))}
+              reset={() => setDraftFilter(current => ({ ...current, ...emptyFileFacets }))}
               apply={() => {
                 updateFilter({ sources: draftFilter.sources, formats: draftFilter.formats, savedOnly: draftFilter.savedOnly })
                 setDraftFilter(undefined)
@@ -645,46 +646,4 @@ function dialogTitle(type: DialogState['type']) {
     'create-folder': '新建文件夹', 'rename-folder': '重命名文件夹', 'remove-folder': '删除文件夹',
     rename: '重命名文件', share: '共享至知识库', move: '移动到文件夹', remove: '从知识库删除'
   }[type]
-}
-
-function FilterMenu({ draft, change, reset, apply }: {
-  draft: KnowledgeFilter
-  change: (next: KnowledgeFilter) => void
-  reset: () => void
-  apply: () => void
-}) {
-  const toggle = <T extends string>(values: T[] = [], value: T) =>
-    values.includes(value) ? values.filter(item => item !== value) : [...values, value]
-  return <div className="knowledge-popup knowledge-filter-menu" role="group" aria-label="筛选文件">
-    <fieldset>
-      <legend>来源</legend>
-      <label className="knowledge-filter-all"><input type="checkbox" checked={!draft.sources?.length}
-        onChange={() => change({ ...draft, sources: [] })} />不限</label>
-      <div className="knowledge-filter-options" data-columns="2">
-        {(Object.keys(knowledgeSources) as KnowledgeSource[]).map(source => <label key={source}>
-          <input type="checkbox" checked={draft.sources?.includes(source) ?? false}
-            onChange={() => change({ ...draft, sources: toggle(draft.sources, source) })} />
-          {knowledgeSources[source]}
-        </label>)}
-      </div>
-    </fieldset>
-    <fieldset>
-      <legend>文件格式</legend>
-      <label className="knowledge-filter-all"><input type="checkbox" checked={!draft.formats?.length}
-        onChange={() => change({ ...draft, formats: [] })} />不限</label>
-      <div className="knowledge-filter-options" data-columns="3">
-        {(Object.keys(knowledgeFormats) as KnowledgeFormat[]).map(format => <label key={format}>
-          <input type="checkbox" checked={draft.formats?.includes(format) ?? false}
-            onChange={() => change({ ...draft, formats: toggle(draft.formats, format) })} />
-          {knowledgeFormats[format]}
-        </label>)}
-      </div>
-    </fieldset>
-    <footer>
-      <label><input type="checkbox" checked={draft.savedOnly ?? false}
-        onChange={event => change({ ...draft, savedOnly: event.currentTarget.checked })} />仅看手动收藏</label>
-      <button type="button" onClick={reset}>重置</button>
-      <button type="button" className="knowledge-primary" onClick={apply}>完成</button>
-    </footer>
-  </div>
 }

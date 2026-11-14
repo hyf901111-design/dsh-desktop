@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   knowledgeCategories, knowledgeFormat, listKnowledgeDocuments,
-  type KnowledgeCategory, type KnowledgeDocument, type KnowledgeSnapshot
+  type KnowledgeCategory, type KnowledgeDocument, type KnowledgeFilter, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
+import { emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgeIcon } from './icons'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './panel.css?raw'
@@ -19,6 +20,7 @@ type PanelBridge = {
 type PanelProps = { id?: string; document: Document; bridge: PanelBridge }
 const size = (value: number) => value >= 1024 * 1024
   ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(value / 1024))} KB`
+const categoryIcons = { all: 'all', saved: 'bookmark', starred: 'star', shared: 'shared', received: 'received' } as const
 
 export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
   const roots = new Map<HTMLElement, ReturnType<typeof createRoot>>()
@@ -90,15 +92,21 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const [folder, setFolder] = useState<string>()
   const [sharedCategory, setSharedCategory] = useState<string>()
   const [query, setQuery] = useState('')
-  const [menu, setMenu] = useState(false)
+  const [facets, setFacets] = useState<KnowledgeFilter>({})
+  const [draftFacets, setDraftFacets] = useState<KnowledgeFilter>()
+  const [menu, setMenu] = useState<'directory' | 'filter'>()
   const [state, setState] = useState({ ready: false, error: '' })
+  const [referenceError, setReferenceError] = useState('')
+  const location = useRef<HTMLDivElement>(null)
+  const directoryTrigger = useRef<HTMLButtonElement>(null)
+  const filterTrigger = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     let revision = 0
     const load = () => {
       const current = ++revision
-      const source = category === 'received'
-        ? bridge.received().then(documents => ({ documents, folders: [] }))
-        : bridge.snapshot()
+      const local = bridge.snapshot()
+      const source = category === 'received' ? Promise.all([local, bridge.received()])
+        .then(([local, documents]) => ({ ...local, documents })) : local
       void source.then(rows => {
         if (current === revision) { setSnapshot(rows); setState({ ready: true, error: '' }) }
       }).catch(error => {
@@ -112,7 +120,11 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       setFolder(undefined)
       setSharedCategory(undefined)
       setQuery('')
-      load()
+      setFacets({})
+      setMenu(undefined)
+      setReferenceError('')
+      if (category === 'all') load()
+      else revision++
     }
     load()
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
@@ -123,24 +135,55 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       document.removeEventListener('sherlock:knowledge-changed', load)
     }
   }, [bridge, document, category])
-  const rows = listKnowledgeDocuments(snapshot, { category, folderId: folder, sharedCategory, query })
-  const categories = [...new Set(snapshot.documents.flatMap(row => row.received ? [row.received.category] : []))]
+  useEffect(() => {
+    if (!menu) return
+    const outside = (event: PointerEvent) => {
+      if (location.current && !event.composedPath().includes(location.current)) setMenu(undefined)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setMenu(undefined)
+      const trigger = menu === 'filter' ? filterTrigger : directoryTrigger
+      trigger.current?.focus()
+    }
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('pointerdown', outside)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [document, menu])
+  const rows = listKnowledgeDocuments(snapshot, { ...facets, category, folderId: folder, sharedCategory, query })
+  const sharedDirectory = category === 'received' && !sharedCategory && !query.trim()
+  const sharedCounts = new Map<string, number>()
+  if (sharedDirectory) for (const row of rows) {
+    const label = row.received?.category
+    if (label) sharedCounts.set(label, (sharedCounts.get(label) ?? 0) + 1)
+  }
+  const filterCount = Number(Boolean(facets.sources?.length)) + Number(Boolean(facets.formats?.length)) + Number(Boolean(facets.savedOnly))
   const title = snapshot.folders.find(row => row.id === folder)?.name ?? knowledgeCategories[category]
   const pick = (next: KnowledgeCategory, folderId?: string) => {
+    if (next !== category) setState({ ready: false, error: '' })
+    if (next === 'received') setFacets(current => ({ ...current, savedOnly: false }))
     setCategory(next)
     setSharedCategory(undefined)
     setFolder(folderId)
-    setMenu(false)
+    setMenu(undefined)
   }
   const reference = (row: KnowledgeDocument) => {
+    const requestId = crypto.randomUUID()
     const result = (event: Event) => {
       const detail = (event as CustomEvent).detail
-      if (!detail.ok) setState({ ready: true, error: detail.message })
-      else setState({ ready: true, error: '' })
+      if (detail.requestId !== requestId) return
+      document.removeEventListener('sherlock:knowledge-reference-status', result)
+      setReferenceError(detail.ok ? '' : detail.message)
     }
-    document.addEventListener('sherlock:knowledge-reference-status', result, { once: true })
+    document.addEventListener('sherlock:knowledge-reference-status', result)
     setTimeout(() => document.removeEventListener('sherlock:knowledge-reference-status', result), 4000)
-    document.dispatchEvent(new CustomEvent('sherlock:knowledge-reference-file', { detail: { id: row.id, label: row.name, activateChat: true } }))
+    document.dispatchEvent(new CustomEvent('sherlock:knowledge-reference-file', {
+      detail: { id: row.id, label: row.name, requestId, activateChat: true }
+    }))
   }
   return <>
     <header className="knowledge-panel-heading">
@@ -150,25 +193,38 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     <label className="knowledge-panel-search"><KnowledgeIcon name="search" />
       <input type="search" aria-label="搜索知识库文件" placeholder="搜索文件…" value={query} onChange={event => setQuery(event.target.value)} />
     </label>
-    <div className="knowledge-panel-location">
-      {(folder || sharedCategory) && <button type="button" aria-label="返回上级" onClick={() => sharedCategory ? setSharedCategory(undefined) : pick('all')}>‹</button>}
-      <button type="button" aria-expanded={menu} onClick={() => setMenu(!menu)}>
-        {title}{sharedCategory ? ` / ${sharedCategory}` : ''} <KnowledgeIcon name="chevron" />
+    <div className="knowledge-panel-location" ref={location}>
+      {(folder || sharedCategory || category === 'received') && <button type="button" aria-label="返回上级"
+        onClick={() => sharedCategory ? setSharedCategory(undefined) : pick('all')}>‹</button>}
+      <button type="button" className="knowledge-panel-location-label" ref={directoryTrigger}
+        aria-expanded={menu === 'directory'} onClick={() => setMenu(menu === 'directory' ? undefined : 'directory')}>
+        <span>{title}{sharedCategory ? ` / ${sharedCategory}` : ''}</span><KnowledgeIcon name="chevron" />
       </button>
-      {menu && <div className="knowledge-panel-menu" onKeyDown={event => { if (event.key === 'Escape') setMenu(false) }}>
+      <button type="button" className="knowledge-panel-filter" ref={filterTrigger} aria-expanded={menu === 'filter'}
+        data-filtered={filterCount > 0} onClick={() => {
+          if (menu === 'filter') setMenu(undefined)
+          else { setDraftFacets(facets); setMenu('filter') }
+        }}><KnowledgeIcon name="filter" />筛选{filterCount > 0 && <span>{filterCount}</span>}</button>
+      {menu === 'directory' && <div className="knowledge-panel-menu" aria-label="知识库目录">
         {Object.entries(knowledgeCategories).map(([id, label]) =>
-          <button key={id} type="button" onClick={() => pick(id as KnowledgeCategory)}>{label}</button>)}
+          <button key={id} type="button" aria-current={category === id && !folder ? 'page' : undefined}
+            onClick={() => pick(id as KnowledgeCategory)}><KnowledgeIcon name={categoryIcons[id as KnowledgeCategory]} />{label}</button>)}
+        {snapshot.folders.length > 0 && <span>文件夹</span>}
         {snapshot.folders.map(folder => <button key={folder.id} type="button" onClick={() => pick('all', folder.id)}>
           <KnowledgeIcon name="folder" /> {folder.name}
         </button>)}
       </div>}
+      {menu === 'filter' && draftFacets && <FilterMenu draft={draftFacets} change={setDraftFacets}
+        showSavedOnly={category !== 'received'} reset={() => setDraftFacets(emptyFileFacets)}
+        apply={() => { setFacets(draftFacets); setMenu(undefined); filterTrigger.current?.focus() }} />}
     </div>
     {!state.ready && <p className="knowledge-panel-state" role="status">正在加载文件…</p>}
     {state.error && <p className="knowledge-panel-state" role="alert">{state.error}</p>}
+    {referenceError && <p className="knowledge-panel-state" role="alert">{referenceError}</p>}
     <div className="knowledge-panel-rows">
-      {category === 'received' && !sharedCategory && !query ? categories.map(category =>
+      {sharedDirectory ? [...sharedCounts].map(([category, count]) =>
         <button type="button" className="knowledge-panel-directory" key={category} onClick={() => setSharedCategory(category)}>
-          <KnowledgeIcon name="folder" /><span>{category}</span><small>{snapshot.documents.filter(row => row.received?.category === category).length}</small><span>›</span>
+          <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><span>›</span>
         </button>) : rows.map(row =>
         <div className="knowledge-panel-row" key={row.id}>
           <span className="knowledge-panel-file-icon"><KnowledgeIcon name={knowledgeFormat(row.name)} /></span>
@@ -183,7 +239,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
             <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>
           </div>
         </div>)}
-      {state.ready && !state.error && !(category === 'received' && !sharedCategory && !query ? categories.length : rows.length) &&
+      {state.ready && !state.error && !(sharedDirectory ? sharedCounts.size : rows.length) &&
         <p className="knowledge-panel-state">暂无符合条件的文件。</p>}
     </div>
   </>

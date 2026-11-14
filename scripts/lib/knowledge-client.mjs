@@ -51,9 +51,9 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
     await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)))
    }
    insert({kind:'file',id:detail.id,label:detail.label},sessionId)
-   doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-reference-status',{detail:{ok:true}}))
+   doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-reference-status',{detail:{requestId:detail.requestId,ok:true}}))
   } catch(error) {
-   doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-reference-status',{detail:{ok:false,message:error.message}}))
+   doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-reference-status',{detail:{requestId:detail?.requestId,ok:false,message:error.message}}))
   }
  }
  doc.addEventListener('sherlock:knowledge-reference-file',receive)

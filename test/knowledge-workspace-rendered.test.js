@@ -14,6 +14,7 @@ beforeAll(async () => {
     stdin: { resolveDir: process.cwd(), contents: `
       import { WorkspaceSurfaceHost } from './src/preload/workspace-surface-host'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
+      import { mountKnowledgePanels } from './src/preload/knowledge/panel'
       const host = new WorkspaceSurfaceHost(document)
       const documents = [
         { id: 'a', name: '消费行业周报.md', source: 'generated', saved: true },
@@ -21,6 +22,15 @@ beforeAll(async () => {
         { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f', size: 16384, updatedAt: 1762080000000 }
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
       window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
+      mountKnowledgePanels(document, {
+        snapshot: async () => structuredClone(window.data),
+        received: async () => [
+          { id: 'r1', name: '共享行业资料.pdf', source: 'upload', size: 1024, updatedAt: 1,
+            starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
+          { id: 'r2', name: '共享数据表.xlsx', source: 'upload', size: 8192, updatedAt: 2,
+            starred: false, saved: false, received: { owner: '共享人', category: '数据分析' } }
+        ]
+      })
       window.addEventListener('sherlock:workspace-surface-change', () => {})
       mountKnowledgeWorkspace(document, host, {
         async request(method, args) {
@@ -83,6 +93,42 @@ it('preserves filters through return and leaves space around the selected row', 
     await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
     await expect.poll(() => library.getByText('找到 1 个文件').isVisible()).toBe(true)
     if (process.env.KNOWLEDGE_QA_SCREENSHOT) await page.screenshot({ path: process.env.KNOWLEDGE_QA_SCREENSHOT })
+  } finally {
+    await page.close()
+  }
+})
+
+it('preserves PDF filtering when drilling into shared files, going back and browsing local folders', async () => {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    page.setDefaultTimeout(2500)
+    await page.setContent('<aside data-knowledge-panel-host style="width:340px;height:720px"></aside>')
+    await page.addScriptTag({ content: bundle })
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    await pane.getByRole('button', { name: '所有文件', exact: true }).click()
+    await pane.getByRole('button', { name: '他人共享', exact: true }).click()
+    await pane.getByRole('button', { name: /数据分析/ }).waitFor()
+    await pane.getByRole('button', { name: '筛选', exact: true }).click()
+    await pane.getByRole('checkbox', { name: 'PDF', exact: true }).check()
+    await pane.getByRole('button', { name: '完成' }).click()
+    await expect.poll(() => pane.getByRole('button', { name: /数据分析/ }).count()).toBe(0)
+    await pane.getByRole('button', { name: /行业研究/ }).click()
+    const file = pane.getByRole('button', { name: /共享行业资料.pdf 共享人/ })
+    await file.waitFor()
+    await expect.poll(() => pane.locator('.knowledge-panel-action small').evaluate(el => getComputedStyle(el).opacity)).toBe('1')
+    await file.hover()
+    await expect.poll(() => pane.getByRole('button', { name: '引用文件 共享行业资料.pdf' }).evaluate(el => getComputedStyle(el).opacity)).toBe('1')
+    await pane.getByRole('button', { name: '返回上级' }).click()
+    await pane.getByRole('button', { name: /行业研究/ }).waitFor()
+    await pane.getByRole('button', { name: '他人共享', exact: true }).click()
+    await pane.getByRole('button', { name: '研究资料', exact: true }).click()
+    await expect.poll(() => pane.getByText('暂无符合条件的文件。').isVisible()).toBe(true)
+    await pane.getByRole('button', { name: /筛选/ }).click()
+    await pane.getByRole('button', { name: '重置' }).click()
+    await pane.getByRole('button', { name: '完成' }).click()
+    await pane.getByRole('button', { name: /研究写作规范.md/ }).first().waitFor()
   } finally {
     await page.close()
   }
