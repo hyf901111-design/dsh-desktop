@@ -91,6 +91,8 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
   useEffect(() => {
     let current = true
     let sequence = 0
+    let loaded: KnowledgePreview | undefined
+    const shared = /^[a-f0-9]{32}$/u.test(id)
     const reset = () => {
       current = false
       epoch.current++
@@ -99,24 +101,55 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
       setFile(undefined)
       setError('账号已变化，请重新打开文件。')
     }
-    const load = () => {
+    const load = async (recheck = false) => {
+      if (!current) return
       const request = ++sequence
-      void bridge.preview(id).then(value => {
-        if (current && request === sequence) setFile(value)
-      }).catch(error => {
-        if (current && request === sequence) { setFile(undefined); setError(printError(error)) }
-      })
+      const isLatest = () => current && request === sequence
+      if (recheck && loaded) {
+        const rows = await bridge.received(true).catch(() => undefined)
+        if (!isLatest() || !rows) return
+        const entry = rows.find(row => row.id === id)
+        if (!entry) {
+          loaded = undefined
+          setFile(undefined)
+          setError('该文件已取消共享或不可用。')
+          return
+        }
+        if (entry.updatedAt === loaded.document.updatedAt && !loaded.previewError) return
+      }
+      try {
+        const value = await bridge.preview(id)
+        if (!isLatest()) return
+        loaded = value
+        setFile(value)
+        setError('')
+      } catch (error) {
+        if (!isLatest()) return
+        loaded = undefined
+        setFile(undefined)
+        setError(printError(error))
+      }
+    }
+    const changed = () => { void load(shared) }
+    const focus = () => {
+      if (document.visibilityState !== 'hidden') void load(true)
     }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
-    document.addEventListener('sherlock:knowledge-changed', load)
-    if (/^[a-f0-9]{32}$/u.test(id)) document.addEventListener('sherlock:knowledge-shared-access-changed', load)
-    load()
+    document.addEventListener('sherlock:knowledge-changed', changed)
+    if (shared) {
+      document.addEventListener('sherlock:knowledge-shared-access-changed', focus)
+      document.defaultView?.addEventListener('focus', focus)
+    }
+    void load()
     return () => {
       current = false
       epoch.current++
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
-      document.removeEventListener('sherlock:knowledge-changed', load)
-      document.removeEventListener('sherlock:knowledge-shared-access-changed', load)
+      document.removeEventListener('sherlock:knowledge-changed', changed)
+      if (shared) {
+        document.removeEventListener('sherlock:knowledge-shared-access-changed', focus)
+        document.defaultView?.removeEventListener('focus', focus)
+      }
     }
   }, [id, bridge, document])
   if (!file && !draft) return <p className="knowledge-panel-state" role={error ? 'alert' : 'status'}>{error || '正在打开文件…'}</p>

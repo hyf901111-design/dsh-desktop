@@ -28,6 +28,12 @@ beforeAll(async () => {
       ].map(row => ({ size: 8192, updatedAt: 1761993600000, starred: false, saved: false, ...row }))
       window.data = { documents, folders: [{ id: 'f', name: '研究资料' }] }
       window.markdown = { text: '# 研究写作规范', revision: 'first' }
+      if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) window.sharedPreview = {
+        document: { id: 'decafbad'.repeat(4), name: '可撤销的分享.md', source: 'upload',
+          size: 8192, updatedAt: 2, starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
+        text: '# 初次共享正文'
+      }
+      window.sharedPreviewReads = 0
       let useMemory = false
       const memory = { request: async command => {
         if (command.type === 'settings') useMemory = command.use
@@ -36,7 +42,14 @@ beforeAll(async () => {
       mountKnowledgePanels(document, {
         memory,
         snapshot: async () => structuredClone(window.data),
-        preview: async id => ({ document: documents.find(row => row.id === id), text: window.markdown.text }),
+        preview: async id => {
+          if (id === 'decafbad'.repeat(4)) {
+            window.sharedPreviewReads++
+            if (!window.sharedPreview) throw Error('该文件已取消共享或不可用。')
+            return structuredClone(window.sharedPreview)
+          }
+          return { document: documents.find(row => row.id === id), text: window.markdown.text }
+        },
         markdown: async () => ({ ...window.markdown }),
         saveMarkdown: async (id, revision, text) => {
           if (revision !== window.markdown.revision) throw Error('文件已被修改')
@@ -44,6 +57,7 @@ beforeAll(async () => {
           return { document: documents.find(row => row.id === id), revision: 'saved' }
         },
         received: async () => [
+          ...(window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []),
           { id: 'r1', name: '共享行业资料.pdf', source: 'upload', size: 1024, updatedAt: 1,
             starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
           { id: 'r2', name: '共享数据表.xlsx', source: 'upload', size: 8192, updatedAt: 2,
@@ -175,6 +189,43 @@ it('edits a Markdown preview and preserves a draft on revision conflicts', async
     await pane.getByRole('button', { name: '保存' }).click()
     await expect.poll(() => pane.getByRole('alert').textContent()).toContain('文件已被修改')
     expect(await pane.getByRole('textbox', { name: 'Markdown 正文' }).inputValue()).toBe('# 保留用户草稿')
+  } finally { await page.close() }
+})
+
+it('rechecks an open shared preview on focus and only reloads the body when its version changes', async () => {
+  const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    const id = 'decafbad'.repeat(4)
+    await page.setContent(`<aside data-knowledge-panel-host data-knowledge-panel-file="${id}" style="width:380px;height:720px"></aside>`)
+    await page.addScriptTag({ content: bundle })
+    const preview = page.getByRole('region', { name: '知识库文件预览' })
+    await preview.getByRole('heading', { name: '初次共享正文' }).waitFor()
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    expect(await page.evaluate(() => window.sharedPreviewReads)).toBe(1)
+    await page.evaluate(() => {
+      window.sharedPreview.document.updatedAt++
+      window.sharedPreview.text = '# 更新后的正文'
+      window.dispatchEvent(new Event('focus'))
+    })
+    await preview.getByRole('heading', { name: '更新后的正文' }).waitFor({ timeout: 1500 })
+    const previous = await page.evaluate(() => {
+      const current = window.sharedPreview
+      window.sharedPreview = undefined
+      window.dispatchEvent(new Event('focus'))
+      return current
+    })
+    await expect.poll(() => preview.getByRole('alert').textContent()).toBe('该文件已取消共享或不可用。')
+    expect(await preview.getByRole('heading', { name: '更新后的正文' }).count()).toBe(0)
+    expect(await preview.getByRole('button', { name: '下载' }).count()).toBe(0)
+    expect(await page.evaluate(() => window.sharedPreviewReads)).toBe(2)
+    await page.evaluate(saved => {
+      window.sharedPreview = saved
+      window.dispatchEvent(new Event('focus'))
+    }, previous)
+    await preview.getByRole('heading', { name: '更新后的正文' }).waitFor()
+    expect(await preview.getByRole('alert').count()).toBe(0)
   } finally { await page.close() }
 })
 
