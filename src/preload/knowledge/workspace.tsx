@@ -10,8 +10,8 @@ import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
 import type { MemoryBridge } from '../../shared/memory'
 import { KnowledgeMemory } from './memory'
-import { KnowledgeIcon } from './icons'
-import { emptyFileFacets, FilterMenu } from './filter-menu'
+import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
+import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './workspace.css?raw'
 
@@ -38,13 +38,12 @@ type DialogState =
 
 const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
-const categoryIcons = { all: 'all', saved: 'bookmark', starred: 'star', shared: 'shared', received: 'received' } as const
 const defaultFilter: KnowledgeFilter = {}
 const formatBytes = (size: number) => size >= 1024 * 1024
   ? `${(size / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 })} MB`
   : `${Math.max(1, Math.round(size / 1024))} KB`
 
-function buttonIcon(icon: string, text: string) {
+function buttonIcon(icon: React.ComponentProps<typeof KnowledgeIcon>['name'], text: string) {
   return <><KnowledgeIcon name={icon} /><span>{text}</span></>
 }
 
@@ -106,7 +105,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const shownPage = Math.min(page, pages)
   const receivedCategories = [...new Set(snapshot.documents.flatMap(row => row.received ? [row.received.category] : []))]
     .sort((a, b) => a.localeCompare(b))
-  const narrowed = Boolean(filter.query || filter.sources?.length || filter.formats?.length || filter.savedOnly)
+  const filterCount = countFileFacets(filter)
+  const narrowed = Boolean(filter.query || filterCount)
   const target = menu && snapshot.documents.find(row => row.id === menu.id)
   const targetFolder = menu?.folder && snapshot.folders.find(row => row.id === menu.id)
   const filterButton = useRef<HTMLButtonElement>(null)
@@ -472,9 +472,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <div className="knowledge-tools">
           <h2>{title}{filter.sharedCategory && selection === 'received' && <span> / {filter.sharedCategory}</span>}</h2>
           <div className="knowledge-toolbar">
-            <button ref={filterButton} type="button" data-knowledge-popup-trigger aria-expanded={!!draftFilter}
-              data-filtered={narrowed} onClick={() => { setMenu(undefined); setDraftFilter(current => current ? undefined : filter) }}>
+            <button ref={filterButton} type="button" className="knowledge-filter-trigger" aria-label="筛选"
+              data-knowledge-popup-trigger aria-expanded={!!draftFilter} data-filtered={filterCount > 0} onClick={() => { setMenu(undefined); setDraftFilter(current => current ? undefined : filter) }}>
               {buttonIcon('filter', '筛选')}
+              {filterCount > 0 && <span className="knowledge-filter-count" aria-hidden="true">{filterCount}</span>}
             </button>
             <label className="knowledge-search">
               <KnowledgeIcon name="search" />
@@ -518,7 +519,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
             {filter.sharedCategory && <button type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>全部共享分类</button>}
             {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
               onClick={() => updateFilter({ sharedCategory: category })}>
-              {buttonIcon('folder', category)}<KnowledgeIcon name="chevron" />
+              {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
             </button>)}
           </nav>}
           <div className="knowledge-table-wrap">
@@ -539,7 +540,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                 {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row =>
                   <tr key={row.id} data-selected={preview?.document.id === row.id}>
                     <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
-                      <span className="knowledge-file-icon"><KnowledgeIcon name={knowledgeFormat(row.name)} /></span>
+                      <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
                       <span className="knowledge-file-content">
                         <span className="knowledge-file-title"><span>{row.name}</span>
                           {row.saved && <span className="knowledge-bookmarked" aria-label="手动收藏"><KnowledgeIcon name="bookmark" /></span>}
@@ -578,7 +579,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       </main>
       {preview && !preview.native && <aside className="knowledge-preview" aria-label="文件预览">
         <header><strong title={preview.document.name}>{preview.document.name}</strong>
-          <button className="knowledge-square" type="button" aria-label="关闭预览" onClick={closePreview}>×</button></header>
+          <button className="knowledge-square" type="button" aria-label="关闭预览" onClick={closePreview}><KnowledgeIcon name="close" /></button></header>
         {preview.document.received && <button type="button" onClick={() => {
           void bridge.request('download', { id: preview.document.id }).catch(error => setNotice({ text: message(error), error: true }))
         }}>下载共享文件</button>}

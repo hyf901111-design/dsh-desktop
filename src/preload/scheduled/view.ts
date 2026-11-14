@@ -108,7 +108,7 @@ export class ScheduledTaskView {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-dsh-sidebar-wide', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right', 'data-workspace-surface'],
+      attributeFilter: ['data-dsh-sidebar-wide', 'data-odyssey-locale', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right', 'data-workspace-surface'],
     })
     this.document.addEventListener('sherlock:workspace-surface-change', () => {
       this.mountMore()
@@ -206,7 +206,7 @@ export class ScheduledTaskView {
   private mountMore() {
     const group = this.document.querySelector('.hHd-Xa_newSessionGroup')
     if (!group) return
-    this.mountBrowserEntry(group)
+    this.mountCollapsedApps(group)
     const current = this.more?.closest<HTMLElement>('.st-more-zone')
     if (current?.isConnected) {
       if(this.menuAnchor===this.more&&this.menu?.dataset.sidebarWide!==String(group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'))this.closeMenu()
@@ -225,16 +225,15 @@ export class ScheduledTaskView {
     more.onclick = () => {
       if(this.menu){this.closeMenu();return}
       const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
+      const english = this.document.documentElement.dataset.odysseyLocale === 'en'
       this.showMenu(more, [
             ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('note')}]:[]),
             ...(wide&&this.sidebarActions?.newSpreadsheet?[{
               label:this.document.documentElement.dataset.odysseyLocale==='en'?'New spreadsheet':'新建表格',
               icon:'spreadsheet' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('spreadsheet')
             }]:[]),
-            ...(wide&&this.surfaceHost?[{label:'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
-            ...(this.surfaceHost?[{label:'知识库',icon:'knowledge' as const,run:()=>{
-              this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:knowledge-open'))
-            }}]:[]),
+            ...(wide&&this.surfaceHost?[{label:english?'Browser':'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
+            ...(wide&&this.surfaceHost?[{label:english?'Knowledge Base':'知识库',icon:'knowledge' as const,run:()=>this.openKnowledge()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
@@ -250,20 +249,51 @@ export class ScheduledTaskView {
   private openBrowser(){
     this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:browser-request'))
   }
-  private mountBrowserEntry(group:Element){
-    let button=group.querySelector<HTMLButtonElement>('[data-sidebar-browser]')
-    let separator=group.querySelector<HTMLElement>('[data-sidebar-browser-separator]')
-    const collapsed=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')==='false'
-    if(!collapsed||!this.surfaceHost){button?.remove();separator?.remove();return}
-    if(!button){
-      button=this.document.createElement('button');button.type='button';button.className='hHd-Xa_newSession';button.dataset.sidebarBrowser=''
-      button.setAttribute('aria-label','浏览器');button.title='浏览器';button.onclick=()=>this.openBrowser()
-      const more=group.querySelector('.st-more-zone');group.insertBefore(button,more)
+  private openKnowledge() {
+    this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:knowledge-open'))
+  }
+  private mountCollapsedApps(group: Element) {
+    const collapsed = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') === 'false'
+    let separator = group.querySelector<HTMLElement>('[data-sidebar-app-separator]')
+    if (!collapsed || !this.surfaceHost) {
+      group.querySelectorAll('[data-sidebar-browser],[data-sidebar-knowledge]').forEach(button => button.remove())
+      separator?.remove()
+      return
     }
-    const more=group.querySelector('.st-more-zone');if(more&&button.nextElementSibling!==more)group.insertBefore(button,more)
-    if(!separator){separator=this.document.createElement('span');separator.dataset.sidebarBrowserSeparator='';separator.setAttribute('aria-hidden','true')}
-    if(separator.nextElementSibling!==button)group.insertBefore(separator,button)
-    button.setAttribute('aria-pressed',String(this.document.body.dataset.workspaceSurface==='browser'))
+    const more = group.querySelector('.st-more-zone')
+    const english = this.document.documentElement.dataset.odysseyLocale === 'en'
+    const entries = [
+      { key: 'browser', label: english ? 'Browser' : '浏览器', open: () => this.openBrowser() },
+      { key: 'knowledge', label: english ? 'Knowledge Base' : '知识库', open: () => this.openKnowledge() }
+    ]
+    const buttons = entries.map(({ key, label, open }) => {
+      const attribute = 'data-sidebar-' + key
+      let button = group.querySelector<HTMLButtonElement>('[' + attribute + ']')
+      if (!button) {
+        button = this.document.createElement('button')
+        button.type = 'button'
+        button.className = 'hHd-Xa_newSession'
+        button.setAttribute(attribute, '')
+        button.onclick = open
+      }
+      if (button.title !== label) {
+        button.title = label
+        button.setAttribute('aria-label', label)
+      }
+      const pressed = String(this.document.body.dataset.workspaceSurface === key)
+      if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed)
+      return button
+    })
+    if (!separator) {
+      separator = this.document.createElement('span')
+      separator.dataset.sidebarAppSeparator = ''
+      separator.setAttribute('aria-hidden', 'true')
+    }
+    let next = more
+    for (const element of [buttons[1]!, buttons[0]!, separator]) {
+      if (element.parentElement !== group || element.nextElementSibling !== next) group.insertBefore(element, next)
+      next = element
+    }
   }
   private placeMore(group: Element, zone: HTMLElement) {
     if(zone.parentElement!==group||group.lastElementChild!==zone)group.append(zone)

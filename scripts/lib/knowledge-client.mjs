@@ -94,7 +94,10 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
 }
 
 export function installKnowledgeSidebar({service,document:doc=document}) {
- const icon=(size=16)=>react.createElement('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1zm0 0v14'}))
+ const icon=(size=16)=>react.createElement('span',{'aria-hidden':true,style:{
+  display:'inline-block',flex:'none',width:size,height:size,backgroundColor:'currentColor',
+  mask:'url(/odyssey-knowledge-base.svg) center / contain no-repeat'
+ }})
  const off=service.registerTab({
   id:'sherlock-knowledge-library',title:()=>doc.documentElement.dataset.odysseyLocale==='en'?'Knowledge Base':'知识库',
   order:15,single:true,icon,component:()=>react.createElement('div',{'data-knowledge-panel-host':''})

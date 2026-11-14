@@ -1,4 +1,4 @@
-import knowledgeIcon from '../knowledge/assets/all.svg?inline'
+import knowledgeIcon from '../../../build/brand/odyssey-knowledge-base.svg?inline'
 import browserRail from './assets/browser-rail.svg?inline'
 import browserIcon from '../browser/assets/globe.svg?inline'
 import spreadsheetAdd from '../spreadsheet/assets-grid-add.svg?inline'

@@ -16,7 +16,12 @@ beforeAll(async () => {
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
       const host = new WorkspaceSurfaceHost(document)
+      const moreFormats = document.body.hasAttribute('data-test-formats')
+        ? ['pdf', 'docx', 'xlsx', 'png', 'mp3', 'mp4', 'bin'].map((suffix, index) => ({
+          id: 'f' + index, name: '格式验收.' + suffix, source: 'upload'
+        })) : []
       const documents = [
+        ...moreFormats,
         { id: 'a', name: '消费行业周报.md', source: 'generated', saved: true },
         { id: 'b', name: '研究写作规范.md', source: 'upload', folderId: 'f', size: 4096 },
         { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f', size: 16384, updatedAt: 1762080000000 }
@@ -199,6 +204,97 @@ it('applies revision-checked commands to the live list and makes them reversible
     expect((await act({ action: 'inspect' })).result.filter).toEqual({ folderId: 'f' })
     await library.getByRole('button', { name: '返回工作区' }).click()
     expect((await act({ action: 'inspect' })).error).toContain('请先回到知识库')
+  } finally {
+    await page.close()
+  }
+})
+
+it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s mode', async (theme) => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 960 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <body data-test-formats ${theme === 'dark' ? 'data-ds-dark-theme' : ''}>
+        <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 380px 10px 120px"></div>
+        <aside data-knowledge-panel-host style="position:fixed;inset:10px 0 10px auto;width:370px;
+          background:${theme === 'dark' ? '#262626' : '#fff'};
+          --dsw-alias-interactive-bg-hover:${theme === 'dark' ? '#333' : '#f2f2f3'}"></aside>
+      </body>`)
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    const tileStyles = library.locator('tbody .knowledge-file-icon')
+    await expect.poll(() => tileStyles.count()).toBe(10)
+    const styles = await tileStyles.evaluateAll(tiles => tiles.map(tile => {
+      const svg = tile.querySelector('svg')
+      return {
+        format: tile.dataset.format, color: getComputedStyle(tile).color,
+        viewBox: svg.getAttribute('viewBox'), stroke: svg.getAttribute('stroke-width'),
+        page: svg.firstElementChild.getAttribute('d')
+      }
+    }))
+    expect(new Set(styles.map(style => style.color)).size).toBe(9)
+    for (const style of styles) {
+      expect(style.viewBox).toBe('0 0 24 24')
+      expect(style.stroke).toBe('1.7')
+      expect(style.page).toBe(styles[0].page)
+    }
+    const filter = library.getByRole('button', { name: '筛选', exact: true })
+    await filter.click()
+    await library.getByRole('checkbox', { name: 'Markdown', exact: true }).check()
+    await library.getByRole('button', { name: '完成' }).click()
+    expect(await filter.evaluate(button => {
+      const css = getComputedStyle(button)
+      return { shadow: css.boxShadow, left: css.paddingLeft, right: css.paddingRight, motion: css.transitionDuration, count: button.lastElementChild.textContent }
+    })).toEqual({ shadow: 'none', left: '11px', right: '11px', motion: '0s', count: '1' })
+    const file = library.getByRole('button', { name: /研究写作规范.md/ }).first()
+    const appearance = async () => file.evaluate(el => {
+      const tile = el.querySelector('.knowledge-file-icon')
+      const luminance = css => css.match(/[\d.]+/g).slice(0, 3).map(Number)
+        .map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+        .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0)
+      const ink = luminance(getComputedStyle(tile).color)
+      const background = luminance(getComputedStyle(tile).backgroundColor)
+      return {
+        foreground: getComputedStyle(tile).color,
+        contrast: (Math.max(ink, background) + .05) / (Math.min(ink, background) + .05),
+        row: getComputedStyle(el.closest('td')).backgroundColor,
+        tile: getComputedStyle(tile).backgroundColor,
+        geometry: [tile.offsetWidth, tile.offsetHeight],
+        stroke: tile.querySelector('svg').getAttribute('stroke-width')
+      }
+    })
+    const normal = await appearance()
+    await file.hover()
+    const hover = await appearance()
+    await file.click()
+    await expect.poll(() => file.evaluate(el => el.closest('tr').dataset.selected)).toBe('true')
+    await page.mouse.move(0, 0)
+    const selected = await appearance()
+    expect(new Set([normal.row, hover.row, selected.row]).size).toBe(3)
+    expect(new Set([normal.tile, hover.tile, selected.tile]).size).toBe(3)
+    for (const state of [normal, hover, selected]) {
+      expect(state.foreground).toBe(normal.foreground)
+      expect(state.contrast).toBeGreaterThan(4.5)
+      expect(state.geometry).toEqual(normal.geometry)
+      expect(state.stroke).toBe('1.7')
+    }
+    const sidebarFile = pane.getByRole('button', { name: /研究写作规范.md/ }).first()
+    const size = pane.getByText('4 KB', { exact: true })
+    await size.waitFor()
+    const row = sidebarFile.locator('..')
+    const before = await sidebarFile.boundingBox()
+    await sidebarFile.hover()
+    const reference = row.getByRole('button', { name: /引用文件/ })
+    expect(await reference.evaluate(el => ({
+      opacity: getComputedStyle(el).opacity,
+      padding: getComputedStyle(el).paddingInline,
+      label: el.textContent
+    }))).toEqual({ opacity: '1', padding: '8px', label: '@文件' })
+    expect(await sidebarFile.boundingBox()).toEqual(before)
+    expect(await sidebarFile.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+    if (process.env.KNOWLEDGE_QA_SCREENSHOT) await page.screenshot({ path: process.env.KNOWLEDGE_QA_SCREENSHOT.replace('.png', '-' + theme + '.png') })
   } finally {
     await page.close()
   }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import type { MemoryBridge, MemorySnapshot } from '../../shared/memory'
 import { openMemoryDocumentEditor } from '../memory/document-editor'
-import { KnowledgeIcon } from './icons'
+import { KnowledgeFileIcon } from './icons'
 
 export function KnowledgeMemory({ document, bridge }: { document: Document; bridge: MemoryBridge }) {
   const [snapshot, setSnapshot] = useState<MemorySnapshot>()
@@ -88,7 +88,7 @@ export function KnowledgeMemory({ document, bridge }: { document: Document; brid
           onChange={event => void toggle(event.currentTarget.checked)} />
       </label>
       <div className="knowledge-memory-row">
-        <KnowledgeIcon name="markdown" />
+        <KnowledgeFileIcon format="markdown" />
         <span><strong>记忆.md</strong><small>预览、补充或修改已保存的记忆。</small></span>
         <button type="button" className="knowledge-primary" onClick={edit}>预览与编辑</button>
       </div>

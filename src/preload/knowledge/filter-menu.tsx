@@ -5,6 +5,10 @@ import {
 
 export const emptyFileFacets = { sources: [], formats: [], savedOnly: false } satisfies Partial<KnowledgeFilter>
 
+export function countFileFacets(filter: KnowledgeFilter) {
+  return Number(Boolean(filter.sources?.length)) + Number(Boolean(filter.formats?.length)) + Number(Boolean(filter.savedOnly))
+}
+
 export function FilterMenu({ draft, change, reset, apply, showSavedOnly = true }: {
   draft: KnowledgeFilter
   change: (next: KnowledgeFilter) => void

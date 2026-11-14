@@ -4,8 +4,8 @@ import {
   knowledgeCategories, knowledgeFormat, listKnowledgeDocuments, maxEditableKnowledgeBytes,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeFilter, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
-import { emptyFileFacets, FilterMenu } from './filter-menu'
-import { KnowledgeIcon } from './icons'
+import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
+import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './panel.css?raw'
 
@@ -22,7 +22,6 @@ type PanelBridge = {
 type PanelProps = { id?: string; document: Document; bridge: PanelBridge }
 const size = (value: number) => value >= 1024 * 1024
   ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(value / 1024))} KB`
-const categoryIcons = { all: 'all', saved: 'bookmark', starred: 'star', shared: 'shared', received: 'received' } as const
 
 export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
   const roots = new Map<HTMLElement, ReturnType<typeof createRoot>>()
@@ -126,7 +125,7 @@ function FilePreview({ id, bridge, document }: PanelProps & { id: string }) {
   }
   return <>
     {file && <header className="knowledge-preview-heading">
-      <KnowledgeIcon name={knowledgeFormat(file.document.name)} />
+      <KnowledgeFileIcon format={knowledgeFormat(file.document.name)} />
       <strong title={file.document.name}>{file.document.name}</strong>
       {!draft && canEdit && <button type="button" disabled={busy} onClick={() => void edit()}>编辑</button>}
       {!draft && <button type="button" disabled={busy} onClick={() => {
@@ -222,7 +221,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     const label = row.received?.category
     if (label) sharedCounts.set(label, (sharedCounts.get(label) ?? 0) + 1)
   }
-  const filterCount = Number(Boolean(facets.sources?.length)) + Number(Boolean(facets.formats?.length)) + Number(Boolean(facets.savedOnly))
+  const filterCount = countFileFacets(facets)
   const title = snapshot.folders.find(row => row.id === folder)?.name ?? knowledgeCategories[category]
   const pick = (next: KnowledgeCategory, folderId?: string) => {
     if (next !== category) setState({ ready: false, error: '' })
@@ -256,16 +255,16 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     </label>
     <div className="knowledge-panel-location" ref={location}>
       {(folder || sharedCategory || category === 'received') && <button type="button" aria-label="返回上级"
-        onClick={() => sharedCategory ? setSharedCategory(undefined) : pick('all')}>‹</button>}
+        onClick={() => sharedCategory ? setSharedCategory(undefined) : pick('all')}><KnowledgeIcon name="previous" /></button>}
       <button type="button" className="knowledge-panel-location-label" ref={directoryTrigger}
         aria-expanded={menu === 'directory'} onClick={() => setMenu(menu === 'directory' ? undefined : 'directory')}>
         <span>{title}{sharedCategory ? ` / ${sharedCategory}` : ''}</span><KnowledgeIcon name="chevron" />
       </button>
-      <button type="button" className="knowledge-panel-filter" ref={filterTrigger} aria-expanded={menu === 'filter'}
+      <button type="button" className="knowledge-panel-filter knowledge-filter-trigger" aria-label="筛选" ref={filterTrigger} aria-expanded={menu === 'filter'}
         data-filtered={filterCount > 0} onClick={() => {
           if (menu === 'filter') setMenu(undefined)
           else { setDraftFacets(facets); setMenu('filter') }
-        }}><KnowledgeIcon name="filter" />筛选{filterCount > 0 && <span>{filterCount}</span>}</button>
+        }}><KnowledgeIcon name="filter" />筛选{filterCount > 0 && <span className="knowledge-filter-count" aria-hidden="true">{filterCount}</span>}</button>
       {menu === 'directory' && <div className="knowledge-panel-menu" aria-label="知识库目录">
         {Object.entries(knowledgeCategories).map(([id, label]) =>
           <button key={id} type="button" aria-current={category === id && !folder ? 'page' : undefined}
@@ -285,10 +284,10 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     <div className="knowledge-panel-rows">
       {sharedDirectory ? [...sharedCounts].map(([category, count]) =>
         <button type="button" className="knowledge-panel-directory" key={category} onClick={() => setSharedCategory(category)}>
-          <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><span>›</span>
+          <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><KnowledgeIcon name="next" />
         </button>) : rows.map(row =>
         <div className="knowledge-panel-row" key={row.id}>
-          <span className="knowledge-panel-file-icon"><KnowledgeIcon name={knowledgeFormat(row.name)} /></span>
+          <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
           <button type="button" className="knowledge-panel-name" onClick={() => document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', {
             detail: { id: row.id, name: row.name }
           }))}>
