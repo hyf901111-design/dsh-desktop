@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import {
   knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
-  type KnowledgeImportResult, type KnowledgeSnapshot
+  type KnowledgeImportProgress, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
 import type { KnowledgeViewAction, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -22,7 +22,10 @@ interface Bridge {
   request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
   request(method: 'edit', args: KnowledgeEdit): Promise<KnowledgeSnapshot>
-  request(method: 'pick' | 'import', args: Record<string, unknown>): Promise<KnowledgeImportResult>
+  request(method: 'pick', args?: Record<string, never>): Promise<string[]>
+  request(method: 'import-file', args: { transferId: string; path: string; folderId?: string }): Promise<KnowledgeDocument>
+  request(method: 'cancel-import', args: { transferId: string }): Promise<void>
+  subscribeImportProgress?(listener: (event: KnowledgeImportProgress & { id: string }) => void): () => void
   request(method: 'preview', args: { id: string }): Promise<KnowledgePreview>
   request(method: 'open' | 'reveal', args: { id: string }): Promise<void>
   path(file: File): string
@@ -36,6 +39,15 @@ type DialogState =
   | { type: 'rename-folder' | 'remove-folder'; id: string; name: string }
   | { type: 'rename' | 'move' | 'remove' | 'share'; row: KnowledgeDocument }
 
+type FileImport = KnowledgeImportProgress & {
+  id: string
+  path: string
+  name: string
+  folderId?: string
+  status: 'adding' | 'cancelling' | 'failed'
+  error?: string
+}
+const fileName = (path: string) => path.split(/[\\/]/u).at(-1) || path
 const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
 const defaultFilter: KnowledgeFilter = {}
@@ -87,6 +99,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [ready, setReady] = useState(false)
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>()
   const [busy, setBusy] = useState(false)
+  const [choosingFiles, setChoosingFiles] = useState(false)
+  const [imports, setImports] = useState<FileImport[]>([])
   const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean }>()
   const [dialog, setDialog] = useState<DialogState>()
   const [value, setValue] = useState('')
@@ -98,6 +112,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const receivedSequence = useRef(0)
   const dragDepth = useRef(0)
   const selection = filter.category ?? 'all'
+  const visibleImports = selection === 'all' ? imports.filter(item => !filter.folderId || item.folderId === filter.folderId) : []
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
   const title = selectedFolder?.name ?? knowledgeCategories[selection]
   const rows = listKnowledgeDocuments(snapshot, filter)
@@ -154,11 +169,16 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setFilter(defaultFilter)
       setPage(1)
       setBusy(false)
+      setChoosingFiles(false)
+      setImports([])
       setNotice(undefined)
       setPreview(undefined)
       setDialog(undefined)
       if (host.current()?.surface === 'knowledge') void load()
     }
+    const offImports = bridge.subscribeImportProgress?.(progress => {
+      setImports(items => items.map(item => item.id === progress.id ? { ...item, ...progress } : item))
+    })
     const off = bridge.subscribe(() => { if (host.current()?.surface === 'knowledge') void load() })
     document.addEventListener('sherlock:workspace-surface-change', surface)
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
@@ -168,6 +188,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       currentEpoch.current++
       previewRequest.current++
       off()
+      offImports?.()
       document.removeEventListener('sherlock:workspace-surface-change', surface)
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
@@ -329,26 +350,68 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     }
   }
 
+  async function runImport(item: FileImport) {
+    const epoch = currentEpoch.current
+    try {
+      const document = await bridge.request('import-file', { transferId: item.id, path: item.path, folderId: item.folderId })
+      if (epoch !== currentEpoch.current) return
+      setSnapshot(snapshot => snapshot.documents.some(row => row.id === document.id)
+        ? snapshot : { ...snapshot, documents: [...snapshot.documents, document] })
+      setImports(items => items.filter(row => row.id !== item.id))
+      refresh.current()
+      setNotice({ text: `已添加 ${item.name}。` })
+    } catch (error) {
+      if (epoch !== currentEpoch.current) return
+      setImports(items => items.flatMap(row => {
+        if (row.id !== item.id) return [row]
+        return row.status === 'cancelling' ? [] : [{ ...row, status: 'failed', error: message(error) }]
+      }))
+    }
+  }
+
+  function retryImport(item: FileImport) {
+    const retry = { ...item, id: crypto.randomUUID(), status: 'adding' as const, error: undefined, copied: 0, total: 0 }
+    setImports(items => items.map(row => row.id === item.id ? retry : row))
+    void runImport(retry)
+  }
+
+  async function cancelImport(item: FileImport) {
+    if (item.status === 'failed') {
+      setImports(items => items.filter(row => row.id !== item.id))
+      return
+    }
+    const epoch = currentEpoch.current
+    setImports(items => items.map(row => row.id === item.id ? { ...row, status: 'cancelling' } : row))
+    try { await bridge.request('cancel-import', { transferId: item.id }) }
+    catch (error) {
+      if (epoch !== currentEpoch.current) return
+      setImports(items => items.map(row => row.id === item.id ? { ...row, status: 'adding' } : row))
+      setNotice({ text: message(error), error: true })
+    }
+  }
+
   async function addFiles(paths?: string[]) {
     const epoch = currentEpoch.current
-    setBusy(true)
+    const folderId = filter.folderId
     setNotice(undefined)
     try {
-      const args = paths ? { paths, folderId: filter.folderId } : { folderId: filter.folderId }
-      const result = await bridge.request(paths ? 'import' : 'pick', args)
-      if (epoch !== currentEpoch.current) return
-      if (result.added.length) refresh.current()
-      if (result.added.length || result.failed.length) setNotice({
-        text: [
-          result.added.length ? `已添加 ${result.added.length} 个文件。` : '',
-          ...result.failed.map(file => `${file.name}：${file.message}`)
-        ].join(' '),
-        error: result.failed.length > 0
-      })
+      if (!paths) {
+        setChoosingFiles(true)
+        paths = await bridge.request('pick', {})
+      }
+      if (epoch !== currentEpoch.current || !paths.length) return
+      if (paths.length > 64) throw Error('每次最多添加 64 个文件。')
+      const batch: FileImport[] = paths.map(path => ({
+        id: crypto.randomUUID(), path, name: fileName(path), folderId, status: 'adding', copied: 0, total: 0
+      }))
+      setImports(items => [...batch, ...items])
+      if (selection !== 'all') selectCategory('all')
+      setPage(1)
+      for (const item of batch) void runImport(item)
     } catch (error) {
       if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
     } finally {
-      if (epoch === currentEpoch.current) setBusy(false)
+      if (epoch === currentEpoch.current) setChoosingFiles(false)
     }
   }
 
@@ -469,7 +532,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         event.preventDefault()
         dragDepth.current = 0
         setDragging(false)
-        if (busy || !ready || selection === 'received') return
+        if (busy || choosingFiles || !ready || selection === 'received') return
         const paths = Array.from(event.dataTransfer.files, file => bridge.path(file)).filter(Boolean)
         if (paths.length) void addFiles(paths)
         else setNotice({ text: '请拖入本地文件。', error: true })
@@ -489,8 +552,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
             </label>
             {selection === 'received' && <button type="button" title="刷新共享目录" aria-label="刷新共享目录"
               disabled={receivedStatus.loading} onClick={() => void refreshReceived(true)}>刷新</button>}
-            {selection !== 'received' && <button type="button" className="knowledge-primary" disabled={busy || !ready} onClick={() => void addFiles()}>
-              {buttonIcon('add', busy ? '处理中…' : '添加文件')}
+            {selection !== 'received' && <button type="button" className="knowledge-primary" disabled={busy || choosingFiles || !ready} onClick={() => void addFiles()}>
+              {buttonIcon('add', '添加文件')}
             </button>}
             {draftFilter && <FilterMenu draft={draftFilter} change={setDraftFilter}
               reset={() => setDraftFilter(current => ({ ...current, ...emptyFileFacets }))}
@@ -542,6 +605,33 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                 <th scope="col">{selection === 'received' ? '共享人' : '操作'}</th>
               </tr></thead>
               <tbody>
+                {shownPage === 1 && visibleImports.map(item => (
+                  <tr key={item.id} className="knowledge-import-row" data-status={item.status}>
+                    <td>
+                      <div className="knowledge-file-name">
+                        <KnowledgeFileIcon format={knowledgeFormat(item.name)} tile />
+                        <div className="knowledge-file-content">
+                          <span className="knowledge-file-title"><span title={item.name}>{item.name}</span></span>
+                          <div className="knowledge-import-controls">
+                            <small>手动上传 · {snapshot.folders.find(folder => folder.id === item.folderId)?.name ?? '未分组'}</small>
+                            {item.status === 'failed' ? <>
+                              <span className="knowledge-import-error" role="alert" title={item.error}>上传失败</span>
+                              <button type="button" aria-label={`重试 ${item.name}`} onClick={() => retryImport(item)}>重试</button>
+                            </> : <span role="status">{item.status === 'cancelling' ? '正在取消…' : item.total
+                              ? `上传中 ${Math.min(100, Math.floor(100 * item.copied / item.total))}% · ${item.copied ? formatBytes(item.copied) : '0 B'} / ${formatBytes(item.total)}`
+                              : '等待上传…'}</span>}
+                            <button type="button" disabled={item.status === 'cancelling'} aria-label={`取消 ${item.name}`} onClick={() => void cancelImport(item)}>取消</button>
+                          </div>
+                          <progress className="knowledge-import-progress" aria-label={`${item.name}的上传进度`}
+                            value={item.total ? Math.min(item.total, item.copied) : undefined} max={item.total || 1} />
+                        </div>
+                      </div>
+                    </td>
+                    <td>{item.total ? formatBytes(item.total) : '—'}</td>
+                    <td>刚刚</td>
+                    <td />
+                  </tr>
+                ))}
                 {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row =>
                   <tr key={row.id} data-selected={preview?.document.id === row.id}>
                     <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
@@ -567,7 +657,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   </tr>)}
               </tbody>
             </table>
-            {!rows.length && <p className="knowledge-empty">
+            {!rows.length && !visibleImports.length && <p className="knowledge-empty">
               {selection === 'received' && receivedStatus.loading ? '正在加载他人共享…'
                 : selection === 'received' && receivedStatus.error ? receivedStatus.error
                 : ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'

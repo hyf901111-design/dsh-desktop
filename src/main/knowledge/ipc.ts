@@ -1,6 +1,6 @@
 import type { KnowledgeContent } from './content'
 import { knowledgeReferenceOptions, resolveKnowledgeReference } from './references'
-import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import { dialog, ipcMain, shell, type BrowserWindow, type WebContents } from 'electron'
 import { realpath } from 'node:fs/promises'
 import { isAbsolute, relative, sep } from 'node:path'
 import { atomicWrite } from '../integrations/store'
@@ -28,7 +28,9 @@ export function installKnowledgeIpc({
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
 }) {
-  registerTrustedMainWindowHandler(ipcMain, 'knowledge:request', window, async (_event, method: unknown, input?: unknown) => {
+  const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
+  const observedSenders = new WeakSet<WebContents>()
+  registerTrustedMainWindowHandler(ipcMain, 'knowledge:request', window, async (event, method: unknown, input?: unknown) => {
     if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || JSON.stringify(input).length > 550_000)) {
       throw Error('知识库请求无效。')
     }
@@ -70,16 +72,47 @@ export function installKnowledgeIpc({
       }
       case 'pick': {
         const parent = window()
-        if (!parent) return { added: [], failed: [] }
+        if (!parent) return []
         const selection = await dialog.showOpenDialog(parent, { title: '添加文件', properties: ['openFile', 'multiSelections'] })
         check()
-        return store.importFiles(selection.filePaths, folderId(), owner)
+        return selection.filePaths
       }
-      case 'import': {
-        if (!Array.isArray(args.paths) || args.paths.length > 64 || !args.paths.every(path => typeof path === 'string' && path.length <= 8192 && isAbsolute(path))) {
-          throw Error('请拖入本地文件，每次最多 64 个。')
+      case 'import-file': {
+        const transferId = id(args.transferId)
+        if (typeof args.path !== 'string' || args.path.length > 8192 || !isAbsolute(args.path)) throw Error('请拖入本地文件。')
+        if (transfers.has(transferId) || transfers.size >= 64) throw Error('知识库正在添加其他文件，请稍后再试。')
+        const controller = new AbortController()
+        const sender = event.sender
+        transfers.set(transferId, { controller, sender })
+        if (!observedSenders.has(sender)) {
+          observedSenders.add(sender)
+          sender.once('destroyed', () => {
+            for (const transfer of transfers.values()) {
+              if (transfer.sender === sender) transfer.controller.abort()
+            }
+          })
         }
-        return store.importFiles(args.paths as string[], folderId(), owner)
+        try {
+          let lastUpdate = 0
+          return await store.importFile(args.path, folderId(), {
+            signal: controller.signal,
+            progress: progress => {
+              check()
+              const now = Date.now()
+              if (now - lastUpdate >= 80 || progress.copied === progress.total) {
+                lastUpdate = now
+                if (!sender.isDestroyed()) sender.send('knowledge:import-progress', { id: transferId, ...progress })
+              }
+            }
+          })
+        } finally {
+          transfers.delete(transferId)
+        }
+      }
+      case 'cancel-import': {
+        const transfer = transfers.get(id(args.transferId))
+        if (transfer?.sender === event.sender) transfer.controller.abort()
+        return
       }
       case 'generated': {
         if (typeof args.sessionId !== 'string' || !args.sessionId || args.sessionId.length > 256 ||

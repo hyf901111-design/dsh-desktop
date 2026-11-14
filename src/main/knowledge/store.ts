@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, realpath, rm, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join } from 'node:path'
-import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
+import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportProgress, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
 import { atomicWrite } from '../integrations/store'
 import { copyResearchFile } from '../state/research-owned-files'
 
@@ -184,8 +184,8 @@ export class KnowledgeStore {
       try {
         const actual = this.identity()
         if (expected.owner !== actual.owner || expected.generation !== actual.generation) throw Error('当前账号已变化，请重试。')
-        const row = await this.importOne(path, { folderId })
-        if (row) result.added.push(row)
+        const row = await this.importFile(path, folderId)
+        result.added.push(row)
       } catch (error) {
         result.failed.push({ name: basename(path), message: error instanceof Error ? error.message : '文件添加失败。' })
       }
@@ -193,12 +193,29 @@ export class KnowledgeStore {
     return result
   }
 
+  async importFile(path: string, folderId?: string, transfer?: {
+    signal?: AbortSignal
+    progress?: (value: KnowledgeImportProgress) => void
+  }): Promise<KnowledgeDocument> {
+    const document = await this.importOne(path, { folderId, transfer })
+    if (!document) throw Error('文件添加失败。')
+    return document
+  }
+
   collectGenerated(path: string, provenance: { sessionId: string; sessionTitle?: string; saved?: boolean }) {
     return this.importOne(path, provenance)
   }
 
-  private importOne(path: string, options: { folderId?: string; sessionId?: string; sessionTitle?: string; saved?: boolean }) {
-    return this.run(async (state, directory, current) => {
+  private importOne(path: string, options: {
+    folderId?: string
+    sessionId?: string
+    sessionTitle?: string
+    saved?: boolean
+    transfer?: { signal?: AbortSignal; progress?: (value: KnowledgeImportProgress) => void }
+  }) {
+    return this.run(async (state, directory, identityCurrent) => {
+      const current = () => { identityCurrent(); options.transfer?.signal?.throwIfAborted() }
+      current()
       if (!isAbsolute(path)) throw Error('文件路径无效。')
       const source = await realpath(path)
       const name = basename(path)
@@ -221,7 +238,7 @@ export class KnowledgeStore {
       const id = randomUUID()
       const target = join(directory, 'files', id)
       try {
-        const copied = await copyResearchFile(source, target)
+        const copied = await copyResearchFile(source, target, options.transfer)
         const info = await stat(copied)
         const row: StoredDocument = {
           id, name, storageName: basename(copied), size: info.size, updatedAt: Date.now(),

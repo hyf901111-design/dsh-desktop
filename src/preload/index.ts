@@ -268,6 +268,11 @@ function initializeUi(): void {
     },
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
+    subscribeImportProgress: listener => {
+      const handle = (_event: unknown, value: Parameters<typeof listener>[0]) => listener(value)
+      ipcRenderer.on('knowledge:import-progress', handle)
+      return () => ipcRenderer.removeListener('knowledge:import-progress', handle)
+    },
     subscribeAction: listener => {
       const handle = (_event: unknown, value: Parameters<typeof listener>[0]) => listener(value)
       ipcRenderer.on('knowledge:view-action', handle)

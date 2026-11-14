@@ -117,3 +117,8 @@ export interface KnowledgeImportResult {
   added: KnowledgeDocument[]
   failed: Array<{ name: string; message: string }>
 }
+
+export interface KnowledgeImportProgress {
+  copied: number
+  total: number
+}
