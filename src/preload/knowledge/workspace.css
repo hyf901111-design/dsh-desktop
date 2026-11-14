@@ -327,6 +327,17 @@
 .knowledge-dialog h2 { margin: 0 0 12px; font-size: 15px; }
 .knowledge-dialog input, .knowledge-dialog select { width: 100%; min-height: 34px; padding: 6px 9px; border: 1px solid var(--knowledge-line); border-radius: 6px; background: var(--knowledge-field); }
 .knowledge-dialog footer { margin-top: 14px; }
+@container (max-width: 880px) {
+  .knowledge-navigation { padding-inline: 6px 8px; }
+  .knowledge-navigation > button, .knowledge-folder > button:first-child { gap: 6px; padding-inline: 8px; }
+  .knowledge-table-area[data-received=true] .knowledge-shared-folders { flex-basis: clamp(104px, 24%, 136px); min-width: 0; }
+  .knowledge-table-area[data-received=true] .knowledge-table :is(th, td):nth-child(2) { display: none; }
+  .knowledge-table-area[data-received=true] .knowledge-table :is(th, td):nth-child(3) { width: 76px; }
+  .knowledge-table-area[data-received=true] .knowledge-table :is(th, td):last-child { width: 68px; overflow: hidden; text-overflow: ellipsis; }
+}
+@container (max-width: 640px) {
+  .knowledge-table-area[data-received=true] .knowledge-table :is(th, td):nth-child(3) { display: none; }
+}
 @container (max-width: 680px) {
   .knowledge-file-list { padding: 0 8px; }
   .knowledge-tools { flex-wrap: wrap; margin-bottom: 4px; }

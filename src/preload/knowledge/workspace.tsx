@@ -560,7 +560,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     <td><time dateTime={new Date(row.updatedAt).toISOString()}>
                       {new Date(row.updatedAt).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })}
                     </time></td>
-                    <td>{row.received ? row.received.owner :
+                    <td title={row.received?.owner}>{row.received ? row.received.owner :
                       <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
                         aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
                         onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>}</td>
