@@ -92,8 +92,16 @@ export class KnowledgeSharing {
       document = rows.find(row => row.id === id)
     }
     if (!document) throw Error('该文件已取消共享或不可用。')
+    return this.readListed(document, signal)
+  }
+
+  // Only callers holding an authorized catalog row can skip the catalog lookup.
+  // The server still checks the current share before returning any bytes.
+  async readListed(document: KnowledgeDocument, signal?: AbortSignal) {
+    if (!this.options.authenticated()) throw Error('请登录后读取共享文件。')
+    const generation = this.options.client.generation()
     let response: Response
-    try { response = await this.options.client.request<Response>({ kind: 'knowledge.file', id }, signal) }
+    try { response = await this.options.client.request<Response>({ kind: 'knowledge.file', id: document.id }, signal) }
     catch (error) {
       if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
         this.cache = undefined
@@ -106,7 +114,6 @@ export class KnowledgeSharing {
       this.cache = undefined
       throw Error('共享文件已更新，请刷新后重试。')
     }
-    const generation = this.options.client.generation()
     const reader = response.body?.getReader()
     const chunks: Uint8Array[] = []
     let size = 0

@@ -1,6 +1,6 @@
 import type { KnowledgeContent } from './content'
 import type { createClientCapabilityRegistry } from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
-import { listKnowledgeDocuments } from '../../shared/knowledge-library'
+import { listKnowledgeDocuments, type KnowledgeDocument } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
 import type { KnowledgeViewBridge } from './view-bridge'
@@ -13,12 +13,45 @@ export function sharedKnowledgeCapabilityHandlers(sharing: KnowledgeSharing, con
     if (!current()) throw Error('会话或账号已变化。')
   }
   return {
-    searchSharedKnowledge: async ({ query, category, formats, offset = 0 }, _context, signal) => {
+    searchSharedKnowledge: async ({ query, category, formats, offset = 0, scope }, _context, signal) => {
       check(signal)
+      const words = query?.normalize('NFKC').toLowerCase().trim().split(/\s+/u).filter(Boolean) ?? []
+      if (scope === 'content' && !words.length) throw Error('请提供正文检索关键词。')
       const documents = await sharing.received(true, signal)
       check(signal)
       const matches = listKnowledgeDocuments({ documents, folders: [] },
-        { category: 'received', query, sharedCategory: category, formats })
+        { category: 'received', query: scope === 'content' ? undefined : query, sharedCategory: category, formats })
+      if (scope === 'content') {
+        const end = Math.min(offset + 12, matches.length)
+        const hits: Array<KnowledgeDocument & { excerpt: string; truncated: boolean }> = []
+        let unreadable = 0
+        for (const document of matches.slice(offset, end)) {
+          check(signal)
+          if (!content.supports(document.name)) { unreadable++; continue }
+          const timeout = AbortSignal.timeout(7000)
+          const operation = signal ? AbortSignal.any([signal, timeout]) : timeout
+          try {
+            const file = await sharing.readListed(document, operation)
+            const result = await content.read(file.document, file.data, operation)
+            check(signal)
+            if (!result) { unreadable++; continue }
+            const text = result.text.normalize('NFKC')
+            const searchable = text.toLowerCase()
+            if (!words.every(word => searchable.includes(word))) continue
+            const first = Math.min(...words.map(word => searchable.indexOf(word)))
+            const start = Math.max(0, first - 65)
+            hits.push({ ...file.document, excerpt: text.slice(start, start + 300), truncated: result.truncated })
+          } catch {
+            check(signal)
+            unreadable++
+          }
+        }
+        return {
+          status: 'succeeded',
+          data: { scope, count: hits.length, documents: hits, examined: Math.max(0, end - offset),
+            unreadable, nextOffset: end < matches.length ? end : null }
+        }
+      }
       const end = offset + 25
       return {
         status: 'succeeded',

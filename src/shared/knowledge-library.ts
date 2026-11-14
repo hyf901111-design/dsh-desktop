@@ -95,7 +95,7 @@ export function listKnowledgeDocuments(snapshot: KnowledgeSnapshot, filter: Know
     if (filter.formats?.length && !filter.formats.includes(knowledgeFormat(row.name))) return false
     if (filter.savedOnly && !row.saved) return false
     if (!words.length) return true
-    const text = [row.name, row.sessionTitle, row.received?.owner, folderNames.get(row.folderId ?? '')].join(' ').toLocaleLowerCase()
+    const text = [row.name, row.sessionTitle, row.received?.owner, row.received?.category, folderNames.get(row.folderId ?? '')].join(' ').toLocaleLowerCase()
     return words.every(word => text.includes(word))
   }).sort((a, b) => {
     const order = sort === 'name' ? a.name.localeCompare(b.name, undefined, { numeric: true }) : a[sort] - b[sort]

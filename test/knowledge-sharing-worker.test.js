@@ -98,6 +98,15 @@ it('publishes privately stored bytes to other authenticated users and closes acc
       .toEqual(['knowledge.shared.search', 'knowledge.shared.read'])
     const matches = await call('search', 'knowledge.shared.search', { query: '报告', category: '行业研究', formats: ['markdown'] })
     expect(matches, matches.message).toMatchObject({ status: 'succeeded', data: { count: 1, documents: [{ id: shared.id, name: '报告.md' }], nextOffset: null } })
+    const bodyHits = await call('search-body', 'knowledge.shared.search',
+      { query: 'ＣＯＮＴＥＮＴ', scope: 'content', category: '行业研究' })
+    expect(bodyHits, bodyHits.message).toMatchObject({ status: 'succeeded', data: {
+      scope: 'content', count: 1, documents: [{ id: shared.id, received: { owner: 'user0' }, excerpt: body }],
+      examined: 1, unreadable: 0, nextOffset: null
+    } })
+    expect((await call('search-category-name', 'knowledge.shared.search', { query: '行业研究' })).data.count).toBe(1)
+    expect((await call('search-no-body', 'knowledge.shared.search', { query: 'Content' })).data.count).toBe(0)
+    expect((await call('search-empty-scope', 'knowledge.shared.search', { query: ' ', scope: 'content' })).status).toBe('failed')
     expect(await call('inspect', 'knowledge.shared.read', { id: shared.id })).toMatchObject({
       status: 'succeeded', data: { text: body, document: { received: { owner: 'user0' } } }
     })
@@ -109,6 +118,8 @@ it('publishes privately stored bytes to other authenticated users and closes acc
     })
     expect((await request('/' + shared.id, 0, { method: 'DELETE' })).status).toBe(200)
     expect(await call('inspect-new', 'knowledge.shared.read', { id: shared.id })).toMatchObject({ status: 'failed' })
+    expect((await call('search-revoked-body', 'knowledge.shared.search', { query: 'Content', scope: 'content' })).data)
+      .toMatchObject({ count: 0, documents: [], nextOffset: null })
     expect((await call('search-new', 'knowledge.shared.search', { query: '报告' })).data).toEqual({ count: 0, documents: [], nextOffset: null })
     await expect(reference('file', shared.id)).rejects.toThrow('已取消共享')
     await expect(reference('shared-category', '行业研究')).rejects.toThrow('暂无可引用')
