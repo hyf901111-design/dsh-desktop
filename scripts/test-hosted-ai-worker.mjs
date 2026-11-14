@@ -129,6 +129,20 @@ try {
   for (const path of ['catalog','quota','chat/completions','images','memory']) {
     assert.equal((await send(path, undefined, ['catalog','quota'].includes(path) ? undefined : chat())).status,401)
   }
+  // Directory and memory access must stay available without querying usage history.
+  await db.exec('ALTER TABLE ai_quota_requests RENAME TO test_quota_history')
+  try {
+    const directory = await send('catalog', token)
+    assert.equal(directory.status, 200, 'The catalog must not read the usage ledger')
+    assert.equal((await directory.json()).models.length, 11)
+    await db.prepare('INSERT INTO ai_quota_user_settings(user_id,paused,version) VALUES(?,1,1)').bind('alice').run()
+    assert.deepEqual(await (await send('catalog', token)).json(), { models: [], image: false })
+    assert.equal((await send('memory', token, { query: '偏好是什么' })).status, 403)
+    await db.prepare('DELETE FROM ai_quota_user_settings WHERE user_id=?').bind('alice').run()
+    assert.equal((await send('memory', token, { query: '偏好是什么' })).status, 200)
+  } finally {
+    await db.exec('ALTER TABLE test_quota_history RENAME TO ai_quota_requests')
+  }
   const otherCatalog = await (await send('catalog',other)).json()
   assert.equal(otherCatalog.models.length,11,'An eligible account outside the trial list can choose hosted models')
   assert.equal(otherCatalog.image,true)
@@ -143,7 +157,7 @@ try {
   assert.deepEqual(await (await send('memory',token,{query:'偏好是什么'})).json(),{memories:['喜欢简洁说明']})
   assert.deepEqual(await (await send('memory',token,{query:'请记住我喜欢简洁说明',remember:true})).json(),{memories:[]})
   assert.deepEqual(await (await send('memory',token,{query:'请记住 api_key: fake-secret',remember:true})).json(),{memories:[]})
-  assert.equal(memoryCalls,4)
+  assert.equal(memoryCalls,5)
   const blocked = await send('chat/completions',token,{...chat(),model:'doubao-seedream-5.0-flash'})
   assert.equal(blocked.status,400)
   assert.equal(calls,0)

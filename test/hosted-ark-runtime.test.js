@@ -2,6 +2,27 @@ import {createServer} from 'node:http'
 import {test,expect,vi} from 'vitest'
 import {registerHostedAi,HOSTED_ARK_PROVIDER} from '../packages/dsh-research-task-runtime/hosted-ai.js'
 
+test('background catalog checks wait between requests and stop on disposal', async () => {
+  vi.useFakeTimers()
+  const request = vi.fn(async () => Response.json({ models: [], image: false }))
+  const service = registerHostedAi({}, {
+    request, bridge: JSON.stringify({ url: 'http://127.0.0.1:6789/fund-research', token: 'a'.repeat(64) })
+  })
+  try {
+    await service.refresh()
+    await vi.advanceTimersByTimeAsync(9_999)
+    expect(request).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(request).toHaveBeenCalledTimes(2)
+    service.dispose()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(request).toHaveBeenCalledTimes(2)
+  } finally {
+    service.dispose()
+    vi.useRealTimers()
+  }
+})
+
 test('the real model adapter only registers entitled chat models and uses its captured loopback generation',async()=>{
   const token='a'.repeat(64), requests=[]
   const model={id:'doubao-seed-2.1-lite',name:'Doubao Seed 2.1 Lite',contextWindow:1024000}
