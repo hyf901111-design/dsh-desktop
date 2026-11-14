@@ -567,6 +567,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     for (const width of [1720, 1380, 1240, 1100]) {
       const wide = width === 1720
       await page.setViewportSize({ width, height: 900 })
+      await expect.poll(() => library.evaluate(el => Math.round(el.getBoundingClientRect().width))).toBe(width - 640)
       expect(await category.locator('span').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
       expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
       expect(await table.evaluate(el => el.scrollWidth - el.clientWidth), `at ${width}px`).toBeLessThanOrEqual(2)
