@@ -78,6 +78,8 @@ class SpreadsheetView{
  private chartGesture?:ChartGesture
  private chartLayoutPending?:{chartId:string;layout:WorkbookChartLayout}
  private activeComponent?:string
+ private dockedComponents:string[]=[]
+ private componentTabMarkup=''
  private readonly componentCards=new Map<string,ComponentCard>()
  private readonly componentOrder=new Map<string,number>()
  private nextObjectOrder=0
@@ -101,7 +103,7 @@ class SpreadsheetView{
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
   for(const [key,value] of enterpriseChartColors)this.root.style.setProperty('--sheet-efund-'+key,value)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden><div class="ew-sheet-component-tabs" role="tablist" aria-label="侧栏组件" hidden></div><div class="ew-sheet-component-panels"></div></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
   this.componentDivider.setAttribute('aria-controls',this.components.id)
   this.modal.id=crypto.randomUUID()
   try{
@@ -201,6 +203,8 @@ class SpreadsheetView{
  private get objectViewport(){return this.root.querySelector<HTMLElement>('.ew-sheet-object-viewport')!}
  private get componentLayer(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-layer')!}
  private get components(){return this.root.querySelector<HTMLElement>('.ew-sheet-components')!}
+ private get componentTabs(){return this.components.querySelector<HTMLElement>('.ew-sheet-component-tabs')!}
+ private get componentPanels(){return this.components.querySelector<HTMLElement>('.ew-sheet-component-panels')!}
  private get componentDivider(){return this.root.querySelector<HTMLElement>('.ew-sheet-component-divider')!}
  private current(){return this.engine?.model.getActiveSheet()}
  private selected(){return this.current()?.getActiveRange()??this.current()?.getRange('A1')}
@@ -427,10 +431,9 @@ class SpreadsheetView{
   const oldCharts=new Set(this.record.workbook?.charts?.map(chart=>chart.chartId))
   const added=record.workbook?.charts?.find(chart=>!oldCharts.has(chart.chartId))
   if(!same){
-   this.selectChart();this.activeComponent=undefined;this.chartDefaults.clear()
+   this.selectChart();this.activeComponent=undefined;this.dockedComponents=[];this.chartDefaults.clear()
    this.chartOrder.clear();this.componentOrder.clear();this.nextObjectOrder=0
   }
-  if(added&&same)this.activeComponent=undefined
   const previous=same?this.selection:undefined
   let viewport
   // A canvas may still be mounting when a second revision arrives.
@@ -609,6 +612,11 @@ class SpreadsheetView{
    }else if(action.startsWith('component-')){
     this.record=row
     this.engine?.syncComponents(row.workbook?.components)
+    if(action==='component-placement'&&(fields.placement as WorkbookComponentPlacement).mode==='docked'){
+     const id=fields.componentId as string
+     if(!this.dockedComponents.includes(id))this.dockedComponents.push(id)
+     this.activeComponent=id
+    }
     this.paint()
     this.renderComponent()
    }else await this.install(row)
@@ -868,6 +876,7 @@ class SpreadsheetView{
   this.root.toggleAttribute('data-sheet-inspector',!!this.modal.dataset.docked||docked)
   this.root.toggleAttribute('data-sheet-component-sidebar',docked)
   this.root.toggleAttribute('data-sheet-chart-inspector',chart)
+  this.components.inert=!docked
   this.componentDivider.hidden=!docked&&!chart
   this.componentDivider.setAttribute('aria-controls',chart?this.modal.id:this.components.id)
   this.componentDivider.setAttribute('aria-label',chart?'调整图表设置边栏宽度':'调整组件边栏宽度')
@@ -934,8 +943,6 @@ class SpreadsheetView{
  private chart(existing?:WorkbookChart){
   const selection=this.selected(),sheet=this.current(),book=this.record.workbook
   if(!selection||!sheet||!book||!this.editable)return
-  this.cancelComponentRequest()
-  this.activeComponent=undefined;this.renderComponent()
   this.cancelComponentRequest();this.closeDialog()
   const single=selection.getLastRow()===selection.getRow()&&selection.getLastColumn()===selection.getColumn()
   const range=single&&!isNullCell(sheet.getSheet().getCellMatrix().getValue(selection.getRow(),selection.getColumn()))?selection.getDataRegion():selection
@@ -1339,7 +1346,6 @@ class SpreadsheetView{
  private async openLibrary(){
   const target=this.currentSelection()
   if(!target||!this.editable)return
-  this.activeComponent=undefined;this.renderComponent()
   this.cancelComponentRequest();this.closeDialog()
   this.componentTarget=target
   this.dialog('组件库','<div class="ew-sheet-insert-content"><input data-field="component-search" type="search" aria-label="搜索组件" placeholder="搜索组件"><div class="ew-sheet-component-library" role="list"><p role="status">正在读取组件…</p></div></div>',null,undefined,'library')
@@ -1379,7 +1385,6 @@ class SpreadsheetView{
  private openSmart(){
   const target=this.currentSelection()
   if(!target||!this.editable)return
-  this.activeComponent=undefined;this.renderComponent()
   this.cancelComponentRequest();this.closeDialog()
   this.componentTarget=target
   this.dialog('智能组件','<div class="ew-sheet-insert-content">'+
@@ -1423,17 +1428,59 @@ class SpreadsheetView{
    button('component-source','',{glyph:'pin',label:'定位选区',value:id})+'</div></footer>'
   return {instance,element,refresh:0}
  }
+ private selectDockedComponent(id:string){
+  if(!this.dockedComponents.includes(id))this.dockedComponents.push(id)
+  this.activeComponent=id
+  this.renderComponent()
+ }
+ private closeDockedComponent(id:string){
+  const index=this.dockedComponents.indexOf(id)
+  if(index<0)return
+  this.dockedComponents.splice(index,1)
+  if(this.activeComponent===id)this.activeComponent=this.dockedComponents[index]??this.dockedComponents.at(-1)
+  this.renderComponent()
+ }
+ private componentTab(id:string){
+  return Array.from(this.componentTabs.querySelectorAll<HTMLButtonElement>('[role=tab]')).find(tab=>tab.dataset.value===id)
+ }
+ private renderComponentTabs(components:Map<string,WorkbookComponent>){
+  const tabs=this.componentTabs
+  tabs.hidden=this.dockedComponents.length<2
+  const markup=tabs.hidden?'':this.dockedComponents.map(id=>{
+   const component=components.get(id)!,card=this.componentCards.get(id)!
+   const title=text(String(component.node.displayName||component.node.title))
+   const active=id===this.activeComponent
+   return '<button type="button" role="tab" id="'+card.instance+'-tab" aria-controls="'+card.instance+'-panel" aria-selected="'+active+'" tabindex="'+(active?0:-1)+'" data-action="component-tab" data-value="'+text(id)+'" data-ui-preserve title="'+title+'">'+title+'</button>'
+  }).join('')
+  if(markup===this.componentTabMarkup)return
+  this.componentTabMarkup=markup;tabs.innerHTML=markup
+  const active=this.activeComponent&&this.componentTab(this.activeComponent)
+  if(active)active.scrollIntoView({block:'nearest',inline:'nearest',container:'nearest'} as ScrollIntoViewOptions)
+ }
  private renderComponent(){
   const ids=new Set<string>(),book=this.record.workbook
   const sheetId=this.current()?.getSheetId()??book?.sheetOrder[0]
-  let docked=false
-  for(const component of book?.components??[]){
+  const components=new Map((book?.components??[]).map(component=>[component.componentId,component]))
+  const activeIndex=this.activeComponent?this.dockedComponents.indexOf(this.activeComponent):-1
+  this.dockedComponents=this.dockedComponents.filter(id=>components.has(id)&&components.get(id)?.placement?.mode!=='floating')
+  if(!this.activeComponent||!this.dockedComponents.includes(this.activeComponent))
+   this.activeComponent=this.dockedComponents[Math.max(0,activeIndex)]??this.dockedComponents.at(-1)
+  for(const component of components.values()){
    const {componentId,placement}=component,floating=placement?.mode==='floating'
-   if(floating?component.sheetId!==sheetId:componentId!==this.activeComponent)continue
+   if(floating?component.sheetId!==sheetId:!this.dockedComponents.includes(componentId))continue
    ids.add(componentId)
    let card=this.componentCards.get(componentId)
    if(!card){card=this.createComponentCard(componentId);this.componentCards.set(componentId,card)}
    card.element.toggleAttribute('data-sheet-component-floating',floating)
+   card.element.hidden=!floating&&componentId!==this.activeComponent
+   card.element.id=card.instance+'-panel'
+   if(!floating&&this.dockedComponents.length>1){
+    card.element.setAttribute('role','tabpanel')
+    card.element.setAttribute('aria-labelledby',card.instance+'-tab')
+   }else{
+    card.element.removeAttribute('role')
+    card.element.removeAttribute('aria-labelledby')
+   }
    if(floating)Object.assign(card.element.style,this.objectBox(this.componentGesture?.id===componentId?this.componentGesture.preview:placement.layout),{
     zIndex:String(this.componentOrder.get(componentId)??0)
    })
@@ -1441,7 +1488,7 @@ class SpreadsheetView{
     for(const property of ['left','top','width','height','z-index'])card.element.style.removeProperty(property)
     card.element.removeAttribute('data-sheet-component-raised')
    }
-   const parent=floating?this.componentLayer:this.components
+   const parent=floating?this.componentLayer:this.componentPanels
    if(card.element.parentElement!==parent){
     const container=parent as HTMLElement&{moveBefore?(node:Node,child:Node|null):void}
     if(card.element.isConnected&&container.moveBefore)container.moveBefore(card.element,null)
@@ -1467,12 +1514,11 @@ class SpreadsheetView{
     '<button type="button" data-component-resize aria-label="调整组件大小" title="调整组件大小">'+icon('resize',14)+'</button>')
    else if(!floating)grip?.remove()
    this.publishComponent(card,component)
-   docked||=!floating
   }
   for(const [id,card] of this.componentCards)if(!ids.has(id)){this.releaseComponentCard(card);this.componentCards.delete(id)}
-  const existing=new Set(book?.components?.map(component=>component.componentId))
-  for(const id of this.componentOrder.keys())if(!existing.has(id))this.componentOrder.delete(id)
-  this.components.hidden=!docked
+  for(const id of this.componentOrder.keys())if(!components.has(id))this.componentOrder.delete(id)
+  this.components.hidden=this.dockedComponents.length===0
+  this.renderComponentTabs(components)
   this.syncInspector()
   this.resize()
  }
@@ -1531,7 +1577,7 @@ class SpreadsheetView{
    case 'theme':if(this.editable)perform(this.run('component-theme',{componentId,theme:value.theme}).then(Boolean));else ack(false);return
    case 'placement':if(this.editable)perform(this.toggleComponentPlacement(component));return
    case 'source':perform(this.locateComponent(component));return
-   case 'close':this.activeComponent=undefined;this.renderComponent();return
+   case 'close':this.closeDockedComponent(componentId);return
    case 'rename':if(this.editable)this.renameComponent(componentId);return
    case 'library-save':
     if(!this.editable){ack(false);return}
@@ -1585,19 +1631,15 @@ class SpreadsheetView{
  private async toggleComponentPlacement(component:WorkbookComponent){
   if(this.busy)return false
   const wasFloating=component.placement?.mode==='floating'
-  const previous=this.activeComponent
   if(!wasFloating&&this.current()?.getSheetId()!==component.sheetId)await this.handle('sheet',component.sheetId,this.grid)
   const layout=component.placement?this.sheetLayout(component.placement.layout):this.initialObjectLayout(component.sheetId,component.range,520,370)
-  this.activeComponent=wasFloating?component.componentId:undefined
-  try{
-   const saved=await this.saveComponentPlacement(component.componentId,{mode:wasFloating?'docked':'floating',layout})
-   if(saved){
-    const card=this.componentCards.get(component.componentId)
-    if(!wasFloating&&card)this.raiseComponent(card.element)
-    return true
-   }
-  }catch(error){this.activeComponent=previous;this.renderComponent();throw error}
-  this.activeComponent=previous;this.renderComponent();return false
+  const saved=await this.saveComponentPlacement(component.componentId,{mode:wasFloating?'docked':'floating',layout})
+  if(!saved)return false
+  if(!wasFloating){
+   const card=this.componentCards.get(component.componentId)
+   if(card)this.raiseComponent(card.element)
+  }
+  return true
  }
  private positionComponents(){
   for(const component of this.record.workbook?.components??[]){
@@ -1707,7 +1749,7 @@ class SpreadsheetView{
    if(!saved||this.modal.firstElementChild!==dialog)return
    const inserted=this.record.workbook?.components?.find(item=>!known.has(item.componentId))
    this.closeDialog()
-   if(inserted){this.activeComponent=inserted.componentId;this.renderComponent()}
+   if(inserted)this.selectDockedComponent(inserted.componentId)
   }catch(error){
    if(this.modal.firstElementChild!==dialog)return
    const job=this.componentJob,message=errorMessage(error)
@@ -1865,13 +1907,13 @@ class SpreadsheetView{
      this.revealObject(component.placement.layout)
      const card=this.componentCards.get(value)
      if(card){this.raiseComponent(card.element);card.element.querySelector<HTMLElement>('.ew-grid-title')?.focus({preventScroll:true})}
-    }else {this.activeComponent=value;this.renderComponent()}
+    }else this.selectDockedComponent(value)
     return
    }
+   case 'component-tab':this.selectDockedComponent(value);this.componentTab(value)?.focus({preventScroll:true});return
    case 'confirm-remove-component':this.confirmComponentRemoval(value);return
    case 'component-remove':
     if(await this.run('component-remove',{componentId:value},'组件已移除')){
-     if(this.activeComponent===value)this.activeComponent=undefined
      this.closeDialog()
     }
     return
@@ -2054,6 +2096,16 @@ class SpreadsheetView{
  }
  private key=(event:KeyboardEvent)=>{
   const control=event.target as HTMLElement,field=control.dataset.field
+  if(control.dataset.action==='component-tab'&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+   const index=this.dockedComponents.indexOf(control.dataset.value??'')
+   const count=this.dockedComponents.length
+   if(index<0||count<2)return
+   const next=event.key==='Home'?0:event.key==='End'?count-1:(index+(event.key==='ArrowRight'?1:-1)+count)%count
+   const id=this.dockedComponents[next]!
+   event.preventDefault()
+   this.selectDockedComponent(id);this.componentTab(id)?.focus({preventScroll:true})
+   return
+  }
   if(control instanceof HTMLInputElement&&(event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='a'){
    event.preventDefault();event.stopPropagation();control.select();return
   }
