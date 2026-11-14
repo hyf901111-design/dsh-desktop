@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "窄窗口图表定位",
+        "featureName": "表格组件拖动和图表数据识别",
         "branch": "codex/feat/spreadsheet-mode-20261113",
-        "baseCommit": "5ffe37745164285d27402a1e63aa1f2c04669ed2",
-        "tipCommit": "cd09553acfdf8de9c1e18508e519238dc87ee728",
+        "baseCommit": "cd09553acfdf8de9c1e18508e519238dc87ee728",
+        "tipCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
         "commits": [
           {
-            "commit": "cd09553acfdf8de9c1e18508e519238dc87ee728",
+            "commit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
             "parents": [
-              "5ffe37745164285d27402a1e63aa1f2c04669ed2"
+              "cd09553acfdf8de9c1e18508e519238dc87ee728"
             ],
-            "subject": "修复窄窗口从底栏定位图表时操作按钮被遮挡"
+            "subject": "修复表格组件拖动与选中反馈，改进图表选区识别"
           }
         ],
         "files": [
@@ -29,7 +29,15 @@
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/engine.ts"
+            "path": "src/preload/spreadsheet/chart.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
           },
           {
             "status": "M",
@@ -45,63 +53,9 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "cd09553acfdf8de9c1e18508e519238dc87ee728",
-            "completedAt": "2026-11-14T02:40:39.919Z",
+            "verifiedCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
+            "completedAt": "2026-11-14T03:17:46.853Z",
             "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "/var/folders/rm/jy4dz49s171fl1dxd9qr3hh80000gp/T/ework-reveal-focused.rsS0tu/focused.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "隔离 Electron 中复现窄窗口裁切并验证通过底栏打开后按钮进入可视区",
-            "verifiedCommit": "cd09553acfdf8de9c1e18508e519238dc87ee728",
-            "completedAt": "2026-11-14T02:40:39.919Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "图表右侧被裁切时，从底栏统计菜单打开图表可滚动到完整显示的范围。"
-        },
-        "acceptanceCriteria": [
-          "窄窗口定位图表后能够点击右侧操作按钮"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-14T02:40:39.919Z"
-      },
-      "merged": {
-        "mergeCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-        "verificationCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-            "completedAt": "2026-11-14T02:40:47.810Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-inline-references.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/spreadsheet-workbook.test.ts test/spreadsheet-store.test.ts test/spreadsheet-files.test.ts test/spreadsheet-inline-references.test.js",
-            "verifiedCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-            "completedAt": "2026-11-14T02:40:47.810Z",
-            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -109,43 +63,23 @@
               "scripts/verify-spreadsheet-live.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-spreadsheet-live.mjs",
-            "verifiedCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-            "completedAt": "2026-11-14T02:40:47.810Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "--testTimeout=15000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/explore-quota-browser.test.ts",
-              "test/hosted-quota-notice.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 --testTimeout=15000 test/account-service.test.ts test/hosted-ark-runtime.test.js test/explore-quota-browser.test.ts test/hosted-quota-notice.test.js test/image-generation-tool.test.js",
-            "verifiedCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-            "completedAt": "2026-11-14T02:40:47.810Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-hosted-ai-worker.mjs",
-            "verifiedCommit": "1ebc1ccfdb9a0281ad3c3fc239c1d51c269067f9",
-            "completedAt": "2026-11-14T02:40:47.810Z",
-            "timeoutMs": 120000
+            "summary": "Electron 工作表聚焦验收通过",
+            "verifiedCommit": "58ca61ba61fdeb25753f6d1407e228ec17ac117a",
+            "completedAt": "2026-11-14T03:17:46.853Z",
+            "timeoutMs": 180000
           }
         ],
-        "recordedAt": "2026-11-14T02:40:47.810Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在隔离 Electron 中验证文本和数值混合选区预览、图表悬停不变、组件选中和图表编辑遮挡。"
+        },
+        "acceptanceCriteria": [
+          "浮动组件支持标题区拖动和统一的选中描边",
+          "图表卡片悬停不改变外观",
+          "含多文本字段的选区可以生成图表，图表编辑器不受浮动对象遮挡"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-14T03:17:46.853Z"
       }
     },
     {
