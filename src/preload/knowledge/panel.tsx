@@ -247,7 +247,14 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       const source = browsingReceived ? Promise.all([local, catalog ?? bridge.received(force)])
         .then(([local, documents]) => ({ ...local, documents })) : local
       void source.then(rows => {
-        if (current === revision) { setSnapshot(rows); setState({ ready: true, error: '' }) }
+        if (current !== revision) return
+        setSnapshot(rows)
+        setState({ ready: true, error: '' })
+        if (browsingReceived && catalog === undefined) {
+          location.current?.dispatchEvent(new CustomEvent('sherlock:knowledge-shared-catalog', {
+            bubbles: true, detail: rows.documents
+          }))
+        }
       }).catch(error => {
         if (current === revision) setState({ ready: true, error: printError(error) })
       })
@@ -269,7 +276,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     const changed = () => load()
     const sharedAccessChanged = () => { if (browsingReceived) load(true) }
     const catalogChanged = (event: Event) => {
-      if (browsingReceived) load(false, (event as CustomEvent<KnowledgeDocument[]>).detail)
+      if (browsingReceived && event.target !== location.current) load(false, (event as CustomEvent<KnowledgeDocument[]>).detail)
     }
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     document.addEventListener('sherlock:knowledge-changed', changed)

@@ -362,7 +362,7 @@
 .knowledge-filter-menu footer label { margin-right: auto; font-size: 12px; }
 .knowledge-filter-menu footer button, .knowledge-dialog footer button { min-height: 32px; padding-inline: 11px; }
 .knowledge-filter-menu footer button:not(.knowledge-primary), .knowledge-dialog footer button:not(.knowledge-primary) { background: var(--knowledge-field); }
-.knowledge-action-menu { position: fixed; z-index: 6; padding: 4px; transform: translateX(-100%); min-width: 175px; max-height: 90vh; overflow: auto; }
+.knowledge-action-menu { position: fixed; z-index: 6; padding: 4px; min-width: 175px; max-height: 90vh; overflow: auto; }
 .knowledge-action-menu button { display: block; width: 100%; min-height: 32px; text-align: left; padding: 5px 10px; font-size: 13px; }
 .knowledge-action-menu hr { border: 0; border-top: 1px solid var(--knowledge-line); margin: 3px 4px; }
 .knowledge-workspace .knowledge-danger { color: var(--knowledge-danger); }
