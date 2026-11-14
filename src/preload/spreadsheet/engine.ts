@@ -119,7 +119,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   ['ySplit','__SpreadsheetFreezeRowHeaderName__','__SpreadsheetFreezeRowMainName__'],
   ['xSplit','__SpreadsheetFreezeColumnHeaderName__','__SpreadsheetFreezeColumnMainName__']
  ] as const
- const selectionEdges = /^__SpreadsheetSelection(?:ShapeLeft|ShapeRight|Top|Bottom)Control__/
+ const selectionEdges=/^__SpreadsheetSelection(?:ShapeLeft|ShapeRight|Top|Bottom)Control__/
+ const selectionHandles=/^__SpreadSheetSelection(?:Top|Middle|Bottom)(?:Left|Center|Right)Widget__/
  const themedFilterButtons=new WeakSet<object>()
  const themeFilterButtons=(render:IRender)=>{
   // The filter plugin rebuilds these canvas shapes as the active sheet changes.
@@ -136,8 +137,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    themedFilterButtons.add(shape)
   }
  }
- // Keep the selection hit area without painting Univer's white buffer around it.
- // These guides are separate from the workbook's cell borders.
+ // Keep the dimensions used for drag hit testing. Only change the colors of
+ // Univer's selection controls, including the handles shown during dragging.
  const guideColors=(render:IRender)=>{
   for(const object of render.scene.getObjectsByLayer(1)){
    if(!object.oKey.startsWith('__SpreadsheetSelectionShape__'))continue
@@ -146,7 +147,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
     let stroke:string|undefined
     if(selectionEdges.test(shape.oKey))stroke='transparent'
     else if(shape.oKey.startsWith('__SpreadsheetDragDashControl__'))stroke='#7898c8'
-    else if(shape.oKey.startsWith('__SpreadsheetSelectionFillControl__'))stroke=palette().canvas
+    else if(shape.oKey.startsWith('__SpreadsheetSelectionFillControl__')||selectionHandles.test(shape.oKey))stroke=palette().canvas
     if(stroke&&(!('stroke' in shape)||shape.stroke!==stroke))shape.setProps({stroke})
    }
   }

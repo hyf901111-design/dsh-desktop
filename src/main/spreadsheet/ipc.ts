@@ -3,7 +3,7 @@ import {open,rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
 import {clipboard,dialog,type BrowserWindow,type IpcMain} from 'electron'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
-import {applyOperations,blankWorkbook,inspectWorkbook,rangeAddress,safeId,sheetRange,validatedChartLayout,validatedComponentPlacement,validatedComponentTheme,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
+import {applyOperations,blankWorkbook,inspectWorkbook,label,rangeAddress,safeId,sheetRange,validatedChartLayout,validatedComponentPlacement,validatedComponentTheme,type Workbook,type WorkbookComponent} from '../../shared/spreadsheet/workbook'
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
 import type {ComponentLibraryStore} from '../state/component-library'
@@ -140,10 +140,15 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     const components=book.components.map(component=>component.componentId===input.componentId?{...component,placement}:component)
     return store.save(key,input.revision,{...book,components})
    }
-   case 'component-theme':case 'component-configure':case 'component-remove':{
+   case 'component-theme':case 'component-configure':case 'component-remove':case 'component-rename':{
     const current=store.load(key),book=current.workbook
     const component=book?.components?.find(item=>item.componentId===input.componentId)
     if(!book||!component)throw Error('组件已不存在。')
+    if(action==='component-rename'){
+     const title=label(input.title,256)
+     const components=book.components!.map(item=>item===component?{...item,node:{...item.node,title,displayName:title}}:item)
+     return store.save(key,input.revision,{...book,components})
+    }
     if(action==='component-theme'){
      const theme=validatedComponentTheme(input.theme)
      return store.save(key,input.revision,{...book,components:book.components!.map(item=>item===component?{...item,theme}:item)})
@@ -167,11 +172,11 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     if(layout&&chart)chart.layout=layout
     return store.save(key,input.revision,next)
    }
-   case 'chart-layout':{
+   case 'chart-layout':case 'chart-rename':{
     const book=store.load(key).workbook
     if(!book?.charts?.some(chart=>chart.chartId===input.chartId))throw Error('图表不存在。')
-    const layout=validatedChartLayout(input.layout)
-    const charts=book.charts.map(chart=>chart.chartId===input.chartId?{...chart,layout}:chart)
+    const changes=action==='chart-layout'?{layout:validatedChartLayout(input.layout)}:{title:label(input.title)}
+    const charts=book.charts.map(chart=>chart.chartId===input.chartId?{...chart,...changes}:chart)
     return store.save(key,input.revision,{...book,charts})
    }
    case 'remove-chart':return store.apply(key,randomUUID(),{revision:input.revision,undo:false,operations:[{op:'removeChart',chartId:input.chartId}]})
