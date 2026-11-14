@@ -15,6 +15,8 @@ export function placeFloatingSurface(anchor: DOMRect, width: number, height: num
 export function mountFloatingSurfaces(doc: Document) {
   const win = doc.defaultView!
   const customTriggers = '.rScV5Q_containerMenuTrigger,.rScV5Q_containerExpand,.srb-favorite-button,.srb-create-collaboration,.srb-preview-toggle,.srb-header-more,[data-odyssey-board-directory]'
+  const truncatedTrigger = '[data-odyssey-truncated-tooltip]'
+  const triggers = customTriggers + ',' + truncatedTrigger
   const tracked = new Map<HTMLElement, HTMLElement | null>()
   let active: HTMLElement | null = null, frame = 0
   const style = doc.createElement('style')
@@ -45,6 +47,7 @@ ${customTriggers.split(',').map(s => s + '[data-odyssey-floating-anchor]::after'
       if (!el.isConnected) { resize.unobserve(el); if (anchor) resize.unobserve(anchor); tracked.delete(el); continue }
       if (anchor) position(el, anchor)
     }
+    if (active?.matches(truncatedTrigger) && active.scrollWidth <= active.clientWidth) hide()
     if (active) position(bubble, active, true)
   }
   const schedule = () => { if (!frame) frame = win.requestAnimationFrame(refresh) }
@@ -65,13 +68,23 @@ ${customTriggers.split(',').map(s => s + '[data-odyssey-floating-anchor]::after'
     })
     schedule()
   }
-  function hide() { active = null; if (bubble.matches(':popover-open')) bubble.hidePopover() }
+  function hide() {
+    if (active?.matches(truncatedTrigger)) resize.unobserve(active)
+    active = null
+    if (bubble.matches(':popover-open')) bubble.hidePopover()
+  }
   function show(target: EventTarget | null) {
-    const el = target instanceof win.Element ? target.closest<HTMLElement>(customTriggers) : null
+    const el = target instanceof win.Element ? target.closest<HTMLElement>(triggers) : null
     if (!el || el.getAttribute('aria-expanded') === 'true' || el.matches(':disabled')) { hide(); return }
     if (active === el) return
-    hide(); active = el; bubble.textContent = el.hasAttribute('data-odyssey-board-directory') ? '此看板当前的文件目录\n' + el.getAttribute('data-odyssey-board-directory') : el.getAttribute('aria-label') ?? el.title
-    if (!bubble.textContent) { hide(); return }
+    hide()
+    const truncated = el.matches(truncatedTrigger)
+    if (truncated && el.scrollWidth <= el.clientWidth) return
+    bubble.toggleAttribute('data-ui-preserve', truncated)
+    bubble.textContent = truncated ? el.textContent : el.hasAttribute('data-odyssey-board-directory') ? '此看板当前的文件目录\n' + el.getAttribute('data-odyssey-board-directory') : el.getAttribute('aria-label') ?? el.title
+    if (!bubble.textContent) return
+    active = el
+    if (truncated) resize.observe(el)
     bubble.showPopover(); position(bubble, el, true)
   }
   const over = (event: Event) => show(event.target)
