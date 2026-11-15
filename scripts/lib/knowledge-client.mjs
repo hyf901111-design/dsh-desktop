@@ -271,13 +271,10 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, chatSto
  const open = event => {
   const { id, requestId, view = 'chat', retained } = event.detail ?? {}
   event.preventDefault()
-  const snapshot = sessions.list.getSnapshot()
   const reply = ok => dispatch('sherlock:knowledge-source-result', { requestId, ok })
-  if (retained && (!usable(snapshot, id) || snapshot.byId[id].blank)) {
-   void sessions.refresh().then(() => reply(false), () => reply(false))
-   return
-  }
-  if(typeof requestId === 'string' && usable(snapshot, id) && ['chat', 'research', 'notes', 'spreadsheet'].includes(view)) {
+  if (typeof requestId !== 'string' || !['chat', 'research', 'notes', 'spreadsheet'].includes(view)) return reply(false)
+  const activate = () => {
+   if (!usable(sessions.list.getSnapshot(), id)) return reply(false)
    try {
     const adapter = view === 'research' ? boards?.() : undefined
     const shared = adapter?.getState?.().boards.find(board => board.localSessionId === id && board.pinned)
@@ -288,10 +285,21 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, chatSto
     chatStore.create(id).actions.setView(view)
     sessions.open(id)
     reply(true)
-    return
-   } catch {}
+   } catch { reply(false) }
   }
-  reply(false)
+  const snapshot = sessions.list.getSnapshot()
+  const summary = usable(snapshot, id)
+  if (retained === true && (!summary || summary.blank)) {
+   void sessions.refresh().then(() => reply(false), () => reply(false))
+   return
+  }
+  // Imported documents are saved before registration. Their title and workbook
+  // are available even when the conversation catalog has not hydrated yet.
+  if (retained === 'imported' && !summary) {
+   void sessions.refresh().then(activate, () => reply(false))
+   return
+  }
+  activate()
  }
  doc.addEventListener('sherlock:knowledge-source-open', open)
  doc.addEventListener('sherlock:knowledge-session-catalog-request', catalog)
