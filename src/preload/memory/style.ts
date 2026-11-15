@@ -20,5 +20,7 @@ body[data-ds-dark-theme] :is(.ew-memory-page,.ew-memory-document-dialog){--memor
 @media(max-width:650px){.ew-memory-page{padding:28px 16px 32px}.ew-memory-switch-row,.ew-memory-document-row{padding:16px;gap:12px}.ew-memory-document-dialog{width:calc(100vw - 24px);height:calc(100vh - 24px);padding:16px;gap:12px!important}.ew-memory-document-dialog footer{align-items:flex-start;flex-direction:column}.ew-memory-actions{align-self:flex-end}.ew-memory-markdown{padding:4px 16px 16px}}
 .ew-memory-document-dialog[data-inline]{display:flex;flex-direction:column;gap:12px;width:100%;height:clamp(240px,57vh,560px);padding:0;margin-top:20px;border:0;border-radius:0;background:transparent;box-shadow:none}
 .ew-memory-document-dialog[data-inline] h2{margin:0;font-size:14px}
+.ew-memory-document-dialog[data-inline] .ew-memory-document-tabs{align-self:center;flex:none}
+.ew-memory-document-dialog[data-inline] .ew-memory-document-tabs button{padding-inline:12px}
 .knowledge-panel .ew-memory-document-dialog[data-inline]{height:clamp(210px,50vh,480px)}
 `

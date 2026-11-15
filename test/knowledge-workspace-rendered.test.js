@@ -1339,6 +1339,12 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
       await context.getByRole('heading', { name: '记忆验收正文' }).waitFor()
       expect(await context.getByRole('button', { name: '预览与编辑' }).count()).toBe(0)
       expect(await context.getByRole('dialog').count()).toBe(0)
+      const title = context.getByRole('heading', { name: '记忆.md' })
+      expect(await title.evaluate(node => {
+        const tabs = node.parentElement.querySelector('[role=tablist]')
+        return tabs && tabs.getBoundingClientRect().left > node.getBoundingClientRect().right &&
+          Math.abs(tabs.getBoundingClientRect().right - node.parentElement.getBoundingClientRect().right) < 1
+      })).toBe(true)
     }
     await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
     await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('## 保存后直接预览')
