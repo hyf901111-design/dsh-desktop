@@ -11,18 +11,40 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
-        "tipCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
+        "baseCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
+        "tipCommit": "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48",
         "commits": [
           {
-            "commit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
+            "commit": "fd0d56fcb5c6cb0d69eb444689b2d3acf02a1a34",
             "parents": [
-              "f96fd8f08518c4beba24259e84b8501b91d98b8e"
+              "e03647400f9749a5b9f6e3961112155f5ad7c4ce"
             ],
-            "subject": "交互：对齐知识库与浏览器顶栏并补充应用图标"
+            "subject": "交互：统一知识库顶栏快捷页签并对齐目录统计"
+          },
+          {
+            "commit": "b06c4beb543c064a3a8c6182f230275c1271fa1d",
+            "parents": [
+              "fd0d56fcb5c6cb0d69eb444689b2d3acf02a1a34"
+            ],
+            "subject": "交互：经验记忆复用设置开关样式"
+          },
+          {
+            "commit": "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48",
+            "parents": [
+              "b06c4beb543c064a3a8c6182f230275c1271fa1d"
+            ],
+            "subject": "体验：首次启动默认使用深色与星云风暴"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "src/main/home-theme-preferences.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/browser/style.css"
@@ -30,6 +52,14 @@
           {
             "status": "M",
             "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/memory.tsx"
           },
           {
             "status": "M",
@@ -41,11 +71,27 @@
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-topbar.ts"
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/memory/switch.ts"
           },
           {
             "status": "M",
-            "path": "test/browser-app-rendered.test.js"
+            "path": "src/preload/memory/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-preferences.test.ts"
           },
           {
             "status": "M",
@@ -61,8 +107,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
-            "completedAt": "2026-11-15T00:43:41.802908+00:00",
+            "verifiedCommit": "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48",
+            "completedAt": "2026-11-15T01:08:01.387291+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=1",
+              "test/home-theme-preferences.test.ts",
+              "test/memory-view.test.ts",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-appearance.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "五十八项主题及记忆聚焦检查通过。",
+            "verifiedCommit": "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48",
+            "completedAt": "2026-11-15T01:08:01.387291+00:00",
             "timeoutMs": 120000
           },
           {
@@ -77,18 +140,18 @@
               "test/knowledge-workspace-rendered.test.js",
               "test/browser-app-rendered.test.js",
               "-t",
-              "aligns the knowledge|preserves filters through return|keeps shared categories|keeps expanded workspace controls|opens workspace tabs only|places the shared workspace back button"
+              "aligns the knowledge|keeps the four workspace|aligns folder counts|keeps expanded workspace controls|opens workspace tabs only|places the shared workspace back button|animates workspace width|dismisses a browser popup|mouse focus|switches the right knowledge pane"
             ],
             "outcome": "passed",
-            "summary": "三个宽度来回切换验证顶栏坐标相等。两份测试文件中六项聚焦检查通过。",
-            "verifiedCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
-            "completedAt": "2026-11-15T00:43:41.802908+00:00",
+            "summary": "九项顶栏、导航计数和记忆开关渲染检查通过。",
+            "verifiedCommit": "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48",
+            "completedAt": "2026-11-15T01:08:01.387291+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "2f413e496 签名客户端已验斜杠权限中文标签和知识库行内引用。新调整使用真实浏览器与知识库前端，在宽屏、紧凑及窄屏切换中测得返回、应用图标与名称的位置一致。"
+          "summary": "bb0237e16 签名客户端已打开知识库供用户验收。此次修整由真实知识库与浏览器前端渲染测试确认顶栏悬停边界、点击导航和计数列对齐。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -126,7 +189,10 @@
           "从浏览器、笔记、表格和研究返回知识库时，原会话草稿及引用保留，右侧对话恢复对知识库筛选状态的读取。",
           "斜杠选择知识库文件夹后，标签与文字同一行编辑，发送后引用范围中的文件正文可供实际读取。",
           "输入框的知识库分类引用标签随名称宽度调整。斜杠权限选项复用设置中的本地化名称，保持原有选择和返回行为。",
-          "知识库使用既有应用图标。和浏览器共享顶栏，切换时返回按钮、应用图标和名称的坐标一致。"
+          "知识库使用既有应用图标。和浏览器共享顶栏，切换时返回按钮、应用图标和名称的坐标一致。",
+          "分类、文件夹计数与添加文件夹图标共用同一列，悬停更多按钮仍在原计数位置。",
+          "知识库顶栏复用浏览器的四视图快捷入口。悬停展开，移过标题、文件资料、经验记忆和顶栏空白时保持，离开后收起。标题与空白区域支持拖动窗体。",
+          "知识库文件资料及右侧知识库复用设置中的经验记忆开关。首次建立的用户资料使用深色与星云风暴，已有配置保留。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -134,51 +200,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-15T00:43:41.802908+00:00"
-      },
-      "merged": {
-        "mergeCommit": "17b749fb61ecaba08667a9676399464f4f57cb38",
-        "verificationCommit": "17b749fb61ecaba08667a9676399464f4f57cb38",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "17b749fb61ecaba08667a9676399464f4f57cb38",
-            "completedAt": "2026-11-15T00:44:00.792Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "17b749fb61ecaba08667a9676399464f4f57cb38",
-            "completedAt": "2026-11-15T00:44:00.792Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T00:44:00.792Z"
+        "generatedAt": "2026-11-15T01:08:01.387291+00:00"
       }
     }
   ],
