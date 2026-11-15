@@ -152,7 +152,7 @@ import {
   type LocalSearchRuntime
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
-import { registerHomeThemePreferences } from './home-theme-preferences'
+import { initializeFirstLaunchAppearance, registerHomeThemePreferences } from './home-theme-preferences'
 import {PowerPreferenceStore, PowerSettingsController} from './power/controller'
 import {MacOSLidGuard} from './power/macos-lid-guard'
 import {registerPowerSettingsIpc} from './power/ipc'
@@ -383,6 +383,11 @@ function configureAppIdentity(): () => void {
       } catch (error) {
         console.warn('[desktop] failed to migrate legacy EWork Odyssey user data', error)
       }
+    }
+    try {
+      initializeFirstLaunchAppearance(identity.userData)
+    } catch (error) {
+      console.warn('[desktop] failed to initialize first-launch appearance', error)
     }
     if (app.isPackaged) {
       try {

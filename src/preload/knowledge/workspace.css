@@ -71,9 +71,17 @@
   height: 16px;
   vertical-align: middle;
 }
-.knowledge-header-tabs { display: flex; gap: 4px; margin-left: 16px; }
+.knowledge-header { -webkit-app-region: drag; }
+.knowledge-header .eb-workspace-tabs { transition: flex-basis 200ms cubic-bezier(.2,.8,.2,1), opacity 200ms ease; }
+.knowledge-header-tabs { display: flex; gap: 4px; }
 .knowledge-header-tabs button { padding: 5px 12px; color: var(--knowledge-muted); white-space: nowrap; }
 .knowledge-header-tabs [aria-current] { background: var(--knowledge-active); color: var(--knowledge-ink); }
+@container (max-width: 480px) {
+  .knowledge-header-tabs button { padding-inline: 4px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-header .eb-workspace-tabs { transition: none; }
+}
 .knowledge-body { display: flex; flex: 1; min-height: 0; padding: 20px 16px 16px; }
 .knowledge-navigation {
   --knowledge-nav-padding: 10px;
@@ -138,7 +146,8 @@
 .knowledge-workspace .knowledge-folder .knowledge-folder-menu:is(:hover, [aria-expanded=true]) {
   background: var(--knowledge-control-hover);
 }
-.knowledge-folder-heading { display: flex; align-items: center; justify-content: space-between; margin: 17px 0 0; padding-left: 10px; color: var(--knowledge-muted); font-size: 12px; }
+.knowledge-folder-heading { display: flex; align-items: center; justify-content: space-between; margin: 17px 0 0; padding-inline: var(--knowledge-nav-padding); color: var(--knowledge-muted); font-size: 12px; }
+.knowledge-workspace .knowledge-folder-heading > .knowledge-square { flex: none; width: var(--knowledge-nav-trailing); height: var(--knowledge-nav-trailing); }
 .knowledge-file-list {
   min-width: 0;
   min-height: 0;
@@ -532,7 +541,6 @@
 }
 .knowledge-memory-row > span:not(.knowledge-file-icon) { display: grid; gap: 4px; margin-right: auto; }
 .knowledge-memory-row small, .knowledge-memory > p { color: var(--knowledge-muted); }
-.knowledge-memory-row [role=switch] { accent-color: var(--knowledge-accent); width: 18px; height: 18px; }
 
 @keyframes knowledge-popup-in {
   from { opacity: 0; translate: 0 -3px; }

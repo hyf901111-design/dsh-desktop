@@ -9,6 +9,7 @@ import {
 import type { KnowledgeViewMessage, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
+import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
 import { KnowledgeMemory } from './memory'
@@ -20,6 +21,7 @@ import css from './workspace.css?raw'
 
 interface Bridge {
   memory?: MemoryBridge
+  workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'download', args: { id: string }): Promise<boolean>
@@ -96,6 +98,11 @@ export function mountKnowledgeWorkspace(document: Document, host: WorkspaceSurfa
 
 function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: WorkspaceSurfaceHost; document: Document }) {
   const [tab, setTab] = useState<'files' | 'memory'>('files')
+  const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
+  const header = useRef<HTMLElement>(null)
+  const workspaceToggle = useRef<HTMLButtonElement>(null)
+  const workspaceHover = useRef<WorkspaceViewHover>()
+  const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(document)
   const [local, setSnapshot] = useState(empty)
   const [received, setReceived] = useState<KnowledgeDocument[]>([])
   const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
@@ -150,6 +157,38 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     filter.savedOnly, filter.sort, filter.ascending, assistantFilter ? filter.query : undefined
   ])
   const previousResultScope = useRef(resultScope)
+
+  useLayoutEffect(() => {
+    const bar = header.current
+    if (!bar) return
+    const hover = new WorkspaceViewHover(bar, () => bar, setWorkspaceExpanded, bridge.workspacePointerInBar)
+    workspaceHover.current = hover
+    const syncSurface = () => {
+      if (host.current()?.surface !== 'knowledge') hover.setExpanded(false)
+    }
+    document.addEventListener('sherlock:workspace-surface-change', syncSurface)
+    return () => {
+      document.removeEventListener('sherlock:workspace-surface-change', syncSurface)
+      hover.dispose()
+      workspaceHover.current = undefined
+    }
+  }, [bridge, document, host])
+
+  function openWorkspaceView(view: string) {
+    const sessionId = findWorkspaceSession(document)?.dataset.eworkNotesSession
+    if (!sessionId) {
+      if (view === 'chat') host.revealConversation()
+      return
+    }
+    const button = workspaceViewButton(document, sessionId, view)
+    if (!button?.isConnected || button.disabled) {
+      setNotice({ text: '此会话视图暂不可用，请先打开对应会话。', error: true })
+      return
+    }
+    host.revealConversation()
+    const current = workspaceViewButton(document, sessionId, view)
+    if (current?.isConnected && !current.disabled) current.click()
+  }
 
   useLayoutEffect(() => {
     viewRead.current = { snapshot, section: tab, ready, receivedStatus }
@@ -642,11 +681,30 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   return <>
-    <header className="knowledge-header workspace-app-topbar">
+    <header ref={header} className="knowledge-header workspace-app-topbar" onKeyDown={event => {
+      if (event.key !== 'Escape' || !workspaceExpanded) return
+      event.preventDefault()
+      event.stopPropagation()
+      workspaceHover.current?.setExpanded(false)
+      workspaceToggle.current?.focus({ preventScroll: true })
+    }}>
       <div className="knowledge-back" onClick={() => host.back()} dangerouslySetInnerHTML={{ __html: workspaceBackButton() }} />
       <div className="workspace-app-title">
         <i aria-hidden="true" style={{ maskImage: `url('${icons.knowledge.replaceAll("'", '%27')}')` }} />
         <span>知识库</span>
+      </div>
+      <div className="eb-workspace-controls">
+        <button type="button" className="eb-workspace-toggle" ref={workspaceToggle}
+          aria-label={`${workspaceExpanded ? '收起' : '展开'}工作区页签`}
+          title={`${workspaceExpanded ? '收起' : '展开'}工作区页签：对话、研究、笔记、表格`}
+          aria-expanded={workspaceExpanded} aria-controls="knowledge-workspace-tabs"
+          onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true" /></button>
+        <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" aria-label="工作区视图" aria-hidden={!workspaceExpanded}>
+          {workspaceViews.map(([view, label]) => <button key={view} type="button" aria-label={`切换到${label}`}
+            tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
+            title={!hasWorkspaceSession && view !== 'chat' ? `选择会话后可打开${label}` : label}
+            onClick={() => openWorkspaceView(view)}>{label}</button>)}
+        </nav>
       </div>
       <div className="knowledge-header-tabs">
         <button type="button" aria-current={tab === 'files' ? 'page' : undefined} onClick={() => setTab('files')}>文件资料</button>

@@ -230,25 +230,11 @@ body .eb-root .eb-popover[data-browser-panel=tab-list]{padding:8px 6px;gap:6px}
 .eb-tab-loading>.eb-icon{animation:eb-tab-spin 800ms linear infinite}
 @keyframes eb-tab-spin{to{transform:rotate(360deg)}}
 
-/* Workspace shortcuts share the browser title row and reserve real tab space. */
-.eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
-.eb-workspace-toggle{-webkit-app-region:no-drag;flex:none}
-.eb-root .eb-workspace-toggle[aria-expanded=true]{background:transparent}
-.eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(188px,23cqw,232px);width:clamp(188px,23cqw,232px);min-width:0;overflow:hidden;-webkit-app-region:no-drag}
-.eb-root .eb-workspace-tabs button{flex:1 1 0;min-width:0;height:32px;padding:0 6px;font-size:14px;line-height:22px;white-space:nowrap}
 @container(max-width:480px){
  .eb-tabs>.eb-icon-button{width:28px;height:28px}
- .eb-workspace-tabs{flex-basis:128px;width:128px;gap:2px}
- .eb-root .eb-workspace-tabs button{padding:0 2px;font-size:13px}
  .eb-tabs[data-crowded=true] .eb-tab[aria-selected=true]:not([data-pinned=true]){min-width:32px}
 }
 
-.eb-workspace-tabs[aria-hidden=true]{width:0;flex-basis:0;opacity:0;pointer-events:none}
-
 /* Both right-hand menus use one opaque popup surface. */
 body .eb-root[data-browser-app] .eb-popover:is([data-browser-panel=menu],[data-browser-panel=bookmarks]){background:var(--eb-panel)!important;border:1px solid var(--eb-line)!important;border-radius:12px!important;box-shadow:0 6px 20px #0004!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.eb-workspace-toggle .eb-icon{transition:transform 200ms cubic-bezier(.2,.8,.2,1)}
-.eb-workspace-toggle[aria-expanded=true] .eb-icon{transform:rotate(180deg)}
-@media(prefers-reduced-motion:reduce){.eb-workspace-toggle .eb-icon{transition:none}}
-
 body .eb-root[data-browser-app] .eb-toolbar>.eb-translation-status{flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:32px!important;margin-inline-start:8px;max-width:120px;padding:6px 10px!important;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;font-size:12px;white-space:nowrap}body .eb-root[data-browser-app] .eb-toolbar>.eb-translation-status:hover{background:var(--eb-field)!important}

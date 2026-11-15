@@ -234,6 +234,61 @@ it('aligns the knowledge app icon and title with the browser when switching work
   }
 })
 
+it('keeps the four workspace shortcuts open across the draggable knowledge header', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px">
+        <div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="selected">
+          <div data-srb-tabs><button data-conversation-view-id="notes">笔记</button></div>
+        </header></div>
+      </div>`)
+    await page.evaluate(() => {
+      document.querySelector('[data-conversation-view-id="notes"]').addEventListener('click', () => {
+        document.body.dataset.selectedView = 'notes'
+      })
+    })
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const header = library.locator('.knowledge-header')
+    const title = header.locator('.workspace-app-title')
+    const toggle = header.locator('.eb-workspace-toggle')
+    const files = header.getByRole('button', { name: '文件资料' })
+    const shortcuts = header.getByRole('navigation', { name: '工作区视图' })
+    const region = el => getComputedStyle(el).getPropertyValue('-webkit-app-region')
+    expect(await header.evaluate(region)).toBe('drag')
+    expect(await title.evaluate(region)).toBe('drag')
+    expect(await toggle.evaluate(region)).toBe('no-drag')
+    expect(await files.evaluate(region)).toBe('no-drag')
+    await title.hover()
+    expect(await shortcuts.count()).toBe(0)
+    await toggle.hover()
+    expect(await shortcuts.getByRole('button').allTextContents()).toEqual(['对话', '研究', '笔记', '表格'])
+    expect(await shortcuts.getByRole('button', { name: '切换到笔记' }).evaluate(region)).toBe('no-drag')
+    await title.hover()
+    await files.hover()
+    const bounds = await header.boundingBox()
+    await header.hover({ position: { x: bounds.width - 16, y: 22 } })
+    await page.waitForTimeout(210)
+    expect(await toggle.getAttribute('aria-expanded')).toBe('true')
+    await library.getByRole('button', { name: '筛选', exact: true }).hover()
+    await expect.poll(() => toggle.getAttribute('aria-expanded')).toBe('false')
+    await toggle.focus()
+    await toggle.press('Enter')
+    await shortcuts.getByRole('button', { name: '切换到笔记' }).press('Escape')
+    expect(await toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(await toggle.evaluate(el => el === document.activeElement)).toBe(true)
+    await toggle.press('Enter')
+    await shortcuts.getByRole('button', { name: '切换到笔记' }).click()
+    expect(await page.locator('body').getAttribute('data-selected-view')).toBe('notes')
+    expect(await library.isVisible()).toBe(false)
+  } finally {
+    await page.close()
+  }
+})
+
 it('preserves filters through return and leaves space around the selected row', async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   try {
@@ -961,6 +1016,11 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     await memory.click({ timeout: 1600 })
     expect(await pane.getByRole('searchbox', { name: '搜索知识库文件' }).isVisible()).toBe(false)
     const toggle = pane.getByRole('switch', { name: /启用记忆/ })
+    const switchShape = el => {
+      const { width, height, appearance } = getComputedStyle(el)
+      return { width, height, appearance, thumb: getComputedStyle(el, '::after').width }
+    }
+    expect(await toggle.evaluate(switchShape)).toEqual({ width: '34px', height: '20px', appearance: 'none', thumb: '14px' })
     await toggle.check()
     expect(await pane.getByText('记忆.md').isVisible()).toBe(true)
     await files.click()
@@ -972,7 +1032,9 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const fullMemory = library.getByRole('region', { name: '经验记忆' })
     await fullMemory.waitFor()
-    expect(await library.getByRole('switch', { name: /启用记忆/ }).isChecked()).toBe(true)
+    const fullToggle = library.getByRole('switch', { name: /启用记忆/ })
+    expect(await fullToggle.isChecked()).toBe(true)
+    expect(await fullToggle.evaluate(switchShape)).toEqual(await toggle.evaluate(switchShape))
     for (const context of [fullMemory, pane.getByRole('region', { name: '经验记忆' })]) {
       await context.getByText('记忆.md', { exact: true }).waitFor()
       const spacing = await context.locator('.knowledge-memory-row').last().evaluate(row => {
@@ -1005,6 +1067,7 @@ it('aligns folder counts and more actions while keeping long headings clear of t
     const number = folder.locator('small')
     const category = nav.getByRole('button', { name: /所有文件/ }).locator('small')
     const menu = folder.locator('.knowledge-folder-menu')
+    const add = nav.getByRole('button', { name: '新建文件夹' })
     const tooltip = page.getByRole('tooltip')
     const center = async target => {
       const box = await target.boundingBox()
@@ -1041,6 +1104,7 @@ it('aligns folder counts and more actions while keeping long headings clear of t
       expect(separated(titleBox, filterBox) && separated(filterBox, searchBox) && separated(searchBox, uploadBox)).toBe(true)
       expect(uploadBox.x + uploadBox.width).toBeLessThanOrEqual(width - 340)
       expect((await center(number)).x).toBe((await center(category)).x)
+      expect((await center(add.locator('svg'))).x).toBe((await center(category)).x)
       expect(await nav.locator(':scope > button > span').evaluateAll(labels =>
         labels.every(el => el.scrollWidth <= el.clientWidth)), `category labels fit at ${width}px`).toBe(true)
     }

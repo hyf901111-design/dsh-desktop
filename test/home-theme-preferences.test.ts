@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
-import { HomeThemePreferenceStore, registerHomeThemePreferences } from '../src/main/home-theme-preferences'
+import { HomeThemePreferenceStore, initializeFirstLaunchAppearance, registerHomeThemePreferences } from '../src/main/home-theme-preferences'
 import type { TrustedWindowEvent } from '../src/main/ipc-trust'
 
 const directories: string[] = []
@@ -12,6 +12,28 @@ function directory(): string {
   return result
 }
 afterEach(() => { for (const value of directories.splice(0)) rmSync(value, { recursive: true, force: true }) })
+
+it('defaults a fresh installation to dark and Nebula Storm and preserves later choices', () => {
+  const userData = directory()
+  const settings = join(userData, 'harness', 'settings.yaml')
+  initializeFirstLaunchAppearance(userData)
+  expect(readFileSync(settings, 'utf8')).toBe('ui-theme:\n  preference: dark\n')
+  const store = new HomeThemePreferenceStore(userData)
+  expect(store.get()).toBe('shashidhar')
+  writeFileSync(settings, 'ui-theme:\n  preference: light\nlocale:\n  preference: zh\n')
+  expect(store.set('random')).toBe(true)
+  initializeFirstLaunchAppearance(userData)
+  expect(readFileSync(settings, 'utf8')).toBe('ui-theme:\n  preference: light\nlocale:\n  preference: zh\n')
+  expect(new HomeThemePreferenceStore(userData).get()).toBe('random')
+})
+
+it.each(['harness', 'launch-root'])('retains an existing profile without explicit appearance settings (%s)', folder => {
+  const userData = directory()
+  mkdirSync(join(userData, folder))
+  initializeFirstLaunchAppearance(userData)
+  expect(existsSync(join(userData, 'harness', 'settings.yaml'))).toBe(false)
+  expect(new HomeThemePreferenceStore(userData).get()).toBeNull()
+})
 
 it('writes the selected theme before returning and restores it from disk after a new store starts', () => {
   const userData = directory(), store = new HomeThemePreferenceStore(userData)

@@ -8,6 +8,7 @@ import type {
 } from '../../shared/memory'
 import { memoryStyles } from './style'
 import { openMemoryDocumentEditor } from './document-editor'
+import { mountMemorySwitchStyles } from './switch'
 
 type Selection = {
   content?: string
@@ -18,6 +19,7 @@ type Selection = {
 
 /** Adds one ordinary settings section without replacing the native settings tree. */
 export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
+  mountMemorySwitchStyles(document)
   const t = (value: string) => localize(value, document.documentElement.dataset.odysseyLocale)
   const win = document.defaultView!
   const style = document.createElement('style')
@@ -181,7 +183,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       saved:next=>{if(accept(next,epoch))render()},closed:()=>{editor=undefined}})
   }
   function settingRow(title:string,description:string,value:boolean,change:(value:boolean)=>void){
-    const label=node('label',undefined,'ew-memory-switch-row'),copy=node('span',undefined,'ew-memory-row-copy'),toggle=node('input')
+    const label=node('label',undefined,'ew-memory-switch-row'),copy=node('span',undefined,'ew-memory-row-copy'),toggle=node('input',undefined,'ew-memory-toggle')
     copy.append(node('strong',t(title)),node('small',t(description)))
     toggle.type='checkbox';toggle.role='switch';toggle.setAttribute('aria-label',t(title));toggle.checked=value;toggle.disabled=settingPending!==undefined
     toggle.onchange=()=>change(toggle.checked);label.append(copy,toggle);return label
