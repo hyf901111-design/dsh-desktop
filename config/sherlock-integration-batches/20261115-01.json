@@ -9,39 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "表格键盘选区和知识库气泡换行",
+        "featureName": "同会话四种模式独立保留草稿",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
-        "tipCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
+        "baseCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
+        "tipCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
         "commits": [
           {
-            "commit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
+            "commit": "28c80bf2c591e76552396728c9f7302cc135102d",
             "parents": [
-              "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd"
+              "81f40a4c27f2327ebd9e28e4b78941e404fab60c"
             ],
-            "subject": "修复表格键盘选区引用和知识库气泡换行"
+            "subject": "隔离对话研究笔记表格的未发送草稿"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/engine.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-composer.test.js"
+            "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
             "status": "A",
-            "path": "test/spreadsheet-keyboard-reference.test.js"
+            "path": "scripts/lib/workspace-draft-state.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/workspace-draft-state.test.js"
           }
         ],
         "checks": [
@@ -51,9 +43,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "组合安装并检查知识库界面补丁。",
-            "verifiedCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
-            "completedAt": "2026-11-15T14:51:41.413Z",
+            "summary": "原生输入框补丁组合安装通过。",
+            "verifiedCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
+            "completedAt": "2026-11-15T15:18:51.195Z",
             "timeoutMs": 120000
           },
           {
@@ -64,8 +56,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
-            "completedAt": "2026-11-15T14:51:41.413Z",
+            "verifiedCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
+            "completedAt": "2026-11-15T15:18:51.195Z",
             "timeoutMs": 120000
           },
           {
@@ -77,29 +69,31 @@
               "test",
               "--",
               "--maxWorkers=1",
+              "test/workspace-draft-state.test.js",
+              "test/workspace-mode-welcome.test.js",
               "test/spreadsheet-keyboard-reference.test.js",
-              "test/spreadsheet-inline-references.test.js",
-              "test/knowledge-composer.test.js"
+              "test/knowledge-composer.test.js",
+              "test/spreadsheet-inline-references.test.js"
             ],
             "outcome": "passed",
-            "summary": "9 项聚焦测试通过，涵盖真实表格引擎扩选、收缩、取消以及新旧知识库消息引文显示。",
-            "verifiedCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
-            "completedAt": "2026-11-15T14:51:41.413Z",
+            "summary": "12 项聚焦测试通过。",
+            "verifiedCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
+            "completedAt": "2026-11-15T15:18:51.195Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实表格引擎在 Chromium 测试中已验证扩选和恢复整表参考。签名客户端待验证。"
+          "summary": "原生输入状态隔离及欢迎页、引用回归通过，签名客户端质检待执行。"
         },
         "acceptanceCriteria": [
-          "使用 Shift＋方向键扩选，输入框显示选区引用并隐藏整表参考，收缩或取消时恢复。",
-          "发送过的知识库引用标签和提示词同一行显示，用户输入的换行继续显示。"
+          "在同一会话切换模式，提示词、引用和附件只出现在所属草稿。",
+          "四种模式共享已发送的会话历史。"
         ],
         "risks": [
-          "使用单客户端、本地资料验收。"
+          "旧版本已保存的公共草稿归到对话模式。"
         ],
-        "generatedAt": "2026-11-15T14:51:41.413Z"
+        "generatedAt": "2026-11-15T15:18:51.195Z"
       }
     }
   ],
