@@ -11,56 +11,25 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "65a651625d16ca87f8dbc644e8d563cef7ac4256",
-        "tipCommit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
+        "baseCommit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
+        "tipCommit": "1049755269175df3b892cc7923ea4498a564c10d",
         "commits": [
           {
-            "commit": "a4a9cb85b4b024f7646d74fe3840b5997d2cc34b",
+            "commit": "1049755269175df3b892cc7923ea4498a564c10d",
             "parents": [
-              "65a651625d16ca87f8dbc644e8d563cef7ac4256"
+              "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb"
             ],
-            "subject": "交互：统一会话列表图标并隐藏空白会话"
-          },
-          {
-            "commit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
-            "parents": [
-              "a4a9cb85b4b024f7646d74fe3840b5997d2cc34b"
-            ],
-            "subject": "交互：使用两秒气泡反馈知识库变更"
+            "subject": "交互：居中知识库空状态并补齐共享目录"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
+            "path": "src/preload/knowledge/panel.css"
           },
           {
             "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/ipc.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/knowledge/session-content.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
+            "path": "src/preload/knowledge/panel.tsx"
           },
           {
             "status": "M",
@@ -76,14 +45,6 @@
           },
           {
             "status": "M",
-            "path": "src/shared/knowledge-sessions.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/knowledge-session-content.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
@@ -96,25 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
-            "completedAt": "2026-11-15T02:03:10.005Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=1",
-              "test/knowledge-session-content.test.ts",
-              "test/knowledge-composer.test.js",
-              "test/spreadsheet-store.test.ts",
-              "test/research-context-bridge.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "三十项会话内容及原生数据检查通过。",
-            "verifiedCommit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
-            "completedAt": "2026-11-15T02:03:10.005Z",
+            "verifiedCommit": "1049755269175df3b892cc7923ea4498a564c10d",
+            "completedAt": "2026-11-15T02:21:51.580Z",
             "timeoutMs": 120000
           },
           {
@@ -129,15 +73,15 @@
               "test/knowledge-workspace-rendered.test.js"
             ],
             "outcome": "passed",
-            "summary": "二十七项界面渲染验证通过，覆盖内容过滤、会话图标、行距及两秒气泡。",
-            "verifiedCommit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
-            "completedAt": "2026-11-15T02:03:10.005Z",
+            "summary": "二十九项知识库渲染验证通过，覆盖空状态居中、共享分类和四档宽度下的目录信息。",
+            "verifiedCommit": "1049755269175df3b892cc7923ea4498a564c10d",
+            "completedAt": "2026-11-15T02:21:51.580Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "229538aa2 签名包验证菜单和拖放。当前提交通过知识库渲染验证，覆盖会话内容过滤、图标、行距、表头位置以及连续操作的两秒反馈。"
+          "summary": "当前提交通过二十九项知识库渲染验证。上一版 86ed08ae3 签名桌面包验收通过。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -184,7 +128,8 @@
           "文件列表更多菜单中，移动到文件夹使用纯文字，收藏入口显示添加至收藏。",
           "研究、笔记与表格列表的每行使用文件列表同尺寸的图标底板和按类型配色的线形图标，悬停高亮之间保留四像素间距。",
           "只有已保存实际内容的研究看板、笔记或工作簿才显示在模式目录；默认空段落、仅默认导航的画板与空白工作簿排除。",
-          "知识库内容变更后显示两秒气泡，文件列表表头不因反馈移动。"
+          "知识库内容变更后显示两秒气泡，文件列表表头不因反馈移动。",
+          "文件与模式分类的空状态提示在列表内容区居中；他人共享提供全部文件入口，每条记录显示所属共享目录。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -192,51 +137,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-15T02:03:10.005Z"
-      },
-      "merged": {
-        "mergeCommit": "bc0801cf9864dabffb3e5fe2c32ab3f52f90faa9",
-        "verificationCommit": "bc0801cf9864dabffb3e5fe2c32ab3f52f90faa9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bc0801cf9864dabffb3e5fe2c32ab3f52f90faa9",
-            "completedAt": "2026-11-15T02:03:30.940Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "bc0801cf9864dabffb3e5fe2c32ab3f52f90faa9",
-            "completedAt": "2026-11-15T02:03:30.940Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T02:03:30.940Z"
+        "generatedAt": "2026-11-15T02:21:51.580Z"
       }
     }
   ],
