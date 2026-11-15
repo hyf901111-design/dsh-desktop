@@ -901,7 +901,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} entries={sessions?.entries ?? []}
         loading={sessions?.loading ?? true} error={sessions?.error ?? false} open={openSession}
         shares={local.sessionShares} share={(row, mode) => openDialog({ type: 'share-session', row, mode })} /> :
-      <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
+      <main className="knowledge-file-list" data-knowledge-file-drop-owner data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
         if (!canDropFiles || !event.dataTransfer.types.includes('Files')) return
         event.preventDefault()
         dragDepth.current++
@@ -915,6 +915,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         event.preventDefault()
         event.stopPropagation()
         event.dataTransfer.dropEffect = canDropFiles ? 'copy' : 'none'
+        if (canDropFiles) setDragging(true)
       }} onDrop={event => {
         if (!event.dataTransfer.types.includes('Files') && !event.dataTransfer.files.length) return
         event.preventDefault()

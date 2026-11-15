@@ -107,41 +107,35 @@ function patchSlashHover(source) {
 }
 
 function patchSlashPopupDesign(source) {
- const marker = '/* ework:slash-popup-design:v1 */'
+ const legacy = '/* ework:slash-popup-design:v1 */'
+ const marker = '/* ework:slash-popup-design:v2 */'
  if (source.includes(marker)) return source
- const backButton = '"data-ework-command-back":true,onClick:goBack,'
- source = replace(source, backButton, backButton + '"aria-label":document.documentElement.dataset.odysseyLocale==="en"?"Back to commands":"返回命令",')
- const back = 'children:document.documentElement.dataset.odysseyLocale==="en"?"‹ Back":"‹ 返回"'
- source = replace(source, back, `children:[directoryIcon('previous'), knowledgeEnglish?'Knowledge Base':isKnowledge?'知识库':
-  document.documentElement.dataset.odysseyLocale==="en"?({model:"Model",permission:"Permission",skills:"Skills"})[state.command]:
-  ({model:"模型",permission:"权限",skills:"技能"})[state.command]]`)
+ if (!source.includes(legacy)) {
+  const backButton = '"data-ework-command-back":true,onClick:goBack,'
+  source = replace(source, backButton, backButton + '"aria-label":document.documentElement.dataset.odysseyLocale==="en"?"Back to commands":"返回命令",')
+  source = replace(source, 'children:document.documentElement.dataset.odysseyLocale==="en"?"‹ Back":"‹ 返回"', `children:[directoryIcon('previous'), knowledgeEnglish?'Knowledge Base':isKnowledge?'知识库':
+    document.documentElement.dataset.odysseyLocale==="en"?({model:"Model",permission:"Permission",skills:"Skills"})[state.command]:
+    ({model:"模型",permission:"权限",skills:"技能"})[state.command]]`)
+ }
+ source = replace(source, "  react_jsx_runtime.jsxs('button',{type:'button','data-knowledge-shared-back':true,\n   onClick:goBack,children:[directoryIcon('previous'),knowledgeEnglish?'Shared with me':'他人共享']},'shared-back'),", '')
+ source = replace(source, "role:'group','aria-label':'他人共享分类','data-knowledge-cascading-options':true,",
+  "role:'group',className:'mufS8W_card','aria-label':knowledgeEnglish?'Shared categories':'他人共享分类','data-knowledge-cascading-options':true,")
  const css = /const css = ("[^\n]+");/u.exec(source)
  if (!css) throw Error('Secondary slash menu CSS anchor missing')
+ const previous = JSON.parse(css[1])
+  .replace(/\/\* ework:slash-popup-design:v1 \*\/[\s\S]*?\[data-knowledge-shared-back\]\{[^}]+\}/u, '')
+  .split('\n').filter(line => !line.trim().startsWith('[data-knowledge-cascading-options]') || line.includes(':hover')).join('\n')
  const styles = `
  ${marker}
- body{--ework-slash-surface:#f9f9fa;--ework-slash-line:#dcdcdf}
- body[data-ds-dark-theme]{--ework-slash-surface:#28282a;--ework-slash-line:#454547}
- body .mufS8W_card[data-ework-command=knowledge][data-ework-command-surface][popover]{
-   padding:4px!important;border:1px solid var(--ework-slash-line)!important;border-radius:12px!important;
-   background:var(--ework-slash-surface)!important;box-shadow:0 8px 12px #0004!important;
-   backdrop-filter:none!important;-webkit-backdrop-filter:none!important
- }
- .mufS8W_card[data-ework-command=knowledge]{width:360px!important;min-width:0!important;max-width:min(360px,calc(100vw - 16px))}
- [data-ework-command-back]{display:flex;gap:8px;width:100%;min-height:36px;padding:0 10px;
-   border-radius:8px;color:var(--dsw-alias-label-primary);font-size:14px;align-items:center;text-align:start}
- [data-ework-command-back] svg{width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary)}
- [data-ework-command=knowledge] .mufS8W_search{margin:3px 10px 0;min-height:28px;width:calc(100% - 20px)}
- [data-ework-command=knowledge] .mufS8W_viewport{scrollbar-width:thin}
- [data-ework-command=knowledge] [data-knowledge-slash-group]{height:26px;padding:0 10px;display:flex;align-items:center;font-size:12px}
- [data-ework-command=knowledge] .mufS8W_row{min-height:34px;padding:0 10px;gap:8px;border-radius:8px;font-size:14px}
+ .mufS8W_card[data-ework-command=knowledge]{box-sizing:border-box;max-width:calc(100vw - 16px)}
+ [data-ework-command=knowledge] .mufS8W_viewport,.mufS8W_card[data-knowledge-cascading-options]{scrollbar-width:thin;overscroll-behavior:contain}
+ [data-ework-command=knowledge] [data-knowledge-slash-group]{height:26px;display:flex;align-items:center}
  [data-knowledge-shared-parent=true]>svg:last-child{margin-inline-start:auto}
- [data-knowledge-cascading-options]{display:flex;flex-direction:column;width:min(198px,calc(100vw - 16px));
-   max-height:min(248px,calc(100vh - 16px));border:1px solid var(--ework-slash-line);border-radius:12px;
-   background:var(--ework-slash-surface);scrollbar-width:thin;box-shadow:0 8px 12px #0004}
- [data-knowledge-cascading-options]>button{flex:0 0 34px;min-height:34px;padding:0 10px;gap:8px;border-radius:8px;font-size:14px}
- [data-knowledge-cascading-options]>button[data-knowledge-shared-back]{flex-basis:36px;margin:0;border:0;color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:400}
+ [data-ework-command-back] svg{width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary)}
+ .mufS8W_card[data-knowledge-cascading-options]{margin:0;width:min(198px,calc(100vw - 16px));box-sizing:border-box;min-width:0;max-width:none;max-height:min(320px,calc(100vh - 16px));overflow:auto}
+ [data-knowledge-cascading-options]>button{display:flex;align-items:center;flex:none;gap:8px;border:0;border-radius:8px;padding:6px 8px;text-align:start;background:none;color:var(--dsw-alias-label-primary);cursor:pointer;font:inherit;font-size:13px}
  `
- return source.replace(css[0], 'const css = ' + JSON.stringify(JSON.parse(css[1]) + styles) + ';')
+ return source.replace(css[0], 'const css = ' + JSON.stringify(previous + styles) + ';')
 }
 
 function patchKnowledgeLabels(source){

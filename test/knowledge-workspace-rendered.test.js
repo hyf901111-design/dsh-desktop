@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest'
 import { build } from 'esbuild'
 import { readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
+import { patchDshFileDropClientSource } from '../src/main/state/dsh-file-drop-compat'
 
 let browser
 let bundle
@@ -20,6 +21,27 @@ beforeAll(async () => {
       import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
       import { createRoot } from 'react-dom/client'
+      if (document.body.hasAttribute('data-test-native-drops')) {
+        window.installComposerDrop = source => {
+          const previous = window.__ModuleLoader__
+          window.__ModuleLoader__ = { load: plugin => plugin.factory(() => React).apply({
+            effect: setup => setup(),
+            slots: {
+              inject: (_name, register) => register(),
+              register: (slot, render) => {
+                if (slot.id !== 'file-drop') return
+                createRoot(document.querySelector('[data-test-drop-composer]')).render(render({
+                  sessionId: 'composer', input: { draft: '' },
+                  inputActions: { insertFilePaths: paths => window.composerPaths.push(...paths) }
+                }))
+              }
+            }
+          }) }
+          try { new Function(source)() } finally { window.__ModuleLoader__ = previous }
+        }
+        window.composerPaths = []
+        window.dshDesktop = { getPathForFile: file => '/upload/' + file.name }
+      }
       const host = new WorkspaceSurfaceHost(document)
       const testPagination = document.body.hasAttribute('data-test-pagination')
       if (testPagination || document.body.hasAttribute('data-test-session-directory')) {
@@ -1028,8 +1050,13 @@ it('drops one or several local files into the active knowledge folder with indiv
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
-    await page.setContent('<body data-test-native-drops><div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.setContent('<body data-test-native-drops><div class="pI_x6G_centerCol" style="position:fixed;inset:10px 340px 10px 250px"></div><aside data-test-drop-composer style="position:fixed;inset:10px 10px 10px auto;width:320px"></aside>')
     await page.addScriptTag({ content: bundle })
+    const fileDrop = patchDshFileDropClientSource(await readFile('test/fixtures/dsh-file-drop-1.0.0-client.js', 'utf8'))
+    expect(fileDrop).toBeTruthy()
+    await page.evaluate(source => window.installComposerDrop(source), fileDrop)
+    const composer = page.locator('[data-test-drop-composer]')
+    const composerGuide = composer.locator('.dsh-drop-overlay')
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const list = library.locator('.knowledge-file-list')
     const heading = list.locator('thead')
@@ -1042,7 +1069,11 @@ it('drops one or several local files into the active knowledge folder with indiv
         for (const name of names) data.items.add(new File(['正文'], name))
         return data
       }, files)
-      await list.dispatchEvent('dragenter', { dataTransfer })
+      await composer.dispatchEvent('dragenter', { dataTransfer })
+      await composerGuide.waitFor()
+      await heading.dispatchEvent('dragenter', { dataTransfer })
+      await heading.dispatchEvent('dragover', { dataTransfer })
+      await composerGuide.waitFor({ state: 'detached' })
       const overlay = list.getByRole('status').filter({ hasText: /^松开以上传文件$/ })
       await overlay.waitFor()
       const [target, headerBox, pagerBox] = await Promise.all([overlay.boundingBox(), heading.boundingBox(), pager.boundingBox()])
@@ -1052,7 +1083,8 @@ it('drops one or several local files into the active knowledge folder with indiv
         const image = el.querySelector('img'), style = getComputedStyle(el)
         return { border: style.borderTopStyle, radius: style.borderRadius, image: [image.naturalWidth, image.naturalHeight] }
       })).toEqual({ border: 'dashed', radius: '8px', image: [28, 28] })
-      await list.dispatchEvent('drop', { dataTransfer })
+      await heading.dispatchEvent('drop', { dataTransfer })
+      expect(await page.evaluate(() => window.composerPaths)).toEqual([])
       await overlay.waitFor({ state: 'detached' })
       for (const name of files) {
         const progress = list.getByRole('progressbar', { name: `${name}的上传进度`, exact: true })
@@ -1484,7 +1516,10 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
         const [current, other, last] = await numberTiles()
         expect(current).toMatchObject({ width: 30, height: 30 })
         expect(other).toMatchObject({ width: 30, height: 30 })
-        expect(other.background).not.toBe('rgba(0, 0, 0, 0)')
+        expect(other.background).toBe('rgba(0, 0, 0, 0)')
+        const inactive = pager.getByRole('button', { name: '第 2 页', exact: true })
+        await inactive.hover()
+        expect(await inactive.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(other.background)
         expect(last.background).toBe(other.background)
         expect(current.background).not.toBe(other.background)
       }

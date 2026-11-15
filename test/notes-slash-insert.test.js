@@ -47,9 +47,10 @@ for(const [title,kind] of [['图片','image'],['视频','video'],['音频','audi
 it('canceling the picker leaves the slash paragraph and surrounding text editable',async()=>{
  const {context,page}=await fixture();try{await slash(page,'文件');await expect.poll(()=>page.evaluate(()=>typeof window.finishPick)).toBe('function');await page.evaluate(()=>{window.pickedFiles=[];window.finishPick()});expect(await page.locator('.en-note-file').count()).toBe(0);expect(await page.evaluate(()=>window.noteEditor.getBlock('before').content[0].text)).toBe('保留前文');expect(await page.locator('.en-root [role=alert]').count()).toBe(0)}finally{await context.close()}
 },15000)
-it('imports Markdown as editable note blocks at the original position and preserves them on reopen',async()=>{
+it.each(['斜杠','顶栏'])('imports Markdown through %s as editable note blocks and preserves them on reopen',async(entry)=>{
  const {context,page,errors}=await fixture();try{
-  await slash(page,'导入文档')
+  if(entry==='斜杠')await slash(page,'导入文档')
+  else await page.evaluate(()=>{window.noteEditor.setTextCursorPosition('anchor','start');document.dispatchEvent(new CustomEvent('sherlock:notes-import',{detail:{sessionId:'slash-insert'}}))})
   await expect.poll(()=>page.evaluate(()=>typeof window.finishDocumentImport)).toBe('function')
   await page.getByText('正在导入文档…',{exact:true}).waitFor()
   await page.evaluate(()=>{window.noteEditor.setTextCursorPosition('after','end');window.finishDocumentImport({format:'markdown',text:'## 导入标题\n\n正文内容'})})

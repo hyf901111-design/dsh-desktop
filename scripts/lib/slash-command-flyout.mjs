@@ -131,7 +131,16 @@ export function migrateSlashFlyoutOptions(source) {
 }
 
 export function patchSlashFlyoutOptions(source) {
-  if (source.includes(tag)) return source
+  const back = 'const showBack=["knowledge","model","permission","skills"].includes(state.command);'
+  const hideCascadeBack = input => {
+    if (!input.includes(back)) return input
+    return replace(
+      replace(input, back, back.replace('=["knowledge"', '=!flyout&&["knowledge"')),
+      'if(isKnowledge&&shared&&!state.search){ev.preventDefault();goBack();}',
+      'if(flyout||isKnowledge&&shared&&!state.search){ev.preventDefault();goBack();}'
+    )
+  }
+  if (source.includes(tag)) return hideCascadeBack(source)
   const wrappedSegment = 'via: "menu",\n\t\t\t\t\t\tspan: pick.span'
   if (source.split(wrappedSegment).length !== 3) throw Error('Slash branch dispatch anchors changed')
   source = source.replaceAll(wrappedSegment, 'via: "menu",\n\t\t\t\t\t\tflyout: pick.flyout,\n\t\t\t\t\t\tspan: pick.span')
@@ -152,5 +161,5 @@ export function patchSlashFlyoutOptions(source) {
   source = replace(source, '  const launcher=cardRef.current?.closest', '  if(flyout){popup.dismiss({focusComposer:true});return;}\n  const launcher=cardRef.current?.closest')
   source = replace(source, 'const left=box.right+width-1<=window.innerWidth-8?box.right-1:Math.max(8,box.left-width+1);',
     'const opensLeft=card.dataset.eworkCascadeSide==="left";\n   const left=!opensLeft&&box.right+width-1<=window.innerWidth-8?box.right-1:Math.max(8,box.left-width+1);')
-  return source
+  return hideCascadeBack(source)
 }

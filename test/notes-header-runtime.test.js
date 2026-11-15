@@ -29,7 +29,7 @@ it.each(['zh','en'])('renders the complete notes header in %s without relying on
  let markup=''
  expect(()=>{markup=renderToStaticMarkup(React.createElement(Header,{sessionId:'note',blank:true,composerPhase:'blank',active:{id:'notes'}}))}).not.toThrow()
  expect(markup).toContain('Chat Research Notes Trajectory')
- expect(markup).toContain(locale==='en'?'Export note':'导出笔记')
+ expect(markup).toContain(locale==='en'?'More note actions':'更多笔记操作')
  expect(markup).toContain('aria-haspopup="menu"')
 })
 
@@ -53,30 +53,40 @@ it('keeps the native export menu usable after mode and live language switches',a
  const react=React,renderSlot=()=>null;
  ${patchNotesClient(nativeSource)}
  function App(){const [view,setView]=React.useState('chat');return React.createElement('main',null,React.createElement('nav',null,...['chat','research','notes','trajectory'].map(id=>React.createElement('button',{key:id,onClick:()=>setView(id)},id))),React.createElement(ConversationSessionHeader,{sessionId:'note',blank:true,composerPhase:'blank',active:{id:view}}))}
- window.exports=[];document.addEventListener('sherlock:notes-export',e=>window.exports.push(e.detail));createRoot(document.querySelector('#root')).render(React.createElement(App));
+ window.exports=[];window.imports=[];document.addEventListener('sherlock:notes-export',e=>window.exports.push(e.detail));document.addEventListener('sherlock:notes-import',e=>window.imports.push(e.detail));createRoot(document.querySelector('#root')).render(React.createElement(App));
  `,resolveDir:process.cwd(),loader:'js'},bundle:true,write:false,format:'iife',define:{'process.env.NODE_ENV':'"production"'}})).outputFiles[0].text
  const browser=await chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
  try{
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
-  await page.setContent('<html data-odyssey-locale="zh"><body><div id="root"></div></body></html>');await page.addScriptTag({content:script})
+  await page.setContent('<html data-odyssey-locale="zh"><body><div id="root"></div></body></html>');await page.addStyleTag({content:await readFile('src/preload/figma-refinements.css','utf8')+'\n.en-header-icon-group{position:relative;left:400px}'});await page.addScriptTag({content:script})
   for(const locale of ['zh','en','zh']){
    await page.evaluate(locale=>document.documentElement.dataset.odysseyLocale=locale,locale)
    for(const view of ['notes','research','notes','chat','notes','trajectory','notes']){
     await page.getByRole('button',{name:view,exact:true}).click()
     if(view!=='notes')continue
-    const button=page.getByRole('button',{name:locale==='en'?'Export note':'导出笔记',exact:true})
+    const button=page.getByRole('button',{name:locale==='en'?'More note actions':'更多笔记操作',exact:true})
     expect(await button.textContent()).toBe('')
     await button.click()
-    expect(await page.getByRole('menuitem').allTextContents()).toEqual(['Word','PDF','Markdown'])
+    const actions=page.getByRole('menu',{name:locale==='en'?'More note actions':'更多笔记操作',exact:true})
+    const importItem=actions.getByRole('menuitem',{name:locale==='en'?'Import':'导入',exact:true})
+    const exportItem=actions.getByRole('menuitem',{name:locale==='en'?'Export':'导出',exact:true})
+    await importItem.click()
+    expect((await page.evaluate(()=>window.imports)).at(-1)).toEqual({sessionId:'note'})
+    await button.click()
+    await exportItem.hover()
+    const formats=page.getByRole('menu',{name:locale==='en'?'Note export format':'笔记导出格式',exact:true})
+    expect(await formats.getByRole('menuitem').allTextContents()).toEqual(['Word','PDF','Markdown'])
+    expect(await actions.isVisible()).toBe(true)
     await page.getByRole('menuitem',{name:'PDF',exact:true}).click()
     expect((await page.evaluate(()=>window.exports)).at(-1)).toEqual({sessionId:'note',format:'pdf'})
    }
   }
   // The same mounted header must rerender its labels without being remounted.
   await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en')
-  await page.getByRole('button',{name:'Export note',exact:true}).press('ArrowDown')
-  expect(await page.getByRole('menu').getAttribute('aria-label')).toBe('Note export format')
+  await page.getByRole('button',{name:'More note actions',exact:true}).press('ArrowDown')
+  await page.getByRole('menuitem',{name:'Export',exact:true}).press('ArrowLeft')
   await page.getByRole('menuitem',{name:'Word',exact:true}).press('Escape')
+  await page.getByRole('menuitem',{name:'Export',exact:true}).press('Escape')
   expect(await page.getByRole('menu').count()).toBe(0)
   expect(errors).toEqual([])
  }finally{await browser.close()}

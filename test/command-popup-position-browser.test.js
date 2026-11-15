@@ -30,15 +30,23 @@ it('opens a submenu from the first-level slash menu on hover and keeps single-st
   expect(await slash.isVisible()).toBe(true)
   expect(await page.locator('[data-ework-command=plan]').count()).toBe(0)
   expect(await slash.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(41, 42, 45, 0.97)')
+  await slash.getByRole('option',{name:/Permission options/}).hover()
+  const permission=page.locator('[data-ework-command=permission]')
+  await permission.waitFor()
+  const menuMaterial=el=>{const style=getComputedStyle(el);return [style.backgroundColor,style.borderColor,style.borderRadius,style.backdropFilter,style.boxShadow]}
+  const material=await permission.evaluate(menuMaterial)
   await slash.getByRole('option',{name:/Knowledge Base options/}).hover()
   await knowledge.waitFor()
   expect(await slash.isVisible()).toBe(true)
   expect(await knowledge.getAttribute('data-ework-cascade-side')).toBe('right')
-  expect(await knowledge.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgb(40, 40, 42)')
+  expect(await knowledge.evaluate(menuMaterial)).toEqual(material)
+  expect(await knowledge.getByRole('button',{name:/返回|Back/}).count()).toBe(0)
   const directory=knowledge.getByRole('option',{name:'他人共享'})
   await directory.hover()
   const flyout=knowledge.getByRole('group',{name:'他人共享分类'})
   await flyout.getByRole('button',{name:'行业研究'}).waitFor()
+  expect(await flyout.evaluate(menuMaterial)).toEqual(material)
+  expect(await flyout.getByRole('button').allTextContents()).not.toContain('他人共享')
   const flyoutBox=await flyout.boundingBox()
   const knowledgeBox=await knowledge.boundingBox()
   expect(Math.abs(flyoutBox.x-knowledgeBox.x-knowledgeBox.width)).toBeLessThanOrEqual(2)
@@ -97,7 +105,10 @@ it.each(['no-preference','reduce'])('navigates slash categories with %s motion w
   await checkMotion(slash);
   await slash.getByRole('option',{name:/Permission options/i}).click();
   const permission=page.locator('[data-ework-command=permission]');
-  await permission.locator('[data-ework-command-back]').click();
+  expect(await permission.locator('[data-ework-command-back]').count()).toBe(0)
+  await permission.getByRole('textbox').press('ArrowLeft')
+  await expect.poll(()=>permission.count()).toBe(0)
+  expect(await slash.isVisible()).toBe(true)
   await slash.getByRole('option',{name:/Knowledge Base options/i}).click();
   const kb=page.locator('[data-ework-command=knowledge]');
   await checkMotion(kb);
@@ -113,12 +124,12 @@ it.each(['no-preference','reduce'])('navigates slash categories with %s motion w
   expect(await parent.evaluate(el=>{
    const row=el.getBoundingClientRect(),arrow=el.lastElementChild.getBoundingClientRect();
    return Math.round(row.right-arrow.right);
-  })).toBe(10);
+  })).toBe(8);
   await input.fill('他人共享');
   expect(await kb.locator('[data-knowledge-slash-group]').count()).toBe(0);
   await input.press('Enter');
   await shared.getByRole('button',{name:'行业研究'}).waitFor();
-  await shared.getByRole('button',{name:'他人共享',exact:true}).click();
+  await input.press('ArrowLeft');
   await expect.poll(()=>shared.count()).toBe(0);
   expect(await input.inputValue()).toBe('');
   await kb.getByRole('option',{name:'他人共享',exact:false}).hover();
