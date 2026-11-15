@@ -172,13 +172,13 @@ ${welcomeAnchor}`,'right pane welcome component')
  const researchWelcome=': researchEmpty ? (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: "sRp_emptyState",'
  change(researchWelcome,": researchEmpty && research && !browserAppActive && !subagentPanel ? react.createElement(EWorkModeWelcome,{sessionId,mode:'research'}) "+researchWelcome,'research welcome without replacing personal history')
  const inputBar='function InputBar({ subagentPanel=false,'
- change(inputBar,inputBar.replace('subagentPanel=false','eworkSpreadsheet=false, subagentPanel=false'),'spreadsheet context composer input')
+ change(inputBar,inputBar.replace('subagentPanel=false','eworkSpreadsheet=false, eworkNoteContext, subagentPanel=false'),'spreadsheet context composer input')
  const barProps='eworkNotes:activeView === "notes",'
  change(barProps,barProps+"\n eworkSpreadsheet:activeView==='spreadsheet'&&!browserAppActive&&!pendingRight&&!subagentPanel,", 'spreadsheet context surface')
  const canvasContext='researchCanvasWorkspace: research && sessionId !== void 0 ? researchWorkspace : void 0,'
  change(canvasContext,canvasContext.replace('research &&','research && !browserAppActive && !pendingRight && !subagentPanel &&'),'research context surface')
  const badge='researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),'
- change(badge,badge+"\n eworkSpreadsheet && react.createElement(EWorkSpreadsheetContextBadge,{key:sessionId,keyboard,input,disabled}),",'spreadsheet context badge')
+ change(badge,"eworkNoteContext,\n "+badge+"\n eworkSpreadsheet && react.createElement(EWorkSpreadsheetContextBadge,{key:sessionId,keyboard,input,disabled}),",'spreadsheet context badge')
  for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',trajectory:"]]){
   const nativeTitle=source.split('/* browser-app-native:v1 */')[0]
   if(nativeTitle.split(before).length===2)change(before,after,'spreadsheet blank title '+before)

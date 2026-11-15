@@ -166,16 +166,22 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seatIcon { width:16px; height:16px; }
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .sRp_composer .FJxK0a_root { display:none; }
-/* 164:805/940: live canvas scope, inside the input at x17/y12. */
-.sRp_composer div:has(>[data-research-context-badge]) { margin:12px 17px 0 !important; max-width:calc(100% - 34px) !important; }
-.sRp_composer [data-research-context-badge] {
-  padding:4px 8px !important; border:0 !important; border-radius:6px !important;
-  background:#00000006 !important; color:#5e5e5e !important;
-  font:400 13px/20px var(--odyssey-font-ui) !important;
+/* Keep all workspace references on the same row inside the native composer. */
+.sRp_composer [data-composer-card]:has(> :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor])) {
+  padding-block-start:12px !important;
 }
-[data-ds-dark-theme] .sRp_composer [data-research-context-badge] { color:#d0d0d0 !important; background:#ffffff09 !important; }
-.sRp_composer [data-research-context-badge]:hover { color:var(--odyssey-text) !important; }
-.sRp_composer [data-research-context-badge]:focus-visible { outline:1px solid var(--odyssey-active); outline-offset:3px; }
+.sRp_composer [data-composer-card] > :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor]) {
+  position:relative; flex:none; align-self:stretch; min-width:0; width:auto !important; max-width:none !important;
+  margin:0 17px !important;
+}
+.sRp_composer [data-composer-card] > :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor]) > button {
+  display:inline-flex; align-items:center; box-sizing:border-box; max-width:100%; min-height:28px;
+  padding:4px 8px !important; border:0 !important; border-radius:8px !important;
+  background:var(--dsw-alias-interactive-bg-hover,#8882) !important;
+  color:var(--dsw-alias-label-secondary,#5e5e5e) !important; font:400 13px/20px var(--odyssey-font-ui) !important;
+}
+.sRp_composer [data-composer-card] > :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor]) > button:hover { color:var(--odyssey-text) !important; }
+.sRp_composer [data-composer-card] > :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor]) > button:focus-visible { outline:1px solid var(--odyssey-active); outline-offset:3px; }
 .t8lSSG_panel .t8lSSG_tabBar { padding-top:6px; padding-bottom:6px; }
 .t8lSSG_panel .t8lSSG_tabList { height:32px; align-items:flex-start; }
 .t8lSSG_panel .t8lSSG_tabBar>:has(>.t8lSSG_tabBarPlus) { flex:0 0 28px; align-self:center; }

@@ -89,7 +89,7 @@ function EWorkSharedInputBar(props) {
   const shell=record.shell,nativeSession=props.useSession;
   return react_jsx_runtime.jsx(InputBar,{...props,
     researchCanvasWorkspace:undefined,
-    accessory:react_jsx_runtime.jsx(react.Fragment,{children:[props.accessory,react_jsx_runtime.jsx(EWorkNotesReferenceBar,{sessionId},sessionId)]}),
+    eworkNoteContext:react_jsx_runtime.jsx(EWorkNotesReferenceBar,{sessionId},sessionId),
     useInput:select=>{props.useInput(value=>value);return select(notesInput)},inputActions:shell.actions,keyboard:shell,
     useNotices:select=>{props.useNotices(value=>value);return select(notesNotice)},
     useSession:select=>nativeSession(value=>select({...value,running:state.running||value.running,promptError:null})),

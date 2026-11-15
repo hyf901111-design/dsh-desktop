@@ -1,12 +1,15 @@
 import type { KnowledgeDocument } from '../../shared/knowledge-library'
 import { sharedKnowledgeSessionFile } from '../../shared/knowledge-sessions'
 import React, { useEffect, useState } from 'react'
-import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
+import { knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
   type KnowledgeSessionMode, type KnowledgeSessionShare } from '../../shared/knowledge-sessions'
 import { KnowledgeIcon, KnowledgeItemIcon } from './icons'
 import { KnowledgePagination, useKnowledgePagination } from './pagination'
 
-const sessionModes = Object.keys(knowledgeSessionLabels) as KnowledgeSessionMode[]
+export const knowledgeSessionDirectoryLabels = {
+  research: '我的研究', notes: '我的笔记', spreadsheet: '我的表格'
+} satisfies Record<KnowledgeSessionMode, string>
+const sessionModes = Object.keys(knowledgeSessionDirectoryLabels) as KnowledgeSessionMode[]
 type SessionDirectoryState = { entries?: KnowledgeSessionEntry[]; loading: boolean; error: boolean }
 
 export function useKnowledgeSessions(document: Document, enabled: boolean,
@@ -109,9 +112,9 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open,
 
   const { page, pages, setPage, scrollRef, start, end } = useKnowledgePagination<HTMLDivElement>(rows.length)
 
-  return <main className="knowledge-file-list knowledge-session-directory" aria-label={knowledgeSessionLabels[mode]}>
+  return <main className="knowledge-file-list knowledge-session-directory" aria-label={knowledgeSessionDirectoryLabels[mode]}>
     <div className="knowledge-tools">
-      <h2>{knowledgeSessionLabels[mode]}</h2>
+      <h2>{knowledgeSessionDirectoryLabels[mode]}</h2>
       <label className="knowledge-search"><KnowledgeIcon name="search" />
         <input type="search" aria-label="搜索会话" placeholder="搜索会话…" value={query}
           onChange={event => {

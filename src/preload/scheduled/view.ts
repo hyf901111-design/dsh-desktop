@@ -291,6 +291,12 @@ export class ScheduledTaskView {
         button.type = 'button'
         button.className = 'hHd-Xa_newSession'
         button.setAttribute(attribute, '')
+        if (key === 'knowledge') {
+          const glyph = this.document.createElement('i')
+          glyph.setAttribute('data-sidebar-knowledge-glyph', '')
+          glyph.setAttribute('aria-hidden', 'true')
+          button.append(glyph)
+        }
         button.onclick = open
       }
       if (button.title !== label) {

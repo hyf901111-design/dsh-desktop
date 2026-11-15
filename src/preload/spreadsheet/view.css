@@ -211,7 +211,7 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-welcome-actions{display:flex;flex-direction:column;gap:2px;margin-inline:-7px}
 .ew-sheet-welcome .ew-sheet-welcome-actions button{width:100%;min-height:36px;display:flex;align-items:center;justify-content:flex-start;gap:8px;border-radius:6px;padding:7px;text-align:start}
 .ew-sheet-welcome .ew-sheet-welcome-actions button:is(:hover,:focus-visible){background:var(--ss-hover)}
-[data-composer-card] [data-sheet-context-anchor]{position:relative;margin:12px 17px 0;min-width:0;align-self:stretch}
+[data-composer-card] [data-sheet-context-anchor]{position:relative;min-width:0}
 [data-composer-card]:has(.ew-sheet-pending-reference) [data-sheet-context-anchor]{display:none}
 [data-sheet-context-anchor] button{border:0;border-radius:8px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:20px;padding:3px 8px;cursor:pointer}
 [data-sheet-context-anchor] button:hover:not(:disabled){color:var(--odyssey-text)}
@@ -512,3 +512,6 @@ body[data-ework-spreadsheet-mode] :is(.univer-popup>section>div.univer-overscrol
 .ew-sheet .ew-sheet-component-card[data-sheet-component-generation] .odyssey-generation-actions{opacity:1;pointer-events:auto}
 .ew-sheet-component-card[data-sheet-component-generation] .odyssey-generation-surface{position:relative;height:100%!important;min-width:0;width:100%;flex:1;background:var(--generation-bg,var(--grid-card))!important}
 .ew-sheet-inspector-tabs button[role=tab]{text-align:center}
+
+.ew-sheet-guide-file{display:grid;justify-items:start;gap:6px;margin-top:12px}
+.ew-sheet-guide-file small{color:var(--ss-muted)}

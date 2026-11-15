@@ -2,25 +2,21 @@ import { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import { lstat, readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { homeGuideSessionTitle, isHomeGuideSessionTitle } from './home-guide-session-titles.js'
-import { HOME_SPREADSHEET_GUIDE_PATH, HOME_SPREADSHEET_GUIDE_PROMPTS } from './home-spreadsheet-guide-contract.js'
+import { HOME_SPREADSHEET_GUIDE_PATH, HOME_SPREADSHEET_GUIDE_PROMPTS, HOME_SPREADSHEET_GUIDE_TREND_PROMPTS, HOME_SPREADSHEET_GUIDE_TREND_REFERENCE } from './home-spreadsheet-guide-contract.js'
 
 const provider = 'sherlock-home-spreadsheet'
-const stages = ['analysis', 'trend', 'complete']
+const stages = ['analysis', 'trend']
 const occupiedEvents = new Set(['user/message', 'assistant/message', 'tool/call', 'turn/start'])
 const isId = value => typeof value === 'string' && /^[\w:-]{1,128}$/.test(value)
 const cancelled = () => new DOMException('表格演示已结束。', 'AbortError')
 const narration = {
   zh: [
-    '我先按公司和季度检查重复记录，再计算同比。',
-    '\n\n已去掉 1 条重复记录。24 条季度数据和同比公式已写入「季度分析」，原始数据已保留。',
-    '\n\n趋势图里，澄川制造 2026 年第三季度的背离最明显。净利润同比增长 **25%**，经营现金流同比下降 **20%**。',
-    '\n\n「现金流拆解台」已放到工作簿侧栏。从 2.50 亿元净利润拆到 1.60 亿元经营现金流，可以点开调整项核对来源，再拖动滑杆做回款试算。'
+    ['我先按公司和季度核对重复记录。', '\n\n已去掉 1 条重复记录。24 条季度数据和同比公式已写入「季度分析」，原始数据已保留。'],
+    ['我会用选区里的季度作横轴，分别绘制净利润和经营现金流同比。', '\n\n趋势图已插入。澄川制造 2026 年第三季度的背离最明显，净利润同比增长 **25%**，经营现金流同比下降 **20%**。']
   ],
   en: [
-    'I’ll check for duplicate company-quarter rows before calculating year-over-year changes.',
-    '\n\nI removed one duplicate and wrote 24 quarterly records and year-over-year formulas to Quarterly Analysis. The original data is preserved.',
-    '\n\nChengchuan Manufacturing shows the widest gap in Q3 2026. Net profit rose **25%** year over year, while operating cash flow fell **20%**.',
-    '\n\nCash Flow Bridge is open in the workbook sidebar. It reconciles CNY 250 million in net profit to CNY 160 million in operating cash flow. Select an adjustment to inspect the source, or drag the slider to model additional collections.'
+    ['I’ll check for duplicate company-quarter rows.', '\n\nI removed one duplicate and wrote 24 quarterly records and year-over-year formulas to Quarterly Analysis. The source is preserved.'],
+    ['I’ll plot both year-over-year series using the selected quarters.', '\n\nThe trend chart is saved. In Q3 2026 net profit rose **25%** year over year while operating cash flow fell **20%**, the widest gap.']
   ]
 }
 
@@ -51,10 +47,14 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
   const runKey = ({ sessionId, runId }) => JSON.stringify([sessionId, runId])
   const humanMessages = run => run.agent.session.events
     .filter(event => event.type === 'user/message' && event.data.source?.kind === 'user')
-  const isReplayPrompt = (run, message) => {
+  const isReplayPrompt = (run, index, message) => {
     const content = message?.data?.content
-    return Array.isArray(content) && content.every(block => block.type === 'text') &&
-      content.map(block => block.text).join('') === HOME_SPREADSHEET_GUIDE_PROMPTS[run.locale]
+    if (!Array.isArray(content) || !content.every(block => block.type === 'text')) return false
+    const text = content.map(block => block.text).join('')
+    if (index === 0) return text === HOME_SPREADSHEET_GUIDE_PROMPTS[run.locale]
+    const marker = /^〔表格选区 ("[^"\n]+")!(A1:C5) #[a-f0-9]{12}〕\s*/u.exec(text)
+    return !!marker && JSON.parse(marker[1]) + '!' + marker[2] === HOME_SPREADSHEET_GUIDE_TREND_REFERENCE[run.locale] &&
+      text.slice(marker[0].length) === HOME_SPREADSHEET_GUIDE_TREND_PROMPTS[run.locale]
   }
   const empty = agent => agent && agent.status !== 'running' &&
     !agent.session.events.some(event => occupiedEvents.has(event.type))
@@ -81,15 +81,16 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
   function guardLateSubmission(run) {
     // A native button's send can still be preparing when navigation cancels
     // the guide. Contain its captured prompt through the first dispatched turn.
-    if (!run.armed || humanMessages(run).length || stopped) return
+    const index = run.index
+    if (!run.turns[index]?.armed || humanMessages(run).length !== index || stopped) return
     const remove = () => {
       off()
       lateSubmissions.delete(run.sessionId)
     }
     const off = run.agent.ctx.on('agent/request', (_request, next) => {
-      const [first] = humanMessages(run)
-      if (first) remove()
-      if (isReplayPrompt(run, first)) throw cancelled()
+      const message = humanMessages(run)[index]
+      if (message) remove()
+      if (isReplayPrompt(run, index, message)) throw cancelled()
       return next()
     }, { prepend: true })
     lateSubmissions.get(run.sessionId)?.()
@@ -99,10 +100,10 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
 
   function stopWaiting(run, error) {
     run.failure = error
-    run.acceptance.reject(error)
-    for (const stage of run.checkpoints) {
-      stage.saved.reject(error)
-      stage.replied.reject(error)
+    for (const turn of run.turns) {
+      turn.acceptance.reject(error)
+      turn.saved.reject(error)
+      turn.replied.reject(error)
     }
   }
 
@@ -130,28 +131,26 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
         yield { type: 'finish', reason: { kind: 'stop' } }
         return
       }
+      const index = run.index
+      const turn = run.turns[index]
       const users = humanMessages(run)
-      if (!run.armed || run.started || users.length !== 1 || !isReplayPrompt(run, users[0])) {
-        throw Error('表格演示只接受本次示例需求。')
+      if (!turn?.armed || turn.started || users.length !== index + 1 || !isReplayPrompt(run, index, users[index])) {
+        throw Error('表格演示只接受本次示例需求和指定选区。')
       }
 
-      run.started = true
-      run.acceptance.resolve()
-      const [intro, ...updates] = narration[run.locale]
-      let text = intro
+      turn.started = true
+      turn.acceptance.resolve()
+      const [intro, update] = narration[run.locale][index]
       yield { type: 'block-start', index: 0, blockType: 'text' }
       yield { type: 'text-delta', index: 0, text: intro }
-      for (const [index, checkpoint] of run.checkpoints.entries()) {
-        await waitFor(checkpoint.saved.promise, request.signal)
-        request.signal?.throwIfAborted()
-        current(run)
-        text += updates[index]
-        yield { type: 'text-delta', index: 0, text: updates[index] }
-        checkpoint.replied.resolve()
-      }
-      yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+      await waitFor(turn.saved.promise, request.signal)
+      request.signal?.throwIfAborted()
+      current(run)
+      yield { type: 'text-delta', index: 0, text: update }
+      turn.replied.resolve()
+      yield { type: 'block-end', index: 0, block: { type: 'text', text: intro + update } }
+      turn.finished = true
       yield { type: 'finish', reason: { kind: 'stop' } }
-      run.finishedReply = true
     }
   }
   const offAdapter = ctx.llm.registerAdapter([provider], new SpreadsheetReplay())
@@ -166,7 +165,7 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
       stopWaiting(run, cancelled())
       try {
         guardLateSubmission(run)
-        if (!run.finishedReply && run.agent.status === 'running') {
+        if (!run.turns[run.index]?.finished && run.agent.status === 'running') {
           await run.agent.cancel({ kind: 'user' })
           await run.agent.whenIdle()
         }
@@ -214,8 +213,8 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
           provider: agent.options.provider, model: agent.options.model,
           ...(agent.options.maxTokens === undefined ? {} : { maxTokens: agent.options.maxTokens })
         } }
-        const run = { ...input, agent, originalHeader, off: [], acceptance: deferred(), allowed: -1,
-          checkpoints: stages.map(() => ({ saved: deferred(), replied: deferred() })) }
+        const run = { ...input, agent, originalHeader, off: [], index: 0,
+          turns: stages.map(() => ({ acceptance: deferred(), saved: deferred(), replied: deferred() })) }
         runs.set(input.sessionId, run)
         // Prevent hosted credential and quota routing from using an actual model.
         run.off.push(agent.ctx.on('agent/request', () => {
@@ -224,10 +223,10 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
         }, { prepend: true }))
         run.off.push(ctx.on('session/event', (owner, event) => {
           if (owner !== session || event.type !== 'turn/end') return
-          if (!run.finishedReply || event.data.reason?.kind !== 'completed') {
+          if (!run.turns[run.index]?.finished || event.data.reason?.kind !== 'completed') {
             stopWaiting(run, Error(event.data.reason?.error?.message || '表格演示已停止。'))
+            return restoreRoute(run)
           }
-          return restoreRoute(run)
         }))
         return { ready: true }
       } finally {
@@ -237,14 +236,18 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
 
     async arm(input) {
       const run = current(input)
-      if (!empty(run.agent)) throw Error('原生表格会话已接收其他消息。')
-      run.armed = true
+      const turn = run.turns[run.index]
+      if (run.failure || !turn || turn.started || run.agent.status === 'running' ||
+          humanMessages(run).length !== run.index || (run.index === 0 && !empty(run.agent))) {
+        throw Error('原生表格会话已接收其他消息。')
+      }
+      turn.armed = true
       return { armed: true }
     },
 
     async accepted(input) {
       const run = current(input)
-      await run.acceptance.promise
+      await run.turns[run.index]?.acceptance.promise
       current(input)
       if (run.failure) throw run.failure
       return { accepted: true }
@@ -252,23 +255,23 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
 
     async advance(input) {
       const run = current(input)
+      const turn = run.turns[run.index]
       if (run.failure) throw run.failure
-      const index = stages.indexOf(input.stage)
-      if (!run.started || index < 0 || index > run.allowed + 1) throw Error('表格演示步骤顺序已变化。')
-      run.allowed = Math.max(run.allowed, index)
-      const checkpoint = run.checkpoints[index]
-      checkpoint.saved.resolve()
-      await checkpoint.replied.promise
+      if (!turn?.started || input.stage !== stages[run.index]) throw Error('表格演示步骤顺序已变化。')
+      turn.saved.resolve()
+      await turn.replied.promise
       current(input)
       return { stage: input.stage }
     },
 
     async flush(input) {
       const run = current(input)
-      if (run.allowed === stages.length - 1) {
+      const turn = run.turns[run.index]
+      if (turn?.started) {
         await run.agent.whenIdle()
         if (run.failure) throw run.failure
-        await restoreRoute(run)
+        current(input)
+        if (turn === run.turns[run.index] && ++run.index === stages.length) await restoreRoute(run)
       }
       return flushSession(run)
     },

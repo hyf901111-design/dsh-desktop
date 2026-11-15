@@ -5,6 +5,9 @@ import {NOTE_ENGLISH} from '../../packages/dsh-research-task-runtime/notes-local
 import {financialUiCopy} from './financial-ui-copy'
 export const englishUiCopy: Record<string, string> = {
   "新笔记":"New Note",
+  "我的研究":"My Research",
+  "我的笔记":"My Notes",
+  "我的表格":"My Spreadsheets",
   "复制用户 ID":"Copy user ID",
   "已复制":"Copied",
   "搜索结果":"Search results",

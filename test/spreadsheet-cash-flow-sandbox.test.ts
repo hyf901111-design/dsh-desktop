@@ -62,10 +62,27 @@ it('offers direct scenario comparison and a readable chart in a narrow sidebar',
   await expect.poll(()=>frame.locator('[data-ratio]').textContent()).toBe('76%')
   expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('+0.30 亿元')
   expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('+12 个百分点')
-  expect(await frame.locator('[data-source-detail] > div').count()).toBe(2)
+  expect(await frame.locator('[data-source-detail] > div').count()).toBe(3)
   await frame.getByRole('button',{name:'实际值',exact:true}).click()
   await expect.poll(()=>frame.locator('[data-ratio]').textContent()).toBe('64%')
   expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('2,750 万元')
+ }finally{await page.close()}
+},15000)
+
+it('keeps short horizontal labels at 258px and switches to the standard EFund fills without resetting the scenario',async()=>{
+ const {page,frame}=await preview(true)
+ try{
+  await page.locator('#outer').evaluate((node:HTMLElement)=>node.style.width='258px')
+  const labels=frame.locator('.bridge-label-compact')
+  await expect.poll(()=>labels.first().isVisible()).toBe(true)
+  const metrics:{height:number;line:number}[]=await labels.evaluateAll((nodes:HTMLElement[])=>nodes.map(node=>({height:node.clientHeight,line:parseFloat(getComputedStyle(node).lineHeight)})))
+  expect(metrics.every(({height,line})=>height<=line+1)).toBe(true)
+  await frame.getByRole('button',{name:'+3,000 万元',exact:true}).click()
+  await frame.getByRole('button',{name:'易方达模式',exact:true}).click()
+  expect(await frame.locator('.bridge-step .bridge-bar').evaluateAll((nodes:HTMLElement[])=>nodes.map(node=>getComputedStyle(node).backgroundColor)))
+   .toEqual(['rgb(0, 80, 150)','rgb(30, 185, 225)','rgb(150, 150, 150)','rgb(150, 150, 150)','rgb(30, 185, 225)','rgb(0, 80, 150)'])
+  expect(await frame.locator('[data-ratio]').textContent()).toBe('76%')
+  expect(await frame.locator('[data-source-detail]').textContent()).toContain('情景多回款')
  }finally{await page.close()}
 },15000)
 

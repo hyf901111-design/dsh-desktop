@@ -7,11 +7,12 @@ import {applyOperations,blankWorkbook,inspectWorkbook,label,rangeAddress,safeId,
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
 import {canSaveCustomComponent,type ComponentLibraryStore} from '../state/component-library'
-import {readWorkbookPath,writeWorkbookFile} from './files'
+import {readWorkbookFile,readWorkbookPath,writeWorkbookFile} from './files'
 import {cashFlowGuideAnalysisOperations,cashFlowGuideChartOperation,cashFlowGuideComponent,createCashFlowGuideWorkbook,CASH_FLOW_GUIDE_BOOK_PREFIX,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
 import {SpreadsheetService} from './service'
 import {SpreadsheetStore,type WorkbookKey} from './store'
 import type {ConversationComponentVisibleContext} from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
+import {HOME_SPREADSHEET_GUIDE_FILE} from '../../../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
 import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
 
 function exportStem(value:unknown){
@@ -68,15 +69,11 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     return text
    }
    case 'admit':service.admit(key,input.instruction,input.bookId,input.references,input.useWorkbook);return true
-   case 'cash-flow-guide-source':case 'cash-flow-guide-analysis':case 'cash-flow-guide-trend':case 'component-cash-flow-guide':{
+   case 'cash-flow-guide-analysis':case 'cash-flow-guide-trend':case 'component-cash-flow-guide':{
     if(!options.canPlayCashFlowGuide?.(key))throw Error('请从探索打开独立的现金流演示。')
     const {revision,workbook}=store.load(key)
     if(input.revision!==revision)throw Error('工作簿已变化，演示已停止。')
     const locale=options.locale?.()??'zh'
-    if(action==='cash-flow-guide-source'){
-     if(workbook||store.recent(key).length)throw Error('此会话已有工作簿，演示未覆盖现有内容。')
-     return store.create(key,revision,createCashFlowGuideWorkbook(CASH_FLOW_GUIDE_BOOK_PREFIX+randomUUID(),locale))
-    }
     if(!workbook?.id.startsWith(CASH_FLOW_GUIDE_BOOK_PREFIX))throw Error('示例工作簿已切换。')
     const hasAnalysis=Object.hasOwn(workbook.sheets,CASH_FLOW_GUIDE_TREND.sheetId)
     const hasTrend=workbook.charts?.some(item=>item.chartId==='cash-flow-guide-trend')
@@ -230,6 +227,19 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
    case 'redo':return store.redo(key,input.revision)
    case 'undo':return store.undo(key,randomUUID(),{revision:input.revision,actionId:input.actionId})
    case 'import':{
+    if(input.guideSample===true){
+     const current=store.load(key)
+     if(!options.canPlayCashFlowGuide?.(key)||current.workbook||store.recent(key).length){
+      throw Error('请从探索打开独立的空白表格演示。')
+     }
+     const locale=options.locale?.()??'zh'
+     const sample=createCashFlowGuideWorkbook(CASH_FLOW_GUIDE_BOOK_PREFIX+randomUUID(),locale)
+     const bytes=await writeWorkbookFile(sample,'xlsx',sample.sheetOrder[0]!)
+     const workbook=await readWorkbookFile(bytes,HOME_SPREADSHEET_GUIDE_FILE[locale],sample.id)
+     guard(true)
+     if(!options.canPlayCashFlowGuide?.(key))throw Error('表格演示已结束。')
+     return store.create(key,input.revision,workbook)
+    }
     const win=getWindow()!
     const chosen=await dialog.showOpenDialog(win,{title:options.locale?.()==='en'?'Import workbook':'导入工作簿',properties:['openFile'],filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}]})
     if(chosen.canceled)return null

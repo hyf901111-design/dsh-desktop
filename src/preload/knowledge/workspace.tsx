@@ -15,14 +15,14 @@ import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-to
 import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
-import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
+import { knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
   type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { KnowledgeMemory } from './memory'
 import { FileSearch } from './file-search'
 import { categoryIcons, KnowledgeIcon, KnowledgeItemIcon } from './icons'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
-import { KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
+import { knowledgeSessionDirectoryLabels, KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
 import { KnowledgePagination, useKnowledgePagination } from './pagination'
 import { listKnowledgeRows, usePublishedKnowledgeSessions, type KnowledgeListRow } from './published-sessions'
 import dropUploadIcon from './drop-upload.svg?inline'
@@ -143,6 +143,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [assistantFilter, setAssistantFilter] = useState(false)
   const [draftFilter, setDraftFilter] = useState<KnowledgeFilter>()
   const [ready, setReady] = useState(false)
+  const sessionCounts = sessionSections.map(([mode]) => sessionDirectories[mode]?.entries?.length)
+  const totalFileCount = ready && sessionCounts.every(count => count !== undefined)
+    ? sessionCounts.reduce<number>((total, count) => total + (count ?? 0), fileCount)
+    : '—'
   const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>()
   const [busy, setBusy] = useState(false)
@@ -869,7 +873,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && category !== 'all' ? 'page' : undefined}
             onClick={() => selectCategory(category)}>
             {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
-            <small>{category === 'all' ? fileCount : listKnowledgeDocuments(snapshot, { category }).length +
+            <small>{category === 'all' ? totalFileCount : listKnowledgeDocuments(snapshot, { category }).length +
               (category === 'shared' ? Object.keys(local.sessionShares ?? {}).length : 0)}</small>
           </button>
           {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
@@ -881,7 +885,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                 setMenu(undefined)
                 setDraftFilter(undefined)
                 closePreview()
-              }}>{buttonIcon(icon, knowledgeSessionLabels[mode])}<small>{sessionDirectories[mode]?.entries?.length ?? '—'}</small></button>)}
+              }}>{buttonIcon(icon, knowledgeSessionDirectoryLabels[mode])}<small>{sessionDirectories[mode]?.entries?.length ?? '—'}</small></button>)}
           </div>}
         </React.Fragment>)}
         <div className="knowledge-folder-heading"><span>文件夹</span>
