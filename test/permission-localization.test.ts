@@ -86,6 +86,53 @@ describe('permission menu localization', () => {
       .toEqual(['Read Only', 'Workspace Write', 'Full access'])
   })
 
+  it('reuses the Settings translations in the native slash permission choices', async () => {
+    const { patchFigmaPermissionMenu } = createRequire(import.meta.url)(
+      '../scripts/lib/figma-permission-menu.mjs'
+    ) as { patchFigmaPermissionMenu(source: string, settings?: boolean): string }
+    const installed = await readFile('node_modules/@deepseek-ai/dsh-client-ui-permission-presets/lib/client.js', 'utf8')
+    const source = patchFigmaPermissionMenu(installed, true)
+    expect(patchFigmaPermissionMenu(source, true)).toBe(source)
+    const labelStart = source.indexOf('function displayPresetName(')
+    const labelEnd = source.indexOf('//#endregion', labelStart)
+    const optionStart = source.indexOf('function optionsOf(')
+    const optionEnd = source.indexOf('\n\t\t}', optionStart) + 4
+    const { optionsOf } = runInNewContext(
+      source.slice(labelStart, labelEnd) + source.slice(optionStart, optionEnd) + '\n({ optionsOf })'
+    )
+    const chinese: Record<string, string> = {
+      'mode.readOnly': '只读',
+      'mode.workspaceWrite': '工作区写入',
+      'mode.fullAccess': '完全访问'
+    }
+    const English: Record<string, string> = {
+      'mode.readOnly': 'Read Only',
+      'mode.workspaceWrite': 'Workspace Write',
+      'mode.fullAccess': 'Full access'
+    }
+    const selection = {
+      currentValue: 'workspace-write',
+      options: [
+        { value: 'read-only', name: 'read-only' },
+        { value: 'workspace-write', name: 'workspace-write' },
+        { value: 'danger-full-access', name: 'danger-full-access' },
+        { value: 'custom', name: 'custom' },
+        { value: 'team-review', name: '团队审核' }
+      ]
+    }
+    const confirmText = (key: string) => 'permission.access:' + key
+    const localized = optionsOf(selection, confirmText, (key: string) => chinese[key])
+    expect(localized.map((option: { label: string }) => option.label)).toEqual(['只读', '工作区写入', '完全访问', '团队审核'])
+    expect(localized[1]).toMatchObject({ id: 'workspace-write', active: true })
+    expect(localized[2]).toMatchObject({
+      id: 'danger-full-access',
+      confirmation: { title: 'permission.access:confirm.title' }
+    })
+    expect(optionsOf(selection, confirmText, (key: string) => English[key]).map((option: { label: string }) => option.label))
+      .toEqual(['Read Only', 'Workspace Write', 'Full access', '团队审核'])
+    expect(source).toContain('optionsOf(value, t, ctx.locale.bind("settings.permission"))')
+  })
+
   it('renders the permission menu outside clipped composer containers', async () => {
     const source = await readFile(
       'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',

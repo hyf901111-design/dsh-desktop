@@ -6,8 +6,13 @@ import {patchResearchCreationProgress} from '../scripts/lib/research-creation-pr
 import {stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
 import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
 import {stripBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
+import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
+import {stripKnowledgeConversation} from '../scripts/lib/knowledge-client.mjs'
 // Reproduce the install order by removing the later resident patches first.
-const source=stripBrowserAppNative(stripResearchBoardHeaderClient(stripSpreadsheetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+const installed = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+const source = stripKnowledgeConversation(stripBrowserAppNative(stripResearchBoardHeaderClient(
+  stripConversationPermissionDefault(stripSpreadsheetClient(installed))
+)))
 it('recovers the real resident orphan and keeps selection helpers inside InputBar through repeated creation passes',()=>{
  const marker='/* sherlock-inline-reference-interactions:v1 */'
  const runtime=marker+'\n'+[selectedInlineReferenceOccurrenceId,inlineReferenceArrowSelection,deleteInlineReferenceOccurrence].map(fn=>fn.toString()).join('\n')+'\n'
