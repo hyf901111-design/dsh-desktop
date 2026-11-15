@@ -7,7 +7,7 @@ import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 let browser,script,css
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
- import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
+ import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp,noteBlocksFromFile} from './src/preload/notes/editor';window.noteBlocksFromFile=noteBlocksFromFile;import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
  window.noteRequests=[];window.noteComponentViews=[];document.addEventListener('sherlock:notes-component-view',e=>window.noteComponentViews.push(e.detail));window.noteTaskRows=[];document.addEventListener('sherlock:notes-task-state',e=>window.noteTaskRows.push(e.detail));window.pickedFiles=[{name:'picked.png',path:'/synthetic/picked.png'}];window.savedNote=null;
  const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});if(method==='load')return {saved:window.savedNote||{title:'斜杠插入验收',blocks:[{id:'before',type:'paragraph',content:'保留前文'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后文'}],yjs:'',revision:0}};if(method==='library-list')return [];if(method==='document-import')return new Promise(resolve=>window.finishDocumentImport=resolve);if(method==='file-pick')return new Promise(resolve=>window.finishPick=()=>resolve({files:window.pickedFiles}));if(method==='file-admit')return {...input,id:input.nodeId,source:'computer',authorizationId:'grant'};if(method==='file-bind')return {previewSessionId:'synthetic'};if(method==='generate')return new Promise((resolve,reject)=>{window.finishGenerate=resolve;window.failGenerate=()=>reject(Error('合成生成失败'))});if(method==='save'){window.savedNote={...input.content,revision:input.revision+1};return {status:'saved',saved:window.savedNote}};return {}},draft:async()=>{}};
  const root=createRoot(document.querySelector('#notes'));window.remount=()=>root.render(<NotesApp key={Date.now()} sessionId="slash-insert" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);window.remount();
@@ -47,9 +47,19 @@ for(const [title,kind] of [['图片','image'],['视频','video'],['音频','audi
 it('canceling the picker leaves the slash paragraph and surrounding text editable',async()=>{
  const {context,page}=await fixture();try{await slash(page,'文件');await expect.poll(()=>page.evaluate(()=>typeof window.finishPick)).toBe('function');await page.evaluate(()=>{window.pickedFiles=[];window.finishPick()});expect(await page.locator('.en-note-file').count()).toBe(0);expect(await page.evaluate(()=>window.noteEditor.getBlock('before').content[0].text)).toBe('保留前文');expect(await page.locator('.en-root [role=alert]').count()).toBe(0)}finally{await context.close()}
 },15000)
-it('imports Markdown as editable note blocks at the original position and preserves them on reopen',async()=>{
+it('converts a file opened in Notes to editable blocks with heading and list structure',async()=>{
+ const {context,page}=await fixture()
+ try {
+  const blocks=await page.evaluate(()=>window.noteBlocksFromFile({format:'markdown',text:'# 报告\n\n- 项目一\n- 项目二'}))
+  expect(blocks.map(block=>block.type)).toEqual(['heading','bulletListItem','bulletListItem'])
+  expect(blocks[2].content[0].text).toBe('项目二')
+  expect(blocks.every(block=>block.id)).toBe(true)
+ }finally{await context.close()}
+},15000)
+it.each(['斜杠','顶栏'])('imports Markdown through %s as editable note blocks and preserves them on reopen',async(entry)=>{
  const {context,page,errors}=await fixture();try{
-  await slash(page,'导入文档')
+  if(entry==='斜杠')await slash(page,'导入文档')
+  else await page.evaluate(()=>{window.noteEditor.setTextCursorPosition('anchor','start');document.dispatchEvent(new CustomEvent('sherlock:notes-import',{detail:{sessionId:'slash-insert'}}))})
   await expect.poll(()=>page.evaluate(()=>typeof window.finishDocumentImport)).toBe('function')
   await page.getByText('正在导入文档…',{exact:true}).waitFor()
   await page.evaluate(()=>{window.noteEditor.setTextCursorPosition('after','end');window.finishDocumentImport({format:'markdown',text:'## 导入标题\n\n正文内容'})})

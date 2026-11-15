@@ -50,7 +50,7 @@
   cursor: pointer;
   padding: 4px 10px;
 }
-.knowledge-workspace button:hover:not(:disabled) { background: var(--knowledge-field); }
+.knowledge-workspace button:hover:not(:disabled, .knowledge-pagination-number) { background: var(--knowledge-field); }
 .knowledge-workspace button:active:not(:disabled) { background: var(--knowledge-active); }
 .knowledge-workspace button:disabled { opacity: .45; cursor: default; }
 .knowledge-workspace :focus-visible { outline: 2px solid var(--knowledge-muted); outline-offset: -2px; }
@@ -193,7 +193,7 @@
 }
 .knowledge-toolbar > button { background: var(--knowledge-field); }
 .knowledge-workspace .knowledge-toolbar > button:not(.knowledge-primary):hover:not(:disabled),
-.knowledge-workspace .knowledge-pagination button:hover:not(:disabled, [aria-current]),
+.knowledge-workspace .knowledge-pagination button:hover:not(:disabled, .knowledge-pagination-number),
 :is(.knowledge-workspace, .knowledge-panel) .knowledge-filter-menu footer button:not(.knowledge-primary):hover {
   background: var(--knowledge-control-hover);
 }
@@ -438,11 +438,10 @@
   inline-size: 30px;
   block-size: 30px;
   padding: 0;
+  background: transparent;
 }
-.knowledge-workspace .knowledge-pagination .knowledge-pagination-number[aria-current] {
-  background: var(--knowledge-control-active);
-  color: var(--knowledge-ink);
-}
+.knowledge-workspace .knowledge-pagination .knowledge-pagination-number:is(:hover, [aria-current]) { color: var(--knowledge-ink); }
+.knowledge-workspace .knowledge-pagination .knowledge-pagination-number[aria-current] { background: var(--knowledge-control-active); }
 .knowledge-pagination input {
   width: 44px;
   border: 1px solid var(--knowledge-line);

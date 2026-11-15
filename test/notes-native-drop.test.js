@@ -23,10 +23,10 @@ beforeAll(async()=>{
 })
 afterAll(async()=>{for(const window of windows)await window.happyDOM.close()})
 
-function fixture(canAcceptDrop=true){
+function fixture(canAcceptDrop=true,ownerName='data-note-file-drop-owner'){
   const window=new Window({url:'https://notes.local/'}),document=window.document
   windows.push(window)
-  document.body.innerHTML='<section id="outside"></section><main data-note-file-drop-owner><span id="note"></span></main>'
+  document.body.innerHTML='<section id="outside"></section><main '+ownerName+'><span id="note"></span></main>'
   const owner=document.querySelector('main'),note=document.querySelector('#note'),outside=document.querySelector('#outside')
   // The editor owns these events before they reach document-level bubble handlers.
   for(const type of ['dragover','drop'])owner.addEventListener(type,event=>{event.preventDefault();event.stopPropagation()},true)
@@ -73,8 +73,8 @@ it('clears an outside image drag when it enters notes and survives a stopped dro
   f.cleanup()
 })
 
-it('clears an outside overlay on the captured notes dragover even without a new dragenter',()=>{
-  const f=fixture()
+it.each(['data-note-file-drop-owner','data-knowledge-file-drop-owner'])('clears an outside overlay on %s dragover without a new dragenter',attribute=>{
+  const f=fixture(true,attribute)
   f.dispatch(f.outside,'dragenter')
   expect(f.active()).toBe(true)
   f.dispatch(f.note,'dragover')

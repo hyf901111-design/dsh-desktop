@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto'
-import {open,rename,unlink,writeFile} from 'node:fs/promises'
+import {rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
 import {clipboard,dialog,type BrowserWindow,type IpcMain} from 'electron'
 import {registerTrustedMainWindowHandler} from '../ipc-trust'
@@ -7,7 +7,7 @@ import {applyOperations,blankWorkbook,inspectWorkbook,label,rangeAddress,safeId,
 import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/component-library'
 import {readNoteGenerationStream} from '../notes/stream'
 import {canSaveCustomComponent,type ComponentLibraryStore} from '../state/component-library'
-import {MAX_SPREADSHEET_FILE,readWorkbookFile,writeWorkbookFile} from './files'
+import {readWorkbookPath,writeWorkbookFile} from './files'
 import {SpreadsheetService} from './service'
 import {SpreadsheetStore,type WorkbookKey} from './store'
 import type {ConversationComponentVisibleContext} from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
@@ -210,16 +210,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     if(chosen.canceled)return null
     guard(true)
     const file=chosen.filePaths[0];if(!file)return null
-    const handle=await open(file,'r')
-    let workbook:Workbook
-    try{
-     const stat=await handle.stat()
-     if(!stat.isFile()||stat.size>MAX_SPREADSHEET_FILE)throw Error('请选择不超过 12 MB 的 Excel 或 CSV 文件。')
-     const buffer=Buffer.alloc(stat.size)
-     let read=0
-     while(read<buffer.length){const {bytesRead}=await handle.read(buffer,read,buffer.length-read,read);if(!bytesRead)throw Error('读取过程中源文件已变化。');read+=bytesRead}
-     workbook=await readWorkbookFile(buffer,basename(file),randomUUID())
-    }finally{await handle.close()}
+    const workbook=await readWorkbookPath(file,basename(file),randomUUID())
     guard(true)
     return store.create(key,input.revision,workbook)
    }

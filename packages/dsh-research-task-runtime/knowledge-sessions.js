@@ -10,9 +10,10 @@ export function registerKnowledgeSessions(ctx, { isTrustedRequest, readJsonBody 
     }
     if (req.method !== 'POST' || !isTrustedRequest(req, true)) return send(403, { error: '请求已拒绝。' })
     try {
-      const { sessionId, title, existing } = await readJsonBody(req)
+      const { sessionId, title, existing, imported } = await readJsonBody(req)
       if (typeof sessionId !== 'string' || !/^session-[a-f0-9-]{36}$/u.test(sessionId) ||
-          typeof title !== 'string' || title.length > 256 || !title.endsWith(copyTitleSuffix) ||
+          typeof title !== 'string' || !title.trim() || title.length > 256 ||
+          (imported !== true && !title.endsWith(copyTitleSuffix)) || (imported !== undefined && imported !== true) ||
           (existing !== undefined && typeof existing !== 'boolean')) {
         throw Error('副本会话参数无效。')
       }

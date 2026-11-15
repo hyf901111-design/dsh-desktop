@@ -1,3 +1,4 @@
+import { fileEditorLabel, fileEditorMode, type FileEditorMode, type FileEditorSource } from '../../shared/file-editor.mjs'
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
 import { openSharedKnowledgeSession } from './session-directory'
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -29,6 +30,7 @@ import css from './workspace.css?raw'
 
 interface Bridge {
   memory?: MemoryBridge
+  openFileInEditor?(source: FileEditorSource, mode: FileEditorMode): Promise<void>
   workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
@@ -184,6 +186,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const filterCount = countFileFacets(filter)
   const narrowed = Boolean(filter.query || filterCount)
   const target = menu && snapshot.documents.find(row => row.id === menu.id)
+  const editorMode = target && bridge.openFileInEditor ? fileEditorMode(target.name) : undefined
   const targetSession = menu && publishedSessions.find(row => row.id === menu.id)?.publishedSession
   const targetFolder = menu?.folder && snapshot.folders.find(row => row.id === menu.id)
   const filterButton = useRef<HTMLButtonElement>(null)
@@ -901,7 +904,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} entries={sessions?.entries ?? []}
         loading={sessions?.loading ?? true} error={sessions?.error ?? false} open={openSession}
         shares={local.sessionShares} share={(row, mode) => openDialog({ type: 'share-session', row, mode })} /> :
-      <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
+      <main className="knowledge-file-list" data-knowledge-file-drop-owner data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
         if (!canDropFiles || !event.dataTransfer.types.includes('Files')) return
         event.preventDefault()
         dragDepth.current++
@@ -915,6 +918,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         event.preventDefault()
         event.stopPropagation()
         event.dataTransfer.dropEffect = canDropFiles ? 'copy' : 'none'
+        if (canDropFiles) setDragging(true)
       }} onDrop={event => {
         if (!event.dataTransfer.types.includes('Files') && !event.dataTransfer.files.length) return
         event.preventDefault()
@@ -1112,6 +1116,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           if (!await openSession(target.sessionId!, 'chat')) setNotice({ text: '来源会话已不可用。', error: true })
         }}>跳转至会话</button>}
         <button type="button" onClick={() => void fileAction('open', target)}>打开文件</button>
+        {editorMode && <button type="button" onClick={() => {
+          setMenu(undefined)
+          const sessionId = target.sessionId || findWorkspaceSession(document)?.dataset.eworkNotesSession
+          void bridge.openFileInEditor?.({ id: target.id, sessionId }, editorMode)
+            .catch(error => setNotice({ text: message(error), error: true }))
+        }}>{fileEditorLabel(editorMode, document.documentElement.dataset.odysseyLocale === 'en')}</button>}
         <button type="button" onClick={() => void fileAction('reveal', target)}>在文件夹中显示</button>
         <hr />
         <button type="button" onClick={() => void edit({ type: 'save', id: target.id, value: !target.saved })}>

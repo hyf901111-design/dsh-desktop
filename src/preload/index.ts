@@ -9,6 +9,10 @@ import {createComponentDataBridge} from './component-data-bridge'
 import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
+import { noteBlocksFromFile } from './notes/editor'
+import { openKnowledgeSession } from './knowledge/session-directory'
+import type { FileEditorMode, FileEditorSource } from '../shared/file-editor.mjs'
+import type { KnowledgeSessionCopy } from '../shared/knowledge-sessions'
 import { mountNotes } from './notes/mount'
 import {createSidebarNewNoteAction} from './sidebar-new-note'
 import {createNoteHistoryLoader} from './notes/history-loader'
@@ -85,6 +89,10 @@ let notesComponentDataAccess:{request:(method:string,input:any)=>Promise<any>;ow
 const DEVELOPER_MODE_STYLE_ID = 'sherlock-developer-mode-style'
 const DEVELOPER_MODE_NOTICE_ID = 'sherlock-developer-mode-notice'
 const locale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+
+let openFileInEditor = async (_source: FileEditorSource, _mode: FileEditorMode): Promise<void> => {
+  throw Error('文件导入入口尚未就绪。')
+}
 
 function requestKnowledgePreview(method: 'file-preview' | 'file-preview-status' | 'download' | 'save-markdown', args: object) {
   return ipcRenderer.invoke('knowledge:request', method, args).catch((error: unknown) => {
@@ -269,6 +277,24 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  openFileInEditor = async (source, mode) => {
+    try {
+      const locale = document.documentElement.dataset.odysseyLocale
+      let result = await ipcRenderer.invoke('knowledge:request', 'open-file-in-editor', { ...source, mode, locale }) as {
+        session?: KnowledgeSessionCopy; token?: string; note?: { format: 'markdown' | 'text'; text: string }
+      }
+      if (result.token && result.note) {
+        const blocks = noteBlocksFromFile(result.note)
+        result = await ipcRenderer.invoke('knowledge:request', 'finish-note-file-import', { token: result.token, blocks })
+      }
+      const session = result.session
+      if (!session) throw Error('文件导入失败。')
+      let opened = await openKnowledgeSession(document, session.id, session.mode, true)
+      if (!opened) opened = await openKnowledgeSession(document, session.id, session.mode, true)
+      if (!opened) throw Error('文件已导入，请从工作区打开对应会话。')
+      if (workspaceSurfaceHost.current()) workspaceSurfaceHost.revealConversation()
+    } catch (error) { throw Error(knowledgeRequestError(error)) }
+  }
   const workspacePointerInBar: import('./workspace-view-shortcuts').WorkspacePointerInBar | undefined =
     process.platform === 'darwin' || process.platform === 'win32'
       ? bounds => ipcRenderer.invoke('browser-app:request', 'workspace-pointer-in-bar', { bounds })
@@ -285,6 +311,7 @@ function initializeUi(): void {
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
     memory: knowledgeMemory,
     workspacePointerInBar,
+    openFileInEditor,
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeImportProgress: listener => {
@@ -482,6 +509,7 @@ contextBridge.exposeInMainWorld(
     showComponentContextMenu: (input: unknown): Promise<string | null> => ipcRenderer.invoke('ui:component-context-menu',input),
     componentContextMenuKey: (menuId: string,key: string) => ipcRenderer.invoke('ui:component-context-menu-key',menuId,key),
     closeComponentContextMenu: (menuId: string) => ipcRenderer.invoke('ui:component-context-menu-close',menuId),
+    openFileInEditor: (path: string, sessionId: string, mode: FileEditorMode) => openFileInEditor({ path, sessionId }, mode),
     knowledgeOptions: () => ipcRenderer.invoke('knowledge:request', 'reference-options'),
     knowledgeReference: (reference: Record<string, unknown>) => ipcRenderer.invoke('knowledge:request', 'reference', reference),
     knowledgeFilePreview: (id: string, sessionId: string) => requestKnowledgePreview('file-preview', { id, sessionId }),

@@ -20,7 +20,8 @@ const INLINE_REFERENCE_PATCHED_CLIENT_SHA256 =
   'c8e269525a469cb1733a8318ab429be3152835997c828eabc5568c07c2044cdf'
 const PRE_IMAGE_PATCHED_CLIENT_SHA256 =
   'a466fa44bef9ab34fe42346f4afd6759d123009e7bc657e73194346f6ed49770'
-const PATCHED_CLIENT_SHA256 = '840ab68b054c85d91757b5be4db2cd82ab3575f98f81118982923d547da58a0f'
+const PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256 = '840ab68b054c85d91757b5be4db2cd82ab3575f98f81118982923d547da58a0f'
+const PATCHED_CLIENT_SHA256 = 'da01d68b87a2db68f8f5d4353a6f8da6b34f709b204a389fbee2d2e864d00dbf'
 const PRE_NOTES_PATCHED_CLIENT_SHA256 =
   '333b2a3b543af91176cd5ff7d56163290d15b84861fbd6dcc59d45c24c18e1c9'
 const ORIGINAL_FILE_GUARD = '          if (!hasFiles(e)) return'
@@ -140,8 +141,16 @@ function patchLegacyDshFileDropClientSource(source: string): string | undefined 
   return sourceIdentity(patched) === PRE_IMAGE_PATCHED_CLIENT_SHA256 ? patched : undefined
 }
 
+function patchWorkspaceDropOwnership(source: string): string | undefined {
+  const owner = "node.hasAttribute('data-note-file-drop-owner')"
+  if (occurrenceCount(source, owner) !== 1) return undefined
+  const patched = source.replace(owner, owner + " || node.hasAttribute('data-knowledge-file-drop-owner')")
+  return sourceIdentity(patched) === PATCHED_CLIENT_SHA256 ? patched : undefined
+}
+
 export function patchDshFileDropClientSource(source: string): string | undefined {
   if (sourceIdentity(source) === PATCHED_CLIENT_SHA256) return source
+  if (sourceIdentity(source) === PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256) return patchWorkspaceDropOwnership(source)
   const legacy = patchLegacyDshFileDropClientSource(source)
   if (!legacy) return undefined
   const patched = legacy
@@ -164,7 +173,7 @@ export function patchDshFileDropClientSource(source: string): string | undefined
           return
         }
         // odyssey:image-file-drop:end`)
-  return sourceIdentity(patched) === PATCHED_CLIENT_SHA256 ? patched : undefined
+  return sourceIdentity(patched) === PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256 ? patchWorkspaceDropOwnership(patched) : undefined
 }
 
 function pluginPaths(dshHome: string): {
@@ -290,7 +299,7 @@ export async function ensureDshFileDropResearchCanvasCompatibility(
   if (
     identity !== PRISTINE_CLIENT_SHA256 &&
     identity !== LEGACY_PATCHED_CLIENT_SHA256 &&
-    identity !== INLINE_REFERENCE_PATCHED_CLIENT_SHA256 && identity !== PRE_NOTES_PATCHED_CLIENT_SHA256 && identity !== PRE_IMAGE_PATCHED_CLIENT_SHA256
+    identity !== INLINE_REFERENCE_PATCHED_CLIENT_SHA256 && identity !== PRE_NOTES_PATCHED_CLIENT_SHA256 && identity !== PRE_IMAGE_PATCHED_CLIENT_SHA256 && identity !== PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256
   ) {
     return {
       status: 'unsupported',

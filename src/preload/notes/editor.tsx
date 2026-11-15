@@ -191,6 +191,14 @@ function ComponentFileBlock({block,inline:requestedInline=false}:any){
 }
 const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''},textAlignment:componentAlignment},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload} data-text-alignment={block.props.textAlignment}>{t("文件")}</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left'}:undefined})()
 const schema = BlockNoteSchema.create({ blockSpecs: { ...withNoteIndentSpecs(defaultBlockSpecs), research: researchSpec,attachment:fileSpec } })
+export function noteBlocksFromFile(result: { format: 'markdown' | 'text'; text: string }) {
+  if (result.format === 'text') return result.text.split('\n').map(content => ({
+    id: crypto.randomUUID(), type: 'paragraph', content
+  }))
+  const editor = BlockNoteEditor.create({ schema })
+  try { return editor.tryParseMarkdownToBlocks(result.text) }
+  finally { editor._tiptapEditor.destroy() }
+}
 function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }) {
   const editor = useCreateBlockNote({ dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)} })
   useEffect(() => { editor.replaceBlocks(editor.document, editor.tryParseMarkdownToBlocks(markdown)) }, [editor, markdown])
@@ -893,7 +901,32 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   const discardPreview=()=>{composerPlans.current=undefined;composerPreview.current=undefined;if(preview)publishTask(preview.requestId,'discarded');if(preview?.requestId===guideSummary.current?.requestId){guideSummary.current=undefined;setGuideSummaryRequest('')}setPreview(undefined);clearSelection()}
   const regenerate=()=>{const previous=lastRequest.current;if(!previous||request.current)return;if(preview)publishTask(preview.requestId,'discarded');const range=editor.getExtension(NoteAiSelection)?.currentRange();void generate(previous.prompt,previous.images,previous.admission,{...previous,captured:{...previous.captured,...(range||{from:0,to:0}),text:range?editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'):''}})}
-  const commands = useRef({generate,stop,exportNote:(_format?:string)=>{}});commands.current={generate,stop,exportNote:(format?:string)=>{void exportNote(format)}}
+  const importDocument=async()=>{
+    if(props.recovery||documentImportPending.current||!editor.isEditable||!editorActive())return
+    const referenceId=editor.getTextCursorPosition().block.id
+    documentImportPending.current=true;setImportingDocument(true);setError('')
+    try{
+      const result=await props.bridge.request('document-import',{sessionId:props.sessionId,locale:document.documentElement.dataset.odysseyLocale}) as {format:'text'|'markdown';text:string}|null
+      if(!result||disposed.current||!editor.isEditable||!editorActive())return
+      const reference=editor.getBlock(referenceId)
+      if(!reference)throw Error(t('原导入位置已变化，请重新选择插入位置。'))
+      const blocks=result.format==='markdown' ? editor.tryParseMarkdownToBlocks(result.text)
+        : result.text.split('\n').map(line=>({type:'paragraph' as const,content:line}))
+      if(!blocks.length)throw Error(t('文档中没有可导入的文字。'))
+      if(editor.document.length+blocks.length>10000)throw Error(t('文档内容过长，请拆分后导入。'))
+      const undo=editor._tiptapEditor.state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager
+      undo?.stopCapturing()
+      if(reference.type==='paragraph'&&noteText(reference.content)===''&&!reference.children.length)editor.replaceBlocks([reference],[...blocks])
+      else editor.insertBlocks(blocks,reference,'after')
+      undo?.stopCapturing();editor.focus()
+    }catch(error){
+      if(!disposed.current&&editorActive())setError((error as Error).message.replace(/^Error invoking remote method 'notes:request': (?:Error: )?/u,''))
+    }finally{
+      documentImportPending.current=false
+      if(!disposed.current)setImportingDocument(false)
+    }
+  }
+  const commands = useRef({generate,stop,importDocument,exportNote:(_format?:string)=>{}});commands.current={generate,stop,importDocument,exportNote:(format?:string)=>{void exportNote(format)}}
   useEffect(()=>{
     if(props.guide&&!props.guide.native)return
     const progress=(event:Event)=>{
@@ -915,12 +948,16 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     document.addEventListener('sherlock:notes-generation-progress',progress)
     const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(!nativeCurrent()||!editorActive()||detail?.sessionId!==props.sessionId||!editor.isEditable||request.current||externalCapabilities.current?.pending()||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const exportRequested=(event:Event)=>{if(editorActive()&&(event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.exportNote((event as CustomEvent).detail.format)}
+    const importRequested=(event:Event)=>{
+      if((event as CustomEvent).detail?.sessionId===props.sessionId)void commands.current.importDocument()
+    }
     document.addEventListener('sherlock:notes-export',exportRequested)
+    document.addEventListener('sherlock:notes-import',importRequested)
     const cancel=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId===props.sessionId&&(detail.requestId===undefined||!!request.current&&detail.requestId===request.current))commands.current.stop()}
     const sessionError=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)setError((event as CustomEvent).detail.message)}
     const state=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)publishComposer({})}
     document.addEventListener('sherlock:notes-submit',submit);document.addEventListener('sherlock:notes-stop',cancel);document.addEventListener('sherlock:notes-session-error',sessionError);document.addEventListener('sherlock:notes-composer-request-state',state);publishComposer({running:false})
-    return()=>{document.removeEventListener('sherlock:notes-generation-progress',progress);document.removeEventListener('sherlock:notes-export',exportRequested);document.removeEventListener('sherlock:notes-submit',submit);document.removeEventListener('sherlock:notes-stop',cancel);document.removeEventListener('sherlock:notes-session-error',sessionError);document.removeEventListener('sherlock:notes-composer-request-state',state);publishComposer({ready:false,running:false})}
+    return()=>{document.removeEventListener('sherlock:notes-generation-progress',progress);document.removeEventListener('sherlock:notes-export',exportRequested);document.removeEventListener('sherlock:notes-import',importRequested);document.removeEventListener('sherlock:notes-submit',submit);document.removeEventListener('sherlock:notes-stop',cancel);document.removeEventListener('sherlock:notes-session-error',sessionError);document.removeEventListener('sherlock:notes-composer-request-state',state);publishComposer({ready:false,running:false})}
   },[props.sessionId,props.recovery,props.active,viewPreview])
   const exportNote = async (format='md') => {
     if(exportPending.current||externalCapabilities.current?.pending()||disposed.current)return
@@ -937,31 +974,6 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       try{const result=await props.bridge.request('file-pick',{sessionId:props.sessionId,kind,locale:document.documentElement.dataset.odysseyLocale});if(disposed.current||!editor.isEditable||!editor.getBlock(reference.id)||!result.files?.length)return
         const current=editor.getBlock(reference.id);await importFiles(result.files,current,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after','inline');editor.focus()
       }catch(e){if(!disposed.current)setError((e as Error).message)}
-    }
-    const importDocument=async()=>{
-      if(documentImportPending.current||!editor.isEditable||!editorActive())return
-      const referenceId=editor.getTextCursorPosition().block.id
-      documentImportPending.current=true;setImportingDocument(true);setError('')
-      try{
-        const result=await props.bridge.request('document-import',{sessionId:props.sessionId,locale:document.documentElement.dataset.odysseyLocale}) as {format:'text'|'markdown';text:string}|null
-        if(!result||disposed.current||!editor.isEditable||!editorActive())return
-        const reference=editor.getBlock(referenceId)
-        if(!reference)throw Error(t('原导入位置已变化，请重新选择插入位置。'))
-        const blocks=result.format==='markdown' ? editor.tryParseMarkdownToBlocks(result.text)
-          : result.text.split('\n').map(line=>({type:'paragraph' as const,content:line}))
-        if(!blocks.length)throw Error(t('文档中没有可导入的文字。'))
-        if(editor.document.length+blocks.length>10000)throw Error(t('文档内容过长，请拆分后导入。'))
-        const undo=editor._tiptapEditor.state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager
-        undo?.stopCapturing()
-        if(reference.type==='paragraph'&&noteText(reference.content)===''&&!reference.children.length)editor.replaceBlocks([reference],[...blocks])
-        else editor.insertBlocks(blocks,reference,'after')
-        undo?.stopCapturing();editor.focus()
-      }catch(error){
-        if(!disposed.current&&editorActive())setError((error as Error).message.replace(/^Error invoking remote method 'notes:request': (?:Error: )?/u,''))
-      }finally{
-        documentImportPending.current=false
-        if(!disposed.current)setImportingDocument(false)
-      }
     }
     const draft=(kind:'smart'|'link')=>{if(!editor.isEditable)return;const reference=editor.getTextCursorPosition().block
       const node={id:'note-component-'+crypto.randomUUID(),kind:'generated-container',title:kind==='smart'?t("智能组件"):t("添加链接"),noteDraft:kind,containerPrompt:'',generationStatus:'draft'}

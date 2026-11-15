@@ -1,3 +1,4 @@
+import { open } from 'node:fs/promises'
 import ExcelJS from 'exceljs'
 import {unzipSync,zipSync} from 'fflate'
 import {blankWorkbook,blankSheet,label,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,safeFormula,sheetName,styleOf,toFormat,validateWorkbook,type Cell,type Sheet,type Workbook} from '../../shared/spreadsheet/workbook'
@@ -68,6 +69,22 @@ function boundedZip(bytes:Uint8Array){
  if(!Object.hasOwn(xml,'xl/workbook.xml')||!Object.hasOwn(xml,'[Content_Types].xml'))throw Error('文件缺少 Excel 工作簿内容。')
  for(const data of Object.values(xml))if(data.length>MAX_XML)throw Error('Excel 文件超出容量。')
  return zipSync(xml,{level:0})
+}
+
+export async function readWorkbookPath(path: string, name: string, id: string): Promise<Workbook> {
+ const handle=await open(path,'r')
+ try {
+  const stat=await handle.stat()
+  if(!stat.isFile()||stat.size>MAX_SPREADSHEET_FILE)throw Error('请选择不超过 12 MB 的 Excel 或 CSV 文件。')
+  const buffer=Buffer.alloc(stat.size)
+  let read=0
+  while(read<buffer.length){
+   const {bytesRead}=await handle.read(buffer,read,buffer.length-read,read)
+   if(!bytesRead)throw Error('读取过程中源文件已变化。')
+   read+=bytesRead
+  }
+  return await readWorkbookFile(buffer,name,id)
+ }finally{await handle.close()}
 }
 
 export async function readWorkbookFile(data:Buffer,name:string,id:string):Promise<Workbook>{

@@ -36,7 +36,10 @@ export function patchBoardDirectoryWorkspace(source) {
 }
 
 export function patchBoardFileOwnership(source) {
-  if (source.includes('/* odyssey:board-file-ownership:v1 */')) return source
+  if (source.includes('/* odyssey:board-file-ownership:v1 */')) {
+    return source.replace(/^(\s*const heroWorkspaceRow = \()research && directoryLocked\)/m, '$1research && (!browserAppActive || directoryLocked))')
+      .replace(/^(\s*const heroWorkspaceRow = )research && directoryLocked \?/m, '$1research && (!browserAppActive || directoryLocked) ?')
+  }
   source = change(source, 'const descriptor = canAdmit ? await preview.admitFinderFile(file, { sessionId, nodeId }).catch(() => null) : null;', `let descriptor = null;
                 try { descriptor = canAdmit ? await preview.admitFinderFile(file, { sessionId, nodeId }) : null; }
                 catch (error) { sherlockBoardsAdapter?.showError(error); continue; }`)
@@ -47,7 +50,7 @@ export function patchBoardFileOwnership(source) {
         if (directoryLocked && sessionId !== void 0) { window.localStorage.setItem(directoryLockKey, 'true'); setPickerOpen(false); }
       }, [sessionId, directoryLocked]);
       const boardDirectory = sessionId === void 0 ? null`)
-  source = change(source, 'const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)', 'const heroWorkspaceRow = research && directoryLocked ? null : (0, react_jsx_runtime.jsxs)')
+  source = change(source, 'const heroWorkspaceRow = (0, react_jsx_runtime.jsxs)', 'const heroWorkspaceRow = research && (!browserAppActive || directoryLocked) ? null : (0, react_jsx_runtime.jsxs)')
   source = change(source, 'buttonRef: pickerAnchor,', 'buttonRef: pickerAnchor, disabled: directoryLocked,')
   source = change(source, 'function WorkspaceChip({ buttonRef, label, directoryPath,', 'function WorkspaceChip({ buttonRef, label, directoryPath, disabled = false,')
   source = change(source, "ref: buttonRef, 'data-odyssey-board-directory': directoryPath,", "ref: buttonRef, disabled, 'data-odyssey-directory-locked': disabled || undefined, 'data-odyssey-board-directory': directoryPath,")

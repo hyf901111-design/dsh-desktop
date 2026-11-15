@@ -144,7 +144,10 @@ function patchNotesInputRoutingScope(source) {
 
 function patchNotesNativeDrop(source){
   const marker='/* ework:notes-native-drop:v1 */';
-  if(source.includes(marker))return source.replace('document.addEventListener("drop", reset, true);','window.addEventListener("drop", reset, true);').replace('document.removeEventListener("drop", reset, true);','window.removeEventListener("drop", reset, true);');
+  if(source.includes(marker))return source.replace(
+    '&& node.hasAttribute("data-note-file-drop-owner"));',
+    '&& (node.hasAttribute("data-note-file-drop-owner") || node.hasAttribute("data-knowledge-file-drop-owner")));'
+  ).replace('document.addEventListener("drop", reset, true);','window.addEventListener("drop", reset, true);').replace('document.removeEventListener("drop", reset, true);','window.removeEventListener("drop", reset, true);');
   const input=source.indexOf('function InputBar({'),start=source.indexOf('const canAcceptDrop = !locked && !machineBusy && addImages !== void 0;',input);
   const end=source.indexOf('const closePreview = (0, react.useCallback)',start);
   if(input<0||start<input||end<start)throw Error('笔记无法定位原生图片拖拽状态。');
@@ -153,7 +156,7 @@ function patchNotesNativeDrop(source){
   replace('const onDragEnter = (event) => {',`${marker}
                     const ownsNoteDrop = (event) => {
                         const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
-                        return path.some(node => node && typeof node.hasAttribute === "function" && node.hasAttribute("data-note-file-drop-owner"));
+                        return path.some(node => node && typeof node.hasAttribute === "function" && (node.hasAttribute("data-note-file-drop-owner") || node.hasAttribute("data-knowledge-file-drop-owner")));
                     };
                     // Release global image state before the note editor captures its drag.
                     const releaseNoteDrop = (event) => { if (ownsNoteDrop(event)) reset(); };

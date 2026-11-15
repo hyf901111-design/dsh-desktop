@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { patchBoardFileOwnership } from '../scripts/lib/board-directory-picker.mjs'
 import { expect, it, vi } from 'vitest'
 import { reconcileResearchConversation, patchResearchResidentConversation } from '../scripts/lib/research-resident-conversation.mjs'
 function fixture(tabs:any[]=[],panelOpen=true) {
@@ -49,4 +50,16 @@ it('keeps a manually collapsed research sidebar closed during repeated tab recon
  expect(c.service.openTab).not.toHaveBeenCalled()
  expect(c.service.setPanelState).not.toHaveBeenCalled()
  expect(c.service.getSnapshot().state.panelOpen).toBe(false)
+})
+
+it('hides the research workspace selector while leaving the browser and home workspace flow available', () => {
+ const installed = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+ const patched = patchBoardFileOwnership(installed)
+ const condition = patched.match(/const heroWorkspaceRow = (.*?) \? null :/)?.[1]
+ expect(condition).toBeTruthy()
+ const hidden = new Function('research', 'browserAppActive', 'directoryLocked', 'sherlockShared', 'sessionId', 'return ' + condition)
+ expect(hidden(true, false, false, () => false, 'board')).toBe(true)
+ expect(hidden(false, false, false, () => false, 'chat')).toBe(false)
+ expect(hidden(true, true, false, () => false, 'browser')).toBe(false)
+ expect(patchBoardFileOwnership(patched)).toBe(patched)
 })

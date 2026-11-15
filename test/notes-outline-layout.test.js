@@ -382,7 +382,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     await page.addStyleTag({ content: css })
     await page.addScriptTag({ content: script })
     try { await page.locator('.en-title').waitFor({ timeout: 2000 }) } catch (e) { throw Error(errors.join('\n') || e.message) }
-    if(!dark&&width===900){for(const label of ['Word','PDF','Markdown']){await page.getByRole('button',{name:'导出笔记',exact:true}).click();await page.getByRole('menuitem',{name:label,exact:true}).click()}expect(await page.evaluate(()=>window.noteRequests.filter(r=>r.method==='export').map(r=>r.input.format))).toEqual(['docx','pdf','md'])}
+    if(!dark&&width===900){for(const label of ['Word','PDF','Markdown']){await page.getByRole('button',{name:'更多笔记操作',exact:true}).click();await page.getByRole('menuitem',{name:'导出',exact:true}).hover();await page.getByRole('menuitem',{name:label,exact:true}).click()}expect(await page.evaluate(()=>window.noteRequests.filter(r=>r.method==='export').map(r=>r.input.format))).toEqual(['docx','pdf','md'])}
     expect(await page.getByRole('button',{name:'展开目录',exact:true}).textContent()).toBe('')
     await page.getByRole('button',{name:'展开目录',exact:true}).click();expect(await page.locator('.en-toc-heading button').count()).toBe(0);expect(await page.getByText('添加标题后显示目录',{exact:true}).count()).toBe(0);await page.keyboard.press('Escape')
     // Paste into the actual BlockNote view to exercise live outline updates.

@@ -730,7 +730,11 @@ body:has([data-srb-session-header]:not([aria-hidden=true])) [data-dsh-panel-host
 .en-task-feedback{min-width:0;font-size:14px;line-height:24px}.en-task-feedback>p{margin:0 0 6px}.en-task-feedback-progress{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--odyssey-menu-muted,#8b8b8b);font-size:12px;line-height:20px}
 .en-note-conversation-flow{height:100%;overflow:auto;min-height:0}.en-note-conversation-flow :is(.wSkVaW_scrollBody,.Md3f7G_scroll){height:auto;overflow:visible;flex:none}.en-note-conversation-flow .en-task-history{padding-top:16px}
 
-.en-export-menu{position:fixed;width:160px;padding:5px;z-index:150;border:1px solid var(--odyssey-menu-border,#ddd);border-radius:9px;background:#fff;color:#252525;box-shadow:var(--odyssey-menu-shadow,0 8px 24px #0002);font:13px/22px system-ui;animation:en-export-enter 120ms ease-out;-webkit-app-region:no-drag}.en-export-menu button{display:block;width:100%;padding:5px 9px;border:0;border-radius:5px;text-align:left;background:transparent;color:inherit;font:inherit;cursor:pointer}.en-export-menu button:is(:hover,:focus-visible){background:var(--odyssey-menu-row,#0000000c);outline:none}body[data-ds-dark-theme] .en-export-menu{background:#282828;color:#e5e5e5}@keyframes en-export-enter{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.en-export-menu{animation:none}}
+.en-export-menu{position:fixed;box-sizing:border-box;width:160px;padding:5px;z-index:150;border:1px solid var(--odyssey-menu-border);border-radius:9px;color:var(--odyssey-text);font:13px/22px var(--odyssey-font-ui,system-ui);-webkit-app-region:no-drag}
+.en-export-menu>button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:5px 9px;border:0;border-radius:5px;text-align:start;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.en-export-menu>button:not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]){background:var(--odyssey-menu-row);outline:none}
+.en-export-menu>button:disabled{opacity:.45;cursor:default}
+.en-export-menu.en-note-format-menu{position:absolute}
 
 /* Shared neutral scrollbar palette: native surfaces and overlay thumbs keep
    their existing geometry, visibility and hit targets. Do not set a global

@@ -174,7 +174,7 @@ function dispatchFileDrag(
 }
 
 describe('dsh-file-drop Research canvas compatibility', () => {
-  it.each(['data-research-canvas','data-note-file-drop-owner'])('lets all file-drag events reach %s while preserving the ordinary window capture drop', async (attribute) => {
+  it.each(['data-research-canvas','data-note-file-drop-owner','data-knowledge-file-drop-owner'])('lets all file-drag events reach %s while preserving the ordinary window capture drop', async (attribute) => {
     const { dshHome, clientPath } = await makeDshHome()
 
     expect(await ensureDshFileDropResearchCanvasCompatibility(dshHome)).toEqual({
