@@ -68,7 +68,7 @@ export function useKnowledgeSessions(document: Document, mode: KnowledgeSessionM
   return { entries: result?.mode === mode ? result?.entries ?? [] : [], loading, error }
 }
 
-export function openKnowledgeSession(document: Document, id: string, view: KnowledgeSessionMode | 'chat'): Promise<boolean> {
+export function openKnowledgeSession(document: Document, id: string, view: KnowledgeSessionMode | 'chat', retained = false): Promise<boolean> {
   const win = document.defaultView!
   return new Promise(resolve => {
     const requestId = crypto.randomUUID()
@@ -84,7 +84,7 @@ export function openKnowledgeSession(document: Document, id: string, view: Knowl
     const timer = win.setTimeout(() => complete(false), 8000)
     document.addEventListener('sherlock:knowledge-source-result', reply)
     if (document.dispatchEvent(new win.CustomEvent('sherlock:knowledge-source-open', {
-      detail: { id, requestId, view }, cancelable: true
+      detail: { id, requestId, view, retained }, cancelable: true
     }))) complete(false)
   })
 }

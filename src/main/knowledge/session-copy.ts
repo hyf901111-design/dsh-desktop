@@ -1,21 +1,72 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
-import type { SharedKnowledgeSession } from '../../shared/knowledge-sessions'
+import type { SessionSummary } from '@deepseek-ai/dsh-host-apiproxy/api'
+import { knowledgeSessionLabels, type KnowledgeSessionMode, type SharedKnowledgeSession } from '../../shared/knowledge-sessions'
 import type { NotesStore } from '../notes/store'
 import type { SpreadsheetStore } from '../spreadsheet/store'
 import type { ResearchCanvasStorage } from '../state/research-canvas-storage'
 import type { Rpc } from '../scheduled/task-runner'
 
 type Workspace = { workspaceId: string; sessionIds: string[] }
+type RetainCopy = (id: string, title: string, existing?: boolean) => Promise<void>
+const copySuffix = '（副本）'
+
+export function knowledgeCopyRetention(runtimeUrl: () => string | undefined): RetainCopy {
+  return async (sessionId, title, existing) => {
+    const base = runtimeUrl()
+    if (!base) throw Error('会话服务尚未就绪，请稍后重试。')
+    const url = new URL('/sherlock/knowledge/session-copy', base)
+    const result = await fetch(url, {
+      method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin },
+      body: JSON.stringify({ sessionId, title, existing }), signal: AbortSignal.timeout(10_000)
+    })
+    const response = await result.json() as { ok?: boolean; error?: string }
+    if (!result.ok || response.ok !== true) throw Error(response.error || '副本会话尚未保存，请重试。')
+  }
+}
+
+// Recover copies saved by the client that registered them as blank sessions.
+export async function retainExistingKnowledgeCopies({ rpc, retain, getMode, hasContent, check }: {
+  rpc: Rpc; retain: RetainCopy; getMode(id: string): string | null
+  hasContent(id: string, mode: KnowledgeSessionMode): boolean; check(): boolean
+}) {
+  const { items } = await rpc<{ items: SessionSummary[] }>('session.list', {})
+  const copies = items.flatMap(item => {
+    const { sessionId, blank, origin, parentSessionId } = item
+    const title = item.projections?.values.title
+    if (!blank || origin === 'subagent' || parentSessionId || typeof title !== 'string' ||
+        !title.endsWith(copySuffix) || !/^session-[a-f0-9-]{36}$/u.test(sessionId)) return []
+    const mode = getMode(sessionId)
+    return mode && Object.hasOwn(knowledgeSessionLabels, mode) && hasContent(sessionId, mode as KnowledgeSessionMode)
+      ? [{ sessionId, title }]
+      : []
+  })
+  if (!copies.length || !check()) return
+  const { items: workspaces, archivedSessionIds = [] } = await rpc<{ items: Workspace[]; archivedSessionIds?: string[] }>('workspace.list', {})
+  const archived = new Set(archivedSessionIds)
+  for (const { sessionId, title } of copies) {
+    if (!check()) return
+    const workspace = workspaces.find(item => item.sessionIds.includes(sessionId))
+    if (!workspace || archived.has(sessionId)) continue
+    try {
+      await rpc('session.create', { sessionId, workspaceId: workspace.workspaceId })
+      if (!check()) return
+      await retain(sessionId, title, true)
+    } catch (error) {
+      console.warn('[knowledge] unable to recover a saved copy', error)
+    }
+  }
+}
 
 export function createKnowledgeSessionCopier(options: {
   rpc: Rpc
+  retain: RetainCopy
   notes: NotesStore
   workbooks: SpreadsheetStore
   research: ResearchCanvasStorage
   fallbackWorkspacePath: string
 }) {
-  const { rpc, notes, workbooks, research } = options
+  const { rpc, retain, notes, workbooks, research } = options
   return async (owner: string, source: SharedKnowledgeSession, fromSession: string | undefined, check: () => void) => {
     const { items } = await rpc<{ items: Workspace[] }>('workspace.list', {})
     check()
@@ -27,7 +78,7 @@ export function createKnowledgeSessionCopier(options: {
       check()
     }
     const sessionId = 'session-' + randomUUID()
-    const title = Array.from(source.title).slice(0, 105).join('') + '（副本）'
+    const title = Array.from(source.title).slice(0, 105).join('') + copySuffix
     const undo: Array<() => void> = []
     const write = (key: string, value: string) => {
       if (!research.setItem(key, value)) throw Error('副本布局无法保存，请检查本地存储后重试。')
@@ -86,8 +137,15 @@ export function createKnowledgeSessionCopier(options: {
       }
     }
     check()
-    const named = await rpc('session.rename', { sessionId, title }).then(() => true, () => false)
+    try {
+      await retain(sessionId, title)
+    } catch {
+      check()
+      await rpc('session.create', target)
+      check()
+      await retain(sessionId, title)
+    }
     check()
-    return { id: sessionId, mode: source.mode, named }
+    return { id: sessionId, mode: source.mode }
   }
 }

@@ -32,16 +32,20 @@ it('optimistically retains only known current-account sessions before the durabl
   const doc=new EventTarget(),retain=vi.fn(),sessions={list:{getSnapshot:()=>({byId:{s:{}}})},retainNoteSession:retain};const dispose=installNoteSessionTitles(sessions,doc)
   doc.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:'s'}}));doc.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:'foreign'}}));expect(retain.mock.calls).toEqual([['s']]);dispose()
 })
-it('the real native host classifies replayed note events as non-blank without creating a turn',async()=>{
+it('the real native host classifies replayed note and knowledge-copy events as non-blank',async()=>{
   const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
   const syntax=createSourceFile('host.js',source,ScriptTarget.Latest,false,ScriptKind.JS),functions=new Map();const visit=node=>{if(isFunctionDeclaration(node)&&node.name)functions.set(node.name.text,node.getText(syntax));forEachChild(node,visit)};visit(syntax)
   const api=runInNewContext(['sessionBlank','applySessionListMetadata','sessionListMetadata'].map(name=>functions.get(name)).join('\n')+';({sessionBlank,sessionListMetadata})')
   const f=fixture();engageNoteSession(f.ctx,{sessionId:'s',title:'笔记'});const replay=JSON.parse(JSON.stringify(f.session.events))
   expect(api.sessionBlank({events:replay})).toBe(false);expect(api.sessionListMetadata(replay).blank).toBe(false);expect(replay.some(e=>e.type==='turn/start')).toBe(false)
+  const copy = [{ type: 'workspace-knowledge/copied', data: {} }]
+  expect(api.sessionBlank({ events: copy })).toBe(false)
+  expect(api.sessionListMetadata(copy).blank).toBe(false)
   expect(api.sessionBlank({events:[{type:'session/title',data:{title:'临时会话'}}]})).toBe(true);expect(patchNoteSessionHost(source)).toBe(source)
 })
 it('writes real Session events and reloads through the native persistence reader', async () => {
   expect(KNOWN_SESSION_EVENT_TYPES.has('workspace-note/edited')).toBe(true)
+  expect(KNOWN_SESSION_EVENT_TYPES.has('workspace-knowledge/copied')).toBe(true)
   for (const path of ['lib/index.js','lib/types/known-event-types.js']) {
     const source = await readFile('node_modules/@deepseek-ai/dsh-session/' + path, 'utf8')
     expect(patchNoteSessionCatalog(source)).toBe(source)
