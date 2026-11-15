@@ -17,6 +17,38 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 async function fixture({mode='home',width=1380,dark=false,reducedMotion='reduce'}={}){const page=await browser.newPage({viewport:{width,height:900},reducedMotion}),errors=[];page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text())});page.setDefaultTimeout(4000);await page.route('**/*',route=>route.abort());await page.setContent(`<style id="sherlock-desktop-shell-style">${css}body{margin:0}.pI_x6G_centerCol{position:fixed!important;inset:20px 20px 20px ${width<900?80:280}px!important}.wSkVaW_root{height:100%;min-height:0}.detail-background{position:absolute;inset:0;background:repeating-conic-gradient(#fff 0% 25%,#000 0% 50%) 0/8px 8px;pointer-events:none}[data-center-composer-host]{width:100%;position:relative!important;padding:0 24px!important;box-sizing:border-box}.wSkVaW_root[data-odyssey-page=home]{justify-content:center}.wSkVaW_root[data-odyssey-page=conversation]{justify-content:flex-end}</style><body ${dark?'data-ds-dark-theme':''}><div id="root"></div></body>`);await page.evaluate(options=>window.positionOptions=options,{mode});await page.evaluate(sources=>{window.nativeModules={};for(const[key,source]of Object.entries(sources)){window.__ModuleLoader__={load:descriptor=>window.nativeModules[key]=descriptor};new Function(source)()}},sources);await page.addScriptTag({content:script});await page.locator('textarea').waitFor().catch(async error=>{console.log(errors,await page.locator('body').innerHTML());throw error});return{page,errors}}
 async function geometry(card){return card.evaluate(el=>{const rect=node=>{const r=node.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}},overlay=el.closest('.uV2eYG_overlayAnchor');return{popup:rect(el),immediate:rect(el.parentElement),slot:el.parentElement.getAttribute('data-slot'),display:getComputedStyle(el.parentElement).display,overlay:rect(overlay),composer:rect(el.closest('[data-composer-card]')),inline:el.getAttribute('style'),popover:el.matches(':popover-open'),focus:el.contains(document.activeElement)}})}
+it('opens a submenu from the first-level slash menu on hover and keeps single-step commands passive', async () => {
+ const {page,errors}=await fixture({mode:'conversation',dark:true})
+ try {
+  const launcher=page.locator('[data-odyssey-command-launcher]').first()
+  const slash=page.locator('[data-ework-command-menu-selection]')
+  const knowledge=page.locator('[data-ework-command=knowledge]')
+  await launcher.click()
+  await slash.getByRole('option',{name:/Plan options/}).hover()
+  await page.waitForTimeout(250)
+  expect(await slash.isVisible()).toBe(true)
+  expect(await page.locator('[data-ework-command=plan]').count()).toBe(0)
+  expect(await slash.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(41, 42, 45, 0.97)')
+  await slash.getByRole('option',{name:/Knowledge Base options/}).hover()
+  await knowledge.waitFor()
+  expect(await knowledge.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgb(40, 40, 42)')
+  const directory=knowledge.getByRole('option',{name:'他人共享'})
+  await directory.hover()
+  const flyout=knowledge.getByRole('group',{name:'他人共享分类'})
+  await flyout.getByRole('button',{name:'行业研究'}).waitFor()
+  const flyoutBox=await flyout.boundingBox()
+  const knowledgeBox=await knowledge.boundingBox()
+  expect(Math.abs(flyoutBox.x-knowledgeBox.x-knowledgeBox.width)).toBeLessThanOrEqual(2)
+  expect(flyoutBox.width).toBe(198)
+  await flyout.getByRole('button',{name:'行业研究'}).hover()
+  expect(await flyout.isVisible()).toBe(true)
+  expect(await page.evaluate(()=>window.probe.events)).toEqual([])
+  await flyout.getByRole('button',{name:'行业研究'}).click()
+  await knowledge.waitFor({state:'hidden'})
+  expect(await page.evaluate(()=>window.probe.events)).toEqual(['industry'])
+  expect(errors).toEqual([])
+ } finally { await page.close() }
+},15000)
 for(const[mode,width,dark]of[['home',1380,false],['conversation',1380,true],['home',680,true],['conversation',680,false]])it(`anchors the real ${mode} command popup through Native SlotOutlet at width ${width}`,async()=>{const{page,errors}=await fixture({mode,width,dark});try{await page.evaluate(()=>window.probe.open());const card=page.locator('[data-ework-command=permission]');await card.waitFor();await page.waitForTimeout(100);const g=await geometry(card);await writeFile(`${artifacts}/${mode}-${width}.json`,JSON.stringify(g,null,2));await page.screenshot({path:`${artifacts}/${mode}-${width}.png`});expect(g.slot).toBe('conversation.input.overlay');expect(g.display).toBe('contents');expect(g.immediate.width).toBe(0);expect(g.overlay.width).toBeGreaterThan(220);expect(g.overlay.height).toBe(0);expect(g.popover).toBe(true);expect(g.focus).toBe(true);expect(Math.abs(g.popup.x-g.overlay.x)).toBeLessThanOrEqual(1);expect(Math.abs(g.popup.bottom-g.overlay.y+4)).toBeLessThanOrEqual(1);expect(g.popup.right).toBeLessThanOrEqual(width-8);expect(g.popup.height).toBeGreaterThan(100);expect(g.popup.width).toBeLessThanOrEqual(g.overlay.width);expect(errors).toEqual([])}finally{await page.close()}},15000)
 it('follows actual composer height and notice layout changes without waiting for a viewport resize',async()=>{const{page,errors}=await fixture({mode:'home'});try{await page.evaluate(()=>window.probe.open('plan'));const card=page.locator('[data-ework-command=plan]');await card.waitFor();await page.waitForTimeout(100);const before=await geometry(card);await page.evaluate(()=>window.probe.extra(true));await expect.poll(async()=>{const g=await geometry(card);return Math.abs(g.popup.bottom-g.overlay.y+4)}).toBeLessThanOrEqual(1);const expanded=await geometry(card);expect(expanded.composer.height).toBeGreaterThan(before.composer.height+100);expect(Math.abs(expanded.overlay.y-before.overlay.y)).toBeGreaterThan(30);expect(expanded.focus).toBe(true);await page.evaluate(()=>{window.probe.shell.notify({level:'info',text:'Local fixture notice'});window.probe.reflow()});await expect.poll(async()=>{const g=await geometry(card);return Math.abs(g.popup.bottom-g.overlay.y+4)}).toBeLessThanOrEqual(1);expect(await card.locator('input').evaluate(el=>document.activeElement===el)).toBe(true);expect(errors).toEqual([])}finally{await page.close()}},15000)
 it('selects permission through the actual native slash launcher, slot menu and popup without sending',async()=>{const{page,errors}=await fixture();try{await page.locator('textarea').focus();await page.locator('button[aria-haspopup=listbox]').first().click();const slash=page.locator('[data-ework-command-menu-selection]');await slash.waitFor();await slash.getByRole('option').first().click();const card=page.locator('[data-ework-command=permission]');await card.waitFor();const g=await geometry(card);expect(Math.abs(g.popup.x-g.overlay.x)).toBeLessThanOrEqual(1);expect(g.focus).toBe(true);await card.getByRole('option',{name:'Workspace Write',exact:true}).click();await expect.poll(()=>card.count()).toBe(0);expect(await page.evaluate(()=>window.probe.events)).toEqual(['choice-1','consume']);expect(await page.evaluate(()=>window.probe.shell.snapshot.draft)).toBe('');expect(await page.locator('textarea').evaluate(el=>document.activeElement===el)).toBe(true);expect(errors).toEqual([])}finally{await page.close()}},15000)
@@ -51,7 +83,7 @@ it.each(['no-preference','reduce'])('navigates slash categories with %s motion w
   expect(await parent.evaluate(el=>{
    const row=el.getBoundingClientRect(),arrow=el.lastElementChild.getBoundingClientRect();
    return Math.round(row.right-arrow.right);
-  })).toBe(8);
+  })).toBe(10);
   await input.fill('他人共享');
   expect(await kb.locator('[data-knowledge-slash-group]').count()).toBe(0);
   await input.press('Enter');

@@ -11,7 +11,7 @@ const replace=(source,anchor,next)=>{
 }
 export function patchSkillCommandPopup(source){
  const marker='/* ework:skill-command-popup:v1 */'
- if(source.includes(marker))return patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills')))))
+ if(source.includes(marker))return patchSlashPopupDesign(patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills'))))))
  const open='this.popupFor(actx).open(name, ui, session, segment);'
  source=replace(source,open,`${marker}\nthis.popupFor(actx).open(name, ui, name === "skills" ? {...session, skillCommandSegment:segment} : session, segment);`)
  source=replace(source,'"aria-label": t("overlay.aria", { command: String(state.command) }),','"aria-label": t("overlay.aria", { command: String(state.command) }),\n"data-ework-command": state.command,')
@@ -19,7 +19,7 @@ export function patchSkillCommandPopup(source){
  source=replace(source,'className: PopupSelectView_module_css_default.detail,','className: PopupSelectView_module_css_default.detail,\ntitle: state.command === "skills" ? option.detail : undefined,')
  const match=/const css = ("[^\n]+");/u.exec(source)
  if(!match)throw Error('Skill command popup CSS anchor missing')
- return patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source.replace(match[0],'const css = '+JSON.stringify(JSON.parse(match[1])+SKILL_COMMAND_MENU_CSS)+';'),'skills')))))
+ return patchSlashPopupDesign(patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source.replace(match[0],'const css = '+JSON.stringify(JSON.parse(match[1])+SKILL_COMMAND_MENU_CSS)+';'),'skills'))))))
 }
 function patchSkillCommandArtwork(source){
  const start='/* ework:skill-command-artwork:v1 */',end='/* ework:skill-command-artwork:end */'
@@ -57,9 +57,89 @@ function patchSkillCommandSettlement(source){
 }
 export function patchSkillCommandLabels(source){
  const marker='/* ework:skill-command-labels:v1 */'
- if(source.includes(marker))return patchKnowledgeLabels(patchCommandMenuSelection(patchExpandedCommandMenu(source,'commands')))
+ if(source.includes(marker))return patchSlashHover(patchKnowledgeLabels(patchCommandMenuSelection(patchExpandedCommandMenu(source,'commands'))))
  source=replace(source,'"command.model.name": "模型",',`${marker}\n"command.skills.name":"技能",\n"command.skills.description":"选择在对话中使用的技能",\n"command.model.name": "模型",`)
- return patchKnowledgeLabels(patchCommandMenuSelection(patchExpandedCommandMenu(replace(source,'"command.model.name": "model",','"command.skills.name":"Skills",\n"command.skills.description":"Choose a skill for this conversation",\n"command.model.name": "model",'),'commands')))
+ return patchSlashHover(patchKnowledgeLabels(patchCommandMenuSelection(patchExpandedCommandMenu(replace(source,'"command.model.name": "model",','"command.skills.name":"Skills",\n"command.skills.description":"Choose a skill for this conversation",\n"command.model.name": "model",'),'commands'))))
+}
+
+function patchSlashHover(source) {
+ const marker = '/* ework:slash-hover:v1 */'
+ if (source.includes(marker)) return source
+ const ref = 'const listRef = (0, react.useRef)(null);'
+ source = replace(source, ref, ref + `
+ ${marker}
+ const hoverTimer = (0, react.useRef)();
+ const cancelHover = () => { clearTimeout(hoverTimer.current); hoverTimer.current = undefined; };
+ (0, react.useEffect)(() => cancelHover, [state.open, state.generation]);
+ const hoverCommand = (event, group, item, index) => {
+  cancelHover();
+  if (event.nativeEvent.sourceCapabilities?.firesTouchEvents || state.hit?.trigger !== "/" || group.source !== "command" ||
+      !["model","permission","skills","knowledge"].includes(item.name)) return;
+  const row = event.currentTarget;
+  hoverTimer.current = setTimeout(() => {
+   hoverTimer.current = undefined;
+   const latest = menu.getSnapshot();
+   if (row.isConnected && latest.open && latest.generation === state.generation &&
+       latest.groups.find(group => group.source === "command")?.items[index]?.name === item.name) {
+    onPick(group.source, index);
+   }
+  }, 220);
+ };
+ `)
+ const row = 'id: optionId(group.source, index),'
+ source = replace(source, row, row + `
+ "aria-haspopup": state.hit?.trigger === "/" && group.source === "command" &&
+    ["model","permission","skills","knowledge"].includes(item.name) ? "listbox" : undefined,
+ onMouseEnter: event => hoverCommand(event, group, item, index),
+ onMouseLeave: cancelHover,
+ `)
+ const click = 'ev.preventDefault();\n\t\t\t\t\t\t\t\tonPick(group.source, index);'
+ source = replace(source, click, 'ev.preventDefault();\n cancelHover();\n onPick(group.source, index);')
+ const css = /const css = ("[^\n]+");/u.exec(source)
+ if (!css) throw Error('Primary slash menu CSS anchor missing')
+ const styles = `
+ [data-ework-command-menu-selection][data-ework-expanded-command]{border-radius:12px!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#f9f9fa!important}
+ body[data-ds-dark-theme] [data-ework-command-menu-selection][data-ework-expanded-command]{background:rgba(41,42,45,.97)!important;border-color:#444549!important}
+ `
+ return source.replace(css[0], 'const css = ' + JSON.stringify(JSON.parse(css[1]) + styles) + ';')
+}
+
+function patchSlashPopupDesign(source) {
+ const marker = '/* ework:slash-popup-design:v1 */'
+ if (source.includes(marker)) return source
+ const backButton = '"data-ework-command-back":true,onClick:goBack,'
+ source = replace(source, backButton, backButton + '"aria-label":document.documentElement.dataset.odysseyLocale==="en"?"Back to commands":"返回命令",')
+ const back = 'children:document.documentElement.dataset.odysseyLocale==="en"?"‹ Back":"‹ 返回"'
+ source = replace(source, back, `children:[directoryIcon('previous'), knowledgeEnglish?'Knowledge Base':isKnowledge?'知识库':
+  document.documentElement.dataset.odysseyLocale==="en"?({model:"Model",permission:"Permission",skills:"Skills"})[state.command]:
+  ({model:"模型",permission:"权限",skills:"技能"})[state.command]]`)
+ const css = /const css = ("[^\n]+");/u.exec(source)
+ if (!css) throw Error('Secondary slash menu CSS anchor missing')
+ const styles = `
+ ${marker}
+ body{--ework-slash-surface:#f9f9fa;--ework-slash-line:#dcdcdf}
+ body[data-ds-dark-theme]{--ework-slash-surface:#28282a;--ework-slash-line:#454547}
+ body .mufS8W_card[data-ework-command=knowledge][data-ework-command-surface][popover]{
+   padding:4px!important;border:1px solid var(--ework-slash-line)!important;border-radius:12px!important;
+   background:var(--ework-slash-surface)!important;box-shadow:0 8px 12px #0004!important;
+   backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+ }
+ .mufS8W_card[data-ework-command=knowledge]{width:360px!important;min-width:0!important;max-width:min(360px,calc(100vw - 16px))}
+ [data-ework-command-back]{display:flex;gap:8px;width:100%;min-height:36px;padding:0 10px;
+   border-radius:8px;color:var(--dsw-alias-label-primary);font-size:14px;align-items:center;text-align:start}
+ [data-ework-command-back] svg{width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary)}
+ [data-ework-command=knowledge] .mufS8W_search{margin:3px 10px 0;min-height:28px;width:calc(100% - 20px)}
+ [data-ework-command=knowledge] .mufS8W_viewport{scrollbar-width:thin}
+ [data-ework-command=knowledge] [data-knowledge-slash-group]{height:26px;padding:0 10px;display:flex;align-items:center;font-size:12px}
+ [data-ework-command=knowledge] .mufS8W_row{min-height:34px;padding:0 10px;gap:8px;border-radius:8px;font-size:14px}
+ [data-knowledge-shared-parent=true]>svg:last-child{margin-inline-start:auto}
+ [data-knowledge-cascading-options]{display:flex;flex-direction:column;width:min(198px,calc(100vw - 16px));
+   max-height:min(248px,calc(100vh - 16px));border:1px solid var(--ework-slash-line);border-radius:12px;
+   background:var(--ework-slash-surface);scrollbar-width:thin;box-shadow:0 8px 12px #0004}
+ [data-knowledge-cascading-options]>button{flex:0 0 34px;min-height:34px;padding:0 10px;gap:8px;border-radius:8px;font-size:14px}
+ [data-knowledge-cascading-options]>button[data-knowledge-shared-back]{flex-basis:36px;margin:0;border:0;color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:400}
+ `
+ return source.replace(css[0], 'const css = ' + JSON.stringify(JSON.parse(css[1]) + styles) + ';')
 }
 
 function patchKnowledgeLabels(source){
