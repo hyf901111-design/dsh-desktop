@@ -11,52 +11,29 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "1275da28dfae46345b748b3941ca84be002be4e7",
-        "tipCommit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
+        "baseCommit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
+        "tipCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
         "commits": [
           {
-            "commit": "d9ab4b8c6db34bf14019a5760051a4233e746d44",
+            "commit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
             "parents": [
-              "1275da28dfae46345b748b3941ca84be002be4e7"
+              "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91"
             ],
-            "subject": "修复：让笔记演示的完整图表可参与总结"
-          },
-          {
-            "commit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
-            "parents": [
-              "d9ab4b8c6db34bf14019a5760051a4233e746d44"
-            ],
-            "subject": "修复：等待技能菜单可见后继续播放演示"
+            "subject": "修复：仅传递技能菜单的输入范围到客户端预加载"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/home-notes-guide-artifacts.js"
+            "path": "src/preload/integrations/skill-command.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/home-guide-presentation-native.mjs"
+            "path": "test/integration-skill-composer.test.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-pointer.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-pointer-menu-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-presentation-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/home-notes-runtime.test.js"
+            "path": "test/skill-command-menu.test.ts"
           }
         ],
         "checks": [
@@ -68,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程及预加载类型检查通过。",
-            "verifiedCommit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
-            "completedAt": "2026-11-15T11:18:55Z",
+            "verifiedCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
+            "completedAt": "2026-11-15T11:30:53Z",
             "timeoutMs": 120000
           },
           {
@@ -78,30 +55,13 @@
               "test",
               "--",
               "--maxWorkers=1",
-              "test/home-notes-runtime.test.js",
-              "test/home-guide-pointer.test.ts"
+              "test/skill-command-menu.test.ts",
+              "test/integration-skill-composer.test.ts"
             ],
             "outcome": "passed",
-            "summary": "笔记图表引用和演示指针 32 个聚焦测试通过。",
-            "verifiedCommit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
-            "completedAt": "2026-11-15T11:18:55Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=1",
-              "test/home-guide-pointer-menu-browser.test.js",
-              "test/home-guide-presentation-browser.test.js",
-              "-t",
-              "clipped DOM ancestors|slides from the real presentation card|serializes the native report skill"
-            ],
-            "outcome": "passed",
-            "summary": "原生技能菜单、PPT 和研报的真实浏览器交互测试通过。",
-            "verifiedCommit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
-            "completedAt": "2026-11-15T11:18:55Z",
+            "summary": "85 项技能菜单跨进程与原生输入框聚焦测试通过。",
+            "verifiedCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
+            "completedAt": "2026-11-15T11:30:53Z",
             "timeoutMs": 120000
           }
         ],
@@ -176,8 +136,7 @@
           "知识库主区文件与会话每页二十条，分页固定在列表区左下，提供快捷页码、跳转输入、滚动条间距。",
           "我的共享混排已发布的文件、研究、笔记、表格，兼容已有发布，支持打开原会话、管理共享。",
           "折叠侧栏中五个探索演示都使用主页开启独立的原生示例会话，普通主页点击仍新建对话。",
-          "PPT 与研报演示在原生命令菜单完成入场后选择技能并生成、打开交付文件。",
-          "笔记演示提交完整图表引用，摘要任务通过正常校验。"
+          "PPT 与研报的技能菜单只传递可序列化的输入范围，打开菜单的 DOM 和回调保留在原渲染环境。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -185,51 +144,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T11:18:55Z"
-      },
-      "merged": {
-        "mergeCommit": "6090fbc12d3dca5d23c6c370bcfdfd1d19cadd7a",
-        "verificationCommit": "6090fbc12d3dca5d23c6c370bcfdfd1d19cadd7a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6090fbc12d3dca5d23c6c370bcfdfd1d19cadd7a",
-            "completedAt": "2026-11-15T11:19:10.508Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "6090fbc12d3dca5d23c6c370bcfdfd1d19cadd7a",
-            "completedAt": "2026-11-15T11:19:10.508Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T11:19:10.508Z"
+        "generatedAt": "2026-11-15T11:30:53Z"
       }
     }
   ],
