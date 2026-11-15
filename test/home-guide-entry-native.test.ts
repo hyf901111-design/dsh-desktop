@@ -51,6 +51,19 @@ it.each(['board','workbench','note','ppt','report']as HomeGuideEntryKind[])('ope
  if(kind==='note')expect(f.document.querySelector('[role="menu"]')).toBeNull()
  client.dispose()
 })
+it.each(['board','workbench','note','ppt','report'] as HomeGuideEntryKind[])('opens the prepared %s through the real collapsed Home action',async kind=>{
+ const f=await fixture(),home=f.document.querySelector<HTMLButtonElement>('[aria-label="新建对话"]')!
+ home.setAttribute('data-sidebar-home','')
+ home.setAttribute('aria-label','主页')
+ const client=await f.client(kind),entry=await client.prepare(home,'sidebar-home')
+ await client.commit(home)
+ expect(f.opened).toEqual([entry.sessionId])
+ expect(f.normal()).toBe(0)
+ expect(f.modes).toEqual([[entry.sessionId,kind==='note'?'notes':kind==='board'||kind==='workbench'?'research':'chat']])
+ client.dispose()
+ home.click()
+ expect(f.normal()).toBe(1)
+})
 it.each([['board','home-research','research'],['note','home-notes','notes'],['ppt','home-chat','chat']]as const)('uses the %s homepage tab as final native entry without changing the old view',async(kind,action,mode)=>{
  const f=await fixture(),target=f.document.querySelector<HTMLElement>('[data-conversation-view-id="'+mode+'"]')!;Object.assign(f.ordinary.snapshot,{draft:'',imageIds:[],occurrences:[]});const client=await f.client(kind);let oldViewChanges=0;target.onclick=()=>oldViewChanges++
  const entry=await client.prepare(target,action);await client.commit(target)

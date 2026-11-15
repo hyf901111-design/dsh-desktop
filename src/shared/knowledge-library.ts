@@ -4,7 +4,7 @@ export const knowledgeCategories = {
   all: '所有文件',
   saved: '手动收藏',
   starred: '重点文件',
-  shared: '共享文件',
+  shared: '我的共享',
   received: '他人共享'
 } as const
 
@@ -103,7 +103,9 @@ export function canAutomaticallyCollect(name: string): boolean {
   return !name.startsWith('.') && knowledgeFormat(name) !== 'other'
 }
 
-export function listKnowledgeDocuments(snapshot: KnowledgeSnapshot, filter: KnowledgeFilter): KnowledgeDocument[] {
+export function listKnowledgeDocuments<T extends KnowledgeDocument>(
+  snapshot: { folders: KnowledgeFolder[]; documents: T[] }, filter: KnowledgeFilter
+): T[] {
   const words = filter.query?.trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean) ?? []
   const folderNames = new Map(snapshot.folders.map(folder => [folder.id, folder.name]))
   const category = filter.category ?? 'all'
@@ -118,7 +120,7 @@ export function listKnowledgeDocuments(snapshot: KnowledgeSnapshot, filter: Know
     if (filter.formats?.length && !filter.formats.includes(knowledgeFormat(row.name))) return false
     if (filter.savedOnly && !row.saved) return false
     if (!words.length) return true
-    const text = [row.name, row.sessionTitle, row.received?.owner, row.received?.category, folderNames.get(row.folderId ?? '')].join(' ').toLocaleLowerCase()
+    const text = [row.name, row.sessionTitle, row.received?.owner, row.received?.category, row.share?.category, folderNames.get(row.folderId ?? '')].join(' ').toLocaleLowerCase()
     return words.every(word => text.includes(word))
   }).sort((a, b) => {
     const order = sort === 'name' ? a.name.localeCompare(b.name, undefined, { numeric: true }) : a[sort] - b[sort]

@@ -20,7 +20,7 @@ export type KnowledgeSessionEvidence = {
 
 export type KnowledgeSessionCopy = { id: string; mode: KnowledgeSessionMode }
 
-export type KnowledgeSessionShare = { id: string; category: string }
+export type KnowledgeSessionShare = { id: string; category: string; title?: string; publishedAt?: number; size?: number }
 export const knowledgeSessionShareKey = (mode: KnowledgeSessionMode, sessionId: string) => `${mode}:${sessionId}`
 
 export type SharedKnowledgeSession = { title: string; version: 1 } & (

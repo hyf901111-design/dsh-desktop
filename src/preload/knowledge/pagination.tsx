@@ -29,9 +29,33 @@ export function KnowledgePagination({ label, page, pages, setPage }: {
   pages: number
   setPage: (page: number) => void
 }) {
+  const start = Math.max(2, Math.min(page - 2, pages - 5))
+  const end = Math.min(pages - 1, start + 4)
+  const shortcuts = pages <= 7
+    ? Array.from({ length: pages }, (_, index) => index + 1)
+    : [1, ...(start > 2 ? ['before'] : []), ...Array.from({ length: end - start + 1 }, (_, index) => start + index),
+      ...(end < pages - 1 ? ['after'] : []), pages]
+
   return <nav className="knowledge-pagination" aria-label={label}>
-    <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>上一页</button>
-    <span aria-live="polite">{page} / {pages}</span>
-    <button type="button" disabled={page === pages} onClick={() => setPage(page + 1)}>下一页</button>
+    <div className="knowledge-pagination-controls">
+      <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>上一页</button>
+      {pages === 1 ? <span>1 / 1</span> : shortcuts.map(item => typeof item === 'number'
+        ? <button key={item} type="button" className="knowledge-pagination-number" aria-label={`第 ${item} 页`}
+          aria-current={item === page ? 'page' : undefined} onClick={() => setPage(item)}>{item}</button>
+        : <span key={item} aria-hidden="true">…</span>)}
+      <button type="button" disabled={page === pages} onClick={() => setPage(page + 1)}>下一页</button>
+    </div>
+    {pages > 1 && <form className="knowledge-pagination-jump" onSubmit={event => {
+      event.preventDefault()
+      const form = event.currentTarget
+      const target = Number(new FormData(form).get('page'))
+      if (!Number.isInteger(target) || target < 1 || target > pages) return
+      setPage(target)
+      form.reset()
+    }}>
+      <label><span>跳至</span><input type="number" inputMode="numeric" name="page" min={1} max={pages} required
+        aria-label="跳至页码" /></label>
+      <button type="submit">跳转</button>
+    </form>}
   </nav>
 }

@@ -17,7 +17,7 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
  // Settings/plugin surfaces may hide a perfectly valid old conversation root.
  // Return through the visible application control, otherwise stop safely.
  if(document.body.dataset.workspaceSurface&&document.body.dataset.workspaceSurface!=='notes'||document.querySelector('.VOzbGW_overlay')){
-  const back=unique(document.querySelectorAll<HTMLElement>('button[aria-label="返回应用"],button[aria-label="Back to app"]'))
+  const back=unique(document.querySelectorAll<HTMLElement>('button[aria-label="返回应用"],button[aria-label="Back to app"],button.workspace-back-button[aria-label="返回工作区"]'))
   if(!back)throw Error('请先返回应用后再播放演示。')
   await click(back);await wait(()=>(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')&&!document.querySelector('.VOzbGW_overlay')?true:undefined)
  }
@@ -38,8 +38,10 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
   }
  }
  const sidebar=await wait(()=>unique(document.querySelectorAll<HTMLElement>('[data-dsh-sidebar-root]')))
+ const home=unique(sidebar.querySelectorAll<HTMLButtonElement>('button[data-sidebar-home]'))
+ if(home){await activate(home,'sidebar-home');return}
  const action:HomeGuideEntryAction=mode==='notes'?'new-note':mode==='research'?'new-research':'new-chat'
- const labels=action==='new-note'?['新建笔记','新笔记','New note','New Note']:action==='new-research'?['新建研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
+ const labels=action==='new-note'?['新建笔记','新笔记','New note','New Note']:action==='new-research'?['新建研究','新研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
  const matching=()=>unique([...sidebar.querySelectorAll<HTMLElement>('button,[role="menuitem"]'),...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"],[role="menu"] button,[data-sidebar-more] button')].filter(node=>labels.includes(node.getAttribute('aria-label')||node.textContent?.trim()||'')||(action==='new-note'&&node.hasAttribute('data-sidebar-new-note'))))
  let target=matching()
  if(!target&&action==='new-note'){

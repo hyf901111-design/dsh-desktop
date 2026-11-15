@@ -1,6 +1,6 @@
 import {emitHomeGuideEntryDiagnostic,type HomeGuideEntryDenial} from '../shared/home-guide-entry-diagnostics'
 export type HomeGuideEntryKind='board'|'workbench'|'note'|'ppt'|'report'
-export type HomeGuideEntryAction='home-input'|'home-chat'|'home-research'|'home-notes'|'new-chat'|'new-research'|'new-note'
+export type HomeGuideEntryAction='home-input'|'home-chat'|'home-research'|'home-notes'|'new-chat'|'new-research'|'new-note'|'sidebar-home'
 export type HomeGuideEntrySession={sessionId:string;cwd:string;title:string;fresh?:boolean}
 export type HomeGuideEntryContext={owner:string;generation:number;identityRevision:number;sessionId?:string;selectionRevision?:number;input?:any;eligible?:boolean}
 type NativeDependencies={
@@ -12,7 +12,7 @@ type NativeDependencies={
 }
 const REQUEST='sherlock:home-guide-entry-request',REPLY='sherlock:home-guide-entry-reply',CANCELLED='sherlock:home-guide-entry-cancelled'
 const TARGET='data-home-guide-entry-target',CLICK='data-home-guide-entry-click'
-const kinds=['board','workbench','note','ppt','report'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note']
+const kinds=['board','workbench','note','ppt','report'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note','sidebar-home']
 const modeOf=(kind:HomeGuideEntryKind)=>kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':'chat'
 const cancelled=()=>new DOMException('演示入口已取消，请重新打开探索。','AbortError')
 const id=(value:unknown):value is string=>typeof value==='string'&&value.length>0&&value.length<=200
@@ -37,6 +37,7 @@ function available(document:Document,target:HTMLElement){
 }
 function matches(document:Document,target:HTMLElement,action:HomeGuideEntryAction,kind:HomeGuideEntryKind){
  if(!available(document,target))return false
+ if(action==='sidebar-home')return target.matches('[data-dsh-sidebar-root] button[data-sidebar-home]')
  const mode=modeOf(kind)
  if(action.startsWith('home-')&&action!=='home-input')return action==='home-'+mode&&target.matches('[data-srb-tabs] button[data-conversation-view-id="'+mode+'"]')&&!!target.closest('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]')
  if(action==='home-input'){

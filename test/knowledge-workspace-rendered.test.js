@@ -136,6 +136,7 @@ beforeAll(async () => {
       } }
       mountKnowledgePanels(document, {
         memory,
+        revealConversation: () => host.revealConversation(),
         snapshot: async () => structuredClone(window.data),
         preview: async id => {
           if (id === 'decafbad'.repeat(4)) {
@@ -235,7 +236,10 @@ beforeAll(async () => {
           if (method === 'preview') return { document: documents.find(d => d.id === args.id), text: '# 研究写作规范' }
           throw new Error('Unexpected bridge method '+method)
         },
-        subscribe: () => () => {},
+        subscribe(listener) {
+          document.addEventListener('sherlock:knowledge-changed', listener)
+          return () => document.removeEventListener('sherlock:knowledge-changed', listener)
+        },
         subscribeImportProgress(listener) { window.emitImportProgress = listener; return () => {} },
         subscribeAction(listener) { window.applyKnowledgeAction = listener; return () => {} },
         reply(response) {
@@ -351,6 +355,51 @@ it('publishes and manages read-only sharing from each mode with inset dialog con
   } finally { await page.close() }
 })
 
+it('lists published files and all three session modes in My Shares with session-specific actions', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 850 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`<body data-test-session-directory>
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 330px 10px 10px"></div>
+      <aside data-knowledge-panel-host style="position:fixed;inset:10px 10px 10px auto;width:310px"></aside></body>`)
+    await page.addScriptTag({ content: bundle })
+    await page.evaluate(() => {
+      window.data.sessionShares = {
+        'research:board': { id: 'b'.repeat(32), category: '行业研究' },
+        'notes:note': { id: 'c'.repeat(32), title: '已发布笔记', category: '写作模板', publishedAt: 1700000000000, size: 512 },
+        'spreadsheet:sheet': { id: 'd'.repeat(32), category: '数据分析' }
+      }
+      window.data.documents[0].share = { id: 'e'.repeat(32), category: '行业研究' }
+      window.dispatchEvent(new Event('sherlock:knowledge-open'))
+      document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+    })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const mine = library.getByRole('button', { name: /^我的共享 4$/ })
+    await mine.click()
+    const research = library.getByRole('row', { name: /消费行业研究看板/ })
+    await research.waitFor()
+    expect(await research.getByText('研究模式 · 行业研究', { exact: true }).isVisible()).toBe(true)
+    expect(await library.getByRole('row', { name: /已发布笔记/ }).getByText('笔记模式 · 写作模板').isVisible()).toBe(true)
+    expect(await library.getByRole('row', { name: /渠道库存表格/ }).isVisible()).toBe(true)
+    expect(await library.getByRole('row', { name: /消费行业周报.md/ }).isVisible()).toBe(true)
+
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    await pane.getByRole('button', { name: '所有文件', exact: true }).click()
+    await pane.getByRole('button', { name: '我的共享', exact: true }).click()
+    expect(await pane.getByRole('button', { name: /已发布笔记/ }).isVisible()).toBe(true)
+    expect(await pane.getByRole('button', { name: /引用文件 已发布笔记/ }).count()).toBe(0)
+
+    await research.getByRole('button', { name: /的更多操作/ }).click()
+    await library.getByRole('button', { name: '管理共享', exact: true }).click()
+    await library.getByRole('button', { name: '取消共享', exact: true }).click()
+    await library.getByRole('button', { name: /^我的共享 3$/ }).waitFor()
+    expect(await research.count()).toBe(0)
+    await library.getByRole('button', { name: /渠道库存表格 共享/ }).click()
+    expect(await page.evaluate(() => window.openedSession)).toEqual({ id: 'sheet', view: 'spreadsheet' })
+  } finally { await page.close() }
+})
+
 it('centers empty messages in session, file and shared list content areas', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {
@@ -365,6 +414,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
     const centered = async (hint, container, header) => {
       await hint.waitFor()
       const bounds = await container.boundingBox()
+      const contentWidth = await container.evaluate(el => el.clientWidth - (parseFloat(getComputedStyle(el).paddingRight) || 0))
       const top = header ? await header.boundingBox() : null
       const contentStart = top ? top.y + top.height : bounds.y
       const text = await hint.evaluate(element => {
@@ -373,7 +423,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
         return range.getBoundingClientRect().toJSON()
       })
       expect(Math.abs(text.y + text.height / 2 - (contentStart + bounds.y + bounds.height) / 2)).toBeLessThan(2)
-      expect(Math.abs(text.x + text.width / 2 - bounds.x - bounds.width / 2)).toBeLessThan(2)
+      expect(Math.abs(text.x + text.width / 2 - bounds.x - contentWidth / 2)).toBeLessThan(2)
     }
     for (const name of ['研究模式', '笔记模式', '表格模式']) {
       await categories.getByRole('button', { name, exact: true }).click()
@@ -381,7 +431,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
       await centered(directory.getByText('这里还没有会话。'), directory.locator('.knowledge-session-results'))
     }
     const table = library.locator('.knowledge-table-wrap')
-    for (const name of [/重点文件/, /^共享文件/]) {
+    for (const name of [/重点文件/, /^我的共享/]) {
       await categories.getByRole('button', { name }).click()
       await centered(library.getByText('此分类暂无文件。'), table, table.locator('thead'))
     }
@@ -1344,7 +1394,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     await pager.waitFor()
     await expectAligned()
     await pager.getByRole('button', { name: '下一页' }).click()
-    expect(await pager.getByText('2 / 2', { exact: true }).isVisible()).toBe(true)
+    expect(await pager.getByRole('button', { name: '第 2 页', exact: true }).getAttribute('aria-current')).toBe('page')
     await expectAligned()
   } finally { await page.close() }
 })
@@ -1365,7 +1415,7 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
     const next = pager.getByRole('button', { name: '下一页' })
     const position = async () => (await pager.boundingBox()).y
 
-    for (const label of ['所有文件', '手动收藏', '重点文件', '共享文件', '研究资料', '他人共享', '行业研究',
+    for (const label of ['所有文件', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
       '研究模式', '笔记模式', '表格模式']) {
       const category = label === '行业研究' ? library.getByRole('button', { name: label, exact: true })
         : nav.getByRole('button', { name: new RegExp('^' + label + '( |$)') })
@@ -1374,24 +1424,31 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       const scroller = library.locator(session ? '.knowledge-session-results' : '.knowledge-table-wrap')
       const rows = scroller.locator(session ? 'li' : 'tbody tr')
       await expect.poll(() => rows.count(), label).toBe(20)
-      expect(await pager.getByText('1 / 3', { exact: true }).isVisible()).toBe(true)
+      expect(await pager.getByRole('button', { name: '第 1 页', exact: true }).getAttribute('aria-current')).toBe('page')
       expect(await previous.isDisabled()).toBe(true)
       const firstPage = await rows.first().innerText()
       const anchor = await position()
+      expect((await previous.boundingBox()).x).toBe((await pager.boundingBox()).x)
+      expect(await scroller.evaluate(el => getComputedStyle(el).paddingInlineEnd)).toBe('12px')
       await scroller.evaluate(el => { el.scrollTop = el.scrollHeight })
       expect(await scroller.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
       expect(await position()).toBe(anchor)
       await next.click()
-      expect(await pager.getByText('2 / 3', { exact: true }).isVisible()).toBe(true)
+      expect(await pager.getByRole('button', { name: '第 2 页', exact: true }).getAttribute('aria-current')).toBe('page')
       expect(await rows.count()).toBe(20)
       expect(await rows.first().innerText()).not.toBe(firstPage)
       expect(await scroller.evaluate(el => el.scrollTop)).toBe(0)
-      await next.click()
+      const jump = pager.getByRole('spinbutton', { name: '跳至页码' })
+      await jump.fill('10')
+      await jump.press('Enter')
+      expect(await rows.count()).toBe(20)
+      await jump.fill('3')
+      await jump.press('Enter')
       expect(await rows.count()).toBe(3)
       expect(await next.isDisabled()).toBe(true)
       expect(await position()).toBe(anchor)
-      await previous.click()
-      expect(await rows.count()).toBe(20)
+      await pager.getByRole('button', { name: '第 1 页', exact: true }).click()
+      expect(await rows.first().innerText()).toBe(firstPage)
       if (session) {
         await library.getByRole('searchbox', { name: '搜索会话' }).fill('不存在的会话')
         expect(await pager.getByText('1 / 1', { exact: true }).isVisible()).toBe(true)
@@ -1400,6 +1457,20 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
         expect(await position()).toBe(anchor)
       }
     }
+    await page.evaluate(() => {
+      const row = window.data.documents[0]
+      window.data.documents.push(...Array.from({ length: 160 }, (_, index) => ({
+        ...row, id: 'extra-page-' + index, name: '追加分页-' + index + '.md'
+      })))
+      document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+    })
+    await nav.getByRole('button', { name: /^所有文件/ }).click()
+    await pager.getByRole('button', { name: '第 11 页', exact: true }).waitFor()
+    expect(await pager.locator('.knowledge-pagination-number').count()).toBe(7)
+    const jump = pager.getByRole('spinbutton', { name: '跳至页码' })
+    await jump.fill('8')
+    await pager.getByRole('button', { name: '跳转', exact: true }).click()
+    expect(await pager.getByRole('button', { name: '第 8 页', exact: true }).getAttribute('aria-current')).toBe('page')
   } finally { await page.close() }
 })
 
