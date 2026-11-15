@@ -1268,9 +1268,12 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     const styles = await tileStyles.evaluateAll(tiles => tiles.map(tile => {
       const svg = tile.querySelector('svg')
       const css = getComputedStyle(tile)
+      const image = tile.dataset.format === 'image'
       return {
         format: tile.dataset.format, background: css.backgroundColor, highlight: css.backgroundImage,
-        cover: getComputedStyle(svg.children[2]).fill, pageDetail: svg.children[1].getAttribute('d'),
+        cover: getComputedStyle(image ? svg.querySelector('rect') : svg.children[2]).fill,
+        pageDetail: (image ? svg.querySelector('path') : svg.children[1]).getAttribute('d'),
+        hasLandscape: image && !!svg.querySelector('rect + circle + path'),
         viewBox: svg.getAttribute('viewBox')
       }
     }))
@@ -1279,6 +1282,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     expect(new Set(styles.map(style => style.pageDetail)).size).toBe(9)
     const pdf = styles.find(style => style.format === 'pdf')
     const ppt = styles.find(style => style.format === 'ppt')
+    expect(styles.find(style => style.format === 'image')).toMatchObject({ cover: 'rgb(115, 64, 149)', hasLandscape: true })
     expect(pdf.cover).toBe('rgb(169, 42, 58)')
     expect(ppt.cover).toBe('rgb(190, 72, 30)')
     expect(pdf.pageDetail).not.toBe(ppt.pageDetail)
