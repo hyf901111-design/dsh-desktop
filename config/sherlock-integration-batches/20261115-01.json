@@ -11,44 +11,33 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "f51d30ff2575551268c9c33867b547561f14596c",
-        "tipCommit": "2e5a82c381d0af553feb19f69293e9329307764c",
+        "baseCommit": "2e5a82c381d0af553feb19f69293e9329307764c",
+        "tipCommit": "dae475e061743c2866afe861534a143847ff65ea",
         "commits": [
           {
-            "commit": "ff5d28f65092b2ffa29d6f64091efe5fff9edee7",
+            "commit": "dae475e061743c2866afe861534a143847ff65ea",
             "parents": [
-              "f51d30ff2575551268c9c33867b547561f14596c"
+              "2e5a82c381d0af553feb19f69293e9329307764c"
             ],
-            "subject": "在收起侧栏的更多菜单中添加四种新建入口"
-          },
-          {
-            "commit": "2e5a82c381d0af553feb19f69293e9329307764c",
-            "parents": [
-              "ff5d28f65092b2ffa29d6f64091efe5fff9edee7"
-            ],
-            "subject": "保持侧栏新建笔记的英文标签一致"
+            "subject": "修复文件导入后直接跳转编辑会话"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
+            "path": "src/preload/knowledge/session-directory.tsx"
           },
           {
             "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
+            "path": "test/knowledge-composer.test.js"
           }
         ],
         "checks": [
@@ -60,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "2e5a82c381d0af553feb19f69293e9329307764c",
-            "completedAt": "2026-11-15T13:01:03Z",
+            "verifiedCommit": "dae475e061743c2866afe861534a143847ff65ea",
+            "completedAt": "2026-11-15T13:15:24Z",
             "timeoutMs": 120000
           },
           {
@@ -89,13 +78,14 @@
               "test/browser-sidebar-entry.test.ts",
               "test/sidebar-new-session-actions.test.ts",
               "test/sidebar-new-note-install.test.js",
+              "test/knowledge-composer.test.js",
               "-t",
-              "paginates files|drops one or several|lets all file-drag|clears an outside overlay|native export menu|complete notes header|imports Markdown|opens a submenu|opens both submenu|navigates slash categories|exact production Node|native popup scope|compatible editor|patches installed|seeds the|file import|round trips Excel|preserves quoted CSV|converts a file|extracts|hides the research workspace|expanded More|collapsed More|single collapsed Home|installs Shell twice"
+              "paginates files|drops one or several|lets all file-drag|clears an outside overlay|native export menu|complete notes header|imports Markdown|opens a submenu|opens both submenu|navigates slash categories|exact production Node|native popup scope|compatible editor|patches installed|seeds the|file import|round trips Excel|preserves quoted CSV|converts a file|extracts|hides the research workspace|expanded More|collapsed More|single collapsed Home|installs Shell twice|newly imported file session|opens the original conversation"
             ],
             "outcome": "passed",
             "summary": "聚焦验证覆盖知识库文件拖放、页码、斜杠菜单、笔记导入导出、文件模式打开和工作区会话持久化。",
-            "verifiedCommit": "2e5a82c381d0af553feb19f69293e9329307764c",
-            "completedAt": "2026-11-15T13:01:03Z",
+            "verifiedCommit": "dae475e061743c2866afe861534a143847ff65ea",
+            "completedAt": "2026-11-15T13:15:24Z",
             "timeoutMs": 120000
           }
         ],
@@ -183,51 +173,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T13:01:03Z"
-      },
-      "merged": {
-        "mergeCommit": "62cd55f152b9540a66a3cd93d222bacfe70890ac",
-        "verificationCommit": "62cd55f152b9540a66a3cd93d222bacfe70890ac",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "62cd55f152b9540a66a3cd93d222bacfe70890ac",
-            "completedAt": "2026-11-15T13:01:19.375Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "62cd55f152b9540a66a3cd93d222bacfe70890ac",
-            "completedAt": "2026-11-15T13:01:19.375Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T13:01:19.375Z"
+        "generatedAt": "2026-11-15T13:15:24Z"
       }
     }
   ],
