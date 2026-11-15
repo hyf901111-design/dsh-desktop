@@ -36,7 +36,7 @@ export const HOME_OPERATIONS_COPY = {
       ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
       ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。'],
       ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。'],
-      ['表格分析', '利润涨了，现金去哪了？', '用 AI 分析季度财报，画出利润与现金流趋势，\n拆解差额并试算多回款的影响。']
+      ['表格分析', '复杂表格简单处理', 'AI 整理财报，生成趋势图。\n拆解现金流，动手试算回款。']
     ]
   },
   en: {
@@ -49,7 +49,7 @@ export const HOME_OPERATIONS_COPY = {
       ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
       ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.'],
       ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.'],
-      ['Spreadsheet analysis', 'Profits rose. Where did the cash go?', 'Analyze quarterly results with AI, trace the cash-flow gap,\nand test a collection scenario.']
+      ['Spreadsheet analysis', 'Simplify complex spreadsheets', 'Clean and chart financial data with AI.\nBreak down cash flow and test collections.']
     ]
   }
 } as const
