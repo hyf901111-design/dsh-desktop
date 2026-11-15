@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'vitest'
-import { createKnowledgeSessionCopier } from '../src/main/knowledge/session-copy'
+import { createKnowledgeSessionCopier, retainExistingKnowledgeCopies } from '../src/main/knowledge/session-copy'
 import { NotesStore } from '../src/main/notes/store'
 import { SpreadsheetStore } from '../src/main/spreadsheet/store'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
@@ -43,7 +43,7 @@ test.each(sources)('seeds the $mode mode before publishing the personal copy to 
     const calls: string[] = []
     const rpc: Rpc = async <T>(method: string, input: unknown) => {
       calls.push(method)
-      const params = input as { sessionId: string; workspaceId: string; title: string }
+      const params = input as { sessionId: string; workspaceId: string }
       if (method === 'workspace.list') return { items: [
         { workspaceId: 'unused', sessionIds: [] }, { workspaceId: 'current', sessionIds: ['viewer-session'] }
       ] } as T
@@ -63,12 +63,16 @@ test.each(sources)('seeds the $mode mode before publishing the personal copy to 
           expect(created?.id).not.toBe(source.workbook.id)
           expect(created?.sheets).toEqual(source.workbook.sheets)
         }
-      } else expect(params.title).toBe(source.title + '（副本）')
+      }
       return { sessionId: params.sessionId } as T
     }
-    const result = await createKnowledgeSessionCopier({ ...stores, rpc })('recipient', source, 'viewer-session', () => {})
-    expect(result).toMatchObject({ mode: source.mode, named: true })
-    expect(calls).toEqual(['workspace.list', 'session.create', 'session.rename'])
+    const result = await createKnowledgeSessionCopier({ ...stores, rpc, retain: async (id, title) => {
+      calls.push('retain')
+      expect(stores.research.getItem('ework.session.view.v1:' + id)).toBe(source.mode)
+      expect(title).toBe(source.title + '（副本）')
+    } })('recipient', source, 'viewer-session', () => {})
+    expect(result.mode).toBe(source.mode)
+    expect(calls).toEqual(['workspace.list', 'session.create', 'retain'])
   })
 })
 
@@ -84,10 +88,39 @@ test('retries a possibly registered copy with the same id and removes staged dat
       if (method === 'session.list') return { items: [] } as T
       throw Error('unexpected method')
     }
-    await expect(createKnowledgeSessionCopier({ ...stores, rpc })('recipient', note, undefined, () => {})).rejects.toThrow('工作区暂不可用')
+    await expect(createKnowledgeSessionCopier({ ...stores, rpc, retain: async () => {
+      throw Error('unexpected retention')
+    } })('recipient', note, undefined, () => {})).rejects.toThrow('工作区暂不可用')
     expect(attempted).toHaveLength(2)
     expect(attempted[0]).toBe(attempted[1])
     expect(stores.research.getItem('ework.session.view.v1:' + attempted[0])).toBeNull()
     expect(stores.notes.hasContent('recipient', attempted[0]!)).toBe(false)
   })
+})
+
+test('recovers a saved copy in its original project without creating a new session', async () => {
+  const saved = 'session-0ec3c0e2-043a-481b-aeca-ab81b053a100'
+  const archived = 'session-0ec3c0e2-043a-481b-aeca-ab81b053a200'
+  const empty = 'session-0ec3c0e2-043a-481b-aeca-ab81b053a300'
+  const title = '渠道库存（副本）'
+  const sequence: unknown[] = []
+  const rpc: Rpc = async <T>(method: string, input: unknown) => {
+    if (method === 'session.list') return { items: [saved, archived, empty].map(sessionId => ({
+      sessionId, blank: true, projections: { values: { title } }
+    })) } as T
+    if (method === 'workspace.list') return {
+      items: [{ workspaceId: 'original-project', sessionIds: [saved, archived, empty] }],
+      archivedSessionIds: [archived]
+    } as T
+    sequence.push([method, input])
+    return {} as T
+  }
+  await retainExistingKnowledgeCopies({
+    rpc, getMode: () => 'spreadsheet', hasContent: id => id !== empty, check: () => true,
+    retain: async (...args) => { sequence.push(args) }
+  })
+  expect(sequence).toEqual([
+    ['session.create', { sessionId: saved, workspaceId: 'original-project' }],
+    [saved, title, true]
+  ])
 })

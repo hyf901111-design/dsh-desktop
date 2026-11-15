@@ -7,7 +7,8 @@ import { KnowledgeFilePreview } from './knowledge/file-preview'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import { researchHasContent } from './knowledge/session-content'
-import { createKnowledgeSessionCopier } from './knowledge/session-copy'
+import { createKnowledgeSessionCopier, knowledgeCopyRetention, retainExistingKnowledgeCopies } from './knowledge/session-copy'
+import type { KnowledgeSessionMode } from '../shared/knowledge-sessions'
 import { createKnowledgeSessionSnapshot } from './knowledge/session-share'
 import type { SessionSummary } from '@deepseek-ai/dsh-host-apiproxy/api'
 import {routeBrowserUse} from './browser/route'
@@ -1504,27 +1505,39 @@ async function bootstrap(): Promise<void> {
   const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
   const calendarNotes = new NotesStore(join(app.getPath('userData'), 'workspace-notes'))
   const knowledgeWorkbooks = new SpreadsheetStore(app.getPath('userData'))
+  const retainKnowledgeCopy = knowledgeCopyRetention(() => runtime?.snapshot().url)
+  const knowledgeSessionEvidence = (owner: string, id: string, mode: KnowledgeSessionMode) => {
+    let hasContent = false
+    try {
+      const shared = researchBoardsService?.isSharedSession(id)
+      if (mode === 'research') {
+        const canvas = shared ? researchBoardsService!.readSharedCanvas(id)
+          : readStoredResearchCanvas({ getItem: key => researchCanvasStorage.peekItem(key) }, id)
+        hasContent = researchHasContent(canvas)
+      } else if (!shared) {
+        hasContent = mode === 'notes' ? calendarNotes.hasContent(owner, id)
+          : knowledgeWorkbooks.hasContent({ owner, sessionId: id })
+      }
+    } catch { /* Unavailable or corrupt sessions stay out of the directory. */ }
+    return { id, hasContent }
+  }
+  const recoverKnowledgeCopies = async (url: string) => {
+    const { owner, generation } = knowledgeIdentity()
+    await retainExistingKnowledgeCopies({
+      rpc: taskRpc, retain: retainKnowledgeCopy,
+      getMode: id => researchCanvasStorage.peekItem('ework.session.view.v1:' + id),
+      hasContent: (id, mode) => !researchBoardsService?.isSharedSession(id) && knowledgeSessionEvidence(owner, id, mode).hasContent,
+      check: () => runtime?.snapshot().url === url && knowledgeIdentity().generation === generation
+    }).catch(error => console.warn('[knowledge] unable to check saved copies', error))
+  }
   installKnowledgeIpc({
     store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow,
     identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
     copySession: createKnowledgeSessionCopier({
-      rpc: taskRpc, notes: calendarNotes, workbooks: knowledgeWorkbooks, research: researchCanvasStorage,
+      rpc: taskRpc, retain: retainKnowledgeCopy, notes: calendarNotes, workbooks: knowledgeWorkbooks, research: researchCanvasStorage,
       fallbackWorkspacePath: join(app.getPath('userData'), 'knowledge-workspaces', '知识库副本')
     }),
-    sessionEvidence: (owner, id, mode) => {
-      let hasContent = false
-      try {
-        if (mode === 'research') {
-          const canvas = researchBoardsService?.isSharedSession(id) ? researchBoardsService.readSharedCanvas(id)
-            : readStoredResearchCanvas({ getItem: key => researchCanvasStorage.peekItem(key) }, id)
-          hasContent = researchHasContent(canvas)
-        } else if (!researchBoardsService?.isSharedSession(id)) {
-          hasContent = mode === 'notes' ? calendarNotes.hasContent(owner, id)
-            : knowledgeWorkbooks.hasContent({ owner, sessionId: id })
-        }
-      } catch { /* Unavailable or corrupt sessions stay out of the directory. */ }
-      return { id, hasContent }
-    },
+    sessionEvidence: knowledgeSessionEvidence,
     sessionSnapshot: async (owner, id, mode, displayTitle, check) => {
       const catalog = await taskRpc<{ items: SessionSummary[] }>('session.list', {})
       check()
@@ -1684,6 +1697,8 @@ async function bootstrap(): Promise<void> {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('integrations:identity-changed')
     void integrationService?.scanLegacySkills()
     if (accountService?.authenticated && !accountService.accountId) void accountService.invoke('me', undefined).catch(() => {})
+    const snapshot = runtime?.snapshot()
+    if (snapshot?.phase === 'ready' && snapshot.url) void recoverKnowledgeCopies(snapshot.url)
   })
   if (accountService.authenticated && !accountService.accountId) void accountService.invoke('me', undefined).catch(() => {})
   const dependencyIndex = integrationService ? new DependencyIndex(integrationService.store) : undefined
@@ -1716,6 +1731,7 @@ async function bootstrap(): Promise<void> {
       if (snapshot.phase === 'starting') integrationService?.rotateIdentity()
       if (snapshot.phase === 'ready' && snapshot.url) {
         void openHarness(snapshot.url).catch(showUnexpectedError)
+        void recoverKnowledgeCopies(snapshot.url)
       } else if (snapshot.phase === 'failed') {
         void showRuntimeFailure(snapshot)
       }

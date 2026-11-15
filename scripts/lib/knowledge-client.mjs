@@ -269,10 +269,14 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, chatSto
  const unsubscribeSessions = sessions.list.subscribe?.(changed)
  const unsubscribeWorkspaces = workspaces?.list.subscribe?.(changed)
  const open = event => {
-  const { id, requestId, view = 'chat' } = event.detail ?? {}
+  const { id, requestId, view = 'chat', retained } = event.detail ?? {}
   event.preventDefault()
   const snapshot = sessions.list.getSnapshot()
   const reply = ok => dispatch('sherlock:knowledge-source-result', { requestId, ok })
+  if (retained && (!usable(snapshot, id) || snapshot.byId[id].blank)) {
+   void sessions.refresh().then(() => reply(false), () => reply(false))
+   return
+  }
   if(typeof requestId === 'string' && usable(snapshot, id) && ['chat', 'research', 'notes', 'spreadsheet'].includes(view)) {
    try {
     const adapter = view === 'research' ? boards?.() : undefined

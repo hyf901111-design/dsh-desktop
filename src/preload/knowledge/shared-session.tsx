@@ -105,13 +105,13 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
         copied ??= await copy(source.id, source.updatedAt, from)
         // Session registration arrives on the resident client's catalog stream.
         for (let attempt = 0; attempt < 12 && token === request; attempt++) {
-          if (await openKnowledgeSession(document, copied.id, copied.mode)) {
+          if (await openKnowledgeSession(document, copied.id, copied.mode, true)) {
             if (token === request && host.current()?.surface === 'shared-session') host.revealConversation()
             return
           }
           await new Promise(resolve => setTimeout(resolve, 100))
         }
-        notice = copied.named ? '副本已创建，可从左侧工作区打开。' : '副本已创建，可从左侧工作区打开并修改名称。'
+        notice = '副本已创建，可从左侧工作区打开。'
       } catch (error) {
         notice = failureText(error)
       } finally {
