@@ -227,9 +227,16 @@ export class ScheduledTaskView {
       const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
       const english = this.document.documentElement.dataset.odysseyLocale === 'en'
       this.showMenu(more, [
-            ...(wide&&this.sidebarActions?[{label:'新笔记',icon:this.dark()?'noteDark' as const:'note' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('note')}]:[]),
-            ...(wide&&this.sidebarActions?.newSpreadsheet?[{
-              label:this.document.documentElement.dataset.odysseyLocale==='en'?'New spreadsheet':'新建表格',
+            ...(!wide ? [
+              {label:english?'New chat':'新建对话',icon:'chat' as const,run:()=>group.querySelector<HTMLButtonElement>('[data-sidebar-home]')?.click()},
+              {label:english?'New research':'新建研究',icon:'research' as const,run:()=>group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research',{bubbles:true}))}
+            ] : []),
+            ...(this.sidebarActions?[{
+              label:english?'New note':wide?'新笔记':'新建笔记',icon:this.dark()?'noteDark' as const:'note' as const,
+              disabled:this.newDocumentBusy,run:()=>void this.createDocument('note')
+            }]:[]),
+            ...(this.sidebarActions?.newSpreadsheet?[{
+              label:english?'New spreadsheet':'新建表格',
               icon:'spreadsheet' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('spreadsheet')
             }]:[]),
             ...(wide&&this.surfaceHost?[{label:english?'Browser':'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),

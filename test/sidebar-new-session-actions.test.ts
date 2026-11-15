@@ -258,6 +258,9 @@ it('uses the existing New Chat action for the single collapsed Home entry', asyn
     home?.dispatchEvent(new w.MouseEvent('click', { bubbles: true }))
     expect(startSession).toHaveBeenCalledOnce()
     expect(startResearchSession).not.toHaveBeenCalled()
+    home?.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-research', { bubbles: true }))
+    expect(startResearchSession).toHaveBeenCalledOnce()
+    expect(startSession).toHaveBeenCalledOnce()
   } finally {
     await act(async () => root.unmount())
     w.happyDOM.close()
