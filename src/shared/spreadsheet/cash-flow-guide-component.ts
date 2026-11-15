@@ -116,10 +116,23 @@ const css = `
     line-height: 1.15;
     overflow-wrap: anywhere;
   }
-  [data-cash-flow-bridge] button.bridge-choice:hover,
-  [data-cash-flow-bridge] .bridge-choice[aria-pressed="true"] { background: transparent; color: var(--ink); }
+  [data-cash-flow-bridge] button.bridge-choice {
+    --sherlock-control-bg: transparent;
+    --sherlock-control-secondary: transparent;
+    --sherlock-control-primary: transparent;
+    --sherlock-control-text: var(--quiet);
+    --sherlock-control-on-primary: var(--ink);
+  }
+  [data-cash-flow-bridge] button.bridge-choice:hover { --sherlock-control-text: var(--ink); }
   [data-cash-flow-bridge] .bridge-choice[aria-pressed="true"] > span { font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
-  [data-cash-flow-bridge] .bridge-choice:focus-visible { outline: 1px solid var(--total); outline-offset: -1px; }
+  [data-cash-flow-bridge] .bridge-choice:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 3px;
+    outline: 1px solid var(--total);
+    pointer-events: none;
+  }
   [data-cash-flow-bridge] .bridge-source {
     display: grid;
     gap: 2px;

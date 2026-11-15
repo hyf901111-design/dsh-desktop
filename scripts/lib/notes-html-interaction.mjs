@@ -91,8 +91,9 @@ function patchNoteHtmlRenderer(renderer,normalizeFrame=true){
         }`)
  }
  const journalMessage='readOnly:current.readOnly,...(typeof rejectedEventId'
- const spreadsheetJournalMessage="readOnly:current.readOnly,...(current.noteHtmlInteraction?.surface==='spreadsheet'?{localDisclosures:true}:{}),...(typeof rejectedEventId"
- if(!renderer.includes(spreadsheetJournalMessage))once(journalMessage,spreadsheetJournalMessage)
+ const previousSpreadsheetJournal="readOnly:current.readOnly,...(current.noteHtmlInteraction?.surface==='spreadsheet'?{localDisclosures:true}:{}),...(typeof rejectedEventId"
+ const spreadsheetJournalMessage=previousSpreadsheetJournal.replace('{localDisclosures:true}', '{localDisclosures:true,localSimulation:current.noteHtmlInteraction.localSimulation===true}')
+ if(!renderer.includes(spreadsheetJournalMessage))once(renderer.includes(previousSpreadsheetJournal)?previousSpreadsheetJournal:journalMessage,spreadsheetJournalMessage)
  if(normalizeFrame){
   const before='srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0 }',after="srcDoc, onLoad: sendTheme, style: { flex: 1, minWidth: 0, minHeight: 0, border: 0, display: 'block', boxSizing: 'border-box', background: 'transparent' }"
   if(renderer.split(before).length+renderer.split(after).length!==3)throw Error('Notes HTML frame style anchor missing or ambiguous')

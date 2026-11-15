@@ -130,7 +130,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
    sheetMenu&&react.createElement(eworkComponentSurfaceUi.Menu,{surface:'spreadsheet',trigger:sheetMenu,actions:menuActions,onClose:()=>setSheetMenu(null)}),
    react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},
     error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),
-    react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{surface:'spreadsheet',bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true}},body),
+    react.createElement(eworkNoteHtmlInteractionContext.Provider,{value:{surface:'spreadsheet',bridge:interactionBridge,state:interactionState,sharedBridge,sharedState,readOnly:true,localSimulation:entry.localSimulation===true}},body),
     indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:!!entry.readOnly,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
   )
  }
