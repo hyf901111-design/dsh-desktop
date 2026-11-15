@@ -241,24 +241,67 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
  return()=>{off();offFile();doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
 }
 
-export function installKnowledgeSourceNavigation({ sessions, chatStore, document: doc = document }) {
- const open = event => {
-  const { id, requestId } = event.detail ?? {}
+export function installKnowledgeSourceNavigation({ sessions, workspaces, chatStore, boards, document: doc = document }) {
+ const win = doc.defaultView
+ const dispatch = (name, detail) => doc.dispatchEvent(new win.CustomEvent(name, { detail }))
+ const usable = (snapshot, id) => {
+  const summary = typeof id === 'string' ? snapshot.byId?.[id] : undefined
+  return summary && !summary.removed && !summary.parentId && summary.origin !== 'subagent' && !sessions.subagentAddress(id) ? summary : undefined
+ }
+ const catalog = event => {
   event.preventDefault()
   const snapshot = sessions.list.getSnapshot()
-  const summary = typeof id === 'string' ? snapshot.byId?.[id] : undefined
-  let ok = false
-  if(typeof requestId === 'string' && summary && !summary.removed && !sessions.subagentAddress(id)) {
+  const workspacesBySession = new Map()
+  for (const workspace of workspaces?.list.getSnapshot().items ?? []) {
+   for (const id of workspace.sessionIds ?? []) workspacesBySession.set(id, workspace.title || workspace.name)
+  }
+  const boardAdapter = boards?.()
+  const entries = (snapshot.ids ?? Object.keys(snapshot.byId ?? {})).flatMap(id => {
+   const summary = usable(snapshot, id)
+   if (!summary) return []
+   let localView
    try {
-    chatStore.create(id).actions.setView('chat')
+    localView = win.localStorage.getItem('ework.session.view.v1:' + id) ??
+     JSON.parse(win.localStorage.getItem('dsh.conversation.chat.' + id) || 'null')?.view
+   } catch {}
+   return [{ id, title: summary.title?.trim() || summary.displayTitle?.trim() || '未命名会话',
+    updatedAt: Number.isFinite(summary.updatedAt) ? summary.updatedAt : 0, workspace: workspacesBySession.get(id),
+    researchBoard: boardAdapter?.isBoardOnly(id) === true, localView }]
+  })
+  dispatch('sherlock:knowledge-session-catalog', { requestId: event.detail?.requestId, entries })
+ }
+ const changed = () => dispatch('sherlock:knowledge-sessions-changed')
+ const unsubscribeSessions = sessions.list.subscribe?.(changed)
+ const unsubscribeWorkspaces = workspaces?.list.subscribe?.(changed)
+ const open = event => {
+  const { id, requestId, view = 'chat' } = event.detail ?? {}
+  event.preventDefault()
+  const snapshot = sessions.list.getSnapshot()
+  const reply = ok => dispatch('sherlock:knowledge-source-result', { requestId, ok })
+  if(typeof requestId === 'string' && usable(snapshot, id) && ['chat', 'research', 'notes', 'spreadsheet'].includes(view)) {
+   try {
+    const adapter = view === 'research' ? boards?.() : undefined
+    const shared = adapter?.getState?.().boards.find(board => board.localSessionId === id && board.pinned)
+    if (shared) {
+     void adapter.openBoard(shared.boardId).then(opened => reply(opened === id), () => reply(false))
+     return
+    }
+    chatStore.create(id).actions.setView(view)
     sessions.open(id)
-    ok = true
+    reply(true)
+    return
    } catch {}
   }
-  doc.dispatchEvent(new doc.defaultView.CustomEvent('sherlock:knowledge-source-result', { detail: { requestId, ok } }))
+  reply(false)
  }
  doc.addEventListener('sherlock:knowledge-source-open', open)
- return () => doc.removeEventListener('sherlock:knowledge-source-open', open)
+ doc.addEventListener('sherlock:knowledge-session-catalog-request', catalog)
+ return () => {
+  unsubscribeSessions?.()
+  unsubscribeWorkspaces?.()
+  doc.removeEventListener('sherlock:knowledge-source-open', open)
+  doc.removeEventListener('sherlock:knowledge-session-catalog-request', catalog)
+ }
 }
 
 const knowledgePatch = '/* ework:knowledge-conversation:restore */'
@@ -320,7 +363,7 @@ export function patchKnowledgeConversation(input) {
  if(!input.includes(sourceNavigation)){
   const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
   input=replace(input,anchor,anchor+'\n '+sourceNavigation+
-   '\n ctx.effect(()=>('+installKnowledgeSourceNavigation.toString()+')({sessions,chatStore}),"Knowledge Base source conversation");')
+   '\n ctx.effect(()=>('+installKnowledgeSourceNavigation.toString()+')({sessions,workspaces,chatStore,boards:()=>sherlockBoardsAdapter}),"Knowledge Base source conversation");')
  }
  if(!input.includes(marker)){
   const registration='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'

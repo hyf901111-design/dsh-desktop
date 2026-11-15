@@ -11,6 +11,9 @@ const uiIcons = {
   back: 'M19 12H5m6-6-6 6 6 6',
   close: 'm6 6 12 12M18 6 6 18',
   chevron: 'm7 10 5 5 5-5',
+  research: 'M4 4h16v16H4Zm0 6h16m-9 0v10',
+  note: 'M6 3h8l4 4v14H6Zm8 0v4h4M9 11h6m-6 4h6m-6 3h3',
+  table: 'M4 5h16v14H4Zm0 5h16M4 14h16M9 10v9m6-9v9',
   filter: 'M4 5h16l-6 7v5.5l-4 2v-7.5Z',
 }
 

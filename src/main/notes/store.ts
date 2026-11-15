@@ -42,6 +42,7 @@ export class NotesStore {
     if (![owner, session].every(id => typeof id === 'string' && id.length > 0 && id.length <= 512)) throw Error('笔记身份无效。')
     return join(this.root, createHash('sha256').update(JSON.stringify([owner, session])).digest('hex') + '.json')
   }
+  hasDocument(owner: string, session: string): boolean { return existsSync(this.path(owner, session)) }
   private read(owner: string, session: string): FileNote {
     const file = this.path(owner, session)
     if (!existsSync(file)) return { version: 1, saved: empty(), drafts: [] }

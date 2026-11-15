@@ -72,6 +72,7 @@ import {
   registerResearchBoardsHandlers
 } from './research-boards-service'
 import { installSpreadsheet } from './spreadsheet/ipc'
+import { SpreadsheetStore } from './spreadsheet/store'
 import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
 import { homedir, tmpdir } from 'node:os'
@@ -1497,9 +1498,19 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
+  const calendarNotes = new NotesStore(join(app.getPath('userData'), 'workspace-notes'))
+  const knowledgeWorkbooks = new SpreadsheetStore(app.getPath('userData'))
   installKnowledgeIpc({
     store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow,
     identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
+    sessionEvidence: (owner, id) => ({
+      id,
+      preferredView: researchCanvasStorage.getItem(`ework.session.view.v1:${id}`),
+      research: (researchBoardsService?.readCanvasStorage(`sherlock.research.session-engaged.v1:${id}`)
+        ?? researchCanvasStorage.getItem(`sherlock.research.session-engaged.v1:${id}`)) === '1',
+      notes: calendarNotes.hasDocument(owner, id),
+      spreadsheet: knowledgeWorkbooks.hasRecord({ owner, sessionId: id })
+    }),
     generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
       ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)
   })
@@ -1540,7 +1551,6 @@ async function bootstrap(): Promise<void> {
     return {ok:true}
   })
   let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
-  const calendarNotes = new NotesStore(join(app.getPath('userData'),'workspace-notes'))
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
   const noteFiles = new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   registerPptxAnnotationHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxAnnotationService({

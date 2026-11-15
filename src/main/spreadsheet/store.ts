@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { applyOperations, MAX_BOOK_BYTES, validateWorkbook, type Workbook } from '../../shared/spreadsheet/workbook'
@@ -23,6 +23,7 @@ function withoutFormulaCache(workbook:Workbook){
 export class SpreadsheetStore {
   constructor(private root: string) {}
   private directory(key: WorkbookKey) { return join(this.root, 'spreadsheet-v1', hash([key.owner,key.sessionId])) }
+  hasRecord(key: WorkbookKey) { return existsSync(join(this.directory(key), 'active.json')) }
   private read(key: WorkbookKey): Stored {
     const file=join(this.directory(key),'active.json')
     try{
