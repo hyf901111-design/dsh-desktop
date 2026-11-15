@@ -11,65 +11,33 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "63e6737b855a61e437cb471338e23d8b2aff2200",
-        "tipCommit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
+        "baseCommit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
+        "tipCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
         "commits": [
           {
-            "commit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
+            "commit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
             "parents": [
-              "63e6737b855a61e437cb471338e23d8b2aff2200"
+              "82bd5a279e93d03654c5d8a901ee8c5f10e8f523"
             ],
-            "subject": "侧栏：收起时合并为主页入口并同步选中状态"
+            "subject": "知识库：将文件与会话图标改为灰底办公文档样式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
+            "path": "src/preload/knowledge/icons.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-b-icons.css"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/scheduled/assets/home-rail.svg"
+            "path": "src/preload/knowledge/panel.css"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/icons.ts"
+            "path": "src/preload/knowledge/workspace.css"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-b-icons-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-install.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -81,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程与预加载类型检查通过。",
-            "verifiedCommit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
-            "completedAt": "2026-11-15T09:47:50Z",
+            "verifiedCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
+            "completedAt": "2026-11-15T10:20:36Z",
             "timeoutMs": 120000
           },
           {
@@ -94,38 +62,20 @@
               "test",
               "--",
               "--maxWorkers=1",
-              "test/sidebar-new-note-browser.test.js",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/browser-sidebar-entry.test.ts",
-              "test/sidebar-b-icons-browser.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "14 项侧栏验证，覆盖主页点击、悬停、切换和展开后创建入口。",
-            "verifiedCommit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
-            "completedAt": "2026-11-15T09:47:50Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=1",
-              "test/sidebar-new-session-actions.test.ts",
-              "test/sidebar-new-note-install.test.js",
+              "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "single collapsed Home entry|renders distinct New Chat|installs Shell"
+              "keeps file icons readable|lists real session modes|shows a readable shared directory error|shared categories and metadata"
             ],
             "outcome": "passed",
-            "summary": "3 项原生新建对话和外壳补丁校验通过。",
-            "verifiedCommit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
-            "completedAt": "2026-11-15T09:47:50Z",
+            "summary": "五项知识库渲染检查，覆盖办公图标、会话列表与共享目录。",
+            "verifiedCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
+            "completedAt": "2026-11-15T10:20:36Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器通过渲染测试核验共享预览宽窄布局、当前原件与原会话的右栏隔离。"
+          "summary": "深浅主题核对文件类型图标以及悬停、选中反馈，生产线路用原客户端核对跨账号 Markdown 列表和预览。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -188,64 +138,17 @@
           "预览共享原件时隐藏原工作区的对话和工具面板，返回后恢复原工具位置与草稿。共享研究看板在本地按可用宽度整理，创建副本后进入原生会话。",
           "升级后在后台扫描已有项目会话的交付记录，按原会话来源补录可用成果，去重并保留已删除状态。",
           "PDF 与 PPT 通过轮廓和色彩区分。主视图与右侧筛选复选框统一尺寸、对齐与键盘交互。",
-          "主列表、右侧栏、会话目录和共享会话统一使用彩色底与实心类型图形，PDF 与 PPT 保持轮廓区分。",
-          "文件与会话列表采用半透明磨砂底板，深浅主题、悬停及选中可辨；PDF 和 PPT 延用不同轮廓。",
           "共享目录加载失败时提供中文说明与重试，并与成功返回空目录的状态区分。",
-          "侧栏收起只保留主页创建入口，点击沿用新建对话，提供悬停提示；随主视图切换与浏览器、知识库互斥高亮。"
+          "侧栏收起只保留主页创建入口，点击沿用新建对话，提供悬停提示；随主视图切换与浏览器、知识库互斥高亮。",
+          "文件与会话图标采用灰色卡片、彩色封面和白色文档页。PDF 和 PPT 以红色与橙色、PDF 符号与幻灯片图形区分。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
-          "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
-          "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。",
-          "线上研究协作 Worker 最新部署早于知识库共享功能，线上 D1 尚无 knowledge_shares 表。"
+          "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T09:47:50Z"
-      },
-      "merged": {
-        "mergeCommit": "345a61b3302faa04c2d10bdb4fd20d57f7e5b3ba",
-        "verificationCommit": "345a61b3302faa04c2d10bdb4fd20d57f7e5b3ba",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "345a61b3302faa04c2d10bdb4fd20d57f7e5b3ba",
-            "completedAt": "2026-11-15T09:48:05.479Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "345a61b3302faa04c2d10bdb4fd20d57f7e5b3ba",
-            "completedAt": "2026-11-15T09:48:05.479Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T09:48:05.479Z"
+        "generatedAt": "2026-11-15T10:20:36Z"
       }
     }
   ],
