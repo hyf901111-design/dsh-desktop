@@ -64,7 +64,7 @@ beforeAll(async () => {
           sessions: { list: { getSnapshot: () => ({ ids: Object.keys(byId), byId }) }, subagentAddress: () => undefined,
             open: id => { window.openedSession = { id, view: opened.get(id) } } },
           workspaces: { list: { getSnapshot: () => ({ items: [{ title: '行业跟踪', sessionIds: ['board', 'note', 'sheet'] }] }) } },
-          chatStore: { create: id => ({ actions: { setView: view => opened.set(id, view) } }) },
+          selectView: (id, view) => opened.set(id, view),
           boards: () => ({ isBoardOnly: id => id.startsWith('paged-research-') || ['board', 'board2', 'blankBoard'].includes(id) })
         })
       }

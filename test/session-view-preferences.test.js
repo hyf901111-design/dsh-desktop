@@ -7,6 +7,7 @@ import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { patchSessionViewPreferences, patchNewChatSessionRuntime, patchNewChatSidebar } from '../scripts/lib/session-view-preferences.mjs'
+import { installKnowledgeSourceNavigation } from '../scripts/lib/knowledge-client.mjs'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 
 const require = createRequire(import.meta.url)
@@ -47,7 +48,7 @@ async function fixture({ storage, port = 4100, local = {} } = {}) {
   const get = id => { if (!instances.has(id)) instances.set(id, handle.create(id)); return instances.get(id) }
   const host = win.document.createElement('main'); win.document.body.append(host)
   const root = createRoot(host)
-  const tabs = ['chat', 'research', 'notes', 'trajectory']
+  const tabs = ['chat', 'research', 'notes', 'trajectory', 'spreadsheet']
   const views = { subscribe: () => () => {}, version: () => 1, list: () => tabs.map(id => ({ id, label: id })) }
   const useSession = select => select({ blank: true, composerPhase: 'blank' })
   const renderSlot = (_name, _props, options) => options ? h('div', { 'data-rendered-view': options.only }) : null
@@ -74,6 +75,39 @@ async function fixture({ storage, port = 4100, local = {} } = {}) {
     close: async () => { win.dispatchEvent(new win.Event('pagehide')); await act(async () => root.unmount()); win.happyDOM.abort() }
   }
 }
+
+it('opens knowledge modes on their retained native view before exposing the session', async () => {
+  const f = await fixture()
+  const { win } = f
+  const byId = { A: { title: '可跨模式打开的会话' }, B: { title: '其他会话' } }
+  const modesAtOpen = []
+  let rendering
+  const dispose = installKnowledgeSourceNavigation({
+    document: win.document,
+    sessions: {
+      list: { getSnapshot: () => ({ byId }) }, subagentAddress: () => undefined,
+      open: id => { modesAtOpen.push(f.get(id).getSnapshot().view); rendering = f.open(id) }
+    },
+    selectView: (id, view) => f.get(id).actions.setView(view)
+  })
+  try {
+    await f.open('A')
+    await f.select('notes')
+    await f.open('B')
+    for (const view of ['research', 'spreadsheet', 'notes', 'research']) {
+      const request = new win.CustomEvent('sherlock:knowledge-source-open', {
+        detail: { id: 'A', requestId: 'category-' + view, view }, cancelable: true
+      })
+      win.document.dispatchEvent(request)
+      await rendering
+      expect(modesAtOpen.at(-1)).toBe(view)
+      expect(f.active()).toBe(view)
+      expect(f.host.querySelector('[data-rendered-view]')?.getAttribute('data-rendered-view')).toBe(view)
+    }
+    expect(f.get('B').getSnapshot().view).toBeNull()
+    expect(f.input.draft).toBe('unsent composer draft')
+  } finally { dispose(); await f.close() }
+})
 
 it.each(['chat', 'research', 'notes', 'trajectory'])('restores %s for A after B, new Chat and new Research without changing drafts or activity', async tab => {
   const { storage } = desktopStorage(), f = await fixture({ storage })
