@@ -68,6 +68,21 @@ it('renders prominent named cards, custom final formats, and collapsed auxiliary
  expect(el.querySelectorAll('.ew-delivery-auxiliary details:not([open])')).toHaveLength(1)
  expect(el.textContent).not.toContain('MB')
 })
+it.each([
+ ['/work/研究笔记.markdown', '在笔记中打开', 'notes'],
+ ['/work/成本.xlsx', '在表格中打开', 'spreadsheet'],
+ ['/work/会议.pptx', undefined, undefined]
+])('offers the compatible editor for %s on the OS menu', async (path, label, mode) => {
+ const openFileInEditor=vi.fn(async()=>{})
+ const showFileContextMenu=vi.fn(async items=>items.some(item=>item.id==='open-editor')?'open-editor':null)
+ window.dshDesktop={openFileInEditor,showFileContextMenu}
+ const el=await render({matched:[path],sessionId:'origin'})
+ await click(el.querySelector('.ew-delivery-options'))
+ const offered=showFileContextMenu.mock.calls[0][0].find(item=>item.id==='open-editor')
+ expect(offered?.label).toBe(label)
+ if(mode)expect(openFileInEditor).toHaveBeenCalledExactlyOnceWith(path,'origin',mode)
+ else expect(openFileInEditor).not.toHaveBeenCalled()
+})
 it('opens the exact selected file and supports keyboard-dismissed open choices',async()=>{
  const open=vi.fn(),system=vi.fn()
  const el=await render({matched:['/work/report.pdf'],openFile:open,openSystemFile:system,cwd:'/work'})

@@ -3,14 +3,19 @@ import type { KnowledgeFilePreview } from './file-preview'
 import { knowledgeReferenceOptions, resolveKnowledgeReference } from './references'
 import { dialog, ipcMain, shell, type BrowserWindow, type WebContents } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { copyFile, realpath, rename, rm } from 'node:fs/promises'
-import { dirname, isAbsolute, join, relative, sep } from 'node:path'
+import { copyFile, realpath, rename, rm, stat } from 'node:fs/promises'
+import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
 import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
-import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode, type SharedKnowledgeSession, type KnowledgeSessionCopy } from '../../shared/knowledge-sessions'
+import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode, type KnowledgeSessionCopy } from '../../shared/knowledge-sessions'
+import { fileEditorMode } from '../../shared/file-editor.mjs'
+import { readNoteDocumentContent } from '../notes/document-import'
+import { validateNoteContent } from '../notes/store'
+import { readWorkbookFile, readWorkbookPath } from '../spreadsheet/files'
+import type { KnowledgeSessionSeed } from './session-copy'
 import { knowledgeSessionShareId, readKnowledgeSessionSnapshot } from './session-share'
 
 function id(value: unknown): string {
@@ -46,14 +51,27 @@ export function installKnowledgeIpc({
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
   sessionEvidence(owner: string, id: string, mode: KnowledgeSessionMode): KnowledgeSessionEvidence
-  copySession(owner: string, source: SharedKnowledgeSession, fromSession: string | undefined, check: () => void): Promise<KnowledgeSessionCopy>
+  copySession(owner: string, source: KnowledgeSessionSeed, fromSession: string | undefined, check: () => void, imported?: boolean): Promise<KnowledgeSessionCopy>
   sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, displayTitle: string, check: () => void): Promise<{ name: string; data: Buffer }>
 }) {
   const activeCopies = new Set<string>()
+  const preparedNotes = new Map<string, { identity: ReturnType<typeof identity>; expires: number; title: string; fromSession?: string }>()
+  const workspaceFile = async (sessionId: unknown, candidate: unknown) => {
+    if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 256 ||
+        typeof candidate !== 'string' || candidate.length > 8192 || !isAbsolute(candidate)) throw Error('会话文件来源无效。')
+    const workspace = await generatedWorkspace(sessionId)
+    if (!workspace) throw Error('当前会话的工作区不可用。')
+    const [root, path] = await Promise.all([realpath(workspace), realpath(candidate)])
+    const fromRoot = relative(root, path)
+    if (!fromRoot || isAbsolute(fromRoot) || fromRoot === '..' || fromRoot.startsWith('..' + sep)) {
+      throw Error('文件不在这个会话的工作区。')
+    }
+    return { path, sessionId }
+  }
   const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
   const observedSenders = new WeakSet<WebContents>()
   registerTrustedMainWindowHandler(ipcMain, 'knowledge:request', window, async (event, method: unknown, input?: unknown) => {
-    if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || JSON.stringify(input).length > 550_000)) {
+    if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || JSON.stringify(input).length > (method === 'finish-note-file-import' ? 4 * 1024 * 1024 : 550_000))) {
       throw Error('知识库请求无效。')
     }
     const args = (input ?? {}) as Record<string, unknown>
@@ -172,21 +190,60 @@ export function installKnowledgeIpc({
         return
       }
       case 'generated': {
-        if (typeof args.sessionId !== 'string' || !args.sessionId || args.sessionId.length > 256 ||
-            typeof args.path !== 'string' || args.path.length > 8192 || !isAbsolute(args.path) ||
-            typeof args.saved !== 'boolean') throw Error('会话文件来源无效。')
-        const workspace = await generatedWorkspace(args.sessionId)
-        if (!workspace) throw Error('当前会话无法收录本地文件。')
-        const [root, path] = await Promise.all([realpath(workspace), realpath(args.path)])
-        const fromRoot = relative(root, path)
-        if (!fromRoot || isAbsolute(fromRoot) || fromRoot === '..' || fromRoot.startsWith('..' + sep)) {
-          throw Error('文件不在这个会话的工作区。')
-        }
+        if (typeof args.saved !== 'boolean') throw Error('会话文件来源无效。')
+        const { path, sessionId } = await workspaceFile(args.sessionId, args.path)
         check()
         return store.collectGenerated(path, {
-          sessionId: args.sessionId, saved: args.saved,
+          sessionId, saved: args.saved,
           sessionTitle: typeof args.sessionTitle === 'string' ? args.sessionTitle.trim().slice(0, 160) || undefined : undefined
         })
+      }
+      case 'open-file-in-editor': {
+        const fromSession = typeof args.sessionId === 'string' && args.sessionId.length <= 256 ? args.sessionId : undefined
+        const signal = AbortSignal.timeout(20_000)
+        const documentId = args.id === undefined ? undefined : previewId(args.id)
+        const file = documentId
+          ? documentId.length === 32 ? await sharing.read(documentId, signal) : await store.file(documentId)
+          : await (async () => {
+            const { path } = await workspaceFile(fromSession, args.path)
+            const info = await stat(path)
+            if (!info.isFile()) throw Error('请选择可导入的文件。')
+            return { path, document: { name: basename(path), size: info.size, source: 'upload' } }
+          })()
+        check()
+        const { name, source } = file.document
+        if (documentId?.length === 32 && sharedKnowledgeSessionFile(name, source)) throw Error('请打开共享会话后创建副本。')
+        const mode = fileEditorMode(name)
+        if (!mode || mode !== args.mode) throw Error('该文件格式无法在此模式中打开。')
+        const title = basename(name, extname(name)).replace(/[\x00-\x1f\x7f]/gu, ' ').trim() || name
+        if (mode === 'spreadsheet') {
+          const bookId = randomUUID()
+          const workbook = 'data' in file ? await readWorkbookFile(file.data, name, bookId)
+            : await readWorkbookPath(file.path, name, bookId)
+          check()
+          const session = await copySession(owner.owner, { title, version: 1, mode, workbook }, fromSession, check, true)
+          return { session }
+        }
+        const locale = args.locale === 'en' ? 'en' : undefined
+        const note = await readNoteDocumentContent(file.document, 'data' in file ? file.data : file.path, content, signal, locale)
+        check()
+        const now = Date.now()
+        for (const [token, entry] of preparedNotes) {
+          if (entry.expires <= now || !identityMatches(entry.identity, owner)) preparedNotes.delete(token)
+        }
+        if (preparedNotes.size >= 16) throw Error('正在导入多份笔记，请稍后重试。')
+        const token = randomUUID()
+        preparedNotes.set(token, { identity: owner, expires: now + 60_000, title, fromSession })
+        return { token, note }
+      }
+      case 'finish-note-file-import': {
+        const token = id(args.token)
+        const entry = preparedNotes.get(token)
+        if (!entry || entry.expires <= Date.now() || !identityMatches(entry.identity, owner)) throw Error('导入已过期，请重新打开文件。')
+        preparedNotes.delete(token)
+        const note = validateNoteContent({ title: entry.title, blocks: args.blocks, yjs: '' })
+        if (!note.blocks.length) throw Error('文档中没有可导入的内容。')
+        return { session: await copySession(owner.owner, { title: entry.title, mode: 'notes', note }, entry.fromSession, check, true) }
       }
       case 'edit': {
         const name = () => {

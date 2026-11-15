@@ -45,3 +45,12 @@ test('recovers a legacy copy without renaming it and rejects other sessions and 
   expect(route.rename).not.toHaveBeenCalled()
   expect(route.events.map(event => event.type)).toEqual(['session/title', 'workspace-knowledge/copied'])
 })
+
+test('keeps a file import under its own title and persists the workspace entry', async () => {
+  const route = testRoute()
+  const name = '销售分析'
+  expect((await route.request({ sessionId, title: name })).status).toBe(400)
+  expect((await route.request({ sessionId, title: name, imported: true })).status).toBe(200)
+  expect(route.rename).toHaveBeenCalledWith(expect.anything(), name)
+  expect(route.events.map(event => event.type)).toEqual(['session/title', 'workspace-knowledge/copied'])
+})

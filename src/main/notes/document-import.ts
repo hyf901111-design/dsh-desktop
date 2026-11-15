@@ -8,11 +8,17 @@ export const noteDocumentExtensions = ['pdf', 'txt', 'docx', 'md', 'markdown']
 export async function readNoteDocument(
   file: { name: string; path: string }, content: KnowledgeContent, signal: AbortSignal, locale?: string
 ) {
-  const extension = extname(file.name).slice(1).toLowerCase()
-  if (!noteDocumentExtensions.includes(extension)) throw Error(noteUiText('请选择 PDF、TXT、Word（.docx）或 Markdown 文档。', locale))
   const info = await stat(file.path)
   if (!info.isFile()) throw Error(noteUiText('所选文件当前无法读取，请重新选择。', locale))
-  const result = await content.read({ name: file.name, size: info.size }, file.path, signal)
+  return readNoteDocumentContent({ name: file.name, size: info.size }, file.path, content, signal, locale)
+}
+
+export async function readNoteDocumentContent(
+  file: { name: string; size: number }, source: string | Buffer, content: KnowledgeContent, signal: AbortSignal, locale?: string
+) {
+  const extension = extname(file.name).slice(1).toLowerCase()
+  if (!noteDocumentExtensions.includes(extension)) throw Error(noteUiText('请选择 PDF、TXT、Word（.docx）或 Markdown 文档。', locale))
+  const result = await content.read(file, source, signal)
   if (!result?.text.trim()) {
     const message = extension === 'pdf' ? 'PDF 中没有可读取的文字。扫描件可以作为附件插入。' : '文档中没有可导入的文字。'
     throw Error(noteUiText(message, locale))

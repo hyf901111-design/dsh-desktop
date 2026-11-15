@@ -191,6 +191,14 @@ function ComponentFileBlock({block,inline:requestedInline=false}:any){
 }
 const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''},textAlignment:componentAlignment},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload} data-text-alignment={block.props.textAlignment}>{t("文件")}</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left'}:undefined})()
 const schema = BlockNoteSchema.create({ blockSpecs: { ...withNoteIndentSpecs(defaultBlockSpecs), research: researchSpec,attachment:fileSpec } })
+export function noteBlocksFromFile(result: { format: 'markdown' | 'text'; text: string }) {
+  if (result.format === 'text') return result.text.split('\n').map(content => ({
+    id: crypto.randomUUID(), type: 'paragraph', content
+  }))
+  const editor = BlockNoteEditor.create({ schema })
+  try { return editor.tryParseMarkdownToBlocks(result.text) }
+  finally { editor._tiptapEditor.destroy() }
+}
 function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }) {
   const editor = useCreateBlockNote({ dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)} })
   useEffect(() => { editor.replaceBlocks(editor.document, editor.tryParseMarkdownToBlocks(markdown)) }, [editor, markdown])

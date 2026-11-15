@@ -1,6 +1,10 @@
+import {fileEditorLabel as editorLabel, fileEditorMode as editorModeForName} from '../../src/shared/file-editor.mjs'
 import {deliveryModelSource} from './delivery-file-model.mjs'
 import {deliveryIconSource} from './delivery-file-icons.mjs'
 import {PPTX_ANNOTATION_DELIVERY_SOURCE} from './pptx-annotation-delivery.mjs'
+
+const fileEditorLabel = editorLabel
+const fileEditorMode = editorModeForName
 
 export const DELIVERY_CARDS_CSS = `
 .ew-delivery{margin-top:16px;min-width:0;color:var(--dsw-alias-label-primary,#202124);font:400 14px/1.5 var(--odyssey-font-ui,system-ui,sans-serif)}
@@ -30,7 +34,7 @@ export const DELIVERY_CARDS_CSS = `
 
 function deliveryFileType(path) {
  const extension=path.split(/[\\/]/).pop().split('.').pop().toLowerCase()
- const kind=/^pdf$/.test(extension)?'pdf':/^(pptx?|odp|key)$/.test(extension)?'presentation':/^(xlsx?|csv|tsv|ods|numbers)$/.test(extension)?'sheet':/^(docx?|odt|pages|rtf|txt|md)$/.test(extension)?'document':/^(html?|svg)$/.test(extension)?'web':/^(png|jpe?g|gif|webp|mp[34]|wav|mov)$/.test(extension)?'media':'file'
+ const kind=/^pdf$/.test(extension)?'pdf':/^(pptx?|odp|key)$/.test(extension)?'presentation':/^(xlsx?|csv|tsv|ods|numbers)$/.test(extension)?'sheet':/^(docx?|odt|pages|rtf|txt|md|markdown)$/.test(extension)?'document':/^(html?|svg)$/.test(extension)?'web':/^(png|jpe?g|gif|webp|mp[34]|wav|mov)$/.test(extension)?'media':'file'
  return {extension:extension.length<=16?extension.toUpperCase():'FILE',kind}
 }
 
@@ -46,6 +50,7 @@ function DeliveryFileCard({path,sessionId,sessionTitle,openFile,openSystemFile,c
  const current=()=>alive.current&&latest.current===owner&&!owner.abort.signal.aborted
  const absolute=/^(?:\/|[A-Za-z]:[\\/]|\\\\)/.test(path)
  const canCheck=localFiles&&absolute&&path.length<=512
+ const editorMode=canCheck&&sessionId&&typeof window.dshDesktop?.openFileInEditor==='function'?fileEditorMode(name):undefined
  const collectFile=canCheck&&sessionId&&window.dshDesktop?.collectKnowledgeFile
  react.useEffect(()=>{
   setCollection(null)
@@ -94,6 +99,7 @@ function DeliveryFileCard({path,sessionId,sessionTitle,openFile,openSystemFile,c
    if(gate&&['open-side','default-app'].includes(action)){const value=await gate.inspect({sendingSessionId:sessionId,path},{signal:controller.signal,force:true});if(!active())return;setAnnotationState({owner,value});if(value.kind!=='ordinary'&&value.status!=='success')throw Error(pptxAnnotationDeliveryText(value,en))}
    if(!active())return
    if(action==='open-side')await openFile(path)
+   else if(action==='open-editor'&&editorMode)await window.dshDesktop.openFileInEditor(path,sessionId,editorMode)
    else if(action==='default-app')await openSystemFile(path)
    else if(action==='finder')await window.dshDesktop.showItemInFolder(path)
   }catch(error){tell(error?.message||(en?'Unable to open this file. Please try again.':'文件暂时无法打开，请重试。'),true)}
@@ -102,6 +108,7 @@ function DeliveryFileCard({path,sessionId,sessionTitle,openFile,openSystemFile,c
  const items=[
   ...(collectFile?[{id:'save-knowledge',label:en?'Save to Knowledge Base':'收藏至知识库'}]:[]),
   {id:'open-side',label:en?'Preview in EWork':'在客户端中预览'},
+  ...(editorMode?[{id:'open-editor',label:fileEditorLabel(editorMode,en)}]:[]),
   ...(absolute&&canOpenSystem&&openSystemFile?[{id:'default-app',label:en?'Open with default app':'用默认应用打开'}]:[]),
   ...(localFiles&&absolute&&window.dshDesktop?.showItemInFolder?[{id:'finder',label:en?'Show in file manager':'在文件管理器中显示'}]:[]),
   {id:'absolute',label:en?'Copy path':'复制文件路径'}
@@ -138,7 +145,7 @@ function ProducedFiles({matched:paths,sessionId,getSessionTitle,openFile,openSys
  const sessionTitle=sessionId?getSessionTitle?.(sessionId):undefined
  const [expanded,setExpanded]=react.useState(false)
  const explicit=new Set(deliveryPathsFromFinalText(text,cwd)),main=[],auxiliary=[]
- for(const path of paths)(explicit.has(path)||/\.(?:pdf|pptx?|odp|key|docx?|odt|pages|rtf|xlsx?|csv|tsv|ods|numbers|html?|md|txt|zip|7z|png|jpe?g|webp|svg|gif|mp[34]|wav|mov)$/i.test(path)?main:auxiliary).push(path)
+ for(const path of paths)(explicit.has(path)||/\.(?:pdf|pptx?|odp|key|docx?|odt|pages|rtf|xlsx?|csv|tsv|ods|numbers|html?|md|markdown|txt|zip|7z|png|jpe?g|webp|svg|gif|mp[34]|wav|mov)$/i.test(path)?main:auxiliary).push(path)
  const cards=(list,collect=false)=>list.map(path=>jsx(DeliveryFileCard,{path,sessionId,sessionTitle,openFile,openSystemFile,canOpenSystem:isLoopback&&hostCanOpen,localFiles:isLoopback===true,collect},path))
  return jsxs('section',{className:'ew-delivery','aria-label':en?'Delivered files':'交付文件',children:[
   main.length?jsxs(react_jsx_runtime.Fragment,{children:[jsxs('div',{className:'ew-delivery-heading',children:[en?'Delivered files':'交付文件',jsx('span',{className:'ew-delivery-count',children:main.length})]}),jsx('div',{className:'ew-delivery-list',children:cards(main,true)})]}):null,
@@ -176,7 +183,7 @@ function patchPresentationCodeDelivery(source){
 
 export function deliveryCardsRuntime(){
  const marker='/* ework:delivery-cards:v1 */'
- const runtime=marker+'\nlet _deliveryIcons=require("@deepseek-ai/dsh-client-ui-primitives");\n'+deliveryModelSource+'\n'+deliveryIconSource+'\n'+PPTX_ANNOTATION_DELIVERY_SOURCE+'\n'+[deliveryFileType,DeliveryFileCard,ProducedFiles].map(fn=>fn.toString()).join('\n')+'\n'+`if(typeof document!=='undefined'&&!document.getElementById('ework-delivery-cards')){const tag=document.createElement('style');tag.id='ework-delivery-cards';tag.textContent=${JSON.stringify(DELIVERY_CARDS_CSS)};document.head.appendChild(tag);}\n`
+ const runtime=marker+'\nlet _deliveryIcons=require("@deepseek-ai/dsh-client-ui-primitives");\n'+deliveryModelSource+'\n'+deliveryIconSource+'\n'+PPTX_ANNOTATION_DELIVERY_SOURCE+'\n'+[fileEditorMode,fileEditorLabel,deliveryFileType,DeliveryFileCard,ProducedFiles].map(fn=>fn.toString()).join('\n')+'\n'+`if(typeof document!=='undefined'&&!document.getElementById('ework-delivery-cards')){const tag=document.createElement('style');tag.id='ework-delivery-cards';tag.textContent=${JSON.stringify(DELIVERY_CARDS_CSS)};document.head.appendChild(tag);}\n`
  return runtime
 }
 
