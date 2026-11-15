@@ -90,7 +90,7 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
         <input type="checkbox" role="switch" className="ew-memory-toggle" checked={snapshot.settings.use} disabled={busy}
           onChange={event => void toggle(event.currentTarget.checked)} />
       </label>
-      <div ref={host} />
+      <div ref={host} className="knowledge-memory-document" />
     </>}
   </section>
 }

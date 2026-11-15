@@ -1542,7 +1542,7 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     await page.goto('https://knowledge.test/')
     await page.setContent(`
       <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 360px 10px 10px"></div>
-      <aside data-knowledge-panel-host style="position:fixed;top:10px;right:10px;width:340px;height:720px"></aside>`)
+      <aside data-knowledge-panel-host style="position:fixed;inset:10px 10px 10px auto;width:340px"></aside>`)
     await page.addScriptTag({ content: bundle })
     const pane = page.getByRole('region', { name: '知识库资料' })
     const files = pane.getByRole('button', { name: '文件资料', exact: true })
@@ -1570,7 +1570,9 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     const fullToggle = library.getByRole('switch', { name: /启用记忆/ })
     expect(await fullToggle.isChecked()).toBe(true)
     expect(await fullToggle.evaluate(switchShape)).toEqual(await toggle.evaluate(switchShape))
-    for (const context of [fullMemory, pane.getByRole('region', { name: '经验记忆' })]) {
+    const contexts = [fullMemory, pane.getByRole('region', { name: '经验记忆' })]
+    const normalHeights = []
+    for (const context of contexts) {
       await context.getByRole('heading', { name: '记忆验收正文' }).waitFor()
       expect(await context.getByRole('button', { name: '预览与编辑' }).count()).toBe(0)
       expect(await context.getByRole('dialog').count()).toBe(0)
@@ -1580,11 +1582,32 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
         return tabs && tabs.getBoundingClientRect().left > node.getBoundingClientRect().right &&
           Math.abs(tabs.getBoundingClientRect().right - node.parentElement.getBoundingClientRect().right) < 1
       })).toBe(true)
+      normalHeights.push((await context.getByRole('tabpanel').boundingBox()).height)
+    }
+    await page.setViewportSize({ width: 1700, height: 1300 })
+    for (const [index, context] of contexts.entries()) {
+      const preview = context.getByRole('tabpanel')
+      await expect.poll(async () => (await preview.boundingBox()).height).toBeGreaterThan(normalHeights[index] + 450)
+      expect(await preview.evaluate(node => {
+        const region = node.closest('.knowledge-memory')
+        return Math.abs(region.getBoundingClientRect().bottom - parseFloat(getComputedStyle(region).paddingBottom) - node.getBoundingClientRect().bottom)
+      })).toBeLessThan(2)
     }
     await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
-    await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('## 保存后直接预览')
+    const editor = fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' })
+    expect((await editor.boundingBox()).height).toBeGreaterThan(800)
+    const markdown = '## 保存后直接预览\n\n' + Array.from({ length: 80 }, (_, index) => `记忆段落 ${index + 1}`).join('\n\n')
+    await editor.fill(markdown)
+    await page.setViewportSize({ width: 1100, height: 500 })
+    expect(await editor.inputValue()).toBe(markdown)
+    expect((await editor.boundingBox()).height).toBeGreaterThan(100)
     await fullMemory.getByRole('button', { name: '保存', exact: true }).click()
     await fullMemory.getByRole('heading', { name: '保存后直接预览' }).waitFor()
+    const preview = fullMemory.getByRole('tabpanel')
+    await preview.evaluate(node => { node.scrollTop = node.scrollHeight })
+    expect(await preview.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
+    expect(await preview.getByText('记忆段落 80', { exact: true }).evaluate(node =>
+      node.getBoundingClientRect().bottom <= node.closest('[role=tabpanel]').getBoundingClientRect().bottom)).toBe(true)
     await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
     await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('未保存草稿')
     await fullMemory.getByRole('button', { name: '取消', exact: true }).click()

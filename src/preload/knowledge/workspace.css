@@ -646,10 +646,20 @@
   background: var(--dsw-alias-interactive-bg-active, light-dark(#e4e4e6, #424242));
 }
 .knowledge-memory {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   width: min(100%, 830px);
   margin-inline: auto;
   overflow: auto;
   padding: 24px;
+}
+.knowledge-memory-document {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 200px;
 }
 .knowledge-memory h2 { margin: 0 0 16px; font-size: 16px; }
 .knowledge-memory-row {
