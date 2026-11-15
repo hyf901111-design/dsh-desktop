@@ -3,7 +3,7 @@ import { sharedKnowledgeSessionFile } from '../../shared/knowledge-sessions'
 import React, { useEffect, useState } from 'react'
 import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
   type KnowledgeSessionMode, type KnowledgeSessionShare } from '../../shared/knowledge-sessions'
-import { KnowledgeIcon } from './icons'
+import { KnowledgeIcon, KnowledgeItemIcon } from './icons'
 
 export function useKnowledgeSessions(document: Document, mode: KnowledgeSessionMode | undefined,
   evidenceFor: (mode: KnowledgeSessionMode, ids: string[]) => Promise<KnowledgeSessionEvidence[]>) {
@@ -103,8 +103,6 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open,
   const [failed, setFailed] = useState(false)
   const needle = query.trim().toLocaleLowerCase()
   const rows = entries.filter(entry => !needle || `${entry.title}\n${entry.workspace ?? ''}`.toLocaleLowerCase().includes(needle))
-  const icon = mode === 'research' ? 'research' : mode === 'notes' ? 'note' : 'table'
-  const color = mode === 'research' ? 'research' : mode === 'notes' ? 'markdown' : 'excel'
 
   return <main className="knowledge-file-list knowledge-session-directory" aria-label={knowledgeSessionLabels[mode]}>
     <div className="knowledge-tools">
@@ -132,7 +130,7 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open,
               setOpening(undefined)
               setFailed(!ok)
             }}>
-            <span className="knowledge-file-icon" data-tile="true" data-format={color}><KnowledgeIcon name={icon} /></span>
+            <KnowledgeItemIcon format={mode} tile />
             <span className="knowledge-session-title"><span>{row.title}</span>{row.workspace && <small>{row.workspace}</small>}</span>
             {published && <span className="knowledge-tag" data-kind="share">已共享</span>}
             {row.updatedAt > 0 && <time dateTime={new Date(row.updatedAt).toISOString()}>{new Date(row.updatedAt).toLocaleDateString()}</time>}

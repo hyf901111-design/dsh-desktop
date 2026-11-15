@@ -269,7 +269,11 @@ it('lists real session modes under all files and opens each one in its native vi
       expect(await opens.count()).toBe(view === 'research' ? 2 : 1)
       expect(await directory.getByRole('button', { name: /空白/ }).count()).toBe(0)
       const tile = row.locator('.knowledge-file-icon')
-      expect(await tile.evaluate(el => el.getBoundingClientRect().width)).toBe(36)
+      expect(await tile.evaluate(el => ({
+        width: el.getBoundingClientRect().width,
+        format: el.dataset.format,
+        fill: el.querySelector('svg').getAttribute('fill')
+      }))).toEqual({ width: 36, format: view, fill: 'currentColor' })
       const color = await tile.evaluate(el => getComputedStyle(el).backgroundColor)
       await row.hover()
       await expect.poll(() => tile.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(color)
@@ -1079,19 +1083,24 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     await expect.poll(() => tileStyles.count()).toBe(10)
     const styles = await tileStyles.evaluateAll(tiles => tiles.map(tile => {
       const svg = tile.querySelector('svg')
+      const css = getComputedStyle(tile)
       return {
-        format: tile.dataset.format, color: getComputedStyle(tile).color,
-        viewBox: svg.getAttribute('viewBox'), stroke: svg.getAttribute('stroke-width'),
-        page: svg.firstElementChild.getAttribute('d')
+        color: css.color, background: css.backgroundColor,
+        viewBox: svg.getAttribute('viewBox'), fill: svg.getAttribute('fill'),
+        glyph: svg.firstElementChild.getAttribute('d')
       }
     }))
-    expect(new Set(styles.map(style => style.color)).size).toBe(9)
+    expect(new Set(styles.map(style => style.background)).size).toBe(9)
+    expect(new Set(styles.map(style => style.glyph)).size).toBe(9)
     for (const style of styles) {
       expect(style.viewBox).toBe('0 0 24 24')
-      expect(style.stroke).toBe('1.7')
-      const pdf = styles.find(item => item.format === 'pdf')
-      if (style.format === 'ppt') expect(style.page).not.toBe(pdf.page)
-      else expect(style.page).toBe(pdf.page)
+      expect(style.fill).toBe('currentColor')
+      expect(style.color).toBe('rgb(255, 255, 255)')
+    }
+    if (process.env.KNOWLEDGE_QA_SCREENSHOT) {
+      await library.getByRole('table').screenshot({
+        path: process.env.KNOWLEDGE_QA_SCREENSHOT.replace('.png', '-tiles-' + theme + '.png')
+      })
     }
     const checkGeometry = async surface => {
       const popup = surface.getByRole('group', { name: '筛选文件' })
@@ -1138,7 +1147,8 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     const appearance = async () => file.evaluate(el => {
       const tile = el.querySelector('.knowledge-file-icon')
       const luminance = css => css.match(/[\d.]+/g).slice(0, 3).map(Number)
-        .map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+        .map(value => css.startsWith('color(srgb ') ? value : value / 255)
+        .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
         .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0)
       const ink = luminance(getComputedStyle(tile).color)
       const background = luminance(getComputedStyle(tile).backgroundColor)
@@ -1148,7 +1158,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
         row: getComputedStyle(el.closest('td')).backgroundColor,
         tile: getComputedStyle(tile).backgroundColor,
         geometry: [tile.offsetWidth, tile.offsetHeight],
-        stroke: tile.querySelector('svg').getAttribute('stroke-width')
+        fill: tile.querySelector('svg').getAttribute('fill')
       }
     })
     const normal = await appearance()
@@ -1164,7 +1174,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
       expect(state.foreground).toBe(normal.foreground)
       expect(state.contrast).toBeGreaterThan(4.5)
       expect(state.geometry).toEqual(normal.geometry)
-      expect(state.stroke).toBe('1.7')
+      expect(state.fill).toBe('currentColor')
     }
     const sidebarFile = pane.getByRole('button', { name: /研究写作规范.md/ }).first()
     const size = pane.getByText('4 KB', { exact: true })

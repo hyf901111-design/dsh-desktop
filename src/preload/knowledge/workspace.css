@@ -10,7 +10,6 @@
   --knowledge-danger: #a93737;
   --knowledge-control-hover: #e7e7e9;
   --knowledge-control-active: #dedee1;
-  --knowledge-icon-tile: #f2f2f4;
   position: fixed;
   z-index: 6;
   display: flex;
@@ -34,7 +33,6 @@
   --knowledge-danger: #f19a91;
   --knowledge-control-hover: #3b3b3b;
   --knowledge-control-active: #484848;
-  --knowledge-icon-tile: #303030;
   color-scheme: dark;
 }
 .knowledge-workspace[hidden] { display: none !important; }
@@ -317,36 +315,40 @@
 .knowledge-table td:last-child { border-radius: 0 7px 7px 0; }
 .knowledge-table .knowledge-file-name { display: flex; gap: 10px; align-items: center; padding: 4px 6px; width: 100%; min-width: 0; text-align: left; color: var(--knowledge-ink); }
 .knowledge-file-icon {
+  --knowledge-icon-color: #596273;
   display: inline-grid;
   flex: none;
   place-items: center;
-  color: var(--knowledge-format-ink, var(--knowledge-muted));
+  color: light-dark(var(--knowledge-icon-color), color-mix(in srgb, var(--knowledge-icon-color), #fff 50%));
 }
 .knowledge-file-icon[data-tile=true] {
   width: 36px;
   height: 36px;
   border-radius: 7px;
-  background: var(--knowledge-icon-tile);
+  color: #fff;
+  background: var(--knowledge-icon-color);
   transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out;
 }
-.knowledge-file-icon[data-tile=true] .knowledge-icon { width: 20px; height: 20px; }
+.knowledge-file-icon[data-tile=true] .knowledge-icon { width: 21px; height: 21px; }
 .knowledge-table tbody tr:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
 .knowledge-panel-row:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
 .knowledge-session-rows button:is(:hover, :focus-visible) .knowledge-file-icon[data-tile=true] {
-  background: var(--knowledge-control-hover);
+  background: color-mix(in srgb, var(--knowledge-icon-color), #fff 6%);
 }
 .knowledge-table tbody tr[data-selected=true] .knowledge-file-icon[data-tile=true] {
-  background: var(--knowledge-control-active);
+  background: color-mix(in srgb, var(--knowledge-icon-color), #fff 10%);
 }
-.knowledge-file-icon[data-format=pdf] { --knowledge-format-ink: light-dark(#a63349, #ff929f); }
-.knowledge-file-icon[data-format=markdown] { --knowledge-format-ink: light-dark(#096875, #89d2da); }
-.knowledge-file-icon[data-format=word] { --knowledge-format-ink: light-dark(#145ba3, #88c3fd); }
-.knowledge-file-icon[data-format=excel] { --knowledge-format-ink: light-dark(#176845, #81d4a6); }
-.knowledge-file-icon[data-format=research] { --knowledge-format-ink: light-dark(#414da8, #aebcff); }
-.knowledge-file-icon[data-format=ppt] { --knowledge-format-ink: light-dark(#8a550c, #f7ca73); }
-.knowledge-file-icon[data-format=image] { --knowledge-format-ink: light-dark(#6940a1, #c6adfa); }
-.knowledge-file-icon[data-format=audio] { --knowledge-format-ink: light-dark(#8a3978, #eeb0da); }
-.knowledge-file-icon[data-format=video] { --knowledge-format-ink: light-dark(#4f55ac, #aebcff); }
+.knowledge-file-icon[data-format=pdf] { --knowledge-icon-color: #ac2d48; }
+.knowledge-file-icon[data-format=ppt] { --knowledge-icon-color: #92520e; }
+.knowledge-file-icon[data-format=markdown] { --knowledge-icon-color: #1b667c; }
+.knowledge-file-icon[data-format=word] { --knowledge-icon-color: #285bb0; }
+.knowledge-file-icon[data-format=excel] { --knowledge-icon-color: #14704c; }
+.knowledge-file-icon[data-format=image] { --knowledge-icon-color: #7143a3; }
+.knowledge-file-icon[data-format=audio] { --knowledge-icon-color: #973564; }
+.knowledge-file-icon[data-format=video] { --knowledge-icon-color: #5051a2; }
+.knowledge-file-icon[data-format=research] { --knowledge-icon-color: #4b4ca2; }
+.knowledge-file-icon[data-format=notes] { --knowledge-icon-color: #2b5f9b; }
+.knowledge-file-icon[data-format=spreadsheet] { --knowledge-icon-color: #196b55; }
 .knowledge-file-content { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .knowledge-file-title { display: flex; gap: 6px; align-items: center; min-width: 0; font-size: 14px; }
 .knowledge-file-title > span:first-child, .knowledge-file-content > small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
