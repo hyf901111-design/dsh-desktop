@@ -170,6 +170,30 @@ it('logs out through the original account owner and leaves the global Explore en
  }finally{await f.close()}
 },15000)
 
+it.each([540,760,1380])('keeps the sixth card subtitle and both description lines readable at %spx',async width=>{
+ const f=await fixture({width,dark:true})
+ try{
+  await open(f.page)
+  await f.page.locator('.odyssey-explore-pages button').nth(5).click()
+  await uiExpect(f.page.getByRole('button',{name:'播放示例：复杂表格简单处理',exact:true})).toBeVisible()
+  const description=f.page.locator('[data-odyssey-operations-case-layer][data-case="5"] .odyssey-operations-description')
+  const lines=await description.evaluate((node:HTMLElement)=>{
+   const text=node.firstChild!
+   const marks=new Map<number,string>()
+   for(let i=0;i<text.textContent!.length;i++){
+    const character=text.textContent![i]!
+    if(character==='\n')continue
+    const range=document.createRange()
+    range.setStart(text,i);range.setEnd(text,i+1)
+    const y=Math.round(range.getBoundingClientRect().y)
+    marks.set(y,(marks.get(y)??'')+character)
+   }
+   return [...marks.values()]
+  })
+  expect(lines).toEqual(['AI 整理财报，生成趋势图。','拆解现金流，动手试算回款。'])
+ }finally{await f.close()}
+},15000)
+
 it('advances all six cases on the existing clock and pauses only while their card is being read',async()=>{
  const f=await fixture({reduced:false,clock:true});try{
   await open(f.page);await f.page.clock.pauseAt(new Date(await f.page.evaluate(()=>Date.now())+50))
