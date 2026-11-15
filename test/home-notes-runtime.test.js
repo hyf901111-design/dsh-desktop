@@ -36,7 +36,10 @@ it('records chart, selected rewrite and appended summary as three genuine native
  const second=f.runtime.generate({...f.run,input:{...f.input,entryPoint:'composer',insertionAnchor:undefined,requestId:'task-2',prompt:HOME_NOTES_REWRITE_PROMPT,title:'',markdown:'',selection:HOME_NOTES_GUIDE_SELECTION,context:{scope:'selection',components:[]}}});await vi.advanceTimersByTimeAsync(20000)
  expect(await second).toEqual({kind:'text',markdown:HOME_NOTES_REWRITE_RESULT})
  recordNoteConversation(f.session,{requestId:'task-2',phase:'accepted',finishedAt:Date.now()})
- const refs=[{blockId:'chart-block',type:'research',title:'情景图表',content:JSON.stringify({spec:(await first).node.containerSpec})},{blockId:'quote-block',type:'research',title:'行情面板',content:JSON.stringify({spec:{version:1,type:'financial-widget',widget:'quote',title:'行情面板',symbols:[{code:'300308',market:'SZ',name:'中际旭创'}],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}})}]
+ const chart=(await first).node
+ const chartReference=JSON.stringify({spec:chart.containerSpec,sourceText:chart.sourceText,visibleText:chart.title,status:chart.generationStatus})
+ expect(chartReference.length).toBeLessThan(30000)
+ const refs=[{blockId:'chart-block',type:'research',title:'情景图表',content:chartReference},{blockId:'quote-block',type:'research',title:'行情面板',content:JSON.stringify({spec:{version:1,type:'financial-widget',widget:'quote',title:'行情面板',symbols:[{code:'300308',market:'SZ',name:'中际旭创'}],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}})}]
  const summary={...f.input,requestId:'task-3',entryPoint:'composer',insertionAnchor:undefined,prompt:HOME_NOTES_TASK_PROMPT,markdown:'环比增长14.29%；经营现金流净额18.00亿元，同比下降44.08%。不把单期业绩或历史涨幅当作确定性依据。沪深300同期下跌10.88%。',context:{scope:'note',components:refs}}
  await expect(f.runtime.generate({...f.run,input:{...summary,context:{...summary.context,components:refs.slice(0,1)}}})).rejects.toThrow('引用内容')
  const third=f.runtime.generate({...f.run,input:summary});await vi.advanceTimersByTimeAsync(20000)

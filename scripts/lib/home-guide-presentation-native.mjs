@@ -155,12 +155,23 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      input.focus({preventScroll:true});input.setSelectionRange(0,0)
      const launcher=input.closest('.uV2eYG_root')?.querySelector('button[aria-haspopup="listbox"]')
      await cue(ticket,launcher,'打开技能菜单');initialUnchanged();launcher.click()
-     const command=()=>[...document.querySelectorAll('[data-ework-command-menu-selection] [role="option"]')].find(row=>[...row.querySelectorAll('span')].some(span=>['技能','Skills'].includes(span.textContent?.trim())))
-     await waitFor(ticket,()=>!!command());const skillCommand=command();await cue(ticket,skillCommand,'选择技能')
+     // A mounted popover still starts its opening animation at zero opacity.
+     const visible=node=>node?.isConnected&&node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})&&
+       !node.closest('[hidden],[inert], [popover]:not(:popover-open)')
+     const command=()=>[...document.querySelectorAll('[data-ework-command-menu-selection] [role="option"]')].find(row=>
+       visible(row)&&[...row.querySelectorAll('span')].some(span=>['技能','Skills'].includes(span.textContent?.trim())))
+     const popup=()=>[...document.querySelectorAll('[data-ework-command="skills"]')].find(visible)
+     await waitFor(ticket,()=>!!command())
+     await cue(ticket,command(),'选择技能','move')
      initialUnchanged()
-     // The native slash roster selects on mousedown, not click.
-     skillCommand.dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))
-     const option=()=>[...document.querySelectorAll('[data-ework-command="skills"] [role="option"]')].find(row=>[...row.querySelectorAll('span')].some(span=>span.textContent?.trim()===skill.label))
+     if(!command()?.matches('[aria-expanded="true"]')&&!popup()){
+      // Reduced motion and a stationary pointer may not have opened the submenu yet.
+      const row=command()
+      if(!row)throw changed()
+      row.dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))
+     }
+     const option=()=>[...(popup()?.querySelectorAll('[role="option"]')??[])].find(row=>
+       visible(row)&&[...row.querySelectorAll('span')].some(span=>span.textContent?.trim()===skill.label))
      await waitFor(ticket,()=>!!option());const choice=option();await cue(ticket,choice,ticket.kind==='report'?'选择研究报告写作技能':'选择公司 PPT 制作技能');initialUnchanged();choice.click()
      await waitFor(ticket,()=>(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id===ticket.skillId))
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id===ticket.skillId))throw Error('制作技能未能加入原生输入框。')

@@ -54,6 +54,24 @@ it.each(['light','dark'])('keeps the pointer above real slash and skill top-laye
   await page.locator('[data-ework-command=skills] .mufS8W_row').first().click();expect(await page.evaluate(()=>window.menuFixture.events)).toEqual(['builtin:efund-ppt-maker','consume']);expect(await page.locator('textarea').inputValue()).toBe('用户草稿');expect(errors).toEqual([])
  }finally{await page.evaluate(()=>window.menuFixture.dispose());await page.close()}
 },15000)
+it('targets an open popover outside its clipped DOM ancestors',async()=>{
+ const {page,errors}=await fixture('dark')
+ try{
+  const result=await page.evaluate(async()=>{
+   const wrapper=document.createElement('div')
+   wrapper.style.cssText='position:fixed;left:50px;top:300px;width:200px;height:100px;overflow:hidden'
+   wrapper.innerHTML='<div popover="manual" style="position:fixed;inset:auto;left:70px;top:100px;margin:0"><button role="option">技能</button></div>'
+   document.body.append(wrapper)
+   const menu=wrapper.firstElementChild
+   menu.showPopover()
+   await window.menuFixture.move('slash')
+   const {x,y}=window.menuFixture.pointer.snapshot()
+   return {hit:menu.contains(document.elementFromPoint(x,y)),escaped:y<wrapper.getBoundingClientRect().top}
+  })
+  expect(result).toEqual({hit:true,escaped:true})
+  expect(errors).toEqual([])
+ }finally{await page.evaluate(()=>window.menuFixture.dispose());await page.close()}
+})
 it('closes the visual top layer on hide, abort and dispose without blocking or taking focus',async()=>{
  const{page,errors}=await fixture('light')
  try{
