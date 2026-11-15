@@ -20,9 +20,8 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
   const style = document.createElement('style')
   style.textContent = `
     .knowledge-shared-session{display:flex;flex-direction:column}
-    .knowledge-shared-session>header{display:flex;align-items:center;gap:10px;padding:0 46px 0 18px;min-height:46px;flex:none}
+    .knowledge-shared-session>header{display:flex;align-items:center;gap:10px;padding:0 10px 0 18px;min-height:46px;flex:none}
     .knowledge-shared-session>header strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
-    body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) .knowledge-shared-session>header{padding-right:10px}
     .knowledge-shared-session-actions{display:flex;align-items:center;flex:none;gap:8px;margin-left:auto;white-space:nowrap}
     .knowledge-shared-session-actions button{background:var(--knowledge-field)}
     .knowledge-shared-session-actions button:hover:not(:disabled){background:var(--knowledge-control-hover)}

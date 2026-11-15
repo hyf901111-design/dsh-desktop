@@ -17,6 +17,13 @@ body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
   --odyssey-right-occupancy: calc(var(--dsh-sidebar-width, 340px) + var(--odyssey-panel-gap));
 }
 
+/* A shared original is a preview over the current project session. Keep the
+   resident panel and draft in place so going back restores them. */
+body[data-workspace-surface="shared-session"] { --odyssey-right-occupancy: 0px !important; }
+body[data-workspace-surface="shared-session"] [data-dsh-panel-host] {
+  display:none !important;
+}
+
 /* Keep the native window full width; the main pane alone yields to the
    adjacent panel, including its header, atmosphere and canvas. */
 #root:has([data-odyssey-page]) {
