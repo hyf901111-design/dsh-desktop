@@ -12,7 +12,7 @@
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
         "baseCommit": "580c0d5faf5e3a8a46284871397221ddd69550f3",
-        "tipCommit": "b60b0922d154ed4803e3676a291b0f638921991a",
+        "tipCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
         "commits": [
           {
             "commit": "b60b0922d154ed4803e3676a291b0f638921991a",
@@ -20,12 +20,31 @@
               "580c0d5faf5e3a8a46284871397221ddd69550f3"
             ],
             "subject": "功能：锁定知识库共享预览并创建可编辑会话副本"
+          },
+          {
+            "commit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+            "parents": [
+              "b60b0922d154ed4803e3676a291b0f638921991a"
+            ],
+            "subject": "修复：隐藏共享页编辑动作并兼容斜杠菜单重复构建"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/knowledge-shared-research.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/slash-command-flyout.mjs"
           },
           {
             "status": "M",
@@ -89,8 +108,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "b60b0922d154ed4803e3676a291b0f638921991a",
-            "completedAt": "2026-11-15T04:06:24.049Z",
+            "verifiedCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+            "completedAt": "2026-11-15T04:09:33.735Z",
             "timeoutMs": 120000
           },
           {
@@ -110,8 +129,25 @@
             ],
             "outcome": "passed",
             "summary": "51 项聚焦检查覆盖三种副本的独立保存、失败回收及既有共享和表格行为。",
-            "verifiedCommit": "b60b0922d154ed4803e3676a291b0f638921991a",
-            "completedAt": "2026-11-15T04:06:24.049Z",
+            "verifiedCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+            "completedAt": "2026-11-15T04:09:33.735Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=1",
+              "test/knowledge-composer.test.js",
+              "test/command-popup-position-browser.test.js",
+              "test/command-popup-surface.test.js",
+              "test/slash-menu-expanded.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "安装过斜杠菜单的原生运行时可再次构建，主对话与右侧栏仍保持级联交互。",
+            "verifiedCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+            "completedAt": "2026-11-15T04:09:33.735Z",
             "timeoutMs": 120000
           }
         ],
@@ -183,7 +219,7 @@
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T04:06:24.049Z"
+        "generatedAt": "2026-11-15T04:09:33.735Z"
       }
     }
   ],
