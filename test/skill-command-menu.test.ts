@@ -25,6 +25,20 @@ it('adds a native popup command and lists only enabled skills with a name and de
  expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:f.skill.id,revision:2,sessionId:'current',commandSegment:{via:'enter',token:'/skills'}}))
  f.dispose();f.bridge.dispose()
 })
+it('sends only the composer range across worlds when selecting a skill in a native flyout',async()=>{
+ const f=fixture(),requests:unknown[]=[]
+ f.w.addEventListener('sherlock:skill-menu-request',event=>{
+  const detail=(event as any).detail
+  if(detail.action==='use')requests.push(structuredClone(detail).commandSegment)
+ })
+ const options=await f.command.ui.options({sessionId:'current'},new AbortController().signal)
+ const span={start:3,end:4,draftRev:2}
+ const flyout={row:f.w.document.createElement('button'),closePrimary:()=>{}}
+ await f.command.ui.onSelect(options[0],{sessionId:'current',skillCommandSegment:{via:'menu',span,flyout}})
+ expect(requests).toEqual([{via:'menu',span}])
+ expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({commandSegment:{via:'menu',span}}))
+ f.dispose();f.bridge.dispose()
+})
 it('prioritizes the two exact built-ins once while retaining the stable order and identity of every other enabled skill',async()=>{
  const f=fixture()
  const rows=[{...f.skill,id:'custom:first',name:'PPT制作助手'},{...f.skill,id:'builtin:other'},

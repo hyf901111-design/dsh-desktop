@@ -48,7 +48,15 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
    if(deps.sessions.subagentAddress(session.sessionId)!==undefined)throw Error('请返回主对话选择技能。')
    const catalog=catalogs.get(session.sessionId),skill=catalog?.rows.find(s=>s.id===option.id)
    if(!skill)throw Error('技能列表已变化，请重新打开。')
-   await exchange('use',{skill,sessionId:session.sessionId,commandSegment:session.skillCommandSegment},catalog!.signal)
+   // The flyout segment also owns DOM nodes and callbacks in the renderer.
+   // Only pass the draft range (or typed token) across the Electron worlds.
+   const segment=session.skillCommandSegment
+   let commandSegment:SkillCommandSegment|undefined
+   if(segment?.via==='menu'){
+    const {start,end,draftRev}=segment.span
+    commandSegment={via:'menu',span:{start,end,draftRev}}
+   }else if(segment?.via==='enter')commandSegment={via:'enter',token:segment.token}
+   await exchange('use',{skill,sessionId:session.sessionId,commandSegment},catalog!.signal)
   }
  }})
  return ()=>{stopped=true;localeObserver.disconnect();win.clearInterval(labelTimer);unregister();unregisterReference?.();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
