@@ -20,22 +20,27 @@ const uiIcons = {
 
 type ItemFormat = KnowledgeFormat | KnowledgeSessionMode
 
-const filePage = 'M7 3h6l5.5 5.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm6 .9V8a1 1 0 0 0 1 1h3.6Z'
-// Interior details are cutouts so the tile color shows through the solid glyph.
+const letterP = 'M5.1 15.7V8.3h2.4a2.1 2.1 0 0 1 0 4.2H5.1'
+const ruledPage = 'M13.5 8.1h5.4m-5.4 2.6h5.4m-5.4 2.6h5.4m-5.4 2.6h5.4'
+const gridPage = 'M13.4 8h5.7v8h-5.7Zm2.9 0v8m-2.9-5.3h5.7m-5.7 2.6h5.7'
+
 const itemGlyphs = {
-  pdf: filePage + 'M8.3 17.5c-.8-.5.1-1.8 2.4-2.5.4-.8.8-1.6.9-2.2-.4-1.2-.2-2.4.6-2.5 1-.1 1.1 1.2.6 2.5.2.5.5 1 .9 1.4 2.1-.3 3.2.2 2.9 1.1-.3.9-1.9.8-3.2-.1-.8.1-1.4.3-2 .5-1 1.7-2.3 2.3-3.1 1.8Zm3.6-2.8 1-.2-.6-.7Z',
-  ppt: 'M3.5 4h17a1 1 0 0 1 1 1v1H21v9a1.5 1.5 0 0 1-1.5 1.5H13V18l2.8 2.6-1.2 1.3-2.6-2.4-2.6 2.4-1.2-1.3L11 18v-1.5H4.5A1.5 1.5 0 0 1 3 15V6h-.5V5a1 1 0 0 1 1-1ZM7 11v3h2v-3Zm4-2v5h2V9Zm4-2v7h2V7Z',
-  markdown: 'M4 5.5h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2ZM5 8v8h2v-4.4L9.2 14l2.3-2.4V16h2V8h-2l-2.3 2.7L7 8Zm11.5 1v4h-1.7l2.7 3 2.7-3h-1.7V9Z',
-  word: filePage + 'M8 11h7.5v1.5H8Zm0 3h7.5v1.5H8Zm0 3h5v1.5H8Z',
-  excel: filePage + 'M8 11h3v2H8Zm4 0h3.5v2H12Zm-4 3h3v2H8Zm4 0h3.5v2H12Zm-4 3h3v1.5H8Zm4 0h3.5v1.5H12Z',
-  image: 'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3.2 3a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM5.5 17h13l-4.5-6-3.5 4.3-2-2.5Z',
-  audio: 'M10 6a1.5 1.5 0 0 1 1.2-1.5l7-1.5A1.5 1.5 0 0 1 20 4.5V16c0 1.7-1.5 3-3.4 3-1.7 0-3.1-1-3.1-2.5s1.5-2.9 3.4-2.9c.4 0 .7.1 1.1.2V8.4l-6 1.3V18c0 1.7-1.6 3-3.4 3-1.7 0-3.1-1-3.1-2.5s1.5-2.9 3.4-2.9c.4 0 .7.1 1.1.2Z',
-  video: 'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm5 3.5v7l5.5-3.5Z',
-  other: filePage,
-  research: 'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm1 3v2h12V7Zm0 4v6h4v-6Zm6 0v2.2h6V11Zm0 4.2V17h6v-1.8Z',
-  notes: 'M7 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-1H3v-2h2v-3H3v-2h2V8H3V6h2V5a2 2 0 0 1 2-2Zm2 4v2h7V7Zm0 4v2h7v-2Zm0 4v2h4v-2Z',
-  spreadsheet: 'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm1 3v2h12V7Zm0 4v2h5v-2Zm7 0v2h5v-2Zm-7 4v2h5v-2Zm7 0v2h5v-2Z',
-} satisfies Record<ItemFormat, string>
+  pdf: {
+    cover: letterP,
+    page: 'M14 13.8c1.4-1.6 2-3.7 1.6-5.5-.2-1 .9-1.1 1.1 0 .4 1.8 1 2.6 2.2 3.3-2.1-.3-3.9 0-4.9 1m-.5 3.5h5.4'
+  },
+  ppt: { cover: letterP, page: 'M13.4 8h5.7v6h-5.7Zm1.5 4.5v-.8m1.5.8v-1.7m1.4 1.7v-2.5m-4.3 6h5.4' },
+  markdown: { cover: 'M4.3 15.7V8.4l2.7 3.4 2.7-3.4v7.3', page: 'M16.3 8v6m-2.5-2.4 2.5 2.4 2.5-2.4m-5.3 4.5h5.4' },
+  word: { cover: 'm4 8.3 1.3 7.4L7 11l1.7 4.7L10 8.3', page: ruledPage },
+  excel: { cover: 'm4.7 8.5 4.6 7m0-7-4.6 7', page: gridPage },
+  image: { cover: 'm4 15 2.3-3 1.3 1.5 1.3-1.8 1.1 3.3ZM8 9.6h.01', page: 'M13.5 8h5.5v8h-5.5Zm0 6 2-2.3 1.5 1.5 2-2.4m-3.7-1.2h.01' },
+  audio: { cover: 'M6.1 14.6a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0Zm0 0V8.7l3.4-.9v2.7', page: 'M13.7 11v2m1.7-3.4v4.8m1.7-6.4v8m1.7-5.4v2.8' },
+  video: { cover: 'M5 8.8 9.6 12 5 15.2Z', page: 'M13.5 8.4h5.4v7.2h-5.4Zm1.8 1.8 2 1.8-2 1.8Z' },
+  other: { cover: 'M5 8.3h2.5L9 9.8v5.9H5Z', page: 'M13.5 8.1h5.4m-5.4 2.6h5.4m-5.4 2.6h3.5' },
+  research: { cover: 'M4.3 9h5.4v6H4.3Zm0 2h5.4m-3 0v4', page: 'M13.4 8h5.7v8h-5.7Zm0 1.8h5.7m-3 0V16m.1-3.1h2.9' },
+  notes: { cover: 'M4.9 15.6V8.4l4.2 7.2V8.4', page: 'M14.2 8.2h4.7m-4.7 2.6h4.7m-4.7 2.6h4.7m-4.7 2.6h3m-4.3-8.7v9.5' },
+  spreadsheet: { cover: 'M9.5 8.9a3 3 0 0 0-2.1-.7c-2.6 0-3 2.6-.5 3.6s2.7 3.9 0 3.9a3.5 3.5 0 0 1-2.2-.8', page: 'M13.4 8h5.7v8h-5.7Zm0 2.2h5.7m-2.8 0V16m-2.9-2.9h5.7' },
+} satisfies Record<ItemFormat, { cover: string; page: string }>
 
 type IconName = keyof typeof uiIcons | 'more'
 
@@ -49,7 +54,13 @@ export function KnowledgeIcon({ name }: { name: IconName }) {
 export function KnowledgeItemIcon({ format, tile = false }: { format: ItemFormat; tile?: boolean }) {
   return <span className="knowledge-file-icon" data-format={format} data-tile={tile} aria-hidden="true">
     <svg className="knowledge-icon" viewBox="0 0 24 24" fill="currentColor">
-      <path fillRule="evenodd" d={itemGlyphs[format]} />
+      <path d="M9 4.5h11.4a.6.6 0 0 1 .6.6v13.8a.6.6 0 0 1-.6.6H9Z"
+        stroke="var(--knowledge-icon-color)" strokeWidth="1.15" />
+      <path fill="none" stroke="var(--knowledge-icon-color)" strokeWidth="1.05" strokeLinecap="round"
+        strokeLinejoin="round" d={itemGlyphs[format].page} />
+      <path fill="var(--knowledge-icon-color)" d="M2 4.6 12 2.4v19.2L2 19.4Z" />
+      <path fill="none" stroke="#fff" strokeWidth="1.55" strokeLinecap="round"
+        strokeLinejoin="round" d={itemGlyphs[format].cover} />
     </svg>
   </span>
 }

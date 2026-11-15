@@ -1122,19 +1122,23 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
       const svg = tile.querySelector('svg')
       const css = getComputedStyle(tile)
       return {
-        background: css.backgroundColor, highlight: css.backgroundImage, rim: css.boxShadow,
-        viewBox: svg.getAttribute('viewBox'), fill: svg.getAttribute('fill'),
-        glyph: svg.firstElementChild.getAttribute('d')
+        format: tile.dataset.format, background: css.backgroundColor, highlight: css.backgroundImage,
+        cover: getComputedStyle(svg.children[2]).fill, pageDetail: svg.children[1].getAttribute('d'),
+        viewBox: svg.getAttribute('viewBox')
       }
     }))
-    expect(new Set(styles.map(style => style.background)).size).toBe(9)
-    expect(new Set(styles.map(style => style.glyph)).size).toBe(9)
+    expect(new Set(styles.map(style => style.background)).size).toBe(1)
+    expect(new Set(styles.map(style => style.cover)).size).toBe(9)
+    expect(new Set(styles.map(style => style.pageDetail)).size).toBe(9)
+    const pdf = styles.find(style => style.format === 'pdf')
+    const ppt = styles.find(style => style.format === 'ppt')
+    expect(pdf.cover).toBe('rgb(169, 42, 58)')
+    expect(ppt.cover).toBe('rgb(190, 72, 30)')
+    expect(pdf.pageDetail).not.toBe(ppt.pageDetail)
     for (const style of styles) {
       expect(style.viewBox).toBe('0 0 24 24')
-      expect(style.fill).toBe('currentColor')
-      expect(style.background).toMatch(/ \/ 0\./u)
-      expect(style.highlight).toContain('radial-gradient')
-      expect(style.rim).toContain('inset')
+      expect(style.background).toBe(theme === 'dark' ? 'rgb(48, 48, 50)' : 'rgb(238, 239, 241)')
+      expect(style.highlight).toBe('none')
     }
     if (process.env.KNOWLEDGE_QA_SCREENSHOT) {
       await library.getByRole('table').screenshot({
@@ -1191,15 +1195,16 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
         .map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
         .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0)
       const tileStyle = getComputedStyle(tile)
+      const [sheet, , cover, mark] = tile.querySelector('svg').children
       const row = getComputedStyle(el.closest('td')).backgroundColor
-      paint(getComputedStyle(el.closest('.knowledge-workspace')).backgroundColor)
-      paint(row)
-      paint(tileStyle.backgroundColor)
+      const coverColor = getComputedStyle(cover).fill
+      paint(coverColor)
       const background = luminance()
-      paint(tileStyle.color)
+      paint(getComputedStyle(mark).stroke)
       const ink = luminance()
       return {
-        foreground: tileStyle.color,
+        foreground: coverColor,
+        sheet: getComputedStyle(sheet).fill,
         contrast: (Math.max(ink, background) + .05) / (Math.min(ink, background) + .05),
         row,
         tile: tileStyle.backgroundColor,
@@ -1218,6 +1223,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     expect(new Set([normal.tile, hover.tile, selected.tile]).size).toBe(3)
     for (const state of [normal, hover, selected]) {
       expect(state.foreground).toBe(normal.foreground)
+      expect(state.sheet).toBe('rgb(248, 248, 250)')
       expect(state.contrast).toBeGreaterThan(4.5)
       expect(state.geometry).toEqual(normal.geometry)
       expect(state.fill).toBe('currentColor')
