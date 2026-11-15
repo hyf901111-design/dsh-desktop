@@ -277,7 +277,13 @@ it('lists real session modes under all files and opens each one in its native vi
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const group = library.getByRole('group', { name: '所有文件子分类' })
-    expect(await group.getByRole('button').allTextContents()).toEqual(['文件资料', '研究模式', '笔记模式', '表格模式'])
+    expect(await group.getByRole('button').locator('span').allTextContents()).toEqual(['文件资料', '研究模式', '笔记模式', '表格模式'])
+    await expect.poll(() => group.locator('small').allTextContents()).toEqual(['3', '2', '1', '1'])
+    const countColumn = await library.getByRole('button', { name: /^手动收藏 / }).locator('small').boundingBox()
+    for (const count of await group.locator('small').all()) {
+      const box = await count.boundingBox()
+      expect({ x: box.x, width: box.width }).toEqual({ x: countColumn.x, width: countColumn.width })
+    }
     for (const [label, title, id, view] of [
       ['研究模式', '消费行业研究看板', 'board', 'research'],
       ['笔记模式', '季度会议笔记', 'note', 'notes'],
@@ -306,6 +312,7 @@ it('lists real session modes under all files and opens each one in its native vi
       const search = directory.getByRole('searchbox', { name: '搜索会话' })
       await search.fill('找不到的项目')
       await directory.getByText('没有符合搜索条件的会话。').waitFor()
+      expect(await group.getByRole('button', { name: label }).locator('small').textContent()).toBe(view === 'research' ? '2' : '1')
       await search.fill('行业跟踪')
       await row.click()
       expect(await page.evaluate(() => window.openedSession)).toEqual({ id, view })
@@ -426,7 +433,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
       expect(Math.abs(text.x + text.width / 2 - bounds.x - contentWidth / 2)).toBeLessThan(2)
     }
     for (const name of ['研究模式', '笔记模式', '表格模式']) {
-      await categories.getByRole('button', { name, exact: true }).click()
+      await categories.getByRole('button', { name: new RegExp(`^${name}( |$)`) }).click()
       const directory = library.getByRole('main', { name })
       await centered(directory.getByText('这里还没有会话。'), directory.locator('.knowledge-session-results'))
     }

@@ -6,67 +6,69 @@ import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSession
 import { KnowledgeIcon, KnowledgeItemIcon } from './icons'
 import { KnowledgePagination, useKnowledgePagination } from './pagination'
 
-export function useKnowledgeSessions(document: Document, mode: KnowledgeSessionMode | undefined,
-  evidenceFor: (mode: KnowledgeSessionMode, ids: string[]) => Promise<KnowledgeSessionEvidence[]>) {
-  const [result, setResult] = useState<{ mode: KnowledgeSessionMode; entries: KnowledgeSessionEntry[] }>()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(false)
+const sessionModes = Object.keys(knowledgeSessionLabels) as KnowledgeSessionMode[]
+type SessionDirectoryState = { entries?: KnowledgeSessionEntry[]; loading: boolean; error: boolean }
+
+export function useKnowledgeSessions(document: Document, enabled: boolean,
+  evidenceFor: (mode: KnowledgeSessionMode, ids: string[], signal: AbortSignal) => Promise<KnowledgeSessionEvidence[]>) {
+  const [directories, setDirectories] = useState<Partial<Record<KnowledgeSessionMode, SessionDirectoryState>>>({})
 
   useEffect(() => {
-    if (!mode) {
-      setResult(undefined)
-      setLoading(false)
-      setError(false)
+    if (!enabled) {
+      setDirectories({})
       return
     }
     const win = document.defaultView!
-    let latest = 0, requestId = '', queued = 0
-    const received = async (event: Event) => {
+    let active: AbortController | undefined, requestId = '', queued = 0
+    const received = (event: Event) => {
       const snapshot = (event as CustomEvent<{ requestId: string; entries: KnowledgeSessionEntry[] }>).detail
-      if (snapshot?.requestId !== requestId) return
-      const sequence = latest
-      try {
-        const candidates = snapshot.entries.filter(entry => mode === 'research' || !entry.researchBoard)
-        const evidence = await evidenceFor(mode, candidates.map(entry => entry.id))
-        if (sequence !== latest) return
-        const populated = new Set(evidence.filter(item => item.hasContent).map(item => item.id))
-        const entries = candidates.filter(entry => populated.has(entry.id))
-          .sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title))
-        setResult({ mode, entries })
-        setLoading(false)
-      } catch {
-        if (sequence === latest) { setError(true); setLoading(false) }
+      if (snapshot?.requestId !== requestId || !active) return
+      const { signal } = active
+      const loadMode = async (mode: KnowledgeSessionMode) => {
+        try {
+          const candidates = snapshot.entries.filter(entry => mode === 'research' || !entry.researchBoard)
+          const evidence = await evidenceFor(mode, candidates.map(entry => entry.id), signal)
+          if (signal.aborted) return
+          const populated = new Set(evidence.filter(item => item.hasContent).map(item => item.id))
+          const entries = candidates.filter(entry => populated.has(entry.id))
+            .sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title))
+          setDirectories(current => ({ ...current, [mode]: { entries, loading: false, error: false } }))
+        } catch {
+          if (!signal.aborted) setDirectories(current => ({ ...current, [mode]: { ...current[mode], loading: false, error: true } }))
+        }
       }
+      for (const mode of sessionModes) void loadMode(mode)
     }
     const load = () => {
+      active?.abort()
+      active = new AbortController()
       requestId = crypto.randomUUID()
-      latest++
-      setLoading(true)
-      setError(false)
       const unhandled = document.dispatchEvent(new win.CustomEvent('sherlock:knowledge-session-catalog-request', {
         cancelable: true, detail: { requestId }
       }))
-      if (unhandled) setLoading(false)
+      setDirectories(current => Object.fromEntries(sessionModes.map(mode => [mode, {
+        ...current[mode], loading: !unhandled, error: false
+      }])))
     }
     const schedule = () => {
       if (queued) return
       queued = win.requestAnimationFrame(() => { queued = 0; load() })
     }
-    const reset = () => { latest++; setResult(undefined); schedule() }
+    const reset = () => { active?.abort(); setDirectories({}); schedule() }
     document.addEventListener('sherlock:knowledge-session-catalog', received)
     document.addEventListener('sherlock:knowledge-sessions-changed', schedule)
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
     load()
     return () => {
-      latest++
+      active?.abort()
       win.cancelAnimationFrame(queued)
       document.removeEventListener('sherlock:knowledge-session-catalog', received)
       document.removeEventListener('sherlock:knowledge-sessions-changed', schedule)
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
-  }, [mode, document, evidenceFor])
+  }, [enabled, document, evidenceFor])
 
-  return { entries: result?.mode === mode ? result?.entries ?? [] : [], loading, error }
+  return directories
 }
 
 export function openKnowledgeSession(document: Document, id: string, view: KnowledgeSessionMode | 'chat', retained = false): Promise<boolean> {
