@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs'
 import {Window} from 'happy-dom'
 import * as React from 'react'
 import {act} from 'react'
@@ -8,11 +9,20 @@ let root
 let observed
 const cleanups=[]
 afterEach(async()=>{if(root)await act(()=>root.unmount());for(const dispose of cleanups.splice(0))dispose();vi.unstubAllGlobals();root=undefined})
-async function setup({fontSize=16,failFont=false,delayFont=false}={}){
+async function setup({fontSize=16,failFont=false,delayFont=false,knowledgeLabels}={}){
  const window=new Window()
  for(const name of ['window','document','navigator','HTMLElement','HTMLInputElement','HTMLTextAreaElement','Event','InputEvent'])vi.stubGlobal(name,name==='window'?window:name==='document'?window.document:window[name])
  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
  vi.stubGlobal('getComputedStyle',()=>({fontSize:String(fontSize)}))
+ let fontData = 'local-test-font'
+ if (knowledgeLabels) {
+  const source = readFileSync(new URL('../scripts/lib/figma-inline-references-client.mjs', import.meta.url), 'utf8')
+  fontData = /const referenceCellFont = "([^"]+)"/.exec(source)[1]
+  Object.defineProperty(window.HTMLTextAreaElement.prototype, 'clientWidth', { get: () => 320 })
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+   measureText: text => ({ width: Array.from(text).length * 13 })
+  })
+ }
  const faces=new Set(),loads=[],observers=[]
  Object.defineProperty(window.document,'fonts',{value:{add:face=>faces.add(face),delete:face=>faces.delete(face)},configurable:true})
  vi.stubGlobal('ResizeObserver',class {constructor(callback){this.callback=callback;observers.push(this)}observe(){}disconnect(){this.disconnected=true}})
@@ -22,8 +32,11 @@ async function setup({fontSize=16,failFont=false,delayFont=false}={}){
   const [draft,setDraft]=React.useState('甲\uFFFC乙\uFFFC尾')
   const [selected,setSelected]=React.useState(null)
   const inputRef=React.useRef(null)
-  const occurrences=[...draft.matchAll(/\uFFFC/g)].map((match,index)=>({occurrenceId:index+1,offset:match.index}))
-  const view=useReferenceProjection(React,inputRef,draft,occurrences,selected,'local-test-font')
+  const occurrences=[...draft.matchAll(/\uFFFC/g)].map((match,index)=>({
+   occurrenceId:index+1, offset:match.index,
+   ...(knowledgeLabels ? { source:'knowledge-reference', label:knowledgeLabels[index] } : {})
+  }))
+  const view=useReferenceProjection(React,inputRef,draft,occurrences,selected,fontData)
   observed={draft,selected,view,setDraft,setSelected,inputRef,occurrences}
   return React.createElement('textarea',{ref:inputRef,value:view.projection.text,onChange:event=>{const next=view.decode(event.target.value);setSelected(null);setDraft(next)}})
  }
@@ -46,6 +59,15 @@ async function setup({fontSize=16,failFont=false,delayFont=false}={}){
 }
 
 describe('native reference projection lifecycle',()=>{
+ it('reserves a cell for each knowledge label at its own width and preserves adjacent text', async () => {
+  const f = await setup({ knowledgeLabels: ['行业研究', '年度经营与库存跟踪报告'] })
+  expect(observed.view.ready).toBe(true)
+  expect(observed.view.projection.cells.map(cell => cell.width)).toEqual([87, 178])
+  await f.edit(2, 2, '跟进')
+  expect(observed.draft).toBe('甲\uFFFC跟进乙\uFFFC尾')
+  expect(observed.view.projection.cells.map(cell => cell.offset)).toEqual([1, 5])
+ })
+
  it.each([14,16])('keeps body %ipx and activates a matching font only after it loads',async fontSize=>{
   const f=await setup({fontSize,delayFont:true});expect(observed.view.ready).toBe(false)
   await f.select(2);expect(observed.view.projection.text).toBe(observed.draft)
