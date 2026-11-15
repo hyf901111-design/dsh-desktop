@@ -11,21 +11,40 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "4c06991b411b9c7e005c04eba3e095b8d4c694fc",
-        "tipCommit": "e7b56c6e1f094456b4e5ae82983a49fb174f2189",
+        "baseCommit": "e7b56c6e1f094456b4e5ae82983a49fb174f2189",
+        "tipCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
         "commits": [
           {
-            "commit": "e7b56c6e1f094456b4e5ae82983a49fb174f2189",
+            "commit": "758ef715a3f82be802977d72c737d559a2be7f3a",
             "parents": [
-              "4c06991b411b9c7e005c04eba3e095b8d4c694fc"
+              "e7b56c6e1f094456b4e5ae82983a49fb174f2189"
             ],
-            "subject": "修复：共享快照沿用原会话标题"
+            "subject": "交互：将记忆文档的预览和编辑移到标题右侧"
+          },
+          {
+            "commit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
+            "parents": [
+              "758ef715a3f82be802977d72c737d559a2be7f3a"
+            ],
+            "subject": "功能：接收方以原生只读页面查看知识库共享会话"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "scripts/lib/knowledge-shared-research.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
             "status": "M",
             "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/file-preview.ts"
           },
           {
             "status": "M",
@@ -37,7 +56,51 @@
           },
           {
             "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/session-directory.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/shared-session.tsx"
+          },
+          {
+            "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/document-editor.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-sessions.ts"
           },
           {
             "status": "M",
@@ -57,8 +120,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "e7b56c6e1f094456b4e5ae82983a49fb174f2189",
-            "completedAt": "2026-11-15T02:56:51.226Z",
+            "verifiedCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
+            "completedAt": "2026-11-15T03:18:46.652Z",
             "timeoutMs": 120000
           },
           {
@@ -72,13 +135,13 @@
               "--maxWorkers=1",
               "test/knowledge-workspace-rendered.test.js",
               "test/knowledge-sharing-worker.test.js",
-              "-t",
-              "session snapshots|manages read-only sharing"
+              "test/knowledge-session-content.test.ts",
+              "test/knowledge-native-preview.test.ts"
             ],
             "outcome": "passed",
-            "summary": "两项只读共享聚焦验证通过，覆盖会话标题传递、共享文件名与接收方访问权限。",
-            "verifiedCommit": "e7b56c6e1f094456b4e5ae82983a49fb174f2189",
-            "completedAt": "2026-11-15T02:56:51.226Z",
+            "summary": "43 项相关测试覆盖双账号共享与只读权限、内嵌记忆编辑以及常规文件预览。",
+            "verifiedCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
+            "completedAt": "2026-11-15T03:18:46.652Z",
             "timeoutMs": 120000
           }
         ],
@@ -134,63 +197,20 @@
           "知识库内容变更后显示两秒气泡，文件列表表头不因反馈移动。",
           "文件与模式分类的空状态提示在列表内容区居中；他人共享提供全部文件入口，每条记录显示所属共享目录。",
           "他人共享以全部文件切换汇总列表，下级目录缩进，保留筛选与搜索。",
-          "本人研究笔记表格会话，可按分类发布已保存内容的只读快照，接收方无法编辑共享原内容。",
           "文件和会话分享弹窗的下拉箭头与按钮间距统一。",
           "斜杠菜单一级可悬停打开各自子菜单，知识库样式对照 Figma 保留搜索和键盘操作。",
           "经验记忆直接显示正文预览和编辑，不需先打开文件条目。",
-          "共享后的文件名显示原会话标题，缺少远端投影时使用客户端已有标题和文档标题。"
+          "研究、笔记和表格的共享接收者由知识库直接打开已有原生模式的只读页面，保留布局、笔记块、工作表和工作簿对象。旧会话共享可由发布者重新发布升级。",
+          "经验记忆的编辑和预览在记忆.md标题行右侧。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
-          "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
+          "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
+          "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T02:56:51.226Z"
-      },
-      "merged": {
-        "mergeCommit": "90953580e781829037c841dac1d3b19ea46148ac",
-        "verificationCommit": "90953580e781829037c841dac1d3b19ea46148ac",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "90953580e781829037c841dac1d3b19ea46148ac",
-            "completedAt": "2026-11-15T02:57:42.415Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "90953580e781829037c841dac1d3b19ea46148ac",
-            "completedAt": "2026-11-15T02:57:42.415Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T02:57:42.415Z"
+        "generatedAt": "2026-11-15T03:18:46.652Z"
       }
     }
   ],
