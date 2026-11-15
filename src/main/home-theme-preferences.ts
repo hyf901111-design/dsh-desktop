@@ -1,7 +1,8 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { isHomeThemeSelection, normalizeHomeTheme, type HomeThemeSelection } from '../shared/home-themes'
 import { registerTrustedMainWindowListener, type TrustedWindow, type TrustedWindowEvent } from './ipc-trust'
+import { launchRootPath } from './state/launch-root'
 
 /** A desktop preference is independent of Harness's changing localhost port. */
 export class HomeThemePreferenceStore {
@@ -30,6 +31,16 @@ export class HomeThemePreferenceStore {
       try { rmSync(temporary, { force: true }) } catch {}
       return false
     }
+  }
+}
+
+export function initializeFirstLaunchAppearance(userData: string): void {
+  const harness = join(userData, 'harness')
+  if (existsSync(harness) || existsSync(launchRootPath(userData))) return
+  mkdirSync(harness, { recursive: true, mode: 0o700 })
+  writeFileSync(join(harness, 'settings.yaml'), 'ui-theme:\n  preference: dark\n', { flag: 'wx', mode: 0o600 })
+  if (!existsSync(join(userData, 'home-theme.json'))) {
+    new HomeThemePreferenceStore(userData).set('shashidhar')
   }
 }
 
