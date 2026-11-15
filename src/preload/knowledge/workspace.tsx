@@ -62,7 +62,9 @@ const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
 const defaultFilter: KnowledgeFilter = {}
 const sessionSections = [ ['research', 'research'], ['notes', 'note'], ['spreadsheet', 'table'] ] as const
-const knowledgeFileDragType = 'application/x-ework-knowledge-file'
+type FileMoveGesture = Pick<KnowledgeDocument, 'id' | 'folderId'> & {
+  pointer: number; x: number; y: number; active: boolean; source: HTMLButtonElement
+}
 const formatBytes = (size: number) => size >= 1024 * 1024
   ? `${(size / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 })} MB`
   : `${Math.max(1, Math.round(size / 1024))} KB`
@@ -142,7 +144,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [value, setValue] = useState('')
   const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
   const [dragging, setDragging] = useState(false)
-  const fileBeingMoved = useRef<Pick<KnowledgeDocument, 'id' | 'folderId'>>()
+  const fileBeingMoved = useRef<FileMoveGesture>()
+  const movedClick = useRef<string>()
+  const commitFileMove = useRef<(id: string, folderId: string) => void>()
   const [moveTarget, setMoveTarget] = useState<string>()
   const currentEpoch = useRef(0)
   const refreshSequence = useRef(0)
@@ -553,14 +557,55 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   function finishFileDrag() {
+    const move = fileBeingMoved.current
     fileBeingMoved.current = undefined
+    if (move?.source.hasPointerCapture(move.pointer)) move.source.releasePointerCapture(move.pointer)
     setMoveTarget(undefined)
   }
 
-  function folderAcceptsMove(event: React.DragEvent, folderId: string) {
-    const source = fileBeingMoved.current
-    return !busy && !!source && source.folderId !== folderId && event.dataTransfer.types.includes(knowledgeFileDragType)
+  commitFileMove.current = (id, folderId) => {
+    if (host.current()?.surface === 'knowledge' && !busy && local.folders.some(folder => folder.id === folderId)) {
+      void edit({ type: 'move', id, folderId })
+    }
   }
+
+  useEffect(() => {
+    const folderAt = (event: PointerEvent, move: FileMoveGesture) => {
+      const folderId = document.elementFromPoint(event.clientX, event.clientY)
+        ?.closest<HTMLElement>('.knowledge-folder[data-knowledge-folder-id]')?.dataset.knowledgeFolderId
+      return folderId !== move.folderId ? folderId : undefined
+    }
+    const move = (event: PointerEvent) => {
+      const gesture = fileBeingMoved.current
+      if (!gesture || gesture.pointer !== event.pointerId) return
+      if (!gesture.active) {
+        if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 6) return
+        gesture.active = true
+        gesture.source.setPointerCapture(event.pointerId)
+      }
+      setMoveTarget(folderAt(event, gesture))
+    }
+    const drop = (event: PointerEvent) => {
+      const gesture = fileBeingMoved.current
+      if (!gesture || gesture.pointer !== event.pointerId) return
+      if (gesture.active) {
+        movedClick.current = gesture.id
+        const folderId = folderAt(event, gesture)
+        if (folderId) commitFileMove.current?.(gesture.id, folderId)
+      }
+      finishFileDrag()
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', drop)
+    document.addEventListener('pointercancel', finishFileDrag)
+    document.defaultView?.addEventListener('blur', finishFileDrag)
+    return () => {
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', drop)
+      document.removeEventListener('pointercancel', finishFileDrag)
+      document.defaultView?.removeEventListener('blur', finishFileDrag)
+    }
+  }, [document])
 
   async function share(row: KnowledgeDocument, category?: string) {
     const epoch = currentEpoch.current
@@ -785,22 +830,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <button className="knowledge-square" type="button" aria-label="新建文件夹" disabled={busy || !ready}
             onClick={() => openDialog({ type: 'create-folder' })}><KnowledgeIcon name="add" /></button>
         </div>
-        {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id}
-          data-selected={!sessionMode && filter.folderId === folder.id} data-move-target={moveTarget === folder.id}
-          onDragOver={event => {
-            if (!folderAcceptsMove(event, folder.id)) return
-            event.preventDefault()
-            event.dataTransfer.dropEffect = 'move'
-            setMoveTarget(folder.id)
-          }} onDragLeave={event => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMoveTarget(undefined)
-          }} onDrop={event => {
-            if (!folderAcceptsMove(event, folder.id)) return
-            event.preventDefault()
-            const id = fileBeingMoved.current!.id
-            finishFileDrag()
-            void edit({ type: 'move', id, folderId: folder.id })
-          }}>
+        {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id} data-knowledge-folder-id={folder.id}
+          data-selected={!sessionMode && filter.folderId === folder.id} data-move-target={moveTarget === folder.id}>
           <button type="button" aria-current={!sessionMode && filter.folderId === folder.id ? 'page' : undefined} onClick={() => selectCategory('all', folder.id)}>
             <KnowledgeIcon name="folder" /><span data-odyssey-truncated-tooltip>{folder.name}</span>
             <small>{listKnowledgeDocuments(snapshot, { folderId: folder.id }).length}</small>
@@ -939,14 +970,16 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
                       data-knowledge-file-context-menu={row.received ? undefined : true}
                       onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
-                      <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}
-                        draggable={!row.received && !busy} onDragStart={event => {
-                          if (row.received || busy) { event.preventDefault(); return }
-                          setMenu(undefined)
-                          fileBeingMoved.current = { id: row.id, folderId: row.folderId }
-                          event.dataTransfer.effectAllowed = 'move'
-                          event.dataTransfer.setData(knowledgeFileDragType, row.id)
-                        }} onDragEnd={finishFileDrag}>
+                      <td><button className="knowledge-file-name" type="button" title={row.name}
+                        onClick={event => {
+                          if (event.detail && movedClick.current === row.id) { movedClick.current = undefined; return }
+                          void openPreview(row)
+                        }} onPointerDown={event => {
+                          if (event.button !== 0 || event.pointerType === 'touch' || row.received || busy) return
+                          movedClick.current = undefined
+                          fileBeingMoved.current = { id: row.id, folderId: row.folderId, pointer: event.pointerId,
+                            x: event.clientX, y: event.clientY, active: false, source: event.currentTarget }
+                        }}>
                         <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
                         <span className="knowledge-file-content">
                           <span className="knowledge-file-title"><span>{row.name}</span>
