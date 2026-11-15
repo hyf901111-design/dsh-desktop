@@ -62,6 +62,7 @@ const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
 const defaultFilter: KnowledgeFilter = {}
 const sessionSections = [ ['research', 'research'], ['notes', 'note'], ['spreadsheet', 'table'] ] as const
+const knowledgeFileDragType = 'application/x-ework-knowledge-file'
 const formatBytes = (size: number) => size >= 1024 * 1024
   ? `${(size / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 })} MB`
   : `${Math.max(1, Math.round(size / 1024))} KB`
@@ -141,6 +142,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [value, setValue] = useState('')
   const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
   const [dragging, setDragging] = useState(false)
+  const fileBeingMoved = useRef<Pick<KnowledgeDocument, 'id' | 'folderId'>>()
+  const [moveTarget, setMoveTarget] = useState<string>()
   const currentEpoch = useRef(0)
   const refreshSequence = useRef(0)
   const receivedSequence = useRef(0)
@@ -296,6 +299,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       } else {
         setMenu(undefined)
         setDraftFilter(undefined)
+        finishFileDrag()
       }
     }
     const reset = () => {
@@ -303,6 +307,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       refreshSequence.current++
       previewRequest.current++
       receivedSequence.current++
+      finishFileDrag()
+      setSessionMode(undefined)
       setSnapshot(empty)
       setReceived([])
       setReceivedStatus({ loading: false })
@@ -536,12 +542,24 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       if (input.type === 'remove' && preview?.document.id === input.id) setPreview(undefined)
       if (input.type === 'remove-folder' && input.id === filter.folderId) updateFilter({ folderId: undefined })
       setDialog(undefined)
-      setNotice({ text: '已更新知识库。' })
+      setNotice({ text: input.type === 'move'
+        ? `已将「${result.documents.find(row => row.id === input.id)?.name ?? '文件'}」移到「${result.folders.find(folder => folder.id === input.folderId)?.name ?? '未分组'}」。`
+        : '已更新知识库。' })
     } catch (error) {
       if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
     } finally {
       if (epoch === currentEpoch.current) setBusy(false)
     }
+  }
+
+  function finishFileDrag() {
+    fileBeingMoved.current = undefined
+    setMoveTarget(undefined)
+  }
+
+  function folderAcceptsMove(event: React.DragEvent, folderId: string) {
+    const source = fileBeingMoved.current
+    return !busy && !!source && source.folderId !== folderId && event.dataTransfer.types.includes(knowledgeFileDragType)
   }
 
   async function share(row: KnowledgeDocument, category?: string) {
@@ -767,7 +785,22 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <button className="knowledge-square" type="button" aria-label="新建文件夹" disabled={busy || !ready}
             onClick={() => openDialog({ type: 'create-folder' })}><KnowledgeIcon name="add" /></button>
         </div>
-        {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id} data-selected={!sessionMode && filter.folderId === folder.id}>
+        {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id}
+          data-selected={!sessionMode && filter.folderId === folder.id} data-move-target={moveTarget === folder.id}
+          onDragOver={event => {
+            if (!folderAcceptsMove(event, folder.id)) return
+            event.preventDefault()
+            event.dataTransfer.dropEffect = 'move'
+            setMoveTarget(folder.id)
+          }} onDragLeave={event => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMoveTarget(undefined)
+          }} onDrop={event => {
+            if (!folderAcceptsMove(event, folder.id)) return
+            event.preventDefault()
+            const id = fileBeingMoved.current!.id
+            finishFileDrag()
+            void edit({ type: 'move', id, folderId: folder.id })
+          }}>
           <button type="button" aria-current={!sessionMode && filter.folderId === folder.id ? 'page' : undefined} onClick={() => selectCategory('all', folder.id)}>
             <KnowledgeIcon name="folder" /><span data-odyssey-truncated-tooltip>{folder.name}</span>
             <small>{listKnowledgeDocuments(snapshot, { folderId: folder.id }).length}</small>
@@ -906,7 +939,14 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
                       data-knowledge-file-context-menu={row.received ? undefined : true}
                       onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
-                      <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}>
+                      <td><button className="knowledge-file-name" type="button" title={row.name} onClick={() => void openPreview(row)}
+                        draggable={!row.received && !busy} onDragStart={event => {
+                          if (row.received || busy) { event.preventDefault(); return }
+                          setMenu(undefined)
+                          fileBeingMoved.current = { id: row.id, folderId: row.folderId }
+                          event.dataTransfer.effectAllowed = 'move'
+                          event.dataTransfer.setData(knowledgeFileDragType, row.id)
+                        }} onDragEnd={finishFileDrag}>
                         <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
                         <span className="knowledge-file-content">
                           <span className="knowledge-file-title"><span>{row.name}</span>
@@ -964,6 +1004,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     {tab === 'files' && menu && (target || targetFolder) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
       role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
+        <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>
+          {buttonIcon('folder', '移动到文件夹…')}
+        </button>
         {target.sessionId && <button type="button" onClick={async () => {
           setMenu(undefined)
           if (!await openSession(target.sessionId!, 'chat')) setNotice({ text: '来源会话已不可用。', error: true })
@@ -980,7 +1023,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <button type="button" onClick={() => target.share ? void share(target) : openDialog({ type: 'share', row: target })}>
           {target.share ? '取消共享' : '设为共享'}
         </button>
-        <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到…</button>
         <button type="button" onClick={() => openDialog({ type: 'rename', row: target })}>重命名</button>
         <hr />
         <button className="knowledge-danger" type="button" onClick={() => openDialog({ type: 'remove', row: target })}>从知识库删除</button>
@@ -999,17 +1041,22 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <select autoFocus aria-label="共享分类" value={value} onChange={event => setValue(event.target.value)}>
             {knowledgeSharedCategories.map(category => <option key={category}>{category}</option>)}
           </select>
-        </> : dialog.type === 'move' ? <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
-          <option value="">未分组</option>
-          {snapshot.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-        </select> : dialog.type === 'remove' ? <p>从知识库删除「{dialog.row.name}」？</p>
+        </> : dialog.type === 'move' ? <>
+          <p className="knowledge-move-file" title={dialog.row.name}>{dialog.row.name}</p>
+          <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
+            <option value="">未分组</option>
+            {snapshot.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+          </select>
+        </> : dialog.type === 'remove' ? <p>从知识库删除「{dialog.row.name}」？</p>
           : dialog.type === 'remove-folder' ? <p>删除「{dialog.name}」后，里面的文件会移到未分组。</p>
             : <input autoFocus aria-label="名称" maxLength={255} value={value} onChange={event => setValue(event.target.value)}
               onFocus={event => event.currentTarget.select()} required />}
         {notice?.error && <p role="alert" className="knowledge-danger">{notice.text}</p>}
         <footer>
           <button type="button" disabled={busy} onClick={() => { setDialog(undefined); setNotice(undefined) }}>取消</button>
-          <button type="submit" className="knowledge-primary" disabled={busy}>{dialog.type.startsWith('remove') ? '删除' : '确认'}</button>
+          <button type="submit" className="knowledge-primary" disabled={busy || dialog.type === 'move' && value === (dialog.row.folderId ?? '')}>
+            {dialog.type === 'move' ? '移动' : dialog.type.startsWith('remove') ? '删除' : '确认'}
+          </button>
         </footer>
       </form>
     </div>}
