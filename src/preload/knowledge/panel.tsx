@@ -9,7 +9,7 @@ import {
 import type { MemoryBridge } from '../../shared/memory'
 import { KnowledgeMemory } from './memory'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
-import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
+import { categoryIcons, KnowledgeIcon, KnowledgeItemIcon } from './icons'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import css from './panel.css?raw'
 
@@ -205,7 +205,7 @@ function FilePreview({ id, bridge, document, panel }: PanelProps & { id: string;
   }
   return <>
     {file && <header className="knowledge-preview-heading">
-      <KnowledgeFileIcon format={knowledgeFormat(file.document.name)} />
+      <KnowledgeItemIcon format={knowledgeFormat(file.document.name)} />
       <strong title={file.document.name}>{file.document.name}</strong>
       {!draft && canEdit && <button type="button" disabled={busy} onClick={() => void edit()}>编辑</button>}
       {!draft && <button type="button" disabled={busy} onClick={() => {
@@ -395,9 +395,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
         const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
         const title = session ? session.title : row.name
         return <div className="knowledge-panel-row" key={row.id}>
-          {session ? <span className="knowledge-file-icon" data-tile="true" data-format={session.mode === 'spreadsheet' ? 'excel' : session.mode === 'research' ? 'ppt' : 'word'}>
-            <KnowledgeIcon name={session.mode === 'spreadsheet' ? 'table' : session.mode === 'notes' ? 'note' : 'research'} />
-          </span> : <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />}
+          <KnowledgeItemIcon format={session ? session.mode : knowledgeFormat(row.name)} tile />
           <button type="button" className="knowledge-panel-name" onClick={() => {
             if (!openSharedKnowledgeSession(document, row)) document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', {
               detail: { id: row.id, name: row.name }

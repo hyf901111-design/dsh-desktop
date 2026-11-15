@@ -11,7 +11,6 @@
   --knowledge-menu: var(--dsw-alias-bg-base, #fff);
   --knowledge-control-hover: #e7e7e9;
   --knowledge-control-active: #dedee1;
-  --knowledge-icon-tile: #f2f2f4;
   display: flex; flex-direction: column; height: 100%; min-height: 0;
   padding: 12px; gap: 9px; color: var(--kb-panel-ink);
   font: 13px/20px var(--odyssey-font-ui,system-ui,sans-serif);
@@ -22,7 +21,6 @@ body[data-ds-dark-theme] .knowledge-panel {
   --knowledge-menu: #292929;
   --knowledge-control-hover: #3b3b3b;
   --knowledge-control-active: #484848;
-  --knowledge-icon-tile: #303030;
   color-scheme: dark;
 }
 .knowledge-panel button, .knowledge-panel input { color: inherit; font: inherit; min-width: 0; }

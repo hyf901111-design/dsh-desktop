@@ -18,7 +18,7 @@ import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSession
   type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { KnowledgeMemory } from './memory'
 import { FileSearch } from './file-search'
-import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
+import { categoryIcons, KnowledgeIcon, KnowledgeItemIcon } from './icons'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import { KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
@@ -973,7 +973,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     <tr key={item.id} className="knowledge-import-row" data-status={item.status}>
                       <td>
                         <div className="knowledge-file-name">
-                          <KnowledgeFileIcon format={knowledgeFormat(item.name)} tile />
+                          <KnowledgeItemIcon format={knowledgeFormat(item.name)} tile />
                           <div className="knowledge-file-content">
                             <span className="knowledge-file-title"><span title={item.name}>{item.name}</span></span>
                             <div className="knowledge-import-controls">
@@ -1016,9 +1016,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                           fileBeingMoved.current = { id: row.id, folderId: row.folderId, pointer: event.pointerId,
                             x: event.clientX, y: event.clientY, active: false, source: event.currentTarget }
                         }}>
-                        {session ? <span className="knowledge-file-icon" data-tile="true" data-format={session.mode === 'spreadsheet' ? 'excel' : session.mode === 'research' ? 'ppt' : 'word'}>
-                          <KnowledgeIcon name={session.mode === 'spreadsheet' ? 'table' : session.mode === 'notes' ? 'note' : 'research'} />
-                        </span> : <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />}
+                        <KnowledgeItemIcon format={session ? session.mode : knowledgeFormat(row.name)} tile />
                         <span className="knowledge-file-content">
                           <span className="knowledge-file-title"><span>{title}</span>
                             {row.saved && <span className="knowledge-bookmarked" aria-label="手动收藏"><KnowledgeIcon name="bookmark" /></span>}
