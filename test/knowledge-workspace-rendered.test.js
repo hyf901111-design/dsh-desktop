@@ -277,6 +277,92 @@ it('lists real session modes under all files and opens each one in its native vi
   } finally { await page.close() }
 })
 
+it('centers empty messages in session, file and shared list content areas', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 330px 10px 10px"></div>
+      <aside data-knowledge-panel-host style="position:fixed;inset:10px 10px 10px auto;width:310px;height:auto"></aside>`)
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const categories = library.getByRole('navigation', { name: '知识库分类' })
+    const centered = async (hint, container, header) => {
+      await hint.waitFor()
+      const bounds = await container.boundingBox()
+      const top = header ? await header.boundingBox() : null
+      const contentStart = top ? top.y + top.height : bounds.y
+      const text = await hint.evaluate(element => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        return range.getBoundingClientRect().toJSON()
+      })
+      expect(Math.abs(text.y + text.height / 2 - (contentStart + bounds.y + bounds.height) / 2)).toBeLessThan(2)
+      expect(Math.abs(text.x + text.width / 2 - bounds.x - bounds.width / 2)).toBeLessThan(2)
+    }
+    for (const name of ['研究模式', '笔记模式', '表格模式']) {
+      await categories.getByRole('button', { name, exact: true }).click()
+      const directory = library.getByRole('main', { name })
+      await centered(directory.getByText('这里还没有会话。'), directory, directory.locator('.knowledge-tools'))
+    }
+    const table = library.locator('.knowledge-table-wrap')
+    for (const name of [/重点文件/, /^共享文件/]) {
+      await categories.getByRole('button', { name }).click()
+      await centered(library.getByText('此分类暂无文件。'), table, table.locator('thead'))
+    }
+    await categories.getByRole('button', { name: /他人共享/ }).click()
+    await library.getByPlaceholder('搜索他人共享…').fill('不存在的文件')
+    await centered(library.getByText('没有符合条件的文件。'), table, table.locator('thead'))
+
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    await pane.getByRole('searchbox').fill('不存在的文件')
+    await centered(pane.getByText('暂无符合条件的文件。'), pane.locator('.knowledge-panel-rows'))
+  } finally { await page.close() }
+})
+
+it('shows one combined shared file list and each file’s directory', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 330px 10px 10px"></div>
+      <aside data-knowledge-panel-host style="position:fixed;inset:10px 10px 10px auto;width:310px;height:auto"></aside>`)
+    await page.evaluate(() => {
+      window.waitForSharedCatalog = Promise.resolve(['行业研究', '数据分析'].map((category, index) => ({
+        id: 'combined-' + index, name: category + '.pdf', source: 'upload', size: 8192, updatedAt: 1,
+        starred: false, saved: false, received: { owner: '共享人', category }
+      })))
+    })
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('navigation', { name: '知识库分类' }).getByRole('button', { name: /他人共享/ }).click()
+    const shared = library.getByRole('navigation', { name: '共享分类' })
+    await shared.getByRole('button', { name: '行业研究', exact: true }).click()
+    const all = shared.getByRole('button', { name: '全部文件', exact: true })
+    expect(await all.getAttribute('aria-current')).toBeNull()
+    expect(await library.getByRole('button', { name: /数据分析.pdf/ }).count()).toBe(0)
+    await all.click()
+    expect(await all.getAttribute('aria-current')).toBe('page')
+    for (const category of ['行业研究', '数据分析']) {
+      const row = library.getByRole('button', { name: new RegExp(category + '\\.pdf') })
+      expect(await row.getByText(category, { exact: true }).isVisible()).toBe(true)
+    }
+
+    const pane = page.getByRole('region', { name: '知识库资料' })
+    await pane.getByRole('button', { name: '所有文件', exact: true }).click()
+    await pane.getByRole('button', { name: '他人共享', exact: true }).click()
+    const panelAll = pane.getByRole('button', { name: /^全部文件/ })
+    await panelAll.click()
+    expect(await pane.getByRole('button', { name: '他人共享 / 全部文件' }).isVisible()).toBe(true)
+    expect(await pane.getByText('行业研究 · 共享人').isVisible()).toBe(true)
+    expect(await pane.getByText('数据分析 · 共享人').isVisible()).toBe(true)
+    await pane.getByRole('button', { name: '返回上级' }).click()
+    expect(await panelAll.isVisible()).toBe(true)
+  } finally { await page.close() }
+})
+
 it('moves existing files into a new folder through the row menu and by dragging', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {
@@ -602,7 +688,7 @@ it('rechecks an open shared preview on focus, list refresh and a visible timer',
     const preview = page.getByRole('region', { name: '知识库文件预览' })
     const picker = page.getByRole('region', { name: '知识库资料' })
     const middleFile = workspace.getByRole('button', { name: /可撤销的分享/ })
-    const pickerFile = picker.getByRole('button', { name: /可撤销的分享.md 共享人/ })
+    const pickerFile = picker.getByRole('button', { name: /可撤销的分享.md 行业研究 · 共享人/ })
     await preview.getByRole('heading', { name: '初次共享正文' }).waitFor()
     await workspace.getByRole('button', { name: /他人共享/ }).click()
     await middleFile.waitFor()
@@ -687,7 +773,7 @@ it.each(['no-preference', 'reduce'])('preserves PDF filtering through drill-down
     expect(await pane.locator('.knowledge-filter-count').evaluate(el => getComputedStyle(el).animationName))
       .toBe(animate ? 'knowledge-feedback-in' : 'none')
     await pane.getByRole('button', { name: /行业研究/ }).click()
-    const file = pane.getByRole('button', { name: /共享行业资料.pdf 共享人/ })
+    const file = pane.getByRole('button', { name: /共享行业资料.pdf 行业研究 · 共享人/ })
     await file.waitFor()
     const view = pane.locator('.knowledge-panel-rows')
     expect(await view.evaluate(el => getComputedStyle(el).animationName))
@@ -1059,7 +1145,8 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
       expect(await title.evaluate(el => el.clientWidth)).toBeGreaterThanOrEqual(100)
       expect(await table.evaluate(el => el.scrollWidth - el.clientWidth), `at ${width}px`).toBeLessThanOrEqual(2)
       expect(await size.isVisible()).toBe(wide)
-      expect(await metadata.isVisible()).toBe(!wide)
+      expect(await metadata.getByText('行业研究', { exact: true }).isVisible()).toBe(true)
+      expect(await metadata.locator('.knowledge-shared-inline-size').isVisible()).toBe(!wide)
       expect(await date.isVisible()).toBe(width >= 1380)
       expect(await metadata.locator('time').isVisible()).toBe(width < 1380)
       expect(await owner.isVisible()).toBe(width >= 1240)

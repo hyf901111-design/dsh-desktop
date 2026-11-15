@@ -233,6 +233,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const [facets, setFacets] = useState<KnowledgeFilter>({})
   const [draftFacets, setDraftFacets] = useState<KnowledgeFilter>()
   const [menu, setMenu] = useState<'directory' | 'filter'>()
+  const [allShared, setAllShared] = useState(false)
   const [state, setState] = useState({ ready: false, error: '' })
   const [referenceError, setReferenceError] = useState('')
   const location = useRef<HTMLDivElement>(null)
@@ -265,6 +266,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       setCategory('all')
       setFolder(undefined)
       setSharedCategory(undefined)
+      setAllShared(false)
       setQuery('')
       setFacets({})
       setMenu(undefined)
@@ -310,12 +312,13 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     }
   }, [document, menu])
   const rows = listKnowledgeDocuments(snapshot, { ...facets, category, folderId: folder, sharedCategory, query })
-  const sharedDirectory = category === 'received' && !sharedCategory && !query.trim()
+  const sharedDirectory = browsingReceived && !allShared && !sharedCategory && !query.trim()
   const sharedCounts = new Map<string, number>()
   if (sharedDirectory) for (const row of rows) {
     const label = row.received?.category
     if (label) sharedCounts.set(label, (sharedCounts.get(label) ?? 0) + 1)
   }
+  const hasRows = (sharedDirectory ? sharedCounts.size : rows.length) > 0
   const filterCount = countFileFacets(facets)
   const title = snapshot.folders.find(row => row.id === folder)?.name ?? knowledgeCategories[category]
   const pick = (next: KnowledgeCategory, folderId?: string) => {
@@ -323,6 +326,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
     if (next === 'received') setFacets(current => ({ ...current, savedOnly: false }))
     setCategory(next)
     setSharedCategory(undefined)
+    setAllShared(false)
     setFolder(folderId)
     setMenu(undefined)
   }
@@ -345,11 +349,14 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       <input type="search" aria-label="搜索知识库文件" placeholder="搜索文件…" value={query} onChange={event => setQuery(event.target.value)} />
     </label>
     <div className="knowledge-panel-location" ref={location}>
-      {(folder || sharedCategory || category === 'received') && <button type="button" aria-label="返回上级"
-        onClick={() => sharedCategory ? setSharedCategory(undefined) : pick('all')}><KnowledgeIcon name="previous" /></button>}
+      {(folder || browsingReceived) && <button type="button" aria-label="返回上级"
+        onClick={() => {
+          if (sharedCategory || allShared) { setSharedCategory(undefined); setAllShared(false) }
+          else pick('all')
+        }}><KnowledgeIcon name="previous" /></button>}
       <button type="button" className="knowledge-panel-location-label" ref={directoryTrigger}
         aria-expanded={menu === 'directory'} onClick={() => setMenu(menu === 'directory' ? undefined : 'directory')}>
-        <span>{title}{sharedCategory ? ` / ${sharedCategory}` : ''}</span><KnowledgeIcon name="chevron" />
+        <span>{title}{allShared ? ' / 全部文件' : sharedCategory ? ` / ${sharedCategory}` : ''}</span><KnowledgeIcon name="chevron" />
       </button>
       <button type="button" className="knowledge-panel-filter knowledge-filter-trigger" aria-label="筛选" ref={filterTrigger} aria-expanded={menu === 'filter'}
         data-filtered={filterCount > 0} onClick={() => {
@@ -369,12 +376,16 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
         showSavedOnly={category !== 'received'} reset={() => setDraftFacets(emptyFileFacets)}
         apply={() => { setFacets(draftFacets); setMenu(undefined); filterTrigger.current?.focus() }} />}
     </div>
-    {!state.ready && <p className="knowledge-panel-state" role="status">正在加载文件…</p>}
-    {state.error && <p className="knowledge-panel-state" role="alert">{state.error}</p>}
+    {state.error && hasRows && <p className="knowledge-panel-state" role="alert">{state.error}</p>}
     {referenceError && <p className="knowledge-panel-state" role="alert">{referenceError}</p>}
     <div className="knowledge-panel-rows"
-      key={JSON.stringify([category, folder, sharedCategory])}
+      key={JSON.stringify([category, folder, sharedCategory, allShared])}
       data-ready={state.ready && !state.error}>
+      {!state.ready && <p className="knowledge-panel-state knowledge-panel-empty" role="status">正在加载文件…</p>}
+      {state.error && !hasRows && <p className="knowledge-panel-state knowledge-panel-empty" role="alert">{state.error}</p>}
+      {state.ready && !state.error && sharedDirectory && <button type="button" className="knowledge-panel-directory" onClick={() => setAllShared(true)}>
+        <KnowledgeIcon name="all" /><span>全部文件</span><small>{rows.length}</small><KnowledgeIcon name="next" />
+      </button>}
       {state.ready && (sharedDirectory ? [...sharedCounts].map(([category, count]) =>
         <button type="button" className="knowledge-panel-directory" key={category} onClick={() => setSharedCategory(category)}>
           <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><KnowledgeIcon name="next" />
@@ -385,15 +396,16 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
             detail: { id: row.id, name: row.name }
           }))}>
             <span title={row.name}>{row.name}</span>
-            <small>{row.received?.owner ?? snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.source === 'generated' ? '会话生成' : '手动上传')}</small>
+            <small>{row.received ? `${row.received.category} · ${row.received.owner}`
+              : snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.source === 'generated' ? '会话生成' : '手动上传')}</small>
           </button>
           <div className="knowledge-panel-action">
             <small>{size(row.size)}</small>
             <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>
           </div>
         </div>))}
-      {state.ready && !state.error && !(sharedDirectory ? sharedCounts.size : rows.length) &&
-        <p className="knowledge-panel-state">暂无符合条件的文件。</p>}
+      {state.ready && !state.error && !hasRows &&
+        <p className="knowledge-panel-state knowledge-panel-empty">暂无符合条件的文件。</p>}
     </div>
   </>
 }
