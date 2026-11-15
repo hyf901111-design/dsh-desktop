@@ -18,7 +18,8 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   return button
  }
  let armed=false,picking=false,imported=false,menu=false,shown=false
- const upload=control('导入 Excel / CSV',()=>{if(armed)picking=true})
+ let upload=control('导入 Excel / CSV',()=>{if(armed)picking=true})
+ const originalUpload=upload
  const file=control('三家公司季度财报.xlsx',()=>{if(picking)imported=true})
  const insert=control('插入',()=>{menu=true})
  const smart=control('智能组件',()=>{if(menu)shown=true})
@@ -37,7 +38,12 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   insertCashFlowGuideComponent:vi.fn(async(wait:()=>Promise<void>)=>{await wait();return undefined}),
   closeCashFlowGuideControls:vi.fn()
  }
- const point=vi.fn(async(_action:HomeGuidePointerAction)=>{})
+ const point=vi.fn(async(action:HomeGuidePointerAction)=>{
+  if(action.target===originalUpload){
+   originalUpload.remove()
+   upload=control('导入 Excel / CSV',()=>{if(armed)picking=true})
+  }
+ })
  const adapter=mountCashFlowGuide(document,{
   signal:controller.signal,runId:'test-run',sessionId:'test-session',cwd:'/tmp/demo',fresh:true,
   wait:async()=>{},waitUntilPlaying:async()=>{},onStatus:()=>{},point
@@ -50,7 +56,7 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   await adapter.runStep('component')
   expect(input.value).toContain('现金流拆解台')
   expect(view.insertCashFlowGuideComponent).toHaveBeenCalledOnce()
-  expect(point.mock.calls.map(([action])=>action.target.textContent)).toEqual([upload,file,insert,smart,submit].map(target=>target.textContent))
+  expect(point.mock.calls.map(([action])=>action.target.textContent)).toEqual([originalUpload,upload,file,insert,smart,submit].map(target=>target.textContent))
  }finally{
   adapter.dispose()
   toggle.remove()
