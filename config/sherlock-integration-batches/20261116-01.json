@@ -11,33 +11,25 @@
         "schemaVersion": 1,
         "featureName": "现金流表格演示、知识库侧栏对齐与分类打开模式",
         "branch": "codex/feat/spreadsheet-cash-flow-guide-20261116",
-        "baseCommit": "492569d66d63a2c5735a860273842c934446633a",
-        "tipCommit": "9af00765d4dc2dfc9f1b656224ff774dcc0a8730",
+        "baseCommit": "9af00765d4dc2dfc9f1b656224ff774dcc0a8730",
+        "tipCommit": "03a4e607581b17162fa41ae2e6523c23cc9e1f15",
         "commits": [
           {
-            "commit": "9af00765d4dc2dfc9f1b656224ff774dcc0a8730",
+            "commit": "03a4e607581b17162fa41ae2e6523c23cc9e1f15",
             "parents": [
-              "492569d66d63a2c5735a860273842c934446633a"
+              "9af00765d4dc2dfc9f1b656224ff774dcc0a8730"
             ],
-            "subject": "修复知识库按分类打开会话时保留旧模式"
+            "subject": "修复表格演示切换到组件表单时的定位时序"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
+            "path": "src/preload/home-guides.ts"
           },
           {
             "status": "M",
-            "path": "test/knowledge-composer.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/session-view-preferences.test.js"
+            "path": "src/preload/spreadsheet/cash-flow-guide.ts"
           }
         ],
         "checks": [
@@ -49,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "9af00765d4dc2dfc9f1b656224ff774dcc0a8730",
-            "completedAt": "2026-11-15T22:30:11.259Z",
+            "verifiedCommit": "03a4e607581b17162fa41ae2e6523c23cc9e1f15",
+            "completedAt": "2026-11-15T22:34:00.893Z",
             "timeoutMs": 120000
           },
           {
@@ -68,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "原生对话回放、表格样本数据、探索入口和侧栏聚焦检查，覆盖知识库同一会话跨模式重开",
-            "verifiedCommit": "9af00765d4dc2dfc9f1b656224ff774dcc0a8730",
-            "completedAt": "2026-11-15T22:30:11.259Z",
+            "verifiedCommit": "03a4e607581b17162fa41ae2e6523c23cc9e1f15",
+            "completedAt": "2026-11-15T22:34:00.893Z",
             "timeoutMs": 120000
           },
           {
@@ -84,14 +76,14 @@
             ],
             "outcome": "passed",
             "summary": "快速开始第六项、轮播与键盘导航",
-            "verifiedCommit": "9af00765d4dc2dfc9f1b656224ff774dcc0a8730",
-            "completedAt": "2026-11-15T22:30:11.259Z",
+            "verifiedCommit": "03a4e607581b17162fa41ae2e6523c23cc9e1f15",
+            "completedAt": "2026-11-15T22:34:00.893Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 核对第六项入口与键盘导航、原生表格公式和双线图、组件沙箱中的回款试算、深浅主题侧栏像素居中。完整 macOS 客户端待本地验收。 知识库分类的研究、表格与笔记在原生状态投影中逐次验证。"
+          "summary": "Chromium 核对第六项入口与键盘导航、原生表格公式和双线图、组件沙箱中的回款试算、深浅主题侧栏像素居中。完整 macOS 客户端待本地验收。 知识库分类的研究、表格与笔记在原生状态投影中逐次验证。 首个 macOS 测试包已进入原生表格并核对原始选区、公式与双线趋势，随后修复指针等待组件布局的时序，完整回放待复验。"
         },
         "acceptanceCriteria": [
           "从探索打开第六个案例，在独立工作簿完成整理、趋势图、组件生成",
@@ -103,60 +95,7 @@
           "AI 对话为免计费固定样本回放",
           "需按本地构建手册核验完整客户端"
         ],
-        "generatedAt": "2026-11-15T22:30:11.259Z"
-      },
-      "merged": {
-        "mergeCommit": "48c494aa1b3968134428b9bdf6c884d68c2aff2c",
-        "verificationCommit": "48c494aa1b3968134428b9bdf6c884d68c2aff2c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "48c494aa1b3968134428b9bdf6c884d68c2aff2c",
-            "completedAt": "2026-11-15T22:30:38.218Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-spreadsheet-runtime.test.js",
-              "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-workbook.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-guide-explore-entry-browser.test.ts",
-              "test/browser-sidebar-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-spreadsheet-runtime.test.js test/spreadsheet-cash-flow-guide.test.ts test/spreadsheet-workbook.test.ts test/home-guide-operations-entry.test.ts test/home-guide-explore-entry-browser.test.ts test/browser-sidebar-entry.test.ts",
-            "verifiedCommit": "48c494aa1b3968134428b9bdf6c884d68c2aff2c",
-            "completedAt": "2026-11-15T22:30:38.218Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "test/home-operations-browser.test.js",
-              "-t",
-              "all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/home-operations-browser.test.js -t all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks",
-            "verifiedCommit": "48c494aa1b3968134428b9bdf6c884d68c2aff2c",
-            "completedAt": "2026-11-15T22:30:38.218Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T22:30:38.218Z"
+        "generatedAt": "2026-11-15T22:34:00.893Z"
       }
     }
   ],
