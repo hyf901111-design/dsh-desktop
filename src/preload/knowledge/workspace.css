@@ -250,9 +250,28 @@
   white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
 }
 
-.knowledge-filter-summary, .knowledge-notice { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 37px; font-size: 12px; }
-.knowledge-filter-summary button, .knowledge-notice button { margin-left: auto; padding: 4px 9px; color: var(--knowledge-muted); }
-.knowledge-notice[role=alert] { color: var(--knowledge-danger); }
+.knowledge-filter-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 37px; font-size: 12px; }
+.knowledge-filter-summary button { margin-left: auto; padding: 4px 9px; color: var(--knowledge-muted); }
+.knowledge-toast {
+  position: absolute;
+  z-index: 6;
+  inset-inline-start: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(440px, calc(100% - 32px));
+  padding: 8px 14px;
+  border: 1px solid var(--knowledge-line);
+  border-radius: 8px;
+  background: var(--knowledge-menu);
+  color: var(--knowledge-ink);
+  box-shadow: 0 4px 20px #0003;
+  font-size: 13px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.knowledge-toast[role=alert] { color: var(--knowledge-danger); }
 .knowledge-filter-summary > .knowledge-tag {
   max-width: min(100%, 18em);
   overflow: hidden;
@@ -377,6 +396,7 @@
 .knowledge-shared-folders button .knowledge-icon:last-child { margin-left: auto; width: 13px; }
 .knowledge-shared-metadata, .knowledge-shared-metadata > time, .knowledge-shared-inline-owner { display: none; }
 .knowledge-empty { margin: 40px 12px; text-align: center; color: var(--knowledge-muted); }
+.knowledge-load-error > button { display: block; margin: 8px auto 0; background: var(--knowledge-field); }
 .knowledge-pagination {
   flex-shrink: 0;
   min-height: 42px;
@@ -576,7 +596,7 @@
       var(--odyssey-motion-panel-ease, ease-out) both;
   }
   :is(.knowledge-workspace, .knowledge-panel) .knowledge-preview-content,
-  .knowledge-drop-zone, .knowledge-notice, .knowledge-filter-summary > .knowledge-tag,
+  .knowledge-drop-zone, .knowledge-toast, .knowledge-filter-summary > .knowledge-tag,
   .knowledge-filter-count,
   tr[data-import-complete] .knowledge-import-progress {
     animation: knowledge-feedback-in var(--odyssey-motion-menu-duration, 140ms) ease-out;

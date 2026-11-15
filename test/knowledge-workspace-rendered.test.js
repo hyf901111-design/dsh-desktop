@@ -317,6 +317,46 @@ it('moves existing files into a new folder through the row menu and by dragging'
   } finally { await page.close() }
 })
 
+it('shows a two-second toast for file changes without moving the list header', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.clock.install()
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const more = library.getByRole('button', { name: '消费行业周报.md的更多操作' })
+    await more.waitFor()
+    const header = library.getByRole('columnheader', { name: /文件名/ })
+    const originalHeader = await header.boundingBox()
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100))
+    await library.getByRole('button', { name: '新建文件夹' }).click()
+    const create = library.getByRole('dialog', { name: '新建文件夹' })
+    await create.getByRole('textbox', { name: '名称' }).fill('已整理')
+    await create.getByRole('button', { name: '确认' }).click()
+    const toast = library.locator('.knowledge-toast')
+    await expect.poll(() => toast.textContent()).toBe('已更新知识库。')
+    expect(await toast.getAttribute('role')).toBe('status')
+    expect(await toast.evaluate(element => getComputedStyle(element).position)).toBe('absolute')
+    expect(await library.getByRole('button', { name: '关闭提示' }).count()).toBe(0)
+    expect(await header.boundingBox()).toEqual(originalHeader)
+    await page.clock.runFor(1300)
+
+    await more.click()
+    await library.getByRole('button', { name: '移动到文件夹…' }).click()
+    const move = library.getByRole('dialog', { name: '移动到文件夹' })
+    await move.getByRole('combobox', { name: '目标文件夹' }).selectOption({ label: '已整理' })
+    await move.getByRole('button', { name: '移动', exact: true }).click()
+    await expect.poll(() => toast.textContent()).toContain('移到「已整理」')
+    await page.clock.runFor(1999)
+    expect(await toast.count()).toBe(1)
+    await page.clock.runFor(1)
+    await expect.poll(() => toast.count()).toBe(0)
+    expect(await header.boundingBox()).toEqual(originalHeader)
+  } finally { await page.close() }
+})
+
 it('aligns the knowledge app icon and title with the browser when switching workspaces', async () => {
   const page = await browser.newPage()
   try {

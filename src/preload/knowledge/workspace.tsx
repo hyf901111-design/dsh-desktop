@@ -132,6 +132,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [draftFilter, setDraftFilter] = useState<KnowledgeFilter>()
   const [page, setPage] = useState(1)
   const [ready, setReady] = useState(false)
+  const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>()
   const [busy, setBusy] = useState(false)
   const [choosingFiles, setChoosingFiles] = useState(false)
@@ -273,6 +274,14 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }, [completedImports])
 
   useEffect(() => {
+    if (!notice || dialog) return
+    const timer = setTimeout(() => {
+      setNotice(current => current === notice ? undefined : current)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [notice, dialog])
+
+  useEffect(() => {
     let disposed = false
     const load = async () => {
       const sequence = ++refreshSequence.current
@@ -281,11 +290,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         if (!disposed && sequence === refreshSequence.current) {
           setSnapshot(next)
           setReady(true)
-          setNotice(current => current?.error && current.text.startsWith('知识库暂时无法加载') ? undefined : current)
+          setLoadError(undefined)
         }
       } catch (error) {
         if (!disposed && sequence === refreshSequence.current) {
-          setNotice({ text: '知识库暂时无法加载。' + message(error), error: true })
+          const text = '知识库暂时无法加载。' + message(error)
+          if (viewRead.current.ready) setNotice({ text, error: true })
+          else setLoadError(text)
         }
       }
     }
@@ -317,6 +328,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setReceived([])
       setReceivedStatus({ loading: false })
       setReady(false)
+      setLoadError(undefined)
       filterState.current = { revision: crypto.randomUUID(), filter: defaultFilter, assistantFilter: false }
       previousFilter.current = undefined
       setUndoAvailable(false)
@@ -901,11 +913,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
             } : { query: '', sources: [], formats: [], savedOnly: false })}>清除筛选</button>
           </div>
         </div>}
-        {notice && !dialog && <div className="knowledge-notice" role={notice.error ? 'alert' : 'status'}>
-          <span>{notice.text}</span>
-          {!ready && <button type="button" onClick={() => refresh.current()}>重试</button>}
-          <button type="button" aria-label="关闭提示" onClick={() => setNotice(undefined)}>×</button>
-        </div>}
         <div className="knowledge-table-area" data-received={selection === 'received'}>
           {selection === 'received' && <div className="knowledge-shared-column">
             <span className="knowledge-shared-heading">分类</span>
@@ -1008,12 +1015,15 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   })}
                 </tbody>
               </table>
-              {!rows.length && !visibleImports.length && <p className="knowledge-empty">
+              {!rows.length && !visibleImports.length && (!ready && loadError ? <div className="knowledge-empty knowledge-load-error">
+                <span role="alert">{loadError}</span>
+                <button type="button" onClick={() => refresh.current()}>重试</button>
+              </div> : <p className="knowledge-empty">
                 {selection === 'received' && receivedStatus.loading ? '正在加载他人共享…'
                   : selection === 'received' && receivedStatus.error ? receivedStatus.error
                   : ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'
-                  : notice?.error ? '' : '正在加载文件…'}
-              </p>}
+                  : '正在加载文件…'}
+              </p>)}
             </div>
             {pages > 1 && <nav className="knowledge-pagination" aria-label="文件分页">
               <button type="button" disabled={shownPage === 1} onClick={() => setPage(shownPage - 1)}>上一页</button>
@@ -1034,6 +1044,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <KnowledgePreviewContent file={preview} loading={preview.loading} />
       </aside>}
     </div>}
+    {notice && !dialog && <div className="knowledge-toast" role={notice.error ? 'alert' : 'status'}>{notice.text}</div>}
     {tab === 'files' && menu && (target || targetFolder) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
       role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
@@ -1065,7 +1076,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     </div>}
     {dialog && <div className="knowledge-dialog-backdrop">
       <form className="knowledge-dialog" role="dialog" aria-modal="true" aria-labelledby="knowledge-dialog-title"
-        onSubmit={submitDialog} onKeyDown={event => { if (!busy && event.key === 'Escape') setDialog(undefined) }}>
+        onSubmit={submitDialog} onKeyDown={event => {
+          if (!busy && event.key === 'Escape') { setDialog(undefined); setNotice(undefined) }
+        }}>
         <h2 id="knowledge-dialog-title">{dialogTitle(dialog.type)}</h2>
         {dialog.type === 'share' ? <>
           <p>共享后，其他已登录用户及其 Agent 可查找和引用此文件。</p>
