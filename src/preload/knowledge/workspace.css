@@ -193,7 +193,7 @@
 }
 .knowledge-toolbar > button { background: var(--knowledge-field); }
 .knowledge-workspace .knowledge-toolbar > button:not(.knowledge-primary):hover:not(:disabled),
-.knowledge-workspace .knowledge-pagination button:hover:not(:disabled),
+.knowledge-workspace .knowledge-pagination button:hover:not(:disabled, [aria-current]),
 :is(.knowledge-workspace, .knowledge-panel) .knowledge-filter-menu footer button:not(.knowledge-primary):hover {
   background: var(--knowledge-control-hover);
 }
@@ -430,10 +430,17 @@
   gap: 4px;
   align-items: center;
 }
+.knowledge-pagination-controls { flex-wrap: wrap; }
 .knowledge-workspace .knowledge-pagination button { background: var(--knowledge-field); padding: 4px 8px; }
-.knowledge-workspace .knowledge-pagination .knowledge-pagination-number { min-width: 26px; background: transparent; }
+.knowledge-workspace .knowledge-pagination .knowledge-pagination-number {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  padding: 0;
+}
 .knowledge-workspace .knowledge-pagination .knowledge-pagination-number[aria-current] {
-  background: var(--knowledge-active);
+  background: var(--knowledge-control-active);
   color: var(--knowledge-ink);
 }
 .knowledge-pagination input {

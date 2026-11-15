@@ -1414,6 +1414,10 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
     const previous = pager.getByRole('button', { name: '上一页' })
     const next = pager.getByRole('button', { name: '下一页' })
     const position = async () => (await pager.boundingBox()).y
+    const numberTiles = () => pager.getByRole('button', { name: /^第 \d+ 页$/ }).evaluateAll(nodes => nodes.map(node => {
+      const { width, height } = node.getBoundingClientRect()
+      return { width, height, background: getComputedStyle(node).backgroundColor }
+    }))
 
     for (const label of ['所有文件', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
       '研究模式', '笔记模式', '表格模式']) {
@@ -1425,6 +1429,14 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       const rows = scroller.locator(session ? 'li' : 'tbody tr')
       await expect.poll(() => rows.count(), label).toBe(20)
       expect(await pager.getByRole('button', { name: '第 1 页', exact: true }).getAttribute('aria-current')).toBe('page')
+      if (label === '所有文件') {
+        const [current, other, last] = await numberTiles()
+        expect(current).toMatchObject({ width: 30, height: 30 })
+        expect(other).toMatchObject({ width: 30, height: 30 })
+        expect(other.background).not.toBe('rgba(0, 0, 0, 0)')
+        expect(last.background).toBe(other.background)
+        expect(current.background).not.toBe(other.background)
+      }
       expect(await previous.isDisabled()).toBe(true)
       const firstPage = await rows.first().innerText()
       const anchor = await position()
