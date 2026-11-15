@@ -1,5 +1,6 @@
 /** Figma 665:828: presentation only; retain Host commands and risk confirmation. */
 export function patchFigmaPermissionMenu(source, settings = false) {
+  if (settings) source = patchSlashPermissionLabels(source)
   const marker = '/* odyssey:permission-menu-description:20260912 */'
   if (source.includes(marker)) return source
   const functionName = settings ? 'PermissionRow' : 'PermissionSelect'
@@ -27,4 +28,21 @@ export function patchFigmaPermissionMenu(source, settings = false) {
     : `label: odysseyPermissionMenuLabel(option.value, permissionOptionLabel(option,t), t('access.mode.readOnly') === '只读', option.description)`
   if (source.split(before).length !== 2) throw Error('Permission menu label drifted')
   return source.replace(before, after)
+}
+
+function patchSlashPermissionLabels(source) {
+  const marker = '/* odyssey:slash-permission-labels:v1 */'
+  if (source.includes(marker)) return source
+
+  for (const [before, after] of [
+    ['function optionsOf(value, t) {', marker + '\n    function optionsOf(value, t, permissionText) {'],
+    ['label: displayPermissionPreset(option.value, option.name),',
+      'label: settingsPermissionPresetLabel({ id: option.value, label: displayPermissionPreset(option.value, option.name) }, permissionText),'],
+    ['return Promise.resolve(optionsOf(value, t));',
+      'return Promise.resolve(optionsOf(value, t, ctx.locale.bind("settings.permission")));']
+  ]) {
+    if (source.split(before).length !== 2) throw Error('Slash permission label drifted: ' + before)
+    source = source.replace(before, after)
+  }
+  return source
 }
