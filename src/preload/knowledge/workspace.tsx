@@ -28,7 +28,7 @@ interface Bridge {
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
-  request(method: 'session-evidence', args: { ids: string[] }): Promise<KnowledgeSessionEvidence[]>
+  request(method: 'session-evidence', args: { ids: string[]; mode: KnowledgeSessionMode }): Promise<KnowledgeSessionEvidence[]>
   request(method: 'edit', args: KnowledgeEdit): Promise<KnowledgeSnapshot>
   request(method: 'recent-searches', args?: Record<string, never>): Promise<string[]>
   request(method: 'remember-search', args: { query: string }): Promise<string[]>
@@ -107,14 +107,14 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [tab, setTab] = useState<'files' | 'memory'>('files')
   const [sessionMode, setSessionMode] = useState<KnowledgeSessionMode>()
   const [surfaceVisible, setSurfaceVisible] = useState(() => host.current()?.surface === 'knowledge')
-  const evidenceFor = useCallback(async (ids: string[]) => {
+  const evidenceFor = useCallback(async (mode: KnowledgeSessionMode, ids: string[]) => {
     const records: KnowledgeSessionEvidence[] = []
-    for (let start = 0; start < ids.length; start += 128) {
-      records.push(...await bridge.request('session-evidence', { ids: ids.slice(start, start + 128) }))
+    for (let start = 0; start < ids.length; start += 32) {
+      records.push(...await bridge.request('session-evidence', { mode, ids: ids.slice(start, start + 32) }))
     }
     return records
   }, [bridge])
-  const sessions = useKnowledgeSessions(document, surfaceVisible && tab === 'files' && !!sessionMode, evidenceFor)
+  const sessions = useKnowledgeSessions(document, surfaceVisible && tab === 'files' ? sessionMode : undefined, evidenceFor)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
   const header = useRef<HTMLElement>(null)
   const workspaceToggle = useRef<HTMLButtonElement>(null)

@@ -3,6 +3,7 @@ import { mkdirSync, existsSync, readFileSync, renameSync, writeFileSync, unlinkS
 import { join } from 'node:path'
 import * as Y from 'yjs'
 import type { NoteContent, NoteLoad, NoteSave, SavedNote, DraftNote } from '../../shared/workspace-notes'
+import { noteHasContent } from '../knowledge/session-content'
 const empty = (): SavedNote => ({ title: '', blocks: [], yjs: '', revision: 0, updatedAt: 0 })
 type FileNote = { version: 1; saved: SavedNote; drafts: DraftNote[] }
 
@@ -42,7 +43,10 @@ export class NotesStore {
     if (![owner, session].every(id => typeof id === 'string' && id.length > 0 && id.length <= 512)) throw Error('笔记身份无效。')
     return join(this.root, createHash('sha256').update(JSON.stringify([owner, session])).digest('hex') + '.json')
   }
-  hasDocument(owner: string, session: string): boolean { return existsSync(this.path(owner, session)) }
+  hasContent(owner: string, session: string): boolean {
+    const data = this.read(owner, session)
+    return noteHasContent(data.saved) || data.drafts.some(noteHasContent)
+  }
   private read(owner: string, session: string): FileNote {
     const file = this.path(owner, session)
     if (!existsSync(file)) return { version: 1, saved: empty(), drafts: [] }

@@ -24,8 +24,10 @@ beforeAll(async () => {
       if (document.body.hasAttribute('data-test-session-directory')) {
         const byId = {
           board: { title: '消费行业研究看板', updatedAt: 1700000000000 },
+          board2: { title: '新品调研看板', updatedAt: 1670000000000 },
           note: { title: '季度会议笔记', updatedAt: 1690000000000 },
           sheet: { title: '渠道库存表格', updatedAt: 1680000000000 },
+          blankBoard: { title: '空白研究看板' }, blankNote: { title: '空白笔记' }, blankSheet: { title: '空白表格' },
           chat: { title: '普通对话' },
           removed: { title: '已删除表格', removed: true },
           child: { title: '子任务', parentId: 'note' }
@@ -36,7 +38,7 @@ beforeAll(async () => {
             open: id => { window.openedSession = { id, view: opened.get(id) } } },
           workspaces: { list: { getSnapshot: () => ({ items: [{ title: '行业跟踪', sessionIds: ['board', 'note', 'sheet'] }] }) } },
           chatStore: { create: id => ({ actions: { setView: view => opened.set(id, view) } }) },
-          boards: () => ({ isBoardOnly: id => id === 'board' })
+          boards: () => ({ isBoardOnly: id => ['board', 'board2', 'blankBoard'].includes(id) })
         })
       }
       if (document.body.hasAttribute('data-test-browser-topbar')) {
@@ -189,8 +191,7 @@ beforeAll(async () => {
             return
           }
           if (method === 'session-evidence') return args.ids.map(id => ({
-            id, preferredView: id === 'sheet' ? 'trajectory' : 'chat', notes: id === 'note',
-            spreadsheet: id === 'removed' || id === 'child', research: false
+            id, hasContent: ({ research: ['board', 'board2'], notes: ['note'], spreadsheet: ['sheet', 'removed', 'child'] })[args.mode].includes(id)
           }))
           if (method === 'received') {
             if (window.waitForSharedCatalog) return window.waitForSharedCatalog
@@ -251,7 +252,17 @@ it('lists real session modes under all files and opens each one in its native vi
       const directory = library.getByRole('main', { name: label })
       const row = directory.getByRole('button', { name: new RegExp(title) })
       await row.waitFor()
-      expect(await directory.getByRole('button').count()).toBe(1)
+      expect(await directory.getByRole('button').count()).toBe(view === 'research' ? 2 : 1)
+      expect(await directory.getByRole('button', { name: /空白/ }).count()).toBe(0)
+      const tile = row.locator('.knowledge-file-icon')
+      expect(await tile.evaluate(el => el.getBoundingClientRect().width)).toBe(36)
+      const color = await tile.evaluate(el => getComputedStyle(el).backgroundColor)
+      await row.hover()
+      await expect.poll(() => tile.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(color)
+      if (view === 'research') {
+        const boxes = await directory.getByRole('button').evaluateAll(items => items.map(el => el.getBoundingClientRect().toJSON()))
+        expect(boxes[1].top - boxes[0].bottom).toBe(4)
+      }
       const search = directory.getByRole('searchbox', { name: '搜索会话' })
       await search.fill('找不到的项目')
       await directory.getByText('没有符合搜索条件的会话。').waitFor()

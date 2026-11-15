@@ -7,13 +7,9 @@ export type KnowledgeSessionEntry = {
   workspace?: string
   updatedAt: number
   researchBoard?: boolean
-  localView?: string
 }
 
 export type KnowledgeSessionEvidence = {
   id: string
-  preferredView: string | null
-  research: boolean
-  notes: boolean
-  spreadsheet: boolean
+  hasContent: boolean
 }

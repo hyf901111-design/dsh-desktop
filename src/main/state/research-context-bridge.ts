@@ -182,7 +182,7 @@ function containerText(value: unknown): { text: string; truncated: boolean } {
   return { text: content, truncated }
 }
 
-export function readStoredResearchCanvas(storage: ResearchCanvasStorage, sessionId: string): Canvas {
+export function readStoredResearchCanvas(storage: Pick<ResearchCanvasStorage, 'getItem'>, sessionId: string): Canvas {
   const read = (kind: string): unknown[] => {
     const value = storage.getItem(`sherlock.research.canvas.${kind}.v1:${sessionId}`)
     if (!value) return []

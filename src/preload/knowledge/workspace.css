@@ -161,11 +161,12 @@
   position: relative;
 }
 .knowledge-session-directory .knowledge-search { flex: 0 1 244px; min-width: 100px; }
-.knowledge-session-rows { flex: 1; min-height: 0; overflow: auto; margin: 10px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--knowledge-line); }
+.knowledge-session-rows { flex: 1; min-height: 0; overflow: auto; margin: 10px 0 0; padding: 4px 0; list-style: none; border-top: 1px solid var(--knowledge-line); }
+.knowledge-session-rows li + li { margin-top: 4px; }
 .knowledge-session-rows button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 12px; text-align: left; }
 .knowledge-session-title { flex: 1; min-width: 0; display: grid; }
 .knowledge-session-title > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.knowledge-session-rows :is(small, time, svg), .knowledge-session-empty { color: var(--knowledge-muted); }
+.knowledge-session-rows :is(small, time), .knowledge-session-rows button > svg, .knowledge-session-empty { color: var(--knowledge-muted); }
 .knowledge-session-rows time { flex: none; font-size: 12px; white-space: nowrap; }
 .knowledge-session-empty { margin: 24px auto; }
 .knowledge-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
@@ -310,7 +311,8 @@
 }
 .knowledge-file-icon[data-tile=true] .knowledge-icon { width: 20px; height: 20px; }
 .knowledge-table tbody tr:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
-.knowledge-panel-row:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true] {
+.knowledge-panel-row:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
+.knowledge-session-rows button:is(:hover, :focus-visible) .knowledge-file-icon[data-tile=true] {
   background: var(--knowledge-control-hover);
 }
 .knowledge-table tbody tr[data-selected=true] .knowledge-file-icon[data-tile=true] {
@@ -320,6 +322,7 @@
 .knowledge-file-icon[data-format=markdown] { --knowledge-format-ink: light-dark(#096875, #89d2da); }
 .knowledge-file-icon[data-format=word] { --knowledge-format-ink: light-dark(#145ba3, #88c3fd); }
 .knowledge-file-icon[data-format=excel] { --knowledge-format-ink: light-dark(#176845, #81d4a6); }
+.knowledge-file-icon[data-format=research] { --knowledge-format-ink: light-dark(#414da8, #aebcff); }
 .knowledge-file-icon[data-format=ppt] { --knowledge-format-ink: light-dark(#8e4b09, #f5b57e); }
 .knowledge-file-icon[data-format=image] { --knowledge-format-ink: light-dark(#6940a1, #c6adfa); }
 .knowledge-file-icon[data-format=audio] { --knowledge-format-ink: light-dark(#8a3978, #eeb0da); }

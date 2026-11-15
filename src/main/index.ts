@@ -6,6 +6,7 @@ import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from '
 import { KnowledgeFilePreview } from './knowledge/file-preview'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
+import { researchHasContent } from './knowledge/session-content'
 import {routeBrowserUse} from './browser/route'
 import {registerBrowserApp} from './browser/service'
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
@@ -1503,14 +1504,20 @@ async function bootstrap(): Promise<void> {
   installKnowledgeIpc({
     store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow,
     identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
-    sessionEvidence: (owner, id) => ({
-      id,
-      preferredView: researchCanvasStorage.getItem(`ework.session.view.v1:${id}`),
-      research: (researchBoardsService?.readCanvasStorage(`sherlock.research.session-engaged.v1:${id}`)
-        ?? researchCanvasStorage.getItem(`sherlock.research.session-engaged.v1:${id}`)) === '1',
-      notes: calendarNotes.hasDocument(owner, id),
-      spreadsheet: knowledgeWorkbooks.hasRecord({ owner, sessionId: id })
-    }),
+    sessionEvidence: (owner, id, mode) => {
+      let hasContent = false
+      try {
+        if (mode === 'research') {
+          const canvas = researchBoardsService?.isSharedSession(id) ? researchBoardsService.readSharedCanvas(id)
+            : readStoredResearchCanvas({ getItem: key => researchCanvasStorage.peekItem(key) }, id)
+          hasContent = researchHasContent(canvas)
+        } else if (!researchBoardsService?.isSharedSession(id)) {
+          hasContent = mode === 'notes' ? calendarNotes.hasContent(owner, id)
+            : knowledgeWorkbooks.hasContent({ owner, sessionId: id })
+        }
+      } catch { /* Unavailable or corrupt sessions stay out of the directory. */ }
+      return { id, hasContent }
+    },
     generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
       ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)
   })
