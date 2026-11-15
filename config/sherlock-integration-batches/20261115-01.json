@@ -11,34 +11,18 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb",
-        "tipCommit": "1049755269175df3b892cc7923ea4498a564c10d",
+        "baseCommit": "1049755269175df3b892cc7923ea4498a564c10d",
+        "tipCommit": "af309814e3070bfaa2f4ee499e16bca201a5070d",
         "commits": [
           {
-            "commit": "1049755269175df3b892cc7923ea4498a564c10d",
+            "commit": "af309814e3070bfaa2f4ee499e16bca201a5070d",
             "parents": [
-              "37966b624ad01c55e14cdfac2b0b31ea0da2e8bb"
+              "1049755269175df3b892cc7923ea4498a564c10d"
             ],
-            "subject": "交互：居中知识库空状态并补齐共享目录"
+            "subject": "交互：仅在他人共享上级显示全部文件"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
-          },
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
@@ -57,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "1049755269175df3b892cc7923ea4498a564c10d",
-            "completedAt": "2026-11-15T02:21:51.580Z",
+            "verifiedCommit": "af309814e3070bfaa2f4ee499e16bca201a5070d",
+            "completedAt": "2026-11-15T02:27:34.497Z",
             "timeoutMs": 120000
           },
           {
@@ -70,18 +54,20 @@
               "test",
               "--",
               "--maxWorkers=1",
-              "test/knowledge-workspace-rendered.test.js"
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "one combined shared file list|shared categories and metadata|preserves filters through return"
             ],
             "outcome": "passed",
-            "summary": "二十九项知识库渲染验证通过，覆盖空状态居中、共享分类和四档宽度下的目录信息。",
-            "verifiedCommit": "1049755269175df3b892cc7923ea4498a564c10d",
-            "completedAt": "2026-11-15T02:21:51.580Z",
+            "summary": "三项共享目录渲染检查通过，验证二级隐藏全部文件、返回恢复入口且保留筛选。",
+            "verifiedCommit": "af309814e3070bfaa2f4ee499e16bca201a5070d",
+            "completedAt": "2026-11-15T02:27:34.497Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "当前提交通过二十九项知识库渲染验证。上一版 86ed08ae3 签名桌面包验收通过。"
+          "summary": "当前提交通过共享目录聚焦渲染验证；上一版 a96048278 已在签名桌面包中验证共享目录导航和文件信息。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -129,7 +115,8 @@
           "研究、笔记与表格列表的每行使用文件列表同尺寸的图标底板和按类型配色的线形图标，悬停高亮之间保留四像素间距。",
           "只有已保存实际内容的研究看板、笔记或工作簿才显示在模式目录；默认空段落、仅默认导航的画板与空白工作簿排除。",
           "知识库内容变更后显示两秒气泡，文件列表表头不因反馈移动。",
-          "文件与模式分类的空状态提示在列表内容区居中；他人共享提供全部文件入口，每条记录显示所属共享目录。"
+          "文件与模式分类的空状态提示在列表内容区居中；他人共享提供全部文件入口，每条记录显示所属共享目录。",
+          "进入任一共享二级目录时隐藏全部文件，点击返回上级目录恢复汇总视图。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -137,51 +124,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-15T02:21:51.580Z"
-      },
-      "merged": {
-        "mergeCommit": "15e9459b3baa995f1674fc20f0b039e98a7fb017",
-        "verificationCommit": "15e9459b3baa995f1674fc20f0b039e98a7fb017",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "15e9459b3baa995f1674fc20f0b039e98a7fb017",
-            "completedAt": "2026-11-15T02:22:12.336Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "15e9459b3baa995f1674fc20f0b039e98a7fb017",
-            "completedAt": "2026-11-15T02:22:12.336Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T02:22:12.336Z"
+        "generatedAt": "2026-11-15T02:27:34.497Z"
       }
     }
   ],
