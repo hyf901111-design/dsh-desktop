@@ -1,13 +1,15 @@
 import {
   HOME_SPREADSHEET_GUIDE_PATH,
-  HOME_SPREADSHEET_GUIDE_PROMPTS
+  HOME_SPREADSHEET_GUIDE_PROMPTS,
+  HOME_SPREADSHEET_GUIDE_TREND_PROMPTS,
+  HOME_SPREADSHEET_GUIDE_TREND_REFERENCE
 } from '../../../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
 import { homeGuideTargetPoint } from '../home-guide-pointer'
 import type { HomeGuideAdapter, HomeGuideMountOptions } from '../home-guides'
 import type { mountSpreadsheet } from './view'
 
 type Spreadsheet = ReturnType<typeof mountSpreadsheet>
-type ReplayStage = 'analysis' | 'trend' | 'complete'
+type ReplayStage = 'analysis' | 'trend'
 type ReplayAction = 'prepare' | 'arm' | 'accepted' | 'advance' | 'flush' | 'dispose'
 
 /** The playback clock owns sequencing. All edits go through the currently visible spreadsheet. */
@@ -100,12 +102,13 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       .filter(input => input.dataset.odysseyFileReferenceSession === options.sessionId && !input.disabled && !input.readOnly && visible(input))
     return inputs.length === 1 ? inputs[0] : undefined
   }
-  const write = async (input: HTMLTextAreaElement, value: string, docked = false) => {
-    if (input.value) throw Error('输入框已有草稿，已保留你的编辑。')
-    await (docked ? pointWhenVisible : point)(input, 'click')
-    if (!input.isConnected || input.value) throw abort()
+  const write = async (input: HTMLTextAreaElement, value: string, optionsForWrite: {dock?: boolean; prefix?: string} = {}) => {
+    const {dock, prefix = ''} = optionsForWrite
+    if (input.value !== prefix) throw Error('输入框已有草稿，已保留你的编辑。')
+    await (dock ? pointWhenVisible : point)(input, 'click')
+    if (!input.isConnected || input.value !== prefix) throw abort()
     input.focus({ preventScroll: true })
-    let previous = ''
+    let previous = prefix
     const chunks = value.match(/.{1,3}/gu) ?? []
     const setValue = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value')!.set!
     for (const chunk of chunks) {
@@ -113,9 +116,28 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       if (!input.isConnected || input.value !== previous) throw Error('输入框内容已变化，演示已停止。')
       previous += chunk
       setValue.call(input, previous)
+      input.setSelectionRange(previous.length, previous.length)
       input.dispatchEvent(new win.InputEvent('input', { bubbles: true, data: chunk, inputType: 'insertText' }))
       await options.wait(42, requestAbort.signal)
     }
+  }
+  const sendPrompt = async (input: HTMLTextAreaElement, expected: string) => {
+    const send = await waitFor(() => {
+      const button = composer()?.closest('.uV2eYG_root')?.querySelector<HTMLButtonElement>('button.uV2eYG_primary')
+      return button && !button.disabled && visible(button) ? button : undefined
+    }, '表格对话发送按钮尚未就绪。')
+    await point(send, 'click')
+    if (composer() !== input || input.value !== expected) throw abort()
+    if (!preparing) {
+      preparing = true
+      await rpc('prepare')
+    }
+    await options.waitUntilPlaying()
+    await rpc('arm')
+    check()
+    if (composer() !== input || input.value !== expected || !send.isConnected || send.disabled) throw abort()
+    send.click()
+    await rpc('accepted')
   }
   const takeOver = (event: Event) => {
     const target = event.target
@@ -129,7 +151,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     requestAbort.abort()
     document.removeEventListener('pointerdown', takeOver, true)
     document.removeEventListener('beforeinput', takeOver, true)
-    if (!completed && visibleView() === workbookView) workbookView?.closeCashFlowGuideComponent()
+    if (!completed && visibleView() === workbookView) workbookView?.closeCashFlowGuideControls()
     closing = preparing ? rpc('dispose') : Promise.resolve()
     return closing
   }
@@ -139,48 +161,85 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
   return {
     async runStep(step: string) {
       await options.waitUntilPlaying()
-      if (step === 'source') {
+      if (step === 'empty') {
         workbookView = await waitFor(visibleView, '示例表格尚未就绪。')
-        await check().applyCashFlowGuide('source', check)
-        await setRight(true)
+        await waitFor(() => check().cashFlowGuideImportButton(), '空白表格尚未就绪。')
+        await setRight(false)
+        return
+      }
+      if (step === 'import-file') {
+        const importButton = await waitFor(() => check().cashFlowGuideImportButton(), '导入按钮尚未就绪。')
+        await point(importButton, 'click')
+        check().armCashFlowGuideImport()
+        importButton.click()
+        const file = await waitFor(() => check().cashFlowGuideFileButton(), '示例文件尚未就绪。')
+        await options.wait(850, requestAbort.signal)
+        await point(file, 'click')
+        file.click()
+        await waitFor(() => check().cashFlowGuideImported || undefined, '示例 Excel 尚未导入。')
         return
       }
       if (step === 'ask') {
+        await setRight(true)
         const input = await waitFor(composer, '右侧表格对话尚未就绪。')
         const prompt = HOME_SPREADSHEET_GUIDE_PROMPTS[locale]
         await write(input, prompt)
-        const send = await waitFor(() => {
-          const button = composer()?.closest('.uV2eYG_root')?.querySelector<HTMLButtonElement>('button.uV2eYG_primary')
-          return button && !button.disabled && visible(button) ? button : undefined
-        }, '表格对话发送按钮尚未就绪。')
-        await point(send, 'click')
-        if (composer() !== input || input.value !== prompt) throw abort()
-        preparing = true
-        await rpc('prepare')
-        await options.waitUntilPlaying()
-        await rpc('arm')
-        check()
-        if (composer() !== input || input.value !== prompt || !send.isConnected || send.disabled) throw abort()
-        send.click()
-        await rpc('accepted')
+        await options.wait(850, requestAbort.signal)
+        await sendPrompt(input, prompt)
+        return
+      }
+      if (step === 'select-trend') {
+        await check().dragCashFlowGuideRange('trend', options.point, check)
+        return
+      }
+      if (step === 'ask-trend') {
+        const input = await waitFor(composer, '右侧表格对话尚未就绪。')
+        if (input.value) throw Error('输入框已有草稿，已保留你的编辑。')
+        input.focus({preventScroll:true})
+        check().referenceCashFlowGuideRange()
+        const prefix = await waitFor(() => {
+          const chip = input.closest('.uV2eYG_grow')?.querySelector('[data-reference-source="spreadsheet-range"]:not([data-provisional])')
+          return chip?.textContent?.includes(HOME_SPREADSHEET_GUIDE_TREND_REFERENCE[locale]) && /^\uFFFC\s*$/u.test(input.value) ? input.value : undefined
+        }, '表格选区未能加入对话。')
+        const prompt = HOME_SPREADSHEET_GUIDE_TREND_PROMPTS[locale]
+        await write(input, prompt, {prefix})
+        await options.wait(750, requestAbort.signal)
+        await sendPrompt(input, prefix + prompt)
         return
       }
       if (step === 'analysis' || step === 'trend') {
-        if (step === 'analysis') await options.wait(2100, requestAbort.signal)
+        await options.wait(1050, requestAbort.signal)
         const target = await check().applyCashFlowGuide(step, check)
         await rpc('advance', step)
+        await rpc('flush')
         if (target) await pointWhenVisible(target, 'move')
         return
       }
-      if (step === 'component') {
+      if (step === 'select-component') {
         await setRight(false)
-        const { input, submit } = check().openCashFlowGuideComponent()
+        await check().dragCashFlowGuideRange('component', options.point, check)
+        return
+      }
+      if (step === 'component') {
+        if (!check().cashFlowGuideInsertButton()) {
+          const menu = await waitFor(() => check().cashFlowGuideMenuButton(), '表格菜单尚未就绪。')
+          await point(menu, 'click')
+          menu.click()
+        }
+        const insert = await waitFor(() => check().cashFlowGuideInsertButton(), '插入菜单尚未就绪。')
+        await point(insert, 'click')
+        insert.click()
+        const smart = await waitFor(() => check().cashFlowGuideSmartButton(), '智能组件菜单尚未就绪。')
+        await point(smart, 'click')
+        smart.click()
+        const { input, submit } = await waitFor(() => check().cashFlowGuideComponentForm(), '智能组件表单尚未就绪。')
         input.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         const prompt = localeText(
           '用选区做一个现金流拆解台。拆开净利润到经营现金流的差额，点击柱子查看构成，并用滑杆试算多回款后能否达到 75% 的现金转化率。',
           'Build a cash flow bridge from the selection. Show adjustment details on click, and let me test whether collecting more receivables reaches a 75% cash conversion target.'
         )
-        await write(input, prompt, true)
+        await write(input, prompt, {dock:true})
+        await options.wait(750, requestAbort.signal)
         await pointWhenVisible(submit, 'click')
         if (input.value !== prompt || submit.disabled) throw abort()
         const card = await check().insertCashFlowGuideComponent(async () => {
@@ -188,8 +247,6 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
           check()
         })
         if (card) await pointWhenVisible(card, 'move')
-        await rpc('advance', 'complete')
-        await rpc('flush')
         completed = true
       }
     },

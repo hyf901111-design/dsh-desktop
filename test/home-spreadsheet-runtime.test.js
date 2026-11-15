@@ -56,7 +56,7 @@ async function fixture(title = '利润涨了，现金去哪了？（演示案例
   return { runtime, agent, ctx, input, outside, submit }
 }
 
-it('gates actual native assistant messages on the saved worksheet, chart, and component checkpoints', async () => {
+it('runs two saved native turns and requires the quarterly analysis range on the chart turn', async () => {
   const f = await fixture()
   await f.runtime.prepare(f.input)
   await f.runtime.arm(f.input)
@@ -64,16 +64,17 @@ it('gates actual native assistant messages on the saved worksheet, chart, and co
   await f.runtime.accepted(f.input)
   await expect(f.runtime.advance({ ...f.input, stage: 'trend' })).rejects.toThrow('顺序')
   await f.runtime.advance({ ...f.input, stage: 'analysis' })
-  await f.runtime.advance({ ...f.input, stage: 'analysis' })
-  await f.runtime.advance({ ...f.input, stage: 'trend' })
-  expect(JSON.stringify(f.agent.session.events)).not.toContain('回款试算')
-  await f.runtime.advance({ ...f.input, stage: 'complete' })
   expect(await f.runtime.flush(f.input)).toEqual({ saved: true })
-  expect(f.agent.session.events.filter(event => event.type === 'user/message')).toHaveLength(1)
-  const assistant = f.agent.session.events.filter(event => event.type === 'assistant/message')
-  expect(assistant).toHaveLength(1)
-  expect(JSON.stringify(assistant)).toContain('回款试算')
-  expect(JSON.stringify(await f.ctx.sessionPersistence.inspect('demo'))).toContain('1.60 亿元')
+  expect(f.agent.session.events.filter(event => event.type === 'assistant/message')).toHaveLength(1)
+  expect(JSON.stringify(f.agent.session.events)).not.toContain('25%')
+  await f.runtime.arm(f.input)
+  f.submit('〔表格选区 "季度分析"!A1:C5 #123456abcdef〕给选区画两条同比趋势线，指出利润与经营现金流背离最明显的一季。')
+  await f.runtime.accepted(f.input)
+  await f.runtime.advance({ ...f.input, stage: 'trend' })
+  expect(await f.runtime.flush(f.input)).toEqual({ saved: true })
+  expect(f.agent.session.events.filter(event => event.type === 'user/message')).toHaveLength(2)
+  expect(f.agent.session.events.filter(event => event.type === 'assistant/message')).toHaveLength(2)
+  expect(JSON.stringify(await f.ctx.sessionPersistence.inspect('demo'))).toContain('25%')
   expect(f.agent.session.requestHeader()?.config.provider).toBe('outside')
   expect(f.outside).toEqual([])
 })
@@ -104,7 +105,6 @@ it('lets the native Stop action cancel a pending checkpoint without late replies
   await f.runtime.arm(f.input)
   f.submit()
   await f.runtime.accepted(f.input)
-  await f.runtime.advance({ ...f.input, stage: 'analysis' })
   await f.agent.cancel({ kind: 'user' })
   await f.agent.whenIdle()
   await expect(f.runtime.advance({ ...f.input, stage: 'trend' })).rejects.toThrow()

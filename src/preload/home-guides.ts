@@ -25,11 +25,15 @@ type Session = {sessionId: string; cwd: string; title: string; fresh?: boolean}
 type Scene = readonly [id: string, title: string, result: string, hold: number]
 const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;steps:readonly Scene[]}> = {
  spreadsheet:{title:'利润涨了，现金去哪了？',view:'表格',intro:'整理财报数据，追踪利润与经营现金流背离，再试算回款情景。',steps:[
-  ['source','打开季度财报样例','选中三家公司的八季财报数据，包含一条重复记录。',1300],
-  ['ask','向 AI 提出分析需求','在表格右侧提交数据整理与趋势分析需求。',1200],
-  ['analysis','整理财报并计算同比','去重后保留 24 条财报记录，计算公式已写入分析表。',3000],
-  ['trend','查看四季度趋势','澄川制造 2026 年第三季度利润同比增长 25%，经营现金流同比下降 20%。',4200],
-  ['component','生成现金流拆解台','查看利润到现金流的差额，并尝试调整回款金额。',2200]
+  ['empty','从空白表格开始','先看空白工作簿的导入入口。',2000],
+  ['import-file','导入三家公司季度财报','从 Excel 工作簿载入三家公司八季财报。',2800],
+  ['ask','在右侧对话交代整理任务','按公司与季度去重，保留原表，在新工作表计算同比。',1650],
+  ['analysis','查看新表和同比公式','已去掉 1 条重复记录，24 条数据及公式保存在「季度分析」。',3000],
+  ['select-trend','用鼠标框选 A1:C5','框选最近四季及两列同比，右侧输入区出现选区引用。',2300],
+  ['ask-trend','针对框选区域下达任务','保留「季度分析!A1:C5」引用，只用这块数据绘制两条同比趋势线。',1700],
+  ['trend','核对利润与现金流的背离','澄川制造 2026 年第三季度利润同比 +25%，经营现金流同比 −20%。',4200],
+  ['select-component','框选现金流调整明细','从分析表框选净利润、经营现金流和中间的调整项。',2300],
+  ['component','从插入菜单生成智能组件','点击柱子查明细，试算多回款，也可切换易方达模式。',3200]
  ]},
  workbench:{title:'白酒龙头研究工作台',view:'研究',intro:'从右侧提交研究需求，规划三个页签并逐步生成可联动的研究组件。',steps:HOME_WORKBENCH_STEPS.map(step=>[step.id,step.title,step.result,step.hold] as const)},
  board:{title:'自选行情看板',view:'研究',intro:'搭建六组件研究看板，再用智能容器补充一份自选股研究观察清单。',steps:[

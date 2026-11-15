@@ -5,6 +5,8 @@ import {
   CASH_FLOW_GUIDE_ADJUSTMENTS,CASH_FLOW_GUIDE_ANALYSIS,CASH_FLOW_GUIDE_SOURCE,CASH_FLOW_GUIDE_TREND,
   cashFlowGuideAnalysisOperations,cashFlowGuideChartOperation,cashFlowGuideComponent,createCashFlowGuideWorkbook
 } from '../src/shared/spreadsheet/cash-flow-guide'
+import {readWorkbookFile,writeWorkbookFile} from '../src/main/spreadsheet/files'
+import {HOME_SPREADSHEET_GUIDE_FILE} from '../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
 import {noteLibrarySpec} from '../src/main/notes/component-library'
 
 describe('cash-flow spreadsheet tutorial',()=>{
@@ -28,6 +30,18 @@ describe('cash-flow spreadsheet tutorial',()=>{
     const trend=inspectWorkbook(analysis,CASH_FLOW_GUIDE_TREND.sheetId,CASH_FLOW_GUIDE_TREND.range)
     expect(trend.cells.slice(1).map(row=>row[0]!.value)).toEqual(['2025Q4','2026Q1','2026Q2','2026Q3'])
     expect(trend.cells[4]!.slice(1).map(cell=>cell.formula)).toEqual(['=ROUND(G16*100,1)','=ROUND(H16*100,1)'])
+  })
+
+  it('loads the example through the Excel importer with the original values and detail rows',async()=>{
+    for(const locale of ['zh','en'] as const){
+      const fixture=createCashFlowGuideWorkbook('cash-demo',locale)
+      const bytes=await writeWorkbookFile(fixture,'xlsx',CASH_FLOW_GUIDE_SOURCE.sheetId)
+      const imported=await readWorkbookFile(bytes,HOME_SPREADSHEET_GUIDE_FILE[locale],fixture.id)
+      expect(imported.name).toBe(HOME_SPREADSHEET_GUIDE_FILE[locale])
+      const range=(book:typeof fixture)=>inspectWorkbook(book,CASH_FLOW_GUIDE_SOURCE.sheetId,CASH_FLOW_GUIDE_SOURCE.range).cells.map(row=>row.map(cell=>cell.value))
+      expect(range(imported)).toEqual(range(fixture))
+      expect(cashFlowGuideComponent(applyOperations(imported,cashFlowGuideAnalysisOperations(imported,locale)),locale)).toMatchObject(CASH_FLOW_GUIDE_ADJUSTMENTS)
+    }
   })
 
   it('uses the native interactive HTML contract and recalculates without overwriting the actual values',async()=>{
