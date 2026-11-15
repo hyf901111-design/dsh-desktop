@@ -8,7 +8,6 @@ export const scheduledStyles = `
 [data-dsh-sidebar-root] .hHd-Xa_newSession::before{content:'';width:16px;height:16px;flex:none;background:currentColor;mask:url('${icons.chat}') center/contain no-repeat}
 [data-dsh-sidebar-root] .hHd-Xa_newSession:nth-child(2)::before{mask-image:url('${icons.research}')}
 [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{mask-image:url('${icons.note.replaceAll("'",'%27')}')}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession[data-sidebar-new-spreadsheet]::before{width:20px!important;height:20px!important;mask-image:url('${icons.spreadsheet.replaceAll("'",'%27')}')!important}
 @media(max-height:740px){
  body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is(.hHd-Xa_logoRow,.hHd-Xa_newSessionGroup,.qDHVXG_rail){gap:4px!important}
 }
@@ -17,14 +16,14 @@ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession[dat
 .st-new-note-error{padding:12px;font-size:13px;line-height:1.5}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup{flex-direction:column!important}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:none!important;width:32px!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-browser],[data-sidebar-knowledge]){width:36px!important;height:36px!important;padding:8px!important;border-radius:6px!important;color:var(--odyssey-sidebar-glyph,inherit)!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-browser],[data-sidebar-knowledge])::before{background:currentColor!important;opacity:1;width:20px;height:20px}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge]){width:36px!important;height:36px!important;padding:8px!important;border-radius:6px!important;color:var(--odyssey-sidebar-glyph,inherit)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])::before{background:currentColor!important;opacity:1;width:20px;height:20px}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-home]::before{mask-image:url('${icons.homeRail.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]::before{mask-image:url('${icons.browserRail.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]::before{mask-image:url('${icons.knowledge.replaceAll("'",'%27')}')}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important;color:var(--dsw-alias-label-primary,#292b2e)!important}
-body[data-ds-dark-theme] [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{color:var(--dsw-alias-label-primary,#e8e8e8)!important}
-[data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup [data-sidebar-app-separator]{display:block;flex:none;width:20px;height:1px;margin:2px 0;background:var(--odyssey-sidebar-glyph,currentColor);opacity:.25;pointer-events:none}
-[data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{flex:0 0 auto!important;overflow:visible!important;min-height:0}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important;color:var(--dsw-alias-label-primary,#292b2e)!important}
+body[data-ds-dark-theme] [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{color:var(--dsw-alias-label-primary,#e8e8e8)!important}
+[data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{display:none!important}
 [data-dsh-sidebar-wide=false] :is(.hHd-Xa_regionArea,.qDHVXG_rail){flex:none!important;height:auto!important;min-height:0}
 [data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto}
 /* Settings is nested in the footer. Exclude it without raising specificity. */

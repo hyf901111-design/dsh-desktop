@@ -109,18 +109,16 @@ export function patchSidebarNewNoteShell(input){
   const begin='(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.newSessionGroup,'
   const start=source.indexOf(begin),stop=source.indexOf(',\n\t\t\t\t\t(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll"',start)
   if(start<0||stop<0)throw Error('Native Sidebar New Session group drift')
-  const group=source.slice(start,stop),last=group.lastIndexOf('})]')
+  const group=source.slice(start,stop)
 
-  const note='(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("session.newNote.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-new-note":"","aria-label":t("session.newNote.label"),onClick:()=>window.dispatchEvent(new CustomEvent("sherlock:sidebar-new-note")),children:void 0})})'
-  const spreadsheet=note.replaceAll('newNote.label','newSpreadsheet.label').replaceAll('sidebar-new-note','sidebar-new-spreadsheet')
-  const controls=group.slice(0,last)+'}), !wide && '+note+', !wide && '+spreadsheet+']'+group.slice(last+3)
+  const home='(0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.newSessionGroup,children:(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("sidebar.home.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-home":"","aria-label":t("sidebar.home.label"),onClick:()=>startSession()})})})'
   const root='\t\t\treturn (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tref: column,'
   const foot='(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.footArea,'
   return apply(source,'shell',[
     [group,'wide && newSessionControls'],
-    [root,'\t\t\tconst newSessionControls = '+controls+';\n'+root],
-    [foot,'!wide && newSessionControls,\n'+foot],
-    ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"session.newNote.label":"新建笔记",\n"session.newSpreadsheet.label":"新建表格",'],
-    ['"session.newResearch.label": "New research",','"session.newResearch.label": "New research",\n"session.newNote.label":"New note",\n"session.newSpreadsheet.label":"New spreadsheet",'],
+    [root,'\t\t\tconst newSessionControls = '+group+';\n'+root],
+    [foot,'!wide && '+home+',\n'+foot],
+    ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"sidebar.home.label":"主页",'],
+    ['"session.newResearch.label": "New research",','"session.newResearch.label": "New research",\n"sidebar.home.label":"Home",'],
   ])
 }

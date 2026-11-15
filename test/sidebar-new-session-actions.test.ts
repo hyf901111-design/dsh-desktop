@@ -239,13 +239,29 @@ describe('normal new Note workspace flow',()=>{
  })
 })
 
-it('renders the actual rail in Add Workspace → Chat → Research → Note → More order',async()=>{
- const w=new Window({url:'https://sherlock.local/'});installBrowserGlobals(w)
- const client=await loadClientBundle('dsh-client-ui-sidebar',w,['SidebarRoot'],process.env.SHERLOCK_NEW_NOTE_RED?undefined:patchSidebarNewNoteShell)
- const root=createRoot(w.document.body as unknown as Element)
- await act(async()=>root.render(createElement(client.__testSidebarRoot,{collapsed:true,width:240,t:(key:string)=>key,toggleSidebar:vi.fn(),startSession:vi.fn(),startResearchSession:vi.fn(),renderSlot:(name:string)=>name==='sidebar.workspaces'?createElement('button',{'data-test-folder':'',children:'Add workspace'}):null})))
- const buttons=[...w.document.querySelectorAll('button')];expect(buttons.findIndex(node=>node.hasAttribute('data-test-folder'))).toBeLessThan(buttons.findIndex(node=>node.getAttribute('aria-label')==='session.new.label'));expect(buttons.at(-1)?.hasAttribute('data-sidebar-new-note')).toBe(true)
- await act(async()=>root.unmount());w.happyDOM.close()
+it('uses the existing New Chat action for the single collapsed Home entry', async () => {
+  const w = new Window({ url: 'https://sherlock.local/' })
+  installBrowserGlobals(w)
+  const client = await loadClientBundle('dsh-client-ui-sidebar', w, ['SidebarRoot'], patchSidebarNewNoteShell)
+  const root = createRoot(w.document.body as unknown as Element)
+  const startSession = vi.fn()
+  const startResearchSession = vi.fn()
+  try {
+    await act(async () => root.render(createElement(client.__testSidebarRoot, {
+      collapsed: true, width: 240, t: (key: string) => key, toggleSidebar: vi.fn(),
+      startSession, startResearchSession, renderSlot: () => null
+    })))
+    const creation = w.document.querySelectorAll('button.hHd-Xa_newSession')
+    expect(creation).toHaveLength(1)
+    const home = w.document.querySelector('button[data-sidebar-home]')
+    expect(home?.getAttribute('aria-label')).toBe('sidebar.home.label')
+    home?.dispatchEvent(new w.MouseEvent('click', { bubbles: true }))
+    expect(startSession).toHaveBeenCalledOnce()
+    expect(startResearchSession).not.toHaveBeenCalled()
+  } finally {
+    await act(async () => root.unmount())
+    w.happyDOM.close()
+  }
 })
 
 describe('Sherlock sidebar new-session actions', () => {

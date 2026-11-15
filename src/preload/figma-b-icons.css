@@ -11,8 +11,8 @@ body [data-dsh-sidebar-root] .YDXeBa_folder>svg>*{visibility:hidden}
 body [data-dsh-sidebar-root] [data-srb-board-group]>.YDXeBa_projectRow .YDXeBa_folder>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-board-folder-closed-18.svg) center/contain no-repeat}
 body [data-dsh-sidebar-root] [data-srb-board-group]>.YDXeBa_projectRow[aria-expanded=true] .YDXeBa_folder>svg{mask-image:url(/odyssey-board-folder-open-18.svg)}
 body [data-dsh-sidebar-root] [data-srb-board-group]>.YDXeBa_projectRow .YDXeBa_folder>svg>*{visibility:hidden}
-body [data-dsh-sidebar-root] .hHd-Xa_newSession:not([data-sidebar-new-note],[data-sidebar-new-spreadsheet]):first-child::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-new-chat-18.svg)!important}
-body [data-dsh-sidebar-root] .hHd-Xa_newSession:nth-child(2)::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-research-18.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] .hHd-Xa_newSession:not([data-sidebar-new-note],[data-sidebar-new-spreadsheet]):first-child::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-new-chat-18.svg)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] .hHd-Xa_newSession:nth-child(2)::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-research-18.svg)!important}
 body [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-note-add-18.svg)!important}
 body [data-dsh-sidebar-root] .st-more .st-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-more-18.svg)!important}
 body [data-dsh-sidebar-root] .srb-bell-icon{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-notifications-20.svg)}
@@ -31,9 +31,6 @@ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margi
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_toggle>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-sidebar-20.svg)!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_logoRow .hHd-Xa_iconButton:not(.hHd-Xa_toggle)>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-search-20.svg)!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] [aria-label="添加工作区"]>svg{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-workspace-add-20.svg)!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession:first-child::before{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-new-chat-20.svg)!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession:nth-child(2)::before{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-research-20.svg)!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSession[data-sidebar-new-note]::before{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-note-add-20.svg)!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .st-more .st-icon{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-more-20.svg)!important}
 body .t8lSSG_tabBarPlus>svg{width:18px!important;height:18px!important;flex:none;background:currentColor;mask:url(/odyssey-b-new-tab-18.svg) center/contain no-repeat}
 body .t8lSSG_tabBarPlus>svg>*{visibility:hidden}
