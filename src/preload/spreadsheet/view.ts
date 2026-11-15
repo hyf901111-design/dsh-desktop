@@ -281,7 +281,7 @@ class SpreadsheetView{
   this.chrome.innerHTML='<div class="ew-sheet-ribbon" role="toolbar" aria-label="表格工具栏">'+button('menu','菜单',{glyph:'menu',value:'commands',className:'dropdown',withLabel:true})+toolbarDivider+'<div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+(this.sharedReadOnly?'':this.focusButton())+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
-   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" data-ui-preserve title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
+   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" data-ui-preserve title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active&&!this.sharedReadOnly?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
   }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span>'+(book.components?.length?button('menu','组件 '+book.components.length,{glyph:'grid',value:'components',label:'查看工作簿组件'}):'')+(book.charts?.length?button('menu','图表 '+book.charts.length,{glyph:'chart',value:'charts',label:'查看工作簿图表'}):'')+'</div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
   const tabList=this.foot.querySelector<HTMLElement>('.ew-sheet-tab-list')!
   tabList.scrollLeft=tabScroll
@@ -461,7 +461,7 @@ class SpreadsheetView{
   try{
    const {createSheetEngine}=await import('./engine')
    if(this.disposed||token!==this.modeToken)return
-   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction,this.positionSheetObjects)
+   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),()=>this.readSelection(),this.sharedReadOnly?undefined:this.contextAction,this.positionSheetObjects,this.sharedReadOnly)
    if(this.preview)this.engine.setEditable(false)
    const book=this.engine.model
    if(!position&&previous&&book.getSheetBySheetId(previous.sheetId)){
@@ -749,7 +749,7 @@ class SpreadsheetView{
    case 'sort':return [{label:'按选区首列升序',action:'sort',value:'asc'},{label:'按选区首列降序',action:'sort',value:'desc'}]
    case 'functions':return items(['SUM','AVERAGE','MIN','MAX','COUNT','IF','IFERROR','NPV','IRR','XIRR'],'function')
    case 'zoom':return items(['50%','75%','100%','125%','150%','200%'],'zoom')
-   case 'ranges':return [{label:'引用当前选区到对话',action:'reference-selection'},{label:'前往 A1',action:'jump',value:'A1'},{label:'输入单元格地址…',action:'address-dialog'},...sheet?[{label:'前往当前选区 '+this.selection?.range,action:'jump',value:this.selection?.range}]:[]]
+   case 'ranges':return [...(this.sharedReadOnly?[]:[{label:'引用当前选区到对话',action:'reference-selection'}]),{label:'前往 A1',action:'jump',value:'A1'},{label:'输入单元格地址…',action:'address-dialog'},...sheet?[{label:'前往当前选区 '+this.selection?.range,action:'jump',value:this.selection?.range}]:[]]
   }
   return []
  }

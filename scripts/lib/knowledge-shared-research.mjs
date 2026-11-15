@@ -6,7 +6,11 @@ const anchors = [
   ['const collaborationCanWrite = () => !sherlockShared(sessionId) || collaborationWritable;',
     'const collaborationCanWrite = () => !knowledgeReadOnly && (!sherlockShared(sessionId) || collaborationWritable);'],
   ['const sharedReadOnly = sherlockShared(sessionId) && boardView?.permissions.edit !== true;',
-    'const sharedReadOnly = (typeof sessionId === "string" && sessionId.startsWith("knowledge-view:")) || (sherlockShared(sessionId) && boardView?.permissions.edit !== true);']
+    'const sharedReadOnly = (typeof sessionId === "string" && sessionId.startsWith("knowledge-view:")) || (sherlockShared(sessionId) && boardView?.permissions.edit !== true);'],
+  ['const publish = (next, persist = false, preserveStack = false) => {',
+    'const publish = (next, persist = false, preserveStack = false) => {\n                if (knowledgeReadOnly && (next.files !== snapshot.files || next.artifacts !== snapshot.artifacts)) return false;'],
+  ['const commitUpdate = (patch, persist = true) => {',
+    'const commitUpdate = (patch, persist = true) => {if(knowledgeReadOnly)return false;']
 ]
 
 export function stripKnowledgeSharedResearch(source) {

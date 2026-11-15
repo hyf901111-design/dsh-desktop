@@ -7,6 +7,7 @@ import { KnowledgeFilePreview } from './knowledge/file-preview'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import { researchHasContent } from './knowledge/session-content'
+import { createKnowledgeSessionCopier } from './knowledge/session-copy'
 import { createKnowledgeSessionSnapshot } from './knowledge/session-share'
 import type { SessionSummary } from '@deepseek-ai/dsh-host-apiproxy/api'
 import {routeBrowserUse} from './browser/route'
@@ -1506,6 +1507,10 @@ async function bootstrap(): Promise<void> {
   installKnowledgeIpc({
     store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow,
     identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
+    copySession: createKnowledgeSessionCopier({
+      rpc: taskRpc, notes: calendarNotes, workbooks: knowledgeWorkbooks, research: researchCanvasStorage,
+      fallbackWorkspacePath: join(app.getPath('userData'), 'knowledge-workspaces', '知识库副本')
+    }),
     sessionEvidence: (owner, id, mode) => {
       let hasContent = false
       try {

@@ -279,7 +279,8 @@ function initializeUi(): void {
   }
   const disposeSharedKnowledgeSessions = mountSharedKnowledgeSessions(document, workspaceSurfaceHost,
     id => ipcRenderer.invoke('knowledge:request', 'shared-session', { id }),
-    (id, updatedAt) => ipcRenderer.invoke('knowledge:request', 'shared-session-status', { id, updatedAt }))
+    (id, updatedAt) => ipcRenderer.invoke('knowledge:request', 'shared-session-status', { id, updatedAt }),
+    (id, updatedAt, fromSession) => ipcRenderer.invoke('knowledge:request', 'copy-shared-session', { id, updatedAt, fromSession }))
   window.addEventListener('unload', disposeSharedKnowledgeSessions, { once: true })
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
     memory: knowledgeMemory,

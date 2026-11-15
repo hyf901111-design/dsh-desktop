@@ -32,7 +32,7 @@ export const sheetContextCopy={
 } as const
 export type SheetContextCommand=keyof typeof sheetContextCopy
 
-export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void,contextCommand?:(command:SheetContextCommand)=>void,viewportChanged?:()=>void){
+export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void,contextCommand?:(command:SheetContextCommand)=>void,viewportChanged?:()=>void,sharedReadOnly=false){
  const doc=host.ownerDocument,win=doc.defaultView!
  const style=doc.createElement('style');style.textContent=editorStyles;doc.head.append(style)
  const originalDark=doc.documentElement.classList.contains('univer-dark')
@@ -80,7 +80,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   locale:doc.documentElement.dataset.odysseyLocale==='en'?LocaleType.EN_US:LocaleType.ZH_CN,
   locales:{[LocaleType.ZH_CN]:mergeLocales(coreZh,filterZh,sortZh,contextLocale(0)),[LocaleType.EN_US]:mergeLocales(coreEn,filterEn,sortEn,contextLocale(1))},
   darkMode:dark(),theme:theme(),plugins:[SpreadsheetCanvasColors],
-  presets:[UniverSheetsCorePreset({container:host,header:false,toolbar:false,formulaBar:false,footer:false,contextMenu:true,disableAutoFocus:true,sheets:{freezeSync:true,scrollConfig:scroll()}}),UniverSheetsFilterPreset(),UniverSheetsSortPreset()]
+  presets:[UniverSheetsCorePreset({container:host,header:false,toolbar:false,formulaBar:false,footer:false,contextMenu:!sharedReadOnly,disableAutoFocus:true,sheets:{freezeSync:true,scrollConfig:scroll()}}),UniverSheetsFilterPreset(),UniverSheetsSortPreset()]
  })
  let disposed=false
  try{
@@ -262,7 +262,14 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  resize.observe(host)
  const subs=[
   api.getFormula().calculationResultApplied(()=>{if(!disposed)change(true)}),
+  api.addEvent(api.Event.BeforeSheetEditStart,event=>{if(!editingAllowed)event.cancel=true}),
   api.addEvent(api.Event.BeforeCommandExecute,event=>{
+   if(!editingAllowed&&event.id==='sheet.operation.set-cell-edit-visible'&&(event.params as {visible?:boolean})?.visible){
+    event.cancel=true;return
+   }
+   if(sharedReadOnly&&event.type===CommandType.MUTATION&&event.id.startsWith('sheet.')){
+    event.cancel=true;return
+   }
    if(event.id!=='sheet.mutation.set-range-values')return
    const values=(event.params as {cellValue?:unknown})?.cellValue
    if(!values||typeof values!=='object')return

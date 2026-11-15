@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, existsSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
+import { mkdirSync, existsSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import * as Y from 'yjs'
 import type { NoteContent, NoteLoad, NoteSave, SavedNote, DraftNote } from '../../shared/workspace-notes'
@@ -82,6 +82,7 @@ export class NotesStore {
     file.drafts = file.drafts.slice(-10)
     this.write(owner, session, file)
   }
+  remove(owner: string, session: string): void { rmSync(this.path(owner, session), { force: true }) }
   discardDraft(owner: string, session: string, clientId: string): void {
     const file = this.read(owner, session)
     file.drafts = file.drafts.filter(d => d.clientId !== clientId)
