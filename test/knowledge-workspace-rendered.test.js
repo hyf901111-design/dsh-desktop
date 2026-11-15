@@ -13,6 +13,7 @@ beforeAll(async () => {
   const output = await build({
     stdin: { resolveDir: process.cwd(), contents: `
       import { WorkspaceSurfaceHost } from './src/preload/workspace-surface-host'
+      import { BrowserAppView } from './src/preload/browser/view'
       import { mountFloatingSurfaces } from './src/preload/floating-surfaces'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
@@ -20,6 +21,17 @@ beforeAll(async () => {
       import React from 'react'
       import { createRoot } from 'react-dom/client'
       const host = new WorkspaceSurfaceHost(document)
+      if (document.body.hasAttribute('data-test-browser-topbar')) {
+        const browser = new BrowserAppView(document, {
+          subscribe: () => () => {},
+          request: async () => ({
+            tabs: [{ id: 'start', title: '新标签页', url: '', zoom: 1 }], activeId: 'start',
+            history: [], closed: [], bookmarks: [], folders: [], downloads: [], settings: { bookmarksBar: true }
+          }),
+          layout: async () => true
+        }, host)
+        window.openBrowser = () => browser.open()
+      }
       const longFolder = document.body.dataset.testFolderName
       if (longFolder) mountFloatingSurfaces(document)
       window.openLibrarySettings = () => document.dispatchEvent(new CustomEvent('sherlock:knowledge-show-section', { detail: 'memory' }))
@@ -189,6 +201,38 @@ beforeAll(async () => {
 }, 20_000)
 
 afterAll(async () => { await browser?.close() })
+
+it('aligns the knowledge app icon and title with the browser when switching workspaces', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<body data-test-browser-topbar data-ds-dark-theme><aside data-dsh-sidebar-root style="position:fixed;left:0;top:10px;width:250px"></aside><div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div></body>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const browserApp = page.getByRole('region', { name: '浏览器', exact: true })
+    const measure = region => region.locator('.workspace-app-topbar').evaluate(bar => {
+      const positions = [...bar.querySelectorAll('.workspace-back-button, .workspace-app-title > i, .workspace-app-title > span')]
+        .map(el => { const { x, y, width, height } = el.getBoundingClientRect(); return { x, y, width, height } })
+      const icon = bar.querySelector('.workspace-app-title > i')
+      return { positions, icon: getComputedStyle(icon).maskImage }
+    })
+    for (const width of [1200, 870, 700]) {
+      await page.setViewportSize({ width, height: 820 })
+      await page.evaluate(() => window.openBrowser())
+      await expect.poll(() => browserApp.evaluate(el => el.getBoundingClientRect().width)).toBe(width - 260)
+      const browserHeader = await measure(browserApp)
+      await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
+      await library.waitFor()
+      const knowledgeHeader = await measure(library)
+      expect(knowledgeHeader.positions).toEqual(browserHeader.positions)
+      expect(knowledgeHeader.icon).toContain('data:image/svg+xml')
+      expect(knowledgeHeader.icon).not.toBe(browserHeader.icon)
+    }
+  } finally {
+    await page.close()
+  }
+})
 
 it('preserves filters through return and leaves space around the selected row', async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })

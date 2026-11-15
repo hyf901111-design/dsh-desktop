@@ -71,14 +71,6 @@
   height: 16px;
   vertical-align: middle;
 }
-.knowledge-header {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: 0 0 44px;
-  padding: 0 8px 0 16px;
-}
-.knowledge-header > strong { font-size: 14px; font-weight: 600; white-space: nowrap; }
 .knowledge-header-tabs { display: flex; gap: 4px; margin-left: 16px; }
 .knowledge-header-tabs button { padding: 5px 12px; color: var(--knowledge-muted); white-space: nowrap; }
 .knowledge-header-tabs [aria-current] { background: var(--knowledge-active); color: var(--knowledge-ink); }

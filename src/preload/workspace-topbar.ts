@@ -8,6 +8,12 @@ export function workspaceBackButton(className = '', action: 'back' | 'exit' = 'b
 
 const controls = 'body :is(.workspace-back-button, :is([data-scheduled-panel],[data-workspace-panel=integrations]) [data-odyssey-panel-entry=right])'
 const styles = `
+.workspace-app-topbar{display:flex;align-items:center;gap:8px;height:44px;flex:none;padding:0 12px}
+.workspace-app-title{display:flex;align-items:center;gap:7px;height:32px;padding:0 2px;font-weight:500;flex:none;white-space:nowrap}
+.workspace-app-title>i{display:inline-block;flex:none;width:18px;height:18px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
+.workspace-app-title,.workspace-app-title *{-webkit-app-region:drag;user-select:none;cursor:default}
+@container(max-width:700px){.workspace-app-title{width:32px}.workspace-app-title>span{display:none}}
+@container(max-width:480px){.workspace-app-topbar{gap:4px;padding-left:8px}.workspace-app-title{width:28px;padding:0 4px}}
 body :is(.st-root,.ig-root,.eb-root,.knowledge-workspace) .workspace-back-button{width:28px;min-width:28px;height:28px;display:grid;place-items:center;padding:6px!important;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary,var(--eb-muted,#777));cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag;transition:background-color .12s ease,color .12s ease}
 body :is(.st-root,.ig-root) .workspace-back-button{position:absolute;top:17px;left:19px}
 body :is(.st-root,.ig-root)[data-dark=true] .workspace-back-button{color:var(--dsw-alias-label-secondary,#aaa)}

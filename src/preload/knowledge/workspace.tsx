@@ -9,6 +9,7 @@ import {
 import type { KnowledgeViewMessage, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
+import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
 import { KnowledgeMemory } from './memory'
 import { FileSearch } from './file-search'
@@ -641,9 +642,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   return <>
-    <header className="knowledge-header">
+    <header className="knowledge-header workspace-app-topbar">
       <div className="knowledge-back" onClick={() => host.back()} dangerouslySetInnerHTML={{ __html: workspaceBackButton() }} />
-      <strong>知识库</strong>
+      <div className="workspace-app-title">
+        <i aria-hidden="true" style={{ maskImage: `url('${icons.knowledge.replaceAll("'", '%27')}')` }} />
+        <span>知识库</span>
+      </div>
       <div className="knowledge-header-tabs">
         <button type="button" aria-current={tab === 'files' ? 'page' : undefined} onClick={() => setTab('files')}>文件资料</button>
         <button type="button" aria-current={tab === 'memory' ? 'page' : undefined} onClick={() => {
