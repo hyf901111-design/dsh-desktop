@@ -311,15 +311,17 @@ import { patchPrototypeSourceTool } from './lib/prototype-source-tool.mjs'
 writeFileSync(fsRuntimePath, patchPrototypeSourceTool(patchFileRecovery(readFileSync(fsRuntimePath, 'utf8'))))
 writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversationPath, 'utf8')))
 
-// Dedicated new boards take their durable name from the first task, not an empty component.
+// Dedicated new boards and knowledge copies have their own durable titles.
 {
   const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
   let source = readFileSync(path, 'utf8')
   const before = 'if (!research.engaged) continue;'
-  const after = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true") continue;'
+  const legacy = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true") continue;'
+  const after = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true" || window.dshDesktop?.researchCanvasStorage?.getItem("sherlock.knowledge.copy-title.v1:" + id)) continue;'
   if (!source.includes(after)) {
-    if (!source.includes(before)) throw Error('Research intent title anchor missing')
-    source = source.replace(before, after)
+    const anchor = source.includes(legacy) ? legacy : before
+    if (!source.includes(anchor)) throw Error('Research intent title anchor missing')
+    source = source.replace(anchor, after)
     writeFileSync(path, source)
   }
 }
