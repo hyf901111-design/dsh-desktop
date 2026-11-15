@@ -8,7 +8,7 @@ import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/compone
 import {readNoteGenerationStream} from '../notes/stream'
 import {canSaveCustomComponent,type ComponentLibraryStore} from '../state/component-library'
 import {readWorkbookPath,writeWorkbookFile} from './files'
-import {cashFlowGuideAnalysisOperations,cashFlowGuideChartOperation,cashFlowGuideComponent,createCashFlowGuideWorkbook,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
+import {cashFlowGuideAnalysisOperations,cashFlowGuideChartOperation,cashFlowGuideComponent,createCashFlowGuideWorkbook,CASH_FLOW_GUIDE_BOOK_PREFIX,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
 import {SpreadsheetService} from './service'
 import {SpreadsheetStore,type WorkbookKey} from './store'
 import type {ConversationComponentVisibleContext} from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
@@ -75,9 +75,9 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     const locale=options.locale?.()??'zh'
     if(action==='cash-flow-guide-source'){
      if(workbook||store.recent(key).length)throw Error('此会话已有工作簿，演示未覆盖现有内容。')
-     return store.create(key,revision,createCashFlowGuideWorkbook('cash-flow-guide-'+randomUUID(),locale))
+     return store.create(key,revision,createCashFlowGuideWorkbook(CASH_FLOW_GUIDE_BOOK_PREFIX+randomUUID(),locale))
     }
-    if(!workbook?.id.startsWith('cash-flow-guide-'))throw Error('示例工作簿已切换。')
+    if(!workbook?.id.startsWith(CASH_FLOW_GUIDE_BOOK_PREFIX))throw Error('示例工作簿已切换。')
     const hasAnalysis=Object.hasOwn(workbook.sheets,CASH_FLOW_GUIDE_TREND.sheetId)
     const hasTrend=workbook.charts?.some(item=>item.chartId==='cash-flow-guide-trend')
     if(action==='cash-flow-guide-analysis'&&!hasAnalysis){

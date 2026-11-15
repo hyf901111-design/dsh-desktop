@@ -8,7 +8,8 @@ export const CASH_FLOW_GUIDE_ADJUSTMENTS = {sheetId:CASH_FLOW_GUIDE_ANALYSIS.she
 
 const sourceAdjustments = 'A29:D33'
 const chartId = 'cash-flow-guide-trend'
-const componentId = 'cash-flow-guide-bridge'
+export const CASH_FLOW_GUIDE_BOOK_PREFIX = 'cash-flow-guide-'
+export const CASH_FLOW_GUIDE_COMPONENT_ID = 'cash-flow-guide-bridge'
 const periods = ['2024Q4','2025Q1','2025Q2','2025Q3','2025Q4','2026Q1','2026Q2','2026Q3']
 const samples = [
   [[16.4,1.72,1.79],[17.4,1.80,1.90],[18.8,1.91,1.99],[20,2,2],[18.5,1.96,2.10],[20.1,2.09,2.13],[21.7,2.30,2.07],[24,2.50,1.60]],
@@ -172,10 +173,10 @@ export function cashFlowGuideComponent(workbook:Workbook,locale:CashFlowGuideLoc
   const modeledCash=steps.slice(0,-1).reduce((sum,step)=>sum+step.amount,0)
   if(steps[0]!.amount<=0||modeledCash!==steps.at(-1)!.amount)throw Error('现金流调整与实际值未能对账，请检查季度分析。')
   return {
-    componentId,...CASH_FLOW_GUIDE_ADJUSTMENTS,
+    componentId:CASH_FLOW_GUIDE_COMPONENT_ID,...CASH_FLOW_GUIDE_ADJUSTMENTS,
     placement:{mode:'docked',layout:{x:42,y:12,width:460,height:410,space:'sheet'}},
     node:{
-      id:componentId,title:labels.component,kind:'generated-container',generationStatus:'completed',
+      id:CASH_FLOW_GUIDE_COMPONENT_ID,title:labels.component,kind:'generated-container',generationStatus:'completed',
       containerSpec:{version:1,type:'html',title:labels.component,html:buildCashFlowGuideHtml({
         locale,company:labels.companies[0],period:'2026Q3',steps
       })},

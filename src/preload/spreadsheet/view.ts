@@ -9,7 +9,7 @@ import {browserIcons} from '../browser/icons'
 import {workbenchStylePalette} from '../../../packages/dsh-research-task-runtime/workbench-style.js'
 import {serializeWorkbenchContent,workbenchImageExportRequest} from '../../../packages/dsh-research-task-runtime/workbench-export.js'
 import type {ResearchCanvasExportRequest,ResearchCanvasExportResult} from '../../main/state/research-canvas-export'
-import {CASH_FLOW_GUIDE_ADJUSTMENTS,CASH_FLOW_GUIDE_ANALYSIS,CASH_FLOW_GUIDE_SOURCE,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
+import {CASH_FLOW_GUIDE_ADJUSTMENTS,CASH_FLOW_GUIDE_ANALYSIS,CASH_FLOW_GUIDE_BOOK_PREFIX,CASH_FLOW_GUIDE_COMPONENT_ID,CASH_FLOW_GUIDE_SOURCE,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
@@ -242,9 +242,9 @@ class SpreadsheetView{
  }
  async insertCashFlowGuideComponent(wait:()=>Promise<void>){
   await this.addComponent('component-cash-flow-guide','',wait)
-  if(!this.record.workbook?.components?.some(item=>item.componentId==='cash-flow-guide-bridge'))throw Error('现金流拆解台尚未保存。')
-  this.jump('A5:C5')
-  return this.componentCards.get('cash-flow-guide-bridge')?.element
+  if(!this.record.workbook?.components?.some(item=>item.componentId===CASH_FLOW_GUIDE_COMPONENT_ID))throw Error('现金流拆解台尚未保存。')
+  this.jump(CASH_FLOW_GUIDE_TREND.range)
+  return this.componentCards.get(CASH_FLOW_GUIDE_COMPONENT_ID)?.element
  }
  closeCashFlowGuideComponent(){
   if(this.modal.dataset.docked==='smart')this.closeDialog()
@@ -1607,7 +1607,10 @@ class SpreadsheetView{
   return (this.record.workbook?.sheets[component.sheetId]?.name??'')+'!'+component.range
  }
  private publishComponent(card:ComponentCard,component:WorkbookComponent){
-  this.publishCard(card,component.node,{mode:'component',source:this.componentSourceRange(component),floating:component.placement?.mode==='floating',theme:component.theme})
+  const localSimulation=component.componentId===CASH_FLOW_GUIDE_COMPONENT_ID&&
+   this.record.workbook?.id.startsWith(CASH_FLOW_GUIDE_BOOK_PREFIX)===true
+  this.publishCard(card,component.node,{mode:'component',source:this.componentSourceRange(component),
+   floating:component.placement?.mode==='floating',theme:component.theme,localSimulation})
  }
  private publishGeneration(){
   const job=this.componentJob
