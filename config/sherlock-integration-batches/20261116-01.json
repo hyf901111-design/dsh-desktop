@@ -86,6 +86,59 @@
           "需按本地构建手册核验完整客户端"
         ],
         "generatedAt": "2026-11-15T23:45:53.434515+00:00"
+      },
+      "merged": {
+        "mergeCommit": "02d78fb9845b6df24d70ba6880fd34bfb59617a8",
+        "verificationCommit": "02d78fb9845b6df24d70ba6880fd34bfb59617a8",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "02d78fb9845b6df24d70ba6880fd34bfb59617a8",
+            "completedAt": "2026-11-15T23:46:06.842Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-spreadsheet-runtime.test.js",
+              "test/spreadsheet-cash-flow-guide.test.ts",
+              "test/spreadsheet-workbook.test.ts",
+              "test/home-guide-operations-entry.test.ts",
+              "test/home-guide-explore-entry-browser.test.ts",
+              "test/browser-sidebar-entry.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-spreadsheet-runtime.test.js test/spreadsheet-cash-flow-guide.test.ts test/spreadsheet-workbook.test.ts test/home-guide-operations-entry.test.ts test/home-guide-explore-entry-browser.test.ts test/browser-sidebar-entry.test.ts",
+            "verifiedCommit": "02d78fb9845b6df24d70ba6880fd34bfb59617a8",
+            "completedAt": "2026-11-15T23:46:06.842Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "test/home-operations-browser.test.js",
+              "-t",
+              "all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/home-operations-browser.test.js -t all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks",
+            "verifiedCommit": "02d78fb9845b6df24d70ba6880fd34bfb59617a8",
+            "completedAt": "2026-11-15T23:46:06.842Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-15T23:46:06.842Z"
       }
     }
   ],
