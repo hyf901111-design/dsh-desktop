@@ -299,17 +299,23 @@ it('lists real session modes under all files and opens each one in its native vi
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const group = library.getByRole('group', { name: '所有文件子分类' })
-    expect(await group.getByRole('button').locator('span').allTextContents()).toEqual(['文件资料', '研究模式', '笔记模式', '表格模式'])
+    expect(await group.getByRole('button').locator('span').allTextContents()).toEqual(['文件资料', '我的研究', '我的笔记', '我的表格'])
     await expect.poll(() => group.locator('small').allTextContents()).toEqual(['3', '2', '1', '1'])
+    const total = library.getByRole('button', { name: /^所有文件 / }).locator('small')
+    await expect.poll(() => total.textContent()).toBe('7')
+    const badge = element => getComputedStyle(element).backgroundColor
+    const fill = await total.evaluate(badge)
+    expect(fill).not.toBe('rgba(0, 0, 0, 0)')
+    expect(await library.getByRole('button', { name: '新建文件夹' }).evaluate(badge)).toBe(fill)
     const countColumn = await library.getByRole('button', { name: /^手动收藏 / }).locator('small').boundingBox()
     for (const count of await group.locator('small').all()) {
       const box = await count.boundingBox()
       expect({ x: box.x, width: box.width }).toEqual({ x: countColumn.x, width: countColumn.width })
     }
     for (const [label, title, id, view] of [
-      ['研究模式', '消费行业研究看板', 'board', 'research'],
-      ['笔记模式', '季度会议笔记', 'note', 'notes'],
-      ['表格模式', '渠道库存表格', 'sheet', 'spreadsheet']
+      ['我的研究', '消费行业研究看板', 'board', 'research'],
+      ['我的笔记', '季度会议笔记', 'note', 'notes'],
+      ['我的表格', '渠道库存表格', 'sheet', 'spreadsheet']
     ]) {
       await group.getByRole('button', { name: label }).click()
       const directory = library.getByRole('main', { name: label })
@@ -355,9 +361,9 @@ it('publishes and manages read-only sharing from each mode with inset dialog con
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     for (const [label, title, id, mode] of [
-      ['研究模式', '消费行业研究看板', 'board', 'research'],
-      ['笔记模式', '季度会议笔记', 'note', 'notes'],
-      ['表格模式', '渠道库存表格', 'sheet', 'spreadsheet']
+      ['我的研究', '消费行业研究看板', 'board', 'research'],
+      ['我的笔记', '季度会议笔记', 'note', 'notes'],
+      ['我的表格', '渠道库存表格', 'sheet', 'spreadsheet']
     ]) {
       await library.getByRole('button', { name: label }).click()
       await library.getByRole('button', { name: `共享会话「${title}」` }).click()
@@ -454,7 +460,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
       expect(Math.abs(text.y + text.height / 2 - (contentStart + bounds.y + bounds.height) / 2)).toBeLessThan(2)
       expect(Math.abs(text.x + text.width / 2 - bounds.x - contentWidth / 2)).toBeLessThan(2)
     }
-    for (const name of ['研究模式', '笔记模式', '表格模式']) {
+    for (const name of ['我的研究', '我的笔记', '我的表格']) {
       await categories.getByRole('button', { name: new RegExp(`^${name}( |$)`) }).click()
       const directory = library.getByRole('main', { name })
       await centered(directory.getByText('这里还没有会话。'), directory.locator('.knowledge-session-results'))
@@ -1516,11 +1522,11 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
     expect(Math.max(...counts.map(count => count.right)) - Math.min(...counts.map(count => count.right))).toBeLessThan(1)
 
     for (const label of ['所有文件', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
-      '研究模式', '笔记模式', '表格模式']) {
+      '我的研究', '我的笔记', '我的表格']) {
       const category = label === '行业研究' ? library.getByRole('button', { name: label, exact: true })
         : nav.getByRole('button', { name: new RegExp('^' + label + '( |$)') })
       await category.click()
-      const session = label.endsWith('模式')
+      const session = ['我的研究', '我的笔记', '我的表格'].includes(label)
       const scroller = library.locator(session ? '.knowledge-session-results' : '.knowledge-table-wrap')
       const rows = scroller.locator(session ? 'li' : 'tbody tr')
       await expect.poll(() => rows.count(), label).toBe(20)
@@ -1644,7 +1650,7 @@ it('keeps the knowledge pager on one row as its own column shrinks', async () =>
       })))
       document.dispatchEvent(new Event('sherlock:knowledge-changed'))
     })
-    for (const category of ['所有文件', '笔记模式']) {
+    for (const category of ['所有文件', '我的笔记']) {
       const totalPages = category === '所有文件' ? 11 : 3
       await library.getByRole('navigation', { name: '知识库分类' })
         .getByRole('button', { name: new RegExp('^' + category + ' ') }).click()

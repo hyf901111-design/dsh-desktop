@@ -20,8 +20,9 @@ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGrou
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])::before{background:currentColor!important;opacity:1;width:20px;height:20px}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-home]::before{mask-image:url('${icons.homeRail.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]::before{mask-image:url('${icons.browserRail.replaceAll("'",'%27')}')}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]{position:relative}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]::before{position:absolute;inset:0;margin:auto;mask-image:url('${icons.knowledge.replaceAll("'",'%27')}')}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]{display:grid!important;place-items:center!important;padding:0!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]::before{content:none}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup [data-sidebar-knowledge-glyph]{display:block;width:24px;height:24px;background:currentColor;mask:url('${icons.knowledge.replaceAll("'",'%27')}') center/100% 100% no-repeat;pointer-events:none}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important;color:var(--dsw-alias-label-primary,#292b2e)!important}
 body[data-ds-dark-theme] [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{color:var(--dsw-alias-label-primary,#e8e8e8)!important}
 [data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{display:none!important}
