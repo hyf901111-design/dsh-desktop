@@ -90,11 +90,28 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     }
     check()
   }
+  const clickControl = async (read: () => HTMLButtonElement | undefined, message: string, beforeClick?: () => void) => {
+    const ready = () => {
+      check()
+      const target = read()
+      return target?.isConnected && !target.disabled ? target : undefined
+    }
+    const initial = await waitFor(ready, message)
+    await pointWhenVisible(initial, 'click')
+    // The spreadsheet can repaint its empty state and ribbon during layout.
+    // Resolve the native control again after the visual cursor has traveled.
+    let current = await waitFor(ready, message)
+    if (current !== initial) {
+      await pointWhenVisible(current, 'click')
+      current = await waitFor(ready, message)
+    }
+    beforeClick?.()
+    current.click()
+  }
   const setRight = async (open: boolean) => {
     const button = await waitFor(() => rightToggle() ?? undefined, '表格对话开关尚未就绪。')
     if (button.getAttribute('aria-expanded') === String(open)) return
-    await point(button, 'click')
-    button.click()
+    await clickControl(() => rightToggle() ?? undefined, '表格对话开关尚未就绪。')
     await waitFor(() => rightToggle()?.getAttribute('aria-expanded') === String(open) || undefined, '表格对话未能切换。')
   }
   const composer = () => {
@@ -168,14 +185,9 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'import-file') {
-        const importButton = await waitFor(() => check().cashFlowGuideImportButton(), '导入按钮尚未就绪。')
-        await point(importButton, 'click')
-        check().armCashFlowGuideImport()
-        importButton.click()
-        const file = await waitFor(() => check().cashFlowGuideFileButton(), '示例文件尚未就绪。')
+        await clickControl(() => check().cashFlowGuideImportButton(), '导入按钮尚未就绪。', () => check().armCashFlowGuideImport())
         await options.wait(850, requestAbort.signal)
-        await point(file, 'click')
-        file.click()
+        await clickControl(() => check().cashFlowGuideFileButton(), '示例文件尚未就绪。')
         await waitFor(() => check().cashFlowGuideImported || undefined, '示例 Excel 尚未导入。')
         return
       }
@@ -222,16 +234,10 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       }
       if (step === 'component') {
         if (!check().cashFlowGuideInsertButton()) {
-          const menu = await waitFor(() => check().cashFlowGuideMenuButton(), '表格菜单尚未就绪。')
-          await point(menu, 'click')
-          menu.click()
+          await clickControl(() => check().cashFlowGuideMenuButton(), '表格菜单尚未就绪。')
         }
-        const insert = await waitFor(() => check().cashFlowGuideInsertButton(), '插入菜单尚未就绪。')
-        await point(insert, 'click')
-        insert.click()
-        const smart = await waitFor(() => check().cashFlowGuideSmartButton(), '智能组件菜单尚未就绪。')
-        await point(smart, 'click')
-        smart.click()
+        await clickControl(() => check().cashFlowGuideInsertButton(), '插入菜单尚未就绪。')
+        await clickControl(() => check().cashFlowGuideSmartButton(), '智能组件菜单尚未就绪。')
         const { input, submit } = await waitFor(() => check().cashFlowGuideComponentForm(), '智能组件表单尚未就绪。')
         input.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         const prompt = localeText(

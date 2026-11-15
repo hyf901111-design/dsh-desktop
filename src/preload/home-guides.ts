@@ -317,7 +317,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     try{
      if((kind==='ppt'||kind==='report')&&step==='plan')resident.dataset.homeGuidePlanReady=run.id
      await adapter.runStep(step);ensure()
-     if(kind==='spreadsheet'&&step==='source'||kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
+     if(kind==='spreadsheet'&&step==='import-file'||kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
       await options.waitUntilPlaying();ensure()
       await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
      }
