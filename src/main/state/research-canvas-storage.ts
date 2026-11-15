@@ -110,6 +110,11 @@ export class ResearchCanvasStorage {
 
   constructor(private readonly userDataPath: string) {}
 
+  peekItem(key: unknown): string | null {
+    if (!validResearchCanvasStorageKey(key)) return null
+    return this.values.has(key) ? this.values.get(key) ?? null : this.read(key)
+  }
+
   getItem(key: unknown): string | null {
     if (!validResearchCanvasStorageKey(key)) return null
     if (this.values.has(key)) return this.values.get(key) ?? null

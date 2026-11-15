@@ -24,8 +24,10 @@ beforeAll(async () => {
       if (document.body.hasAttribute('data-test-session-directory')) {
         const byId = {
           board: { title: '消费行业研究看板', updatedAt: 1700000000000 },
+          board2: { title: '新品调研看板', updatedAt: 1670000000000 },
           note: { title: '季度会议笔记', updatedAt: 1690000000000 },
           sheet: { title: '渠道库存表格', updatedAt: 1680000000000 },
+          blankBoard: { title: '空白研究看板' }, blankNote: { title: '空白笔记' }, blankSheet: { title: '空白表格' },
           chat: { title: '普通对话' },
           removed: { title: '已删除表格', removed: true },
           child: { title: '子任务', parentId: 'note' }
@@ -36,7 +38,7 @@ beforeAll(async () => {
             open: id => { window.openedSession = { id, view: opened.get(id) } } },
           workspaces: { list: { getSnapshot: () => ({ items: [{ title: '行业跟踪', sessionIds: ['board', 'note', 'sheet'] }] }) } },
           chatStore: { create: id => ({ actions: { setView: view => opened.set(id, view) } }) },
-          boards: () => ({ isBoardOnly: id => id === 'board' })
+          boards: () => ({ isBoardOnly: id => ['board', 'board2', 'blankBoard'].includes(id) })
         })
       }
       if (document.body.hasAttribute('data-test-browser-topbar')) {
@@ -189,8 +191,7 @@ beforeAll(async () => {
             return
           }
           if (method === 'session-evidence') return args.ids.map(id => ({
-            id, preferredView: id === 'sheet' ? 'trajectory' : 'chat', notes: id === 'note',
-            spreadsheet: id === 'removed' || id === 'child', research: false
+            id, hasContent: ({ research: ['board', 'board2'], notes: ['note'], spreadsheet: ['sheet', 'removed', 'child'] })[args.mode].includes(id)
           }))
           if (method === 'received') {
             if (window.waitForSharedCatalog) return window.waitForSharedCatalog
@@ -251,7 +252,17 @@ it('lists real session modes under all files and opens each one in its native vi
       const directory = library.getByRole('main', { name: label })
       const row = directory.getByRole('button', { name: new RegExp(title) })
       await row.waitFor()
-      expect(await directory.getByRole('button').count()).toBe(1)
+      expect(await directory.getByRole('button').count()).toBe(view === 'research' ? 2 : 1)
+      expect(await directory.getByRole('button', { name: /空白/ }).count()).toBe(0)
+      const tile = row.locator('.knowledge-file-icon')
+      expect(await tile.evaluate(el => el.getBoundingClientRect().width)).toBe(36)
+      const color = await tile.evaluate(el => getComputedStyle(el).backgroundColor)
+      await row.hover()
+      await expect.poll(() => tile.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(color)
+      if (view === 'research') {
+        const boxes = await directory.getByRole('button').evaluateAll(items => items.map(el => el.getBoundingClientRect().toJSON()))
+        expect(boxes[1].top - boxes[0].bottom).toBe(4)
+      }
       const search = directory.getByRole('searchbox', { name: '搜索会话' })
       await search.fill('找不到的项目')
       await directory.getByText('没有符合搜索条件的会话。').waitFor()
@@ -303,6 +314,46 @@ it('moves existing files into a new folder through the row menu and by dragging'
     await library.getByRole('row', { name: /消费行业周报\.md/ }).waitFor()
     await library.getByRole('row', { name: /研究写作规范\.md/ }).waitFor()
     expect(await page.evaluate(() => window.data.documents.length)).toBe(3)
+  } finally { await page.close() }
+})
+
+it('shows a two-second toast for file changes without moving the list header', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.clock.install()
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const more = library.getByRole('button', { name: '消费行业周报.md的更多操作' })
+    await more.waitFor()
+    const header = library.getByRole('columnheader', { name: /文件名/ })
+    const originalHeader = await header.boundingBox()
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100))
+    await library.getByRole('button', { name: '新建文件夹' }).click()
+    const create = library.getByRole('dialog', { name: '新建文件夹' })
+    await create.getByRole('textbox', { name: '名称' }).fill('已整理')
+    await create.getByRole('button', { name: '确认' }).click()
+    const toast = library.locator('.knowledge-toast')
+    await expect.poll(() => toast.textContent()).toBe('已更新知识库。')
+    expect(await toast.getAttribute('role')).toBe('status')
+    expect(await toast.evaluate(element => getComputedStyle(element).position)).toBe('absolute')
+    expect(await library.getByRole('button', { name: '关闭提示' }).count()).toBe(0)
+    expect(await header.boundingBox()).toEqual(originalHeader)
+    await page.clock.runFor(1300)
+
+    await more.click()
+    await library.getByRole('button', { name: '移动到文件夹…' }).click()
+    const move = library.getByRole('dialog', { name: '移动到文件夹' })
+    await move.getByRole('combobox', { name: '目标文件夹' }).selectOption({ label: '已整理' })
+    await move.getByRole('button', { name: '移动', exact: true }).click()
+    await expect.poll(() => toast.textContent()).toContain('移到「已整理」')
+    await page.clock.runFor(1999)
+    expect(await toast.count()).toBe(1)
+    await page.clock.runFor(1)
+    await expect.poll(() => toast.count()).toBe(0)
+    expect(await header.boundingBox()).toEqual(originalHeader)
   } finally { await page.close() }
 })
 

@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { applyOperations, MAX_BOOK_BYTES, validateWorkbook, type Workbook } from '../../shared/spreadsheet/workbook'
+import { workbookHasContent } from '../knowledge/session-content'
 
 export type WorkbookPosition = {sheetId:string;range:string}
 export type WorkbookKey = { owner: string; sessionId: string }
@@ -23,7 +24,13 @@ function withoutFormulaCache(workbook:Workbook){
 export class SpreadsheetStore {
   constructor(private root: string) {}
   private directory(key: WorkbookKey) { return join(this.root, 'spreadsheet-v1', hash([key.owner,key.sessionId])) }
-  hasRecord(key: WorkbookKey) { return existsSync(join(this.directory(key), 'active.json')) }
+  hasContent(key: WorkbookKey): boolean {
+    const active = this.read(key)
+    return workbookHasContent(active.workbook) || (active.recent ?? []).some(id => {
+      if (id === active.workbook?.id) return false
+      try { return workbookHasContent(this.recentBook(key, id)) } catch { return false }
+    })
+  }
   private read(key: WorkbookKey): Stored {
     const file=join(this.directory(key),'active.json')
     try{

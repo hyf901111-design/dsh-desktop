@@ -2,17 +2,15 @@ import React, { useEffect, useState } from 'react'
 import { knowledgeSessionLabels, type KnowledgeSessionEntry, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { KnowledgeIcon } from './icons'
 
-type SessionRow = KnowledgeSessionEntry & { modes: KnowledgeSessionMode[] }
-const modes = Object.keys(knowledgeSessionLabels) as KnowledgeSessionMode[]
-
-export function useKnowledgeSessions(document: Document, active: boolean, evidenceFor: (ids: string[]) => Promise<KnowledgeSessionEvidence[]>) {
-  const [entries, setEntries] = useState<SessionRow[]>([])
+export function useKnowledgeSessions(document: Document, mode: KnowledgeSessionMode | undefined,
+  evidenceFor: (mode: KnowledgeSessionMode, ids: string[]) => Promise<KnowledgeSessionEvidence[]>) {
+  const [result, setResult] = useState<{ mode: KnowledgeSessionMode; entries: KnowledgeSessionEntry[] }>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (!active) {
-      setEntries([])
+    if (!mode) {
+      setResult(undefined)
       setLoading(false)
       setError(false)
       return
@@ -24,16 +22,13 @@ export function useKnowledgeSessions(document: Document, active: boolean, eviden
       if (snapshot?.requestId !== requestId) return
       const sequence = latest
       try {
-        const ids = snapshot.entries.map(entry => entry.id)
-        const evidence = new Map((await evidenceFor(ids)).map(item => [item.id, item]))
+        const candidates = snapshot.entries.filter(entry => mode === 'research' || !entry.researchBoard)
+        const evidence = await evidenceFor(mode, candidates.map(entry => entry.id))
         if (sequence !== latest) return
-        setEntries(snapshot.entries.map(entry => {
-          const record = evidence.get(entry.id)
-          const rawView = record?.preferredView ?? entry.localView
-          const view = rawView === 'trajectory' ? 'spreadsheet' : rawView
-          return { ...entry, modes: modes.filter(mode => mode === 'research' && entry.researchBoard
-            || !entry.researchBoard && (view === mode || record?.[mode])) }
-        }).sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title)))
+        const populated = new Set(evidence.filter(item => item.hasContent).map(item => item.id))
+        const entries = candidates.filter(entry => populated.has(entry.id))
+          .sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title))
+        setResult({ mode, entries })
         setLoading(false)
       } catch {
         if (sequence === latest) { setError(true); setLoading(false) }
@@ -53,7 +48,7 @@ export function useKnowledgeSessions(document: Document, active: boolean, eviden
       if (queued) return
       queued = win.requestAnimationFrame(() => { queued = 0; load() })
     }
-    const reset = () => { latest++; setEntries([]); schedule() }
+    const reset = () => { latest++; setResult(undefined); schedule() }
     document.addEventListener('sherlock:knowledge-session-catalog', received)
     document.addEventListener('sherlock:knowledge-sessions-changed', schedule)
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
@@ -65,9 +60,9 @@ export function useKnowledgeSessions(document: Document, active: boolean, eviden
       document.removeEventListener('sherlock:knowledge-sessions-changed', schedule)
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
-  }, [active, document, evidenceFor])
+  }, [mode, document, evidenceFor])
 
-  return { entries, loading, error }
+  return { entries: result?.mode === mode ? result?.entries ?? [] : [], loading, error }
 }
 
 export function openKnowledgeSession(document: Document, id: string, view: KnowledgeSessionMode | 'chat'): Promise<boolean> {
@@ -93,7 +88,7 @@ export function openKnowledgeSession(document: Document, id: string, view: Knowl
 
 export function KnowledgeSessionDirectory({ mode, entries, loading, error, open }: {
   mode: KnowledgeSessionMode
-  entries: SessionRow[]
+  entries: KnowledgeSessionEntry[]
   loading: boolean
   error: boolean
   open: (id: string, mode: KnowledgeSessionMode) => Promise<boolean>
@@ -102,9 +97,9 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open 
   const [opening, setOpening] = useState<string>()
   const [failed, setFailed] = useState(false)
   const needle = query.trim().toLocaleLowerCase()
-  const rows = entries.filter(entry => entry.modes.includes(mode) &&
-    (!needle || `${entry.title}\n${entry.workspace ?? ''}`.toLocaleLowerCase().includes(needle)))
+  const rows = entries.filter(entry => !needle || `${entry.title}\n${entry.workspace ?? ''}`.toLocaleLowerCase().includes(needle))
   const icon = mode === 'research' ? 'research' : mode === 'notes' ? 'note' : 'table'
+  const color = mode === 'research' ? 'research' : mode === 'notes' ? 'markdown' : 'excel'
 
   return <main className="knowledge-file-list knowledge-session-directory" aria-label={knowledgeSessionLabels[mode]}>
     <div className="knowledge-tools">
@@ -128,7 +123,7 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open 
           setOpening(undefined)
           setFailed(!ok)
         }}>
-        <KnowledgeIcon name={icon} />
+        <span className="knowledge-file-icon" data-tile="true" data-format={color}><KnowledgeIcon name={icon} /></span>
         <span className="knowledge-session-title"><span>{row.title}</span>{row.workspace && <small>{row.workspace}</small>}</span>
         {row.updatedAt > 0 && <time dateTime={new Date(row.updatedAt).toISOString()}>{new Date(row.updatedAt).toLocaleDateString()}</time>}
         <KnowledgeIcon name="next" />

@@ -259,14 +259,9 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, chatSto
   const entries = (snapshot.ids ?? Object.keys(snapshot.byId ?? {})).flatMap(id => {
    const summary = usable(snapshot, id)
    if (!summary) return []
-   let localView
-   try {
-    localView = win.localStorage.getItem('ework.session.view.v1:' + id) ??
-     JSON.parse(win.localStorage.getItem('dsh.conversation.chat.' + id) || 'null')?.view
-   } catch {}
    return [{ id, title: summary.title?.trim() || summary.displayTitle?.trim() || '未命名会话',
     updatedAt: Number.isFinite(summary.updatedAt) ? summary.updatedAt : 0, workspace: workspacesBySession.get(id),
-    researchBoard: boardAdapter?.isBoardOnly(id) === true, localView }]
+    researchBoard: boardAdapter?.isBoardOnly(id) === true }]
   })
   dispatch('sherlock:knowledge-session-catalog', { requestId: event.detail?.requestId, entries })
  }

@@ -10,7 +10,7 @@ import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
-import type { KnowledgeSessionEvidence } from '../../shared/knowledge-sessions'
+import { knowledgeSessionLabels, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 
 function id(value: unknown): string {
   if (typeof value !== 'string' || !/^[a-f0-9-]{36}$/u.test(value)) throw Error('知识库项目标识无效。')
@@ -44,7 +44,7 @@ export function installKnowledgeIpc({
   window: () => BrowserWindow | undefined
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
-  sessionEvidence(owner: string, id: string): KnowledgeSessionEvidence
+  sessionEvidence(owner: string, id: string, mode: KnowledgeSessionMode): KnowledgeSessionEvidence
 }) {
   const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
   const observedSenders = new WeakSet<WebContents>()
@@ -67,11 +67,12 @@ export function installKnowledgeIpc({
       case 'reference': return resolveKnowledgeReference(input, { store, sharing, content, owner: identity })
       case 'snapshot': return store.snapshot()
       case 'session-evidence': {
-        if (!Array.isArray(args.ids) || args.ids.length > 128 || args.ids.some(value =>
+        if (typeof args.mode !== 'string' || !Object.hasOwn(knowledgeSessionLabels, args.mode) ||
+            !Array.isArray(args.ids) || args.ids.length > 128 || args.ids.some(value =>
           typeof value !== 'string' || !value || value.length > 512 || /[\x00-\x1f]/u.test(value))) {
           throw Error('会话目录请求无效。')
         }
-        return [...new Set(args.ids as string[])].map(id => sessionEvidence(owner.owner, id))
+        return [...new Set(args.ids as string[])].map(id => sessionEvidence(owner.owner, id, args.mode as KnowledgeSessionMode))
       }
       case 'recent-searches': return store.recentSearches()
       case 'remember-search': {
