@@ -1,5 +1,30 @@
 import {spreadsheetRangeCodec,collectSpreadsheetReferences,installSpreadsheetReferences,spreadsheetMessageParts} from './spreadsheet-inline-references.mjs'
 import {SPREADSHEET_QUICK_PROMPTS} from '../../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
+
+const modeWelcome={
+ spreadsheet:{
+  zh:{heading:['从一个问题，','开始一张表格。'],body:['导入已有 Excel，或直接描述需要的分析。','我可以创建工作表、填写公式、整理格式。'],
+   labels:['制作消费行业可比估值表','整理上传的数据并去重','创建现金流预测模型'],prompts:SPREADSHEET_QUICK_PROMPTS.zh},
+  en:{heading:['Start with a question,','build a spreadsheet.'],body:['Import an Excel workbook or describe the analysis you need.','Create worksheets, fill in formulas, and format data.'],
+   labels:['Build a consumer-sector valuation table','Clean up and deduplicate imported data','Create a cash flow forecast'],prompts:SPREADSHEET_QUICK_PROMPTS.en}
+ },
+ notes:{
+  zh:{heading:['从一份材料，','开始一篇笔记。'],body:['导入资料或说说你想写什么。','可以整理要点、起草正文，也可以润色现有笔记。'],
+   labels:['整理会议纪要','把资料整理成阅读笔记','润色当前笔记'],
+   prompts:['请根据我提供的会议记录起草一份纪要，整理主要决定、待办事项、负责人和截止日期。没有提及的信息标为待确认。','请把我提供的资料整理成一篇阅读笔记。提炼核心观点、对应证据和待核实的问题，并标出资料出处。','请润色当前笔记，清理重复表述，调整段落结构，保留原有事实和术语。如果笔记还没有正文，请先询问主题。']},
+  en:{heading:['Start with your material,','turn it into a note.'],body:['Import a document or describe what you want to write.','Organize key points, draft a note, or polish an existing one.'],
+   labels:['Draft meeting minutes','Turn source material into reading notes','Polish the current note'],
+   prompts:['Draft minutes from my meeting notes. Organize decisions, action items, owners, and deadlines. Mark unspecified details as open.','Turn the materials I provide into reading notes. Highlight the main claims, supporting evidence, and open questions, and cite the source materials.','Polish the current note by removing repetition and improving its structure while preserving facts and terminology. If it is empty, ask me for a topic.']}
+ },
+ research:{
+  zh:{heading:['从一个问题，','开始一次研究。'],body:['告诉我想研究的行业、公司或假设。','可以在看板上整理证据、指标和待验证的问题。'],
+   labels:['搭建行业研究看板','跟踪公司关键指标','梳理投资逻辑与风险'],
+   prompts:['请围绕我指定的行业搭建研究看板，整理行业规模、竞争格局和关键指标，标注数据来源和日期。如果缺少行业名称，请先询问我。','请为我指定的公司搭建跟踪看板，汇总关键指标、近期财报和重要事件，标注数据来源和时间。如果缺少公司名称或代码，请先询问我。','请为我指定的研究对象梳理投资逻辑与风险，在看板上列出支持证据、反证和待验证事项，并标明来源。如果目标不明确，请先询问我。']},
+  en:{heading:['Start with a question,','build a research board.'],body:['Name a sector, company, or hypothesis to investigate.','Organize evidence, metrics, and open questions on the board.'],
+   labels:['Build an industry research board','Track key company metrics','Map an investment thesis and its risks'],
+   prompts:['Build a research board for the industry I specify. Organize market size, competitors, and key metrics, with sources and dates. Ask for the industry if I have not supplied it.','Build a tracking board for the companies I specify. Summarize key metrics, recent results, and material events with sources and dates. Ask for company names or tickers if missing.','Map the investment thesis and risks for the subject I specify. Use the board to show supporting evidence, counterevidence, and checks still needed, with sources. Ask for the subject if it is unclear.']}
+ }
+}
 const marker='/* ework:spreadsheet-client:v2 */'
 const restore='/* ework:spreadsheet-client:restore '
 function replace(source,before,after,label){
@@ -28,20 +53,26 @@ function EWorkSpreadsheetView({sessionId}){
 }
 slots.register({name:'conversation.view',id:'spreadsheet',order:10,label:()=>document.documentElement.dataset.odysseyLocale==='en'?'Spreadsheet':'表格',inject:sessionId=>({sessionId})},EWorkSpreadsheetView);
 ctx.effect(()=>{
- const prompts=${JSON.stringify(SPREADSHEET_QUICK_PROMPTS)};
  const fill=event=>{
-  const detail=event.detail,choices=prompts[document.documentElement.dataset.odysseyLocale==='en'?'en':'zh'];
-  if(!detail||sessions.list.getSnapshot().current!==detail.sessionId||document.body.dataset.eworkSpreadsheetSession!==detail.sessionId||!Object.hasOwn(choices,detail.action))return;
-  const shell=eworkActiveInput(detail.sessionId,inputHub.shell(detail.sessionId)),draft=shell?.snapshot;
+  const detail=event.detail;
+  if(!detail||sessions.list.getSnapshot().current!==detail.sessionId)return;
+  const {sessionId,mode,index}=detail,surface=document.body.dataset.workspaceSurface;
+  if(mode==='notes'?surface!=='notes':surface)return;
+  if(mode==='spreadsheet'&&document.body.dataset.eworkSpreadsheetSession!==sessionId)return;
+  const prompt=eworkModeWelcome[mode]?.[eworkModeLocale()]?.prompts[index];
+  if(typeof prompt!=='string')return;
+  const shell=eworkActiveInput(sessionId,inputHub.shell(sessionId)),draft=shell?.snapshot;
   if(!draft||shell.disposed||draft.phase!=='plain'||draft.researchContextPreparing)return;
-  const panel=document.querySelector('[data-odyssey-panel-entry="right"]');
-  if(panel?.getAttribute('aria-expanded')==='false')panel.click();
-  shell.insertText((draft.draft.trim()?'\\n':'')+choices[detail.action],{start:draft.draft.length,end:draft.draft.length,draftRev:draft.draftRev});
-  requestAnimationFrame(()=>document.querySelector('[data-research-composer-host] textarea')?.focus({preventScroll:true}));
+  if(!shell.insertText((draft.draft.trim()?'\\n':'')+prompt,{start:draft.draft.length,end:draft.draft.length,draftRev:draft.draftRev}))return;
+  requestAnimationFrame(()=>{
+   if(sessions.list.getSnapshot().current!==sessionId)return;
+   const inputs=document.querySelectorAll('[data-research-composer-host] textarea[data-odyssey-file-reference-session]');
+   [...inputs].find(input=>input.dataset.odysseyFileReferenceSession===sessionId&&input.getClientRects().length&&!input.disabled)?.focus({preventScroll:true});
+  });
  };
- window.addEventListener('sherlock:spreadsheet-quick-prompt',fill);
- return()=>window.removeEventListener('sherlock:spreadsheet-quick-prompt',fill);
-},'Spreadsheet shared composer shortcuts');
+ window.addEventListener('sherlock:mode-quick-prompt',fill);
+ return()=>window.removeEventListener('sherlock:mode-quick-prompt',fill);
+},'Workspace mode composer shortcuts');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${spreadsheetRangeCodec.toString()})()),'Spreadsheet range codec'));
 ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:document,sessions,getInput:id=>inputHub.shell(id)}),'Spreadsheet range insertion');`,'registration')
  const mode="const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);"
@@ -49,16 +80,64 @@ ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:docu
  const page='"data-phase": phase,\n\t\t\t\t"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
  change(page,page.replace('research ?','activeView===\'spreadsheet\'&&!subagentPanel ? "spreadsheet" : research ?'),'resident layout')
  const welcomeAnchor='function HomeGuideNativeOriginalConversationRoot('
- change(welcomeAnchor,`function EWorkSpreadsheetWelcome({sessionId}){
- const prompt=(e)=>window.dispatchEvent(new CustomEvent('sherlock:spreadsheet-quick-prompt',{detail:{sessionId,action:e.currentTarget.dataset.prompt}}));
- return react.createElement('div',{className:'ew-sheet-welcome'},react.createElement('div',{className:'ew-sheet-welcome-content'},
-  react.createElement('h2',null,'从一个问题，',react.createElement('br'),'开始一张表格。'),
-  react.createElement('p',null,'导入已有 Excel，或直接描述需要的分析。',react.createElement('br'),'我可以创建工作表、填写公式、整理格式。'),
-  react.createElement('div',{className:'ew-sheet-welcome-actions'},['制作消费行业可比估值表','整理上传的数据并去重','创建现金流预测模型'].map((title,i)=>react.createElement('button',{key:i,type:'button','data-prompt':i,onClick:prompt},react.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinejoin:'round','aria-hidden':true},react.createElement('path',{d:'M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3z'})),react.createElement('span',null,title))))));
+ change(welcomeAnchor,`const eworkModeWelcome=${JSON.stringify(modeWelcome)};
+const eworkSheetContextOptOut=new WeakSet();
+const eworkModeLocale=()=>document.documentElement.dataset.odysseyLocale==='en'?'en':'zh';
+function subscribeEWorkModeLocale(notify){
+ const observer=new MutationObserver(notify);
+ observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});
+ return()=>observer.disconnect();
+}
+function EWorkModeWelcome({sessionId,mode}){
+ const language=react.useSyncExternalStore(subscribeEWorkModeLocale,eworkModeLocale,eworkModeLocale);
+ const {heading,body,labels}=eworkModeWelcome[mode][language];
+ const choose=index=>window.dispatchEvent(new CustomEvent('sherlock:mode-quick-prompt',{detail:{sessionId,mode,index}}));
+ const h=react.createElement,br=()=>h('br');
+ return h('div',{className:'ew-sheet-welcome','data-mode-welcome':mode,'data-research-empty-state':mode==='spreadsheet'?undefined:'','data-note-empty-state':mode==='notes'?'':undefined},
+  h('div',{className:'ew-sheet-welcome-content'},
+  h('h2',null,heading[0],br(),heading[1]),
+  h('p',null,body[0],br(),body[1]),
+  h('div',{className:'ew-sheet-welcome-actions'},labels.map((title,i)=>h('button',{key:i,type:'button','data-prompt':i,onClick:()=>choose(i)},
+   h('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinejoin:'round','aria-hidden':true},
+    h('path',{d:'M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3z'})),
+   h('span',null,title))))));
+}
+function EWorkSpreadsheetContextBadge({keyboard,input,disabled}){
+ const language=react.useSyncExternalStore(subscribeEWorkModeLocale,eworkModeLocale,eworkModeLocale);
+ const [optOut,setOptOut]=react.useState(()=>eworkSheetContextOptOut.has(keyboard));
+ const [open,setOpen]=react.useState(false);
+ const id=react.useId(),hasRange=input?.occurrences?.some(item=>item.source==='spreadsheet-range');
+ react.useEffect(()=>{if(hasRange)setOpen(false)},[hasRange]);
+ if(!keyboard||hasRange)return null;
+ const [use,skip]=language==='en'?['Use current workbook','Skip current workbook']:['参考当前表格内容','不参考当前表格内容'];
+ const toggle=()=>{
+  if(optOut)eworkSheetContextOptOut.delete(keyboard);
+  else eworkSheetContextOptOut.add(keyboard);
+  setOptOut(!optOut);setOpen(false);
+ };
+ const h=react.createElement;
+ return h('div',{'data-sheet-context-anchor':'',
+  onBlur:event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false)},
+  onKeyDown:event=>{if(event.key==='Escape'&&open){event.stopPropagation();setOpen(false);event.currentTarget.firstElementChild?.focus()}}},
+  h('button',{type:'button','data-sheet-context-badge':'','data-opt-out':optOut||undefined,disabled,'aria-expanded':open,'aria-controls':open?id:undefined,onClick:()=>setOpen(!open)},optOut?skip:use),
+  open&&h('div',{id,'data-sheet-context-directory':'',role:'region','aria-label':use},
+   h('button',{type:'button',disabled,onClick:toggle},optOut?use:skip)));
 }
 ${welcomeAnchor}`,'right pane welcome component')
  const portal='pendingRight ? researchConversationView : activeView === \'notes\' && document.body.dataset.workspaceSurface!==\'browser\' ?'
- change(portal,portal.replace(' : activeView', " : activeView==='spreadsheet'&&!browserAppActive ? (conversationVacant ? react.createElement(EWorkSpreadsheetWelcome,{sessionId}) : sessionPresentation.conversationView) : activeView"),'right pane welcome')
+ change(portal,"pendingRight ? researchConversationView : activeView==='spreadsheet'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'spreadsheet'}) : sessionPresentation.conversationView) : activeView==='notes'&&!browserAppActive&&!subagentPanel ?",'right pane welcome')
+ const notePortal='EWorkNotesConversation,{sessionId,t,empty:conversationVacant,children:sessionPresentation.conversationView}'
+ change(notePortal,"EWorkNotesConversation,{sessionId,t,empty:conversationVacant,welcomeView:react.createElement(EWorkModeWelcome,{sessionId,mode:'notes'}),children:sessionPresentation.conversationView}",'notes welcome without replacing native history')
+ const researchWelcome=': researchEmpty ? (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: "sRp_emptyState",'
+ change(researchWelcome,": researchEmpty && research && !browserAppActive && !subagentPanel ? react.createElement(EWorkModeWelcome,{sessionId,mode:'research'}) "+researchWelcome,'research welcome without replacing personal history')
+ const inputBar='function InputBar({ subagentPanel=false,'
+ change(inputBar,inputBar.replace('subagentPanel=false','eworkSpreadsheet=false, subagentPanel=false'),'spreadsheet context composer input')
+ const barProps='eworkNotes:activeView === "notes",'
+ change(barProps,barProps+"\n eworkSpreadsheet:activeView==='spreadsheet'&&!browserAppActive&&!pendingRight&&!subagentPanel,", 'spreadsheet context surface')
+ const canvasContext='researchCanvasWorkspace: research && sessionId !== void 0 ? researchWorkspace : void 0,'
+ change(canvasContext,canvasContext.replace('research &&','research && !browserAppActive && !pendingRight && !subagentPanel &&'),'research context surface')
+ const badge='researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),'
+ change(badge,badge+"\n eworkSpreadsheet && react.createElement(EWorkSpreadsheetContextBadge,{key:sessionId,keyboard,input,disabled}),",'spreadsheet context badge')
  for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',trajectory:"]]){
   const nativeTitle=source.split('/* browser-app-native:v1 */')[0]
   if(nativeTitle.split(before).length===2)change(before,after,'spreadsheet blank title '+before)
@@ -97,7 +176,7 @@ ${welcomeAnchor}`,'right pane welcome component')
                   try{
                     const sheetRefs=(${collectSpreadsheetReferences.toString()})(attempt.draftState);
                     if(!window.dshDesktop?.spreadsheetAdmission)throw Error('表格尚未就绪，草稿已保留。');
-                    await window.dshDesktop.spreadsheetAdmission(session.sessionId,attempt.text,sheetRefs);
+                    await window.dshDesktop.spreadsheetAdmission(session.sessionId,attempt.text,sheetRefs,!eworkSheetContextOptOut.has(shell));
                     if(shell?.disposed||this.researchSendAttempts.get(session.sessionId)!==sendAttempt||
                        shell&&shell.snapshot.draftRev!==shellSnapshot?.draftRev||
                        document.body.dataset.eworkSpreadsheetSession!==session.sessionId)return;

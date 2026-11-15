@@ -36,9 +36,15 @@ export class ClientCapabilityService{
   return binding?{ownerAccountId:binding.owner,sessionId:binding.sessionId,mode:binding.mode,generation:binding.generation}:undefined
  }
  async request(input:any,signal?:AbortSignal){
-  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt'].includes(input.method)||input.method==='catalog'&&input.call!==undefined)throw Error('客户端操作请求无效。')
+  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference'].includes(input.method)||['catalog','spreadsheet-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
   if(input.sourceInstruction!==undefined&&(typeof input.sourceInstruction!=='string'||input.sourceInstruction.length>8000)||input.authorityId!==undefined&&!validId(input.authorityId)||(input.authorityId===undefined)!==(input.sourceInstruction===undefined)||(input.authorityId===undefined)!==(input.authoritySeq===undefined)||input.authoritySeq!==undefined&&(!Number.isSafeInteger(input.authoritySeq)||input.authoritySeq<0))throw Error('客户端请求来源无效。')
+  if(input.sourceInstructionDigest!==undefined&&(input.sourceInstruction!==''||typeof input.sourceInstructionDigest!=='string'||!/^[a-f0-9]{64}$/.test(input.sourceInstructionDigest)))throw Error('客户端请求来源无效。')
   signal?.throwIfAborted()
+  if(input.method==='spreadsheet-reference'){
+   const binding=this.current(input.sessionId)
+   if(binding?.mode!=='spreadsheet'||input.authorityId===undefined)return {}
+   return this.options.spreadsheet?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
+  }
   if(input.method==='receipt')return this.recoverReceipt(input,signal)
   const binding=this.current(input.sessionId);if(!binding)throw Error('当前会话未绑定可见客户端，请回到该会话后重试。')
   const key=JSON.stringify([binding.owner,binding.sessionId,input.turnId])
@@ -66,7 +72,7 @@ export class ClientCapabilityService{
     turn?.notes?.dispose()
     const leaseCurrent=()=>this.current(binding.sessionId)?.generation===binding.generation&&authorityCurrent()
     const notes=adapter?await adapter.acquire({sessionId:binding.sessionId,turnId:input.turnId,sourceInstruction:input.sourceInstruction??'',current:leaseCurrent,signal:signal??new AbortController().signal}):undefined
-    const sheet=await sheetService?.acquire({key:sheetKey,turnId:input.turnId,authorityId,instruction,current:leaseCurrent,canWrite:()=>this.options.canWrite?.(binding.sessionId)??true,signal})
+    const sheet=await sheetService?.acquire({key:sheetKey,turnId:input.turnId,authorityId,instruction:input.sourceInstruction,instructionDigest:input.sourceInstructionDigest,current:leaseCurrent,canWrite:()=>this.options.canWrite?.(binding.sessionId)??true,signal})
     if(!leaseCurrent()){notes?.dispose();throw Error('客户端请求已被较新用户输入替代，请重新读取能力目录。')}
     const context:ClientCapabilityContext={owner:binding.owner,sessionId:binding.sessionId,documentId:binding.generation,mode:binding.mode,editable:this.options.canWrite?.(binding.sessionId)??true,selectedBlockIds:[],canvasAvailable:binding.mode==='research'&&this.options.canvasAvailable(binding.sessionId),...notes?.context}
     const current=()=>leaseCurrent()&&(!notes||notes.current())?context:undefined
@@ -93,7 +99,12 @@ export class ClientCapabilityService{
      }})
     turn={generation:binding.generation,authorityId,authoritySeq:sequence,catalogRequired:false,context,conversationIdentity,sheet,notes,notesIdentity:notes?.context.documentId,canvasAvailable:context.canvasAvailable===true,editable:context.editable,host,receipts:turn?.receipts??new Map()};this.turns.set(key,turn)
    }
-   return{mode:binding.mode,capabilities:turn.host.registry.catalog(turn.context),guidance:binding.mode==='knowledge'?'先用 knowledge.inspect 获取当前列表、目录标识和筛选版本。使用 knowledge.filter 更新中间文件列表，依据客户端回执说明匹配结果。':binding.mode==='spreadsheet'?'表格能力只作用于当前工作簿。先 spreadsheet.inspect 获取版本、工作表和目标范围，明确修改才 spreadsheet.apply。只依据已保存回执确认，禁止用对话表格或研究画布代替。':'切换视图后重新读取目录；只有available:true的能力可执行。笔记能力使用当下可见编辑器捕获的文档与选区，较新输入或其它请求占用时拒绝旧操作。'}
+   const guidance=binding.mode==='knowledge'
+    ?'先用 knowledge.inspect 获取当前列表、目录标识和筛选版本。使用 knowledge.filter 更新中间文件列表，依据客户端回执说明匹配结果。'
+    :binding.mode==='spreadsheet'
+     ?(turn.sheet?.guidance??'')+'表格能力只作用于当前工作簿。使用 spreadsheet.inspect 获取版本、工作表和目标范围，用户明确要求修改时才调用 spreadsheet.apply。依据已保存回执确认结果。'
+     :'切换视图后重新读取目录；只有available:true的能力可执行。笔记能力使用当下可见编辑器捕获的文档与选区，较新输入或其它请求占用时拒绝旧操作。'
+   return{mode:binding.mode,capabilities:turn.host.registry.catalog(turn.context),guidance,...turn.sheet&&{referenceScope:turn.sheet.referenceScope}}
   }
   if(!turn||turn.catalogRequired||turn.generation!==binding.generation)throw Error('请先重新读取当前客户端能力目录。')
   const call=input.call

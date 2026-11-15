@@ -307,7 +307,7 @@ describe('Figma shell patch installation', () => {
     expect(input).toContain('"data-research-artifact-tag": researchArtifact?.id')
   })
   it('shows the current canvas count and keeps the original scope toggle and explicit-reference precedence', () => {
-    const installed=patchFigmaFinalConversation(source)
+    const installed=source.includes('"research.context.emptyBadge":')?source:patchFigmaFinalConversation(source)
     let snapshot={files:[] as any[],artifacts:[] as any[],selection:{selectedNodeIds:[] as string[]}}
     let optedOut=false
     const badge=runInNewContext(clientFunction(installed,'ResearchCanvasContextBadge')+'\nResearchCanvasContextBadge',{
@@ -316,7 +316,8 @@ describe('Figma shell patch installation', () => {
       researchPromptBasename:(name:string)=>name,FileReferenceIcon:'file',ResearchArtifactReferenceIcon:'artifact'
     })
     const props={workspace:{},input:{},keyboard:{setResearchContextOptOut:(next:boolean)=>{optedOut=next}},t:(key:string,value?:any)=>value?.total??key}
-    expect(badge(props)).toBe(null)
+    expect(badge(props).props.children[0].props.children).toBe('research.context.emptyBadge')
+    expect(badge({...props,input:{researchContextOptOut:true}}).props.children[0].props.children).toBe('research.context.disabled')
     snapshot.artifacts=[{id:'one',title:'研究一'},{id:'two',title:'研究二'}]
     snapshot.files=[{id:'three',name:'数据.csv'}]
     const tree=badge(props)

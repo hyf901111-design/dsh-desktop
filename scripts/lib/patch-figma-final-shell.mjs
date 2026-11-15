@@ -69,6 +69,15 @@ export function patchFigmaFinalConversation(source) {
   // User correction / 164:805,940: retain the live canvas scope control in
   // the composer. Explicit references still flow as inline chips.
   source = exact(source, 'null /* Figma final: manual references remain native inline chips. */,', 'researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),')
+  source = exact(source,
+    'if (sources.length === 0 || snapshot.selection.selectedNodeIds.length > 0 || (input?.occurrences?.length ?? 0) > 0) return null;',
+    'if (snapshot.selection.selectedNodeIds.length > 0 || (input?.occurrences?.length ?? 0) > 0) return null;')
+  source = exact(source, 't("research.context.badge", { total: sources.length })',
+    'sources.length === 0 ? t("research.context.emptyBadge") : t("research.context.badge", { total: sources.length })')
+  for (const [label, empty] of [["参考当前画板资料 · {total}个组件", "参考当前画板资料"], ["Use current canvas · {total} components", "Use current canvas"]]) {
+    const line = `"research.context.badge": ${JSON.stringify(label)},`
+    source = exact(source, line, line + `\n\t\t\t"research.context.emptyBadge": ${JSON.stringify(empty)},`)
+  }
   source = exact(source, '|| research.canvasContext !== void 0 || rest.length > 0;', '|| rest.length > 0; /* Automatic context alone is not visible message content. */')
   source = exact(source, [
     'projectResearchUserText(research, openFile), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {',

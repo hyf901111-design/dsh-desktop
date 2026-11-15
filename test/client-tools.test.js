@@ -1,7 +1,7 @@
 import {it,expect,vi} from 'vitest'
 import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools'
 import {readFileSync} from 'node:fs'
-import {CLIENT_TOOL_NAMES,registerClientTools} from '../packages/dsh-research-task-runtime/client-tools.js'
+import {CLIENT_TOOL_NAMES,readSpreadsheetReference,registerClientTools} from '../packages/dsh-research-task-runtime/client-tools.js'
 
 const env={SHERLOCK_RESEARCH_CONTEXT_URL:'http://127.0.0.1:1234',SHERLOCK_RESEARCH_CONTEXT_TOKEN:'test-token'}
 const execution=(events=[{type:'turn/start',data:{turn:7}}],header={})=>({agent:{session:{id:'chat-session',header,events}},signal:new AbortController().signal})
@@ -10,6 +10,18 @@ function fixture(options={}, context={}){
   const dispose=registerClientTools({tools:{register:tool=>{tools.set(tool.name,tool);return()=>tools.delete(tool.name)}},...context},{env,fetch:async(url,init)=>{calls.push({url,...init,body:JSON.parse(init.body)});return new Response(JSON.stringify({capabilities:[{id:'canvas.inspect',available:false}]}))},...options})
   return {tools,calls,dispose}
 }
+
+it('reads the admitted sheet scope before the first model request without listing client capabilities',async()=>{
+  const events=[{type:'turn/start',data:{turn:7}},{seq:13,type:'user/message',data:{id:'human',source:{kind:'user'},content:[{type:'text',text:'这一批数据有哪些异常？'}]}}]
+  const {agent,signal}=execution(events)
+  const options={env,fetch:vi.fn(async()=>Response.json({referenceScope:'workbook',guidance:'读取当前工作表'}))}
+  await expect(readSpreadsheetReference(agent,signal,options)).resolves.toBe('读取当前工作表')
+  const [url,request]=options.fetch.mock.calls[0]
+  expect(url).toBe('http://127.0.0.1:1234/client-capabilities')
+  expect(JSON.parse(request.body)).toMatchObject({method:'spreadsheet-reference',sessionId:'chat-session',authorityId:'human',sourceInstruction:'这一批数据有哪些异常？'})
+  await expect(readSpreadsheetReference(execution(events,{origin:'subagent'}).agent,signal,options)).resolves.toBeUndefined()
+  expect(options.fetch).toHaveBeenCalledTimes(1)
+})
 
 it('starts spreadsheet titling only for a saved content change in the current human turn',async()=>{
   const scheduleSpreadsheetTitle=vi.fn()

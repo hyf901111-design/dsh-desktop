@@ -3,6 +3,7 @@ import {canvasHumanRequest} from './canvas-task-routing.js'
 import {COMPONENT_SURFACE_STYLE_RULES,PANEL_COLOR_INSTRUCTION} from './design-policy.js'
 import {TRUSTED_TYPES_COMPONENT_INSTRUCTION} from './html-trusted-types-validation.js'
 import {spreadsheetQuickPrompt} from './spreadsheet-quick-prompts.js'
+import {readSpreadsheetReference} from './client-tools.js'
 
 // Prompt assembly runs before the first claimed message is committed as
 // user/message. Include the authored inbox entry so the first model call sees
@@ -145,8 +146,13 @@ export function registerConversationComponentsPolicy(ctx){
  }
  const disposeGuard=ctx.tools?.guard?.(exec=>exec.name==='research_workbench_create'?denial(exec.agent?.session):undefined)
  const disposeWire=ctx.on('agent/request-context',async({agent,signal},next)=>{
-  signal?.throwIfAborted();const request=await next();signal?.throwIfAborted()
+  signal?.throwIfAborted();let request=await next();signal?.throwIfAborted()
   const session=agent?.session
+  if(request.tools?.some(tool=>tool.name==='client_capabilities')){
+   const reference=await readSpreadsheetReference(agent,signal)
+   signal?.throwIfAborted()
+   if(reference)request={...request,system:(request.system??'')+'\n【当前表格参考范围】'+reference}
+  }
   const quick=session?.header?.origin!=='subagent'&&!session?.header?.delegationDepth&&!documentOnly(session)?spreadsheetQuickPrompt(planningHumanRequest(session)?.text):-1
   const mode=quick>=0?latestClientModeForAuthority(session):null
   if(quick>=0&&!mode&&request.tools?.some(tool=>tool.name==='client_capabilities')){

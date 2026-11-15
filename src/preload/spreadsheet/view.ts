@@ -232,10 +232,10 @@ class SpreadsheetView{
    }
   }
  }
- async admit(instruction:string,references:unknown){
+ async admit(instruction:string,references:unknown,useWorkbook?:boolean){
   if(this.disposed||!this.ready||!this.host.isConnected)throw Error('表格正在加载，请稍后再发送。')
   await this.flush(true)
-  await this.request('admit',{instruction,bookId:this.record.workbook?.id??null,references})
+  await this.request('admit',{instruction,bookId:this.record.workbook?.id??null,references,useWorkbook})
  }
  syncHeader(){
   if(this.sharedReadOnly)return
@@ -2268,9 +2268,9 @@ export function mountSpreadsheet(doc:Document,bridge:Bridge){
   bridge.subscribe('identity',()=>{view?.dispose();view=undefined;anchor=undefined;schedule()})
  ]
  scan()
- return {admit:(id:string,prompt:string,references:unknown)=>{
+ return {admit:(id:string,prompt:string,references:unknown,useWorkbook?:boolean)=>{
   if(doc.body.dataset.eworkSpreadsheetSession!==id||!view)throw Error('当前表格已切换。')
-  return view.admit(prompt,references)
+  return view.admit(prompt,references,useWorkbook)
  },
   flush:(id:string)=>doc.body.dataset.eworkSpreadsheetSession===id&&view?view.flush():Promise.resolve(),
   dispose:()=>{disposed=true;delete doc.body.dataset.eworkSpreadsheetMode;observer.disconnect();off.forEach(fn=>fn());view?.dispose();style.remove()}}

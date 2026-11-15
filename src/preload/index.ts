@@ -488,7 +488,7 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
-    spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references)},
+    spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown,useWorkbook?:boolean)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references,useWorkbook)},
     spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
     browserApp: Object.freeze({
       context: ()=>ipcRenderer.invoke('browser-app:request','context'),
