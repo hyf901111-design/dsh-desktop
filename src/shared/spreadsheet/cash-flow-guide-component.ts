@@ -12,12 +12,16 @@ const copy = {
     unit:'亿元', chart:'从净利润到经营现金流', assumption:'若当季多收回货款',
     actual:'实际', estimate:'测算', max:'8,000 万元', labels:['净利润','折旧摊销','应收增加','存货增加','其他调整','现金流'],
     targetMet:'达到 75% 目标', targetGap:'距 75% 目标差', points:'个百分点',
+    actualPreset:'实际值', trialPreset:'+3,000 万元', presets:'回款情景',
+    moreToTarget:'距达标需多回款 ', flowChange:'经营现金流 ', ratioChange:'现金转化率 ', amountUnit:'万元',
   },
   en:{
     sample:'Fictional demo data', earnings:'Net profit', cash:'Operating cash flow', conversion:'Cash conversion',
     unit:'CNY 100m', chart:'From net profit to operating cash flow', assumption:'If more receivables were collected',
     actual:'Actual', estimate:'Scenario', max:'CNY 80m', labels:['Net profit','D&A','Receivables','Inventory','Other','Cash flow'],
     targetMet:'75% target reached', targetGap:'Gap to 75% target:', points:'pp',
+    actualPreset:'Actual', trialPreset:'+CNY 30m', presets:'Collection scenarios',
+    moreToTarget:'Extra collections needed: ', flowChange:'Cash flow ', ratioChange:'Conversion ', amountUnit:'CNY 10k',
   }
 }
 const css = `
@@ -56,10 +60,11 @@ const css = `
     border-bottom: 1px solid var(--rule);
   }
   .bridge-metrics > div { display: grid; min-width: 0; align-content: start; gap: 3px; }
-  .bridge-metrics b { font-size: clamp(19px,6vw,26px); line-height: 1.05; white-space: nowrap; }
+  .bridge-metrics b { font-size: clamp(20px,6.4vw,27px); line-height: 1.1; white-space: nowrap; }
+  [data-cash-flow-bridge] [data-metric-label] { white-space: normal; }
   .bridge-metrics [data-metric-label] { font-size: 11px; color: var(--quiet); }
-  [data-cash-flow-bridge][data-goal-met] [data-target] { color: var(--inflow); }
-  [data-cash-flow-bridge] .bridge-graph { --plot: 103px; --labels: 36px; position: relative; margin-top: 15px; padding-left: 12px; }
+  [data-cash-flow-bridge][data-goal-met] :is([data-ratio],[data-target]) { color: var(--inflow); }
+  [data-cash-flow-bridge] .bridge-graph { --plot: 150px; --labels: 38px; position: relative; margin-top: 15px; padding-left: 12px; }
   .bridge-grid { position: absolute; inset: 0 0 auto; height: var(--plot); pointer-events: none; }
   .bridge-grid span { position: absolute; inset-inline: 0; bottom: var(--position); height: 0; color: var(--quiet); font-size: 9px; line-height: 0; }
   .bridge-grid span::after { content: ""; position: absolute; inset-inline: 12px 0; border-top: 1px solid var(--rule); }
@@ -137,12 +142,28 @@ const css = `
     display: grid;
     gap: 2px;
     min-height: 43px;
-    padding: 5px 7px;
+    padding: 8px 9px;
     border-left: 2px solid var(--total);
     background: var(--sherlock-surface-muted);
   }
-  [data-cash-flow-bridge] .bridge-scenario { margin-top: 10px; }
+  .bridge-source strong { color: var(--ink); }
+  .bridge-detail-rows { display: grid; gap: 4px; }
+  .bridge-detail-rows > div { display: flex; justify-content: space-between; gap: 6px; }
+  .bridge-detail-rows > div > span:last-child { color: var(--ink); white-space: nowrap; }
+  [data-cash-flow-bridge] .bridge-scenario {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+  }
+  .bridge-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 8px 0 5px; }
+  [data-cash-flow-bridge] .bridge-presets button {
+    --sherlock-control-secondary: var(--sherlock-surface-muted);
+    --sherlock-control-primary: color-mix(in srgb, var(--total) 22%, var(--sherlock-surface));
+    --sherlock-control-on-primary: var(--ink);
+  }
+  .bridge-scenario label { color: var(--ink); font-weight: 600; }
   [data-cash-flow-bridge] .bridge-scenario input { display:block; width:100%; height:23px; margin:0; padding:0; accent-color:var(--total); }
+  [data-cash-flow-bridge] .bridge-scenario-delta { margin-top: 8px; min-height: 2.8em; }
   @media (prefers-reduced-motion:reduce) {
     .bridge-bar,.bridge-connector,.bridge-amount { transition:none; }
   }
@@ -174,15 +195,20 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     <ol class="bridge-steps"></ol>
   </div>
   <div class="bridge-source" aria-live="polite">
-    <strong data-source-title></strong><span data-source-detail class="bridge-secondary"></span>
+    <strong data-source-title></strong><div data-source-detail class="bridge-secondary bridge-detail-rows"></div>
   </div>
   <div class="bridge-scenario">
     <div class="bridge-heading">
       <label for="cash-flow-collections">${labels.assumption}</label>
       <strong data-collected></strong>
     </div>
+    <div class="bridge-presets" role="group" aria-label="${labels.presets}">
+      <button type="button" data-scenario="0" aria-pressed="true">${labels.actualPreset}</button>
+      <button type="button" data-scenario="3000" aria-pressed="false">${labels.trialPreset}</button>
+    </div>
     <input id="cash-flow-collections" type="range" min="0" max="8000" step="100" value="0">
     <div class="bridge-heading bridge-secondary" aria-hidden="true"><span>0</span><span>${labels.max}</span></div>
+    <div data-scenario-delta class="bridge-scenario-delta bridge-secondary"></div>
   </div>
 </main>
 <script>
@@ -191,6 +217,7 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
   const root = document.querySelector('[data-cash-flow-bridge]');
   const slider = root.querySelector('input');
   const graph = root.querySelector('ol');
+  const presets = [...root.querySelectorAll('[data-scenario]')];
   const actualProfit = steps[0].amount;
   const actualCash = steps[steps.length - 1].amount;
   const formatNumber = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'zh-CN', {maximumFractionDigits:1});
@@ -236,7 +263,16 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
   function showAdjustment() {
     const step = steps.find(step => step.id === active);
     write('[data-source-title]', step.name);
-    write('[data-source-detail]', step.details.map(detail => detail.name + ' ' + signed(detail.amount) + ' ' + labels.unit).join(' · '));
+    const details = step.details.map(detail => {
+      const row = document.createElement('div');
+      const name = document.createElement('span');
+      const value = document.createElement('span');
+      name.textContent = detail.name;
+      value.textContent = ' ' + signed(detail.amount) + ' ' + labels.unit;
+      row.append(name,value);
+      return row;
+    });
+    root.querySelector('[data-source-detail]').replaceChildren(...details);
     for (const {choice} of marks) if (choice.dataset.adjustment) {
       choice.setAttribute('aria-pressed',String(choice.dataset.adjustment === active));
     }
@@ -273,10 +309,21 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     const value = locale === 'en' ? 'CNY ' + formatNumber.format(recovered/100) + 'm' : formatNumber.format(recovered) + ' 万元';
     write('[data-collected]', value);
     slider.setAttribute('aria-valuetext', value);
+    const remaining = Math.max(0, Math.ceil(actualProfit * .75 - actualCash));
+    const improvement = formatNumber.format(recovered / actualProfit * 100);
+    const delta = recovered
+      ? labels.flowChange + '+' + amountText(recovered) + ' ' + labels.unit + ' · ' + labels.ratioChange + '+' + improvement + ' ' + labels.points
+      : remaining ? labels.moreToTarget + formatNumber.format(remaining) + ' ' + labels.amountUnit : labels.targetMet;
+    write('[data-scenario-delta]', delta);
+    for (const preset of presets) preset.setAttribute('aria-pressed', String(preset.dataset.scenario === slider.value));
   }
   render();
   showAdjustment();
   slider.addEventListener('input',render);
+  for (const preset of presets) preset.addEventListener('click', () => {
+    slider.value = preset.dataset.scenario;
+    render();
+  });
 })();
 </script>`
 }
