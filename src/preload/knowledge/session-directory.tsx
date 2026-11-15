@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
   type KnowledgeSessionMode, type KnowledgeSessionShare } from '../../shared/knowledge-sessions'
 import { KnowledgeIcon, KnowledgeItemIcon } from './icons'
+import { KnowledgePagination, useKnowledgePagination } from './pagination'
 
 export function useKnowledgeSessions(document: Document, mode: KnowledgeSessionMode | undefined,
   evidenceFor: (mode: KnowledgeSessionMode, ids: string[]) => Promise<KnowledgeSessionEvidence[]>) {
@@ -104,43 +105,51 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open,
   const needle = query.trim().toLocaleLowerCase()
   const rows = entries.filter(entry => !needle || `${entry.title}\n${entry.workspace ?? ''}`.toLocaleLowerCase().includes(needle))
 
+  const { page, pages, setPage, scrollRef, start, end } = useKnowledgePagination<HTMLDivElement>(rows.length)
+
   return <main className="knowledge-file-list knowledge-session-directory" aria-label={knowledgeSessionLabels[mode]}>
     <div className="knowledge-tools">
       <h2>{knowledgeSessionLabels[mode]}</h2>
       <label className="knowledge-search"><KnowledgeIcon name="search" />
         <input type="search" aria-label="搜索会话" placeholder="搜索会话…" value={query}
-          onChange={event => setQuery(event.currentTarget.value)} />
+          onChange={event => {
+            setQuery(event.currentTarget.value)
+            setPage(1)
+          }} />
       </label>
     </div>
-    {failed && <p role="alert">此会话暂时无法打开。</p>}
-    {error && <p className={rows.length ? undefined : 'knowledge-empty'} role="alert">暂时无法读取会话。</p>}
-    {loading && !rows.length && <p className="knowledge-empty" role="status">正在读取会话…</p>}
-    {!loading && !error && !rows.length && <p className="knowledge-empty">{needle ? '没有符合搜索条件的会话。' : '这里还没有会话。'}</p>}
-    {rows.length > 0 && <ul className="knowledge-session-rows" aria-label="会话列表">
-      {rows.map(row => {
-        const published = shares?.[knowledgeSessionShareKey(mode, row.id)]
-        const action = published ? '管理共享' : '共享会话'
-        return <li key={row.id}>
-          <button className="knowledge-session-open" type="button" title={row.title} disabled={!!opening}
-            aria-busy={opening === row.id}
-            onClick={async () => {
-              setOpening(row.id)
-              setFailed(false)
-              const ok = await open(row.id, mode)
-              setOpening(undefined)
-              setFailed(!ok)
-            }}>
-            <KnowledgeItemIcon format={mode} tile />
-            <span className="knowledge-session-title"><span>{row.title}</span>{row.workspace && <small>{row.workspace}</small>}</span>
-            {published && <span className="knowledge-tag" data-kind="share">已共享</span>}
-            {row.updatedAt > 0 && <time dateTime={new Date(row.updatedAt).toISOString()}>{new Date(row.updatedAt).toLocaleDateString()}</time>}
-            <KnowledgeIcon name="next" />
-          </button>
-          <button className="knowledge-square knowledge-session-share" type="button" title={action}
-            aria-label={`${action}「${row.title}」`} onClick={() => share(row, mode)}><KnowledgeIcon name="shared" /></button>
-        </li>
-      })}
-    </ul>}
+    <div ref={scrollRef} className="knowledge-session-results">
+      {failed && <p role="alert">此会话暂时无法打开。</p>}
+      {error && <p className={rows.length ? undefined : 'knowledge-empty'} role="alert">暂时无法读取会话。</p>}
+      {loading && !rows.length && <p className="knowledge-empty" role="status">正在读取会话…</p>}
+      {!loading && !error && !rows.length && <p className="knowledge-empty">{needle ? '没有符合搜索条件的会话。' : '这里还没有会话。'}</p>}
+      {rows.length > 0 && <ul className="knowledge-session-rows" aria-label="会话列表">
+        {rows.slice(start, end).map(row => {
+          const published = shares?.[knowledgeSessionShareKey(mode, row.id)]
+          const action = published ? '管理共享' : '共享会话'
+          return <li key={row.id}>
+            <button className="knowledge-session-open" type="button" title={row.title} disabled={!!opening}
+              aria-busy={opening === row.id}
+              onClick={async () => {
+                setOpening(row.id)
+                setFailed(false)
+                const ok = await open(row.id, mode)
+                setOpening(undefined)
+                setFailed(!ok)
+              }}>
+              <KnowledgeItemIcon format={mode} tile />
+              <span className="knowledge-session-title"><span>{row.title}</span>{row.workspace && <small>{row.workspace}</small>}</span>
+              {published && <span className="knowledge-tag" data-kind="share">已共享</span>}
+              {row.updatedAt > 0 && <time dateTime={new Date(row.updatedAt).toISOString()}>{new Date(row.updatedAt).toLocaleDateString()}</time>}
+              <KnowledgeIcon name="next" />
+            </button>
+            <button className="knowledge-square knowledge-session-share" type="button" title={action}
+              aria-label={`${action}「${row.title}」`} onClick={() => share(row, mode)}><KnowledgeIcon name="shared" /></button>
+          </li>
+        })}
+      </ul>}
+    </div>
+    <KnowledgePagination label="会话分页" page={page} pages={pages} setPage={setPage} />
   </main>
 }
 

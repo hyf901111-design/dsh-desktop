@@ -21,8 +21,13 @@ beforeAll(async () => {
       import React from 'react'
       import { createRoot } from 'react-dom/client'
       const host = new WorkspaceSurfaceHost(document)
-      if (document.body.hasAttribute('data-test-session-directory')) {
-        const byId = {
+      const testPagination = document.body.hasAttribute('data-test-pagination')
+      if (testPagination || document.body.hasAttribute('data-test-session-directory')) {
+        const byId = testPagination ? Object.fromEntries(['research', 'notes', 'spreadsheet'].flatMap(mode =>
+          Array.from({ length: 43 }, (_, index) => ['paged-' + mode + '-' + index, {
+            title: '分页会话-' + mode + '-' + index, updatedAt: 1700000000000 - index
+          }])
+        )) : {
           board: { title: '消费行业研究看板', updatedAt: 1700000000000 },
           board2: { title: '新品调研看板', updatedAt: 1670000000000 },
           note: { title: '季度会议笔记', updatedAt: 1690000000000 },
@@ -38,7 +43,7 @@ beforeAll(async () => {
             open: id => { window.openedSession = { id, view: opened.get(id) } } },
           workspaces: { list: { getSnapshot: () => ({ items: [{ title: '行业跟踪', sessionIds: ['board', 'note', 'sheet'] }] }) } },
           chatStore: { create: id => ({ actions: { setView: view => opened.set(id, view) } }) },
-          boards: () => ({ isBoardOnly: id => ['board', 'board2', 'blankBoard'].includes(id) })
+          boards: () => ({ isBoardOnly: id => id.startsWith('paged-research-') || ['board', 'board2', 'blankBoard'].includes(id) })
         })
       }
       if (document.body.hasAttribute('data-test-browser-topbar')) {
@@ -59,7 +64,12 @@ beforeAll(async () => {
         ? ['pdf', 'docx', 'xlsx', 'png', 'mp3', 'mp4', 'bin'].map((suffix, index) => ({
           id: 'f' + index, name: '格式验收.' + suffix, source: 'upload'
         })) : []
-      const documents = [
+      const pagedFiles = Array.from({ length: 43 }, (_, index) => ({
+        id: 'paged-file-' + index, name: '分页文件-' + index + '.md', source: 'upload', folderId: 'f',
+        updatedAt: 1700000000000 - index, size: 8192, starred: true, saved: true,
+        share: { id: 'share-' + index, category: '行业研究' }
+      }))
+      const documents = testPagination ? pagedFiles : [
         ...moreFormats,
         { id: 'a', name: '消费行业周报.md', source: 'generated', saved: true },
         { id: 'b', name: '研究写作规范.md', source: 'upload', folderId: 'f', size: 4096 },
@@ -207,11 +217,15 @@ beforeAll(async () => {
             return
           }
           if (method === 'session-evidence') return args.ids.map(id => ({
-            id, hasContent: ({ research: ['board', 'board2'], notes: ['note'], spreadsheet: ['sheet', 'removed', 'child'] })[args.mode].includes(id)
+            id, hasContent: testPagination ? id.startsWith('paged-' + args.mode + '-')
+              : ({ research: ['board', 'board2'], notes: ['note'], spreadsheet: ['sheet', 'removed', 'child'] })[args.mode].includes(id)
           }))
           if (method === 'received') {
             if (window.sharedCatalogError) throw Error(window.sharedCatalogError)
             if (window.waitForSharedCatalog) return window.waitForSharedCatalog
+            if (testPagination) return pagedFiles.map(({ share, folderId, ...row }) => ({
+              ...row, id: 'received-' + row.id, received: { owner: '验收账号', category: '行业研究' }
+            }))
             if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) {
               return window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []
             }
@@ -364,7 +378,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
     for (const name of ['研究模式', '笔记模式', '表格模式']) {
       await categories.getByRole('button', { name, exact: true }).click()
       const directory = library.getByRole('main', { name })
-      await centered(directory.getByText('这里还没有会话。'), directory, directory.locator('.knowledge-tools'))
+      await centered(directory.getByText('这里还没有会话。'), directory.locator('.knowledge-session-results'))
     }
     const table = library.locator('.knowledge-table-wrap')
     for (const name of [/重点文件/, /^共享文件/]) {
@@ -1319,7 +1333,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     await library.getByRole('button', { name: '清除筛选', exact: true }).click()
     await category.click()
     await page.evaluate(() => {
-      const catalog = Array.from({ length: 12 }, (_, index) => ({
+      const catalog = Array.from({ length: 22 }, (_, index) => ({
         id: `shared-layout-set-${index}`, name: `行业共享验收-${index}.md`,
         source: 'upload', size: 1024, updatedAt: index,
         starred: false, saved: false, received: { owner: '验收所有者', category: '行业研究' }
@@ -1332,6 +1346,60 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     await pager.getByRole('button', { name: '下一页' }).click()
     expect(await pager.getByText('2 / 2', { exact: true }).isVisible()).toBe(true)
     await expectAligned()
+  } finally { await page.close() }
+})
+
+it('paginates files and native sessions in groups of 20 with a fixed footer', async () => {
+  const page = await browser.newPage({ viewport: { width: 1150, height: 650 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({
+      contentType: 'text/html', body: `<!doctype html>
+        <body data-test-pagination><div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div></body>`
+    }))
+    await page.goto('https://knowledge.test/')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const nav = library.getByRole('navigation', { name: '知识库分类' })
+    const pager = library.getByRole('navigation', { name: /分页/ })
+    const previous = pager.getByRole('button', { name: '上一页' })
+    const next = pager.getByRole('button', { name: '下一页' })
+    const position = async () => (await pager.boundingBox()).y
+
+    for (const label of ['所有文件', '手动收藏', '重点文件', '共享文件', '研究资料', '他人共享', '行业研究',
+      '研究模式', '笔记模式', '表格模式']) {
+      const category = label === '行业研究' ? library.getByRole('button', { name: label, exact: true })
+        : nav.getByRole('button', { name: new RegExp('^' + label + '( |$)') })
+      await category.click()
+      const session = label.endsWith('模式')
+      const scroller = library.locator(session ? '.knowledge-session-results' : '.knowledge-table-wrap')
+      const rows = scroller.locator(session ? 'li' : 'tbody tr')
+      await expect.poll(() => rows.count(), label).toBe(20)
+      expect(await pager.getByText('1 / 3', { exact: true }).isVisible()).toBe(true)
+      expect(await previous.isDisabled()).toBe(true)
+      const firstPage = await rows.first().innerText()
+      const anchor = await position()
+      await scroller.evaluate(el => { el.scrollTop = el.scrollHeight })
+      expect(await scroller.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
+      expect(await position()).toBe(anchor)
+      await next.click()
+      expect(await pager.getByText('2 / 3', { exact: true }).isVisible()).toBe(true)
+      expect(await rows.count()).toBe(20)
+      expect(await rows.first().innerText()).not.toBe(firstPage)
+      expect(await scroller.evaluate(el => el.scrollTop)).toBe(0)
+      await next.click()
+      expect(await rows.count()).toBe(3)
+      expect(await next.isDisabled()).toBe(true)
+      expect(await position()).toBe(anchor)
+      await previous.click()
+      expect(await rows.count()).toBe(20)
+      if (session) {
+        await library.getByRole('searchbox', { name: '搜索会话' }).fill('不存在的会话')
+        expect(await pager.getByText('1 / 1', { exact: true }).isVisible()).toBe(true)
+        expect(await previous.isDisabled()).toBe(true)
+        expect(await next.isDisabled()).toBe(true)
+        expect(await position()).toBe(anchor)
+      }
+    }
   } finally { await page.close() }
 })
 
