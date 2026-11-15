@@ -11,22 +11,25 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "2d2eb8ac957d228a2911a9a8a28eef112c42ac06",
-        "tipCommit": "688fdd53b79b51f80846d3fb362fbad24c6a736c",
+        "baseCommit": "688fdd53b79b51f80846d3fb362fbad24c6a736c",
+        "tipCommit": "63e6737b855a61e437cb471338e23d8b2aff2200",
         "commits": [
           {
-            "commit": "688fdd53b79b51f80846d3fb362fbad24c6a736c",
+            "commit": "a7c555a856b593ad95ccc8b27f5a89027f9ec917",
             "parents": [
-              "2d2eb8ac957d228a2911a9a8a28eef112c42ac06"
+              "688fdd53b79b51f80846d3fb362fbad24c6a736c"
             ],
-            "subject": "知识库：统一列表的彩底实心图标"
+            "subject": "知识库：为共享目录加载失败提供说明和重试"
+          },
+          {
+            "commit": "63e6737b855a61e437cb471338e23d8b2aff2200",
+            "parents": [
+              "a7c555a856b593ad95ccc8b27f5a89027f9ec917"
+            ],
+            "subject": "知识库：将文件和会话图标改为磨砂玻璃卡片"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/icons.tsx"
-          },
           {
             "status": "M",
             "path": "src/preload/knowledge/panel.css"
@@ -37,15 +40,15 @@
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
-          },
-          {
-            "status": "M",
             "path": "src/preload/knowledge/workspace.css"
           },
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-library.ts"
           },
           {
             "status": "M",
@@ -61,8 +64,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程与预加载类型检查通过。",
-            "verifiedCommit": "688fdd53b79b51f80846d3fb362fbad24c6a736c",
-            "completedAt": "2026-11-15T08:09:03Z",
+            "verifiedCommit": "63e6737b855a61e437cb471338e23d8b2aff2200",
+            "completedAt": "2026-11-15T09:32:40Z",
             "timeoutMs": 120000
           },
           {
@@ -76,12 +79,26 @@
               "--maxWorkers=1",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "keeps file icons readable|lists real session modes|shared categories and metadata"
+              "keeps file icons readable|lists real session modes|shows a readable shared directory error|rechecks an open shared preview|shared categories and metadata"
             ],
             "outcome": "passed",
-            "summary": "4 项聚焦检查通过，覆盖两种主题、悬停选中对比度、会话图标与共享目录。",
-            "verifiedCommit": "688fdd53b79b51f80846d3fb362fbad24c6a736c",
-            "completedAt": "2026-11-15T08:09:03Z",
+            "summary": "6 项渲染检查通过，覆盖两种主题、图标交互与共享目录重试。",
+            "verifiedCommit": "63e6737b855a61e437cb471338e23d8b2aff2200",
+            "completedAt": "2026-11-15T09:32:40Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=1",
+              "test/knowledge-sharing-worker.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "5 项本地共享服务测试通过。",
+            "verifiedCommit": "63e6737b855a61e437cb471338e23d8b2aff2200",
+            "completedAt": "2026-11-15T09:32:40Z",
             "timeoutMs": 120000
           }
         ],
@@ -150,60 +167,19 @@
           "预览共享原件时隐藏原工作区的对话和工具面板，返回后恢复原工具位置与草稿。共享研究看板在本地按可用宽度整理，创建副本后进入原生会话。",
           "升级后在后台扫描已有项目会话的交付记录，按原会话来源补录可用成果，去重并保留已删除状态。",
           "PDF 与 PPT 通过轮廓和色彩区分。主视图与右侧筛选复选框统一尺寸、对齐与键盘交互。",
-          "主列表、右侧栏、会话目录和共享会话统一使用彩色底与实心类型图形，PDF 与 PPT 保持轮廓区分。"
+          "主列表、右侧栏、会话目录和共享会话统一使用彩色底与实心类型图形，PDF 与 PPT 保持轮廓区分。",
+          "文件与会话列表采用半透明磨砂底板，深浅主题、悬停及选中可辨；PDF 和 PPT 延用不同轮廓。",
+          "共享目录加载失败时提供中文说明与重试，并与成功返回空目录的状态区分。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
           "生产服务部署及正式客户端发布需要单独验证。",
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
-          "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
+          "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。",
+          "线上研究协作 Worker 最新部署早于知识库共享功能，线上 D1 尚无 knowledge_shares 表。"
         ],
-        "generatedAt": "2026-11-15T08:09:03Z"
-      },
-      "merged": {
-        "mergeCommit": "244d73ee742a44adcc2adfe7d6b22d84e6efd7a4",
-        "verificationCommit": "244d73ee742a44adcc2adfe7d6b22d84e6efd7a4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "244d73ee742a44adcc2adfe7d6b22d84e6efd7a4",
-            "completedAt": "2026-11-15T08:09:15.943Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "244d73ee742a44adcc2adfe7d6b22d84e6efd7a4",
-            "completedAt": "2026-11-15T08:09:15.943Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T08:09:15.943Z"
+        "generatedAt": "2026-11-15T09:32:40Z"
       }
     }
   ],
