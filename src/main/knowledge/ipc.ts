@@ -46,7 +46,7 @@ export function installKnowledgeIpc({
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
   sessionEvidence(owner: string, id: string, mode: KnowledgeSessionMode): KnowledgeSessionEvidence
-  sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, check: () => void): Promise<{ name: string; data: Buffer }>
+  sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, displayTitle: string, check: () => void): Promise<{ name: string; data: Buffer }>
 }) {
   const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
   const observedSenders = new WeakSet<WebContents>()
@@ -103,6 +103,7 @@ export function installKnowledgeIpc({
         const sessionId = args.id
         const mode = args.mode as KnowledgeSessionMode
         const category = args.category
+        const displayTitle = typeof args.title === 'string' ? args.title.slice(0, 160) : ''
         return store.updateSessionShare(knowledgeSessionShareKey(mode, sessionId), async (previous, current) => {
           check()
           if (method === 'unshare-session') {
@@ -111,7 +112,7 @@ export function installKnowledgeIpc({
           }
           if (owner.owner === 'local') throw Error('请登录后共享会话。')
           if (typeof category !== 'string') throw Error('请选择共享分类。')
-          const snapshot = await sessionSnapshot(owner.owner, sessionId, mode, current)
+          const snapshot = await sessionSnapshot(owner.owner, sessionId, mode, displayTitle, current)
           return sharing.publishBytes(knowledgeSessionShareId(mode, sessionId), snapshot.name, 'generated', snapshot.data, category, current)
         })
       }

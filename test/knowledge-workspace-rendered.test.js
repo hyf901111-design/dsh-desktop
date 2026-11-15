@@ -318,7 +318,7 @@ it('publishes and manages read-only sharing from each mode with inset dialog con
       await dialog.getByRole('button', { name: '发布', exact: true }).click()
       const manage = library.getByRole('button', { name: `管理共享「${title}」` })
       await manage.waitFor()
-      expect(await page.evaluate(() => window.sessionShareAction)).toMatchObject({ method: 'share-session', id, mode, category: '写作模板' })
+      expect(await page.evaluate(() => window.sessionShareAction)).toMatchObject({ method: 'share-session', id, title, mode, category: '写作模板' })
       await manage.click()
       expect(await category.inputValue()).toBe('写作模板')
       expect(await dialog.getByRole('button', { name: '重新发布' }).isVisible()).toBe(true)

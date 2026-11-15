@@ -27,7 +27,7 @@ interface Bridge {
   workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
-  request(method: 'share-session' | 'unshare-session', args: { id: string; mode: KnowledgeSessionMode; category?: string }): Promise<KnowledgeSnapshot>
+  request(method: 'share-session' | 'unshare-session', args: { id: string; mode: KnowledgeSessionMode; title: string; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
   request(method: 'session-evidence', args: { ids: string[]; mode: KnowledgeSessionMode }): Promise<KnowledgeSessionEvidence[]>
@@ -647,7 +647,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     setBusy(true)
     setNotice(undefined)
     try {
-      const result = await bridge.request(category ? 'share-session' : 'unshare-session', { id: row.id, mode, category })
+      const result = await bridge.request(category ? 'share-session' : 'unshare-session', { id: row.id, title: row.title, mode, category })
       if (epoch !== currentEpoch.current) return
       setSnapshot(result)
       setDialog(undefined)

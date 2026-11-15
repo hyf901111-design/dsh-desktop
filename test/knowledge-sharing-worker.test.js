@@ -91,10 +91,11 @@ it('shares all three session snapshots with a recipient that can read but cannot
       published.push(catalog.sessionShares[snapshot.mode].id)
     }
     await recipient.received(true)
-    for (const [index, [_title, body, snapshot]] of items.entries()) {
+    for (const [index, [title, body, snapshot]] of items.entries()) {
       const id = published[index]
       const { document, data } = await recipient.read(id)
       expect(document.received).toEqual({ category: '行业研究', owner: 'user0' })
+      expect(document.name).toMatch(new RegExp('^' + title + ' · '))
       expect((await content.read(document, data)).text).toContain(body)
       expect((await request('/' + id, undefined)).status).toBe(401)
       await expect(recipient.rename(id, '越权修改.md')).rejects.toMatchObject({ status: 404 })
