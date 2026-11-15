@@ -75,7 +75,7 @@ export type NotesGuideEditorApi = {
 }
 export type NotesGuideBinding = {native?:{runId:string};ready(api:NotesGuideEditorApi):void;dispose?(api:NotesGuideEditorApi):void}
 export type NotesSaveBinding = {ready(flush:()=>Promise<void>):void;dispose?(flush:()=>Promise<void>):void}
-type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; activityId?:string; navigate(view: string): void;guide?:NotesGuideBinding;saveBinding?:NotesSaveBinding }
+type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; active?:boolean; sharedReadOnly?:boolean; activityId?:string; navigate(view: string): void;guide?:NotesGuideBinding;saveBinding?:NotesSaveBinding }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void; editor?: any; importing?:Set<string> } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
@@ -242,7 +242,8 @@ export function NotesApp(props: Props) {
 }
 
 function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: NoteLoad['draft']; recovering: boolean; onRecovery(restore: boolean): void; onReload(): void }) {
-  const [viewPreview, setViewPreview] = useState(false)
+  const [previewRequested, setViewPreview] = useState(false)
+  const viewPreview = props.sharedReadOnly || previewRequested
   const readOnly = viewPreview || !!props.recovery || props.active === false
   const [title, setTitle] = useState(props.initial.title), [status, setStatus] = useState(props.recovery ? '发现本地草稿' : '已保存'), [error, setError] = useState(''), [outline, setOutline] = useState<any[]>([]), [active, setActive] = useState(''), [preview, setPreview] = useState<NoteSuggestionPreview & {requestId:string}>(), [compare, setCompare] = useState(false)
   const client = useRef((props.initial as any).clientId || crypto.randomUUID()), revision = useRef(props.initial.revision), titleRef = useRef(title), scroll = useRef<HTMLDivElement>(null), saveTimer = useRef<ReturnType<typeof setTimeout>>(), saveQueue = useRef(Promise.resolve()), disposed = useRef(false), request = useRef(''), epoch = useRef(0), selection = useRef({ text: '', from: 0, to: 0, cursor: '' }), lastWritten = useRef(''), latest = useRef<NoteContent>(props.initial)
@@ -256,7 +257,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }, extensions: [NoteAiSelection(), NoteReplacementHighlights(),NoteInlineProposalHighlights(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new NoteThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
   editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
-  const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false)
+  const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false||!!props.sharedReadOnly)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const [documentWriting,setDocumentWriting]=useState(false),composerPlans=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];projected?:any[];fingerprint:string}>(),composerPreview=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];updates?:any[];markdown?:string;inlineOrder?:string}>(),composerChildren=useRef(new Set<string>())
   const [guideSummaryRequest,setGuideSummaryRequest]=useState(''),guideSummary=useRef<{lease():boolean;requestId?:string}>()
@@ -1024,11 +1025,11 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       </SuggestionPanel></div> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    {!props.guide&&props.active!==false?<NoteViewMode sessionId={props.sessionId} preview={viewPreview} disabled={!!props.recovery||writing||externalBusy||challenge.running||!!challenge.busyId||!!importing.current.size} onToggle={()=>{
+    {!props.guide&&!props.sharedReadOnly&&props.active!==false?<NoteViewMode sessionId={props.sessionId} preview={viewPreview} disabled={!!props.recovery||writing||externalBusy||challenge.running||!!challenge.busyId||!!importing.current.size} onToggle={()=>{
       if(composing.current||request.current||settlingProposal.current||externalCapabilities.current?.pending()||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)))return
       setViewPreview(value=>!value)
     }}/>:null}
-    {props.active!==false?<ChallengeToolbar controller={challenge} sessionId={props.sessionId} dark={props.dark} marginAvailable={challengeMarginAvailable} disabled={readOnly}/>:null}
+    {!props.sharedReadOnly&&props.active!==false?<ChallengeToolbar controller={challenge} sessionId={props.sessionId} dark={props.dark} marginAvailable={challengeMarginAvailable} disabled={readOnly}/>:null}
     <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onCompositionStartCapture={startBodyComposition} onCompositionEndCapture={()=>{composing.current=false}} onKeyDownCapture={event=>{const target=event.target as HTMLElement;if(composing.current||props.recovery||request.current||settlingProposal.current||!editorActive()||!target.isContentEditable||target.closest('input,textarea,button,select,[contenteditable="false"]')||!target.closest('.bn-editor'))return;const blockId=noteInlineAiTrigger(editor,event.nativeEvent);if(!blockId)return;event.preventDefault();event.stopPropagation();clearSelection(true);setPreview(undefined);setInlineDraft({anchor:captureNoteInlineAnchor(editor,client.current,blockId),prompt:inlinePrompt.current})}} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant,.en-research')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document" data-note-document-id={client.current}>
         {props.recovery ? <div className="en-recovery"><strong>{t("发现未保存的本地草稿")}</strong><span>{t("上次编辑内容已保留，可对比后恢复。")}</span><div><button onClick={() => setCompare(true)}>{t("对比草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>{t("保留已保存版本")}</button></div></div> : null}

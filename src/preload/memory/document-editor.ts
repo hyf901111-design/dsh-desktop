@@ -74,7 +74,10 @@ export function openMemoryDocumentEditor(options:Options){
       preview.innerHTML=renderSkillMarkdown(content)
       body.append(preview)
     }
-    dialog.append(header,tabs,body)
+    if(host)header.append(tabs)
+    dialog.append(header)
+    if(!host)dialog.append(tabs)
+    dialog.append(body)
     const status=element('p',error||(saved?t('已保存到记忆.md'):''),'ew-memory-editor-status');status.role=error?'alert':'status';status.hidden=!status.textContent;dialog.append(status)
     const footer=element('footer'),hint=element('span',t('使用 Markdown 编辑；不同内容之间可用 --- 分隔。'),'ew-memory-muted'),actions=element('div',undefined,'ew-memory-actions')
     if(error){const reload=button(hash?'放弃修改并重新读取':'重试',()=>void read());reload.disabled=busy;actions.append(reload)}

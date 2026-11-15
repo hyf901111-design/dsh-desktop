@@ -1,3 +1,5 @@
+import type { KnowledgeDocument } from '../../shared/knowledge-library'
+import { sharedKnowledgeSessionFile } from '../../shared/knowledge-sessions'
 import React, { useEffect, useState } from 'react'
 import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
   type KnowledgeSessionMode, type KnowledgeSessionShare } from '../../shared/knowledge-sessions'
@@ -142,4 +144,10 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open,
       })}
     </ul>}
   </main>
+}
+
+export function openSharedKnowledgeSession(document: Document, row: KnowledgeDocument) {
+  if (!row.received || !sharedKnowledgeSessionFile(row.name, row.source)) return false
+  document.dispatchEvent(new CustomEvent('sherlock:knowledge-open-shared-session', { detail: row }))
+  return true
 }

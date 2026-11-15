@@ -1,3 +1,4 @@
+import { patchKnowledgeSharedResearch, stripKnowledgeSharedResearch } from './lib/knowledge-shared-research.mjs'
 import {patchKnowledgeConversation, stripKnowledgeConversation} from './lib/knowledge-client.mjs'
 import {patchSpreadsheetClient,stripSpreadsheetClient,hideTrajectoryTab} from './lib/spreadsheet-client.mjs'
 import {patchPendingPresetClient} from './lib/pending-composer-preferences.mjs'
@@ -209,6 +210,7 @@ patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
+writeFileSync(gridConversationPath,stripKnowledgeSharedResearch(readFileSync(gridConversationPath,'utf8')))
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
 writeFileSync(gridConversationPath,stripKnowledgeConversation(stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(readFileSync(gridConversationPath,'utf8')))))))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
@@ -407,4 +409,4 @@ writeFileSync(conversationPath,patchMessageEditClient(readFileSync(conversationP
 writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
-writeFileSync(conversationPath,patchSpreadsheetClient(patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(patchKnowledgeConversation(readFileSync(conversationPath,'utf8')))))))
+writeFileSync(conversationPath,patchKnowledgeSharedResearch(patchSpreadsheetClient(patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(patchKnowledgeConversation(readFileSync(conversationPath,'utf8'))))))))

@@ -10,8 +10,8 @@ import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
-import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
-import { knowledgeSessionShareId } from './session-share'
+import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { knowledgeSessionShareId, readKnowledgeSessionSnapshot } from './session-share'
 
 function id(value: unknown): string {
   if (typeof value !== 'string' || !/^[a-f0-9-]{36}$/u.test(value)) throw Error('知识库项目标识无效。')
@@ -207,10 +207,27 @@ export function installKnowledgeIpc({
         await store.edit(edit, { guard: check, renameShare: (id, name) => sharing.rename(id, name) })
         return store.snapshot()
       }
+      case 'shared-session-status': {
+        const shareId = previewId(args.id)
+        if (shareId.length !== 32 || typeof args.updatedAt !== 'number') return false
+        const signal = AbortSignal.timeout(10000)
+        const row = (await sharing.received(false, signal)).find(row => row.id === shareId)
+        const allowed = !!row && row.updatedAt === args.updatedAt && await sharing.canReadVersion(row, signal)
+        check()
+        return allowed
+      }
+      case 'shared-session': {
+        const shareId = previewId(args.id)
+        if (shareId.length !== 32) throw Error('共享会话标识无效。')
+        const file = await sharing.read(shareId, AbortSignal.timeout(15000))
+        check()
+        return { session: readKnowledgeSessionSnapshot(file.document, file.data), updatedAt: file.document.updatedAt }
+      }
       case 'preview': {
         const received = typeof args.id === 'string' && /^[a-f0-9]{32}$/u.test(args.id)
         const file = received ? await sharing.read(args.id as string) : await store.file(id(args.id))
         check()
+        if (received && sharedKnowledgeSessionFile(file.document.name, file.document.source)) throw Error('请在知识库中打开对应的只读会话。')
         try {
           const preview = await content.read(file.document, 'data' in file ? file.data : file.path)
           check()
@@ -236,6 +253,7 @@ export function installKnowledgeIpc({
           ? (await sharing.received()).find(document => document.id === id)
           : (await store.file(id)).document
         if (!row) throw Error('该文件已取消共享或不可用。')
+        if (received && sharedKnowledgeSessionFile(row.name, row.source)) throw Error('请在知识库中打开对应的只读会话。')
         const target = await dialog.showSaveDialog(parent, { title: '保存文件副本', defaultPath: row.name })
         if (target.canceled || !target.filePath) return false
         check()

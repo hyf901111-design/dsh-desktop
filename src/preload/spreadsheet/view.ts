@@ -99,7 +99,7 @@ class SpreadsheetView{
  private readonly root:HTMLElement
  private readonly doc:Document
  private readonly win:Window
- constructor(private host:HTMLElement,private sessionId:string,private bridge:Bridge){
+ constructor(private host:HTMLElement,private sessionId:string,private bridge:Bridge,private sharedReadOnly=false){
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
   for(const [key,value] of enterpriseChartColors)this.root.style.setProperty('--sheet-efund-'+key,value)
@@ -217,7 +217,7 @@ class SpreadsheetView{
     const state=await this.request('load')
     if(this.disposed)return
     this.owner=state.owner;this.generation=state.generation;this.editable=state.editable;this.recent=state.recent;this.ready=true
-    if(this.host.isConnected)this.doc.body.dataset.eworkSpreadsheetSession=this.sessionId
+    if(this.host.isConnected&&!this.sharedReadOnly)this.doc.body.dataset.eworkSpreadsheetSession=this.sessionId
     await this.install(state.record)
     return
    }catch(error){
@@ -235,6 +235,7 @@ class SpreadsheetView{
   await this.request('admit',{instruction,bookId:this.record.workbook?.id??null,references})
  }
  syncHeader(){
+  if(this.sharedReadOnly)return
   const next=this.host.closest('[data-odyssey-page=spreadsheet]')?.querySelector<HTMLElement>('[data-ework-spreadsheet-actions]')??undefined
   if(next===this.headerActions)return
   this.headerActions?.removeEventListener('click',this.click)
@@ -266,7 +267,7 @@ class SpreadsheetView{
   }
   const current=this.current()
   const tabScroll=this.foot.querySelector('.ew-sheet-tab-list')?.scrollLeft??0
-  this.chrome.innerHTML='<div class="ew-sheet-ribbon" role="toolbar" aria-label="表格工具栏">'+button('menu','菜单',{glyph:'menu',value:'commands',className:'dropdown',withLabel:true})+toolbarDivider+'<div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+this.focusButton()+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
+  this.chrome.innerHTML='<div class="ew-sheet-ribbon" role="toolbar" aria-label="表格工具栏">'+button('menu','菜单',{glyph:'menu',value:'commands',className:'dropdown',withLabel:true})+toolbarDivider+'<div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+(this.sharedReadOnly?'':this.focusButton())+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
    return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" data-ui-preserve title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
@@ -2241,4 +2242,13 @@ export function mountSpreadsheet(doc:Document,bridge:Bridge){
  },
   flush:(id:string)=>doc.body.dataset.eworkSpreadsheetSession===id&&view?view.flush():Promise.resolve(),
   dispose:()=>{disposed=true;delete doc.body.dataset.eworkSpreadsheetMode;observer.disconnect();off.forEach(fn=>fn());view?.dispose();style.remove()}}
+}
+
+export function mountSharedSpreadsheet(host:HTMLElement,sessionId:string,workbook:Workbook) {
+ const readOnly=async()=>{throw Error('共享工作簿仅供查看。')}
+ const view=new SpreadsheetView(host,sessionId,{
+  request:method=>method==='load'?Promise.resolve({editable:false,record:{workbook,revision:0},recent:[]}):readOnly(),
+  flushResult:readOnly,saveImage:readOnly,subscribe:()=>()=>{}
+ },true)
+ return ()=>view.dispose()
 }

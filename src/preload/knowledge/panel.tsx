@@ -1,3 +1,5 @@
+import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
+import { openSharedKnowledgeSession } from './session-directory'
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
@@ -389,21 +391,28 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       {state.ready && (sharedDirectory ? [...sharedCounts].map(([category, count]) =>
         <button type="button" className="knowledge-panel-directory" key={category} onClick={() => setSharedCategory(category)}>
           <KnowledgeIcon name="folder" /><span>{category}</span><small>{count}</small><KnowledgeIcon name="next" />
-        </button>) : rows.map(row =>
-        <div className="knowledge-panel-row" key={row.id}>
-          <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
-          <button type="button" className="knowledge-panel-name" onClick={() => document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', {
-            detail: { id: row.id, name: row.name }
-          }))}>
-            <span title={row.name}>{row.name}</span>
-            <small>{row.received ? `${row.received.category} · ${row.received.owner}`
+        </button>) : rows.map(row => {
+        const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
+        const title = session ? session.title : row.name
+        return <div className="knowledge-panel-row" key={row.id}>
+          {session ? <span className="knowledge-file-icon" data-tile="true" data-format={session.mode === 'spreadsheet' ? 'excel' : session.mode === 'research' ? 'ppt' : 'word'}>
+            <KnowledgeIcon name={session.mode === 'spreadsheet' ? 'table' : session.mode === 'notes' ? 'note' : 'research'} />
+          </span> : <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />}
+          <button type="button" className="knowledge-panel-name" onClick={() => {
+            if (!openSharedKnowledgeSession(document, row)) document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', {
+              detail: { id: row.id, name: row.name }
+            }))
+          }}>
+            <span title={title}>{title}</span>
+            <small>{row.received ? [session && sharedModeLabels[session.mode], row.received.category, row.received.owner].filter(Boolean).join(' · ')
               : snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.source === 'generated' ? '会话生成' : '手动上传')}</small>
           </button>
-          <div className="knowledge-panel-action">
+          <div className="knowledge-panel-action" data-session={session ? true : undefined}>
             <small>{size(row.size)}</small>
-            <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>
+            {!session && <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>}
           </div>
-        </div>))}
+        </div>
+      }))}
       {state.ready && !state.error && !hasRows &&
         <p className="knowledge-panel-state knowledge-panel-empty">暂无符合条件的文件。</p>}
     </div>
