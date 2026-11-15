@@ -1,11 +1,14 @@
 export function patchFigmaWorkspaceMenus(source) {
   source = patchNewChatWorkspaceIntent(patchSessionEntryActions(patchWorkspaceFolderActions(source)))
   const marker = '/* odyssey:workspace-menu-search:20260912 */'
-  if (source.includes(marker)) return source
   const exact = (before, after) => {
     if (source.split(before).length !== 2) throw Error('Workspace menu anchor drifted: '+before.slice(0,60))
     source = source.replace(before, after)
   }
+  const addWorkspaceLabel = '"aria-label": t("workspace.add"),'
+  const addWorkspaceAction = '"data-sidebar-add-workspace": "",'
+  if (!source.includes(addWorkspaceAction)) exact(addWorkspaceLabel, addWorkspaceLabel + '\n' + addWorkspaceAction)
+  if (source.includes(marker)) return source
   exact('const workspaceSnapshot = useWorkspaces((state) => state);', `const workspaceSnapshot = useWorkspaces((state) => state);
       ${marker}
       const [query,setQuery] = (0,react.useState)('');

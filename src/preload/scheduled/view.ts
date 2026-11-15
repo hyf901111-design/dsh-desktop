@@ -224,10 +224,13 @@ export class ScheduledTaskView {
     more.innerHTML = icon('more')
     more.onclick = () => {
       if(this.menu){this.closeMenu();return}
-      const wide=group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'
+      const sidebar = group.closest('[data-dsh-sidebar-root]')
+      const wide = sidebar?.getAttribute('data-dsh-sidebar-wide') !== 'false'
+      const addWorkspace = sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')
       const english = this.document.documentElement.dataset.odysseyLocale === 'en'
       this.showMenu(more, [
             ...(!wide ? [
+              {label:english?'New workspace':'新建工作区',icon:'workspaceAdd' as const,disabled:!addWorkspace||addWorkspace.disabled,run:()=>addWorkspace?.click()},
               {label:english?'New chat':'新建对话',icon:'chat' as const,run:()=>group.querySelector<HTMLButtonElement>('[data-sidebar-home]')?.click()},
               {label:english?'New research':'新建研究',icon:'research' as const,run:()=>group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research',{bubbles:true}))}
             ] : []),
