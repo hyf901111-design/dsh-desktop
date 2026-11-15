@@ -22,12 +22,11 @@ const fileMarks = {
   markdown: 'M9 13.5h7m-8 3.5h7m-3.8-5-1.5 7m5.3-7-1.5 7',
   word: 'M8.5 12.5h7m-7 3h7m-7 3h5',
   excel: 'M8.5 12.5h7v6h-7Zm0 3h7m-3.5-3v6',
-  ppt: 'M8.5 12h7v4.5h-7Zm3.5 4.5V19m-2 0h4',
   image: 'm8.5 17 2.5-3 2 2 1.5-2 2 3m-7-5h.01',
   audio: 'M11 17v-4l4-1v4m-4 1a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Zm4-1a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Z',
   video: 'm10.5 12.5 5 2.75-5 2.75Z',
   other: ''
-} satisfies Record<KnowledgeFormat, string>
+} satisfies Record<Exclude<KnowledgeFormat, 'ppt'>, string>
 
 type IconName = keyof typeof uiIcons | 'more'
 
@@ -42,8 +41,13 @@ export function KnowledgeFileIcon({ format, tile = false }: { format: KnowledgeF
   return <span className="knowledge-file-icon" data-format={format} data-tile={tile} aria-hidden="true">
     <svg className="knowledge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 3.5h6.5L18.5 8v11A1.5 1.5 0 0 1 17 20.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Zm6.5 0V8h5" />
-      {fileMarks[format] && <path d={fileMarks[format]} />}
+      {format === 'ppt' ? <>
+        <path d="M3 5h18M4 5v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V5M12 16v3m0 0-3 2m3-2 3 2" />
+        <path d="M8 12v1m4-3v3m4-5v5" />
+      </> : <>
+        <path d="M7 3.5h6.5L18.5 8v11A1.5 1.5 0 0 1 17 20.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Zm6.5 0V8h5" />
+        {fileMarks[format] && <path d={fileMarks[format]} />}
+      </>}
     </svg>
   </span>
 }
