@@ -9,31 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "同会话四种模式独立保留草稿",
+        "featureName": "收起侧栏的工作区和面性对话图标",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
-        "tipCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
+        "baseCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
+        "tipCommit": "5c60d088526fe46fe925ca4bbed21424a521dfc1",
         "commits": [
           {
-            "commit": "28c80bf2c591e76552396728c9f7302cc135102d",
+            "commit": "5c60d088526fe46fe925ca4bbed21424a521dfc1",
             "parents": [
-              "81f40a4c27f2327ebd9e28e4b78941e404fab60c"
+              "28c80bf2c591e76552396728c9f7302cc135102d"
             ],
-            "subject": "隔离对话研究笔记表格的未发送草稿"
+            "subject": "统一侧栏新建对话图标并新增工作区菜单项"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
+            "path": "scripts/lib/figma-workspace-menus.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/workspace-draft-state.mjs"
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
           },
           {
-            "status": "A",
-            "path": "test/workspace-draft-state.test.js"
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/sidebar-new-note-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-browser.test.js"
           }
         ],
         "checks": [
@@ -43,9 +55,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "原生输入框补丁组合安装通过。",
-            "verifiedCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
-            "completedAt": "2026-11-15T15:18:51.195Z",
+            "summary": "原生工作区按钮适配成功。",
+            "verifiedCommit": "5c60d088526fe46fe925ca4bbed21424a521dfc1",
+            "completedAt": "2026-11-15T15:34:09.381Z",
             "timeoutMs": 120000
           },
           {
@@ -56,44 +68,37 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
-            "completedAt": "2026-11-15T15:18:51.195Z",
+            "verifiedCommit": "5c60d088526fe46fe925ca4bbed21424a521dfc1",
+            "completedAt": "2026-11-15T15:34:09.381Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "--maxWorkers=1",
-              "test/workspace-draft-state.test.js",
-              "test/workspace-mode-welcome.test.js",
-              "test/spreadsheet-keyboard-reference.test.js",
-              "test/knowledge-composer.test.js",
-              "test/spreadsheet-inline-references.test.js"
+              "test/browser-sidebar-entry.test.ts",
+              "test/sidebar-new-note-browser.test.js",
+              "test/figma-workspace-folder-menu.test.ts"
             ],
             "outcome": "passed",
-            "summary": "12 项聚焦测试通过。",
-            "verifiedCommit": "28c80bf2c591e76552396728c9f7302cc135102d",
-            "completedAt": "2026-11-15T15:18:51.195Z",
+            "summary": "15 项侧栏与工作区聚焦检查通过。",
+            "verifiedCommit": "5c60d088526fe46fe925ca4bbed21424a521dfc1",
+            "completedAt": "2026-11-15T15:34:09.381Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生输入状态隔离及欢迎页、引用回归通过，签名客户端质检待执行。"
+          "summary": "浏览器验证首项打开原生目录选择流程并可取消；签名客户端待验证。"
         },
         "acceptanceCriteria": [
-          "在同一会话切换模式，提示词、引用和附件只出现在所属草稿。",
-          "四种模式共享已发送的会话历史。"
+          "收起侧栏的更多菜单首项为新建工作区，打开已有目录选择流程。",
+          "新建对话复用展开侧栏面性图标。"
         ],
-        "risks": [
-          "旧版本已保存的公共草稿归到对话模式。"
-        ],
-        "generatedAt": "2026-11-15T15:18:51.195Z"
+        "risks": [],
+        "generatedAt": "2026-11-15T15:34:09.381Z"
       }
     }
   ],
