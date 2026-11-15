@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import {
-  knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, listKnowledgeDocuments,
+  knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, knowledgeSharedCatalogError, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
   type KnowledgeImportProgress, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
@@ -400,7 +400,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     } catch (error) {
       if (sequence === receivedSequence.current && epoch === currentEpoch.current) {
         setReceived([])
-        setReceivedStatus({ loading: false, error: message(error) })
+        setReceivedStatus({ loading: false, error: knowledgeSharedCatalogError(error) })
       }
     }
   }
@@ -1048,9 +1048,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               {!rows.length && !visibleImports.length && (!ready && loadError ? <div className="knowledge-empty knowledge-load-error">
                 <span role="alert">{loadError}</span>
                 <button type="button" onClick={() => refresh.current()}>重试</button>
+              </div> : selection === 'received' && receivedStatus.error ? <div className="knowledge-empty knowledge-load-error">
+                <span role="alert">{receivedStatus.error}</span>
+                <button type="button" onClick={() => void refreshReceived(true)}>重试</button>
               </div> : <p className="knowledge-empty">
                 {selection === 'received' && receivedStatus.loading ? '正在加载他人共享…'
-                  : selection === 'received' && receivedStatus.error ? receivedStatus.error
                   : ready ? narrowed ? '没有符合条件的文件。' : selection === 'received' ? '暂无他人共享的文件。' : '此分类暂无文件。'
                   : '正在加载文件…'}
               </p>)}
