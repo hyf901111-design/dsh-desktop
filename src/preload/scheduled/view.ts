@@ -108,7 +108,7 @@ export class ScheduledTaskView {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-dsh-sidebar-wide', 'data-odyssey-locale', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right', 'data-workspace-surface'],
+      attributeFilter: ['data-dsh-sidebar-wide', 'data-odyssey-locale', 'data-odyssey-page', 'hidden', 'data-theme', 'data-ds-dark-theme', 'class', 'data-odyssey-panel-right', 'data-workspace-surface'],
     })
     this.document.addEventListener('sherlock:workspace-surface-change', () => {
       this.mountMore()
@@ -254,10 +254,17 @@ export class ScheduledTaskView {
   }
   private mountCollapsedApps(group: Element) {
     const collapsed = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') === 'false'
-    let separator = group.querySelector<HTMLElement>('[data-sidebar-app-separator]')
+    const surface = this.document.body.dataset.workspaceSurface
+    const home = group.querySelector<HTMLButtonElement>('[data-sidebar-home]')
+    if (collapsed && home) {
+      const homePage = !surface && this.document.querySelector(
+        '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([hidden], [hidden] *, [data-odyssey-subagent-panel] *)'
+      )
+      const pressed = String(Boolean(homePage))
+      if (home.getAttribute('aria-pressed') !== pressed) home.setAttribute('aria-pressed', pressed)
+    }
     if (!collapsed || !this.surfaceHost) {
       group.querySelectorAll('[data-sidebar-browser],[data-sidebar-knowledge]').forEach(button => button.remove())
-      separator?.remove()
       return
     }
     const more = group.querySelector('.st-more-zone')
@@ -280,17 +287,12 @@ export class ScheduledTaskView {
         button.title = label
         button.setAttribute('aria-label', label)
       }
-      const pressed = String(this.document.body.dataset.workspaceSurface === key)
+      const pressed = String(surface === key)
       if (button.getAttribute('aria-pressed') !== pressed) button.setAttribute('aria-pressed', pressed)
       return button
     })
-    if (!separator) {
-      separator = this.document.createElement('span')
-      separator.dataset.sidebarAppSeparator = ''
-      separator.setAttribute('aria-hidden', 'true')
-    }
     let next = more
-    for (const element of [buttons[1]!, buttons[0]!, separator]) {
+    for (const element of [...buttons].reverse()) {
       if (element.parentElement !== group || element.nextElementSibling !== next) group.insertBefore(element, next)
       next = element
     }
