@@ -10,7 +10,18 @@ const anchors = [
   ['const publish = (next, persist = false, preserveStack = false) => {',
     'const publish = (next, persist = false, preserveStack = false) => {\n                if (knowledgeReadOnly && (next.files !== snapshot.files || next.artifacts !== snapshot.artifacts)) return false;'],
   ['const commitUpdate = (patch, persist = true) => {',
-    'const commitUpdate = (patch, persist = true) => {if(knowledgeReadOnly)return false;']
+    'const commitUpdate = (patch, persist = true) => {if(knowledgeReadOnly)return false;'],
+  ['applyWorkbenchCells(cells,persist=false,previewToken,automatic=false){if(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;',
+    `applyWorkbenchCells(cells,persist=false,previewToken,automatic=false){
+      const viewOnly=knowledgeReadOnly&&automatic&&responsiveArrange&&previewToken===researchPreviewArrangeToken;
+      if(!viewOnly&&(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken))return false;`],
+  ['organizeCanvas(measured = new Map(), arrangeMode="standard",previewToken) {if(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken)return false;',
+    `organizeCanvas(measured = new Map(), arrangeMode="standard",previewToken) {
+      const viewOnly=knowledgeReadOnly&&arrangeMode==="auto"&&responsiveArrange&&previewToken===researchPreviewArrangeToken;
+      if(!viewOnly&&(!collaborationCanWrite()||workbenchPreview.get()&&previewToken!==researchPreviewArrangeToken))return false;
+      if(viewOnly&&!workbenchGrid.enabled())return false;`],
+  ['workbenchGrid.clearContentOverrides();\n      if(!collaborationCanWrite())return false;',
+    'workbenchGrid.clearContentOverrides();\n      if(!collaborationCanWrite()&&!viewOnly)return false;']
 ]
 
 export function stripKnowledgeSharedResearch(source) {
@@ -47,10 +58,11 @@ if (typeof window !== 'undefined' && window.top === window) {
     const items = new Map([
       [researchCanvasStorageKey(scope), JSON.stringify(canvas.files)],
       [researchCanvasArtifactsStorageKey(scope), JSON.stringify(canvas.artifacts)],
-      ['ework.research.preview.v1:' + scope, 'preview']
+      ['ework.research.preview.v1:' + scope, 'preview'],
+      ['ework.research.responsive-arrange.v1:' + scope, 'auto']
     ]);
     for (const [prefix,suffix,value] of layout ?? []) items.set(prefix + scope + suffix, value);
-    // Panning, zoom and active sheet/page are local view state for this open.
+    // Arrangement, zoom and the active page are local view state for this open.
     // No native storage or live collaborative board is bound to the viewer.
     const storage = {getItem:key=>items.get(key) ?? null,setItem:(key,value)=>{items.set(key,value);},removeItem:key=>items.delete(key)};
     const workspace = createResearchWorkspaceSession(storage, scope, true);

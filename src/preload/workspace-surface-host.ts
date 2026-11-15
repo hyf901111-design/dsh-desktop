@@ -140,7 +140,7 @@ export class WorkspaceSurfaceHost {
                 if (center) {
                     const box = center.getBoundingClientRect();
                     const view = this.document.defaultView;
-                    const reserved = Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
+                    const reserved = name === 'shared-session' ? 0 : Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
                     const height = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top - reserved);
                     const bounds = { left: box.left, top: box.top, width: box.width, height };
                     for (const [property, pixels] of Object.entries(bounds)) {
