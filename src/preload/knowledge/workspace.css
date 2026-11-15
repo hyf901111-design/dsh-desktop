@@ -289,8 +289,8 @@
   min-height: 0;
   margin-top: 9px;
 }
-.knowledge-table-content { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; }
-.knowledge-table-wrap { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1; overflow: auto; }
+.knowledge-table-content { display: grid; grid-template-rows: minmax(0, 1fr) auto; flex: 1; min-width: 0; min-height: 0; }
+.knowledge-table-wrap { grid-area: 1 / 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
 :is(.knowledge-table-wrap, .knowledge-session-results) { padding-inline-end: 12px; scrollbar-gutter: stable; }
 .knowledge-table { flex: none; width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .knowledge-table thead { position: sticky; top: 0; z-index: 1; background: var(--knowledge-bg); }
@@ -454,16 +454,27 @@
 }
 .knowledge-pagination input::-webkit-inner-spin-button { appearance: none; }
 .knowledge-drop-zone {
-  position: absolute;
-  inset: 6px;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--knowledge-bg) 86%, transparent);
-  border: 2px dashed var(--knowledge-accent);
-  border-radius: 12px;
+  --knowledge-drop-accent: #63aaef;
+  grid-area: 1 / 1;
+  min-height: 0;
+  margin-block-start: calc(var(--knowledge-table-header-height) + 8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  color: var(--knowledge-ink);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 26px;
+  background: color-mix(in srgb, var(--knowledge-drop-accent) 8%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--knowledge-drop-accent) 65%, transparent);
+  border-radius: 8px;
   pointer-events: none;
   z-index: 3;
 }
+.knowledge-drop-icon { width: 40px; height: 40px; display: grid; place-items: center; }
+.knowledge-workspace:not([data-dark=true]) .knowledge-drop-icon img { filter: brightness(.65); }
 .knowledge-popup, .knowledge-dialog {
   border: 1px solid var(--knowledge-line);
   border-radius: 10px;

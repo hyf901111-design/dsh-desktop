@@ -246,7 +246,7 @@ beforeAll(async () => {
           window.knowledgeActionResult = response
           window.rowsAtKnowledgeReply = Array.from(document.querySelectorAll('.knowledge-table tbody .knowledge-file-title')).map(element => element.textContent)
         },
-        path: () => ''
+        path: file => document.body.hasAttribute('data-test-native-drops') ? '/upload/' + file.name : ''
       })
       window.dispatchEvent(new Event('sherlock:knowledge-open'))
     ` },
@@ -998,7 +998,7 @@ it.each(['no-preference', 'reduce'])('provides drag and preview feedback with %s
     })
     for (let attempt = 0; attempt < 2; attempt++) {
       await list.dispatchEvent('dragenter', { dataTransfer: transfer })
-      const overlay = library.getByText('拖放文件到知识库', { exact: true })
+      const overlay = library.getByRole('status').filter({ hasText: /^松开以上传文件$/ })
       await overlay.waitFor()
       expect(await overlay.evaluate(el => getComputedStyle(el).animationName)).toBe(animation)
       expect(await file.boundingBox()).toEqual(before)
@@ -1013,6 +1013,50 @@ it.each(['no-preference', 'reduce'])('provides drag and preview feedback with %s
     await preview.getByRole('button', { name: '关闭预览' }).click()
     await preview.waitFor({ state: 'detached' })
     expect(await file.boundingBox()).toEqual(before)
+  } finally { await page.close() }
+})
+
+it('drops one or several local files into the active knowledge folder with individual progress', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<body data-test-native-drops><div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const list = library.locator('.knowledge-file-list')
+    const heading = list.locator('thead')
+    const pager = list.getByRole('navigation', { name: '文件分页' })
+    const folder = library.getByRole('navigation', { name: '知识库分类' }).getByRole('button', { name: /^研究资料 / })
+    await folder.click()
+    for (const files of [['单文件.md'], ['批量资料一.txt', '批量资料二.pdf']]) {
+      const dataTransfer = await page.evaluateHandle(names => {
+        const data = new DataTransfer()
+        for (const name of names) data.items.add(new File(['正文'], name))
+        return data
+      }, files)
+      await list.dispatchEvent('dragenter', { dataTransfer })
+      const overlay = list.getByRole('status').filter({ hasText: /^松开以上传文件$/ })
+      await overlay.waitFor()
+      const [target, headerBox, pagerBox] = await Promise.all([overlay.boundingBox(), heading.boundingBox(), pager.boundingBox()])
+      expect(target.y - headerBox.y - headerBox.height).toBeCloseTo(8)
+      expect(target.y + target.height).toBeCloseTo(pagerBox.y)
+      expect(await overlay.evaluate(el => {
+        const image = el.querySelector('img'), style = getComputedStyle(el)
+        return { border: style.borderTopStyle, radius: style.borderRadius, image: [image.naturalWidth, image.naturalHeight] }
+      })).toEqual({ border: 'dashed', radius: '8px', image: [28, 28] })
+      await list.dispatchEvent('drop', { dataTransfer })
+      await overlay.waitFor({ state: 'detached' })
+      for (const name of files) {
+        const progress = list.getByRole('progressbar', { name: `${name}的上传进度`, exact: true })
+        await progress.waitFor()
+        await expect.poll(() => progress.getAttribute('value')).toBe('8192')
+      }
+      await page.evaluate(names => names.forEach(name => window.finishImport(name)), files)
+      for (const name of files) await list.getByRole('button', { name: new RegExp(name) }).first().waitFor()
+      expect(await page.evaluate(names => window.data.documents.filter(row => names.includes(row.name)).map(row => row.folderId), files))
+        .toEqual(files.map(() => 'f'))
+    }
   } finally { await page.close() }
 })
 

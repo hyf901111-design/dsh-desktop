@@ -24,6 +24,7 @@ import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import { KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
 import { KnowledgePagination, useKnowledgePagination } from './pagination'
 import { listKnowledgeRows, usePublishedKnowledgeSessions, type KnowledgeListRow } from './published-sessions'
+import dropUploadIcon from './drop-upload.svg?inline'
 import css from './workspace.css?raw'
 
 interface Bridge {
@@ -164,6 +165,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const appliedSharedCatalog = useRef(false)
   const dragDepth = useRef(0)
   const selection = filter.category ?? 'all'
+  const canDropFiles = ready && !busy && !choosingFiles && selection !== 'received'
+  useEffect(() => {
+    dragDepth.current = 0
+    setDragging(false)
+  }, [canDropFiles, filter.folderId, selection, sessionMode, surfaceVisible, tab])
   const visibleImports = selection === 'all' ? imports.filter(item => !filter.folderId || item.folderId === filter.folderId) : []
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
   const title = selectedFolder?.name ?? knowledgeCategories[selection]
@@ -892,20 +898,26 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} {...sessions} open={openSession}
         shares={local.sessionShares} share={(row, mode) => openDialog({ type: 'share-session', row, mode })} /> :
       <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
-        if (selection === 'received' || !event.dataTransfer.types.includes('Files')) return
+        if (!canDropFiles || !event.dataTransfer.types.includes('Files')) return
+        event.preventDefault()
         dragDepth.current++
         setDragging(true)
-      }} onDragLeave={() => {
+      }} onDragLeave={event => {
+        if (!event.dataTransfer.types.includes('Files')) return
         dragDepth.current = Math.max(0, dragDepth.current - 1)
         if (!dragDepth.current) setDragging(false)
       }} onDragOver={event => {
-        if (selection !== 'received' && event.dataTransfer.types.includes('Files')) event.preventDefault()
-      }} onDrop={event => {
-        if (!event.dataTransfer.files.length) return
+        if (!event.dataTransfer.types.includes('Files')) return
         event.preventDefault()
+        event.stopPropagation()
+        event.dataTransfer.dropEffect = canDropFiles ? 'copy' : 'none'
+      }} onDrop={event => {
+        if (!event.dataTransfer.types.includes('Files') && !event.dataTransfer.files.length) return
+        event.preventDefault()
+        event.stopPropagation()
         dragDepth.current = 0
         setDragging(false)
-        if (busy || choosingFiles || !ready || selection === 'received') return
+        if (!canDropFiles) return
         const paths = Array.from(event.dataTransfer.files, file => bridge.path(file)).filter(Boolean)
         if (paths.length) void addFiles(paths)
         else setNotice({ text: '请拖入本地文件。', error: true })
@@ -1068,10 +1080,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   : '正在加载文件…'}
               </p>)}
             </div>
+            {canDropFiles && dragging && <div className="knowledge-drop-zone" role="status">
+              <span className="knowledge-drop-icon"><img src={dropUploadIcon} alt="" width={28} height={28} /></span>
+              <span>松开以上传文件</span>
+            </div>}
             <KnowledgePagination label="文件分页" page={page} pages={pages} setPage={setPage} />
           </div>
         </div>
-        {dragging && <div className="knowledge-drop-zone">拖放文件到知识库</div>}
       </main>}
       {preview && !preview.native && <aside className="knowledge-preview" aria-label="文件预览">
         <header><strong title={preview.document.name}>{preview.document.name}</strong>
