@@ -1,3 +1,5 @@
+import {workbenchStylePalette} from '../../../packages/dsh-research-task-runtime/workbench-style.js'
+
 export type CashFlowGuideLocale = 'zh'|'en'
 type BridgeStep = {
   id:'profit'|'depreciation'|'receivables'|'inventory'|'other'|'cash'
@@ -11,6 +13,8 @@ const copy = {
     sample:'虚构演示数据', earnings:'净利润', cash:'经营现金流', conversion:'现金转化率',
     unit:'亿元', chart:'从净利润到经营现金流', assumption:'若当季多收回货款',
     actual:'实际', estimate:'测算', max:'8,000 万元', labels:['净利润','折旧摊销','应收增加','存货增加','其他调整','现金流'],
+    shortLabels:['净利','折旧','应收','存货','其他','现金'],
+    colors:'柱图配色', defaultStyle:'默认', enterpriseStyle:'易方达模式', scenarioReceipt:'情景多回款',
     targetMet:'达到 75% 目标', targetGap:'距 75% 目标差', points:'个百分点',
     actualPreset:'实际值', trialPreset:'+3,000 万元', presets:'回款情景',
     moreToTarget:'距达标需多回款 ', flowChange:'经营现金流 ', ratioChange:'现金转化率 ', amountUnit:'万元',
@@ -19,11 +23,14 @@ const copy = {
     sample:'Fictional demo data', earnings:'Net profit', cash:'Operating cash flow', conversion:'Cash conversion',
     unit:'CNY 100m', chart:'From net profit to operating cash flow', assumption:'If more receivables were collected',
     actual:'Actual', estimate:'Scenario', max:'CNY 80m', labels:['Net profit','D&A','Receivables','Inventory','Other','Cash flow'],
+    shortLabels:['Profit','D&A','A/R','Stock','Other','Cash'],
+    colors:'Chart colors', defaultStyle:'Default', enterpriseStyle:'EFund mode', scenarioReceipt:'Extra collections',
     targetMet:'75% target reached', targetGap:'Gap to 75% target:', points:'pp',
     actualPreset:'Actual', trialPreset:'+CNY 30m', presets:'Collection scenarios',
     moreToTarget:'Extra collections needed: ', flowChange:'Cash flow ', ratioChange:'Conversion ', amountUnit:'CNY 10k',
   }
 }
+const enterprise = workbenchStylePalette('enterprise')
 const css = `
   [data-cash-flow-bridge] {
     --ink: var(--sherlock-text);
@@ -32,13 +39,16 @@ const css = `
     --total: var(--sherlock-chart-1);
     --inflow: #227b63;
     --outflow: #b65833;
+    --goal: var(--inflow);
     width: 100%;
+    box-sizing: border-box;
+    container: cash-bridge / inline-size;
     padding: 12px 10px 8px;
     color: var(--ink);
     font: 12px/1.4 var(--sherlock-font-sans);
     font-variant-numeric: tabular-nums;
   }
-  :root[data-sherlock-theme="dark"] [data-cash-flow-bridge] {
+  :root[data-sherlock-theme="dark"] [data-cash-flow-bridge]:not([data-bridge-style=enterprise]) {
     --inflow: #78c8af;
     --outflow: #ed9c73;
   }
@@ -50,20 +60,37 @@ const css = `
     gap: 2px 8px;
   }
   .bridge-heading strong { font-size: 13px; }
+  .bridge-toolbar { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:6px; margin:10px 0 6px; }
+  .bridge-palette { display:flex; flex-wrap:wrap; gap:2px; border-radius:7px; padding:2px; background:var(--sherlock-surface-muted); }
+  [data-cash-flow-bridge] .bridge-palette button {
+    min-height:24px; white-space:nowrap; font-size:11px; padding:2px 7px;
+    --sherlock-control-secondary: transparent;
+    --sherlock-control-primary: color-mix(in srgb,var(--total) 18%,var(--sherlock-surface));
+    --sherlock-control-on-primary: var(--ink);
+  }
+  [data-cash-flow-bridge][data-bridge-style=enterprise] {
+    --total: ${enterprise['chart-1']};
+    --inflow: ${enterprise['chart-2']};
+    --outflow: ${enterprise['chart-3']};
+    --goal: ${enterprise['chart-1']};
+  }
+  :root[data-sherlock-theme="dark"] [data-cash-flow-bridge][data-bridge-style=enterprise] { --goal: var(--inflow); }
+  [data-bridge-style=enterprise] .bridge-bar { box-shadow: inset 0 0 0 1px #ffffff24; }
   [data-cash-flow-bridge] .bridge-secondary { color: var(--quiet); font-size: 11px; }
   [data-cash-flow-bridge] .bridge-metrics {
     display: grid;
-    grid-template-columns: .9fr 1.05fr 1.05fr;
+    grid-template-columns: repeat(3,minmax(0,1fr));
     gap: 7px;
     margin: 12px 0 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--rule);
   }
-  .bridge-metrics > div { display: grid; min-width: 0; align-content: start; gap: 3px; }
-  .bridge-metrics b { font-size: clamp(20px,6.4vw,27px); line-height: 1.1; white-space: nowrap; }
-  [data-cash-flow-bridge] [data-metric-label] { white-space: normal; }
+  .bridge-metrics > div { display: grid; grid-template-rows: minmax(2.5em,auto) auto auto; min-width: 0; align-content: start; gap: 3px; }
+  .bridge-metrics b { font-size: clamp(19px,7cqi,27px); line-height: 1.1; white-space: nowrap; }
+  [data-cash-flow-bridge] [data-metric-label] { display:flex; flex-wrap:wrap; align-content:end; align-items:baseline; gap:0 4px; white-space:normal; }
+  [data-mode] { font-size:10px; white-space:nowrap; }
   .bridge-metrics [data-metric-label] { font-size: 11px; color: var(--quiet); }
-  [data-cash-flow-bridge][data-goal-met] :is([data-ratio],[data-target]) { color: var(--inflow); }
+  [data-cash-flow-bridge][data-goal-met] :is([data-ratio],[data-target]) { color: var(--goal); }
   [data-cash-flow-bridge] .bridge-graph { --plot: 150px; --labels: 38px; position: relative; margin-top: 15px; padding-left: 12px; }
   .bridge-grid { position: absolute; inset: 0 0 auto; height: var(--plot); pointer-events: none; }
   .bridge-grid span { position: absolute; inset-inline: 0; bottom: var(--position); height: 0; color: var(--quiet); font-size: 9px; line-height: 0; }
@@ -107,20 +134,23 @@ const css = `
     position: absolute;
     z-index: 2;
     inset: 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    display: grid;
+    align-content: end;
+    justify-items: center;
+    box-sizing: border-box;
     border: 0;
     border-radius: 2px;
     background: transparent;
     color: var(--quiet);
     text-align: center;
-    padding: 0 0 4px;
+    padding: 0 0 6px !important;
     font: inherit;
     font-size: 10px;
     line-height: 1.15;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
+  .bridge-choice > span { white-space:nowrap; }
+  .bridge-choice .bridge-label-compact { display:none; }
   [data-cash-flow-bridge] button.bridge-choice {
     --sherlock-control-bg: transparent;
     --sherlock-control-secondary: transparent;
@@ -150,6 +180,17 @@ const css = `
   .bridge-detail-rows { display: grid; gap: 4px; }
   .bridge-detail-rows > div { display: flex; justify-content: space-between; gap: 6px; }
   .bridge-detail-rows > div > span:last-child { color: var(--ink); white-space: nowrap; }
+  .bridge-detail-rows [data-collection-detail] { padding-top:4px; border-top:1px solid var(--rule); color:var(--goal); }
+  @container cash-bridge (max-width: 290px) {
+    .bridge-choice .bridge-label-full { display:none; }
+    .bridge-choice .bridge-label-compact { display:block; }
+  }
+  @container cash-bridge (max-width: 210px) {
+    [data-cash-flow-bridge] .bridge-metrics { grid-template-columns:1fr; gap:8px; }
+    .bridge-metrics > div { grid-template-columns:1fr auto; grid-template-rows:auto auto; align-items:center; }
+    .bridge-metrics > div > .bridge-secondary { grid-column:1 / -1; }
+    .bridge-amount { font-size:9px; }
+  }
   [data-cash-flow-bridge] .bridge-scenario {
     margin-top: 15px;
     padding-top: 12px;
@@ -179,9 +220,16 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     <strong>${company} · ${period}</strong>
     <span class="bridge-secondary">${labels.sample}</span>
   </header>
+  <div class="bridge-toolbar">
+    <span class="bridge-secondary">${labels.colors}</span>
+    <div class="bridge-palette" role="group" aria-label="${labels.colors}">
+      <button type="button" data-palette="default" aria-pressed="true">${labels.defaultStyle}</button>
+      <button type="button" data-palette="enterprise" aria-pressed="false">${labels.enterpriseStyle}</button>
+    </div>
+  </div>
   <div class="bridge-metrics" aria-live="polite">
     <div><span data-metric-label>${labels.earnings}</span><b data-profit></b><span class="bridge-secondary">${labels.unit}</span></div>
-    <div><span data-metric-label>${labels.cash}<span data-mode></span></span><b data-flow></b><span class="bridge-secondary" data-actual-flow></span></div>
+    <div><span data-metric-label><span>${labels.cash}</span><span data-mode></span></span><b data-flow></b><span class="bridge-secondary" data-actual-flow></span></div>
     <div><span data-metric-label>${labels.conversion}</span><b data-ratio></b><span data-target class="bridge-secondary"></span></div>
   </div>
   <div class="bridge-heading">
@@ -218,6 +266,7 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
   const slider = root.querySelector('input');
   const graph = root.querySelector('ol');
   const presets = [...root.querySelectorAll('[data-scenario]')];
+  const palettes = [...root.querySelectorAll('[data-palette]')];
   const actualProfit = steps[0].amount;
   const actualCash = steps[steps.length - 1].amount;
   const formatNumber = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'zh-CN', {maximumFractionDigits:1});
@@ -245,8 +294,12 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     const choice = document.createElement(step.details.length ? 'button' : 'span');
     choice.className = 'bridge-choice';
     const name = document.createElement('span');
+    name.className = 'bridge-label-full';
     name.textContent = labels.labels[index];
-    choice.append(name);
+    const compact = document.createElement('span');
+    compact.className = 'bridge-label-compact';
+    compact.textContent = labels.shortLabels[index];
+    choice.append(name,compact);
     if (step.details.length) {
       choice.type = 'button';
       choice.dataset.adjustment = step.id;
@@ -263,10 +316,14 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
   function showAdjustment() {
     const step = steps.find(step => step.id === active);
     write('[data-source-title]', step.name);
-    const details = step.details.map(detail => {
+    const recovered = Number(slider.value);
+    const sourceDetails = step.id === 'receivables' && recovered
+      ? [...step.details,{name:labels.scenarioReceipt,amount:recovered,scenario:true}] : step.details;
+    const details = sourceDetails.map(detail => {
       const row = document.createElement('div');
       const name = document.createElement('span');
       const value = document.createElement('span');
+      if (detail.scenario) row.dataset.collectionDetail = '';
       name.textContent = detail.name;
       value.textContent = ' ' + signed(detail.amount) + ' ' + labels.unit;
       row.append(name,value);
@@ -301,7 +358,7 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     write('[data-profit]', amountText(actualProfit));
     write('[data-flow]', amountText(projected));
     write('[data-ratio]', formatNumber.format(ratio) + '%');
-    write('[data-mode]', recovered ? ' · ' + labels.estimate : '');
+    write('[data-mode]', recovered ? labels.estimate : '');
     write('[data-actual-flow]', recovered ? labels.actual + ' ' + amountText(actualCash) + ' ' + labels.unit : labels.unit);
     const attained = ratio >= 75;
     root.toggleAttribute('data-goal-met',attained);
@@ -316,9 +373,13 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
       : remaining ? labels.moreToTarget + formatNumber.format(remaining) + ' ' + labels.amountUnit : labels.targetMet;
     write('[data-scenario-delta]', delta);
     for (const preset of presets) preset.setAttribute('aria-pressed', String(preset.dataset.scenario === slider.value));
+    showAdjustment();
   }
   render();
-  showAdjustment();
+  for (const palette of palettes) palette.addEventListener('click', () => {
+    root.dataset.bridgeStyle = palette.dataset.palette;
+    for (const option of palettes) option.setAttribute('aria-pressed', String(option === palette));
+  });
   slider.addEventListener('input',render);
   for (const preset of presets) preset.addEventListener('click', () => {
     slider.value = preset.dataset.scenario;
