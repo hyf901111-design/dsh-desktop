@@ -211,6 +211,14 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
 .ew-sheet-welcome-actions{display:flex;flex-direction:column;gap:2px;margin-inline:-7px}
 .ew-sheet-welcome .ew-sheet-welcome-actions button{width:100%;min-height:36px;display:flex;align-items:center;justify-content:flex-start;gap:8px;border-radius:6px;padding:7px;text-align:start}
 .ew-sheet-welcome .ew-sheet-welcome-actions button:is(:hover,:focus-visible){background:var(--ss-hover)}
+[data-composer-card] [data-sheet-context-anchor]{position:relative;margin:12px 17px 0;min-width:0;align-self:stretch}
+[data-composer-card]:has(.ew-sheet-pending-reference) [data-sheet-context-anchor]{display:none}
+[data-sheet-context-anchor] button{border:0;border-radius:8px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:20px;padding:3px 8px;cursor:pointer}
+[data-sheet-context-anchor] button:hover:not(:disabled){color:var(--odyssey-text)}
+[data-sheet-context-anchor] button:disabled{opacity:.5;cursor:default}
+[data-sheet-context-anchor] button:focus-visible{outline:1px solid var(--odyssey-active);outline-offset:3px}
+[data-sheet-context-directory]{position:absolute;bottom:calc(100% + 8px);left:0;width:min(320px,100%);box-sizing:border-box;z-index:20;padding:12px;border:1px solid var(--dsw-alias-border-l3);border-radius:12px;background:var(--dsw-specific-input-major);box-shadow:var(--dsw-shadow-lv2)}
+[data-sheet-context-directory] button{width:100%;min-height:34px}
 /* Chromium needs a layout box on Univer's editable node even when it is empty. */
 .ew-sheet-grid [id^="univer-doc-selection-container-__INTERNAL_EDITOR__"]{width:1px;height:1px}
 .ew-sheet-grid [data-u-comp=editor][contenteditable=true]{min-width:1px;min-height:1px}

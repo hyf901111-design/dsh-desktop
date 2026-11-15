@@ -90,13 +90,13 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
       settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}),className:'osXY9a_actions',t}):null)
 }
 export function EWorkNotesActivity(props){useNotesActivityLocale();const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':noteUiText('笔记任务过程')},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}
-export function EWorkNotesConversation({sessionId,empty,children,t}){
+export function EWorkNotesConversation({sessionId,empty,children,t,welcomeView}){
  useNotesActivityLocale()
  const rows=useNotesConversationRows(sessionId),{tasks}=useCanvasTasks(sessionId)
  const welcome=empty&&rows.length===0&&tasks.length===0
  // Keep the native ChatView mounted: it replays notes again when openState becomes open.
  return react.createElement(react.Fragment,null,
-   welcome?react.createElement('div',{className:'sRp_emptyState','data-research-empty-state':'','data-note-empty-state':''},noteUiText('探索更远，洞见更深')):null,
+   welcome?(welcomeView??react.createElement('div',{className:'sRp_emptyState','data-research-empty-state':'','data-note-empty-state':''},noteUiText('探索更远，洞见更深'))):null,
    react.createElement('div',{style:{display:welcome?'none':'contents'}},children||react.createElement(EWorkNotesActivity,{sessionId,t})))
 }
 export function mergeNoteConversationFlow(flow,nodeStore,rows){

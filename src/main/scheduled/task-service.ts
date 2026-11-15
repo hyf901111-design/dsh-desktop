@@ -2,7 +2,6 @@ import {createHash} from 'node:crypto'
 import type {TaskStore} from './task-store'
 import type {TaskRunner} from './task-runner'
 import {scheduleLabel,validateTask} from '../../shared/scheduled-tasks'
-// @ts-expect-error The runtime module also supplies the same intent boundary to the model tools.
 import {scheduledTaskRequest} from '../../../packages/dsh-research-task-runtime/canvas-task-routing.js'
 
 type Options={store:TaskStore;runner:TaskRunner;owner:()=>string;readCanvas:(sessionId:string)=>any|Promise<any>;isShared:(sessionId:string)=>boolean;now?:()=>number}

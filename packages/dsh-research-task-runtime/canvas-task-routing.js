@@ -3,7 +3,11 @@
 export function canvasHumanRequest(session) {
   const message=[...(session?.events??[])].reverse().find(e=>e.type==='user/message'&&e.data?.source?.kind==='user')?.data
   if(!message)return null
-  let text=(message.content??[]).filter(p=>p.type==='text').map(p=>p.text).join('\n')
+  const text=canvasHumanText((message.content??[]).filter(p=>p.type==='text').map(p=>p.text).join('\n'))
+  return text===null?null:{messageId:message.id,text}
+}
+
+export function canvasHumanText(text) {
   const prefix='␞SHERLOCK_RESEARCH_FILES_V1 '
   if(text.startsWith(prefix)){
     const end=text.indexOf('␟',prefix.length)
@@ -17,7 +21,7 @@ export function canvasHumanRequest(session) {
       return ['file','folder','category','shared-category'].includes(reference?.kind)&&Array.isArray(reference.documents)?' ':original
     }catch{return original}
   })
-  return {messageId:message.id,text:text.trim()}
+  return text.trim()
 }
 
 export function ongoingCanvasRequest(session) {

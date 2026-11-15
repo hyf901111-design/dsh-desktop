@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import {mkdtempSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -18,13 +19,14 @@ it('uses the visible native client capability route and does not retarget select
   const source={sessionId:key.sessionId,turnId:'turn',authorityId:'human',authoritySeq:1,sourceInstruction:'填写并格式化工作簿'}
   const catalog=await client.request({...source,method:'catalog'})
   expect(catalog.mode).toBe('spreadsheet')
+  expect(catalog).toMatchObject({referenceScope:'workbook',guidance:expect.stringContaining('默认参考当前工作簿')})
   expect(catalog.capabilities.find((c:any)=>c.id==='spreadsheet.apply').available).toBe(true)
   const call=(capability:string,args:unknown,requestId:string)=>client.request({...source,method:'execute',call:{capability,arguments:args,requestId}})
   const created=await call('spreadsheet.apply',{revision:0,createName:'估值',operations:[{op:'write',sheetId:'sheet-1',range:'B2',cells:[[{value:42}]]}]},'create')
   expect(created).toMatchObject({status:'succeeded',data:{saved:true,revision:1}})
   const withRef={...source,turnId:'selection-turn',authorityId:'selection-user',sourceInstruction:'填写〔表格选区 "Sheet1"!B2 #f0123456789a〕'}
-  spreadsheet.admit(key,withRef.sourceInstruction,store.load(key).workbook!.id,[{sessionId:key.sessionId,bookId:store.load(key).workbook!.id,sheetName:'Sheet1',sheetId:'sheet-1',range:'B2',id:'f0123456789a'}])
-  await client.request({...withRef,method:'catalog'})
+  spreadsheet.admit(key,withRef.sourceInstruction,store.load(key).workbook!.id,[{sessionId:key.sessionId,bookId:store.load(key).workbook!.id,sheetName:'Sheet1',sheetId:'sheet-1',range:'B2',id:'f0123456789a'}],false)
+  expect(await client.request({...withRef,method:'catalog'})).toMatchObject({referenceScope:'ranges'})
   expect(await client.request({...withRef,method:'execute',call:{requestId:'inspect',capability:'spreadsheet.inspect',arguments:{scope:'selected'}}})).toMatchObject({status:'succeeded',data:{range:'B2',cells:[[{value:42}]]}})
   flush=async()=>{ const current=store.load(key);current.workbook!.name='手动改名';store.save(key,current.revision,current.workbook!) }
   expect(await call('spreadsheet.apply',{revision:1,operations:[{op:'clear',sheetId:'sheet-1',range:'B2'}]},'race')).toMatchObject({status:'failed'})
@@ -34,11 +36,19 @@ it('uses the visible native client capability route and does not retarget select
   expect(await call('spreadsheet.apply',{revision:2,operations:[{op:'clear',sheetId:'sheet-1',range:'B2'}]},'revoked')).toMatchObject({status:'failed'})
   expect(store.load(key).revision).toBe(2)
   writable=true;flush=async()=>{}
-  spreadsheet.admit(key,'不用当前选区',store.load(key).workbook!.id,[])
+  spreadsheet.admit(key,'不用当前选区',store.load(key).workbook!.id,[],false)
   const noSelection={...source,turnId:'without-range',authorityId:'new',sourceInstruction:'不用当前选区'}
-  await client.request({...noSelection,method:'catalog'})
+  expect(await client.request({...noSelection,method:'spreadsheet-reference'})).toMatchObject({referenceScope:'none'})
+  expect(await client.request({...noSelection,method:'spreadsheet-reference',sessionId:'another'})).toEqual({})
+  expect(await client.request({...noSelection,method:'catalog'})).toMatchObject({referenceScope:'none',guidance:expect.stringContaining('不要自行读取工作簿内容')})
   expect(await client.request({...noSelection,method:'execute',call:{requestId:'excluded',capability:'spreadsheet.inspect',arguments:{scope:'selected'}}})).toMatchObject({status:'failed',message:expect.stringContaining('没有引用选区')})
+  const longPrompt='长'.repeat(8001)
+  spreadsheet.admit(key,longPrompt,store.load(key).workbook!.id,[],false)
+  const longInput={...noSelection,turnId:'long-turn',sourceInstruction:'',sourceInstructionDigest:createHash('sha256').update(longPrompt).digest('hex')}
+  expect(await client.request({...longInput,method:'spreadsheet-reference'})).toMatchObject({referenceScope:'none'})
+  expect(await client.request({...longInput,method:'catalog'})).toMatchObject({referenceScope:'none'})
   client.bind({sessionId:key.sessionId,mode:'notes',active:true})
+  expect(await client.request({...noSelection,method:'spreadsheet-reference'})).toEqual({})
   expect((await client.request({...source,method:'catalog'})).capabilities.find((c:any)=>c.id==='spreadsheet.apply').available).toBe(false)
  }finally{rmSync(dir,{recursive:true,force:true})}
 })

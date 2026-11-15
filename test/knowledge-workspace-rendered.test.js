@@ -1268,9 +1268,12 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     const styles = await tileStyles.evaluateAll(tiles => tiles.map(tile => {
       const svg = tile.querySelector('svg')
       const css = getComputedStyle(tile)
+      const image = tile.dataset.format === 'image'
       return {
         format: tile.dataset.format, background: css.backgroundColor, highlight: css.backgroundImage,
-        cover: getComputedStyle(svg.children[2]).fill, pageDetail: svg.children[1].getAttribute('d'),
+        cover: getComputedStyle(image ? svg.querySelector('rect') : svg.children[2]).fill,
+        pageDetail: (image ? svg.querySelector('path') : svg.children[1]).getAttribute('d'),
+        hasLandscape: image && !!svg.querySelector('rect + circle + path'),
         viewBox: svg.getAttribute('viewBox')
       }
     }))
@@ -1279,6 +1282,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     expect(new Set(styles.map(style => style.pageDetail)).size).toBe(9)
     const pdf = styles.find(style => style.format === 'pdf')
     const ppt = styles.find(style => style.format === 'ppt')
+    expect(styles.find(style => style.format === 'image')).toMatchObject({ cover: 'rgb(115, 64, 149)', hasLandscape: true })
     expect(pdf.cover).toBe('rgb(169, 42, 58)')
     expect(ppt.cover).toBe('rgb(190, 72, 30)')
     expect(pdf.pageDetail).not.toBe(ppt.pageDetail)
@@ -1502,6 +1506,15 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       return { width, height, background: getComputedStyle(node).backgroundColor }
     }))
 
+    await expect.poll(() => nav.locator('small').allTextContents()).toContain('43')
+    const counts = await nav.locator('small').evaluateAll(elements => elements.map(element => {
+      const text = document.createRange()
+      text.selectNodeContents(element)
+      return { digits: element.textContent.length, right: text.getBoundingClientRect().right }
+    }))
+    expect(new Set(counts.map(count => count.digits)).size).toBeGreaterThan(1)
+    expect(Math.max(...counts.map(count => count.right)) - Math.min(...counts.map(count => count.right))).toBeLessThan(1)
+
     for (const label of ['所有文件', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
       '研究模式', '笔记模式', '表格模式']) {
       const category = label === '行业研究' ? library.getByRole('button', { name: label, exact: true })
@@ -1540,6 +1553,8 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       await jump.fill('10')
       await jump.press('Enter')
       expect(await rows.count()).toBe(20)
+      expect(await jump.getAttribute('aria-invalid')).toBe('true')
+      expect(await jump.evaluate(input => input.getAnimations().length)).toBe(0)
       await jump.fill('3')
       await jump.press('Enter')
       expect(await rows.count()).toBe(3)
@@ -1569,6 +1584,46 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
     await jump.fill('8')
     await pager.getByRole('button', { name: '跳转', exact: true }).click()
     expect(await pager.getByRole('button', { name: '第 8 页', exact: true }).getAttribute('aria-current')).toBe('page')
+  } finally { await page.close() }
+})
+
+it('shakes the page field on repeated invalid submissions and suppresses native browser feedback', async () => {
+  const page = await browser.newPage({ viewport: { width: 1150, height: 650 }, reducedMotion: 'no-preference' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({
+      contentType: 'text/html', body: `<!doctype html>
+        <body data-test-pagination><div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div></body>`
+    }))
+    await page.goto('https://knowledge.test/')
+    await page.addScriptTag({ content: bundle })
+    const input = page.getByRole('spinbutton', { name: '跳至页码' })
+    const button = page.getByRole('button', { name: '跳转', exact: true })
+    await input.evaluate(element => {
+      const animate = element.animate.bind(element)
+      window.pageValidation = { native: 0, shakes: [] }
+      element.addEventListener('invalid', () => window.pageValidation.native++)
+      element.animate = (frames, options) => {
+        window.pageValidation.shakes.push(frames.map(frame => frame.transform))
+        return animate(frames, options)
+      }
+    })
+    for (const value of ['33', '1.5', '0', '']) {
+      await input.fill(value)
+      await input.press('Enter')
+      expect(await input.getAttribute('aria-invalid')).toBe('true')
+    }
+    await button.click()
+    expect(await input.evaluate(element => element === document.activeElement)).toBe(true)
+    const { native, shakes } = await page.evaluate(() => window.pageValidation)
+    expect(native).toBe(0)
+    expect(shakes).toEqual(Array.from({ length: 5 }, () =>
+      [0, -5, 5, -3, 3, 0].map(offset => `translateX(${offset}px)`)))
+    expect(await page.getByRole('button', { name: '第 1 页', exact: true }).getAttribute('aria-current')).toBe('page')
+    await input.fill('3')
+    await button.click()
+    expect(await input.inputValue()).toBe('')
+    expect(await input.getAttribute('aria-invalid')).toBeNull()
+    expect(await page.getByRole('button', { name: '第 3 页', exact: true }).getAttribute('aria-current')).toBe('page')
   } finally { await page.close() }
 })
 

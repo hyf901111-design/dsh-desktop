@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto'
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {canvasHumanRequest} from './canvas-task-routing.js'
 import {parseConversationComponentManifest} from './conversation-component-contract.js'
@@ -25,7 +26,36 @@ function executionIdentity(exec){
   const human=admitted?canvasHumanRequest({events:[admitted]}):undefined
   const authoritySeq=admitted?(Number.isSafeInteger(admitted.seq)&&admitted.seq>=0?admitted.seq:events.indexOf(admitted)):undefined
   const authorityId=admitted?(id(admitted.data?.id)?admitted.data.id:String(authoritySeq)):undefined
-  return {sessionId:session.id,turnId,...authorityId?{authorityId,authoritySeq,sourceInstruction:human?.text&&human.text.length<=8000?human.text:''}:{}}
+  const instruction=human?.text??'',long=instruction.length>8000
+  return {sessionId:session.id,turnId,...authorityId?{authorityId,authoritySeq,sourceInstruction:long?'':instruction,
+    ...(long&&{sourceInstructionDigest:createHash('sha256').update(instruction).digest('hex')})}:{}}
+}
+
+function capabilityEndpoint(env){
+  const endpoint=new URL(env.SHERLOCK_RESEARCH_CONTEXT_URL)
+  if(endpoint.protocol!=='http:'||endpoint.hostname!=='127.0.0.1'||endpoint.username||endpoint.password||typeof env.SHERLOCK_RESEARCH_CONTEXT_TOKEN!=='string'||!env.SHERLOCK_RESEARCH_CONTEXT_TOKEN)
+    throw Error('客户端能力服务不可用。')
+  return endpoint.origin+'/client-capabilities'
+}
+
+// Resolve only the scope of the admitted message. Workbook cells still go
+// through the normal capability catalog and inspection tools.
+export async function readSpreadsheetReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch}={}){
+  if(!env.SHERLOCK_RESEARCH_CONTEXT_URL)return undefined
+  try{
+    const identity=executionIdentity({agent})
+    if(!identity.authorityId)return undefined
+    const timeout=AbortSignal.timeout(500)
+    const response=await request(capabilityEndpoint(env),{
+      method:'POST',redirect:'error',signal:signal?AbortSignal.any([signal,timeout]):timeout,
+      headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
+      body:JSON.stringify({...identity,method:'spreadsheet-reference'})
+    })
+    if(!response.ok)return undefined
+    const value=await response.json()
+    if(['workbook','ranges','none'].includes(value?.referenceScope)&&typeof value.guidance==='string')return value.guidance
+  }catch{}
+  return undefined
 }
 
 function actionCall(args){
@@ -88,9 +118,7 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         const call=method==='execute'?actionCall(args):undefined
         const identity=executionIdentity(exec)
         let endpoint
-        try{endpoint=new URL(env.SHERLOCK_RESEARCH_CONTEXT_URL)}catch{throw Error('客户端能力服务不可用。')}
-        if(endpoint.protocol!=='http:'||endpoint.hostname!=='127.0.0.1'||endpoint.username||endpoint.password||typeof env.SHERLOCK_RESEARCH_CONTEXT_TOKEN!=='string'||!env.SHERLOCK_RESEARCH_CONTEXT_TOKEN)
-          throw Error('客户端能力服务不可用。')
+        try{endpoint=capabilityEndpoint(env)}catch{throw Error('客户端能力服务不可用。')}
         exec.signal?.throwIfAborted()
         const controller=new AbortController(),abort=()=>controller.abort()
         controllers.add(controller)
@@ -99,7 +127,7 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         // a bounded final-effect acknowledgement. Other actions remain 120s.
         const timer=setTimeout(abort,call?.capability==='notes.components.create'?260000:120000)
         const post=async(operation,transportSignal)=>{
-          const response=await request(`${endpoint.origin}/client-capabilities`,{
+          const response=await request(endpoint,{
             method:'POST',redirect:'error',signal:transportSignal,
             headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
             body:JSON.stringify({...identity,method:operation,...(call?{call}:{})})

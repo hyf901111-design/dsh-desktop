@@ -1,5 +1,6 @@
 import {Window,HTMLButtonElement as TestButton} from 'happy-dom'
 import {it,expect,vi} from 'vitest'
+import filledResearchIcon from '../build/brand/odyssey-b-research-18.svg?inline'
 import {ScheduledTaskView} from '../src/preload/scheduled/view'
 const fixture=(wide:boolean)=>{
  const w=new Window();vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
@@ -41,6 +42,8 @@ it('routes all four collapsed More creation entries to their existing actions', 
    more.click()
    const item=[...w.document.querySelectorAll<TestButton>('[role=menuitem]')].find(entry=>entry.textContent===label)
    expect(item).toBeTruthy()
+   if(label==='新建研究')expect(item!.querySelector('.st-icon')?.getAttribute('style'))
+    .toBe("--icon:url('" + filledResearchIcon.replaceAll("'",'%27') + "')")
    item!.click()
    await Promise.resolve()
    expect(callback).toHaveBeenCalledOnce()

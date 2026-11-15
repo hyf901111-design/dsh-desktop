@@ -124,7 +124,7 @@
   color: var(--knowledge-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  text-align: end;
 }
 .knowledge-folder { position: relative; display: flex; align-items: center; border-radius: 6px; }
 .knowledge-folder[data-move-target=true] { background: var(--knowledge-active); box-shadow: inset 0 0 0 1px var(--knowledge-muted); }
@@ -452,6 +452,9 @@
   appearance: textfield;
 }
 .knowledge-pagination input::-webkit-inner-spin-button { appearance: none; }
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-pagination input[aria-invalid=true] { border-color: var(--knowledge-danger); }
+}
 .knowledge-drop-zone {
   --knowledge-drop-accent: #63aaef;
   grid-area: 1 / 1;

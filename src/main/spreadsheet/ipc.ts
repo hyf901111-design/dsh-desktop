@@ -66,7 +66,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     if(Buffer.byteLength(text)>2*1024*1024)throw Error('剪贴板内容过大，请使用 Excel 或 CSV 导入。')
     return text
    }
-   case 'admit':service.admit(key,input.instruction,input.bookId,input.references);return true
+   case 'admit':service.admit(key,input.instruction,input.bookId,input.references,input.useWorkbook);return true
    case 'refresh-calculations':return store.refreshCalculations(key,input.revision,input.workbook as Workbook)
    case 'save':{
     const workbook=input.workbook as Workbook
