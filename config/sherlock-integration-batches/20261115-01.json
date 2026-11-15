@@ -11,40 +11,44 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "580c0d5faf5e3a8a46284871397221ddd69550f3",
-        "tipCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+        "baseCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+        "tipCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
         "commits": [
           {
-            "commit": "b60b0922d154ed4803e3676a291b0f638921991a",
+            "commit": "36a21db24e6bd90ecb45068830f28b2eb790a74d",
             "parents": [
-              "580c0d5faf5e3a8a46284871397221ddd69550f3"
+              "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d"
             ],
-            "subject": "功能：锁定知识库共享预览并创建可编辑会话副本"
+            "subject": "修复：移除共享研究画布顶部重复留白"
           },
           {
-            "commit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
+            "commit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
             "parents": [
-              "b60b0922d154ed4803e3676a291b0f638921991a"
+              "36a21db24e6bd90ecb45068830f28b2eb790a74d"
             ],
-            "subject": "修复：隐藏共享页编辑动作并兼容斜杠菜单重复构建"
+            "subject": "修复：在项目会话中持久保留知识库副本"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/expanded-command-menu.mjs"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/knowledge-sessions.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-shared-research.mjs"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/skill-command-menu.mjs"
+            "path": "scripts/lib/notes-session.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/slash-command-flyout.mjs"
+            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
@@ -52,27 +56,11 @@
           },
           {
             "status": "M",
-            "path": "src/main/knowledge/ipc.ts"
-          },
-          {
-            "status": "A",
             "path": "src/main/knowledge/session-copy.ts"
           },
           {
             "status": "M",
-            "path": "src/main/notes/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
+            "path": "src/preload/knowledge/session-directory.tsx"
           },
           {
             "status": "M",
@@ -80,23 +68,23 @@
           },
           {
             "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/engine.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
             "path": "src/shared/knowledge-sessions.ts"
           },
           {
             "status": "A",
+            "path": "test/knowledge-session-copy-host.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/knowledge-session-copy.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-shared-research-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-session.test.js"
           }
         ],
         "checks": [
@@ -107,9 +95,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过。",
-            "verifiedCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
-            "completedAt": "2026-11-15T04:09:33.735Z",
+            "summary": "主进程与预加载类型检查通过。",
+            "verifiedCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
+            "completedAt": "2026-11-15T04:32:07.000Z",
             "timeoutMs": 120000
           },
           {
@@ -121,39 +109,33 @@
               "test",
               "--",
               "--maxWorkers=1",
+              "test/knowledge-composer.test.js",
+              "test/knowledge-content.test.ts",
+              "test/knowledge-library.test.ts",
+              "test/knowledge-native-preview.test.ts",
+              "test/knowledge-session-content.test.ts",
+              "test/knowledge-session-copy-host.test.js",
               "test/knowledge-session-copy.test.ts",
+              "test/knowledge-shared-research-layout.test.js",
               "test/knowledge-sharing-worker.test.js",
               "test/knowledge-workspace-rendered.test.js",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-service.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "51 项聚焦检查覆盖三种副本的独立保存、失败回收及既有共享和表格行为。",
-            "verifiedCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
-            "completedAt": "2026-11-15T04:09:33.735Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=1",
-              "test/knowledge-composer.test.js",
               "test/command-popup-position-browser.test.js",
               "test/command-popup-surface.test.js",
-              "test/slash-menu-expanded.test.js"
+              "test/slash-menu-expanded.test.js",
+              "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-service.test.ts",
+              "test/memory-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "安装过斜杠菜单的原生运行时可再次构建，主对话与右侧栏仍保持级联交互。",
-            "verifiedCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
-            "completedAt": "2026-11-15T04:09:33.735Z",
-            "timeoutMs": 120000
+            "summary": "190 项知识库与相关入口回归通过，覆盖画布间距、持久化副本和共享、文件导入与原生预览、右侧对话与引用菜单。",
+            "verifiedCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
+            "completedAt": "2026-11-15T04:32:07.000Z",
+            "timeoutMs": 150000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "桌面旧签名包 7c8fd860f 真实双账号已验证发布、接收并打开只读正文，并确认页内记忆。本次原会话标题修正通过聚焦测试。"
+          "summary": "Chromium 渲染验证覆盖共享画布顶部间距、知识库主界面及双栏斜杠菜单。签名客户端切换和重启验证待本次合并后进行。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -210,7 +192,9 @@
           "斜杠一级保持展开。悬停或点击具有子选项的命令时显示相邻的原生二级菜单。主对话默认向右，窄的右侧对话栏向左展开。知识库下的他人共享再沿同方向展开。",
           "表格普通会话可切换编辑和预览。预览保留当前工作表、选区及撤销历史，共享表格顶部显示锁定的预览状态。",
           "打开他人共享的研究、笔记和表格保留只读预览，不增加左侧会话。点击创建副本后，保存完整内容再在当前工作区登记可编辑副本。原始共享版本不受副本编辑影响。",
-          "共享会话顶栏右侧显示创建副本与预览，右侧栏展开时预览占用腾出的空间。表格仍可选择和导航，禁用编辑器、快捷写入和数据命令。"
+          "共享会话顶栏右侧显示创建副本与预览，右侧栏展开时预览占用腾出的空间。表格仍可选择和导航，禁用编辑器、快捷写入和数据命令。",
+          "知识库中查看共享研究看板，画布紧接标题栏，缩放和右侧对话栏展开时只保留一层顶部空间。",
+          "知识库副本以原生持久化会话登记到项目，从其他会话切回或重启后仍可从左侧打开，已保存旧版副本在原项目恢复。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -219,51 +203,7 @@
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T04:09:33.735Z"
-      },
-      "merged": {
-        "mergeCommit": "7bcb4c633a6b16e3fc0d22abe283b8539232cefb",
-        "verificationCommit": "7bcb4c633a6b16e3fc0d22abe283b8539232cefb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7bcb4c633a6b16e3fc0d22abe283b8539232cefb",
-            "completedAt": "2026-11-15T04:10:21.460Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "7bcb4c633a6b16e3fc0d22abe283b8539232cefb",
-            "completedAt": "2026-11-15T04:10:21.460Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T04:10:21.460Z"
+        "generatedAt": "2026-11-15T04:32:07.000Z"
       }
     }
   ],
