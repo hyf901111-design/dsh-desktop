@@ -11,170 +11,33 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "cb191ac0b4391043ea06a407fabf7a6c7af6dc23",
-        "tipCommit": "f51d30ff2575551268c9c33867b547561f14596c",
+        "baseCommit": "f51d30ff2575551268c9c33867b547561f14596c",
+        "tipCommit": "ff5d28f65092b2ffa29d6f64091efe5fff9edee7",
         "commits": [
           {
-            "commit": "cad1714f16b3905cec11bf4692bee655531a84ae",
+            "commit": "ff5d28f65092b2ffa29d6f64091efe5fff9edee7",
             "parents": [
-              "cb191ac0b4391043ea06a407fabf7a6c7af6dc23"
+              "f51d30ff2575551268c9c33867b547561f14596c"
             ],
-            "subject": "修复知识库分页样式、斜杠菜单、文件拖放和笔记操作入口"
-          },
-          {
-            "commit": "6ddcf2ade81574c6e263aadb14904807995495d9",
-            "parents": [
-              "cad1714f16b3905cec11bf4692bee655531a84ae"
-            ],
-            "subject": "支持从文件菜单快捷导入笔记和表格会话"
-          },
-          {
-            "commit": "bb14f4b6aeaff99b17f0ef398489a2e58e0a170e",
-            "parents": [
-              "6ddcf2ade81574c6e263aadb14904807995495d9"
-            ],
-            "subject": "隐藏研究右侧对话中的项目选择器"
-          },
-          {
-            "commit": "f51d30ff2575551268c9c33867b547561f14596c",
-            "parents": [
-              "bb14f4b6aeaff99b17f0ef398489a2e58e0a170e"
-            ],
-            "subject": "补充研究对话补丁的类型声明"
+            "subject": "在收起侧栏的更多菜单中添加四种新建入口"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/knowledge-sessions.js"
+            "path": "scripts/lib/sidebar-new-note.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+            "path": "src/preload/scheduled/view.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/board-directory-picker.d.mts"
+            "path": "test/browser-sidebar-entry.test.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/board-directory-picker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/deliverable-cards.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-native-file-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-composer.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-export-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/skill-command-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/slash-command-flyout.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/session-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/document-import.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/files.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/dsh-file-drop-compat.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-refinements.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/file-editor.d.mts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/file-editor.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/command-popup-position-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/deliverable-cards.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/dsh-file-drop-compat.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-session-copy-host.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-header-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-native-drop.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-outline-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-slash-insert.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-resident-conversation.test.ts"
+            "path": "test/sidebar-new-session-actions.test.ts"
           }
         ],
         "checks": [
@@ -186,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "f51d30ff2575551268c9c33867b547561f14596c",
-            "completedAt": "2026-11-15T12:55:40Z",
+            "verifiedCommit": "ff5d28f65092b2ffa29d6f64091efe5fff9edee7",
+            "completedAt": "2026-11-15T12:58:21Z",
             "timeoutMs": 120000
           },
           {
@@ -212,13 +75,16 @@
               "test/knowledge-session-copy-host.test.js",
               "test/spreadsheet-files.test.ts",
               "test/research-resident-conversation.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/sidebar-new-note-install.test.js",
               "-t",
-              "paginates files|drops one or several|lets all file-drag|clears an outside overlay|native export menu|complete notes header|imports Markdown|opens a submenu|opens both submenu|navigates slash categories|exact production Node|native popup scope|compatible editor|patches installed|seeds the|file import|round trips Excel|preserves quoted CSV|converts a file|extracts|hides the research workspace"
+              "paginates files|drops one or several|lets all file-drag|clears an outside overlay|native export menu|complete notes header|imports Markdown|opens a submenu|opens both submenu|navigates slash categories|exact production Node|native popup scope|compatible editor|patches installed|seeds the|file import|round trips Excel|preserves quoted CSV|converts a file|extracts|hides the research workspace|expanded More|collapsed More|single collapsed Home|installs Shell twice"
             ],
             "outcome": "passed",
             "summary": "聚焦验证覆盖知识库文件拖放、页码、斜杠菜单、笔记导入导出、文件模式打开和工作区会话持久化。",
-            "verifiedCommit": "f51d30ff2575551268c9c33867b547561f14596c",
-            "completedAt": "2026-11-15T12:55:40Z",
+            "verifiedCommit": "ff5d28f65092b2ffa29d6f64091efe5fff9edee7",
+            "completedAt": "2026-11-15T12:58:21Z",
             "timeoutMs": 120000
           }
         ],
@@ -297,7 +163,8 @@
           "分页器仅当前页带背景。知识库斜杠级联使用原生子菜单样式和同一套键盘导航。",
           "知识库中间列表优先接收单文件及批量拖放，并关闭对话输入框的拖放提示。",
           "笔记顶栏更多菜单支持导入和分格式导出。文件打开方式在兼容格式上提供笔记和表格快捷入口。",
-          "研究模式右侧对话隐藏项目选择器，沿用当前会话工作区。"
+          "研究模式右侧对话隐藏项目选择器，沿用当前会话工作区。",
+          "收起侧栏后，更多菜单可直接新建对话、研究、笔记与表格。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -305,51 +172,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T12:55:40Z"
-      },
-      "merged": {
-        "mergeCommit": "18d77e4fbef9f5a0db3fe82d1b806066b4033f26",
-        "verificationCommit": "18d77e4fbef9f5a0db3fe82d1b806066b4033f26",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "18d77e4fbef9f5a0db3fe82d1b806066b4033f26",
-            "completedAt": "2026-11-15T12:55:58.250Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "18d77e4fbef9f5a0db3fe82d1b806066b4033f26",
-            "completedAt": "2026-11-15T12:55:58.250Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T12:55:58.250Z"
+        "generatedAt": "2026-11-15T12:58:21Z"
       }
     }
   ],
