@@ -9,34 +9,53 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "集成预览客户端启动修复",
+        "featureName": "表格键盘选区和知识库气泡换行",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
-        "tipCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
+        "baseCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
+        "tipCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
         "commits": [
           {
-            "commit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
+            "commit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
             "parents": [
-              "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34"
+              "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd"
             ],
-            "subject": "修复表格引用依赖导致的客户端打包启动错误"
+            "subject": "修复表格键盘选区引用和知识库气泡换行"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "src/preload/spreadsheet/engine.ts"
           },
           {
             "status": "M",
-            "path": "test/conversation-components-policy.test.js"
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-composer.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/spreadsheet-keyboard-reference.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "组合安装并检查知识库界面补丁。",
+            "verifiedCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
+            "completedAt": "2026-11-15T14:51:41.413Z",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "npm",
@@ -45,41 +64,42 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
-            "completedAt": "2026-11-15T14:24:37.176Z",
+            "verifiedCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
+            "completedAt": "2026-11-15T14:51:41.413Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "--maxWorkers=1",
-              "test/spreadsheet-service.test.ts",
+              "test/spreadsheet-keyboard-reference.test.js",
               "test/spreadsheet-inline-references.test.js",
-              "test/client-tools.test.js",
-              "test/client-capability-transport.test.ts",
-              "test/conversation-components-policy.test.js"
+              "test/knowledge-composer.test.js"
             ],
             "outcome": "passed",
-            "summary": "209 项相关测试通过，覆盖模型请求保留表格参考范围。",
-            "verifiedCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
-            "completedAt": "2026-11-15T14:24:37.176Z",
+            "summary": "9 项聚焦测试通过，涵盖真实表格引擎扩选、收缩、取消以及新旧知识库消息引文显示。",
+            "verifiedCommit": "81f40a4c27f2327ebd9e28e4b78941e404fab60c",
+            "completedAt": "2026-11-15T14:51:41.413Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "界面来源未变，等待签名测试包实机启动。"
+          "outcome": "passed",
+          "summary": "真实表格引擎在 Chromium 测试中已验证扩选和恢复整表参考。签名客户端待验证。"
         },
         "acceptanceCriteria": [
-          "实际产品窗口能启动进入现有本地资料与会话。",
-          "表格模型请求仍然获取本轮参考范围。"
+          "使用 Shift＋方向键扩选，输入框显示选区引用并隐藏整表参考，收缩或取消时恢复。",
+          "发送过的知识库引用标签和提示词同一行显示，用户输入的换行继续显示。"
         ],
         "risks": [
-          "此前签名包在进入窗口前加载出错，需要实机确认启动修复。"
+          "使用单客户端、本地资料验收。"
         ],
-        "generatedAt": "2026-11-15T14:24:37.176Z"
+        "generatedAt": "2026-11-15T14:51:41.413Z"
       }
     }
   ],
