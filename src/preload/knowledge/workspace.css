@@ -159,7 +159,8 @@
   position: relative;
 }
 .knowledge-session-directory .knowledge-search { flex: 0 1 244px; min-width: 100px; }
-.knowledge-session-rows { flex: 1; min-height: 0; overflow: auto; margin: 10px 0 0; padding: 4px 0; list-style: none; border-top: 1px solid var(--knowledge-line); }
+.knowledge-session-results { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.knowledge-session-rows { flex: none; margin: 10px 0 0; padding: 4px 0; list-style: none; border-top: 1px solid var(--knowledge-line); }
 .knowledge-session-rows li { display: flex; align-items: center; gap: 4px; }
 .knowledge-session-rows li + li { margin-top: 4px; }
 .knowledge-session-rows .knowledge-session-open { display: flex; flex: 1; min-width: 0; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; text-align: left; }
@@ -416,12 +417,13 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  align-items: flex-end;
+  align-items: center;
+  padding-top: 8px;
   color: var(--knowledge-muted);
   font-size: 12px;
 }
 .knowledge-pagination button { background: var(--knowledge-field); padding: 5px 9px; }
-.knowledge-pagination span { align-self: center; margin-top: 9px; }
+.knowledge-pagination span { min-width: 4ch; text-align: center; font-variant-numeric: tabular-nums; }
 .knowledge-drop-zone {
   position: absolute;
   inset: 6px;

@@ -22,6 +22,7 @@ import { categoryIcons, KnowledgeIcon, KnowledgeItemIcon } from './icons'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import { KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
+import { KnowledgePagination, useKnowledgePagination } from './pagination'
 import css from './workspace.css?raw'
 
 interface Bridge {
@@ -63,7 +64,6 @@ type FileImport = KnowledgeImportProgress & {
   error?: string
 }
 const fileName = (path: string) => path.split(/[\\/]/u).at(-1) || path
-const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
 const defaultFilter: KnowledgeFilter = {}
 const sessionSections = [ ['research', 'research'], ['notes', 'note'], ['spreadsheet', 'table'] ] as const
@@ -135,7 +135,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [undoAvailable, setUndoAvailable] = useState(false)
   const [assistantFilter, setAssistantFilter] = useState(false)
   const [draftFilter, setDraftFilter] = useState<KnowledgeFilter>()
-  const [page, setPage] = useState(1)
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>()
@@ -168,8 +167,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
   const title = selectedFolder?.name ?? knowledgeCategories[selection]
   const rows = listKnowledgeDocuments(snapshot, filter)
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
-  const shownPage = Math.min(page, pages)
+  const { page, pages, setPage, scrollRef, start, end } = useKnowledgePagination<HTMLDivElement>(rows.length)
   const receivedCategories = [...new Set(snapshot.documents.flatMap(row => row.received ? [row.received.category] : []))]
     .sort((a, b) => a.localeCompare(b))
   const filterCount = countFileFacets(filter)
@@ -954,7 +952,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
             </nav>
           </div>}
           <div className="knowledge-table-content">
-            <div className="knowledge-table-wrap">
+            <div className="knowledge-table-wrap" ref={scrollRef}>
               <table className="knowledge-table">
                 <thead><tr>
                   {(['name', 'size', 'updatedAt'] as const).map((sort, index) => {
@@ -969,7 +967,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   <th scope="col">{selection === 'received' ? '共享人' : '操作'}</th>
                 </tr></thead>
                 <tbody ref={tableRows}>
-                  {shownPage === 1 && visibleImports.map(item => (
+                  {page === 1 && visibleImports.map(item => (
                     <tr key={item.id} className="knowledge-import-row" data-status={item.status}>
                       <td>
                         <div className="knowledge-file-name">
@@ -996,7 +994,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                       <td />
                     </tr>
                   ))}
-                  {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row => {
+                  {rows.slice(start, end).map(row => {
                     const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
                     const title = session ? session.title : row.name
                     const completed = completedImports[row.id] !== undefined
@@ -1057,11 +1055,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   : '正在加载文件…'}
               </p>)}
             </div>
-            {pages > 1 && <nav className="knowledge-pagination" aria-label="文件分页">
-              <button type="button" disabled={shownPage === 1} onClick={() => setPage(shownPage - 1)}>上一页</button>
-              <span>{shownPage} / {pages}</span>
-              <button type="button" disabled={shownPage === pages} onClick={() => setPage(shownPage + 1)}>下一页</button>
-            </nav>}
+            <KnowledgePagination label="文件分页" page={page} pages={pages} setPage={setPage} />
           </div>
         </div>
         {dragging && <div className="knowledge-drop-zone">拖放文件到知识库</div>}
